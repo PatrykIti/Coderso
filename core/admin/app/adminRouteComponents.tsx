@@ -252,9 +252,14 @@ export const WidgetLibraryRoute = lazyNamedRoute(
   "WidgetLibraryPage"
 );
 
-export const WidgetTemplateEditorRoute = lazyNamedRoute(
-  () => import("@/ui/widgets/WidgetTemplateEditorPage"),
-  "WidgetTemplateEditorPage"
+export const PageTemplatesRoute = lazyNamedRoute(
+  () => import("@/ui/pages/templates/PageTemplatesPage"),
+  "PageTemplatesPage"
+);
+
+export const PageTemplateEditorRoute = lazyNamedRoute(
+  () => import("@/ui/pages/templates/PageTemplateEditorPage"),
+  "PageTemplateEditorPage"
 );
 
 export const GeneralSettingsRoute = lazyNamedRoute<GeneralSettingsRouteProps>(

@@ -2,9 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import type { DeviceTarget, WidgetBlock } from "../widgets/types";
-import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
 import {
-  renderPublicPageHtml,
   renderPublicPageRuntimeHtml,
   renderPublicPageV2RuntimeHtml,
 } from "../site/renderPublicPage";
@@ -45,7 +43,8 @@ import {
   hydrateProductTableRuntimeData,
   type CommerceRuntimeCache,
 } from "../services/commerce/commerceWidgetRuntime";
-import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
+import { getPageTemplatePreviewModel } from "../services/pages/pageTemplateLibraryService";
+import { isPageTemplateError } from "../services/pages/pageTemplateLibrarySchema";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { resolvePublicSeoMetadata } from "../services/seo/seoService";
 import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
@@ -53,7 +52,6 @@ import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import { resolvePublicRedirect } from "../services/redirects/redirectService";
 import type { ContentSchema } from "../services/content/validation";
-import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
 import { resolveDevAssetUrl, resolveSiteDevServerUrl } from "./utils/styleUrl";
 import { normalizeContentListData, type ContentListData } from "../widgets/core/contentList";
 import { normalizePostsFeedData, type PostsFeedData } from "../widgets/core/postsFeed";
@@ -849,10 +847,12 @@ export async function renderPublicPage(
   return buildHtmlResponse(result.html);
 }
 
+// "widget-template" deliberately no longer resolves: the retired preview
+// surface returns 404 Not Found instead of rendering legacy widget blocks.
 const resolvePreviewTargetType = (value: string | null): PreviewTargetType | null => {
   if (value === "page") return "page";
   if (value === "content") return "content";
-  if (value === "widget-template") return "widget-template";
+  if (value === "page-template") return "page-template";
   if (value === "detail-page") return "detail-page";
   return null;
 };
@@ -873,29 +873,38 @@ const resolvePreviewDevice = (value: string | null): DeviceTarget | null => {
   return null;
 };
 
-const renderWidgetTemplatePreviewHtml = async (
+/**
+ * Page Templates render through the SAME public Page v2 pipeline as page
+ * preview: token-gated, `?device=` flatten semantics, scoped data-bound block
+ * handling, and fail-closed boundary enforcement against legacy
+ * `WidgetBlock[]` documents.
+ */
+const renderPageTemplatePreviewHtml = async (
   templateId: string,
-  previewDevice?: DeviceTarget
+  previewDevice?: DeviceTarget,
+  runtimeSearchParams?: URLSearchParams
 ) => {
-  ensureRuntimeWidgetsRegistered();
-  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const template = await getWidgetTemplatePreviewModel(templateId);
-  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
-  const blocks = await hydrateRuntimeBlocks(template.blocks, {
-    preview: true,
-    contentRoutes,
-    runtimeCache: {},
+  const model = await getPageTemplatePreviewModel(templateId);
+  const input = resolvePageTemplateInput(model.document, {
+    renderMode: "preview-page",
+    enforceFreshBoundary: true,
   });
-  return renderPublicPageHtml({
-    title: template.name,
-    blocks,
-    cssHref,
-    inlineCss,
-    isPreview: true,
-    previewDevice,
-    layoutSettings: getWidgetTemplateLayoutSettings(template.settings),
-    devModuleScripts,
-  });
+  const result = await renderPublicPageHtmlInternal(
+    {
+      id: model.id,
+      title: model.name,
+      slug: `/page-templates/${model.slug}`,
+      status: "draft",
+      currentData: input.document as unknown as Record<string, unknown>,
+      publishedData: null,
+    },
+    {
+      preview: true,
+      previewDevice,
+      runtimeSearchParams,
+    }
+  );
+  return result.html;
 };
 
 const buildDetailHref = (pattern: string, slug: string, id?: string) => {
@@ -1401,12 +1410,21 @@ export async function handlePublicRequest(req: Request) {
       return buildHtmlResponse(html);
     }
 
-    if (preview.token.targetType === "widget-template") {
+    if (preview.token.targetType === "page-template") {
       try {
-        const html = await renderWidgetTemplatePreviewHtml(preview.token.targetId, previewDevice);
+        const html = await renderPageTemplatePreviewHtml(
+          preview.token.targetId,
+          previewDevice,
+          url.searchParams
+        );
         return buildHtmlResponse(html);
       } catch (error) {
-        if (error instanceof Error && error.message === "widget_template_not_found") {
+        // Fail closed: missing templates, unreadable stored documents, and
+        // boundary violations all return 404 instead of partial rendering.
+        if (isPageTemplateError(error)) {
+          return new Response("Not Found", { status: 404 });
+        }
+        if (error instanceof Error && error.message.startsWith("page_template_")) {
           return new Response("Not Found", { status: 404 });
         }
         throw error;

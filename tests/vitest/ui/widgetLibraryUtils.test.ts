@@ -7,7 +7,6 @@ import {
   countWidgetLibrarySections,
   filterWidgetLibraryItems,
   filterWidgetLibraryItemsBySection,
-  matchesTemplateCategory,
   normalizeCategoryValue,
   normalizeWidgetLibrarySection,
   trimWidgetLibrarySelection,
@@ -18,19 +17,11 @@ test("normalizeCategoryValue trims and lowercases", () => {
   expect(normalizeCategoryValue("Content")).toBe("content");
 });
 
-test("matchesTemplateCategory ignores case and whitespace", () => {
-  expect(matchesTemplateCategory("Layout", "layout")).toBe(true);
-  expect(matchesTemplateCategory(" Layout ", "Layout")).toBe(true);
-  expect(matchesTemplateCategory("Media", "Forms")).toBe(false);
-});
-
-test("matchesTemplateCategory allows all", () => {
-  expect(matchesTemplateCategory("Layout", "all")).toBe(true);
-});
-
-test("normalizeWidgetLibrarySection rejects unknown section ids", () => {
+test("normalizeWidgetLibrarySection rejects unknown and retired section ids", () => {
   expect(normalizeWidgetLibrarySection("media")).toBe("media");
   expect(normalizeWidgetLibrarySection("unknown")).toBe("all-items");
+  // The widget-template surface is retired; its section id no longer resolves.
+  expect(normalizeWidgetLibrarySection("templates")).toBe("all-items");
   expect(normalizeWidgetLibrarySection(null)).toBe("all-items");
 });
 
@@ -57,7 +48,6 @@ test("filterWidgetLibraryItems returns only composite items in recommended widge
     {
       query: "",
       activeScope: "widgets",
-      templateCategory: "all",
       widgetCategory: "all",
       widgetTab: "recommended",
       widgetModule: "all",
@@ -100,7 +90,6 @@ test("filterWidgetLibraryItems applies module and complexity filters in widgets 
     {
       query: "",
       activeScope: "widgets",
-      templateCategory: "all",
       widgetCategory: "all",
       widgetTab: "all",
       widgetModule: "layout",
@@ -124,12 +113,12 @@ test("filterWidgetLibraryItemsBySection maps dropdown sections to scope filters"
       isFavorite: true,
     },
     {
-      name: "Gallery Template",
+      name: "Gallery",
       categoryLabel: "Media",
       category: "media",
       complexity: "composite" as const,
       module: "content",
-      source: "template" as const,
+      source: "core" as const,
       isFavorite: false,
     },
   ];
@@ -138,7 +127,6 @@ test("filterWidgetLibraryItemsBySection maps dropdown sections to scope filters"
     filterWidgetLibraryItemsBySection(widgets, {
       query: "",
       section: "favorites",
-      templateCategory: "all",
       widgetTab: "all",
       widgetModule: "all",
       widgetComplexity: "all",
@@ -148,19 +136,7 @@ test("filterWidgetLibraryItemsBySection maps dropdown sections to scope filters"
   expect(
     filterWidgetLibraryItemsBySection(widgets, {
       query: "",
-      section: "templates",
-      templateCategory: "media",
-      widgetTab: "all",
-      widgetModule: "all",
-      widgetComplexity: "all",
-    }).map((item) => item.name)
-  ).toEqual(["Gallery Template"]);
-
-  expect(
-    filterWidgetLibraryItemsBySection(widgets, {
-      query: "",
       section: "layout",
-      templateCategory: "all",
       widgetTab: "all",
       widgetModule: "all",
       widgetComplexity: "all",
@@ -233,12 +209,12 @@ test("countWidgetLibrarySections and trimWidgetLibrarySelection stay visible-sco
       isFavorite: true,
     },
     {
-      name: "Template",
+      name: "Spacer",
       categoryLabel: "Layout",
       category: "layout",
-      complexity: "composite" as const,
-      module: "content",
-      source: "template" as const,
+      complexity: "atomic" as const,
+      module: "layout",
+      source: "core" as const,
       isFavorite: true,
     },
   ];
@@ -246,7 +222,6 @@ test("countWidgetLibrarySections and trimWidgetLibrarySelection stay visible-sco
   expect(
     countWidgetLibrarySections(widgets, {
       query: "",
-      templateCategory: "all",
       widgetTab: "all",
       widgetModule: "all",
       widgetComplexity: "all",
@@ -254,15 +229,11 @@ test("countWidgetLibrarySections and trimWidgetLibrarySelection stay visible-sco
   ).toMatchObject({
     "all-items": 2,
     favorites: 2,
-    templates: 1,
-    "widgets-all": 1,
-    layout: 1,
+    "widgets-all": 2,
+    layout: 2,
   });
 
-  expect(trimWidgetLibrarySelection(["a", "b", "c"], ["b", "c"])).toEqual([
-    "b",
-    "c",
-  ]);
+  expect(trimWidgetLibrarySelection(["a", "b", "c"], ["b", "c"])).toEqual(["b", "c"]);
 });
 
 test("buildWidgetModuleOptions sorts strict ready modules first", () => {

@@ -124,6 +124,15 @@ const buildDocument = (): PageDocumentV2 => ({
 
 const cloneDocument = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
+const safeNormalizeError = (value: unknown): unknown => {
+  try {
+    normalizePageDocumentV2ForWrite(value);
+    return null;
+  } catch (error) {
+    return error;
+  }
+};
+
 const createHeadingBlock = (id: string, text = "Nested heading"): PageBlockV2 => ({
   id,
   type: "heading",
@@ -185,7 +194,7 @@ describe("PageDocumentV2", () => {
       unknownBlockStyle.sections[0]!.blocks[0]!.style = {
         align: "center",
         debugBorder: "nope",
-      } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
       expect(validate(unknownBlockStyle)).toBe(false);
 
       const unknownBlockResponsive = buildDocument();
@@ -264,7 +273,7 @@ describe("PageDocumentV2", () => {
     styleUnknown.sections[0]!.blocks[0]!.style = {
       align: "center",
       debugBorder: "nope",
-    } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
     expect(() => normalizePageDocumentV2ForWrite(styleUnknown)).toThrow(
       "Unknown page document field: sections.0.blocks.0.style.debugBorder"
     );
@@ -311,6 +320,46 @@ describe("PageDocumentV2", () => {
     expect(mobileDocument.sections[0]?.spacing.paddingLeft).toBe(20);
   });
 
+  test("normalizes layout.stackVertical with an explicit false default and sparse overrides (TASK-425)", () => {
+    // Full normalization defaults the base flag to false when absent, so
+    // documents saved before the field resolve to today's behavior.
+    const withoutField = normalizePageDocumentV2ForWrite(buildDocument());
+    expect(withoutField.sections[0]?.layout.stackVertical).toBe(false);
+
+    // Fresh writes accept the base flag and the per-breakpoint override
+    // through the existing responsive[bp].layout container.
+    const document = buildDocument();
+    document.sections[0]!.layout.stackVertical = false;
+    document.sections[0]!.responsive.mobile = {
+      ...document.sections[0]!.responsive.mobile,
+      layout: { stackVertical: true },
+    };
+    const normalized = normalizePageDocumentV2ForWrite(document);
+    expect(normalized.sections[0]?.layout.stackVertical).toBe(false);
+    expect(normalized.sections[0]?.responsive.mobile?.layout).toEqual({ stackVertical: true });
+    // Overrides stay sparse: tablet did not gain the field.
+    expect(normalized.sections[0]?.responsive.tablet?.layout).toEqual({ columns: 1 });
+
+    // Cascade: mobile resolves the override, desktop/tablet keep the base.
+    const resolvedMobile = resolvePageSectionForBreakpoint(normalized.sections[0]!, "mobile");
+    expect(resolvedMobile.layout.stackVertical).toBe(true);
+    const resolvedTablet = resolvePageSectionForBreakpoint(normalized.sections[0]!, "tablet");
+    expect(resolvedTablet.layout.stackVertical).toBe(false);
+
+    // Reset restores inheritance through the shared override-clear helper.
+    const cleared = clearResponsiveOverride(normalized.sections[0]!, "mobile", [
+      "layout",
+      "stackVertical",
+    ]);
+    expect(cleared.responsive.mobile?.layout).toBeUndefined();
+
+    // Non-boolean stored values fall back to false instead of inventing layout.
+    const storedCorrupt = buildDocument();
+    (storedCorrupt.sections[0]!.layout as Record<string, unknown>).stackVertical = "yes";
+    const storedRead = normalizeStoredPageDocumentV2ForRead(storedCorrupt);
+    expect(storedRead.sections[0]?.layout.stackVertical).toBe(false);
+  });
+
   test("normalizes expanded block style fields with clamped values", () => {
     const document = buildDocument();
     document.sections[0]!.blocks[0]!.style = {
@@ -341,6 +390,154 @@ describe("PageDocumentV2", () => {
       borderColor: "#e2e8f0",
       padding: { top: 12, right: 160, bottom: 0, left: 4 },
       margin: { top: 8 },
+    });
+  });
+
+  test("normalizes token-backed typography style fields with clamps and explicit nulls", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.style = {
+      fontFamily: "display",
+      fontSize: "2xl",
+      fontWeight: "bold",
+      lineHeight: 99,
+      letterSpacing: -99,
+    };
+    document.sections[0]!.blocks[1]!.style = {
+      fontFamily: null,
+      fontSize: null,
+      fontWeight: null,
+      lineHeight: null,
+      letterSpacing: null,
+    };
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+
+    expect(normalized.sections[0]?.blocks[0]?.style).toEqual({
+      fontFamily: "display",
+      fontSize: "2xl",
+      fontWeight: "bold",
+      lineHeight: 2.5,
+      letterSpacing: -2,
+    });
+    // Explicit null is the stored "use the baked default" value.
+    expect(normalized.sections[0]?.blocks[1]?.style).toEqual({
+      fontFamily: null,
+      fontSize: null,
+      fontWeight: null,
+      lineHeight: null,
+      letterSpacing: null,
+    });
+  });
+
+  test("rejects unknown typography tokens on writes and nulls them on stored reads", () => {
+    const badFontSize = buildDocument();
+    badFontSize.sections[0]!.blocks[0]!.style = {
+      fontSize: "mega",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(badFontSize)).toThrow(
+      "Invalid sections.0.blocks.0.style.fontSize."
+    );
+    expect(isPageDocumentError(safeNormalizeError(badFontSize), "page_document_invalid")).toBe(
+      true
+    );
+
+    const badLineHeight = buildDocument();
+    badLineHeight.sections[0]!.blocks[0]!.style = {
+      lineHeight: "tall",
+    } as unknown as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(badLineHeight)).toThrow(
+      "Invalid sections.0.blocks.0.style.lineHeight."
+    );
+
+    // Stored reads fail open to null (no invented styling) instead of throwing.
+    const storedRead = normalizeStoredPageDocumentV2ForRead(badFontSize);
+    expect(storedRead.sections[0]?.blocks[0]?.style?.fontSize).toBeNull();
+  });
+
+  test("documents without typography fields normalize without gaining them (legacy parity)", () => {
+    const legacyShaped = buildDocument();
+    const written = normalizePageDocumentV2ForWrite(legacyShaped);
+    const read = normalizeStoredPageDocumentV2ForRead(legacyShaped);
+
+    for (const normalized of [written, read]) {
+      const block = normalized.sections[0]?.blocks[0];
+      expect(block?.style).toBeUndefined();
+      const styled = normalized.sections[0]?.blocks[1];
+      expect(styled?.style ?? {}).not.toHaveProperty("fontFamily");
+      expect(styled?.style ?? {}).not.toHaveProperty("fontSize");
+      expect(styled?.style ?? {}).not.toHaveProperty("fontWeight");
+      expect(styled?.style ?? {}).not.toHaveProperty("lineHeight");
+      expect(styled?.style ?? {}).not.toHaveProperty("letterSpacing");
+    }
+  });
+
+  test(
+    "JSON schema accepts typography tokens plus nulls and rejects unknown tokens",
+    { timeout: AJV_COMPILE_TEST_TIMEOUT_MS },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+
+      const valid = buildDocument();
+      valid.sections[0]!.blocks[0]!.style = {
+        fontFamily: "sans",
+        fontSize: "lg",
+        fontWeight: "semibold",
+        lineHeight: 1.4,
+        letterSpacing: 0.5,
+      };
+      expect(validate(valid)).toBe(true);
+
+      const cleared = buildDocument();
+      cleared.sections[0]!.blocks[0]!.style = {
+        fontFamily: null,
+        fontSize: null,
+        fontWeight: null,
+        lineHeight: null,
+        letterSpacing: null,
+      };
+      expect(validate(cleared)).toBe(true);
+
+      const unknownToken = buildDocument();
+      unknownToken.sections[0]!.blocks[0]!.style = {
+        fontWeight: "black",
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(unknownToken)).toBe(false);
+
+      const outOfClamp = buildDocument();
+      outOfClamp.sections[0]!.blocks[0]!.style = {
+        lineHeight: 9,
+      };
+      expect(validate(outOfClamp)).toBe(false);
+
+      const responsiveTypography = buildDocument();
+      responsiveTypography.sections[0]!.blocks[0]!.responsive = {
+        tablet: { style: { fontSize: "sm" } },
+      };
+      expect(validate(responsiveTypography)).toBe(true);
+    }
+  );
+
+  test("resolves responsive typography overrides through the desktop-first cascade", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.style = { fontSize: "lg", fontWeight: "bold" };
+    document.sections[0]!.blocks[0]!.responsive = {
+      mobile: { style: { fontSize: "sm" } },
+    };
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+    const block = normalized.sections[0]!.blocks[0]!;
+    expect(resolvePageBlockForBreakpoint(block, "desktop").style).toEqual({
+      fontSize: "lg",
+      fontWeight: "bold",
+    });
+    expect(resolvePageBlockForBreakpoint(block, "mobile").style).toEqual({
+      fontSize: "sm",
+      fontWeight: "bold",
+    });
+    expect(resolvePageBlockForBreakpoint(block, "tablet").style).toEqual({
+      fontSize: "lg",
+      fontWeight: "bold",
     });
   });
 
@@ -898,7 +1095,10 @@ describe("PageDocumentV2", () => {
       ...buildDocument(),
       editor: { selectedSectionId: "sec_hero" },
     });
-    expect(published).toEqual(buildDocument());
+    // Full normalization carries the explicit stackVertical default (TASK-425).
+    const expected = cloneDocument(buildDocument());
+    expected.sections[0]!.layout.stackVertical = false;
+    expect(published).toEqual(expected);
   });
 
   test("exposes block capability metadata for every block type", () => {

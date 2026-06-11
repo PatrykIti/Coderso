@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -27,7 +29,7 @@ published front instead of becoming dead controls.
 
 ## Sub-Tasks
 
-- [ ] TASK-424-01-L01: Add normalized typography fields and shared text-control
+- [x] TASK-424-01-L01: Add normalized typography fields and shared text-control
       descriptors to the Pages owner.
 
 ---
@@ -47,3 +49,8 @@ published front instead of becoming dead controls.
 - `_docs/PAGE_MODEL.md`
 - `_docs/DESIGN_TOKENS.md`
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: schema/normalizers/JSON-schema + token CSS value maps owned by pageDocumentV2; typography-capable block set frozen; legacy docs render byte-identical when fields are null.

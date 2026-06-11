@@ -81,9 +81,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `commerce:products:detail:<id>`
 - `commerce:collections:list`
 - `widgetCatalog:list`
-- `widgetTemplateCategories:list`
-- `widgetTemplates:list`
-- `widgetTemplates:detail:<id>`
+- `pageTemplates:list`
+- `pageTemplates:detail:<id>`
 - `media:list`
 - `adminThemeTemplates:list`
 - `adminThemeProfiles:list`
@@ -302,7 +301,6 @@ Clients update caches and broadcast events on:
   - `form.automation.upsert` -> `forms:actions:<id>`, `forms:action-runs:<id>`
   - `listing-query.*` -> `listings:queries:list`, touched `listings:queries:detail:<id>`
   - `listing-template.*` -> `listings:templates:list`, touched `listings:templates:detail:<id>`
-  - `widget-template.*` -> `widgetTemplates:list`, `widgetCatalog:list`, touched `widgetTemplates:detail:<id>`
   - `menu.item.*` -> `menus:list`, touched `menus:detail:<menuId>`
   - `seo.document.*` -> `seo:list`, touched `seo:detail:<id>`
 - `media.reference.attach`, `setting.content-route.upsert`, and `site-kit.*`
@@ -330,33 +328,40 @@ Clients update caches and broadcast events on:
   - Redirect create/update/delete patches `redirects:list` and broadcasts an
     update so other tabs refresh public-routing-affecting rows promptly.
 
-### Widget template cache note
+### Page templates cache note (TASK-420-03)
 
-- Widget template duplicate/create/update/delete mutations keep
-  `widgetTemplates:list`, touched `widgetTemplates:detail:<id>`, and
-  `widgetCatalog:list` synchronized through the existing widget template client
-  cache/bus contract.
-- `duplicateWidgetTemplate(id)` inserts the returned draft into cached template
-  lists, warms the new detail cache, broadcasts template/catalog updates, and
-  treats the server response as source of truth.
-- Failed name-conflict or delete mutations must not patch browser cache state.
+- Page Templates are owned by `core/admin/services/pageTemplatesClient.ts`
+  with keys `pageTemplates:list` and `pageTemplates:detail:<id>` (default
+  list/detail TTLs).
+- Create/update/duplicate broadcast `{ key: pageTemplates:list, action:
+  "update" }` plus the touched `pageTemplates:detail:<id>`; delete broadcasts
+  `invalidate` for the list and the detail key.
+- The list page (`/advanced/page-templates`) hydrates from cache, revalidates
+  in the background, and subscribes to `pageTemplates:list` cache-bus events.
+- The editor (`/advanced/page-templates/:id`) is the shared Page Editor v2
+  surface bound through the editor host: it hydrates from
+  `pageTemplates:detail:<id>`, revalidates via cache-bus events, and keeps
+  dirty-state protection (background revalidation never overwrites unsaved
+  edits).
+- Route prefetch warms `pageTemplates:list` with `{ force: false }` only.
+- Template documents contain no secrets; nothing secret-bearing enters
+  browser cache/localStorage/debug payloads.
+- Retired with the widget-template surface: `widgetTemplates:list`,
+  `widgetTemplates:detail:<id>`, `widgetTemplateCategories:list`, their cached
+  clients, and the `/advanced/widgets/templates/:id` prefetch/route entries.
 
 ### Widget library cache note
 
 - Widget library list state is owned by
   `core/admin/ui/widgets/WidgetLibraryPage.tsx` and is backed by
-  `widgetCatalog:list`, `widgetTemplateCategories:list`, and `pages:list`.
-- The page hydrates catalog, template categories, and pages from
-  `getCachedWidgetCatalog()`, `getCachedWidgetTemplateCategories()`, and
+  `widgetCatalog:list` and `pages:list` (the catalog is core-widget-only after
+  the Page Templates rewrite).
+- The page hydrates catalog and pages from `getCachedWidgetCatalog()` and
   `getCachedPages()` on first render, then revalidates in the background when a
   cache entry exists.
-- Cache-bus events for `widgetCatalog:list`,
-  `widgetTemplateCategories:list`, and `pages:list` refresh the list model in
-  the background. The section dropdown, table/grid mode, and selected row ids
-  remain shell-owned UI state and are not persisted into browser cache.
-- Template duplicate/delete/category mutations continue to refresh the catalog
-  through the existing template/category clients; TASK-215 adds no new cache key
-  or public write path.
+- Cache-bus events for `widgetCatalog:list` and `pages:list` refresh the list
+  model in the background. The section dropdown, table/grid mode, and selected
+  row ids remain shell-owned UI state and are not persisted into browser cache.
 
 ### Media cache note
 

@@ -1,3 +1,5 @@
+import { DEFAULT_TOKENS } from "../theme/tokenTypes";
+
 export const PAGE_DOCUMENT_SCHEMA_VERSION = 2 as const;
 
 export const pageBreakpoints = ["desktop", "tablet", "mobile"] as const;
@@ -75,6 +77,47 @@ export const pageBlockSlotKeys = [
   "column:3",
   "column:4",
 ] as const;
+
+/**
+ * Token-backed typography contract (TASK-424). Option tokens reference the
+ * theme token stack (`DesignTokens.typography` in `core/services/theme/
+ * tokenTypes.ts`, emitted as `--font-sans`/`--font-display` and
+ * `--text-sm`...`--text-5xl` by `core/ui/theme/tokenCss.ts`). All typography
+ * style fields are nullable and default to unset, so documents saved before
+ * this contract render exactly as before (the baked utility classes stay the
+ * fallback). The scale tops out at `5xl` (3rem = 48px), matching the baked h1
+ * utility class so the largest explicit preset never shrinks a default h1.
+ */
+export const pageTypographyFontFamilies = ["sans", "display"] as const;
+export const pageTypographyFontSizes = [
+  "sm",
+  "md",
+  "lg",
+  "xl",
+  "2xl",
+  "3xl",
+  "4xl",
+  "5xl",
+] as const;
+export const pageTypographyFontWeights = ["normal", "medium", "semibold", "bold"] as const;
+/** Unitless `line-height` bounds for block typography. */
+export const PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP = { min: 1, max: 2.5 } as const;
+/** `letter-spacing` bounds in px for block typography. */
+export const PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP = { min: -2, max: 8 } as const;
+/**
+ * Block types whose rendered output paints user-editable text, and therefore
+ * may expose (and paint) the typography style surface. Layout, media, and
+ * data-bound blocks stay outside this contract.
+ */
+export const pageTypographyCapableBlockTypes = [
+  "heading",
+  "text",
+  "button",
+  "list",
+  "card",
+  "statistic",
+  "quote",
+] as const;
 export const PAGE_BLOCK_MAX_TREE_DEPTH = 4 as const;
 export const PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24 as const;
 
@@ -90,6 +133,45 @@ export type PageBlockWidth = (typeof pageBlockWidths)[number];
 export type PageColumnDistribution = (typeof pageColumnDistributions)[number];
 export type PageGroupDirection = (typeof pageGroupDirections)[number];
 export type PageBlockSlotKey = (typeof pageBlockSlotKeys)[number];
+export type PageTypographyFontFamily = (typeof pageTypographyFontFamilies)[number];
+export type PageTypographyFontSize = (typeof pageTypographyFontSizes)[number];
+export type PageTypographyFontWeight = (typeof pageTypographyFontWeights)[number];
+export type PageTypographyCapableBlockType = (typeof pageTypographyCapableBlockTypes)[number];
+
+export const isPageTypographyCapableBlockType = (
+  type: PageBlockType
+): type is PageTypographyCapableBlockType =>
+  (pageTypographyCapableBlockTypes as readonly string[]).includes(type);
+
+/**
+ * CSS values for typography tokens. Family and size tokens resolve through the
+ * theme CSS variables on the published front (`toCssVariables` paints them on
+ * `:root`), with the `DEFAULT_TOKENS` value as a literal fallback so the admin
+ * canvas (which does not mount the front token stylesheet) paints the same
+ * defaults. Weight tokens map to plain numeric weights.
+ */
+export const pageTypographyFontFamilyCssValues: Record<PageTypographyFontFamily, string> = {
+  sans: `var(--font-sans, ${DEFAULT_TOKENS.typography.sans})`,
+  display: `var(--font-display, ${DEFAULT_TOKENS.typography.display})`,
+};
+
+export const pageTypographyFontSizeCssValues: Record<PageTypographyFontSize, string> = {
+  sm: `var(--text-sm, ${DEFAULT_TOKENS.typography.sm})`,
+  md: `var(--text-md, ${DEFAULT_TOKENS.typography.md})`,
+  lg: `var(--text-lg, ${DEFAULT_TOKENS.typography.lg})`,
+  xl: `var(--text-xl, ${DEFAULT_TOKENS.typography.xl})`,
+  "2xl": `var(--text-2xl, ${DEFAULT_TOKENS.typography["2xl"]})`,
+  "3xl": `var(--text-3xl, ${DEFAULT_TOKENS.typography["3xl"]})`,
+  "4xl": `var(--text-4xl, ${DEFAULT_TOKENS.typography["4xl"]})`,
+  "5xl": `var(--text-5xl, ${DEFAULT_TOKENS.typography["5xl"]})`,
+};
+
+export const pageTypographyFontWeightCssValues: Record<PageTypographyFontWeight, string> = {
+  normal: "400",
+  medium: "500",
+  semibold: "600",
+  bold: "700",
+};
 
 export type PageDocumentSeoV2 = {
   title?: string;
@@ -117,6 +199,17 @@ export type PageSectionLayoutV2 = {
   align: PageSectionAlignment;
   justify: PageSectionJustify;
   maxWidth: number;
+  /**
+   * Vertical-stacking switch (TASK-425). When the EFFECTIVE resolved value at
+   * a breakpoint is `true`, the section content grid is forced to a single
+   * column, beating the template-floored column count. It is per-breakpoint
+   * override-able through `responsive[bp].layout.stackVertical` like every
+   * other layout key; the typical authoring shape keeps the base `false` and
+   * sets `responsive.mobile.layout.stackVertical = true`. Optional on input;
+   * full normalization defaults it to `false`, so documents saved before this
+   * field render exactly as before.
+   */
+  stackVertical?: boolean;
 };
 
 export type PageSectionStyleV2 = {
@@ -163,6 +256,14 @@ export type PageBlockStyleV2 = {
   borderColor?: string | null;
   padding?: PageBoxSpacingV2;
   margin?: PageBoxSpacingV2;
+  /** Token-backed typography (TASK-424); null/unset keeps the baked classes. */
+  fontFamily?: PageTypographyFontFamily | null;
+  fontSize?: PageTypographyFontSize | null;
+  fontWeight?: PageTypographyFontWeight | null;
+  /** Unitless line-height clamped to {@link PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP}. */
+  lineHeight?: number | null;
+  /** Letter-spacing in px clamped to {@link PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP}. */
+  letterSpacing?: number | null;
 };
 
 export type PageBlockVisibilityV2 = {
@@ -249,6 +350,11 @@ const pageBlockStyleKeys = [
   "borderColor",
   "padding",
   "margin",
+  "fontFamily",
+  "fontSize",
+  "fontWeight",
+  "lineHeight",
+  "letterSpacing",
 ] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
@@ -263,6 +369,7 @@ const defaultLayout: PageSectionLayoutV2 = {
   align: "start",
   justify: "start",
   maxWidth: 1080,
+  stackVertical: false,
 };
 const defaultStyle: PageSectionStyleV2 = {
   background: "#ffffff",
@@ -493,6 +600,17 @@ const numericSchema = (minimum: number, maximum: number): RecordValue => ({
   maximum,
 });
 
+const nullableNumericSchema = (minimum: number, maximum: number): RecordValue => ({
+  type: ["number", "null"],
+  minimum,
+  maximum,
+});
+
+const nullableEnumSchema = (options: readonly string[]): RecordValue => ({
+  type: ["string", "null"],
+  enum: [...options, null],
+});
+
 const stringSchema: RecordValue = { type: "string" };
 const nullableStringSchema: RecordValue = { type: ["string", "null"] };
 const booleanSchema: RecordValue = { type: "boolean" };
@@ -569,6 +687,17 @@ const pageBlockStyleJsonSchema: RecordValue = {
     borderColor: { type: ["string", "null"] },
     padding: pageBoxSpacingJsonSchema,
     margin: pageBoxSpacingJsonSchema,
+    fontFamily: nullableEnumSchema(pageTypographyFontFamilies),
+    fontSize: nullableEnumSchema(pageTypographyFontSizes),
+    fontWeight: nullableEnumSchema(pageTypographyFontWeights),
+    lineHeight: nullableNumericSchema(
+      PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP.min,
+      PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP.max
+    ),
+    letterSpacing: nullableNumericSchema(
+      PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP.min,
+      PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP.max
+    ),
   },
 };
 
@@ -671,6 +800,7 @@ const partialSectionLayoutJsonSchema: RecordValue = {
     align: { type: "string", enum: [...pageSectionAlignments] },
     justify: { type: "string", enum: [...pageSectionJustify] },
     maxWidth: numericSchema(320, 1920),
+    stackVertical: booleanSchema,
   },
 };
 
@@ -805,6 +935,7 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               align: { type: "string", enum: [...pageSectionAlignments] },
               justify: { type: "string", enum: [...pageSectionJustify] },
               maxWidth: { type: "number", minimum: 320, maximum: 1920 },
+              stackVertical: { type: "boolean" },
             },
           },
           style: {
@@ -894,6 +1025,46 @@ const normalizeEnum = <T extends string>(
     throw new PageDocumentError("page_document_invalid", `Invalid ${context}.`, context);
   }
   return fallback;
+};
+
+/**
+ * Nullable enum normalizer for the typography token fields: `null` is the
+ * explicit "use the baked default" value. Unknown tokens reject on fresh
+ * writes and fall back to `null` (no invented styling) on stored reads.
+ */
+const normalizeNullableEnum = <T extends string>(
+  value: unknown,
+  options: readonly T[],
+  context: string,
+  mode: NormalizeMode
+): T | null => {
+  if (value === null) return null;
+  if (typeof value === "string" && options.includes(value as T)) return value as T;
+  if (mode === "write") {
+    throw new PageDocumentError("page_document_invalid", `Invalid ${context}.`, context);
+  }
+  return null;
+};
+
+/**
+ * Nullable clamped number for the typography fields. Non-numeric values reject
+ * on fresh writes and fall back to `null` on stored reads; finite values clamp
+ * into the owner bounds.
+ */
+const readNullableClampedNumber = (
+  value: unknown,
+  clamp: { readonly min: number; readonly max: number },
+  context: string,
+  mode: NormalizeMode
+): number | null => {
+  if (value === null) return null;
+  if (!Number.isFinite(value)) {
+    if (mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${context}.`, context);
+    }
+    return null;
+  }
+  return Math.min(clamp.max, Math.max(clamp.min, value as number));
 };
 
 const assertKnownKeys = (
@@ -1043,7 +1214,7 @@ const normalizeSectionLayout = (
   partial = false
 ): Partial<PageSectionLayoutV2> | PageSectionLayoutV2 => {
   const input = requireRecord(value ?? {}, path, mode);
-  assertKnownKeys(input, ["columns", "align", "justify", "maxWidth"], path, mode);
+  assertKnownKeys(input, ["columns", "align", "justify", "maxWidth", "stackVertical"], path, mode);
   const result: Partial<PageSectionLayoutV2> = {};
   if (!partial || input.columns !== undefined) {
     result.columns = readNumber(input.columns, defaultLayout.columns, 1, 4);
@@ -1068,6 +1239,9 @@ const normalizeSectionLayout = (
   }
   if (!partial || input.maxWidth !== undefined) {
     result.maxWidth = readNumber(input.maxWidth, defaultLayout.maxWidth, 320, 1920);
+  }
+  if (!partial || input.stackVertical !== undefined) {
+    result.stackVertical = readBoolean(input.stackVertical, false);
   }
   return partial ? result : ({ ...defaultLayout, ...result } satisfies PageSectionLayoutV2);
 };
@@ -1234,6 +1408,46 @@ const normalizeBlockStyle = (
   if (input.margin !== undefined) {
     const margin = normalizeBlockBoxSpacing(input.margin, mode, `${path}.margin`);
     if (margin) result.margin = margin;
+  }
+  if (input.fontFamily !== undefined) {
+    result.fontFamily = normalizeNullableEnum(
+      input.fontFamily,
+      pageTypographyFontFamilies,
+      `${path}.fontFamily`,
+      mode
+    );
+  }
+  if (input.fontSize !== undefined) {
+    result.fontSize = normalizeNullableEnum(
+      input.fontSize,
+      pageTypographyFontSizes,
+      `${path}.fontSize`,
+      mode
+    );
+  }
+  if (input.fontWeight !== undefined) {
+    result.fontWeight = normalizeNullableEnum(
+      input.fontWeight,
+      pageTypographyFontWeights,
+      `${path}.fontWeight`,
+      mode
+    );
+  }
+  if (input.lineHeight !== undefined) {
+    result.lineHeight = readNullableClampedNumber(
+      input.lineHeight,
+      PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
+      `${path}.lineHeight`,
+      mode
+    );
+  }
+  if (input.letterSpacing !== undefined) {
+    result.letterSpacing = readNullableClampedNumber(
+      input.letterSpacing,
+      PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
+      `${path}.letterSpacing`,
+      mode
+    );
   }
   return Object.keys(result).length > 0 ? result : undefined;
 };

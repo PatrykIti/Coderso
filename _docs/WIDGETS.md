@@ -748,33 +748,33 @@ Katalog zawiera podstawowe metadata:
 
 ---
 
-## Template Preview (Admin)
+## Widget Templates (retired surface — TASK-420-03)
 
-- Podglad template renderuje bloki przez runtime `WidgetRenderer` (server-side).
-- Podglad jest read-only i pokazuje ostatnia zapisana wersje template.
-- Wynik zwracany jako HTML do iframe w edytorze template.
-- Widget templates remain a legacy `WidgetBlock[]` surface. They must not store
-  Page v2 `sections[]` or Page v2 block documents in `widget_template.blocks`.
-  TASK-420 owns any future Page Templates surface migration or replacement of
-  the Advanced Widgets template editor.
-
----
-
-## Template Revisions (Admin)
-
-- Kazdy zapis template tworzy rewizje (metadata + bloki).
-- Restore przywraca wybrana rewizje i zapisuje nowy snapshot po przywroceniu.
-- Rewizje pokazuja autora, status i liczbe blokow.
-
----
-
-## Template Categories (Admin)
-
-- Kategorie template sa zarzadzane przez ustawienia `widgets.templateCategories`.
-- Template zapisuje nazwe kategorii (match case-insensitive na UI).
-- Biblioteka templates filtruje po nazwie kategorii.
-- Edit/delete kategorii zachowuje kontekst wiersza i pokazuje osobny tryb
-  edycji/usuwania zamiast cicho zastepowac kategorie niejednoznacznym stanem.
+- The Advanced Widgets reusable-template editor, its routes
+  (`/widget-templates*`, `/widgets/templates*`, template categories), preview
+  target (`type=widget-template`), revisions flow, cached admin clients, and
+  the Templates section of the Widget Library are deleted. Reusable templates
+  are now the Page Templates surface (`/page-templates` routes,
+  `/advanced/page-templates` admin UI) documented in `_docs/PAGE_MODEL.md` and
+  `_docs/CMS_API.md`.
+- The widget catalog (`GET /widgets`) is core-widget-only.
+- Boundary guards stay permanent in both directions: fresh Page v2
+  `sections[]` payloads into legacy widget surfaces reject
+  (`legacy_widget_surface_page_v2_document_invalid`), and legacy
+  `WidgetBlock[]` payloads into Page Templates reject
+  (`page_template_legacy_widget_blocks_invalid`).
+- Ring 2 residue (recorded by TASK-420-03 verification): `widget_templates` +
+  `widget_template_revisions` tables stay because live consumers remain
+  (solution-kit template seeding via `templateInstaller`, the
+  `template-section` core widget on custom screens/detail pages, and existing
+  rows in production data). `widgetTemplateService`,
+  `widgetTemplateRevisionService`, `widgetTemplateCategoryService`,
+  `widgetTemplateSettings`, and `templateSectionRuntime` remain as data-layer
+  modules for those consumers only; they no longer have any admin product
+  surface. The storage drop is an explicit follow-up task, not silent scope.
+- The `template-section` widget keeps rendering already stored rows
+  (fail-closed placeholders for unresolvable ids). Its admin editors are
+  read-only for template selection; presentational metadata stays editable.
 
 ## Wizard QA contracts
 

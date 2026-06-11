@@ -5,7 +5,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-423, TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -25,13 +27,13 @@ inline badges on unrelated controls.
 
 ## Sub-Tasks
 
-- [ ] TASK-425-01: Responsive panel scope, labels, and override-state contract.
-- [ ] TASK-425-01-L01: Define panel-owned responsive controls and inherited vs
+- [x] TASK-425-01: Responsive panel scope, labels, and override-state contract.
+- [x] TASK-425-01-L01: Define panel-owned responsive controls and inherited vs
       override semantics.
-- [ ] TASK-425-02: Responsive panel widgets and breakpoint affordances.
-- [ ] TASK-425-02-L01: Implement hide/layout toggles, reset actions, and device
+- [x] TASK-425-02: Responsive panel widgets and breakpoint affordances.
+- [x] TASK-425-02-L01: Implement hide/layout toggles, reset actions, and device
       readouts with dedicated controls.
-- [ ] TASK-425-03: Validation, docs, and viewport-authoring closure.
+- [x] TASK-425-03: Validation, docs, and viewport-authoring closure.
 
 ---
 
@@ -50,3 +52,8 @@ inline badges on unrelated controls.
 - `docs/guide/` Page editor docs
 - `_docs/_TASKS/README.md`
 
+---
+
+## Completion Notes
+
+Family completed 2026-06-11. Responsive tab now owns real content: hide-on-desktop/tablet/mobile switches (existing visibility paths), per-field override list with working resets, NEW section layout.stackVertical (full 4-layer chain + @media emission; forces grid-cols-1 beating template-floored columns), device switcher with labels + px readout (Desktop 1080 / Tablet 744 / Mobile 390) and an editing-scope pill. Live smoke B PASS: hide-on-mobile display:none @390 on the front, stackVertical 1 col @744 via tablet override.

@@ -111,6 +111,52 @@ describe("page editor control ui model adapter", () => {
     }
   });
 
+  test("typography controls map to segmented token selects and slider-stepper precision models", () => {
+    expect(resolveById("block.style.fontFamily")).toMatchObject({
+      kind: "segmented",
+      options: ["sans", "display"],
+      labels: { sans: "Sans", display: "Display" },
+    });
+    // The font-size scale tops out at 5xl (matching the baked h1 class) and
+    // STAYS segmented above the select-upgrade limit: declared segmented
+    // controls never degrade to a native select.
+    expect(resolveById("block.style.fontSize")).toMatchObject({
+      kind: "segmented",
+      options: ["sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
+      labels: {
+        sm: "Small",
+        md: "Medium",
+        lg: "Large",
+        xl: "XL",
+        "2xl": "2XL",
+        "3xl": "3XL",
+        "4xl": "4XL",
+        "5xl": "5XL",
+      },
+    });
+    expect(resolveById("block.style.fontWeight")).toMatchObject({
+      kind: "segmented",
+      options: ["normal", "medium", "semibold", "bold"],
+      labels: { normal: "Normal", medium: "Medium", semibold: "Semibold", bold: "Bold" },
+    });
+    // Registry-owned fractional step/unit force the slider+stepper pairing
+    // even below the wide-span threshold; line height stays unitless.
+    expect(resolveById("block.style.lineHeight")).toEqual({
+      kind: "sliderStepper",
+      min: 1,
+      max: 2.5,
+      step: 0.05,
+      unit: "",
+    });
+    expect(resolveById("block.style.letterSpacing")).toEqual({
+      kind: "sliderStepper",
+      min: -2,
+      max: 8,
+      step: 0.5,
+      unit: "px",
+    });
+  });
+
   test("small finite select sets upgrade to segmented with English labels", () => {
     const segmentedIds = [
       "section.layout.align",
@@ -177,6 +223,15 @@ describe("page editor control ui model adapter", () => {
     if (model.kind === "select") {
       expect(model.options).toEqual(options);
       expect(model.labels.one).toBe("One");
+    }
+  });
+
+  test("declared segmented controls stay segmented above the select-upgrade limit", () => {
+    const options = ["one", "two", "three", "four", "five", "six", "seven", "eight"] as const;
+    const model = resolvePageEditorControlUiModel(makeControl({ input: "segmented", options }));
+    expect(model.kind).toBe("segmented");
+    if (model.kind === "segmented") {
+      expect(model.options).toEqual(options);
     }
   });
 

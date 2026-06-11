@@ -5,7 +5,9 @@
 **Category:** Pages / Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-418-06-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -39,9 +41,9 @@ Current frozen boundary:
 
 ## Sub-Tasks
 
-- [ ] TASK-420-01: Audit reusable template IA and current usage.
-- [ ] TASK-420-02: Design Page-template storage preview and replacement contract.
-- [ ] TASK-420-03: Implement Page Templates admin rewrite closure.
+- [x] TASK-420-01: Audit reusable template IA and current usage.
+- [x] TASK-420-02: Design Page-template storage preview and replacement contract.
+- [x] TASK-420-03: Implement Page Templates admin rewrite closure.
 
 ---
 
@@ -170,3 +172,9 @@ Regression-test shape:
 - `_docs/CMS_SPEC.md`
 - `_docs/ARCHITECTURE.md`
 - `_docs/ASSISTANT_SITE_BUILDER.md` if assistant surfaces change.
+
+---
+
+## Completion Notes
+
+Family completed 2026-06-11. Obsolete Advanced Widgets/widget-template path replaced by the Page Templates surface built on Page v2: pageTemplateLibrarySchema/Service owners, pageTemplates DB table (migration 0058 + full artifacts), 7-route internal family with mapPageTemplateError + registration tests, page-template preview target on the public pipeline (widget-template target unresolvable), cache contract end-to-end (keys/client/cacheBus/prefetch + ADMIN_CACHE docs), admin list+editor reusing the shared Page Editor v2 shell, nav swap, widget-template surface deleted. Live smoke D PASS: author template -> preview -> publish -> insert into a page from the picker.

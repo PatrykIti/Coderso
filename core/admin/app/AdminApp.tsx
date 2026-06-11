@@ -86,7 +86,8 @@ import {
   UsersRolesRoute,
   WebhooksRoute,
   WidgetLibraryRoute,
-  WidgetTemplateEditorRoute,
+  PageTemplatesRoute,
+  PageTemplateEditorRoute,
 } from "@/app/adminRouteComponents";
 import { AdminRouteErrorBoundary } from "@/app/AdminRouteErrorBoundary";
 import {
@@ -771,9 +772,14 @@ export function AdminApp({ path }: AdminAppProps) {
         permission: "widgets:read",
       },
       {
-        pattern: "/advanced/widgets/templates/:id",
-        render: () => <WidgetTemplateEditorRoute.Component />,
-        permission: "widgets:read",
+        pattern: "/advanced/page-templates",
+        render: () => <PageTemplatesRoute.Component />,
+        permission: "content:read",
+      },
+      {
+        pattern: "/advanced/page-templates/:id",
+        render: () => <PageTemplateEditorRoute.Component />,
+        permission: "content:read",
       },
       {
         pattern: "/settings",

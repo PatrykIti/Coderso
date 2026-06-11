@@ -8,6 +8,7 @@ import {
   Filter,
   Layers,
   LayoutGrid,
+  LayoutTemplate,
   Megaphone,
   Menu,
   Search,
@@ -24,7 +25,7 @@ export type AdvancedModuleId =
   | "entries"
   | "custom-screens"
   | "widgets"
-  | "templates"
+  | "page-templates"
   | "forms"
   | "posts"
   | "listings"
@@ -143,14 +144,19 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
     },
   },
   {
-    id: "templates",
-    label: "Templates",
+    id: "page-templates",
+    label: "Page Templates",
     tier: "v1",
     ownerArea: "design",
     lifecycle: "stable",
-    description: "Template presets and layout skeletons for reusable pages.",
-    dependencies: ["widgets"],
-    nav: null,
+    description: "Reusable Page v2 section templates authored with the Page Editor.",
+    dependencies: [],
+    nav: {
+      href: "/admin/advanced/page-templates",
+      icon: LayoutTemplate,
+      defaultEnabled: true,
+      permission: "content:read",
+    },
   },
   {
     id: "forms",
@@ -356,7 +362,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
     ownerArea: "growth",
     lifecycle: "preview",
     description: "Template kits with AI-assisted setup and guided defaults.",
-    dependencies: ["templates", "widgets", "entries"],
+    dependencies: ["page-templates", "widgets", "entries"],
     nav: {
       href: "/admin/advanced/solution-kits",
       icon: Sparkles,

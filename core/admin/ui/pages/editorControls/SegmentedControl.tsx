@@ -10,6 +10,14 @@ export type SegmentedControlProps = {
   optionLabels?: Readonly<Record<string, string>>;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /**
+   * Also emit `onChange` when the already-active option is clicked. Device-
+   * scoped editor fields use this on tablet/mobile while the value is still
+   * inherited: explicitly choosing the inherited value must PIN it as a
+   * breakpoint override instead of silently no-opping (phase2 smoke anomaly:
+   * Text align "Center" over an inherited center created no override).
+   */
+  commitActiveOption?: boolean;
 };
 
 /**
@@ -43,6 +51,7 @@ export const SegmentedControl = ({
   optionLabels,
   onChange,
   disabled = false,
+  commitActiveOption = false,
 }: SegmentedControlProps) => {
   const groupRef = useRef<HTMLDivElement | null>(null);
 
@@ -100,7 +109,7 @@ export const SegmentedControl = ({
               }`}
               onFocus={(event) => scrollOptionIntoView(event.currentTarget)}
               onClick={() => {
-                if (!disabled && !active) onChange(option);
+                if (!disabled && (!active || commitActiveOption)) onChange(option);
               }}
             >
               {optionLabels?.[option] ?? option}

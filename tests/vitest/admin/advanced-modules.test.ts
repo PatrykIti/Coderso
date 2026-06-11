@@ -12,12 +12,13 @@ import {
 } from "../../../core/admin/ui/navigation/sidebarConfig";
 import { buildAdvancedFeatureFlagsForSolutionKit } from "../../../core/admin/services/solutionKitSelection";
 
-const ids = new Set(ADVANCED_MODULE_REGISTRY.map((module) => module.id));
+const ids = new Set<string>(ADVANCED_MODULE_REGISTRY.map((module) => module.id));
 
 test("Advanced module registry covers v1-v3 catalog", () => {
   expect(ADVANCED_MODULE_REGISTRY).toHaveLength(19);
   expect(ids.has("engine")).toBe(true);
-  expect(ids.has("templates")).toBe(true);
+  expect(ids.has("page-templates")).toBe(true);
+  expect(ids.has("templates")).toBe(false);
   expect(ids.has("membership-portal")).toBe(true);
   expect(ids.has("ai-kit-wizard")).toBe(true);
 
@@ -33,6 +34,7 @@ test("buildAdvancedNavItems returns stable default navigation contract", () => {
     "Entries",
     "Screens",
     "Widgets",
+    "Page Templates",
     "Forms",
     "Listings",
     "Filters",
@@ -59,6 +61,7 @@ test("buildAdvancedNavItems returns stable default navigation contract", () => {
   expect(items.some((item) => item.href === "/admin/advanced/commerce")).toBe(true);
   expect(items.some((item) => item.href === "/admin/advanced/popups")).toBe(true);
   expect(items.some((item) => item.href === "/admin/advanced/custom-screens")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/page-templates")).toBe(true);
   expect(items.some((item) => item.href === "/admin/advanced/solution-kits")).toBe(true);
 });
 

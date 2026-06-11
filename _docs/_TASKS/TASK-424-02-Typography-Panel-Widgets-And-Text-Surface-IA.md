@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-424-01, TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -23,7 +25,7 @@ same rendered node on both the editor canvas and the published front.
 
 ## Sub-Tasks
 
-- [ ] TASK-424-02-L01: Render dedicated typography controls and shared
+- [x] TASK-424-02-L01: Render dedicated typography controls and shared
       text-surface UX.
 
 ---
@@ -41,3 +43,8 @@ same rendered node on both the editor canvas and the published front.
 - `docs/guide/` Page editor docs
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: Typography panel category rendered only for text-capable block selections; segmented family/size/weight + sliders lineHeight/letterSpacing; textAlign relocated into the group with storage paths unchanged.

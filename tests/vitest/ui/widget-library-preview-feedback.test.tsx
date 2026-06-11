@@ -35,14 +35,6 @@ vi.mock("@/services/widgetsClient", () => ({
   listWidgetCatalogCached: async () => widgetCatalog,
 }));
 
-vi.mock("@/services/widgetTemplateCategoriesClient", () => ({
-  createWidgetTemplateCategory: vi.fn(),
-  deleteWidgetTemplateCategory: vi.fn(),
-  getCachedWidgetTemplateCategories: () => [],
-  listWidgetTemplateCategoriesCached: async () => [],
-  updateWidgetTemplateCategory: vi.fn(),
-}));
-
 vi.mock("@/services/pagesClient", () => ({
   getCachedPages: () => [],
   getPageCached: vi.fn(),
@@ -53,13 +45,6 @@ vi.mock("@/services/pagesClient", () => ({
 vi.mock("@/services/userSettingsClient", () => ({
   getUserSettings: async () => ({ "widgets.favorites": [] }),
   setUserSetting: vi.fn(),
-}));
-
-vi.mock("@/services/widgetTemplatesClient", () => ({
-  deleteWidgetTemplate: vi.fn(),
-  duplicateWidgetTemplate: vi.fn(),
-  getWidgetTemplateCached: vi.fn(),
-  updateWidgetTemplate: vi.fn(),
 }));
 
 vi.mock("../../../core/admin/ui/widgets/WidgetLibraryRowActions", () => ({

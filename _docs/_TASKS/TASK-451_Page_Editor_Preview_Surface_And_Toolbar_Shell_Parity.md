@@ -5,7 +5,9 @@
 **Category:** Pages / Admin UI / Preview
 **Estimated Effort:** Large
 **Dependencies:** TASK-421, TASK-423
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -25,13 +27,13 @@ closure family instead of staying as loose notes.
 
 ## Sub-Tasks
 
-- [ ] TASK-451-01: Preview route and dialog contract freeze.
-- [ ] TASK-451-01-L01: Diagnose and fix the preview URL/environment composition
+- [x] TASK-451-01: Preview route and dialog contract freeze.
+- [x] TASK-451-01-L01: Diagnose and fix the preview URL/environment composition
       so the dialog renders, without weakening preview-token rules.
-- [ ] TASK-451-02: Toolbar shell and parity polish.
-- [ ] TASK-451-02-L01: Normalize toolbar labels, add-surface affordances, and
+- [x] TASK-451-02: Toolbar shell and parity polish.
+- [x] TASK-451-02-L01: Normalize toolbar labels, add-surface affordances, and
       remaining shell parity behaviors.
-- [ ] TASK-451-03: Three-surface validation and closure.
+- [x] TASK-451-03: Three-surface validation and closure.
 
 ---
 
@@ -67,3 +69,8 @@ closure family instead of staying as loose notes.
 - `_docs/PAGE_MODEL.md`
 - `_docs/_TASKS/README.md`
 
+---
+
+## Completion Notes
+
+Family completed 2026-06-11. Preview root cause diagnosed (NOT a missing route): the server-side probe failed because Bun fetch connects IPv6-only for *.localhost while the dev server binds IPv4 — fixed with a loopback IPv4 retry preserving the Host header (token model unchanged). Toolbar labels no longer leak content (resolveToolbarTargetLabel; "Text tools"/"Statistic tools" verified live). Inline per-gap "Add section" zones insert at the exact index. Live smoke C PASS incl. draft-vs-published proof in the dialog.

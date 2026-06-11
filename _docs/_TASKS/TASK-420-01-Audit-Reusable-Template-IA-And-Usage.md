@@ -6,7 +6,9 @@
 **Category:** Pages / Templates / Product IA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-420
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -94,3 +96,9 @@ Regression-test shape:
 - `_docs/WIDGETS.md`
 - `_docs/PAGE_MODEL.md`
 - TASK-420 acceptance notes.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: read-only DELETE/REWRITE/KEEP inventory of the entire widget-template surface (routes, UI, nav, cache, preview target, runtime, assistant, tests) gating the rewrite.

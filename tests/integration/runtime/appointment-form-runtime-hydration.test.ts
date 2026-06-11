@@ -289,10 +289,6 @@ bunMock?.module("../../../core/services/search/searchIndexService", () => ({
   }),
 }));
 
-bunMock?.module("../../../core/services/widgets/widgetTemplatePreviewService", () => ({
-  getWidgetTemplatePreviewModel: async () => null,
-}));
-
 bunMock?.module("../../../core/services/widgets/templateSectionRuntime", () => ({
   resolveTemplateSectionRuntimeData: async () => ({
     blocks: [],

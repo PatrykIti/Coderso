@@ -1,37 +1,17 @@
-import type {
-  WidgetCategoryId,
-  WidgetComplexity,
-  WidgetItem,
-  WidgetLibraryTab,
-  WidgetSource,
-} from "./types";
+import type { WidgetCategoryId, WidgetComplexity, WidgetItem, WidgetLibraryTab } from "./types";
 import type { ModulePackStatus } from "../../../widgets/registry";
 
 export const normalizeCategoryValue = (value: string) => value.trim().toLowerCase();
 
-export const matchesTemplateCategory = (
-  templateCategory: string,
-  filter: string
-) => {
-  if (filter === "all") return true;
-  return (
-    normalizeCategoryValue(templateCategory) === normalizeCategoryValue(filter)
-  );
-};
+// Reusable templates moved to the dedicated Page Templates surface; the
+// widget library scopes are core-widget-only.
+export type WidgetLibraryScope = "all-items" | "favorites" | "widgets";
 
-export type WidgetLibraryScope = "all-items" | "favorites" | "templates" | "widgets";
-
-export type WidgetLibrarySection =
-  | "all-items"
-  | "favorites"
-  | "templates"
-  | "widgets-all"
-  | WidgetCategoryId;
+export type WidgetLibrarySection = "all-items" | "favorites" | "widgets-all" | WidgetCategoryId;
 
 export const WIDGET_LIBRARY_SECTION_IDS = [
   "all-items",
   "favorites",
-  "templates",
   "widgets-all",
   "layout",
   "content",
@@ -58,19 +38,12 @@ export function normalizeWidgetLibrarySection(
 
 export type WidgetFilterItem = Pick<
   WidgetItem,
-  | "name"
-  | "categoryLabel"
-  | "category"
-  | "complexity"
-  | "module"
-  | "isFavorite"
-  | "source"
+  "name" | "categoryLabel" | "category" | "complexity" | "module" | "isFavorite" | "source"
 >;
 
 export type WidgetFilterOptions = {
   query: string;
   activeScope: WidgetLibraryScope;
-  templateCategory: string;
   widgetCategory: "all" | WidgetCategoryId;
   widgetTab: WidgetLibraryTab;
   widgetModule: string;
@@ -96,9 +69,6 @@ export type WidgetScopeCountOptions = Pick<
   "query" | "widgetTab" | "widgetModule" | "widgetComplexity"
 >;
 
-const toSource = (value: WidgetFilterItem["source"]): WidgetSource =>
-  value === "template" ? "template" : "core";
-
 export function resolveWidgetLibrarySectionFilter(
   section: WidgetLibrarySection
 ): Pick<WidgetFilterOptions, "activeScope" | "widgetCategory"> {
@@ -111,11 +81,7 @@ export function resolveWidgetLibrarySectionFilter(
       widgetCategory: section as WidgetCategoryId,
     };
   }
-  if (
-    section === "all-items" ||
-    section === "favorites" ||
-    section === "templates"
-  ) {
+  if (section === "all-items" || section === "favorites") {
     return { activeScope: section, widgetCategory: "all" };
   }
   return { activeScope: "all-items", widgetCategory: "all" };
@@ -126,13 +92,8 @@ export const filterWidgetLibraryItems = <T extends WidgetFilterItem>(
   options: WidgetFilterOptions
 ) => {
   const normalized = options.query.trim().toLowerCase();
-  const normalizedTemplateCategory =
-    options.templateCategory === "all"
-      ? "all"
-      : normalizeCategoryValue(options.templateCategory);
 
   const matched = widgets.filter((widget) => {
-    const source = toSource(widget.source);
     const matchesQuery =
       normalized.length === 0 ||
       widget.name.toLowerCase().includes(normalized) ||
@@ -141,30 +102,17 @@ export const filterWidgetLibraryItems = <T extends WidgetFilterItem>(
     const matchesScope = (() => {
       if (options.activeScope === "all-items") return true;
       if (options.activeScope === "favorites") return Boolean(widget.isFavorite);
-      if (options.activeScope === "templates") {
-        if (source !== "template") return false;
-        if (normalizedTemplateCategory === "all") return true;
-        if (typeof widget.category !== "string") return false;
-        return matchesTemplateCategory(widget.category, normalizedTemplateCategory);
-      }
       if (options.activeScope === "widgets") {
-        if (source !== "core") return false;
         if (options.widgetTab === "recommended" && widget.complexity !== "composite") {
           return false;
         }
         if (options.widgetModule !== "all" && widget.module !== options.widgetModule) {
           return false;
         }
-        if (
-          options.widgetComplexity !== "all" &&
-          widget.complexity !== options.widgetComplexity
-        ) {
+        if (options.widgetComplexity !== "all" && widget.complexity !== options.widgetComplexity) {
           return false;
         }
-        return (
-          options.widgetCategory === "all" ||
-          widget.category === options.widgetCategory
-        );
+        return options.widgetCategory === "all" || widget.category === options.widgetCategory;
       }
       return true;
     })();
@@ -201,7 +149,6 @@ export function countWidgetLibraryWidgets<T extends WidgetFilterItem>(
   return filterWidgetLibraryItems(widgets, {
     ...options,
     activeScope: "widgets",
-    templateCategory: "all",
     widgetCategory: "all",
   }).length;
 }
@@ -210,29 +157,25 @@ export function countWidgetLibraryWidgetsByCategory<T extends WidgetFilterItem>(
   widgets: T[],
   options: WidgetScopeCountOptions
 ) {
-  const categories: WidgetCategoryId[] = [
-    "layout",
-    "content",
-    "forms",
-    "navigation",
-    "media",
-  ];
+  const categories: WidgetCategoryId[] = ["layout", "content", "forms", "navigation", "media"];
 
-  return categories.reduce<Record<WidgetCategoryId, number>>((result, category) => {
-    result[category] = filterWidgetLibraryItems(widgets, {
-      ...options,
-      activeScope: "widgets",
-      templateCategory: "all",
-      widgetCategory: category,
-    }).length;
-    return result;
-  }, {
-    layout: 0,
-    content: 0,
-    forms: 0,
-    navigation: 0,
-    media: 0,
-  });
+  return categories.reduce<Record<WidgetCategoryId, number>>(
+    (result, category) => {
+      result[category] = filterWidgetLibraryItems(widgets, {
+        ...options,
+        activeScope: "widgets",
+        widgetCategory: category,
+      }).length;
+      return result;
+    },
+    {
+      layout: 0,
+      content: 0,
+      forms: 0,
+      navigation: 0,
+      media: 0,
+    }
+  );
 }
 
 export function countWidgetLibrarySections<T extends WidgetFilterItem>(
@@ -250,7 +193,6 @@ export function countWidgetLibrarySections<T extends WidgetFilterItem>(
     {
       "all-items": 0,
       favorites: 0,
-      templates: 0,
       "widgets-all": 0,
       layout: 0,
       content: 0,
@@ -296,9 +238,7 @@ export function buildWidgetModuleOptions(
 
       if (status.valid) {
         const readySuffix =
-          status.enforcement === "strict"
-            ? "Ready to use"
-            : "Ready to use (Beta)";
+          status.enforcement === "strict" ? "Ready to use" : "Ready to use (Beta)";
         return {
           value: module,
           label: `${toDisplayLabel(module)} - ${readySuffix}`,

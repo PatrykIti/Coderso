@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-423
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -20,7 +22,7 @@ communicates viewport scope and width truthfully.
 
 ## Sub-Tasks
 
-- [ ] TASK-425-01-L01: Define responsive panel controls and override ownership.
+- [x] TASK-425-01-L01: Define responsive panel controls and override ownership.
 
 ---
 
@@ -36,3 +38,8 @@ communicates viewport scope and width truthfully.
 
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: panel control metadata + override ownership contract implemented over the existing responsive override model.

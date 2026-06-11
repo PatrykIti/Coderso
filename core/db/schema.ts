@@ -310,6 +310,27 @@ export const widgetTemplateRevisions = pgTable(
   })
 );
 
+export const pageTemplates = pgTable(
+  "page_templates",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    description: text("description"),
+    category: text("category"),
+    status: text("status").notNull().default("draft"),
+    document: jsonb("document").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("page_templates_slug_idx").on(t.slug),
+    statusIdx: index("page_templates_status_idx").on(t.status),
+    nameIdx: index("page_templates_name_idx").on(t.name),
+    updatedAtIdx: index("page_templates_updated_at_idx").on(t.updatedAt),
+  })
+);
+
 export const pageRevisions = pgTable(
   "page_revisions",
   {

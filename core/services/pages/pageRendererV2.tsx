@@ -4,6 +4,10 @@ import { ContentListBlock } from "../../widgets/core/contentList";
 import { FormEmbedBlock, type FormEmbedData } from "../../widgets/core/formEmbed";
 import {
   getPageBlockActiveSlotKeys,
+  isPageTypographyCapableBlockType,
+  pageTypographyFontFamilyCssValues,
+  pageTypographyFontSizeCssValues,
+  pageTypographyFontWeightCssValues,
   resolvePageDocumentForBreakpoint,
   type PageBlockSlotKey,
   type PageBlockV2,
@@ -16,6 +20,7 @@ import {
   isPageBlockVisualElementType,
   PAGE_BLOCK_ELEMENT_ATTRIBUTE,
   PAGE_BLOCK_ID_ATTRIBUTE,
+  PAGE_BLOCK_TEXT_ATTRIBUTE,
   PAGE_SECTION_CONTENT_ATTRIBUTE,
   PAGE_SECTION_ID_ATTRIBUTE,
 } from "./pageResponsiveCss";
@@ -243,7 +248,13 @@ export const toPageSectionRenderProps = (
   options?: { layoutMode?: PageSectionLayoutMode }
 ): PageSectionRenderProps => {
   const template = resolvePageSectionTemplate(section);
-  const columns = pageSectionTemplateColumns(template);
+  // stackVertical contract (TASK-425): when the effective resolved value is
+  // true, the section content grid collapses to a single column, beating the
+  // template-floored column count. Callers pass breakpoint-resolved sections
+  // (editor canvas, flattened previews), so the override cascade is already
+  // merged here; the public base markup uses the desktop-resolved value and
+  // pageResponsiveCss.ts emits the tablet/mobile delta.
+  const columns = section.layout.stackVertical === true ? 1 : pageSectionTemplateColumns(template);
   return {
     sectionClassName: "w-full px-4 py-6",
     contentClassName: joinPageRenderClasses(
@@ -292,6 +303,42 @@ const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties =>
   };
 };
 
+/**
+ * Typography style surface of `PageBlockStyleV2` (TASK-424). It paints on the
+ * exact text node(s) a block renders (the `<h1>`/`<p>`/`<blockquote>`/list/
+ * statistic/card text elements) — NOT on the block frame — because the baked
+ * utility classes on those nodes (`text-5xl`, `font-semibold`, `leading-7`)
+ * would beat any value that only arrives via inheritance. Inline values on
+ * the node itself always beat its classes, so an explicit token visually
+ * wins. Unset/null fields emit nothing, keeping pre-TASK-424 documents
+ * pixel-identical. For {@link isPageBlockVisualElementType} text blocks (the
+ * button) the same surface merges into the inner visual element style.
+ */
+export const toPageBlockTypographyStyle = (block: PageBlockV2): PageBlockStyleProperties => {
+  if (!isPageTypographyCapableBlockType(block.type)) return {};
+  const style = block.style ?? {};
+  const result: PageBlockStyleProperties = {};
+  if (style.fontFamily) result.fontFamily = pageTypographyFontFamilyCssValues[style.fontFamily];
+  if (style.fontSize) result.fontSize = pageTypographyFontSizeCssValues[style.fontSize];
+  if (style.fontWeight) result.fontWeight = pageTypographyFontWeightCssValues[style.fontWeight];
+  if (typeof style.lineHeight === "number" && Number.isFinite(style.lineHeight)) {
+    result.lineHeight = style.lineHeight;
+  }
+  if (typeof style.letterSpacing === "number" && Number.isFinite(style.letterSpacing)) {
+    result.letterSpacing = `${style.letterSpacing}px`;
+  }
+  return result;
+};
+
+/**
+ * Stable hook for the responsive CSS contract: every typography-painted text
+ * node carries it so tablet/mobile typography overrides can target the same
+ * node the desktop base paints inline.
+ */
+export const pageBlockTextDataAttributes = {
+  [PAGE_BLOCK_TEXT_ATTRIBUTE]: "true",
+} as const;
+
 /** Layout-affecting style surface that always stays on the block frame. */
 const toPageBlockLayoutStyle = (block: PageBlockV2): PageBlockStyleProperties => {
   const style = block.style ?? {};
@@ -315,7 +362,10 @@ export const toPageBlockElementStyle = (block: PageBlockV2): PageBlockStylePrope
   if (visual.backgroundImage && visual.backgroundColor === undefined) {
     visual.backgroundColor = "transparent";
   }
-  return visual;
+  // Text-bearing re-routed types (the button) paint text on the visual
+  // element itself, so the typography surface merges here; non-text types
+  // (the image) skip it inside toPageBlockTypographyStyle.
+  return { ...visual, ...toPageBlockTypographyStyle(block) };
 };
 
 export const pageBlockElementDataAttributes = {
@@ -355,18 +405,24 @@ const renderBlockText = (
 const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
   const text = renderBlockText(block, "text", readText(block.props.text, "Heading"), context);
   const level = readText(block.props.level, "h2");
-  const className = joinPageRenderClasses(
-    "font-semibold leading-tight text-[var(--coderso-block-text,#020617)]",
-    level === "h1" ? "text-5xl" : level === "h2" ? "text-4xl" : "text-2xl",
-    pageTextAlignClass(block.props.align)
-  );
+  // Typography contract: explicit tokens paint inline on the heading element
+  // itself so they beat the baked level classes (text-5xl, font-semibold).
+  const textNodeProps = {
+    className: joinPageRenderClasses(
+      "font-semibold leading-tight text-[var(--coderso-block-text,#020617)]",
+      level === "h1" ? "text-5xl" : level === "h2" ? "text-4xl" : "text-2xl",
+      pageTextAlignClass(block.props.align)
+    ),
+    style: toPageBlockTypographyStyle(block),
+    ...pageBlockTextDataAttributes,
+  };
 
-  if (level === "h1") return <h1 className={className}>{text}</h1>;
-  if (level === "h3") return <h3 className={className}>{text}</h3>;
-  if (level === "h4") return <h4 className={className}>{text}</h4>;
-  if (level === "h5") return <h5 className={className}>{text}</h5>;
-  if (level === "h6") return <h6 className={className}>{text}</h6>;
-  return <h2 className={className}>{text}</h2>;
+  if (level === "h1") return <h1 {...textNodeProps}>{text}</h1>;
+  if (level === "h3") return <h3 {...textNodeProps}>{text}</h3>;
+  if (level === "h4") return <h4 {...textNodeProps}>{text}</h4>;
+  if (level === "h5") return <h5 {...textNodeProps}>{text}</h5>;
+  if (level === "h6") return <h6 {...textNodeProps}>{text}</h6>;
+  return <h2 {...textNodeProps}>{text}</h2>;
 };
 
 const renderImage = (block: PageBlockV2) => {
@@ -642,12 +698,21 @@ const renderList = (block: PageBlockV2, context: PageBlockRenderContext) => {
       </li>
     );
   });
+  const listStyle = toPageBlockTypographyStyle(block);
   return readBoolean(block.props.ordered, false) ? (
-    <ol className="list-decimal space-y-2 pl-6 text-[var(--coderso-block-text,#334155)]">
+    <ol
+      className="list-decimal space-y-2 pl-6 text-[var(--coderso-block-text,#334155)]"
+      style={listStyle}
+      {...pageBlockTextDataAttributes}
+    >
       {children}
     </ol>
   ) : (
-    <ul className="list-disc space-y-2 pl-6 text-[var(--coderso-block-text,#334155)]">
+    <ul
+      className="list-disc space-y-2 pl-6 text-[var(--coderso-block-text,#334155)]"
+      style={listStyle}
+      {...pageBlockTextDataAttributes}
+    >
       {children}
     </ul>
   );
@@ -824,6 +889,8 @@ export const renderPageBlockContent = (
             "text-base leading-7 text-[var(--coderso-block-text,#334155)]",
             pageTextAlignClass(block.props.align)
           )}
+          style={toPageBlockTypographyStyle(block)}
+          {...pageBlockTextDataAttributes}
         >
           {renderBlockText(block, "text", readText(block.props.text), context)}
         </p>
@@ -866,17 +933,29 @@ export const renderPageBlockContent = (
     }
     case "list":
       return renderList(block, context);
-    case "card":
+    case "card": {
+      // Card paints two text nodes; only explicitly set typography fields are
+      // emitted, so unset fields keep each node's own baked scale.
+      const cardTypography = toPageBlockTypographyStyle(block);
       return (
         <article className="rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)] p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-[var(--coderso-block-text,#020617)]">
+          <h3
+            className="text-lg font-semibold text-[var(--coderso-block-text,#020617)]"
+            style={cardTypography}
+            {...pageBlockTextDataAttributes}
+          >
             {readText(block.props.title, "Card title")}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--coderso-block-text,#475569)]">
+          <p
+            className="mt-2 text-sm leading-6 text-[var(--coderso-block-text,#475569)]"
+            style={cardTypography}
+            {...pageBlockTextDataAttributes}
+          >
             {readText(block.props.text)}
           </p>
         </article>
       );
+    }
     case "divider":
       return (
         <hr
@@ -886,23 +965,43 @@ export const renderPageBlockContent = (
       );
     case "spacer":
       return <div aria-hidden="true" style={{ height: `${readNumber(block.props.size, 32)}px` }} />;
-    case "statistic":
+    case "statistic": {
+      // Statistic paints three text nodes; explicit fields apply to all of
+      // them while unset fields keep each node's own baked scale.
+      const statisticTypography = toPageBlockTypographyStyle(block);
       return (
         <div className="rounded border border-slate-200 p-5">
-          <div className="text-3xl font-semibold text-[var(--coderso-block-text,#020617)]">
+          <div
+            className="text-3xl font-semibold text-[var(--coderso-block-text,#020617)]"
+            style={statisticTypography}
+            {...pageBlockTextDataAttributes}
+          >
             {renderBlockText(block, "value", readText(block.props.value, "0"), context)}
           </div>
-          <div className="mt-1 text-sm font-medium text-[var(--coderso-block-text,#334155)]">
+          <div
+            className="mt-1 text-sm font-medium text-[var(--coderso-block-text,#334155)]"
+            style={statisticTypography}
+            {...pageBlockTextDataAttributes}
+          >
             {renderBlockText(block, "label", readText(block.props.label, "Metric"), context)}
           </div>
-          <div className="mt-1 text-sm text-[var(--coderso-block-text,#64748b)]">
+          <div
+            className="mt-1 text-sm text-[var(--coderso-block-text,#64748b)]"
+            style={statisticTypography}
+            {...pageBlockTextDataAttributes}
+          >
             {renderBlockText(block, "caption", readText(block.props.caption), context)}
           </div>
         </div>
       );
+    }
     case "quote":
       return (
-        <blockquote className="border-l-4 border-[var(--coderso-section-accent,#0d9488)] pl-5 text-lg leading-8 text-[var(--coderso-block-text,#334155)]">
+        <blockquote
+          className="border-l-4 border-[var(--coderso-section-accent,#0d9488)] pl-5 text-lg leading-8 text-[var(--coderso-block-text,#334155)]"
+          style={toPageBlockTypographyStyle(block)}
+          {...pageBlockTextDataAttributes}
+        >
           <p>{renderBlockText(block, "text", readText(block.props.text), context)}</p>
           {readText(block.props.cite) ? (
             <cite className="mt-3 block text-sm text-[var(--coderso-block-text,#64748b)]">

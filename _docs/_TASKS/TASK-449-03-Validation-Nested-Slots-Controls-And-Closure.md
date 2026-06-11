@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-449-02, TASK-421, TASK-423
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -50,9 +52,9 @@ Regression-test shape:
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ## Testing Requirements
 
@@ -69,3 +71,8 @@ Regression-test shape:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
 
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: 16/16 live checks PASS at HEAD f416a644 (insert, dedicated widgets incl. segmented distribution + gap slider, count=3 with per-slot nesting via Layers, save/reopen preserved, publish + front renders per-slot children, responsive override reaches the front). Evidence: .tmp/phase2/task-449-03-closure.md.

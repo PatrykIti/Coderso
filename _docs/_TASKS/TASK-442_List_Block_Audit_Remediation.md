@@ -5,8 +5,9 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -36,13 +37,13 @@ and visibility control collapse owned through `TASK-421`.
 
 ## Sub-Tasks
 
-- [ ] TASK-442-01: Reproduction-first empty-list persistence and
+- [x] TASK-442-01: Reproduction-first empty-list persistence and
       ordered-control contract.
-- [ ] TASK-442-01-L01: Reproduce the empty-list drop in the live admin flow
+- [x] TASK-442-01-L01: Reproduce the empty-list drop in the live admin flow
       (or record it no longer reproduces at HEAD), preserve a freshly
       inserted list through save/publish, and adopt inline/dedicated controls
       for items and ordered state.
-- [ ] TASK-442-02: Validation, docs, and closure.
+- [x] TASK-442-02: Validation, docs, and closure.
 
 ---
 
@@ -69,3 +70,7 @@ the shared dropper fix shipped via TASK-449-02. TASK-442-01 remains in
 progress for task-graph consistency while direct child TASK-442-01-L01
 tracks the gated ordered-toggle and inline-items surface adoption
 dependencies on TASK-421/TASK-422.
+
+## Family Completion
+
+Family completed 2026-06-11: empty-list persistence verified at HEAD with pins, ordered toggle and inline items editing verified through the shared surfaces (TASK-421/422), shared dropper fix via TASK-449-02.

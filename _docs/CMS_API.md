@@ -700,7 +700,7 @@ Notes:
   Stored-read normalization prunes malformed slot data without resetting the
   full document.
 
-Preview URL resolution policy (dotyczy pages/content/widget templates):
+Preview URL resolution policy (dotyczy pages/content/page templates):
 - 1) `settings["site.publicBaseUrl"]`
 - 2) `PUBLIC_BASE_URL` (ENV fallback)
 - 3) request-derived `proto://host` (`x-forwarded-host` / `x-forwarded-proto` / `host`)
@@ -1544,19 +1544,16 @@ Runtime behavior (v1):
 
 Permissions: `widgets:read`, `widgets:write`
 
-- `GET /widgets` (catalog: core + templates)
+- `GET /widgets` (catalog: core widgets only)
 - `POST /widgets/entry-teaser/preview` (internal admin preview hydration, permission: `content:read`)
 - `POST /widgets/product-compare/preview` (internal admin preview hydration, permission: `commerce:read`)
 - `POST /widgets/product-gallery/preview` (internal admin preview hydration, permission: `widgets:read`)
-- `GET /widgets/templates` (alias: `GET /widget-templates`)
-- `GET /widgets/templates/:id` (alias: `GET /widget-templates/:id`)
-- `POST /widgets/templates` (alias: `POST /widget-templates`)
-- `PATCH /widgets/templates/:id` (alias: `PATCH /widget-templates/:id`)
-- `DELETE /widgets/templates/:id` (alias: `DELETE /widget-templates/:id`)
-- `POST /widgets/templates/:id/duplicate` (alias: `POST /widget-templates/:id/duplicate`)
-- `POST /widgets/templates/:id/preview` (alias: `POST /widget-templates/:id/preview`)
-- `GET /widgets/templates/:id/revisions` (alias: `GET /widget-templates/:id/revisions`)
-- `POST /widgets/templates/:id/revisions/:revisionId/restore`
+
+Retired route families (TASK-420-03): every `/widget-templates*` and
+`/widgets/templates*` route (CRUD, preview, revisions, restore, duplicate) and
+the `/widgets/template-categories*` routes are deleted. Hits return the
+router's standard `404 Not Found`. The reusable-template product surface is
+now Page Templates (`/page-templates`, below).
 
 `GET /widgets` catalog item shape (summary):
 - `id`, `source`, `name`, `description`, `category`, `variants`, `status`
@@ -1577,54 +1574,81 @@ Internal widget preview routes:
 - accept widget-owned payloads only (`additionalProperties: false`)
 - return transient preview data for the current builder canvas and do not persist resolved runtime payload into widget JSON
 
-Template create/update payload (summary):
+---
+
+## Page Templates (Internal Admin API)
+
+Permissions: `content:read` (reads + preview issue), `content:write`
+(mutations). Single canonical route family (no aliases):
+
+- `GET /page-templates`
+- `GET /page-templates/:id`
+- `POST /page-templates`
+- `PATCH /page-templates/:id`
+- `DELETE /page-templates/:id`
+- `POST /page-templates/:id/duplicate`
+- `POST /page-templates/:id/preview`
+
+Page Templates store full Page v2 documents (`schemaVersion: 2`, `sections[]`)
+validated by the strict Page v2 owner normalizer. Legacy `WidgetBlock[]`
+payloads (root `blocks[]`) reject with
+`page_template_legacy_widget_blocks_invalid` (HTTP 400).
+
+Create payload (strict, `additionalProperties: false`):
 
 ```json
 {
-  "name": "Homepage Hero A",
-  "description": "Reusable hero stack",
-  "category": "layout",
+  "name": "Landing hero stack",
+  "slug": "landing-hero-stack",
+  "description": null,
+  "category": "marketing",
   "status": "draft",
-  "blocks": [],
-  "settings": {
-    "layout": {
-      "wrapper": {
-        "container": "full",
-        "padding": { "top": "none", "bottom": "none" },
-        "background": { "color": "transparent", "image": null }
-      },
-      "sections": {
-        "gap": "none",
-        "defaults": {
-          "container": "default",
-          "padding": { "top": "xl", "bottom": "xl" },
-          "margin": { "top": "none", "bottom": "none" }
-        }
-      }
-    }
-  }
+  "document": { "schemaVersion": 2, "sections": [] }
 }
 ```
 
-Template create/update rejects case-insensitive duplicate template names with
-`widget_template_name_conflict` (HTTP 409).
+- `slug` is optional and derived deterministically from `name` (trim,
+  lowercase, `[^a-z0-9]+` -> `-`, strip edge dashes). Conflicts reject with
+  `page_template_slug_conflict` (HTTP 409); there is no silent suffixing on
+  direct writes.
+- `status` is `draft | published` (default `draft`); invalid values reject
+  with `page_template_status_invalid` (HTTP 400). Published templates are
+  offered by the Page editor insert picker.
+- `PATCH` accepts the same fields, all optional, at least one key.
+- `POST /page-templates/:id/duplicate` accepts a strict empty object and
+  returns a server-owned draft copy with deterministic naming: name
+  `"<name> (copy)"`, slug `<slug>-copy`, then `-copy-2`, `-copy-3`, ... on
+  conflict (bounded at `-copy-100`; exhaustion rejects with
+  `page_template_slug_conflict`).
+- `GET /page-templates` returns summaries (with `sectionsCount`) ordered by
+  `updatedAt` descending. Non-UUID `:id` params resolve to
+  `page_template_not_found` (404).
 
-`POST /widgets/templates/:id/duplicate` accepts an empty strict JSON payload and
-returns the created draft template. The server loads the source template and
-decides which fields are safe to copy; callers cannot supply replacement
-`blocks`, `settings`, revision ids, or preview tokens. Duplicate names are
-resolved intentionally with `Copy of ...` style suffixes.
-
-`POST /widgets/templates/:id/preview` response:
+`POST /page-templates/:id/preview` accepts an optional `ttlMinutes` (default
+30; rounded and clamped to 1..120 minutes). Response:
 
 ```json
 {
   "token": "preview-token",
-  "previewUrl": "/preview?type=widget-template&token=preview-token",
+  "previewUrl": "/preview?type=page-template&token=preview-token",
   "expiresAt": "2026-02-07T12:00:00.000Z",
-  "blocksCount": 3
+  "sectionsCount": 3
 }
 ```
+
+Domain errors are mapped centrally by `mapPageTemplateError`:
+`page_template_not_found` (404), `page_template_invalid` (400),
+`page_template_slug_conflict` (409), `page_template_status_invalid` (400),
+`page_template_legacy_widget_blocks_invalid` (400). Strict Page v2 document
+failures pass through as `page_template_invalid` with the original field path
+preserved in the message.
+
+Apply/insert is NOT a server endpoint: the admin editor instantiates template
+sections with fresh ids (`instantiatePageTemplateSections`) and persists them
+through the existing Page write paths.
+
+Audit log actions: `pages.template.create|update|delete|duplicate` with
+`targetType: "page_template"`.
 
 ---
 
@@ -1811,7 +1835,7 @@ Publiczne renderowanie stron działa bez `/admin`.
   opcjonalnym published detail-page override (token)
 - `GET /preview?type=detail-page&token=...` → podgląd draft/current
   detail-page document z server-side sample-entry context (token)
-- `GET /preview?type=widget-template&token=...` → podgląd runtime template widgetów (token)
+- `GET /preview?type=page-template&token=...` → podgląd runtime Page Template (token); `type=widget-template` jest wycofane i zwraca 404
 - `GET <content list route>` → lista wpisów dla danego content type
 - `GET <content detail route>` → pojedynczy wpis (slug)
 

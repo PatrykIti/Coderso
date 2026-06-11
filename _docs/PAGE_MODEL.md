@@ -49,7 +49,8 @@ layout, spacing, style, and visibility.
     "columns": 1,
     "align": "stretch",
     "justify": "start",
-    "maxWidth": 1080
+    "maxWidth": 1080,
+    "stackVertical": false
   },
   "style": {
     "background": "#ffffff",
@@ -105,6 +106,16 @@ Section variants are intentionally small: `default`, `split`, `centered`,
 `full-width`, `cards`, `grid`, `horizontal`, and `compact`. Variant editing is
 base-only in Pages v2: tablet/mobile overrides cover section
 `layout`/`style`/`spacing`/`visibility`, but not `variant`.
+
+`layout.stackVertical` (TASK-425) is the vertical-stacking switch: when the
+EFFECTIVE resolved value at a breakpoint is `true`, the section content grid is
+forced to a single column, beating the template-floored column count. It is
+optional on input and defaults to `false` through full normalization, so
+documents saved before the field render exactly as before. Like every other
+layout key it is per-breakpoint override-able through
+`responsive[bp].layout.stackVertical`; the typical authoring shape keeps the
+base `false` and sets `responsive.mobile.layout.stackVertical = true` from the
+editor's Responsive panel.
 
 `pageSectionTemplates` owns the supported type/variant matrix consumed by the
 renderer and editor controls:
@@ -174,7 +185,28 @@ Block style is bounded and optional. Supported style keys are:
 - `width`: `auto`, `full`;
 - `textColor`, `background`, `backgroundType`, `opacity`, `radius`, `shadow`,
   and `borderColor`;
-- `padding` and `margin` using `{ top, right, bottom, left }` spacing objects.
+- `padding` and `margin` using `{ top, right, bottom, left }` spacing objects;
+- token-backed typography (TASK-424), nullable with unset/`null` meaning
+  "keep the baked classes" so pre-existing documents render identically:
+  - `fontFamily`: `sans` | `display` (theme token refs emitted as
+    `var(--font-sans/--font-display, <default stack>)`),
+  - `fontSize`: `sm` | `md` | `lg` | `xl` | `2xl` (theme scale refs emitted as
+    `var(--text-*, <default size>)`),
+  - `fontWeight`: `normal` | `medium` | `semibold` | `bold` (400/500/600/700),
+  - `lineHeight`: unitless number clamped to 1–2.5,
+  - `letterSpacing`: px number clamped to -2–8.
+
+Typography fields persist on any block but paint only on typography-capable
+block types (`heading`, `text`, `button`, `list`, `card`, `statistic`,
+`quote` — `pageTypographyCapableBlockTypes` in `pageDocumentV2.ts`). The
+renderer paints them inline on the exact text node(s) a block renders (the
+`h1`–`h6`, `p`, `blockquote`, `ul`/`ol`, statistic value/label/caption, card
+title/body), marked with `data-page-block-text="true"`; the button paints them
+on its anchor element together with the rest of its visual surface. Painting
+on the text node is mandatory: typography on the block frame would lose to the
+baked utility classes (`text-5xl`, `font-semibold`) on the text node itself.
+Unknown typography tokens reject on fresh writes and normalize to `null` on
+stored reads.
 
 The Pages owner clamps numeric style values and rejects unknown style keys on
 fresh writes. Block responsive overrides are sparse deltas: `responsive.mobile`
@@ -356,6 +388,36 @@ and assistant surfaces must continue to use the stricter `insertable` and
 whether each field is inherited or overridden and reset only the selected field
 path without clearing unrelated sparse overrides.
 
+`pageEditorControlRegistry` additionally owns the Responsive panel contract
+(TASK-425): `pageEditorDeviceMetadata` is the single source for the editor
+device labels and canvas widths (Desktop 1080 / Tablet 744 / Mobile 390 —
+bracketed by the public media bounds in `pageResponsiveCss.ts`),
+`pageResponsiveHideToggles` defines the per-breakpoint hide-on-screen toggles
+(the desktop toggle writes the BASE `visibility.visible`; tablet/mobile write
+the existing `responsive[bp].visibility.visible` override containers — no new
+schema paths), `pageSectionStackVerticalControl` is the section-only
+vertical-layout toggle on `layout.stackVertical`, and
+`projectPageResponsiveOverrideEntries` projects every responsive-capable
+control of a target onto its Base / Override / Inherited state for the
+panel's per-field override list. Reset affordances may only render for fields
+with an actual override, and unsupported targets project no entries instead of
+fake controls. The Responsive panel in `PageEditor.tsx` is the rendering
+owner; the floating panel stays the sole control surface.
+
+The editor shell contract (TASK-451-02-L01) adds two `PageEditor.tsx`-owned
+behaviors on top of that surface. `resolveToolbarTargetLabel(target, {
+fallbackToTypeName: true })` is the single owner of the floating-toolbar label:
+it resolves the selected block/section TYPE display name ("Text tools",
+"Statistic tools", "Quote tools", "Hero tools") and never leaks user-entered
+block content or placeholder copy into the toolbar label or its `aria-label`;
+content hints remain only where they already existed (layer rows, delete
+dialogs, content panel header). Canvas gaps render hover-revealed
+`SectionGapInsertZone` insertion points (`data-page-editor-section-gap`,
+indices `0..sections.length`) that open the shared command palette pre-targeted
+at the gap, and `addSection` splices the chosen section at that index instead
+of appending; the persistent top-of-canvas `Add section` button keeps the
+append behavior.
+
 ## Responsive Cascade
 
 The owner normalizer keeps `desktop`, `tablet`, and `mobile` breakpoints stable.
@@ -392,17 +454,26 @@ document to one breakpoint server-side:
   unbounded tablet `max-width` query would leak tablet overrides into mobile
   viewports.
 - Rules are scoped through the stable renderer attributes
-  (`data-section-id`, `data-block-id`, `data-page-section-content`; exported
-  as `PAGE_SECTION_ID_ATTRIBUTE`, `PAGE_BLOCK_ID_ATTRIBUTE`,
-  `PAGE_SECTION_CONTENT_ATTRIBUTE`). Section style rules target the section
+  (`data-section-id`, `data-block-id`, `data-page-section-content`,
+  `data-page-block-element`, `data-page-block-text`; exported as
+  `PAGE_SECTION_ID_ATTRIBUTE`, `PAGE_BLOCK_ID_ATTRIBUTE`,
+  `PAGE_SECTION_CONTENT_ATTRIBUTE`, `PAGE_BLOCK_ELEMENT_ATTRIBUTE`,
+  `PAGE_BLOCK_TEXT_ATTRIBUTE`). Section style rules target the section
   content element; visibility rules target the id node itself. Ids are
   CSS-string escaped; every declaration carries `!important` because the
   desktop base values are inline styles.
 - Mapped deltas: section `layout` (`maxWidth`, `align`, `justify`, `columns`
-  via the shared template column floors), section `style`
+  via the shared template column floors, and `stackVertical` — a
+  merged-effective `true` forces `grid-template-columns: repeat(1, ...)`
+  exactly like the renderer, an explicit `false` over a stacked base restores
+  the template-floored count), section `style`
   (accent/background/radius/shadow), section `spacing` (padding sides, gap),
   block `style` (align/width/colors/background/opacity/radius/shadow/border/
-  padding/margin), and `visibility.visible: false` as `display:none`.
+  padding/margin), block typography
+  (fontFamily/fontSize/fontWeight/lineHeight/letterSpacing, scoped to the
+  block's `data-page-block-text` node — or the `data-page-block-element` node
+  for the button — mirroring the renderer's text-target contract), and
+  `visibility.visible: false` as `display:none`.
 - Only schema-clamped numbers, enum-token lookups, and strictly validated
   color/gradient strings reach the stylesheet; anything else fails closed
   into diagnostics, never guessed CSS.
@@ -410,10 +481,12 @@ document to one breakpoint server-side:
   `responsive[bp].props` content overrides (no content-override contract
   exists yet), non-`visible` section visibility fields
   (`authOnly`/`anchor`/`startsAt`/`endsAt`), `maxWidth` overrides on
-  `full-width` variants (the renderer pins `max-width: none`), and any
-  override on nodes hidden at the desktop base or in inactive `columns`
-  slots, including `visible: true` restores — that markup is absent from the
-  desktop-resolved base HTML.
+  `full-width` variants (the renderer pins `max-width: none`), typography
+  overrides on non-typography-capable block types, explicit `null` typography
+  overrides (clearing back to baked classes at one breakpoint cannot beat the
+  inline desktop base), and any override on nodes hidden at the desktop base
+  or in inactive `columns` slots, including `visible: true` restores — that
+  markup is absent from the desktop-resolved base HTML.
 
 ### Responsive Delivery In The Public Runtime
 
@@ -494,7 +567,12 @@ same type/variant layout output before editor chrome is added.
 The shared renderer owns block frame render props for `PageBlockStyleV2`:
 width/alignment classes, text/background variables, opacity, radius, border,
 shadow, padding, and margin are applied before public runtime or admin preview
-chrome wraps the block. Hidden block frames are omitted from public/shared
+chrome wraps the block. Token-backed typography fields paint inline on the
+block's text node(s) (`toPageBlockTypographyStyle`, marked
+`data-page-block-text="true"`); for the button they merge into the anchor
+element style (`toPageBlockElementStyle`). The same node paints on the editor
+canvas (`PageSectionContent`) and the published front (`PageDocumentRender`).
+Hidden block frames are omitted from public/shared
 runtime output by default. Admin preview may opt into hidden blocks through the
 renderer extension point and must render them as selectable ghost chrome instead
 of public content.
@@ -506,10 +584,11 @@ Non-Page surfaces keep their widget contracts:
 - post/content block runtimes.
 
 Those surfaces remain on `documentContract: "legacy-widget-block-contract"` and
-own `WidgetBlock[]` data until a dedicated migration changes them. TASK-420
-tracks the deferred product decision to introduce a separate Page Templates
-surface or migrate Advanced Widgets templates without mixing Page v2 documents
-into legacy widget-template rows.
+own `WidgetBlock[]` data until a dedicated migration changes them. The Page
+Templates contract is frozen by TASK-420-02 in the
+"Page Templates (Reusable Page v2 Templates)" section below and implemented by
+TASK-420-03, which also deleted the obsolete widget-template product surface
+(routes, preview target, admin UI, cached clients).
 
 ## Revisions And Autosave
 
@@ -554,3 +633,396 @@ static `gallery` output remains accepted but not broadly advertised until its
 authoring controls ship. `collection`, `form`, and `embed` are runtime-real
 scoped public data-bound blocks, but they are not advertised as
 assistant-emittable until focused Page controls and assistant policies ship.
+
+## Page Templates (Reusable Page v2 Templates) — TASK-420-02 Frozen Contract
+
+Status: contract frozen 2026-06-11 by TASK-420-02; implemented 2026-06-11 by
+TASK-420-03 (storage, routes, preview, admin UI, cache, widget-template
+surface deletion Ring 1). Everything below is the binding contract; changes
+require reopening TASK-420-02.
+
+Ring 2 verification outcome (recorded at implementation time, TASK-420-03):
+the board claim "no active user data dependency" did NOT hold — grep + DB
+check found live consumers (`templateInstaller`/`kitInstaller` solution-kit
+seeding, the `template-section` core widget on custom screens/detail pages,
+and existing `widget_templates` rows with revisions). Per this contract the
+storage drop (`widget_templates` + `widget_template_revisions`) and the
+template-section/installer deletion are split into an explicit follow-up
+task; the legacy data-layer services (`widgetTemplateService`,
+`widgetTemplateRevisionService`, `widgetTemplateCategoryService`,
+`widgetTemplateSettings`, `templateSectionRuntime`) remain ONLY for those
+consumers, with no admin product surface. The template-section widget keeps
+its fail-closed placeholder rendering, and the bidirectional boundary guards
+stay permanent.
+
+Page Templates are reusable Page v2 documents built from `sections[]` and
+`PageBlockV2` blocks. They are authored with the Page Editor v2 surface,
+previewed through the token-gated runtime preview pipeline, and applied into
+Pages by instantiating their sections with fresh ids. The legacy Advanced
+Widgets/widget-template surface is replaced, not preserved (deletion plan at
+the end of this section).
+
+### Naming Guard (Mandatory)
+
+The `pages` domain already owns three template-adjacent modules that MUST NOT
+be touched or shadowed by this feature:
+
+- `core/services/pages/pageTemplateService.ts` — theme shell template keys
+  (`settings.template`, e.g. `landing`),
+- `core/services/pages/pageSectionTemplates.ts` — section render templates
+  for the shared renderer,
+- `core/services/pages/pageTemplateBoundary.ts` — the document-contract
+  boundary helpers (reused below).
+
+New code uses the `pageTemplateLibrary` prefix:
+
+- `core/services/pages/pageTemplateLibrarySchema.ts` — Bun-free owner module:
+  payload schemas, `normalize*` helpers, domain errors, slug normalizer, and
+  the pure `instantiatePageTemplateSections` apply helper. No import-time
+  DB/settings/runtime coupling (Vitest lane).
+- `core/services/pages/pageTemplateLibraryService.ts` — DB-backed CRUD +
+  duplicate + preview model (Bun lane).
+- `core/server/routes/pageTemplateRoutes.ts` — route module
+  (orchestration-only; delegates to the service; maps errors through
+  `mapPageTemplateError`).
+- `core/admin/services/pageTemplatesClient.ts` — cached admin client.
+
+API resource name: `page-templates`. Audit log actions:
+`pages.template.create|update|delete|duplicate` with
+`targetType: "page_template"`.
+
+### Storage Model
+
+New table `page_templates` (full migration artifacts required: SQL file,
+`meta/*_snapshot.json`, `meta/_journal.json`):
+
+- `id` uuid pk default random
+- `name` text not null (1..160 after trim)
+- `slug` text not null, unique index — deterministic, derived from `name`
+  when omitted (trim, lowercase, `[^a-z0-9]+` -> `-`, strip edge dashes);
+  conflicts reject with `page_template_slug_conflict` (409). No silent
+  suffixing on direct writes.
+- `description` text nullable (<= 500)
+- `category` text nullable (<= 80, plain label; the settings-backed
+  `widgets.templateCategories` registry is NOT reproduced)
+- `status` text not null default `draft` (`draft | published`); `published`
+  templates are offered by the Page editor insert/apply picker, `draft`
+  templates are library-only. Invalid values reject with
+  `page_template_status_invalid`.
+- `document` jsonb not null — a full normalized `PageDocumentV2`
+  (`schemaVersion: 2`, `sections[]`, `settings`, `seo`, `breakpoints`).
+- `created_at`, `updated_at` timestamps.
+- Indexes: unique `slug`, plus `status`, `name`, `updated_at`.
+
+Document rules (schema-first, reject-unknown, explicit schemaVersion):
+
+- Writes validate through the existing owner
+  `normalizePageDocumentV2ForWrite` (strict mode: unknown fields reject with
+  `page_document_unknown_field`, invalid values reject with
+  `page_document_invalid`, `schemaVersion` must be `2`).
+- Writes additionally run `assertPageTemplateInputBoundary`
+  (`pageTemplateBoundary.ts`): any root `blocks[]` payload rejects with
+  `page_template_legacy_widget_blocks_invalid`. `WidgetBlock[]` never enters
+  `page_templates` rows.
+- The inverse guard stays in force: `assertLegacyWidgetSurfaceBoundary`
+  rejects Page v2 documents in legacy widget surfaces
+  (`legacy_widget_surface_page_v2_document_invalid`), so no mixed-contract
+  rows exist in either direction.
+- Reads normalize through `normalizeStoredPageDocumentV2ForRead`
+  (non-destructive defense; the table is new, so no legacy rows exist).
+  A stored document that fails read normalization fails closed
+  (`page_template_invalid`) on preview/apply — never partial rendering.
+- Section/block ids inside `document` follow the Page v2 write rules (ids
+  required, block ids unique, depth/children clamps).
+- The template's own `settings`, `seo`, and `breakpoints` are stored (the
+  editor edits a real Page document) but are IGNORED on apply — only
+  `sections[]` are instantiated into target pages.
+
+Row-level versioning: the document's `schemaVersion` is the authoritative
+contract version; no separate row version column. A future v3 document bump
+goes through the same owner module.
+
+Revisions: intentionally NOT shipped in v1. The widget-template revision
+flows (`widget_template_revisions`, revision routes, revision drawer) are
+deleted with the surface, not ported. Target pages keep their own
+`page_revisions` protection. If product later needs template revisions, that
+is an explicit follow-up task, not silent scope.
+
+Strict payload schemas (route-level `additionalProperties: false` on every
+object, including nested ones):
+
+```jsonc
+// POST /page-templates
+{
+  "name": "Landing hero stack",          // required
+  "slug": "landing-hero-stack",          // optional, derived from name
+  "description": null,                    // optional
+  "category": "marketing",               // optional
+  "status": "draft",                      // optional, default draft
+  "document": { "schemaVersion": 2, "sections": [ /* PageSectionV2 */ ] } // required
+}
+// PATCH /page-templates/:id — same fields, all optional, at least one key
+// POST /page-templates/:id/duplicate — strict empty object {}
+// POST /page-templates/:id/preview — { "ttlMinutes": 30 } (optional;
+//   non-finite/non-number falls back to the default 30, numeric values are
+//   rounded and clamped to 1..120 minutes)
+```
+
+Domain errors (machine-readable, mapped centrally by
+`mapPageTemplateError`): `page_template_not_found` (404),
+`page_template_invalid` (400), `page_template_slug_conflict` (409),
+`page_template_status_invalid` (400),
+`page_template_legacy_widget_blocks_invalid` (400), plus pass-through of
+`page_document_invalid` / `page_document_unknown_field` mapped to
+`page_template_invalid` (400) with the original field path in the message.
+
+### Route Family (Internal Admin)
+
+Single canonical path family — the widget-template dual-alias registration
+(`/widget-templates` + `/widgets/templates`) is NOT reproduced:
+
+- `GET    /page-templates` — list (`content:read`)
+- `GET    /page-templates/:id` — detail (`content:read`)
+- `POST   /page-templates` — create (`content:write`, CSRF)
+- `PATCH  /page-templates/:id` — update (`content:write`, CSRF)
+- `DELETE /page-templates/:id` — delete (`content:write`, CSRF)
+- `POST   /page-templates/:id/duplicate` — server-owned copy
+  (`content:write`, CSRF; strict empty payload; callers cannot supply
+  replacement documents). Deterministic copy naming: name `"<name> (copy)"`,
+  slug `<slug>-copy`, then `-copy-2`, `-copy-3`, ... on conflict (bounded at
+  `-copy-100`; exhaustion rejects with `page_template_slug_conflict`). The
+  copy is always created as `draft` regardless of source status, and the
+  stored source document must pass stored-read normalization before copying
+  (fail-closed, `page_template_invalid`).
+- `POST   /page-templates/:id/preview` — issue preview token
+  (`content:read`, CSRF; same permission as `POST /pages/:id/preview`).
+
+Determinism details: `GET /page-templates` returns summaries (incl.
+`sectionsCount`) ordered by `updated_at` descending; `:id` params that are
+not UUIDs resolve to `page_template_not_found` (404) without a DB lookup.
+
+RBAC decision (recorded): Page Templates map to the existing `content:*`
+permission family used by Pages (`content:read` reads + preview issue,
+`content:write` mutations). No new permission catalog entry; the obsolete
+`widgets:read|write` mapping disappears with the widget-template surface.
+Status flips (`draft` <-> `published`) ride `PATCH` under `content:write`;
+there is no separate publish permission because templates have no standalone
+public runtime exposure.
+
+CSRF: all writes use the existing admin CSRF middleware. Rate limits: admin
+routes use the existing `admin_read` / `admin_write` buckets; the public
+`/preview` route stays in `public_read`. No new bucket (decision recorded per
+TASK-420-02 Security Contract).
+
+Apply/insert is NOT a server endpoint. Applying a template into a page is an
+editor-side document edit: admin UI loads the template detail, instantiates
+sections through the shared pure helper, and persists through the existing
+Page write paths (`PATCH /pages/:id` / autosave), keeping the Page save path
+single-owner.
+
+### Apply / Replacement Semantics (Non-Destructive)
+
+Owner helper (Bun-free, in `pageTemplateLibrarySchema.ts`):
+
+```ts
+instantiatePageTemplateSections(
+  document: PageDocumentV2,
+  deps?: { createId?: (prefix: "sec" | "blk") => string }
+): PageSectionV2[]
+```
+
+- Returns deep-cloned `sections[]` where EVERY section id and EVERY block id
+  (recursively through `slots`) is regenerated via `createPageDocumentId`
+  (`sec_*` / `blk_*`). No id from the template document survives into the
+  page, so: applying the same template twice never collides, and editing a
+  template later never retro-affects pages it was applied to.
+- `deps.createId` exists only for deterministic tests; production uses the
+  `pageDocumentV2.ts` owner default.
+- Only `sections[]` are instantiated. Template `settings`, `seo`, and
+  `breakpoints` never touch the target page.
+- Section/block content (props, styles, typography, responsive overrides,
+  visibility incl. `anchor`) is carried verbatim; anchor uniqueness across
+  the target page stays operator-owned, same as manual section authoring.
+- Insertion position is an editor concern (append by default, insert-at-index
+  allowed); the resulting page document must pass
+  `normalizePageDocumentV2ForWrite` before save — fail-closed, no partial
+  application.
+- The template row is never mutated by apply (read-only source).
+
+### Preview Contract (Token-Gated)
+
+- `PreviewTargetType` gains `"page-template"` (owner:
+  `core/services/pages/previewService.ts`; also `normalizeStoredTargetType`
+  and `resolvePreviewTargetType` in `core/server/publicSite.tsx`).
+- `POST /page-templates/:id/preview` response (existing preview shape):
+
+```json
+{
+  "token": "preview-token",
+  "previewUrl": "/preview?type=page-template&token=preview-token",
+  "expiresAt": "2026-02-07T12:00:00.000Z",
+  "sectionsCount": 3
+}
+```
+
+- `GET /preview?type=page-template&token=<token>` validates the token
+  (random, stored hashed, TTL per target type, `410 Preview expired`), loads
+  the `page_templates` row, resolves it through
+  `resolvePageTemplateInput(document, { renderMode: "preview-page",
+  enforceFreshBoundary: true })`, and renders through the SAME public Page v2
+  pipeline as page preview (`renderPublicPageV2RuntimeHtml`), including
+  `?device=` flatten semantics and scoped data-bound block handling.
+- Target-type separation is strict: a `type=page` token cannot render a
+  template, a `type=page-template` token cannot render a page, and
+  `WidgetBlock[]` documents can never reach this path (boundary assertion +
+  v2-only storage). Unsupported blocks or unresolved data-bound documents
+  fail closed (404/diagnostics), never best-effort rendering.
+- `previewUrl` resolution, token redaction in labels/logs, and failure copy
+  rules follow `_docs/PREVIEW_SPEC.md` unchanged. The pages-only `probe`
+  extension is not adopted in v1.
+- After the widget-template surface deletion,
+  `GET /preview?type=widget-template&...` returns `404 Not Found` (the type
+  no longer resolves); stale stored tokens fail closed via
+  `normalizeStoredTargetType` -> `preview_token_invalid`.
+
+### Admin Cache Contract
+
+Per `_docs/ADMIN_CACHE.md` (TASK-420-03 updates that doc +
+`_docs/ADMIN_CACHE_MAP.md` when shipping):
+
+- Keys in `core/admin/services/cachePolicy.ts`:
+  - `pageTemplates:list`
+  - `pageTemplates:detail:<id>`
+- TTL: default `cacheTtlMs.list` / `cacheTtlMs.detail` (5 minutes).
+- `pageTemplatesClient.ts` follows the cached-client contract end-to-end:
+  cache hydration, background revalidation, in-memory + localStorage
+  envelopes, no mount-force refetch loops, dirty-state protection in the
+  editor (background revalidation never overwrites unsaved edits).
+- Invalidation + `cacheBus` broadcasts: create/update/duplicate broadcast
+  `{ key: pageTemplates:list, action: "update" }` plus the touched detail
+  key; delete broadcasts `invalidate` for list + detail.
+- Admin SPA routes `/advanced/page-templates` (list) and
+  `/advanced/page-templates/:id` (editor) register through the shared
+  `adminPaths` / `AdminLink` / `prefetchAdminRoute` helpers; prefetch warms
+  `pageTemplates:list` with `{ force: false }` only. Final sidebar placement
+  label must name "Page Templates" explicitly (TASK-420-03 closes IA).
+- Deleted with the old surface: `widgetTemplates:list`,
+  `widgetTemplates:detail:<id>`, `widgetTemplateCategories:list` keys, their
+  cached clients, and the `/advanced/widgets/templates/:id` prefetch/route
+  entries.
+- Template documents contain no secrets; nothing secret-bearing enters
+  browser cache/localStorage/debug payloads.
+
+### Editor Surface Reuse Rule (Binding)
+
+The Page Templates editor IS the Page Editor v2 surface bound to a template
+document. It must consume, without forks:
+
+- the same canvas renderer (`pageRendererV2.tsx`) and inline-edit contract
+  (`pageInlineEditContract.ts`),
+- the same control pipeline: `pageEditorControlRegistry.ts` ->
+  `pageEditorControlUiModel.ts` adapter ->
+  `core/admin/ui/pages/editorControls/*` primitives via the
+  `RegistryControlWidget` routing in `PageEditor.tsx`,
+- the same floating-panel-as-sole-control-surface model, per-block typography
+  group, and responsive override semantics (`pageResponsiveCss.ts` scoping).
+
+A parallel inspector, a template-specific raw-input panel, or any control
+that bypasses the shared adapter is a contract violation and fails review.
+Allowed differences are page-chrome only: the template metadata form
+(name/slug/description/category/status) replaces page publish/SEO chrome, and
+Page Settings panels that do not apply to templates (SEO, `showInNav`,
+`collectionLink`, revision retention) are hidden in template mode while the
+stored document keeps their normalized defaults.
+
+Assistant: the Page Templates editor advertises NO assistant active surface
+in v1 (the `widget-template` active-surface kind and `widget-template.*`
+action families are deleted with the old surface). A dedicated follow-up task
+owns a future `page-template` assistant surface; until then the editor must
+not advertise contracts it does not own.
+
+### Obsolete Widget-Template Surface — Deletion Plan
+
+Ring 1 — deleted unconditionally by TASK-420-03 (the reusable-template
+product path; retired entry points must return explicit 404s, never render
+old editors):
+
+- Routes: `core/server/routes/widgetTemplateRoutes.ts` (both
+  `/widget-templates*` and `/widgets/templates*` families, incl. preview,
+  revisions, restore, duplicate), `widgetTemplateCategoryRoutes.ts`, and
+  their registrations in `core/server/routes/index.ts`.
+- Preview: the `widget-template` member of `PreviewTargetType`,
+  `resolvePreviewTargetType`, the `/preview` handler branch in
+  `core/server/publicSite.tsx` (~lines 855, 1404), and
+  `core/services/widgets/widgetTemplatePreviewService.ts`.
+- Services: `widgetTemplateService.ts`, `widgetTemplateRevisionService.ts`
+  (and the widget-template branch of any settings helpers they own).
+- Admin UI: `WidgetTemplateEditorPage.tsx`, `WidgetTemplateCategoryDrawer.tsx`,
+  `WidgetTemplateRevisionDrawer.tsx`, `WidgetTemplatePreviewDialog.tsx`, the
+  templates surface of `WidgetLibraryPage.tsx`, template paths in
+  `WidgetCreateDialog.tsx`/`WidgetInsertDialog.tsx`,
+  `hooks/useWidgetTemplates.ts`, the `/advanced/widgets/templates/:id` route
+  in `AdminApp.tsx`/`adminRouteComponents.tsx`, and the legacy v1 builder
+  `builder/TemplatePicker.tsx` path.
+- Admin clients + cache: `widgetTemplatesClient.ts`,
+  `widgetTemplateRevisionsClient.ts`, `widgetTemplateCategoriesClient.ts`,
+  `widgetTemplatePreviewClient.ts`, the three `widgetTemplate*` cache keys in
+  `cachePolicy.ts`, and prefetch wiring in `adminPrefetch.ts`.
+- Assistant: the `widget-template` active-surface kind
+  (`activeSurfaceHydration.ts`, `adminContextTypes.ts`,
+  `cmsTargetResolver.ts`, follow-up resolver) and the `widget-template.*`
+  action families (registry, schemas, executor, undo manifest, UI surfaces).
+- Settings: the `widgets.templateCategories` registry surface.
+- Docs: `_docs/CMS_API.md` widget-template routes, `_docs/WIDGETS.md`
+  template sections, `_docs/PREVIEW_SPEC.md` `type=widget-template`,
+  `_docs/ADMIN_CACHE*.md` keys, `_docs/CMS_SPEC.md` Advanced Widgets note.
+
+Ring 2 — dependent legacy consumers (verify-then-delete, with explicit
+follow-up split if blocked): the `template-section` core widget
+(`core/widgets/core/templateSection.tsx`,
+`core/services/widgets/templateSectionRuntime.ts`) still renders
+widget-template rows on non-Page legacy surfaces (custom screens, detail
+pages), and `core/services/templates/templateInstaller.ts` (solution kits,
+`_docs/TEMPLATE_CONTRACTS.md`) seeds widget-template rows. TASK-420-03 must
+re-verify the board's "no active user data dependency" claim at
+implementation time (grep + DB check). If confirmed, drop `widget_templates`
++ `widget_template_revisions` (full migration artifacts) and delete the
+template-section widget and installer seeding in the same closure. If any
+live consumer remains, Ring 1 still ships in full, the tables stay, the
+template-section widget keeps rendering its existing fail-closed placeholder
+for unresolvable ids, and the storage drop is split into an explicit
+follow-up task with rationale — never silent scope reduction.
+
+Rejection guards stay permanent in both directions even after deletion:
+fresh `sections[]` payloads into any legacy widget surface reject
+(`legacy_widget_surface_page_v2_document_invalid`), and `blocks[]` payloads
+into Page Templates reject (`page_template_legacy_widget_blocks_invalid`).
+
+### Regression-Test Shape (Gates TASK-420-03)
+
+- Vitest (Bun-free, `tests/vitest/*`): `pageTemplateLibrarySchema` suites —
+  strict accept/reject for create/update payloads, unknown-field rejection at
+  route and document level, `WidgetBlock[]`/root-`blocks[]` rejection, slug
+  normalization determinism + conflict semantics, duplicate naming
+  determinism, `instantiatePageTemplateSections` id-regeneration (all ids
+  fresh, recursive slots, repeat-apply non-collision, template untouched),
+  fail-closed behavior for invalid stored documents.
+- Bun (runtime): route registration tests + `mapPageTemplateError` coverage;
+  CRUD + RBAC (`content:read|write`) + CSRF behavior; preview token issue +
+  `GET /preview?type=page-template` rendering; target-type separation tests
+  (page token vs template token); retired-surface tests proving
+  `/widget-templates*`, `/widgets/templates*`, and
+  `/preview?type=widget-template` return explicit 404s.
+- Admin cache/prefetch tests for the new keys and route prefetch entries.
+- Read-only Claude drift audits per the TASK-420 family workflow.
+- `bun --cwd core lint`, `bun --cwd core lint:types`.
+
+### Documentation Updates At Implementation Time (TASK-420-03)
+
+`_docs/CMS_API.md` (new route family + deleted widget-template family),
+`_docs/PREVIEW_SPEC.md` (`type=page-template` target, `type=widget-template`
+removal), `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` (keys),
+`_docs/WIDGETS.md` (surface removal), `_docs/CMS_SPEC.md` +
+`_docs/ARCHITECTURE.md` (surface naming), `_docs/TEMPLATE_CONTRACTS.md`
+(Ring 2 outcome). They are intentionally not pre-edited here so shipped-API
+docs keep describing only shipped behavior.

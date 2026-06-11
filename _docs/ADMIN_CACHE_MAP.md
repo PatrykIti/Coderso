@@ -185,26 +185,35 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     users without that permission keep default Advanced nav context without a
     solution-kit list fetch.
 
-## Widget Templates
-- Template editor
-  - UI: `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx`
-  - Cached APIs: `getWidgetTemplateCached`, `listWidgetTemplateCategoriesCached`, `getCachedWidgetTemplateCategories`
-- Templates list hook
-  - UI: `core/admin/ui/widgets/hooks/useWidgetTemplates.ts`
-  - Cached APIs: `listWidgetTemplatesCached`, `getCachedWidgetTemplates`
-  - Mutations: `deleteWidgetTemplate`, `duplicateWidgetTemplate`
-  - Cache bus: `widgetTemplates:list`, `widgetCatalog:list`,
-    `widgetTemplates:detail:<id>`
+## Page Templates
+- Templates list
+  - UI: `core/admin/ui/pages/templates/PageTemplatesPage.tsx` (+ hook
+    `core/admin/ui/pages/templates/usePageTemplates.ts`)
+  - Cached APIs: `listPageTemplatesCached`, `getCachedPageTemplates`
+  - Mutations: `createPageTemplate`, `duplicatePageTemplate`,
+    `deletePageTemplate`
+  - Cache bus: `pageTemplates:list`, `pageTemplates:detail:<id>`
+- Template editor (shared Page Editor v2 surface via editor host)
+  - UI: `core/admin/ui/pages/templates/PageTemplateEditorPage.tsx`
+  - Cached APIs: `getPageTemplateCached`, `getCachedPageTemplateDetail`
+  - Mutations: `updatePageTemplate` (document + metadata), `previewPageTemplate`
+  - Cache bus: `pageTemplates:detail:<id>` background revalidation with
+    dirty-state protection
+- Page editor insert picker (published templates)
+  - UI: `core/admin/ui/pages/PageEditor.tsx` (command palette group)
+  - Cached APIs: `listPageTemplatesCached`, `getPageTemplateCached`
+
+## Widgets
 - Widget insert dialog
   - UI: `core/admin/ui/widgets/WidgetInsertDialog.tsx`
-  - Cached APIs: `getWidgetTemplateCached`, `getPageCached`
+  - Cached APIs: `getPageCached`
 - Widget library
   - UI: `core/admin/ui/widgets/WidgetLibraryPage.tsx`
-  - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listWidgetTemplateCategoriesCached`, `getCachedWidgetTemplateCategories`, `listPagesCached`, `getCachedPages`, `getPageCached`
+  - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listPagesCached`, `getCachedPages`, `getPageCached`
   - UI state: section dropdown, table/grid mode, pagination, and selected row ids
-    are shell-owned; only catalog/category/page data comes from cache.
-  - Cache bus: `widgetCatalog:list`, `widgetTemplateCategories:list`, and
-    `pages:list` refresh the section-aware model in the background.
+    are shell-owned; only catalog/page data comes from cache.
+  - Cache bus: `widgetCatalog:list` and `pages:list` refresh the section-aware
+    model in the background.
 
 
 ## Media

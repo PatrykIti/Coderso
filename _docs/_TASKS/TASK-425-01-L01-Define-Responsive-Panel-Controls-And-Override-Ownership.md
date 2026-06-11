@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-425-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -28,9 +30,9 @@ implements Responsive-panel controls.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -134,3 +136,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: hide toggles mapped to visibility.visible paths, stackVertical declared with the 4-layer plan, per-field reset actions defined.

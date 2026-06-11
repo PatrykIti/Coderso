@@ -5,7 +5,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-421, TASK-422
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -38,13 +40,13 @@ published front (`PageDocumentRender`), otherwise the controls are dummies.
 
 ## Sub-Tasks
 
-- [ ] TASK-424-01: Typography style schema and registry contract.
-- [ ] TASK-424-01-L01: Add normalized typography fields and shared text-control
+- [x] TASK-424-01: Typography style schema and registry contract.
+- [x] TASK-424-01-L01: Add normalized typography fields and shared text-control
       descriptors to the Pages owner.
-- [ ] TASK-424-02: Typography panel widgets and text-surface IA.
-- [ ] TASK-424-02-L01: Render segmented, swatch, slider, picker, and token
+- [x] TASK-424-02: Typography panel widgets and text-surface IA.
+- [x] TASK-424-02-L01: Render segmented, swatch, slider, picker, and token
       controls for typography inputs.
-- [ ] TASK-424-03: Validation, docs, and text-path closure.
+- [x] TASK-424-03: Validation, docs, and text-path closure.
 
 ---
 
@@ -68,3 +70,8 @@ published front (`PageDocumentRender`), otherwise the controls are dummies.
 - `docs/guide/` Page editor docs
 - `_docs/_TASKS/README.md`
 
+---
+
+## Completion Notes
+
+Family completed 2026-06-11. Per-block Typography "T" panel for text-capable blocks (heading/text/button/list/card/statistic/quote): 5 nullable token-backed PageBlockStyleV2 fields (fontFamily sans|display, fontSize sm..5xl, fontWeight, lineHeight clamp 1-2.5, letterSpacing clamp -2..8) with strict-write/lenient-read normalizers; renderer paints the same node canvas+front; responsive override slots + pageResponsiveCss mappings; dedicated widgets only. Post-smoke fixes folded in: text-align tablet override pins correctly (commitActiveOption + props.align @media mapping on the text node), size scale extended to 5xl so the largest preset never shrinks a default h1, canvas re-paints site typography tokens so WYSIWYG matches the front. Live smoke A PASS (.tmp/phase2/phase2-smoke.md). Sections get no consolidated text surface (owner rule honored).

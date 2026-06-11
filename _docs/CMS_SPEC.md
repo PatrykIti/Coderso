@@ -93,9 +93,13 @@ Przechowywanie:
   `collection`/`form`/`embed` blocks. Public collection output is published-only,
   form output reuses the existing forms runtime security projection, and embed
   output is limited to hardened provider iframes or sanitized inline markup.
-- Advanced Widgets remains the reusable widget-template editor. TASK-420 tracks
-  the deferred Page Templates surface migration so Page v2 documents are not
-  mixed into existing widget-template rows during TASK-418.
+- Page Templates (TASK-420-03) is the reusable-template surface: Page v2
+  `sections[]` documents stored in `page_templates`, authored with the shared
+  Page Editor v2 surface at `/advanced/page-templates`, previewed through
+  `type=page-template` tokens, and inserted into pages by instantiating
+  sections with fresh ids. The legacy Advanced Widgets widget-template editor,
+  its routes, preview target, and cache keys are deleted; the Widget Library
+  is a core-widget catalog only.
 
 ---
 

@@ -1,4 +1,6 @@
 import {
+  PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
+  PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
   pageBlockCapabilities,
   pageColumnDistributions,
@@ -16,7 +18,12 @@ import {
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
+  pageBreakpoints,
+  pageTypographyFontFamilies,
+  pageTypographyFontSizes,
+  pageTypographyFontWeights,
   type PageBlockType,
+  type PageBreakpoint,
   type PageSectionVariant,
   type PageSectionType,
 } from "./pageDocumentV2";
@@ -26,6 +33,7 @@ export type PageEditorControlTarget = "section" | "block";
 export type PageEditorControlPanel =
   | "layout"
   | "content"
+  | "typography"
   | "style"
   | "spacing"
   | "background"
@@ -52,6 +60,10 @@ export type PageEditorControlDefinition = {
   responsive: boolean;
   options?: readonly string[];
   clamp?: { min: number; max: number };
+  /** Explicit slider step for fractional numeric controls (e.g. line height). */
+  step?: number;
+  /** Explicit readout unit; overrides the adapter's px default (use "" for unitless). */
+  unit?: string;
 };
 
 const control = (
@@ -208,7 +220,28 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     input: "switch",
     responsive: true,
   }),
+  control({
+    id: "section.layout.stackVertical",
+    panel: "responsive",
+    target: "section",
+    label: "Stack vertically",
+    path: ["layout", "stackVertical"],
+    input: "switch",
+    responsive: true,
+  }),
 ] as const;
+
+/**
+ * Vertical-layout toggle owned by the Responsive panel (TASK-425). The stored
+ * field is `layout.stackVertical` (`pageDocumentV2`); on tablet/mobile the
+ * editor writes it through the existing `responsive[bp].layout` override
+ * container like every other layout key. Sections only — blocks have no
+ * stacking surface, so unsupported targets render no control.
+ */
+export const pageSectionStackVerticalControl: PageEditorControlDefinition =
+  pageUniversalSectionControls.find(
+    (definition) => definition.id === "section.layout.stackVertical"
+  )!;
 
 export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] = [
   control({
@@ -331,6 +364,102 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
   }),
 ] as const;
 
+/**
+ * Shared per-block Typography cluster (TASK-424). It is exposed only on
+ * typography-capable block types (never on sections) and writes the
+ * token-backed `style.fontFamily/fontSize/fontWeight/lineHeight/letterSpacing`
+ * fields owned by `pageDocumentV2`. Family/size/weight render as segmented
+ * token selects; line height and letter spacing render as slider+stepper
+ * controls with owner clamps.
+ */
+export const pageTypographyBlockControls: readonly PageEditorControlDefinition[] = [
+  control({
+    id: "block.style.fontFamily",
+    panel: "typography",
+    target: "block",
+    label: "Font family",
+    path: ["style", "fontFamily"],
+    input: "segmented",
+    responsive: true,
+    options: pageTypographyFontFamilies,
+  }),
+  control({
+    id: "block.style.fontSize",
+    panel: "typography",
+    target: "block",
+    label: "Font size",
+    path: ["style", "fontSize"],
+    input: "segmented",
+    responsive: true,
+    options: pageTypographyFontSizes,
+  }),
+  control({
+    id: "block.style.fontWeight",
+    panel: "typography",
+    target: "block",
+    label: "Font weight",
+    path: ["style", "fontWeight"],
+    input: "segmented",
+    responsive: true,
+    options: pageTypographyFontWeights,
+  }),
+  control({
+    id: "block.style.lineHeight",
+    panel: "typography",
+    target: "block",
+    label: "Line height",
+    path: ["style", "lineHeight"],
+    input: "number",
+    responsive: true,
+    clamp: PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
+    step: 0.05,
+    unit: "",
+  }),
+  control({
+    id: "block.style.letterSpacing",
+    panel: "typography",
+    target: "block",
+    label: "Letter spacing",
+    path: ["style", "letterSpacing"],
+    input: "number",
+    responsive: true,
+    clamp: PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
+    step: 0.5,
+    unit: "px",
+  }),
+] as const;
+
+/**
+ * Typography-group presentation of the universal `block.style.align` control
+ * for text-capable types without a `props.align` text-align path. The stored
+ * path and id stay identical to the universal control — only the panel and
+ * label move into the Typography group (TASK-424 relocation contract).
+ */
+const blockStyleTextAlignTypographyControl = control({
+  id: "block.style.align",
+  panel: "typography",
+  target: "block",
+  label: "Text align",
+  path: ["style", "align"],
+  input: "segmented",
+  responsive: true,
+  options: pageTextAlignments,
+});
+
+/**
+ * Text-capable types whose text-align path is the universal `style.align`
+ * (heading/text instead relocate their own `props.align` control). For these
+ * types the accessor swaps the universal layout-panel presentation for the
+ * Typography-group presentation; storage stays `style.align` either way.
+ */
+const styleAlignTypographyBlockTypes = new Set<PageBlockType>([
+  "button",
+  "list",
+  "card",
+  "statistic",
+  "quote",
+]);
+
 export const getPageSectionVariantControl = (
   type: PageSectionType
 ): PageEditorControlDefinition | null => {
@@ -366,9 +495,13 @@ export const pageBlockControlRegistry: Record<
       input: "select",
       options: pageHeadingLevels,
     }),
+    ...pageTypographyBlockControls,
+    // Relocated into the Typography group (TASK-424); stored path stays
+    // props.align so existing documents and writes are untouched.
     blockPropControl("heading", "align", {
       label: "Text align",
       input: "segmented",
+      panel: "typography",
       options: pageTextAlignments,
     }),
   ],
@@ -379,9 +512,13 @@ export const pageBlockControlRegistry: Record<
       input: "select",
       options: pageTextFormats,
     }),
+    ...pageTypographyBlockControls,
+    // Relocated into the Typography group (TASK-424); stored path stays
+    // props.align so existing documents and writes are untouched.
     blockPropControl("text", "align", {
       label: "Text align",
       input: "segmented",
+      panel: "typography",
       options: pageTextAlignments,
     }),
   ],
@@ -403,6 +540,8 @@ export const pageBlockControlRegistry: Record<
       input: "select",
       options: pageButtonSizes,
     }),
+    ...pageTypographyBlockControls,
+    blockStyleTextAlignTypographyControl,
   ],
   image: [
     blockPropControl("image", "src", { label: "Source", input: "media" }),
@@ -425,12 +564,16 @@ export const pageBlockControlRegistry: Record<
   list: [
     blockPropControl("list", "items", { label: "Items", input: "text" }),
     blockPropControl("list", "ordered", { label: "Ordered", input: "switch" }),
+    ...pageTypographyBlockControls,
+    blockStyleTextAlignTypographyControl,
   ],
   card: [
     blockPropControl("card", "title", { label: "Title", input: "text" }),
     blockPropControl("card", "text", { label: "Body", input: "text" }),
     blockPropControl("card", "image", { label: "Image", input: "media" }),
     blockPropControl("card", "href", { label: "Link URL", input: "text" }),
+    ...pageTypographyBlockControls,
+    blockStyleTextAlignTypographyControl,
   ],
   collection: [],
   embed: [],
@@ -457,11 +600,15 @@ export const pageBlockControlRegistry: Record<
     blockPropControl("statistic", "value", { label: "Value", input: "text" }),
     blockPropControl("statistic", "label", { label: "Label", input: "text" }),
     blockPropControl("statistic", "caption", { label: "Caption", input: "text" }),
+    ...pageTypographyBlockControls,
+    blockStyleTextAlignTypographyControl,
   ],
   icon: [],
   quote: [
     blockPropControl("quote", "text", { label: "Quote", input: "text" }),
     blockPropControl("quote", "cite", { label: "Cite", input: "text" }),
+    ...pageTypographyBlockControls,
+    blockStyleTextAlignTypographyControl,
   ],
   container: [],
   columns: [
@@ -518,10 +665,127 @@ export const getPageEditorControlsForTarget = (target: {
       : pageUniversalSectionControls;
   }
   const type = target.type as PageBlockType;
-  return pageBlockCapabilities[type]?.editorInsertable
-    ? [...pageUniversalBlockControls, ...pageBlockControlRegistry[type]]
-    : [];
+  if (!pageBlockCapabilities[type]?.editorInsertable) return [];
+  // Types whose text-align relocates into the Typography group drop the
+  // layout-panel presentation of the same stored field to avoid duplicates.
+  const universalControls = styleAlignTypographyBlockTypes.has(type)
+    ? pageUniversalBlockControls.filter((control) => control.id !== "block.style.align")
+    : pageUniversalBlockControls;
+  return [...universalControls, ...pageBlockControlRegistry[type]];
 };
 
 export const getPageSectionCapability = (type: PageSectionType) => pageSectionCapabilities[type];
 export const getPageBlockCapability = (type: PageBlockType) => pageBlockCapabilities[type];
+
+/**
+ * Responsive panel contract (TASK-425-01). This block is the single owner of
+ * the Responsive panel's control metadata: the canonical editor device
+ * metadata (labels + canvas widths), the per-breakpoint hide-on-screen
+ * toggles, and the per-field override-state projection consumed by the
+ * panel's override list. The widgets themselves render in `PageEditor.tsx`
+ * (TASK-425-02) through the shared editor control primitives.
+ */
+
+/**
+ * Canonical editor device metadata: one shared source for the breakpoint
+ * switcher labels, the canvas width readouts, and the editing-scope pill.
+ * The widths are the editor canvas frame widths bracketed by the public
+ * media bounds in `pageResponsiveCss.ts` (desktop >= 1024, tablet 640-1023,
+ * mobile <= 639); `canvasDeviceFrameClassMap` in `PageEditor.tsx` must keep
+ * its static Tailwind classes in sync with these values.
+ */
+export const pageEditorDeviceMetadata: Record<PageBreakpoint, { label: string; width: number }> = {
+  desktop: { label: "Desktop", width: 1080 },
+  tablet: { label: "Tablet", width: 744 },
+  mobile: { label: "Mobile", width: 390 },
+};
+
+export type PageResponsiveHideToggle = {
+  id: string;
+  breakpoint: PageBreakpoint;
+  label: string;
+  /**
+   * Schema-owned visibility path: the desktop toggle writes the BASE
+   * `visibility.visible`, the tablet/mobile toggles write the existing
+   * `responsive[bp].visibility.visible` override containers. No new schema
+   * fields exist for hide-on-screen.
+   */
+  path: readonly ["visibility", "visible"];
+};
+
+/**
+ * Per-breakpoint hide-on-screen toggles for the Responsive panel. They apply
+ * to sections and blocks alike (both own `visibility.visible` plus the
+ * responsive override container). Hiding on desktop hides every breakpoint
+ * that does not override visibility, because tablet/mobile inherit the base.
+ */
+export const pageResponsiveHideToggles: readonly PageResponsiveHideToggle[] = pageBreakpoints.map(
+  (breakpoint) => ({
+    id: `responsive.hide.${breakpoint}`,
+    breakpoint,
+    label: `Hide on ${breakpoint}`,
+    path: ["visibility", "visible"] as const,
+  })
+);
+
+type PageResponsiveVisibilitySource = {
+  visibility: { visible: boolean };
+  responsive?: Partial<
+    Record<Exclude<PageBreakpoint, "desktop">, { visibility?: { visible?: boolean } }>
+  >;
+};
+
+/**
+ * Effective visibility of a section/block at a breakpoint following the
+ * cascade: tablet/mobile read their sparse override when present, otherwise
+ * the desktop base. Mirrors `resolvePageSectionForBreakpoint` semantics.
+ */
+export const getPageResponsiveEffectiveVisible = (
+  source: PageResponsiveVisibilitySource,
+  breakpoint: PageBreakpoint
+): boolean => {
+  if (breakpoint === "desktop") return source.visibility.visible;
+  return source.responsive?.[breakpoint]?.visibility?.visible ?? source.visibility.visible;
+};
+
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const hasNestedPathValue = (source: unknown, path: readonly string[]): boolean =>
+  path.reduce<unknown>((current, key) => {
+    if (!isRecordValue(current) || !(key in current)) return undefined;
+    return current[key];
+  }, source) !== undefined;
+
+export type PageResponsiveOverrideEntryState = "base" | "override" | "inherited";
+
+export type PageResponsiveOverrideEntry = {
+  control: PageEditorControlDefinition;
+  state: PageResponsiveOverrideEntryState;
+};
+
+/**
+ * Projects every responsive-capable registry control of a target onto its
+ * Base / Override / Inherited state for one breakpoint. `overrideSource` is
+ * the target's sparse override record for that breakpoint
+ * (`section.responsive[bp]` / `block.responsive[bp]`); on desktop every
+ * field is `base` because desktop IS the cascade base. The Responsive
+ * panel's override list renders these entries with reset-inheritance
+ * actions; reset affordances may only appear for `override` entries.
+ */
+export const projectPageResponsiveOverrideEntries = (
+  target: { kind: PageEditorControlTarget; type: PageSectionType | PageBlockType },
+  breakpoint: PageBreakpoint,
+  overrideSource: unknown
+): PageResponsiveOverrideEntry[] =>
+  getPageEditorControlsForTarget(target)
+    .filter((definition) => definition.responsive)
+    .map((definition) => ({
+      control: definition,
+      state:
+        breakpoint === "desktop"
+          ? "base"
+          : hasNestedPathValue(overrideSource, definition.overridePath)
+            ? "override"
+            : "inherited",
+    }));

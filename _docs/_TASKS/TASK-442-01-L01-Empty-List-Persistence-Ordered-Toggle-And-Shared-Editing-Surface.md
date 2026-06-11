@@ -6,8 +6,9 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-442-01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -33,13 +34,13 @@ contenteditable flow); this leaf only registers the list `items` targets in
 
 ## Sub-Tasks
 
-- [ ] Reproduce the empty-list drop in the live admin flow (including the
+- [x] Reproduce the empty-list drop in the live admin flow (including the
       stale-CSRF save-failure + cache-rehydration path) and record the first
       layer that drops the block, or record that it no longer reproduces at
       HEAD (hard gate for the persistence fix).
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -141,3 +142,7 @@ Regression-test shape:
 ## Progress Notes
 
 Persistence pins landed 2026-06-11 (round-trip suite) and the live-path dropper was fixed by TASK-449-02 (shared root cause; no list-specific persistence change required). Remaining scope (ordered-toggle adoption, inline items registration) is gated on TASK-421/TASK-422.
+
+## Completion Notes
+
+Completed 2026-06-11: remaining gated scope verified in place post-421/422 (ordered renders the shared ToggleSwitch through the adapter; list `items.*` inline editing wired end-to-end through pageInlineEditContract + the renderer hook); one flow-layer regression pin added; persistence pins and the shared dropper fix landed earlier (TASK-449-02).

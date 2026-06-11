@@ -6,7 +6,6 @@ import { SeoAuditDialog } from "../../../core/admin/ui/seo/SeoAuditDialog";
 import { ExportDialog } from "../../../core/admin/ui/shared/ExportDialog";
 import { BackupNowDialog } from "../../../core/admin/ui/backups/BackupNowDialog";
 import { ThemeExportDialog } from "../../../core/admin/ui/themes/ThemeExportDialog";
-import { WidgetCreateDialog } from "../../../core/admin/ui/widgets/WidgetCreateDialog";
 import { WidgetInsertDialog } from "../../../core/admin/ui/widgets/WidgetInsertDialog";
 import { IntegrationRequestDialog } from "../../../core/admin/ui/settings/IntegrationRequestDialog";
 
@@ -53,18 +52,6 @@ test("ThemeExportDialog renders title", () => {
   const html = renderAdminUi(<ThemeExportDialog open onOpenChange={() => undefined} />);
 
   expect(html).toContain("Export Theme Config");
-});
-
-test("WidgetCreateDialog renders title", () => {
-  const html = renderAdminUi(
-    <WidgetCreateDialog
-      open
-      onOpenChange={() => undefined}
-      categories={[{ id: "layout", name: "Layout" }]}
-    />
-  );
-
-  expect(html).toContain("Custom Widget");
 });
 
 test("WidgetInsertDialog renders title", () => {

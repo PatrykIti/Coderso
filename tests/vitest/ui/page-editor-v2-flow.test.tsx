@@ -4,7 +4,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-import { PageEditor } from "../../../core/admin/ui/pages/PageEditor";
+import { PageEditor, resolveToolbarTargetLabel } from "../../../core/admin/ui/pages/PageEditor";
 import type { PageDetail, PageRevision } from "../../../core/admin/services/pagesClient";
 import {
   createPageBlockV2,
@@ -18,6 +18,8 @@ import {
   type PageDocumentV2,
   type PageSectionType,
 } from "../../../core/services/pages/pageDocumentV2";
+import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
+import { toPageTypographyCssVariableMap } from "../../../core/ui/theme/tokenCss";
 
 type CacheEvent = {
   key: string;
@@ -167,6 +169,14 @@ const mediaLibraryState = vi.hoisted(() => ({
   ],
 }));
 
+// Admin settings payload backing the canvas site-token variables ("design.tokens").
+const siteSettingsState = vi.hoisted(() => ({
+  settings: null as Record<string, unknown> | null,
+  reset() {
+    siteSettingsState.settings = null;
+  },
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: toastState.success,
@@ -278,11 +288,17 @@ vi.mock("@/services/apiClient", () => ({
 vi.mock("@/services/cachePolicy", () => ({
   cacheKeys: {
     pageDetail: (id: string) => `page-detail:${id}`,
+    settingsRedacted: "settings:redacted",
   },
   cacheTtlMs: {
     list: 300_000,
     detail: 300_000,
   },
+}));
+
+vi.mock("@/services/settingsClient", () => ({
+  getCachedSettings: () => siteSettingsState.settings,
+  getSettingsCached: async () => siteSettingsState.settings ?? {},
 }));
 
 vi.mock("@/services/pagesClient", () => ({
@@ -360,10 +376,13 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
   RuntimePreviewDialog: (props: {
     open: boolean;
     title: string;
+    subtitle?: string;
     canPreview: boolean;
     previewUrl: string | null;
     probeResult?: { ok: boolean; targetLabel?: string } | null;
     device?: string;
+    onFixPreviewTarget?: () => void;
+    fixPreviewTargetLabel?: string;
   }) => {
     previewDialogState.latest = props;
     return props.open ? (
@@ -693,6 +712,7 @@ beforeEach(() => {
   previewDialogState.reset();
   toastState.success.mockClear();
   toastState.error.mockClear();
+  siteSettingsState.reset();
   pageEditorState.cachedPage = createPage();
   pageEditorState.currentPage = createPage();
 });
@@ -1907,11 +1927,14 @@ test("PageEditor hero and button inspector panels render dedicated widgets with 
     expect(panelEl().querySelectorAll("select")).toHaveLength(0);
     expect(countWidgets("toggle")).toBeGreaterThan(0); // visible, auth only, date range
 
-    // The Responsive panel is a category shell with the breakpoint-state
-    // readout only; its control content is owned by TASK-425.
+    // The Responsive panel renders its dedicated control content (TASK-425):
+    // the breakpoint-state readout, per-breakpoint hide toggles, and the
+    // section vertical-layout toggle — all role="switch" widgets, no natives.
     clickButtonByLabel(view.container, "Responsive panel");
     expect(panelEl().querySelector("[data-page-editor-responsive-target-state]")).toBeTruthy();
-    expect(panelEl().querySelectorAll("[data-page-editor-control]")).toHaveLength(0);
+    expect(countWidgets("toggle")).toBe(4); // hide desktop/tablet/mobile + stack vertically
+    expect(panelEl().querySelectorAll('[role="switch"]')).toHaveLength(4);
+    expect(panelEl().querySelector("[data-page-editor-responsive-override-list]")).toBeTruthy();
     expect(panelEl().querySelectorAll("input, select")).toHaveLength(0);
 
     // Button block panels.
@@ -1932,6 +1955,285 @@ test("PageEditor hero and button inspector panels render dedicated widgets with 
     clickButtonByLabel(view.container, "Visibility panel");
     expect(panelEl().querySelectorAll("select")).toHaveLength(0);
     expect(countWidgets("toggle")).toBeGreaterThan(0); // visible
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor typography panel appears only for text-capable block selections", async () => {
+  const mixedPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-typo-matrix",
+          name: "Typography matrix",
+          blocks: [
+            createPageBlockV2("heading", { id: "blk-h" }),
+            createPageBlockV2("text", { id: "blk-t" }),
+            createPageBlockV2("button", { id: "blk-b" }),
+            createPageBlockV2("quote", { id: "blk-q", props: { text: "Quoted", cite: "" } }),
+            createPageBlockV2("statistic", { id: "blk-s" }),
+            createPageBlockV2("list", { id: "blk-l", props: { items: ["One"], ordered: false } }),
+            createPageBlockV2("card", { id: "blk-c" }),
+            createPageBlockV2("image", { id: "blk-i" }),
+            createPageBlockV2("divider", { id: "blk-d" }),
+            createPageBlockV2("spacer", { id: "blk-sp" }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = mixedPage;
+  pageEditorState.currentPage = mixedPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={mixedPage} />);
+
+  try {
+    await flush();
+
+    const typographyButton = () =>
+      view.container.querySelector('button[aria-label="Typography panel"]');
+
+    // Section selections never expose the Typography panel (no consolidated
+    // section text surface by owner contract).
+    expect(typographyButton()).toBeNull();
+
+    for (const blockId of ["blk-h", "blk-t", "blk-b", "blk-q", "blk-s", "blk-l", "blk-c"]) {
+      clickSelector(view.container, `[data-page-editor-block-id="${blockId}"]`);
+      await flush();
+      expect(typographyButton(), blockId).toBeTruthy();
+    }
+
+    for (const blockId of ["blk-i", "blk-d", "blk-sp"]) {
+      clickSelector(view.container, `[data-page-editor-block-id="${blockId}"]`);
+      await flush();
+      expect(typographyButton(), blockId).toBeNull();
+    }
+
+    // An open Typography panel closes when the selection moves to a target
+    // that does not support it, instead of rendering invalid controls.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-h"]');
+    await flush();
+    clickButtonByLabel(view.container, "Typography panel");
+    expect(
+      view.container.querySelector('[data-page-editor-toolbar-panel="typography"]')
+    ).toBeTruthy();
+    clickSelector(view.container, '[data-page-editor-block-id="blk-i"]');
+    await flush();
+    expect(
+      view.container.querySelector('[data-page-editor-toolbar-panel="typography"]')
+    ).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor typography panel renders dedicated widgets, paints the text node, and saves token values", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    clickButtonByLabel(view.container, "Typography panel");
+
+    const panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="typography"]'
+    ) as HTMLElement;
+    expect(panel).toBeTruthy();
+
+    // Dedicated widgets only: no native selects, no raw text inputs.
+    expect(panel.querySelectorAll("select")).toHaveLength(0);
+    expect(panel.querySelectorAll('[data-page-editor-control="text"]')).toHaveLength(0);
+    expect(panel.querySelectorAll('input[type="number"]')).toHaveLength(0);
+    for (const label of ["Font family", "Font size", "Font weight", "Text align"]) {
+      expect(findSegmentedGroup(panel, label)).toBeTruthy();
+    }
+    for (const label of ["Line height", "Letter spacing"]) {
+      expect(
+        panel.querySelector(`[data-page-editor-slider-stepper="${label}"]`),
+        label
+      ).toBeTruthy();
+    }
+
+    clickSegmentedOption(panel, "Font family", "display");
+    clickSegmentedOption(panel, "Font size", "2xl");
+    clickSegmentedOption(panel, "Font weight", "bold");
+    clickSegmentedOption(panel, "Text align", "right");
+    setSliderField(view.container, "Line height", "1.4");
+    setSliderField(view.container, "Letter spacing", "2");
+    await flush();
+
+    // The canvas paints the values inline on the same heading node the front
+    // renders, beating the baked level classes.
+    const heading = findEditorBlock(view.container, "blk-heading").querySelector(
+      "h1"
+    ) as HTMLElement;
+    expect(heading).toBeTruthy();
+    expect(heading.style.fontFamily).toContain("var(--font-display");
+    expect(heading.style.fontWeight).toBe("700");
+    expect(heading.style.lineHeight).toBe("1.4");
+    expect(heading.style.letterSpacing).toBe("2px");
+    expect(heading.className).toContain("text-right");
+    // happy-dom's CSS validator drops `var()` values for font-size, so the
+    // inline font-size paint is asserted by the shared-renderer suite
+    // (page-renderer-v2.test.tsx) which covers the same node markup; here the
+    // stored token is asserted through the save payload below.
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const savedBlock = savedDocument.sections[0]?.blocks.find(
+      (block) => block.id === "blk-heading"
+    );
+    // Token values persist in the schema-owned style fields.
+    expect(savedBlock?.style).toMatchObject({
+      fontFamily: "display",
+      fontSize: "2xl",
+      fontWeight: "bold",
+      lineHeight: 1.4,
+      letterSpacing: 2,
+    });
+    // The relocated Text align presentation keeps the legacy stored path:
+    // heading text alignment stays in props.align, not style.align.
+    expect(savedBlock?.props.align).toBe("right");
+    expect(savedBlock?.style?.align).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor typography Text align edited on tablet writes a tablet props override, not the base", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Smoke repro (phase2 anomaly #1): select the heading, switch the canvas
+    // device to Tablet, then set Text align — the edit must create a
+    // responsive.tablet props override exactly like Font size does, never a
+    // base write.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    clickButtonByLabel(view.container, "Tablet");
+    await flush();
+    clickButtonByLabel(view.container, "Typography panel");
+
+    let panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="typography"]'
+    ) as HTMLElement;
+    expect(panel).toBeTruthy();
+    const alignFieldOf = (root: HTMLElement) =>
+      findSegmentedGroup(root, "Text align").closest(
+        "[data-page-editor-responsive-field]"
+      ) as HTMLElement;
+    expect(alignFieldOf(panel).getAttribute("data-page-editor-responsive-field")).toBe("inherited");
+
+    // The exact smoke gesture: the base align IS "center", and the operator
+    // clicks "center" on tablet. The explicit choice must PIN the inherited
+    // value as a tablet override (the same gesture on Font size created one),
+    // never no-op and never write the base.
+    clickSegmentedOption(panel, "Text align", "center");
+    await flush();
+
+    panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="typography"]'
+    ) as HTMLElement;
+    let alignField = alignFieldOf(panel);
+    // Badge flips Inherited -> Override and exposes the reset affordance.
+    expect(alignField.getAttribute("data-page-editor-responsive-field")).toBe("override");
+    expect(alignField.querySelector('[data-page-editor-responsive-badge="override"]')).toBeTruthy();
+    expect(
+      alignField.querySelector('button[aria-label="Reset Text align to inherited"]')
+    ).toBeTruthy();
+
+    clickButton(view.container, "Save");
+    await flush();
+    let saved = lastSavedDocument();
+    let heading = saved.sections[0]?.blocks[0];
+    // Base align untouched; the tablet override container carries the edit.
+    expect(heading?.props.align).toBe("center");
+    expect(heading?.responsive?.tablet?.props).toEqual({ align: "center" });
+
+    // Reset restores inheritance and removes the override container.
+    clickSelector(view.container, 'button[aria-label="Reset Text align to inherited"]');
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    saved = lastSavedDocument();
+    heading = saved.sections[0]?.blocks[0];
+    expect(heading?.props.align).toBe("center");
+    expect(heading?.responsive?.tablet).toBeUndefined();
+
+    // A diverging value follows the same device-scoped props container.
+    panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="typography"]'
+    ) as HTMLElement;
+    clickSegmentedOption(panel, "Text align", "left");
+    await flush();
+    panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="typography"]'
+    ) as HTMLElement;
+    alignField = alignFieldOf(panel);
+    expect(alignField.getAttribute("data-page-editor-responsive-field")).toBe("override");
+    clickButton(view.container, "Save");
+    await flush();
+    saved = lastSavedDocument();
+    heading = saved.sections[0]?.blocks[0];
+    expect(heading?.props.align).toBe("center");
+    expect(heading?.responsive?.tablet?.props).toEqual({ align: "left" });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor canvas frame anchors site typography token variables for WYSIWYG parity with the front", async () => {
+  // No cached/fetched settings: the canvas must carry the documented
+  // DEFAULT_TOKENS fallbacks so `var(--text-*)` resolves the same values the
+  // front emits for a default token set — never the admin-theme `--text-*`
+  // scale painted on the admin `:root`.
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    const frame = view.container.querySelector(
+      '[data-page-editor-canvas-frame="true"]'
+    ) as HTMLElement;
+    expect(frame).toBeTruthy();
+    for (const [variable, value] of Object.entries(
+      toPageTypographyCssVariableMap(DEFAULT_TOKENS)
+    )) {
+      expect(frame.style.getPropertyValue(variable), variable).toBe(value);
+    }
+    expect(frame.style.getPropertyValue("--text-sm")).toBe("0.875rem");
+    expect(frame.style.getPropertyValue("--text-5xl")).toBe("3rem");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor canvas frame paints the resolved site design.tokens typography over the defaults", async () => {
+  siteSettingsState.settings = {
+    "design.tokens": {
+      typography: { sm: "1.125rem", "5xl": "3.5rem" },
+    },
+  };
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    const frame = view.container.querySelector(
+      '[data-page-editor-canvas-frame="true"]'
+    ) as HTMLElement;
+    expect(frame.style.getPropertyValue("--text-sm")).toBe("1.125rem");
+    expect(frame.style.getPropertyValue("--text-5xl")).toBe("3.5rem");
+    // Untouched tokens keep the DEFAULT_TOKENS anchor.
+    expect(frame.style.getPropertyValue("--text-md")).toBe("1rem");
+    expect(frame.style.getPropertyValue("--font-sans")).toBe(DEFAULT_TOKENS.typography.sans);
   } finally {
     view.cleanup();
   }
@@ -1967,7 +2269,9 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
     clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
     await flush();
     toolbar = view.container.querySelector('[data-page-editor-floating-toolbar="true"]');
-    expect(toolbar?.getAttribute("aria-label")).toBe("Existing page copy. tools");
+    // Type display name only — block content ("Existing page copy.") must not
+    // leak into the toolbar aria text (TASK-451-02-L01 label contract).
+    expect(toolbar?.getAttribute("aria-label")).toBe("Text tools");
 
     clickButtonByLabel(view.container, "Collapse toolbar");
     await flush();
@@ -2012,6 +2316,132 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
         .querySelector('[data-page-editor-floating-toolbar="true"]')
         ?.getAttribute("data-page-editor-toolbar-dragging")
     ).toBe("false");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("resolveToolbarTargetLabel resolves type display names and never block content", () => {
+  expect(resolveToolbarTargetLabel({ kind: "block", type: "text" })).toBe("Text");
+  expect(resolveToolbarTargetLabel({ kind: "block", type: "statistic" })).toBe("Statistic");
+  expect(resolveToolbarTargetLabel({ kind: "block", type: "quote" })).toBe("Quote");
+  expect(resolveToolbarTargetLabel({ kind: "section", type: "hero" })).toBe("Hero");
+  expect(
+    resolveToolbarTargetLabel(
+      { kind: "section", type: "feature-grid" },
+      {
+        fallbackToTypeName: true,
+      }
+    )
+  ).toBe("Feature grid");
+  expect(resolveToolbarTargetLabel(null)).toBe("Page");
+});
+
+test("PageEditor toolbar aria labels use type names for text, statistic, and quote blocks", async () => {
+  pageEditorState.cachedPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("hero", {
+          id: "sec-hero",
+          name: "Hero",
+          blocks: [
+            createPageBlockV2("text", {
+              id: "blk-text",
+              props: { text: "Write the section copy here.", format: "plain" },
+            }),
+            createPageBlockV2("statistic", {
+              id: "blk-stat",
+              props: { value: "0" },
+            }),
+            createPageBlockV2("quote", {
+              id: "blk-quote",
+              props: { text: "Customer praise quote." },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    const toolbarLabel = () =>
+      view.container
+        .querySelector('[data-page-editor-floating-toolbar="true"]')
+        ?.getAttribute("aria-label");
+
+    clickSelector(view.container, '[data-page-editor-section="hero"]');
+    await flush();
+    expect(toolbarLabel()).toBe("Hero tools");
+
+    const expectations: Array<[string, string]> = [
+      ["blk-text", "Text tools"],
+      ["blk-stat", "Statistic tools"],
+      ["blk-quote", "Quote tools"],
+    ];
+    for (const [blockId, expected] of expectations) {
+      clickSelector(view.container, `[data-page-editor-block-id="${blockId}"]`);
+      await flush();
+      expect(toolbarLabel()).toBe(expected);
+    }
+
+    // Placeholder/user copy never leaks into the toolbar aria text.
+    expect(toolbarLabel()).not.toContain("Customer praise quote.");
+    const toolbar = view.container.querySelector('[data-page-editor-floating-toolbar="true"]');
+    expect(toolbar?.getAttribute("aria-label")).not.toContain("Write the section copy here.");
+    expect(toolbar?.getAttribute("aria-label")).not.toBe("0 tools");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor per-gap insert zones open the palette pre-targeted and insert at the gap index", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // The persistent top-of-canvas button stays alongside the per-gap zones.
+    expect(findButton(view.container, "Add section")).toBeTruthy();
+    // One section renders a gap above (0) and below (1).
+    expect(view.container.querySelector('[data-page-editor-section-gap="0"]')).toBeTruthy();
+    expect(view.container.querySelector('[data-page-editor-section-gap="1"]')).toBeTruthy();
+
+    // Insert at the gap ABOVE the existing hero section.
+    clickButtonByLabel(view.container, "Add section at position 1");
+    await flush();
+    expect(
+      view.container.querySelector('[role="dialog"][aria-label="Command palette"]')
+    ).toBeTruthy();
+    clickButton(view.container, "FAQ");
+    await flush();
+
+    // Insert at the trailing gap (now index 2) below the last section.
+    clickButtonByLabel(view.container, "Add section at position 3");
+    await flush();
+    clickButton(view.container, "CTA");
+    await flush();
+
+    // The top button still appends (gap pre-targeting resets between opens).
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "Content");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections.map((section) => section.type)).toEqual([
+      "faq",
+      "hero",
+      "cta",
+      "content",
+    ]);
+    expect(savedDocument.sections[1]?.id).toBe("sec-hero");
   } finally {
     view.cleanup();
   }
@@ -2491,6 +2921,42 @@ test("PageEditor list controls round-trip items and ordered mode", async () => {
   }
 });
 
+// TASK-442-01-L01 empty-list persistence pin at the editor flow layer: the
+// audited UX trap was a freshly inserted (still empty) list vanishing from the
+// saved document. Schema-layer pins live in page-document-v2-block-roundtrip;
+// this pin proves the editor save payload keeps the default `items: []` block.
+test("PageEditor save keeps a freshly inserted empty list block in the document", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add block");
+    await flush();
+    const listEntry = getCommandGroupButtons(view.container, "Blocks").find(
+      (button) => button.querySelector("span")?.textContent === "List"
+    );
+    expect(listEntry).toBeTruthy();
+    React.act(() => {
+      listEntry?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    // Save immediately, before the author types any items.
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const savedList = savedDocument.sections
+      .flatMap((section) => section.blocks)
+      .find((block) => block.type === "list");
+    expect(savedList?.props).toMatchObject({ items: [], ordered: false });
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor card, statistic, quote, divider, and spacer controls round-trip", async () => {
   const mixedPage = createPage({
     currentData: createDocument({
@@ -2678,10 +3144,25 @@ test("PageEditor previews, publishes, updates settings, and manages revisions wi
     expect(previewDialogState.latest).toMatchObject({
       open: true,
       title: "Page preview",
+      subtitle: "Runtime preview of the saved draft (read-only, site theme).",
       canPreview: true,
       previewUrl: "https://preview.test/page-1",
       device: "desktop",
+      fixPreviewTargetLabel: "Retry preview",
     });
+    // The unavailable placeholder exposes a retry affordance that re-runs the
+    // preview issuance flow instead of leaving a dead end.
+    const previewCallsBeforeRetry = pageEditorState.previewPage.mock.calls.length;
+    const latestDialogProps = previewDialogState.latest as {
+      onFixPreviewTarget?: () => void;
+    };
+    expect(typeof latestDialogProps.onFixPreviewTarget).toBe("function");
+    await React.act(async () => {
+      latestDialogProps.onFixPreviewTarget?.();
+      await Promise.resolve();
+    });
+    await flush();
+    expect(pageEditorState.previewPage.mock.calls.length).toBe(previewCallsBeforeRetry + 1);
 
     clickButton(view.container, "Page settings");
     await flush();
@@ -3220,6 +3701,262 @@ test("PageEditor inline edits list items and statistic fields through their prop
       value: "1337",
       label: "Answers",
     });
+  } finally {
+    view.cleanup();
+  }
+});
+
+// --- TASK-425: Responsive panel content, hide/stack toggles, override list ---
+
+const openResponsivePanel = (container: ParentNode) => {
+  clickButtonByLabel(container, "Responsive panel");
+  const panel = container.querySelector('[data-page-editor-toolbar-panel="responsive"]');
+  expect(panel).toBeTruthy();
+  return panel as HTMLElement;
+};
+
+const lastSavedDocument = (): PageDocumentV2 =>
+  pageEditorState.updatePage.mock.calls.at(-1)?.[1]?.data as PageDocumentV2;
+
+test("PageEditor Responsive panel hide toggles write per-breakpoint visibility and reset restores inheritance", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    const panel = openResponsivePanel(view.container);
+    // All three per-breakpoint hide toggles render as real switches.
+    const switches = Array.from(panel.querySelectorAll('[role="switch"]')).map((node) =>
+      node.getAttribute("aria-label")
+    );
+    expect(switches).toEqual([
+      "Hide on desktop",
+      "Hide on tablet",
+      "Hide on mobile",
+      "Stack vertically",
+    ]);
+    expect(
+      panel
+        .querySelector('[data-page-editor-responsive-hide="desktop"]')
+        ?.getAttribute("data-page-editor-responsive-hide-state")
+    ).toBe("base");
+    expect(
+      panel
+        .querySelector('[data-page-editor-responsive-hide="mobile"]')
+        ?.getAttribute("data-page-editor-responsive-hide-state")
+    ).toBe("inherited");
+
+    // Hide on mobile writes the EXISTING responsive.mobile.visibility.visible
+    // override path while the active canvas device stays desktop.
+    setToggleField(panel, "Hide on mobile", true);
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    let saved = lastSavedDocument();
+    expect(saved.sections[0]?.visibility.visible).toBe(true);
+    expect(saved.sections[0]?.responsive.mobile?.visibility).toEqual({ visible: false });
+
+    // The toggle row now reports an override and exposes the reset action.
+    const mobileRow = view.container.querySelector(
+      '[data-page-editor-responsive-hide="mobile"]'
+    ) as HTMLElement;
+    expect(mobileRow.getAttribute("data-page-editor-responsive-hide-state")).toBe("override");
+    clickSelector(mobileRow, 'button[aria-label="Reset Hide on mobile to inherited"]');
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    saved = lastSavedDocument();
+    expect(saved.sections[0]?.responsive.mobile).toBeUndefined();
+
+    // Hide on desktop writes the BASE visibility, not an override container.
+    const refreshedPanel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="responsive"]'
+    ) as HTMLElement;
+    setToggleField(refreshedPanel, "Hide on desktop", true);
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    saved = lastSavedDocument();
+    expect(saved.sections[0]?.visibility.visible).toBe(false);
+    expect(saved.sections[0]?.responsive.tablet).toBeUndefined();
+    expect(saved.sections[0]?.responsive.mobile).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor Responsive panel stack toggle writes layout.stackVertical per device and the override list resets it", async () => {
+  const twoColumnPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("hero", {
+          id: "sec-hero",
+          name: "Hero",
+          variant: "centered",
+          layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "blk-heading",
+              props: { text: "Welcome to Coderso", level: "h1", align: "center" },
+            }),
+            createPageBlockV2("text", {
+              id: "blk-copy",
+              props: { text: "Existing page copy.", format: "plain", align: "center" },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = twoColumnPage;
+  pageEditorState.currentPage = twoColumnPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={twoColumnPage} />);
+
+  try {
+    await flush();
+    expect(findEditorSectionContent(view.container, "sec-hero").className).toContain("grid-cols-2");
+
+    // Desktop context writes the base field.
+    let panel = openResponsivePanel(view.container);
+    expect(
+      panel.querySelector('[data-page-editor-responsive-override-list="desktop"]')?.textContent
+    ).toContain("Desktop is the base");
+    setToggleField(panel, "Stack vertically", true);
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    let saved = lastSavedDocument();
+    expect(saved.sections[0]?.layout.stackVertical).toBe(true);
+    expect(saved.sections[0]?.responsive.mobile).toBeUndefined();
+    panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="responsive"]'
+    ) as HTMLElement;
+    setToggleField(panel, "Stack vertically", false);
+    await flush();
+
+    // Mobile context writes the responsive.mobile.layout override.
+    clickButtonByLabel(view.container, "Mobile");
+    await flush();
+    panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="responsive"]'
+    ) as HTMLElement;
+    setToggleField(panel, "Stack vertically", true);
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    saved = lastSavedDocument();
+    expect(saved.sections[0]?.layout.stackVertical).toBe(false);
+    expect(saved.sections[0]?.responsive.mobile?.layout).toEqual({ stackVertical: true });
+
+    // The canvas section grid visibly stacks at the mobile context.
+    const stackedContent = findEditorSectionContent(view.container, "sec-hero");
+    expect(stackedContent.className).toContain("grid-cols-1");
+    expect(stackedContent.className).not.toContain("grid-cols-2");
+
+    // The per-field override list shows the override entry with a reset action.
+    panel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="responsive"]'
+    ) as HTMLElement;
+    const entry = panel.querySelector(
+      '[data-page-editor-override-entry="section.layout.stackVertical"]'
+    ) as HTMLElement;
+    expect(entry.getAttribute("data-page-editor-override-state")).toBe("override");
+    expect(
+      panel.querySelectorAll('[data-page-editor-override-state="inherited"]').length
+    ).toBeGreaterThan(0);
+    clickSelector(entry, '[data-page-editor-override-reset="section.layout.stackVertical"]');
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    saved = lastSavedDocument();
+    expect(saved.sections[0]?.responsive.mobile).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor Responsive panel targets the selected block and projects its override list", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
+    await flush();
+    const panel = openResponsivePanel(view.container);
+    expect(
+      panel
+        .querySelector("[data-page-editor-responsive-panel]")
+        ?.getAttribute("data-page-editor-responsive-panel")
+    ).toBe("block");
+    // Block targets expose the hide toggles but no section stacking surface.
+    const switches = Array.from(panel.querySelectorAll('[role="switch"]')).map((node) =>
+      node.getAttribute("aria-label")
+    );
+    expect(switches).toEqual(["Hide on desktop", "Hide on tablet", "Hide on mobile"]);
+
+    setToggleField(panel, "Hide on tablet", true);
+    await flush();
+    clickButton(view.container, "Save");
+    await flush();
+    const saved = lastSavedDocument();
+    const heading = saved.sections[0]?.blocks[0];
+    expect(heading?.visibility.visible).toBe(true);
+    expect(heading?.responsive?.tablet?.visibility).toEqual({ visible: false });
+
+    // The override list projects block fields at the tablet context.
+    clickButtonByLabel(view.container, "Tablet");
+    await flush();
+    const tabletPanel = view.container.querySelector(
+      '[data-page-editor-toolbar-panel="responsive"]'
+    ) as HTMLElement;
+    const visibilityEntry = tabletPanel.querySelector(
+      '[data-page-editor-override-entry="block.visibility.visible"]'
+    );
+    expect(visibilityEntry?.getAttribute("data-page-editor-override-state")).toBe("override");
+    expect(
+      tabletPanel
+        .querySelector('[data-page-editor-override-entry="block.heading.props.text"]')
+        ?.getAttribute("data-page-editor-override-state")
+    ).toBe("inherited");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor breakpoint switcher shows labels with width readouts and the editing-scope pill follows the device", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Visible labels + canonical px readouts on the switcher (not icon-only).
+    for (const [label, width] of [
+      ["Desktop", "1080"],
+      ["Tablet", "744"],
+      ["Mobile", "390"],
+    ] as const) {
+      const button = view.container.querySelector(`button[aria-label="${label}"]`);
+      expect(button?.textContent).toContain(label);
+      expect(button?.textContent).toContain(width);
+    }
+
+    // Canvas context bar and the floating-panel scope pill share the readout.
+    expect(
+      view.container.querySelector('[data-page-editor-canvas-context="desktop"]')?.textContent
+    ).toBe("Desktop · 1080px · base view");
+    expect(
+      view.container.querySelector('[data-page-editor-editing-scope="desktop"]')?.textContent
+    ).toBe("Editing: Desktop · 1080px (base)");
+
+    clickButtonByLabel(view.container, "Mobile");
+    await flush();
+    expect(
+      view.container.querySelector('[data-page-editor-canvas-context="mobile"]')?.textContent
+    ).toBe("Mobile · 390px · override context");
+    expect(
+      view.container.querySelector('[data-page-editor-editing-scope="mobile"]')?.textContent
+    ).toBe("Editing: Mobile · 390px (overrides)");
   } finally {
     view.cleanup();
   }

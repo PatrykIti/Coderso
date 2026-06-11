@@ -34,8 +34,7 @@ import { listRecentSearchesCached } from "@/services/searchClient";
 import { listSeoCached } from "@/services/seoClient";
 import { getSettingsCached } from "@/services/settingsClient";
 import { getSiteSettingsCached } from "@/services/siteSettingsClient";
-import { listWidgetTemplateCategoriesCached } from "@/services/widgetTemplateCategoriesClient";
-import { listWidgetTemplatesCached } from "@/services/widgetTemplatesClient";
+import { listPageTemplatesCached } from "@/services/pageTemplatesClient";
 import { listWidgetCatalogCached } from "@/services/widgetsClient";
 import {
   isExternalHref,
@@ -290,13 +289,12 @@ const defaultEntries: AdminPrefetchEntry[] = [
     run: () => listPagesCached(prefetchWarmupOptions),
   },
   {
+    match: "/advanced/page-templates",
+    run: () => listPageTemplatesCached(prefetchWarmupOptions),
+  },
+  {
     match: "/advanced/widgets",
-    run: () =>
-      Promise.all([
-        listWidgetCatalogCached(prefetchWarmupOptions),
-        listWidgetTemplateCategoriesCached(prefetchWarmupOptions),
-        listWidgetTemplatesCached(prefetchWarmupOptions),
-      ]),
+    run: () => listWidgetCatalogCached(prefetchWarmupOptions),
   },
   {
     match: (path) => resolveDetailTemplatePrefetchTarget(path) !== null,

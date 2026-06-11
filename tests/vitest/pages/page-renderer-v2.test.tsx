@@ -6,6 +6,7 @@ import {
   createPageBlockV2,
   createPageSectionV2,
   PAGE_DOCUMENT_SCHEMA_VERSION,
+  resolvePageSectionForBreakpoint,
   type PageDocumentV2,
   type PageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
@@ -16,8 +17,14 @@ import {
   PageSectionRender,
   resolvePageRenderTree,
   toPageBlockRenderProps,
+  toPageBlockTypographyStyle,
   toPageSectionRenderProps,
 } from "../../../core/services/pages/pageRendererV2";
+import {
+  pageTypographyFontFamilyCssValues,
+  pageTypographyFontSizeCssValues,
+  pageTypographyFontWeightCssValues,
+} from "../../../core/services/pages/pageDocumentV2";
 import { serializePageBlockPath } from "../../../core/services/pages/pageBlockPaths";
 
 const createDocument = (sections: PageSectionV2[]): PageDocumentV2 => ({
@@ -135,6 +142,40 @@ test("section templates branch supported variants and fall back without mutating
   expect(renderToStaticMarkup(<PageSectionRender section={split} />)).toContain(
     'data-page-variant="split"'
   );
+});
+
+test("stackVertical forces a single-column section grid on canvas and front (TASK-425)", () => {
+  const base = createSection();
+  const stacked: PageSectionV2 = { ...base, layout: { ...base.layout, stackVertical: true } };
+
+  const runtimeProps = toPageSectionRenderProps(stacked);
+  const canvasProps = toPageSectionRenderProps(stacked, { layoutMode: "canvas-device" });
+  expect(runtimeProps.contentClassName).toContain("grid-cols-1");
+  expect(runtimeProps.contentClassName).not.toContain("md:grid-cols-3");
+  expect(canvasProps.contentClassName).toContain("grid-cols-1");
+  expect(canvasProps.contentClassName).not.toContain("grid-cols-3");
+
+  // Non-destructive legacy adapter: unset and explicit false keep the exact
+  // pre-TASK-425 class output (template-floored multi-column grid).
+  const unsetProps = toPageSectionRenderProps(base);
+  const explicitFalseProps = toPageSectionRenderProps({
+    ...base,
+    layout: { ...base.layout, stackVertical: false },
+  });
+  expect(explicitFalseProps.contentClassName).toBe(unsetProps.contentClassName);
+  expect(unsetProps.contentClassName).toContain("md:grid-cols-3");
+
+  // Per-breakpoint override resolves through the standard cascade first.
+  const withMobileOverride: PageSectionV2 = {
+    ...base,
+    responsive: { mobile: { layout: { stackVertical: true } } },
+  };
+  const resolvedMobile = resolvePageSectionForBreakpoint(withMobileOverride, "mobile");
+  expect(
+    toPageSectionRenderProps(resolvedMobile, { layoutMode: "canvas-device" }).contentClassName
+  ).toContain("grid-cols-1");
+  const resolvedDesktop = resolvePageSectionForBreakpoint(withMobileOverride, "desktop");
+  expect(toPageSectionRenderProps(resolvedDesktop).contentClassName).toContain("md:grid-cols-3");
 });
 
 test("admin preview wrappers preserve the same shared section and block content", () => {
@@ -331,6 +372,170 @@ test("gradient button backgrounds clear the variant background color inline", ()
   // Inline transparent background-color keeps the variant accent class from
   // bleeding through translucent gradient stops.
   expect(anchorTag).toContain("background-color:transparent");
+});
+
+test("typography style paints inline on the exact text node, not the block frame", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-typography",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-typo-heading",
+        props: { text: "Typo headline", level: "h1", align: "left" },
+        style: {
+          fontFamily: "display",
+          fontSize: "2xl",
+          fontWeight: "normal",
+          lineHeight: 1.2,
+          letterSpacing: 0.5,
+        },
+      }),
+    ],
+  });
+  const block = section.blocks[0]!;
+
+  // Owner mapping: token values resolve through the theme CSS variables.
+  expect(toPageBlockTypographyStyle(block)).toEqual({
+    fontFamily: pageTypographyFontFamilyCssValues.display,
+    fontSize: pageTypographyFontSizeCssValues["2xl"],
+    fontWeight: pageTypographyFontWeightCssValues.normal,
+    lineHeight: 1.2,
+    letterSpacing: "0.5px",
+  });
+  // The frame keeps zero typography: it would lose to the baked classes on
+  // the heading element by CSS specificity/inheritance.
+  expect(toPageBlockRenderProps(block).style).not.toMatchObject({
+    fontFamily: expect.anything(),
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const headingTag = html.match(/<h1[^>]*>/)?.[0] ?? "";
+  const frameTag = html.match(/<div[^>]*data-block-id="blk-typo-heading"[^>]*>/)?.[0] ?? "";
+
+  // Inline values on the same node beat the baked classes (text-5xl,
+  // font-semibold, leading-tight) which remain as fallbacks.
+  expect(headingTag).toContain('data-page-block-text="true"');
+  expect(headingTag).toContain("font-family:var(--font-display");
+  expect(headingTag).toContain("font-size:var(--text-2xl");
+  expect(headingTag).toContain("font-weight:400");
+  expect(headingTag).toContain("line-height:1.2");
+  expect(headingTag).toContain("letter-spacing:0.5px");
+  expect(headingTag).toContain("text-5xl");
+  expect(frameTag).not.toContain("font-family");
+  expect(frameTag).not.toContain("font-size");
+  expect(frameTag).not.toContain("letter-spacing");
+});
+
+test("button typography lands on the anchor element with the visual surface", () => {
+  const section = createPageSectionV2("cta", {
+    id: "sec-typo-button",
+    blocks: [
+      createPageBlockV2("button", {
+        id: "blk-typo-button",
+        props: { label: "Buy", href: "/buy" },
+        style: { fontFamily: "sans", fontSize: "lg", fontWeight: "bold", letterSpacing: 1 },
+      }),
+    ],
+  });
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const anchorTag = html.match(/<a[^>]*>/)?.[0] ?? "";
+  const frameTag = html.match(/<div[^>]*data-block-id="blk-typo-button"[^>]*>/)?.[0] ?? "";
+
+  expect(anchorTag).toContain('data-page-block-element="true"');
+  expect(anchorTag).toContain("font-family:var(--font-sans");
+  expect(anchorTag).toContain("font-size:var(--text-lg");
+  expect(anchorTag).toContain("font-weight:700");
+  expect(anchorTag).toContain("letter-spacing:1px");
+  expect(frameTag).not.toContain("font-size");
+});
+
+test("multi-text and flow blocks carry typography on every painted text node", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-typo-multi",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-typo-copy",
+        props: { text: "Copy", format: "plain", align: "left" },
+        style: { fontSize: "sm" },
+      }),
+      createPageBlockV2("quote", {
+        id: "blk-typo-quote",
+        props: { text: "Quoted", cite: "Cite" },
+        style: { fontSize: "sm" },
+      }),
+      createPageBlockV2("list", {
+        id: "blk-typo-list",
+        props: { items: ["One"], ordered: false },
+        style: { fontSize: "sm" },
+      }),
+      createPageBlockV2("statistic", {
+        id: "blk-typo-stat",
+        props: { value: "42", label: "Answers", caption: "All time" },
+        style: { fontSize: "sm" },
+      }),
+      createPageBlockV2("card", {
+        id: "blk-typo-card",
+        props: { title: "Card", text: "Body" },
+        style: { fontSize: "sm" },
+      }),
+    ],
+  });
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  // p + blockquote + ul + 3 statistic nodes + card title + card body = 8.
+  expect(html.match(/data-page-block-text="true"/g)).toHaveLength(8);
+  expect(html.match(/font-size:var\(--text-sm/g)).toHaveLength(8);
+});
+
+test("unset typography keeps legacy markup free of inline font styles", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-typo-legacy",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-legacy-heading",
+        props: { text: "Legacy", level: "h2", align: "left" },
+      }),
+      createPageBlockV2("image", {
+        id: "blk-legacy-image",
+        props: { src: "/pic.jpg", alt: "Pic" },
+        // Typography fields on non-text blocks are storable but never paint.
+        style: { fontSize: "2xl" },
+      }),
+    ],
+  });
+  expect(toPageBlockTypographyStyle(section.blocks[0]!)).toEqual({});
+  expect(toPageBlockTypographyStyle(section.blocks[1]!)).toEqual({});
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  expect(html).not.toContain("font-family:");
+  expect(html).not.toContain("font-size:");
+  expect(html).not.toContain("letter-spacing:");
+  // The responsive-CSS hook stays present so breakpoint-only typography
+  // overrides can still target the node.
+  expect(html.match(/<h2[^>]*>/)?.[0] ?? "").toContain('data-page-block-text="true"');
+});
+
+test("document renderer resolves responsive typography overrides for the public front", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-typo-responsive",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-typo-resp",
+        props: { text: "Responsive", level: "h2", align: "left" },
+        style: { fontSize: "2xl" },
+        responsive: { mobile: { style: { fontSize: "sm" } } },
+      }),
+    ],
+  });
+  const document = createDocument([section]);
+
+  const desktopHtml = renderToStaticMarkup(
+    <PageDocumentRender document={document} breakpoint="desktop" />
+  );
+  const mobileHtml = renderToStaticMarkup(
+    <PageDocumentRender document={document} breakpoint="mobile" />
+  );
+  expect(desktopHtml).toContain("font-size:var(--text-2xl");
+  expect(mobileHtml).toContain("font-size:var(--text-sm");
 });
 
 test("shared renderer omits hidden block frames unless admin opts in", () => {

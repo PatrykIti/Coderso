@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-425-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -19,9 +21,9 @@ proof across desktop/tablet/mobile flows, and docs/board/changelog sync.
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ## Implementation Pseudocode
 
@@ -52,3 +54,8 @@ Validation commands:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
 
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: suites green, live viewport authoring proof on the front (hide + stack), docs/board/changelog synchronized (changelog 1163).

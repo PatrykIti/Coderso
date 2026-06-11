@@ -68,19 +68,54 @@ The breadcrumb/status strip also matters:
    - confirm whether the page is `Draft` or `Published`,
    - check whether `Unsaved changes` is already shown.
 3. Use the add/command controls when you need a new section or atomic block.
+   - The `Add section` button at the top of the canvas opens the command
+     palette and appends the chosen section at the end of the page.
+   - Hovering the gap above, between, or below sections reveals an inline
+     `Add section` insertion point. It opens the same command palette, and the
+     chosen section is inserted exactly at that gap instead of being appended.
 4. Move your focus to the canvas:
    - select a section,
    - confirm it appears in the canvas where you expect,
    - use the canvas as the editable version of the page.
 5. After selecting a section, use the floating toolbar at the bottom of the
    canvas for layout, content, style, spacing, responsive, and visibility
-   controls.
+   controls. The toolbar names the selection by its type (`Hero`, `Text`,
+   `Statistic`, `Quote`, ...), never by the text you typed into the block, so
+   the label stays stable while you edit content.
+   - When you select a text-bearing block (heading, text, button, quote,
+     statistic, list, card), the toolbar additionally shows a `Typography`
+     panel with font family, font size, font weight, line height, letter
+     spacing, and text align. Font choices are site design tokens (Sans /
+     Display and the token size scale), not free-form values, so pages stay
+     consistent with the site theme. The panel is per-block: sections and
+     non-text blocks (image, divider, spacer) do not show it.
+   - The `Responsive` panel is the dedicated breakpoint surface for the
+     selected section or block. It contains:
+     - `Hide on desktop` / `Hide on tablet` / `Hide on mobile` toggles. The
+       desktop toggle changes the base visibility (smaller screens inherit
+       it); the tablet and mobile toggles store per-screen overrides you can
+       reset back to inheritance.
+     - `Stack vertically` (sections only): forces the section content into a
+       single column on the screen you are editing. Set it while editing
+       Mobile to stack a multi-column section on phones only; the published
+       site applies the same behavior at real viewport widths.
+     - A per-field override list showing every responsive-capable field of
+       the selection with its `Base` / `Override` / `Inherited` state and a
+       `Reset` action next to each overridden field. On Desktop the list is
+       informational because desktop is the base.
 6. Save your work early with `Save draft`.
    Do this before opening preview if you want to validate the latest draft.
 7. Use the device control to choose desktop,
-   tablet, or mobile preview mode.
+   tablet, or mobile editing/preview mode. Each option shows its label and
+   canvas width (`Desktop 1080`, `Tablet 744`, `Mobile 390`), and the floating
+   toolbar shows an `Editing: …` pill so you always know which breakpoint your
+   edits target. Edits made on Tablet or Mobile become overrides; Desktop edits
+   change the base.
 8. Click `Runtime preview` to open the read-only runtime dialog.
-    Use it to verify site-theme rendering, not to edit content.
+    Use it to verify site-theme rendering, not to edit content. The dialog
+    renders the saved draft ("Runtime preview of the saved draft"); if the
+    preview target is temporarily unreachable, the dialog shows a bounded
+    diagnostic and a `Retry preview` button that regenerates the preview.
 9. Open `Page settings` when you need page-wide controls rather than one
    section’s controls.
 10. In `Page settings`, work top to bottom:
@@ -143,6 +178,11 @@ Use this safe working order when you want the lowest chance of mistakes:
 - Runtime preview cannot be generated:
   save the resource first. The editor requires a saved page before preview can
   be generated reliably.
+- Runtime preview shows `Live preview unavailable`:
+  the public frontend did not answer the server-side preview probe. The
+  diagnostic names the target host without the preview token. Check that the
+  public frontend is running and the configured public URL is correct, then use
+  `Retry preview` to regenerate the preview session.
 - Template options are still loading in Page settings:
   wait for the async options load to finish before changing the template.
 - History shows `No revisions yet`:
@@ -150,6 +190,12 @@ Use this safe working order when you want the lowest chance of mistakes:
   for restore/discard actions.
 - You changed page-wide values but the section still looks wrong:
   verify whether the section has its own explicit layout/style/spacing values.
+- A field will not follow your desktop edit on tablet or mobile:
+  that screen has a per-field override. Open the `Responsive` panel on that
+  device and use the override list `Reset` action to restore inheritance.
+- A section unexpectedly renders as one column on a small screen:
+  check the `Stack vertically` toggle in the `Responsive` panel for that
+  screen, then the section `Columns` override.
 
 # Decision Guide
 

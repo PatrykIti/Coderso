@@ -11,7 +11,10 @@ import type { PageEditorControlDefinition } from "./pageEditorControlRegistry";
  * This module must stay Bun-free and side-effect free.
  */
 
-/** Option sets up to this size upgrade from a native select to segmented pills. */
+/**
+ * Declared `select` option sets up to this size upgrade to segmented pills.
+ * Registry controls declared as `segmented` stay segmented at any length.
+ */
 export const PAGE_EDITOR_SEGMENTED_OPTION_LIMIT = 6;
 
 /**
@@ -89,6 +92,18 @@ export const pageEditorOptionLabelCatalog: Readonly<Record<string, string>> = {
   rich: "Rich text",
   left: "Left",
   right: "Right",
+  // Typography tokens
+  sans: "Sans",
+  display: "Display",
+  xl: "XL",
+  "2xl": "2XL",
+  "3xl": "3XL",
+  "4xl": "4XL",
+  "5xl": "5XL",
+  normal: "Normal",
+  medium: "Medium",
+  semibold: "Semibold",
+  bold: "Bold",
   // Heading levels
   h1: "H1",
   h2: "H2",
@@ -196,7 +211,7 @@ const resolveNumberModel = (control: PageEditorControlDefinition): PageEditorCon
   ) {
     return { kind: "unsupported", reason: "number-without-valid-clamp" };
   }
-  if (isSegmentedNumberRange(clamp)) {
+  if (control.step === undefined && isSegmentedNumberRange(clamp)) {
     const options: string[] = [];
     for (let value = clamp.min; value <= clamp.max; value += 1) {
       options.push(String(value));
@@ -211,10 +226,14 @@ const resolveNumberModel = (control: PageEditorControlDefinition): PageEditorCon
   const model = {
     min: clamp.min,
     max: clamp.max,
-    step: resolveSliderStep(clamp),
-    unit: clamp.max <= 1 ? "" : "px",
+    // Registry-owned step/unit (typography fractional ranges) win over the
+    // derived defaults; `unit: ""` is an explicit unitless readout.
+    step: control.step ?? resolveSliderStep(clamp),
+    unit: control.unit ?? (clamp.max <= 1 ? "" : "px"),
   };
-  return span > PAGE_EDITOR_SLIDER_STEPPER_SPAN_THRESHOLD
+  // Explicit fractional steps pair the slider with steppers so precise values
+  // (line height 1.45) stay reachable, like wide ranges do.
+  return span > PAGE_EDITOR_SLIDER_STEPPER_SPAN_THRESHOLD || control.step !== undefined
     ? { kind: "sliderStepper", ...model }
     : { kind: "slider", ...model };
 };
@@ -237,7 +256,11 @@ const resolveOptionModel = (control: PageEditorControlDefinition): PageEditorCon
     return { kind: "unsupported", reason: "option-control-without-options" };
   }
   const labels = getPageEditorOptionLabels(options, control.id);
-  if (options.length <= PAGE_EDITOR_SEGMENTED_OPTION_LIMIT) {
+  // Registry-declared `segmented` inputs always stay segmented — the shared
+  // SegmentedControl is a horizontal scroller, so wide token scales (e.g. the
+  // sm..5xl font-size presets) remain reachable without a native select.
+  // Declared `select` inputs upgrade to segmented only for small finite sets.
+  if (control.input === "segmented" || options.length <= PAGE_EDITOR_SEGMENTED_OPTION_LIMIT) {
     return { kind: "segmented", options, labels };
   }
   return { kind: "select", options, labels };

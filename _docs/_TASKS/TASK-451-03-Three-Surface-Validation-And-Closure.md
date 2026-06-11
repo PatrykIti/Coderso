@@ -6,7 +6,9 @@
 **Category:** Pages / Preview / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -20,9 +22,9 @@ be updated with final evidence.
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ## Implementation Pseudocode
 
@@ -64,3 +66,8 @@ Validation commands:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
 
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: canvas/preview/front replay PASS (3/3 surfaces; draft-only headline visible in preview, absent on published front), suites green, changelog 1163.

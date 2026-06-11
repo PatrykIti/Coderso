@@ -459,10 +459,16 @@ Runtime admin context:
   and unsaved-change warnings. Page data is `schemaVersion: 2` with
   `sections[]`; widget template references are not hydrated from Page data.
 - `core/services/pages/pageTemplateBoundary.ts` owns the template-surface
-  document contract split: Pages resolve as
-  `page-v2-section-block-contract`, while widget-template, custom-screen, and
-  detail-page surfaces remain `legacy-widget-block-contract`.
-- `WidgetTemplateEditorPage` publishes bounded active widget template surface context: template identity, selected block id, block id/type/path summaries, slot keys, template-section references, and template settings summary.
+  document contract split: Pages and Page Templates resolve as
+  `page-v2-section-block-contract`, while custom-screen and detail-page
+  surfaces remain `legacy-widget-block-contract`.
+- Page Templates (TASK-420-03) is the reusable-template surface: `page_templates`
+  rows store full Page v2 documents, the admin editor is the shared Page Editor
+  v2 surface bound through an editor host (`/advanced/page-templates`), preview
+  uses `type=page-template` tokens through the public Page v2 pipeline, and
+  apply instantiates sections with fresh ids in the editor. The widget-template
+  admin editor/routes/preview surface is deleted; the Page Templates editor
+  advertises NO assistant active surface in v1.
 - Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, and writable field names.
 - Writable field names are derived only from widget-aware write-capable targets
   (for example `screen-field-value.value`), so legacy fallback widgets and

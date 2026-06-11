@@ -71,7 +71,15 @@ Detail-page variant:
 - `GET /preview?type=page&token=<token>`
 - `GET /preview?type=content&token=<token>&detailPageId=<detail-page-id>`
 - `GET /preview?type=detail-page&token=<token>`
-- `GET /preview?type=widget-template&token=<token>`
+- `GET /preview?type=page-template&token=<token>`
+
+`type=page-template` (TASK-420-03) renderuje dokument Page v2 z
+`page_templates` przez ten sam publiczny pipeline Page v2 co preview stron
+(`renderPublicPageV2RuntimeHtml`), z semantyka `?device=` i fail-closed dla
+nieczytelnych dokumentow. Separacja typow jest scisla: token `type=page` nie
+wyrenderuje template, token `type=page-template` nie wyrenderuje strony.
+`type=widget-template` jest wycofane i zwraca `404 Not Found`; stare tokeny
+zapisane z tym typem failuja closed (`preview_token_invalid`).
 
 Uwaga: `site.contentRoutes` moze teraz przenosic opcjonalne `detailPageId`
 jako structural link do canonical detail-page document. `type=content` preview
@@ -100,6 +108,10 @@ Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhos
   the host or base URL only.
 - Pages runtime preview may expose a direct route back to Page Settings when the
   configured public URL looks wrong.
+- Pages editor preview dialog labels the surface truthfully ("Runtime preview of
+  the saved draft (read-only, site theme).") and exposes a "Retry preview"
+  affordance on the unavailable placeholder that re-runs the draft save + token
+  issuance + probe flow instead of leaving a dead end.
 - Pages `POST /pages/:id/preview` accepts optional `probe: true` and may return
   `probe: { ok, status, reason, targetLabel }`. The probe:
   - uses server-owned generated preview URLs only;
@@ -107,7 +119,14 @@ Uwaga: gdy `proto` jest nieznane, domyslnie stosujemy `https`, ale dla `localhos
   - follows bounded same-origin redirects and blocks external redirects;
   - uses a short timeout and does not persist response bodies, headers, or
     cookies;
-  - redacts `token` and `device` from UI-safe diagnostics.
+  - redacts `token` and `device` from UI-safe diagnostics;
+  - stays environment-robust for RFC 6761 loopback names: when the target
+    hostname is `localhost` or `*.localhost` and the direct connection throws
+    (for example, the resolver returns `::1` first while the HTTP server binds
+    IPv4 only, as with `coderso-a.localhost` in dev), the probe retries once
+    against `127.0.0.1` with the original `Host` header preserved. The
+    `previewUrl`, target labels, allowed-origin checks, and token semantics are
+    unchanged — only the probe's transport-level connection is substituted.
 
 ## Admin API response contract
 
@@ -141,14 +160,14 @@ Gdy resolver ma poprawny base URL, `previewUrl` jest absolutny, np.:
 }
 ```
 
-Widget template preview moze dodac metadata UI:
+Page Template preview dodaje metadata UI:
 
 ```json
 {
   "token": "preview-token",
-  "previewUrl": "/preview?type=widget-template&token=preview-token",
+  "previewUrl": "/preview?type=page-template&token=preview-token",
   "expiresAt": "2026-02-07T12:00:00.000Z",
-  "blocksCount": 3
+  "sectionsCount": 3
 }
 ```
 

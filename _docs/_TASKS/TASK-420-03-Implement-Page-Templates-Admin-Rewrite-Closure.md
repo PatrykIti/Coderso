@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Templates
 **Estimated Effort:** Large
 **Dependencies:** TASK-420-02, TASK-421-02 (the shared Page Editor inspector control primitives must land before this rewrite consumes them)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -113,3 +115,9 @@ Regression-test shape:
 - `_docs/CMS_API.md`
 - `_docs/ADMIN_CACHE.md` and `_docs/ADMIN_CACHE_MAP.md` if cached resources are
   added or changed.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11 (resumed after session-limit interruption without redoing finished work): implementation + Ring 1 deletion + Ring 2 verification; new Bun suites (pageTemplates routes 9/9, preview runtime) green; CMS_API/PREVIEW_SPEC/ADMIN_CACHE(+MAP)/WIDGETS docs updated.

@@ -105,6 +105,55 @@ test("probeGeneratedPreviewUrl maps success, http error, redirects, and timeout"
   });
 });
 
+test("probeGeneratedPreviewUrl retries loopback names against 127.0.0.1 with Host preserved", async () => {
+  const attempts: Array<{ url: string; host: string | undefined }> = [];
+  const result = await probeGeneratedPreviewUrl(
+    "http://coderso-a.localhost:3000/preview?type=page&token=secret",
+    {
+      fetchImpl: async (input, init) => {
+        const headers = (init?.headers ?? {}) as Record<string, string>;
+        attempts.push({ url: input, host: headers.Host });
+        if (input.startsWith("http://coderso-a.localhost:3000/")) {
+          throw new Error("ConnectionRefused");
+        }
+        return new Response(null, { status: 204 });
+      },
+    }
+  );
+
+  expect(result).toEqual({
+    ok: true,
+    status: 204,
+    targetLabel: "http://coderso-a.localhost:3000/preview",
+  });
+  expect(attempts).toHaveLength(2);
+  expect(attempts[0]?.url).toBe("http://coderso-a.localhost:3000/preview?type=page&token=secret");
+  expect(attempts[0]?.host).toBeUndefined();
+  expect(attempts[1]?.url).toBe("http://127.0.0.1:3000/preview?type=page&token=secret");
+  expect(attempts[1]?.host).toBe("coderso-a.localhost:3000");
+});
+
+test("probeGeneratedPreviewUrl keeps non-loopback connection failures unreachable", async () => {
+  let attempts = 0;
+  const result = await probeGeneratedPreviewUrl(
+    "https://preview.example.test/preview?token=secret",
+    {
+      fetchImpl: async () => {
+        attempts += 1;
+        throw new Error("ConnectionRefused");
+      },
+    }
+  );
+
+  expect(result).toEqual({
+    ok: false,
+    reason: "unreachable",
+    targetLabel: "https://preview.example.test/preview",
+  });
+  // Single HEAD attempt fails fast — no loopback retry for public hosts.
+  expect(attempts).toBe(1);
+});
+
 testIfDb("create and validate preview token", async () => {
   const targetId = randomUUID();
   const { token } = await createPreviewToken({

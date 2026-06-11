@@ -3,14 +3,23 @@ import { describe, expect, test } from "vitest";
 import {
   getPageBlockCapability,
   getPageEditorControlsForTarget,
+  getPageResponsiveEffectiveVisible,
   getPageSectionCapability,
   getPageSectionVariantControl,
   pageBlockControlRegistry,
+  pageEditorDeviceMetadata,
+  pageResponsiveHideToggles,
+  pageSectionStackVerticalControl,
+  pageTypographyBlockControls,
   pageUniversalBlockControls,
   pageUniversalSectionControls,
+  projectPageResponsiveOverrideEntries,
   type PageEditorControlDefinition,
 } from "../../../core/services/pages/pageEditorControlRegistry";
 import {
+  PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
+  PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
+  isPageTypographyCapableBlockType,
   pageBackgroundTypes,
   pageBlockCapabilities,
   pageBlockPropKeys,
@@ -31,6 +40,10 @@ import {
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
+  pageTypographyCapableBlockTypes,
+  pageTypographyFontFamilies,
+  pageTypographyFontSizes,
+  pageTypographyFontWeights,
 } from "../../../core/services/pages/pageDocumentV2";
 import {
   getPageSectionVariantOptions,
@@ -42,6 +55,7 @@ const validSectionPaths = new Set([
   "layout.maxWidth",
   "layout.align",
   "layout.justify",
+  "layout.stackVertical",
   "style.background",
   "style.backgroundType",
   "style.accent",
@@ -59,6 +73,11 @@ const validSectionPaths = new Set([
 const validBlockPaths = new Set([
   "style.width",
   "style.align",
+  "style.fontFamily",
+  "style.fontSize",
+  "style.fontWeight",
+  "style.lineHeight",
+  "style.letterSpacing",
   "style.textColor",
   "style.background",
   "style.backgroundType",
@@ -95,7 +114,24 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
+  pageTypographyFontFamilies,
+  pageTypographyFontSizes,
+  pageTypographyFontWeights,
 ]);
+
+/**
+ * Text-capable types whose Typography "Text align" presentation reuses the
+ * universal `block.style.align` stored path; heading/text relocate their own
+ * `props.align` control instead.
+ */
+const styleAlignTypographyBlockTypes = pageTypographyCapableBlockTypes.filter(
+  (type) => type !== "heading" && type !== "text"
+);
+
+const expectedUniversalBlockControls = (type: (typeof pageBlockTypes)[number]) =>
+  (styleAlignTypographyBlockTypes as readonly string[]).includes(type)
+    ? pageUniversalBlockControls.filter((control) => control.id !== "block.style.align")
+    : pageUniversalBlockControls;
 
 const expectControlPath = (control: PageEditorControlDefinition, validPaths: Set<string>) => {
   expect(control.path.length).toBeGreaterThan(0);
@@ -201,7 +237,7 @@ describe("page editor control registry", () => {
       const controls = getPageEditorControlsForTarget({ kind: "block", type });
       if (pageBlockCapabilities[type].editorInsertable) {
         expect(controls.map((control) => control.id)).toEqual(
-          [...pageUniversalBlockControls, ...pageBlockControlRegistry[type]].map(
+          [...expectedUniversalBlockControls(type), ...pageBlockControlRegistry[type]].map(
             (control) => control.id
           )
         );
@@ -369,6 +405,189 @@ describe("page editor control registry", () => {
       "default",
     ]);
     expect(getPageSectionVariantControl("navigation")).toBeNull();
+  });
+
+  test("typography cluster is exposed on every text-capable block and nowhere else", () => {
+    expect(pageTypographyCapableBlockTypes).toEqual([
+      "heading",
+      "text",
+      "button",
+      "list",
+      "card",
+      "statistic",
+      "quote",
+    ]);
+    expect(pageTypographyBlockControls.map((control) => control.id)).toEqual([
+      "block.style.fontFamily",
+      "block.style.fontSize",
+      "block.style.fontWeight",
+      "block.style.lineHeight",
+      "block.style.letterSpacing",
+    ]);
+    for (const control of pageTypographyBlockControls) {
+      expect(control.target).toBe("block");
+      expect(control.panel).toBe("typography");
+      expect(control.responsive).toBe(true);
+      expect(control.path).toEqual(["style", control.id.split(".").at(-1)]);
+      expect(control.overridePath).toEqual(control.path);
+    }
+    expect(
+      pageTypographyBlockControls.find((control) => control.id === "block.style.fontFamily")
+    ).toMatchObject({ input: "segmented", options: pageTypographyFontFamilies });
+    expect(
+      pageTypographyBlockControls.find((control) => control.id === "block.style.fontSize")
+    ).toMatchObject({ input: "segmented", options: pageTypographyFontSizes });
+    expect(
+      pageTypographyBlockControls.find((control) => control.id === "block.style.fontWeight")
+    ).toMatchObject({ input: "segmented", options: pageTypographyFontWeights });
+    expect(
+      pageTypographyBlockControls.find((control) => control.id === "block.style.lineHeight")
+    ).toMatchObject({
+      input: "number",
+      clamp: PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
+      step: 0.05,
+      unit: "",
+    });
+    expect(
+      pageTypographyBlockControls.find((control) => control.id === "block.style.letterSpacing")
+    ).toMatchObject({
+      input: "number",
+      clamp: PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
+      step: 0.5,
+      unit: "px",
+    });
+
+    for (const type of pageBlockTypes) {
+      const controls = getPageEditorControlsForTarget({ kind: "block", type });
+      const typographyControls = controls.filter((control) => control.panel === "typography");
+      if (isPageTypographyCapableBlockType(type)) {
+        // Cluster plus the relocated text-align presentation.
+        expect(typographyControls.map((control) => control.id)).toEqual([
+          ...pageTypographyBlockControls.map((control) => control.id),
+          type === "heading" || type === "text" ? `block.${type}.props.align` : "block.style.align",
+        ]);
+        const alignControl = typographyControls.at(-1)!;
+        expect(alignControl).toMatchObject({
+          label: "Text align",
+          input: "segmented",
+          options: pageTextAlignments,
+        });
+        // Relocation keeps the stored path identical to the legacy control.
+        expect(alignControl.path).toEqual(
+          type === "heading" || type === "text" ? ["props", "align"] : ["style", "align"]
+        );
+        // No duplicate presentation of the same stored align path.
+        expect(
+          controls.filter((control) => control.path.join(".") === alignControl.path.join("."))
+        ).toHaveLength(1);
+      } else {
+        expect(typographyControls).toEqual([]);
+      }
+    }
+
+    // Sections never expose typography controls.
+    for (const type of pageSectionTypes) {
+      const controls = getPageEditorControlsForTarget({ kind: "section", type });
+      expect(controls.filter((control) => control.panel === "typography")).toEqual([]);
+    }
+  });
+
+  test("responsive panel contract owns device metadata, hide toggles, and the stack toggle (TASK-425)", () => {
+    // One shared source for switcher labels and canvas width readouts.
+    expect(pageEditorDeviceMetadata).toEqual({
+      desktop: { label: "Desktop", width: 1080 },
+      tablet: { label: "Tablet", width: 744 },
+      mobile: { label: "Mobile", width: 390 },
+    });
+
+    // Per-breakpoint hide toggles reuse the EXISTING schema visibility paths.
+    expect(pageResponsiveHideToggles.map((toggle) => toggle.id)).toEqual([
+      "responsive.hide.desktop",
+      "responsive.hide.tablet",
+      "responsive.hide.mobile",
+    ]);
+    for (const toggle of pageResponsiveHideToggles) {
+      expect(toggle.path).toEqual(["visibility", "visible"]);
+      expect(toggle.label).toBe(`Hide on ${toggle.breakpoint}`);
+    }
+
+    // The vertical-layout toggle is a real registry control on the new
+    // schema-owned layout.stackVertical path, scoped to the Responsive panel.
+    expect(pageSectionStackVerticalControl).toMatchObject({
+      id: "section.layout.stackVertical",
+      panel: "responsive",
+      target: "section",
+      label: "Stack vertically",
+      path: ["layout", "stackVertical"],
+      overridePath: ["layout", "stackVertical"],
+      input: "switch",
+      responsive: true,
+    });
+    expect(
+      getPageEditorControlsForTarget({ kind: "section", type: "hero" }).some(
+        (control) => control.id === pageSectionStackVerticalControl.id
+      )
+    ).toBe(true);
+    // Blocks never expose the section stacking surface.
+    for (const type of pageBlockTypes) {
+      expect(
+        getPageEditorControlsForTarget({ kind: "block", type }).filter(
+          (control) => control.panel === "responsive"
+        )
+      ).toEqual([]);
+    }
+  });
+
+  test("effective visibility and the override-state projection follow the cascade (TASK-425)", () => {
+    const source = {
+      visibility: { visible: true },
+      responsive: { mobile: { visibility: { visible: false } } },
+    };
+    expect(getPageResponsiveEffectiveVisible(source, "desktop")).toBe(true);
+    expect(getPageResponsiveEffectiveVisible(source, "tablet")).toBe(true);
+    expect(getPageResponsiveEffectiveVisible(source, "mobile")).toBe(false);
+    expect(getPageResponsiveEffectiveVisible({ visibility: { visible: false } }, "mobile")).toBe(
+      false
+    );
+
+    // Desktop is the base: every responsive-capable field projects as "base".
+    const desktopEntries = projectPageResponsiveOverrideEntries(
+      { kind: "section", type: "hero" },
+      "desktop",
+      undefined
+    );
+    expect(desktopEntries.length).toBeGreaterThan(0);
+    expect(desktopEntries.every((entry) => entry.state === "base")).toBe(true);
+    // The non-responsive variant control never appears in the projection.
+    expect(desktopEntries.some((entry) => entry.control.id === "section.hero.variant")).toBe(false);
+
+    const mobileEntries = projectPageResponsiveOverrideEntries(
+      { kind: "section", type: "hero" },
+      "mobile",
+      { layout: { stackVertical: true }, spacing: { gap: 12 } }
+    );
+    const byId = new Map(mobileEntries.map((entry) => [entry.control.id, entry.state]));
+    expect(byId.get("section.layout.stackVertical")).toBe("override");
+    expect(byId.get("section.spacing.gap")).toBe("override");
+    expect(byId.get("section.layout.maxWidth")).toBe("inherited");
+    expect(byId.get("section.visibility.visible")).toBe("inherited");
+
+    const blockEntries = projectPageResponsiveOverrideEntries(
+      { kind: "block", type: "heading" },
+      "tablet",
+      { props: { text: "Tablet headline" } }
+    );
+    const blockById = new Map(blockEntries.map((entry) => [entry.control.id, entry.state]));
+    expect(blockById.get("block.heading.props.text")).toBe("override");
+    expect(blockById.get("block.style.width")).toBe("inherited");
+
+    // Unsupported targets project no entries instead of fake controls.
+    expect(
+      projectPageResponsiveOverrideEntries({ kind: "section", type: "navigation" }, "mobile", {})
+    ).toEqual([]);
+    expect(
+      projectPageResponsiveOverrideEntries({ kind: "block", type: "gallery" }, "mobile", {})
+    ).toEqual([]);
   });
 
   test("per-type block controls are complete, owner-backed, and allowlist-safe", () => {

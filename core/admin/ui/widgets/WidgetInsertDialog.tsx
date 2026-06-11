@@ -9,10 +9,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { getPageCached } from "@/services/pagesClient";
-import { getWidgetTemplateCached } from "@/services/widgetTemplatesClient";
 import type { Block } from "@/ui/pages/builder/types";
 import { findBlockById } from "@/ui/pages/builder/blockUtils";
 import { listRegisteredPageWidgets } from "@/ui/widgets/registry";
@@ -26,10 +31,8 @@ export type WidgetInsertDialogProps = {
   widget?: WidgetItem | null;
   preview?: React.ReactNode;
   pages?: { id: string; title: string }[];
-  templates?: { id: string; name: string }[];
   onInsert?: (payload: {
     placement: "new" | "inside";
-    targetType?: "page" | "template";
     targetId?: string | null;
     blockId?: string | null;
     slotId?: string | null;
@@ -38,11 +41,8 @@ export type WidgetInsertDialogProps = {
 };
 
 type PlacementOption = "new" | "inside";
-type WidgetInsertPayload = Parameters<
-  NonNullable<WidgetInsertDialogProps["onInsert"]>
->[0];
+type WidgetInsertPayload = Parameters<NonNullable<WidgetInsertDialogProps["onInsert"]>>[0];
 const NO_PAGES_VALUE = "no-pages";
-const NO_TEMPLATES_VALUE = "no-templates";
 const NO_BLOCKS_VALUE = "no-blocks";
 
 export function WidgetInsertDialog({
@@ -51,12 +51,10 @@ export function WidgetInsertDialog({
   widget,
   preview,
   pages,
-  templates,
   onInsert,
   error,
 }: WidgetInsertDialogProps) {
   const pageOptions = useMemo(() => pages ?? [], [pages]);
-  const templateOptions = useMemo(() => templates ?? [], [templates]);
   const widgetMetaMap = useMemo(
     () =>
       new Map(
@@ -73,7 +71,6 @@ export function WidgetInsertDialog({
   );
   const [pageId, setPageId] = useState<string>(() => pageOptions[0]?.id ?? "");
   const [placement, setPlacement] = useState<PlacementOption>("new");
-  const [targetType, setTargetType] = useState<"page" | "template">("page");
   const [targetId, setTargetId] = useState<string>("");
   const [blockId, setBlockId] = useState<string>("");
   const [slotId, setSlotId] = useState<string>("");
@@ -87,34 +84,25 @@ export function WidgetInsertDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const resolvedPageId = pageId || pageOptions[0]?.id || "";
   const selectedBlock = blocks.find((block) => block.id === blockId) ?? null;
-  const selectedBlockData = useMemo(
-    () => findBlockById(blockTree, blockId),
-    [blockTree, blockId]
-  );
-  const selectedBlockMeta = selectedBlockData
-    ? widgetMetaMap.get(selectedBlockData.type)
-    : null;
-  const targetOptions = targetType === "page" ? pageOptions : templateOptions;
-  const resolvedTargetId =
-    placement === "inside" ? targetId || targetOptions[0]?.id || "" : "";
+  const selectedBlockData = useMemo(() => findBlockById(blockTree, blockId), [blockTree, blockId]);
+  const selectedBlockMeta = selectedBlockData ? widgetMetaMap.get(selectedBlockData.type) : null;
+  const targetOptions = pageOptions;
+  const resolvedTargetId = placement === "inside" ? targetId || targetOptions[0]?.id || "" : "";
   const slotOptions = useMemo(() => {
     if (!selectedBlockData || !selectedBlockMeta?.slots?.length) return [];
     return buildSlotOptions(selectedBlockMeta.slots, selectedBlockData, widget?.id);
   }, [selectedBlockData, selectedBlockMeta, widget?.id]);
   const selectedSlot = slotOptions.find((slot) => slot.id === slotId) ?? null;
-  const firstAvailableSlot =
-    slotOptions.find((slot) => !slot.disabled) ?? slotOptions[0] ?? null;
+  const firstAvailableSlot = slotOptions.find((slot) => !slot.disabled) ?? slotOptions[0] ?? null;
   const resolvedSlotId =
-    selectedSlot && !selectedSlot.disabled ? selectedSlot.id : firstAvailableSlot?.id ?? "";
-  const resolvedSelectedSlot =
-    slotOptions.find((slot) => slot.id === resolvedSlotId) ?? null;
+    selectedSlot && !selectedSlot.disabled ? selectedSlot.id : (firstAvailableSlot?.id ?? "");
+  const resolvedSelectedSlot = slotOptions.find((slot) => slot.id === resolvedSlotId) ?? null;
   const supportsLegacyChildren = selectedBlockMeta?.canHaveChildren ?? false;
   const handleOpenChange = (nextOpen: boolean) => {
     if (isSubmitting && !nextOpen) return;
     if (nextOpen) {
       setPageId(pageOptions[0]?.id ?? "");
       setPlacement("new");
-      setTargetType("page");
       setTargetId("");
       setBlockId("");
       setSlotId("");
@@ -132,9 +120,8 @@ export function WidgetInsertDialog({
       ? Boolean(resolvedPageId)
       : Boolean(
           resolvedTargetId &&
-            blockId &&
-            (slotOptions.length === 0 ||
-              (resolvedSelectedSlot && !resolvedSelectedSlot.disabled))
+          blockId &&
+          (slotOptions.length === 0 || (resolvedSelectedSlot && !resolvedSelectedSlot.disabled))
         );
 
   useEffect(() => {
@@ -142,28 +129,17 @@ export function WidgetInsertDialog({
     let active = true;
     const loadBlocks = async () => {
       try {
-        if (targetType === "template") {
-          const template = await getWidgetTemplateCached(resolvedTargetId, { force: true });
-          const items = Array.isArray(template.blocks) ? template.blocks : [];
-          const mapped = mapWidgetBlockOptions(items, (type) =>
-            widgetMetaMap.get(type)?.label ?? type
-          );
-          if (!active) return;
-          setBlocks(mapped);
-          setBlockTree(items as Block[]);
-          setBlockId(mapped[0]?.id ?? "");
-        } else {
-          const page = await getPageCached(resolvedTargetId, { force: true });
-          const data = (page.currentData ?? {}) as Record<string, unknown>;
-          const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
-          const mapped = mapWidgetBlockOptions(items, (type) =>
-            widgetMetaMap.get(type)?.label ?? type
-          );
-          if (!active) return;
-          setBlocks(mapped);
-          setBlockTree(items as Block[]);
-          setBlockId(mapped[0]?.id ?? "");
-        }
+        const page = await getPageCached(resolvedTargetId, { force: true });
+        const data = (page.currentData ?? {}) as Record<string, unknown>;
+        const items = Array.isArray(data.blocks) ? (data.blocks as unknown[]) : [];
+        const mapped = mapWidgetBlockOptions(
+          items,
+          (type) => widgetMetaMap.get(type)?.label ?? type
+        );
+        if (!active) return;
+        setBlocks(mapped);
+        setBlockTree(items as Block[]);
+        setBlockId(mapped[0]?.id ?? "");
       } catch {
         if (!active) return;
         setBlocksError("Failed to load blocks.");
@@ -180,7 +156,7 @@ export function WidgetInsertDialog({
     return () => {
       active = false;
     };
-  }, [placement, resolvedTargetId, targetType, widgetMetaMap]);
+  }, [placement, resolvedTargetId, widgetMetaMap]);
 
   const handleSubmit = async () => {
     if (!canSubmit || isSubmitting) return;
@@ -188,12 +164,10 @@ export function WidgetInsertDialog({
       placement === "new"
         ? {
             placement: "new",
-            targetType: "page",
             targetId: resolvedPageId,
           }
         : {
             placement: "inside",
-            targetType,
             targetId: resolvedTargetId,
             blockId,
             slotId: slotOptions.length > 0 ? resolvedSlotId : undefined,
@@ -216,9 +190,7 @@ export function WidgetInsertDialog({
         <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b px-6 py-4 text-left">
           <div>
             <DialogTitle>Insert Widget</DialogTitle>
-            <DialogDescription>
-              Choose where this widget should be inserted.
-            </DialogDescription>
+            <DialogDescription>Choose where this widget should be inserted.</DialogDescription>
           </div>
           <Button
             variant="ghost"
@@ -246,9 +218,7 @@ export function WidgetInsertDialog({
                   </span>
                 ) : null}
               </div>
-              <p className="text-[11px] text-muted-foreground">
-                Insert this widget into a layout.
-              </p>
+              <p className="text-[11px] text-muted-foreground">Insert this widget into a layout.</p>
             </div>
           </div>
           <div className="space-y-3">
@@ -256,18 +226,20 @@ export function WidgetInsertDialog({
               Placement
             </label>
             <div className="space-y-2">
-              {([
-                {
-                  id: "new",
-                  title: "Insert as new section",
-                  description: "Adds at the bottom of the page layout",
-                },
-                {
-                  id: "inside",
-                  title: "Insert into existing block",
-                  description: "Pick a specific container inside the layout",
-                },
-              ] as const).map((option) => (
+              {(
+                [
+                  {
+                    id: "new",
+                    title: "Insert as new section",
+                    description: "Adds at the bottom of the page layout",
+                  },
+                  {
+                    id: "inside",
+                    title: "Insert into existing block",
+                    description: "Pick a specific container inside the layout",
+                  },
+                ] as const
+              ).map((option) => (
                 <label
                   key={option.id}
                   className={cn(
@@ -297,12 +269,8 @@ export function WidgetInsertDialog({
                     className="mt-1 h-4 w-4 accent-primary"
                   />
                   <div>
-                    <div className="text-xs font-semibold text-foreground">
-                      {option.title}
-                    </div>
-                    <div className="text-[11px] text-muted-foreground">
-                      {option.description}
-                    </div>
+                    <div className="text-xs font-semibold text-foreground">{option.title}</div>
+                    <div className="text-[11px] text-muted-foreground">{option.description}</div>
                   </div>
                 </label>
               ))}
@@ -313,10 +281,7 @@ export function WidgetInsertDialog({
               <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                 Target page
               </label>
-              <Select
-                value={resolvedPageId}
-                onValueChange={(value) => setPageId(value)}
-              >
+              <Select value={resolvedPageId} onValueChange={(value) => setPageId(value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a page" />
                 </SelectTrigger>
@@ -340,34 +305,7 @@ export function WidgetInsertDialog({
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Target type
-                </label>
-                <Select
-                  value={targetType}
-                  onValueChange={(value) => {
-                    const nextTargetType = value as "page" | "template";
-                    const nextOptions =
-                      nextTargetType === "page" ? pageOptions : templateOptions;
-                    setTargetType(nextTargetType);
-                    setTargetId("");
-                    setBlockId("");
-                    setSlotId("");
-                    setBlocksError(null);
-                    setBlocksLoading(nextOptions.length > 0);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose target" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="page">Page</SelectItem>
-                    <SelectItem value="template">Template</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  {targetType === "template" ? "Target template" : "Target page"}
+                  Target page
                 </label>
                 <Select
                   value={resolvedTargetId}
@@ -380,28 +318,10 @@ export function WidgetInsertDialog({
                   }}
                 >
                   <SelectTrigger>
-                    <SelectValue
-                      placeholder={
-                        targetType === "template"
-                          ? "Select a template"
-                          : "Select a page"
-                      }
-                    />
+                    <SelectValue placeholder="Select a page" />
                   </SelectTrigger>
                   <SelectContent>
-                    {targetType === "template" ? (
-                      templateOptions.length === 0 ? (
-                        <SelectItem value={NO_TEMPLATES_VALUE} disabled>
-                          No templates available
-                        </SelectItem>
-                      ) : (
-                        templateOptions.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                          </SelectItem>
-                        ))
-                      )
-                    ) : pageOptions.length === 0 ? (
+                    {pageOptions.length === 0 ? (
                       <SelectItem value={NO_PAGES_VALUE} disabled>
                         No pages available
                       </SelectItem>
@@ -449,18 +369,13 @@ export function WidgetInsertDialog({
                     )}
                   </SelectContent>
                 </Select>
-                {blocksError ? (
-                  <p className="text-xs text-destructive">{blocksError}</p>
-                ) : null}
+                {blocksError ? <p className="text-xs text-destructive">{blocksError}</p> : null}
                 {slotOptions.length > 0 ? (
                   <div className="space-y-2">
                     <label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Target slot
                     </label>
-                    <Select
-                      value={resolvedSlotId}
-                      onValueChange={(value) => setSlotId(value)}
-                    >
+                    <Select value={resolvedSlotId} onValueChange={(value) => setSlotId(value)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a slot" />
                       </SelectTrigger>
@@ -471,11 +386,7 @@ export function WidgetInsertDialog({
                               ? ` (${slot.count}/${slot.maxItems})`
                               : ` (${slot.count})`;
                           return (
-                            <SelectItem
-                              key={slot.id}
-                              value={slot.id}
-                              disabled={slot.disabled}
-                            >
+                            <SelectItem key={slot.id} value={slot.id} disabled={slot.disabled}>
                               {slot.label}
                               {countLabel}
                             </SelectItem>
@@ -484,9 +395,7 @@ export function WidgetInsertDialog({
                       </SelectContent>
                     </Select>
                     {resolvedSelectedSlot?.reason ? (
-                      <p className="text-xs text-destructive">
-                        {resolvedSelectedSlot.reason}
-                      </p>
+                      <p className="text-xs text-destructive">{resolvedSelectedSlot.reason}</p>
                     ) : null}
                   </div>
                 ) : null}
@@ -509,11 +418,7 @@ export function WidgetInsertDialog({
           </div>
         ) : null}
         <div className="flex flex-col gap-3 border-t bg-muted/30 px-6 py-4 sm:flex-row sm:justify-end">
-          <Button
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={isSubmitting}
-          >
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button

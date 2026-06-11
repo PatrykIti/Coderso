@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-425-01, TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -20,7 +22,7 @@ surface for responsive authoring.
 
 ## Sub-Tasks
 
-- [ ] TASK-425-02-L01: Implement hide/layout toggles, reset actions, and device
+- [x] TASK-425-02-L01: Implement hide/layout toggles, reset actions, and device
       readouts.
 
 ---
@@ -38,3 +40,8 @@ surface for responsive authoring.
 - `docs/guide/` Page editor docs
 - `_docs/PAGE_MODEL.md`
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: tab widgets rendered via shared primitives; switcher labels/readout/scope pill landed.

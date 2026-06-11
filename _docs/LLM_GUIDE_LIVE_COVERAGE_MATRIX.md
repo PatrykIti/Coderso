@@ -51,6 +51,7 @@ report provider gating without trusting provider-authored executable actions.
 | /admin/advanced/entries | Entries | live-execute | TASK-184-03 | Active entry update/delete live matrix. |
 | /admin/advanced/custom-screens | Screens | live-execute | TASK-184-04 | Custom screen search/update/delete live matrix. |
 | /admin/advanced/widgets | Widgets | live-execute | TASK-184-07 | Widget template inspect/update/block patch/delete live matrix. |
+| /admin/advanced/page-templates | Page Templates | live-gated | TASK-420-03 | Page Templates editor advertises no assistant active surface in v1; prompts stay manual-UI gated. |
 | /admin/advanced/forms | Forms | live-execute | TASK-184-05 | Form create/search/update/archive/delete/safety live matrix. |
 | /admin/advanced/listings | Listings | live-execute | TASK-184-06 | Listing query/template inspect/update/delete live matrix. |
 | /admin/advanced/filters | Filters | live-gated | TASK-184-11 | Filter/search module prompts stay non-executable unless covered by listing typed actions. |

@@ -6,7 +6,9 @@
 **Category:** Pages / Templates / Contracts
 **Estimated Effort:** Large
 **Dependencies:** TASK-420-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -107,3 +109,9 @@ Regression-test shape:
 - `_docs/WIDGETS.md`
 - `_docs/CMS_API.md` if routes are introduced.
 - `_docs/PREVIEW_SPEC.md` if preview target types change.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-11: frozen contract recorded in _docs/PAGE_MODEL.md ("Page Templates (Reusable Page v2 Templates) - TASK-420-02 Frozen Contract"); claims verified line-by-line against landed owners; determinism gaps fixed in the docs.

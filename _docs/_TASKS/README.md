@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 132 tasks
-- **In Progress:** 9 tasks
-- **Done:** 2394 tasks
+- **To Do:** 109 tasks
+- **In Progress:** 6 tasks
+- **Done:** 2420 tasks
 
 ---
 
@@ -88,22 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-420 | Page Templates Surface Rewrite | Medium | Large | Follow-up from TASK-418-06-L03: delete/replace the obsolete Advanced Widgets/widget-template path with a dedicated Page Templates surface built on Page v2 sections/blocks; requires Claude xhigh drift audits and `coderso-dev-core-host` + `playwright-cli` browser validation when implemented. |
-| TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Audit obsolete widget-template IA/code and produce the deletion/replacement checklist for Page Templates. |
-| TASK-420-02 | Page Template Storage Preview And Replacement Contract | Medium | Large | Design strict Page-template storage, preview, deletion, and replacement contracts before implementation. |
-| TASK-420-03 | Implement Page Templates Admin Rewrite Closure | Medium | Large | Implement the Page Templates admin rewrite with obsolete surface removal, server/helper Playwright smoke, cache, docs, and closure validation. |
-| TASK-424 | Page Editor Typography Inspector Controls | High | Large | Cross-canvas Path B: add a real Typography control surface for font family/size/weight/line-height/letter-spacing and shared text styling. |
-| TASK-424-01 | Typography Style Schema And Registry Contract | High | Medium | Freeze Page-owner typography fields, defaults, and registry descriptors before wiring inspector UI. |
-| TASK-424-01-L01 | Add Normalized Typography Fields And Shared Text Control Descriptors | High | Medium | Extend `pageDocumentV2` and the control registry with schema-owned typography fields and descriptors. |
-| TASK-424-02 | Typography Panel Widgets And Text Surface IA | High | Large | Implement the actual Typography inspector surface and its grouping across sections and text-bearing blocks. |
-| TASK-424-02-L01 | Render Dedicated Typography Controls And Shared Text Surface Ux | High | Large | Render dedicated typography widgets for font family/size/weight/line-height/letter-spacing, align, and text color. |
-| TASK-424-03 | Validation Docs And Text Path Closure | High | Medium | Close the typography family with targeted validation, live browser proof, and docs/board/changelog sync. |
-| TASK-425 | Page Editor Responsive Panel UX Parity | High | Large | Build the currently-missing Responsive tab controls, override affordances, and breakpoint readouts on top of the working model. |
-| TASK-425-01 | Responsive Panel Scope Labels And Override State Contract | High | Medium | Freeze which controls belong in the Responsive tab and how inherited vs override state is labeled. |
-| TASK-425-01-L01 | Define Responsive Panel Controls And Override Ownership | High | Medium | Define panel metadata for hide/layout toggles, reset actions, and device readouts on top of the existing override model. |
-| TASK-425-02 | Responsive Panel Widgets And Breakpoint Affordances | High | Large | Render the actual Responsive-panel widgets so the tab stops being an empty informational placeholder. |
-| TASK-425-02-L01 | Implement Hide Layout Toggles Reset Actions And Device Readouts | High | Large | Implement dedicated responsive toggles, reset affordances, and explicit breakpoint width readouts. |
-| TASK-425-03 | Validation Docs And Viewport Authoring Closure | High | Medium | Close the Responsive-panel family with targeted validation, live authoring proof, and docs/board/changelog sync. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
@@ -193,17 +177,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-448-01 | Container Contract And Audit Freeze | Medium | Medium | Freeze the Container remediation contract while preserving the current working nested-layout/runtime path. |
 | TASK-448-01-L01 | Container Dedicated Controls And Nested Runtime Guard | Medium | Medium | Adopt the dedicated controls for Container while preserving current nested persistence and runtime behavior. |
 | TASK-448-02 | Container Validation Docs And Closure | Medium | Medium | Close the Container family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-449-03 | Validation Nested Slots Controls And Closure | High | Medium | Replay the columns audit in a real browser and re-verify controls after the shared UI work lands. |
 | TASK-450 | Group Block Audit Remediation | Medium | Medium | Group already renders truthfully; close the heaviest remaining segmented/toggle/gap control drift. |
 | TASK-450-01 | Group Contract And Audit Freeze | Medium | Medium | Freeze the Group remediation contract around direction/wrap/gap control truthfulness. |
 | TASK-450-01-L01 | Group Direction Wrap Gap And Dedicated Controls | Medium | Medium | Adopt the dedicated controls for Group direction/wrap/gap while preserving current runtime behavior. |
 | TASK-450-02 | Group Validation Docs And Closure | Medium | Medium | Close the Group family with targeted validation, live proof, and docs/board/changelog sync. |
-| TASK-451 | Page Editor Preview Surface And Toolbar Shell Parity | High | Large | The preview dialog is unreachable in the audited environment (the `/preview` route exists; tokenless requests 404 by design), leaving 3-surface parity at 2/3; diagnose the preview URL/environment composition and close the shell gaps from the cross-parity audit. |
-| TASK-451-01 | Preview Route And Dialog Contract Freeze | High | Medium | Freeze preview-route ownership, token protections, and what counts as truthful 3-surface parity before fixing the preview reachability path. |
-| TASK-451-01-L01 | Restore Preview Surface And Preserve Preview Token Guards | High | Large | Diagnose and fix preview reachability (URL/environment composition) without weakening the preview-token security model. |
-| TASK-451-02 | Toolbar Shell And Parity Polish | High | Medium | Close the remaining shell-level parity gaps after the preview surface is reachable. |
-| TASK-451-02-L01 | Normalize Preview Dialog Labels And Add Surface Affordances | High | Medium | Normalize toolbar labels and remaining preview/add-surface shell affordances. |
-| TASK-451-03 | Three Surface Validation And Closure | High | Medium | Close the parity family with a fresh canvas/preview/front replay and docs/board/changelog sync. |
 | TASK-453 | Page Editor V2 Audit Followup Closure Program | High | Medium | Aggregate closure family for `_FOLLOWUP_REPORT_2026-06-10.md`, mapping cross-family acceptance and residual risks. |
 | TASK-453-01 | Followup Report Closure Matrix And Ownership Freeze | High | Medium | Freeze the acceptance matrix that maps each aggregate follow-up finding onto concrete task families. |
 | TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Build the matrix that links every aggregate finding to concrete task owners and evidence requirements. |
@@ -226,10 +203,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-442 | List Block Audit Remediation | High | Medium | In progress: 442-01 reproduction and persistence evidence landed (2026-06-11), while 442-01-L01 surface adoption remains gated on TASK-421/TASK-422. |
 | TASK-442-01 | List Contract And Audit Freeze | High | Medium | In progress: reproduction and schema pins landed (2026-06-11), but direct child 442-01-L01 remains open for the gated ordered-toggle and inline-items surface work. |
-| TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | In progress: schema pins and the shared dropper fix landed (2026-06-11); ordered-toggle adoption and inline items registration remain gated on TASK-421/TASK-422. |
-| TASK-449 | Columns Block Audit Remediation | High | Medium | In progress: reproduction and fix (449-01/-02 with leaves) are done (2026-06-11); the 449-03 closure sweep remains blocked on TASK-421 and TASK-423. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -241,6 +215,32 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-420 | Page Templates Surface Rewrite | Medium | Large | Done (2026-06-11): Page Templates surface on Page v2 (schema/service/routes/cache/UI reusing the shared editor) replaced the obsolete widget-template path; migration 0058; live author->preview->publish->insert proof. |
+| TASK-420-01 | Audit Reusable Template IA And Usage | Medium | Medium | Done (2026-06-11): DELETE/REWRITE/KEEP inventory of the obsolete surface. |
+| TASK-420-02 | Page Template Storage Preview And Replacement Contract | Medium | Large | Done (2026-06-11): frozen storage/preview/replacement contract in PAGE_MODEL.md, verified against landed owners. |
+| TASK-420-03 | Implement Page Templates Admin Rewrite Closure | Medium | Large | Done (2026-06-11): implementation + deletion rings + verification; new Bun route/preview suites green; docs updated. |
+| TASK-424 | Page Editor Typography Inspector Controls | High | Large | Done (2026-06-11): per-block Typography panel with token-backed fields (sm..5xl scale), canvas/front parity incl. site-token repaint on the canvas, tablet text-align override fix; live smoke PASS. |
+| TASK-424-01 | Typography Style Schema And Registry Contract | High | Medium | Done (2026-06-11): schema/normalizers/JSON-schema + token CSS maps; legacy docs byte-identical when fields null. |
+| TASK-424-01-L01 | Add Normalized Typography Fields And Shared Text Control Descriptors | High | Medium | Done (2026-06-11): typography fields, enums, clamps, descriptors with domain tests. |
+| TASK-424-02 | Typography Panel Widgets And Text Surface IA | High | Large | Done (2026-06-11): T panel for text-capable blocks only; textAlign relocated with storage unchanged. |
+| TASK-424-02-L01 | Render Dedicated Typography Controls And Shared Text Surface Ux | High | Large | Done (2026-06-11): dedicated typography widgets via the shared adapter/primitives. |
+| TASK-424-03 | Validation Docs And Text Path Closure | High | Medium | Done (2026-06-11): full lane + Bun runtime + live typography smoke green; changelog 1163. |
+| TASK-425 | Page Editor Responsive Panel UX Parity | High | Large | Done (2026-06-11): Responsive tab content (hide switches, override list + resets, stackVertical 4-layer + @media), switcher labels/px/scope pill; live front proof at 390/744px. |
+| TASK-425-01 | Responsive Panel Scope Labels And Override State Contract | High | Medium | Done (2026-06-11): panel metadata + override ownership over the existing model. |
+| TASK-425-01-L01 | Define Responsive Panel Controls And Override Ownership | High | Medium | Done (2026-06-11): hide toggles on visibility paths; stackVertical 4-layer plan. |
+| TASK-425-02 | Responsive Panel Widgets And Breakpoint Affordances | High | Large | Done (2026-06-11): tab widgets via shared primitives; device readouts. |
+| TASK-425-02-L01 | Implement Hide Layout Toggles Reset Actions And Device Readouts | High | Large | Done (2026-06-11): toggles, override list with resets, readouts with flow tests. |
+| TASK-425-03 | Validation Docs And Viewport Authoring Closure | High | Medium | Done (2026-06-11): suites + live viewport authoring proof; changelog 1163. |
+| TASK-449-03 | Validation Nested Slots Controls And Closure | High | Medium | Done (2026-06-11): 16/16 live closure checks (nesting, dedicated controls, responsive delivery, front render). |
+| TASK-451 | Page Editor Preview Surface And Toolbar Shell Parity | High | Large | Done (2026-06-11): preview probe IPv4/IPv6 root cause fixed (token model unchanged), toolbar labels stop leaking content, per-gap inline add-section zones; live 3-surface proof incl. draft-vs-published. |
+| TASK-451-01 | Preview Route And Dialog Contract Freeze | High | Medium | Done (2026-06-11): diagnose-first executed; probe transport fix with guards unchanged. |
+| TASK-451-01-L01 | Restore Preview Surface And Preserve Preview Token Guards | High | Large | Done (2026-06-11): preview dialog renders the saved draft via tokenized /preview. |
+| TASK-451-02 | Toolbar Shell And Parity Polish | High | Medium | Done (2026-06-11): shell/dialog polish + add-surface affordances. |
+| TASK-451-02-L01 | Normalize Preview Dialog Labels And Add Surface Affordances | High | Medium | Done (2026-06-11): resolveToolbarTargetLabel owner helper + inline gap insertion at exact index. |
+| TASK-451-03 | Three Surface Validation And Closure | High | Medium | Done (2026-06-11): canvas/preview/front replay PASS 3/3; changelog 1163. |
+| TASK-442 | List Block Audit Remediation | High | Medium | Done (2026-06-11): family closed — persistence pins, shared surfaces verified, dropper fix shared with TASK-449. |
+| TASK-442-01-L01 | Empty List Persistence Ordered Toggle And Shared Editing Surface | High | Medium | Done (2026-06-11): ordered toggle + inline items verified through shared surfaces; regression pin added. |
+| TASK-449 | Columns Block Audit Remediation | High | Medium | Done (2026-06-11): family closed — dropper fixed, schema guard pinned, live sweep 16/16. |
 | TASK-421 | Page Editor Floating Inspector UX Redesign | High | Very Large | Done (2026-06-11): floating inspector fully on dedicated widgets (adapter + primitives, all section/block panels, tooltips, scrollable segmented strips, transparent swatch, element-level block styling); live classifier shows zero native selects/numbers. |
 | TASK-421-01 | Reference Audit And Inspector Contract | High | Medium | Done (2026-06-11): read-only reference audit froze the control->widget mapping, ranges, wiring sites, and test risks. |
 | TASK-421-02 | Control Primitives And Preset Inputs | High | Large | Done (2026-06-11): pageEditorControlUiModel adapter + six editorControls primitives with tests. |

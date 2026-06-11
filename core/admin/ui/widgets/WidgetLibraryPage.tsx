@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Grid2X2, Play, Plus, Search, Star, Table2, Trash2, X } from "lucide-react";
+import { Grid2X2, Play, Search, Star, Table2, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
@@ -27,31 +27,13 @@ import {
   listWidgetCatalogCached,
   type WidgetCatalogItem,
 } from "@/services/widgetsClient";
-import {
-  deleteWidgetTemplate,
-  duplicateWidgetTemplate,
-  getWidgetTemplateCached,
-  updateWidgetTemplate,
-} from "@/services/widgetTemplatesClient";
-import {
-  createWidgetTemplateCategory,
-  deleteWidgetTemplateCategory,
-  getCachedWidgetTemplateCategories,
-  listWidgetTemplateCategoriesCached,
-  updateWidgetTemplateCategory,
-  type WidgetTemplateCategory,
-} from "@/services/widgetTemplateCategoriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
-import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
-import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
-import { AdminLink } from "@/ui/shared/AdminLink";
 import { resolveAdminActionErrorMessage } from "@/ui/shared/actionToasts";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { listRegisteredWidgetLibraryWidgets } from "@/ui/widgets/registry";
-import { resolveAdminHref } from "@/utils/adminPaths";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { getWidgetSlotKind, isSlotIdMatchingDefinition } from "../../../widgets/slots";
 import { listModulePackStatus } from "../../../widgets/registry";
@@ -67,7 +49,6 @@ import { WidgetCard } from "./WidgetCard";
 import { WidgetCatalogFilters } from "./WidgetCatalogFilters";
 import { WidgetLibraryRowActions } from "./WidgetLibraryRowActions";
 import { WidgetLibraryTable } from "./WidgetLibraryTable";
-import { WidgetTemplateCategoryDrawer } from "./WidgetTemplateCategoryDrawer";
 import { WidgetDetailsDrawer } from "./WidgetDetailsDrawer";
 import { WidgetInsertDialog } from "./WidgetInsertDialog";
 import {
@@ -75,7 +56,6 @@ import {
   countWidgetLibrarySections,
   filterWidgetLibraryItems,
   filterWidgetLibraryItemsBySection,
-  normalizeCategoryValue,
   normalizeWidgetLibrarySection,
   type WidgetLibrarySection,
 } from "./widgetLibraryUtils";
@@ -90,7 +70,6 @@ import type {
 
 type WidgetCategoryFilter = "all" | WidgetCategoryId;
 type WidgetComplexityFilter = "all" | WidgetComplexity;
-type TemplateCategoryFilter = "all" | string;
 type WidgetView = "grid" | "table";
 type WidgetPreview = "hero" | "grid" | "form" | "media" | "video" | "text" | "pricing" | "banner";
 
@@ -223,11 +202,9 @@ function renderPreview(kind: WidgetPreview) {
 
 export function WidgetLibraryPage() {
   const initialCatalog = getCachedWidgetCatalog();
-  const initialCategories = getCachedWidgetTemplateCategories();
   const initialPages = getCachedPages();
   const hasHydratedRef = useRef({
     catalog: Boolean(initialCatalog),
-    categories: Boolean(initialCategories),
     pages: Boolean(initialPages),
   });
   const [query, setQuery] = useState("");
@@ -237,35 +214,19 @@ export function WidgetLibraryPage() {
   const [advancedMode, setAdvancedMode] = useState(false);
   const [widgetComplexity, setWidgetComplexity] = useState<WidgetComplexityFilter>("all");
   const [widgetModule, setWidgetModule] = useState("all");
-  const [templateCategory, setTemplateCategory] = useState<TemplateCategoryFilter>("all");
   const [catalogItems, setCatalogItems] = useState<WidgetCatalogItem[]>(() => initialCatalog ?? []);
-  const [templateCategories, setTemplateCategories] = useState<WidgetTemplateCategory[]>(
-    () => initialCategories ?? []
-  );
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
   const [favoritesError, setFavoritesError] = useState<string | null>(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [insertOpen, setInsertOpen] = useState(false);
-  const [categoriesOpen, setCategoriesOpen] = useState(false);
   const [selectedWidget, setSelectedWidget] = useState<WidgetWithPreview | null>(null);
   const [insertWidget, setInsertWidget] = useState<WidgetWithPreview | null>(null);
   const [pages, setPages] = useState<PageSummary[]>(() => initialPages ?? []);
   const [pagesError, setPagesError] = useState<string | null>(null);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [categoriesError, setCategoriesError] = useState<string | null>(null);
   const [insertError, setInsertError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [templateDeleteTarget, setTemplateDeleteTarget] = useState<{
-    ids: string[];
-    label: string;
-  } | null>(null);
-  const [templateActionError, setTemplateActionError] = useState<string | null>(null);
-  const [isTemplateActionWorking, setIsTemplateActionWorking] = useState(false);
-  const adminBasePath = useAdminBasePath();
   const { navigate } = useAdminRouter();
-  const templateCreateHref = resolveAdminHref(adminBasePath, "/admin/widgets/templates/new");
-  const templateEditHref = (id: string) =>
-    resolveAdminHref(adminBasePath, `/admin/widgets/templates/${id}`);
 
   const widgetDefinitions = useMemo(() => listRegisteredWidgetLibraryWidgets(), []);
   const widgetDefinitionMap = useMemo(
@@ -296,7 +257,6 @@ export function WidgetLibraryPage() {
           presets: item.presets,
           requires: item.requires,
           preview: meta?.preview ?? "hero",
-          badge: item.source === "template" ? "Template" : undefined,
           source: item.source,
           description: item.description,
           status: item.status,
@@ -378,35 +338,6 @@ export function WidgetLibraryPage() {
     []
   );
 
-  const refreshCategories = useCallback(
-    async (options?: { force?: boolean; background?: boolean }) => {
-      const force = options?.force ?? false;
-      const background = options?.background ?? hasHydratedRef.current.categories;
-      if (!background) {
-        setCategoriesError(null);
-      }
-      try {
-        const result = await listWidgetTemplateCategoriesCached({ force });
-        setTemplateCategories(result);
-        setCategoriesError(null);
-        hasHydratedRef.current.categories = true;
-      } catch {
-        if (!background) {
-          setCategoriesError("Failed to load categories.");
-        }
-      }
-    },
-    []
-  );
-
-  const reloadCatalog = async () => {
-    await refreshCatalog({ force: true, background: false });
-  };
-
-  const reloadCategories = async () => {
-    await refreshCategories({ force: true, background: false });
-  };
-
   useEffect(() => {
     let active = true;
     Promise.resolve().then(() => {
@@ -419,29 +350,15 @@ export function WidgetLibraryPage() {
   }, [refreshCatalog]);
 
   useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (!active) return;
-      refreshCategories({ force: true, background: true }).catch(() => undefined);
-    });
-    return () => {
-      active = false;
-    };
-  }, [refreshCategories]);
-
-  useEffect(() => {
     return subscribeCacheEvents((event) => {
       if (event.key === cacheKeys.widgetCatalogList) {
         refreshCatalog({ force: true, background: true }).catch(() => undefined);
-      }
-      if (event.key === cacheKeys.widgetTemplateCategoriesList) {
-        refreshCategories({ force: true, background: true }).catch(() => undefined);
       }
       if (event.key === cacheKeys.pagesList) {
         refreshPages({ force: true, background: true }).catch(() => undefined);
       }
     });
-  }, [refreshCatalog, refreshCategories, refreshPages]);
+  }, [refreshCatalog, refreshPages]);
   const activeWidgetCategory: WidgetCategoryFilter =
     section === "widgets-all"
       ? "all"
@@ -449,19 +366,15 @@ export function WidgetLibraryPage() {
         ? (section as WidgetCategoryId)
         : "all";
 
-  const normalizedTemplateCategory =
-    templateCategory === "all" ? "all" : normalizeCategoryValue(templateCategory);
-
   const sectionCounts = useMemo(
     () =>
       countWidgetLibrarySections(widgets, {
         query,
-        templateCategory: normalizedTemplateCategory,
         widgetTab,
         widgetModule,
         widgetComplexity,
       }),
-    [normalizedTemplateCategory, query, widgetComplexity, widgetModule, widgets, widgetTab]
+    [query, widgetComplexity, widgetModule, widgets, widgetTab]
   );
 
   const widgetTabCounts = useMemo(() => {
@@ -469,7 +382,6 @@ export function WidgetLibraryPage() {
       recommended: filterWidgetLibraryItems(widgets, {
         query,
         activeScope: "widgets",
-        templateCategory: "all",
         widgetCategory: activeWidgetCategory,
         widgetTab: "recommended",
         widgetModule,
@@ -478,7 +390,6 @@ export function WidgetLibraryPage() {
       all: filterWidgetLibraryItems(widgets, {
         query,
         activeScope: "widgets",
-        templateCategory: "all",
         widgetCategory: activeWidgetCategory,
         widgetTab: "all",
         widgetModule,
@@ -501,19 +412,17 @@ export function WidgetLibraryPage() {
       filterWidgetLibraryItemsBySection(widgets, {
         query,
         section,
-        templateCategory: normalizedTemplateCategory,
         widgetTab,
         widgetModule,
         widgetComplexity,
       }),
-    [widgets, query, section, normalizedTemplateCategory, widgetTab, widgetModule, widgetComplexity]
+    [widgets, query, section, widgetTab, widgetModule, widgetComplexity]
   );
 
   const pagination = useListPagination(filteredWidgets, {
     resetKey: JSON.stringify({
       query,
       section,
-      normalizedTemplateCategory,
       widgetTab,
       widgetModule,
       widgetComplexity,
@@ -530,34 +439,14 @@ export function WidgetLibraryPage() {
     () => pagination.visibleRows.filter((widget) => selectedIds.has(widget.id)),
     [pagination.visibleRows, selectedIds]
   );
-  const selectedVisibleTemplateRows = useMemo(
-    () => selectedVisibleRows.filter((widget) => widget.source === "template"),
-    [selectedVisibleRows]
-  );
   const isAllVisibleSelected =
     visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
   const isSelectionIndeterminate = selectedVisibleRows.length > 0 && !isAllVisibleSelected;
-
-  const templateCategoryOptions = useMemo(
-    () => [
-      { id: "all", value: "all", label: "All categories" },
-      ...templateCategories.map((category) => {
-        const name = category.name.trim();
-        return {
-          id: category.id,
-          value: name,
-          label: name,
-        };
-      }),
-    ],
-    [templateCategories]
-  );
 
   const sectionOptions = useMemo(
     () => [
       { value: "all-items" as const, label: "All Items" },
       { value: "favorites" as const, label: "Favorites" },
-      { value: "templates" as const, label: "Templates" },
       { value: "widgets-all" as const, label: "All Widgets" },
       ...widgetCategoryOrder.map((id) => ({
         value: id,
@@ -571,11 +460,9 @@ export function WidgetLibraryPage() {
     sectionOptions.find((option) => option.value === section)?.label ?? "All Items";
 
   const resourceLabel =
-    section === "templates"
-      ? "templates"
-      : section === "widgets-all" || widgetCategoryOrder.includes(section as WidgetCategoryId)
-        ? "widgets"
-        : "items";
+    section === "widgets-all" || widgetCategoryOrder.includes(section as WidgetCategoryId)
+      ? "widgets"
+      : "items";
 
   const handleFavoriteToggle = async (id: string) => {
     setFavoritesError(null);
@@ -627,10 +514,6 @@ export function WidgetLibraryPage() {
   };
 
   const handleOpenPrimary = (widget: WidgetWithPreview) => {
-    if (widget.source === "template") {
-      handleEditTemplate(widget);
-      return;
-    }
     handleSelectWidget(widget);
   };
 
@@ -648,7 +531,6 @@ export function WidgetLibraryPage() {
 
   const handleInsert = async (payload: {
     placement: "new" | "inside";
-    targetType?: "page" | "template";
     targetId?: string | null;
     blockId?: string | null;
     slotId?: string | null;
@@ -656,7 +538,6 @@ export function WidgetLibraryPage() {
     if (!insertWidget || insertWidget.source !== "core") {
       throw new Error("Select a widget before inserting.");
     }
-    const targetType = payload.targetType ?? "page";
     if (!payload.targetId) {
       throw new Error("Select a target before inserting.");
     }
@@ -738,15 +619,6 @@ export function WidgetLibraryPage() {
         return;
       }
 
-      if (targetType === "template") {
-        const template = await getWidgetTemplateCached(payload.targetId, { force: true });
-        const blocks = Array.isArray(template.blocks) ? (template.blocks as Block[]) : [];
-        const nextBlocks = insertBlock(blocks, payload.blockId, payload.slotId);
-        await updateWidgetTemplate(payload.targetId, { blocks: nextBlocks });
-        notifyInserted(template.name, `/widgets/templates/${encodeURIComponent(payload.targetId)}`);
-        return;
-      }
-
       const page = await getPageCached(payload.targetId, { force: true });
       const currentData = (page.currentData ?? {}) as Record<string, unknown>;
       const blocks = Array.isArray(currentData.blocks) ? (currentData.blocks as Block[]) : [];
@@ -761,37 +633,6 @@ export function WidgetLibraryPage() {
       toast.error(message);
       throw new Error(message);
     }
-  };
-
-  const handleCreateCategory = async (name: string) => {
-    await createWidgetTemplateCategory({ name });
-    await reloadCategories();
-    await reloadCatalog();
-  };
-
-  const handleUpdateCategory = async (id: string, name: string) => {
-    const existing = templateCategories.find((category) => category.id === id);
-    await updateWidgetTemplateCategory(id, { name });
-    await reloadCategories();
-    await reloadCatalog();
-    if (existing && templateCategory === existing.name) {
-      setTemplateCategory(name);
-    }
-  };
-
-  const handleDeleteCategory = async (id: string) => {
-    const existing = templateCategories.find((category) => category.id === id);
-    await deleteWidgetTemplateCategory(id);
-    await reloadCategories();
-    await reloadCatalog();
-    if (existing && templateCategory === existing.name) {
-      setTemplateCategory("all");
-    }
-  };
-
-  const handleEditTemplate = (widget: WidgetWithPreview | null) => {
-    if (!widget || widget.source !== "template") return;
-    navigate(templateEditHref(widget.id));
   };
 
   const toggleSelection = (id: string, checked?: boolean) => {
@@ -849,88 +690,15 @@ export function WidgetLibraryPage() {
     }
   };
 
-  const handleDuplicateTemplate = async (widget: WidgetWithPreview) => {
-    if (widget.source !== "template") return;
-    setTemplateActionError(null);
-    setIsTemplateActionWorking(true);
-    try {
-      const duplicated = await duplicateWidgetTemplate(widget.id);
-      toast.success(`Template ${duplicated.name} duplicated.`);
-      await reloadCatalog();
-    } catch (err) {
-      const message = resolveAdminActionErrorMessage(err, "Failed to duplicate template.");
-      setTemplateActionError(message);
-      toast.error(message);
-    } finally {
-      setIsTemplateActionWorking(false);
-    }
-  };
-
-  const handleConfirmDeleteTemplates = async () => {
-    if (!templateDeleteTarget) return;
-    setTemplateActionError(null);
-    setIsTemplateActionWorking(true);
-    const results = await Promise.allSettled(
-      templateDeleteTarget.ids.map((id) => deleteWidgetTemplate(id))
-    );
-    const failed = templateDeleteTarget.ids.filter(
-      (_, index) => results[index]?.status === "rejected"
-    );
-    const deletedCount = templateDeleteTarget.ids.length - failed.length;
-    if (deletedCount > 0) {
-      toast.success(
-        deletedCount === 1 ? "Template deleted." : `${deletedCount} templates deleted.`
-      );
-    }
-    if (failed.length > 0) {
-      const message =
-        failed.length === 1
-          ? "Failed to delete 1 template."
-          : `Failed to delete ${failed.length} templates.`;
-      setTemplateActionError(message);
-      toast.error(message);
-    }
-    setSelectedIds(new Set(failed));
-    setTemplateDeleteTarget(null);
-    try {
-      await reloadCatalog();
-    } finally {
-      setIsTemplateActionWorking(false);
-    }
-  };
-
   const renderWidgetActions = (widget: WidgetWithPreview) => (
     <WidgetLibraryRowActions
-      source={widget.source}
       section={section}
       isFavorite={Boolean(widget.isFavorite)}
       onPreview={() => handlePreview(widget)}
-      onConfigure={widget.source === "core" ? () => handleSelectWidget(widget) : undefined}
-      onInsert={widget.source === "core" ? () => handleInsertWidget(widget) : undefined}
-      onEditTemplate={widget.source === "template" ? () => handleEditTemplate(widget) : undefined}
-      onDuplicateTemplate={
-        widget.source === "template" ? () => void handleDuplicateTemplate(widget) : undefined
-      }
-      onDeleteTemplate={
-        widget.source === "template"
-          ? () =>
-              setTemplateDeleteTarget({
-                ids: [widget.id],
-                label: widget.name,
-              })
-          : undefined
-      }
+      onConfigure={() => handleSelectWidget(widget)}
+      onInsert={() => handleInsertWidget(widget)}
       onFavoriteToggle={() => handleFavoriteToggle(widget.id)}
-      disabled={isTemplateActionWorking && widget.source === "template"}
     />
-  );
-
-  const templateList = useMemo(
-    () =>
-      catalogItems
-        .filter((item) => item.source === "template")
-        .map((item) => ({ id: item.id, name: item.name })),
-    [catalogItems]
   );
 
   return (
@@ -979,44 +747,10 @@ export function WidgetLibraryPage() {
                       </Button>
                     </>
                   )}
-                  {section === "templates" && selectedVisibleTemplateRows.length > 0 ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      className="gap-2"
-                      onClick={() =>
-                        setTemplateDeleteTarget({
-                          ids: selectedVisibleTemplateRows.map((widget) => widget.id),
-                          label: `${selectedVisibleTemplateRows.length} selected templates`,
-                        })
-                      }
-                      disabled={isTemplateActionWorking}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete selected
-                    </Button>
-                  ) : null}
                   <Button type="button" size="sm" variant="ghost" onClick={clearSelection}>
                     Clear
                   </Button>
                 </div>
-              ) : null}
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setCategoriesOpen(true)}
-              >
-                Categories
-              </Button>
-              {section === "templates" ? (
-                <Button size="sm" className="gap-2" asChild>
-                  <AdminLink href={templateCreateHref}>
-                    <Plus className="h-4 w-4" />
-                    New Template
-                  </AdminLink>
-                </Button>
               ) : null}
             </>
           }
@@ -1032,9 +766,9 @@ export function WidgetLibraryPage() {
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search widgets and templates..."
+                placeholder="Search widgets..."
                 className="pl-9"
-                aria-label="Search widgets and templates"
+                aria-label="Search widgets"
               />
             </div>
             <Select value={section} onValueChange={handleSectionChange}>
@@ -1092,20 +826,6 @@ export function WidgetLibraryPage() {
                 onComplexityFilterChange={setWidgetComplexity}
               />
             ) : null}
-            {section === "templates" ? (
-              <Select value={templateCategory} onValueChange={setTemplateCategory}>
-                <SelectTrigger className="h-9 w-[180px] text-xs">
-                  <SelectValue placeholder="All categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  {templateCategoryOptions.map((category) => (
-                    <SelectItem key={category.id} value={category.value}>
-                      {category.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            ) : null}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <span>Section: {activeSectionLabel}</span>
@@ -1119,11 +839,6 @@ export function WidgetLibraryPage() {
             ) : null}
           </div>
         </div>
-        {templateActionError ? (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {templateActionError}
-          </div>
-        ) : null}
         <div className="flex flex-col gap-4">
           {view === "table" ? (
             <WidgetLibraryTable
@@ -1131,11 +846,7 @@ export function WidgetLibraryPage() {
               selectedIds={selectedIdList}
               isAllSelected={isAllVisibleSelected}
               isIndeterminate={isSelectionIndeterminate}
-              emptyMessage={
-                section === "templates"
-                  ? "No templates match your search."
-                  : "No items match your search."
-              }
+              emptyMessage="No items match your search."
               onToggleAll={toggleAllVisible}
               onToggleRow={(id) => toggleSelection(id)}
               onOpenPrimary={(widget) => handleOpenPrimary(widget as WidgetWithPreview)}
@@ -1150,9 +861,7 @@ export function WidgetLibraryPage() {
             >
               {pagination.visibleRows.length === 0 ? (
                 <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-                  {section === "templates"
-                    ? "No templates match your search."
-                    : "No items match your search."}
+                  No items match your search.
                 </div>
               ) : (
                 pagination.visibleRows.map((widget) => (
@@ -1162,11 +871,7 @@ export function WidgetLibraryPage() {
                     categoryLabel={widget.categoryLabel}
                     preview={renderPreview(widget.preview)}
                     badge={widget.badge}
-                    metaBadges={
-                      widget.source === "core"
-                        ? [widget.complexity, formatModuleBadgeLabel(widget.module)]
-                        : undefined
-                    }
+                    metaBadges={[widget.complexity, formatModuleBadgeLabel(widget.module)]}
                     isFavorite={widget.isFavorite}
                     selected={selectedIds.has(widget.id)}
                     onSelectionChange={(checked) => toggleSelection(widget.id, checked)}
@@ -1184,24 +889,7 @@ export function WidgetLibraryPage() {
         widget={selectedWidget}
         open={detailsOpen}
         onOpenChange={setDetailsOpen}
-        onInsert={
-          selectedWidget?.source === "core" ? () => handleInsertWidget(selectedWidget) : undefined
-        }
-        onPrimaryAction={
-          selectedWidget?.source === "template"
-            ? () => handleEditTemplate(selectedWidget)
-            : undefined
-        }
-        primaryActionLabel={selectedWidget?.source === "template" ? "Edit Template" : undefined}
-      />
-      <WidgetTemplateCategoryDrawer
-        open={categoriesOpen}
-        onOpenChange={setCategoriesOpen}
-        categories={templateCategories}
-        onCreate={handleCreateCategory}
-        onUpdate={handleUpdateCategory}
-        onDelete={handleDeleteCategory}
-        error={categoriesError}
+        onInsert={selectedWidget ? () => handleInsertWidget(selectedWidget) : undefined}
       />
       <WidgetInsertDialog
         open={insertOpen}
@@ -1209,25 +897,8 @@ export function WidgetLibraryPage() {
         widget={insertWidget}
         preview={insertWidget ? renderPreview(insertWidget.preview) : undefined}
         pages={pages.map((page) => ({ id: page.id, title: page.title }))}
-        templates={templateList}
         error={insertError}
         onInsert={(payload) => handleInsert(payload)}
-      />
-      <ConfirmActionDialog
-        open={Boolean(templateDeleteTarget)}
-        onOpenChange={(open) => {
-          if (!open) setTemplateDeleteTarget(null);
-        }}
-        title="Delete template"
-        description={
-          templateDeleteTarget
-            ? `Delete ${templateDeleteTarget.label}? This cannot be undone.`
-            : "Delete template?"
-        }
-        confirmLabel="Delete"
-        confirmingLabel="Deleting..."
-        isConfirming={isTemplateActionWorking}
-        onConfirm={handleConfirmDeleteTemplates}
       />
       {pagesError ? (
         <span className="sr-only" role="status">
@@ -1237,11 +908,6 @@ export function WidgetLibraryPage() {
       {catalogError ? (
         <span className="sr-only" role="status">
           {catalogError}
-        </span>
-      ) : null}
-      {categoriesError ? (
-        <span className="sr-only" role="status">
-          {categoriesError}
         </span>
       ) : null}
       {insertError ? (

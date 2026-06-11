@@ -18,8 +18,6 @@ import { clearListingQueriesCache, clearListingTemplatesCache } from "./listings
 import { clearMenusCache } from "./menusClient";
 import { clearPagesCache } from "./pagesClient";
 import { clearSeoCache } from "./seoClient";
-import { clearWidgetTemplatesCache } from "./widgetTemplatesClient";
-import { clearWidgetCatalogCache } from "./widgetsClient";
 import type {
   AssistantActionContext,
   AssistantActionDryRunResult,
@@ -423,24 +421,6 @@ const notifyAssistantExecutionCacheEvent = (input: {
       clearListingTemplatesCache();
       emit(cacheKeys.listingTemplatesList, cacheAction);
       if (id) clearAndEmitDetail(cacheKeys.listingTemplateDetail(id), cacheAction, emit);
-      return;
-    }
-
-    case "widget-template.delete":
-    case "widget-template.update":
-    case "widget-template.block.patch": {
-      const plannedDelete = readActionId(action, "widget-template.delete");
-      const plannedUpdate = readActionId(action, "widget-template.update");
-      const plannedPatch = readActionId(action, "widget-template.block.patch");
-      const id = resourceId(
-        item,
-        plannedDelete?.input.id ?? plannedUpdate?.input.id ?? plannedPatch?.input.id
-      );
-      clearWidgetTemplatesCache();
-      clearWidgetCatalogCache();
-      emit(cacheKeys.widgetTemplatesList, cacheAction);
-      emit(cacheKeys.widgetCatalogList, "invalidate");
-      if (id) clearAndEmitDetail(cacheKeys.widgetTemplateDetail(id), cacheAction, emit);
       return;
     }
 

@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / Editor UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-451-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -21,7 +23,7 @@ the preview URL/environment composition fix from TASK-451-01 lands (the
 
 ## Sub-Tasks
 
-- [ ] TASK-451-02-L01: Normalize preview dialog labels and add-surface
+- [x] TASK-451-02-L01: Normalize preview dialog labels and add-surface
       affordances.
 
 ---
@@ -38,3 +40,8 @@ the preview URL/environment composition fix from TASK-451-01 lands (the
 
 - `docs/guide/` Page editor docs
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: shell/dialog label polish + add-surface affordances landed.

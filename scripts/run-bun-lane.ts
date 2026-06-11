@@ -45,9 +45,7 @@ const routeSuites = [
   "tests/integration/routes/themes.test.ts",
   "tests/integration/routes/userSettings.test.ts",
   "tests/integration/routes/webhooks.test.ts",
-  "tests/integration/routes/widgetTemplateCategories.test.ts",
-  "tests/integration/routes/widgetTemplatePreview.test.ts",
-  "tests/integration/routes/widgetTemplates.test.ts",
+  "tests/integration/routes/pageTemplates.test.ts",
   "tests/integration/routes/widgets.test.ts",
 ];
 

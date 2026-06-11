@@ -35,6 +35,11 @@ remain and together can still lose author work or render a poisoned view:
    editor while a poisoned (empty) cached record was in localStorage rendered
    `s=0/b=0` until the cache was cleared.
 
+Additional evidence (2026-06-11 Phase 2 smoke): when the dev host died
+mid-session, the editor silently reloaded and dropped unsaved work, and a Save
+issued during the outage failed with no visible error UI — the recovery and
+error-surfacing scope below covers this path too.
+
 Scope: surface autosaved drafts on reopen (restore prompt or promote-on-open
 contract — decide explicitly; revision restore UI already exists), add an
 unsaved-changes guard for SPA navigation consistent with existing admin UX

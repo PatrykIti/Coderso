@@ -6,7 +6,9 @@
 **Category:** Admin UI / Pages / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-424-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -20,9 +22,9 @@ experience.
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ## Implementation Pseudocode
 
@@ -53,3 +55,8 @@ Validation commands:
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
 
+---
+
+## Completion Notes
+
+Closure executed 2026-06-11: full Vitest lane green (3894 tests), Bun runtime suite green, live smoke typography end-to-end (canvas/front computed parity, tablet override on the front), DESIGN_TOKENS.md updated, changelog 1163.

@@ -32,6 +32,9 @@ export type DesignTokens = {
     lg: string;
     xl: string;
     "2xl": string;
+    "3xl": string;
+    "4xl": string;
+    "5xl": string;
   };
 };
 
@@ -77,5 +80,11 @@ export const DEFAULT_TOKENS: DesignTokens = {
     lg: "1.125rem",
     xl: "1.25rem",
     "2xl": "1.5rem",
+    // Heading-scale extension (TASK phase2 anomaly #2): 30/36/48px. 5xl matches
+    // the baked h1 utility class (`text-5xl` = 3rem) so choosing the largest
+    // preset never shrinks a default h1.
+    "3xl": "1.875rem",
+    "4xl": "2.25rem",
+    "5xl": "3rem",
   },
 };

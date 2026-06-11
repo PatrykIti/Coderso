@@ -337,7 +337,7 @@ export function DetailTemplateEditorPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [libraryTab, setLibraryTab] = useState<"widgets" | "templates" | "forms">("widgets");
+  const [libraryTab, setLibraryTab] = useState<"widgets" | "forms">("widgets");
   const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
   const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [slotInsertTarget, setSlotInsertTarget] = useState<SlotInsertTarget | null>(null);
@@ -622,21 +622,6 @@ export function DetailTemplateEditorPage() {
     if (mobileLibraryOpen) setMobileLibraryOpen(false);
   };
 
-  const handleAddTemplateSection = (template: { id: string; name: string }) => {
-    const nextBlock = createBlock("template-section");
-    const finalized = {
-      ...nextBlock,
-      data: {
-        ...(nextBlock.data as Record<string, unknown>),
-        templateId: template.id,
-        templateName: template.name,
-      },
-    };
-    updateBlocks([...blocks, finalized]);
-    setSelectedId(finalized.id);
-    if (mobileLibraryOpen) setMobileLibraryOpen(false);
-  };
-
   const handleAddForm = (form: { id: string; name: string }) => {
     const nextBlock = createBlock("form-embed");
     const finalized = {
@@ -894,7 +879,6 @@ export function DetailTemplateEditorPage() {
   const renderLibraryPanel = () => (
     <LibraryPanel
       onAddWidget={handleAddBlock}
-      onAddTemplate={handleAddTemplateSection}
       onAddForm={handleAddForm}
       activeTab={libraryTab}
       onActiveTabChange={(nextTab) => {

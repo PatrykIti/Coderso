@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import {
   PAGE_BLOCK_ELEMENT_ATTRIBUTE,
   PAGE_BLOCK_ID_ATTRIBUTE,
+  PAGE_BLOCK_TEXT_ATTRIBUTE,
   PAGE_SECTION_CONTENT_ATTRIBUTE,
   PAGE_SECTION_ID_ATTRIBUTE,
   buildPageResponsiveCss,
@@ -62,6 +63,7 @@ describe("pageResponsiveCss contract constants", () => {
     expect(PAGE_BLOCK_ID_ATTRIBUTE).toBe("data-block-id");
     expect(PAGE_SECTION_CONTENT_ATTRIBUTE).toBe("data-page-section-content");
     expect(PAGE_BLOCK_ELEMENT_ATTRIBUTE).toBe("data-page-block-element");
+    expect(PAGE_BLOCK_TEXT_ATTRIBUTE).toBe("data-page-block-text");
     expect(pageBlockVisualElementTypes).toEqual(["button", "image"]);
     expect(pageResponsiveCssBreakpoints).toEqual(["tablet", "mobile"]);
     expect(pageResponsiveMediaBounds).toEqual({
@@ -204,6 +206,70 @@ describe("buildPageResponsiveCss", () => {
     expect(buildPageResponsiveCss(document)).toContain(
       "grid-template-columns:repeat(3, minmax(0, 1fr)) !important"
     );
+  });
+
+  test("stackVertical overrides force a single column on the section content grid (TASK-425)", () => {
+    const document = buildDocument([
+      buildSection({
+        type: "content",
+        layout: { columns: 3, align: "start", justify: "start", maxWidth: 1080 },
+        responsive: { mobile: { layout: { stackVertical: true } } },
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).toContain("@media (max-width: 639px){");
+    expect(css).toContain(
+      '[data-section-id="sec_hero"] > [data-page-section-content="true"]{grid-template-columns:repeat(1, minmax(0, 1fr)) !important}'
+    );
+    // Tablet has no override: nothing leaks outside the mobile range.
+    expect(css).not.toContain("(min-width: 640px)");
+  });
+
+  test("stackVertical wins over a simultaneous columns override and stays a single declaration", () => {
+    const document = buildDocument([
+      buildSection({
+        type: "content",
+        layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+        responsive: { tablet: { layout: { columns: 3, stackVertical: true } } },
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).toContain("grid-template-columns:repeat(1, minmax(0, 1fr)) !important");
+    expect(css.match(/grid-template-columns/g)).toHaveLength(1);
+  });
+
+  test("an explicit stackVertical:false override restores the template-floored columns over a stacked base", () => {
+    const document = buildDocument([
+      buildSection({
+        type: "content",
+        layout: {
+          columns: 3,
+          align: "start",
+          justify: "start",
+          maxWidth: 1080,
+          stackVertical: true,
+        },
+        responsive: { tablet: { layout: { stackVertical: false } } },
+      }),
+    ]);
+    expect(buildPageResponsiveCss(document)).toContain(
+      "grid-template-columns:repeat(3, minmax(0, 1fr)) !important"
+    );
+  });
+
+  test("a stacked base without overrides emits no responsive CSS (legacy-safe no-op)", () => {
+    const document = buildDocument([
+      buildSection({
+        layout: {
+          columns: 2,
+          align: "start",
+          justify: "start",
+          maxWidth: 1080,
+          stackVertical: true,
+        },
+      }),
+    ]);
+    expect(buildPageResponsiveCss(document)).toBe("");
   });
 
   test("maps section style overrides (accent, background switch, radius, shadow)", () => {
@@ -355,6 +421,112 @@ describe("buildPageResponsiveCss", () => {
     expect(css).not.toContain('[data-block-id="blk_btn_hide"] [data-page-block-element');
   });
 
+  test("scopes typography overrides to the painted text node of text-capable blocks", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_typo",
+            style: { fontSize: "2xl" },
+            responsive: {
+              mobile: {
+                style: {
+                  fontFamily: "display",
+                  fontSize: "sm",
+                  fontWeight: "bold",
+                  lineHeight: 1.4,
+                  letterSpacing: 0.5,
+                },
+              },
+            },
+          }),
+        ],
+      }),
+    ]);
+    const plan = buildPageResponsiveCssPlan(document);
+
+    // Typography targets the renderer's text-node hook, never the frame: the
+    // baked utility classes live on the text node and only a rule on the same
+    // node can beat them (plus the inline desktop base via !important).
+    expect(plan.css).toContain(
+      '[data-block-id="blk_typo"] [data-page-block-text="true"]{' +
+        "font-family:var(--font-display" +
+        ""
+    );
+    const textRule =
+      plan.css.match(
+        /\[data-block-id="blk_typo"\] \[data-page-block-text="true"\]\{[^}]*\}/
+      )?.[0] ?? "";
+    expect(textRule).toContain("font-size:var(--text-sm");
+    expect(textRule).toContain("font-weight:700 !important");
+    expect(textRule).toContain("line-height:1.4 !important");
+    expect(textRule).toContain("letter-spacing:0.5px !important");
+    // The frame rule never carries typography.
+    expect(plan.css).not.toMatch(/\[data-block-id="blk_typo"\]\{[^}]*font-/);
+    expect(plan.diagnostics).toEqual([]);
+  });
+
+  test("routes button typography overrides to the inner visual element", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_typo_btn",
+            type: "button",
+            props: { label: "Buy", href: "/buy", target: "self" },
+            responsive: { mobile: { style: { fontSize: "lg", fontWeight: "semibold" } } },
+          }),
+        ],
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    const elementRule =
+      css.match(
+        /\[data-block-id="blk_typo_btn"\] \[data-page-block-element="true"\]\{[^}]*\}/
+      )?.[0] ?? "";
+    expect(elementRule).toContain("font-size:var(--text-lg");
+    expect(elementRule).toContain("font-weight:600 !important");
+    expect(css).not.toContain('[data-block-id="blk_typo_btn"] [data-page-block-text');
+  });
+
+  test("typography overrides on non-text blocks and null clears stay diagnostics-only", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_typo_container",
+            type: "container",
+            props: {},
+            responsive: { mobile: { style: { fontSize: "lg" } } },
+          }),
+          buildBlock({
+            id: "blk_typo_cleared",
+            style: { fontSize: "lg" },
+            responsive: { mobile: { style: { fontSize: null } } },
+          }),
+        ],
+      }),
+    ]);
+    const plan = buildPageResponsiveCssPlan(document);
+    expect(plan.css).not.toContain("font-size");
+    expect(plan.diagnostics).toEqual([
+      {
+        scope: "block",
+        id: "blk_typo_container",
+        breakpoint: "mobile",
+        key: "style.fontSize",
+        reason: "not_css_expressible",
+      },
+      {
+        scope: "block",
+        id: "blk_typo_cleared",
+        breakpoint: "mobile",
+        key: "style.fontSize",
+        reason: "not_css_expressible",
+      },
+    ]);
+  });
+
   test("reaches blocks nested in active layout slots and skips inactive columns slots", () => {
     const nested = buildBlock({
       id: "blk_nested",
@@ -449,6 +621,81 @@ describe("buildPageResponsiveCss", () => {
     expect(plan.diagnostics).toContainEqual({
       scope: "block",
       id: "blk_text",
+      breakpoint: "tablet",
+      key: "props",
+      reason: "props_override_unsupported",
+    });
+  });
+
+  test("props.align overrides on heading/text emit a text-align rule on the painted text node", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_heading",
+            type: "heading",
+            props: { text: "Build with Coderso", level: "h1", align: "left" },
+            responsive: { tablet: { props: { align: "center" } } },
+          }),
+          buildBlock({
+            id: "blk_copy",
+            responsive: { mobile: { props: { align: "right" } } },
+          }),
+        ],
+      }),
+    ]);
+    const plan = buildPageResponsiveCssPlan(document);
+    // Scoped through the block frame selector onto the text node the desktop
+    // base paints (the baked text-align class lives there, so a frame-level
+    // rule could never beat it).
+    expect(plan.css).toContain(
+      '[data-block-id="blk_heading"] [data-page-block-text="true"]{text-align:center !important}'
+    );
+    expect(plan.css.indexOf("blk_heading")).toBeLessThan(
+      plan.css.indexOf("@media (max-width: 639px)")
+    );
+    expect(plan.css).toContain(
+      '[data-block-id="blk_copy"] [data-page-block-text="true"]{text-align:right !important}'
+    );
+    // The supported align key alone produces no props diagnostic.
+    expect(plan.diagnostics).toEqual([]);
+  });
+
+  test("props.align overrides fail closed for non-enum values and non-text block types", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_bad_value",
+            type: "heading",
+            props: { text: "Heading", level: "h2", align: "left" },
+            responsive: { tablet: { props: { align: "justify;}body{display:none" } } },
+          }),
+          buildBlock({
+            id: "blk_mixed",
+            responsive: { tablet: { props: { align: "center", text: "Tablet copy" } } },
+          }),
+        ],
+      }),
+    ]);
+    const plan = buildPageResponsiveCssPlan(document);
+    expect(plan.css).not.toContain("body{");
+    expect(plan.css).not.toContain("justify");
+    expect(plan.css).not.toContain("Tablet copy");
+    // Supported align still emits next to the unsupported sibling key.
+    expect(plan.css).toContain(
+      '[data-block-id="blk_mixed"] [data-page-block-text="true"]{text-align:center !important}'
+    );
+    expect(plan.diagnostics).toContainEqual({
+      scope: "block",
+      id: "blk_bad_value",
+      breakpoint: "tablet",
+      key: "props.align",
+      reason: "not_css_expressible",
+    });
+    expect(plan.diagnostics).toContainEqual({
+      scope: "block",
+      id: "blk_mixed",
       breakpoint: "tablet",
       key: "props",
       reason: "props_override_unsupported",

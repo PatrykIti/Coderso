@@ -1255,7 +1255,7 @@ testIfDbWithOptions(
     const slug = `/runtime-responsive-${token}`;
     const data = responsivePageData(token, {
       tablet: { layout: { maxWidth: 640 } },
-      mobile: { layout: { maxWidth: 360 } },
+      mobile: { layout: { maxWidth: 360, stackVertical: true } },
     });
     const created = await createPage({
       title: `Runtime Responsive ${token}`,
@@ -1280,8 +1280,10 @@ testIfDbWithOptions(
       `${responsiveSectionContentSelector(token)}{max-width:640px !important}`
     );
     expect(publicHtml).toContain("@media (max-width: 639px){");
+    // The mobile delta carries the TASK-425 stackVertical single-column rule
+    // next to the maxWidth override, sorted by property.
     expect(publicHtml).toContain(
-      `${responsiveSectionContentSelector(token)}{max-width:360px !important}`
+      `${responsiveSectionContentSelector(token)}{grid-template-columns:repeat(1, minmax(0, 1fr)) !important;max-width:360px !important}`
     );
 
     // The CSS lives inside the cached page HTML: one device-agnostic entry.

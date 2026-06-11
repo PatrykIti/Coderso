@@ -21,8 +21,12 @@
  * - Only schema-clamped numbers, enum-token lookups, validated color strings,
  *   and CSS-string-escaped ids/urls reach the output. Anything else fails
  *   closed into diagnostics — never guessed CSS.
- * - `responsive[bp].props` (content overrides) are explicitly unsupported and
- *   surface as diagnostics until a dedicated content-override contract exists.
+ * - `responsive[bp].props` (content overrides) are unsupported and surface as
+ *   diagnostics until a dedicated content-override contract exists — with ONE
+ *   explicit exception: `props.align` on heading/text blocks (the
+ *   schema-enumerated text-align prop, TASK-424) maps to a `text-align` rule
+ *   on the block's painted text node, because the desktop base renders it as a
+ *   baked alignment class on that same node.
  * - Nodes hidden at the desktop base (or living in inactive `columns` slots)
  *   have no public markup, so their overrides are unreachable: diagnostics,
  *   no CSS. Restoring visibility at a smaller breakpoint
@@ -33,7 +37,11 @@
 
 import {
   getPageBlockActiveSlotKeys,
+  isPageTypographyCapableBlockType,
   pageBlockCapabilities,
+  pageTypographyFontFamilyCssValues,
+  pageTypographyFontSizeCssValues,
+  pageTypographyFontWeightCssValues,
   type PageBlockV2,
   type PageBoxSpacingV2,
   type PageDocumentV2,
@@ -54,6 +62,15 @@ export const PAGE_BLOCK_ID_ATTRIBUTE = "data-block-id" as const;
 export const PAGE_SECTION_CONTENT_ATTRIBUTE = "data-page-section-content" as const;
 /** Stable hook on the inner visual element of re-routed block types. */
 export const PAGE_BLOCK_ELEMENT_ATTRIBUTE = "data-page-block-element" as const;
+/**
+ * Stable hook on the text node(s) a typography-capable block paints (the
+ * `<h1>`/`<p>`/`<blockquote>`/list/statistic/card text elements). Typography
+ * style must land on the text node itself because baked utility classes on
+ * those nodes (e.g. `text-5xl`, `font-semibold`) would beat values inherited
+ * from the block frame. The renderer emits it; this builder scopes responsive
+ * typography overrides to the same node(s).
+ */
+export const PAGE_BLOCK_TEXT_ATTRIBUTE = "data-page-block-text" as const;
 
 /**
  * Style-target contract shared with `pageRendererV2.tsx`: block types whose
@@ -146,6 +163,13 @@ const blockSelector = (id: string) => `[${PAGE_BLOCK_ID_ATTRIBUTE}="${escapeCssS
 
 const blockElementSelector = (id: string) =>
   `${blockSelector(id)} [${PAGE_BLOCK_ELEMENT_ATTRIBUTE}="true"]`;
+
+/**
+ * Typography-capable blocks never own nested block slots, so the descendant
+ * selector can only match the block's own painted text nodes.
+ */
+const blockTextSelector = (id: string) =>
+  `${blockSelector(id)} [${PAGE_BLOCK_TEXT_ATTRIBUTE}="true"]`;
 
 const hexColorPattern = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const namedColorPattern = /^[a-z]+$/i;
@@ -298,12 +322,18 @@ const collectSectionDeclarations = (
     const value = sectionJustifyContentValues[mergedLayout.justify];
     if (value) content.push({ property: "justify-content", value });
   }
-  if (layoutOverride.columns !== undefined) {
+  if (layoutOverride.columns !== undefined || layoutOverride.stackVertical !== undefined) {
     // Mirror the flattened editor preview: an explicit columns override forces
     // that template-floored count across the breakpoint range, replacing the
-    // base `grid-cols-1 md:grid-cols-N` class pair.
+    // base `grid-cols-1 md:grid-cols-N` class pair. A merged-effective
+    // `stackVertical: true` (TASK-425) wins over any column count and forces a
+    // single column, exactly like `toPageSectionRenderProps`; an explicit
+    // `stackVertical: false` override over a stacked base restores the
+    // template-floored count. Both paths emit one deterministic
+    // `grid-template-columns` declaration.
     const mergedTemplate = resolvePageSectionTemplate({ ...section, layout: mergedLayout });
-    const columns = resolvePageSectionTemplateColumns(mergedTemplate);
+    const columns =
+      mergedLayout.stackVertical === true ? 1 : resolvePageSectionTemplateColumns(mergedTemplate);
     if (isFiniteNumber(columns) && columns >= 1) {
       content.push({
         property: "grid-template-columns",
@@ -389,18 +419,43 @@ const collectBlockDeclarations = (
   block: PageBlockV2,
   override: NonNullable<NonNullable<PageBlockV2["responsive"]>["tablet"]>,
   context: CollectorContext
-): { frame: CssDeclaration[]; element: CssDeclaration[] } => {
+): { frame: CssDeclaration[]; element: CssDeclaration[]; text: CssDeclaration[] } => {
   const frame: CssDeclaration[] = [];
   // Visual style keys follow the renderer's style-target contract: for
   // re-routed types they land on the inner visual element, otherwise on the
   // frame. Layout keys (align/width/padding/margin/display) always stay on
   // the frame.
   const visual = isPageBlockVisualElementType(block.type) ? ([] as CssDeclaration[]) : frame;
+  // Typography keys follow the renderer's text-target contract: re-routed
+  // types paint them on the inner visual element (the button anchor),
+  // everything else on the dedicated text node(s).
+  const text: CssDeclaration[] = [];
+  const typography = isPageBlockVisualElementType(block.type) ? visual : text;
   const diag = (key: string, reason: PageResponsiveCssDiagnosticReason) =>
     pushDiagnostic(context, "block", block.id, key, reason);
 
-  if (override.props && Object.keys(override.props).length > 0) {
-    diag("props", "props_override_unsupported");
+  const propsOverride = override.props ?? {};
+  const propsOverrideKeys = Object.keys(propsOverride);
+  if (propsOverrideKeys.length > 0) {
+    // `props.align` on heading/text is the single content key with a safe CSS
+    // projection: the desktop base paints it as a baked text-align class on
+    // the block's text node, so the override re-targets that node with the
+    // enum-mapped value (left|center|right only — anything else fails closed).
+    const alignExpressible = block.type === "heading" || block.type === "text";
+    if (alignExpressible && propsOverride.align !== undefined) {
+      const merged = propsOverride.align ?? block.props.align;
+      const value = blockTextAlignValues[typeof merged === "string" ? merged : ""];
+      if (value) {
+        text.push({ property: "text-align", value });
+      } else {
+        diag("props.align", "not_css_expressible");
+      }
+    }
+    // Every other content key stays diagnostics-only until a dedicated
+    // content-override contract exists.
+    if (propsOverrideKeys.some((key) => !(alignExpressible && key === "align"))) {
+      diag("props", "props_override_unsupported");
+    }
   }
 
   const styleOverride = override.style ?? {};
@@ -489,11 +544,44 @@ const collectBlockDeclarations = (
     if (value) frame.push({ property: "margin", value });
   }
 
+  // Typography overrides (TASK-424). Only typography-capable blocks have a
+  // painted text target; explicit `null` overrides (clear back to the baked
+  // classes at one breakpoint) are not expressible against the inline base
+  // values, so both cases fail closed into diagnostics.
+  const typographyEnumOverrides = [
+    ["fontFamily", pageTypographyFontFamilyCssValues, "font-family"],
+    ["fontSize", pageTypographyFontSizeCssValues, "font-size"],
+    ["fontWeight", pageTypographyFontWeightCssValues, "font-weight"],
+  ] as const;
+  for (const [key, cssValues, property] of typographyEnumOverrides) {
+    if (styleOverride[key] === undefined) continue;
+    const merged = mergedStyle[key];
+    if (!isPageTypographyCapableBlockType(block.type) || merged === null || merged === undefined) {
+      diag(`style.${key}`, "not_css_expressible");
+      continue;
+    }
+    const value = (cssValues as Record<string, string>)[merged];
+    if (value) typography.push({ property, value });
+  }
+  const typographyNumberOverrides = [
+    ["lineHeight", "line-height", ""],
+    ["letterSpacing", "letter-spacing", "px"],
+  ] as const;
+  for (const [key, property, unit] of typographyNumberOverrides) {
+    if (styleOverride[key] === undefined) continue;
+    const merged = mergedStyle[key];
+    if (!isPageTypographyCapableBlockType(block.type) || !isFiniteNumber(merged)) {
+      diag(`style.${key}`, "not_css_expressible");
+      continue;
+    }
+    typography.push({ property, value: `${merged}${unit}` });
+  }
+
   if (override.visibility?.visible === false) {
     frame.push({ property: "display", value: "none" });
   }
 
-  return { frame, element: visual === frame ? [] : visual };
+  return { frame, element: visual === frame ? [] : visual, text };
 };
 
 const hasBlockOverride = (
@@ -517,11 +605,13 @@ const walkBlock = (block: PageBlockV2, context: CollectorContext, markupAbsent: 
     } else if (!id) {
       pushDiagnostic(context, "block", id, "*", "unsafe_scope_id");
     } else {
-      const { frame, element } = collectBlockDeclarations(block, override, context);
+      const { frame, element, text } = collectBlockDeclarations(block, override, context);
       const frameRule = renderRule(blockSelector(id), frame);
       if (frameRule) context.rules.push(frameRule);
       const elementRule = renderRule(blockElementSelector(id), element);
       if (elementRule) context.rules.push(elementRule);
+      const textRule = renderRule(blockTextSelector(id), text);
+      if (textRule) context.rules.push(textRule);
     }
   }
 

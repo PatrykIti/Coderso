@@ -5,8 +5,9 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** None for the persistence fix; TASK-421 (dedicated controls), TASK-423 (responsive runtime) for the closure verification sweep
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -86,7 +87,7 @@ Scope of this family:
       (fix only the layer identified by TASK-449-01).
 - [x] TASK-449-02-L01: Fix the identified layer and land the
       all-insertable-block round-trip guard (green today; pins behavior).
-- [ ] TASK-449-03: Validation, nested slots, controls, and closure.
+- [x] TASK-449-03: Validation, nested slots, controls, and closure.
 
 ---
 
@@ -168,3 +169,7 @@ Regression-test shape:
 ## Progress Notes
 
 TASK-449-01/-01-L01 (reproduction) and TASK-449-02/-02-L01 (fix + guard) are Done (2026-06-11); TASK-449-03 closure sweep remains blocked on TASK-421 (dedicated controls) and TASK-423 (responsive runtime).
+
+## Family Completion
+
+Family completed 2026-06-11: reproduction proved the audited drop was a stale-cache artifact, the block-agnostic dropper was fixed (monotonic rehydration guard), the all-insertable-block round-trip guard pins the schema layer, and the TASK-449-03 live sweep passed 16/16 with dedicated controls and responsive delivery in place.

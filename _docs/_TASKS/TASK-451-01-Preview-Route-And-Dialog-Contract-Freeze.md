@@ -6,7 +6,9 @@
 **Category:** Pages / Preview / Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-423
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-11
 
 ---
 
@@ -24,7 +26,7 @@ not route restoration.
 
 ## Sub-Tasks
 
-- [ ] TASK-451-01-L01: Restore preview surface and preserve preview-token
+- [x] TASK-451-01-L01: Restore preview surface and preserve preview-token
       guards.
 
 ---
@@ -53,3 +55,8 @@ not route restoration.
 
 - `_docs/PREVIEW_SPEC.md`
 
+---
+
+## Completion Notes
+
+Completed 2026-06-11: diagnose-first contract executed; probe transport fix in previewService.fetchPreviewProbe with security guards unchanged.
