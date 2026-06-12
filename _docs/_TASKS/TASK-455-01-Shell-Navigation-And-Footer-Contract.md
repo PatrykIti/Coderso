@@ -6,7 +6,9 @@
 **Category:** Pages / Public Runtime / Site Shell
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -45,9 +47,9 @@ Contract to record (verify each anchor before freezing):
 
 ## Sub-Tasks
 
-- [ ] Verify anchors and freeze the contract in this file (update the bullets
+- [x] Verify anchors and freeze the contract in this file (update the bullets
       above with exact line references).
-- [ ] Define `PublicSiteShell` types and the resolver module skeleton with
+- [x] Define `PublicSiteShell` types and the resolver module skeleton with
       machine-readable errors for the admin validation path
       (`site_shell_menu_not_found`, `site_shell_template_not_found`).
 
@@ -105,3 +107,9 @@ fail-closed nulls; settings schema rejects unknown keys/non-string ids.
 ## Documentation Updates Required
 
 - Contract bullets in this file updated with verified anchors (done at freeze).
+
+---
+
+## Completion Notes
+
+Completed 2026-06-12: anchors verified, settings keys site.navigationMenuId/site.footerTemplateId (nullable-id pattern), publicSiteShell.ts resolver with published-only fail-closed semantics and site_shell_* sentinels; Bun resolver + settings schema tests.

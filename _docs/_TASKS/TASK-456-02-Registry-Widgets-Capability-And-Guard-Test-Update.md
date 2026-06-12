@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Forms
 **Estimated Effort:** Large
 **Dependencies:** TASK-456-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -25,9 +27,9 @@ TASK-452 guard-test update to the new frozen catalog. All four layers per the
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -62,3 +64,9 @@ TASK-452 guard-test update to the new frozen catalog. All four layers per the
 ## Documentation Updates Required
 
 - Covered by the parent family closure leaf.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-12: capability flip, registry controls, ComboboxControl + adapter kind + PageEditor wiring (comboboxOptionsSources, cache-hydrate + single revalidation, dangling-id marking), canvas preview bindings, TASK-452 suites updated to the new frozen catalog.

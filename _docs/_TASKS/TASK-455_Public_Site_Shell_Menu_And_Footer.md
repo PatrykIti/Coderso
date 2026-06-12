@@ -5,7 +5,9 @@
 **Category:** Pages / Public Runtime / Site Shell / Admin UI
 **Estimated Effort:** Large
 **Dependencies:** None (consumes the shipped Menus domain, TASK-420 Page Templates, and TASK-423 responsive runtime)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -63,9 +65,9 @@ overrides; menu item editing (Menus admin already owns it).
 
 ## Sub-Tasks
 
-- [ ] TASK-455-01: Shell navigation and footer contract.
-- [ ] TASK-455-02: Runtime shell and admin surfaces.
-- [ ] TASK-455-03: Validation, live smoke, and closure.
+- [x] TASK-455-01: Shell navigation and footer contract.
+- [x] TASK-455-02: Runtime shell and admin surfaces.
+- [x] TASK-455-03: Validation, live smoke, and closure.
 
 ---
 
@@ -126,3 +128,9 @@ Regression-test shape:
 - `docs/guide/` end-user note (how to set the site menu and footer).
 - `_docs/_TASKS/README.md` board + statistics; `_docs/_CHANGELOG/` entry on
   completion.
+
+---
+
+## Completion Notes
+
+Family completed 2026-06-12. Global site shell live: SiteHeaderNav from the designated published menu (logged_in items omitted for anonymous, CSS-only mobile disclosure) and SiteFooter rendering the designated published Page Template through the shared Page v2 pipeline with scoped responsive CSS; resolved once per request in publicSite (pages, homepage, both preview targets); Site shell settings card with validated nullable pickers; settings writes invalidate the site cache. Live smoke: nav + 3-column footer on multiple pages and at 390px, unpublish menu -> nav gone footer stays, shell present in preview content (.tmp/phase25/client-readiness-smoke.md). Post-smoke polish: list link items authoring (footer links), pageTemplates list-cache poisoning fix, loopback base-URL validation + preview probe trust (commit 7d975441).

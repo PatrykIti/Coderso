@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Content Types
 **Estimated Effort:** Medium
 **Dependencies:** TASK-456-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -25,9 +27,9 @@ combobox primitive owned by TASK-456-02.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -59,3 +61,9 @@ combobox primitive owned by TASK-456-02.
 ## Documentation Updates Required
 
 - Covered by the parent family closure leaf.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-12: props/clamps and scoped-binding fail-closed shapes verified; options sources and filterBy semantics frozen; final catalog values recorded.

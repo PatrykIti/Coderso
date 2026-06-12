@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Forms
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -26,9 +28,9 @@ this file; the implementation leaf executes from it.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -62,3 +64,9 @@ this file; the implementation leaf executes from it.
 ## Documentation Updates Required
 
 - Covered by the parent family closure leaf.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-12: props/fail-closed shapes verified (renderInertDataBoundBlock, FormEmbedBlock boundary), combobox model contract frozen, catalog amendment values recorded.

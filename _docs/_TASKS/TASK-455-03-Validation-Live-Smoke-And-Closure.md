@@ -6,7 +6,9 @@
 **Category:** Pages / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-455-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -20,9 +22,9 @@ assign both in Site shell settings, and verify every public page renders them.
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture evidence.
-- [ ] Live smoke per pseudocode below.
-- [ ] Docs/board/changelog sync.
+- [x] Run the targeted validation set and capture evidence.
+- [x] Live smoke per pseudocode below.
+- [x] Docs/board/changelog sync.
 
 ---
 
@@ -72,3 +74,9 @@ Regression-test shape: closure adds evidence, not production code.
 
 - `docs/guide/` user note (set site menu + footer).
 - `_docs/_TASKS/README.md` + `_docs/_CHANGELOG/` family entry.
+
+---
+
+## Completion Notes
+
+Closure executed 2026-06-12: full lanes green (3993+ Vitest, Bun site-shell/settings/pages suites), live client scenario PASS (menu+footer on two pages, 390px stacking, unpublish fail-closed); evidence .tmp/phase25/. Editor preview dialog finding fixed post-smoke (probe trust + loopback validation, commit 7d975441).

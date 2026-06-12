@@ -5,7 +5,9 @@
 **Category:** Pages / Page Editor V2 / Content Types
 **Estimated Effort:** Large
 **Dependencies:** None (consumes TASK-421 widgets, TASK-418-06-L04 runtime binding; amends the TASK-452 catalog freeze deliberately; TASK-456 lands the combobox primitive this family reuses)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -54,12 +56,12 @@ one wave; the changelog must record the final frozen catalog either way).
 
 ## Sub-Tasks
 
-- [ ] TASK-457-01: Collection block controls contract (props/controls/empty
+- [x] TASK-457-01: Collection block controls contract (props/controls/empty
       states; verify runtime fail-closed shapes; capability plan and
       TASK-452 amendment values).
-- [ ] TASK-457-02: Registry controls, capability change, palette entry, and
+- [x] TASK-457-02: Registry controls, capability change, palette entry, and
       guard-test update (reuses the TASK-456-02 combobox primitive).
-- [ ] TASK-457-03: Validation, live smoke (real content type with published
+- [x] TASK-457-03: Validation, live smoke (real content type with published
       entries rendered on a client-style page), and closure.
 
 ---
@@ -111,3 +113,9 @@ controls; Bun runtime listing render (existing binding suites stay green).
 - `_docs/CONTENT_TYPES_SPEC.md` note if the authoring contract is referenced.
 - `docs/guide/` user note (listing collection entries on a page).
 - `_docs/_TASKS/README.md` + `_docs/_CHANGELOG/` entry on completion.
+
+---
+
+## Completion Notes
+
+Family completed 2026-06-12. Collection block un-gated: contentTypeId/queryId/templateId comboboxes (queryId strictly filtered by content type and cleared on type change in one undoable patch) + limit slider 1..50, canvas preview with published entries (interactivity off) and pick-a-type empty state, palette entry "Collection"; TASK-452 suites at the final frozen catalog (11 sections + 16 blocks). Live smoke: Services type + 3 entries, limit 2 -> front lists exactly 2 articles.

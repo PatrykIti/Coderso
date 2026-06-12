@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Forms
 **Estimated Effort:** Medium
 **Dependencies:** TASK-456-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -23,9 +25,9 @@ changelog sync.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -59,3 +61,9 @@ Live smoke:
 ## Documentation Updates Required
 
 - Covered by the parent family closure leaf.
+
+---
+
+## Completion Notes
+
+Closure executed 2026-06-12: lanes green; live end-to-end Contact form submit through the existing nonce path verified on the front with the submission retrievable; Submissions admin surface landed post-smoke (7d975441).

@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 119 tasks
+- **To Do:** 107 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2422 tasks
+- **Done:** 2434 tasks
 
 ---
 
@@ -185,18 +185,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Build the matrix that links every aggregate finding to concrete task owners and evidence requirements. |
 | TASK-453-02 | Followup Validation Board And Changelog Closure | High | Medium | Close the aggregate follow-up report with final validation and board/changelog synchronization. |
 | TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Follow-up from the TASK-449 reproduction: surface/promote autosaved drafts on reopen, add an SPA unsaved-changes navigation guard, and revalidate mount hydration so a TTL-fresh poisoned cache cannot render a stale document. |
-| TASK-455 | Public Site Shell Menu And Footer | High | Large | Global header navigation from the published Menus admin and a global footer rendered from a designated Page Template on every public Page v2 page, with a Site shell settings card. |
-| TASK-455-01 | Shell Navigation And Footer Contract | High | Medium | Freeze settings keys, resolver shape, fail-closed publish-status rules, and cache strategy before implementation. |
-| TASK-455-02 | Runtime Shell And Admin Surfaces | High | Large | Implement SiteHeaderNav/SiteFooter in the v2 shell plus the Site shell settings card with validated writes and cache invalidation. |
-| TASK-455-03 | Validation Live Smoke And Closure | High | Medium | Close with full lanes and a live menu+footer-template proof across pages and viewports. |
-| TASK-456 | Form Authoring Enablement In Page Editor | High | Large | Un-gate the form block with real editor controls (form picker combobox) so client sites ship contact/lead forms; deliberate TASK-452 catalog amendment; runtime submit pipeline untouched. |
-| TASK-456-01 | Form Controls Contract And Capability Plan | High | Medium | Freeze props/controls/canvas semantics and the exact catalog amendment values. |
-| TASK-456-02 | Registry Widgets Capability And Guard Test Update | High | Large | Capability flip, combobox primitive (single owner), registry controls, canvas-safe preview, TASK-452 test update. |
-| TASK-456-03 | Validation Live Submit Smoke And Closure | High | Medium | Full lanes plus a real front-side form submit through the existing nonce pipeline. |
-| TASK-457 | Collection Authoring Enablement In Page Editor | High | Large | Un-gate the collection block with content-type/query/template/limit controls for listings on client pages; reuses the TASK-456 combobox; deliberate TASK-452 amendment. |
-| TASK-457-01 | Collection Controls Contract And Capability Plan | High | Medium | Freeze props/controls/fail-closed shapes and final frozen catalog values. |
-| TASK-457-02 | Registry Controls Capability And Guard Test Update | High | Large | Capability flip, three comboboxes + limit slider, canvas preview, TASK-452 test update. |
-| TASK-457-03 | Validation Live Listing Smoke And Closure | High | Medium | Full lanes plus a live published-entries listing proof with template and limit. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -224,6 +212,18 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-455 | Public Site Shell Menu And Footer | High | Large | Done (2026-06-12): global menu + footer-from-template render on every public page with a Site shell settings card; live client scenario verified incl. mobile and fail-closed unpublish. |
+| TASK-455-01 | Shell Navigation And Footer Contract | High | Medium | Done (2026-06-12): settings keys + published-only fail-closed resolver with tests. |
+| TASK-455-02 | Runtime Shell And Admin Surfaces | High | Large | Done (2026-06-12): runtime shell components, per-request resolution, settings card, cache invalidation, docs. |
+| TASK-455-03 | Validation Live Smoke And Closure | High | Medium | Done (2026-06-12): full lanes + live menu/footer proof; preview finding fixed post-smoke. |
+| TASK-456 | Form Authoring Enablement In Page Editor | High | Large | Done (2026-06-12): Form block authoring live (combobox picker, inert canvas preview, palette entry, deliberate catalog amendment); real nonce submit verified; Submissions admin screen added. |
+| TASK-456-01 | Form Controls Contract And Capability Plan | High | Medium | Done (2026-06-12): contract freeze with verified fail-closed shapes and catalog values. |
+| TASK-456-02 | Registry Widgets Capability And Guard Test Update | High | Large | Done (2026-06-12): capability flip + ComboboxControl owner + wiring + guard-test update. |
+| TASK-456-03 | Validation Live Submit Smoke And Closure | High | Medium | Done (2026-06-12): lanes green + live end-to-end submit. |
+| TASK-457 | Collection Authoring Enablement In Page Editor | High | Large | Done (2026-06-12): Collection block authoring live (filtered comboboxes + limit slider, canvas entries preview, final frozen catalog 11+16); live listing proof. |
+| TASK-457-01 | Collection Controls Contract And Capability Plan | High | Medium | Done (2026-06-12): contract freeze with binding fail-closed shapes. |
+| TASK-457-02 | Registry Controls Capability And Guard Test Update | High | Large | Done (2026-06-12): controls + capability + guard-test update reusing the shared combobox. |
+| TASK-457-03 | Validation Live Listing Smoke And Closure | High | Medium | Done (2026-06-12): lanes green + live limit-respecting listing on the front. |
 | TASK-442-02 | List Validation Docs And Closure | High | Medium | Done (2026-06-11): family validation/docs closure executed with Phase 0-2 evidence (live flows, schema pins, flow suite); changelog 1161/1163/1164. |
 | TASK-442-01 | List Contract And Audit Freeze | High | Medium | Done (2026-06-11): contract freeze + live reproduction closed in Phase 0; re-closed after the owner-review reopen once TASK-442-01-L01 completed in Phase 2. |
 | TASK-420 | Page Templates Surface Rewrite | Medium | Large | Done (2026-06-11): Page Templates surface on Page v2 (schema/service/routes/cache/UI reusing the shared editor) replaced the obsolete widget-template path; migration 0058; live author->preview->publish->insert proof. |

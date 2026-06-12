@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Content Types
 **Estimated Effort:** Large
 **Dependencies:** TASK-457-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -22,9 +24,9 @@ combobox primitive — do not fork it.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -56,3 +58,9 @@ combobox primitive — do not fork it.
 ## Documentation Updates Required
 
 - Covered by the parent family closure leaf.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-12: capability flip, registry controls with optionsSources + filterBy, PageEditor wiring reusing the TASK-456 ComboboxControl unchanged, canvas preview via pageEditorCollectionPreview, guard tests updated.

@@ -6,7 +6,9 @@
 **Category:** Pages / Public Runtime / Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-455-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -35,10 +37,10 @@ Implement the frozen contract end to end:
 
 ## Sub-Tasks
 
-- [ ] Implement the runtime shell components + publicSite wiring (preview
+- [x] Implement the runtime shell components + publicSite wiring (preview
       included).
-- [ ] Implement the admin Site shell settings card with validated writes.
-- [ ] Wire cache invalidation for the two settings keys.
+- [x] Implement the admin Site shell settings card with validated writes.
+- [x] Wire cache invalidation for the two settings keys.
 
 ---
 
@@ -107,3 +109,9 @@ Regression-test shape:
 
 - `_docs/PAGE_MODEL.md` site shell section.
 - `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` (invalidation trigger).
+
+---
+
+## Completion Notes
+
+Completed 2026-06-12: siteShell.tsx components (zero client JS), DefaultRuntimePageShellV2 + renderPublicPage threading, per-request resolution in publicSite with footer responsive CSS via scopeSelector, SiteShellCard settings UI with cached pickers, cache invalidation wired; PAGE_MODEL/ADMIN_CACHE(+MAP) updated; Bun site-shell-runtime suite + Vitest card suite green.

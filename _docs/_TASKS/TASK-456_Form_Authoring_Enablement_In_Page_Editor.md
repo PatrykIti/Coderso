@@ -5,7 +5,9 @@
 **Category:** Pages / Page Editor V2 / Forms
 **Estimated Effort:** Large
 **Dependencies:** None (consumes TASK-421 widgets, TASK-418-06-L04 runtime binding; amends the TASK-452 catalog freeze deliberately)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-11
+**Completed:** 2026-06-12
 
 ---
 
@@ -57,10 +59,10 @@ change and follow-on task" — this is that task).
 
 ## Sub-Tasks
 
-- [ ] TASK-456-01: Form block controls contract and capability plan.
-- [ ] TASK-456-02: Registry, widgets, capability change, and guard-test
+- [x] TASK-456-01: Form block controls contract and capability plan.
+- [x] TASK-456-02: Registry, widgets, capability change, and guard-test
       update.
-- [ ] TASK-456-03: Validation, live submit smoke, and closure.
+- [x] TASK-456-03: Validation, live submit smoke, and closure.
 
 ---
 
@@ -123,3 +125,9 @@ Regression-test shape:
   reference the page-block catalog (verify; per AGENTS.md product rules).
 - `docs/guide/` user note (adding a form to a page).
 - `_docs/_TASKS/README.md` + `_docs/_CHANGELOG/` entry on completion.
+
+---
+
+## Completion Notes
+
+Family completed 2026-06-12. Form block un-gated with real authoring: ComboboxControl primitive + combobox adapter kind (single owner, dynamic optionsSource), formId picker from listFormsCached, canvas-safe inert preview (pick-a-form empty state, disabled fieldset), palette entry "Form"; TASK-452 catalog deliberately amended (16 insertable / gated set reduced) with suites updated; runtime submit pipeline untouched. Live smoke: palette -> combobox -> publish -> REAL nonce submit -> success + payload in submissions API. Post-smoke: read-only Form Submissions admin screen added (commit 7d975441).
