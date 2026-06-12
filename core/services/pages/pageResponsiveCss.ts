@@ -461,6 +461,16 @@ const collectBlockDeclarations = (
   const styleOverride = override.style ?? {};
   const mergedStyle = { ...(block.style ?? {}), ...styleOverride };
 
+  // Section-column placement (owner finding #5, round 3): `style.column`
+  // re-parents the block into a different column wrapper in the BASE markup,
+  // which is structural and cannot be expressed as a @media rule over the
+  // desktop DOM. Per-breakpoint column overrides therefore resolve in the
+  // editor/preview cascade only and fail closed into a diagnostic here;
+  // `layout.stackVertical` is the supported mobile collapse.
+  if (styleOverride.column !== undefined) {
+    diag("style.column", "not_css_expressible");
+  }
+
   if (styleOverride.align !== undefined) {
     const textAlign = blockTextAlignValues[mergedStyle.align ?? ""];
     const justifySelf = blockJustifySelfValues[mergedStyle.align ?? ""];

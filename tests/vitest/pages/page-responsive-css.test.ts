@@ -792,3 +792,50 @@ describe("buildPageResponsiveCss", () => {
     });
   });
 });
+
+// --- Section column placement (style.column, owner finding #5 round 3) ---
+
+test("style.column overrides are structural and fail closed into not_css_expressible diagnostics", () => {
+  const document = buildDocument([
+    buildSection({
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [
+        buildBlock({
+          id: "blk_column_move",
+          style: { column: 1 },
+          responsive: { tablet: { style: { column: 2 } }, mobile: { style: { column: null } } },
+        }),
+      ],
+    }),
+  ]);
+
+  const plan = buildPageResponsiveCssPlan(document);
+  // Column assignment re-parents the block into a different wrapper in the
+  // BASE markup — no @media projection exists. Editor/preview resolve it;
+  // layout.stackVertical remains the supported mobile collapse.
+  expect(plan.diagnostics).toEqual([
+    {
+      scope: "block",
+      id: "blk_column_move",
+      breakpoint: "tablet",
+      key: "style.column",
+      reason: "not_css_expressible",
+    },
+    {
+      scope: "block",
+      id: "blk_column_move",
+      breakpoint: "mobile",
+      key: "style.column",
+      reason: "not_css_expressible",
+    },
+  ]);
+  expect(plan.css).toBe("");
+
+  // A base-only assignment emits neither CSS nor diagnostics.
+  const baseOnly = buildDocument([
+    buildSection({
+      blocks: [buildBlock({ id: "blk_column_base", style: { column: 2 } })],
+    }),
+  ]);
+  expect(buildPageResponsiveCssPlan(baseOnly)).toEqual({ css: "", diagnostics: [] });
+});

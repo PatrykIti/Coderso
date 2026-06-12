@@ -24,6 +24,8 @@ import {
   insertPageBlockAtTarget,
   insertPageBlockBeside,
   movePageBlockToTarget,
+  movePageSectionBlockToAdjacentColumn,
+  movePageSectionBlockWithinColumn,
   serializePageBlockPath,
   updatePageBlockAtPath,
   type PageBlockPath,
@@ -421,6 +423,40 @@ describe("insert block beside (owner finding #7)", () => {
     ]);
   });
 
+  test("wrapping a column-pinned root block carries the section column onto the row group", () => {
+    // Per-column composition (owner finding #5, round 3): the wrap group
+    // replaces the block at the same root index, so it must keep the block's
+    // `style.column` pin — otherwise the new row would fall back to its
+    // auto-flow cell and jump columns.
+    const section = createPageSectionV2("content", {
+      layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: [
+        { ...button("blk-col-one"), style: { column: 1 } },
+        { ...button("blk-col-two"), style: { column: 2 } },
+      ],
+    });
+    const result = insertPageBlockBeside(section, [{ index: 1 }], button("blk-second"));
+
+    expect(result.status).toBe("ok");
+    const wrapper = getPageBlockAtPath(result.section, [{ index: 1 }]);
+    expect(wrapper).toMatchObject({
+      type: "group",
+      props: { direction: "row", wrap: false, gap: 16 },
+      style: { column: 2 },
+    });
+    expect(wrapper?.slots?.children?.map((child) => child.id)).toEqual([
+      "blk-col-two",
+      "blk-second",
+    ]);
+
+    // Unassigned root blocks keep producing an unassigned wrap group: the
+    // group inherits the same derived auto-flow cell from its list index.
+    const autoFlow = createPageSectionV2("content", { blocks: [button("blk-plain")] });
+    const wrapped = insertPageBlockBeside(autoFlow, [{ index: 0 }], button("blk-next"));
+    expect(wrapped.status).toBe("ok");
+    expect(getPageBlockAtPath(wrapped.section, [{ index: 0 }])?.style?.column ?? null).toBeNull();
+  });
+
   test("rejects wraps that would push the subtree past the depth budget", () => {
     const deepSection = createPageSectionV2("content", {
       blocks: [
@@ -440,5 +476,127 @@ describe("insert block beside (owner finding #7)", () => {
 
     const shallowSection = createPageSectionV2("content", { blocks: [heading("blk-ok")] });
     expect(getPageBlockBesideInsertStatus(shallowSection, [{ index: 0 }])).toBe("ok");
+  });
+});
+
+// --- Section per-column composition moves (owner finding #5, round 3) ---
+
+const twoColumnSection = (columnByBlock: Array<number | null>): PageSectionV2 =>
+  createPageSectionV2("content", {
+    id: "sec-columned",
+    name: "Columned",
+    layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+    blocks: columnByBlock.map((column, index) =>
+      createPageBlockV2("heading", {
+        id: `blk-${index + 1}`,
+        props: { text: `Block ${index + 1}`, level: "h2", align: "left" },
+        ...(column === null ? {} : { style: { column } }),
+      })
+    ),
+  });
+
+describe("section column composition moves", () => {
+  test("container layout reports section-column with the block's effective column once assignments exist", () => {
+    const autoFlow = twoColumnSection([null, null, null]);
+    expect(getPageBlockContainerLayout(autoFlow, [{ index: 0 }])).toEqual({
+      kind: "grid",
+      columns: 2,
+    });
+
+    const assigned = twoColumnSection([2, null, null]);
+    expect(getPageBlockContainerLayout(assigned, [{ index: 0 }])).toEqual({
+      kind: "section-column",
+      columns: 2,
+      column: 2,
+    });
+    // Unassigned siblings report their legacy auto-flow cell.
+    expect(getPageBlockContainerLayout(assigned, [{ index: 1 }])).toEqual({
+      kind: "section-column",
+      columns: 2,
+      column: 2,
+    });
+    expect(getPageBlockContainerLayout(assigned, [{ index: 2 }])).toEqual({
+      kind: "section-column",
+      columns: 2,
+      column: 1,
+    });
+
+    // stackVertical collapses the painted grid but composition (and the
+    // wrapper DOM) persists, so the assignment-aware axes stay available.
+    const stacked = {
+      ...assigned,
+      layout: { ...assigned.layout, stackVertical: true },
+    } satisfies PageSectionV2;
+    expect(getPageBlockContainerLayout(stacked, [{ index: 0 }])).toMatchObject({
+      kind: "section-column",
+    });
+  });
+
+  test("left/right set the column assignment without reordering siblings and no-op at the edges", () => {
+    const section = twoColumnSection([null, null, null, null]);
+
+    // First horizontal move activates composition: only the moved block gains
+    // an assignment, every sibling keeps its index (and auto-flow cell).
+    const moved = movePageSectionBlockToAdjacentColumn(section, [{ index: 0 }], 1);
+    expect(moved).not.toBeNull();
+    expect(moved!.blocks.map((block) => block.id)).toEqual(["blk-1", "blk-2", "blk-3", "blk-4"]);
+    expect(moved!.blocks[0]?.style?.column).toBe(2);
+    expect(moved!.blocks[1]?.style ?? {}).not.toHaveProperty("column");
+
+    // Edge no-ops: already in the last/first column.
+    expect(movePageSectionBlockToAdjacentColumn(moved!, [{ index: 0 }], 1)).toBeNull();
+    expect(movePageSectionBlockToAdjacentColumn(section, [{ index: 0 }], -1)).toBeNull();
+
+    // Back left restores column 1 explicitly.
+    const back = movePageSectionBlockToAdjacentColumn(moved!, [{ index: 0 }], -1);
+    expect(back!.blocks[0]?.style?.column).toBe(1);
+
+    // Non-root paths and single-column sections are strict no-ops.
+    expect(
+      movePageSectionBlockToAdjacentColumn(
+        section,
+        [{ index: 0 }, { slotKey: "children", index: 0 }],
+        1
+      )
+    ).toBeNull();
+    const singleColumn = createPageSectionV2("content", {
+      id: "sec-single",
+      blocks: [createPageBlockV2("text", { id: "blk-single" })],
+    });
+    expect(movePageSectionBlockToAdjacentColumn(singleColumn, [{ index: 0 }], 1)).toBeNull();
+  });
+
+  test("up/down reorder within the effective column stack and pin unassigned siblings first", () => {
+    // blk-1 assigned to column 2; blk-2 (index 1) and blk-4 (index 3) flow to
+    // column 2, blk-3 (index 2) flows to column 1. Column 2 stack order is
+    // blk-1, blk-2, blk-4.
+    const section = twoColumnSection([2, null, null, null]);
+
+    const movedDown = movePageSectionBlockWithinColumn(section, [{ index: 0 }], 1);
+    expect(movedDown).not.toBeNull();
+    expect(movedDown!.section.blocks.map((block) => block.id)).toEqual([
+      "blk-2",
+      "blk-1",
+      "blk-3",
+      "blk-4",
+    ]);
+    expect(movedDown!.path).toEqual([{ index: 1 }]);
+    // Every root block is pinned so the index shuffle cannot re-column the
+    // unassigned siblings.
+    expect(movedDown!.section.blocks.map((block) => block.style?.column)).toEqual([2, 2, 1, 2]);
+
+    const movedUp = movePageSectionBlockWithinColumn(movedDown!.section, movedDown!.path, -1);
+    expect(movedUp!.section.blocks.map((block) => block.id)).toEqual([
+      "blk-1",
+      "blk-2",
+      "blk-3",
+      "blk-4",
+    ]);
+    expect(movedUp!.path).toEqual([{ index: 0 }]);
+
+    // Stack-edge and inactive-composition no-ops.
+    expect(movePageSectionBlockWithinColumn(movedUp!.section, [{ index: 0 }], -1)).toBeNull();
+    const autoFlow = twoColumnSection([null, null]);
+    expect(movePageSectionBlockWithinColumn(autoFlow, [{ index: 0 }], 1)).toBeNull();
   });
 });

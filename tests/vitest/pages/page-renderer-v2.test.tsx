@@ -997,3 +997,131 @@ test("admin columns-slot trailing hook renders per active slot and never on runt
   const runtime = renderToStaticMarkup(<PageSectionRender section={section} />);
   expect(runtime).not.toContain("data-page-editor-ghost");
 });
+
+// --- Section per-column composition (owner finding #5, round 3) ---
+
+const createTwoColumnSection = (blocks: PageSectionV2["blocks"]) =>
+  createPageSectionV2("content", {
+    id: "sec-column-composition",
+    name: "Column composition",
+    layout: { columns: 2, align: "start", justify: "start", maxWidth: 1080 },
+    blocks,
+  });
+
+const compositionBlocks = (columns: Array<number | null>) =>
+  columns.map((column, index) =>
+    createPageBlockV2("text", {
+      id: `blk-col-${index + 1}`,
+      props: { text: `Copy ${index + 1}`, format: "plain", align: "left" },
+      ...(column === null ? {} : { style: { column } }),
+    })
+  );
+
+test("section without column assignments keeps the auto-flow markup byte-identical (legacy pin)", () => {
+  // Documents authored before `style.column` existed never carry the field;
+  // an explicit `column: null` is the normalized "legacy auto-flow" value.
+  // Both must produce the exact same wrapper-free auto-flow markup.
+  const unset = createTwoColumnSection(compositionBlocks([null, null, null]));
+  const explicitNull = createTwoColumnSection(
+    compositionBlocks([null, null, null]).map((block) => ({
+      ...block,
+      style: { ...(block.style ?? {}), column: null },
+    }))
+  );
+
+  const unsetMarkup = renderToStaticMarkup(<PageSectionContent section={unset} />);
+  const explicitNullMarkup = renderToStaticMarkup(<PageSectionContent section={explicitNull} />);
+  expect(explicitNullMarkup).toBe(unsetMarkup);
+  // No per-column wrappers: blocks stay direct auto-flow grid children, in
+  // stored order, immediately inside the section content element.
+  expect(unsetMarkup).not.toContain("data-page-section-column");
+  expect(unsetMarkup.indexOf("blk-col-1")).toBeLessThan(unsetMarkup.indexOf("blk-col-2"));
+  expect(unsetMarkup.indexOf("blk-col-2")).toBeLessThan(unsetMarkup.indexOf("blk-col-3"));
+  expect(/data-page-section-layout-mode="runtime"><div class="max-w-full/.test(unsetMarkup)).toBe(
+    true
+  );
+});
+
+test("section column assignments render per-column wrapper stacks with legacy cells for unassigned blocks", () => {
+  // Hero starter shape: three blocks pinned to column 1, plus one unassigned
+  // block at index 3 (legacy auto-flow cell 3 % 2 -> column 2) and one
+  // out-of-range assignment that clamps into the last painted column.
+  const section = createTwoColumnSection(compositionBlocks([1, 1, 1, null, 4]));
+  const markup = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  const wrappers = markup.split('data-page-section-column="').slice(1);
+  expect(wrappers).toHaveLength(2);
+  const [columnOne, columnTwo] = wrappers as [string, string];
+  expect(columnOne.startsWith("1")).toBe(true);
+  expect(columnTwo.startsWith("2")).toBe(true);
+  for (const id of ["blk-col-1", "blk-col-2", "blk-col-3"]) {
+    expect(columnOne).toContain(id);
+    expect(columnTwo.includes(id)).toBe(false);
+  }
+  // Unassigned block keeps its legacy visual cell; column 4 clamps to 2.
+  expect(columnTwo).toContain("blk-col-4");
+  expect(columnTwo).toContain("blk-col-5");
+  expect(columnTwo.indexOf("blk-col-4")).toBeLessThan(columnTwo.indexOf("blk-col-5"));
+  // Wrappers inherit the section gap so vertical rhythm matches auto-flow.
+  expect(markup).toContain("gap:inherit");
+  expect(markup).toContain('data-page-section-column-owner="sec-column-composition"');
+});
+
+test("section column composition keeps canvas/front parity and runtime renders no ghost affordances", () => {
+  const section = createTwoColumnSection(compositionBlocks([1, null, 2]));
+  const runtime = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const admin = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      renderBlockFrame={({ content, renderProps }) => (
+        <div
+          className={renderProps.className}
+          style={renderProps.style}
+          {...renderProps.dataAttributes}
+          data-editor-chrome="true"
+        >
+          {content}
+        </div>
+      )}
+    />
+  );
+  expect(admin.replaceAll(' data-editor-chrome="true"', "")).toBe(runtime);
+  expect(runtime).not.toContain("data-page-editor-ghost");
+
+  // The per-column trailing hook is admin-only chrome: it fires once per
+  // composition column AFTER that column's blocks, and runtime paths that
+  // never pass it stay unchanged.
+  const calls: Array<{ column: number; childCount: number }> = [];
+  const canvas = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      layoutMode="canvas-device"
+      renderSectionColumnTrailing={({ column, childCount }) => {
+        calls.push({ column, childCount });
+        return (
+          <button type="button" data-page-editor-ghost="section-column-append">
+            Add block
+          </button>
+        );
+      }}
+    />
+  );
+  expect(calls).toEqual([
+    { column: 1, childCount: 1 },
+    { column: 2, childCount: 2 },
+  ]);
+  expect(canvas.match(/data-page-editor-ghost="section-column-append"/g)).toHaveLength(2);
+});
+
+test("stackVertical collapses column wrappers into one stacked column without losing composition", () => {
+  const base = createTwoColumnSection(compositionBlocks([1, 1, null]));
+  const stacked: PageSectionV2 = { ...base, layout: { ...base.layout, stackVertical: true } };
+  const markup = renderToStaticMarkup(
+    <PageSectionContent section={stacked} layoutMode="canvas-device" />
+  );
+  // The grid collapses to a single column while the wrapper DOM (derived from
+  // the composition count, not the collapsed count) keeps the column groups —
+  // mirroring the front's grid-cols-1 media collapse over base markup.
+  expect(markup).toContain("grid-cols-1");
+  expect(markup.match(/data-page-section-column="/g)).toHaveLength(2);
+});

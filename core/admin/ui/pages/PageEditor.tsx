@@ -108,6 +108,7 @@ import {
   resolvePageEditorControlUiModel,
   type PageEditorControlUiModel,
 } from "../../../services/pages/pageEditorControlUiModel";
+import { getPageBlockRenderDefault } from "../../../services/pages/pageBlockRenderDefaults";
 import { DEFAULT_TOKENS, type DesignTokenOverrides } from "../../../services/theme/tokenTypes";
 import { mergeTokens } from "../../../services/theme/tokenUtils";
 import { assertTokenOverrides } from "../../../services/theme/tokenValidation";
@@ -122,6 +123,7 @@ import {
 } from "./editorControls";
 import {
   editorCanvasCtaButtonClass,
+  editorCanvasGhostBesideHandleClass,
   editorCanvasGhostTileClass,
   editorCanvasGhostTileCompactClass,
   editorControlFocusClass,
@@ -147,11 +149,14 @@ import {
   isPageBlockPathDescendant,
   isSamePageBlockPath,
   movePageBlockToTarget,
+  movePageSectionBlockToAdjacentColumn,
+  movePageSectionBlockWithinColumn,
   serializePageBlockPath,
   updatePageBlockAtPath,
   type PageBlockInsertTarget,
   type PageBlockPath,
 } from "../../../services/pages/pageBlockPaths";
+import { pinUnassignedPageSectionBlocksToColumn } from "../../../services/pages/pageSectionColumns";
 import {
   commitInlineText,
   inlineEditableTargets,
@@ -488,6 +493,14 @@ const toolbarActionTooltips = {
     label: "Move block down",
     description: "Move the selected block one grid row later.",
   },
+  moveBlockUpColumn: {
+    label: "Move block up",
+    description: "Move the selected block one position earlier in its column.",
+  },
+  moveBlockDownColumn: {
+    label: "Move block down",
+    description: "Move the selected block one position later in its column.",
+  },
   moveBlockLeft: {
     label: "Move block left",
     description: "Move the selected block one position left in its row.",
@@ -495,6 +508,14 @@ const toolbarActionTooltips = {
   moveBlockRight: {
     label: "Move block right",
     description: "Move the selected block one position right in its row.",
+  },
+  moveBlockLeftColumn: {
+    label: "Move block left",
+    description: "Move the selected block into the previous column.",
+  },
+  moveBlockRightColumn: {
+    label: "Move block right",
+    description: "Move the selected block into the next column.",
   },
   addBlockBeside: {
     label: "Add block beside",
@@ -874,17 +895,20 @@ const listItemsFromFieldValue = (value: string) =>
     .filter(Boolean);
 
 /**
- * EFFECTIVE display value of a control (TASK-449 owner bug #9): the stored
- * value when present, otherwise the registry `fallback` (the schema default
- * that an unset field actually renders as). Unset fields without a fallback
- * resolve to "" — segmented strips then mark NO option active (honest
- * "inherit" state) instead of lying with the first option, and sliders rest
- * at their minimum. This must never show a zero-value lie (e.g. Opacity 0
- * for an unset value that renders as 1).
+ * EFFECTIVE display value of a control (TASK-449 owner bug #9, round 3): the
+ * stored value when present, otherwise the effective RENDER default from
+ * `pageBlockRenderDefaults` (what the renderer actually paints for the unset
+ * field — baked text classes, grid-stretch frame width), otherwise the
+ * registry `fallback` (the schema default an unset field renders as). Only
+ * fields with no single effective rendered value resolve to "" — segmented
+ * strips then mark NO option active, and sliders rest at their minimum. This
+ * must never show a zero-value lie (e.g. Opacity 0 for an unset value that
+ * renders as 1). Display-only: writes stay explicit through `onCommit`.
  */
 const fieldValueFromControlValue = (
   control: PageEditorControlDefinition,
-  value: unknown
+  value: unknown,
+  renderDefault?: string | number
 ): string => {
   if (control.input === "switch") {
     if (typeof value === "boolean") return value ? "yes" : "no";
@@ -892,10 +916,12 @@ const fieldValueFromControlValue = (
   }
   if (control.input === "number") {
     if (typeof value === "number") return String(value);
+    if (typeof renderDefault === "number") return String(renderDefault);
     return typeof control.fallback === "number" ? String(control.fallback) : "";
   }
   if (control.input === "select" || control.input === "segmented") {
     if (typeof value === "string") return value;
+    if (typeof renderDefault === "string") return renderDefault;
     return typeof control.fallback === "string" ? control.fallback : "";
   }
   if (control.path[0] === "props" && control.path[1] === "items") {
@@ -946,6 +972,14 @@ const hasAnyResponsiveOverride = (breakpoint: PageBreakpoint, source: unknown) =
 
 const clampToolbarOffset = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(max, value));
+
+// Round-3 friction A: the floating toolbar anchors `bottom-6` (24px) over the
+// canvas, so its measured height plus the anchor offset plus breathing room is
+// reserved as scroll clearance below the canvas content. Without it, targets
+// under the expanded panel (ghost "Add block" tiles, blocks at the bottom of
+// short pages) could never be scrolled clear and clicks landed on the panel
+// until the selection was cleared with Escape.
+const TOOLBAR_CANVAS_CLEARANCE_GAP = 24 + 16;
 
 const isEditableShortcutTarget = (target: EventTarget | null) => {
   if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) return false;
@@ -1335,10 +1369,12 @@ const SectionCanvas = ({
   selectedBlockId,
   inlineEditTarget,
   device,
+  canAddBlockBeside,
   onSelect,
   onSelectBlock,
   onAddBlock,
   onAddBlockToTarget,
+  onAddBlockBeside,
   onStartInlineEdit,
   onCommitInlineEdit,
 }: {
@@ -1349,10 +1385,12 @@ const SectionCanvas = ({
   selectedBlockId: string | null;
   inlineEditTarget: PageEditorInlineEditTarget | null;
   device: PageBreakpoint;
+  canAddBlockBeside: boolean;
   onSelect: () => void;
   onSelectBlock: (blockPath: PageBlockPath) => void;
   onAddBlock: () => void;
-  onAddBlockToTarget: (target: PageBlockInsertTarget) => void;
+  onAddBlockToTarget: (target: PageBlockInsertTarget, options?: { column?: number }) => void;
+  onAddBlockBeside: () => void;
   onStartInlineEdit: (target: PageEditorInlineEditTarget) => void;
   onCommitInlineEdit: (commit: PageEditorInlineEditCommit) => void;
 }) => {
@@ -1369,15 +1407,13 @@ const SectionCanvas = ({
   // The painted grid column count (template floors + stackVertical), NOT the
   // raw layout.columns value — ghost tiles must map onto real grid cells.
   const effectiveColumns = getPageSectionEffectiveColumns(section);
-  // Section root inserts append at the end of the block list: the auto-flow
-  // grid places the new block in the next free cell (column = index % N).
-  const sectionAppendTarget: PageBlockInsertTarget = {
-    listPath: {},
-    index: section.blocks.length,
-  };
-  const addBlockAppending = () => {
+  // Owner finding #5 (round 3): every column-targeted ghost tile appends at
+  // the END of the root list and stamps `style.column` on the new block, so
+  // the block lands at the bottom of that column's stack regardless of how
+  // the remaining blocks are distributed.
+  const addBlockToSectionColumn = (column: number) => {
     onSelect();
-    onAddBlockToTarget(sectionAppendTarget);
+    onAddBlockToTarget({ listPath: {}, index: section.blocks.length }, { column });
   };
   return (
     <section
@@ -1422,16 +1458,17 @@ const SectionCanvas = ({
         includeHiddenBlocks
         emptyContent={
           effectiveColumns >= 2 ? (
-            // Owner finding #5: an empty multi-column section paints one ghost
-            // tile per column cell. Every tile appends (auto-flow fills the
-            // columns in order), so they share the same explicit append target.
+            // Owner finding #5 (round 3): an empty multi-column section paints
+            // one ghost tile per column cell, and each tile inserts WITH that
+            // column's assignment so "column 2 starts empty while column 1
+            // fills" works from the very first block.
             <>
               {Array.from({ length: effectiveColumns }, (_, columnIndex) => (
                 <CanvasGhostAddTile
                   key={`section-column-ghost-${columnIndex + 1}`}
                   ghostKind="section-column"
                   ariaLabel={`Add block to column ${columnIndex + 1}`}
-                  onAdd={addBlockAppending}
+                  onAdd={() => addBlockToSectionColumn(columnIndex + 1)}
                 />
               ))}
             </>
@@ -1451,15 +1488,41 @@ const SectionCanvas = ({
         }
         trailingContent={
           effectiveColumns >= 2 && section.blocks.length > 0 ? (
-            // Owner finding #5: non-empty multi-column sections keep a single
-            // trailing ghost tile in the next free grid cell.
-            <CanvasGhostAddTile
-              ghostKind="section-append"
-              ariaLabel="Add block at end of section"
-              onAdd={addBlockAppending}
-            />
+            // Owner finding #5 (round 3): while the section still auto-flows
+            // (no column assignments yet), EVERY column keeps its own
+            // persistent add tile. The tiles append after the last block, so
+            // N consecutive auto-flow cells cover each column exactly once at
+            // the bottom of its stack; tile order maps each tile to the
+            // column its cell lands in. Once assignments are active the
+            // per-column trailing hook below owns these affordances instead
+            // (the renderer ignores trailingContent in wrapper mode).
+            <>
+              {Array.from({ length: effectiveColumns }, (_, offset) => {
+                const column = ((section.blocks.length + offset) % effectiveColumns) + 1;
+                return (
+                  <CanvasGhostAddTile
+                    key={`section-column-append-ghost-${column}`}
+                    ghostKind="section-column-append"
+                    ariaLabel={`Add block to column ${column}`}
+                    compact
+                    onAdd={() => addBlockToSectionColumn(column)}
+                  />
+                );
+              })}
+            </>
           ) : null
         }
+        renderSectionColumnTrailing={({ column, childCount }) => (
+          // Owner finding #5 (round 3): with per-column composition active,
+          // every column stack ends in a persistent ghost add tile (full-size
+          // in an empty column, compact under existing blocks).
+          <CanvasGhostAddTile
+            ghostKind={childCount === 0 ? "section-column" : "section-column-append"}
+            ariaLabel={`Add block to column ${column}`}
+            compact={childCount > 0}
+            onAdd={() => addBlockToSectionColumn(column)}
+          />
+        )}
         renderColumnsSlotTrailing={({ slotKey, ownerPath, childCount }) => {
           // Owner finding #8: per-slot add affordances on the canvas, wired to
           // the same insert path the Layers panel uses ("Add block to Column N").
@@ -1544,6 +1607,26 @@ const SectionCanvas = ({
                 </span>
               ) : null}
               {block.visibility.visible ? content : <HiddenBlockGhost block={block} />}
+              {blockSelected && canAddBlockBeside ? (
+                // Owner finding #7 (round 3): canvas-side "Add block beside"
+                // affordance — a compact ghost "+" handle straddling the
+                // selected block's right edge. Same action as the toolbar
+                // button; canvas-only chrome, never rendered on the front.
+                <button
+                  type="button"
+                  className={editorCanvasGhostBesideHandleClass}
+                  data-page-editor-ghost="add-block-beside"
+                  title="Add block beside"
+                  aria-label="Add block beside"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onAddBlockBeside();
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
             </div>
           );
         }}
@@ -1755,8 +1838,13 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [commandActiveIndex, setCommandActiveIndex] = useState(0);
-  const [pendingBlockInsertTarget, setPendingBlockInsertTarget] =
-    useState<PageBlockInsertTarget | null>(null);
+  // Pre-targeted block insert (ghost tiles, Layers "Add"): the chosen palette
+  // block is inserted at `target`; an optional `column` stamps the section
+  // column assignment onto the new block (owner finding #5, round 3).
+  const [pendingBlockInsert, setPendingBlockInsert] = useState<{
+    target: PageBlockInsertTarget;
+    column?: number;
+  } | null>(null);
   // Gap index pre-targeted by the inline per-gap "+" zones: a chosen section
   // is spliced at this index instead of being appended.
   const [pendingSectionInsertIndex, setPendingSectionInsertIndex] = useState<number | null>(null);
@@ -1771,6 +1859,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [toolbarDragging, setToolbarDragging] = useState(false);
   const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
   const toolbarDragRef = useRef({ startX: 0, startY: 0, baseX: 0, baseY: 0 });
+  const toolbarElementRef = useRef<HTMLDivElement | null>(null);
+  // Measured floating-toolbar footprint (height + anchor + gap) reserved as
+  // canvas scroll clearance while the toolbar is visible (round-3 friction A).
+  const [toolbarCanvasClearance, setToolbarCanvasClearance] = useState(0);
   const [deleteSelectionTarget, setDeleteSelectionTarget] = useState<ToolbarDeleteTarget | null>(
     null
   );
@@ -1801,6 +1893,9 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const resolvedSelectedSection = selectedSection
     ? resolvePageSectionForBreakpoint(selectedSection, device)
     : null;
+  // Mirrors the floating toolbar render condition; drives the canvas scroll
+  // clearance that keeps canvas targets reachable under the toolbar.
+  const floatingToolbarVisible = Boolean(selectedSection && resolvedSelectedSection);
   const selectedBlock =
     selectedBlockPath && selectedSection
       ? getPageBlockAtPath(selectedSection, selectedBlockPath)
@@ -1832,18 +1927,25 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       ? getPageBlockContainerLayout(resolvedSelectedSection, selectedBlockPath)
       : null;
   // Left/Right exist only where the block renders beside siblings (section
-  // grid with 2+ columns, a row-direction group, or a columns-block slot row);
-  // single-column contexts hide them entirely.
+  // grid with 2+ columns — auto-flow or per-column composition — a
+  // row-direction group, or a columns-block slot row); single-column contexts
+  // hide them entirely.
   const horizontalBlockMoveAvailable = Boolean(
     selectedBlockContainerLayout && selectedBlockContainerLayout.kind !== "stack"
   );
-  // Up/Down move by one visual row: ±columns inside a multi-column grid,
-  // plain ±1 in single-column stacks and columns-block slots (each slot is a
-  // vertical stack). A row-direction group has no vertical axis, so Up/Down
-  // hide there.
+  // Up/Down move by one visual row: ±columns inside a multi-column auto-flow
+  // grid, plain ±1 in single-column stacks, columns-block slots, and section
+  // column stacks (owner finding #5 round 3 — each column is a vertical
+  // stack). A row-direction group has no vertical axis, so Up/Down hide there.
   const verticalBlockMoveAvailable = selectedBlockContainerLayout?.kind !== "row";
   const verticalBlockMoveStep =
     selectedBlockContainerLayout?.kind === "grid" ? selectedBlockContainerLayout.columns : 1;
+  // Per-column composition steers both axes onto column-stack semantics.
+  const sectionColumnMoveActive = selectedBlockContainerLayout?.kind === "section-column";
+  // Root-level Left/Right in a multi-column section write a column assignment
+  // (both before and after composition activates).
+  const horizontalMoveSetsColumn =
+    selectedBlockContainerLayout?.kind === "grid" || sectionColumnMoveActive;
   // Owner finding #7: availability of the "Add block beside" action (depth
   // and slot-capacity guarded; palette blocks always start at tree height 1).
   const canAddBlockBeside = Boolean(
@@ -1894,7 +1996,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     filteredSections.length + filteredBlocks.length + filteredTemplates.length;
 
   const openCommandPalette = useCallback(() => {
-    setPendingBlockInsertTarget(null);
+    setPendingBlockInsert(null);
     setPendingSectionInsertIndex(null);
     setPendingBesideBlockPath(null);
     setCommandOpen(true);
@@ -1902,19 +2004,25 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     setCommandActiveIndex(0);
   }, []);
 
-  const openCommandPaletteForTarget = useCallback((target: PageBlockInsertTarget) => {
-    setPendingBlockInsertTarget(target);
-    setPendingSectionInsertIndex(null);
-    setPendingBesideBlockPath(null);
-    setCommandOpen(true);
-    setCommandQuery("");
-    setCommandActiveIndex(0);
-  }, []);
+  const openCommandPaletteForTarget = useCallback(
+    (target: PageBlockInsertTarget, options?: { column?: number }) => {
+      setPendingBlockInsert({
+        target,
+        ...(options?.column !== undefined ? { column: options.column } : {}),
+      });
+      setPendingSectionInsertIndex(null);
+      setPendingBesideBlockPath(null);
+      setCommandOpen(true);
+      setCommandQuery("");
+      setCommandActiveIndex(0);
+    },
+    []
+  );
 
   // Opens the existing command palette pre-targeted at a canvas gap so the
   // chosen section lands at that gap instead of being appended.
   const openCommandPaletteAtGap = useCallback((gapIndex: number) => {
-    setPendingBlockInsertTarget(null);
+    setPendingBlockInsert(null);
     setPendingSectionInsertIndex(gapIndex);
     setPendingBesideBlockPath(null);
     setCommandOpen(true);
@@ -1926,7 +2034,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   // (owner finding #7); the actual wrap/append happens when a block is picked.
   const openCommandPaletteBesideSelected = useCallback(() => {
     if (!selectedBlockPath) return;
-    setPendingBlockInsertTarget(null);
+    setPendingBlockInsert(null);
     setPendingSectionInsertIndex(null);
     setPendingBesideBlockPath(selectedBlockPath);
     setCommandOpen(true);
@@ -2011,9 +2119,29 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
 
   const updateSelectedSectionControl = useCallback(
     (control: PageEditorControlDefinition, value: unknown) => {
-      updateSelectedSection((section) =>
-        patchSectionControlForDevice(section, device, control, value)
-      );
+      updateSelectedSection((section) => {
+        const next = patchSectionControlForDevice(section, device, control, value);
+        // Column-switch bridge (owner finding #5, round 3): when the COLUMNS
+        // control takes the desktop base from one effective column to N >= 2,
+        // every still-unassigned root block is pinned to column 1 in the same
+        // deliberate (and undoable) write, so existing content stays visually
+        // stacked together instead of scattering through auto-flow — the new
+        // columns start empty with their own add tiles. The bridge is scoped
+        // to the columns control on the desktop base: variant switches keep
+        // their template-designed auto-flow, stackVertical only collapses and
+        // restores the existing grid, and tablet/mobile column overrides stay
+        // editor-resolved auto-flow (stackVertical is the supported collapse).
+        if (
+          control.id === "section.layout.columns" &&
+          device === "desktop" &&
+          next.blocks.length > 0 &&
+          getPageSectionEffectiveColumns(section) < 2 &&
+          getPageSectionEffectiveColumns(next) >= 2
+        ) {
+          return { ...next, blocks: pinUnassignedPageSectionBlocksToColumn(next.blocks, 1) };
+        }
+        return next;
+      });
     },
     [device, updateSelectedSection]
   );
@@ -2134,7 +2262,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setCommandOpen(false);
       setCommandQuery("");
       setCommandActiveIndex(0);
-      setPendingBlockInsertTarget(null);
+      setPendingBlockInsert(null);
       setPendingSectionInsertIndex(null);
       setPendingBesideBlockPath(null);
     },
@@ -2143,7 +2271,15 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
 
   const addBlock = useCallback(
     (type: PageBlockType) => {
-      const block = createPageBlockV2(type);
+      // Column-targeted ghost tiles (owner finding #5, round 3) stamp the
+      // section column assignment onto the new block at creation time, so the
+      // insert itself stays the plain append the target describes.
+      const block = createPageBlockV2(
+        type,
+        pendingBlockInsert?.column !== undefined
+          ? { style: { column: pendingBlockInsert.column } }
+          : undefined
+      );
       if (!selectedSectionId) {
         const section = createPageSectionV2("content", { blocks: [block] });
         setDocumentDraft((current) => ({ ...current, sections: [...current.sections, section] }));
@@ -2151,7 +2287,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         setCommandOpen(false);
         setCommandQuery("");
         setCommandActiveIndex(0);
-        setPendingBlockInsertTarget(null);
+        setPendingBlockInsert(null);
         setPendingSectionInsertIndex(null);
         setPendingBesideBlockPath(null);
         return;
@@ -2163,7 +2299,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         ? insertPageBlockBeside(selectedSection, pendingBesideBlockPath, block)
         : insertPageBlockAtTarget(
             selectedSection,
-            pendingBlockInsertTarget ??
+            pendingBlockInsert?.target ??
               getDefaultPageBlockInsertTarget(selectedSection, selectedBlockPath),
             block
           );
@@ -2178,13 +2314,13 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setCommandOpen(false);
       setCommandQuery("");
       setCommandActiveIndex(0);
-      setPendingBlockInsertTarget(null);
+      setPendingBlockInsert(null);
       setPendingSectionInsertIndex(null);
       setPendingBesideBlockPath(null);
     },
     [
       pendingBesideBlockPath,
-      pendingBlockInsertTarget,
+      pendingBlockInsert,
       selectBlock,
       selectedBlockPath,
       selectedSection,
@@ -2220,7 +2356,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setCommandOpen(false);
       setCommandQuery("");
       setCommandActiveIndex(0);
-      setPendingBlockInsertTarget(null);
+      setPendingBlockInsert(null);
       setPendingSectionInsertIndex(null);
       setPendingBesideBlockPath(null);
       try {
@@ -2347,11 +2483,15 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   );
 
   // Horizontal Left/Right move (owner finding #6): ±1 sibling move inside a
-  // section grid or row group, adjacent-slot move inside a columns block (the
-  // geometry the user actually sees). Out-of-range moves are strict no-ops.
+  // row group, adjacent-slot move inside a columns block (the geometry the
+  // user actually sees). At the section root of a multi-column section
+  // (owner finding #5, round 3) Left/Right SET the column assignment instead
+  // of swapping indices: the block moves into the adjacent column stack and
+  // every other block keeps its cell. Out-of-range moves are strict no-ops.
   const moveSelectedBlockHorizontally = useCallback(
     (direction: -1 | 1) => {
-      if (!selectedSection || !selectedBlockPath || !resolvedSelectedSection) return;
+      if (!selectedSection || !selectedBlockPath || !resolvedSelectedSection || !selectedSectionId)
+        return;
       const layout = getPageBlockContainerLayout(resolvedSelectedSection, selectedBlockPath);
       if (layout.kind === "columns-slot") {
         const target = getPageBlockAdjacentColumnMoveTarget(
@@ -2363,6 +2503,24 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         moveSelectedBlockToTarget(target);
         return;
       }
+      if (layout.kind === "grid" || layout.kind === "section-column") {
+        // The assignment write lands on the BASE section (column composition
+        // is structural and breakpoint-invariant on the public front); the
+        // block keeps its path, so the selection stays put.
+        const result = movePageSectionBlockToAdjacentColumn(
+          selectedSection,
+          selectedBlockPath,
+          direction
+        );
+        if (!result) return;
+        setDocumentDraft((current) => ({
+          ...current,
+          sections: current.sections.map((section) =>
+            section.id === selectedSectionId ? result : section
+          ),
+        }));
+        return;
+      }
       if (layout.kind === "stack") return;
       moveSelectedBlockBy(direction);
     },
@@ -2372,7 +2530,31 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       resolvedSelectedSection,
       selectedBlockPath,
       selectedSection,
+      selectedSectionId,
+      setDocumentDraft,
     ]
+  );
+
+  // Vertical Up/Down while per-column composition is active (owner finding
+  // #5, round 3): reorder the selected block within its column stack.
+  const moveSelectedBlockWithinColumnStack = useCallback(
+    (direction: -1 | 1) => {
+      if (!selectedSectionId || !selectedSection || !selectedBlockPath) return;
+      const result = movePageSectionBlockWithinColumn(
+        selectedSection,
+        selectedBlockPath,
+        direction
+      );
+      if (!result) return;
+      setDocumentDraft((current) => ({
+        ...current,
+        sections: current.sections.map((section) =>
+          section.id === selectedSectionId ? result.section : section
+        ),
+      }));
+      selectBlock(selectedSectionId, result.path);
+    },
+    [selectBlock, selectedBlockPath, selectedSection, selectedSectionId, setDocumentDraft]
   );
 
   const duplicateSelectedSection = useCallback(() => {
@@ -2492,6 +2674,26 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     };
   }, [toolbarDragging]);
 
+  // Round-3 friction A: while the floating toolbar is visible, reserve its
+  // measured footprint as bottom scroll clearance on the canvas scroller.
+  // Targets that sit under the expanded panel (ghost "Add block" tiles,
+  // blocks near the bottom of short pages) stay reachable by scrolling — a
+  // single click then acts without first deselecting via Escape. The
+  // ResizeObserver fires on observe and on every expand/collapse/panel-switch
+  // resize, so the clearance always tracks the live toolbar height.
+  useEffect(() => {
+    if (!floatingToolbarVisible || typeof ResizeObserver === "undefined") return undefined;
+    const element = toolbarElementRef.current;
+    if (!element) return undefined;
+    const observer = new ResizeObserver(() => {
+      setToolbarCanvasClearance(
+        Math.ceil(element.getBoundingClientRect().height) + TOOLBAR_CANVAS_CLEARANCE_GAP
+      );
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [floatingToolbarVisible]);
+
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -2506,7 +2708,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         if (commandOpen) {
           event.preventDefault();
           setCommandOpen(false);
-          setPendingBlockInsertTarget(null);
+          setPendingBlockInsert(null);
           setPendingSectionInsertIndex(null);
           setPendingBesideBlockPath(null);
           return;
@@ -2977,6 +3179,18 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         <div
           className="min-h-0 flex-1 overflow-auto overscroll-contain p-6"
           data-page-editor-canvas-scroller="true"
+          // Reserved floating-toolbar clearance: the bottom padding guarantees
+          // scroll room past the toolbar, and the CSS variable feeds the
+          // scroll-margin-bottom rule (globals.css) so scroll-into-view lands
+          // canvas targets above the panel instead of underneath it.
+          style={
+            floatingToolbarVisible && toolbarCanvasClearance > 0
+              ? ({
+                  paddingBottom: toolbarCanvasClearance,
+                  "--page-editor-toolbar-clearance": `${toolbarCanvasClearance}px`,
+                } as CSSProperties)
+              : undefined
+          }
           onClick={() => selectSection(null)}
         >
           <div
@@ -3024,10 +3238,12 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       selectedBlockId={section.id === selectedSectionId ? selectedBlockId : null}
                       inlineEditTarget={inlineEditTarget}
                       device={device}
+                      canAddBlockBeside={canAddBlockBeside}
                       onSelect={() => selectSection(section.id)}
                       onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
                       onAddBlock={openCommandPalette}
                       onAddBlockToTarget={openCommandPaletteForTarget}
+                      onAddBlockBeside={openCommandPaletteBesideSelected}
                       onStartInlineEdit={startInlineEdit}
                       onCommitInlineEdit={commitInlineEdit}
                     />
@@ -3111,6 +3327,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
 
         {selectedSection && resolvedSelectedSection ? (
           <div
+            ref={toolbarElementRef}
             className="absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] rounded-xl bg-slate-950 p-2 text-white shadow-2xl"
             style={{
               transform: `translateX(calc(-50% + ${toolbarOffset.x}px)) translateY(${toolbarOffset.y}px)`,
@@ -3171,14 +3388,18 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                         <ToolbarIconButton
                           tooltip={
                             selectedBlock
-                              ? verticalBlockMoveStep > 1
-                                ? toolbarActionTooltips.moveBlockUpRow
-                                : toolbarActionTooltips.moveBlockUp
+                              ? sectionColumnMoveActive
+                                ? toolbarActionTooltips.moveBlockUpColumn
+                                : verticalBlockMoveStep > 1
+                                  ? toolbarActionTooltips.moveBlockUpRow
+                                  : toolbarActionTooltips.moveBlockUp
                               : toolbarActionTooltips.moveSectionUp
                           }
                           onClick={() =>
                             selectedBlock
-                              ? moveSelectedBlockBy(-verticalBlockMoveStep)
+                              ? sectionColumnMoveActive
+                                ? moveSelectedBlockWithinColumnStack(-1)
+                                : moveSelectedBlockBy(-verticalBlockMoveStep)
                               : moveSelectedSection(-1)
                           }
                         >
@@ -3187,14 +3408,18 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                         <ToolbarIconButton
                           tooltip={
                             selectedBlock
-                              ? verticalBlockMoveStep > 1
-                                ? toolbarActionTooltips.moveBlockDownRow
-                                : toolbarActionTooltips.moveBlockDown
+                              ? sectionColumnMoveActive
+                                ? toolbarActionTooltips.moveBlockDownColumn
+                                : verticalBlockMoveStep > 1
+                                  ? toolbarActionTooltips.moveBlockDownRow
+                                  : toolbarActionTooltips.moveBlockDown
                               : toolbarActionTooltips.moveSectionDown
                           }
                           onClick={() =>
                             selectedBlock
-                              ? moveSelectedBlockBy(verticalBlockMoveStep)
+                              ? sectionColumnMoveActive
+                                ? moveSelectedBlockWithinColumnStack(1)
+                                : moveSelectedBlockBy(verticalBlockMoveStep)
                               : moveSelectedSection(1)
                           }
                         >
@@ -3205,13 +3430,21 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                     {selectedBlock && horizontalBlockMoveAvailable ? (
                       <>
                         <ToolbarIconButton
-                          tooltip={toolbarActionTooltips.moveBlockLeft}
+                          tooltip={
+                            horizontalMoveSetsColumn
+                              ? toolbarActionTooltips.moveBlockLeftColumn
+                              : toolbarActionTooltips.moveBlockLeft
+                          }
                           onClick={() => moveSelectedBlockHorizontally(-1)}
                         >
                           <ArrowLeft className="h-4 w-4" />
                         </ToolbarIconButton>
                         <ToolbarIconButton
-                          tooltip={toolbarActionTooltips.moveBlockRight}
+                          tooltip={
+                            horizontalMoveSetsColumn
+                              ? toolbarActionTooltips.moveBlockRightColumn
+                              : toolbarActionTooltips.moveBlockRight
+                          }
                           onClick={() => moveSelectedBlockHorizontally(1)}
                         >
                           <ArrowRight className="h-4 w-4" />
@@ -3219,12 +3452,22 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       </>
                     ) : null}
                     {selectedBlock ? (
+                      // Owner finding #7 (round 3): a bare Columns2 glyph read
+                      // as a layout toggle, not an insert action — the icon
+                      // now carries an explicit "+" badge so the action is
+                      // discoverable without hovering for the tooltip.
                       <ToolbarIconButton
                         tooltip={toolbarActionTooltips.addBlockBeside}
                         disabled={!canAddBlockBeside}
                         onClick={openCommandPaletteBesideSelected}
                       >
-                        <Columns2 className="h-4 w-4" />
+                        <span className="relative inline-flex" aria-hidden="true">
+                          <Columns2 className="h-4 w-4" />
+                          <Plus
+                            className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-slate-950"
+                            strokeWidth={3}
+                          />
+                        </span>
                       </ToolbarIconButton>
                     ) : null}
                     <ToolbarIconButton
@@ -3379,7 +3622,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                   onClick={() => {
                     setCommandOpen(false);
                     setCommandActiveIndex(0);
-                    setPendingBlockInsertTarget(null);
+                    setPendingBlockInsert(null);
                     setPendingSectionInsertIndex(null);
                     setPendingBesideBlockPath(null);
                   }}
@@ -4140,6 +4383,7 @@ const RegistryControlField = ({
       <RegistryControlWidget
         control={control}
         rawValue={value}
+        renderDefault={getPageBlockRenderDefault(block, control.path)}
         commitActiveOption={device !== "desktop" && !override}
         onCommit={(nextValue) => onChange(control, nextValue)}
       />
@@ -4164,11 +4408,19 @@ const mediaControlAccept: Record<string, readonly string[]> = {
 const RegistryControlWidget = ({
   control,
   rawValue,
+  renderDefault,
   commitActiveOption = false,
   onCommit,
 }: {
   control: PageEditorControlDefinition;
   rawValue: unknown;
+  /**
+   * Effective render default for the field when the document stores no value
+   * (`pageBlockRenderDefaults`, owner finding #9 round 3). Display-only: the
+   * widget presents it as the active value, but committing it writes the
+   * explicit value through the normal path.
+   */
+  renderDefault?: string | number;
   /**
    * Tablet/mobile fields without an override yet set this so an explicit
    * click on the inherited segmented value still commits — pinning it as a
@@ -4178,16 +4430,22 @@ const RegistryControlWidget = ({
   onCommit: (value: unknown) => void;
 }) => {
   const model = resolvePageEditorControlUiModel(control);
-  const fieldValue = fieldValueFromControlValue(control, rawValue);
+  const fieldValue = fieldValueFromControlValue(control, rawValue, renderDefault);
+  const hasStoredValue =
+    control.input === "number" ? typeof rawValue === "number" : typeof rawValue === "string";
   switch (model.kind) {
     case "segmented":
+      // When the active option is only the DISPLAYED default of an unset
+      // field (render default or registry fallback), an explicit click on it
+      // must still commit — writing the explicit value instead of silently
+      // no-opping (owner finding #9 round 3: acceptable and honest).
       return (
         <SegmentedControl
           label={control.label}
           value={fieldValue}
           options={model.options}
           optionLabels={model.labels}
-          commitActiveOption={commitActiveOption}
+          commitActiveOption={commitActiveOption || (!hasStoredValue && fieldValue.length > 0)}
           onChange={(nextValue) => onCommit(coerceControlFieldValue(control, nextValue))}
         />
       );
@@ -4214,9 +4472,10 @@ const RegistryControlWidget = ({
       );
     case "slider":
     case "sliderStepper": {
-      // An empty field value means "unset without a schema fallback": rest at
-      // the model minimum explicitly. `Number("")` is 0, which would otherwise
-      // silently display 0 for values that render differently when unset.
+      // An empty field value means "unset without a render default or schema
+      // fallback": rest at the model minimum explicitly. `Number("")` is 0,
+      // which would otherwise silently display 0 for values that render
+      // differently when unset.
       const parsed = fieldValue.length > 0 ? Number(fieldValue) : Number.NaN;
       const sliderValue = Number.isFinite(parsed) ? parsed : model.min;
       const sliderProps = {

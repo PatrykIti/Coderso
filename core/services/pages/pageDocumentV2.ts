@@ -105,6 +105,12 @@ export const PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP = { min: 1, max: 2.5 } as const;
 /** `letter-spacing` bounds in px for block typography. */
 export const PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP = { min: -2, max: 8 } as const;
 /**
+ * Bounds for the section-column placement field (`style.column`, owner
+ * finding #5 round 3). Mirrors the `layout.columns` clamp: a section never
+ * paints more than four columns.
+ */
+export const PAGE_SECTION_BLOCK_COLUMN_CLAMP = { min: 1, max: 4 } as const;
+/**
  * Block types whose rendered output paints user-editable text, and therefore
  * may expose (and paint) the typography style surface. Layout, media, and
  * data-bound blocks stay outside this contract.
@@ -247,6 +253,19 @@ export type PageBoxSpacingV2 = {
 export type PageBlockStyleV2 = {
   align?: "left" | "center" | "right";
   width?: PageBlockWidth;
+  /**
+   * Section-column placement (owner finding #5, round 3). Meaningful only on
+   * SECTION ROOT blocks inside a section whose composition column count is
+   * >= 2: the shared renderer then stacks the block into that column
+   * (clamped to the painted count). `null`/unset keeps the legacy auto-flow
+   * placement (`column = index % N`), so documents authored before this field
+   * render byte-identically. The field rides the existing responsive style
+   * override machinery in the editor model, but it is STRUCTURAL on the
+   * public front: `pageResponsiveCss` diagnoses per-breakpoint overrides as
+   * `not_css_expressible` (cross-breakpoint column changes are editor/preview
+   * resolved only; `layout.stackVertical` is the supported mobile collapse).
+   */
+  column?: number | null;
   textColor?: string | null;
   background?: string | null;
   backgroundType?: PageBackgroundType;
@@ -341,6 +360,7 @@ const pageBoxSpacingKeys = ["top", "right", "bottom", "left"] as const;
 const pageBlockStyleKeys = [
   "align",
   "width",
+  "column",
   "textColor",
   "background",
   "backgroundType",
@@ -678,6 +698,10 @@ const pageBlockStyleJsonSchema: RecordValue = {
   properties: {
     align: { type: "string", enum: [...pageTextAlignments] },
     width: { type: "string", enum: [...pageBlockWidths] },
+    column: nullableNumericSchema(
+      PAGE_SECTION_BLOCK_COLUMN_CLAMP.min,
+      PAGE_SECTION_BLOCK_COLUMN_CLAMP.max
+    ),
     textColor: { type: ["string", "null"] },
     background: { type: ["string", "null"] },
     backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
@@ -1373,6 +1397,16 @@ const normalizeBlockStyle = (
   }
   if (input.width !== undefined) {
     result.width = normalizeEnum(input.width, pageBlockWidths, "auto", `${path}.width`, mode);
+  }
+  if (input.column !== undefined) {
+    // Section-column placement: integer 1..4, `null` = legacy auto-flow.
+    const clamped = readNullableClampedNumber(
+      input.column,
+      PAGE_SECTION_BLOCK_COLUMN_CLAMP,
+      `${path}.column`,
+      mode
+    );
+    result.column = clamped === null ? null : Math.trunc(clamped);
   }
   if (input.textColor !== undefined) {
     result.textColor = readOptionalText(input.textColor) ?? null;

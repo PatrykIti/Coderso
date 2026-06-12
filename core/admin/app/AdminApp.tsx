@@ -1106,6 +1106,12 @@ export function AdminApp({ path }: AdminAppProps) {
               richColors
               closeButton
               duration={4000}
+              // Round-3 friction B: spawn toasts below the 64px admin topbar.
+              // A visible "Draft saved." toast at the default 24px offset sat
+              // directly on top of the topbar actions (Publish) and, being an
+              // interactive element, swallowed real clicks on them.
+              offset={{ top: 76 }}
+              mobileOffset={{ top: 76 }}
               containerAriaLabel="Admin notifications"
             />
             <AdminRouteErrorBoundary resetKey={canonicalRelativePath}>

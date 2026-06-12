@@ -1166,3 +1166,96 @@ describe("PageDocumentV2", () => {
     }
   });
 });
+
+// --- Section column placement (style.column, owner finding #5 round 3) ---
+
+test("normalizes section column placement with integer clamps and an explicit null round-trip", () => {
+  const document = buildDocument();
+  document.sections[0]!.blocks[0]!.style = { column: 2 };
+  document.sections[0]!.blocks[1]!.style = {
+    ...(document.sections[0]!.blocks[1]!.style ?? {}),
+    column: null,
+  };
+
+  const normalized = normalizePageDocumentV2ForWrite(document);
+  expect(normalized.sections[0]?.blocks[0]?.style).toEqual({ column: 2 });
+  // Explicit null is the stored "legacy auto-flow" value and round-trips.
+  expect(normalized.sections[0]?.blocks[1]?.style?.column).toBeNull();
+  const reread = normalizeStoredPageDocumentV2ForRead(normalized);
+  expect(reread.sections[0]?.blocks[0]?.style?.column).toBe(2);
+  expect(reread.sections[0]?.blocks[1]?.style?.column).toBeNull();
+
+  // Out-of-range and fractional values clamp into integer 1..4.
+  const clamped = buildDocument();
+  clamped.sections[0]!.blocks[0]!.style = { column: 9 };
+  clamped.sections[0]!.blocks[1]!.style = { column: 2.9 };
+  const normalizedClamped = normalizePageDocumentV2ForWrite(clamped);
+  expect(normalizedClamped.sections[0]?.blocks[0]?.style?.column).toBe(4);
+  expect(normalizedClamped.sections[0]?.blocks[1]?.style?.column).toBe(2);
+  const floor = buildDocument();
+  floor.sections[0]!.blocks[0]!.style = { column: 0 };
+  expect(normalizePageDocumentV2ForWrite(floor).sections[0]?.blocks[0]?.style?.column).toBe(1);
+
+  // Non-numeric values reject on writes and null out on stored reads.
+  const invalid = buildDocument();
+  invalid.sections[0]!.blocks[0]!.style = {
+    column: "two",
+  } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+  expect(() => normalizePageDocumentV2ForWrite(invalid)).toThrow(
+    "Invalid sections.0.blocks.0.style.column."
+  );
+  expect(
+    normalizeStoredPageDocumentV2ForRead(invalid).sections[0]?.blocks[0]?.style?.column
+  ).toBeNull();
+
+  // Legacy parity: documents without the field never gain it on either path.
+  const legacy = buildDocument();
+  for (const normalizedLegacy of [
+    normalizePageDocumentV2ForWrite(legacy),
+    normalizeStoredPageDocumentV2ForRead(legacy),
+  ]) {
+    expect(normalizedLegacy.sections[0]?.blocks[0]?.style).toBeUndefined();
+    expect(normalizedLegacy.sections[0]?.blocks[1]?.style ?? {}).not.toHaveProperty("column");
+  }
+});
+
+test("section column placement rides responsive style overrides in the editor model", () => {
+  const document = buildDocument();
+  document.sections[0]!.blocks[0]!.style = { column: 1 };
+  document.sections[0]!.blocks[0]!.responsive = { tablet: { style: { column: 2 } } };
+  const normalized = normalizePageDocumentV2ForWrite(document);
+
+  const block = normalized.sections[0]!.blocks[0]!;
+  expect(resolvePageBlockForBreakpoint(block, "desktop").style?.column).toBe(1);
+  expect(resolvePageBlockForBreakpoint(block, "tablet").style?.column).toBe(2);
+  // Mobile inherits the DESKTOP base (standard cascade), not tablet.
+  expect(resolvePageBlockForBreakpoint(block, "mobile").style?.column).toBe(1);
+});
+
+test(
+  "JSON schema accepts section column placement plus null and rejects out-of-range values",
+  { timeout: 30_000 },
+  () => {
+    const ajv = new Ajv({ allErrors: true, strict: true });
+    const validate = ajv.compile(pageDocumentV2JsonSchema);
+
+    const valid = buildDocument();
+    valid.sections[0]!.blocks[0]!.style = { column: 2 };
+    valid.sections[0]!.blocks[1]!.style = { column: null };
+    expect(validate(valid)).toBe(true);
+
+    const responsiveColumn = buildDocument();
+    responsiveColumn.sections[0]!.blocks[0]!.responsive = { tablet: { style: { column: 2 } } };
+    expect(validate(responsiveColumn)).toBe(true);
+
+    const outOfRange = buildDocument();
+    outOfRange.sections[0]!.blocks[0]!.style = { column: 9 };
+    expect(validate(outOfRange)).toBe(false);
+
+    const wrongType = buildDocument();
+    wrongType.sections[0]!.blocks[0]!.style = {
+      column: "two",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(validate(wrongType)).toBe(false);
+  }
+);

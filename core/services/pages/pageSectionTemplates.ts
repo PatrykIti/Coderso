@@ -154,6 +154,18 @@ export const getPageSectionEffectiveColumns = (section: PageSectionV2): number =
     ? 1
     : resolvePageSectionTemplateColumns(resolvePageSectionTemplate(section));
 
+/**
+ * Column count used for per-column block COMPOSITION (owner finding #5,
+ * round 3): the template-floored count WITHOUT the `stackVertical` collapse.
+ * Column assignments group blocks into per-column wrapper stacks in the base
+ * markup; when `stackVertical` (or the public `grid-cols-1` mobile class)
+ * collapses the grid to a single column, the wrappers themselves stack —
+ * the DOM grouping must therefore stay derived from the multi-column count,
+ * exactly like the front's media-query collapse over desktop base markup.
+ */
+export const getPageSectionCompositionColumns = (section: PageSectionV2): number =>
+  resolvePageSectionTemplateColumns(resolvePageSectionTemplate(section));
+
 export const resolvePageSectionTemplate = (section: PageSectionV2): ResolvedPageSectionTemplate => {
   const definition = getPageSectionTemplateDefinition(section.type);
   if (!definition) {

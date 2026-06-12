@@ -70,11 +70,12 @@ export type PageEditorControlDefinition = {
    * (sparse block style / defensive prop reads). It is the `pageDocumentV2`
    * schema default only where that default is render-equivalent to "unset"
    * (e.g. unset `style.opacity` renders exactly like the schema default `1`).
-   * Controls whose unset state means "inherit baked styling" with no
-   * equivalent option token (block width/align, typography tokens, nullable
-   * colors) deliberately omit it: the honest display is "no active option",
-   * never a guessed token. Widgets must never show a zero-value lie (e.g.
-   * Opacity `0` for an unset value that renders as `1`).
+   * Controls whose unset state means "inherit baked styling" (block
+   * width/align, typography tokens) omit it here — their effective rendered
+   * defaults are owned by `pageBlockRenderDefaults.ts` and resolved by the
+   * display path per block type/heading level (owner finding #9 round 3).
+   * Nullable colors stay display-empty. Widgets must never show a zero-value
+   * lie (e.g. Opacity `0` for an unset value that renders as `1`).
    */
   fallback?: string | number | boolean;
 };
@@ -473,8 +474,8 @@ export const pageTypographyBlockControls: readonly PageEditorControlDefinition[]
     unit: "px",
     // The baked text classes set no tracking, so unset/null renders as the
     // CSS default `normal` (0px). Family/size/weight/line-height stay
-    // fallback-less: their unset state is the baked per-type styling, which
-    // no token represents — those controls show no active option instead.
+    // fallback-less here: their unset state is the baked per-type styling,
+    // owned and displayed via `pageBlockRenderDefaults.ts` (finding #9 r3).
     fallback: 0,
   }),
 ] as const;

@@ -25,6 +25,11 @@ import {
   PAGE_SECTION_ID_ATTRIBUTE,
 } from "./pageResponsiveCss";
 import {
+  distributePageSectionBlocksToColumns,
+  pageSectionBlocksHaveColumnAssignments,
+} from "./pageSectionColumns";
+import {
+  getPageSectionCompositionColumns,
   getPageSectionEffectiveColumns,
   resolvePageSectionTemplate,
   type ResolvedPageSectionTemplate,
@@ -110,6 +115,22 @@ export type PageColumnsSlotTrailingRenderer = (input: {
   block: PageBlockV2;
   slotKey: PageBlockSlotKey;
   ownerPath: PageBlockPath;
+  childCount: number;
+}) => ReactNode;
+
+/**
+ * Admin-canvas hook (owner finding #5, round 3): invoked once per SECTION
+ * column wrapper AFTER the column's blocks when per-column composition is
+ * active (composition columns >= 2 and at least one root block carries a
+ * `style.column` assignment), so the Page Editor can paint a persistent ghost
+ * "Add block" tile at the bottom of every column stack. Runtime render paths
+ * never provide it, so public output is unchanged — the same parity contract
+ * as {@link PageColumnsSlotTrailingRenderer}.
+ */
+export type PageSectionColumnTrailingRenderer = (input: {
+  section: PageSectionV2;
+  /** 1-based column index. */
+  column: number;
   childCount: number;
 }) => ReactNode;
 
@@ -1118,6 +1139,7 @@ export function PageSectionContent({
   renderBlockFrame,
   renderInlineText,
   renderColumnsSlotTrailing,
+  renderSectionColumnTrailing,
   trailingContent,
   layoutMode = "runtime",
   includeHiddenBlocks = false,
@@ -1129,9 +1151,17 @@ export function PageSectionContent({
   renderInlineText?: PageInlineTextRenderer;
   renderColumnsSlotTrailing?: PageColumnsSlotTrailingRenderer;
   /**
+   * Admin-canvas hook (owner finding #5, round 3): per-column add affordance
+   * painted at the bottom of every column wrapper stack when per-column
+   * composition is active. Runtime render paths never provide it.
+   */
+  renderSectionColumnTrailing?: PageSectionColumnTrailingRenderer;
+  /**
    * Admin-canvas hook (owner finding #5): rendered as an extra grid child
    * AFTER the last block, so in a multi-column auto-flow grid it lands in the
-   * next free cell. Runtime render paths never provide it (front parity).
+   * next free cell. Ignored while per-column composition is active (the
+   * per-column trailing hook owns the add affordances there). Runtime render
+   * paths never provide it (front parity).
    */
   trailingContent?: ReactNode;
   layoutMode?: PageSectionLayoutMode;
@@ -1142,6 +1172,30 @@ export function PageSectionContent({
   const blocks = includeHiddenBlocks
     ? section.blocks
     : section.blocks.filter((block) => block.visibility.visible);
+  const blockRenderContext = (index: number): PageBlockRenderContext => ({
+    blockPath: [{ index }] as PageBlockPath,
+    depth: 1,
+    includeHiddenBlocks,
+    renderBlockFrame,
+    renderInlineText,
+    renderColumnsSlotTrailing,
+    runtimeDataByBlockId,
+  });
+  // Per-column composition (owner finding #5, round 3): when the section
+  // composes 2+ columns AND at least one rendered root block carries a
+  // `style.column` assignment, blocks render inside one wrapper stack per
+  // column (assigned blocks in their column, unassigned blocks in their
+  // legacy auto-flow cell). When NO block is assigned, the auto-flow markup
+  // below stays byte-identical to the pre-assignment contract — that is the
+  // non-destructive guarantee for documents authored before this field.
+  // The composition count deliberately ignores `stackVertical`: a collapsed
+  // grid (stackVertical or the public `grid-cols-1` mobile class) stacks the
+  // wrappers themselves, mirroring the front's media-query collapse.
+  const compositionColumns = getPageSectionCompositionColumns(section);
+  const columnComposition =
+    compositionColumns >= 2 && blocks.length > 0 && pageSectionBlocksHaveColumnAssignments(blocks)
+      ? distributePageSectionBlocksToColumns(blocks, compositionColumns)
+      : null;
   return (
     <div
       className={renderProps.contentClassName}
@@ -1149,19 +1203,33 @@ export function PageSectionContent({
       {...pageSectionContentDataAttributes}
       data-page-section-layout-mode={layoutMode}
     >
-      {blocks.length > 0 ? (
+      {columnComposition ? (
+        columnComposition.map((members, columnIndex) => (
+          <div
+            key={`${section.id}-column-${columnIndex + 1}`}
+            // One wrapper per composition column, each occupying one cell of
+            // the section grid's first row. The inner grid inherits the
+            // section gap (including responsive gap overrides on the content
+            // element) so vertical rhythm matches the auto-flow rows, and
+            // block-level `justify-self` alignment keeps working.
+            className="grid min-w-0 content-start"
+            style={{ gap: "inherit" }}
+            data-page-section-column={columnIndex + 1}
+            data-page-section-column-owner={section.id}
+          >
+            {members.map(({ block, index }) =>
+              renderPageBlockWithFrame(block, blockRenderContext(index))
+            )}
+            {renderSectionColumnTrailing?.({
+              section,
+              column: columnIndex + 1,
+              childCount: members.length,
+            })}
+          </div>
+        ))
+      ) : blocks.length > 0 ? (
         <>
-          {blocks.map((block, index) =>
-            renderPageBlockWithFrame(block, {
-              blockPath: [{ index }] as PageBlockPath,
-              depth: 1,
-              includeHiddenBlocks,
-              renderBlockFrame,
-              renderInlineText,
-              renderColumnsSlotTrailing,
-              runtimeDataByBlockId,
-            })
-          )}
+          {blocks.map((block, index) => renderPageBlockWithFrame(block, blockRenderContext(index)))}
           {trailingContent}
         </>
       ) : (

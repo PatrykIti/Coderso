@@ -9,7 +9,16 @@ import {
   type PageBlockV2,
   type PageSectionV2,
 } from "./pageDocumentV2";
-import { getPageSectionEffectiveColumns } from "./pageSectionTemplates";
+import {
+  getPageBlockSectionColumn,
+  getPageSectionBlockEffectiveColumn,
+  pageSectionBlocksHaveColumnAssignments,
+  pinPageSectionBlockColumns,
+} from "./pageSectionColumns";
+import {
+  getPageSectionCompositionColumns,
+  getPageSectionEffectiveColumns,
+} from "./pageSectionTemplates";
 
 export type PageBlockPathSegment = {
   slotKey?: PageBlockSlotKey;
@@ -327,7 +336,12 @@ export const getPageBlockSiblingMoveTarget = (
  * `stackVertical`/`layout.columns`/`count` overrides are already merged.
  *
  * - `grid`: section root list painted as a CSS auto-flow grid with 2+ columns
- *   (column = index % columns) — left/right move ±1, up/down move ±columns.
+ *   and NO column assignments (column = index % columns) — left/right SET a
+ *   column assignment (owner finding #5 round 3), up/down move ±columns.
+ * - `section-column`: section root list with per-column composition active
+ *   (2+ composition columns and at least one assigned root block) — each
+ *   column is an independent stack; left/right re-assign the block into the
+ *   adjacent column, up/down reorder within the block's column stack.
  * - `row`: children of a row-direction group — horizontal flex, left/right ±1,
  *   no vertical axis inside the single row.
  * - `columns-slot`: direct child of a columns block with 2+ active slots —
@@ -338,6 +352,7 @@ export const getPageBlockSiblingMoveTarget = (
  */
 export type PageBlockContainerLayout =
   | { kind: "grid"; columns: number }
+  | { kind: "section-column"; columns: number; column: number }
   | { kind: "row" }
   | { kind: "columns-slot"; slotKeys: readonly PageBlockSlotKey[]; slotIndex: number }
   | { kind: "stack" };
@@ -347,6 +362,21 @@ export const getPageBlockContainerLayout = (
   path: PageBlockPath
 ): PageBlockContainerLayout => {
   if (path.length === 1) {
+    // Composition columns ignore stackVertical (the column wrappers stack
+    // when the grid collapses), so assignment-aware moves stay available and
+    // consistent with the painted wrapper DOM at every breakpoint.
+    const compositionColumns = getPageSectionCompositionColumns(section);
+    if (compositionColumns >= 2 && pageSectionBlocksHaveColumnAssignments(section.blocks)) {
+      return {
+        kind: "section-column",
+        columns: compositionColumns,
+        column: getPageSectionBlockEffectiveColumn(
+          section.blocks,
+          path[0]!.index,
+          compositionColumns
+        ),
+      };
+    }
     const columns = getPageSectionEffectiveColumns(section);
     return columns >= 2 ? { kind: "grid", columns } : { kind: "stack" };
   }
@@ -387,6 +417,81 @@ export const getPageBlockAdjacentColumnMoveTarget = (
   return {
     listPath: { ownerPath, slotKey: targetSlotKey },
     index: Math.min(path[path.length - 1]!.index, listResult.blocks.length),
+  };
+};
+
+/**
+ * Owner finding #5 (round 3): Left/Right on a section-root block inside a
+ * multi-column section SET the column assignment instead of swapping list
+ * indices. The moved block keeps its list index (so every unassigned sibling
+ * keeps its auto-flow cell) and only its `style.column` changes to the
+ * adjacent column. Returns the updated section, or null at the first/last
+ * column (strict no-op) and for non-root paths. The write always lands on the
+ * BASE block style: column composition is structural and breakpoint-invariant
+ * on the public front (`pageResponsiveCss` cannot express it per breakpoint).
+ */
+export const movePageSectionBlockToAdjacentColumn = (
+  section: PageSectionV2,
+  path: PageBlockPath,
+  direction: -1 | 1
+): PageSectionV2 | null => {
+  if (path.length !== 1) return null;
+  const columns = getPageSectionCompositionColumns(section);
+  if (columns < 2) return null;
+  const index = path[0]!.index;
+  if (!section.blocks[index]) return null;
+  const current = getPageSectionBlockEffectiveColumn(section.blocks, index, columns);
+  const target = current + direction;
+  if (target < 1 || target > columns) return null;
+  const blocks = section.blocks.map((block, blockIndex) =>
+    blockIndex === index ? { ...block, style: { ...(block.style ?? {}), column: target } } : block
+  );
+  return { ...section, blocks };
+};
+
+/**
+ * Owner finding #5 (round 3): Up/Down while per-column composition is active
+ * reorder the block WITHIN its effective column stack — swapping list
+ * positions with the previous/next root block of the same effective column.
+ * Because unassigned siblings derive their column from their list index, the
+ * move first pins every unassigned root block to its current effective column
+ * (one deliberate write) so nothing else changes columns when indices shift.
+ * Returns null when composition is inactive or at the stack edges (strict
+ * no-op, mirroring sibling-move bounds).
+ */
+export const movePageSectionBlockWithinColumn = (
+  section: PageSectionV2,
+  path: PageBlockPath,
+  direction: -1 | 1
+): { section: PageSectionV2; path: PageBlockPath } | null => {
+  if (path.length !== 1) return null;
+  const columns = getPageSectionCompositionColumns(section);
+  if (columns < 2 || !pageSectionBlocksHaveColumnAssignments(section.blocks)) return null;
+  const index = path[0]!.index;
+  if (!section.blocks[index]) return null;
+  const column = getPageSectionBlockEffectiveColumn(section.blocks, index, columns);
+  const members = section.blocks
+    .map((_, blockIndex) => blockIndex)
+    .filter(
+      (blockIndex) =>
+        getPageSectionBlockEffectiveColumn(section.blocks, blockIndex, columns) === column
+    );
+  const position = members.indexOf(index);
+  if (position < 0) return null;
+  const neighbor = members[position + direction];
+  if (neighbor === undefined) return null;
+
+  const blocks = [...pinPageSectionBlockColumns(section.blocks, columns)];
+  const [moved] = blocks.splice(index, 1);
+  if (!moved) return null;
+  // Inserting at the neighbor's pre-removal index works for both directions:
+  // up (neighbor < index) lands directly before the neighbor; down
+  // (neighbor > index, shifted to neighbor - 1 by the removal) lands directly
+  // after it — a swap in column order either way.
+  blocks.splice(neighbor, 0, moved);
+  return {
+    section: { ...section, blocks },
+    path: [{ index: neighbor }] as PageBlockPath,
   };
 };
 
@@ -454,8 +559,15 @@ export const insertPageBlockBeside = (
     return { status: "max-depth-exceeded", section };
   }
 
+  // Per-column composition (owner finding #5, round 3): a root block may be
+  // pinned into a section column via `style.column`. The wrap group replaces
+  // the block at the same root index, so it must CARRY the same assignment —
+  // otherwise the new row would silently fall back to its auto-flow cell and
+  // jump columns. "Beside" always means "in the same column".
+  const sectionColumn = path.length === 1 ? getPageBlockSectionColumn(selected) : null;
   const group = createPageBlockV2("group", {
     props: { direction: "row", wrap: false, gap: 16 },
+    ...(sectionColumn !== null ? { style: { column: sectionColumn } } : {}),
     slots: { children: [selected, block] },
   });
   const result = updatePageBlockAtPath(section, path, () => group);

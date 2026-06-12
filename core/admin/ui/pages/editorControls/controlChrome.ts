@@ -51,3 +51,12 @@ export const editorCanvasGhostTileClass =
 /** Compact variant for trailing add affordances inside non-empty columns slots. */
 export const editorCanvasGhostTileCompactClass =
   "flex h-8 w-full items-center justify-center gap-1 rounded border border-dashed border-slate-300 bg-white text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900";
+
+/**
+ * Compact ghost "+" handle pinned to the right edge of the SELECTED canvas
+ * block ("Add block beside", owner finding #7 round 3). Same dashed
+ * light-surface ghost chrome as the add tiles, sized as a circular handle
+ * that straddles the block border. Canvas-only, never on the public front.
+ */
+export const editorCanvasGhostBesideHandleClass =
+  "absolute right-0 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-dashed border-slate-300 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900";
