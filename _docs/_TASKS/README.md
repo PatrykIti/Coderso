@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 107 tasks
+- **To Do:** 118 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2434 tasks
 
@@ -185,6 +185,17 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Build the matrix that links every aggregate finding to concrete task owners and evidence requirements. |
 | TASK-453-02 | Followup Validation Board And Changelog Closure | High | Medium | Close the aggregate follow-up report with final validation and board/changelog synchronization. |
 | TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Follow-up from the TASK-449 reproduction: surface/promote autosaved drafts on reopen, add an SPA unsaved-changes navigation guard, and revalidate mount hydration so a TTL-fresh poisoned cache cannot render a stale document. |
+| TASK-458 | Menus Site Shell And Menu Design Editor | High | Very Large | Owner UX redesign: site-shell config moves to a dialog on the Menus list (Settings shell section REMOVED), and each menu gets a canvas Design view (floating panel, appearance model bridged into the shell CSS, restricted block palette for menu extras). |
+| TASK-458-01 | Site Shell Relocation And Settings Removal | High | Medium | Site shell dialog on MenuListPage with scoped partial PATCH; remove the Settings -> site -> shell section per explicit owner instruction. |
+| TASK-458-02 | Menu Appearance Model And Shell Css Bridge | High | Large | menus.settings jsonb + normalizeMenuAppearance (token-backed NavigationStyle-inspired vocabulary) and buildSiteShellCss with byte-identical legacy defaults; full migration artifacts. |
+| TASK-458-03 | Menu Design Editor Canvas And Restricted Palette | High | Large | /menus/:id/design hosting the shared editor via a new host palette capability; live SiteHeaderNav canvas; appearance controls via shared primitives; button/image extras slot. |
+| TASK-458-04 | Validation Live Smoke And Closure | High | Medium | Full lanes + live restyle->publish->front proof; settings section gone; palette restricted. |
+| TASK-459 | Visitor Facing Catalog Filters Sort And Pagination | High | Very Large | Otodom-style enablement: visitor filters/sort/counts/pagination on Pages v2 over the existing lq.* runtime engine, pretty URL params, DB pushdown + jsonb indexes for scale, filtered-caching strategy. |
+| TASK-459-01 | Filters Contract Param Aliases And Pagination Plan | High | Medium | Freeze the filters-as-block contract, assistant mode:filters normalization, pretty-param alias + SEO rules, pagination props, truthful counts, dangling-route policy. |
+| TASK-459-02 | Filters Block Sort Control And V2 Client Script | High | Large | Filters block reusing the listing facet engine + fetch-swap script, v2 body-script seam, sort control, result count, deliberate catalog amendment. |
+| TASK-459-03 | Pagination Counts And List Routes | High | Medium | Enable paged/load-more + numbered pager and totals, unify the 50/24 clamp, list routes consume searchParams, consume template style, dangling-link guard. |
+| TASK-459-04 | Db Pushdown Indexes And Filtered Caching | High | Large | SQL pushdown of allowlisted data.* predicates with jsonb GIN/expression indexes, corpus-wide facet counts, param-aware caching / public JSON partial (perf gates). |
+| TASK-459-05 | Validation Catalog Demo And Closure | High | Medium | Full lanes + perf + live real-estate demo (facets, sort, pager, counts, shareable URLs, detail links). |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
