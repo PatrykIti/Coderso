@@ -33,6 +33,8 @@ const cleanupKeys = [
   "site.adminPath",
   "site.adminRedirectEnabled",
   "site.contentRoutes",
+  "site.navigationMenuId",
+  "site.footerTemplateId",
   "auth.sessionTtlDays",
   "auth.resetTtlMinutes",
   "posts.editor.mode",
@@ -147,6 +149,36 @@ testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
 
 testIfDb("rejects unknown key", async () => {
   await expect(setSetting("unknown.key", "value")).rejects.toThrow("settings_key_invalid");
+});
+
+testIfDb("site shell reference keys accept nullable id strings", async () => {
+  const list = await listSettings();
+  expect(list["site.navigationMenuId"]).toBeNull();
+  expect(list["site.footerTemplateId"]).toBeNull();
+
+  const menuId = randomUUID();
+  const templateId = randomUUID();
+  await setSetting("site.navigationMenuId", ` ${menuId} `);
+  await setSetting("site.footerTemplateId", templateId);
+  expect(await getSetting("site.navigationMenuId")).toBe(menuId);
+  expect(await getSetting("site.footerTemplateId")).toBe(templateId);
+  expect((await listSettings())["site.navigationMenuId"]).toBe(menuId);
+  expect((await listSettings())["site.footerTemplateId"]).toBe(templateId);
+
+  await setSetting("site.navigationMenuId", null);
+  await setSetting("site.footerTemplateId", "   ");
+  expect(await getSetting("site.navigationMenuId")).toBeNull();
+  expect(await getSetting("site.footerTemplateId")).toBeNull();
+});
+
+testIfDb("site shell reference keys reject non-string values", async () => {
+  await expect(setSetting("site.navigationMenuId", 123)).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("site.footerTemplateId", { id: "x" })).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("site.footerTemplateId", false)).rejects.toThrow(
+    "settings_value_invalid"
+  );
 });
 
 testIfDb("rejects duplicate keys after alias normalization in bulk payload", async () => {

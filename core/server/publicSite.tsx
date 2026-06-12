@@ -17,7 +17,7 @@ import {
 } from "../site/cache/siteCache";
 import { matchContentRoute } from "../site/contentRouteMatcher";
 import { toCssVariables } from "../ui/theme/tokenCss";
-import { getPageBySlug, getPage } from "../services/pages/pageService";
+import { getPageBySlug, getPage, getPageSlugsByIds } from "../services/pages/pageService";
 import { type PreviewTargetType, validatePreviewToken } from "../services/pages/previewService";
 import { getEntry, getEntryBySlug, listEntries } from "../services/content/entryService";
 import {
@@ -104,6 +104,17 @@ import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataBin
 import { buildPageResponsiveCss } from "../services/pages/pageResponsiveCss";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import type { PageBreakpoint } from "../services/pages/pageDocumentV2";
+import { resolvePublicSiteShell } from "../services/pages/publicSiteShell";
+import {
+  collectNavigationMenuPageIds,
+  mapMenuNodesToNavigationItems,
+} from "../services/navigation/navigationMenuMapping";
+import type { MenuWithItems } from "../services/menus/menuService";
+import {
+  SITE_FOOTER_SCOPE_SELECTOR,
+  type SiteShellNavigation,
+  type SiteShellRenderProps,
+} from "../site/siteShell";
 
 export type PublicPageData = {
   id: string;
@@ -760,6 +771,39 @@ const resolveDetailPageRuntimeSeo = (input: {
   };
 };
 
+/**
+ * Maps the resolved published menu onto render-ready navigation links through
+ * the canonical menu mapping (`pageId` -> published page slug, safe hrefs).
+ */
+const buildSiteShellNavigation = async (
+  menu: MenuWithItems
+): Promise<SiteShellNavigation | null> => {
+  const pageIds = collectNavigationMenuPageIds(menu.items);
+  const pagePathById = await getPageSlugsByIds(pageIds);
+  const items = mapMenuNodesToNavigationItems(menu.items, pagePathById, {
+    includeDefaultTarget: true,
+  });
+  return items.length > 0 ? { label: menu.menu.name, items } : null;
+};
+
+/**
+ * Resolves the global site shell once per request (TASK-455). Fail closed:
+ * resolver nulls or navigation-mapping failures degrade to a missing shell
+ * part, never an error page.
+ */
+const resolveSiteShellRenderProps = async (): Promise<SiteShellRenderProps> => {
+  try {
+    const shell = await resolvePublicSiteShell();
+    return {
+      navigation: shell.navigation ? await buildSiteShellNavigation(shell.navigation) : null,
+      footerDocument: shell.footerDocument,
+    };
+  } catch (error) {
+    console.warn("site_shell_resolution_failed", error);
+    return { navigation: null, footerDocument: null };
+  }
+};
+
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
   options?: {
@@ -804,6 +848,15 @@ const renderPublicPageHtmlInternal = async (
     runtimeSearchParams: options?.runtimeSearchParams,
   });
 
+  // The site shell resolves once per request and renders on every public
+  // Page v2 render, tokenized preview included (TASK-455).
+  const siteShell = await resolveSiteShellRenderProps();
+  const siteNameSetting = await getSetting("site.name");
+  const siteName =
+    typeof siteNameSetting === "string" && siteNameSetting.trim().length > 0
+      ? siteNameSetting.trim()
+      : null;
+
   // Public visitors receive desktop-resolved base markup plus scoped @media
   // overrides built from the unflattened document, so one cached HTML serves
   // every viewport. An explicit previewDevice keeps the current
@@ -815,6 +868,21 @@ const renderPublicPageHtmlInternal = async (
       responsiveCss = buildPageResponsiveCss(pageTemplateInput.document);
     } catch (error) {
       console.warn("page_responsive_css_emission_failed", error);
+    }
+    // Footer template responsive CSS rides the same builder under the
+    // distinct [data-site-footer="true"] scope, concatenated after the
+    // page's own rules. Failures fail closed to desktop-only footer markup.
+    if (siteShell.footerDocument) {
+      try {
+        const footerCss = buildPageResponsiveCss(siteShell.footerDocument, {
+          scopeSelector: SITE_FOOTER_SCOPE_SELECTOR,
+        });
+        if (footerCss) {
+          responsiveCss = responsiveCss ? `${responsiveCss}\n${footerCss}` : footerCss;
+        }
+      } catch (error) {
+        console.warn("site_footer_responsive_css_emission_failed", error);
+      }
     }
   }
 
@@ -834,6 +902,8 @@ const renderPublicPageHtmlInternal = async (
       templateKey: settingsRecord.template,
       runtimeDataByBlockId: preparedRuntime.runtimeDataByBlockId,
       responsiveCss,
+      siteShell,
+      siteName,
     }),
     cacheable: preparedRuntime.cacheable,
   };

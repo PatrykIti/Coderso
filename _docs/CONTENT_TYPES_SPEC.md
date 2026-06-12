@@ -451,7 +451,13 @@ Press/Media:
 - Core dostarcza bazowe widoki listy i szczegolu.
 - Theme moze nadpisac wyglad per content type.
 - Plugin moze dostarczyc wlasny view (opcjonalnie).
-- Page builder moze osadzac listy entries jako blok.
+- Page builder moze osadzac listy entries jako blok. Od TASK-457 blok
+  `collection` jest wstawialny w Page Editorze v2: autor wybiera content type
+  (combobox), opcjonalnie zapisane listing query (przefiltrowane do wybranego
+  typu; zmiana typu czysci referencje query), limit (1..50, runtime renderuje
+  max 24) i listing template. Publiczny runtime rozwiazuje wpisy przez
+  scoped read-only binding (`statusScope: "published"`); szczegoly kontraktu
+  autorskiego w `_docs/PAGE_MODEL.md`.
 
 Resolution order:
 1. Theme template

@@ -142,6 +142,13 @@ type PageBlockRenderContext = {
   renderInlineText?: PageInlineTextRenderer;
   renderColumnsSlotTrailing?: PageColumnsSlotTrailingRenderer;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
+  /**
+   * Section layout mode threaded into block rendering (TASK-456) so
+   * data-bound blocks can emit a canvas-safe representation (interactivity
+   * disabled) in the editor. Runtime render paths keep the "runtime" default,
+   * so public output is unchanged.
+   */
+  layoutMode?: PageSectionLayoutMode;
   slotKey?: PageBlockSlotKey;
   parentBlock?: PageBlockV2;
 };
@@ -616,10 +623,41 @@ const getRuntimeBinding = <Kind extends PageRuntimeDataBinding["kind"]>(
 
 const renderCollectionBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
   const binding = getRuntimeBinding(block, context, "collection");
-  if (!binding || binding.data.resolved?.error) {
+  const isCanvas = context.layoutMode === "canvas-device";
+  if (!binding) {
+    if (isCanvas) {
+      // Editor canvas without preview data (TASK-457): an unset contentTypeId
+      // asks the author to pick a content type; a set contentTypeId without a
+      // binding yet means the editor-provided preview data is still
+      // resolving. Runtime paths never reach this branch (layoutMode stays
+      // "runtime").
+      const contentTypeId = readText(block.props.contentTypeId);
+      return renderInertDataBoundBlock(
+        "collection",
+        contentTypeId
+          ? "Loading collection preview..."
+          : "Pick a content type in the Content panel to preview entries here."
+      );
+    }
     return renderInertDataBoundBlock("collection", "Collection content is not available yet.");
   }
-  return <ContentListBlock data={binding.data} variant="grid" blockId={block.id} />;
+  if (binding.data.resolved?.error) {
+    // Fail closed identically on canvas and runtime: dangling references
+    // never render a fake listing (the Content panel marks the dangling id).
+    return renderInertDataBoundBlock("collection", "Collection content is not available yet.");
+  }
+  const listing = <ContentListBlock data={binding.data} variant="grid" blockId={block.id} />;
+  if (isCanvas) {
+    // Canvas-safe preview (TASK-457): the author sees the exact shared
+    // listing markup the front renders, with pointer events off so entry
+    // links and pagination affordances never navigate inside the canvas.
+    return (
+      <div className="pointer-events-none min-w-0" data-page-editor-collection-preview="inert">
+        {listing}
+      </div>
+    );
+  }
+  return listing;
 };
 
 const mapFormBindingToEmbedData = (
@@ -658,14 +696,44 @@ const mapFormBindingToEmbedData = (
 
 const renderFormBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
   const binding = getRuntimeBinding(block, context, "form");
+  const isCanvas = context.layoutMode === "canvas-device";
   if (!binding) {
+    if (isCanvas) {
+      // Editor canvas without preview data (TASK-456): an unset formId asks
+      // the author to pick a form; a set formId without a binding yet means
+      // the editor-provided preview data is still resolving. Runtime paths
+      // never reach this branch (layoutMode stays "runtime").
+      const formId = readText(block.props.formId);
+      return renderInertDataBoundBlock(
+        "form",
+        formId ? "Loading form preview..." : "Pick a form in the Content panel to preview it here."
+      );
+    }
     const title = readText(block.props.title);
     return renderInertDataBoundBlock(
       "form",
       title ? `${title} is not available yet.` : "Form is not available yet."
     );
   }
-  return <FormEmbedBlock data={mapFormBindingToEmbedData(block, binding)} variant="standard" />;
+  const embed = (
+    <FormEmbedBlock data={mapFormBindingToEmbedData(block, binding)} variant="standard" />
+  );
+  if (isCanvas) {
+    // Canvas-safe preview (TASK-456): the author sees the exact shared form
+    // markup the front renders, but with every control disabled and pointer
+    // events off, so the canvas never submits, focuses, or navigates. The
+    // editor-provided preview binding also carries no submission nonce.
+    return (
+      <fieldset
+        disabled
+        className="pointer-events-none min-w-0 border-0 p-0"
+        data-page-editor-form-preview="inert"
+      >
+        {embed}
+      </fieldset>
+    );
+  }
+  return embed;
 };
 
 const renderEmbedBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
@@ -792,6 +860,7 @@ const renderPageBlockList = (
       renderInlineText: context.renderInlineText,
       renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
       runtimeDataByBlockId: context.runtimeDataByBlockId,
+      layoutMode: context.layoutMode,
       slotKey: context.slotKey,
       parentBlock: context.parentBlock,
     })
@@ -854,6 +923,7 @@ const renderPageLayoutBlockContent = (
                       renderInlineText: context.renderInlineText,
                       renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
                       runtimeDataByBlockId: context.runtimeDataByBlockId,
+                      layoutMode: context.layoutMode,
                       slotKey,
                       parentBlock: block,
                     })}
@@ -893,6 +963,7 @@ const renderPageLayoutBlockContent = (
         renderInlineText: context.renderInlineText,
         renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
         runtimeDataByBlockId: context.runtimeDataByBlockId,
+        layoutMode: context.layoutMode,
         slotKey,
         parentBlock: block,
       }),
@@ -911,6 +982,7 @@ const renderPageLayoutBlockContent = (
       renderInlineText: context.renderInlineText,
       renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
       runtimeDataByBlockId: context.runtimeDataByBlockId,
+      layoutMode: context.layoutMode,
       slotKey,
       parentBlock: block,
     }),
@@ -1180,6 +1252,7 @@ export function PageSectionContent({
     renderInlineText,
     renderColumnsSlotTrailing,
     runtimeDataByBlockId,
+    layoutMode,
   });
   // Per-column composition (owner finding #5, round 3): when the section
   // composes 2+ columns AND at least one rendered root block carries a
@@ -1281,27 +1354,39 @@ export function PageDocumentRender({
   breakpoint = "desktop",
   emptyContent = emptyDocumentContent,
   runtimeDataByBlockId,
+  rootTag = "main",
+  rootClassName,
 }: {
   document: PageDocumentV2;
   breakpoint?: PageBreakpoint;
   emptyContent?: ReactNode;
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
+  /**
+   * Wrapper element for the rendered document. Pages keep the default
+   * `main`; secondary documents (e.g. the TASK-455 site-shell footer
+   * template) pass `div` so the page's unique `<main>` landmark stays valid.
+   */
+  rootTag?: "main" | "div";
+  rootClassName?: string;
 }) {
   const resolved = resolvePageRenderTree(document, breakpoint);
+  const Root = rootTag;
 
   if (resolved.sections.length === 0) {
     return (
-      <main
-        className="mx-auto w-full max-w-4xl px-6 py-16 text-center text-slate-500"
+      <Root
+        className={
+          rootClassName ?? "mx-auto w-full max-w-4xl px-6 py-16 text-center text-slate-500"
+        }
         data-page-v2="true"
       >
         {emptyContent}
-      </main>
+      </Root>
     );
   }
 
   return (
-    <main className="min-h-screen bg-white text-slate-950" data-page-v2="true">
+    <Root className={rootClassName ?? "min-h-screen bg-white text-slate-950"} data-page-v2="true">
       {resolved.sections.map((section) => (
         <PageSectionRender
           key={section.id}
@@ -1309,6 +1394,6 @@ export function PageDocumentRender({
           runtimeDataByBlockId={runtimeDataByBlockId}
         />
       ))}
-    </main>
+    </Root>
   );
 }

@@ -50,6 +50,25 @@ export type PageEditorControlInput =
   | "swatch"
   | "media";
 
+/**
+ * Dynamic option sources for unbounded reference pickers (TASK-456/457). A
+ * `select` control flagged with an `optionsSource` resolves to a searchable
+ * combobox model in `pageEditorControlUiModel`; the editor shell owns the
+ * source wiring through the cached admin clients, mapping resource id ->
+ * display name:
+ * - `"forms"` -> `listFormsCached()` (admin forms client),
+ * - `"contentTypes"` -> `listContentTypesCached()` (content types client),
+ * - `"listingQueries"` -> `listListingQueriesCached()` (listings client),
+ * - `"listingTemplates"` -> `listListingTemplatesCached()` (listings client).
+ * The registry stays Bun-free: it only names the source, never imports the
+ * client.
+ */
+export type PageEditorControlOptionsSource =
+  | "forms"
+  | "contentTypes"
+  | "listingQueries"
+  | "listingTemplates";
+
 export type PageEditorControlDefinition = {
   id: string;
   panel: PageEditorControlPanel;
@@ -60,6 +79,25 @@ export type PageEditorControlDefinition = {
   input: PageEditorControlInput;
   responsive: boolean;
   options?: readonly string[];
+  /**
+   * Dynamic options source for reference pickers (TASK-456). Mutually
+   * exclusive with static `options`; the adapter maps the control to a
+   * `combobox` model and the editor shell resolves the option list.
+   */
+  optionsSource?: PageEditorControlOptionsSource;
+  /**
+   * Whether the stored value may be cleared to an explicit `null`
+   * (schema-owned nullability in `pageDocumentV2`, e.g. `props.formId`).
+   * Combobox models surface it as a "None" row.
+   */
+  nullable?: boolean;
+  /**
+   * Sibling prop key that SCOPES the dynamic option list (TASK-457): the
+   * editor shell filters the resolved source options to entries belonging to
+   * the current value of this prop (e.g. saved listing queries scoped to the
+   * chosen `contentTypeId`). Only meaningful together with `optionsSource`.
+   */
+  filterBy?: string;
   clamp?: { min: number; max: number };
   /** Explicit slider step for fractional numeric controls (e.g. line height). */
   step?: number;
@@ -107,7 +145,12 @@ const blockPropControl = (
   type: PageBlockType,
   key: string,
   definition: Pick<PageEditorControlDefinition, "label" | "input"> &
-    Partial<Pick<PageEditorControlDefinition, "panel" | "options" | "clamp">>
+    Partial<
+      Pick<
+        PageEditorControlDefinition,
+        "panel" | "options" | "optionsSource" | "filterBy" | "clamp" | "unit"
+      >
+    >
 ) => {
   const fallback = blockPropFallback(type, key);
   return control({
@@ -119,7 +162,18 @@ const blockPropControl = (
     input: definition.input,
     responsive: true,
     ...(definition.options ? { options: definition.options } : {}),
+    // Dynamic-source pickers derive nullability from the owner schema default:
+    // a `null` default in `pageBlockDefaultProps` is the nullable-reference
+    // contract (`formId`/`contentTypeId`/... use nullableStringSchema).
+    ...(definition.optionsSource
+      ? {
+          optionsSource: definition.optionsSource,
+          nullable: pageBlockDefaultProps[type][key] === null,
+          ...(definition.filterBy ? { filterBy: definition.filterBy } : {}),
+        }
+      : {}),
     ...(definition.clamp ? { clamp: definition.clamp } : {}),
+    ...(definition.unit !== undefined ? { unit: definition.unit } : {}),
     ...(fallback === null ? {} : { fallback }),
   });
 };
@@ -611,7 +665,17 @@ export const pageBlockControlRegistry: Record<
     blockPropControl("video", "muted", { label: "Muted", input: "switch" }),
   ],
   gallery: [],
-  form: [],
+  form: [
+    // TASK-456: the form block Content panel. `formId` is a nullable
+    // reference picked from the Forms admin through the dynamic "forms"
+    // combobox source; `title` optionally overrides the resolved form name.
+    blockPropControl("form", "formId", {
+      label: "Form",
+      input: "select",
+      optionsSource: "forms",
+    }),
+    blockPropControl("form", "title", { label: "Title", input: "text" }),
+  ],
   list: [
     blockPropControl("list", "items", { label: "Items", input: "text" }),
     blockPropControl("list", "ordered", { label: "Ordered", input: "switch" }),
@@ -626,7 +690,39 @@ export const pageBlockControlRegistry: Record<
     ...pageTypographyBlockControls,
     blockStyleTextAlignTypographyControl,
   ],
-  collection: [],
+  collection: [
+    // TASK-457: the collection block Content panel. `contentTypeId` binds the
+    // listing to a content type; `queryId` optionally narrows it to a saved
+    // listing query SCOPED to that type (the editor shell filters the source
+    // by the current `contentTypeId` and clears the stored `queryId` when the
+    // type changes); `limit` clamps to the schema bound (1..50 in
+    // `blockPropJsonSchemaForType`); `templateId` optionally picks a listing
+    // template. All three references are nullable in `pageBlockDefaultProps`,
+    // so each combobox offers the "None" row.
+    blockPropControl("collection", "contentTypeId", {
+      label: "Content type",
+      input: "select",
+      optionsSource: "contentTypes",
+    }),
+    blockPropControl("collection", "queryId", {
+      label: "Saved query",
+      input: "select",
+      optionsSource: "listingQueries",
+      filterBy: "contentTypeId",
+    }),
+    blockPropControl("collection", "limit", {
+      label: "Limit",
+      input: "number",
+      clamp: { min: 1, max: 50 },
+      // Entry count, not pixels: an explicit unitless readout.
+      unit: "",
+    }),
+    blockPropControl("collection", "templateId", {
+      label: "Listing template",
+      input: "select",
+      optionsSource: "listingTemplates",
+    }),
+  ],
   embed: [],
   divider: [
     blockPropControl("divider", "tone", {

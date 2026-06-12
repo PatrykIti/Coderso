@@ -42,6 +42,16 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { isApiClientError, isSessionExpiredApiError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
+import { getCachedContentTypes, listContentTypesCached } from "@/services/contentTypesClient";
+import { listEntriesCached } from "@/services/entriesClient";
+import { getCachedForms, getFormDetailCached, listFormsCached } from "@/services/formsClient";
+import {
+  getCachedListingQueries,
+  getCachedListingTemplates,
+  listListingQueriesCached,
+  listListingTemplatesCached,
+  type ListingQueryRecord,
+} from "@/services/listingsClient";
 import { getCachedMedia, listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import {
   discardPageRevision,
@@ -103,6 +113,7 @@ import {
   pageUniversalSectionControls,
   projectPageResponsiveOverrideEntries,
   type PageEditorControlDefinition,
+  type PageEditorControlOptionsSource,
 } from "../../../services/pages/pageEditorControlRegistry";
 import {
   resolvePageEditorControlUiModel,
@@ -115,11 +126,13 @@ import { assertTokenOverrides } from "../../../services/theme/tokenValidation";
 import { toPageTypographyCssVariableMap } from "../../../ui/theme/tokenCss";
 import {
   ColorSwatchControl,
+  ComboboxControl,
   MediaPickerControl,
   SegmentedControl,
   SliderControl,
   SliderStepperControl,
   ToggleSwitch,
+  type ComboboxControlOption,
 } from "./editorControls";
 import {
   editorCanvasCtaButtonClass,
@@ -170,6 +183,17 @@ import {
   getPageSectionEffectiveColumns,
   getPageSectionFallbackVariant,
 } from "../../../services/pages/pageSectionTemplates";
+import {
+  buildPageEditorCollectionPreviewBindings,
+  collectPageEditorCollectionPreviewContentTypeIds,
+  type PageEditorCollectionPreviewSource,
+} from "../../../services/pages/pageEditorCollectionPreview";
+import {
+  buildPageEditorFormPreviewBindings,
+  collectPageEditorFormPreviewFormIds,
+  type PageEditorFormPreviewDetail,
+} from "../../../services/pages/pageEditorFormPreview";
+import type { PageRuntimeDataByBlockId } from "../../../services/pages/pageRuntimeDataBinding";
 import { joinPageRenderClasses, PageSectionContent } from "../../../services/pages/pageRendererV2";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
 import {
@@ -788,7 +812,15 @@ const patchBlockControlForDevice = (
   if (!isBlockControlGroup(group) || path.length === 0) return block;
   if (group === "props") {
     const [key] = path;
-    return key ? patchBlockPropsForDevice(block, device, { [key]: value }) : block;
+    if (!key) return block;
+    // Reference coupling (TASK-457): saved listing queries are scoped to one
+    // content type, so switching the collection block's content type clears
+    // the stored queryId in the same deliberate (and undoable) write — a
+    // stale query for the previous type must never linger as a dangling ref.
+    if (block.type === "collection" && key === "contentTypeId") {
+      return patchBlockPropsForDevice(block, device, { contentTypeId: value, queryId: null });
+    }
+    return patchBlockPropsForDevice(block, device, { [key]: value });
   }
 
   if (device === "desktop") {
@@ -1370,6 +1402,7 @@ const SectionCanvas = ({
   inlineEditTarget,
   device,
   canAddBlockBeside,
+  canvasDataByBlockId,
   onSelect,
   onSelectBlock,
   onAddBlock,
@@ -1386,6 +1419,12 @@ const SectionCanvas = ({
   inlineEditTarget: PageEditorInlineEditTarget | null;
   device: PageBreakpoint;
   canAddBlockBeside: boolean;
+  /**
+   * Editor-resolved preview bindings for data-bound blocks (TASK-456 form
+   * previews, TASK-457 collection previews). Canvas-only data — publish and
+   * public runtime paths never see this map.
+   */
+  canvasDataByBlockId: PageRuntimeDataByBlockId;
   onSelect: () => void;
   onSelectBlock: (blockPath: PageBlockPath) => void;
   onAddBlock: () => void;
@@ -1456,6 +1495,7 @@ const SectionCanvas = ({
         section={section}
         layoutMode="canvas-device"
         includeHiddenBlocks
+        runtimeDataByBlockId={canvasDataByBlockId}
         emptyContent={
           effectiveColumns >= 2 ? (
             // Owner finding #5 (round 3): an empty multi-column section paints
@@ -1887,6 +1927,94 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [templateOptions, setTemplateOptions] = useState<
     { id: string; name: string; description: string | null }[] | null
   >(null);
+  // Canvas form preview data (TASK-456): cached form details keyed by formId
+  // (`null` = the referenced form no longer exists -> fail-closed binding).
+  const [canvasFormDetails, setCanvasFormDetails] = useState<
+    Record<string, PageEditorFormPreviewDetail | null>
+  >({});
+  // FormIds already requested in this editor session; transient load failures
+  // are removed again so a later document change can retry the fetch.
+  const requestedFormIdsRef = useRef<Set<string>>(new Set());
+
+  // Stable identity for "the set of forms this document references" so the
+  // fetch effect only re-runs when a NEW form id appears, not on every edit.
+  const canvasFormIdsKey = useMemo(
+    () => collectPageEditorFormPreviewFormIds(pageDocument).sort().join(" "),
+    [pageDocument]
+  );
+
+  useEffect(() => {
+    const formIds = canvasFormIdsKey.length > 0 ? canvasFormIdsKey.split(" ") : [];
+    for (const formId of formIds) {
+      if (requestedFormIdsRef.current.has(formId)) continue;
+      requestedFormIdsRef.current.add(formId);
+      // Cache-first through the shared cached client; the async boundary owns
+      // the state write (no synchronous setState in the effect body).
+      getFormDetailCached(formId)
+        .then((detail) => {
+          setCanvasFormDetails((current) => ({ ...current, [formId]: detail ?? null }));
+        })
+        .catch(() => {
+          requestedFormIdsRef.current.delete(formId);
+        });
+    }
+  }, [canvasFormIdsKey]);
+
+  // Canvas-only runtime bindings for form blocks at the active breakpoint.
+  // Publish/runtime paths never receive this map — the public runtime keeps
+  // resolving its own bindings server-side (TASK-418-06-L04).
+  const canvasFormPreviewBindings = useMemo<PageRuntimeDataByBlockId>(
+    () => buildPageEditorFormPreviewBindings(pageDocument, device, canvasFormDetails),
+    [pageDocument, device, canvasFormDetails]
+  );
+
+  // Canvas collection preview data (TASK-457): preview sources keyed by
+  // contentTypeId (`null` = the referenced content type no longer exists ->
+  // fail-closed binding).
+  const [canvasCollectionSources, setCanvasCollectionSources] = useState<
+    Record<string, PageEditorCollectionPreviewSource>
+  >({});
+  // ContentTypeIds already requested in this editor session; transient load
+  // failures are removed again so a later document change can retry.
+  const requestedCollectionTypeIdsRef = useRef<Set<string>>(new Set());
+
+  // Stable identity for "the set of content types this document references"
+  // so the fetch effect only re-runs when a NEW type id appears.
+  const canvasCollectionTypeIdsKey = useMemo(
+    () => collectPageEditorCollectionPreviewContentTypeIds(pageDocument).sort().join(" "),
+    [pageDocument]
+  );
+
+  useEffect(() => {
+    const typeIds =
+      canvasCollectionTypeIdsKey.length > 0 ? canvasCollectionTypeIdsKey.split(" ") : [];
+    for (const typeId of typeIds) {
+      if (requestedCollectionTypeIdsRef.current.has(typeId)) continue;
+      requestedCollectionTypeIdsRef.current.add(typeId);
+      // Cache-first through the shared cached clients; the async boundary
+      // owns the state write (no synchronous setState in the effect body).
+      loadCollectionPreviewSource(typeId)
+        .then((source) => {
+          setCanvasCollectionSources((current) => ({ ...current, [typeId]: source }));
+        })
+        .catch(() => {
+          requestedCollectionTypeIdsRef.current.delete(typeId);
+        });
+    }
+  }, [canvasCollectionTypeIdsKey]);
+
+  // Canvas-only runtime bindings for collection blocks at the active
+  // breakpoint; merged with the form previews below. The public runtime keeps
+  // resolving the real content-list binding server-side (TASK-418-06-L04).
+  const canvasCollectionPreviewBindings = useMemo<PageRuntimeDataByBlockId>(
+    () => buildPageEditorCollectionPreviewBindings(pageDocument, device, canvasCollectionSources),
+    [pageDocument, device, canvasCollectionSources]
+  );
+
+  const canvasDataByBlockId = useMemo<PageRuntimeDataByBlockId>(
+    () => ({ ...canvasFormPreviewBindings, ...canvasCollectionPreviewBindings }),
+    [canvasFormPreviewBindings, canvasCollectionPreviewBindings]
+  );
 
   const selectedSection =
     pageDocument.sections.find((section) => section.id === selectedSectionId) ?? null;
@@ -3239,6 +3367,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       inlineEditTarget={inlineEditTarget}
                       device={device}
                       canAddBlockBeside={canAddBlockBeside}
+                      canvasDataByBlockId={canvasDataByBlockId}
                       onSelect={() => selectSection(section.id)}
                       onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
                       onAddBlock={openCommandPalette}
@@ -4373,6 +4502,13 @@ const RegistryControlField = ({
     readBlockBreakpointOverride(baseBlock, device),
     control.overridePath
   );
+  // Scoped combobox sources (TASK-457) read the sibling prop named by the
+  // registry's `filterBy` from the SAME resolved block the value comes from.
+  const filterRaw = control.filterBy
+    ? readPathValue(block, ["props", control.filterBy])
+    : undefined;
+  const comboboxFilterValue =
+    typeof filterRaw === "string" && filterRaw.length > 0 ? filterRaw : null;
   return (
     <ResponsiveControlShell
       device={device}
@@ -4385,6 +4521,7 @@ const RegistryControlField = ({
         rawValue={value}
         renderDefault={getPageBlockRenderDefault(block, control.path)}
         commitActiveOption={device !== "desktop" && !override}
+        comboboxFilterValue={comboboxFilterValue}
         onCommit={(nextValue) => onChange(control, nextValue)}
       />
     </ResponsiveControlShell>
@@ -4399,6 +4536,160 @@ const mediaControlAccept: Record<string, readonly string[]> = {
 };
 
 /**
+ * Resolves one canvas collection preview source through the cached admin
+ * clients (TASK-457): the content types list gives id -> slug/name, the
+ * per-type entries list gives the published entries the canvas projects. A
+ * missing content type resolves to `null` (the fail-closed preview binding).
+ */
+const loadCollectionPreviewSource = async (
+  contentTypeId: string
+): Promise<PageEditorCollectionPreviewSource> => {
+  const contentTypes = await listContentTypesCached();
+  const contentType = contentTypes.find((candidate) => candidate.id === contentTypeId);
+  if (!contentType) return null;
+  const entries = await listEntriesCached(contentType.slug);
+  return {
+    contentType: { id: contentType.id, name: contentType.name, slug: contentType.slug },
+    entries,
+  };
+};
+
+/**
+ * Saved listing queries are SCOPED to one content type (TASK-457): only
+ * entry-sourced queries explicitly targeting the picked `contentTypeId`
+ * resolve as options; with no content type picked the list is honestly empty
+ * (the combobox shows the source's empty-state copy).
+ */
+const filterListingQueryOptions = (
+  queries: readonly ListingQueryRecord[],
+  contentTypeId: string | null
+): ComboboxControlOption[] =>
+  contentTypeId
+    ? queries
+        .filter(
+          (record) =>
+            record.query.source === "entries" &&
+            record.query.sourceConfig.contentTypeId === contentTypeId
+        )
+        .map((record) => ({ value: record.id, label: record.name }))
+    : [];
+
+/**
+ * Dynamic option sources for registry combobox controls (TASK-456/457). The
+ * registry/adapter only NAME a source; this map is the editor-shell owner
+ * that wires each source onto its cached admin client (cache-hydrate first,
+ * cached fetch for revalidation). Values are stored ids, labels are names.
+ * `filterValue` carries the sibling-prop scope for filtered sources
+ * (`filterBy` in the registry); unfiltered sources ignore it.
+ */
+const comboboxOptionsSources: Record<
+  PageEditorControlOptionsSource,
+  {
+    getCachedOptions: (filterValue: string | null) => ComboboxControlOption[] | null;
+    listOptions: (filterValue: string | null) => Promise<ComboboxControlOption[]>;
+  }
+> = {
+  forms: {
+    getCachedOptions: () =>
+      getCachedForms()?.map((form) => ({ value: form.id, label: form.name })) ?? null,
+    listOptions: async () =>
+      (await listFormsCached()).map((form) => ({ value: form.id, label: form.name })),
+  },
+  contentTypes: {
+    getCachedOptions: () =>
+      getCachedContentTypes()?.map((type) => ({ value: type.id, label: type.name })) ?? null,
+    listOptions: async () =>
+      (await listContentTypesCached()).map((type) => ({ value: type.id, label: type.name })),
+  },
+  listingQueries: {
+    getCachedOptions: (filterValue) => {
+      const cached = getCachedListingQueries();
+      return cached ? filterListingQueryOptions(cached, filterValue) : null;
+    },
+    listOptions: async (filterValue) =>
+      filterListingQueryOptions(await listListingQueriesCached(), filterValue),
+  },
+  listingTemplates: {
+    getCachedOptions: () =>
+      getCachedListingTemplates()?.map((template) => ({
+        value: template.id,
+        label: template.name,
+      })) ?? null,
+    listOptions: async () =>
+      (await listListingTemplatesCached()).map((template) => ({
+        value: template.id,
+        label: template.name,
+      })),
+  },
+};
+
+/**
+ * Registry combobox field: hydrates options synchronously from the admin
+ * cache when available and revalidates through the cached list call. Commits
+ * the picked id (or `null` from the "None" row) straight through the normal
+ * control write path — stored value shapes stay schema-owned. Filtered
+ * sources (TASK-457, e.g. listing queries scoped by `contentTypeId`) key the
+ * resolved lists by filter value so a scope switch never shows the previous
+ * scope's options.
+ */
+const ToolbarComboboxField = ({
+  label,
+  model,
+  rawValue,
+  filterValue = null,
+  onCommit,
+}: {
+  label: string;
+  model: Extract<PageEditorControlUiModel, { kind: "combobox" }>;
+  rawValue: unknown;
+  /** Current value of the registry `filterBy` sibling prop, if any. */
+  filterValue?: string | null;
+  onCommit: (value: string | null) => void;
+}) => {
+  const source = comboboxOptionsSources[model.optionsSource];
+  const filterKey = filterValue ?? "";
+  const [resolvedByFilter, setResolvedByFilter] = useState<Record<string, ComboboxControlOption[]>>(
+    {}
+  );
+  useEffect(() => {
+    let active = true;
+    source
+      .listOptions(filterKey.length > 0 ? filterKey : null)
+      .then((items) => {
+        if (active) {
+          setResolvedByFilter((current) => ({ ...current, [filterKey]: items }));
+        }
+      })
+      .catch(() => {
+        // Load failures keep the cached (or empty) list; the stored value
+        // stays untouched and surfaces as dangling until options resolve.
+        if (active) {
+          setResolvedByFilter((current) =>
+            filterKey in current ? current : { ...current, [filterKey]: [] }
+          );
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [source, filterKey]);
+  const options =
+    resolvedByFilter[filterKey] ?? source.getCachedOptions(filterKey.length > 0 ? filterKey : null);
+  return (
+    <ComboboxControl
+      label={label}
+      value={typeof rawValue === "string" && rawValue.length > 0 ? rawValue : null}
+      options={options ?? []}
+      placeholder={model.placeholder}
+      allowNull={model.allowNull}
+      loading={options === null || options === undefined}
+      {...(model.emptyMessage ? { emptyMessage: model.emptyMessage } : {})}
+      onChange={onCommit}
+    />
+  );
+};
+
+/**
  * Maps a registry control through the pure UI-model adapter onto the dedicated
  * floating-inspector primitives. Stored value shapes are preserved: segmented
  * and select emit the stored option token, toggles emit booleans, sliders emit
@@ -4410,10 +4701,16 @@ const RegistryControlWidget = ({
   rawValue,
   renderDefault,
   commitActiveOption = false,
+  comboboxFilterValue = null,
   onCommit,
 }: {
   control: PageEditorControlDefinition;
   rawValue: unknown;
+  /**
+   * Current value of the registry `filterBy` sibling prop for combobox
+   * controls with a scoped source (TASK-457); `null` when unscoped or unset.
+   */
+  comboboxFilterValue?: string | null;
   /**
    * Effective render default for the field when the document stores no value
    * (`pageBlockRenderDefaults`, owner finding #9 round 3). Display-only: the
@@ -4457,6 +4754,18 @@ const RegistryControlWidget = ({
           options={model.options}
           optionLabels={model.labels}
           onChange={(nextValue) => onCommit(coerceControlFieldValue(control, nextValue))}
+        />
+      );
+    case "combobox":
+      // Dynamic reference picker (TASK-456): emits the stored id, or the
+      // explicit `null` the nullable schema stores for "no selection".
+      return (
+        <ToolbarComboboxField
+          label={control.label}
+          model={model}
+          rawValue={rawValue}
+          filterValue={comboboxFilterValue}
+          onCommit={(nextValue) => onCommit(nextValue)}
         />
       );
     case "toggle":

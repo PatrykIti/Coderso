@@ -147,6 +147,20 @@ test("mapSettingsRouteError preserves known settings contract errors", () => {
   expect(mapped.message).toBe("Unknown setting key");
 });
 
+test("mapSettingsRouteError maps site shell reference errors to 400 responses", () => {
+  const menuError = mapSettingsRouteError(new Error("site_shell_menu_not_found"));
+  expect(menuError).toBeInstanceOf(ApiError);
+  expect(menuError.code).toBe("site_shell_menu_not_found");
+  expect(menuError.status).toBe(400);
+  expect(menuError.message).toBe("Navigation menu not found");
+
+  const templateError = mapSettingsRouteError(new Error("site_shell_template_not_found"));
+  expect(templateError).toBeInstanceOf(ApiError);
+  expect(templateError.code).toBe("site_shell_template_not_found");
+  expect(templateError.status).toBe(400);
+  expect(templateError.message).toBe("Footer template not found");
+});
+
 test("mapSettingsRouteError hides unexpected raw query errors", () => {
   const mapped = mapSettingsRouteError(
     new Error('Failed query: select "key", "value" from "settings"')

@@ -307,13 +307,22 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cache bus: `settings:redacted`
   - Prefetch: `/settings` warms `settings:redacted`
 - Site settings
-  - UI: `core/admin/ui/site/SiteSettingsPage.tsx`
+  - UI: `core/admin/ui/site/SiteSettingsPage.tsx` (+ Site shell card
+    `core/admin/ui/site/SiteShellCard.tsx`, TASK-455)
   - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
     `listPagesCached`, `getCachedPages`, `listContentTypesCached`,
-    `getCachedContentTypes`
-  - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`
-  - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`, and
-    `contentTypes:list` with `{ force: false }`
+    `getCachedContentTypes`, `listMenusCached`, `getCachedMenus`,
+    `listPageTemplatesCached`, `getCachedPageTemplates`
+  - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`,
+    `menus:list`, `pageTemplates:list`
+  - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`,
+    `contentTypes:list`, `menus:list`, and `pageTemplates:list` with
+    `{ force: false }`
+  - Server-side invalidation trigger: settings writes/deletes touching
+    `site.navigationMenuId` or `site.footerTemplateId` clear the server-side
+    public site HTML cache (`clearSiteCache()` via
+    `core/services/settings/settingsService.ts`) because cached public pages
+    embed the rendered site shell
   - Safety: only redacted/non-secret Settings values are stored in
     `settings:redacted`; credential-bearing Settings endpoints remain uncached
     in browser storage.
@@ -366,4 +375,4 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - `/tools/import-export` -> `listImportHistoryCached`
 - `/redirects` -> `listRedirectsCached`
 - `/settings` -> `getSettingsCached`
-- `/settings/site` -> `getSiteSettingsCached`, `listPagesCached`, `listContentTypesCached`
+- `/settings/site` -> `getSiteSettingsCached`, `listPagesCached`, `listContentTypesCached`, `listMenusCached`, `listPageTemplatesCached`

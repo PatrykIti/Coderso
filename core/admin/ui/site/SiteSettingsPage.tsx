@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, Eye, Gauge, Home, LayoutList, Link2, Timer } from "lucide-react";
+import {
+  CheckCircle2,
+  Eye,
+  Gauge,
+  Home,
+  LayoutList,
+  Link2,
+  PanelsTopLeft,
+  Timer,
+} from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -20,12 +29,18 @@ import {
   listContentTypesCached,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
+import { getCachedMenus, listMenusCached, type MenuSummary } from "@/services/menusClient";
 import {
   getCachedPages,
   listPagesCached,
   previewPage,
   type PageSummary,
 } from "@/services/pagesClient";
+import {
+  getCachedPageTemplates,
+  listPageTemplatesCached,
+  type PageTemplateSummary,
+} from "@/services/pageTemplatesClient";
 import {
   getCachedSiteSettings,
   getSiteSettingsCached,
@@ -48,6 +63,11 @@ import { cn } from "@/lib/utils";
 
 import { SiteRouteEditor } from "./SiteRouteEditor";
 import {
+  SiteShellCard,
+  resolveSiteShellFieldErrors,
+  type SiteShellFieldErrors,
+} from "./SiteShellCard";
+import {
   buildDefaultRoute,
   normalizeDetailPageIdInput,
   mergeContentRoutes,
@@ -63,12 +83,14 @@ type SiteSettingsForm = {
   adminRedirectEnabled: boolean;
   homepageId: string | null;
   notFoundPageId: string | null;
+  navigationMenuId: string | null;
+  footerTemplateId: string | null;
   previewEnabled: boolean;
   cacheTtlSeconds: string;
   contentRoutes: SiteContentRouteForm[];
 };
 
-type SiteSectionId = "base" | "pages" | "preview" | "routes" | "cache" | "performance";
+type SiteSectionId = "base" | "pages" | "shell" | "preview" | "routes" | "cache" | "performance";
 
 const SITE_SECTIONS: Array<{
   id: SiteSectionId;
@@ -87,6 +109,12 @@ const SITE_SECTIONS: Array<{
     title: "Homepage & 404",
     description: "Pick the default public entry points.",
     icon: Home,
+  },
+  {
+    id: "shell",
+    title: "Site shell",
+    description: "Global navigation menu and footer template.",
+    icon: PanelsTopLeft,
   },
   {
     id: "preview",
@@ -121,6 +149,8 @@ const defaultForm: SiteSettingsForm = {
   adminRedirectEnabled: false,
   homepageId: null,
   notFoundPageId: null,
+  navigationMenuId: null,
+  footerTemplateId: null,
   previewEnabled: true,
   cacheTtlSeconds: "30",
   contentRoutes: [],
@@ -133,6 +163,8 @@ const toFormValues = (settings: SiteSettingsResponse): SiteSettingsForm => ({
   adminRedirectEnabled: settings.adminRedirectEnabled ?? false,
   homepageId: settings.homepageId ?? null,
   notFoundPageId: settings.notFoundPageId ?? null,
+  navigationMenuId: settings.navigationMenuId ?? null,
+  footerTemplateId: settings.footerTemplateId ?? null,
   previewEnabled: settings.previewEnabled ?? true,
   cacheTtlSeconds: `${settings.cacheTtlSeconds ?? 30}`,
   contentRoutes: settings.contentRoutes ?? [],
@@ -150,6 +182,8 @@ const resolveInitialSiteSettingsState = () => {
   const settings = getCachedSiteSettings();
   const pages = getCachedPages();
   const contentTypes = getCachedContentTypes();
+  const menus = getCachedMenus();
+  const pageTemplates = getCachedPageTemplates();
   const resolvedContentTypes = contentTypes ?? [];
   const form = settings ? toLoadedForm(settings, resolvedContentTypes) : defaultForm;
   return {
@@ -157,10 +191,14 @@ const resolveInitialSiteSettingsState = () => {
     savedForm: form,
     pages: pages ?? [],
     contentTypes: resolvedContentTypes,
+    menus: menus ?? [],
+    pageTemplates: pageTemplates ?? [],
     status: settings ? ("ready" as const) : ("loading" as const),
     hasSettingsCache: Boolean(settings),
     hasPagesCache: Boolean(pages),
     hasContentTypesCache: Boolean(contentTypes),
+    hasMenusCache: Boolean(menus),
+    hasPageTemplatesCache: Boolean(pageTemplates),
   };
 };
 
@@ -223,6 +261,8 @@ const classifySiteSettingsRisk = (before: SiteSettingsForm, after: SiteSettingsF
   if (before.notFoundPageId !== after.notFoundPageId) {
     risks.push("404 route");
   }
+  // Site shell changes (navigationMenuId/footerTemplateId) are content-level
+  // and fail closed on the public site, so they save without risk review.
   if (before.previewEnabled !== after.previewEnabled) {
     risks.push("Preview access");
   }
@@ -238,11 +278,16 @@ export function SiteSettingsPage() {
   const [savedForm, setSavedForm] = useState<SiteSettingsForm>(initialState.savedForm);
   const [pages, setPages] = useState<PageSummary[]>(initialState.pages);
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>(initialState.contentTypes);
+  const [menus, setMenus] = useState<MenuSummary[]>(initialState.menus);
+  const [pageTemplates, setPageTemplates] = useState<PageTemplateSummary[]>(
+    initialState.pageTemplates
+  );
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">(initialState.status);
   const [error, setError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [shellFieldErrors, setShellFieldErrors] = useState<SiteShellFieldErrors>({});
   const [saving, setSaving] = useState(false);
   const [activeSection, setActiveSection] = useState<SiteSectionId>("base");
   const [pendingRiskReview, setPendingRiskReview] = useState<string[] | null>(null);
@@ -250,6 +295,8 @@ export function SiteSettingsPage() {
   const hasSettingsCacheRef = useRef(initialState.hasSettingsCache);
   const hasPagesCacheRef = useRef(initialState.hasPagesCache);
   const hasContentTypesCacheRef = useRef(initialState.hasContentTypesCache);
+  const hasMenusCacheRef = useRef(initialState.hasMenusCache);
+  const hasPageTemplatesCacheRef = useRef(initialState.hasPageTemplatesCache);
   const isDirtyRef = useRef(false);
   const formRef = useRef(initialState.form);
   const contentTypesRef = useRef(initialState.contentTypes);
@@ -261,6 +308,10 @@ export function SiteSettingsPage() {
     const contentTypesMountOptions = resolveListMountRefreshOptions(
       hasContentTypesCacheRef.current
     );
+    const menusMountOptions = resolveListMountRefreshOptions(hasMenusCacheRef.current);
+    const pageTemplatesMountOptions = resolveListMountRefreshOptions(
+      hasPageTemplatesCacheRef.current
+    );
 
     if (!settingsHadCache) {
       setStatus("loading");
@@ -270,8 +321,10 @@ export function SiteSettingsPage() {
       getSiteSettingsCached({ force: settingsHadCache }),
       listPagesCached({ force: pagesMountOptions.force }),
       listContentTypesCached({ force: contentTypesMountOptions.force }),
+      listMenusCached({ force: menusMountOptions.force }),
+      listPageTemplatesCached({ force: pageTemplatesMountOptions.force }),
     ])
-      .then(([settings, pagesResult, typesResult]) => {
+      .then(([settings, pagesResult, typesResult, menusResult, pageTemplatesResult]) => {
         if (!active) return;
         const loadedForm = toLoadedForm(settings, typesResult);
         if (!isDirtyRef.current) {
@@ -280,9 +333,13 @@ export function SiteSettingsPage() {
         }
         setPages(pagesResult);
         setContentTypes(typesResult);
+        setMenus(menusResult);
+        setPageTemplates(pageTemplatesResult);
         hasSettingsCacheRef.current = true;
         hasPagesCacheRef.current = true;
         hasContentTypesCacheRef.current = true;
+        hasMenusCacheRef.current = true;
+        hasPageTemplatesCacheRef.current = true;
         setStatus("ready");
       })
       .catch((err) => {
@@ -358,6 +415,26 @@ export function SiteSettingsPage() {
             setSavedForm(next);
           })
           .catch(() => undefined);
+        return;
+      }
+
+      if (event.key === cacheKeys.menusList) {
+        listMenusCached({ force: true })
+          .then((items) => {
+            setMenus(items);
+            hasMenusCacheRef.current = true;
+          })
+          .catch(() => undefined);
+        return;
+      }
+
+      if (event.key === cacheKeys.pageTemplatesList) {
+        listPageTemplatesCached({ force: true })
+          .then((items) => {
+            setPageTemplates(items);
+            hasPageTemplatesCacheRef.current = true;
+          })
+          .catch(() => undefined);
       }
     });
   }, []);
@@ -396,6 +473,7 @@ export function SiteSettingsPage() {
     setSaveError(null);
     setSaveSuccess(null);
     setActionError(null);
+    setShellFieldErrors({});
     setSaving(true);
     try {
       const normalizedRoutes = form.contentRoutes.map((route) => ({
@@ -411,6 +489,8 @@ export function SiteSettingsPage() {
         adminRedirectEnabled: form.adminRedirectEnabled,
         homepageId: form.homepageId,
         notFoundPageId: form.notFoundPageId,
+        navigationMenuId: form.navigationMenuId,
+        footerTemplateId: form.footerTemplateId,
         previewEnabled: form.previewEnabled,
         cacheTtlSeconds: Math.max(0, Math.floor(cacheTtlValue || 0)),
         contentRoutes: normalizedRoutes,
@@ -426,6 +506,7 @@ export function SiteSettingsPage() {
     } catch (err) {
       const message = isApiClientError(err) ? err.message : "Failed to save site settings.";
       setSaveError(message);
+      setShellFieldErrors(resolveSiteShellFieldErrors(err));
       return false;
     } finally {
       setSaving(false);
@@ -689,6 +770,27 @@ export function SiteSettingsPage() {
                       ) : null}
                     </CardContent>
                   </Card>
+                ) : null}
+
+                {activeSection === "shell" ? (
+                  <SiteShellCard
+                    values={{
+                      navigationMenuId: form.navigationMenuId,
+                      footerTemplateId: form.footerTemplateId,
+                    }}
+                    menus={menus}
+                    templates={pageTemplates}
+                    errors={shellFieldErrors}
+                    disabled={busy}
+                    onChange={(next) => {
+                      setShellFieldErrors({});
+                      setForm((prev) => ({
+                        ...prev,
+                        navigationMenuId: next.navigationMenuId,
+                        footerTemplateId: next.footerTemplateId,
+                      }));
+                    }}
+                  />
                 ) : null}
 
                 {activeSection === "preview" ? (

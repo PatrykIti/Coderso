@@ -1,7 +1,7 @@
 import { eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { settings } from "../../db/schema";
-import { invalidateContentRouteCacheTransition } from "../../site/cache/siteCache";
+import { clearSiteCache, invalidateContentRouteCacheTransition } from "../../site/cache/siteCache";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import {
@@ -64,6 +64,8 @@ const DEFAULT_SETTINGS = {
   "site.adminRedirectEnabled": false,
   "site.homepageId": null as string | null,
   "site.notFoundPageId": null as string | null,
+  "site.navigationMenuId": null as string | null,
+  "site.footerTemplateId": null as string | null,
   "site.previewEnabled": true,
   "site.contentRoutes": DEFAULT_CONTENT_ROUTES,
   "site.cacheTtlSeconds": 30,
@@ -104,6 +106,30 @@ const isBaseUrlKey = (key: SettingKey) =>
 
 const isAdminPathKey = (key: SettingKey) => key === "site.adminPath";
 const isAdminRedirectKey = (key: SettingKey) => key === "site.adminRedirectEnabled";
+
+const isOptionalIdSettingKey = (key: SettingKey) =>
+  key === "site.homepageId" ||
+  key === "site.notFoundPageId" ||
+  key === "site.navigationMenuId" ||
+  key === "site.footerTemplateId";
+
+const isSiteShellSettingKey = (key: SettingKey) =>
+  key === "site.navigationMenuId" || key === "site.footerTemplateId";
+
+/**
+ * The public pages cache stores fully rendered HTML that embeds the global
+ * site shell (TASK-455). Writes (or deletes) touching a shell reference key
+ * must clear the whole site cache so header/footer changes propagate on the
+ * next render instead of waiting out the TTL.
+ */
+const invalidateSiteShellCachesForKeys = (keys: Iterable<SettingKey>) => {
+  for (const key of keys) {
+    if (isSiteShellSettingKey(key)) {
+      clearSiteCache();
+      return;
+    }
+  }
+};
 
 export function resolveSettingKey(key: string): SettingKey {
   const normalized = SETTING_KEY_ALIASES[key as keyof typeof SETTING_KEY_ALIASES] ?? key;
@@ -369,7 +395,7 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     return value;
   }
 
-  if (key === "site.homepageId" || key === "site.notFoundPageId") {
+  if (isOptionalIdSettingKey(key)) {
     return normalizeOptionalIdValue(value);
   }
 
@@ -574,8 +600,8 @@ export async function listSettings(): Promise<SettingValueMap> {
       continue;
     }
 
-    if (key === "site.homepageId" || key === "site.notFoundPageId") {
-      merged[key] = normalizeOptionalId(row.value);
+    if (isOptionalIdSettingKey(key)) {
+      mergedByKey[key] = normalizeOptionalId(row.value);
       continue;
     }
 
@@ -630,7 +656,7 @@ export async function getSetting(key: string) {
   if (isAdminRedirectKey(normalizedKey)) {
     return Boolean(row.value);
   }
-  if (normalizedKey === "site.homepageId" || normalizedKey === "site.notFoundPageId") {
+  if (isOptionalIdSettingKey(normalizedKey)) {
     return normalizeOptionalId(row.value);
   }
   if (normalizedKey === "site.previewEnabled") {
@@ -706,6 +732,8 @@ export async function setSetting(key: string, value: unknown) {
     }
   }
 
+  invalidateSiteShellCachesForKeys([normalizedKey]);
+
   return row;
 }
 
@@ -772,6 +800,8 @@ export async function setSettings(values: Record<string, unknown>) {
     }
   }
 
+  invalidateSiteShellCachesForKeys(validated.map((entry) => entry.key));
+
   return listSettings();
 }
 
@@ -835,6 +865,8 @@ export async function setSettingsTx(tx: DbTransaction, values: Record<string, un
       });
     }
   }
+
+  invalidateSiteShellCachesForKeys(validated.map((entry) => entry.key));
 }
 
 export async function deleteSetting(key: string) {
@@ -855,6 +887,8 @@ export async function deleteSetting(key: string) {
       });
     }
   }
+
+  invalidateSiteShellCachesForKeys([normalizedKey]);
 
   return row ?? null;
 }

@@ -14,6 +14,8 @@ import {
   normalizePageDocumentV2ForWrite,
   normalizeStoredPageDocumentV2ForRead,
   pageBlockCapabilities,
+  pageBlockDefaultProps,
+  pageBlockPropKeys,
   pageBlockWidths,
   pageBlockSlotKeys,
   pageDividerTones,
@@ -599,6 +601,50 @@ describe("PageDocumentV2", () => {
     });
   });
 
+  test("form block props round-trip with schema-owned nullable formId (TASK-456)", () => {
+    expect(pageBlockPropKeys.form).toEqual(["formId", "title"]);
+    expect(pageBlockDefaultProps.form).toEqual({ formId: null, title: "" });
+    // Palette default: a fresh form block starts unselected (formId null).
+    expect(createPageBlockV2("form").props).toEqual({ formId: null, title: "" });
+
+    const document = buildDocument();
+    document.sections[0]!.blocks = [
+      createPageBlockV2("form", {
+        id: "blk_form_picked",
+        props: { formId: "  form-contact  ", title: "  Contact us  " },
+      }),
+      createPageBlockV2("form", {
+        id: "blk_form_cleared",
+        props: { formId: null, title: "" },
+      }),
+    ];
+    const written = normalizePageDocumentV2ForWrite(document);
+    expect(written.sections[0]?.blocks[0]?.props).toEqual({
+      formId: "form-contact",
+      title: "Contact us",
+    });
+    expect(written.sections[0]?.blocks[1]?.props).toEqual({ formId: null, title: "" });
+
+    // Stored read keeps the same values non-destructively.
+    const read = normalizeStoredPageDocumentV2ForRead(written);
+    expect(read.sections[0]?.blocks[0]?.props).toEqual({
+      formId: "form-contact",
+      title: "Contact us",
+    });
+
+    // Unknown form prop keys stay rejected on fresh writes.
+    const unknownProp = buildDocument();
+    unknownProp.sections[0]!.blocks = [
+      {
+        ...createPageBlockV2("form"),
+        props: { formId: null, title: "", submitLabel: "Send" },
+      },
+    ];
+    expect(() => normalizePageDocumentV2ForWrite(unknownProp)).toThrow(
+      "Unknown page document field: sections.0.blocks.0.props.submitLabel"
+    );
+  });
+
   test("normalizes bounded recursive layout block slots", () => {
     const document = buildDocument();
     document.sections[0]!.blocks = [
@@ -1136,19 +1182,26 @@ describe("PageDocumentV2", () => {
     });
     expect("reason" in pageBlockCapabilities.columns).toBe(false);
     expect(pageBlockCapabilities.icon.reason).toBe("icon-runtime-renderer-pending");
+    // TASK-457: the collection block is author-insertable (controls shipped)
+    // while staying outside the assistant emission vocabulary.
     expect(pageBlockCapabilities.collection).toMatchObject({
-      editorInsertable: false,
-      insertable: false,
+      editorInsertable: true,
+      insertable: true,
       assistantEmittable: false,
       runtimeRenderer: "real",
       publicDataBinding: "scoped-read-only",
-      reason: "collection-editor-controls-pending",
     });
+    expect("reason" in pageBlockCapabilities.collection).toBe(false);
+    // TASK-456: the form block is author-insertable (controls shipped) while
+    // staying outside the assistant emission vocabulary.
     expect(pageBlockCapabilities.form).toMatchObject({
+      editorInsertable: true,
+      insertable: true,
+      assistantEmittable: false,
       runtimeRenderer: "real",
       publicDataBinding: "scoped-read-only",
-      reason: "form-editor-controls-pending",
     });
+    expect("reason" in pageBlockCapabilities.form).toBe(false);
     expect(pageBlockCapabilities.embed).toMatchObject({
       runtimeRenderer: "real",
       publicDataBinding: "scoped-read-only",

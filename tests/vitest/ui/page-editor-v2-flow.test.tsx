@@ -190,6 +190,163 @@ const mediaLibraryState = vi.hoisted(() => ({
   ],
 }));
 
+// Admin forms client backing the form-block combobox + canvas preview
+// (TASK-456): two published forms plus one detail with real fields.
+const formsClientState = vi.hoisted(() => {
+  const buildForm = (id: string, name: string) => ({
+    id,
+    name,
+    slug: id,
+    status: "published",
+    description: null,
+    successMessage: "Thanks!",
+    successRedirectUrl: null,
+    submissionAccess: "public" as const,
+    settings: { layoutMode: "single", saveProgress: false, stepTitles: [] },
+    createdAt: "2026-03-08T09:00:00.000Z",
+    updatedAt: "2026-03-08T09:00:00.000Z",
+  });
+  const state = {
+    forms: [buildForm("form-contact", "Contact"), buildForm("form-quote", "Quote request")],
+    detailRequests: [] as string[],
+    listForms: vi.fn(async () => state.forms),
+    getFormDetail: vi.fn(async (id: string) => {
+      state.detailRequests.push(id);
+      const form = state.forms.find((candidate) => candidate.id === id);
+      if (!form) return null;
+      return {
+        form,
+        fields: [
+          {
+            id: `${id}-email`,
+            type: "email",
+            label: "Email address",
+            name: "email",
+            required: true,
+            settings: {},
+            orderIndex: 0,
+          },
+        ],
+      };
+    }),
+    reset() {
+      state.forms = [
+        buildForm("form-contact", "Contact"),
+        buildForm("form-quote", "Quote request"),
+      ];
+      state.detailRequests = [];
+      state.listForms.mockClear();
+      state.getFormDetail.mockClear();
+    },
+  };
+  return state;
+});
+
+// Admin content/listings clients backing the collection-block comboboxes +
+// canvas preview (TASK-457): two content types with published entries, saved
+// queries scoped per type, and one listing template.
+const collectionClientsState = vi.hoisted(() => {
+  const buildContentTypes = () => [
+    { id: "ct-services", name: "Services", slug: "services" },
+    { id: "ct-projects", name: "Projects", slug: "projects" },
+  ];
+  const buildEntries = (): Record<string, unknown[]> => ({
+    services: [
+      {
+        id: "entry-audit",
+        title: "Site audit",
+        slug: "site-audit",
+        status: "published",
+        data: { summary: "We review your whole site." },
+        updatedAt: "2026-05-01T09:00:00.000Z",
+        publishedAt: "2026-05-01T09:00:00.000Z",
+      },
+      {
+        id: "entry-care",
+        title: "Care plan",
+        slug: "care-plan",
+        status: "published",
+        data: {},
+        updatedAt: "2026-04-01T09:00:00.000Z",
+        publishedAt: "2026-04-01T09:00:00.000Z",
+      },
+      {
+        id: "entry-draft",
+        title: "Unpublished service",
+        slug: "unpublished-service",
+        status: "draft",
+        data: {},
+        updatedAt: "2026-05-20T09:00:00.000Z",
+      },
+    ],
+    projects: [],
+  });
+  const buildQueries = () => [
+    {
+      id: "query-services",
+      name: "Featured services",
+      description: null,
+      query: {
+        source: "entries",
+        sourceConfig: { contentTypeId: "ct-services" },
+        filters: [],
+        sort: [],
+        pagination: { limit: 10, offset: 0 },
+        fields: [],
+      },
+      createdAt: "2026-03-08T09:00:00.000Z",
+      updatedAt: "2026-03-08T09:00:00.000Z",
+    },
+    {
+      id: "query-projects",
+      name: "Projects feed",
+      description: null,
+      query: {
+        source: "entries",
+        sourceConfig: { contentTypeId: "ct-projects" },
+        filters: [],
+        sort: [],
+        pagination: { limit: 10, offset: 0 },
+        fields: [],
+      },
+      createdAt: "2026-03-08T09:00:00.000Z",
+      updatedAt: "2026-03-08T09:00:00.000Z",
+    },
+  ];
+  const buildTemplates = () => [
+    {
+      id: "tpl-grid",
+      name: "Service grid",
+      slug: "service-grid",
+      description: null,
+      layout: "grid",
+      createdAt: "2026-03-08T09:00:00.000Z",
+      updatedAt: "2026-03-08T09:00:00.000Z",
+    },
+  ];
+  const state = {
+    contentTypes: buildContentTypes(),
+    entriesBySlug: buildEntries(),
+    listingQueries: buildQueries(),
+    listingTemplates: buildTemplates(),
+    listContentTypes: vi.fn(async () => state.contentTypes),
+    listEntries: vi.fn(async (slug: string) => state.entriesBySlug[slug] ?? []),
+    listListingQueries: vi.fn(async () => state.listingQueries),
+    listListingTemplates: vi.fn(async () => state.listingTemplates),
+    reset() {
+      state.contentTypes = buildContentTypes();
+      state.entriesBySlug = buildEntries();
+      state.listingQueries = buildQueries();
+      state.listingTemplates = buildTemplates();
+      state.listContentTypes.mockClear();
+      state.listEntries.mockClear();
+      state.listListingQueries.mockClear();
+      state.listListingTemplates.mockClear();
+    },
+  };
+  return state;
+});
+
 // Admin settings payload backing the canvas site-token variables ("design.tokens").
 const siteSettingsState = vi.hoisted(() => ({
   settings: null as Record<string, unknown> | null,
@@ -368,6 +525,28 @@ vi.mock("@/utils/cacheBus", () => ({
 vi.mock("@/services/mediaClient", () => ({
   getCachedMedia: () => mediaLibraryState.items,
   listMediaCached: async () => mediaLibraryState.items,
+}));
+
+vi.mock("@/services/formsClient", () => ({
+  getCachedForms: () => null,
+  listFormsCached: formsClientState.listForms,
+  getFormDetailCached: formsClientState.getFormDetail,
+}));
+
+vi.mock("@/services/contentTypesClient", () => ({
+  getCachedContentTypes: () => null,
+  listContentTypesCached: collectionClientsState.listContentTypes,
+}));
+
+vi.mock("@/services/entriesClient", () => ({
+  listEntriesCached: collectionClientsState.listEntries,
+}));
+
+vi.mock("@/services/listingsClient", () => ({
+  getCachedListingQueries: () => null,
+  getCachedListingTemplates: () => null,
+  listListingQueriesCached: collectionClientsState.listListingQueries,
+  listListingTemplatesCached: collectionClientsState.listListingTemplates,
 }));
 
 vi.mock("@/ui/media/MediaPicker", () => ({
@@ -734,6 +913,8 @@ beforeEach(() => {
   toastState.success.mockClear();
   toastState.error.mockClear();
   siteSettingsState.reset();
+  formsClientState.reset();
+  collectionClientsState.reset();
   pageEditorState.cachedPage = createPage();
   pageEditorState.currentPage = createPage();
 });
@@ -1772,7 +1953,7 @@ test("PageEditor section inserter follows owner insertable section capabilities"
   }
 });
 
-test("PageEditor command palette catalog is frozen to 11 sections plus 14 blocks with gated titles absent", async () => {
+test("PageEditor command palette catalog is frozen to 11 sections plus 16 blocks with gated titles absent", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -1804,14 +1985,18 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 14 blocks
       "CTA",
       "Custom",
     ]);
+    // TASK-456 amendment: "Form" joined the block palette; TASK-457
+    // amendment: "Collection" joined it (16 blocks, final frozen catalog).
     expect(blockPaletteTitles).toEqual([
       "Heading",
       "Text",
       "Button",
       "Image",
       "Video",
+      "Form",
       "List",
       "Card",
+      "Collection",
       "Divider",
       "Spacer",
       "Statistic",
@@ -1820,18 +2005,20 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 14 blocks
       "Columns",
       "Group",
     ]);
-    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(25);
+    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(27);
 
     expect(sectionPaletteTitles).not.toContain("Template");
     expect(sectionPaletteTitles).not.toContain("Navigation");
+    // The collection SECTION stays gated: a listing layout is a section
+    // composed with the now-insertable collection BLOCK (composite-first).
     expect(sectionPaletteTitles).not.toContain("Collection");
     expect(sectionPaletteTitles).not.toContain("Filters");
+    // The lead-form SECTION stays gated: a lead-form layout is a section
+    // composed with the now-insertable form BLOCK (composite-first rule).
     expect(sectionPaletteTitles).not.toContain("Lead form");
     expect(sectionPaletteTitles).not.toContain("Embed");
 
     expect(blockPaletteTitles).not.toContain("Gallery");
-    expect(blockPaletteTitles).not.toContain("Form");
-    expect(blockPaletteTitles).not.toContain("Collection");
     expect(blockPaletteTitles).not.toContain("Embed");
     expect(blockPaletteTitles).not.toContain("Icon");
 
@@ -1840,6 +2027,190 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 14 blocks
     expect(pageBlockCapabilities.icon.insertable).toBe(false);
     expect(pageBlockCapabilities.icon.editorInsertable).toBe(false);
     expect(pageBlockCapabilities.icon.runtimeRenderer).toBe("placeholder");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inserts a form block, picks a form through the combobox, previews it inert, and saves the formId", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add block");
+    await flush();
+    clickButton(view.container, "Form");
+    await flush();
+
+    // Default props: formId null -> the canvas shows the pick-a-form state.
+    const canvasFormBlock = view.container.querySelector('[data-page-editor-block="form"]');
+    expect(canvasFormBlock).toBeTruthy();
+    expect(canvasFormBlock?.textContent).toContain(
+      "Pick a form in the Content panel to preview it here."
+    );
+
+    // The Content panel renders the dynamic combobox with options resolved
+    // from the cached admin forms client (id -> name).
+    const trigger = view.container.querySelector(
+      'button[data-page-editor-combobox-trigger="Form"]'
+    );
+    expect(trigger).toBeTruthy();
+    expect(trigger?.textContent).toContain("Pick a form");
+    React.act(() => {
+      trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(formsClientState.listForms).toHaveBeenCalled();
+
+    const optionValues = Array.from(
+      view.container.querySelectorAll("[data-page-editor-combobox-option]")
+    ).map((option) => option.getAttribute("data-page-editor-combobox-option"));
+    // Nullable schema (formId: null) surfaces the explicit "None" row.
+    expect(optionValues).toEqual(["none", "form-contact", "form-quote"]);
+
+    clickSelector(view.container, '[data-page-editor-combobox-option="form-contact"] button');
+    await flush();
+    await flush();
+
+    // Canvas preview: the shared form markup, inert (disabled fieldset) and
+    // fed by the cached form detail; the trigger now shows the form name.
+    expect(formsClientState.detailRequests).toContain("form-contact");
+    const preview = view.container.querySelector('[data-page-editor-form-preview="inert"]');
+    expect(preview).toBeTruthy();
+    expect(preview?.hasAttribute("disabled")).toBe(true);
+    expect(preview?.textContent).toContain("Email address");
+    expect(
+      view.container.querySelector('button[data-page-editor-combobox-trigger="Form"]')?.textContent
+    ).toContain("Contact");
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const savedFormBlock = savedDocument.sections[0]?.blocks.at(-1);
+    expect(savedFormBlock).toMatchObject({
+      type: "form",
+      props: { formId: "form-contact", title: "" },
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor inserts a collection block, binds type/query/template through scoped comboboxes, previews entries inert, and clears the query on type change", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  const comboboxTrigger = (label: string) =>
+    view.container.querySelector(`button[data-page-editor-combobox-trigger="${label}"]`);
+  const openCombobox = async (label: string) => {
+    const trigger = comboboxTrigger(label);
+    expect(trigger).toBeTruthy();
+    React.act(() => {
+      trigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+  };
+  const readOptionValues = () =>
+    Array.from(view.container.querySelectorAll("[data-page-editor-combobox-option]")).map(
+      (option) => option.getAttribute("data-page-editor-combobox-option")
+    );
+  const pickOption = async (value: string) => {
+    clickSelector(view.container, `[data-page-editor-combobox-option="${value}"] button`);
+    await flush();
+    await flush();
+  };
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add block");
+    await flush();
+    clickButton(view.container, "Collection");
+    await flush();
+
+    // Default props: contentTypeId null -> the canvas shows the pick-a-type
+    // empty state (the fail-closed authoring entry point).
+    const canvasCollectionBlock = view.container.querySelector(
+      '[data-page-editor-block="collection"]'
+    );
+    expect(canvasCollectionBlock).toBeTruthy();
+    expect(canvasCollectionBlock?.textContent).toContain(
+      "Pick a content type in the Content panel to preview entries here."
+    );
+
+    // The Content panel renders the three comboboxes plus the limit slider
+    // (bounded-number upgrade of the schema clamp 1..50).
+    expect(comboboxTrigger("Content type")?.textContent).toContain("Pick a content type");
+    expect(comboboxTrigger("Saved query")?.textContent).toContain("Pick a saved query");
+    expect(comboboxTrigger("Listing template")?.textContent).toContain("Pick a listing template");
+    const limitSlider = view.container.querySelector<HTMLInputElement>(
+      'input[data-page-editor-slider="Limit"]'
+    );
+    expect(limitSlider).toBeTruthy();
+    expect(limitSlider?.min).toBe("1");
+    expect(limitSlider?.max).toBe("50");
+
+    // With no content type picked, the scoped saved-query source is honestly
+    // empty: only the "None" row of the nullable schema remains.
+    await openCombobox("Saved query");
+    expect(readOptionValues()).toEqual(["none"]);
+    await openCombobox("Saved query"); // close again
+
+    // Pick the content type through the dynamic combobox (id -> name).
+    await openCombobox("Content type");
+    expect(collectionClientsState.listContentTypes).toHaveBeenCalled();
+    expect(readOptionValues()).toEqual(["none", "ct-services", "ct-projects"]);
+    await pickOption("ct-services");
+
+    // Canvas preview: the shared content-list markup fed by the cached
+    // clients, inert (pointer events off); published entries only, limit
+    // respected by the runtime-parity mapper.
+    expect(collectionClientsState.listEntries).toHaveBeenCalledWith("services");
+    const preview = view.container.querySelector('[data-page-editor-collection-preview="inert"]');
+    expect(preview).toBeTruthy();
+    expect(preview?.textContent).toContain("Site audit");
+    expect(preview?.textContent).toContain("Care plan");
+    expect(preview?.textContent).not.toContain("Unpublished service");
+    expect(comboboxTrigger("Content type")?.textContent).toContain("Services");
+
+    // The saved-query combobox is now scoped to the picked content type.
+    await openCombobox("Saved query");
+    expect(readOptionValues()).toEqual(["none", "query-services"]);
+    await pickOption("query-services");
+    expect(comboboxTrigger("Saved query")?.textContent).toContain("Featured services");
+
+    // Listing template picker resolves through the cached listings client.
+    await openCombobox("Listing template");
+    expect(readOptionValues()).toEqual(["none", "tpl-grid"]);
+    await pickOption("tpl-grid");
+    expect(comboboxTrigger("Listing template")?.textContent).toContain("Service grid");
+
+    // Switching the content type clears the scoped saved query in the same
+    // write: queries belong to one content type and must never dangle.
+    await openCombobox("Content type");
+    await pickOption("ct-projects");
+    expect(comboboxTrigger("Saved query")?.textContent).toContain("Pick a saved query");
+    await openCombobox("Saved query");
+    expect(readOptionValues()).toEqual(["none", "query-projects"]);
+    await openCombobox("Saved query"); // close again
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const savedCollectionBlock = savedDocument.sections[0]?.blocks.at(-1);
+    expect(savedCollectionBlock).toMatchObject({
+      type: "collection",
+      props: {
+        contentTypeId: "ct-projects",
+        queryId: null,
+        limit: 6,
+        templateId: "tpl-grid",
+      },
+    });
   } finally {
     view.cleanup();
   }

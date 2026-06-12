@@ -23,6 +23,8 @@ export type SiteSettingsResponse = {
   adminRedirectEnabled: boolean;
   homepageId: string | null;
   notFoundPageId: string | null;
+  navigationMenuId: string | null;
+  footerTemplateId: string | null;
   previewEnabled: boolean;
   cacheTtlSeconds: number;
   contentRoutes: SiteContentRoute[];
@@ -130,6 +132,8 @@ const resolveSiteSettings = (payload: Record<string, unknown>): SiteSettingsResp
     adminRedirectEnabled: normalizeOptionalBoolean(payload["site.adminRedirectEnabled"], false),
     homepageId: normalizeOptionalString(payload["site.homepageId"]),
     notFoundPageId: normalizeOptionalString(payload["site.notFoundPageId"]),
+    navigationMenuId: normalizeOptionalString(payload["site.navigationMenuId"]),
+    footerTemplateId: normalizeOptionalString(payload["site.footerTemplateId"]),
     previewEnabled: normalizeOptionalBoolean(payload["site.previewEnabled"], true),
     cacheTtlSeconds: Math.max(
       0,
@@ -255,6 +259,12 @@ export async function updateSiteSettings(update: SiteSettingsUpdate) {
   }
   if ("notFoundPageId" in update) {
     payload["site.notFoundPageId"] = normalizeOptionalIdInput(update.notFoundPageId);
+  }
+  if ("navigationMenuId" in update) {
+    payload["site.navigationMenuId"] = normalizeOptionalIdInput(update.navigationMenuId);
+  }
+  if ("footerTemplateId" in update) {
+    payload["site.footerTemplateId"] = normalizeOptionalIdInput(update.footerTemplateId);
   }
   if ("previewEnabled" in update) {
     payload["site.previewEnabled"] = update.previewEnabled;

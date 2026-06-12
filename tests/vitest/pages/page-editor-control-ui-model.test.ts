@@ -216,6 +216,64 @@ describe("page editor control ui model adapter", () => {
     }
   });
 
+  test("dynamic-source selects resolve to the frozen combobox model (TASK-456)", () => {
+    // The form block picker: the exact model contract the editor shell and
+    // the TASK-457 collection stage build against.
+    expect(resolveById("block.form.props.formId")).toEqual({
+      kind: "combobox",
+      optionsSource: "forms",
+      placeholder: "Pick a form",
+      allowNull: true,
+    });
+    // A dynamic source always wins over static options and never degrades to
+    // segmented pills, regardless of nullability.
+    expect(
+      resolvePageEditorControlUiModel(
+        makeControl({ input: "select", optionsSource: "forms", options: ["a", "b"] })
+      )
+    ).toEqual({
+      kind: "combobox",
+      optionsSource: "forms",
+      placeholder: "Pick a form",
+      allowNull: false,
+    });
+  });
+
+  test("collection block pickers resolve to the frozen combobox and slider models (TASK-457)", () => {
+    expect(resolveById("block.collection.props.contentTypeId")).toEqual({
+      kind: "combobox",
+      optionsSource: "contentTypes",
+      placeholder: "Pick a content type",
+      allowNull: true,
+    });
+    // The saved-query picker carries its sibling-prop scope and the scoped
+    // empty-state copy: the editor shell filters by the chosen content type.
+    expect(resolveById("block.collection.props.queryId")).toEqual({
+      kind: "combobox",
+      optionsSource: "listingQueries",
+      placeholder: "Pick a saved query",
+      allowNull: true,
+      filterBy: "contentTypeId",
+      emptyMessage: "No saved queries for this content type.",
+    });
+    expect(resolveById("block.collection.props.templateId")).toEqual({
+      kind: "combobox",
+      optionsSource: "listingTemplates",
+      placeholder: "Pick a listing template",
+      allowNull: true,
+    });
+    // Limit (schema clamp 1..50) rides the existing bounded-number slider
+    // upgrade: span 49 stays a plain slider with step 1 and an explicit
+    // unitless readout (an entry count, not pixels).
+    expect(resolveById("block.collection.props.limit")).toEqual({
+      kind: "slider",
+      min: 1,
+      max: 50,
+      step: 1,
+      unit: "",
+    });
+  });
+
   test("long option lists stay select models with labels", () => {
     const options = ["one", "two", "three", "four", "five", "six", "seven"] as const;
     const model = resolvePageEditorControlUiModel(makeControl({ input: "select", options }));

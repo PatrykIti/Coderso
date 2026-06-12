@@ -528,8 +528,22 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   "button",
   "image",
   "video",
+  // TASK-456: the form block is editor-insertable — its public runtime
+  // (scoped data binding, nonce/anti-abuse submit pipeline) shipped with
+  // TASK-418-06-L04 and the authoring controls (formId combobox + title)
+  // ship with this capability flip. The `lead-form` SECTION stays gated: a
+  // lead-form layout is a section composed with this block (composite-first
+  // product rule), so a dedicated section type would only add catalog noise.
+  "form",
   "list",
   "card",
+  // TASK-457: the collection block is editor-insertable — its public runtime
+  // (scoped read-only content-list binding) shipped with TASK-418-06-L04 and
+  // the authoring controls (contentTypeId/queryId/templateId comboboxes +
+  // limit slider) ship with this capability flip. The `collection` SECTION
+  // stays gated: a listing layout is a section composed with this block
+  // (composite-first product rule).
+  "collection",
   "divider",
   "spacer",
   "statistic",
@@ -557,8 +571,6 @@ const assistantEmittableBlockTypes = new Set<PageBlockType>([
 ]);
 const pageBlockCapabilityReasons: Partial<Record<PageBlockType, string>> = {
   gallery: "gallery-editor-controls-pending",
-  form: "form-editor-controls-pending",
-  collection: "collection-editor-controls-pending",
   embed: "embed-editor-controls-pending",
   icon: "icon-runtime-renderer-pending",
 };

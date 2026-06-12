@@ -1,4 +1,9 @@
 export { ColorSwatchControl, type ColorSwatchControlProps } from "./ColorSwatchControl";
+export {
+  ComboboxControl,
+  type ComboboxControlOption,
+  type ComboboxControlProps,
+} from "./ComboboxControl";
 export { MediaPickerControl, type MediaPickerControlProps } from "./MediaPickerControl";
 export { SegmentedControl, type SegmentedControlProps } from "./SegmentedControl";
 export { SliderControl, type SliderControlProps } from "./SliderControl";

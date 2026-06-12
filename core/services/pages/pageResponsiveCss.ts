@@ -278,6 +278,18 @@ type CollectorContext = {
   breakpoint: PageResponsiveCssBreakpoint;
   rules: string[];
   diagnostics: PageResponsiveCssDiagnostic[];
+  /** Optional trusted ancestor selector prepended to every emitted rule. */
+  selectorPrefix: string;
+};
+
+const pushRule = (
+  context: CollectorContext,
+  selector: string,
+  declarations: CssDeclaration[]
+): void => {
+  const scoped = context.selectorPrefix ? `${context.selectorPrefix} ${selector}` : selector;
+  const rule = renderRule(scoped, declarations);
+  if (rule) context.rules.push(rule);
 };
 
 const pushDiagnostic = (
@@ -616,12 +628,9 @@ const walkBlock = (block: PageBlockV2, context: CollectorContext, markupAbsent: 
       pushDiagnostic(context, "block", id, "*", "unsafe_scope_id");
     } else {
       const { frame, element, text } = collectBlockDeclarations(block, override, context);
-      const frameRule = renderRule(blockSelector(id), frame);
-      if (frameRule) context.rules.push(frameRule);
-      const elementRule = renderRule(blockElementSelector(id), element);
-      if (elementRule) context.rules.push(elementRule);
-      const textRule = renderRule(blockTextSelector(id), text);
-      if (textRule) context.rules.push(textRule);
+      pushRule(context, blockSelector(id), frame);
+      pushRule(context, blockElementSelector(id), element);
+      pushRule(context, blockTextSelector(id), text);
     }
   }
 
@@ -655,10 +664,8 @@ const walkSection = (section: PageSectionV2, context: CollectorContext) => {
       pushDiagnostic(context, "section", id, "*", "unsafe_scope_id");
     } else {
       const { content, root } = collectSectionDeclarations(section, override, context);
-      const rootRule = renderRule(sectionRootSelector(id), root);
-      if (rootRule) context.rules.push(rootRule);
-      const contentRule = renderRule(sectionContentSelector(id), content);
-      if (contentRule) context.rules.push(contentRule);
+      pushRule(context, sectionRootSelector(id), root);
+      pushRule(context, sectionContentSelector(id), content);
     }
   }
 
@@ -667,12 +674,40 @@ const walkSection = (section: PageSectionV2, context: CollectorContext) => {
   }
 };
 
-export const buildPageResponsiveCssPlan = (document: PageDocumentV2): PageResponsiveCssPlan => {
+export type PageResponsiveCssOptions = {
+  /**
+   * Trusted ancestor selector prepended (descendant combinator) to every
+   * emitted rule so a secondary document — e.g. the site-shell footer
+   * template (TASK-455) — can ride the same builder without its section/block
+   * ids colliding with the page document's rules. Callers must pass an owned
+   * literal; the value is validated against a conservative charset and the
+   * builder throws `page_responsive_css_scope_invalid` otherwise (callers
+   * already fail closed on builder errors).
+   */
+  scopeSelector?: string;
+};
+
+const SAFE_SCOPE_SELECTOR_PATTERN = /^[A-Za-z0-9 "'=\-_.#:[\]]+$/;
+
+const resolveSelectorPrefix = (options?: PageResponsiveCssOptions): string => {
+  const scope = options?.scopeSelector?.trim();
+  if (!scope) return "";
+  if (!SAFE_SCOPE_SELECTOR_PATTERN.test(scope)) {
+    throw new Error("page_responsive_css_scope_invalid");
+  }
+  return scope;
+};
+
+export const buildPageResponsiveCssPlan = (
+  document: PageDocumentV2,
+  options?: PageResponsiveCssOptions
+): PageResponsiveCssPlan => {
   const diagnostics: PageResponsiveCssDiagnostic[] = [];
   const mediaBlocks: string[] = [];
+  const selectorPrefix = resolveSelectorPrefix(options);
 
   for (const breakpoint of pageResponsiveCssBreakpoints) {
-    const context: CollectorContext = { breakpoint, rules: [], diagnostics };
+    const context: CollectorContext = { breakpoint, rules: [], diagnostics, selectorPrefix };
     for (const section of document.sections) {
       walkSection(section, context);
     }
@@ -685,5 +720,7 @@ export const buildPageResponsiveCssPlan = (document: PageDocumentV2): PageRespon
   return { css: mediaBlocks.join("\n"), diagnostics };
 };
 
-export const buildPageResponsiveCss = (document: PageDocumentV2): string =>
-  buildPageResponsiveCssPlan(document).css;
+export const buildPageResponsiveCss = (
+  document: PageDocumentV2,
+  options?: PageResponsiveCssOptions
+): string => buildPageResponsiveCssPlan(document, options).css;

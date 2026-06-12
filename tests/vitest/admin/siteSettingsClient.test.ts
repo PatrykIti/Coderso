@@ -119,6 +119,8 @@ test("getSiteSettings normalizes raw settings payload", async () => {
       adminRedirectEnabled: false,
       homepageId: "homepage",
       notFoundPageId: null,
+      navigationMenuId: null,
+      footerTemplateId: null,
       previewEnabled: true,
       cacheTtlSeconds: 0,
       contentRoutes: [
@@ -267,6 +269,8 @@ test("updateSiteSettings patches normalized payload with csrf token", async () =
       adminRedirectEnabled: true,
       homepageId: "home-1",
       notFoundPageId: "404-1",
+      navigationMenuId: null,
+      footerTemplateId: null,
       previewEnabled: false,
       cacheTtlSeconds: 91,
       contentRoutes: [

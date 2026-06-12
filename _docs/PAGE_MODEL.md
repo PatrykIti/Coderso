@@ -325,24 +325,60 @@ Runtime-renderable and insertable are related but not identical states:
   `reason: "gallery-editor-controls-pending"` until gallery controls and
   authoring tests ship in the same increment.
 - `collection`, `form`, and `embed` have real scoped public runtime renderers
-  with `publicDataBinding: "scoped-read-only"` and still remain not
-  editor-insertable or assistant-emittable. The public runtime resolves only
+  with `publicDataBinding: "scoped-read-only"`. The public runtime resolves only
   visible/authorized sections, maps collection props through the content-list
   resolver with `statusScope: "published"`, reuses the forms runtime projection
   without adding a write route, and renders embeds only as hardened provider
   iframes or sanitized inline markup. Missing or invalid resources fail closed
   without leaking internal ids or raw errors.
+- TASK-456 promoted `form` into the editor-insertable catalog: the Content
+  panel ships a `formId` combobox (dynamic `optionsSource: "forms"` resolved
+  by the editor shell through `listFormsCached()`, with an explicit "None" row
+  for the nullable schema and a dangling-value marker for deleted forms) plus
+  a `title` text control. The editor canvas renders the form block through
+  the shared renderer in `layoutMode: "canvas-device"` as an inert preview
+  (disabled fieldset, pointer events off, no submission nonce) fed by
+  `pageEditorFormPreview.ts` from cached admin form details; the public
+  submit pipeline is untouched. `form` stays `assistantEmittable: false`, and
+  the `lead-form` SECTION deliberately stays gated
+  (`reason: "form-section-boundary"`): a lead-form layout is a section
+  composed with the form block (composite-first), not a separate section type.
+- TASK-457 promoted `collection` into the editor-insertable catalog: the
+  Content panel ships a `contentTypeId` combobox (dynamic
+  `optionsSource: "contentTypes"` resolved through `listContentTypesCached()`),
+  a `queryId` combobox (`optionsSource: "listingQueries"` SCOPED by the
+  registry's `filterBy: "contentTypeId"` — only entry-sourced saved queries
+  targeting the picked type resolve, and switching the content type clears the
+  stored `queryId` in the same write), a `limit` slider (the schema clamp
+  1..50 via the bounded-number upgrade, unitless readout), and a `templateId`
+  combobox (`optionsSource: "listingTemplates"`). The editor canvas renders
+  the collection block through the shared renderer in
+  `layoutMode: "canvas-device"` as an inert preview (pointer events off) fed
+  by `pageEditorCollectionPreview.ts` from the cached content types + entries
+  clients: published entries only, runtime-parity mapping through the shared
+  `mapPageCollectionBlockToContentListData` (which keeps the runtime's
+  effective render cap of 24 entries), the "pick a content type" empty state
+  for unbound blocks, and the runtime resolver's exact fail-closed error for
+  dangling type ids. Saved queries/templates do not execute in the canvas —
+  the preview approximates the listing with the type's published entries; the
+  public runtime keeps resolving the real query/template server-side
+  (TASK-418-06-L04). `collection` stays `assistantEmittable: false`, and the
+  `collection` SECTION deliberately stays gated
+  (`reason: "collection-section-boundary"`): a listing layout is a section
+  composed with the collection block (composite-first).
+- `embed` remains not editor-insertable or assistant-emittable.
 - `icon` remains gated with `reason: "icon-runtime-renderer-pending"` until a
   real renderer, controls, and tests ship together.
 
 The insertable catalog is test-frozen: guard tests in
 `tests/vitest/pages/page-editor-control-registry.test.ts` and
 `tests/vitest/ui/page-editor-v2-flow.test.tsx` assert the exact 11 insertable
-sections, 14 insertable blocks, the capability reasons for all 6 gated sections
-and 5 gated blocks, and that the gated entries stay absent from the command
-palette by entry title (`icon` additionally stays the only
-`runtimeRenderer: "placeholder"` type). Promoting or demoting any catalog entry
-is an intentional contract change that must update those tests and this
+sections, 16 insertable blocks (TASK-456 added `form`, TASK-457 added
+`collection`), the capability reasons for all 6 gated sections and 3 gated
+blocks (`gallery`, `embed`, `icon`), and that the gated entries stay absent
+from the command palette by entry title (`icon` additionally stays the only
+`runtimeRenderer: "placeholder"` type). Promoting or demoting any catalog
+entry is an intentional contract change that must update those tests and this
 document together.
 
 `pageBlockPaths` owns section-scoped editor block paths for nested authoring.
@@ -387,6 +423,23 @@ and assistant surfaces must continue to use the stricter `insertable` and
 `assistantEmittable` flags. On tablet/mobile, registry consumers must expose
 whether each field is inherited or overridden and reset only the selected field
 path without clearing unrelated sparse overrides.
+
+Unbounded reference pickers (TASK-456/457) are registry `select` controls
+flagged with an `optionsSource` (`"forms"`, `"contentTypes"`,
+`"listingQueries"`, `"listingTemplates"`) instead of static `options`;
+`pageEditorControlUiModel` maps them to a
+`{ kind: "combobox", optionsSource, placeholder, allowNull, filterBy?, emptyMessage? }`
+model and the editor shell resolves the named source through the cached admin
+clients (`forms` -> `listFormsCached()`, `contentTypes` ->
+`listContentTypesCached()`, `listingQueries`/`listingTemplates` -> the
+listings client; id -> name) into the shared `ComboboxControl` primitive in
+`core/admin/ui/pages/editorControls/` (searchable, keyboard accessible,
+"None" row for nullable schema values, dangling-value marker).
+Dynamic-source controls derive `nullable` from the owner schema default in
+`pageBlockDefaultProps`. A registry `filterBy` names a sibling prop that
+scopes the option list (TASK-457: listing queries scoped to the chosen
+`contentTypeId`); future reference pickers must reuse this combobox contract
+unchanged.
 
 `pageEditorControlRegistry` additionally owns the Responsive panel contract
 (TASK-425): `pageEditorDeviceMetadata` is the single source for the editor
@@ -590,6 +643,61 @@ Templates contract is frozen by TASK-420-02 in the
 TASK-420-03, which also deleted the obsolete widget-template product surface
 (routes, preview target, admin UI, cached clients).
 
+## Site Shell (Global Navigation And Footer) — TASK-455
+
+Navigation is a SITE concern, not a per-page section (the `navigation` Page
+section stays gated by `runtime-navigation-boundary`). The global site shell
+wraps EVERY public Page v2 render — published pages, the homepage, and the
+tokenized preview (page and page-template previews included) — with a header
+navigation and a footer:
+
+- Settings keys (owned by `core/services/settings/settingsService.ts`,
+  reject-unknown preserved): `site.navigationMenuId` and
+  `site.footerTemplateId`, both nullable id strings. `null` means "no header
+  nav" / "no footer".
+- Resolver: `core/services/pages/publicSiteShell.ts` —
+  `resolvePublicSiteShell()` returns
+  `{ navigation: MenuWithItems | null, footerDocument: PageDocumentV2 | null }`.
+  Only `published` menus and `published` page templates resolve; missing,
+  draft, deleted, malformed-id, or unreadable references fail closed to `null`
+  (never an error page). The admin write path validates references up front
+  through `assertSiteShellMenuExists` / `assertSiteShellTemplateExists`
+  (machine-readable `site_shell_menu_not_found` /
+  `site_shell_template_not_found`, mapped to 400 by the settings route's
+  `mapSettingsRouteError`). Draft references are accepted on write; publish
+  status gates rendering only.
+- Render placement: `core/server/publicSite.tsx` resolves the shell once per
+  request (`resolveSiteShellRenderProps`), maps the menu tree through the
+  canonical `navigationMenuMapping` helpers (`pageId` -> published page slug,
+  safe hrefs), and threads `siteShell` + `siteName` through
+  `renderPublicPageV2RuntimeHtml` into `DefaultRuntimePageShellV2`
+  (`core/site/pageRuntimeV2.tsx`): `<SiteHeaderNav>` above and `<SiteFooter>`
+  below the page `<main>`.
+- Shell components live in `core/site/siteShell.tsx` and ship ZERO client
+  JavaScript. Nested menu items render as native `<details>/<summary>`
+  dropdown disclosures (single submenu depth; deeper descendants flatten into
+  the dropdown); the mobile collapse is a CSS-only `<details>` toggle whose
+  `[open]` state reveals the single shared link list via a sibling selector.
+  Breakpoints reuse the owned `pageResponsiveMediaBounds` contract. Items with
+  `logged_in` visibility are omitted from the anonymous public render.
+- Footer content is a published Page Template document rendered through the
+  SAME `PageDocumentRender` pipeline (`rootTag="div"` so the page keeps its
+  unique `<main>` landmark) inside `<footer data-site-footer="true">`. Footer
+  responsive CSS rides `buildPageResponsiveCss(document, { scopeSelector })`
+  with the distinct `[data-site-footer="true"]` scope, concatenated after the
+  page's own rules in the same `data-page-responsive` style block.
+- Caching: public pages cache stores rendered HTML that embeds the shell, so
+  settings writes/deletes touching either shell key clear the whole site cache
+  (`clearSiteCache()` inside `settingsService` write paths). Menu/template
+  content edits propagate via the normal site-cache TTL.
+- Admin surface: the "Site shell" card in
+  `core/admin/ui/site/SiteSettingsPage.tsx` (`core/admin/ui/site/SiteShellCard.tsx`)
+  picks published menus (cached menus client) and published page templates
+  (`pageTemplatesClient`) with a "None" option; an unpublished current
+  selection stays listed and is marked "not published — hidden on site".
+  Writes go through the existing settings PATCH; `site_shell_*` errors surface
+  inline under the matching picker.
+
 ## Revisions And Autosave
 
 `page_revisions` stores:
@@ -631,8 +739,11 @@ the assistant output vocabulary. Runtime-real `heading`, `text`, `button`,
 `container`, `columns`, and `group` blocks are assistant-emittable. Existing
 static `gallery` output remains accepted but not broadly advertised until its
 authoring controls ship. `collection`, `form`, and `embed` are runtime-real
-scoped public data-bound blocks, but they are not advertised as
-assistant-emittable until focused Page controls and assistant policies ship.
+scoped public data-bound blocks, but they are not assistant-emittable: even
+though TASK-456 made `form` and TASK-457 made `collection` editor-insertable,
+assistant plans must not invent form or content-type/query references, so
+both stay outside the assistant output vocabulary until an explicit assistant
+policy ships.
 
 ## Page Templates (Reusable Page v2 Templates) — TASK-420-02 Frozen Contract
 

@@ -26,6 +26,8 @@ import {
   pageTypographyFontWeightCssValues,
 } from "../../../core/services/pages/pageDocumentV2";
 import { serializePageBlockPath } from "../../../core/services/pages/pageBlockPaths";
+import { buildPageEditorCollectionPreviewBinding } from "../../../core/services/pages/pageEditorCollectionPreview";
+import { buildPageEditorFormPreviewBinding } from "../../../core/services/pages/pageEditorFormPreview";
 
 const createDocument = (sections: PageSectionV2[]): PageDocumentV2 => ({
   schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
@@ -681,6 +683,181 @@ test("shared renderer provides safe inert states while rendering active layout s
   expect(html).not.toContain("form-private");
   expect(html).not.toContain("<script>");
   expect(html).not.toContain("alert(1)");
+});
+
+test("form block renders a canvas-safe inert preview in canvas layout mode (TASK-456)", () => {
+  const detail = {
+    form: {
+      id: "form-contact",
+      name: "Contact",
+      status: "published",
+      description: "Send us a message.",
+      successMessage: "Thanks!",
+      successRedirectUrl: null,
+      submissionAccess: "public" as const,
+      settings: { layoutMode: "single", saveProgress: false, stepTitles: [] },
+    },
+    fields: [
+      {
+        id: "fld-email",
+        type: "email",
+        label: "Email address",
+        name: "email",
+        required: true,
+        settings: {},
+        orderIndex: 0,
+      },
+    ],
+  };
+  const section = createPageSectionV2("content", {
+    id: "sec-form-canvas",
+    blocks: [
+      createPageBlockV2("form", { id: "blk-form-unpicked", props: { formId: null, title: "" } }),
+      createPageBlockV2("form", {
+        id: "blk-form-loading",
+        props: { formId: "form-pending", title: "" },
+      }),
+      createPageBlockV2("form", {
+        id: "blk-form-ready",
+        props: { formId: "form-contact", title: "Contact us" },
+      }),
+      createPageBlockV2("form", {
+        id: "blk-form-missing",
+        props: { formId: "form-deleted", title: "" },
+      }),
+    ],
+  });
+  const runtimeDataByBlockId = {
+    "blk-form-ready": buildPageEditorFormPreviewBinding("form-contact", "Contact us", detail),
+    "blk-form-missing": buildPageEditorFormPreviewBinding("form-deleted", null, null),
+  };
+  const canvasHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      layoutMode="canvas-device"
+      runtimeDataByBlockId={runtimeDataByBlockId}
+    />
+  );
+
+  // Unpicked form -> explicit empty state; set-but-unresolved -> loading state.
+  expect(canvasHtml).toContain("Pick a form in the Content panel to preview it here.");
+  expect(canvasHtml).toContain("Loading form preview...");
+  // Resolved preview: the SHARED form markup, fully inert (disabled fieldset,
+  // pointer events off) and without any submission nonce.
+  expect(canvasHtml).toContain('data-page-editor-form-preview="inert"');
+  expect(canvasHtml).toContain("pointer-events-none");
+  expect(canvasHtml).toContain("<fieldset disabled");
+  expect(canvasHtml).toContain("Contact us");
+  expect(canvasHtml).toContain("Email address");
+  // No nonce hidden input is ever emitted (the runtime client script string
+  // mentions the field name, but scripts injected via innerHTML never run in
+  // the admin SPA and the disabled fieldset blocks submission regardless).
+  expect(canvasHtml).not.toContain('type="hidden" name="__nl_form_nonce"');
+  // Dangling reference: the runtime's fail-closed boundary, not a fake form.
+  expect(canvasHtml).toContain('data-form-embed-runtime-boundary="error"');
+  expect(canvasHtml).toContain("This form is not available right now.");
+
+  // Runtime parity: the default layout mode keeps the existing inert
+  // fallback (no canvas copy, no fieldset wrapper) for unbound form blocks.
+  const runtimeHtml = renderToStaticMarkup(<PageSectionContent section={section} />);
+  expect(runtimeHtml).not.toContain("Pick a form in the Content panel to preview it here.");
+  expect(runtimeHtml).not.toContain("Loading form preview...");
+  expect(runtimeHtml).not.toContain('data-page-editor-form-preview="inert"');
+  expect(runtimeHtml).toContain("Form is not available yet.");
+});
+
+test("collection block renders a canvas-safe inert preview in canvas layout mode (TASK-457)", () => {
+  const source = {
+    contentType: { id: "ct-services", name: "Services", slug: "services" },
+    entries: [
+      {
+        id: "entry-audit",
+        title: "Site audit",
+        slug: "site-audit",
+        status: "published",
+        data: { summary: "We review your whole site." },
+        updatedAt: "2026-05-01T09:00:00.000Z",
+        publishedAt: "2026-05-01T09:00:00.000Z",
+      },
+      {
+        id: "entry-care",
+        title: "Care plan",
+        slug: "care-plan",
+        status: "published",
+        data: {},
+        updatedAt: "2026-04-01T09:00:00.000Z",
+        publishedAt: "2026-04-01T09:00:00.000Z",
+      },
+      {
+        id: "entry-draft",
+        title: "Unpublished service",
+        slug: "unpublished-service",
+        status: "draft",
+        data: {},
+        updatedAt: "2026-05-20T09:00:00.000Z",
+      },
+    ],
+  };
+  const readyBlock = createPageBlockV2("collection", {
+    id: "blk-collection-ready",
+    props: { contentTypeId: "ct-services", queryId: null, limit: 2, templateId: null },
+  });
+  const danglingBlock = createPageBlockV2("collection", {
+    id: "blk-collection-dangling",
+    props: { contentTypeId: "ct-deleted", queryId: null, limit: 6, templateId: null },
+  });
+  const section = createPageSectionV2("content", {
+    id: "sec-collection-canvas",
+    blocks: [
+      createPageBlockV2("collection", {
+        id: "blk-collection-unpicked",
+        props: { contentTypeId: null, queryId: null, limit: 6, templateId: null },
+      }),
+      createPageBlockV2("collection", {
+        id: "blk-collection-loading",
+        props: { contentTypeId: "ct-pending", queryId: null, limit: 6, templateId: null },
+      }),
+      readyBlock,
+      danglingBlock,
+    ],
+  });
+  const runtimeDataByBlockId = {
+    "blk-collection-ready": buildPageEditorCollectionPreviewBinding(readyBlock, source),
+    "blk-collection-dangling": buildPageEditorCollectionPreviewBinding(danglingBlock, null),
+  };
+  const canvasHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={section}
+      layoutMode="canvas-device"
+      runtimeDataByBlockId={runtimeDataByBlockId}
+    />
+  );
+
+  // Unpicked type -> explicit empty state; set-but-unresolved -> loading.
+  expect(canvasHtml).toContain("Pick a content type in the Content panel to preview entries here.");
+  expect(canvasHtml).toContain("Loading collection preview...");
+  // Resolved preview: the SHARED content-list markup, pointer events off so
+  // entry links never navigate inside the canvas; published entries only,
+  // limit respected (the draft entry and the third slot never render).
+  expect(canvasHtml).toContain('data-page-editor-collection-preview="inert"');
+  expect(canvasHtml).toContain("pointer-events-none");
+  expect(canvasHtml).toContain("Site audit");
+  expect(canvasHtml).toContain("Care plan");
+  expect(canvasHtml).toContain("We review your whole site.");
+  expect(canvasHtml).not.toContain("Unpublished service");
+  // Dangling content type: the runtime's fail-closed boundary, no fake list.
+  expect(canvasHtml).toContain('data-page-block-inert="collection"');
+  expect(canvasHtml).toContain("Collection content is not available yet.");
+
+  // Runtime parity: the default layout mode keeps the existing inert
+  // fallback (no canvas copy, no inert preview wrapper) for unbound blocks.
+  const runtimeHtml = renderToStaticMarkup(<PageSectionContent section={section} />);
+  expect(runtimeHtml).not.toContain(
+    "Pick a content type in the Content panel to preview entries here."
+  );
+  expect(runtimeHtml).not.toContain("Loading collection preview...");
+  expect(runtimeHtml).not.toContain('data-page-editor-collection-preview="inert"');
+  expect(runtimeHtml).toContain("Collection content is not available yet.");
 });
 
 test("gallery renderer exposes a bounded empty state for empty item arrays", () => {

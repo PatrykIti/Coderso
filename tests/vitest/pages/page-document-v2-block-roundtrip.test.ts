@@ -64,14 +64,18 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
   test("editor-insertable catalog pin: derived list matches pageDocumentV2.ts:398", () => {
     // Keeps the test.each guard below from going vacuous if the capability
     // flag is ever emptied or reshaped by accident.
+    // TASK-456: "form" joined the catalog (form authoring enablement).
+    // TASK-457: "collection" joined the catalog (collection authoring).
     expect(editorInsertableBlockTypes).toEqual([
       "heading",
       "text",
       "button",
       "image",
       "video",
+      "form",
       "list",
       "card",
+      "collection",
       "divider",
       "spacer",
       "statistic",

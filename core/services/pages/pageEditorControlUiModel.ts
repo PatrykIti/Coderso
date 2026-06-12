@@ -1,5 +1,8 @@
 import { DEFAULT_TOKENS, type DesignTokens } from "../theme/tokenTypes";
-import type { PageEditorControlDefinition } from "./pageEditorControlRegistry";
+import type {
+  PageEditorControlDefinition,
+  PageEditorControlOptionsSource,
+} from "./pageEditorControlRegistry";
 
 /**
  * Pure presentational adapter between the page editor control registry and the
@@ -46,6 +49,21 @@ export type PageEditorControlUiModel =
       kind: "select";
       options: readonly string[];
       labels: Readonly<Record<string, string>>;
+    }
+  | {
+      kind: "combobox";
+      optionsSource: PageEditorControlOptionsSource;
+      placeholder: string;
+      allowNull: boolean;
+      /**
+       * Sibling prop key scoping the option list (TASK-457, e.g. listing
+       * queries filtered by the chosen `contentTypeId`). The editor shell
+       * reads the current value of this prop on the selected block and
+       * filters the resolved source options with it.
+       */
+      filterBy?: string;
+      /** Source-specific copy when the (possibly filtered) list is empty. */
+      emptyMessage?: string;
     }
   | { kind: "toggle" }
   | { kind: "slider"; min: number; max: number; step: number; unit: string }
@@ -250,7 +268,41 @@ const resolveNumberModel = (control: PageEditorControlDefinition): PageEditorCon
 const allowsTransparentColor = (control: PageEditorControlDefinition): boolean =>
   control.target === "block";
 
+/**
+ * Per-source presentation metadata for dynamic combobox controls
+ * (TASK-456/457). The adapter stays pure: it names the source and its
+ * empty-state copy; the editor shell resolves the option list through the
+ * cached admin clients (forms -> `listFormsCached()`, content types ->
+ * `listContentTypesCached()`, listing queries/templates -> listings client).
+ */
+export const pageEditorComboboxSourceMetadata: Readonly<
+  Record<PageEditorControlOptionsSource, { placeholder: string; emptyMessage?: string }>
+> = {
+  forms: { placeholder: "Pick a form" },
+  contentTypes: { placeholder: "Pick a content type" },
+  listingQueries: {
+    placeholder: "Pick a saved query",
+    // The source is scoped by the chosen content type; with no type picked
+    // (or none of the saved queries targeting it) the list is honestly empty.
+    emptyMessage: "No saved queries for this content type.",
+  },
+  listingTemplates: { placeholder: "Pick a listing template" },
+};
+
 const resolveOptionModel = (control: PageEditorControlDefinition): PageEditorControlUiModel => {
+  // Dynamic-source pickers are unbounded reference lists: segmented pills are
+  // the wrong shape, so they always resolve to the searchable combobox.
+  if (control.optionsSource) {
+    const metadata = pageEditorComboboxSourceMetadata[control.optionsSource];
+    return {
+      kind: "combobox",
+      optionsSource: control.optionsSource,
+      placeholder: metadata.placeholder,
+      allowNull: control.nullable === true,
+      ...(control.filterBy ? { filterBy: control.filterBy } : {}),
+      ...(metadata.emptyMessage ? { emptyMessage: metadata.emptyMessage } : {}),
+    };
+  }
   const options = control.options ?? [];
   if (options.length === 0) {
     return { kind: "unsupported", reason: "option-control-without-options" };

@@ -275,6 +275,8 @@ export async function prefetchSettingsRoute(path: string) {
       getSiteSettingsCached(prefetchWarmupOptions),
       listPagesCached(prefetchWarmupOptions),
       listContentTypesCached(prefetchWarmupOptions),
+      listMenusCached(prefetchWarmupOptions),
+      listPageTemplatesCached(prefetchWarmupOptions),
     ]);
     return true;
   }

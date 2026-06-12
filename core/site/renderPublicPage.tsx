@@ -17,6 +17,7 @@ import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeData
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
+import { SITE_SHELL_CSS, type SiteShellRenderProps } from "./siteShell";
 
 export type PublicPageRenderOptions = {
   title: string;
@@ -50,8 +51,16 @@ export type PublicPageV2RuntimeRenderOptions = Omit<
    * Scoped responsive `@media` overrides (TASK-423-02). Emitted for public
    * visitors on top of the desktop-resolved base markup; empty/absent on the
    * explicit `previewDevice` path, which keeps single-breakpoint flattening.
+   * TASK-455 appends the footer template's builder output under the distinct
+   * `[data-site-footer="true"]` scope.
    */
   responsiveCss?: string | null;
+  /**
+   * Global site shell (TASK-455), resolved once per request by
+   * `publicSite.tsx` and threaded into `PageTemplatePropsV2`.
+   */
+  siteShell?: SiteShellRenderProps | null;
+  siteName?: string | null;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -328,6 +337,8 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     templateKey,
     runtimeDataByBlockId,
     responsiveCss,
+    siteShell,
+    siteName,
   } = options;
 
   const templateInput = resolvePageTemplateInput(rawDocument, {
@@ -344,7 +355,16 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     isPreview,
     previewDevice: previewDevice ?? "desktop",
     runtimeDataByBlockId,
+    siteShell,
+    siteName,
   };
+
+  // The shell ships no client JS; its static CSS rides the inline style block
+  // only when a shell part actually renders.
+  const hasSiteShell = Boolean(siteShell?.navigation || siteShell?.footerDocument);
+  const inlineCssWithShell = hasSiteShell
+    ? [inlineCss, SITE_SHELL_CSS].filter(Boolean).join("\n")
+    : inlineCss;
 
   const body = (
     <PageRuntimeRoot templateKey={`v2-${templateProps.templateKey}`} isPreview={isPreview}>
@@ -356,7 +376,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     title,
     body,
     cssHref,
-    inlineCss,
+    inlineCssWithShell,
     metaDescription,
     canonicalUrl,
     robots,

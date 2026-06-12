@@ -216,7 +216,8 @@ describe("page editor control registry", () => {
       runtimeRenderer: "real",
       reason: "gallery-editor-controls-pending",
     });
-    expect(pageBlockCapabilities.collection.editorInsertable).toBe(false);
+    // TASK-457: the collection block joined the editor-insertable catalog.
+    expect(pageBlockCapabilities.collection.editorInsertable).toBe(true);
   });
 
   test("insertable sections expose universal controls and blocks expose universal plus per-type controls", () => {
@@ -277,7 +278,7 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("insertable block catalog is frozen to the audited 14 blocks", () => {
+  test("insertable block catalog is frozen to the audited 16 blocks (TASK-456 form + TASK-457 collection promotions)", () => {
     const insertableBlocks = pageBlockTypes.filter(
       (type) => pageBlockCapabilities[type].editorInsertable
     );
@@ -287,8 +288,10 @@ describe("page editor control registry", () => {
       "button",
       "image",
       "video",
+      "form",
       "list",
       "card",
+      "collection",
       "divider",
       "spacer",
       "statistic",
@@ -301,7 +304,11 @@ describe("page editor control registry", () => {
       expect(pageBlockCapabilities[type]).toMatchObject({
         editorInsertable: true,
         insertable: true,
-        assistantEmittable: true,
+        // TASK-456/457 deliberate scope: the form and collection blocks are
+        // author-insertable but stay OUTSIDE the assistant emission
+        // vocabulary — assistant plans must not invent form or
+        // content-type/query references.
+        assistantEmittable: type !== "form" && type !== "collection",
         runtimeRenderer: "real",
       });
       expect("reason" in pageBlockCapabilities[type]).toBe(false);
@@ -337,11 +344,12 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("all 5 gated blocks stay non-insertable with frozen capability reasons", () => {
+  test("all 3 gated blocks stay non-insertable with frozen capability reasons", () => {
+    // TASK-456/457 amendments: "form" and "collection" left this set
+    // deliberately (editor controls shipped). Any further promotion requires
+    // an explicit capability change and follow-on task, exactly like those.
     const gatedBlockReasons = {
       gallery: "gallery-editor-controls-pending",
-      form: "form-editor-controls-pending",
-      collection: "collection-editor-controls-pending",
       embed: "embed-editor-controls-pending",
       icon: "icon-runtime-renderer-pending",
     } as const;
@@ -613,9 +621,136 @@ describe("page editor control registry", () => {
     ];
     for (const control of allControls) {
       if (control.input !== "select" && control.input !== "segmented") continue;
+      if (control.optionsSource) {
+        // Dynamic reference pickers (TASK-456/457) never carry static
+        // options; the editor shell resolves the named source instead.
+        expect(control.options, control.id).toBeUndefined();
+        expect(
+          ["forms", "contentTypes", "listingQueries", "listingTemplates"],
+          control.id
+        ).toContain(control.optionsSource);
+        // `filterBy` is meaningful only with a dynamic source and must name
+        // a sibling prop key owned by the same block type.
+        if (control.filterBy) {
+          const type = control.id.split(".")[1] as keyof typeof pageBlockPropKeys;
+          expect(pageBlockPropKeys[type], control.id).toContain(control.filterBy);
+        }
+        continue;
+      }
+      expect(control.filterBy, control.id).toBeUndefined();
       expect(control.options).toBeTruthy();
       expect(ownerOptionSets.has(control.options!)).toBe(true);
     }
+  });
+
+  test("form block content controls are frozen to the TASK-456 contract", () => {
+    expect(pageBlockControlRegistry.form.map((control) => control.id)).toEqual([
+      "block.form.props.formId",
+      "block.form.props.title",
+    ]);
+    const formIdControl = pageBlockControlRegistry.form[0]!;
+    expect(formIdControl).toMatchObject({
+      panel: "content",
+      target: "block",
+      label: "Form",
+      path: ["props", "formId"],
+      overridePath: ["props", "formId"],
+      input: "select",
+      optionsSource: "forms",
+      // Schema-owned nullability: `pageBlockDefaultProps.form.formId` is null
+      // (nullableStringSchema), so the combobox offers the "None" row.
+      nullable: true,
+      responsive: true,
+    });
+    expect(formIdControl.options).toBeUndefined();
+    expect(formIdControl.fallback).toBeUndefined();
+    expect(pageBlockControlRegistry.form[1]).toMatchObject({
+      panel: "content",
+      label: "Title",
+      path: ["props", "title"],
+      input: "text",
+      fallback: "",
+    });
+    // The full target surface = universal block controls + the two content
+    // controls; the form block is not typography-capable, so no cluster.
+    expect(
+      getPageEditorControlsForTarget({ kind: "block", type: "form" }).map((control) => control.id)
+    ).toEqual([
+      ...pageUniversalBlockControls.map((control) => control.id),
+      "block.form.props.formId",
+      "block.form.props.title",
+    ]);
+  });
+
+  test("collection block content controls are frozen to the TASK-457 contract", () => {
+    expect(pageBlockControlRegistry.collection.map((control) => control.id)).toEqual([
+      "block.collection.props.contentTypeId",
+      "block.collection.props.queryId",
+      "block.collection.props.limit",
+      "block.collection.props.templateId",
+    ]);
+    const [contentTypeControl, queryControl, limitControl, templateControl] =
+      pageBlockControlRegistry.collection;
+    expect(contentTypeControl).toMatchObject({
+      panel: "content",
+      target: "block",
+      label: "Content type",
+      path: ["props", "contentTypeId"],
+      overridePath: ["props", "contentTypeId"],
+      input: "select",
+      optionsSource: "contentTypes",
+      // Schema-owned nullability: `pageBlockDefaultProps.collection.*Id` are
+      // null (nullableStringSchema), so each combobox offers the "None" row.
+      nullable: true,
+      responsive: true,
+    });
+    expect(contentTypeControl!.options).toBeUndefined();
+    expect(contentTypeControl!.fallback).toBeUndefined();
+    expect(contentTypeControl!.filterBy).toBeUndefined();
+    expect(queryControl).toMatchObject({
+      panel: "content",
+      label: "Saved query",
+      path: ["props", "queryId"],
+      input: "select",
+      optionsSource: "listingQueries",
+      // Saved queries are scoped to the chosen content type (the editor
+      // shell filters by this sibling prop and clears queryId on change).
+      filterBy: "contentTypeId",
+      nullable: true,
+    });
+    expect(limitControl).toMatchObject({
+      panel: "content",
+      label: "Limit",
+      path: ["props", "limit"],
+      input: "number",
+      // The schema clamp from `blockPropJsonSchemaForType` ("limit" ->
+      // numericSchema(1, 50)); entry count is a unitless readout.
+      clamp: { min: 1, max: 50 },
+      unit: "",
+      fallback: 6,
+    });
+    expect(templateControl).toMatchObject({
+      panel: "content",
+      label: "Listing template",
+      path: ["props", "templateId"],
+      input: "select",
+      optionsSource: "listingTemplates",
+      nullable: true,
+    });
+    expect(templateControl!.filterBy).toBeUndefined();
+    // The full target surface = universal block controls + the four content
+    // controls; the collection block is not typography-capable, so no cluster.
+    expect(
+      getPageEditorControlsForTarget({ kind: "block", type: "collection" }).map(
+        (control) => control.id
+      )
+    ).toEqual([
+      ...pageUniversalBlockControls.map((control) => control.id),
+      "block.collection.props.contentTypeId",
+      "block.collection.props.queryId",
+      "block.collection.props.limit",
+      "block.collection.props.templateId",
+    ]);
   });
 
   test("display fallbacks mirror the pageDocumentV2 schema defaults (TASK-449 bug #9)", () => {

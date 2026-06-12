@@ -89,6 +89,30 @@ The breadcrumb/status strip also matters:
      Display and the token size scale), not free-form values, so pages stay
      consistent with the site theme. The panel is per-block: sections and
      non-text blocks (image, divider, spacer) do not show it.
+   - Adding a form to a page: insert the `Form` block from the command
+     palette, then open the `Content` panel and pick one of your saved forms
+     in the searchable `Form` picker (forms are built in the Forms admin
+     first). The canvas shows a non-interactive preview of the form's fields;
+     the published page renders the live form with the normal submit
+     protections. An optional `Title` field overrides the form name shown
+     above the fields, and choosing `None` detaches the form again. If the
+     picked form is later deleted, the picker marks the missing reference and
+     the published page shows a safe "form not available" message instead of
+     a broken form.
+   - Listing collection entries on a page: insert the `Collection` block from
+     the command palette, then open the `Content` panel and pick a content
+     type (for example `Services` or `Projects`) in the searchable
+     `Content type` picker. The canvas immediately previews the published
+     entries of that type (drafts never show), and the published page renders
+     the live listing. Optional refinements: a `Saved query` (only queries
+     built for the picked content type appear; switching the content type
+     clears the query so it never points at the wrong type), a `Limit` slider
+     for how many entries to show, and a `Listing template` for the entry
+     layout. Saved queries and templates are built in the Listings admin
+     first. Choosing `None` clears any of the three references; if a
+     referenced resource is later deleted, the picker marks the missing
+     reference and the published page shows a safe "collection not available"
+     message instead of a broken listing.
    - The `Responsive` panel is the dedicated breakpoint surface for the
      selected section or block. It contains:
      - `Hide on desktop` / `Hide on tablet` / `Hide on mobile` toggles. The
