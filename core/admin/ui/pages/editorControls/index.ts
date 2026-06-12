@@ -4,6 +4,7 @@ export {
   type ComboboxControlOption,
   type ComboboxControlProps,
 } from "./ComboboxControl";
+export { ListItemsControl, type ListItemsControlProps } from "./ListItemsControl";
 export { MediaPickerControl, type MediaPickerControlProps } from "./MediaPickerControl";
 export { SegmentedControl, type SegmentedControlProps } from "./SegmentedControl";
 export { SliderControl, type SliderControlProps } from "./SliderControl";

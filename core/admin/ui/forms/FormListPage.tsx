@@ -147,6 +147,10 @@ export function FormListPage() {
     navigate(`/advanced/forms/${encodeURIComponent(id)}`);
   };
 
+  const handleSubmissions = (id: string) => {
+    navigate(`/advanced/forms/${encodeURIComponent(id)}/submissions`);
+  };
+
   const handleActionLogs = (id: string) => {
     navigate(`/advanced/forms/${encodeURIComponent(id)}/action-runs`);
   };
@@ -315,6 +319,7 @@ export function FormListPage() {
             onToggleAll={handleToggleAll}
             onToggleForm={handleToggleForm}
             onEdit={handleEdit}
+            onSubmissions={handleSubmissions}
             onActionLogs={handleActionLogs}
             onPublish={(id) => handleSetStatus(id, "published", "publish")}
             onMoveToDraft={(id) => handleSetStatus(id, "draft", "draft")}

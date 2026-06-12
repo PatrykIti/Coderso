@@ -208,6 +208,17 @@ test("admin preview wrappers preserve the same shared section and block content"
   ).toContain('data-page-section-layout-mode="canvas-device"');
 });
 
+test("list link items render anchors while plain items stay inline-editable text", () => {
+  const html = renderToStaticMarkup(<PageSectionContent section={createSection()} />);
+
+  // Link item ({ label, href }) renders a real anchor with the stored target.
+  expect(html).toContain('href="/linked"');
+  expect(html).toMatch(/<a[^>]*href="\/linked"[^>]*>Linked item<\/a>/);
+  // Plain string items render as text (no anchor) and keep the inline-edit hook.
+  expect(html).toContain("Plain item");
+  expect(html).not.toMatch(/<a[^>]*>Plain item<\/a>/);
+});
+
 test("block render props expose shared classes, styles, and data attributes", () => {
   const block = createPageBlockV2("heading", {
     id: "blk-styled-renderer",

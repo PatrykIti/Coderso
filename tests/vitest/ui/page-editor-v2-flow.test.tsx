@@ -772,6 +772,21 @@ const changeField = (container: ParentNode, labelText: string, value: string) =>
   });
 };
 
+/** Structured list-items rows label their inputs via aria-label, not <label>. */
+const changeInputByAriaLabel = (container: ParentNode, ariaLabel: string, value: string) => {
+  const field = container.querySelector(
+    `input[aria-label="${ariaLabel}"]`
+  ) as HTMLInputElement | null;
+  expect(field).toBeTruthy();
+  React.act(() => {
+    if (!field) return;
+    const valueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    valueSetter?.call(field, value);
+    field.dispatchEvent(new Event("input", { bubbles: true }));
+    field.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+};
+
 const findFieldControl = (container: ParentNode, labelText: string) => {
   const label = Array.from(container.querySelectorAll("label")).find((entry) =>
     entry.textContent?.includes(labelText)
@@ -3409,7 +3424,16 @@ test("PageEditor list controls round-trip items and ordered mode", async () => {
   try {
     await flush();
 
-    changeField(view.container, "Items", "Discovery, Build, Launch");
+    // Structured items rows (client-readiness FIX 1): edit the existing row,
+    // add a second plain row and a third row carrying a link target.
+    changeInputByAriaLabel(view.container, "Item 1 label", "Discovery");
+    clickButton(view.container, "Add item");
+    await flush();
+    changeInputByAriaLabel(view.container, "Item 2 label", "Build");
+    clickButton(view.container, "Add item");
+    await flush();
+    changeInputByAriaLabel(view.container, "Item 3 label", "Launch");
+    changeInputByAriaLabel(view.container, "Item 3 link URL", "/launch");
     setToggleField(view.container, "Ordered", true);
     await flush();
     clickButton(view.container, "Save");
@@ -3419,8 +3443,10 @@ test("PageEditor list controls round-trip items and ordered mode", async () => {
     const savedDocument = savedPayload?.data as PageDocumentV2;
     const list = savedDocument.sections[0]?.blocks[0];
 
+    // Stored shapes are exact: plain rows stay strings, the linked row stores
+    // the `{ label, href }` link-item contract the renderer turns into <a>.
     expect(list?.props).toMatchObject({
-      items: ["Discovery", "Build", "Launch"],
+      items: ["Discovery", "Build", { label: "Launch", href: "/launch" }],
       ordered: true,
     });
   } finally {

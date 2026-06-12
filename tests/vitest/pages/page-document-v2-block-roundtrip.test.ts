@@ -235,11 +235,11 @@ describe("list block round-trip pins (TASK-442-01-L01)", () => {
     }
   });
 
-  test("items coercion pin: non-array items coerce silently to [] (pageDocumentV2.ts:1344)", () => {
-    // Owner contract pinned, not endorsed: normalizeBlockProp coerces any
-    // non-array `items` payload to [] without raising page_document_invalid,
-    // even in write mode. Tightening this is explicitly out of scope here
-    // (see TASK-442-01-L01 error-handling decision).
+  test("items coercion: non-array items reject on write and coerce to [] on stored reads", () => {
+    // Client-readiness link-items contract (supersedes the TASK-442-01-L01
+    // silent-coercion pin): list items are schema-validated. Fresh writes
+    // reject non-array payloads with page_document_invalid; stored reads stay
+    // non-destructive and coerce to [].
     const nonArrayPayloads: readonly unknown[] = ["not-an-array", 42, { nested: true }];
 
     for (const [index, items] of nonArrayPayloads.entries()) {
@@ -248,13 +248,16 @@ describe("list block round-trip pins (TASK-442-01-L01)", () => {
         type: "list",
         props: { items, ordered: false },
       };
-      const { written, read, published } = roundTripStages(buildDocumentWithRawBlocks([rawList]));
+      const rawDocument = buildDocumentWithRawBlocks([rawList]);
 
-      for (const stage of [written, read, published]) {
-        const block = onlyBlock(stage);
-        expect(block.type).toBe("list");
-        expect(block.props.items).toEqual([]);
-      }
+      expect(() => normalizePageDocumentV2ForWrite(rawDocument)).toThrowError(
+        /Expected array at sections\.0\.blocks\.0\.props\.items/
+      );
+
+      const read = normalizeStoredPageDocumentV2ForRead(rawDocument);
+      const block = onlyBlock(read);
+      expect(block.type).toBe("list");
+      expect(block.props.items).toEqual([]);
     }
   });
 
@@ -269,9 +272,52 @@ describe("list block round-trip pins (TASK-442-01-L01)", () => {
     for (const stage of [written, read, published]) {
       const block = onlyBlock(stage);
       expect(block.type).toBe("list");
-      // Array entries pass through clone-only, without per-item validation.
+      // Plain string items keep their legacy stored shape untouched.
       expect(block.props.items).toEqual(["Alpha", "Beta", "Gamma"]);
       expect(block.props.ordered).toBe(true);
     }
+  });
+
+  test("link items ({ label, href }) survive write/read/publish with the exact stored shape", () => {
+    const rawList = {
+      id: "blk_list_links",
+      type: "list",
+      props: {
+        items: ["Plain item", { label: "Privacy", href: "/privacy" }],
+        ordered: false,
+      },
+    };
+    const { written, read, published } = roundTripStages(buildDocumentWithRawBlocks([rawList]));
+
+    for (const stage of [written, read, published]) {
+      const block = onlyBlock(stage);
+      expect(block.type).toBe("list");
+      expect(block.props.items).toEqual(["Plain item", { label: "Privacy", href: "/privacy" }]);
+    }
+  });
+
+  test("link items with an empty href collapse to plain strings; unknown item keys reject on write", () => {
+    const collapsing = {
+      id: "blk_list_collapse",
+      type: "list",
+      props: { items: [{ label: "No target", href: "   " }], ordered: false },
+    };
+    const { written } = roundTripStages(buildDocumentWithRawBlocks([collapsing]));
+    expect(onlyBlock(written).props.items).toEqual(["No target"]);
+
+    const unknownKey = buildDocumentWithRawBlocks([
+      {
+        id: "blk_list_unknown",
+        type: "list",
+        props: { items: [{ label: "Privacy", href: "/privacy", target: "_blank" }] },
+      },
+    ]);
+    expect(() => normalizePageDocumentV2ForWrite(unknownKey)).toThrowError(
+      /Unknown page document field: sections\.0\.blocks\.0\.props\.items\.0\.target/
+    );
+    // Stored reads stay non-destructive for the same payload: the unknown key
+    // is dropped and the link item survives.
+    const read = normalizeStoredPageDocumentV2ForRead(unknownKey);
+    expect(onlyBlock(read).props.items).toEqual([{ label: "Privacy", href: "/privacy" }]);
   });
 });

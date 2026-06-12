@@ -127,6 +127,7 @@ import { toPageTypographyCssVariableMap } from "../../../ui/theme/tokenCss";
 import {
   ColorSwatchControl,
   ComboboxControl,
+  ListItemsControl,
   MediaPickerControl,
   SegmentedControl,
   SliderControl,
@@ -920,12 +921,6 @@ const patchSectionControlForDevice = (
   };
 };
 
-const listItemsFromFieldValue = (value: string) =>
-  value
-    .split(/\r?\n|,/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-
 /**
  * EFFECTIVE display value of a control (TASK-449 owner bug #9, round 3): the
  * stored value when present, otherwise the effective RENDER default from
@@ -956,17 +951,6 @@ const fieldValueFromControlValue = (
     if (typeof renderDefault === "string") return renderDefault;
     return typeof control.fallback === "string" ? control.fallback : "";
   }
-  if (control.path[0] === "props" && control.path[1] === "items") {
-    if (!Array.isArray(value)) return "";
-    return value
-      .map((item) => {
-        if (typeof item === "string") return item;
-        if (isPlainRecord(item) && typeof item.label === "string") return item.label;
-        return "";
-      })
-      .filter(Boolean)
-      .join(", ");
-  }
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return "";
@@ -980,9 +964,6 @@ const coerceControlFieldValue = (control: PageEditorControlDefinition, value: st
     const next = Number.isFinite(parsed) ? parsed : fallback;
     if (!control.clamp) return next;
     return Math.min(control.clamp.max, Math.max(control.clamp.min, next));
-  }
-  if (control.path[0] === "props" && control.path[1] === "items") {
-    return listItemsFromFieldValue(value);
   }
   return value;
 };
@@ -4822,6 +4803,17 @@ const RegistryControlWidget = ({
           value={typeof rawValue === "string" ? rawValue : ""}
           accept={mediaControlAccept[control.id]}
           onChange={(nextValue) => onCommit(nextValue)}
+        />
+      );
+    case "listItems":
+      // Structured list items (footer link columns): commits the owner
+      // `PageListItemV2` shapes — plain strings stay plain, link rows store
+      // `{ label, href }` — through the normal control write path.
+      return (
+        <ListItemsControl
+          label={control.label}
+          value={Array.isArray(rawValue) ? rawValue : []}
+          onChange={(nextItems) => onCommit(nextItems)}
         />
       );
     case "text":

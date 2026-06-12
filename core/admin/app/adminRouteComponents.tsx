@@ -94,6 +94,11 @@ export const FormActionLogsRoute = lazyNamedRoute(
   "FormActionLogsPage"
 );
 
+export const FormSubmissionsRoute = lazyNamedRoute(
+  () => import("@/ui/forms/FormSubmissionsPage"),
+  "FormSubmissionsPage"
+);
+
 export const FormBuilderRoute = lazyNamedRoute(
   () => import("@/ui/forms/FormBuilderPage"),
   "FormBuilderPage"

@@ -673,6 +673,11 @@ export function FormBuilderPage() {
     navigate(`/advanced/forms/${encodeURIComponent(formId)}/action-runs`);
   };
 
+  const openSubmissions = () => {
+    if (!formId) return;
+    navigate(`/advanced/forms/${encodeURIComponent(formId)}/submissions`);
+  };
+
   const openRuntimePreview = () => {
     if (!activeForm) return;
     if (hasUnsavedChanges) {
@@ -782,6 +787,9 @@ export function FormBuilderPage() {
       <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur">
         <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={openSubmissions}>
+              Submissions
+            </Button>
             <Button variant="outline" size="sm" onClick={openActionLogs}>
               Action logs
             </Button>

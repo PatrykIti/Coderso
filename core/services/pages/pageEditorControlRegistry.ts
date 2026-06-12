@@ -48,7 +48,13 @@ export type PageEditorControlInput =
   | "switch"
   | "color"
   | "swatch"
-  | "media";
+  | "media"
+  /**
+   * Structured list-items editor (`props.items` on the list block): per-item
+   * rows with a label and an optional link target, committing the owner
+   * `PageListItemV2` shapes (plain string, or `{ label, href }` link items).
+   */
+  | "items";
 
 /**
  * Dynamic option sources for unbounded reference pickers (TASK-456/457). A
@@ -677,7 +683,7 @@ export const pageBlockControlRegistry: Record<
     blockPropControl("form", "title", { label: "Title", input: "text" }),
   ],
   list: [
-    blockPropControl("list", "items", { label: "Items", input: "text" }),
+    blockPropControl("list", "items", { label: "Items", input: "items" }),
     blockPropControl("list", "ordered", { label: "Ordered", input: "switch" }),
     ...pageTypographyBlockControls,
     blockStyleTextAlignTypographyControl,

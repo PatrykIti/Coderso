@@ -356,6 +356,13 @@ Clients update caches and broadcast events on:
   dirty-state protection (background revalidation never overwrites unsaved
   edits).
 - Route prefetch warms `pageTemplates:list` with `{ force: false }` only.
+- Detail-driven merges (`getPageTemplateCached`, create/update/duplicate
+  responses) update `pageTemplates:list` only when a full list cache already
+  exists. They never ESTABLISH the list cache: a single-item partial written
+  while the full list was missing/expired would look authoritative and hide
+  published templates in pickers (client-readiness FIX 3). With no cached
+  list, only `pageTemplates:detail:<id>` is written and the next list call
+  fetches the complete set.
 - Template documents contain no secrets; nothing secret-bearing enters
   browser cache/localStorage/debug payloads.
 - Retired with the widget-template surface: `widgetTemplates:list`,
@@ -532,6 +539,11 @@ Clients update caches and broadcast events on:
   caches and broadcasts invalidation. Retained submissions or action-run
   diagnostics block hard delete through `form_delete_restricted`, so failed
   deletes must not remove rows from browser cache as success.
+- Form submissions (`/admin/advanced/forms/:id/submissions`) are intentionally
+  UNCACHED: the read-only screen fetches on open through
+  `listFormSubmissions()` (no `cachePolicy` key, no localStorage entry —
+  submissions carry visitor-provided data). Only the form name/field labels
+  hydrate through the existing `forms:detail:<id>` cached client.
 
 ### Tools cache note
 

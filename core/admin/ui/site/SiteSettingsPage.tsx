@@ -72,6 +72,7 @@ import {
   normalizeDetailPageIdInput,
   mergeContentRoutes,
   normalizeRouteInput,
+  validateBaseUrl,
   validateContentRoutes,
   type SiteContentRouteForm,
 } from "./siteSettingsValidation";
@@ -200,23 +201,6 @@ const resolveInitialSiteSettingsState = () => {
     hasMenusCache: Boolean(menus),
     hasPageTemplatesCache: Boolean(pageTemplates),
   };
-};
-
-const validateBaseUrl = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  try {
-    const parsed = new URL(trimmed);
-    const host = parsed.hostname.toLowerCase();
-    if (parsed.protocol !== "https:") {
-      if (host !== "localhost" && host !== "127.0.0.1") {
-        return "HTTPS is required for non-localhost URLs.";
-      }
-    }
-    return null;
-  } catch {
-    return "Enter a valid URL (e.g. https://example.com).";
-  }
 };
 
 const validateAdminPath = (value: string) => {

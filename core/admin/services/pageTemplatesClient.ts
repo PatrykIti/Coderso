@@ -82,16 +82,24 @@ const toSummary = (detail: PageTemplateDetail): PageTemplateSummary => ({
 });
 
 const mergeIntoList = (detail: PageTemplateDetail) => {
-  const current = listCache.read() ?? [];
-  const summary = toSummary(detail);
-  const index = current.findIndex((item) => item.id === summary.id);
-  const next = [...current];
-  if (index === -1) {
-    next.unshift(summary);
-  } else {
-    next[index] = { ...next[index], ...summary };
+  const current = listCache.read();
+  // A detail-driven merge must never ESTABLISH the list cache: writing a
+  // single-item list when the full list was never fetched (or expired) makes
+  // a partial list look authoritative, shadowing published templates in
+  // pickers until the key is cleared (client-readiness smoke FIX 3). With no
+  // existing full list the detail cache is still written and the next list
+  // call fetches the complete set from the API.
+  if (current) {
+    const summary = toSummary(detail);
+    const index = current.findIndex((item) => item.id === summary.id);
+    const next = [...current];
+    if (index === -1) {
+      next.unshift(summary);
+    } else {
+      next[index] = { ...next[index], ...summary };
+    }
+    primeListCache(next);
   }
-  primeListCache(next);
   writeDetailCache(detail);
 };
 

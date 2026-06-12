@@ -1,6 +1,7 @@
 import {
   Archive,
   FilePenLine,
+  Inbox,
   ListChecks,
   MoreHorizontal,
   Pencil,
@@ -22,6 +23,7 @@ import type { FormStatus } from "@/services/formsClient";
 type FormRowActionsProps = {
   status: FormStatus;
   onEdit: () => void;
+  onSubmissions: () => void;
   onActionLogs: () => void;
   onPublish: () => void;
   onMoveToDraft: () => void;
@@ -33,6 +35,7 @@ type FormRowActionsProps = {
 export function FormRowActions({
   status,
   onEdit,
+  onSubmissions,
   onActionLogs,
   onPublish,
   onMoveToDraft,
@@ -51,6 +54,10 @@ export function FormRowActions({
         <DropdownMenuItem onClick={onEdit}>
           <Pencil className="h-4 w-4" />
           Edit
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onSubmissions}>
+          <Inbox className="h-4 w-4" />
+          Submissions
         </DropdownMenuItem>
         <DropdownMenuItem onClick={onActionLogs}>
           <ListChecks className="h-4 w-4" />
@@ -75,11 +82,7 @@ export function FormRowActions({
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
-        <DropdownMenuItem
-          variant="destructive"
-          disabled={!onDelete}
-          onClick={() => onDelete?.()}
-        >
+        <DropdownMenuItem variant="destructive" disabled={!onDelete} onClick={() => onDelete?.()}>
           <Trash2 className="h-4 w-4" />
           Delete
         </DropdownMenuItem>

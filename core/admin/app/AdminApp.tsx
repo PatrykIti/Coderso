@@ -49,6 +49,7 @@ import {
   EntryEditorRoute,
   EntryListRoute,
   FormActionLogsRoute,
+  FormSubmissionsRoute,
   FormBuilderRoute,
   FormListRoute,
   GeneralSettingsRoute,
@@ -610,6 +611,11 @@ export function AdminApp({ path }: AdminAppProps) {
       {
         pattern: "/advanced/forms/:id/action-runs",
         render: () => <FormActionLogsRoute.Component />,
+        permission: "forms:read",
+      },
+      {
+        pattern: "/advanced/forms/:id/submissions",
+        render: () => <FormSubmissionsRoute.Component />,
         permission: "forms:read",
       },
       {

@@ -71,6 +71,11 @@ export type PageEditorControlUiModel =
   | { kind: "swatch"; allowCustom: boolean; allowTransparent: boolean }
   | { kind: "media" }
   | { kind: "text" }
+  /**
+   * Structured list-items rows (label + optional link target) for the list
+   * block `props.items` control; commits owner `PageListItemV2` shapes.
+   */
+  | { kind: "listItems" }
   | { kind: "unsupported"; reason: string };
 
 export type PageEditorControlUiKind = PageEditorControlUiModel["kind"];
@@ -348,6 +353,8 @@ export const resolvePageEditorControlUiModel = (
       };
     case "media":
       return { kind: "media" };
+    case "items":
+      return { kind: "listItems" };
     case "text":
       return { kind: "text" };
     default:

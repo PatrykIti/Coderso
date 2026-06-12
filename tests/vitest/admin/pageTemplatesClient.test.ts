@@ -261,6 +261,76 @@ test("listPageTemplatesCached reads from local storage without refetching", asyn
   }
 });
 
+test("a detail-driven merge never establishes the list cache: the list call still fetches every template", async () => {
+  // Client-readiness FIX 3 regression: fetching one template detail while the
+  // full list was never cached must NOT write a single-item `pageTemplates:list`
+  // entry that shadows published templates in pickers across reloads.
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const secondSummary = {
+    ...templateSummary,
+    id: "tpl-2",
+    name: "P2 Smoke Template",
+    slug: "p2-smoke-template",
+    status: "published" as const,
+  };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/page-templates/tpl-1")) {
+      return jsonResponse(templateDetail);
+    }
+    return jsonResponse({ items: [templateSummary, secondSummary] });
+  };
+
+  try {
+    clearPageTemplatesCache();
+
+    const detail = await getPageTemplateCached("tpl-1");
+    expect(detail?.id).toBe("tpl-1");
+
+    // The detail merge must register as a list-cache MISS: the list call hits
+    // the API and surfaces the complete set, including the other published
+    // template the poisoned single-item cache used to hide.
+    const list = await listPageTemplatesCached();
+    expect(list.map((item) => item.id)).toEqual(["tpl-1", "tpl-2"]);
+    expect(calls.filter((call) => String(call.input).endsWith("/page-templates")).length).toBe(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPageTemplatesCache();
+  }
+});
+
+test("a detail-driven merge updates an existing full list cache in place", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const secondSummary = { ...templateSummary, id: "tpl-2", name: "Other", slug: "other" };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    if (String(input).endsWith("/page-templates/tpl-1")) {
+      return jsonResponse({ ...templateDetail, name: "Landing stack v2" });
+    }
+    return jsonResponse({ items: [templateSummary, secondSummary] });
+  };
+
+  try {
+    clearPageTemplatesCache();
+    await listPageTemplatesCached();
+
+    await getPageTemplateCached("tpl-1", { force: true });
+
+    // The cached full list keeps BOTH templates and absorbs the fresher name.
+    const list = await listPageTemplatesCached();
+    expect(list.map((item) => item.id)).toEqual(["tpl-1", "tpl-2"]);
+    expect(list[0]?.name).toBe("Landing stack v2");
+    expect(calls.filter((call) => String(call.input).endsWith("/page-templates")).length).toBe(1);
+  } finally {
+    globalThis.fetch = originalFetch;
+    clearPageTemplatesCache();
+  }
+});
+
 test("getPageTemplateCached reads detail from local storage without refetching", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;

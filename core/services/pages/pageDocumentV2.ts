@@ -604,6 +604,22 @@ export const getPageBlockActiveSlotKeys = (block: PageBlockV2): readonly PageBlo
   return slots.slice(0, count);
 };
 
+/**
+ * List block item contract: a plain string renders as text, while
+ * `{ label, href }` renders as a link (footer link columns). Plain strings
+ * stay first-class for backward compatibility with existing documents.
+ */
+export type PageListItemV2 = string | { label: string; href: string };
+
+/**
+ * Builds the stored shape for a list item from free-form editor input: a
+ * non-empty link target produces the `{ label, href }` link item, anything
+ * else collapses to the legacy plain-string item. Owned here so the panel
+ * items editor and normalization agree on the stored contract.
+ */
+export const createPageListItem = (label: string, href: string): PageListItemV2 =>
+  href.trim().length > 0 ? { label, href: href.trim() } : label;
+
 export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
   heading: { text: "Heading", level: "h2", align: "left" },
   text: { text: "Write the section copy here.", format: "plain", align: "left" },
@@ -648,6 +664,22 @@ const nullableStringSchema: RecordValue = { type: ["string", "null"] };
 const booleanSchema: RecordValue = { type: "boolean" };
 const arraySchema: RecordValue = { type: "array" };
 
+/** List block items: plain strings or `{ label, href }` link items. */
+const listItemsSchema: RecordValue = {
+  type: "array",
+  items: {
+    anyOf: [
+      { type: "string" },
+      {
+        type: "object",
+        additionalProperties: false,
+        required: ["label", "href"],
+        properties: { label: { type: "string" }, href: { type: "string" } },
+      },
+    ],
+  },
+};
+
 const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordValue => {
   if (type === "heading" && key === "level")
     return { type: "string", enum: [...pageHeadingLevels] };
@@ -680,6 +712,7 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   if (key === "ordered" || key === "autoplay" || key === "muted" || key === "wrap") {
     return booleanSchema;
   }
+  if (type === "list" && key === "items") return listItemsSchema;
   if (key === "items") return arraySchema;
   if (
     [
@@ -1551,6 +1584,58 @@ const normalizeBlockProps = (
   return result;
 };
 
+/**
+ * List items normalizer: plain strings stay plain strings (legacy and
+ * non-link items), `{ label, href }` records stay link items, and unknown
+ * record keys reject on fresh writes (reject-unknown contract). A link item
+ * whose `href` trims to empty collapses back to a plain string, so the stored
+ * shape is deterministic: an object item ALWAYS carries a usable link target.
+ */
+const normalizeListItems = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageListItemV2[] => {
+  const input = requireArray(value ?? [], path, mode);
+  const result: PageListItemV2[] = [];
+  for (const [index, item] of input.entries()) {
+    const itemPath = `${path}.${index}`;
+    if (typeof item === "string") {
+      result.push(item.trim());
+      continue;
+    }
+    if (isRecord(item)) {
+      assertKnownKeys(item, ["label", "href"], itemPath, mode);
+      const label = item.label;
+      const href = item.href;
+      if (mode === "write" && (typeof label !== "string" || typeof href !== "string")) {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Invalid list item at ${itemPath}.`,
+          itemPath
+        );
+      }
+      result.push(
+        createPageListItem(
+          typeof label === "string" ? label.trim() : "",
+          typeof href === "string" ? href : ""
+        )
+      );
+      continue;
+    }
+    if (mode === "write") {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        `Invalid list item at ${itemPath}.`,
+        itemPath
+      );
+    }
+    // Stored reads stay non-destructive: scalar legacy values keep their text.
+    result.push(typeof item === "number" || typeof item === "boolean" ? String(item) : "");
+  }
+  return result;
+};
+
 const normalizeBlockProp = (
   type: PageBlockType,
   key: string,
@@ -1601,6 +1686,7 @@ const normalizeBlockProp = (
   if (key === "ordered" || key === "autoplay" || key === "muted" || key === "wrap") {
     return Boolean(value);
   }
+  if (type === "list" && key === "items") return normalizeListItems(value, mode, path);
   if (key === "items") return Array.isArray(value) ? cloneRecord(value) : [];
   if (value === undefined) return undefined;
   if (value === null) return null;
