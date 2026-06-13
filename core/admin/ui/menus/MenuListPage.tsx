@@ -3,6 +3,7 @@ import {
   Filter,
   MapPin,
   MoreHorizontal,
+  PanelsTopLeft,
   Pencil,
   Plus,
   Search,
@@ -52,6 +53,7 @@ import {
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { MenuCreateDialog } from "@/ui/menus/MenuCreateDialog";
+import { SiteShellDialog } from "@/ui/menus/SiteShellDialog";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
@@ -442,6 +444,7 @@ export function MenuListPage() {
   const hasInitialCache = initialCached !== null;
   const [items, setItems] = useState<MenuSummary[]>(() => initialCached ?? []);
   const [createOpen, setCreateOpen] = useState(false);
+  const [siteShellOpen, setSiteShellOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(() => !hasInitialCache);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -675,6 +678,10 @@ export function MenuListPage() {
                   isApplying={isBulkWorking}
                 />
               ) : null}
+              <Button variant="outline" className="gap-2" onClick={() => setSiteShellOpen(true)}>
+                <PanelsTopLeft className="h-4 w-4" />
+                Site shell
+              </Button>
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
                 New
@@ -722,6 +729,7 @@ export function MenuListPage() {
         <ListPaginationFooter resourceLabel="menus" pagination={pagination} isLoading={isLoading} />
       </div>
 
+      <SiteShellDialog open={siteShellOpen} onOpenChange={setSiteShellOpen} />
       <MenuCreateDialog
         open={createOpen}
         onOpenChange={setCreateOpen}

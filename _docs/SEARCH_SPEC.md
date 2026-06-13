@@ -32,6 +32,29 @@ Zakres: wyszukiwanie w panelu admina.
 - Wyniki zwracane jako lista z polem `type`.
 - Odpowiedz zawiera aggregate-only `meta`, bez ujawniania ukrytych rekordow.
 
+## Listing Runtime Query Params
+
+Visitor-facing listing filters use the canonical grammar
+`lq.<listingQueryId>.<token>=value`, where `<token>` is one of:
+
+- `__sort` with `field:asc|desc`.
+- `__page` with a 1-based page number.
+- `__q` with the listing search text.
+- `<field>.<operator>` for allowlisted filter operators:
+  `eq`, `neq`, `in`, `nin`, `contains`, `startsWith`, `gt`, `gte`, `lt`,
+  `lte`, `between`, `exists`.
+
+Filters blocks may define bounded pretty aliases in `props.aliases`, for
+example `{ "rooms": "data.rooms.in", "sort": "__sort", "page": "__page" }`.
+Aliases are normalized into canonical `lq.*` tokens before filter parsing and
+query validation. If both an alias and its canonical `lq.*` token are present
+in the same request, the canonical token wins.
+
+The public HTML cache uses option A from TASK-459: filtered Page v2 HTML stays
+cacheable only for structurally valid canonical `lq.*` params, legacy
+`cl.<blockId>.page`, and route-level `page`/`sort`. Unknown params and
+overlong signatures render uncached.
+
 ## API
 
 - `GET /search?q=...&limit=20&dateRange=last-7-days` (admin)

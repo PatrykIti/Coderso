@@ -76,6 +76,8 @@ export type ListingFacetMetric = {
   } | null;
 };
 
+export type ListingRuntimeAliasMap = Record<string, string>;
+
 const runtimeFilterOperators = new Set<ListingFilterOperator>([
   "eq",
   "neq",
@@ -215,6 +217,88 @@ const parseFacetOperator = (
 
 export function buildListingRuntimeParamName(listingQueryId: string, token: string) {
   return `${LISTING_RUNTIME_QUERY_PREFIX}.${listingQueryId}.${token}`;
+}
+
+const listingRuntimeAliasNamePattern = /^[a-z][a-z0-9_-]{0,63}$/i;
+const listingRuntimeFieldTokenPattern = /^[a-z0-9_.-]+$/i;
+
+export function isListingRuntimeAliasName(value: string) {
+  return (
+    listingRuntimeAliasNamePattern.test(value) &&
+    !value.startsWith(LISTING_RUNTIME_QUERY_PREFIX + ".")
+  );
+}
+
+export function isListingRuntimeAliasToken(value: string) {
+  if (value === runtimeSortToken || value === runtimePageToken || value === runtimeSearchToken) {
+    return true;
+  }
+  const separatorIndex = value.lastIndexOf(".");
+  if (separatorIndex <= 0 || separatorIndex >= value.length - 1) return false;
+  const field = value.slice(0, separatorIndex);
+  const op = value.slice(separatorIndex + 1);
+  return (
+    listingRuntimeFieldTokenPattern.test(field) &&
+    runtimeFilterOperators.has(op as ListingFilterOperator)
+  );
+}
+
+export function normalizeListingRuntimeAliases(input: unknown): ListingRuntimeAliasMap {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+
+  const result: ListingRuntimeAliasMap = {};
+  const seenTokens = new Set<string>();
+  for (const [rawAlias, rawToken] of Object.entries(input as Record<string, unknown>)) {
+    if (Object.keys(result).length >= 24) break;
+    if (typeof rawToken !== "string") continue;
+    const alias = rawAlias.trim();
+    const token = rawToken.trim();
+    if (!isListingRuntimeAliasName(alias) || !isListingRuntimeAliasToken(token)) continue;
+    if (seenTokens.has(token)) continue;
+    result[alias] = token;
+    seenTokens.add(token);
+  }
+  return result;
+}
+
+export function resolveListingRuntimeParamName(
+  listingQueryId: string,
+  token: string,
+  aliases?: ListingRuntimeAliasMap
+) {
+  const normalizedAliases = normalizeListingRuntimeAliases(aliases);
+  for (const [alias, aliasToken] of Object.entries(normalizedAliases)) {
+    if (aliasToken === token) return alias;
+  }
+  return buildListingRuntimeParamName(listingQueryId, token);
+}
+
+export function normalizeListingRuntimeSearchParams(
+  searchParams: URLSearchParams,
+  listingQueryId: string,
+  aliases?: ListingRuntimeAliasMap
+) {
+  const normalizedListingQueryId = listingQueryId.trim();
+  const prefix = `${LISTING_RUNTIME_QUERY_PREFIX}.${normalizedListingQueryId}.`;
+  const normalized = new URLSearchParams(searchParams);
+  const canonicalTokens = new Set<string>();
+
+  for (const key of searchParams.keys()) {
+    if (!key.startsWith(prefix)) continue;
+    const token = key.slice(prefix.length).trim();
+    if (token) canonicalTokens.add(token);
+  }
+
+  for (const [alias, token] of Object.entries(normalizeListingRuntimeAliases(aliases))) {
+    if (canonicalTokens.has(token)) continue;
+    const values = searchParams.getAll(alias);
+    if (values.length === 0) continue;
+    const canonicalName = buildListingRuntimeParamName(normalizedListingQueryId, token);
+    values.forEach((value) => normalized.append(canonicalName, value));
+    canonicalTokens.add(token);
+  }
+
+  return normalized;
 }
 
 export function normalizeListingFacetConfigs(input: unknown): ListingFacetConfig[] {

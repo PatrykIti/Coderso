@@ -107,12 +107,53 @@ The breadcrumb/status strip also matters:
      the live listing. Optional refinements: a `Saved query` (only queries
      built for the picked content type appear; switching the content type
      clears the query so it never points at the wrong type), a `Limit` slider
-     for how many entries to show, and a `Listing template` for the entry
-     layout. Saved queries and templates are built in the Listings admin
-     first. Choosing `None` clears any of the three references; if a
-     referenced resource is later deleted, the picker marks the missing
-     reference and the published page shows a safe "collection not available"
-     message instead of a broken listing.
+     for how many entries to show (1 to 24 — the same bound the published page
+     enforces), and a `Listing template` for the entry layout. A bound
+     template also styles the listing: its column count, gap, and card
+     variant (default, compact, or minimal) replace the standard grid, and
+     its empty-state title and description show when no entries match. Saved
+     queries and templates are built in the Listings admin first. Choosing
+     `None` clears any of the three references; if a referenced resource is
+     later deleted, the picker marks the missing reference and the published
+     page shows a safe "collection not available" message instead of a broken
+     listing. Card links need a matching content route (Site Settings →
+     Content routes): when the entry type has no enabled route, cards render
+     without links and show a short "links unavailable" note instead of
+     pointing at pages that do not exist.
+   - Paging a long listing: the same `Content` panel has a `Pagination` strip
+     (`none`, `paged`, `load-more`) and a `Page size` slider (1 to 24; when
+     unset, the page size follows `Limit`). `None` is the default and keeps
+     the single-list render every existing page already has. `Paged` adds a
+     pager line under the listing on the published page: the total result
+     count ("N results"), numbered page links (long ranges collapse to
+     1 … 4 5 6 … 12), and Previous/Next. `Load-more` renders a single
+     "Load more" link that grows the list page by page. Page links are real
+     links — they work without JavaScript and produce shareable addresses —
+     and on listings bound to a saved query the pager updates the list in
+     place without a full reload. The canvas preview keeps all pagination
+     affordances non-interactive.
+   - Letting visitors filter and sort a listing page: insert the `Filters`
+     block from the command palette next to your `Collection` block, then open
+     the `Content` panel and pick the SAME `Saved query` the collection block
+     uses — that shared query is what connects the filter controls to the
+     listed entries. Build the filter controls in the `Facets` editor: each
+     facet has a kind (`Checkbox`, `Radio`, `Taxonomy`, `Range`, `Date range`,
+     or `Sort`), a visitor-facing label, and the entry field it filters (any
+     schema field path such as `data.rooms` — facets are fully generic, so the
+     same block powers real-estate catalogs, job boards, directories, or any
+     other listing). Option-backed kinds list their choices one per line as
+     `value | Label`; the `Sort` kind lists sort options as `field:asc | Label`
+     (with no facets configured, the block shows a generic newest/oldest sort).
+     Behavior toggles cover `Auto apply` (filter on every change vs an explicit
+     apply button), `Show search` (a free-text search row), and
+     `Show result count` (the number of matching entries above the form); the
+     `Layout` panel switches between the horizontal bar and the sidebar shape.
+     The canvas shows a non-interactive preview of the facet form; on the
+     published page, filtering updates the listing in place and the address
+     bar, so filtered views are shareable links — and everything still works
+     as a plain form submit when JavaScript is unavailable. If the saved query
+     is later deleted, the published page shows a safe "filters not available"
+     message instead of broken controls.
    - The `Responsive` panel is the dedicated breakpoint surface for the
      selected section or block. It contains:
      - `Hide on desktop` / `Hide on tablet` / `Hide on mobile` toggles. The

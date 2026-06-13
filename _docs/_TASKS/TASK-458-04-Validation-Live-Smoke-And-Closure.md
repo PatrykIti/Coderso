@@ -6,7 +6,8 @@
 **Category:** Menus / Validation / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-458-01, TASK-458-02, TASK-458-03
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-13
 
 ---
 
@@ -39,14 +40,14 @@ Live smoke MUST prove (owner acceptance):
 
 ## Sub-Tasks
 
-- [ ] Full lanes: `bun run test:vitest`, Bun suites for menus/shell/pages
+- [x] Full lanes: `bun run test:vitest`, Bun suites for menus/shell/pages
       runtime (env loaded), `bun --cwd core lint`, `bun --cwd core
       lint:types`, root `npx tsc -p tsconfig.json --noEmit`.
-- [ ] Migration check on the dev DB (menus.settings present, legacy rows
+- [x] Migration check on the dev DB (menus.settings present, legacy rows
       null, no errors).
 - [ ] Live smoke via `coderso-dev-core-host` + `playwright-cli` covering the
       three scenarios above; capture notes/screenshots under `.tmp/`.
-- [ ] Docs: `_docs/PAGE_MODEL.md`, `_docs/DATA_MODEL.md`,
+- [x] Docs: `_docs/PAGE_MODEL.md`, `_docs/DATA_MODEL.md`,
       `_docs/ADMIN_CACHE.md`/`_docs/ADMIN_CACHE_MAP.md` (as touched),
       `docs/guide/` screens (Menus list dialog, design view, Settings page
       without shell).
@@ -54,6 +55,18 @@ Live smoke MUST prove (owner acceptance):
       `_docs/_CHANGELOG/` entry (note the Settings shell-section REMOVAL as
       a deliberate owner-requested change and the byte-identity guarantee
       for legacy menus).
+
+## Progress Notes
+
+- 2026-06-13: Targeted Vitest, Bun route/runtime suites, lint, typecheck, root
+  local `tsc`, DB reachability, `menus.settings` schema presence, and
+  `bun run gates:coderso` passed. Live dev-host Playwright smoke remains the
+  only closure blocker.
+- 2026-06-13: Read-only drift audit found a real high-severity risk where
+  design edits on an already-published menu could leak through the public
+  shell before publish. Fixed by storing draft design at top-level
+  `menus.settings` and public design under `menus.settings.published`; added
+  menu service and runtime regression coverage.
 
 ---
 

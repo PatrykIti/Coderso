@@ -6,7 +6,8 @@
 **Category:** Menus / Admin UI / Settings
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -71,14 +72,26 @@ Deliverables:
 
 ## Sub-Tasks
 
-- [ ] Build `SiteShellDialog` (load on open, scoped partial save, error
+- [x] Build `SiteShellDialog` (load on open, scoped partial save, error
       mapping, lazy menus/templates options fetch).
-- [ ] Wire the "Site shell" button into the `MenuListPage` PageHeader actions
+- [x] Wire the "Site shell" button into the `MenuListPage` PageHeader actions
       slot.
-- [ ] Remove the shell section, nav entry, form fields, and save-payload keys
+- [x] Remove the shell section, nav entry, form fields, and save-payload keys
       from `SiteSettingsPage`; update its tests.
-- [ ] Update admin prefetch/cache wiring if the dialog introduces new cached
+- [x] Update admin prefetch/cache wiring if the dialog introduces new cached
       reads (`core/admin/utils/adminPrefetch.ts`, cachePolicy keys).
+
+## Completion Notes
+
+- Site shell configuration now lives on the Menus surface through the scoped
+  dialog. The Settings shell section and stale copy were removed, and admin
+  route/prefetch coverage was updated.
+
+## Validation
+
+- `bunx vitest run tests/vitest/admin/adminApp.test.tsx` passed.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
 
 ---
 

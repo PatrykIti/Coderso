@@ -6,7 +6,8 @@
 **Category:** Menus / Data Model / Public Runtime
 **Estimated Effort:** Large
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -68,17 +69,17 @@ Deliverables:
 
 ## Sub-Tasks
 
-- [ ] Migration artifacts: `menus.settings` jsonb (SQL + journal +
+- [x] Migration artifacts: `menus.settings` jsonb (SQL + journal +
       schema.ts).
-- [ ] `normalizeMenuAppearance` module: model, defaults pinned to the current
+- [x] `normalizeMenuAppearance` module: model, defaults pinned to the current
       look, color/enum/clamp validation, reject-unknown,
       `menu_appearance_invalid` sentinel.
-- [ ] Menu service + routes: persist appearance on update, carry it through
+- [x] Menu service + routes: persist appearance on update, carry it through
       publish/draft, expose it on `getMenuWithItems`/shell resolution.
-- [ ] `buildSiteShellCss` builder + byte-identity guarantee; swap the static
+- [x] `buildSiteShellCss` builder + byte-identity guarantee; swap the static
       constant injection in `renderPublicPage.tsx` for the built CSS threaded
       from the resolved shell.
-- [ ] Bun + vitest coverage (below).
+- [x] Bun + vitest coverage (below).
 
 ---
 
@@ -147,6 +148,24 @@ matrix incl. transparent and `var(--color-*)` tokens, reject-unknown.
   (prevents CSS/HTML injection through the style channel); draft appearance
   never renders publicly (published snapshot only).
 - **Anti-abuse controls:** not applicable (no public writes).
+
+## Completion Notes
+
+- Menu appearance is persisted in `menus.settings`, normalized through the
+  menu appearance contract, carried through explicit publish snapshots under
+  `menus.settings.published`, and rendered by the public shell CSS builder
+  with legacy/default behavior preserved. A drift pass found and this closeout
+  fixed the published-menu draft leak risk: design edits now remain top-level
+  draft state until `publishMenu` snapshots them.
+
+## Validation
+
+- `bun test tests/integration/routes/menus.test.ts` passed.
+- `bun test tests/unit/menus/menuService.test.ts` passed.
+- `bun test tests/integration/runtime/menu-design-extras-runtime.test.ts`
+  passed, including the draft-edit-before-publish isolation guard.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
 
 ---
 

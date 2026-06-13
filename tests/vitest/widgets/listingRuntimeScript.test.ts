@@ -396,6 +396,79 @@ test("listing runtime submit removes stale __page when filters change", async ()
   expect(requestUrl.searchParams.get("lq.other.__page")).toBe("2");
 });
 
+test("listing runtime submit serializes configured aliases and clears stale alias state", async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(document.body.innerHTML, {
+      status: 200,
+      headers: { "Content-Type": "text/html" },
+    });
+  });
+  globalThis.fetch = fetchMock as typeof globalThis.fetch;
+  window.history.replaceState(
+    {},
+    "",
+    "http://localhost:3000/?rooms=2&page=4&lq.query-3.__page=4&lq.other.__page=2"
+  );
+
+  const form = installListingFiltersRuntime(
+    normalizeListingFiltersData({
+      listingQueryId: "query-3",
+      autoApply: false,
+      showSearch: false,
+      aliases: {
+        rooms: "data.rooms.in",
+        page: "__page",
+      },
+      facets: [
+        {
+          id: "rooms",
+          kind: "checkbox",
+          label: "Rooms",
+          field: "data.rooms",
+          op: "in",
+          options: [{ value: "3", label: "Three" }],
+        },
+      ],
+      resolved: {
+        listingQueryId: "query-3",
+        metrics: [
+          {
+            id: "rooms",
+            kind: "checkbox",
+            label: "Rooms",
+            token: "data.rooms.in",
+            options: [{ value: "3", label: "Three", count: 2, active: false }],
+            range: null,
+          },
+        ],
+      },
+    })
+  );
+
+  const checkbox = form.querySelector('input[type="checkbox"]') as HTMLInputElement | null;
+  expect(checkbox?.name).toBe("rooms");
+  if (!checkbox) {
+    throw new Error("Expected listing filter checkbox.");
+  }
+  checkbox.checked = true;
+  submitForm(form);
+  await flush();
+
+  const firstCall = fetchMock.mock.calls[0] as unknown as
+    | [RequestInfo | URL, RequestInit?]
+    | undefined;
+  expect(firstCall).toBeDefined();
+  if (!firstCall) {
+    throw new Error("Expected listing runtime submit fetch call.");
+  }
+  const requestUrl = new URL(String(firstCall[0]));
+  expect(requestUrl.searchParams.get("rooms")).toBe("3");
+  expect(requestUrl.searchParams.get("page")).toBeNull();
+  expect(requestUrl.searchParams.get("lq.query-3.__page")).toBeNull();
+  expect(requestUrl.searchParams.get("lq.query-3.data.rooms.in")).toBeNull();
+  expect(requestUrl.searchParams.get("lq.other.__page")).toBe("2");
+});
+
 test("search box listing mode keeps the shared listing runtime submit contract after listing-filters changes", async () => {
   const fetchMock = vi.fn(async () => {
     return new Response(document.body.innerHTML, {
@@ -678,4 +751,55 @@ test("listing runtime keeps only the latest response across listing-filters, con
       ) as HTMLFormElement | null
     )?.getAttribute("aria-busy")
   ).toBe("false");
+});
+
+test("listing runtime intercepts pager links and fetch-swaps the bound listing blocks (TASK-459-03)", async () => {
+  const fetchMock = vi.fn(async () => {
+    return new Response(
+      '<html><body><section data-listing-query-id="query-9" data-listing-block-id="block-9"><p data-listing-swapped="1">Page two item</p></section></body></html>',
+      { status: 200, headers: { "Content-Type": "text/html" } }
+    );
+  });
+  globalThis.fetch = fetchMock as typeof globalThis.fetch;
+
+  resetRuntimeFlag();
+  window.history.replaceState({}, "", "http://localhost:3000/catalog");
+  document.body.innerHTML = [
+    '<section data-listing-query-id="query-9" data-listing-block-id="block-9">',
+    '<p data-listing-item="1">Page one item</p>',
+    '<nav><a href="?lq.query-9.__page=2" data-listing-page-link="1">2</a></nav>',
+    "</section>",
+  ].join("");
+  const { getListingRuntimeClientScript } =
+    await import("../../../core/widgets/core/listingRuntimeScript");
+  // eslint-disable-next-line no-eval
+  eval(getListingRuntimeClientScript());
+
+  const pagerLink = document.querySelector('[data-listing-query-id] [data-listing-page-link="1"]');
+  if (!(pagerLink instanceof HTMLAnchorElement)) throw new Error("Missing pager link");
+  const pagerClick = new MouseEvent("click", { bubbles: true, cancelable: true });
+  pagerLink.dispatchEvent(pagerClick);
+  await flush();
+
+  // The click was intercepted: the listing block fetch-swapped in place and
+  // the URL carries the lq page token through pushState.
+  expect(pagerClick.defaultPrevented).toBe(true);
+  const firstCall = fetchMock.mock.calls[0] as unknown as
+    | [RequestInfo | URL, RequestInit?]
+    | undefined;
+  expect(firstCall).toBeDefined();
+  if (!firstCall) throw new Error("Expected pager fetch call.");
+  const requestUrl = new URL(String(firstCall[0]));
+  expect(requestUrl.searchParams.get("lq.query-9.__page")).toBe("2");
+  expect(document.querySelector('[data-listing-swapped="1"]')?.textContent).toBe("Page two item");
+  expect(window.location.search).toContain("lq.query-9.__page=2");
+  // The harness resets the window once-guard per test, so earlier evals leave
+  // their document-level click listeners behind — every observed fetch must
+  // still target the SAME pager URL (production binds exactly once).
+  expect(new Set((fetchMock.mock.calls as unknown[][]).map((call) => String(call[0]))).size).toBe(
+    1
+  );
+  // Legacy (cl.*) pagers have no data-listing-query-id ancestor: the handler
+  // returns before preventDefault, keeping the plain server navigation —
+  // pinned by the Bun runtime suite (legacy pages ship no script at all).
 });

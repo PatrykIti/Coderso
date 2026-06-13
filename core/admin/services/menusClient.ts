@@ -8,6 +8,8 @@ import {
   writeLocalCache,
 } from "@/utils/storageCache";
 import type { MenuItemSettings } from "../../services/menus/menuItemSettings";
+import type { MenuAppearance } from "../../services/menus/normalizeMenuAppearance";
+import type { PageBlockV2 } from "../../services/pages/pageDocumentV2";
 
 export type MenuSummary = {
   id: string;
@@ -16,6 +18,12 @@ export type MenuSummary = {
   status: "draft" | "published";
   publishedAt: string | null;
   createdAt: string;
+  /**
+   * Stored `menus.settings` envelope (appearance + nav extras,
+   * TASK-458-02/03). Read through the fail-closed `resolveStored*` helpers,
+   * never directly.
+   */
+  settings?: unknown;
 };
 
 export type MenuItemRecord = {
@@ -195,7 +203,15 @@ export async function createMenu(input: {
 
 export async function updateMenu(
   menuId: string,
-  input: { name?: string; location?: string | null; status?: MenuSummary["status"] }
+  input: {
+    name?: string;
+    location?: string | null;
+    status?: MenuSummary["status"];
+    /** Menu appearance draft; `null` clears back to the legacy look. */
+    appearance?: MenuAppearance | null;
+    /** Nav extras blocks; `null`/empty clears the slot. */
+    extras?: PageBlockV2[] | null;
+  }
 ) {
   const updated = await apiRequest<MenuSummary>(
     `/menus/${menuId}`,

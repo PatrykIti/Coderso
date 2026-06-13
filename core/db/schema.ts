@@ -778,6 +778,19 @@ export const contentEntries = pgTable(
     statusIdx: index("content_entries_status_idx").on(t.status),
     titleIdx: index("content_entries_title_idx").on(t.title),
     scheduledAtIdx: index("content_entries_scheduled_at_idx").on(t.scheduledAt),
+    // TASK-459-04 listing pushdown indexes: the composite btree serves the
+    // published-catalog base predicate (type + status + publishedAt) pushed
+    // into SQL by the listing execution path; the jsonb_path_ops GIN serves
+    // containment/jsonpath probes over entry data. Per-field expression
+    // btrees for hot numeric comparisons are an operator-level optimization
+    // documented in _docs/DATA_MODEL.md (field paths are user-defined and
+    // cannot be statically migrated).
+    typeStatusPublishedIdx: index("content_entries_type_status_published_idx").on(
+      t.typeId,
+      t.status,
+      t.publishedAt
+    ),
+    dataGinIdx: index("content_entries_data_gin_idx").using("gin", t.data.op("jsonb_path_ops")),
   })
 );
 
@@ -1082,6 +1095,8 @@ export const menus = pgTable(
     status: text("status").notNull().default("draft"),
     publishedAt: timestamp("published_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
+    // Nullable appearance envelope (TASK-458-02); null = legacy shell look.
+    settings: jsonb("settings"),
   },
   (t) => ({
     nameIdx: uniqueIndex("menus_name_idx").on(t.name),

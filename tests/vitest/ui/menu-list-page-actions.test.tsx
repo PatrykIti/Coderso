@@ -283,6 +283,13 @@ vi.mock("@/ui/menus/MenuCreateDialog", () => ({
   MenuCreateDialog: () => <div data-testid="menu-create-dialog" />,
 }));
 
+// The real SiteShellDialog pulls in the settings/page-templates cached
+// clients, which conflict with the narrowed cachePolicy mock above; the
+// dialog has its own dedicated suite (site-shell-dialog.test.tsx).
+vi.mock("@/ui/menus/SiteShellDialog", () => ({
+  SiteShellDialog: () => <div data-testid="site-shell-dialog" />,
+}));
+
 vi.mock("@/ui/shared/AdminLink", () => ({
   AdminLink: ({
     children,

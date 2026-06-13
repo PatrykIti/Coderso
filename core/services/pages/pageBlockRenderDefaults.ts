@@ -180,6 +180,7 @@ export const pageBlockRenderDefaults: Record<PageBlockType, PageBlockRenderDefau
   gallery: { ...frameRenderDefaults },
   form: { ...frameRenderDefaults },
   collection: { ...frameRenderDefaults },
+  filters: { ...frameRenderDefaults },
   embed: { ...frameRenderDefaults },
   divider: { ...frameRenderDefaults },
   spacer: { ...frameRenderDefaults },

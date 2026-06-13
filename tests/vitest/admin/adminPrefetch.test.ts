@@ -130,8 +130,11 @@ test("settings site prefetch warms settings and selector caches once", async () 
     expect(paths.filter((path) => path.endsWith("/settings"))).toHaveLength(1);
     expect(paths.filter((path) => path.endsWith("/pages"))).toHaveLength(1);
     expect(paths.filter((path) => path.endsWith("/content-types"))).toHaveLength(1);
-    expect(paths.filter((path) => path.endsWith("/menus"))).toHaveLength(1);
-    expect(paths.filter((path) => path.endsWith("/page-templates"))).toHaveLength(1);
+    // Site shell pickers moved to the Menus-surface SiteShellDialog
+    // (TASK-458-01): the Site Settings prefetch no longer warms menus or
+    // page-template caches.
+    expect(paths.filter((path) => path.endsWith("/menus"))).toHaveLength(0);
+    expect(paths.filter((path) => path.endsWith("/page-templates"))).toHaveLength(0);
   } finally {
     globalThis.fetch = originalFetch;
     restoreStorage();

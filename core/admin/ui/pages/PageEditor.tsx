@@ -24,6 +24,7 @@ import {
   Minimize2,
   MonitorSmartphone,
   PaintBucket,
+  Palette,
   PanelTop,
   Plus,
   RotateCcw,
@@ -127,6 +128,7 @@ import { toPageTypographyCssVariableMap } from "../../../ui/theme/tokenCss";
 import {
   ColorSwatchControl,
   ComboboxControl,
+  FacetListControl,
   ListItemsControl,
   MediaPickerControl,
   SegmentedControl,
@@ -234,6 +236,43 @@ export type PageEditorHostSettingsRenderProps = {
 };
 
 /**
+ * Host-side palette scoping (TASK-458-03): when present, the listed types
+ * INTERSECT the globally insertable section/block options everywhere insert
+ * choices surface (command palette, ghost tiles, add-beside). The palette
+ * can only narrow the global capability tables, never widen them — gated
+ * types (e.g. the `navigation` section) stay gated even when listed.
+ * Absent palette (page + page-template hosts) keeps the full catalog.
+ */
+export type PageEditorHostPalette = {
+  sections?: PageSectionType[];
+  blocks?: PageBlockType[];
+};
+
+export type PageEditorHostAppearancePanelProps = {
+  document: PageDocumentV2;
+  device: PageBreakpoint;
+  /** Draft-discipline write path: patches mark the document unsaved. */
+  updateDocument: (updater: (current: PageDocumentV2) => PageDocumentV2) => void;
+};
+
+/**
+ * Host-owned floating-toolbar panel (TASK-458-03): rendered as an extra
+ * always-available panel tab ahead of the registry panels. The menu host
+ * uses it to expose the menu appearance controls through the shared control
+ * primitives, writing into the document draft.
+ */
+export type PageEditorHostAppearancePanel = {
+  label: string;
+  description: string;
+  render: (props: PageEditorHostAppearancePanelProps) => ReactNode;
+};
+
+export type PageEditorHostCanvasChromeProps = {
+  document: PageDocumentV2;
+  device: PageBreakpoint;
+};
+
+/**
  * Document host abstraction: the Page Editor v2 surface (canvas, floating
  * panel, registry control pipeline, inline edit) is shared verbatim between
  * Pages and Page Templates. Hosts only swap the page-chrome concerns: load
@@ -241,7 +280,7 @@ export type PageEditorHostSettingsRenderProps = {
  * issuance, the settings sheet, and assistant surface advertisement.
  */
 export type PageEditorHost = {
-  mode: "page" | "page-template";
+  mode: "page" | "page-template" | "menu";
   resourceLabel: string;
   settingsLabel: string;
   previewTitle: string;
@@ -257,7 +296,12 @@ export type PageEditorHost = {
     id: string,
     document: PageDocumentV2
   ) => Promise<PageEditorHostPublishResult | null | undefined>;
-  preview: (id: string) => Promise<PageEditorHostPreviewResponse>;
+  /**
+   * Preview-token issuance. Optional (TASK-458-03): hosts without a preview
+   * route (menus — the live canvas IS the preview) omit it and the toolbar
+   * preview affordance is hidden, consistent with publish/revisions.
+   */
+  preview?: (id: string) => Promise<PageEditorHostPreviewResponse>;
   revisions?: PageEditorHostRevisions;
   /** Page-chrome settings: defaults to the page settings sheet when omitted. */
   renderSettings?: (props: PageEditorHostSettingsRenderProps) => ReactNode;
@@ -266,6 +310,16 @@ export type PageEditorHost = {
     listPublished: () => Promise<{ id: string; name: string; description: string | null }[]>;
     instantiateSections: (id: string) => Promise<PageSectionV2[]>;
   };
+  /** Host-side narrowing of the insertable section/block options. */
+  palette?: PageEditorHostPalette;
+  /** Extra host-owned floating-toolbar panel (e.g. menu appearance). */
+  appearancePanel?: PageEditorHostAppearancePanel;
+  /**
+   * Host-owned chrome rendered inside the canvas frame above the document
+   * sections (e.g. the live menu shell preview). Receives the CURRENT draft
+   * so it restyles live as the panel edits it.
+   */
+  canvasChrome?: (props: PageEditorHostCanvasChromeProps) => ReactNode;
 };
 
 const defaultPagesEditorHost: PageEditorHost = {
@@ -318,7 +372,9 @@ type ToolbarPanel =
   | "spacing"
   | "background"
   | "responsive"
-  | "visibility";
+  | "visibility"
+  /** Host-owned appearance panel slot (only offered when the host provides one). */
+  | "host-appearance";
 
 type SectionOption = {
   type: PageSectionType;
@@ -406,6 +462,7 @@ const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> = {
   list: { label: "List", description: "Bulleted or numbered points." },
   card: { label: "Card", description: "Compact title and body block." },
   collection: { label: "Collection", description: "Data-bound listing block." },
+  filters: { label: "Filters", description: "Visitor facet filters for a bound listing." },
   embed: { label: "Embed", description: "Trusted external embed." },
   divider: { label: "Divider", description: "Visual separator." },
   spacer: { label: "Spacer", description: "Vertical rhythm control." },
@@ -1875,7 +1932,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   // pick-time so cancelling the palette never mutates the document.
   const [pendingBesideBlockPath, setPendingBesideBlockPath] = useState<PageBlockPath | null>(null);
   const [layersOpen, setLayersOpen] = useState(false);
-  const [activePanel, setActivePanel] = useState<ToolbarPanel | null>("content");
+  // Hosts with an appearance panel open on it (it is their primary control
+  // surface); page hosts keep the content panel default.
+  const [activePanel, setActivePanel] = useState<ToolbarPanel | null>(() =>
+    editorHost.appearancePanel ? "host-appearance" : "content"
+  );
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
   const [toolbarDragging, setToolbarDragging] = useState(false);
   const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
@@ -2070,28 +2131,66 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     resolvedSelectedBlock &&
     isPageTypographyCapableBlockType(resolvedSelectedBlock.type)
   );
-  const visibleToolbarPanelOptions = typographyPanelAvailable
-    ? toolbarPanelOptions
-    : toolbarPanelOptions.filter((option) => option.panel !== "typography");
+  // Host appearance panel (TASK-458-03): offered as the leading panel tab
+  // whenever the host provides one (it edits document-level state, so it is
+  // selection-independent).
+  const hostAppearancePanel = editorHost.appearancePanel;
+  const visibleToolbarPanelOptions = useMemo<ToolbarPanelOption[]>(() => {
+    const registryOptions = typographyPanelAvailable
+      ? toolbarPanelOptions
+      : toolbarPanelOptions.filter((option) => option.panel !== "typography");
+    if (!hostAppearancePanel) return registryOptions;
+    return [
+      {
+        panel: "host-appearance",
+        label: hostAppearancePanel.label,
+        description: hostAppearancePanel.description,
+        Icon: Palette,
+      },
+      ...registryOptions,
+    ];
+  }, [hostAppearancePanel, typographyPanelAvailable]);
   const activeToolbarPanel =
-    activePanel === "typography" && !typographyPanelAvailable ? null : activePanel;
+    (activePanel === "typography" && !typographyPanelAvailable) ||
+    (activePanel === "host-appearance" && !hostAppearancePanel)
+      ? null
+      : activePanel;
+
+  // Host palette scoping (TASK-458-03): intersect the global insertable
+  // options with the host palette BEFORE query filtering, so every insert
+  // entry point (command palette, ghost tiles, add-beside) only ever offers
+  // host-allowed types. Absent palette keeps today's full catalog.
+  const hostPalette = editorHost.palette;
+  const availableSectionOptions = useMemo(() => {
+    if (!hostPalette?.sections) return sectionOptions;
+    const allowed = new Set(hostPalette.sections);
+    return sectionOptions.filter((option) => allowed.has(option.type));
+  }, [hostPalette]);
+  const availableBlockOptions = useMemo(() => {
+    if (!hostPalette?.blocks) return blockOptions;
+    const allowed = new Set(hostPalette.blocks);
+    return blockOptions.filter((option) => allowed.has(option.type));
+  }, [hostPalette]);
+  // Hosts with zero insertable sections get no section-insert affordances
+  // (gap zones, "Add section" buttons, palette section group).
+  const canInsertSections = availableSectionOptions.length > 0;
 
   const filteredSections = useMemo(() => {
     const query = commandQuery.trim().toLowerCase();
     return query
-      ? sectionOptions.filter((option) =>
+      ? availableSectionOptions.filter((option) =>
           `${option.label} ${option.description}`.toLowerCase().includes(query)
         )
-      : sectionOptions;
-  }, [commandQuery]);
+      : availableSectionOptions;
+  }, [availableSectionOptions, commandQuery]);
   const filteredBlocks = useMemo(() => {
     const query = commandQuery.trim().toLowerCase();
     return query
-      ? blockOptions.filter((option) =>
+      ? availableBlockOptions.filter((option) =>
           `${option.label} ${option.description}`.toLowerCase().includes(query)
         )
-      : blockOptions;
-  }, [commandQuery]);
+      : availableBlockOptions;
+  }, [availableBlockOptions, commandQuery]);
   const filteredTemplates = useMemo(() => {
     if (!templateOptions) return [];
     const query = commandQuery.trim().toLowerCase();
@@ -3167,13 +3266,16 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   };
 
   const handlePreview = async () => {
-    if (!page) return;
+    // Optional host capability (TASK-458-03): the affordance is hidden when
+    // the host issues no preview tokens, so this is a type guard only.
+    const previewHost = editorHost.preview;
+    if (!page || !previewHost) return;
     setPreviewLoading(true);
     setPreviewError(null);
     try {
       const previewPageId = hasUnsavedChanges ? (await saveCurrentDraft())?.id : page.id;
       if (!previewPageId) return;
-      const response = await editorHost.preview(previewPageId);
+      const response = await previewHost(previewPageId);
       setPreviewUrl(response.previewUrl);
       setPreviewProbe(response.probe ?? null);
       setPreviewOpen(true);
@@ -3206,16 +3308,18 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           History
         </Button>
       ) : null}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={previewLoading || !page}
-        onClick={handlePreview}
-      >
-        <Eye className="h-4 w-4" />
-        Preview
-      </Button>
+      {editorHost.preview ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={previewLoading || !page}
+          onClick={handlePreview}
+        >
+          <Eye className="h-4 w-4" />
+          Preview
+        </Button>
+      ) : null}
       <Button
         type="button"
         variant="outline"
@@ -3310,33 +3414,47 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             data-page-editor-canvas-frame="true"
             data-page-editor-canvas-device={device}
           >
+            {!isLoading && editorHost.canvasChrome ? (
+              <div className="mb-4" data-page-editor-canvas-chrome="true">
+                {editorHost.canvasChrome({ document: pageDocument, device })}
+              </div>
+            ) : null}
             {isLoading ? (
               <div className="p-16 text-center text-sm text-muted-foreground">Loading page...</div>
             ) : pageDocument.sections.length === 0 ? (
               <div className="p-16 text-center">
                 <p className="text-sm text-muted-foreground">This page has no sections yet.</p>
-                <Button type="button" className="mt-4" onClick={openCommandPalette}>
-                  <Plus className="h-4 w-4" />
-                  Add section
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="flex justify-center">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className={editorCanvasCtaButtonClass}
-                    onClick={openCommandPalette}
-                  >
+                {canInsertSections ? (
+                  <Button type="button" className="mt-4" onClick={openCommandPalette}>
                     <Plus className="h-4 w-4" />
                     Add section
                   </Button>
-                </div>
+                ) : null}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {canInsertSections ? (
+                  <div className="flex justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className={editorCanvasCtaButtonClass}
+                      onClick={openCommandPalette}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Add section
+                    </Button>
+                  </div>
+                ) : null}
                 {pageDocument.sections.map((section, sectionIndex) => (
                   <Fragment key={section.id}>
-                    <SectionGapInsertZone index={sectionIndex} onInsert={openCommandPaletteAtGap} />
+                    {canInsertSections ? (
+                      <SectionGapInsertZone
+                        index={sectionIndex}
+                        onInsert={openCommandPaletteAtGap}
+                      />
+                    ) : null}
                     <SectionCanvas
                       section={resolvePageSectionForBreakpoint(section, device)}
                       baseSection={section}
@@ -3359,10 +3477,12 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                     />
                   </Fragment>
                 ))}
-                <SectionGapInsertZone
-                  index={pageDocument.sections.length}
-                  onInsert={openCommandPaletteAtGap}
-                />
+                {canInsertSections ? (
+                  <SectionGapInsertZone
+                    index={pageDocument.sections.length}
+                    onInsert={openCommandPaletteAtGap}
+                  />
+                ) : null}
               </div>
             )}
           </div>
@@ -3623,7 +3743,51 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                 ))}
               </div>
             ) : null}
-            {!toolbarCollapsed && activeToolbarPanel ? (
+            {!toolbarCollapsed && activeToolbarPanel === "host-appearance" ? (
+              // Host-owned appearance panel (TASK-458-03): same subpanel
+              // chrome as the registry panels, content rendered by the host
+              // through the shared control primitives.
+              <div
+                className="mt-2 flex max-h-[min(72vh,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg bg-white/5 text-slate-100"
+                data-page-editor-toolbar-panel="host-appearance"
+                data-page-editor-subpanel="viewport-safe"
+                role="region"
+                aria-label={`${hostAppearancePanel?.label ?? "Appearance"} toolbar panel`}
+              >
+                <div
+                  className="flex shrink-0 items-start justify-between gap-2 border-b border-white/10 px-3 py-2"
+                  data-page-editor-subpanel-header="true"
+                >
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+                      {hostAppearancePanel?.label ?? "Appearance"}
+                    </p>
+                    {hostAppearancePanel ? (
+                      <p className="truncate text-[11px] text-slate-400">
+                        {hostAppearancePanel.description}
+                      </p>
+                    ) : null}
+                  </div>
+                  <ToolbarIconButton
+                    tooltip={toolbarActionTooltips.closePanel}
+                    onClick={() => setActivePanel(null)}
+                  >
+                    <X className="h-4 w-4" />
+                  </ToolbarIconButton>
+                </div>
+                <div
+                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
+                  data-page-editor-subpanel-scroll="true"
+                >
+                  {hostAppearancePanel?.render({
+                    document: pageDocument,
+                    device,
+                    updateDocument: setDocumentDraft,
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {!toolbarCollapsed && activeToolbarPanel && activeToolbarPanel !== "host-appearance" ? (
               <ToolbarSubpanel
                 panel={activeToolbarPanel}
                 device={device}
@@ -3682,17 +3846,19 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                 data-page-editor-command-results-scroll="true"
               >
                 <div className="grid gap-4 md:grid-cols-2">
-                  <CommandGroup title="Sections">
-                    {filteredSections.map((option, index) => (
-                      <CommandButton
-                        key={option.type}
-                        label={option.label}
-                        description={option.description}
-                        active={commandActiveIndex === index}
-                        onClick={() => addSection(option.type)}
-                      />
-                    ))}
-                  </CommandGroup>
+                  {canInsertSections ? (
+                    <CommandGroup title="Sections">
+                      {filteredSections.map((option, index) => (
+                        <CommandButton
+                          key={option.type}
+                          label={option.label}
+                          description={option.description}
+                          active={commandActiveIndex === index}
+                          onClick={() => addSection(option.type)}
+                        />
+                      ))}
+                    </CommandGroup>
+                  ) : null}
                   <CommandGroup title="Blocks">
                     {filteredBlocks.map((option, index) => {
                       const resultIndex = filteredSections.length + index;
@@ -3803,22 +3969,24 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           />
         ) : null}
 
-        <RuntimePreviewDialog
-          open={previewOpen}
-          onOpenChange={setPreviewOpen}
-          title={editorHost.previewTitle}
-          subtitle="Runtime preview of the saved draft (read-only, site theme)."
-          canPreview={Boolean(previewUrl)}
-          previewUrl={previewUrl}
-          isLoading={previewLoading}
-          error={previewError}
-          device={device}
-          onDeviceChange={setDevice}
-          probeResult={previewProbe}
-          iframeTitle="Page runtime preview"
-          onFixPreviewTarget={() => void handlePreview()}
-          fixPreviewTargetLabel="Retry preview"
-        />
+        {editorHost.preview ? (
+          <RuntimePreviewDialog
+            open={previewOpen}
+            onOpenChange={setPreviewOpen}
+            title={editorHost.previewTitle}
+            subtitle="Runtime preview of the saved draft (read-only, site theme)."
+            canPreview={Boolean(previewUrl)}
+            previewUrl={previewUrl}
+            isLoading={previewLoading}
+            error={previewError}
+            device={device}
+            onDeviceChange={setDevice}
+            probeResult={previewProbe}
+            iframeTitle="Page runtime preview"
+            onFixPreviewTarget={() => void handlePreview()}
+            fixPreviewTargetLabel="Retry preview"
+          />
+        ) : null}
       </div>
     </EditorShell>
   );
@@ -3876,7 +4044,8 @@ const ToolbarSubpanel = ({
   onAddBlock,
   onClose,
 }: {
-  panel: ToolbarPanel;
+  /** Registry-driven panels only; "host-appearance" renders host content. */
+  panel: Exclude<ToolbarPanel, "host-appearance">;
   device: PageBreakpoint;
   section: PageSectionV2;
   baseSection: PageSectionV2;
@@ -4590,6 +4759,18 @@ const comboboxOptionsSources: Record<
     listOptions: async (filterValue) =>
       filterListingQueryOptions(await listListingQueriesCached(), filterValue),
   },
+  // Unscoped saved-query list (TASK-459-02): the filters block has no
+  // contentTypeId sibling, so it binds to any saved listing query directly.
+  listingQueriesAll: {
+    getCachedOptions: () =>
+      getCachedListingQueries()?.map((record) => ({ value: record.id, label: record.name })) ??
+      null,
+    listOptions: async () =>
+      (await listListingQueriesCached()).map((record) => ({
+        value: record.id,
+        label: record.name,
+      })),
+  },
   listingTemplates: {
     getCachedOptions: () =>
       getCachedListingTemplates()?.map((template) => ({
@@ -4814,6 +4995,17 @@ const RegistryControlWidget = ({
           label={control.label}
           value={Array.isArray(rawValue) ? rawValue : []}
           onChange={(nextItems) => onCommit(nextItems)}
+        />
+      );
+    case "facetList":
+      // Generic facet builder (TASK-459-02): commits the canonical
+      // `ListingFacetConfig[]` shapes the pageDocumentV2 facet normalizer
+      // owns, through the normal control write path.
+      return (
+        <FacetListControl
+          label={control.label}
+          value={Array.isArray(rawValue) ? rawValue : []}
+          onChange={(nextFacets) => onCommit(nextFacets)}
         />
       );
     case "text":

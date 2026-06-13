@@ -122,9 +122,10 @@ legacy stored rows are normalized before admin caching.
   `/admin/tools/import-export` hydrates the local import history cache, and
   `/admin/redirects` warms `redirects:list`.
 - `/settings` prefetch warms only `settings:redacted` with `{ force: false }`.
-  `/settings/site` additionally warms `pages:list`, `contentTypes:list`,
-  `menus:list`, and `pageTemplates:list` for selectors (the Site shell card
-  picks published menus and page templates), also with `{ force: false }`.
+  `/settings/site` additionally warms `pages:list` and `contentTypes:list` for
+  selectors, also with `{ force: false }`. The Site shell pickers moved to the
+  Menus-surface `SiteShellDialog` (TASK-458-01), which loads `menus:list` and
+  `pageTemplates:list` lazily on dialog open instead of via prefetch.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
@@ -268,12 +269,14 @@ contain credentials or security-sensitive material.
 - `updateSecuritySettings()` only patches boolean configured flags when a safe
   cache entry exists; otherwise it broadcasts `invalidate` and clears the
   redacted settings cache.
-- Site Settings hydrates from `settings:redacted`, `pages:list`,
-  `contentTypes:list`, `menus:list`, and `pageTemplates:list` (the TASK-455
-  Site shell card), revalidates Settings in the background when cache exists,
-  and no longer force-refetches selector lists on every mount when those
-  selector caches are fresh. `menus:list` / `pageTemplates:list` cache-bus
-  events force-refresh the shell pickers in the background.
+- Site Settings hydrates from `settings:redacted`, `pages:list`, and
+  `contentTypes:list`, revalidates Settings in the background when cache
+  exists, and no longer force-refetches selector lists on every mount when
+  those selector caches are fresh. The Site shell pickers (TASK-455) moved to
+  the Menus-surface `SiteShellDialog` (TASK-458-01): the dialog hydrates from
+  `settings:redacted`, `menus:list`, and `pageTemplates:list` lazily on open,
+  revalidates Settings in the background, and saves through a scoped partial
+  `updateSiteSettings()` PATCH carrying exactly the two shell keys.
 - Site shell reference keys (`site.navigationMenuId`, `site.footerTemplateId`)
   are part of the redacted Site settings cache (nullable id strings only; no
   secrets). Their server-side write path has an additional invalidation

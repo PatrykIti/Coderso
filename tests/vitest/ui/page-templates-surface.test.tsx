@@ -152,7 +152,10 @@ test(
     expect(loaded?.id).toBe("tpl-1");
     expect(loaded?.currentData).toEqual({ schemaVersion: 2, sections: [] });
 
-    const preview = await host?.preview("tpl-1");
+    // `host.preview` is optional on the host seam (TASK-458-03); the
+    // template host keeps providing it.
+    expect(host?.preview).toBeTypeOf("function");
+    const preview = await host?.preview?.("tpl-1");
     expect(preview?.previewUrl).toBe("/preview?type=page-template&token=preview-token");
   }
 );

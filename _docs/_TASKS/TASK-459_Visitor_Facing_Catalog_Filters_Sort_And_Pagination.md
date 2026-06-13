@@ -5,7 +5,8 @@
 **Category:** Pages / Public Runtime / Listings / Search / Performance
 **Estimated Effort:** Very Large
 **Dependencies:** None (consumes the shipped TASK-457 collection block authoring)
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-13
 
 ---
 
@@ -115,15 +116,24 @@ sections, not a monolithic section type.
 
 ## Sub-Tasks
 
-- [ ] TASK-459-01: Filters contract, pretty-param aliases, and pagination
+- [x] TASK-459-01: Filters contract, pretty-param aliases, and pagination
       plan (contract freeze).
-- [ ] TASK-459-02: Filters block, visitor sort control, and the v2 client
+- [x] TASK-459-02: Filters block, visitor sort control, and the v2 client
       script seam.
-- [ ] TASK-459-03: Pagination, truthful totals, clamp fix, list routes, and
+- [x] TASK-459-03: Pagination, truthful totals, clamp fix, list routes, and
       template style consumption.
-- [ ] TASK-459-04: DB pushdown, jsonb indexes, corpus-wide facet counts, and
+- [x] TASK-459-04: DB pushdown, jsonb indexes, corpus-wide facet counts, and
       filtered-request caching.
 - [ ] TASK-459-05: Validation, live catalog demo, and closure.
+
+## Progress Notes
+
+- 2026-06-13: Implementation leaves TASK-459-01 through TASK-459-04 are
+  complete with alias-aware filters, legacy filters-pair normalization,
+  pagination/list route wiring, DB pushdown/index artifacts, option-A
+  param-aware cache hardening, targeted suites, perf gate, release gates,
+  EXPLAIN evidence, and docs updates. Parent remains open until TASK-459-05
+  records the live dev-host Playwright catalog demo with pretty URLs.
 
 ---
 

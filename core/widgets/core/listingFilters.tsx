@@ -1,13 +1,15 @@
 import type { ComponentType, CSSProperties, ReactElement } from "react";
 
 import {
-  buildListingRuntimeParamName,
   listingRuntimeTokens,
   normalizeListingFacetConfigs,
+  normalizeListingRuntimeAliases,
+  resolveListingRuntimeParamName,
   resolveFacetToken,
   type ListingFacetConfig,
   type ListingFacetMetric,
   type ListingFacetMetricOption,
+  type ListingRuntimeAliasMap,
 } from "../../services/search/filterContract";
 import type { WidgetDefinition, WidgetEditorContract, WidgetEditorProps } from "../types";
 import { compactObject, compactStyle, resolveClearableStyleValue } from "./clearableStyle";
@@ -26,6 +28,7 @@ export type ListingFiltersData = {
   searchLabel?: string;
   applyLabel?: string;
   facets?: ListingFacetConfig[];
+  aliases?: ListingRuntimeAliasMap;
   layout?: {
     maxWidth?: "narrow" | "content" | "wide" | "full";
     stickySidebar?: boolean;
@@ -279,6 +282,11 @@ export const listingFiltersSchema = {
     searchPlaceholder: { type: "string" },
     searchLabel: { type: "string" },
     applyLabel: { type: "string" },
+    aliases: {
+      type: "object",
+      maxProperties: 24,
+      additionalProperties: { type: "string" },
+    },
     layout: {
       type: "object",
       additionalProperties: false,
@@ -493,6 +501,7 @@ export function normalizeListingFiltersData(data: ListingFiltersData): ListingFi
     searchLabel: resolveText(data.searchLabel, defaultValues.searchLabel ?? "Search"),
     applyLabel: resolveText(data.applyLabel, defaultValues.applyLabel ?? "Apply filters"),
     facets: facets.length > 0 ? facets : fallbackFacets,
+    aliases: normalizeListingRuntimeAliases(data.aliases),
     layout: {
       maxWidth:
         data.layout?.maxWidth === "narrow" ||
@@ -694,6 +703,7 @@ const buildFallbackMetric = (facet: ListingFacetConfig): ListingFacetMetric => (
 function ListingFacetControl({
   facet,
   listingQueryId,
+  aliases,
   metric,
   hasResolvedMetric,
   collapsible,
@@ -701,12 +711,13 @@ function ListingFacetControl({
 }: {
   facet: ListingFacetConfig;
   listingQueryId: string;
+  aliases?: ListingRuntimeAliasMap;
   metric: ListingFacetMetric;
   hasResolvedMetric: boolean;
   collapsible: boolean;
   defaultCollapsed: boolean;
 }) {
-  const inputName = buildListingRuntimeParamName(listingQueryId, metric.token);
+  const inputName = resolveListingRuntimeParamName(listingQueryId, metric.token, aliases);
   const controlMode = resolveFacetControlMode(facet);
   const resolvedOptions =
     metric.kind === "taxonomy" ? flattenTaxonomyOptions(metric.options) : metric.options;
@@ -749,6 +760,7 @@ function ListingFacetControl({
           className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
           name={inputName}
           data-listing-token={metric.token}
+          data-listing-param-name={inputName}
           defaultValue={active}
         >
           <option value="">Default order</option>
@@ -779,6 +791,7 @@ function ListingFacetControl({
             type="hidden"
             name={inputName}
             data-listing-token={metric.token}
+            data-listing-param-name={inputName}
             defaultValue={hiddenValue}
           />
           <div className="grid gap-2 sm:grid-cols-2">
@@ -815,6 +828,7 @@ function ListingFacetControl({
             className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
             name={inputName}
             data-listing-token={metric.token}
+            data-listing-param-name={inputName}
             defaultValue={hiddenValue}
             placeholder="YYYY-MM-DD,YYYY-MM-DD"
           />
@@ -844,6 +858,7 @@ function ListingFacetControl({
           type="hidden"
           name={inputName}
           data-listing-token={metric.token}
+          data-listing-param-name={inputName}
           defaultValue={hiddenValue}
         />
         <div className="grid gap-2 sm:grid-cols-2">
@@ -922,6 +937,7 @@ function ListingFacetControl({
                   value={option.value}
                   defaultChecked={option.active}
                   data-listing-token={metric.token}
+                  data-listing-param-name={inputName}
                 />
                 <span>{option.label}</span>
                 {hasResolvedMetric ? (
@@ -960,6 +976,7 @@ function ListingFacetControl({
               value={option.value}
               defaultChecked={option.active}
               data-listing-token={metric.token}
+              data-listing-param-name={inputName}
             />
             <span>{option.label}</span>
             {hasResolvedMetric ? (
@@ -1002,10 +1019,18 @@ export function ListingFiltersBlock({
   data,
   variant,
   blockId,
+  withRuntimeScript = true,
 }: {
   data: ListingFiltersData;
   variant: string;
   blockId?: string;
+  /**
+   * Whether the shared listing runtime client script is inlined next to the
+   * form (legacy widget default). The Page v2 pipeline passes `false` and
+   * emits the script once per page through the body-script seam
+   * (TASK-459-02); the markup itself stays a plain GET form either way.
+   */
+  withRuntimeScript?: boolean;
 }) {
   const normalized = normalizeListingFiltersData(data);
   const resolvedVariant = resolveListingFiltersVariant(variant);
@@ -1013,6 +1038,8 @@ export function ListingFiltersBlock({
     resolveOptionalText(normalized.resolved?.listingQueryId) ??
     resolveOptionalText(normalized.listingQueryId);
   const facets = normalized.facets ?? [];
+  const aliases = normalized.aliases ?? {};
+  const aliasParamNames = Object.keys(aliases).join(",");
   const resolvedMetrics = normalized.resolved?.metrics ?? [];
 
   const metrics = facets.map((facet) => {
@@ -1054,6 +1081,9 @@ export function ListingFiltersBlock({
   );
   const titleId = scopedId(rootInstanceId, "title");
   const searchInputId = scopedId(rootInstanceId, "search");
+  const searchInputName = listingQueryId
+    ? resolveListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search, aliases)
+    : "";
 
   if (!listingQueryId) {
     return (
@@ -1101,6 +1131,7 @@ export function ListingFiltersBlock({
       data-listing-runtime-form
       data-listing-query-id={listingQueryId}
       data-listing-auto-apply={autoApply ? "1" : "0"}
+      data-listing-param-aliases={aliasParamNames}
       aria-labelledby={titleId}
     >
       <div className="space-y-1">
@@ -1121,8 +1152,9 @@ export function ListingFiltersBlock({
             className="h-9 rounded-md border border-[var(--color-border)] bg-transparent px-3 text-sm"
             type="search"
             autoComplete="off"
-            name={buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.search)}
+            name={searchInputName}
             data-listing-token={listingRuntimeTokens.search}
+            data-listing-param-name={searchInputName}
             defaultValue={searchValue}
             placeholder={resolveText(normalized.searchPlaceholder, "Search results...")}
           />
@@ -1162,6 +1194,7 @@ export function ListingFiltersBlock({
             key={metric.id}
             facet={facet}
             listingQueryId={listingQueryId}
+            aliases={aliases}
             metric={metric}
             hasResolvedMetric={hasResolvedMetric}
             collapsible={collapsibleFacets}
@@ -1230,7 +1263,9 @@ export function ListingFiltersBlock({
       aria-labelledby={titleId}
     >
       {renderedFrame}
-      <script dangerouslySetInnerHTML={{ __html: getListingRuntimeClientScript() }} />
+      {withRuntimeScript ? (
+        <script dangerouslySetInnerHTML={{ __html: getListingRuntimeClientScript() }} />
+      ) : null}
     </section>
   );
 }

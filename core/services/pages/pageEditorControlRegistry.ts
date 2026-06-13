@@ -1,4 +1,5 @@
 import {
+  PAGE_COLLECTION_LIMIT_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
@@ -8,7 +9,9 @@ import {
   pageButtonSizes,
   pageButtonTargets,
   pageButtonVariants,
+  pageCollectionPaginationModes,
   pageDividerTones,
+  pageFiltersBlockLayouts,
   pageGroupDirections,
   pageHeadingLevels,
   pageImageFits,
@@ -54,7 +57,15 @@ export type PageEditorControlInput =
    * rows with a label and an optional link target, committing the owner
    * `PageListItemV2` shapes (plain string, or `{ label, href }` link items).
    */
-  | "items";
+  | "items"
+  /**
+   * Generic facet-list builder (`props.facets` on the filters block,
+   * TASK-459-02): per-facet rows with kind/label/field/operator plus the
+   * option and sort-option lists, committing the canonical
+   * `ListingFacetConfig[]` shape owned by `pageDocumentV2`/`filterContract`.
+   * Field-driven by design — nothing vertical-specific.
+   */
+  | "facets";
 
 /**
  * Dynamic option sources for unbounded reference pickers (TASK-456/457). A
@@ -73,6 +84,12 @@ export type PageEditorControlOptionsSource =
   | "forms"
   | "contentTypes"
   | "listingQueries"
+  /**
+   * Unscoped saved listing queries (TASK-459-02): the filters block binds to
+   * any saved query directly (no `contentTypeId` sibling to scope by), so the
+   * editor shell lists every saved query through the listings client.
+   */
+  | "listingQueriesAll"
   | "listingTemplates";
 
 export type PageEditorControlDefinition = {
@@ -701,8 +718,9 @@ export const pageBlockControlRegistry: Record<
     // listing to a content type; `queryId` optionally narrows it to a saved
     // listing query SCOPED to that type (the editor shell filters the source
     // by the current `contentTypeId` and clears the stored `queryId` when the
-    // type changes); `limit` clamps to the schema bound (1..50 in
-    // `blockPropJsonSchemaForType`); `templateId` optionally picks a listing
+    // type changes); `limit` clamps to the single owner bound
+    // (`PAGE_COLLECTION_LIMIT_CLAMP`, TASK-459-03 — schema, controls, and
+    // runtime agree on 1..24); `templateId` optionally picks a listing
     // template. All three references are nullable in `pageBlockDefaultProps`,
     // so each combobox offers the "None" row.
     blockPropControl("collection", "contentTypeId", {
@@ -719,7 +737,7 @@ export const pageBlockControlRegistry: Record<
     blockPropControl("collection", "limit", {
       label: "Limit",
       input: "number",
-      clamp: { min: 1, max: 50 },
+      clamp: { min: PAGE_COLLECTION_LIMIT_CLAMP.min, max: PAGE_COLLECTION_LIMIT_CLAMP.max },
       // Entry count, not pixels: an explicit unitless readout.
       unit: "",
     }),
@@ -728,6 +746,50 @@ export const pageBlockControlRegistry: Record<
       input: "select",
       optionsSource: "listingTemplates",
     }),
+    // TASK-459-03: visitor pagination. Mode "none" is the schema default
+    // (existing pages render unchanged); "paged" renders the numbered pager +
+    // totals, "load-more" the single next-page anchor. `pageSize` is nullable
+    // — unset follows `limit` — and clamps to the same owner bound.
+    blockPropControl("collection", "paginationMode", {
+      label: "Pagination",
+      input: "segmented",
+      options: pageCollectionPaginationModes,
+    }),
+    blockPropControl("collection", "pageSize", {
+      label: "Page size",
+      input: "number",
+      clamp: { min: PAGE_COLLECTION_LIMIT_CLAMP.min, max: PAGE_COLLECTION_LIMIT_CLAMP.max },
+      unit: "",
+    }),
+  ],
+  filters: [
+    // TASK-459-02: the filters block Content panel. `queryId` binds the facet
+    // form to a saved listing query (the SAME query a sibling collection
+    // block lists, so visitor filters drive both); the facet builder commits
+    // the canonical generic facet shapes; behavior toggles and labels cover
+    // auto-apply, the free-text search row, the result count, and the no-JS
+    // submit button.
+    blockPropControl("filters", "queryId", {
+      label: "Saved query",
+      input: "select",
+      optionsSource: "listingQueriesAll",
+    }),
+    blockPropControl("filters", "facets", { label: "Facets", input: "facets" }),
+    blockPropControl("filters", "layout", {
+      label: "Layout",
+      input: "segmented",
+      panel: "layout",
+      options: pageFiltersBlockLayouts,
+    }),
+    blockPropControl("filters", "autoApply", { label: "Auto apply", input: "switch" }),
+    blockPropControl("filters", "showSearch", { label: "Show search", input: "switch" }),
+    blockPropControl("filters", "showCount", { label: "Show result count", input: "switch" }),
+    blockPropControl("filters", "searchLabel", { label: "Search label", input: "text" }),
+    blockPropControl("filters", "searchPlaceholder", {
+      label: "Search placeholder",
+      input: "text",
+    }),
+    blockPropControl("filters", "applyLabel", { label: "Apply button label", input: "text" }),
   ],
   embed: [],
   divider: [

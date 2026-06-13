@@ -76,6 +76,12 @@ export type PageEditorControlUiModel =
    * block `props.items` control; commits owner `PageListItemV2` shapes.
    */
   | { kind: "listItems" }
+  /**
+   * Generic facet-list builder for the filters block `props.facets` control
+   * (TASK-459-02); commits the canonical `ListingFacetConfig[]` shapes the
+   * `pageDocumentV2` facet normalizer owns.
+   */
+  | { kind: "facetList" }
   | { kind: "unsupported"; reason: string };
 
 export type PageEditorControlUiKind = PageEditorControlUiModel["kind"];
@@ -291,6 +297,10 @@ export const pageEditorComboboxSourceMetadata: Readonly<
     // (or none of the saved queries targeting it) the list is honestly empty.
     emptyMessage: "No saved queries for this content type.",
   },
+  listingQueriesAll: {
+    placeholder: "Pick a saved query",
+    emptyMessage: "No saved listing queries yet.",
+  },
   listingTemplates: { placeholder: "Pick a listing template" },
 };
 
@@ -355,6 +365,8 @@ export const resolvePageEditorControlUiModel = (
       return { kind: "media" };
     case "items":
       return { kind: "listItems" };
+    case "facets":
+      return { kind: "facetList" };
     case "text":
       return { kind: "text" };
     default:

@@ -5,7 +5,8 @@
 **Category:** Menus / Admin UI / Public Runtime / Page Editor V2
 **Estimated Effort:** Very Large
 **Dependencies:** None (consumes the shipped TASK-455 site shell and the TASK-421 floating-panel control primitives)
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-13
 
 ---
 
@@ -93,13 +94,21 @@ editor).
 
 ## Sub-Tasks
 
-- [ ] TASK-458-01: Site shell relocation to the Menus surface and Settings
+- [x] TASK-458-01: Site shell relocation to the Menus surface and Settings
       shell-section removal.
-- [ ] TASK-458-02: Menu appearance model (`settings` jsonb + normalizer) and
+- [x] TASK-458-02: Menu appearance model (`settings` jsonb + normalizer) and
       the SITE_SHELL_CSS parameterization bridge.
-- [ ] TASK-458-03: Menu design editor canvas, host palette restriction
+- [x] TASK-458-03: Menu design editor canvas, host palette restriction
       mechanism, appearance floating panel, and nav extras slot.
 - [ ] TASK-458-04: Validation, live smoke, and closure.
+
+## Progress Notes
+
+- 2026-06-13: Implementation leaves TASK-458-01 through TASK-458-03 are
+  complete with targeted route/runtime/admin coverage, lint, typecheck, root
+  typecheck, DB reachability, release gates, and docs updates. Parent remains
+  open until TASK-458-04 records the live dev-host Playwright smoke for
+  restyle -> publish, Settings shell removal, and restricted menu palette.
 
 ---
 

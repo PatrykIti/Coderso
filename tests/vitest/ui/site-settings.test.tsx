@@ -207,6 +207,14 @@ test("SiteSettingsPage renders section navigation and actions", () => {
   expect(html).toContain("Auto-save settings across all screens");
 });
 
+test("SiteSettingsPage no longer renders the Site shell section (moved to Menus, TASK-458-01)", () => {
+  const html = renderAdminUi(<SiteSettingsPage />);
+
+  expect(html).not.toContain("Site shell");
+  expect(html).not.toContain("Global navigation menu and footer template");
+  expect(html).not.toContain("data-site-shell-card");
+});
+
 test("SiteSettingsPage uses fresh cached selector resources on mount", async () => {
   const { storage, restore: restoreStorage } = installLocalStorage();
   const fetchMock = installSettingsFetch(() => rawSiteSettingsPayload());
@@ -227,6 +235,10 @@ test("SiteSettingsPage uses fresh cached selector resources on mount", async () 
     expect(paths.filter((path) => path.endsWith("/pages"))).toHaveLength(0);
     expect(paths.filter((path) => path.endsWith("/content-types"))).toHaveLength(0);
     expect(paths.filter((path) => path.endsWith("/settings"))).toHaveLength(1);
+    // Menus/page-templates selector loads moved to the Menus-surface
+    // SiteShellDialog (TASK-458-01); this page must not request them at all.
+    expect(paths.filter((path) => path.endsWith("/menus"))).toHaveLength(0);
+    expect(paths.filter((path) => path.endsWith("/page-templates"))).toHaveLength(0);
     view.cleanup();
   } finally {
     fetchMock.restore();
@@ -360,9 +372,14 @@ test("SiteSettingsPage requires review before risky routing saves", async () => 
       (call) => String(call.input).endsWith("/settings") && call.init?.method === "PATCH"
     );
     expect(patchCalls).toHaveLength(1);
-    expect(JSON.parse(String(patchCalls[0]?.init?.body))).toMatchObject({
+    const patchBody = JSON.parse(String(patchCalls[0]?.init?.body)) as Record<string, unknown>;
+    expect(patchBody).toMatchObject({
       "site.adminPath": "/cms",
     });
+    // The site shell keys are owned by the Menus-surface SiteShellDialog
+    // (TASK-458-01); the page-wide save must not write them anymore.
+    expect(Object.keys(patchBody)).not.toContain("site.navigationMenuId");
+    expect(Object.keys(patchBody)).not.toContain("site.footerTemplateId");
     await waitForAutoSaveDelay();
     expect(
       fetchMock.calls.filter(

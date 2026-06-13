@@ -1,7 +1,16 @@
-import type { PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
-import { PageDocumentRender } from "../services/pages/pageRendererV2";
-import { pageResponsiveMediaBounds } from "../services/pages/pageResponsiveCss";
+import type { MenuAppearance } from "../services/menus/normalizeMenuAppearance";
+import type { PageBlockV2, PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
+import {
+  PageBlockContent,
+  PageBlockFrame,
+  PageDocumentRender,
+} from "../services/pages/pageRendererV2";
 import type { NavigationItem } from "../widgets/core/navigation";
+import {
+  SITE_FOOTER_ATTRIBUTE,
+  SITE_FOOTER_SCOPE_SELECTOR,
+  SITE_HEADER_ATTRIBUTE,
+} from "./siteShellCss";
 
 /**
  * Public site-shell render layer (TASK-455).
@@ -21,15 +30,17 @@ import type { NavigationItem } from "../widgets/core/navigation";
  *   the markup.
  */
 
-export const SITE_HEADER_ATTRIBUTE = "data-site-header" as const;
-export const SITE_FOOTER_ATTRIBUTE = "data-site-footer" as const;
-
-/**
- * Scope prefix for the footer template's responsive CSS so its
- * section/block rules can never collide with the page document's rules
- * (distinct scope per the TASK-455 contract).
- */
-export const SITE_FOOTER_SCOPE_SELECTOR = `[${SITE_FOOTER_ATTRIBUTE}="true"]` as const;
+// Shell attribute constants and the appearance-driven stylesheet builder
+// live in the Bun-free `./siteShellCss` module (TASK-458-02); the attribute
+// re-exports keep existing importers working.
+export {
+  SITE_FOOTER_ATTRIBUTE,
+  SITE_FOOTER_SCOPE_SELECTOR,
+  SITE_HEADER_ATTRIBUTE,
+  SHELL_APPEARANCE_DEFAULTS,
+  buildSiteShellCss,
+  buildSiteShellPreviewCss,
+} from "./siteShellCss";
 
 export type SiteShellNavigation = {
   /** Menu name; used as the accessible label of the `<nav>` landmark. */
@@ -44,44 +55,19 @@ export type SiteShellNavigation = {
  */
 export type SiteShellRenderProps = {
   navigation: SiteShellNavigation | null;
+  /**
+   * Published menu appearance threaded to `buildSiteShellCss` (TASK-458-02).
+   * `null`/absent = legacy look (the builder's fail-closed defaults).
+   */
+  navigationAppearance?: MenuAppearance | null;
+  /**
+   * Published nav extras blocks (TASK-458-03) rendered in the dedicated
+   * header extras slot. `null`/absent/empty = no slot markup (legacy menus
+   * render byte-identically).
+   */
+  navigationExtras?: PageBlockV2[] | null;
   footerDocument: PageDocumentV2 | null;
 };
-
-const mobileMaxWidth = pageResponsiveMediaBounds.mobile.maxWidth;
-const desktopNavMinWidth = pageResponsiveMediaBounds.tablet.minWidth;
-
-/**
- * Handwritten shell CSS (emitted inline with the page so the shell needs no
- * stylesheet build step). Every rule is scoped under the shell data
- * attributes; breakpoints reuse the owned responsive contract bounds.
- */
-export const SITE_SHELL_CSS = `
-[${SITE_HEADER_ATTRIBUTE}="true"]{border-bottom:1px solid rgba(15,23,42,.08)}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-header-inner{margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 24px;max-width:1080px;padding:12px 24px}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-header-brand{font-weight:600;color:inherit;text-decoration:none}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav summary{cursor:pointer;list-style:none}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav summary::-webkit-details-marker{display:none}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-list{display:flex;flex-wrap:wrap;align-items:center;gap:4px;list-style:none;margin:0;padding:0}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-item{position:relative}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-link{display:block;padding:8px 12px;border-radius:6px;color:inherit;text-decoration:none}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-link:hover,[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-link:focus-visible,[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-group>summary:hover,[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-group>summary:focus-visible{background:rgba(15,23,42,.06)}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-group>summary{display:block;padding:8px 12px;border-radius:6px}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-group>summary::after{content:" \\25BE";font-size:.7em}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-sublist{list-style:none;margin:0;padding:6px;display:grid;gap:2px;min-width:180px}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-disclosure{display:none}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-disclosure>summary{padding:8px 12px;border:1px solid rgba(15,23,42,.16);border-radius:6px}
-@media (min-width: ${desktopNavMinWidth}px){
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-sublist{position:absolute;left:0;top:100%;z-index:40;background:var(--color-bg,#fff);border:1px solid rgba(15,23,42,.12);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.12)}
-}
-@media (max-width: ${mobileMaxWidth}px){
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav{width:100%}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-disclosure{display:block}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-list{display:none}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-disclosure[open]~.site-nav-list{display:flex;flex-direction:column;align-items:stretch;padding-top:8px}
-[${SITE_HEADER_ATTRIBUTE}="true"] .site-nav-sublist{padding-left:16px}
-}
-[${SITE_FOOTER_ATTRIBUTE}="true"]{border-top:1px solid rgba(15,23,42,.08)}
-`.trim();
 
 const isPubliclyVisibleNavigationItem = (item: NavigationItem) =>
   item.meta?.visibility !== "logged_in";
@@ -148,15 +134,31 @@ const SiteNavItem = ({ item }: { item: NavigationItem }) => {
   );
 };
 
+/**
+ * Layout for the dedicated nav extras slot (TASK-458-03). Inline styles keep
+ * `buildSiteShellCss(null)` byte-identical for legacy menus: the slot only
+ * exists in the markup when published extras exist.
+ */
+const siteNavExtrasStyle = {
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: 12,
+} as const;
+
 export function SiteHeaderNav({
   navigation,
   siteName,
+  extras,
 }: {
   navigation: SiteShellNavigation;
   siteName?: string | null;
+  /** Nav extras blocks (CTA button / logo image), already schema-sanitized. */
+  extras?: PageBlockV2[] | null;
 }) {
   const items = navigation.items.filter(isPubliclyVisibleNavigationItem);
-  if (items.length === 0) return null;
+  const extraBlocks = extras ?? [];
+  if (items.length === 0 && extraBlocks.length === 0) return null;
 
   return (
     <header className="site-header" {...{ [SITE_HEADER_ATTRIBUTE]: "true" }}>
@@ -166,20 +168,31 @@ export function SiteHeaderNav({
             {siteName}
           </a>
         ) : null}
-        <nav
-          className="site-nav"
-          aria-label={navigation.label.trim() || "Site navigation"}
-          data-site-nav="true"
-        >
-          <details className="site-nav-disclosure" data-site-nav-disclosure="true">
-            <summary>Menu</summary>
-          </details>
-          <ul className="site-nav-list" data-site-nav-list="true">
-            {items.map((item, index) => (
-              <SiteNavItem key={`${item.label}-${index}`} item={item} />
+        {items.length > 0 ? (
+          <nav
+            className="site-nav"
+            aria-label={navigation.label.trim() || "Site navigation"}
+            data-site-nav="true"
+          >
+            <details className="site-nav-disclosure" data-site-nav-disclosure="true">
+              <summary>Menu</summary>
+            </details>
+            <ul className="site-nav-list" data-site-nav-list="true">
+              {items.map((item, index) => (
+                <SiteNavItem key={`${item.label}-${index}`} item={item} />
+              ))}
+            </ul>
+          </nav>
+        ) : null}
+        {extraBlocks.length > 0 ? (
+          <div className="site-nav-extras" data-site-nav-extras="true" style={siteNavExtrasStyle}>
+            {extraBlocks.map((block) => (
+              <PageBlockFrame key={block.id} block={block}>
+                <PageBlockContent block={block} />
+              </PageBlockFrame>
             ))}
-          </ul>
-        </nav>
+          </div>
+        ) : null}
       </div>
     </header>
   );

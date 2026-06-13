@@ -42,7 +42,28 @@ test("composeBlueprintPageData builds listing filters and collection sections fo
 
   expect(data.schemaVersion).toBe(2);
   expect(data.sections.map((section) => section.type)).toEqual(["filters", "collection"]);
-  expect(data.sections[0]?.blocks.map((block) => block.type)).toContain("collection");
+  // TASK-459-02 canonical shape: the filter surface is the dedicated filters
+  // BLOCK bound to the same saved query the collection block lists.
+  expect(data.sections[0]?.blocks.map((block) => block.type)).toContain("filters");
+  expect(data.sections[0]?.blocks.map((block) => block.type)).not.toContain("collection");
+  expect(data.sections[0]?.blocks.find((block) => block.type === "filters")).toMatchObject({
+    props: {
+      queryId: "query-1",
+      autoApply: true,
+      showSearch: true,
+      applyLabel: "Apply",
+      facets: [
+        {
+          id: "status",
+          kind: "checkbox",
+          label: "Status",
+          field: "data.projectStatus",
+          op: "in",
+          options: [{ value: "active", label: "Active" }],
+        },
+      ],
+    },
+  });
   expect(data.sections[1]?.blocks[0]).toMatchObject({
     type: "collection",
     props: {

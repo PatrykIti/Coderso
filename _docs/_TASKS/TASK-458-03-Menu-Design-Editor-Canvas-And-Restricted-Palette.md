@@ -6,7 +6,8 @@
 **Category:** Menus / Page Editor V2 / Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-458-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -90,18 +91,18 @@ Deliverables:
 
 ## Sub-Tasks
 
-- [ ] Add `palette` to `PageEditorHost` and thread it through
+- [x] Add `palette` to `PageEditorHost` and thread it through
       `filteredSections`/`filteredBlocks`, ghost tiles, and add-beside;
       vitest proving page/template hosts are unaffected.
-- [ ] Relax `host.preview` to optional; hide the preview affordance when
+- [x] Relax `host.preview` to optional; hide the preview affordance when
       absent (no behavior change for existing hosts).
-- [ ] `/menus/:id/design` route + "Design" button + `MenuDesignEditorPage`
+- [x] `/menus/:id/design` route + "Design" button + `MenuDesignEditorPage`
       host wiring (load/save/publish adapters, cache key).
-- [ ] Canvas: SiteHeaderNav live render with draft appearance CSS; device
+- [x] Canvas: SiteHeaderNav live render with draft appearance CSS; device
       switcher mobile check.
-- [ ] Appearance panel via shared primitives bound to
+- [x] Appearance panel via shared primitives bound to
       `normalizeMenuAppearance` fields.
-- [ ] Extras slot: restricted insert (button/image only), persistence with
+- [x] Extras slot: restricted insert (button/image only), persistence with
       the menu draft, public shell render of published extras.
 
 ---
@@ -161,6 +162,23 @@ Bun — extras + appearance round-trip through menu service.
   remains authoritative server-side; extras/appearance validated by the
   TASK-458-02 normalizer and existing block prop schemas.
 - **Anti-abuse controls:** not applicable.
+
+## Completion Notes
+
+- `/admin/menus/:id/design` now uses the shared editor host with a restricted
+  menu palette, menu canvas, appearance panel, optional-preview behavior, and
+  published extras/runtime coverage. The menu design save path writes draft
+  appearance/extras only; public extras and appearance resolve from the
+  `menus.settings.published` snapshot created by publish.
+
+## Validation
+
+- `bunx vitest run tests/vitest/admin/adminApp.test.tsx` passed with route
+  resolution coverage for `/admin/menus/:id/design`.
+- `bun test tests/integration/runtime/menu-design-extras-runtime.test.ts`
+  passed with public snapshot isolation coverage.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
 
 ---
 

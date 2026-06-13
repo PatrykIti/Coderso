@@ -1312,3 +1312,397 @@ test(
     expect(validate(wrongType)).toBe(false);
   }
 );
+
+// --- Filters block (TASK-459-02) ---
+
+describe("filters block contract (TASK-459-02)", () => {
+  const filtersDocument = (props: Record<string, unknown>): PageDocumentV2 => {
+    const document = buildDocument();
+    document.sections[0]!.blocks = [
+      {
+        id: "blk_filters",
+        type: "filters",
+        props,
+        visibility: { visible: true },
+      },
+    ];
+    return document;
+  };
+
+  test("filters block capability: editor-insertable, runtime-real, scoped read-only binding", () => {
+    expect(pageBlockCapabilities.filters).toMatchObject({
+      editorInsertable: true,
+      insertable: true,
+      // Deliberate scope (mirrors form/collection): outside the assistant
+      // emission vocabulary; the blueprint composer binds resolved ids.
+      assistantEmittable: false,
+      runtimeRenderer: "real",
+      slots: [],
+      publicDataBinding: "scoped-read-only",
+    });
+    expect("reason" in pageBlockCapabilities.filters).toBe(false);
+    // The filters SECTION stays gated (composite-first product rule).
+    expect(pageBlockDefaultProps.filters).toMatchObject({
+      queryId: null,
+      layout: "horizontal",
+      autoApply: true,
+      showSearch: true,
+      showCount: true,
+    });
+  });
+
+  test("filters props round-trip with canonical facet shapes", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      filtersDocument({
+        queryId: "query-1",
+        layout: "sidebar",
+        autoApply: false,
+        showCount: false,
+        applyLabel: "Filter now",
+        aliases: {
+          rooms: "data.rooms.in",
+          sort: "__sort",
+          q: "__q",
+          page: "__page",
+        },
+        facets: [
+          {
+            id: "Rooms Facet",
+            kind: "checkbox",
+            label: "Rooms",
+            field: "data.rooms",
+            options: [{ value: "3", label: "Three" }],
+          },
+          {
+            id: "sort",
+            kind: "sort",
+            label: "Sort",
+            sortOptions: [
+              { value: "data.price:asc", label: "Cheapest", field: "data.price", dir: "asc" },
+            ],
+          },
+        ],
+      })
+    );
+
+    const block = normalized.sections[0]!.blocks[0]!;
+    expect(block.type).toBe("filters");
+    expect(block.props).toMatchObject({
+      queryId: "query-1",
+      layout: "sidebar",
+      autoApply: false,
+      showSearch: true,
+      showCount: false,
+      applyLabel: "Filter now",
+      aliases: {
+        rooms: "data.rooms.in",
+        sort: "__sort",
+        q: "__q",
+        page: "__page",
+      },
+    });
+    // Canonical facet shape is owned by the listing filter contract: ids
+    // tokenize, the default operator fills per kind.
+    expect(block.props.facets).toEqual([
+      {
+        id: "rooms-facet",
+        kind: "checkbox",
+        label: "Rooms",
+        field: "data.rooms",
+        op: "in",
+        options: [{ value: "3", label: "Three" }],
+      },
+      {
+        id: "sort",
+        kind: "sort",
+        label: "Sort",
+        sortOptions: [
+          { value: "data.price:asc", label: "Cheapest", field: "data.price", dir: "asc" },
+        ],
+      },
+    ]);
+
+    const reread = normalizeStoredPageDocumentV2ForRead(normalized);
+    expect(reread.sections[0]!.blocks[0]!.props).toEqual(block.props);
+  });
+
+  test("unknown facet keys reject on write and drop on stored reads", () => {
+    const payload = filtersDocument({
+      queryId: "query-1",
+      facets: [
+        {
+          id: "rooms",
+          kind: "checkbox",
+          label: "Rooms",
+          field: "data.rooms",
+          tracking: "nope",
+        },
+      ],
+    });
+    expect(() => normalizePageDocumentV2ForWrite(payload)).toThrowError(
+      /Unknown page document field: sections\.0\.blocks\.0\.props\.facets\.0\.tracking/
+    );
+
+    const read = normalizeStoredPageDocumentV2ForRead(payload);
+    expect(read.sections[0]!.blocks[0]!.props.facets).toEqual([
+      { id: "rooms", kind: "checkbox", label: "Rooms", field: "data.rooms", op: "in" },
+    ]);
+  });
+
+  test("filters aliases reject invalid fresh writes and sanitize stored reads", () => {
+    const invalid = filtersDocument({
+      queryId: "query-1",
+      aliases: {
+        "bad.alias": "data.rooms.in",
+        rooms: "data.rooms.nope",
+      },
+    });
+    expect(() => normalizePageDocumentV2ForWrite(invalid)).toThrowError(
+      /Invalid sections\.0\.blocks\.0\.props\.aliases/
+    );
+
+    const read = normalizeStoredPageDocumentV2ForRead(invalid);
+    expect(read.sections[0]!.blocks[0]!.props.aliases).toEqual({});
+  });
+
+  test("fieldless non-sort facets drop deterministically (canonical normalizer)", () => {
+    const read = normalizeStoredPageDocumentV2ForRead(
+      filtersDocument({
+        queryId: "query-1",
+        facets: [{ id: "broken", kind: "checkbox", label: "Broken" }],
+      })
+    );
+    expect(read.sections[0]!.blocks[0]!.props.facets).toEqual([]);
+  });
+
+  test(
+    "JSON schema accepts the filters block and rejects unknown facet keys",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+
+      const valid = filtersDocument({
+        queryId: "query-1",
+        layout: "horizontal",
+        autoApply: true,
+        showSearch: true,
+        showCount: true,
+        facets: [{ id: "rooms", kind: "checkbox", label: "Rooms", field: "data.rooms", op: "in" }],
+      });
+      expect(validate(valid)).toBe(true);
+
+      const unknownFacetKey = filtersDocument({
+        queryId: "query-1",
+        facets: [{ id: "rooms", kind: "checkbox", field: "data.rooms", tracking: "nope" }],
+      });
+      expect(validate(unknownFacetKey)).toBe(false);
+
+      const badLayout = filtersDocument({ queryId: "query-1", layout: "drawer" });
+      expect(validate(badLayout)).toBe(false);
+    }
+  );
+
+  test("legacy assistant collection blocks with mode:'filters' normalize into filters plus collection", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks = [
+      {
+        id: "blk_legacy_filters",
+        type: "collection",
+        props: {
+          mode: "filters",
+          queryId: "query-1",
+          autoApply: false,
+          showSearch: true,
+          searchPlaceholder: "Search homes",
+          searchLabel: "Search",
+          applyLabel: "Apply",
+          aliases: { rooms: "data.rooms.in" },
+          facets: [{ id: "rooms", kind: "checkbox", label: "Rooms", field: "data.rooms" }],
+        },
+        visibility: { visible: true },
+      } as unknown as PageBlockV2,
+    ];
+
+    for (const normalized of [
+      normalizePageDocumentV2ForWrite(document),
+      normalizeStoredPageDocumentV2ForRead(document),
+    ]) {
+      const filtersBlock = normalized.sections[0]!.blocks[0]!;
+      const collectionBlock = normalized.sections[0]!.blocks[1]!;
+      expect(filtersBlock.id).toBe("blk_legacy_filters_filters");
+      expect(filtersBlock.type).toBe("filters");
+      expect(filtersBlock.props).toMatchObject({
+        queryId: "query-1",
+        autoApply: false,
+        showSearch: true,
+        searchPlaceholder: "Search homes",
+        searchLabel: "Search",
+        applyLabel: "Apply",
+        aliases: { rooms: "data.rooms.in" },
+      });
+      expect(filtersBlock.props.facets).toEqual([
+        { id: "rooms", kind: "checkbox", label: "Rooms", field: "data.rooms", op: "in" },
+      ]);
+      expect(collectionBlock.id).toBe("blk_legacy_filters");
+      expect(collectionBlock.type).toBe("collection");
+      expect(collectionBlock.props).toMatchObject({ queryId: "query-1" });
+      expect(collectionBlock.props).not.toHaveProperty("mode");
+      expect(collectionBlock.props).not.toHaveProperty("facets");
+    }
+
+    // Plain collection blocks (no filters mode) stay untouched.
+    const plain = buildDocument();
+    plain.sections[0]!.blocks = [
+      {
+        id: "blk_plain_collection",
+        type: "collection",
+        props: { contentTypeId: "type-1", queryId: "query-1", limit: 6, templateId: null },
+        visibility: { visible: true },
+      },
+    ];
+    const normalizedPlain = normalizePageDocumentV2ForWrite(plain);
+    expect(normalizedPlain.sections[0]!.blocks[0]!.type).toBe("collection");
+  });
+});
+
+describe("collection pagination props and clamp unification (TASK-459-03)", () => {
+  const buildCollectionDocument = (props: Record<string, unknown>): PageDocumentV2 => {
+    const document = buildDocument();
+    document.sections[0]!.blocks = [
+      {
+        id: "blk_collection_pagination",
+        type: "collection",
+        props,
+        visibility: { visible: true },
+      },
+    ];
+    return document;
+  };
+
+  test("pagination props round-trip with the schema defaults (mode none, pageSize null)", () => {
+    expect(pageBlockPropKeys.collection).toEqual([
+      "contentTypeId",
+      "queryId",
+      "limit",
+      "templateId",
+      "paginationMode",
+      "pageSize",
+    ]);
+    expect(pageBlockDefaultProps.collection).toMatchObject({
+      paginationMode: "none",
+      pageSize: null,
+    });
+
+    // Legacy documents (no pagination props stored) normalize to the default
+    // "none" — exactly today's render contract.
+    const legacy = buildCollectionDocument({
+      contentTypeId: "type-1",
+      queryId: null,
+      limit: 6,
+      templateId: null,
+    });
+    for (const normalized of [
+      normalizePageDocumentV2ForWrite(legacy),
+      normalizeStoredPageDocumentV2ForRead(legacy),
+    ]) {
+      expect(normalized.sections[0]!.blocks[0]!.props).toMatchObject({
+        paginationMode: "none",
+        pageSize: null,
+      });
+    }
+
+    // Authored values round-trip on write and read.
+    const paged = buildCollectionDocument({
+      contentTypeId: "type-1",
+      queryId: "query-1",
+      limit: 12,
+      templateId: null,
+      paginationMode: "paged",
+      pageSize: 9,
+    });
+    for (const normalized of [
+      normalizePageDocumentV2ForWrite(paged),
+      normalizeStoredPageDocumentV2ForRead(paged),
+    ]) {
+      expect(normalized.sections[0]!.blocks[0]!.props).toMatchObject({
+        paginationMode: "paged",
+        pageSize: 9,
+        limit: 12,
+      });
+    }
+  });
+
+  test("paginationMode rejects unknown values on write and falls back on read", () => {
+    const invalid = buildCollectionDocument({
+      contentTypeId: "type-1",
+      paginationMode: "infinite",
+    });
+    expect(() => normalizePageDocumentV2ForWrite(invalid)).toThrowError();
+    const read = normalizeStoredPageDocumentV2ForRead(invalid);
+    expect(read.sections[0]!.blocks[0]!.props.paginationMode).toBe("none");
+  });
+
+  test("pageSize rejects non-numeric writes and clamps out-of-range values to the owner bound", () => {
+    const invalid = buildCollectionDocument({
+      contentTypeId: "type-1",
+      pageSize: "nine",
+    });
+    expect(() => normalizePageDocumentV2ForWrite(invalid)).toThrowError();
+    expect(
+      normalizeStoredPageDocumentV2ForRead(invalid).sections[0]!.blocks[0]!.props.pageSize
+    ).toBeNull();
+
+    const outOfRange = buildCollectionDocument({
+      contentTypeId: "type-1",
+      paginationMode: "paged",
+      pageSize: 50,
+    });
+    for (const normalized of [
+      normalizePageDocumentV2ForWrite(outOfRange),
+      normalizeStoredPageDocumentV2ForRead(outOfRange),
+    ]) {
+      expect(normalized.sections[0]!.blocks[0]!.props.pageSize).toBe(24);
+    }
+  });
+
+  // Ajv compilation of the recursive document schema takes seconds under
+  // parallel suite load (same budget as the schema suite above).
+  test(
+    "limit clamps to the unified 1..24 bound (stored 25..50 normalize on read)",
+    {
+      timeout: 30_000,
+    },
+    () => {
+      // The old schema allowed 1..50 while the runtime truncated to 24; the
+      // unified owner bound makes the stored value honest. Stored documents
+      // with 25..50 normalize ON READ to 24 — exactly what they already
+      // rendered — with no destructive rewrite.
+      const stored = buildCollectionDocument({ contentTypeId: "type-1", limit: 50 });
+      expect(normalizeStoredPageDocumentV2ForRead(stored).sections[0]!.blocks[0]!.props.limit).toBe(
+        24
+      );
+      expect(normalizePageDocumentV2ForWrite(stored).sections[0]!.blocks[0]!.props.limit).toBe(24);
+
+      const inRange = buildCollectionDocument({ contentTypeId: "type-1", limit: 24 });
+      expect(normalizePageDocumentV2ForWrite(inRange).sections[0]!.blocks[0]!.props.limit).toBe(24);
+
+      // The JSON schema agrees with the owner bound.
+      const ajv = new Ajv({ allowUnionTypes: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(buildCollectionDocument({ contentTypeId: "type-1", limit: 30 }))).toBe(false);
+      expect(
+        validate(
+          normalizePageDocumentV2ForWrite(
+            buildCollectionDocument({
+              contentTypeId: "type-1",
+              limit: 24,
+              paginationMode: "load-more",
+              pageSize: 12,
+            })
+          )
+        )
+      ).toBe(true);
+    }
+  );
+});

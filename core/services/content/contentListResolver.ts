@@ -14,8 +14,13 @@ import {
   parseListingRuntimeOverrides,
   resolveListingRuntimeOverrides,
 } from "../search/filterEngine";
-import { buildListingRuntimeParamName, listingRuntimeTokens } from "../search/filterContract";
 import {
+  listingRuntimeTokens,
+  resolveListingRuntimeParamName,
+  type ListingRuntimeAliasMap,
+} from "../search/filterContract";
+import {
+  buildContentListPageHref,
   contentListDefaults,
   normalizeContentListData,
   normalizeContentListLimit,
@@ -52,6 +57,20 @@ export type ContentListResolvedRuntimeData = {
   listingTemplateId?: string;
   resolvedAt: string;
   runtime?: ContentListResolvedRuntimeMeta;
+  /**
+   * Dangling-route guard (TASK-459-03 frozen policy): "missing-route" when
+   * the source content type has NO enabled content route, so detail hrefs
+   * were suppressed instead of linking at URLs `matchContentRoute` cannot
+   * match. Undefined for sources without a route concept (custom tables).
+   */
+  cardLinkMode?: "ready" | "missing-route";
+  /**
+   * Listing template presentation passthrough (TASK-459-03): the bound
+   * template's normalized `config.style` / `config.emptyState`, consumed by
+   * the render-side binding (NOT part of the normalized widget payload).
+   */
+  templateStyle?: ListingTemplateRecord["config"]["style"];
+  templateEmptyState?: ListingTemplateRecord["config"]["emptyState"];
   error?: string;
 };
 export type ListingContentListResolvedRuntimeData = ContentListResolvedRuntimeData & {
@@ -97,27 +116,12 @@ const resolveLegacyContentListPageKey = (blockId?: string) => {
   return `cl.${normalizedBlockId}.page`;
 };
 
-const resolveContentListRequestedPage = (
+export const resolveContentListRequestedPage = (
   runtimeSearchParams: URLSearchParams | undefined,
   pageKey: string
 ) => {
   const raw = Number(runtimeSearchParams?.get(pageKey) ?? "1");
   return Number.isFinite(raw) ? Math.max(1, Math.floor(raw)) : 1;
-};
-
-const buildContentListPageHref = (
-  runtimeSearchParams: URLSearchParams | undefined,
-  pageKey: string,
-  page: number
-) => {
-  const params = new URLSearchParams(runtimeSearchParams?.toString() ?? "");
-  if (page <= 1) {
-    params.delete(pageKey);
-  } else {
-    params.set(pageKey, String(page));
-  }
-  const query = params.toString();
-  return query.length > 0 ? `?${query}` : "?";
 };
 
 export function resolveContentListRuntimeNavigationMeta({
@@ -138,19 +142,21 @@ export function resolveContentListRuntimeNavigationMeta({
   const currentPage = Math.min(Math.max(1, page), totalPages);
   const previousPage = currentPage > 1 ? currentPage - 1 : null;
   const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+  const search = runtimeSearchParams?.toString() ?? "";
 
   return {
     page: currentPage,
     pageSize: safePageSize,
     totalPages,
+    // Pager contract (TASK-459-03): the widget builds numbered page hrefs
+    // from the SAME owner helper, so it also receives the param key and the
+    // serialized search the prev/next hrefs were derived from.
+    pageParamKey: pageKey,
+    search,
     previousPageHref:
-      previousPage !== null
-        ? buildContentListPageHref(runtimeSearchParams, pageKey, previousPage)
-        : undefined,
+      previousPage !== null ? buildContentListPageHref(search, pageKey, previousPage) : undefined,
     nextPageHref:
-      nextPage !== null
-        ? buildContentListPageHref(runtimeSearchParams, pageKey, nextPage)
-        : undefined,
+      nextPage !== null ? buildContentListPageHref(search, pageKey, nextPage) : undefined,
   };
 }
 
@@ -238,7 +244,10 @@ const resolveImageCandidateFromEntry = (entry: ListEntriesRow): ContentMediaCand
   return null;
 };
 
-const resolveSortableTime = (entry: ListEntriesRow, mode: "published" | "updated") => {
+const resolveSortableTime = (
+  entry: { publishedAt?: Date | null; updatedAt?: Date | null },
+  mode: "published" | "updated"
+) => {
   if (mode === "published") {
     const publishedTs = entry.publishedAt?.getTime();
     if (publishedTs) return publishedTs;
@@ -311,10 +320,16 @@ export function applyContentListRuntimeFilters(
   });
 }
 
-export function sortContentListRuntimeEntries(
-  entries: ListEntriesRow[],
+export type ContentListSortableEntry = {
+  title: string;
+  publishedAt?: Date | null;
+  updatedAt?: Date | null;
+};
+
+export function sortContentListRuntimeEntries<T extends ContentListSortableEntry>(
+  entries: T[],
   sort: NonNullable<ContentListData["source"]>["sort"]
-) {
+): T[] {
   const next = [...entries];
   if (sort === "published-asc") {
     return next.sort(
@@ -342,9 +357,19 @@ export function sortContentListRuntimeEntries(
   );
 }
 
-const resolveDetailPathPattern = (routes: ContentRouteSetting[], typeSlug: string) => {
+/**
+ * Detail-path pattern for card links. TASK-459-03 frozen dangling-route
+ * policy: when no ENABLED content route exists for the type this returns
+ * `undefined` (links suppressed, cards render plain) — the old
+ * `/<typeSlug>/:slug` fallback produced hrefs `matchContentRoute` can never
+ * match (guaranteed 404s).
+ */
+const resolveDetailPathPattern = (
+  routes: ContentRouteSetting[],
+  typeSlug: string
+): string | undefined => {
   const route = routes.find((entry) => entry.type === typeSlug && entry.enabled);
-  return route?.detailPath ?? `/${typeSlug}/:slug`;
+  return route?.detailPath;
 };
 
 const readPathValue = (row: Record<string, unknown>, path: string): unknown => {
@@ -527,11 +552,24 @@ const resolvePostsRouteType = (contentRoutes: ContentRouteSetting[]) =>
   contentRoutes.find((entry) => entry.enabled && isPostContentTypeSlug(entry.type))?.type ??
   POST_CONTENT_TYPE_SLUG;
 
+type ListingRouteMeta = {
+  sourceTypeId: string;
+  sourceTypeSlug: string;
+  detailPathPattern: string | undefined;
+  listPath: string | undefined;
+  /**
+   * Dangling-route guard state (TASK-459-03): set only for sources with a
+   * content-route concept (entries/posts). "missing-route" means card links
+   * were suppressed because no enabled route exists for the type.
+   */
+  cardLinkMode: "ready" | "missing-route" | undefined;
+};
+
 const resolveListingRouteMeta = async (
   query: ListingQuery,
   contentRoutes: ContentRouteSetting[],
   deps: ContentListListingRuntimeDeps
-) => {
+): Promise<ListingRouteMeta> => {
   if (query.source === "entries") {
     const typeId = query.sourceConfig.contentTypeId?.trim();
     if (!typeId) {
@@ -540,6 +578,7 @@ const resolveListingRouteMeta = async (
         sourceTypeSlug: "",
         detailPathPattern: undefined,
         listPath: undefined,
+        cardLinkMode: undefined,
       };
     }
     const contentType = await deps.getContentTypeById(typeId);
@@ -549,25 +588,30 @@ const resolveListingRouteMeta = async (
         sourceTypeSlug: "",
         detailPathPattern: undefined,
         listPath: undefined,
+        cardLinkMode: undefined,
       };
     }
+    const detailPathPattern = resolveDetailPathPattern(contentRoutes, contentType.slug);
     return {
       sourceTypeId: contentType.id,
       sourceTypeSlug: contentType.slug,
-      detailPathPattern: resolveDetailPathPattern(contentRoutes, contentType.slug),
+      detailPathPattern,
       listPath: contentRoutes.find((entry) => entry.type === contentType.slug && entry.enabled)
         ?.listPath,
+      cardLinkMode: detailPathPattern ? "ready" : "missing-route",
     };
   }
 
   if (query.source === "posts") {
     const postRouteType = resolvePostsRouteType(contentRoutes);
+    const detailPathPattern = resolveDetailPathPattern(contentRoutes, postRouteType);
     return {
       sourceTypeId: POST_CONTENT_TYPE_SLUG,
       sourceTypeSlug: postRouteType,
-      detailPathPattern: resolveDetailPathPattern(contentRoutes, postRouteType),
+      detailPathPattern,
       listPath: contentRoutes.find((entry) => entry.type === postRouteType && entry.enabled)
         ?.listPath,
+      cardLinkMode: detailPathPattern ? "ready" : "missing-route",
     };
   }
 
@@ -576,6 +620,7 @@ const resolveListingRouteMeta = async (
     sourceTypeSlug: query.source,
     detailPathPattern: undefined,
     listPath: undefined,
+    cardLinkMode: undefined,
   };
 };
 
@@ -594,7 +639,8 @@ const normalizeListingQueryForRuntime = (query: ListingQuery, preview: boolean):
 export async function mapEntriesToContentListItems(
   entries: ListEntriesRow[],
   options: {
-    detailPathPattern: string;
+    /** Absent = no enabled content route: card hrefs are suppressed. */
+    detailPathPattern?: string;
     showImage: boolean;
   },
   deps: {
@@ -603,6 +649,7 @@ export async function mapEntriesToContentListItems(
 ): Promise<ContentListRuntimeItem[]> {
   const mediaCache = new Map<string, { url: string; alt?: string } | null>();
   const runtimeGetMediaById = deps.getMediaById ?? getMediaById;
+  const detailPathPattern = options.detailPathPattern;
 
   return Promise.all(
     entries.map(async (entry) => {
@@ -614,7 +661,9 @@ export async function mapEntriesToContentListItems(
         id: entry.id,
         title: entry.title,
         slug: entry.slug,
-        href: sanitizeHref(buildDetailHref(options.detailPathPattern, entry.slug, entry.id)),
+        href: detailPathPattern
+          ? sanitizeHref(buildDetailHref(detailPathPattern, entry.slug, entry.id))
+          : undefined,
         excerpt: resolveExcerpt(entry),
         imageSrc: resolvedImage.src,
         imageAlt: resolvedImage.alt,
@@ -729,6 +778,7 @@ export async function resolveListingContentListRuntimeData(
     preview: boolean;
     contentRoutes: ContentRouteSetting[];
     runtimeSearchParams?: URLSearchParams;
+    runtimeAliases?: ListingRuntimeAliasMap;
     blockId?: string;
   },
   deps: Partial<ContentListListingRuntimeDeps> = {}
@@ -805,8 +855,12 @@ export async function resolveListingContentListRuntimeData(
     options.preview
   );
   const runtimeDraft = options.runtimeSearchParams
-    ? parseListingRuntimeOverrides(options.runtimeSearchParams, listingQueryId)
-    : parseListingRuntimeOverrides(new URLSearchParams(), listingQueryId);
+    ? parseListingRuntimeOverrides(
+        options.runtimeSearchParams,
+        listingQueryId,
+        options.runtimeAliases
+      )
+    : parseListingRuntimeOverrides(new URLSearchParams(), listingQueryId, options.runtimeAliases);
   const runtime = resolveListingRuntimeOverrides(baseQuery, runtimeDraft);
   const execution = await runtimeDeps.executeListing(runtime.query);
   const rawRows = execution.rows as Record<string, unknown>[];
@@ -826,7 +880,11 @@ export async function resolveListingContentListRuntimeData(
     pageSize: requestedPageSize,
     total: execution.total,
     runtimeSearchParams: options.runtimeSearchParams,
-    pageKey: buildListingRuntimeParamName(listingQueryId, listingRuntimeTokens.page),
+    pageKey: resolveListingRuntimeParamName(
+      listingQueryId,
+      listingRuntimeTokens.page,
+      options.runtimeAliases
+    ),
   });
 
   const runtimeMeta = {
@@ -835,6 +893,8 @@ export async function resolveListingContentListRuntimeData(
     page: runtimeNavigation.page,
     pageSize: runtimeNavigation.pageSize,
     totalPages: runtimeNavigation.totalPages,
+    pageParamKey: runtimeNavigation.pageParamKey,
+    search: runtimeNavigation.search,
     ...(runtimeNavigation.previousPageHref
       ? { previousPageHref: runtimeNavigation.previousPageHref }
       : {}),
@@ -852,6 +912,13 @@ export async function resolveListingContentListRuntimeData(
     listingTemplateId,
     resolvedAt: new Date().toISOString(),
     runtime: runtimeMeta,
+    ...(routeMeta.cardLinkMode ? { cardLinkMode: routeMeta.cardLinkMode } : {}),
+    ...(listingTemplate
+      ? {
+          templateStyle: listingTemplate.config.style,
+          templateEmptyState: listingTemplate.config.emptyState,
+        }
+      : {}),
   };
 }
 
@@ -861,6 +928,7 @@ export async function resolveContentListRuntimeData(
     preview: boolean;
     contentRoutes: ContentRouteSetting[];
     runtimeSearchParams?: URLSearchParams;
+    runtimeAliases?: ListingRuntimeAliasMap;
     blockId?: string;
   },
   deps: Partial<ContentListListingRuntimeDeps> = {}
@@ -948,10 +1016,13 @@ export async function resolveContentListRuntimeData(
     sourceTypeSlug: contentType.slug,
     listPath,
     resolvedAt: new Date().toISOString(),
+    cardLinkMode: detailPathPattern ? "ready" : "missing-route",
     runtime: {
       page: runtimeNavigation.page,
       pageSize: runtimeNavigation.pageSize,
       totalPages: runtimeNavigation.totalPages,
+      pageParamKey: runtimeNavigation.pageParamKey,
+      search: runtimeNavigation.search,
       ...(runtimeNavigation.previousPageHref
         ? { previousPageHref: runtimeNavigation.previousPageHref }
         : {}),

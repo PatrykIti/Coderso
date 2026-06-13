@@ -62,6 +62,7 @@ import {
   ListingSearchRoute,
   LoginAlertsRoute,
   MediaLibraryRoute,
+  MenuDesignEditorRoute,
   MenuEditorRoute,
   MenuListRoute,
   PageEditorRoute,
@@ -755,6 +756,11 @@ export function AdminApp({ path }: AdminAppProps) {
       {
         pattern: "/menus/:id",
         render: () => <MenuEditorRoute.Component />,
+        permission: "menus:read",
+      },
+      {
+        pattern: "/menus/:id/design",
+        render: () => <MenuDesignEditorRoute.Component />,
         permission: "menus:read",
       },
       {

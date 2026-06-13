@@ -55,10 +55,10 @@ test("renderPublicEntryListHtml renders entries and preview banner", async () =>
   expect(html).toContain("Preview mode");
   expect(html).toContain("/blog/hello");
   expect(html).toContain("/site/assets/site.css");
-  expect(html).toContain("rel=\"preload\"");
-  expect(html).toContain("as=\"style\"");
+  expect(html).toContain('rel="preload"');
+  expect(html).toContain('as="style"');
   expect(html).toContain("body{opacity:0}");
-  expect(html).toContain("data-template=\"content-list\"");
+  expect(html).toContain('data-template="content-list"');
 });
 
 test("renderPublicEntryListHtml hides preview until load when using dev modules", async () => {
@@ -99,7 +99,7 @@ test("renderPublicEntryDetailHtml renders entry data", async () => {
   expect(html).toContain('rel="canonical"');
   expect(html).toContain('href="https://example.com/blog/hello"');
   expect(html).toContain("Hello");
-  expect(html).toContain("data-template=\"content-detail\"");
+  expect(html).toContain('data-template="content-detail"');
   expect(html).toContain("summary");
   expect(html).toContain("World");
   expect(html).not.toContain("Entry preview");
@@ -118,12 +118,7 @@ test("renderPublicEntryDetailHtml shows preview label only in preview mode", asy
 });
 
 test("renderPublicEntryListHtml prefers theme templates when available", async () => {
-  const templatesDir = path.resolve(
-    process.cwd(),
-    "themes",
-    "admin-default",
-    "templates"
-  );
+  const templatesDir = path.resolve(process.cwd(), "themes", "admin-default", "templates");
   const templatesDirExists = existsSync(templatesDir);
   const templatePath = path.join(templatesDir, "content-blog-list.tsx");
   await mkdir(templatesDir, { recursive: true });
@@ -147,11 +142,65 @@ test("renderPublicEntryListHtml prefers theme templates when available", async (
       themeName: "admin-default",
     });
 
-    expect(html).toContain("data-template=\"theme-list\"");
+    expect(html).toContain('data-template="theme-list"');
   } finally {
     await rm(templatePath, { force: true });
     if (!templatesDirExists) {
       await rm(templatesDir, { recursive: true, force: true });
     }
   }
+});
+
+test("renderPublicEntryListHtml renders the shared numbered pager from pagination meta (TASK-459-03)", async () => {
+  const html = await renderPublicEntryListHtml({
+    title: "Blog",
+    contentType: baseContentType,
+    items: [
+      {
+        id: "1",
+        title: "Hello",
+        href: "/blog/hello",
+        entry: baseEntry,
+      },
+    ],
+    pagination: {
+      page: 2,
+      totalPages: 3,
+      total: 49,
+      pageParamKey: "page",
+      search: "page=2",
+      previousPageHref: "?",
+      nextPageHref: "?page=3",
+    },
+  });
+
+  expect(html).toContain('data-content-list-pagination="paged"');
+  expect(html).toContain('data-content-list-total="49"');
+  expect(html.replace(/<!-- -->/g, "")).toContain("49 results");
+  expect(html).toContain('aria-current="page"');
+  expect(html).toContain('href="?page=3"');
+  expect(html).toContain('aria-label="Page 3"');
+
+  // Single page: no pager (legacy unpaginated markup stays untouched).
+  const singlePage = await renderPublicEntryListHtml({
+    title: "Blog",
+    contentType: baseContentType,
+    items: [{ id: "1", title: "Hello", href: "/blog/hello", entry: baseEntry }],
+    pagination: {
+      page: 1,
+      totalPages: 1,
+      total: 1,
+      pageParamKey: "page",
+      search: "",
+    },
+  });
+  expect(singlePage).not.toContain('data-content-list-pagination="paged"');
+
+  // Zero published entries render the explicit empty state.
+  const empty = await renderPublicEntryListHtml({
+    title: "Blog",
+    contentType: baseContentType,
+    items: [],
+  });
+  expect(empty).toContain('data-entry-list-empty="1"');
 });

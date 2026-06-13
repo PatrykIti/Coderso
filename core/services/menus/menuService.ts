@@ -3,6 +3,8 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { menuItems, menus, pages } from "../../db/schema";
 import { normalizeMenuItemSettings } from "./menuItemSettings";
+import { normalizeMenuNavExtras } from "./menuNavExtras";
+import { normalizeMenuAppearance, type MenuSettings } from "./normalizeMenuAppearance";
 import {
   assertNoCycles,
   buildMenuTree,
@@ -23,6 +25,24 @@ export type UpdateMenuInput = {
   name?: string;
   location?: string | null;
   status?: MenuStatus;
+  /**
+   * Menu appearance (TASK-458-02): validated through
+   * `normalizeMenuAppearance` (throws machine-readable
+   * `menu_appearance_invalid`), persisted in the `menus.settings` envelope.
+   * `null` clears the stored appearance back to the legacy look;
+   * `undefined` leaves it untouched, so publish/draft lifecycle updates
+   * carry the appearance exactly like items.
+   */
+  appearance?: unknown;
+  /**
+   * Nav extras blocks (TASK-458-03): validated through
+   * `normalizeMenuNavExtras` (throws machine-readable
+   * `menu_nav_extras_invalid`), persisted next to the appearance in the
+   * `menus.settings` envelope. `null` or an empty list clears the slot;
+   * `undefined` leaves it untouched. Appearance and extras updates merge
+   * per key, so either can change without dropping the other.
+   */
+  extras?: unknown;
 };
 
 export type MenuStatus = "draft" | "published";
@@ -134,8 +154,73 @@ export async function createMenu(input: CreateMenuInput) {
   return row ?? null;
 }
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const hasOwn = (value: Record<string, unknown>, key: string) =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
+const readMenuDesignState = (envelope: Record<string, unknown>): Record<string, unknown> => {
+  const state: Record<string, unknown> = {};
+  if (hasOwn(envelope, "appearance")) {
+    state.appearance = envelope.appearance;
+  }
+  if (hasOwn(envelope, "extras")) {
+    state.extras = envelope.extras;
+  }
+  return state;
+};
+
+/**
+ * Merges an appearance/extras update into the stored `menus.settings`
+ * envelope per key (TASK-458-03): updating one key never drops the other,
+ * unknown stored envelope keys are preserved non-destructively, and an
+ * emptied envelope collapses back to `null` (the legacy shape).
+ */
+const mergeMenuSettingsEnvelope = (
+  stored: unknown,
+  input: Pick<UpdateMenuInput, "appearance" | "extras">,
+  options?: { seedPublishedSnapshot?: boolean }
+): MenuSettings | null => {
+  const envelope: Record<string, unknown> = isPlainObject(stored) ? { ...stored } : {};
+  if (options?.seedPublishedSnapshot && !isPlainObject(envelope.published)) {
+    envelope.published = readMenuDesignState(envelope);
+  }
+  if (input.appearance !== undefined) {
+    if (input.appearance === null) {
+      delete envelope.appearance;
+    } else {
+      envelope.appearance = normalizeMenuAppearance(input.appearance);
+    }
+  }
+  if (input.extras !== undefined) {
+    const extras = input.extras === null ? [] : normalizeMenuNavExtras(input.extras);
+    if (extras.length === 0) {
+      delete envelope.extras;
+    } else {
+      envelope.extras = extras;
+    }
+  }
+  return Object.keys(envelope).length > 0 ? (envelope as MenuSettings) : null;
+};
+
+const publishMenuSettingsEnvelope = (stored: unknown): MenuSettings | null => {
+  const envelope: Record<string, unknown> = isPlainObject(stored) ? { ...stored } : {};
+  const draftState = readMenuDesignState(envelope);
+  if (Object.keys(draftState).length === 0 && !isPlainObject(envelope.published)) {
+    return Object.keys(envelope).length > 0 ? (envelope as MenuSettings) : null;
+  }
+  envelope.published = draftState;
+  return Object.keys(envelope).length > 0 ? (envelope as MenuSettings) : null;
+};
+
 export async function updateMenu(menuId: string, input: UpdateMenuInput) {
   const patch: Partial<typeof menus.$inferInsert> = {};
+  const changesDesign = input.appearance !== undefined || input.extras !== undefined;
+  const publishes = input.status === "published";
+  const existing = changesDesign || publishes ? await getMenu(menuId) : null;
+  if ((changesDesign || publishes) && !existing) return null;
+
   if (input.name !== undefined) {
     patch.name = input.name;
   }
@@ -146,6 +231,14 @@ export async function updateMenu(menuId: string, input: UpdateMenuInput) {
     const status = normalizeMenuStatus(input.status, "draft");
     patch.status = status;
     patch.publishedAt = status === "published" ? new Date() : null;
+  }
+  if (input.appearance !== undefined || input.extras !== undefined) {
+    patch.settings = mergeMenuSettingsEnvelope(existing?.settings, input, {
+      seedPublishedSnapshot: existing?.status === "published",
+    });
+  }
+  if (publishes) {
+    patch.settings = publishMenuSettingsEnvelope(patch.settings ?? existing?.settings);
   }
 
   const [row] = await db.update(menus).set(patch).where(eq(menus.id, menuId)).returning();

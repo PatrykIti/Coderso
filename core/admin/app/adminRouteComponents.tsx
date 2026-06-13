@@ -240,6 +240,11 @@ export const MenuEditorRoute = lazyNamedRoute(
   "MenuEditorPage"
 );
 
+export const MenuDesignEditorRoute = lazyNamedRoute(
+  () => import("@/ui/menus/MenuDesignEditorPage"),
+  "MenuDesignEditorPage"
+);
+
 export const UsersRolesRoute = lazyNamedRoute<PermissionSnapshotRouteProps>(
   () => import("@/ui/users/UsersRolesPage"),
   "UsersRolesPage"

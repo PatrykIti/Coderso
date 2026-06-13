@@ -1,33 +1,22 @@
 // @vitest-environment happy-dom
 
 import React from "react";
-import { createRoot } from "react-dom/client";
 import { expect, test } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 import { ApiClientError } from "../../../core/admin/services/apiClient";
-import { cacheKeys } from "../../../core/admin/services/cachePolicy";
-import { clearContentTypesCache } from "../../../core/admin/services/contentTypesClient";
-import { clearMenusCache, type MenuSummary } from "../../../core/admin/services/menusClient";
-import { clearPagesCache } from "../../../core/admin/services/pagesClient";
-import {
-  clearPageTemplatesCache,
-  type PageTemplateSummary,
-} from "../../../core/admin/services/pageTemplatesClient";
-import { primeRedactedSettingsCache } from "../../../core/admin/services/settingsCache";
+import { type MenuSummary } from "../../../core/admin/services/menusClient";
+import { type PageTemplateSummary } from "../../../core/admin/services/pageTemplatesClient";
 import {
   clearSiteSettingsCache,
   updateSiteSettings,
 } from "../../../core/admin/services/siteSettingsClient";
-import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
-import { SiteSettingsPage } from "../../../core/admin/ui/site/SiteSettingsPage";
 import {
   SiteShellCard,
   buildSiteShellMenuOptions,
   buildSiteShellTemplateOptions,
   resolveSiteShellFieldErrors,
 } from "../../../core/admin/ui/site/SiteShellCard";
-import { broadcastCacheEvent } from "../../../core/admin/utils/cacheBus";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -58,20 +47,8 @@ const installLocalStorage = () => {
         (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
       }
       clearSiteSettingsCache();
-      clearPagesCache();
-      clearContentTypesCache();
-      clearMenusCache();
-      clearPageTemplatesCache();
     },
   };
-};
-
-const setCacheValue = (
-  storage: ReturnType<typeof createLocalStorage>,
-  key: string,
-  value: unknown
-) => {
-  storage.setItem(key, JSON.stringify({ value, savedAt: Date.now() }));
 };
 
 const rawSiteSettingsPayload = (overrides: Record<string, unknown> = {}) => ({
@@ -120,44 +97,6 @@ const templateSummary = (
   updatedAt: "2026-06-10T00:00:00.000Z",
 });
 
-const mount = (node: React.ReactNode) => {
-  const container = document.createElement("div");
-  document.body.appendChild(container);
-  const root = createRoot(container);
-
-  React.act(() => {
-    root.render(node);
-  });
-
-  return {
-    container,
-    cleanup: () => {
-      React.act(() => {
-        root.unmount();
-      });
-      container.remove();
-    },
-  };
-};
-
-const flushEffects = async () => {
-  await React.act(async () => {
-    await Promise.resolve();
-    await Promise.resolve();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-  });
-};
-
-const clickButton = (container: HTMLElement, label: string) => {
-  const button = Array.from(container.querySelectorAll("button")).find((item) =>
-    item.textContent?.includes(label)
-  );
-  if (!button) throw new Error(`missing button: ${label}`);
-  React.act(() => {
-    (button as HTMLButtonElement).click();
-  });
-};
-
 const installSettingsFetch = (settings: () => Record<string, unknown>) => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
@@ -166,14 +105,6 @@ const installSettingsFetch = (settings: () => Record<string, unknown>) => {
     const url = String(input);
     if (url.endsWith("/settings")) {
       return new Response(JSON.stringify(settings()), {
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    if (url.endsWith("/pages") || url.endsWith("/content-types") || url.endsWith("/menus")) {
-      return new Response(JSON.stringify([]), { headers: { "Content-Type": "application/json" } });
-    }
-    if (url.endsWith("/page-templates")) {
-      return new Response(JSON.stringify({ items: [] }), {
         headers: { "Content-Type": "application/json" },
       });
     }
@@ -275,85 +206,6 @@ test("SiteShellCard links to Menus and Page Templates when nothing is published"
   expect(html).toContain("No published page templates yet.");
   expect(html).toContain("/admin/menus");
   expect(html).toContain("/admin/advanced/page-templates");
-});
-
-test("SiteSettingsPage hydrates site shell pickers from cached clients without refetching", async () => {
-  const { storage, restore: restoreStorage } = installLocalStorage();
-  const fetchMock = installSettingsFetch(() => rawSiteSettingsPayload());
-
-  try {
-    primeRedactedSettingsCache(rawSiteSettingsPayload());
-    setCacheValue(storage, cacheKeys.pagesList, []);
-    setCacheValue(storage, cacheKeys.contentTypesList, []);
-    setCacheValue(storage, cacheKeys.menusList, [
-      menuSummary("menu-published", "Main menu"),
-      menuSummary("menu-draft", "Draft menu", "draft"),
-    ]);
-    setCacheValue(storage, cacheKeys.pageTemplatesList, [
-      templateSummary("template-published", "Footer columns"),
-    ]);
-
-    const view = mount(
-      <AdminRouterProvider initialPath="/admin/settings/site">
-        <SiteSettingsPage />
-      </AdminRouterProvider>
-    );
-    await flushEffects();
-
-    const paths = fetchMock.calls.map((call) => String(call.input));
-    expect(paths.filter((path) => path.endsWith("/menus"))).toHaveLength(0);
-    expect(paths.filter((path) => path.endsWith("/page-templates"))).toHaveLength(0);
-
-    clickButton(view.container, "Site shell");
-    await flushEffects();
-
-    expect(view.container.textContent).toContain("Navigation menu");
-    expect(view.container.textContent).toContain("Footer template");
-    expect(view.container.querySelector('[data-site-shell-card="true"]')).not.toBeNull();
-    view.cleanup();
-  } finally {
-    fetchMock.restore();
-    restoreStorage();
-  }
-});
-
-test("SiteSettingsPage revalidates site shell pickers on menus cache bus events", async () => {
-  const { storage, restore: restoreStorage } = installLocalStorage();
-  const fetchMock = installSettingsFetch(() => rawSiteSettingsPayload());
-
-  try {
-    primeRedactedSettingsCache(rawSiteSettingsPayload());
-    setCacheValue(storage, cacheKeys.pagesList, []);
-    setCacheValue(storage, cacheKeys.contentTypesList, []);
-    setCacheValue(storage, cacheKeys.menusList, [menuSummary("menu-published", "Main menu")]);
-    setCacheValue(storage, cacheKeys.pageTemplatesList, []);
-
-    const view = mount(
-      <AdminRouterProvider initialPath="/admin/settings/site">
-        <SiteSettingsPage />
-      </AdminRouterProvider>
-    );
-    await flushEffects();
-
-    const callsBefore = fetchMock.calls.filter((call) =>
-      String(call.input).endsWith("/menus")
-    ).length;
-    expect(callsBefore).toBe(0);
-
-    React.act(() => {
-      broadcastCacheEvent({ key: cacheKeys.menusList, action: "update" });
-    });
-    await flushEffects();
-
-    const callsAfter = fetchMock.calls.filter((call) =>
-      String(call.input).endsWith("/menus")
-    ).length;
-    expect(callsAfter).toBe(1);
-    view.cleanup();
-  } finally {
-    fetchMock.restore();
-    restoreStorage();
-  }
 });
 
 test("updateSiteSettings writes the site shell keys through the settings PATCH payload", async () => {

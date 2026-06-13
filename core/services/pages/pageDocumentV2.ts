@@ -1,3 +1,21 @@
+import {
+  normalizeListingFacetConfigs,
+  normalizeListingRuntimeAliases,
+  type ListingFacetConfig,
+  type ListingRuntimeAliasMap,
+} from "../search/filterContract";
+import { contentListLimitMax } from "../../widgets/core/contentList";
+import {
+  menuAppearanceAlignments,
+  menuAppearanceDropdownDirections,
+  menuAppearanceFontWeights,
+  menuAppearanceMobileModes,
+  menuAppearanceShadows,
+  menuAppearanceTextTransforms,
+  normalizeMenuAppearance,
+  sanitizeMenuAppearance,
+  type MenuAppearance,
+} from "../menus/normalizeMenuAppearance";
 import { DEFAULT_TOKENS } from "../theme/tokenTypes";
 
 export const PAGE_DOCUMENT_SCHEMA_VERSION = 2 as const;
@@ -33,6 +51,7 @@ export const pageBlockTypes = [
   "list",
   "card",
   "collection",
+  "filters",
   "embed",
   "divider",
   "spacer",
@@ -43,6 +62,64 @@ export const pageBlockTypes = [
   "columns",
   "group",
 ] as const;
+
+/**
+ * Layout variants of the filters block (TASK-459-02): `horizontal` renders
+ * the facet bar above/near the listing, `sidebar` renders the narrow aside
+ * shape. Both map onto the shared `listing-filters` markup variants.
+ */
+export const pageFiltersBlockLayouts = ["horizontal", "sidebar"] as const;
+
+/**
+ * Visitor pagination modes of the collection block (TASK-459-03, frozen in
+ * TASK-459-01): `none` (default — exactly today's render), `paged` (numbered
+ * pager + prev/next + totals over `lq.<queryId>.__page` / legacy
+ * `cl.<blockId>.page` params), `load-more` (single next-page anchor). The
+ * widget-era `view-all` mode stays widget-only; the v2 block does not expose
+ * it.
+ */
+export const pageCollectionPaginationModes = ["none", "paged", "load-more"] as const;
+export type PageCollectionPaginationMode = (typeof pageCollectionPaginationModes)[number];
+
+/**
+ * Single collection limit/page-size bound (TASK-459-03 clamp unification).
+ * Owned by the widget render contract (`contentListLimitMax = 24`); the
+ * editor schema, control clamps, and runtime binding all read THIS value —
+ * the old schema/editor 1..50 ceiling silently truncated to 24 at runtime.
+ * Stored documents with out-of-range values normalize on read (no rewrite).
+ */
+export const PAGE_COLLECTION_LIMIT_CLAMP = { min: 1, max: contentListLimitMax } as const;
+
+/**
+ * Facet vocabulary of the filters block — the SAME generic, field-driven
+ * facet contract the listing runtime owns (`core/services/search/
+ * filterContract.ts`). Kinds/operators are mirrored here only for the JSON
+ * schema; normalization delegates to `normalizeListingFacetConfigs` so the
+ * stored shape stays canonical with the runtime contract.
+ */
+export const pageFiltersFacetKinds = [
+  "taxonomy",
+  "checkbox",
+  "radio",
+  "range",
+  "date-range",
+  "sort",
+] as const;
+export const pageFiltersFacetOperators = [
+  "eq",
+  "neq",
+  "in",
+  "nin",
+  "contains",
+  "startsWith",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "between",
+  "exists",
+] as const;
+export const PAGE_FILTERS_MAX_FACETS = 24 as const;
 
 export const pageSectionVariants = [
   "default",
@@ -198,6 +275,15 @@ export type PageDocumentSettingsV2 = {
   showInNav: boolean;
   revisionRetention?: number;
   collectionLink?: PageCollectionLinkV2;
+  /**
+   * Menu-host editor vehicle (TASK-458-03): the menu design editor carries
+   * the menu's `MenuAppearance` draft through the shared editor document so
+   * appearance edits ride the regular draft/save discipline. Validation is
+   * owned by `normalizeMenuAppearance` (strict on write, fail-closed
+   * sanitize on stored read). Page and page-template documents never set
+   * this field; absent input stays absent in the normalized output.
+   */
+  menuAppearance?: MenuAppearance;
 };
 
 export type PageSectionLayoutV2 = {
@@ -433,7 +519,19 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   form: ["formId", "title"],
   list: ["items", "ordered"],
   card: ["title", "text", "image", "href"],
-  collection: ["contentTypeId", "queryId", "limit", "templateId"],
+  collection: ["contentTypeId", "queryId", "limit", "templateId", "paginationMode", "pageSize"],
+  filters: [
+    "queryId",
+    "facets",
+    "aliases",
+    "layout",
+    "autoApply",
+    "showSearch",
+    "showCount",
+    "searchLabel",
+    "searchPlaceholder",
+    "applyLabel",
+  ],
   embed: ["html", "url", "provider"],
   divider: ["tone", "thickness"],
   spacer: ["size"],
@@ -511,6 +609,7 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   "list",
   "card",
   "collection",
+  "filters",
   "embed",
   "divider",
   "spacer",
@@ -520,7 +619,7 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   "columns",
   "group",
 ]);
-const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "form", "embed"]);
+const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "filters", "form", "embed"]);
 const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"]);
 const editorInsertableBlockTypes = new Set<PageBlockType>([
   "heading",
@@ -544,6 +643,14 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   // stays gated: a listing layout is a section composed with this block
   // (composite-first product rule).
   "collection",
+  // TASK-459-02: the filters block is editor-insertable — a deliberate
+  // TASK-452-style catalog amendment. Its public runtime (facet form reusing
+  // the listing-filters markup, scoped read-only listing binding) and the
+  // authoring controls (saved-query combobox + generic facet builder +
+  // behavior toggles) ship together with this capability flip. The `filters`
+  // SECTION stays gated `listing-section-boundary`: a filter layout is an
+  // ordinary section composed with this block (composite-first product rule).
+  "filters",
   "divider",
   "spacer",
   "statistic",
@@ -630,7 +737,28 @@ export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown
   form: { formId: null, title: "" },
   list: { items: [], ordered: false },
   card: { title: "Card title", text: "", image: null, href: null },
-  collection: { contentTypeId: null, queryId: null, limit: 6, templateId: null },
+  collection: {
+    contentTypeId: null,
+    queryId: null,
+    limit: 6,
+    templateId: null,
+    // TASK-459-03: visitor pagination defaults — "none" preserves today's
+    // render exactly; `pageSize: null` means "follow limit" when paged.
+    paginationMode: "none",
+    pageSize: null,
+  },
+  filters: {
+    queryId: null,
+    facets: [],
+    aliases: {},
+    layout: "horizontal",
+    autoApply: true,
+    showSearch: true,
+    showCount: true,
+    searchLabel: "Search",
+    searchPlaceholder: "Search results...",
+    applyLabel: "Apply filters",
+  },
   embed: { html: "", url: "", provider: "custom" },
   divider: { tone: "neutral", thickness: 1 },
   spacer: { size: 32 },
@@ -680,6 +808,72 @@ const listItemsSchema: RecordValue = {
   },
 };
 
+/**
+ * JSON schema of the filters block facet list (TASK-459-02). Mirrors the
+ * shared `listing-filters` facet contract: option-backed kinds carry explicit
+ * option lists, sort facets carry `field:dir` sort options, presentation
+ * stays the small generic surface the runtime understands. Reject-unknown is
+ * preserved on every nested record.
+ */
+const pageFiltersFacetsJsonSchema: RecordValue = {
+  type: "array",
+  maxItems: PAGE_FILTERS_MAX_FACETS,
+  items: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      id: { type: "string" },
+      kind: { type: "string", enum: [...pageFiltersFacetKinds] },
+      label: { type: "string" },
+      field: { type: "string" },
+      op: { type: "string", enum: [...pageFiltersFacetOperators] },
+      options: {
+        type: "array",
+        maxItems: 120,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            label: { type: "string" },
+            value: { type: "string" },
+            parentValue: { type: "string" },
+          },
+        },
+      },
+      sortOptions: {
+        type: "array",
+        maxItems: 20,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            label: { type: "string" },
+            value: { type: "string" },
+            field: { type: "string" },
+            dir: { type: "string", enum: ["asc", "desc"] },
+          },
+        },
+      },
+      presentation: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          controlMode: { type: "string", enum: ["inline", "searchable"] },
+          rangeStep: { type: "number" },
+          rangeInputMode: { type: "string", enum: ["inputs", "inputs-slider"] },
+          dateInputMode: { type: "string", enum: ["native-date", "text-fallback"] },
+        },
+      },
+    },
+  },
+};
+
+const pageFiltersAliasesJsonSchema: RecordValue = {
+  type: "object",
+  maxProperties: 24,
+  additionalProperties: { type: "string" },
+};
+
 const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordValue => {
   if (type === "heading" && key === "level")
     return { type: "string", enum: [...pageHeadingLevels] };
@@ -696,6 +890,17 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   if (type === "image" && key === "fit") return { type: "string", enum: [...pageImageFits] };
   if (type === "gallery" && key === "layout")
     return { type: "string", enum: [...pageGalleryLayouts] };
+  if (type === "filters" && key === "layout") {
+    return { type: "string", enum: [...pageFiltersBlockLayouts] };
+  }
+  if (type === "filters" && key === "facets") return pageFiltersFacetsJsonSchema;
+  if (type === "filters" && key === "aliases") return pageFiltersAliasesJsonSchema;
+  if (type === "collection" && key === "paginationMode") {
+    return { type: "string", enum: [...pageCollectionPaginationModes] };
+  }
+  if (type === "collection" && key === "pageSize") {
+    return nullableNumericSchema(PAGE_COLLECTION_LIMIT_CLAMP.min, PAGE_COLLECTION_LIMIT_CLAMP.max);
+  }
   if (type === "divider" && key === "tone") return { type: "string", enum: [...pageDividerTones] };
   if (type === "columns" && key === "distribution") {
     return { type: "string", enum: [...pageColumnDistributions] };
@@ -703,13 +908,25 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   if (type === "group" && key === "direction") {
     return { type: "string", enum: [...pageGroupDirections] };
   }
-  if (key === "limit") return numericSchema(1, 50);
+  // Single owner clamp (TASK-459-03): editor schema agrees with the runtime
+  // bound instead of the old 1..50 ceiling the runtime truncated to 24.
+  if (key === "limit") {
+    return numericSchema(PAGE_COLLECTION_LIMIT_CLAMP.min, PAGE_COLLECTION_LIMIT_CLAMP.max);
+  }
   if (key === "thickness") return numericSchema(1, 16);
   if (key === "count") return numericSchema(1, 4);
   if (type === "columns" && key === "gap") return numericSchema(0, 120);
   if (type === "group" && key === "gap") return numericSchema(0, 120);
   if (key === "size") return numericSchema(0, 240);
-  if (key === "ordered" || key === "autoplay" || key === "muted" || key === "wrap") {
+  if (
+    key === "ordered" ||
+    key === "autoplay" ||
+    key === "muted" ||
+    key === "wrap" ||
+    key === "autoApply" ||
+    key === "showSearch" ||
+    key === "showCount"
+  ) {
     return booleanSchema;
   }
   if (type === "list" && key === "items") return listItemsSchema;
@@ -959,6 +1176,36 @@ export const pageDocumentV2JsonSchema: RecordValue = {
         template: { type: "string" },
         showInNav: { type: "boolean" },
         revisionRetention: { type: "number", minimum: 1, maximum: 100 },
+        // Menu-host appearance vehicle (TASK-458-03). Deep validation
+        // (color shapes, numeric clamps) is owned by
+        // `normalizeMenuAppearance`; the JSON schema mirrors the shape and
+        // reject-unknown contract.
+        menuAppearance: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            surfaceColor: { type: "string" },
+            linkColor: { type: "string" },
+            linkHoverColor: { type: "string" },
+            linkActiveColor: { type: "string" },
+            itemGap: { type: "number" },
+            paddingY: { type: "number" },
+            paddingX: { type: "number" },
+            alignment: { type: "string", enum: [...menuAppearanceAlignments] },
+            fontSize: { type: "number" },
+            fontWeight: { type: "number", enum: [...menuAppearanceFontWeights] },
+            textTransform: { type: "string", enum: [...menuAppearanceTextTransforms] },
+            borderColor: { type: "string" },
+            borderWidth: { type: "number" },
+            shadow: { type: "string", enum: [...menuAppearanceShadows] },
+            sticky: { type: "boolean" },
+            dropdownDirection: {
+              type: "string",
+              enum: [...menuAppearanceDropdownDirections],
+            },
+            mobileMode: { type: "string", enum: [...menuAppearanceMobileModes] },
+          },
+        },
         collectionLink: {
           type: "object",
           required: ["contentTypeId", "pageRole"],
@@ -1255,11 +1502,36 @@ const normalizeCollectionLink = (
   };
 };
 
+/**
+ * Menu-host appearance vehicle (TASK-458-03): strict on write (delegates to
+ * `normalizeMenuAppearance`, mapping its error to the document contract),
+ * fail-closed sanitize on stored read, absent stays absent.
+ */
+const normalizeSettingsMenuAppearance = (
+  value: unknown,
+  mode: NormalizeMode
+): MenuAppearance | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (mode === "write") {
+    try {
+      return normalizeMenuAppearance(value);
+    } catch {
+      throw new PageDocumentError(
+        "page_document_invalid",
+        "settings.menuAppearance is invalid.",
+        "settings.menuAppearance"
+      );
+    }
+  }
+  if (!isRecord(value)) return undefined;
+  return sanitizeMenuAppearance(value);
+};
+
 const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSettingsV2 => {
   const input = requireRecord(value ?? {}, "settings", mode);
   assertKnownKeys(
     input,
-    ["template", "showInNav", "revisionRetention", "collectionLink"],
+    ["template", "showInNav", "revisionRetention", "collectionLink", "menuAppearance"],
     "settings",
     mode
   );
@@ -1268,11 +1540,13 @@ const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSet
     input.revisionRetention === undefined
       ? undefined
       : readNumber(input.revisionRetention, 10, 1, 100);
+  const menuAppearance = normalizeSettingsMenuAppearance(input.menuAppearance, mode);
   return {
     template: readText(input.template, defaultSettings.template),
     showInNav: readBoolean(input.showInNav, defaultSettings.showInNav),
     ...(revisionRetention !== undefined ? { revisionRetention } : {}),
     ...(collectionLink ? { collectionLink } : {}),
+    ...(menuAppearance !== undefined ? { menuAppearance } : {}),
   };
 };
 
@@ -1636,6 +1910,114 @@ const normalizeListItems = (
   return result;
 };
 
+const pageFiltersFacetKeys = [
+  "id",
+  "kind",
+  "label",
+  "field",
+  "op",
+  "options",
+  "sortOptions",
+  "presentation",
+] as const;
+const pageFiltersFacetOptionKeys = ["label", "value", "parentValue"] as const;
+const pageFiltersFacetSortOptionKeys = ["label", "value", "field", "dir"] as const;
+const pageFiltersFacetPresentationKeys = [
+  "controlMode",
+  "rangeStep",
+  "rangeInputMode",
+  "dateInputMode",
+] as const;
+
+/**
+ * Filters block facet normalizer (TASK-459-02). Fresh writes preserve the
+ * reject-unknown contract on every nested record; the canonical stored shape
+ * is owned by the listing filter contract (`normalizeListingFacetConfigs`),
+ * so the document, the editor, and the runtime resolver agree on ids, default
+ * operators, and option shapes. Stored reads stay non-destructive: invalid
+ * entries drop instead of failing the document.
+ */
+const normalizeFiltersFacets = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): ListingFacetConfig[] => {
+  const input = requireArray(value ?? [], path, mode);
+  if (mode === "write" && input.length > PAGE_FILTERS_MAX_FACETS) {
+    throw new PageDocumentError(
+      "page_document_invalid",
+      `Filters block allows at most ${PAGE_FILTERS_MAX_FACETS} facets.`,
+      path
+    );
+  }
+  if (mode === "write") {
+    input.forEach((entry, index) => {
+      const facetPath = `${path}.${index}`;
+      const record = requireRecord(entry, facetPath, mode);
+      assertKnownKeys(record, pageFiltersFacetKeys, facetPath, mode);
+      if (record.options !== undefined) {
+        requireArray(record.options, `${facetPath}.options`, mode).forEach(
+          (option, optionIndex) => {
+            const optionPath = `${facetPath}.options.${optionIndex}`;
+            assertKnownKeys(
+              requireRecord(option, optionPath, mode),
+              pageFiltersFacetOptionKeys,
+              optionPath,
+              mode
+            );
+          }
+        );
+      }
+      if (record.sortOptions !== undefined) {
+        requireArray(record.sortOptions, `${facetPath}.sortOptions`, mode).forEach(
+          (option, optionIndex) => {
+            const optionPath = `${facetPath}.sortOptions.${optionIndex}`;
+            assertKnownKeys(
+              requireRecord(option, optionPath, mode),
+              pageFiltersFacetSortOptionKeys,
+              optionPath,
+              mode
+            );
+          }
+        );
+      }
+      if (record.presentation !== undefined) {
+        assertKnownKeys(
+          requireRecord(record.presentation, `${facetPath}.presentation`, mode),
+          pageFiltersFacetPresentationKeys,
+          `${facetPath}.presentation`,
+          mode
+        );
+      }
+    });
+  }
+  return normalizeListingFacetConfigs(input.slice(0, PAGE_FILTERS_MAX_FACETS));
+};
+
+const normalizeFiltersAliases = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): ListingRuntimeAliasMap => {
+  const input = requireRecord(value ?? {}, path, mode);
+  const normalized = normalizeListingRuntimeAliases(input);
+
+  if (mode === "write") {
+    const entries = Object.entries(input);
+    const hasInvalidEntry =
+      entries.length > 24 ||
+      entries.some(
+        ([alias, token]) => typeof token !== "string" || normalized[alias] !== token.trim()
+      ) ||
+      Object.keys(normalized).length !== entries.length;
+    if (hasInvalidEntry) {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+    }
+  }
+
+  return normalized;
+};
+
 const normalizeBlockProp = (
   type: PageBlockType,
   key: string,
@@ -1667,6 +2049,35 @@ const normalizeBlockProp = (
   if (type === "gallery" && key === "layout") {
     return normalizeEnum(value, pageGalleryLayouts, "grid", path, mode);
   }
+  if (type === "filters" && key === "layout") {
+    return normalizeEnum(value, pageFiltersBlockLayouts, "horizontal", path, mode);
+  }
+  if (type === "filters" && key === "facets") {
+    return normalizeFiltersFacets(value, mode, path);
+  }
+  if (type === "filters" && key === "aliases") {
+    return normalizeFiltersAliases(value, mode, path);
+  }
+  if (type === "collection" && key === "paginationMode") {
+    return normalizeEnum(value, pageCollectionPaginationModes, "none", path, mode);
+  }
+  if (type === "collection" && key === "pageSize") {
+    // Nullable page size: `null` follows `limit`; numbers clamp to the single
+    // owner bound (out-of-range stored values normalize on read).
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "number" || !Number.isFinite(value)) {
+      if (mode === "write") {
+        throw new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+      }
+      return null;
+    }
+    return readNumber(
+      Math.trunc(value),
+      PAGE_COLLECTION_LIMIT_CLAMP.min,
+      PAGE_COLLECTION_LIMIT_CLAMP.min,
+      PAGE_COLLECTION_LIMIT_CLAMP.max
+    );
+  }
   if (type === "divider" && key === "tone") {
     return normalizeEnum(value, pageDividerTones, "neutral", path, mode);
   }
@@ -1676,14 +2087,24 @@ const normalizeBlockProp = (
   if (type === "group" && key === "direction") {
     return normalizeEnum(value, pageGroupDirections, "column", path, mode);
   }
-  if (key === "limit") return readNumber(value, 6, 1, 50);
+  if (key === "limit") {
+    return readNumber(value, 6, PAGE_COLLECTION_LIMIT_CLAMP.min, PAGE_COLLECTION_LIMIT_CLAMP.max);
+  }
   if (key === "thickness") return readNumber(value, 1, 1, 16);
   if (type === "columns" && key === "count") return readNumber(value, 2, 1, 4);
   if ((type === "columns" || type === "group") && key === "gap") {
     return readNumber(value, type === "columns" ? 24 : 16, 0, 120);
   }
   if (type === "spacer" && key === "size") return readNumber(value, 32, 0, 240);
-  if (key === "ordered" || key === "autoplay" || key === "muted" || key === "wrap") {
+  if (
+    key === "ordered" ||
+    key === "autoplay" ||
+    key === "muted" ||
+    key === "wrap" ||
+    key === "autoApply" ||
+    key === "showSearch" ||
+    key === "showCount"
+  ) {
     return Boolean(value);
   }
   if (type === "list" && key === "items") return normalizeListItems(value, mode, path);
@@ -1832,20 +2253,75 @@ const normalizeBlockSlots = (
     const normalizedChildren: PageBlockV2[] = [];
     const children = slotValue.slice(0, PAGE_BLOCK_MAX_CHILDREN_PER_SLOT);
     children.forEach((child, childIndex) => {
-      const normalized = normalizeBlock(
-        child,
-        `${path}.${slotKey}.${childIndex}`,
-        childIndex,
-        mode,
-        depth + 1,
-        context
-      );
-      if (normalized) normalizedChildren.push(normalized);
+      for (const expandedChild of expandLegacyFiltersCollectionBlock(child)) {
+        const normalized = normalizeBlock(
+          expandedChild,
+          `${path}.${slotKey}.${childIndex}`,
+          normalizedChildren.length,
+          mode,
+          depth + 1,
+          context
+        );
+        if (normalized) normalizedChildren.push(normalized);
+      }
     });
     result[slotKey] = normalizedChildren;
   }
 
   return Object.keys(result).length > 0 ? result : undefined;
+};
+
+const legacyFiltersCollectionFilterPropKeys = [
+  "queryId",
+  "facets",
+  "aliases",
+  "layout",
+  "autoApply",
+  "showSearch",
+  "showCount",
+  "searchLabel",
+  "searchPlaceholder",
+  "applyLabel",
+] as const;
+
+const legacyFiltersCollectionStripPropKeys = new Set<string>([
+  "mode",
+  ...legacyFiltersCollectionFilterPropKeys.filter((key) => key !== "queryId"),
+]);
+
+/**
+ * Non-destructive legacy adapter (TASK-459-02, frozen TASK-459-01 decision):
+ * assistant blueprints historically attached `mode: "filters"` plus the
+ * filter-surface props to a COLLECTION block. Those payloads now normalize
+ * into a filters + collection pair: the dedicated filters block owns the
+ * facet controls, while the original collection block keeps rendering the
+ * linked results. Collection blocks WITHOUT `mode: "filters"` are untouched,
+ * so existing documents render byte-identically.
+ */
+const expandLegacyFiltersCollectionBlock = (value: unknown): unknown[] => {
+  if (!isRecord(value) || value.type !== "collection" || !isRecord(value.props)) return [value];
+  if (value.props.mode !== "filters") return [value];
+  const legacy = value.props;
+  const props: RecordValue = {};
+  for (const key of legacyFiltersCollectionFilterPropKeys) {
+    if (legacy[key] !== undefined) props[key] = legacy[key];
+  }
+  const collectionProps = Object.fromEntries(
+    Object.entries(legacy).filter(([key]) => !legacyFiltersCollectionStripPropKeys.has(key))
+  );
+  const sourceId = typeof value.id === "string" ? value.id.trim() : "";
+  const filtersId = sourceId ? `${sourceId}_filters` : undefined;
+  const filtersBlock = {
+    ...value,
+    ...(filtersId ? { id: filtersId } : {}),
+    type: "filters",
+    props,
+  };
+  const collectionBlock = {
+    ...value,
+    props: collectionProps,
+  };
+  return [filtersBlock, collectionBlock];
 };
 
 const normalizeBlock = (
@@ -1992,16 +2468,19 @@ const normalizeSection = (
     mode
   );
   const type = normalizeEnum(input.type, pageSectionTypes, "custom", `${path}.type`, mode);
-  const blocks = requireArray(input.blocks, `${path}.blocks`, mode).flatMap((block, blockIndex) => {
-    const normalized = normalizeBlock(
-      block,
-      `${path}.blocks.${blockIndex}`,
-      blockIndex,
-      mode,
-      1,
-      blockContext
-    );
-    return normalized ? [normalized] : [];
+  const blocks: PageBlockV2[] = [];
+  requireArray(input.blocks, `${path}.blocks`, mode).forEach((block, blockIndex) => {
+    for (const expandedBlock of expandLegacyFiltersCollectionBlock(block)) {
+      const normalized = normalizeBlock(
+        expandedBlock,
+        `${path}.blocks.${blockIndex}`,
+        blocks.length,
+        mode,
+        1,
+        blockContext
+      );
+      if (normalized) blocks.push(normalized);
+    }
   });
 
   return {

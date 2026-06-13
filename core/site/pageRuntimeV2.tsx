@@ -30,7 +30,11 @@ export function DefaultRuntimePageShellV2({
   return (
     <>
       {siteShell?.navigation ? (
-        <SiteHeaderNav navigation={siteShell.navigation} siteName={siteName} />
+        <SiteHeaderNav
+          navigation={siteShell.navigation}
+          siteName={siteName}
+          extras={siteShell.navigationExtras ?? null}
+        />
       ) : null}
       <PageDocumentRender
         document={document}

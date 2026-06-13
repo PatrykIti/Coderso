@@ -17,7 +17,7 @@ import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeData
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
-import { SITE_SHELL_CSS, type SiteShellRenderProps } from "./siteShell";
+import { buildSiteShellCss, type SiteShellRenderProps } from "./siteShell";
 
 export type PublicPageRenderOptions = {
   title: string;
@@ -61,6 +61,14 @@ export type PublicPageV2RuntimeRenderOptions = Omit<
    */
   siteShell?: SiteShellRenderProps | null;
   siteName?: string | null;
+  /**
+   * V2 body-script emission seam (TASK-459-02): the registry-rendered runtime
+   * scripts appended before `</body>`, exactly like the legacy WidgetBlock
+   * path. `publicSite.tsx` provides it only when the prepared runtime
+   * document needs a client script (currently the shared listing runtime
+   * script for live filters blocks); absent/null keeps v2 pages script-free.
+   */
+  renderBodyScripts?: (() => ReactNode) | null;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -339,6 +347,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     responsiveCss,
     siteShell,
     siteName,
+    renderBodyScripts,
   } = options;
 
   const templateInput = resolvePageTemplateInput(rawDocument, {
@@ -359,11 +368,15 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     siteName,
   };
 
-  // The shell ships no client JS; its static CSS rides the inline style block
-  // only when a shell part actually renders.
+  // The shell ships no client JS; its CSS rides the inline style block only
+  // when a shell part actually renders. The stylesheet is built from the
+  // published menu's appearance; a null/legacy appearance reproduces the
+  // pre-appearance stylesheet byte-identically (TASK-458-02).
   const hasSiteShell = Boolean(siteShell?.navigation || siteShell?.footerDocument);
   const inlineCssWithShell = hasSiteShell
-    ? [inlineCss, SITE_SHELL_CSS].filter(Boolean).join("\n")
+    ? [inlineCss, buildSiteShellCss(siteShell?.navigationAppearance ?? null)]
+        .filter(Boolean)
+        .join("\n")
     : inlineCss;
 
   const body = (
@@ -383,7 +396,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     options.imageUrl,
     devModuleScripts,
     isPreview,
-    undefined,
+    renderBodyScripts ?? undefined,
     responsiveCss
   );
 }

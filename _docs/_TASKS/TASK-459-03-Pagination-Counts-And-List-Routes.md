@@ -6,7 +6,8 @@
 **Category:** Pages / Public Runtime / Listings
 **Estimated Effort:** Medium
 **Dependencies:** TASK-459-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -82,13 +83,26 @@ Deliverables (per the TASK-459-01 frozen contract):
 
 ## Sub-Tasks
 
-- [ ] Pagination props end to end (schema, controls, binding, default
+- [x] Pagination props end to end (schema, controls, binding, default
       "none", canvas-inert).
-- [ ] Numbered pager + totals + view-all in the shared list render.
-- [ ] Clamp unification + stored-document normalization.
-- [ ] Entry-list route searchParams consumption.
-- [ ] Template style/emptyState consumption (v2 + list routes).
-- [ ] Dangling-link guard per frozen policy.
+- [x] Numbered pager + totals + view-all in the shared list render.
+- [x] Clamp unification + stored-document normalization.
+- [x] Entry-list route searchParams consumption.
+- [x] Template style/emptyState consumption (v2 + list routes).
+- [x] Dangling-link guard per frozen policy.
+
+## Completion Notes
+
+- Pagination, totals, URL-driven list routes, template style consumption,
+  clamp normalization, and dangling-link suppression are wired through the
+  page/listing runtime path.
+
+## Validation
+
+- `bun test tests/unit/content/contentListResolver.test.ts` passed.
+- `bun test tests/integration/runtime/pages-runtime.test.ts` passed.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
 
 ---
 

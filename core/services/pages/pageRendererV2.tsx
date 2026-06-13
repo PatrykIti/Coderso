@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 
 import { ContentListBlock } from "../../widgets/core/contentList";
 import { FormEmbedBlock, type FormEmbedData } from "../../widgets/core/formEmbed";
+import { ListingFiltersBlock } from "../../widgets/core/listingFilters";
 import {
   getPageBlockActiveSlotKeys,
   isPageTypographyCapableBlockType,
@@ -34,10 +35,12 @@ import {
   resolvePageSectionTemplate,
   type ResolvedPageSectionTemplate,
 } from "./pageSectionTemplates";
-import type {
-  PageRuntimeDataBinding,
-  PageRuntimeDataByBlockId,
-  PageRuntimeFormBinding,
+import {
+  mapPageFiltersBlockToListingFiltersData,
+  readPageFiltersBlockLayout,
+  type PageRuntimeDataBinding,
+  type PageRuntimeDataByBlockId,
+  type PageRuntimeFormBinding,
 } from "./pageRuntimeDataBinding";
 
 export type PageRenderMode = "runtime" | "admin-preview";
@@ -601,7 +604,10 @@ const renderGallery = (block: PageBlockV2) => {
   );
 };
 
-const renderInertDataBoundBlock = (type: "collection" | "form" | "embed", message: string) => (
+const renderInertDataBoundBlock = (
+  type: "collection" | "filters" | "form" | "embed",
+  message: string
+) => (
   <div
     className="rounded border border-slate-200 bg-slate-50 p-5 text-sm text-slate-600"
     data-page-block-inert={type}
@@ -646,7 +652,11 @@ const renderCollectionBlock = (block: PageBlockV2, context: PageBlockRenderConte
     // never render a fake listing (the Content panel marks the dangling id).
     return renderInertDataBoundBlock("collection", "Collection content is not available yet.");
   }
-  const listing = <ContentListBlock data={binding.data} variant="grid" blockId={block.id} />;
+  // TASK-459-03: the binding resolves the listing template's cardVariant to
+  // the effective list variant; absent template keeps today's grid render.
+  const listing = (
+    <ContentListBlock data={binding.data} variant={binding.variant ?? "grid"} blockId={block.id} />
+  );
   if (isCanvas) {
     // Canvas-safe preview (TASK-457): the author sees the exact shared
     // listing markup the front renders, with pointer events off so entry
@@ -658,6 +668,75 @@ const renderCollectionBlock = (block: PageBlockV2, context: PageBlockRenderConte
     );
   }
   return listing;
+};
+
+/**
+ * Filters block renderer (TASK-459-02): reuses the shared `listing-filters`
+ * facet markup on the v2 pipeline. The outer wrapper carries the SAME
+ * fetch-swap hooks the collection listing markup ships
+ * (`data-listing-query-id` + `data-listing-block-id`), so the runtime client
+ * script swaps the result count together with the facet form. The form itself
+ * is a plain GET form — without JS a submit reloads the page with `lq.*`
+ * params the server already honors.
+ */
+const renderFiltersBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
+  const binding = getRuntimeBinding(block, context, "filters");
+  const isCanvas = context.layoutMode === "canvas-device";
+  if (isCanvas) {
+    const queryId = readText(block.props.queryId);
+    if (!queryId) {
+      return renderInertDataBoundBlock(
+        "filters",
+        "Pick a saved query in the Content panel to preview filters here."
+      );
+    }
+    // Canvas-safe preview: the configured facet form renders from the block
+    // props alone (no live filtering, counts stay 0) with pointer events off,
+    // mirroring the collection block's inert-canvas discipline.
+    return (
+      <div className="pointer-events-none min-w-0" data-page-editor-filters-preview="inert">
+        <ListingFiltersBlock
+          data={mapPageFiltersBlockToListingFiltersData(block)}
+          variant={readPageFiltersBlockLayout(block)}
+          blockId={`${block.id}-form`}
+          withRuntimeScript={false}
+        />
+      </div>
+    );
+  }
+  if (!binding || binding.data.resolved?.error) {
+    // Fail closed identically to the collection block: an unresolved or
+    // dangling saved query never renders a fake filter form.
+    return renderInertDataBoundBlock("filters", "Filters are not available yet.");
+  }
+  const listingQueryId = binding.data.listingQueryId ?? "";
+  if (!listingQueryId) {
+    return renderInertDataBoundBlock("filters", "Filters are not available yet.");
+  }
+  const showCount = readBoolean(block.props.showCount, true);
+  return (
+    <div
+      className="min-w-0"
+      data-page-filters-block="true"
+      data-listing-block-id={block.id}
+      data-listing-query-id={listingQueryId}
+    >
+      {showCount ? (
+        <p
+          className="px-4 text-sm font-medium text-[var(--coderso-block-text,#334155)]"
+          data-page-filters-count={binding.total}
+        >
+          {binding.total === 1 ? "1 result" : `${binding.total} results`}
+        </p>
+      ) : null}
+      <ListingFiltersBlock
+        data={binding.data}
+        variant={readPageFiltersBlockLayout(block)}
+        blockId={`${block.id}-form`}
+        withRuntimeScript={false}
+      />
+    </div>
+  );
 };
 
 const mapFormBindingToEmbedData = (
@@ -1138,6 +1217,8 @@ export const renderPageBlockContent = (
       return renderGallery(block);
     case "collection":
       return renderCollectionBlock(block, context);
+    case "filters":
+      return renderFiltersBlock(block, context);
     case "form": {
       return renderFormBlock(block, context);
     }

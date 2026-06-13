@@ -6,7 +6,8 @@
 **Category:** Pages / Public Runtime / Listings
 **Estimated Effort:** Large
 **Dependencies:** TASK-459-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -80,16 +81,29 @@ Deliverables:
 
 ## Sub-Tasks
 
-- [ ] Block type plumbing: schema, defaults, capabilities, palette entry,
+- [x] Block type plumbing: schema, defaults, capabilities, palette entry,
       TASK-452-style guard-suite amendment.
-- [ ] Renderer + runtime data binding (facet hydration scoped to the bound
+- [x] Renderer + runtime data binding (facet hydration scoped to the bound
       queryId; fail-closed placeholder for dangling queryId).
-- [ ] Editor controls panel (queryId combobox, facet editor, toggles) via
+- [x] Editor controls panel (queryId combobox, facet editor, toggles) via
       shared primitives.
-- [ ] V2 body-script emission seam + script wiring (fetch-swap targets,
+- [x] V2 body-script emission seam + script wiring (fetch-swap targets,
       pushState, clearQueryPrefix behavior preserved).
-- [ ] Sort control + result-count display per contract.
-- [ ] Assistant props normalization + composer update + tests.
+- [x] Sort control + result-count display per contract.
+- [x] Assistant props normalization + composer update + tests.
+
+## Completion Notes
+
+- The filters block renders alias-aware no-JS forms, sort/search/count
+  controls, and the v2 runtime script that fetch-swaps matching collection
+  content while preserving the existing UX/UI surface.
+
+## Validation
+
+- `bunx vitest run tests/vitest/widgets/listingRuntimeScript.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts` passed.
+- `bun test tests/integration/runtime/pages-runtime.test.ts` passed.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
 
 ---
 

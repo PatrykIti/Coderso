@@ -29,10 +29,11 @@ Ordinary new entries continue at 1164.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1166 for the next changelog entry.
+assistant policy coverage fix. Use 1167 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1166 | 2026-06-13 | TASK-458/459 implementation stabilization | Menus/Listings/Public Runtime/Admin UI/Performance/QA/Docs |
 | 1165 | 2026-06-12 | TASK-455/456/457 client-readiness closure | Pages/Runtime/Forms/Content/Admin UI/QA/Docs |
 | 1164 | 2026-06-11 | TASK-442 closure correction (drift pass) | Docs/Planning |
 | 1163 | 2026-06-11 | TASK-424/425/451/420 Pages editor Phase 2 closure | Pages/Admin UI/Runtime/Templates/Preview/QA/Docs |

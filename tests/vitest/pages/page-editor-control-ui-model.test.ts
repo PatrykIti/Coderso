@@ -262,16 +262,46 @@ describe("page editor control ui model adapter", () => {
       placeholder: "Pick a listing template",
       allowNull: true,
     });
-    // Limit (schema clamp 1..50) rides the existing bounded-number slider
-    // upgrade: span 49 stays a plain slider with step 1 and an explicit
-    // unitless readout (an entry count, not pixels).
+    // Limit rides the existing bounded-number slider upgrade with the single
+    // owner clamp (1..24 after the TASK-459-03 unification): step 1 and an
+    // explicit unitless readout (an entry count, not pixels).
     expect(resolveById("block.collection.props.limit")).toEqual({
       kind: "slider",
       min: 1,
-      max: 50,
+      max: 24,
       step: 1,
       unit: "",
     });
+    // TASK-459-03 visitor pagination: a segmented mode strip plus the
+    // page-size slider bound to the same owner clamp.
+    expect(resolveById("block.collection.props.paginationMode")).toMatchObject({
+      kind: "segmented",
+      options: ["none", "paged", "load-more"],
+    });
+    expect(resolveById("block.collection.props.pageSize")).toEqual({
+      kind: "slider",
+      min: 1,
+      max: 24,
+      step: 1,
+      unit: "",
+    });
+  });
+
+  test("filters block controls resolve to the frozen models (TASK-459-02)", () => {
+    // The saved-query picker rides the UNSCOPED source: the filters block
+    // binds to any saved listing query (no contentTypeId sibling).
+    expect(resolveById("block.filters.props.queryId")).toEqual({
+      kind: "combobox",
+      optionsSource: "listingQueriesAll",
+      placeholder: "Pick a saved query",
+      allowNull: true,
+      emptyMessage: "No saved listing queries yet.",
+    });
+    // The generic facet builder is its own dedicated model.
+    expect(resolveById("block.filters.props.facets")).toEqual({ kind: "facetList" });
+    expect(resolveById("block.filters.props.layout")).toMatchObject({ kind: "segmented" });
+    expect(resolveById("block.filters.props.autoApply")).toEqual({ kind: "toggle" });
+    expect(resolveById("block.filters.props.applyLabel")).toEqual({ kind: "text" });
   });
 
   test("long option lists stay select models with labels", () => {

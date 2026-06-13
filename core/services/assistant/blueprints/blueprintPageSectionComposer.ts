@@ -85,6 +85,14 @@ const createIntroSection = (input: BlueprintPageSectionCompositionInput) =>
     ],
   });
 
+/**
+ * Canonical filters composition (TASK-459-02, frozen TASK-459-01 decision):
+ * the filter surface is the dedicated `filters` BLOCK bound to the same
+ * saved query the sibling collection block lists. The historical shape — a
+ * collection block carrying `mode: "filters"` — keeps rendering through the
+ * non-destructive legacy adapter in `pageDocumentV2`, but the composer emits
+ * the canonical block going forward.
+ */
 const createListingFiltersSection = (
   filters: NonNullable<BlueprintPageSectionCompositionInput["listingFilters"]>,
   listingQueryId: string
@@ -96,10 +104,9 @@ const createListingFiltersSection = (
     blocks: [
       headingBlock("assistant-listing-filters-heading", filters.title),
       textBlock("assistant-listing-filters-copy", filters.description),
-      createPageBlockV2("collection", {
+      createPageBlockV2("filters", {
         id: "assistant-listing-filters-block",
         props: {
-          mode: "filters",
           queryId: listingQueryId,
           autoApply: filters.autoApply,
           showSearch: filters.showSearch,

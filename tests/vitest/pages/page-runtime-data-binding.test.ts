@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import {
   mapPageCollectionBlockToContentListData,
+  mapPageFiltersBlockToListingFiltersData,
   preparePageRuntimeDocument,
   sanitizePageEmbedHtml,
   type PageRuntimeDataBindingDeps,
@@ -207,6 +208,380 @@ describe("page runtime data binding", () => {
         blockId: "blk_collection",
       })
     );
+  });
+
+  test("maps filters block props onto the shared listing-filters data shape", () => {
+    const data = mapPageFiltersBlockToListingFiltersData({
+      id: "filters",
+      type: "filters",
+      props: {
+        queryId: "query-public",
+        autoApply: false,
+        showSearch: false,
+        applyLabel: "Filter now",
+        aliases: { rooms: "data.rooms.in" },
+        facets: [
+          {
+            id: "rooms",
+            kind: "checkbox",
+            label: "Rooms",
+            field: "data.rooms",
+            op: "in",
+            options: [{ value: "3", label: "Three" }],
+          },
+        ],
+      },
+      visibility: { visible: true },
+    });
+
+    expect(data.listingQueryId).toBe("query-public");
+    expect(data.autoApply).toBe(false);
+    expect(data.showSearch).toBe(false);
+    expect(data.applyLabel).toBe("Filter now");
+    expect(data.aliases).toEqual({ rooms: "data.rooms.in" });
+    expect(data.facets).toEqual([
+      {
+        id: "rooms",
+        kind: "checkbox",
+        label: "Rooms",
+        field: "data.rooms",
+        op: "in",
+        options: [{ value: "3", label: "Three" }],
+      },
+    ]);
+  });
+
+  test("empty facet config falls back to the shared default sort facet", () => {
+    const data = mapPageFiltersBlockToListingFiltersData({
+      id: "filters",
+      type: "filters",
+      props: { queryId: "query-public", facets: [] },
+      visibility: { visible: true },
+    });
+    // The widget normalizer owns this fallback: a facet-less filters block
+    // still renders the generic sort control (updatedAt asc/desc).
+    expect(data.facets?.map((facet) => facet.kind)).toEqual(["sort"]);
+  });
+
+  test("resolves filters bindings and flags the listing runtime script need", async () => {
+    const deps = {
+      ...bindingDeps(),
+      resolveListingFiltersRuntimeData: vi.fn(async () => ({
+        listingQueryId: "query-public",
+        metrics: [],
+        searchQuery: "loft",
+        rejectedTokens: [],
+        total: 7,
+      })),
+    };
+    const document = pageDocument({
+      visible: true,
+      authOnly: false,
+      anchor: null,
+      startsAt: null,
+      endsAt: null,
+    });
+    document.sections[0]!.blocks.push({
+      id: "blk_filters",
+      type: "filters",
+      props: { queryId: "query-public", facets: [] },
+      visibility: { visible: true },
+    });
+
+    const prepared = await preparePageRuntimeDocument(
+      document,
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      deps
+    );
+
+    const binding = prepared.runtimeDataByBlockId.blk_filters;
+    expect(binding).toMatchObject({ kind: "filters", total: 7 });
+    if (binding?.kind === "filters") {
+      expect(binding.data.resolved).toMatchObject({
+        listingQueryId: "query-public",
+        searchQuery: "loft",
+      });
+    }
+    expect(prepared.cacheable).toBe(false);
+    expect(prepared.needsListingRuntimeScript).toBe(true);
+    expect(deps.resolveListingFiltersRuntimeData).toHaveBeenCalledWith(
+      expect.objectContaining({ listingQueryId: "query-public", aliases: {}, preview: false })
+    );
+  });
+
+  test("threads filters aliases into linked listing collections", async () => {
+    const deps = {
+      ...bindingDeps(),
+      resolveListingFiltersRuntimeData: vi.fn(async () => ({
+        listingQueryId: "query-public",
+        metrics: [],
+        rejectedTokens: [],
+        total: 1,
+      })),
+    };
+    const document = pageDocument({
+      visible: true,
+      authOnly: false,
+      anchor: null,
+      startsAt: null,
+      endsAt: null,
+    });
+    document.sections[0]!.blocks = [
+      {
+        id: "blk_collection",
+        type: "collection",
+        props: {
+          contentTypeId: "",
+          queryId: "query-public",
+          templateId: "",
+          limit: 6,
+          paginationMode: "paged",
+          pageSize: null,
+        },
+        visibility: { visible: true },
+      },
+      {
+        id: "blk_filters",
+        type: "filters",
+        props: {
+          queryId: "query-public",
+          aliases: { rooms: "data.rooms.in", page: "__page" },
+          facets: [{ id: "rooms", kind: "checkbox", label: "Rooms", field: "data.rooms" }],
+        },
+        visibility: { visible: true },
+      },
+    ];
+
+    await preparePageRuntimeDocument(
+      document,
+      {
+        preview: false,
+        breakpoint: "desktop",
+        contentRoutes: [],
+        runtimeSearchParams: new URLSearchParams("rooms=3"),
+      },
+      deps
+    );
+
+    expect(deps.resolveContentListRuntimeData).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        runtimeAliases: { rooms: "data.rooms.in", page: "__page" },
+      })
+    );
+    expect(deps.resolveListingFiltersRuntimeData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        aliases: { rooms: "data.rooms.in", page: "__page" },
+      })
+    );
+  });
+
+  test("dangling or unbound filters blocks never request the runtime script", async () => {
+    const danglingDeps = {
+      ...bindingDeps(),
+      resolveListingFiltersRuntimeData: vi.fn(async () => ({
+        listingQueryId: "query-missing",
+        metrics: [],
+        rejectedTokens: [],
+        total: 0,
+        error: "Selected listing query no longer exists.",
+      })),
+    };
+    const document = pageDocument({
+      visible: true,
+      authOnly: false,
+      anchor: null,
+      startsAt: null,
+      endsAt: null,
+    });
+    document.sections[0]!.blocks.push({
+      id: "blk_filters",
+      type: "filters",
+      props: { queryId: "query-missing", facets: [] },
+      visibility: { visible: true },
+    });
+
+    const prepared = await preparePageRuntimeDocument(
+      document,
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      danglingDeps
+    );
+    expect(prepared.runtimeDataByBlockId.blk_filters?.kind).toBe("filters");
+    expect(prepared.needsListingRuntimeScript).toBe(false);
+
+    // A document without any filters block never flags the script either.
+    const plain = await preparePageRuntimeDocument(
+      pageDocument({ visible: true, authOnly: false, anchor: null, startsAt: null, endsAt: null }),
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      bindingDeps()
+    );
+    expect(plain.needsListingRuntimeScript).toBe(false);
+  });
+
+  test("maps the collection pagination props (TASK-459-03): default none, paged/load-more, pageSize follows limit", () => {
+    const buildBlock = (props: Record<string, unknown>) => ({
+      id: "collection",
+      type: "collection" as const,
+      props,
+      visibility: { visible: true },
+    });
+
+    // Legacy props (no pagination fields) keep today's contract exactly.
+    const legacy = mapPageCollectionBlockToContentListData(
+      buildBlock({ contentTypeId: "type-public", limit: 8 })
+    );
+    expect(legacy.pagination).toMatchObject({ mode: "none", pageSize: 8 });
+
+    // Authored paged mode with an explicit page size.
+    const paged = mapPageCollectionBlockToContentListData(
+      buildBlock({
+        contentTypeId: "type-public",
+        queryId: "query-public",
+        limit: 12,
+        paginationMode: "paged",
+        pageSize: 9,
+      })
+    );
+    expect(paged.pagination).toMatchObject({ mode: "paged", pageSize: 9 });
+
+    // Nullable pageSize follows limit; load-more keeps anchor semantics.
+    const loadMore = mapPageCollectionBlockToContentListData(
+      buildBlock({
+        contentTypeId: "type-public",
+        limit: 10,
+        paginationMode: "load-more",
+        pageSize: null,
+      })
+    );
+    expect(loadMore.pagination).toMatchObject({ mode: "load-more", pageSize: 10 });
+
+    // Out-of-range pageSize clamps to the single owner bound (24).
+    const clamped = mapPageCollectionBlockToContentListData(
+      buildBlock({
+        contentTypeId: "type-public",
+        limit: 6,
+        paginationMode: "paged",
+        pageSize: 99,
+      })
+    );
+    expect(clamped.pagination).toMatchObject({ mode: "paged", pageSize: 24 });
+
+    // Unknown stored mode values fail closed to "none".
+    const unknown = mapPageCollectionBlockToContentListData(
+      buildBlock({ contentTypeId: "type-public", paginationMode: "view-all" })
+    );
+    expect(unknown.pagination?.mode).toBe("none");
+  });
+
+  test("paged listing-bound collections flag the listing runtime script; legacy/none do not", async () => {
+    const buildPagedDocument = (props: Record<string, unknown>) => {
+      const document = pageDocument({
+        visible: true,
+        authOnly: false,
+        anchor: null,
+        startsAt: null,
+        endsAt: null,
+      });
+      document.sections[0]!.blocks = [
+        {
+          id: "blk_collection",
+          type: "collection",
+          props,
+          visibility: { visible: true },
+        },
+      ];
+      return document;
+    };
+
+    const pagedListing = await preparePageRuntimeDocument(
+      buildPagedDocument({
+        contentTypeId: "type-public",
+        queryId: "query-public",
+        paginationMode: "paged",
+      }),
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      bindingDeps()
+    );
+    expect(pagedListing.needsListingRuntimeScript).toBe(true);
+
+    // Legacy-mode pagers (cl.* params) stay no-JS full navigations.
+    const pagedLegacy = await preparePageRuntimeDocument(
+      buildPagedDocument({ contentTypeId: "type-public", paginationMode: "paged" }),
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      bindingDeps()
+    );
+    expect(pagedLegacy.needsListingRuntimeScript).toBe(false);
+
+    // Default "none" never requests the script.
+    const unpaged = await preparePageRuntimeDocument(
+      buildPagedDocument({ contentTypeId: "type-public", queryId: "query-public" }),
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      bindingDeps()
+    );
+    expect(unpaged.needsListingRuntimeScript).toBe(false);
+  });
+
+  test("consumes listing template style and emptyState at render bind (TASK-459-03)", async () => {
+    const document = pageDocument({
+      visible: true,
+      authOnly: false,
+      anchor: null,
+      startsAt: null,
+      endsAt: null,
+    });
+    document.sections[0]!.blocks = [
+      {
+        id: "blk_collection",
+        type: "collection",
+        props: {
+          contentTypeId: "type-public",
+          queryId: "query-public",
+          templateId: "template-public",
+        },
+        visibility: { visible: true },
+      },
+    ];
+    const deps = {
+      ...bindingDeps(),
+      resolveContentListRuntimeData: vi.fn(
+        async (): Promise<ContentListResolvedRuntimeData> => ({
+          ...resolvedCollection(),
+          templateStyle: { columns: 4, gap: "xl", cardVariant: "compact" },
+          templateEmptyState: {
+            title: "No homes match",
+            description: "Loosen the filters.",
+            ctaLabel: null,
+            ctaHref: null,
+          },
+        })
+      ),
+    };
+
+    const prepared = await preparePageRuntimeDocument(
+      document,
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      deps
+    );
+    const binding = prepared.runtimeDataByBlockId.blk_collection;
+    expect(binding?.kind).toBe("collection");
+    if (binding?.kind !== "collection") throw new Error("expected collection binding");
+    expect(binding.variant).toBe("compact");
+    expect(binding.data.style).toMatchObject({ columns: "4", gap: "lg", cardStyle: "outlined" });
+    expect(binding.data.emptyState).toMatchObject({
+      title: "No homes match",
+      description: "Loosen the filters.",
+    });
+
+    // Without a template the binding keeps today's defaults (no variant).
+    const plain = await preparePageRuntimeDocument(
+      document,
+      { preview: false, breakpoint: "desktop", contentRoutes: [] },
+      bindingDeps()
+    );
+    const plainBinding = plain.runtimeDataByBlockId.blk_collection;
+    if (plainBinding?.kind !== "collection") throw new Error("expected collection binding");
+    expect(plainBinding.variant).toBeUndefined();
+    expect(plainBinding.data.style).toMatchObject({ columns: "3", gap: "md" });
   });
 
   test("strips unsafe inline embed markup and keeps safe links", () => {

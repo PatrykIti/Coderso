@@ -17,7 +17,10 @@ import {
   createMenu,
   publishMenu,
   replaceMenuItems,
+  updateMenu,
 } from "../../../core/services/menus/menuService";
+import type { MenuAppearance } from "../../../core/services/menus/normalizeMenuAppearance";
+import { buildSiteShellCss } from "../../../core/site/siteShellCss";
 import { createPage, publishPage } from "../../../core/services/pages/pageService";
 import { createPageTemplate } from "../../../core/services/pages/pageTemplateLibraryService";
 import { createPreviewToken } from "../../../core/services/pages/previewService";
@@ -229,7 +232,10 @@ const createPublishedPage = async (token: string) => {
   return { page: created, slug, headline: `Shell page headline ${token}` };
 };
 
-const createShellMenu = async (token: string, options?: { publish?: boolean; pageId?: string }) => {
+const createShellMenu = async (
+  token: string,
+  options?: { publish?: boolean; pageId?: string; appearance?: MenuAppearance }
+) => {
   const menu = await createMenu({ name: `Shell Menu ${token}` });
   trackedMenuIds.add(menu.id);
   const parentId = randomUUID();
@@ -247,6 +253,9 @@ const createShellMenu = async (token: string, options?: { publish?: boolean; pag
       : []),
   ];
   await replaceMenuItems(menu.id, items);
+  if (options?.appearance) {
+    await updateMenu(menu.id, { appearance: options.appearance });
+  }
   if (options?.publish !== false) {
     await publishMenu(menu.id);
   }
@@ -415,6 +424,69 @@ testIfDbWithOptions(
     const secondHtml = await secondResponse.text();
     expect(secondHtml).toContain(`aria-label="Shell Menu ${otherToken}"`);
     expect(secondHtml).not.toContain(`aria-label="Shell Menu ${token}"`);
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "a published styled menu injects its appearance-driven shell CSS (TASK-458-02)",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const token = randomUUID().slice(0, 8);
+    const appearance: MenuAppearance = {
+      surfaceColor: "#0f172a",
+      linkColor: "var(--color-primary)",
+      itemGap: 16,
+      paddingY: 20,
+      alignment: "center",
+      sticky: true,
+    };
+    const fixture = await createPublishedPage(token);
+    const menu = await createShellMenu(token, { appearance });
+    await setTestSetting(SITE_NAVIGATION_MENU_SETTING_KEY, menu.id);
+
+    const response = await requestPublicPath(fixture.slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    // The published appearance is rendered exactly as the builder emits it.
+    const styled = buildSiteShellCss(appearance);
+    expect(html).toContain(styled);
+    expect(html).toContain(
+      '[data-site-header="true"]{background:#0f172a;border-bottom:1px solid rgba(15,23,42,.08);position:sticky;top:0;z-index:50}'
+    );
+    expect(html).toContain("justify-content:center");
+    expect(html).toContain("padding:20px 24px");
+    // The legacy stylesheet is NOT present once an appearance is applied.
+    expect(html).not.toContain(
+      '[data-site-header="true"]{border-bottom:1px solid rgba(15,23,42,.08)}'
+    );
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "a published menu without appearance renders today's legacy shell CSS byte-identically",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const token = randomUUID().slice(0, 8);
+    const fixture = await createPublishedPage(token);
+    const menu = await createShellMenu(token);
+    await setTestSetting(SITE_NAVIGATION_MENU_SETTING_KEY, menu.id);
+
+    const response = await requestPublicPath(fixture.slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    // Null/legacy appearance reproduces the pre-appearance stylesheet.
+    expect(html).toContain(buildSiteShellCss(null));
+    expect(html).toContain('[data-site-header="true"]{border-bottom:1px solid rgba(15,23,42,.08)}');
   },
   { timeout: dbRuntimeTimeout }
 );

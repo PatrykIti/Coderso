@@ -716,6 +716,7 @@ const pageEditorBlockLabels: Record<PageBlockType, string> = {
   list: "List",
   card: "Card",
   collection: "Collection",
+  filters: "Filters",
   embed: "Embed",
   divider: "Divider",
   spacer: "Spacer",
@@ -1968,7 +1969,7 @@ test("PageEditor section inserter follows owner insertable section capabilities"
   }
 });
 
-test("PageEditor command palette catalog is frozen to 11 sections plus 16 blocks with gated titles absent", async () => {
+test("PageEditor command palette catalog is frozen to 11 sections plus 17 blocks with gated titles absent", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -2001,7 +2002,8 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 16 blocks
       "Custom",
     ]);
     // TASK-456 amendment: "Form" joined the block palette; TASK-457
-    // amendment: "Collection" joined it (16 blocks, final frozen catalog).
+    // amendment: "Collection" joined it; TASK-459-02 amendment: "Filters"
+    // joined it (17 blocks, final frozen catalog).
     expect(blockPaletteTitles).toEqual([
       "Heading",
       "Text",
@@ -2012,6 +2014,7 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 16 blocks
       "List",
       "Card",
       "Collection",
+      "Filters",
       "Divider",
       "Spacer",
       "Statistic",
@@ -2020,7 +2023,7 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 16 blocks
       "Columns",
       "Group",
     ]);
-    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(27);
+    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(28);
 
     expect(sectionPaletteTitles).not.toContain("Template");
     expect(sectionPaletteTitles).not.toContain("Navigation");
@@ -2156,7 +2159,7 @@ test("PageEditor inserts a collection block, binds type/query/template through s
     );
 
     // The Content panel renders the three comboboxes plus the limit slider
-    // (bounded-number upgrade of the schema clamp 1..50).
+    // (bounded-number upgrade of the unified owner clamp 1..24, TASK-459-03).
     expect(comboboxTrigger("Content type")?.textContent).toContain("Pick a content type");
     expect(comboboxTrigger("Saved query")?.textContent).toContain("Pick a saved query");
     expect(comboboxTrigger("Listing template")?.textContent).toContain("Pick a listing template");
@@ -2165,7 +2168,15 @@ test("PageEditor inserts a collection block, binds type/query/template through s
     );
     expect(limitSlider).toBeTruthy();
     expect(limitSlider?.min).toBe("1");
-    expect(limitSlider?.max).toBe("50");
+    expect(limitSlider?.max).toBe("24");
+    // TASK-459-03 visitor pagination controls ride the same panel: the mode
+    // strip and the page-size slider with the same owner clamp.
+    const pageSizeSlider = view.container.querySelector<HTMLInputElement>(
+      'input[data-page-editor-slider="Page size"]'
+    );
+    expect(pageSizeSlider).toBeTruthy();
+    expect(pageSizeSlider?.min).toBe("1");
+    expect(pageSizeSlider?.max).toBe("24");
 
     // With no content type picked, the scoped saved-query source is honestly
     // empty: only the "None" row of the nullable schema remains.

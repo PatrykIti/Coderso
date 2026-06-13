@@ -1,13 +1,28 @@
 import {
   contentListDefaults,
+  contentListLimitMax,
+  mapListingTemplatePresentationToContentList,
   normalizeContentListData,
   type ContentListData,
+  type ContentListVariantId,
 } from "../../widgets/core/contentList";
+import {
+  normalizeListingFiltersData,
+  type ListingFiltersData,
+} from "../../widgets/core/listingFilters";
+import {
+  normalizeListingRuntimeAliases,
+  type ListingRuntimeAliasMap,
+} from "../search/filterContract";
 import type {
   ContentListResolvedRuntimeData,
   resolveContentListRuntimeData,
 } from "../content/contentListResolver";
 import type { FormRuntimeResolution, resolveFormRuntimeData } from "../forms/formRuntimeResolver";
+import type {
+  ListingFiltersRuntimeResult,
+  resolveListingFiltersRuntimeData,
+} from "../search/listingRuntimeService";
 import { getDefaultFormSettings } from "../forms/formSettings";
 import {
   dangerousHtmlContentTagSet,
@@ -30,6 +45,24 @@ import {
 export type PageRuntimeCollectionBinding = {
   kind: "collection";
   data: ContentListData;
+  /**
+   * Effective list variant (TASK-459-03 template-style consumption): set when
+   * the bound listing template's `config.style.cardVariant` selects a
+   * non-default presentation (e.g. "compact"). Absent = today's grid render.
+   */
+  variant?: ContentListVariantId;
+};
+
+export type PageRuntimeFiltersBinding = {
+  kind: "filters";
+  /** Shared listing-filters data shape consumed by the reused facet markup. */
+  data: ListingFiltersData;
+  /**
+   * Total of the bound listing execution (TASK-459-01 counts contract field).
+   * Rendered by the filters block result-count display; truthful full-corpus
+   * values land with TASK-459-04 — the field contract is stable already.
+   */
+  total: number;
 };
 
 export type PageRuntimeFormBinding = {
@@ -48,6 +81,7 @@ export type PageRuntimeEmbedBinding = {
 
 export type PageRuntimeDataBinding =
   | PageRuntimeCollectionBinding
+  | PageRuntimeFiltersBinding
   | PageRuntimeFormBinding
   | PageRuntimeEmbedBinding;
 
@@ -56,13 +90,35 @@ export type PageRuntimeDataByBlockId = Record<string, PageRuntimeDataBinding>;
 export type PageRuntimeDataBindingDeps = {
   resolveContentListRuntimeData?: typeof resolveContentListRuntimeData;
   resolveFormRuntimeData?: typeof resolveFormRuntimeData;
+  resolveListingFiltersRuntimeData?: typeof resolveListingFiltersRuntimeData;
   now?: () => Date;
 };
+
+/**
+ * Whole-page HTML cache mode (TASK-459-04):
+ * - `"full"` — fully static render, cacheable for the configured site TTL;
+ * - `"short-ttl"` — the only dynamic bindings are listing-shaped
+ *   (collection/filters over published content), safe to cache under a
+ *   short, bounded TTL so filtered catalog requests stop re-rendering on
+ *   every hit;
+ * - `"none"` — request-coupled state (forms with submission nonces,
+ *   auth/schedule-gated sections) must never be cached.
+ */
+export type PageRuntimeCacheMode = "full" | "short-ttl" | "none";
 
 export type PreparedPageRuntimeDocument = {
   document: PageDocumentV2;
   runtimeDataByBlockId: PageRuntimeDataByBlockId;
   cacheable: boolean;
+  cacheMode: PageRuntimeCacheMode;
+  /**
+   * Whether the rendered page needs the shared listing runtime client script
+   * (TASK-459-02 body-script seam): true exactly when a filters block bound
+   * to an existing saved query rendered a live facet form. The script stays
+   * progressive enhancement — the facet form is a plain GET form that filters
+   * without JS through the existing `lq.*` server pipeline.
+   */
+  needsListingRuntimeScript: boolean;
 };
 
 type PreparePageRuntimeOptions = {
@@ -70,6 +126,7 @@ type PreparePageRuntimeOptions = {
   breakpoint: PageBreakpoint;
   contentRoutes: ContentRouteSetting[];
   runtimeSearchParams?: URLSearchParams;
+  listingRuntimeAliasesByQueryId?: Record<string, ListingRuntimeAliasMap>;
 };
 
 const pageEmbedAllowedTags = new Set([
@@ -197,11 +254,28 @@ const walkDocumentBlocks = function* (document: PageDocumentV2): Generator<PageB
   }
 };
 
+/** Owner enum read for the collection block's visitor pagination mode. */
+const readCollectionPaginationMode = (value: unknown): "none" | "paged" | "load-more" =>
+  value === "paged" || value === "load-more" ? value : "none";
+
 export const mapPageCollectionBlockToContentListData = (block: PageBlockV2): ContentListData => {
   const contentTypeId = readOptionalText(block.props.contentTypeId) ?? "";
   const listingQueryId = readOptionalText(block.props.queryId) ?? "";
   const listingTemplateId = readOptionalText(block.props.templateId) ?? "";
-  const limit = readBoundedNumber(block.props.limit, contentListDefaults.source?.limit ?? 6, 1, 24);
+  // Single owner clamp (TASK-459-03): the binding reads the SAME bound the
+  // editor schema enforces (`contentListLimitMax`), so authored values render
+  // exactly as stored instead of silently truncating.
+  const limit = readBoundedNumber(
+    block.props.limit,
+    contentListDefaults.source?.limit ?? 6,
+    1,
+    contentListLimitMax
+  );
+  // Visitor pagination (TASK-459-03): block props drive the widget pagination
+  // contract — default "none" preserves today's render; `pageSize` follows
+  // `limit` when unset (nullable prop).
+  const paginationMode = readCollectionPaginationMode(block.props.paginationMode);
+  const pageSize = readBoundedNumber(block.props.pageSize, limit, 1, contentListLimitMax);
   const mode = listingQueryId ? "listing" : "legacy";
 
   return normalizeContentListData({
@@ -217,8 +291,8 @@ export const mapPageCollectionBlockToContentListData = (block: PageBlockV2): Con
     },
     pagination: {
       ...contentListDefaults.pagination,
-      mode: "none",
-      pageSize: limit,
+      mode: paginationMode,
+      pageSize,
     },
   });
 };
@@ -229,12 +303,16 @@ const resolveCollectionBinding = async (
   deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveContentListRuntimeData">>
 ): Promise<PageRuntimeCollectionBinding> => {
   const data = mapPageCollectionBlockToContentListData(block);
+  const listingQueryId = data.source?.listingQueryId?.trim() ?? "";
   let resolved: ContentListResolvedRuntimeData;
   try {
     resolved = await deps.resolveContentListRuntimeData(data, {
       preview: options.preview,
       contentRoutes: options.contentRoutes,
       runtimeSearchParams: options.runtimeSearchParams,
+      runtimeAliases: listingQueryId
+        ? options.listingRuntimeAliasesByQueryId?.[listingQueryId]
+        : undefined,
       blockId: block.id,
     });
   } catch {
@@ -247,12 +325,100 @@ const resolveCollectionBinding = async (
       error: "content_list_unavailable",
     };
   }
+  // Listing template presentation (TASK-459-03): consume the bound template's
+  // `config.style` (columns/gap/cardVariant) and `emptyState` instead of the
+  // hardcoded grid defaults. Absent template/style keeps today's defaults, so
+  // existing pages render unchanged.
+  const presentation =
+    resolved.templateStyle || resolved.templateEmptyState
+      ? mapListingTemplatePresentationToContentList({
+          style: resolved.templateStyle ?? null,
+          emptyState: resolved.templateEmptyState ?? null,
+        })
+      : null;
   return {
     kind: "collection",
     data: normalizeContentListData({
       ...data,
+      ...(presentation
+        ? {
+            style: { ...contentListDefaults.style, ...presentation.style },
+            ...(presentation.emptyState
+              ? { emptyState: { ...contentListDefaults.emptyState, ...presentation.emptyState } }
+              : {}),
+          }
+        : {}),
       resolved,
     }),
+    ...(presentation ? { variant: presentation.variant } : {}),
+  };
+};
+
+const readBooleanProp = (value: unknown, fallback: boolean) =>
+  typeof value === "boolean" ? value : fallback;
+
+/**
+ * Maps the v2 filters block props onto the shared `listing-filters` data
+ * shape (TASK-459-02). The widget normalizer stays the single owner of facet
+ * canonicalization and fallback behavior — including the default sort facet
+ * when the author configured no facets — so the v2 block renders the exact
+ * facet markup the widget runtime ships.
+ */
+export const mapPageFiltersBlockToListingFiltersData = (block: PageBlockV2): ListingFiltersData =>
+  normalizeListingFiltersData({
+    listingQueryId: readOptionalText(block.props.queryId) ?? "",
+    autoApply: readBooleanProp(block.props.autoApply, true),
+    showSearch: readBooleanProp(block.props.showSearch, true),
+    searchLabel: readOptionalText(block.props.searchLabel) ?? undefined,
+    searchPlaceholder: readOptionalText(block.props.searchPlaceholder) ?? undefined,
+    applyLabel: readOptionalText(block.props.applyLabel) ?? undefined,
+    aliases: normalizeListingRuntimeAliases(block.props.aliases),
+    facets: Array.isArray(block.props.facets)
+      ? (block.props.facets as ListingFiltersData["facets"])
+      : [],
+  });
+
+/** Effective layout variant of the filters block for the shared markup. */
+export const readPageFiltersBlockLayout = (block: PageBlockV2): "horizontal" | "sidebar" =>
+  block.props.layout === "sidebar" ? "sidebar" : "horizontal";
+
+const resolveFiltersBinding = async (
+  block: PageBlockV2,
+  options: PreparePageRuntimeOptions,
+  deps: Required<Pick<PageRuntimeDataBindingDeps, "resolveListingFiltersRuntimeData">>
+): Promise<PageRuntimeFiltersBinding> => {
+  const data = mapPageFiltersBlockToListingFiltersData(block);
+  let resolved: ListingFiltersRuntimeResult;
+  try {
+    resolved = await deps.resolveListingFiltersRuntimeData({
+      listingQueryId: data.listingQueryId,
+      facets: data.facets,
+      aliases: data.aliases,
+      preview: options.preview,
+      runtimeSearchParams: options.runtimeSearchParams,
+    });
+  } catch {
+    resolved = {
+      listingQueryId: data.listingQueryId ?? "",
+      metrics: [],
+      rejectedTokens: [],
+      total: 0,
+      error: "Failed to resolve runtime filters.",
+    };
+  }
+  return {
+    kind: "filters",
+    data: normalizeListingFiltersData({
+      ...data,
+      resolved: {
+        listingQueryId: resolved.listingQueryId,
+        metrics: resolved.metrics,
+        searchQuery: resolved.searchQuery,
+        rejectedTokens: resolved.rejectedTokens,
+        ...(resolved.error ? { error: resolved.error } : {}),
+      },
+    }),
+    total: resolved.total,
   };
 };
 
@@ -302,6 +468,22 @@ const resolveEmbedBinding = (block: PageBlockV2): PageRuntimeEmbedBinding => {
   };
 };
 
+const collectListingRuntimeAliasesByQueryId = (
+  document: PageDocumentV2
+): Record<string, ListingRuntimeAliasMap> => {
+  const result: Record<string, ListingRuntimeAliasMap> = {};
+  for (const block of walkDocumentBlocks(document)) {
+    if (block.type !== "filters") continue;
+    const data = mapPageFiltersBlockToListingFiltersData(block);
+    const queryId = data.listingQueryId?.trim();
+    if (!queryId) continue;
+    const aliases = normalizeListingRuntimeAliases(data.aliases);
+    if (Object.keys(aliases).length === 0) continue;
+    result[queryId] = aliases;
+  }
+  return result;
+};
+
 export async function preparePageRuntimeDocument(
   document: PageDocumentV2,
   options: PreparePageRuntimeOptions,
@@ -319,16 +501,60 @@ export async function preparePageRuntimeDocument(
   const resolveForm =
     deps.resolveFormRuntimeData ??
     (await import("../forms/formRuntimeResolver")).resolveFormRuntimeData;
+  const hasFiltersBlock = [...walkDocumentBlocks(pruned.document)].some(
+    (block) => block.type === "filters"
+  );
+  const resolveFilters = hasFiltersBlock
+    ? (deps.resolveListingFiltersRuntimeData ??
+      (await import("../search/listingRuntimeService")).resolveListingFiltersRuntimeData)
+    : deps.resolveListingFiltersRuntimeData;
 
   let hasDynamicBinding = pruned.hasPublicGates;
+  // Cache-mode tracking (TASK-459-04): listing bindings allow short-TTL
+  // caching; request-coupled bindings (forms) and visibility gates force the
+  // render uncacheable.
+  let hasListingBinding = false;
+  let hasUncacheableBinding = pruned.hasPublicGates;
+  let needsListingRuntimeScript = false;
   const runtimeDataByBlockId: PageRuntimeDataByBlockId = {};
+  const runtimeOptions: PreparePageRuntimeOptions = {
+    ...options,
+    listingRuntimeAliasesByQueryId: collectListingRuntimeAliasesByQueryId(pruned.document),
+  };
 
   for (const block of walkDocumentBlocks(pruned.document)) {
     if (block.type === "collection") {
-      runtimeDataByBlockId[block.id] = await resolveCollectionBinding(block, options, {
+      const binding = await resolveCollectionBinding(block, runtimeOptions, {
         resolveContentListRuntimeData: resolveCollection,
       });
+      runtimeDataByBlockId[block.id] = binding;
       hasDynamicBinding = true;
+      hasListingBinding = true;
+      // TASK-459-03: a paged, listing-bound collection enhances its pager
+      // links with the shared fetch-swap client (coordinated with the
+      // TASK-459-02 seam). Legacy-mode pagers (`cl.*` params) and unresolved
+      // queries stay no-JS full navigations.
+      if (
+        binding.data.pagination?.mode === "paged" &&
+        (binding.data.source?.listingQueryId ?? "").length > 0 &&
+        !binding.data.resolved?.error
+      ) {
+        needsListingRuntimeScript = true;
+      }
+      continue;
+    }
+    if (block.type === "filters" && resolveFilters) {
+      const binding = await resolveFiltersBinding(block, runtimeOptions, {
+        resolveListingFiltersRuntimeData: resolveFilters,
+      });
+      runtimeDataByBlockId[block.id] = binding;
+      hasDynamicBinding = true;
+      hasListingBinding = true;
+      // The script ships only for live facet forms: a missing queryId or a
+      // dangling saved query renders the fail-closed placeholder without JS.
+      if ((binding.data.listingQueryId ?? "").length > 0 && !binding.data.resolved?.error) {
+        needsListingRuntimeScript = true;
+      }
       continue;
     }
     if (block.type === "form") {
@@ -337,6 +563,7 @@ export async function preparePageRuntimeDocument(
       });
       if (binding) runtimeDataByBlockId[block.id] = binding;
       hasDynamicBinding = true;
+      hasUncacheableBinding = true;
       continue;
     }
     if (block.type === "embed") {
@@ -344,9 +571,17 @@ export async function preparePageRuntimeDocument(
     }
   }
 
+  const cacheMode: PageRuntimeCacheMode = hasUncacheableBinding
+    ? "none"
+    : hasListingBinding
+      ? "short-ttl"
+      : "full";
+
   return {
     document: pruned.document,
     runtimeDataByBlockId,
     cacheable: !hasDynamicBinding,
+    cacheMode,
+    needsListingRuntimeScript,
   };
 }

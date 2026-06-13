@@ -14,10 +14,12 @@ import type { PageTemplateSummary } from "@/services/pageTemplatesClient";
 import { AdminLink } from "@/ui/shared/AdminLink";
 
 /**
- * "Site shell" settings card (TASK-455): picks the published navigation menu
- * and the published footer page-template rendered around every public Page v2
- * page. Values write through the existing settings PATCH route
- * (`site.navigationMenuId` / `site.footerTemplateId`).
+ * "Site shell" card (TASK-455): picks the published navigation menu and the
+ * published footer page-template rendered around every public Page v2 page.
+ * Values write through the existing settings PATCH route
+ * (`site.navigationMenuId` / `site.footerTemplateId`). Presentational only;
+ * hosted by the Menus-surface `SiteShellDialog` since TASK-458-01 (the
+ * Settings page no longer mounts it).
  */
 
 const NONE_OPTION_VALUE = "none";

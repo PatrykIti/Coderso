@@ -6,7 +6,8 @@
 **Category:** Pages / Public Runtime / Listings
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -73,16 +74,28 @@ to record (each anchored to verified code):
 
 ## Sub-Tasks
 
-- [ ] Verify every anchor above; freeze the filters-block prop schema
+- [x] Verify every anchor above; freeze the filters-block prop schema
       (queryId binding, facets array shape reusing the
       `listingFilters` facet kinds, layout variant, autoApply, showSearch,
       sort options, aliases map) in this file.
-- [ ] Freeze the assistant-props normalization decision (rewrite vs honor)
+- [x] Freeze the assistant-props normalization decision (rewrite vs honor)
       with the exact prop mapping table.
-- [ ] Freeze the alias grammar + SEO/canonical rules.
-- [ ] Freeze pagination props, numbered-pager UX, and the single limit
+- [x] Freeze the alias grammar + SEO/canonical rules.
+- [x] Freeze pagination props, numbered-pager UX, and the single limit
       clamp.
-- [ ] Freeze the counts contract fields and the dangling-route policy.
+- [x] Freeze the counts contract fields and the dangling-route policy.
+
+## Completion Notes
+
+- The visitor filters contract is frozen around schema-owned filters props,
+  alias canonicalization, canonical `lq.*` precedence, legacy filters-pair
+  normalization, pagination/count policy, and dangling-route handling.
+
+## Validation
+
+- `bunx vitest run tests/vitest/search/filterEngine.test.ts tests/vitest/pages/page-document-v2.test.ts` passed.
+- `bun --cwd core lint` passed.
+- `bun --cwd core lint:types` passed.
 
 ---
 

@@ -271,12 +271,13 @@ export async function prefetchDetailTemplateEditor(path: string) {
 
 export async function prefetchSettingsRoute(path: string) {
   if (path === "/settings/site" || path.startsWith("/settings/site/")) {
+    // The Site shell pickers moved to the Menus surface (`SiteShellDialog`,
+    // TASK-458-01); the Site Settings page no longer consumes menus or
+    // page-template caches, and the dialog loads them lazily on open.
     await Promise.all([
       getSiteSettingsCached(prefetchWarmupOptions),
       listPagesCached(prefetchWarmupOptions),
       listContentTypesCached(prefetchWarmupOptions),
-      listMenusCached(prefetchWarmupOptions),
-      listPageTemplatesCached(prefetchWarmupOptions),
     ]);
     return true;
   }

@@ -232,6 +232,19 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Menus list
   - UI: `core/admin/ui/menus/MenuListPage.tsx`
   - Cached APIs: `listMenusCached`, `getCachedMenus`
+- Site shell dialog (Menus surface, TASK-458-01)
+  - UI: `core/admin/ui/menus/SiteShellDialog.tsx` (wraps the presentational
+    `core/admin/ui/site/SiteShellCard.tsx`)
+  - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
+    `listMenusCached`, `getCachedMenus`, `listPageTemplatesCached`,
+    `getCachedPageTemplates`
+  - Cache policy: all reads are LAZY on dialog open (no page-mount or
+    prefetch warmup beyond the existing `/menus` -> `menus:list` entry);
+    cached values hydrate instantly and settings revalidate in the background
+    on open. Save issues a scoped partial settings PATCH carrying exactly
+    `site.navigationMenuId` + `site.footerTemplateId`, which primes
+    `settings:redacted` and broadcasts the standard `settings:redacted`
+    update event.
 - Menu editor
   - UI: `core/admin/ui/menus/MenuEditorPage.tsx`
   - Cached APIs: `getMenuWithItemsCached`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
@@ -307,17 +320,15 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cache bus: `settings:redacted`
   - Prefetch: `/settings` warms `settings:redacted`
 - Site settings
-  - UI: `core/admin/ui/site/SiteSettingsPage.tsx` (+ Site shell card
-    `core/admin/ui/site/SiteShellCard.tsx`, TASK-455)
+  - UI: `core/admin/ui/site/SiteSettingsPage.tsx` (the Site shell card moved
+    to the Menus-surface `SiteShellDialog`, TASK-458-01; this page no longer
+    reads or writes `site.navigationMenuId` / `site.footerTemplateId`)
   - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
     `listPagesCached`, `getCachedPages`, `listContentTypesCached`,
-    `getCachedContentTypes`, `listMenusCached`, `getCachedMenus`,
-    `listPageTemplatesCached`, `getCachedPageTemplates`
-  - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`,
-    `menus:list`, `pageTemplates:list`
-  - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`,
-    `contentTypes:list`, `menus:list`, and `pageTemplates:list` with
-    `{ force: false }`
+    `getCachedContentTypes`
+  - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`
+  - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`, and
+    `contentTypes:list` with `{ force: false }`
   - Server-side invalidation trigger: settings writes/deletes touching
     `site.navigationMenuId` or `site.footerTemplateId` clear the server-side
     public site HTML cache (`clearSiteCache()` via
@@ -375,4 +386,4 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - `/tools/import-export` -> `listImportHistoryCached`
 - `/redirects` -> `listRedirectsCached`
 - `/settings` -> `getSettingsCached`
-- `/settings/site` -> `getSiteSettingsCached`, `listPagesCached`, `listContentTypesCached`, `listMenusCached`, `listPageTemplatesCached`
+- `/settings/site` -> `getSiteSettingsCached`, `listPagesCached`, `listContentTypesCached`

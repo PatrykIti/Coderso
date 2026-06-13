@@ -225,6 +225,7 @@ Core block types:
 - `list`
 - `card`
 - `collection`
+- `filters`
 - `embed`
 - `divider`
 - `spacer`
@@ -287,7 +288,26 @@ fresh writes by both the imperative normalizer and `pageDocumentV2JsonSchema`.
 Examples:
 - `button`: `label`, `href`, `target`, `variant`, `size`
 - `image`: `assetId`, `src`, `alt`, `caption`, `fit`
-- `collection`: `contentTypeId`, `queryId`, `limit`, `templateId`
+- `collection`: `contentTypeId`, `queryId`, `limit`, `templateId`,
+  `paginationMode` (`none` | `paged` | `load-more`, default `none`),
+  `pageSize` (nullable; unset follows `limit`). Both numeric props clamp to
+  the SINGLE owner bound `PAGE_COLLECTION_LIMIT_CLAMP` (1..24 from the widget
+  contract's `contentListLimitMax`) — see the TASK-459-03 notes below.
+- `filters`: `queryId`, `facets`, `aliases`, `layout` (`horizontal` |
+  `sidebar`), `autoApply`, `showSearch`, `showCount`, `searchLabel`,
+  `searchPlaceholder`, `applyLabel`. `facets[]` stores the canonical generic
+  facet contract shared with the listing runtime
+  (`core/services/search/filterContract.ts`): kinds
+  `taxonomy`/`checkbox`/`radio`/`range`/`date-range`/`sort`, a schema field
+  path (`data.*` or allowlisted system fields), an operator defaulted per
+  kind, explicit option lists for option-backed kinds, and `field:dir` sort
+  options. Fresh writes preserve reject-unknown on every nested facet record
+  and cap the list at 24 facets; normalization canonicalizes through
+  `normalizeListingFacetConfigs`, so fieldless non-sort facets drop
+  deterministically. `aliases` is a bounded map of public query-param names to
+  canonical runtime tokens, e.g. `{ "rooms": "data.rooms.in", "sort":
+  "__sort", "page": "__page" }`; fresh writes reject invalid names/tokens and
+  canonical `lq.*` params win over aliases when both are present.
 - `form`: `formId`, `title`
 - `list`: `items`, `ordered`
 - `columns`: `count`, `gap`, `distribution`
@@ -366,6 +386,40 @@ Runtime-renderable and insertable are related but not identical states:
   `collection` SECTION deliberately stays gated
   (`reason: "collection-section-boundary"`): a listing layout is a section
   composed with the collection block (composite-first).
+- TASK-459-02 promoted `filters` into the editor-insertable catalog: the
+  visitor-facing facet surface for any listing-driven page. The block binds a
+  `queryId` to a saved listing query (the SAME query a sibling collection
+  block lists, so one visitor filter state drives both), and the public
+  runtime renders the shared `listing-filters` facet markup
+  (`core/widgets/core/listingFilters.tsx`) through
+  `resolveListingFiltersRuntimeData` — a plain GET form whose inputs use the
+  canonical `lq.<queryId>.<field>.<op>` / `__sort` / `__q` names by default,
+  or configured pretty aliases from `props.aliases` (`rooms`, `sort`, `q`,
+  `page`, etc.). Aliases resolve to the same canonical tokens before runtime
+  validation, so filtering, the visitor sort control, search, and pagination
+  work WITHOUT JavaScript through the existing server-side pipeline
+  (allowlist validation, rejected tokens dropped). The block also renders the
+  result-count display
+  (`data-page-filters-count`, the execution `total` per the TASK-459-01
+  counts contract; truthful full-corpus values land with TASK-459-04). The
+  Content panel ships a `queryId` combobox (unscoped
+  `optionsSource: "listingQueriesAll"`), the generic facet builder
+  (`input: "facets"` -> the `FacetListControl` primitive, field-driven by
+  design), behavior toggles (`autoApply`, `showSearch`, `showCount`), and the
+  label text fields; the Layout panel owns the `horizontal`/`sidebar`
+  variant. The editor canvas renders the configured facet form inert (pointer
+  events off, no live filtering, no runtime script) and shows a "pick a saved
+  query" empty state for unbound blocks; the public runtime fails closed to
+  the shared inert placeholder for unresolved or dangling queries. `filters`
+  stays `assistantEmittable: false` (the blueprint composer binds RESOLVED
+  query ids explicitly), and the `filters` SECTION deliberately stays gated
+  (`reason: "listing-section-boundary"`): a filter layout is a section
+  composed with the filters block (composite-first). Legacy assistant
+  documents that attached `mode: "filters"` to a collection block normalize
+  non-destructively into a filters + collection pair (same `queryId`; filter
+  props move to the new filters block, listing props stay on the original
+  collection) per the frozen TASK-459-01 decision; the blueprint composer
+  emits the canonical filters block going forward.
 - `embed` remains not editor-insertable or assistant-emittable.
 - `icon` remains gated with `reason: "icon-runtime-renderer-pending"` until a
   real renderer, controls, and tests ship together.
@@ -373,13 +427,96 @@ Runtime-renderable and insertable are related but not identical states:
 The insertable catalog is test-frozen: guard tests in
 `tests/vitest/pages/page-editor-control-registry.test.ts` and
 `tests/vitest/ui/page-editor-v2-flow.test.tsx` assert the exact 11 insertable
-sections, 16 insertable blocks (TASK-456 added `form`, TASK-457 added
-`collection`), the capability reasons for all 6 gated sections and 3 gated
-blocks (`gallery`, `embed`, `icon`), and that the gated entries stay absent
-from the command palette by entry title (`icon` additionally stays the only
-`runtimeRenderer: "placeholder"` type). Promoting or demoting any catalog
-entry is an intentional contract change that must update those tests and this
-document together.
+sections, 17 insertable blocks (TASK-456 added `form`, TASK-457 added
+`collection`, TASK-459-02 added `filters`), the capability reasons for all 6
+gated sections and 3 gated blocks (`gallery`, `embed`, `icon`), and that the
+gated entries stay absent from the command palette by entry title (`icon`
+additionally stays the only `runtimeRenderer: "placeholder"` type). Promoting
+or demoting any catalog entry is an intentional contract change that must
+update those tests and this document together.
+
+Page v2 runtime body scripts (TASK-459-02): the public v2 render path owns a
+body-script emission seam mirroring the legacy widget registry —
+`publicSite.tsx` registers required runtime scripts on a
+`createWidgetRuntimeScriptRegistry()` instance from the prepared runtime
+contract and threads `renderBodyScripts` into
+`renderPublicPageV2RuntimeHtml`. Today exactly one script exists: the shared
+listing runtime client (`getListingRuntimeClientScript()`, fetch-swap +
+`history.pushState` for facet forms), emitted as
+`data-coderso-runtime-script="listing-runtime"` exactly when the prepared
+document flags `needsListingRuntimeScript` (a filters block bound to an
+existing saved query rendered a live facet form). Pages without live filters
+ship zero client JS, unchanged. The script swaps every element carrying
+`data-listing-query-id` + `data-listing-block-id` for the bound query — the
+filters block wrapper (count + form) and the collection block's shared
+listing markup — and degrades to the plain GET submit when it fails.
+
+Collection pagination and listing presentation (TASK-459-03):
+
+- **Visitor pagination props.** The collection block stores `paginationMode`
+  (`none` | `paged` | `load-more`) and a nullable `pageSize`. `none` stays the
+  schema default — legacy documents normalize to it and render exactly as
+  before. `paged` renders the shared numbered pager under the listing:
+  a totals line ("N results", `data-content-list-total`), windowed page
+  numbers (1 … 4 5 6 … 12, current page `aria-current="page"`), and
+  Previous/Next. `load-more` keeps the single next-page anchor. All pager
+  hrefs are server-rendered (no-JS safe) from the canonical page-href helper
+  `buildContentListPageHref` (page 1 DROPS the page param; other pages set it
+  on top of the current search params, so active filters survive paging).
+  Listing-bound pagers ride `lq.<queryId>.__page` by default, or the filters
+  block alias mapped to `__page` when one is configured; legacy content-type
+  listings ride `cl.<blockId>.page`. The resolver's runtime meta carries
+  `pageParamKey` + `search` so the widget builds every numbered href with the
+  same owner helper. Pager anchors carry
+  `data-listing-page-link="1"`: the TASK-459-02 listing runtime client
+  intercepts them inside `data-listing-query-id` blocks for fetch-swap +
+  `history.pushState`, and `needsListingRuntimeScript` now also flags paged,
+  listing-bound collections (legacy `cl.*` pagers stay plain navigations).
+  The editor canvas keeps all pagination affordances inert (TASK-457
+  pointer-events discipline).
+- **Filtered HTML cache.** Public Page v2 renders with listing-only dynamic
+  bindings use the short-TTL site HTML cache. The cache signature accepts only
+  structurally valid canonical `lq.<queryId>.<token>` params, legacy
+  `cl.<blockId>.page`, and route-level `page`/`sort`; unknown params and
+  overlong signatures render uncached instead of poisoning or fragmenting the
+  cache. Pretty alias params still resolve server-side through the filters
+  block alias registry; arbitrary aliases are not added to the global cache
+  allowlist.
+- **Clamp unification.** The old split (schema/editor 1..50 vs runtime 1..24)
+  silently truncated authored values. The single bound is now
+  `PAGE_COLLECTION_LIMIT_CLAMP = { min: 1, max: contentListLimitMax (24) }`,
+  owned by the widget render contract and consumed by the document schema,
+  the prop normalizers, the editor control clamps, and the runtime binding.
+  Migration is normalize-on-read: stored documents with `limit` 25..50 read
+  back as 24 — exactly what they already rendered — with no stored rewrite;
+  fresh writes clamp the same way.
+- **Listing template presentation.** A bound listing template's
+  `config.style` (`columns` 1..6, `gap` xs..xl, `cardVariant`
+  default/compact/minimal) and `config.emptyState` are now consumed at render
+  bind (`mapListingTemplatePresentationToContentList`): columns map 1:1 onto
+  the widget grid (extended to 6), the gap scale collapses onto
+  none/sm/md/lg, `compact` selects the compact list variant and `minimal` the
+  minimal card style, and the template's empty-state title/description
+  replace the generic copy. Blocks without a template (or templates without
+  style) keep today's grid defaults — no visual change for existing pages.
+- **Dangling-route guard (frozen TASK-459-01 policy).** The resolver no
+  longer falls back to `/<typeSlug>/:slug` when no ENABLED content route
+  exists (the matcher can never match that pattern, so every such card link
+  was a guaranteed 404). Instead card hrefs are SUPPRESSED: the resolved data
+  carries `cardLinkMode: "missing-route"`, cards render unlinked with the
+  explicit "links unavailable until a detail route is configured" note, and
+  no rendered card may link to a URL `matchContentRoute` cannot match.
+  Registering/enabling the content route in Site Settings restores the links
+  on the next render. Listing rows that carry their own hrefs (template
+  action hrefs, row-level `href` bindings) keep them — the guard only covers
+  resolver-built detail links.
+- **Auto entry-list routes.** `renderEntryListHtml` consumes
+  `?page=N` and `?sort=<ContentListSort>` through the same listing pipeline
+  primitives (validated sort enum with fallback, clamped page, shared
+  navigation meta with canonical hrefs) at a fixed page size of 24
+  (`contentListLimitMax`), and the list templates (default + theme
+  `content-list`) render the shared `ContentListPager` plus an explicit
+  empty state. Out-of-range pages clamp instead of 404ing.
 
 `pageBlockPaths` owns section-scoped editor block paths for nested authoring.
 Paths are arrays of `{ index, slotKey? }` segments rooted in one section:
@@ -680,6 +817,27 @@ navigation and a footer:
   `[open]` state reveals the single shared link list via a sibling selector.
   Breakpoints reuse the owned `pageResponsiveMediaBounds` contract. Items with
   `logged_in` visibility are omitted from the anonymous public render.
+- Header appearance (TASK-458-02): the published menu's public design
+  snapshot in `menus.settings.published.appearance` (`MenuAppearance`, owned
+  by `core/services/menus/normalizeMenuAppearance.ts`) drives the shell
+  stylesheet; legacy envelopes without `published` fall back to the historical
+  top-level `menus.settings.appearance`. `core/site/siteShellCss.ts`
+  `buildSiteShellCss(appearance)`
+  maps each normalized field (surface/link/hover/active colors incl.
+  `transparent`, item gap, bar padding, alignment, font size/weight/transform,
+  border color/width, shadow, sticky, dropdown direction, mobile mode) onto
+  the same scoped rule set that used to be the static `SITE_SHELL_CSS`
+  constant. FAIL-CLOSED DEFAULTS: `buildSiteShellCss(null)` and the
+  all-defaults model reproduce the legacy stylesheet BYTE-IDENTICALLY (pinned
+  by `tests/unit/pages/siteShellCss.test.ts`), so menus without a stored
+  appearance render exactly as before. The public stylesheet is built only
+  from schema-validated, clamped, enum-mapped values
+  (`sanitizeMenuAppearance` re-runs on the render path) — raw stored input
+  never reaches the CSS channel, and a missing/legacy/unparsable value
+  degrades to the default look without throwing. Appearance resolves from the
+  PUBLISHED snapshot only (top-level draft edits never leak); `publicSite.tsx`
+  threads it as `siteShell.navigationAppearance` into `buildSiteShellCss` at
+  the injection site in `renderPublicPage.tsx`.
 - Footer content is a published Page Template document rendered through the
   SAME `PageDocumentRender` pipeline (`rootTag="div"` so the page keeps its
   unique `<main>` landmark) inside `<footer data-site-footer="true">`. Footer
@@ -690,13 +848,90 @@ navigation and a footer:
   settings writes/deletes touching either shell key clear the whole site cache
   (`clearSiteCache()` inside `settingsService` write paths). Menu/template
   content edits propagate via the normal site-cache TTL.
-- Admin surface: the "Site shell" card in
-  `core/admin/ui/site/SiteSettingsPage.tsx` (`core/admin/ui/site/SiteShellCard.tsx`)
-  picks published menus (cached menus client) and published page templates
-  (`pageTemplatesClient`) with a "None" option; an unpublished current
-  selection stays listed and is marked "not published — hidden on site".
-  Writes go through the existing settings PATCH; `site_shell_*` errors surface
-  inline under the matching picker.
+- Admin surface: shell attachment now lives on the Menus surface through
+  `core/admin/ui/menus/SiteShellDialog.tsx`, opened from
+  `core/admin/ui/menus/MenuListPage.tsx`. The dialog lazy-loads published menus
+  (cached menus client) and published page templates (`pageTemplatesClient`)
+  with a "None" option; an unpublished current selection stays listed and is
+  marked "not published — hidden on site". Writes stay scoped to the existing
+  settings PATCH and `site_shell_*` errors surface inline under the matching
+  picker.
+
+## Menu Design Editor And Editor Host Capabilities — TASK-458-03
+
+The shared Page Editor v2 surface is bound to documents through the
+`PageEditorHost` seam (`core/admin/ui/pages/PageEditor.tsx`; precedent:
+`PageTemplateEditorPage`). TASK-458-03 extends the seam with generic,
+optional capabilities and ships the menu DESIGN view on top of them:
+
+- **`palette?: { sections?: PageSectionType[]; blocks?: PageBlockType[] }`** —
+  host-side palette SCOPING. When present, the listed types INTERSECT the
+  globally insertable options everywhere insert choices surface: command
+  palette groups, canvas ghost tiles, gap inserts, and add-beside (all entry
+  points list from the same scoped option sets). The palette can only NARROW
+  the global capability tables, never widen them — gated types (the
+  `navigation` section, `runtime-navigation-boundary`) stay gated even when
+  listed. An empty `sections` palette also hides every section-insert
+  affordance (gap zones, "Add section" buttons, the palette Sections group).
+  Absent palette = the full catalog (page and page-template hosts unchanged).
+- **`preview` is OPTIONAL** — hosts without a preview-token route omit it and
+  the toolbar Preview affordance (plus the runtime preview dialog) is hidden,
+  consistent with how `publish`/`revisions`/`autosaveDocument` degrade.
+- **`appearancePanel?`** — a host-owned floating-toolbar panel rendered as
+  the leading, selection-independent panel tab (and the initial active
+  panel). It receives the CURRENT document draft plus the draft updater, so
+  its edits ride the regular unsaved/save/publish discipline.
+- **`canvasChrome?`** — host-owned chrome rendered inside the canvas frame
+  above the document sections, fed the live draft + active device.
+- **`mode`** gains `"menu"` (still inert — all behavior rides the explicit
+  host fields).
+
+The menu design view (`/menus/:id/design`, `menus:read`, "Design" button in
+the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
+
+- Canvas chrome renders the LIVE public `SiteHeaderNav` for the menu's items
+  (canonical `navigationMenuMapping` + cached page slugs) styled by the
+  current appearance draft via `buildSiteShellPreviewCss(appearance,
+  breakpoint)` (`core/site/siteShellCss.ts`) — the same rule sets as the
+  public stylesheet with the matching breakpoint branch flattened (no
+  `@media`), so the device switcher exercises the CSS-only mobile disclosure
+  inside the width-constrained canvas frame. Item structure stays read-only
+  here; the structure editor owns it.
+- The appearance floating panel
+  (`core/admin/ui/menus/MenuAppearancePanel.tsx`) exposes every
+  `MenuAppearance` field through the SHARED control primitives (color
+  swatches with transparent as a first-class swatch, segmented enums,
+  bounded sliders, toggle). Edits patch `settings.menuAppearance` on the
+  editor document draft.
+- **`settings.menuAppearance`** is the menu-host vehicle on
+  `PageDocumentSettingsV2`: strict on write (delegates to
+  `normalizeMenuAppearance`; invalid values are `page_document_invalid` at
+  `settings.menuAppearance`), fail-closed sanitize on stored read, absent
+  stays absent (page/template documents never set it and round-trip
+  byte-identically).
+- **Nav extras** (restricted palette: `button` + `image` only, no insertable
+  sections): blocks live in the single fixed "Navigation extras" section of
+  the design document and persist in the `menus.settings` envelope as
+  `extras`, owned by `core/services/menus/menuNavExtras.ts` —
+  `normalizeMenuNavExtras` is strict (Page v2 block schema via the document
+  normalizers + the type allowlist + clamped slot capacity; machine-readable
+  `menu_nav_extras_invalid` with the offending `field`, mapped by
+  `mapMenuError`), `resolveStoredMenuNavExtras` fails closed to an empty
+  slot. `updateMenu` merges draft `appearance`/`extras` per envelope key
+  (updating one never drops the other) and preserves the existing published
+  snapshot on first edit of an already-published menu. The PUBLISHED extras
+  snapshot renders in a dedicated `data-site-nav-extras` slot inside the shell
+  header (`SiteHeaderNav extras` prop, `PageBlockFrame` + `PageBlockContent`,
+  zero client JS); legacy menus without extras emit no slot markup and keep
+  the byte-identical legacy stylesheet.
+- The document <-> envelope adapter is
+  `core/services/menus/menuDesignDocument.ts`
+  (`buildMenuDesignDocument` / `resolveMenuDesignDraft` /
+  `menuDesignEditorPalette`). Save rides the existing menu PATCH
+  (`appearance` + `extras` top-level draft), publish rides `publishMenu` after
+  the editor's draft-save-first coherence step and copies that draft to
+  `menus.settings.published`; menus issue no preview tokens — the live canvas
+  IS the preview.
 
 ## Revisions And Autosave
 

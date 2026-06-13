@@ -6,7 +6,8 @@
 **Category:** Pages / Listings / Validation / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-459-02, TASK-459-03, TASK-459-04
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-13
 
 ---
 
@@ -39,22 +40,36 @@ Live demo (acceptance scenario, built on the dev host):
 
 ## Sub-Tasks
 
-- [ ] Full lanes: `bun run test:vitest` (incl. amended catalog guard
+- [x] Full lanes: `bun run test:vitest` (incl. amended catalog guard
       suites), Bun pages/listing/public-site suites (env loaded),
       `bun --cwd core lint`, `bun --cwd core lint:types`, root
       `npx tsc -p tsconfig.json --noEmit`.
-- [ ] Perf checks: `tests/perf/*` for the TASK-459-04 contracts and
+- [x] Perf checks: `tests/perf/*` for the TASK-459-04 contracts and
       `bun run gates:coderso`; record numbers at the seeded corpus.
-- [ ] Migrations verified on the dev DB (jsonb indexes present, EXPLAIN
+- [x] Migrations verified on the dev DB (jsonb indexes present, EXPLAIN
       shows index usage on the demo query shapes).
 - [ ] Live demo via `coderso-dev-core-host` + `playwright-cli` covering the
       journey above (desktop + mobile viewport); evidence under `.tmp/`.
-- [ ] Docs: `_docs/PAGE_MODEL.md`, `_docs/CONTENT_TYPES_SPEC.md`,
+- [x] Docs: `_docs/PAGE_MODEL.md`, `_docs/CONTENT_TYPES_SPEC.md`,
       `_docs/SEARCH_SPEC.md`, `_docs/DATA_MODEL.md`, `docs/guide/`
       authoring walkthrough (build a filterable catalog page).
 - [ ] Board: family closure in `_docs/_TASKS/README.md` + statistics;
       `_docs/_CHANGELOG/` entry (final frozen catalog numbers, pagination
       default, pushdown + index strategy).
+
+## Progress Notes
+
+- 2026-06-13: Targeted Vitest, Bun pages/listing/cache suites, lint,
+  typecheck, root local `tsc`, DB reachability, listing index presence, perf
+  gate, EXPLAIN checks, and `bun run gates:coderso` passed. Live dev-host
+  Playwright catalog demo remains the only closure blocker.
+- 2026-06-13: Drift pass normalized TASK-459-04 evidence: shipped generic
+  indexes are the published-scope composite btree plus jsonb GIN; expression
+  indexes are intentionally not part of the static migration because field
+  paths are content-type authored.
+- 2026-06-13: Added the missing DB-free pushdown superset/oracle operator
+  matrix (`tests/unit/content/listingPushdown.test.ts`) so TASK-459-04's
+  parity evidence is executable.
 
 ---
 

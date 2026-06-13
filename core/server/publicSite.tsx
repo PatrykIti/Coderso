@@ -1,6 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { ReactNode } from "react";
+
 import type { DeviceTarget, WidgetBlock } from "../widgets/types";
 import {
   renderPublicPageRuntimeHtml,
@@ -8,11 +10,13 @@ import {
 } from "../site/renderPublicPage";
 import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
 import {
+  DEFAULT_SITE_CACHE_TTL_SECONDS,
   blocksAllowSiteHtmlCache,
   buildSiteCacheKey,
   configureSiteCache,
   getSiteCacheEntry,
   normalizeSitePath,
+  resolveSiteCacheSearchSignature,
   setSiteCacheEntry,
 } from "../site/cache/siteCache";
 import { matchContentRoute } from "../site/contentRouteMatcher";
@@ -28,7 +32,13 @@ import {
   POST_CONTENT_TYPE_NAME,
   POST_CONTENT_TYPE_SLUG,
 } from "../services/content/postsService";
-import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
+import {
+  resolveContentListRequestedPage,
+  resolveContentListRuntimeData,
+  resolveContentListRuntimeNavigationMeta,
+  sortContentListRuntimeEntries,
+  type ContentListSortableEntry,
+} from "../services/content/contentListResolver";
 import {
   resolvePreviewDetailPageRuntime,
   resolvePublishedDetailPageRuntime,
@@ -53,7 +63,12 @@ import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import { resolvePublicRedirect } from "../services/redirects/redirectService";
 import type { ContentSchema } from "../services/content/validation";
 import { resolveDevAssetUrl, resolveSiteDevServerUrl } from "./utils/styleUrl";
-import { normalizeContentListData, type ContentListData } from "../widgets/core/contentList";
+import {
+  contentListLimitMax,
+  normalizeContentListData,
+  resolveContentListSort,
+  type ContentListData,
+} from "../widgets/core/contentList";
 import { normalizePostsFeedData, type PostsFeedData } from "../widgets/core/postsFeed";
 import { normalizeEntryTeaserData, type EntryTeaserData } from "../widgets/core/entryTeaser";
 import { type ProductGalleryData } from "../widgets/core/productGallery";
@@ -75,6 +90,8 @@ import {
   normalizeListingFiltersData,
   type ListingFiltersData,
 } from "../widgets/core/listingFilters";
+import { getListingRuntimeClientScript } from "../widgets/core/listingRuntimeScript";
+import { createWidgetRuntimeScriptRegistry } from "../widgets/runtimeScripts";
 import { normalizeSearchBoxData, type SearchBoxData } from "../widgets/core/searchBox";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
@@ -100,7 +117,10 @@ import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
-import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataBinding";
+import {
+  preparePageRuntimeDocument,
+  type PageRuntimeCacheMode,
+} from "../services/pages/pageRuntimeDataBinding";
 import { buildPageResponsiveCss } from "../services/pages/pageResponsiveCss";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import type { PageBreakpoint } from "../services/pages/pageDocumentV2";
@@ -110,6 +130,8 @@ import {
   mapMenuNodesToNavigationItems,
 } from "../services/navigation/navigationMenuMapping";
 import type { MenuWithItems } from "../services/menus/menuService";
+import { resolvePublishedMenuNavExtras } from "../services/menus/menuNavExtras";
+import { resolvePublishedMenuAppearance } from "../services/menus/normalizeMenuAppearance";
 import {
   SITE_FOOTER_SCOPE_SELECTOR,
   type SiteShellNavigation,
@@ -638,6 +660,13 @@ const buildHtmlResponse = (html: string) =>
 type PublicHtmlRenderResult = {
   html: string;
   cacheable: boolean;
+  /**
+   * Granular page cache mode (TASK-459-04, v2 page renders only): listing
+   * bindings allow short-TTL caching of filtered catalog renders while forms
+   * and gated sections stay uncacheable. Absent on render paths that only
+   * report the boolean `cacheable` contract.
+   */
+  cacheMode?: PageRuntimeCacheMode;
 };
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -796,11 +825,27 @@ const resolveSiteShellRenderProps = async (): Promise<SiteShellRenderProps> => {
     const shell = await resolvePublicSiteShell();
     return {
       navigation: shell.navigation ? await buildSiteShellNavigation(shell.navigation) : null,
+      // Published menu appearance snapshot only; top-level draft design
+      // values never leak before publish. Missing/legacy/unparsable stored
+      // values fail closed to the default look (TASK-458-02).
+      navigationAppearance: shell.navigation
+        ? resolvePublishedMenuAppearance(shell.navigation.menu.settings)
+        : null,
+      // Published nav extras snapshot (TASK-458-03); unreadable stored
+      // values fail closed to an empty slot.
+      navigationExtras: shell.navigation
+        ? resolvePublishedMenuNavExtras(shell.navigation.menu.settings)
+        : null,
       footerDocument: shell.footerDocument,
     };
   } catch (error) {
     console.warn("site_shell_resolution_failed", error);
-    return { navigation: null, footerDocument: null };
+    return {
+      navigation: null,
+      navigationAppearance: null,
+      navigationExtras: null,
+      footerDocument: null,
+    };
   }
 };
 
@@ -886,6 +931,18 @@ const renderPublicPageHtmlInternal = async (
     }
   }
 
+  // V2 body-script seam (TASK-459-02): the runtime-script registry mirrors
+  // the legacy WidgetBlock path, but scripts register from the prepared
+  // runtime contract instead of widget renders. Today exactly one script
+  // exists — the shared listing runtime client (fetch-swap + pushState for
+  // filters blocks) — and it ships only when a live facet form rendered.
+  let renderBodyScripts: (() => ReactNode) | undefined;
+  if (preparedRuntime.needsListingRuntimeScript) {
+    const runtimeScripts = createWidgetRuntimeScriptRegistry();
+    runtimeScripts.registerScript("listing-runtime", getListingRuntimeClientScript());
+    renderBodyScripts = () => runtimeScripts.renderScripts();
+  }
+
   return {
     html: renderPublicPageV2RuntimeHtml({
       title: resolvedSeo.title ?? page.title ?? "Page",
@@ -904,8 +961,10 @@ const renderPublicPageHtmlInternal = async (
       responsiveCss,
       siteShell,
       siteName,
+      renderBodyScripts,
     }),
     cacheable: preparedRuntime.cacheable,
+    cacheMode: preparedRuntime.cacheMode,
   };
 };
 
@@ -990,20 +1049,66 @@ const buildDetailHref = (pattern: string, slug: string, id?: string) => {
 const isEntryPublished = (entry: { status?: string; publishedAt?: Date | null }) =>
   entry.status === "published" && Boolean(entry.publishedAt ?? true);
 
+/** Page size of auto entry-list routes: the single contract bound (24). */
+const entryListRoutePageSize = contentListLimitMax;
+const entryListRoutePageParamKey = "page";
+
+/**
+ * Auto entry-list route pagination (TASK-459-03): consumes `?page=N` and
+ * `?sort=<ContentListSort>` through the SAME listing pipeline primitives the
+ * collection block uses — the sort value validates against the owner enum
+ * (unknown values fall back to the default ordering), the requested page
+ * clamps into range, and the shared navigation meta builds canonical page
+ * hrefs (page 1 drops the param). Out-of-range pages clamp instead of 404ing.
+ */
+const paginateEntryListEntries = <
+  T extends ContentListSortableEntry & { status?: string; publishedAt?: Date | null },
+>(
+  entries: T[],
+  runtimeSearchParams?: URLSearchParams
+) => {
+  const published = entries.filter((entry) => isEntryPublished(entry));
+  const sort = resolveContentListSort(runtimeSearchParams?.get("sort") ?? undefined);
+  const sorted = sortContentListRuntimeEntries(published, sort);
+  const requestedPage = resolveContentListRequestedPage(
+    runtimeSearchParams,
+    entryListRoutePageParamKey
+  );
+  const navigation = resolveContentListRuntimeNavigationMeta({
+    page: requestedPage,
+    pageSize: entryListRoutePageSize,
+    total: sorted.length,
+    runtimeSearchParams,
+    pageKey: entryListRoutePageParamKey,
+  });
+  const sliceStart = (navigation.page - 1) * navigation.pageSize;
+  return {
+    entries: sorted.slice(sliceStart, sliceStart + navigation.pageSize),
+    pagination: {
+      page: navigation.page,
+      totalPages: navigation.totalPages,
+      total: sorted.length,
+      pageParamKey: entryListRoutePageParamKey,
+      search: runtimeSearchParams?.toString() ?? "",
+      ...(navigation.previousPageHref ? { previousPageHref: navigation.previousPageHref } : {}),
+      ...(navigation.nextPageHref ? { nextPageHref: navigation.nextPageHref } : {}),
+    },
+  };
+};
+
 const renderEntryListHtml = async (
   typeSlug: string,
   detailPath: string,
-  options?: { preview?: boolean; themeName?: string }
+  options?: { preview?: boolean; themeName?: string; runtimeSearchParams?: URLSearchParams }
 ) => {
   if (isPostContentTypeSlug(typeSlug)) {
-    const postItems = (await listPosts())
-      .filter((entry) => isEntryPublished(entry))
-      .map((entry) => ({
-        id: entry.id,
-        title: entry.title,
-        href: buildDetailHref(detailPath, entry.slug, entry.id),
-        entry,
-      }));
+    const paged = paginateEntryListEntries(await listPosts(), options?.runtimeSearchParams);
+    const postItems = paged.entries.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      href: buildDetailHref(detailPath, entry.slug, entry.id),
+      entry,
+    }));
 
     const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
     return renderPublicEntryListHtml({
@@ -1015,6 +1120,7 @@ const renderEntryListHtml = async (
         schema: DEFAULT_POST_CONTENT_SCHEMA as unknown as ContentSchema,
       },
       items: postItems,
+      pagination: paged.pagination,
       cssHref,
       inlineCss,
       devModuleScripts,
@@ -1026,15 +1132,16 @@ const renderEntryListHtml = async (
   const contentType = await getContentTypeBySlug(typeSlug);
   if (!contentType) return null;
 
-  const entries = await listEntries(contentType.id);
-  const items = entries
-    .filter((entry) => isEntryPublished(entry))
-    .map((entry) => ({
-      id: entry.id,
-      title: entry.title,
-      href: buildDetailHref(detailPath, entry.slug, entry.id),
-      entry,
-    }));
+  const paged = paginateEntryListEntries(
+    await listEntries(contentType.id),
+    options?.runtimeSearchParams
+  );
+  const items = paged.entries.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    href: buildDetailHref(detailPath, entry.slug, entry.id),
+    entry,
+  }));
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   return renderPublicEntryListHtml({
@@ -1046,6 +1153,7 @@ const renderEntryListHtml = async (
       schema: contentType.schema as ContentSchema,
     },
     items,
+    pagination: paged.pagination,
     cssHref,
     inlineCss,
     devModuleScripts,
@@ -1524,10 +1632,22 @@ export async function handlePublicRequest(req: Request) {
   const cacheProfileId = activeProfile?.id ?? "default";
   const themeName = activeProfile?.themeName ?? "default";
   configureSiteCache(cacheTtlSeconds);
-  const hasQueryParams = url.searchParams.toString().length > 0;
-  const shouldUseCache = cacheTtlSeconds > 0 && !hasQueryParams;
+  // Param-aware caching (TASK-459-04): requests whose params all belong to
+  // the listing/pager allowlist are cached under a canonical signature key
+  // (filtered variants under a short TTL); any other param keeps the request
+  // uncacheable, exactly like before.
+  const searchSignature = resolveSiteCacheSearchSignature(url.searchParams);
+  const shouldUseCache = cacheTtlSeconds > 0 && searchSignature.cacheable;
+  const shortCacheTtlSeconds = Math.min(cacheTtlSeconds, DEFAULT_SITE_CACHE_TTL_SECONDS);
+  const defaultStoreTtlSeconds = searchSignature.signature ? shortCacheTtlSeconds : cacheTtlSeconds;
+  const resolveRenderCacheTtl = (result: PublicHtmlRenderResult) => {
+    if (result.cacheMode === "none") return 0;
+    if (result.cacheMode === "short-ttl") return shortCacheTtlSeconds;
+    if (result.cacheMode === "full") return defaultStoreTtlSeconds;
+    return result.cacheable ? defaultStoreTtlSeconds : 0;
+  };
 
-  const cacheKey = buildSiteCacheKey(cacheProfileId, slugPath);
+  const cacheKey = buildSiteCacheKey(cacheProfileId, slugPath, searchSignature.signature);
   if (shouldUseCache) {
     const cachedHtml = getSiteCacheEntry(cacheKey);
     if (cachedHtml) {
@@ -1546,8 +1666,9 @@ export async function handlePublicRequest(req: Request) {
         themeName,
         runtimeSearchParams: url.searchParams,
       });
-      if (shouldUseCache && result.cacheable) {
-        setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
+      const homepageTtlSeconds = resolveRenderCacheTtl(result);
+      if (shouldUseCache && homepageTtlSeconds > 0) {
+        setSiteCacheEntry(cacheKey, result.html, homepageTtlSeconds);
       }
       return buildHtmlResponse(result.html);
     }
@@ -1559,10 +1680,11 @@ export async function handlePublicRequest(req: Request) {
     if (match.mode === "list") {
       const html = await renderEntryListHtml(match.type, match.detailPath, {
         themeName,
+        runtimeSearchParams: url.searchParams,
       });
       if (!html) return new Response("Not Found", { status: 404 });
       if (shouldUseCache) {
-        setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+        setSiteCacheEntry(cacheKey, html, defaultStoreTtlSeconds);
       }
       return buildHtmlResponse(html);
     }
@@ -1579,7 +1701,7 @@ export async function handlePublicRequest(req: Request) {
     const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;
     const canCache = typeof detailHtml === "string" ? true : detailHtml.cacheable;
     if (shouldUseCache && canCache) {
-      setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+      setSiteCacheEntry(cacheKey, html, defaultStoreTtlSeconds);
     }
     return buildHtmlResponse(html);
   }
@@ -1592,8 +1714,9 @@ export async function handlePublicRequest(req: Request) {
     themeName,
     runtimeSearchParams: url.searchParams,
   });
-  if (shouldUseCache && result.cacheable) {
-    setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
+  const pageTtlSeconds = resolveRenderCacheTtl(result);
+  if (shouldUseCache && pageTtlSeconds > 0) {
+    setSiteCacheEntry(cacheKey, result.html, pageTtlSeconds);
   }
   return buildHtmlResponse(result.html);
 }

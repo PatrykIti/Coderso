@@ -11,7 +11,12 @@ import {
   normalizeMenuStatus,
   publishMenu,
   replaceMenuItems,
+  updateMenu,
 } from "../../../core/services/menus/menuService";
+import {
+  MENU_APPEARANCE_INVALID,
+  resolvePublishedMenuAppearance,
+} from "../../../core/services/menus/normalizeMenuAppearance";
 import {
   assertNoCycles,
   buildMenuTree,
@@ -133,7 +138,9 @@ testIfDb("createMenu defaults to draft and lifecycle helpers publish or draft me
 testIfDb("replaceMenuItems stores items", async () => {
   const menu = await createMenu({
     name: `Primary-${randomUUID()}`,
-    location: "primary",
+    // Uniquely scoped: `menus.location` is globally unique and "primary" is
+    // real dev data.
+    location: `primary-${randomUUID()}`,
   });
 
   createdMenuId = menu?.id;
@@ -156,7 +163,7 @@ testIfDb("replaceMenuItems stores items", async () => {
 testIfDb("replaceMenuItems normalizes menu metadata settings", async () => {
   const menu = await createMenu({
     name: `Meta-${randomUUID()}`,
-    location: "meta",
+    location: `meta-${randomUUID()}`,
   });
 
   createdMenuId = menu?.id;
@@ -216,19 +223,125 @@ testIfDb("deleteMenuItem removes descendants and preserves unrelated items", asy
   createdMenuId = undefined;
 });
 
+testIfDb(
+  "updateMenu persists normalized appearance and carries it through publish/draft",
+  async () => {
+    const menu = await createMenu({
+      name: `Appearance-${randomUUID()}`,
+      location: `appearance-${randomUUID()}`,
+    });
+
+    createdMenuId = menu?.id;
+    if (!createdMenuId) throw new Error("menu_missing");
+
+    expect(menu?.settings).toBeNull();
+
+    const appearance = {
+      surfaceColor: "#0f172a",
+      linkColor: "var(--color-primary)",
+      itemGap: 12.4,
+      sticky: true,
+    };
+    const updated = await updateMenu(createdMenuId, { appearance });
+    // Numbers are clamped/rounded by normalizeMenuAppearance before persisting.
+    expect(updated?.settings).toEqual({
+      appearance: { ...appearance, itemGap: 12 },
+    });
+
+    // Publish snapshots the draft appearance for public rendering.
+    const published = await publishMenu(createdMenuId);
+    expect(published?.status).toBe("published");
+    expect(published?.settings).toEqual({
+      appearance: { ...appearance, itemGap: 12 },
+      published: { appearance: { ...appearance, itemGap: 12 } },
+    });
+    expect(resolvePublishedMenuAppearance(published?.settings)).toEqual({
+      ...appearance,
+      itemGap: 12,
+    });
+
+    // A draft edit on an already-published menu does not alter the public
+    // published snapshot until the next publish.
+    const draftEdit = await updateMenu(createdMenuId, {
+      appearance: { surfaceColor: "#111827" },
+    });
+    expect(draftEdit?.settings).toEqual({
+      appearance: { surfaceColor: "#111827" },
+      published: { appearance: { ...appearance, itemGap: 12 } },
+    });
+    expect(resolvePublishedMenuAppearance(draftEdit?.settings)).toEqual({
+      ...appearance,
+      itemGap: 12,
+    });
+
+    const republished = await publishMenu(createdMenuId);
+    expect(republished?.settings).toEqual({
+      appearance: { surfaceColor: "#111827" },
+      published: { appearance: { surfaceColor: "#111827" } },
+    });
+    expect(resolvePublishedMenuAppearance(republished?.settings)).toEqual({
+      surfaceColor: "#111827",
+    });
+
+    const draft = await moveMenuToDraft(createdMenuId);
+    expect(draft?.status).toBe("draft");
+    expect(draft?.settings).toEqual({
+      appearance: { surfaceColor: "#111827" },
+      published: { appearance: { surfaceColor: "#111827" } },
+    });
+
+    // Explicit null clears the draft appearance. Publishing that cleared
+    // draft replaces the public snapshot with the legacy look.
+    const cleared = await updateMenu(createdMenuId, { appearance: null });
+    expect(cleared?.settings).toEqual({
+      published: { appearance: { surfaceColor: "#111827" } },
+    });
+    const republishedClear = await publishMenu(createdMenuId);
+    expect(republishedClear?.settings).toEqual({ published: {} });
+    expect(resolvePublishedMenuAppearance(republishedClear?.settings)).toBeNull();
+
+    await cleanupMenu(createdMenuId);
+    createdMenuId = undefined;
+  }
+);
+
+testIfDb(
+  "updateMenu rejects invalid appearance with menu_appearance_invalid and persists nothing",
+  async () => {
+    const menu = await createMenu({
+      name: `Appearance-Invalid-${randomUUID()}`,
+      location: `appearance-invalid-${randomUUID()}`,
+    });
+
+    createdMenuId = menu?.id;
+    if (!createdMenuId) throw new Error("menu_missing");
+
+    await expect(
+      updateMenu(createdMenuId, { appearance: { surfaceColor: "not-a-color" } })
+    ).rejects.toThrow(MENU_APPEARANCE_INVALID);
+    await expect(updateMenu(createdMenuId, { appearance: { unknownField: true } })).rejects.toThrow(
+      MENU_APPEARANCE_INVALID
+    );
+
+    const stored = await getMenuWithItems(createdMenuId);
+    expect(stored?.menu.settings).toBeNull();
+
+    await cleanupMenu(createdMenuId);
+    createdMenuId = undefined;
+  }
+);
+
 testIfDb("replaceMenuItems rejects missing page ids", async () => {
   const menu = await createMenu({
     name: `Primary-${randomUUID()}`,
-    location: "primary",
+    location: `primary-${randomUUID()}`,
   });
 
   createdMenuId = menu?.id;
   if (!createdMenuId) throw new Error("menu_missing");
 
   await expect(
-    replaceMenuItems(createdMenuId, [
-      { label: "Home", pageId: randomUUID() },
-    ])
+    replaceMenuItems(createdMenuId, [{ label: "Home", pageId: randomUUID() }])
   ).rejects.toThrow("menu_item_page_missing");
 
   await cleanupMenu(createdMenuId);

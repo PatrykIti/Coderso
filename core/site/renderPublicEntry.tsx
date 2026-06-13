@@ -13,6 +13,7 @@ import {
   type PostRuntimeMappedDocument,
 } from "../services/posts/runtime/postBlockRuntimeMapper";
 import { PostBlockRuntimeRenderer } from "../services/posts/runtime/postBlockRuntimeRenderer";
+import { ContentListPager } from "../widgets/core/contentList";
 
 export type PublicEntrySummary = {
   id: string;
@@ -46,6 +47,22 @@ export type PublicEntryListItem = {
   entry: PublicEntrySummary;
 };
 
+/**
+ * Pagination meta of an auto entry-list route (TASK-459-03): the route render
+ * consumes `?page=N` / `?sort=` through the shared listing pipeline and the
+ * default template renders the shared numbered pager from these fields.
+ * Additive — theme templates that ignore it keep rendering the page slice.
+ */
+export type PublicEntryListPagination = {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageParamKey: string;
+  search: string;
+  previousPageHref?: string;
+  nextPageHref?: string;
+};
+
 export type ContentTypeSnapshot = {
   id: string;
   name: string;
@@ -58,6 +75,7 @@ export type ContentListTemplateProps = {
   title: string;
   contentType: ContentTypeSnapshot;
   items: PublicEntryListItem[];
+  pagination?: PublicEntryListPagination;
   isPreview?: boolean;
 };
 
@@ -76,6 +94,7 @@ export type PublicEntryListOptions = {
   title: string;
   contentType: ContentTypeSnapshot;
   items: PublicEntryListItem[];
+  pagination?: PublicEntryListPagination;
   themeName?: string | null;
   cssHref?: string | null;
   inlineCss?: string | null;
@@ -212,24 +231,41 @@ const PreviewBanner = () => (
   </div>
 );
 
-const DefaultListTemplate = ({ title, items }: ContentListTemplateProps) => (
+const DefaultListTemplate = ({ title, items, pagination }: ContentListTemplateProps) => (
   <main className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-12">
     <header className="space-y-2">
       <h1 className="text-3xl font-semibold">{title}</h1>
       <p className="text-sm text-[var(--color-text)]/70">Latest entries</p>
     </header>
-    <ul className="space-y-3">
-      {items.map((item) => (
-        <li key={item.id}>
-          <a
-            className="text-lg font-medium text-[var(--color-primary)] hover:underline"
-            href={item.href}
-          >
-            {item.title}
-          </a>
-        </li>
-      ))}
-    </ul>
+    {items.length > 0 ? (
+      <ul className="space-y-3">
+        {items.map((item) => (
+          <li key={item.id}>
+            <a
+              className="text-lg font-medium text-[var(--color-primary)] hover:underline"
+              href={item.href}
+            >
+              {item.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-sm text-[var(--color-text)]/70" data-entry-list-empty="1">
+        No published entries yet.
+      </p>
+    )}
+    {pagination && pagination.totalPages > 1 ? (
+      <ContentListPager
+        page={pagination.page}
+        totalPages={pagination.totalPages}
+        total={pagination.total}
+        pageParamKey={pagination.pageParamKey}
+        search={pagination.search}
+        previousPageHref={pagination.previousPageHref}
+        nextPageHref={pagination.nextPageHref}
+      />
+    ) : null}
   </main>
 );
 
@@ -262,6 +298,7 @@ export async function renderPublicEntryListHtml(options: PublicEntryListOptions)
     title,
     contentType,
     items,
+    pagination,
     cssHref,
     inlineCss,
     devModuleScripts,
@@ -286,6 +323,7 @@ export async function renderPublicEntryListHtml(options: PublicEntryListOptions)
     title,
     contentType,
     items,
+    pagination,
     isPreview,
   };
 

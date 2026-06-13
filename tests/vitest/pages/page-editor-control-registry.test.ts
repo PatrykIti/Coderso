@@ -17,6 +17,7 @@ import {
   type PageEditorControlDefinition,
 } from "../../../core/services/pages/pageEditorControlRegistry";
 import {
+  PAGE_COLLECTION_LIMIT_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   isPageTypographyCapableBlockType,
@@ -29,8 +30,10 @@ import {
   pageButtonSizes,
   pageButtonTargets,
   pageButtonVariants,
+  pageCollectionPaginationModes,
   pageColumnDistributions,
   pageDividerTones,
+  pageFiltersBlockLayouts,
   pageGroupDirections,
   pageHeadingLevels,
   pageImageFits,
@@ -105,8 +108,10 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageButtonSizes,
   pageButtonTargets,
   pageButtonVariants,
+  pageCollectionPaginationModes,
   pageColumnDistributions,
   pageDividerTones,
+  pageFiltersBlockLayouts,
   pageGroupDirections,
   pageHeadingLevels,
   pageImageFits,
@@ -278,7 +283,7 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("insertable block catalog is frozen to the audited 16 blocks (TASK-456 form + TASK-457 collection promotions)", () => {
+  test("insertable block catalog is frozen to the audited 17 blocks (TASK-456 form + TASK-457 collection + TASK-459-02 filters promotions)", () => {
     const insertableBlocks = pageBlockTypes.filter(
       (type) => pageBlockCapabilities[type].editorInsertable
     );
@@ -292,6 +297,7 @@ describe("page editor control registry", () => {
       "list",
       "card",
       "collection",
+      "filters",
       "divider",
       "spacer",
       "statistic",
@@ -304,11 +310,12 @@ describe("page editor control registry", () => {
       expect(pageBlockCapabilities[type]).toMatchObject({
         editorInsertable: true,
         insertable: true,
-        // TASK-456/457 deliberate scope: the form and collection blocks are
-        // author-insertable but stay OUTSIDE the assistant emission
-        // vocabulary — assistant plans must not invent form or
-        // content-type/query references.
-        assistantEmittable: type !== "form" && type !== "collection",
+        // TASK-456/457/459-02 deliberate scope: the form, collection, and
+        // filters blocks are author-insertable but stay OUTSIDE the
+        // assistant emission vocabulary — assistant plans must not invent
+        // form or content-type/query references (the blueprint composer
+        // binds RESOLVED query ids explicitly instead).
+        assistantEmittable: type !== "form" && type !== "collection" && type !== "filters",
         runtimeRenderer: "real",
       });
       expect("reason" in pageBlockCapabilities[type]).toBe(false);
@@ -626,7 +633,7 @@ describe("page editor control registry", () => {
         // options; the editor shell resolves the named source instead.
         expect(control.options, control.id).toBeUndefined();
         expect(
-          ["forms", "contentTypes", "listingQueries", "listingTemplates"],
+          ["forms", "contentTypes", "listingQueries", "listingQueriesAll", "listingTemplates"],
           control.id
         ).toContain(control.optionsSource);
         // `filterBy` is meaningful only with a dynamic source and must name
@@ -682,15 +689,23 @@ describe("page editor control registry", () => {
     ]);
   });
 
-  test("collection block content controls are frozen to the TASK-457 contract", () => {
+  test("collection block content controls are frozen to the TASK-457 contract (+TASK-459-03 pagination)", () => {
     expect(pageBlockControlRegistry.collection.map((control) => control.id)).toEqual([
       "block.collection.props.contentTypeId",
       "block.collection.props.queryId",
       "block.collection.props.limit",
       "block.collection.props.templateId",
+      "block.collection.props.paginationMode",
+      "block.collection.props.pageSize",
     ]);
-    const [contentTypeControl, queryControl, limitControl, templateControl] =
-      pageBlockControlRegistry.collection;
+    const [
+      contentTypeControl,
+      queryControl,
+      limitControl,
+      templateControl,
+      paginationModeControl,
+      pageSizeControl,
+    ] = pageBlockControlRegistry.collection;
     expect(contentTypeControl).toMatchObject({
       panel: "content",
       target: "block",
@@ -723,12 +738,14 @@ describe("page editor control registry", () => {
       label: "Limit",
       path: ["props", "limit"],
       input: "number",
-      // The schema clamp from `blockPropJsonSchemaForType` ("limit" ->
-      // numericSchema(1, 50)); entry count is a unitless readout.
-      clamp: { min: 1, max: 50 },
+      // TASK-459-03 clamp unification: the single owner bound (1..24 from
+      // `contentListLimitMax`) replaced the old 1..50 ceiling the runtime
+      // silently truncated. Entry count is a unitless readout.
+      clamp: { min: PAGE_COLLECTION_LIMIT_CLAMP.min, max: PAGE_COLLECTION_LIMIT_CLAMP.max },
       unit: "",
       fallback: 6,
     });
+    expect(PAGE_COLLECTION_LIMIT_CLAMP).toEqual({ min: 1, max: 24 });
     expect(templateControl).toMatchObject({
       panel: "content",
       label: "Listing template",
@@ -738,7 +755,31 @@ describe("page editor control registry", () => {
       nullable: true,
     });
     expect(templateControl!.filterBy).toBeUndefined();
-    // The full target surface = universal block controls + the four content
+    // TASK-459-03 visitor pagination: a segmented mode strip (owner enum,
+    // default "none" keeps existing pages unchanged) and a nullable page-size
+    // number bound to the same owner clamp ("follow limit" when unset).
+    expect(paginationModeControl).toMatchObject({
+      panel: "content",
+      label: "Pagination",
+      path: ["props", "paginationMode"],
+      input: "segmented",
+      options: pageCollectionPaginationModes,
+      fallback: "none",
+      responsive: true,
+    });
+    expect(pageCollectionPaginationModes).toEqual(["none", "paged", "load-more"]);
+    expect(pageSizeControl).toMatchObject({
+      panel: "content",
+      label: "Page size",
+      path: ["props", "pageSize"],
+      input: "number",
+      clamp: { min: PAGE_COLLECTION_LIMIT_CLAMP.min, max: PAGE_COLLECTION_LIMIT_CLAMP.max },
+      unit: "",
+    });
+    // Nullable schema default (`pageSize: null` = follow limit): no scalar
+    // fallback may lie about the unset state.
+    expect(pageSizeControl!.fallback).toBeUndefined();
+    // The full target surface = universal block controls + the six content
     // controls; the collection block is not typography-capable, so no cluster.
     expect(
       getPageEditorControlsForTarget({ kind: "block", type: "collection" }).map(
@@ -750,6 +791,75 @@ describe("page editor control registry", () => {
       "block.collection.props.queryId",
       "block.collection.props.limit",
       "block.collection.props.templateId",
+      "block.collection.props.paginationMode",
+      "block.collection.props.pageSize",
+    ]);
+  });
+
+  test("filters block content controls are frozen to the TASK-459-02 contract", () => {
+    expect(pageBlockControlRegistry.filters.map((control) => control.id)).toEqual([
+      "block.filters.props.queryId",
+      "block.filters.props.facets",
+      "block.filters.props.layout",
+      "block.filters.props.autoApply",
+      "block.filters.props.showSearch",
+      "block.filters.props.showCount",
+      "block.filters.props.searchLabel",
+      "block.filters.props.searchPlaceholder",
+      "block.filters.props.applyLabel",
+    ]);
+    const controlsById = new Map(
+      pageBlockControlRegistry.filters.map((control) => [control.id, control])
+    );
+    expect(controlsById.get("block.filters.props.queryId")).toMatchObject({
+      panel: "content",
+      target: "block",
+      label: "Saved query",
+      path: ["props", "queryId"],
+      input: "select",
+      // Unscoped source: the filters block binds to ANY saved listing query
+      // (no contentTypeId sibling exists to scope by).
+      optionsSource: "listingQueriesAll",
+      // Schema-owned nullability: `pageBlockDefaultProps.filters.queryId` is
+      // null (nullableStringSchema), so the combobox offers the "None" row.
+      nullable: true,
+      responsive: true,
+    });
+    expect(controlsById.get("block.filters.props.queryId")?.filterBy).toBeUndefined();
+    expect(controlsById.get("block.filters.props.facets")).toMatchObject({
+      panel: "content",
+      label: "Facets",
+      path: ["props", "facets"],
+      input: "facets",
+    });
+    expect(controlsById.get("block.filters.props.layout")).toMatchObject({
+      panel: "layout",
+      input: "segmented",
+      options: ["horizontal", "sidebar"],
+      fallback: "horizontal",
+    });
+    for (const toggle of ["autoApply", "showSearch", "showCount"]) {
+      expect(controlsById.get(`block.filters.props.${toggle}`)).toMatchObject({
+        panel: "content",
+        input: "switch",
+        // Schema defaults are true: the form auto-applies, shows the search
+        // row, and shows the result count unless explicitly disabled.
+        fallback: true,
+      });
+    }
+    expect(controlsById.get("block.filters.props.applyLabel")).toMatchObject({
+      input: "text",
+      fallback: "Apply filters",
+    });
+    // The full target surface = universal block controls + the nine content
+    // controls; the filters block is not typography-capable, so no cluster.
+    expect(
+      getPageEditorControlsForTarget({ kind: "block", type: "filters" }).map(
+        (control) => control.id
+      )
+    ).toEqual([
+      ...pageUniversalBlockControls.map((control) => control.id),
+      ...pageBlockControlRegistry.filters.map((control) => control.id),
     ]);
   });
 

@@ -66,6 +66,7 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
     // flag is ever emptied or reshaped by accident.
     // TASK-456: "form" joined the catalog (form authoring enablement).
     // TASK-457: "collection" joined the catalog (collection authoring).
+    // TASK-459-02: "filters" joined the catalog (visitor filters block).
     expect(editorInsertableBlockTypes).toEqual([
       "heading",
       "text",
@@ -76,6 +77,7 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
       "list",
       "card",
       "collection",
+      "filters",
       "divider",
       "spacer",
       "statistic",
