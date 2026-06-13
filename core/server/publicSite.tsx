@@ -57,7 +57,8 @@ import { getPageTemplatePreviewModel } from "../services/pages/pageTemplateLibra
 import { isPageTemplateError } from "../services/pages/pageTemplateLibrarySchema";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { resolvePublicSeoMetadata } from "../services/seo/seoService";
-import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
+import { getSetting } from "../services/settings/settingsService";
+import type { ContentRouteSetting } from "../services/settings/settingsContracts";
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import { resolvePublicRedirect } from "../services/redirects/redirectService";
@@ -117,10 +118,8 @@ import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
-import {
-  preparePageRuntimeDocument,
-  type PageRuntimeCacheMode,
-} from "../services/pages/pageRuntimeDataBinding";
+import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataPreparation";
+import type { PageRuntimeCacheMode } from "../services/pages/pageRuntimeBindingContract";
 import { buildPageResponsiveCss } from "../services/pages/pageResponsiveCss";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import type { PageBreakpoint } from "../services/pages/pageDocumentV2";

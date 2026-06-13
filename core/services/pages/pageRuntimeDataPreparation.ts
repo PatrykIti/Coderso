@@ -1,162 +1,44 @@
 import {
   contentListDefaults,
-  contentListLimitMax,
   mapListingTemplatePresentationToContentList,
   normalizeContentListData,
-  type ContentListData,
-  type ContentListVariantId,
 } from "../../widgets/core/contentList";
-import {
-  normalizeListingFiltersData,
-  type ListingFiltersData,
-} from "../../widgets/core/listingFilters";
-import {
-  normalizeListingRuntimeAliases,
-  type ListingRuntimeAliasMap,
-} from "../search/filterContract";
-import type {
-  ContentListResolvedRuntimeData,
-  resolveContentListRuntimeData,
-} from "../content/contentListResolver";
-import type { FormRuntimeResolution, resolveFormRuntimeData } from "../forms/formRuntimeResolver";
-import type {
-  ListingFiltersRuntimeResult,
-  resolveListingFiltersRuntimeData,
-} from "../search/listingRuntimeService";
+import { normalizeListingFiltersData } from "../../widgets/core/listingFilters";
 import { getDefaultFormSettings } from "../forms/formSettings";
+import type { FormRuntimeResolution } from "../forms/formRuntimeContract";
+import type { ContentListResolvedRuntimeData } from "./pageRuntimeBindingContract";
 import {
-  dangerousHtmlContentTagSet,
-  escapeHtml,
-  parseHtmlAttributes,
-  sanitizeHtmlWithPolicy,
-} from "../posts/editor/postRichTextHtmlUtils";
-import { toYoutubeEmbedUrl } from "../posts/shared/videoEmbed";
-import type { ContentRouteSetting } from "../settings/settingsService";
+  mapPageCollectionBlockToContentListData,
+  mapPageFiltersBlockToListingFiltersData,
+  sanitizePageEmbedHtml,
+  type PageRuntimeCollectionBinding,
+  type PageRuntimeDataBindingDeps,
+  type PageRuntimeDataByBlockId,
+  type PageRuntimeEmbedBinding,
+  type PageRuntimeFiltersBinding,
+  type PageRuntimeFormBinding,
+  type PreparePageRuntimeOptions,
+  type PreparedPageRuntimeDocument,
+} from "./pageRuntimeBindingContract";
 import {
   getPageBlockActiveSlotKeys,
   resolvePageDocumentForBreakpoint,
   type PageBlockV2,
-  type PageBreakpoint,
   type PageDocumentV2,
   type PageSectionV2,
   type PageSectionVisibilityV2,
 } from "./pageDocumentV2";
-
-export type PageRuntimeCollectionBinding = {
-  kind: "collection";
-  data: ContentListData;
-  /**
-   * Effective list variant (TASK-459-03 template-style consumption): set when
-   * the bound listing template's `config.style.cardVariant` selects a
-   * non-default presentation (e.g. "compact"). Absent = today's grid render.
-   */
-  variant?: ContentListVariantId;
-};
-
-export type PageRuntimeFiltersBinding = {
-  kind: "filters";
-  /** Shared listing-filters data shape consumed by the reused facet markup. */
-  data: ListingFiltersData;
-  /**
-   * Total of the bound listing execution (TASK-459-01 counts contract field).
-   * Rendered by the filters block result-count display; truthful full-corpus
-   * values land with TASK-459-04 — the field contract is stable already.
-   */
-  total: number;
-};
-
-export type PageRuntimeFormBinding = {
-  kind: "form";
-  formId: string;
-  title: string | null;
-  resolution: FormRuntimeResolution;
-};
-
-export type PageRuntimeEmbedBinding = {
-  kind: "embed";
-  sanitizedHtml: string;
-  iframeSrc: string | null;
-  iframeTitle: string;
-};
-
-export type PageRuntimeDataBinding =
-  | PageRuntimeCollectionBinding
-  | PageRuntimeFiltersBinding
-  | PageRuntimeFormBinding
-  | PageRuntimeEmbedBinding;
-
-export type PageRuntimeDataByBlockId = Record<string, PageRuntimeDataBinding>;
-
-export type PageRuntimeDataBindingDeps = {
-  resolveContentListRuntimeData?: typeof resolveContentListRuntimeData;
-  resolveFormRuntimeData?: typeof resolveFormRuntimeData;
-  resolveListingFiltersRuntimeData?: typeof resolveListingFiltersRuntimeData;
-  now?: () => Date;
-};
-
-/**
- * Whole-page HTML cache mode (TASK-459-04):
- * - `"full"` — fully static render, cacheable for the configured site TTL;
- * - `"short-ttl"` — the only dynamic bindings are listing-shaped
- *   (collection/filters over published content), safe to cache under a
- *   short, bounded TTL so filtered catalog requests stop re-rendering on
- *   every hit;
- * - `"none"` — request-coupled state (forms with submission nonces,
- *   auth/schedule-gated sections) must never be cached.
- */
-export type PageRuntimeCacheMode = "full" | "short-ttl" | "none";
-
-export type PreparedPageRuntimeDocument = {
-  document: PageDocumentV2;
-  runtimeDataByBlockId: PageRuntimeDataByBlockId;
-  cacheable: boolean;
-  cacheMode: PageRuntimeCacheMode;
-  /**
-   * Whether the rendered page needs the shared listing runtime client script
-   * (TASK-459-02 body-script seam): true exactly when a filters block bound
-   * to an existing saved query rendered a live facet form. The script stays
-   * progressive enhancement — the facet form is a plain GET form that filters
-   * without JS through the existing `lq.*` server pipeline.
-   */
-  needsListingRuntimeScript: boolean;
-};
-
-type PreparePageRuntimeOptions = {
-  preview: boolean;
-  breakpoint: PageBreakpoint;
-  contentRoutes: ContentRouteSetting[];
-  runtimeSearchParams?: URLSearchParams;
-  listingRuntimeAliasesByQueryId?: Record<string, ListingRuntimeAliasMap>;
-};
-
-const pageEmbedAllowedTags = new Set([
-  "a",
-  "blockquote",
-  "br",
-  "code",
-  "div",
-  "em",
-  "i",
-  "li",
-  "ol",
-  "p",
-  "pre",
-  "span",
-  "strong",
-  "ul",
-]);
-
-const pageEmbedSelfClosingTags = new Set(["br"]);
+import { toYoutubeEmbedUrl } from "../posts/shared/videoEmbed";
+import type { ListingFiltersRuntimeResult } from "../search/listingRuntimeContract";
+import {
+  normalizeListingRuntimeAliases,
+  type ListingRuntimeAliasMap,
+} from "../search/filterContract";
 
 const readOptionalText = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-};
-
-const readBoundedNumber = (value: unknown, fallback: number, min: number, max: number) => {
-  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
-  return Math.max(min, Math.min(max, Math.trunc(value)));
 };
 
 const isHttpUrl = (value: string) => {
@@ -167,32 +49,6 @@ const isHttpUrl = (value: string) => {
     return false;
   }
 };
-
-const isSafeInlineHref = (value: string) => {
-  if (value.startsWith("#") || value.startsWith("/")) return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" || url.protocol === "mailto:";
-  } catch {
-    return false;
-  }
-};
-
-const sanitizePageEmbedAttributes = (tagName: string, rawAttrs: string) => {
-  if (tagName !== "a") return "";
-  const attrs = parseHtmlAttributes(rawAttrs);
-  const href = attrs.get("href")?.trim();
-  if (!href || !isSafeInlineHref(href)) return null;
-  return ` href="${escapeHtml(href)}" rel="nofollow noreferrer" target="_blank"`;
-};
-
-export const sanitizePageEmbedHtml = (html: string) =>
-  sanitizeHtmlWithPolicy(html, {
-    allowedTags: pageEmbedAllowedTags,
-    selfClosingTags: pageEmbedSelfClosingTags,
-    dropContentTags: dangerousHtmlContentTagSet,
-    sanitizeAttributes: sanitizePageEmbedAttributes,
-  });
 
 const isWithinSectionSchedule = (visibility: PageSectionVisibilityV2, now: Date) => {
   const startsAt = readOptionalText(visibility.startsAt);
@@ -254,49 +110,6 @@ const walkDocumentBlocks = function* (document: PageDocumentV2): Generator<PageB
   }
 };
 
-/** Owner enum read for the collection block's visitor pagination mode. */
-const readCollectionPaginationMode = (value: unknown): "none" | "paged" | "load-more" =>
-  value === "paged" || value === "load-more" ? value : "none";
-
-export const mapPageCollectionBlockToContentListData = (block: PageBlockV2): ContentListData => {
-  const contentTypeId = readOptionalText(block.props.contentTypeId) ?? "";
-  const listingQueryId = readOptionalText(block.props.queryId) ?? "";
-  const listingTemplateId = readOptionalText(block.props.templateId) ?? "";
-  // Single owner clamp (TASK-459-03): the binding reads the SAME bound the
-  // editor schema enforces (`contentListLimitMax`), so authored values render
-  // exactly as stored instead of silently truncating.
-  const limit = readBoundedNumber(
-    block.props.limit,
-    contentListDefaults.source?.limit ?? 6,
-    1,
-    contentListLimitMax
-  );
-  // Visitor pagination (TASK-459-03): block props drive the widget pagination
-  // contract — default "none" preserves today's render; `pageSize` follows
-  // `limit` when unset (nullable prop).
-  const paginationMode = readCollectionPaginationMode(block.props.paginationMode);
-  const pageSize = readBoundedNumber(block.props.pageSize, limit, 1, contentListLimitMax);
-  const mode = listingQueryId ? "listing" : "legacy";
-
-  return normalizeContentListData({
-    ...contentListDefaults,
-    source: {
-      ...contentListDefaults.source,
-      mode,
-      contentTypeId,
-      listingQueryId,
-      listingTemplateId,
-      statusScope: "published",
-      limit,
-    },
-    pagination: {
-      ...contentListDefaults.pagination,
-      mode: paginationMode,
-      pageSize,
-    },
-  });
-};
-
 const resolveCollectionBinding = async (
   block: PageBlockV2,
   options: PreparePageRuntimeOptions,
@@ -325,10 +138,6 @@ const resolveCollectionBinding = async (
       error: "content_list_unavailable",
     };
   }
-  // Listing template presentation (TASK-459-03): consume the bound template's
-  // `config.style` (columns/gap/cardVariant) and `emptyState` instead of the
-  // hardcoded grid defaults. Absent template/style keeps today's defaults, so
-  // existing pages render unchanged.
   const presentation =
     resolved.templateStyle || resolved.templateEmptyState
       ? mapListingTemplatePresentationToContentList({
@@ -353,34 +162,6 @@ const resolveCollectionBinding = async (
     ...(presentation ? { variant: presentation.variant } : {}),
   };
 };
-
-const readBooleanProp = (value: unknown, fallback: boolean) =>
-  typeof value === "boolean" ? value : fallback;
-
-/**
- * Maps the v2 filters block props onto the shared `listing-filters` data
- * shape (TASK-459-02). The widget normalizer stays the single owner of facet
- * canonicalization and fallback behavior — including the default sort facet
- * when the author configured no facets — so the v2 block renders the exact
- * facet markup the widget runtime ships.
- */
-export const mapPageFiltersBlockToListingFiltersData = (block: PageBlockV2): ListingFiltersData =>
-  normalizeListingFiltersData({
-    listingQueryId: readOptionalText(block.props.queryId) ?? "",
-    autoApply: readBooleanProp(block.props.autoApply, true),
-    showSearch: readBooleanProp(block.props.showSearch, true),
-    searchLabel: readOptionalText(block.props.searchLabel) ?? undefined,
-    searchPlaceholder: readOptionalText(block.props.searchPlaceholder) ?? undefined,
-    applyLabel: readOptionalText(block.props.applyLabel) ?? undefined,
-    aliases: normalizeListingRuntimeAliases(block.props.aliases),
-    facets: Array.isArray(block.props.facets)
-      ? (block.props.facets as ListingFiltersData["facets"])
-      : [],
-  });
-
-/** Effective layout variant of the filters block for the shared markup. */
-export const readPageFiltersBlockLayout = (block: PageBlockV2): "horizontal" | "sidebar" =>
-  block.props.layout === "sidebar" ? "sidebar" : "horizontal";
 
 const resolveFiltersBinding = async (
   block: PageBlockV2,
@@ -510,9 +291,6 @@ export async function preparePageRuntimeDocument(
     : deps.resolveListingFiltersRuntimeData;
 
   let hasDynamicBinding = pruned.hasPublicGates;
-  // Cache-mode tracking (TASK-459-04): listing bindings allow short-TTL
-  // caching; request-coupled bindings (forms) and visibility gates force the
-  // render uncacheable.
   let hasListingBinding = false;
   let hasUncacheableBinding = pruned.hasPublicGates;
   let needsListingRuntimeScript = false;
@@ -530,10 +308,6 @@ export async function preparePageRuntimeDocument(
       runtimeDataByBlockId[block.id] = binding;
       hasDynamicBinding = true;
       hasListingBinding = true;
-      // TASK-459-03: a paged, listing-bound collection enhances its pager
-      // links with the shared fetch-swap client (coordinated with the
-      // TASK-459-02 seam). Legacy-mode pagers (`cl.*` params) and unresolved
-      // queries stay no-JS full navigations.
       if (
         binding.data.pagination?.mode === "paged" &&
         (binding.data.source?.listingQueryId ?? "").length > 0 &&
@@ -550,8 +324,6 @@ export async function preparePageRuntimeDocument(
       runtimeDataByBlockId[block.id] = binding;
       hasDynamicBinding = true;
       hasListingBinding = true;
-      // The script ships only for live facet forms: a missing queryId or a
-      // dangling saved query renders the fail-closed placeholder without JS.
       if ((binding.data.listingQueryId ?? "").length > 0 && !binding.data.resolved?.error) {
         needsListingRuntimeScript = true;
       }
@@ -571,11 +343,7 @@ export async function preparePageRuntimeDocument(
     }
   }
 
-  const cacheMode: PageRuntimeCacheMode = hasUncacheableBinding
-    ? "none"
-    : hasListingBinding
-      ? "short-ttl"
-      : "full";
+  const cacheMode = hasUncacheableBinding ? "none" : hasListingBinding ? "short-ttl" : "full";
 
   return {
     document: pruned.document,

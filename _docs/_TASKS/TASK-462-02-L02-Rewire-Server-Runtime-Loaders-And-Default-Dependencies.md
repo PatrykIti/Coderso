@@ -6,7 +6,8 @@
 **Category:** Architecture / Admin Build / Runtime Boundary
 **Estimated Effort:** Large
 **Dependencies:** TASK-462-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -149,3 +150,19 @@ Error handling:
 - `_docs/_TASKS/TASK-462*.md`
 - `tests/README.md` if `check:admin-bundle` becomes an explicit closure gate
   for this boundary class.
+
+---
+
+## Closeout Notes
+
+- Added `core/services/pages/pageRuntimeDataPreparation.ts` as the server-only
+  owner for page runtime data preparation and runtime resolver loading.
+- Removed the obsolete mixed `core/services/pages/pageRuntimeDataBinding.ts`
+  module after all callers moved to either the pure contract or server-only
+  preparer.
+- Updated `core/server/publicSite.tsx` to import the server-only preparer while
+  admin/browser imports remain on `pageRuntimeBindingContract`.
+- Moved password pepper presence logic to `core/services/auth/passwordPepper.ts`
+  and left argon2-backed hashing in `core/services/auth/password.ts`.
+- Kept media storage adapter resolution server-only; the passing admin build
+  proves Azure/S3/local storage adapters are not in the admin import graph.

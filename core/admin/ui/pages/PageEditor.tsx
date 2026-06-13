@@ -196,7 +196,7 @@ import {
   collectPageEditorFormPreviewFormIds,
   type PageEditorFormPreviewDetail,
 } from "../../../services/pages/pageEditorFormPreview";
-import type { PageRuntimeDataByBlockId } from "../../../services/pages/pageRuntimeDataBinding";
+import type { PageRuntimeDataByBlockId } from "../../../services/pages/pageRuntimeBindingContract";
 import { joinPageRenderClasses, PageSectionContent } from "../../../services/pages/pageRendererV2";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
 import {

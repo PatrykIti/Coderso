@@ -2,7 +2,7 @@ import type {
   ListingExecutionResult,
   ListingCorpusResult,
   ListingQuery,
-} from "../content/queryBuilderService";
+} from "../content/listingQueryContract";
 import {
   normalizeListingFacetConfigs,
   resolveFacetToken,
@@ -10,6 +10,10 @@ import {
   type ListingFacetMetric,
   type ListingRuntimeAliasMap,
 } from "./filterContract";
+import type {
+  ListingFiltersRuntimeResult,
+  ListingSearchRuntimeState,
+} from "./listingRuntimeContract";
 import {
   computeListingFacetMetrics,
   parseListingRuntimeOverrides,
@@ -66,20 +70,6 @@ export type ListingFiltersRuntimeInput = {
   aliases?: ListingRuntimeAliasMap;
   preview: boolean;
   runtimeSearchParams?: URLSearchParams;
-};
-
-export type ListingFiltersRuntimeResult = {
-  listingQueryId: string;
-  metrics: ListingFacetMetric[];
-  searchQuery?: string;
-  rejectedTokens: string[];
-  total: number;
-  error?: string;
-};
-
-export type ListingSearchRuntimeState = {
-  searchQuery?: string;
-  rejectedTokens: string[];
 };
 
 export function resolveListingSearchRuntimeState(

@@ -3,7 +3,7 @@ import {
   type ListingFilter,
   type ListingQuery,
   type ListingSort,
-} from "../content/queryBuilderService";
+} from "../content/listingQueryContract";
 import { readListingRowField } from "../content/listingRuntimeResolver";
 import {
   LISTING_RUNTIME_QUERY_PREFIX,

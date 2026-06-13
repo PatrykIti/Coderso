@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 114 tasks
+- **To Do:** 107 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2447 tasks
+- **Done:** 2454 tasks
 
 ---
 
@@ -88,13 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-462 | Admin Browser Runtime Boundary Hardening | High | Large | Fix `build:admin` by restoring the admin/browser vs server/runtime boundary; no final `@vite-ignore`, externals, aliases, or browser stubs for provider/auth/runtime modules. |
-| TASK-462-01 | Admin Build Boundary Audit And Contract Freeze | High | Medium | Reproduce the build failure, map server-only import leaks, and freeze the real architecture contract before implementation. |
-| TASK-462-01-L01 | Map Admin Browser Import Graph And Server-Only Leaks | High | Medium | Produce the import graph/audit evidence for page runtime binding, storage, listing, auth/password, media lookup, DB, and runtime loader leaks. |
-| TASK-462-02 | Browser-Safe Contract And Server Runtime Split | High | Large | Implement the split so admin imports pure contracts while DB/provider/auth/runtime loaders stay server-only. |
-| TASK-462-02-L01 | Extract Browser-Safe Contracts And Server-Only Loaders | High | Large | Extract page runtime binding, listing/security/media shared contracts from modules that also import DB, provider SDKs, filesystem, or password hashing. |
-| TASK-462-02-L02 | Rewire Server Runtime Loaders And Default Dependencies | High | Large | Update runtime callers to explicit server loaders/deps and prove admin build no longer pulls server-only modules. |
-| TASK-462-03 | Admin Build Validation Docs And Closure | High | Medium | Close with `build:admin`, bundle gate, targeted Bun/Vitest, lint/types, board, docs, and changelog evidence. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
@@ -223,6 +216,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-462 | Admin Browser Runtime Boundary Hardening | High | Large | Done (2026-06-13): Admin build restored by splitting browser-safe contracts from server/runtime loaders; no provider externals, aliases, `@vite-ignore`, or browser stubs. |
+| TASK-462-01 | Admin Build Boundary Audit And Contract Freeze | High | Medium | Done (2026-06-13): Reproduced Azure export failure and froze the import-boundary contract before implementation. |
+| TASK-462-01-L01 | Map Admin Browser Import Graph And Server-Only Leaks | High | Medium | Done (2026-06-13): Confirmed Page Editor to runtime resolver/storage/auth leak paths and codified them in `check:admin-boundary`. |
+| TASK-462-02 | Browser-Safe Contract And Server Runtime Split | High | Large | Done (2026-06-13): Pure page/form/listing/settings contracts now sit apart from DB/provider/auth/runtime loaders. |
+| TASK-462-02-L01 | Extract Browser-Safe Contracts And Server-Only Loaders | High | Large | Done (2026-06-13): Extracted pure contracts for page runtime binding, forms, settings routes, listing query/source metadata, and listing runtime DTOs. |
+| TASK-462-02-L02 | Rewire Server Runtime Loaders And Default Dependencies | High | Large | Done (2026-06-13): Public runtime uses server-only page preparation while admin imports pure contracts; pepper status no longer imports argon2 hashing. |
+| TASK-462-03 | Admin Build Validation Docs And Closure | High | Medium | Done (2026-06-13): `build:admin`, admin bundle gate, boundary guard, lint/types, targeted Bun/Vitest, docs, changelog, and board synced. |
 | TASK-461 | Hide Advanced Widgets Entry Point | Medium | Small | Done (2026-06-13): Advanced > Widgets hidden from default nav while direct route and widget infrastructure remain intact. |
 | TASK-461-01 | Hide Advanced Widgets Entry Point | Medium | Small | Done (2026-06-13): UI-only hide kept `/advanced/widgets`, registry metadata, Page Editor palette, and runtime contracts unchanged. |
 | TASK-461-01-L01 | Hide Widgets From Advanced Navigation | Medium | Small | Done (2026-06-13): `widgets.nav` set to null, Advanced nav tests updated, docs synchronized, targeted Vitest/lint/typecheck passed. |

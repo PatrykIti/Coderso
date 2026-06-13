@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 import type { ListingPushdownPlan } from "./listingPushdown";
-import type { ListingSource, ListingSourceConfig, ListingSort } from "./queryBuilderService";
+import type { ListingSource, ListingSourceConfig, ListingSort } from "./listingQueryContract";
 
 export type ListingSourceRow = Record<string, unknown>;
 

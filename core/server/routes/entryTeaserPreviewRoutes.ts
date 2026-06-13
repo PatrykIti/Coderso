@@ -2,11 +2,11 @@ import type { RouteContext } from "../router";
 import { ApiError } from "../errorHandler";
 import { entryTeaserSchema, type EntryTeaserData } from "../../widgets/core/entryTeaser";
 import { resolveEntryTeaserRuntimeData } from "../../services/content/entryTeaserResolver";
+import { getSetting } from "../../services/settings/settingsService";
 import {
-  getSetting,
   normalizeContentRoutes,
   type ContentRouteSetting,
-} from "../../services/settings/settingsService";
+} from "../../services/settings/settingsContracts";
 
 export type EntryTeaserPreviewRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 

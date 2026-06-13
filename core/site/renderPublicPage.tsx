@@ -13,7 +13,7 @@ import {
   resolvePageTemplatePath,
 } from "../services/pages/pageTemplateService";
 import { type PageBreakpoint, type PageDocumentV2 } from "../services/pages/pageDocumentV2";
-import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeDataBinding";
+import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBindingContract";
 import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
 import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";

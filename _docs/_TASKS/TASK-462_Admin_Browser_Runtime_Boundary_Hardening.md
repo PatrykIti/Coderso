@@ -5,7 +5,8 @@
 **Category:** Architecture / Admin Build / Runtime Boundary
 **Estimated Effort:** Large
 **Dependencies:** TASK-399, TASK-409, TASK-458-03, TASK-459-04, TASK-460, TASK-461
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -95,12 +96,12 @@ Acceptance criteria:
 
 ## Sub-Tasks
 
-- [ ] TASK-462-01: Admin build boundary audit and contract freeze.
-- [ ] TASK-462-01-L01: Map admin browser import graph and server-only leaks.
-- [ ] TASK-462-02: Browser-safe contracts and server-runtime split.
-- [ ] TASK-462-02-L01: Extract browser-safe contracts from runtime loaders.
-- [ ] TASK-462-02-L02: Rewire server runtime loaders and default dependencies.
-- [ ] TASK-462-03: Admin build validation, docs, and closure.
+- [x] TASK-462-01: Admin build boundary audit and contract freeze.
+- [x] TASK-462-01-L01: Map admin browser import graph and server-only leaks.
+- [x] TASK-462-02: Browser-safe contracts and server-runtime split.
+- [x] TASK-462-02-L01: Extract browser-safe contracts from runtime loaders.
+- [x] TASK-462-02-L02: Rewire server runtime loaders and default dependencies.
+- [x] TASK-462-03: Admin build validation, docs, and closure.
 
 ---
 
@@ -190,3 +191,36 @@ core/admin/** or admin-imported pure helpers
 - `tests/README.md` if a new admin-build/import-boundary validation command or
   test lane is introduced.
 - `_docs/_CHANGELOG/` entry and `_docs/_CHANGELOG/README.md` when completed.
+
+---
+
+## Closeout Notes
+
+- Restored the admin/browser boundary by moving browser-safe page runtime,
+  settings route, form runtime, listing runtime, and listing source contracts
+  into pure modules.
+- Moved server runtime page data preparation into
+  `core/services/pages/pageRuntimeDataPreparation.ts`; admin Page Editor and
+  preview helpers now import `pageRuntimeBindingContract` instead of the
+  runtime preparer.
+- Split password pepper helpers away from `auth/password.ts`, so security
+  settings no longer import argon2-backed password hashing for the configured
+  status check.
+- Added `bun run check:admin-boundary`, a source import graph guard that scans
+  admin-reachable static and dynamic imports and rejects DB/server/storage,
+  provider SDK, password hashing, secret-store, and runtime resolver seams.
+- `bun --cwd core build:admin` now passes without `@vite-ignore`, provider
+  externals, browser aliases, or browser stubs for Azure/S3/argon2/postgres.
+
+## Validation Evidence
+
+- `bun run check:admin-boundary`
+- `bun --cwd core build:admin`
+- `bun run check:admin-bundle`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/tsc -p tsconfig.json --noEmit`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/unit/content/queryBuilderService.test.ts tests/unit/content/listingSources.test.ts tests/unit/content/listingPushdown.test.ts tests/unit/settings/contentRoutesValidation.test.ts tests/unit/auth/password.test.ts tests/unit/media/storageResolver.test.ts tests/unit/media/azureAdapter.test.ts tests/unit/media/s3Adapter.test.ts tests/unit/media/mediaService.test.ts`
+- `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminBoundaryReport.test.ts tests/vitest/admin/adminBundleReport.test.ts tests/vitest/search/filterEngine.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-renderer-v2.test.tsx`
+- `bun run test:bun` - 1128 pass, 1 skip, 0 fail.
+- `bun run test:vitest` - 671 files passed, 4085 tests passed.

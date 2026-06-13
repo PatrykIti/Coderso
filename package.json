@@ -20,6 +20,7 @@
     "lint:repo": "bun run lint:repo:types",
     "lint:repo:types": "tsc -p tsconfig.json --noEmit",
     "check:admin-bundle": "bun scripts/check-admin-bundle.ts",
+    "check:admin-boundary": "bun scripts/check-admin-boundary.ts",
     "test": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run test:bun && bun run test:vitest",
     "test:full": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run test:bun && bun run test:vitest",
     "test:bun": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test --parallel=1 --timeout=15000 tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/perf tests/security",

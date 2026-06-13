@@ -6,7 +6,8 @@
 **Category:** Architecture / Admin Build / Runtime Boundary
 **Estimated Effort:** Large
 **Dependencies:** TASK-462-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -25,8 +26,8 @@ be the primary way to hide server-only code from the browser build.
 
 ## Sub-Tasks
 
-- [ ] TASK-462-02-L01: Extract browser-safe contracts from runtime loaders.
-- [ ] TASK-462-02-L02: Rewire server runtime loaders and default dependencies.
+- [x] TASK-462-02-L01: Extract browser-safe contracts from runtime loaders.
+- [x] TASK-462-02-L02: Rewire server runtime loaders and default dependencies.
 
 ---
 
@@ -65,3 +66,15 @@ be the primary way to hide server-only code from the browser build.
 - `_docs/ARCHITECTURE.md` or `_docs/TESTING_STRATEGY.md` if a reusable named
   seam is introduced.
 - `_docs/_CHANGELOG/` entry when the family closes.
+
+---
+
+## Closeout Notes
+
+- Added pure contracts for page runtime binding, form runtime resolution,
+  listing runtime DTOs, listing query/source metadata, and content route
+  settings.
+- Kept DB-backed runtime execution, media storage, form nonce/security,
+  listing source fetchers, and provider SDKs on server-only import paths.
+- Rewired browser/admin callers to pure modules while server/public runtime
+  callers use the explicit runtime preparer.

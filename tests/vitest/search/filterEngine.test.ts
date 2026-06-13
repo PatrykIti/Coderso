@@ -11,7 +11,7 @@ import {
   normalizeListingFacetConfigs,
   listingRuntimeTokens,
 } from "../../../core/services/search/filterContract";
-import type { ListingQuery } from "../../../core/services/content/queryBuilderService";
+import type { ListingQuery } from "../../../core/services/content/listingQueryContract";
 
 const baseUsersQuery: ListingQuery = {
   source: "users",

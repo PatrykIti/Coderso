@@ -1,6 +1,6 @@
 import { PageDocumentRender } from "../services/pages/pageRendererV2";
 import type { PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
-import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeDataBinding";
+import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBindingContract";
 import { SiteFooter, SiteHeaderNav, type SiteShellRenderProps } from "./siteShell";
 
 export type PageTemplatePropsV2 = {

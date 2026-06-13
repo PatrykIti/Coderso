@@ -1,26 +1,7 @@
 import { createFormSubmissionNonce } from "./submissionNonce";
 import { normalizeSubmissionAccess } from "./submissionAccess";
 import { getDefaultFormSettings, normalizeFormSettings } from "./formSettings";
-import type { NormalizedFormField } from "./validation";
-
-export type FormRuntimeResolution = {
-  formId: string;
-  formName: string;
-  description: string | null;
-  status: string;
-  successMessage: string | null;
-  successRedirectUrl: string | null;
-  settings: ReturnType<typeof getDefaultFormSettings>;
-  submissionAccess: "public" | "internal";
-  submissionNonce?: string | null;
-  botProtection?: {
-    provider: "recaptcha_v3";
-    siteKey: string;
-    action: "public_write";
-  } | null;
-  fields: NormalizedFormField[];
-  error?: string;
-};
+import type { FormRuntimeResolution } from "./formRuntimeContract";
 
 export const resolveFormSubmissionAccess = (value: unknown) =>
   normalizeSubmissionAccess(value, "public");

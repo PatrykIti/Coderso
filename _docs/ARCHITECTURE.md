@@ -34,6 +34,12 @@ Nie-cele:
   (np. `DATABASE_URL`, `MEDIA_SECRET_MASTER_KEY`).
 - Ustawienia security middleware (CORS/CSRF/rate-limit/headers) konfigurowalne
   z Admin UI i stosowane runtime (bez restartu).
+- Admin SPA jest browser-only: importuje tylko komponenty UI, klienty admin API,
+  DTO, schematy, normalizery i pure kontrakty. Kod server/runtime (`core/db/**`,
+  `core/server/**`, storage adaptery, provider SDK, password hashing,
+  `secretStore`, runtime resolvery i Bun/Node adaptery) musi pozostac za
+  server-only modulami albo jawnymi runtime loaderami. Regresje tego boundary
+  lapie `bun run check:admin-boundary`.
 - Produkcyjny obraz Docker startuje przez `core/server/dockerStart.ts`: przed
   uruchomieniem glownego serwera HTTP wykonuje migracje Drizzle z
   `core/db/migrations`, uzywajac `DATABASE_URL`. Blad migracji zatrzymuje start

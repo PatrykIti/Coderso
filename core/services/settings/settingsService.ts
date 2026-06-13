@@ -4,11 +4,9 @@ import { settings } from "../../db/schema";
 import { clearSiteCache, invalidateContentRouteCacheTransition } from "../../site/cache/siteCache";
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
-import {
-  normalizeContentRouteDetailPath,
-  normalizeContentRouteListPath,
-} from "./contentRoutePaths";
-import { normalizeOptionalDetailPageId } from "./detailPageIdContract";
+import { normalizeContentRoutes, type ContentRouteSetting } from "./settingsContracts";
+
+export type { ContentRouteSetting } from "./settingsContracts";
 
 type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -36,14 +34,6 @@ export type AssistantGlobalSettings = {
   "assistant.llm.timeoutMs": number;
   "assistant.quotas.requestsPerMinute": number;
   "assistant.quotas.requestsPerDay": number;
-};
-
-export type ContentRouteSetting = {
-  type: string;
-  listPath: string;
-  detailPath: string;
-  enabled: boolean;
-  detailPageId?: string | null;
 };
 
 const DEFAULT_WIDGET_TEMPLATE_CATEGORIES: WidgetTemplateCategorySetting[] = [
@@ -315,53 +305,6 @@ const normalizeOptionalIdValue = (value: unknown) => {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : "";
-};
-
-export const normalizeContentRoutes = (value: unknown): ContentRouteSetting[] => {
-  if (!Array.isArray(value)) {
-    throw new Error("settings_value_invalid");
-  }
-  const seenTypes = new Set<string>();
-  return value.map((entry) => {
-    if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
-      throw new Error("settings_value_invalid");
-    }
-    const record = entry as {
-      type?: unknown;
-      listPath?: unknown;
-      detailPath?: unknown;
-      enabled?: unknown;
-      detailPageId?: unknown;
-    };
-    if (typeof record.type !== "string") {
-      throw new Error("settings_value_invalid");
-    }
-    const type = record.type.trim();
-    if (!type) {
-      throw new Error("settings_value_invalid");
-    }
-    if (seenTypes.has(type)) {
-      throw new Error("settings_value_invalid");
-    }
-    seenTypes.add(type);
-    const listPath = normalizeContentRouteListPath(record.listPath);
-    const detailPath = normalizeContentRouteDetailPath(record.detailPath);
-    if (record.enabled !== undefined && typeof record.enabled !== "boolean") {
-      throw new Error("settings_value_invalid");
-    }
-    const normalized = {
-      type,
-      listPath,
-      detailPath,
-      enabled: record.enabled ?? true,
-    };
-    return Object.prototype.hasOwnProperty.call(record, "detailPageId")
-      ? {
-          ...normalized,
-          detailPageId: normalizeOptionalDetailPageId(record.detailPageId),
-        }
-      : normalized;
-  });
 };
 
 const readContentRoutesSettingValue = (value: unknown): ContentRouteSetting[] => {

@@ -1,4 +1,4 @@
-import type { ContentRouteSetting } from "../settings/settingsService";
+import type { ContentRouteSetting } from "../settings/settingsContracts";
 import { listEntries } from "./entryService";
 import { getContentType } from "./typeService";
 import {

@@ -29,10 +29,11 @@ Ordinary new entries continue at 1164.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1169 for the next changelog entry.
+assistant policy coverage fix. Use 1170 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1169 | 2026-06-13 | TASK-462 admin browser/runtime boundary hardening | Admin Build/Architecture/Runtime Boundary/QA/Docs |
 | 1168 | 2026-06-13 | TASK-461 hide Advanced Widgets entry point | Widgets/Admin UI/Navigation/Docs |
 | 1167 | 2026-06-13 | TASK-460 Page Templates Pages entry point | Pages/Templates/Admin UI/Navigation/Docs |
 | 1166 | 2026-06-13 | TASK-458/459 implementation stabilization | Menus/Listings/Public Runtime/Admin UI/Performance/QA/Docs |

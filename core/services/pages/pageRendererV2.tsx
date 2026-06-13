@@ -41,7 +41,7 @@ import {
   type PageRuntimeDataBinding,
   type PageRuntimeDataByBlockId,
   type PageRuntimeFormBinding,
-} from "./pageRuntimeDataBinding";
+} from "./pageRuntimeBindingContract";
 
 export type PageRenderMode = "runtime" | "admin-preview";
 export type PageSectionLayoutMode = "runtime" | "canvas-device";

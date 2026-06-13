@@ -6,7 +6,8 @@
 **Category:** Architecture / Admin Build / Runtime Boundary
 **Estimated Effort:** Medium
 **Dependencies:** TASK-462-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -134,3 +135,17 @@ Error handling:
 - Closeout notes in `_docs/_TASKS/TASK-462*.md`.
 - Temporary root report is allowed only if the import graph cannot fit cleanly
   in the task file; otherwise keep evidence in task closeout.
+
+---
+
+## Closeout Notes
+
+- Confirmed the browser-reachable chain from Page Editor to
+  `contentListResolver`, `formRuntimeResolver`, `listingRuntimeService`,
+  `mediaService`, storage adapters, and auth password hashing.
+- Verified that Vite/Rolldown treats dynamic imports inside admin-reachable
+  modules as browser chunks, so `await import(...)` is not a server-only seam.
+- Converted this audit into an executable guard in
+  `scripts/adminBoundaryReport.ts` / `scripts/check-admin-boundary.ts`.
+- Final guard result: `Admin boundary check passed: 690 browser-reachable files
+  scanned.`

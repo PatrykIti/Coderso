@@ -6,7 +6,8 @@
 **Category:** Architecture / Admin Build / Runtime Boundary
 **Estimated Effort:** Medium
 **Dependencies:** TASK-462-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -21,11 +22,11 @@ import graph.
 
 ## Sub-Tasks
 
-- [ ] Capture final `bun --cwd core build:admin` evidence.
-- [ ] Capture final targeted Bun/Vitest evidence for affected boundaries.
-- [ ] Run lint/type gates.
-- [ ] Update task board, changelog, and any source-of-truth docs.
-- [ ] Record any remaining non-blocking import-boundary risks as explicit
+- [x] Capture final `bun --cwd core build:admin` evidence.
+- [x] Capture final targeted Bun/Vitest evidence for affected boundaries.
+- [x] Run lint/type gates.
+- [x] Update task board, changelog, and any source-of-truth docs.
+- [x] Record any remaining non-blocking import-boundary risks as explicit
       follow-up tasks before closing TASK-462.
 
 ---
@@ -106,3 +107,18 @@ Error handling:
 - `_docs/_CHANGELOG/` entry and `_docs/_CHANGELOG/README.md`
 - `_docs/ARCHITECTURE.md`, `_docs/TESTING_STRATEGY.md`, or `tests/README.md`
   if the implementation adds a reusable boundary rule or validation command.
+
+---
+
+## Closeout Notes
+
+- Final `bun --cwd core build:admin` passes and no longer fails on Azure
+  `StorageSharedKeyCredential` or argon2/browser resolution.
+- Final `bun run check:admin-bundle` passes with entry gzip 46.16 KiB and
+  initial static gzip 171.35 KiB, both below budget.
+- Final `bun run check:admin-boundary` passes with 690 browser-reachable files
+  scanned.
+- Full validation passed: `bun run test:bun` reported 1128 pass, 1 skip,
+  0 fail; `bun run test:vitest` reported 671 files and 4085 tests passed.
+- No Vite/Rolldown provider externals, aliases, `@vite-ignore`, or browser
+  stubs were added.

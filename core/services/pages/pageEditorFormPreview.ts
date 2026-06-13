@@ -6,7 +6,10 @@ import {
   type PageBreakpoint,
   type PageDocumentV2,
 } from "./pageDocumentV2";
-import type { PageRuntimeDataByBlockId, PageRuntimeFormBinding } from "./pageRuntimeDataBinding";
+import type {
+  PageRuntimeDataByBlockId,
+  PageRuntimeFormBinding,
+} from "./pageRuntimeBindingContract";
 
 /**
  * Canvas-preview data contract for the form block (TASK-456). The Page Editor

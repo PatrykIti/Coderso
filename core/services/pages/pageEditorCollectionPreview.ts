@@ -13,7 +13,7 @@ import {
   mapPageCollectionBlockToContentListData,
   type PageRuntimeCollectionBinding,
   type PageRuntimeDataByBlockId,
-} from "./pageRuntimeDataBinding";
+} from "./pageRuntimeBindingContract";
 
 /**
  * Canvas-preview data contract for the collection block (TASK-457). The Page
@@ -147,7 +147,7 @@ export const buildPageEditorCollectionPreviewBinding = (
     return {
       kind: "collection",
       // The runtime binding normalizes `{ ...data, resolved }` through the
-      // widget owner (`resolveCollectionBinding` in pageRuntimeDataBinding);
+      // widget owner (`resolveCollectionBinding` in pageRuntimeDataPreparation);
       // the canvas keeps the identical final shape.
       data: normalizeContentListData({
         ...data,

@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 
-import { getSetting, setSetting, type ContentRouteSetting } from "../settings/settingsService";
+import { getSetting, setSetting } from "../settings/settingsService";
+import type { ContentRouteSetting } from "../settings/settingsContracts";
 import {
   createContentType,
   getContentType,

@@ -6,7 +6,8 @@
 **Category:** Architecture / Admin Build / Runtime Boundary
 **Estimated Effort:** Large
 **Dependencies:** TASK-462-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -160,3 +161,20 @@ Error handling:
 - `_docs/_TASKS/TASK-462*.md`
 - `_docs/TESTING_STRATEGY.md` if the pure/server split introduces a reusable
   pattern worth documenting.
+
+---
+
+## Closeout Notes
+
+- Created:
+  `core/services/pages/pageRuntimeBindingContract.ts`,
+  `core/services/forms/formRuntimeContract.ts`,
+  `core/services/settings/settingsContracts.ts`,
+  `core/services/search/listingRuntimeContract.ts`,
+  `core/services/content/listingQueryContract.ts`, and
+  `core/services/content/listingSourceDefinitions.ts`.
+- Updated Page Editor, page preview helpers, renderer, site runtime helpers,
+  search/filter pure code, and content route helpers to import pure contract
+  owners instead of runtime services.
+- Added Bun/Vitest regression coverage for pure listing source definitions and
+  the new admin boundary import graph guard.

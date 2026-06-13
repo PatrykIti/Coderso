@@ -3,12 +3,12 @@ import { describe, expect, test, vi } from "vitest";
 import {
   mapPageCollectionBlockToContentListData,
   mapPageFiltersBlockToListingFiltersData,
-  preparePageRuntimeDocument,
   sanitizePageEmbedHtml,
   type PageRuntimeDataBindingDeps,
-} from "../../../core/services/pages/pageRuntimeDataBinding";
+} from "../../../core/services/pages/pageRuntimeBindingContract";
+import { preparePageRuntimeDocument } from "../../../core/services/pages/pageRuntimeDataPreparation";
 import type { PageDocumentV2 } from "../../../core/services/pages/pageDocumentV2";
-import type { ContentListResolvedRuntimeData } from "../../../core/services/content/contentListResolver";
+import type { ContentListResolvedRuntimeData } from "../../../core/services/pages/pageRuntimeBindingContract";
 import { getDefaultFormSettings } from "../../../core/services/forms/formSettings";
 
 const resolvedCollection = (): ContentListResolvedRuntimeData => ({

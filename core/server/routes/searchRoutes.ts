@@ -8,7 +8,8 @@ import {
 } from "../../services/search/searchService";
 import { searchPublicIndex } from "../../services/search/searchIndexService";
 import { listRecentSearches, recordSearch } from "../../services/search/searchHistoryService";
-import { getSetting, type ContentRouteSetting } from "../../services/settings/settingsService";
+import { getSetting } from "../../services/settings/settingsService";
+import type { ContentRouteSetting } from "../../services/settings/settingsContracts";
 import { ApiError } from "../errorHandler";
 
 export type RouteContext = {

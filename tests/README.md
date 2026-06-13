@@ -44,6 +44,7 @@ bun run test:coverage:bun
 bun run test:coverage:bun:full
 bun run test:coverage:all
 bun --cwd core build:admin
+bun run check:admin-boundary
 bun run check:admin-bundle
 ```
 
@@ -65,6 +66,11 @@ instead of streaming Bun's full per-file text coverage table into CI logs.
 `check:admin-bundle` must run after `bun --cwd core build:admin`; it writes
 `.tmp/admin-bundle-report.json` and guards the admin SPA chunk count, HTML entry
 gzip, and initial static JS graph gzip.
+`check:admin-boundary` is source-based and can run before the build. It walks
+the admin browser import graph, including lazy route imports, and fails when
+admin-reachable code value-imports server/runtime-only modules such as DB,
+server routes, storage adapters, provider SDKs, password hashing, secret-store,
+or runtime data resolvers.
 
 ## Manual Smoke
 

@@ -1,5 +1,5 @@
 import { matchRoute, normalizePath } from "../server/router";
-import type { ContentRouteSetting } from "../services/settings/settingsService";
+import type { ContentRouteSetting } from "../services/settings/settingsContracts";
 import { compareContentRouteDetailSpecificity } from "../services/settings/contentRoutePaths";
 
 export type ContentRouteMatch = {

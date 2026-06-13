@@ -6,7 +6,8 @@
 **Category:** Architecture / Admin Build / Runtime Boundary
 **Estimated Effort:** Medium
 **Dependencies:** TASK-462
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-13
 
 ---
 
@@ -27,7 +28,7 @@ This subtask owns:
 
 ## Sub-Tasks
 
-- [ ] TASK-462-01-L01: Map admin browser import graph and server-only leaks.
+- [x] TASK-462-01-L01: Map admin browser import graph and server-only leaks.
 
 ---
 
@@ -45,3 +46,18 @@ This subtask owns:
 - `_docs/_TASKS/README.md`
 - Optional temporary audit notes if the import graph is too large to summarize
   directly in the task closeout.
+
+---
+
+## Closeout Notes
+
+- Reproduced the original admin build failure on HEAD `7e1675e8`: Rolldown
+  resolved `@azure/storage-blob` through its browser entry and failed on
+  `StorageSharedKeyCredential` from `core/services/media/storage/azure.ts`.
+- Confirmed the Azure failure was the first symptom of admin importing server
+  runtime data loaders through Page Editor preview/page runtime binding code.
+- Read-only agent audits agreed on the primary leaks: page runtime binding,
+  listing query/source execution, settings route DTO ownership, password pepper
+  status, and media storage adapters.
+- Frozen contract rejected final fixes based on Vite externals, aliases,
+  `@vite-ignore`, or browser stubs.

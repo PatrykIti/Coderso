@@ -1,4 +1,4 @@
-import type { ContentRouteSetting } from "../settings/settingsService";
+import type { ContentRouteSetting } from "../settings/settingsContracts";
 import { getMediaById } from "../media/mediaService";
 import { listPosts, type PostSummary } from "./postsService";
 import type { PostsFeedData } from "../../widgets/core/postsFeed";

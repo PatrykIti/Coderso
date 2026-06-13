@@ -1,6 +1,6 @@
 import { and, eq, ilike, notInArray, or, sql } from "drizzle-orm";
 
-import type { ContentRouteSetting } from "../settings/settingsService";
+import type { ContentRouteSetting } from "../settings/settingsContracts";
 import { buildPrefixQuery, normalizeSearchQuery, resolveSearchLimit } from "./searchService";
 
 export type PublicSearchSource = "pages" | "entries" | "posts";
@@ -153,9 +153,10 @@ const buildDefaultDeps = async (): Promise<SearchPublicIndexDeps> => {
       db
         .select({
           id: contentEntries.id,
-          title: sql<string>`coalesce(${contentEntries.title}, ${contentEntries.data} ->> 'title')`.as(
-            "title"
-          ),
+          title:
+            sql<string>`coalesce(${contentEntries.title}, ${contentEntries.data} ->> 'title')`.as(
+              "title"
+            ),
           slug: contentEntries.slug,
           updatedAt: contentEntries.updatedAt,
           typeSlug: contentTypes.slug,
@@ -270,26 +271,30 @@ export async function searchPublicIndex(
       })
     : [];
 
-  const entryItems = entryRows.map((row): PublicSearchItem => ({
-    id: row.id,
-    source: "entries",
-    title: row.title,
-    slug: row.slug,
-    href: resolveEntryHref(row.typeSlug, row.slug, row.id, routes),
-    updatedAt: resolveIso(row.updatedAt),
-    typeSlug: row.typeSlug,
-  }));
+  const entryItems = entryRows.map(
+    (row): PublicSearchItem => ({
+      id: row.id,
+      source: "entries",
+      title: row.title,
+      slug: row.slug,
+      href: resolveEntryHref(row.typeSlug, row.slug, row.id, routes),
+      updatedAt: resolveIso(row.updatedAt),
+      typeSlug: row.typeSlug,
+    })
+  );
 
   const postTypeSlug = resolvePostsRouteType(routes);
-  const postItems = postRows.map((row): PublicSearchItem => ({
-    id: row.id,
-    source: "posts",
-    title: row.title,
-    slug: row.slug,
-    href: resolveEntryHref(postTypeSlug, row.slug, row.id, routes),
-    updatedAt: resolveIso(row.updatedAt),
-    typeSlug: postTypeSlug,
-  }));
+  const postItems = postRows.map(
+    (row): PublicSearchItem => ({
+      id: row.id,
+      source: "posts",
+      title: row.title,
+      slug: row.slug,
+      href: resolveEntryHref(postTypeSlug, row.slug, row.id, routes),
+      updatedAt: resolveIso(row.updatedAt),
+      typeSlug: postTypeSlug,
+    })
+  );
 
   const pageItems: PublicSearchItem[] = pageRows.map((row) => ({
     id: row.id,

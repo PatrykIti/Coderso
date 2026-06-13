@@ -31,7 +31,7 @@ import { buildPageEditorFormPreviewBinding } from "../../../core/services/pages/
 import {
   mapPageFiltersBlockToListingFiltersData,
   type PageRuntimeCollectionBinding,
-} from "../../../core/services/pages/pageRuntimeDataBinding";
+} from "../../../core/services/pages/pageRuntimeBindingContract";
 import { normalizeListingFiltersData } from "../../../core/widgets/core/listingFilters";
 import { normalizeContentListData } from "../../../core/widgets/core/contentList";
 

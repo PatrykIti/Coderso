@@ -1,5 +1,5 @@
 import type { WidgetBlock } from "../../widgets/types";
-import type { ContentRouteSetting } from "../../services/settings/settingsService";
+import type { ContentRouteSetting } from "../../services/settings/settingsContracts";
 import { getSetting } from "../../services/settings/settingsService";
 import { matchContentRoute } from "../contentRouteMatcher";
 

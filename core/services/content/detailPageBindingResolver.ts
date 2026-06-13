@@ -4,8 +4,8 @@ import {
   type ContentListRuntimeItem,
 } from "../../widgets/core/contentList";
 import type { WidgetBlock } from "../../widgets/types";
-import type { FormRuntimeResolution } from "../forms/formRuntimeResolver";
-import type { ContentRouteSetting } from "../settings/settingsService";
+import type { FormRuntimeResolution } from "../forms/formRuntimeContract";
+import type { ContentRouteSetting } from "../settings/settingsContracts";
 import {
   readBindingPathValue,
   splitBindingPath,
