@@ -42,7 +42,7 @@ that the assistant corpus should use.
 | `/advanced/entries/:type/:id` | `docs/guide/coderso/entry-editor-and-metadata.md` |
 | `/advanced/custom-screens`, `/advanced/custom-screens/:id` | `docs/guide/coderso/custom-screens-list-and-builder.md` |
 | `/advanced/custom-screens/:id/entries`, `/advanced/custom-screens/:id/entries/:entryId` | `docs/guide/coderso/custom-screen-records-and-entry-workflow.md` |
-| `/advanced/widgets` | `docs/guide/coderso/widget-library.md` |
+| `/advanced/widgets` (hidden direct compatibility route) | `docs/guide/coderso/widget-library.md` |
 | `/advanced/widgets/templates/:id` | `docs/guide/coderso/widget-template-editor.md` |
 | `/advanced/forms`, `/advanced/forms/:id` | `docs/guide/coderso/forms-list-and-builder.md` |
 | `/advanced/forms/:id/action-runs` | `docs/guide/coderso/form-action-logs.md` |

@@ -5,7 +5,9 @@
 **Category:** Widgets / Admin IA
 **Estimated Effort:** Small
 **Dependencies:** TASK-420, TASK-458-03, TASK-460
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-13
+**Completed:** 2026-06-13
 
 ---
 
@@ -49,7 +51,7 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] TASK-461-01: Advanced Widgets entry point hide.
+- [x] TASK-461-01: Advanced Widgets entry point hide.
 
 ---
 
@@ -147,3 +149,19 @@ instead of only hiding it. That follow-up should audit:
 - widget catalog service/routes/tests,
 - assistant/operation-policy references to `widgets`,
 - docs and guide entries that still describe the old standalone surface.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-13. The default Advanced sidebar no longer shows `Widgets`.
+The `widgets` module remains in `ADVANCED_MODULE_REGISTRY`, direct
+`/advanced/widgets` route compatibility remains registered, and internal widget
+registry/Page Editor palette/runtime behavior stays unchanged.
+
+Validation passed:
+
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/advanced-modules.test.ts tests/vitest/ui/widget-library.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

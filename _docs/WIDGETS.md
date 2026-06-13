@@ -414,7 +414,8 @@ Zasady:
   `admin-list-view`, i `admin-editor-view` zalezne od realnej surface
   odpowiedzialnosci,
 - tylko jawnie dopuszczone prymitywy layoutowe moga byc wspoldzielone miedzy wszystkimi surface'ami,
-- `Advanced/Widgets` pokazuje tylko surface `widget-library`,
+- `Advanced/Widgets` is hidden from default navigation as of TASK-461; the
+  direct compatibility route still shows only surface `widget-library`,
 - `Coderso/Screens` pokazuje tylko surface `custom-screen-builder`.
 
 Uwaga:
@@ -424,7 +425,8 @@ Uwaga:
 
 ## Widget Library Admin UX
 
-`/admin/advanced/widgets` follows the shared Pages-style list contract:
+`/admin/advanced/widgets` is a hidden/direct compatibility route after
+TASK-461 and follows the shared Pages-style list contract when opened:
 - `All Items` opens by default in table view.
 - The old library rail is represented by one section dropdown in the filter bar:
   `All Items`, `Favorites`, `Templates`, `All Widgets`, `Layout`, `Content`,

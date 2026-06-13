@@ -15,7 +15,6 @@ internal screens. This reduces loading flashes and keeps cached data warm.
 - Default (enabled) Advanced modules:
   - `Engine` -> `/admin/advanced/engine`
   - `Entries` -> `/admin/advanced/entries`
-  - `Widgets` -> `/admin/advanced/widgets`
   - `Forms` -> `/admin/advanced/forms`
   - `Posts` -> `/admin/posts`
   - editor route: `/admin/posts/:id` (default `blocks` mode),
@@ -24,6 +23,9 @@ internal screens. This reduces loading flashes and keeps cached data warm.
 - Tiered catalog (v1-v3) is documented in `_docs/CODERSO_MODULES.md`.
 - Sidebar can expose future modules through feature flags passed to
   `buildDefaultNavSections(flags)` (`AdvancedFeatureFlags`).
+- Hidden compatibility routes can remain registered after their default nav
+  entry is removed. TASK-461 hides `Widgets` from the Advanced sidebar while
+  keeping `/admin/advanced/widgets` reachable for direct compatibility.
 - When an active `Solution Kit` is selected in admin UI, `AdminShell` may derive
   `AdvancedFeatureFlags` from the kit and narrow only the `Advanced` group.
 - No active solution kit means the default full `Advanced` group remains visible.

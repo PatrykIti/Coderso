@@ -6,7 +6,9 @@
 **Category:** Widgets / Admin IA
 **Estimated Effort:** Small
 **Dependencies:** TASK-420, TASK-458-03, TASK-460
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-13
+**Completed:** 2026-06-13
 
 ---
 
@@ -23,7 +25,7 @@ implementation leaf a concrete technical contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-461-01-L01: Hide Widgets from Advanced navigation.
+- [x] TASK-461-01-L01: Hide Widgets from Advanced navigation.
 
 ---
 
@@ -86,3 +88,11 @@ Error handling:
 - `_docs/_TASKS/README.md`
 - User-facing docs if they mention Advanced > Widgets.
 - Changelog on completion.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-13 through TASK-461-01-L01. This subtask only changed visible
+admin navigation and related documentation/tests. Direct route compatibility
+and widget infrastructure remain available for support/future removal planning.

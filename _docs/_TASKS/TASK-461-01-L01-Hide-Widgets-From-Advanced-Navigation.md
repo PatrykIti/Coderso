@@ -6,7 +6,9 @@
 **Category:** Widgets / Admin IA
 **Estimated Effort:** Small
 **Dependencies:** TASK-420, TASK-458-03, TASK-460-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-13
+**Completed:** 2026-06-13
 
 ---
 
@@ -100,3 +102,26 @@ Regression-test shape:
 - `_docs/_TASKS/README.md`
 - Navigation/admin guide docs that still describe Advanced > Widgets.
 - `_docs/_CHANGELOG/` entry and `_docs/_CHANGELOG/README.md` at completion.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-13.
+
+Implemented:
+
+- set `widgets.nav` to `null` in the Advanced module registry,
+- kept the `widgets` module ID and metadata in the registry,
+- kept `/advanced/widgets` route registration untouched,
+- updated Advanced navigation tests to assert hidden default nav plus retained
+  direct-route compatibility,
+- updated docs that still described Widgets as a visible Advanced navigation
+  destination.
+
+Validation passed:
+
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/advanced-modules.test.ts tests/vitest/ui/widget-library.test.tsx tests/vitest/admin/adminApp.test.tsx tests/vitest/ui/admin-shell-nav.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`

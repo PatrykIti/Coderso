@@ -21,6 +21,7 @@ test("Advanced module registry covers v1-v3 catalog", () => {
   expect(ids.has("templates")).toBe(false);
   expect(ids.has("membership-portal")).toBe(true);
   expect(ids.has("ai-kit-wizard")).toBe(true);
+  expect(ADVANCED_MODULE_REGISTRY.find((module) => module.id === "widgets")?.nav).toBeNull();
   expect(ADVANCED_MODULE_REGISTRY.find((module) => module.id === "page-templates")?.nav).toBeNull();
 
   expect(advancedModulesByTier("v1")).toHaveLength(7);
@@ -34,7 +35,6 @@ test("buildAdvancedNavItems returns stable default navigation contract", () => {
     "Engine",
     "Entries",
     "Screens",
-    "Widgets",
     "Forms",
     "Listings",
     "Filters",
@@ -61,6 +61,7 @@ test("buildAdvancedNavItems returns stable default navigation contract", () => {
   expect(items.some((item) => item.href === "/admin/advanced/commerce")).toBe(true);
   expect(items.some((item) => item.href === "/admin/advanced/popups")).toBe(true);
   expect(items.some((item) => item.href === "/admin/advanced/custom-screens")).toBe(true);
+  expect(items.some((item) => item.href === "/admin/advanced/widgets")).toBe(false);
   expect(items.some((item) => item.href === "/admin/advanced/page-templates")).toBe(false);
   expect(items.some((item) => item.href === "/admin/advanced/solution-kits")).toBe(true);
 });
@@ -143,7 +144,6 @@ test("buildDefaultNavSections narrows Advanced group for an active solution kit"
     "/admin/advanced/engine",
     "/admin/advanced/entries",
     "/admin/advanced/custom-screens",
-    "/admin/advanced/widgets",
     "/admin/advanced/forms",
     "/admin/advanced/listings",
     "/admin/advanced/booking",

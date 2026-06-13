@@ -20,7 +20,7 @@ The file name is retained for historical links; the current IA label is
 | Engine | content | stable | Yes |
 | Entries | content | stable | Yes |
 | Screens | content | preview | Yes (`Beta`) |
-| Widgets | design | stable | Yes |
+| Widgets | design | stable | No (hidden direct compatibility route after TASK-461) |
 | Templates | design | stable | No (managed inside Widgets flows) |
 | Forms | forms | stable | Yes |
 | Posts | content | stable | No (promoted to top-level Main navigation) |
@@ -168,7 +168,8 @@ const sections = buildDefaultNavSections({
 - 054-23 done: Custom Screens follow-up delivered:
   - widget registry gained surface scoping (`page-builder`, `widget-library`, `custom-screen-builder`),
   - `Screens` now uses dedicated admin screen widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) plus explicit shared layout primitives,
-  - `Advanced/Widgets` and template/page flows hide screen-only widgets,
+  - hidden direct `Advanced/Widgets` compatibility route and template/page
+    flows hide screen-only widgets,
   - custom screen responses expose derived `collection-only | dashboard | editor` capabilities,
   - builder preview and records workflow now explain incomplete setups instead of falling through to blank or confusing states.
 - 055 done: Posts module delivered:

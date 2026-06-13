@@ -156,7 +156,7 @@ afterEach(() => {
 
 test("SidebarNav renders Advanced group with canonical child links", () => {
   const html = renderSidebar(defaultNavSections, {
-    activeHref: "/admin/advanced/widgets",
+    activeHref: "/admin/advanced/forms",
   });
 
   expect(html).toContain("Coderso");
@@ -165,7 +165,7 @@ test("SidebarNav renders Advanced group with canonical child links", () => {
   expect(html).toContain("/admin/advanced/engine");
   expect(html).toContain("/admin/advanced/entries");
   expect(html).toContain("/admin/advanced/custom-screens");
-  expect(html).toContain("/admin/advanced/widgets");
+  expect(html).not.toContain("/admin/advanced/widgets");
   expect(html).toContain("/admin/advanced/forms");
   expect(html).toContain("/admin/advanced/reviews");
   expect(html).toContain("/admin/advanced/commerce");

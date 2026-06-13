@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Blocks,
   Briefcase,
   Calendar,
   ClipboardList,
@@ -135,12 +134,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
     lifecycle: "stable",
     description: "Widget library and reusable block editor experiences.",
     dependencies: [],
-    nav: {
-      href: "/admin/advanced/widgets",
-      icon: Blocks,
-      defaultEnabled: true,
-      permission: "widgets:read",
-    },
+    nav: null,
   },
   {
     id: "page-templates",

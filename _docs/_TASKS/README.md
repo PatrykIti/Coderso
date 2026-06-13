@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 110 tasks
+- **To Do:** 107 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2444 tasks
+- **Done:** 2447 tasks
 
 ---
 
@@ -88,9 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-461 | Hide Advanced Widgets Entry Point | Medium | Small | UI-only IA follow-up: hide Advanced > Widgets while keeping widget registry, Page Editor palette, route/API/cache/runtime contracts intact for now. |
-| TASK-461-01 | Hide Advanced Widgets Entry Point | Medium | Small | Technical subtask for hiding the standalone Widgets nav entry without removing the route or internal widget infrastructure. |
-| TASK-461-01-L01 | Hide Widgets From Advanced Navigation | Medium | Small | Execution leaf: set Widgets nav visibility to hidden, keep direct route compatibility, and update Advanced nav/widget-library/admin-app coverage. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
@@ -219,6 +216,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-461 | Hide Advanced Widgets Entry Point | Medium | Small | Done (2026-06-13): Advanced > Widgets hidden from default nav while direct route and widget infrastructure remain intact. |
+| TASK-461-01 | Hide Advanced Widgets Entry Point | Medium | Small | Done (2026-06-13): UI-only hide kept `/advanced/widgets`, registry metadata, Page Editor palette, and runtime contracts unchanged. |
+| TASK-461-01-L01 | Hide Widgets From Advanced Navigation | Medium | Small | Done (2026-06-13): `widgets.nav` set to null, Advanced nav tests updated, docs synchronized, targeted Vitest/lint/typecheck passed. |
 | TASK-460 | Page Templates Pages Entry Point | Medium | Small | Done (2026-06-13): Page Templates discovery moved into Pages as a `Templates` button while route/API/cache contracts stay unchanged. |
 | TASK-460-01 | Page Templates Pages Entry Point | Medium | Small | Done (2026-06-13): UI-only relocation kept `/advanced/page-templates` as the technical route and aligned shell state with Pages. |
 | TASK-460-01-L01 | Relocate Page Templates Into Pages Header | Medium | Small | Done (2026-06-13): Advanced nav item hidden, Pages header action added, breadcrumbs updated, and targeted Vitest/lint/typecheck passed. |
