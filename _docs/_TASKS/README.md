@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 107 tasks
+- **To Do:** 110 tasks
 - **In Progress:** 9 tasks
 - **Done:** 2441 tasks
 
@@ -88,6 +88,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-460 | Page Templates Pages Entry Point | Medium | Small | UI-only IA follow-up: expose Page Templates from Pages as a `Templates` button next to `New`, hide it from Advanced navigation, and keep the existing route/API/cache contracts unchanged. |
+| TASK-460-01 | Page Templates Pages Entry Point | Medium | Small | Technical subtask for the UI-only relocation; keeps `/advanced/page-templates` and existing Page Templates contracts stable. |
+| TASK-460-01-L01 | Relocate Page Templates Into Pages Header | Medium | Small | Execution leaf: hide Page Templates from Advanced nav, add the Pages header `Templates` button, align shell/breadcrumb context, and update Vitest coverage. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
