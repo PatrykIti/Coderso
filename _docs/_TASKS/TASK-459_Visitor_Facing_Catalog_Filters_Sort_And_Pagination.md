@@ -35,28 +35,26 @@ and allowlist validation (`core/services/search/filterContract.ts:1,
 (`core/widgets/core/listingFilters.tsx:17-47`) and a fetch-swap/pushState
 client script (`core/widgets/core/listingRuntimeScript.ts:291-336`). The v2
 collection block already applies `lq.*` URL overrides end to end:
-`publicSite.tsx` threads `url.searchParams` into every render and
-`contentListResolver` applies visitor filters/sort/page on the saved query
-(`core/services/pages/pageRuntimeDataBinding.ts:234-238`;
-`core/services/content/contentListResolver.ts:807-830`).
+`publicSite.tsx` threads `url.searchParams` into every render, the server-only
+`pageRuntimeDataPreparation.ts` passes them into collection bindings, and
+`contentListResolver` applies visitor filters/sort/page on the saved query.
 
 What is missing is almost entirely the VISITOR-FACING V2 SURFACE and scale.
 Known traps this family must encode (all verified):
 
-- Assistant blueprints already emit `filters` sections whose collection
-  block carries `mode: "filters"`, `facets`, `autoApply`, `showSearch`
-  (`core/services/assistant/blueprints/blueprintPageSectionComposer.ts:88-113`)
-  — and `pageRuntimeDataBinding.ts:200-224` SILENTLY DROPS all of them (it
-  reads only contentTypeId/queryId/templateId/limit), so assistant-built
-  filter pages render as plain listings.
-- Pagination is hard-forced to `"none"` on v2
-  (`pageRuntimeDataBinding.ts:218-220`), so `lq.*.__page` works server-side
-  but no pager ever renders.
-- Editor/runtime limit clamp mismatch: schema + floating panel allow 1..50
-  (`pageDocumentV2.ts:706`, `pageEditorControlRegistry.ts:722`) but runtime
-  clamps 1..24 (`pageRuntimeDataBinding.ts:204`,
-  `contentList.tsx:255` `contentListLimitMax = 24`) — 25..50 silently
-  truncates.
+- Historical TASK-459 starting state: assistant blueprints emitted filter-like
+  collection props, but the v2 collection mapper only owned collection data.
+  Current ownership is split: `pageRuntimeBindingContract.ts` maps the real
+  `filters` block props and `pageRuntimeDataPreparation.ts` resolves the
+  server-side filter binding.
+- Historical TASK-459 starting state: pagination defaulted to `"none"` on v2,
+  so `lq.*.__page` worked server-side but no pager rendered. Current owner is
+  `mapPageCollectionBlockToContentListData` in
+  `pageRuntimeBindingContract.ts`, which reads `paginationMode` and `pageSize`.
+- Historical TASK-459 starting state: editor/runtime limit clamps drifted.
+  Current owner is `PAGE_COLLECTION_LIMIT_CLAMP` in `pageDocumentV2.ts`, backed
+  by `contentListLimitMax` and consumed by
+  `pageRuntimeBindingContract.ts`.
 - Facet counts are computed from the CURRENT PAGE SLICE only
   (`listingRuntimeService.ts:128-138` over `execution.rows`), so counts are
   already wrong beyond one page.

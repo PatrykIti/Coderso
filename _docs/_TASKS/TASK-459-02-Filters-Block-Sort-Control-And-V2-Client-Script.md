@@ -36,16 +36,16 @@ Verified starting state (reuse, do not rebuild):
   path creates a runtime-script registry and renders scripts (`:287-321`).
   This leaf adds the v2 runtime-script emission seam.
 - The server already applies `lq.*` overrides to the v2 collection block end
-  to end (`pageRuntimeDataBinding.ts:234-238`,
-  `contentListResolver.ts:807-830`, `filterEngine.ts:324-427`) — only the
-  control surface + script are missing.
+  to end through `pageRuntimeDataPreparation.ts`, `contentListResolver.ts`,
+  and `filterEngine.ts` — only the control surface + script were missing at
+  this leaf's start.
 - Sort: `lq.<id>.__sort=field:dir` is parsed and validated
   (`filterEngine.ts:374-383` region; sort facet kind with sortOptions in
   `filterContract.ts:29-34`), but no v2 surface emits it.
-- Assistant blueprints emit `mode:'filters'` collection props that the
-  runtime drops (`blueprintPageSectionComposer.ts:88-113` vs
-  `pageRuntimeDataBinding.ts:200-224`) — this leaf implements the frozen
-  normalization decision.
+- Assistant blueprints emitted legacy `mode:'filters'` collection props
+  (`blueprintPageSectionComposer.ts:88-113`); this leaf implements the frozen
+  normalization decision and the current `filters` block mapping owner is
+  `pageRuntimeBindingContract.ts`.
 
 Deliverables:
 

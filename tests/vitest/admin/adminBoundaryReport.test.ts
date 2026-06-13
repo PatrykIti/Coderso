@@ -87,4 +87,20 @@ describe("analyzeAdminBoundary", () => {
     expect(report.violations[0]?.reason).toBe("Azure storage SDK");
     expect(report.violations[0]?.specifier).toBe("@azure/storage-blob");
   });
+
+  test("rejects assistant provider loaders in browser-reachable files", async () => {
+    const repoRoot = await createRepo({
+      "core/admin/main.tsx":
+        'import { createOpenAiProvider } from "../services/assistant/providers/openAiProvider";',
+      "core/services/assistant/providers/openAiProvider.ts":
+        "export const createOpenAiProvider = () => null;",
+    });
+
+    const report = analyzeAdminBoundary({ repoRoot });
+
+    expect(report.violations[0]?.reason).toBe("assistant provider loaders");
+    expect(report.violations[0]?.resolvedPath).toBe(
+      "core/services/assistant/providers/openAiProvider.ts"
+    );
+  });
 });

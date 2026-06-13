@@ -17,18 +17,16 @@ Make v2 listings pageable and honest, and stop tiles from linking into 404s.
 
 Verified starting state:
 
-- Pagination is DISABLED by construction on v2:
-  `mapPageCollectionBlockToContentListData` hard-codes
-  `pagination.mode: "none"` (`pageRuntimeDataBinding.ts:218-220`), even
-  though `lq.<id>.__page` maps to offset server-side
-  (`filterEngine.ts` page->offset) and the resolver computes
-  page/totalPages/prev/next meta (`contentListResolver.ts:824-842`). The
-  widget renders only prev/next anchors even in paged mode
-  (`contentList.tsx:1025-1076`) — no numbered pager, no totals.
-- Clamp mismatch: schema + editor clamp limit 1..50 (`pageDocumentV2.ts:706,
-  1679`, `pageEditorControlRegistry.ts:722`) vs runtime 1..24
-  (`pageRuntimeDataBinding.ts:204`, `contentList.tsx:255`
-  `contentListLimitMax = 24`) — values 25..50 silently truncate.
+- Historical starting state: v2 collection pagination defaulted to `"none"`
+  and did not expose the saved query page state even though
+  `lq.<id>.__page` mapped to offset server-side (`filterEngine.ts`) and the
+  resolver computed page/totalPages/prev/next meta. Current ownership is
+  `mapPageCollectionBlockToContentListData` in
+  `pageRuntimeBindingContract.ts`, plus the shared content-list pager render.
+- Historical starting state: schema/editor/runtime clamps drifted. Current
+  ownership is `PAGE_COLLECTION_LIMIT_CLAMP` in `pageDocumentV2.ts`, backed by
+  `contentListLimitMax = 24` and consumed by
+  `pageRuntimeBindingContract.ts`.
 - Listing template style config `{ columns 1-6, gap, cardVariant }` and
   `emptyState` are normalized and stored
   (`core/services/content/listingTemplateConfig.ts:1-96`) but never
@@ -109,7 +107,7 @@ Deliverables (per the TASK-459-01 frozen contract):
 ## Implementation Pseudocode
 
 ```ts
-// pageRuntimeDataBinding.ts
+// pageRuntimeBindingContract.ts
 const pagination = normalizeCollectionPagination(block.props.pagination);
 // { mode: "none" } default; pageSize clamped to the single contract bound
 return { ...contentListDefaults, pagination, ... };

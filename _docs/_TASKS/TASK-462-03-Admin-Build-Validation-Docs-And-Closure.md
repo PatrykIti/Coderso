@@ -120,5 +120,9 @@ Error handling:
   scanned.
 - Full validation passed: `bun run test:bun` reported 1128 pass, 1 skip,
   0 fail; `bun run test:vitest` reported 671 files and 4085 tests passed.
+- Final drift pass reported two low-severity items; both were resolved by
+  adding assistant provider loader coverage to `check:admin-boundary` and
+  updating active TASK-459 references to the new page runtime contract/preparer
+  split.
 - No Vite/Rolldown provider externals, aliases, `@vite-ignore`, or browser
   stubs were added.

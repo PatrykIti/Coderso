@@ -25,9 +25,11 @@ to record (each anchored to verified code):
 2. **Honor, do not drop, the assistant props.** Blueprints already emit
    collection blocks with `mode: "filters"`, `facets`, `autoApply`,
    `showSearch`, `applyLabel`
-   (`blueprintPageSectionComposer.ts:88-113`) which
-   `mapPageCollectionBlockToContentListData` silently ignores
-   (`pageRuntimeDataBinding.ts:200-224`). The contract must define the
+   (`blueprintPageSectionComposer.ts:88-113`). Current ownership is split:
+   `mapPageCollectionBlockToContentListData` owns collection data, while
+   `mapPageFiltersBlockToListingFiltersData` in
+   `pageRuntimeBindingContract.ts` owns the real `filters` block shape. The
+   contract must define the
    normalization: either (preferred) a document-normalization step that
    rewrites legacy `mode:'filters'` collection props into the new filters
    block + plain collection pair, or runtime honoring of `mode:'filters'`
@@ -46,13 +48,13 @@ to record (each anchored to verified code):
 4. **Collection pagination props.** Define block props
    `pagination: { mode: "none" | "paged" | "load-more", pageSize }`
    (the widget contract already models these modes,
-   `contentList.tsx:166-174, 302`) replacing the hard-forced `"none"`
-   (`pageRuntimeDataBinding.ts:218-220`), plus the numbered-pager UX (page
+   `contentList.tsx:166-174, 302`) replacing the historical hard-forced
+   `"none"` behavior in the v2 collection mapper, plus the numbered-pager UX (page
    numbers + prev/next + total count — today only prev/next anchors exist,
    `contentList.tsx:1025-1076`). Resolve the clamp story: schema/editor
-   1..50 vs runtime 1..24 (`pageDocumentV2.ts:706`,
-   `pageEditorControlRegistry.ts:722` vs `pageRuntimeDataBinding.ts:204`,
-   `contentListLimitMax = 24`) — pick the single number and where it is
+   1..50 vs runtime 1..24 (`pageDocumentV2.ts`,
+   editor collection controls, and `contentListLimitMax = 24`) — pick the
+   single number and where it is
    owned.
 5. **Truthful counts strategy.** Facet counts currently iterate the current
    page slice (`listingRuntimeService.ts:128-138`); totals exist on the

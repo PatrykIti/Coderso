@@ -211,6 +211,10 @@ core/admin/** or admin-imported pure helpers
   provider SDK, password hashing, secret-store, and runtime resolver seams.
 - `bun --cwd core build:admin` now passes without `@vite-ignore`, provider
   externals, browser aliases, or browser stubs for Azure/S3/argon2/postgres.
+- Final read-only drift pass found two low-severity cleanup items and both were
+  resolved: the boundary guard now rejects assistant provider loader paths, and
+  active TASK-459 docs no longer cite the removed `pageRuntimeDataBinding.ts`
+  module.
 
 ## Validation Evidence
 
@@ -224,3 +228,5 @@ core/admin/** or admin-imported pure helpers
 - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminBoundaryReport.test.ts tests/vitest/admin/adminBundleReport.test.ts tests/vitest/search/filterEngine.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-renderer-v2.test.tsx`
 - `bun run test:bun` - 1128 pass, 1 skip, 0 fail.
 - `bun run test:vitest` - 671 files passed, 4085 tests passed.
+- Post-drift targeted validation: `bun run check:admin-boundary` and
+  `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminBoundaryReport.test.ts`.

@@ -26,12 +26,16 @@
 - Split password pepper presence checks from argon2-backed password hashing.
 - Added `bun run check:admin-boundary` to reject admin-reachable value imports
   of server/runtime-only modules and provider SDKs.
+- Extended the boundary guard to cover assistant provider loader paths after
+  final drift review.
 
 ### Documentation
 
 - Documented the admin browser/runtime boundary in `_docs/ARCHITECTURE.md`.
 - Documented `check:admin-boundary` in `tests/README.md`.
 - Closed the TASK-462 task family and synchronized the task board.
+- Updated active TASK-459 task contracts to reference the new page runtime
+  contract/preparer split instead of the removed mixed binding module.
 
 ## Validation
 
@@ -45,6 +49,8 @@
 - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminBoundaryReport.test.ts tests/vitest/admin/adminBundleReport.test.ts tests/vitest/search/filterEngine.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-renderer-v2.test.tsx`
 - `bun run test:bun` - 1128 pass, 1 skip, 0 fail.
 - `bun run test:vitest` - 671 files passed, 4085 tests passed.
+- Post-drift targeted validation: `bun run check:admin-boundary` and
+  `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/admin/adminBoundaryReport.test.ts`.
 
 ## Board
 

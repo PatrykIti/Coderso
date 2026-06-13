@@ -101,6 +101,7 @@ const defaultForbiddenPathRules: AdminBoundaryForbiddenPathRule[] = [
   { label: "secret storage service", path: "core/services/security/secretStore.ts", exact: true },
   { label: "password hashing service", path: "core/services/auth/password.ts", exact: true },
   { label: "password pepper service", path: "core/services/auth/passwordPepper.ts", exact: true },
+  { label: "assistant provider loaders", path: "core/services/assistant/providers/" },
 ];
 
 const defaultForbiddenPackageRules: AdminBoundaryForbiddenPackageRule[] = [
