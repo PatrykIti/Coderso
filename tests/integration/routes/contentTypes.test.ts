@@ -406,6 +406,7 @@ testIfDbWithOptions(
         title: "Workspace catalog page",
         slug: `workspace-catalog-${randomUUID()}`,
         data: {
+          schemaVersion: 2,
           settings: {
             collectionLink: {
               contentTypeId: type.id,
@@ -415,7 +416,7 @@ testIfDbWithOptions(
               listingTemplateId: listingTemplate.id,
             },
           },
-          blocks: [],
+          sections: [],
         },
       });
       createdPageIds.push(listPage.id);
@@ -424,6 +425,7 @@ testIfDbWithOptions(
         title: "Workspace supporting page",
         slug: `workspace-supporting-${randomUUID()}`,
         data: {
+          schemaVersion: 2,
           settings: {
             collectionLink: {
               contentTypeId: type.id,
@@ -431,7 +433,7 @@ testIfDbWithOptions(
               compositionKey: "catalog-support",
             },
           },
-          blocks: [],
+          sections: [],
         },
       });
       createdPageIds.push(supportingPage.id);
@@ -638,6 +640,7 @@ testIfDbWithOptions(
           title: `Ambiguous catalog ${suffix}`,
           slug: `ambiguous-catalog-${suffix}-${randomUUID()}`,
           data: {
+            schemaVersion: 2,
             settings: {
               collectionLink: {
                 contentTypeId: type.id,
@@ -645,7 +648,7 @@ testIfDbWithOptions(
                 compositionKey: `catalog-${suffix}`,
               },
             },
-            blocks: [],
+            sections: [],
           },
         });
         createdPageIds.push(page.id);

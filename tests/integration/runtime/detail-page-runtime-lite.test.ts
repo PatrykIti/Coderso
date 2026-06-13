@@ -224,6 +224,7 @@ bunMock?.module("../../../core/services/content/detailPageRuntimeResolver", () =
 bunMock?.module("../../../core/services/pages/pageService", () => ({
   getPageBySlug: async () => null,
   getPage: async () => null,
+  getPageSlugsByIds: async () => new Map<string, string>(),
 }));
 
 bunMock?.module("../../../core/services/navigation/navigationRuntimeResolver", () => ({

@@ -137,17 +137,22 @@ vi.mock("@/components/ui/button", () => ({
     children,
     onClick,
     disabled,
+    asChild,
     ...props
   }: {
     children: React.ReactNode;
     onClick?: () => void;
     disabled?: boolean;
+    asChild?: boolean;
     [key: string]: unknown;
-  }) => (
-    <button type="button" onClick={onClick} disabled={disabled} {...props}>
-      {children}
-    </button>
-  ),
+  }) =>
+    asChild ? (
+      <>{children}</>
+    ) : (
+      <button type="button" onClick={onClick} disabled={disabled} {...props}>
+        {children}
+      </button>
+    ),
 }));
 
 vi.mock("@/components/ui/dialog", () => ({

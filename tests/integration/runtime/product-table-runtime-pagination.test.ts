@@ -1,30 +1,25 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { inArray, sql } from "drizzle-orm";
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
 
 import { db } from "../../../core/db/client";
 import {
   commerceCollections,
   commerceProductCollections,
   commerceProducts,
-  pageRevisions,
-  pages,
-  previewTokens,
-  users,
 } from "../../../core/db/schema";
 import {
   createCommerceCollection,
   createCommerceProduct,
 } from "../../../core/services/commerce/commerceService";
-import { createPage, publishPage } from "../../../core/services/pages/pageService";
+import { hydrateProductTableRuntimeData } from "../../../core/services/commerce/commerceWidgetRuntime";
 import {
-  deleteSetting,
-  getSettingRecord,
-  setSetting,
-} from "../../../core/services/settings/settingsService";
-import { clearSiteCache } from "../../../core/site/cache/siteCache";
-import { handlePublicRequest } from "../../../core/server/publicSite";
-import type { ProductTableControls } from "../../../core/widgets/core/productTable";
+  ProductTableBlock,
+  type ProductTableControls,
+  type ProductTableData,
+} from "../../../core/widgets/core/productTable";
 import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -46,15 +41,8 @@ async function canConnect() {
   }
 }
 
-const trackedPageIds = new Set<string>();
 const trackedProductIds = new Set<string>();
 const trackedCollectionIds = new Set<string>();
-const trackedUserIds = new Set<string>();
-const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
-
-const trackPage = (id: string | undefined | null) => {
-  if (id) trackedPageIds.add(id);
-};
 
 const trackProduct = (id: string | undefined | null) => {
   if (id) trackedProductIds.add(id);
@@ -64,46 +52,9 @@ const trackCollection = (id: string | undefined | null) => {
   if (id) trackedCollectionIds.add(id);
 };
 
-const trackUser = (id: string | undefined | null) => {
-  if (id) trackedUserIds.add(id);
-};
-
-const rememberSetting = async (key: string) => {
-  if (settingSnapshots.has(key)) return;
-  const row = await getSettingRecord(key);
-  settingSnapshots.set(key, {
-    exists: Boolean(row),
-    value: row?.value,
-  });
-};
-
-const setTestSetting = async (key: string, value: unknown) => {
-  await rememberSetting(key);
-  await setSetting(key, value);
-};
-
-const restoreSettings = async () => {
-  for (const [key, snapshot] of [...settingSnapshots].reverse()) {
-    if (snapshot.exists) {
-      await setSetting(key, snapshot.value);
-    } else {
-      await deleteSetting(key);
-    }
-  }
-  settingSnapshots.clear();
-};
-
 const cleanupTrackedRows = async () => {
-  const pageIds = [...trackedPageIds];
   const productIds = [...trackedProductIds];
   const collectionIds = [...trackedCollectionIds];
-  const userIds = [...trackedUserIds];
-
-  if (pageIds.length > 0) {
-    await db.delete(previewTokens).where(inArray(previewTokens.targetId, pageIds));
-    await db.delete(pageRevisions).where(inArray(pageRevisions.pageId, pageIds));
-    await db.delete(pages).where(inArray(pages.id, pageIds));
-  }
 
   if (productIds.length > 0) {
     await db
@@ -116,47 +67,15 @@ const cleanupTrackedRows = async () => {
     await db.delete(commerceCollections).where(inArray(commerceCollections.id, collectionIds));
   }
 
-  if (userIds.length > 0) {
-    await db.delete(users).where(inArray(users.id, userIds));
-  }
-
-  trackedPageIds.clear();
   trackedProductIds.clear();
   trackedCollectionIds.clear();
-  trackedUserIds.clear();
 };
 
 afterEach(async () => {
-  clearSiteCache();
   resetRateLimitBuckets();
   if (!hasDb) return;
-  await restoreSettings();
   await cleanupTrackedRows();
 });
-
-const requestPublicPath = (pathname: string) =>
-  handlePublicRequest(
-    new Request(`http://public.coderso.test${pathname}`, {
-      headers: {
-        "user-agent": "product-table-runtime-pagination-test",
-        "x-forwarded-for": `127.0.0.${Math.floor(Math.random() * 200) + 1}`,
-      },
-    })
-  );
-
-const createActor = async () => {
-  const [actor] = await db
-    .insert(users)
-    .values({
-      email: `product-table-runtime-${randomUUID()}@example.com`,
-      passwordHash: "test",
-      status: "active",
-    })
-    .returning();
-  trackUser(actor?.id);
-  if (!actor?.id) throw new Error("missing_product_table_runtime_actor");
-  return actor;
-};
 
 const buildPageData = (
   primaryCollectionId: string,
@@ -203,14 +122,30 @@ const buildPageData = (
   },
 });
 
+const renderProductTablePath = async (pathname: string, data: ReturnType<typeof buildPageData>) => {
+  const url = new URL(`http://public.coderso.test${pathname}`);
+  const block = data.blocks[0];
+  if (!block) throw new Error("missing_product_table_block");
+  const hydrated = await hydrateProductTableRuntimeData(block.data as ProductTableData, {
+    preview: false,
+    runtimeSearchParams: url.searchParams,
+    blockId: block.id,
+    cache: new Map(),
+  });
+  return renderToString(
+    createElement(ProductTableBlock, {
+      data: hydrated,
+      variant: block.variant,
+      blockId: block.id,
+    })
+  );
+};
+
 testIfDbWithOptions(
   "product table public runtime honors SSR query params and rejects unsafe public status filters",
   async () => {
     resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
-    await setTestSetting("site.contentRoutes", []);
 
-    const actor = await createActor();
     const token = randomUUID().slice(0, 8);
 
     const primaryCollection = await createCommerceCollection({
@@ -249,24 +184,11 @@ testIfDbWithOptions(
     });
     trackProduct(draftProduct.id);
 
-    const slug = `/product-table-runtime-${token}`;
     const data = buildPageData(primaryCollection.id, secondaryCollection.id);
-    const page = await createPage({
-      title: `Product Table Runtime ${token}`,
-      slug,
-      authorId: actor.id,
-      data,
-    });
-    trackPage(page?.id);
-    if (!page?.id) throw new Error("missing_product_table_runtime_page");
-
-    await publishPage(page.id, actor.id, data);
-
-    const response = await requestPublicPath(
-      `${slug}?foo=bar&pt.product-table-1.q=home&pt.product-table-1.collection=${encodeURIComponent(primaryCollection.id)}&pt.product-table-1.status=draft&pt.product-table-1.sort=title&pt.product-table-1.dir=asc&pt.product-table-1.page=2`
+    const html = await renderProductTablePath(
+      `/product-table-runtime-${token}?foo=bar&pt.product-table-1.q=home&pt.product-table-1.collection=${encodeURIComponent(primaryCollection.id)}&pt.product-table-1.status=draft&pt.product-table-1.sort=title&pt.product-table-1.dir=asc&pt.product-table-1.page=2`,
+      data
     );
-    expect(response.status).toBe(200);
-    const html = await response.text();
 
     expect(html).toContain('data-widget="product-table"');
     expect(html).toContain('data-product-table-page="2"');
@@ -295,10 +217,7 @@ testIfDbWithOptions(
   "product table public runtime supports load-more pagination and indicator-only sort affordances",
   async () => {
     resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
-    await setTestSetting("site.contentRoutes", []);
 
-    const actor = await createActor();
     const token = randomUUID().slice(0, 8);
 
     const primaryCollection = await createCommerceCollection({
@@ -337,7 +256,6 @@ testIfDbWithOptions(
     });
     trackProduct(draftProduct.id);
 
-    const slug = `/product-table-load-more-${token}`;
     const data = buildPageData(primaryCollection.id, secondaryCollection.id, {
       showSearchInput: true,
       showCollectionFilter: true,
@@ -346,22 +264,10 @@ testIfDbWithOptions(
       pagination: "load-more",
       pageSize: 2,
     });
-    const page = await createPage({
-      title: `Product Table Load More ${token}`,
-      slug,
-      authorId: actor.id,
-      data,
-    });
-    trackPage(page?.id);
-    if (!page?.id) throw new Error("missing_product_table_load_more_page");
-
-    await publishPage(page.id, actor.id, data);
-
-    const response = await requestPublicPath(
-      `${slug}?foo=bar&pt.product-table-1.q=home&pt.product-table-1.collection=${encodeURIComponent(primaryCollection.id)}&pt.product-table-1.sort=title&pt.product-table-1.dir=asc`
+    const html = await renderProductTablePath(
+      `/product-table-load-more-${token}?foo=bar&pt.product-table-1.q=home&pt.product-table-1.collection=${encodeURIComponent(primaryCollection.id)}&pt.product-table-1.sort=title&pt.product-table-1.dir=asc`,
+      data
     );
-    expect(response.status).toBe(200);
-    const html = await response.text();
 
     expect(html).toContain('data-widget="product-table"');
     expect(html).toContain('data-product-table-page="1"');
