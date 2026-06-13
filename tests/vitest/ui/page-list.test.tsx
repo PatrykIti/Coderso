@@ -9,8 +9,11 @@ test("PageListPage renders header and table", () => {
   const html = renderAdminUi(<PageListPage />);
 
   expect(html).toContain("Pages");
+  expect(html).toContain("Templates");
   expect(html).toContain("New");
   expect(html).toContain("Loading pages");
+  expect(html).toContain('href="/admin/advanced/page-templates"');
+  expect(html.indexOf("Templates")).toBeLessThan(html.indexOf("New"));
 });
 
 const createLocalStorage = () => {

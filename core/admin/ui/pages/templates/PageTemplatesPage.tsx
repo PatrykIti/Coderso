@@ -131,8 +131,12 @@ export function PageTemplatesPage() {
 
   return (
     <AdminShell
-      activeHref="/admin/advanced/page-templates"
-      breadcrumbs={["Coderso", "Page Templates"]}
+      activeHref="/admin/pages"
+      breadcrumbs={[
+        { label: "Content" },
+        { label: "Pages", href: "/pages" },
+        { label: "Templates" },
+      ]}
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <PageHeader

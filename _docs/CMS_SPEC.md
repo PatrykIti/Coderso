@@ -97,9 +97,11 @@ Przechowywanie:
   `sections[]` documents stored in `page_templates`, authored with the shared
   Page Editor v2 surface at `/advanced/page-templates`, previewed through
   `type=page-template` tokens, and inserted into pages by instantiating
-  sections with fresh ids. The legacy Advanced Widgets widget-template editor,
-  its routes, preview target, and cache keys are deleted; the Widget Library
-  is a core-widget catalog only.
+  sections with fresh ids. TASK-460 keeps `/advanced/page-templates` as the
+  technical admin route but exposes the visible entry point from the Pages list
+  header. The legacy Advanced Widgets widget-template editor, its routes,
+  preview target, and cache keys are deleted; the Widget Library is a
+  core-widget catalog only.
 
 ---
 

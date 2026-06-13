@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 110 tasks
+- **To Do:** 107 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2441 tasks
+- **Done:** 2444 tasks
 
 ---
 
@@ -88,9 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-460 | Page Templates Pages Entry Point | Medium | Small | UI-only IA follow-up: expose Page Templates from Pages as a `Templates` button next to `New`, hide it from Advanced navigation, and keep the existing route/API/cache contracts unchanged. |
-| TASK-460-01 | Page Templates Pages Entry Point | Medium | Small | Technical subtask for the UI-only relocation; keeps `/advanced/page-templates` and existing Page Templates contracts stable. |
-| TASK-460-01-L01 | Relocate Page Templates Into Pages Header | Medium | Small | Execution leaf: hide Page Templates from Advanced nav, add the Pages header `Templates` button, align shell/breadcrumb context, and update Vitest coverage. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
@@ -219,6 +216,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-460 | Page Templates Pages Entry Point | Medium | Small | Done (2026-06-13): Page Templates discovery moved into Pages as a `Templates` button while route/API/cache contracts stay unchanged. |
+| TASK-460-01 | Page Templates Pages Entry Point | Medium | Small | Done (2026-06-13): UI-only relocation kept `/advanced/page-templates` as the technical route and aligned shell state with Pages. |
+| TASK-460-01-L01 | Relocate Page Templates Into Pages Header | Medium | Small | Done (2026-06-13): Advanced nav item hidden, Pages header action added, breadcrumbs updated, and targeted Vitest/lint/typecheck passed. |
 | TASK-458-01 | Site Shell Relocation And Settings Removal | High | Medium | Done (2026-06-13): Site shell dialog moved to Menus, Settings shell copy/docs/test drift fixed, and scoped route/admin coverage passed. |
 | TASK-458-02 | Menu Appearance Model And Shell Css Bridge | High | Large | Done (2026-06-13): menus.settings appearance model, fail-closed shell CSS bridge, migrations, docs, and validation lanes are complete. |
 | TASK-458-03 | Menu Design Editor Canvas And Restricted Palette | High | Large | Done (2026-06-13): /menus/:id/design route, optional-preview host support, restricted palette, menu canvas, appearance panel, and route coverage are complete. |

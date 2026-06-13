@@ -6,7 +6,9 @@
 **Category:** Pages / Templates / Admin IA
 **Estimated Effort:** Small
 **Dependencies:** TASK-420, TASK-460-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-13
+**Completed:** 2026-06-13
 
 ---
 
@@ -137,3 +139,26 @@ Regression-test shape:
   mentions template entry points.
 - Page Templates guide docs if they mention Advanced navigation.
 - `_docs/_CHANGELOG/` entry and `_docs/_CHANGELOG/README.md` at completion.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-13.
+
+Implemented:
+
+- hid Page Templates from the default Advanced sidebar by keeping the registry
+  module but removing its visible nav config,
+- added a `Templates` action to the Pages header before `New`,
+- kept `Templates` as a navigation-only affordance through `AdminLink`,
+- changed the Page Templates shell active state/breadcrumbs to flow through
+  Pages,
+- preserved `/advanced/page-templates` and `/advanced/page-templates/:id` as
+  the existing route family.
+
+Validation passed:
+
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-list.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/admin/advanced-modules.test.ts tests/vitest/admin/adminPrefetch.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`

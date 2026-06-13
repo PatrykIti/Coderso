@@ -81,6 +81,8 @@ test(
     expect(html).toContain("Page Templates");
     expect(html).toContain("Reusable Page v2 section stacks");
     expect(html).toContain("New template");
+    expect(html).toContain('href="/admin/pages"');
+    expect(html).toContain('aria-current="page">Templates');
     expect(html).toContain('data-page-template-row="tpl-1"');
     expect(html).toContain("Landing stack");
     expect(html).toContain("landing-stack");

@@ -8,7 +8,6 @@ import {
   Filter,
   Layers,
   LayoutGrid,
-  LayoutTemplate,
   Megaphone,
   Menu,
   Search,
@@ -151,12 +150,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
     lifecycle: "stable",
     description: "Reusable Page v2 section templates authored with the Page Editor.",
     dependencies: [],
-    nav: {
-      href: "/admin/advanced/page-templates",
-      icon: LayoutTemplate,
-      defaultEnabled: true,
-      permission: "content:read",
-    },
+    nav: null,
   },
   {
     id: "forms",

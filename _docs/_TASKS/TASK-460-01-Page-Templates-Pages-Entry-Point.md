@@ -6,7 +6,9 @@
 **Category:** Pages / Templates / Admin IA
 **Estimated Effort:** Small
 **Dependencies:** TASK-420, TASK-460
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-13
+**Completed:** 2026-06-13
 
 ---
 
@@ -23,7 +25,7 @@ service, cache, API, and data model untouched.
 
 ## Sub-Tasks
 
-- [ ] TASK-460-01-L01: Relocate Page Templates into the Pages header.
+- [x] TASK-460-01-L01: Relocate Page Templates into the Pages header.
 
 ---
 
@@ -96,3 +98,11 @@ Error handling:
 - `_docs/_TASKS/README.md`
 - User-facing Page Templates/Pages docs if they mention Advanced navigation.
 - `_docs/_CHANGELOG/` entry and `_docs/_CHANGELOG/README.md` at completion.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-13 via TASK-460-01-L01. The subtask kept the implementation
+inside admin UI/navigation and documentation. No backend route, API, cache key,
+database, or public runtime behavior changed.

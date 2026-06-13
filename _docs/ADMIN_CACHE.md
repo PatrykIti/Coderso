@@ -353,6 +353,8 @@ Clients update caches and broadcast events on:
   `invalidate` for the list and the detail key.
 - The list page (`/advanced/page-templates`) hydrates from cache, revalidates
   in the background, and subscribes to `pageTemplates:list` cache-bus events.
+  TASK-460 moves the visible entry point to the Pages list header while keeping
+  this technical route and cache ownership unchanged.
 - The editor (`/advanced/page-templates/:id`) is the shared Page Editor v2
   surface bound through the editor host: it hydrates from
   `pageTemplates:detail:<id>`, revalidates via cache-bus events, and keeps

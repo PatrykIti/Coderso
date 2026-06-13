@@ -1250,8 +1250,10 @@ Per `_docs/ADMIN_CACHE.md` (TASK-420-03 updates that doc +
 - Admin SPA routes `/advanced/page-templates` (list) and
   `/advanced/page-templates/:id` (editor) register through the shared
   `adminPaths` / `AdminLink` / `prefetchAdminRoute` helpers; prefetch warms
-  `pageTemplates:list` with `{ force: false }` only. Final sidebar placement
-  label must name "Page Templates" explicitly (TASK-420-03 closes IA).
+  `pageTemplates:list` with `{ force: false }` only. TASK-460 keeps these
+  technical routes stable but moves the visible entry point into the Pages list
+  header as `Templates`; the Page Templates shell uses Pages-oriented active
+  navigation and breadcrumbs.
 - Deleted with the old surface: `widgetTemplates:list`,
   `widgetTemplates:detail:<id>`, `widgetTemplateCategories:list` keys, their
   cached clients, and the `/advanced/widgets/templates/:id` prefetch/route

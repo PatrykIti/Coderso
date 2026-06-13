@@ -5,7 +5,9 @@
 **Category:** Pages / Templates / Admin IA
 **Estimated Effort:** Small
 **Dependencies:** TASK-420
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-13
+**Completed:** 2026-06-13
 
 ---
 
@@ -45,7 +47,7 @@ Out of scope:
 
 ## Sub-Tasks
 
-- [ ] TASK-460-01: Page Templates Pages entry point UI relocation.
+- [x] TASK-460-01: Page Templates Pages entry point UI relocation.
 
 ---
 
@@ -163,3 +165,19 @@ Regression-test shape:
   Advanced navigation.
 - `_docs/_CHANGELOG/` entry and `_docs/_CHANGELOG/README.md` when the
   implementation is completed.
+
+---
+
+## Completion Notes
+
+Completed 2026-06-13. The visible Page Templates entry point now lives on the
+Pages list as a `Templates` action before `New`; the Advanced sidebar no longer
+shows Page Templates, and the Page Templates surface uses Pages-oriented shell
+state/breadcrumbs. Existing `/advanced/page-templates` routes, admin API,
+cache keys, and Page Templates data contracts remain unchanged.
+
+Validation passed:
+
+- `./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-list.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/admin/advanced-modules.test.ts tests/vitest/admin/adminPrefetch.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
