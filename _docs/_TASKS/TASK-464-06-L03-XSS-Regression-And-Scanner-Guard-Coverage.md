@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Security Tests
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-06-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -21,13 +22,13 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Add tests for script tags and event handler payloads.
-- [ ] Add tests for `javascript:` and disallowed data URL payloads.
-- [ ] Add tests for CSS/style payloads such as `url(javascript:)`.
-- [ ] Add tests for unsafe template names/descriptions and control labels.
-- [ ] Add dangerous-sink tests for extracted admin authoring modules.
-- [ ] Run local security scans where tooling is available.
-- [ ] Run local CodeQL CLI when available; otherwise record that GitHub code
+- [x] Add tests for script tags and event handler payloads.
+- [x] Add tests for `javascript:` and disallowed data URL payloads.
+- [x] Add tests for CSS/style payloads such as `url(javascript:)`.
+- [x] Add tests for unsafe template names/descriptions and control labels.
+- [x] Add dangerous-sink tests for extracted admin authoring modules.
+- [x] Run local security scans where tooling is available.
+- [x] Run local CodeQL CLI when available; otherwise record that GitHub code
       scanning/CodeQL is the final confirmation gate.
 
 ---

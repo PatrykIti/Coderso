@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Command Palette
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-05-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -21,11 +22,11 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Extract command palette state helpers.
-- [ ] Extract command palette UI.
-- [ ] Preserve section/block/template group order.
-- [ ] Preserve keyboard behavior and active index reset.
-- [ ] Add command palette tests.
+- [x] Extract command palette state helpers.
+- [x] Extract command palette UI.
+- [x] Preserve section/block/template group order.
+- [x] Preserve keyboard behavior and active index reset.
+- [x] Add command palette tests.
 
 ---
 

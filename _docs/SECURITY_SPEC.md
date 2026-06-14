@@ -353,6 +353,29 @@ Rotacja klucza:
 - Prototype or reference HTML in `_docs/UI` must construct dynamic text with
   DOM nodes and `textContent`; do not interpolate DOM text into `innerHTML`.
 
+## Pages authoring sanitizer boundary
+
+- `core/services/pages/pageAuthoringSanitizers.ts` owns browser-safe sanitizer
+  helpers for Page authoring URL, media URL, CSS color, CSS background, and
+  CSS string escaping. Admin authoring modules, Page document normalizers,
+  responsive CSS emission, and Page renderer sinks must reuse these helpers
+  instead of accepting raw strings at render or persistence boundaries.
+- Link sinks (`href`, list item hrefs, button hrefs) allow safe relative,
+  hash, `http:`, `https:`, `mailto:`, and `tel:` values only. Media sinks
+  (`src`, `image`, `url`, gallery item sources, iframe source output from
+  trusted runtime bindings) allow safe relative or `http(s)` values and reject
+  script-capable protocols.
+- CSS sinks (`style.background`, `backgroundImage`, block `textColor`,
+  block/section accent, block border colors, responsive CSS custom property
+  values) are normalized through color/background policies before persistence
+  and escaped before `url("...")` emission. `url(javascript:...)`,
+  expression-like CSS, protocol-relative media, and event-handler payloads are
+  fail-closed to `null` or the documented default.
+- Renderers keep defense-in-depth sanitization even when upstream
+  normalization already ran. New Page v2 render sinks must add regression
+  coverage in the Vitest sanitizer/XSS suites and keep local Semgrep/security
+  scans clean without scanner suppressions.
+
 ## Assistant security baseline (v1)
 
 - Konfiguracja limitow asystenta jest trzymana w global settings:

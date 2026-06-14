@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-06-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,14 +23,14 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Add safe authoring display-text helper for labels/tooltips/summaries.
-- [ ] Add safe URL/media URL helper with explicit protocols/policies.
-- [ ] Add safe color/style token helper.
-- [ ] Encode the TASK-464-06-L01 field-path policy as typed helper policies for
+- [x] Add safe authoring display-text helper for labels/tooltips/summaries.
+- [x] Add safe URL/media URL helper with explicit protocols/policies.
+- [x] Add safe color/style token helper.
+- [x] Encode the TASK-464-06-L01 field-path policy as typed helper policies for
       link URLs, media URLs, embed URLs, safe HTML/embed content, colors,
       gradients, numerics, and enums.
-- [ ] Route inline-edit and registry mutation boundaries through helpers.
-- [ ] Add pure sanitizer tests.
+- [x] Route inline-edit and registry mutation boundaries through helpers.
+- [x] Add pure sanitizer tests.
 
 ---
 

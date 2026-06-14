@@ -5,7 +5,8 @@
 **Category:** Pages / Admin UI / Architecture / Security
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-418, TASK-420, TASK-421, TASK-458-03, TASK-462, TASK-463
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -76,13 +77,13 @@ their document contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-464-01: Contract freeze, module map, and UI parity baseline.
-- [ ] TASK-464-02: Extract pure editor host, state, and mutation contracts.
-- [ ] TASK-464-03: Extract reusable Page authoring canvas module.
-- [ ] TASK-464-04: Extract reusable floating toolbar and panel module.
-- [ ] TASK-464-05: Extract layers, command palette, and template picker modules.
-- [ ] TASK-464-06: Centralize authoring sanitizers and XSS guardrails.
-- [ ] TASK-464-07: Compose the slim PageEditor shell and close validation.
+- [x] TASK-464-01: Contract freeze, module map, and UI parity baseline.
+- [x] TASK-464-02: Extract pure editor host, state, and mutation contracts.
+- [x] TASK-464-03: Extract reusable Page authoring canvas module.
+- [x] TASK-464-04: Extract reusable floating toolbar and panel module.
+- [x] TASK-464-05: Extract layers, command palette, and template picker modules.
+- [x] TASK-464-06: Centralize authoring sanitizers and XSS guardrails.
+- [x] TASK-464-07: Compose the slim PageEditor shell and close validation.
 
 ---
 
@@ -167,3 +168,42 @@ callbacks, without importing Page document services.
 - `_docs/ADMIN_CACHE.md` only if host/cache behavior changes.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md` on completion.
+
+## Closeout Notes
+
+- Extracted browser-safe Page Editor modules under
+  `core/admin/ui/pages/editor/`: host contract, authoring canvas, floating
+  toolbar primitive, layers tree, command/template picker, labels, and option
+  metadata. The default Pages host remains in `PageEditor.tsx`; Page Templates
+  and Menu Design keep host-specific API/cache wiring outside reusable modules.
+- Added pure state/mutation modules in `core/services/pages/` and centralized
+  authoring sanitizers for link/media/style sinks. Page document normalization,
+  responsive CSS, and the public/admin renderer now reject unsafe URLs and CSS
+  values before persistence or render.
+- Preserved the existing UI/UX: markup classes, data attributes, toolbar order,
+  layers behavior, command palette behavior, template picker behavior, and Menu
+  Design host appearance panel remain equivalent and are covered by targeted
+  Vitest and live browser smoke.
+- Local CodeQL CLI was not available on `PATH`; GitHub CodeQL/code scanning
+  remains the final external scanner confirmation for the CodeQL-specific
+  query class.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/pages/page-editor-host-contract.test.ts tests/vitest/pages/page-editor-state-helpers.test.ts tests/vitest/pages/page-editor-action-groups.test.ts tests/vitest/pages/page-authoring-sanitizers.test.ts tests/vitest/pages/page-editor-xss-guards.test.tsx tests/vitest/ui/page-authoring-canvas.test.tsx tests/vitest/ui/floating-editor-toolbar.test.tsx tests/vitest/ui/page-editor-layers.test.tsx tests/vitest/ui/page-editor-command-palette.test.tsx tests/vitest/ui/page-editor-template-picker.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
+- `bun run test:vitest -- tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/services/page-inline-edit-contract.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-editor-control-ui-model.test.ts tests/vitest/ui/page-editor-control-primitives.test.tsx tests/vitest/pages/page-responsive-css.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun --cwd core build:admin`
+- `bun run check:admin-boundary`
+- `bun run check:admin-bundle`
+- `bun test tests/security`
+- `bun run gates:coderso`
+- `bun run scan:semgrep` (0 findings; Semgrep reported non-blocking rule
+  timeouts on existing large files)
+- `bun run scan:audit`
+- `bun run scan:security:strict`
+- `set -a && source .env && set +a && bun .tmp/task-464-live-smoke-runner.ts`
+  against `coderso-dev-core-host`: passed for Pages editor, Page Templates
+  editor, Menu Design editor, and the published public front page.

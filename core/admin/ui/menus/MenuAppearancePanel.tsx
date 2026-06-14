@@ -12,7 +12,7 @@ import {
   type MenuAppearanceFontWeight,
 } from "../../../services/menus/normalizeMenuAppearance";
 import { SHELL_APPEARANCE_DEFAULTS } from "../../../site/siteShellCss";
-import type { PageEditorHostAppearancePanelProps } from "../pages/PageEditor";
+import type { PageEditorHostAppearancePanelProps } from "../pages/editor/pageEditorHostContract";
 import {
   ColorSwatchControl,
   SegmentedControl,

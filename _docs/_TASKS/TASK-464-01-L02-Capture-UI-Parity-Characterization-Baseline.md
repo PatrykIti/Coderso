@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Test Baseline
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -24,10 +25,10 @@ behavior for Pages, Page Templates, and Menu Design.
 
 ## Sub-Tasks
 
-- [ ] Identify existing tests that cover Page Editor visual/behavior parity.
-- [ ] Add narrow characterization tests for missing extraction seams.
-- [ ] Cover Pages, Page Templates, and Menu Design host modes.
-- [ ] Cover canvas markers, floating toolbar markers, command palette, layers,
+- [x] Identify existing tests that cover Page Editor visual/behavior parity.
+- [x] Add narrow characterization tests for missing extraction seams.
+- [x] Cover Pages, Page Templates, and Menu Design host modes.
+- [x] Cover canvas markers, floating toolbar markers, command palette, layers,
       and template picker markers.
 
 ---

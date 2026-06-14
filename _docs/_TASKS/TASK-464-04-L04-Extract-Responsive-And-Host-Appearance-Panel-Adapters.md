@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Floating Panel
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-04-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,11 +23,11 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Move `ResponsivePanelContent` to a Page panel adapter module.
-- [ ] Move host appearance panel chrome adapter.
-- [ ] Keep responsive badge/readout/reset behavior identical.
-- [ ] Keep host appearance panel first-tab behavior identical.
-- [ ] Add tests for responsive and host appearance panels.
+- [x] Move `ResponsivePanelContent` to a Page panel adapter module.
+- [x] Move host appearance panel chrome adapter.
+- [x] Keep responsive badge/readout/reset behavior identical.
+- [x] Keep host appearance panel first-tab behavior identical.
+- [x] Add tests for responsive and host appearance panels.
 
 ---
 

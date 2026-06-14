@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-02-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -23,11 +24,11 @@ button order, and click behavior.
 
 ## Sub-Tasks
 
-- [ ] Create the Page authoring canvas module.
-- [ ] Move canvas scroller/frame and device width map.
-- [ ] Move host `canvasChrome` rendering point.
-- [ ] Move empty-document canvas state.
-- [ ] Add parity tests for canvas frame markers.
+- [x] Create the Page authoring canvas module.
+- [x] Move canvas scroller/frame and device width map.
+- [x] Move host `canvasChrome` rendering point.
+- [x] Move empty-document canvas state.
+- [x] Add parity tests for canvas frame markers.
 
 ---
 

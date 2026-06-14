@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Contracts
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-01-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,12 +23,12 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Create a browser-safe host contract module.
-- [ ] Move `PageEditorHost`, host preview/publish/revision/settings types, and
+- [x] Create a browser-safe host contract module.
+- [x] Move `PageEditorHost`, host preview/publish/revision/settings types, and
       host extension slots into that module.
-- [ ] Update Page Editor, Page Template Editor, `MenuAppearancePanel.tsx`, Menu
+- [x] Update Page Editor, Page Template Editor, `MenuAppearancePanel.tsx`, Menu
       Design, and tests to import from the new owner.
-- [ ] Extend import-boundary guard coverage if needed.
+- [x] Extend import-boundary guard coverage if needed.
 
 ---
 

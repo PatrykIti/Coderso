@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Security
 **Estimated Effort:** Large
 **Dependencies:** TASK-464-02, TASK-464-03, TASK-464-04, TASK-464-05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -27,9 +28,9 @@ fail-closed equivalent.
 
 ## Sub-Tasks
 
-- [ ] [TASK-464-06-L01](TASK-464-06-L01-Authoring-Sink-Inventory-And-Sanitizer-Contract.md): Authoring sink inventory and sanitizer contract.
-- [ ] [TASK-464-06-L02](TASK-464-06-L02-Implement-Safe-Authoring-Value-Helpers.md): Implement safe authoring value helpers.
-- [ ] [TASK-464-06-L03](TASK-464-06-L03-XSS-Regression-And-Scanner-Guard-Coverage.md): XSS regression and scanner guard coverage.
+- [x] [TASK-464-06-L01](TASK-464-06-L01-Authoring-Sink-Inventory-And-Sanitizer-Contract.md): Authoring sink inventory and sanitizer contract.
+- [x] [TASK-464-06-L02](TASK-464-06-L02-Implement-Safe-Authoring-Value-Helpers.md): Implement safe authoring value helpers.
+- [x] [TASK-464-06-L03](TASK-464-06-L03-XSS-Regression-And-Scanner-Guard-Coverage.md): XSS regression and scanner guard coverage.
 
 ---
 

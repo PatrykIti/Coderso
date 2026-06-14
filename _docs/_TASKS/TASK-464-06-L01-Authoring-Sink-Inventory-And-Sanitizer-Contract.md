@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-05-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,19 +23,19 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] List text sinks: inline edit, labels, template summaries, layer labels,
+- [x] List text sinks: inline edit, labels, template summaries, layer labels,
       tooltip/control labels, and host appearance copy from data.
-- [ ] List URL/media/embed sinks.
-- [ ] List style/color/numeric sinks.
-- [ ] Freeze a field-by-field policy for current Page v2 sinks: block
+- [x] List URL/media/embed sinks.
+- [x] List style/color/numeric sinks.
+- [x] Freeze a field-by-field policy for current Page v2 sinks: block
       `href`, `src`, `image`, `url`, and `html`; list item `href`; media
       gallery/video/image sources; section `backgroundImage`; block
       style/background/color fields; gradients; embed URLs/HTML; host
       appearance fields; and Menu Design style fields.
-- [ ] Identify existing sanitizer owners and missing gaps, including
+- [x] Identify existing sanitizer owners and missing gaps, including
       `widgetSafeHref`, existing widget color normalizers,
       `pageInlineEditContract`, and TASK-463 embed sanitizers.
-- [ ] Update security docs or TASK-464 docs with the sanitizer contract.
+- [x] Update security docs or TASK-464 docs with the sanitizer contract.
 
 ---
 

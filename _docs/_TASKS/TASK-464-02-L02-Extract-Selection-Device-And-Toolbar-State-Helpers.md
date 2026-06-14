@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / State
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,12 +23,12 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Extract `PageEditorSelectionState` and selection derivation helpers.
-- [ ] Extract selected section/block label and metadata derivation.
-- [ ] Extract toolbar panel defaulting for regular hosts and appearance-panel
+- [x] Extract `PageEditorSelectionState` and selection derivation helpers.
+- [x] Extract selected section/block label and metadata derivation.
+- [x] Extract toolbar panel defaulting for regular hosts and appearance-panel
       hosts.
-- [ ] Extract pure clearance/offset helpers where possible.
-- [ ] Add pure tests.
+- [x] Extract pure clearance/offset helpers where possible.
+- [x] Add pure tests.
 
 ---
 

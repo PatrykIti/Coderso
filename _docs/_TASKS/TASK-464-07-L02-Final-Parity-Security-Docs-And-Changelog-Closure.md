@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-07-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,14 +23,14 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Run targeted Vitest and pure helper suites.
-- [ ] Run lint, typecheck, admin build, and admin boundary guard.
-- [ ] Run local security scans where tooling is available.
-- [ ] Run local CodeQL CLI when available; otherwise record GitHub code
+- [x] Run targeted Vitest and pure helper suites.
+- [x] Run lint, typecheck, admin build, and admin boundary guard.
+- [x] Run local security scans where tooling is available.
+- [x] Run local CodeQL CLI when available; otherwise record GitHub code
       scanning/CodeQL as the final confirmation gate.
-- [ ] Run real browser parity smoke for Pages, Page Templates, and Menu Design.
-- [ ] Update docs, task statuses, board, changelog, and changelog index.
-- [ ] Ensure the family changelog entry explicitly lists `TASK-464` plus every
+- [x] Run real browser parity smoke for Pages, Page Templates, and Menu Design.
+- [x] Update docs, task statuses, board, changelog, and changelog index.
+- [x] Ensure the family changelog entry explicitly lists `TASK-464` plus every
       closed `TASK-464-##` and `TASK-464-##-L##` ID; otherwise create
       standalone changelog entries before moving any leaf to `✅ Done`.
 
@@ -112,3 +113,26 @@ Regression-test shape:
 - `_docs/SECURITY_SPEC.md` if sanitizer/scanner policy changed.
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` and `_docs/_CHANGELOG/README.md`
+
+## Closeout Evidence
+
+- Targeted module/helper suites passed for host contracts, editor state,
+  mutation actions, authoring sanitizers, XSS guards, authoring canvas,
+  floating toolbar, layers, command palette, and template picker.
+- Existing host parity suites passed for Page Editor v2, Page Templates, and
+  Menu Design.
+- Existing renderer/control suites passed for Page renderer v2, inline edit,
+  control registry, control UI model, control primitives, and responsive CSS.
+- Build/boundary gates passed: `bun --cwd core lint`,
+  `bun --cwd core lint:types`, `bun --cwd core build:admin`,
+  `bun run check:admin-boundary`, and `bun run check:admin-bundle`.
+- Release/security gates passed: `bun test tests/security`,
+  `bun run gates:coderso`, `bun run scan:semgrep`, `bun run scan:audit`, and
+  `bun run scan:security:strict`.
+- Live browser smoke passed through `coderso-dev-core-host` using
+  `http://coderso-a.localhost:5173/admin/` and
+  `http://coderso-a.localhost:3000`: Pages editor, Page Templates editor, Menu
+  Design editor, and the published public front smoke all rendered without
+  console errors.
+- Local CodeQL CLI was unavailable; GitHub CodeQL/code scanning remains the
+  final external confirmation for CodeQL-specific query coverage.

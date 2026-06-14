@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Architecture
 **Estimated Effort:** Small
 **Dependencies:** TASK-464-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -25,11 +26,11 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Record PageEditor source ranges by responsibility.
-- [ ] List target module names and their ownership boundaries.
-- [ ] List forbidden imports per target module.
-- [ ] Record dependency order for TASK-464 implementation leaves.
-- [ ] Update TASK-464 files if the map exposes missing leaf ownership.
+- [x] Record PageEditor source ranges by responsibility.
+- [x] List target module names and their ownership boundaries.
+- [x] List forbidden imports per target module.
+- [x] Record dependency order for TASK-464 implementation leaves.
+- [x] Update TASK-464 files if the map exposes missing leaf ownership.
 
 ---
 

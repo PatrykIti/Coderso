@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Floating Toolbar
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-02-L03, TASK-464-03-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -23,11 +24,11 @@ tooltips, action order, row layout, drag state flags, and collapse behavior.
 
 ## Sub-Tasks
 
-- [ ] Create a reusable floating toolbar shell module.
-- [ ] Move toolbar icon button/action row rendering.
-- [ ] Move drag/collapse props and data attributes.
-- [ ] Keep toolbar clearance measurement wired to the canvas scroller.
-- [ ] Add parity tests for toolbar shell and action row.
+- [x] Create a reusable floating toolbar shell module.
+- [x] Move toolbar icon button/action row rendering.
+- [x] Move drag/collapse props and data attributes.
+- [x] Keep toolbar clearance measurement wired to the canvas scroller.
+- [x] Add parity tests for toolbar shell and action row.
 
 ---
 

@@ -608,6 +608,35 @@ at the gap, and `addSection` splices the chosen section at that index instead
 of appending; the persistent top-of-canvas `Add section` button keeps the
 append behavior.
 
+### Modular Authoring Surface (TASK-464)
+
+`PageEditor.tsx` is the host shell for page chrome: loading/saving, preview,
+publish, settings, revisions, assistant context, cached admin clients, and
+site-token style bridging. Reusable authoring modules live under
+`core/admin/ui/pages/editor/` and stay browser-safe:
+
+- `pageEditorHostContract.ts` owns structural host types and extension slots.
+  It must not value-import admin clients, server routes, DB/runtime loaders,
+  provider SDKs, storage adapters, password hashing, or secret stores.
+- `PageAuthoringCanvas.tsx` owns the Page v2 canvas frame, section shell,
+  block frames, ghost add affordances, nested slot chrome, and inline-edit
+  wiring. It receives resolved site-token style values from the shell instead
+  of reading settings itself.
+- `FloatingEditorToolbar.tsx` owns shared toolbar button chrome only. The
+  full panel orchestration remains shell-owned until a future task extracts a
+  generic non-Page-v2 panel engine.
+- `PageEditorLayers.tsx` and `PageEditorCommandPalette.tsx` own the layers
+  rows, command groups, and Page Template insertion picker UI. The parent
+  shell still owns document mutation and template instantiation.
+- `pageEditorOptions.ts` and `pageEditorLabels.ts` own neutral option/label
+  derivation that can be reused by Pages, Page Templates, and Menu Design.
+
+Pure editor derivation and mutation helpers live in
+`core/services/pages/pageEditorState.ts` and
+`core/services/pages/pageEditorMutationActions.ts`. They patch only Page v2
+owner paths, keep sparse responsive overrides deterministic, and sanitize
+section style writes before draft mutation.
+
 ## Responsive Cascade
 
 The owner normalizer keeps `desktop`, `tablet`, and `mobile` breakpoints stable.

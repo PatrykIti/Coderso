@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 135 tasks
+- **To Do:** 107 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2455 tasks
+- **Done:** 2483 tasks
 
 ---
 
@@ -88,34 +88,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-464 | Page Editor Modular Reuse And Security Hardening | High | Very Large | Split the monolithic PageEditor into reusable canvas, floating panel, shell, state, and sanitizer modules with zero UX/UI changes. |
-| TASK-464-01 | Contract Freeze Module Map And UI Parity Baseline | High | Medium | Freeze module ownership and parity baselines before any extraction. |
-| TASK-464-01-L01 | Map PageEditor Monolith Responsibilities And Boundaries | High | Small | Produce the source-range/module map, ownership boundaries, and forbidden imports before moving code. |
-| TASK-464-01-L02 | Capture UI Parity Characterization Baseline | High | Medium | Lock current DOM, data-attribute, host, panel, and interaction baselines so extraction cannot alter UX/UI. |
-| TASK-464-02 | Extract Pure Editor Host State And Mutation Contracts | High | Large | Pull host/state/mutation contracts into browser-safe modules before JSX moves. |
-| TASK-464-02-L01 | Extract Host Contracts And Import Guards | High | Medium | Move host types and browser-safe import rules into a dedicated contract module. |
-| TASK-464-02-L02 | Extract Selection Device And Toolbar State Helpers | High | Medium | Extract pure selection/device/toolbar derivation while preserving current defaults and behavior. |
-| TASK-464-02-L03 | Extract Typed Mutation Action Groups | High | Medium | Define typed action groups for canvas, toolbar, layers, command, templates, and host writes. |
-| TASK-464-03 | Extract Reusable Page Authoring Canvas Module | High | Large | Move canvas chrome/block frames/ghost tiles into a reusable Page v2 canvas module without visual changes. |
-| TASK-464-03-L01 | Extract Canvas Frame And Section Shell | High | Medium | Move the canvas scroller/frame, device sizing, site-token bridge, and section shell with exact markup parity. |
-| TASK-464-03-L02 | Extract Block Frames Ghost Tiles And Slot Affordances | High | Medium | Move block frame chrome, ghost add tiles, hidden ghosts, slot trailing affordances, and selection markers. |
-| TASK-464-03-L03 | Extract Inline Edit And Canvas Runtime Binding Wiring | High | Medium | Move inline-edit wrappers and canvas-only runtime preview binding wiring behind typed sanitizer-safe props. |
-| TASK-464-04 | Extract Reusable Floating Toolbar And Panel Module | High | Large | Move the bottom floating toolbar, registry panels, and host appearance slot into reusable modules without visual changes. |
-| TASK-464-04-L01 | Extract Floating Toolbar Shell And Action Row | High | Medium | Move toolbar shell, drag/collapse state plumbing, action icons, tooltips, and clearance measurement. |
-| TASK-464-04-L02 | Extract Registry Option Provider And Media Lookup Contract | High | Medium | Move dynamic option/media lookup behind injected provider contracts so reusable panels stay client-free. |
-| TASK-464-04-L03 | Extract Registry Panel Renderer And Control Routing | High | Medium | Move registry-driven section/block panel rendering and control routing without raw fallback regressions. |
-| TASK-464-04-L04 | Extract Responsive And Host Appearance Panel Adapters | High | Medium | Move responsive panel and host appearance panel adapter while preserving reset/inheritance semantics. |
-| TASK-464-05 | Extract Layers Command Palette And Template Picker Modules | High | Large | Pull layers, command palette, and template picker out of the PageEditor shell while preserving behavior. |
-| TASK-464-05-L01 | Extract Layers Tree And Row Actions | High | Medium | Move layers overlay/tree row rendering plus select/add/move/add-beside callbacks. |
-| TASK-464-05-L02 | Extract Command Palette State And Insert Flow | High | Medium | Move command palette search, active-index keyboard flow, and section/block insertion orchestration. |
-| TASK-464-05-L03 | Extract Template Picker And Delete Confirmation Flow | High | Medium | Move template picker/application and delete confirmation flow with existing copy and id-regeneration semantics. |
-| TASK-464-06 | Centralize Authoring Sanitizers And XSS Guardrails | High | Large | Centralize editor sanitizer helpers and add scanner-oriented XSS guard coverage across authoring surfaces. |
-| TASK-464-06-L01 | Authoring Sink Inventory And Sanitizer Contract | High | Medium | Inventory all author-controlled render/mutation sinks and freeze sanitizer ownership before code changes. |
-| TASK-464-06-L02 | Implement Safe Authoring Value Helpers | High | Medium | Add browser-safe helpers for text, URLs, media, style tokens, labels, and inline-edit commits. |
-| TASK-464-06-L03 | XSS Regression And Scanner Guard Coverage | High | Medium | Add scanner-friendly tests for script/event/URL/style/template/control-label payloads and dangerous sinks. |
-| TASK-464-07 | Compose Slim PageEditor Shell And Close Validation | High | Medium | Recompose PageEditor from extracted modules, validate Pages/Page Templates/Menu Design parity, and close docs/changelog. |
-| TASK-464-07-L01 | Compose Slim Shell And Remove Duplicates | High | Medium | Replace local chunks with extracted modules and remove duplicated helpers without UX/UI changes. |
-| TASK-464-07-L02 | Final Parity Security Docs And Changelog Closure | High | Medium | Run final validation, real browser parity smoke, scanner checks, docs, board, and changelog closeout. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
@@ -244,6 +216,34 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-464 | Page Editor Modular Reuse And Security Hardening | High | Very Large | Done (2026-06-14): PageEditor split into reusable browser-safe authoring modules with centralized sanitizer guards and live Pages/Templates/Menu Design smoke evidence. |
+| TASK-464-01 | Contract Freeze Module Map And UI Parity Baseline | High | Medium | Done (2026-06-14): Module ownership, host boundaries, and UI parity baseline closed in the TASK-464 family validation. |
+| TASK-464-01-L01 | Map PageEditor Monolith Responsibilities And Boundaries | High | Small | Done (2026-06-14): Responsibilities mapped into host contracts, state/mutation helpers, canvas, toolbar, layers, command/template, and sanitizer owners. |
+| TASK-464-01-L02 | Capture UI Parity Characterization Baseline | High | Medium | Done (2026-06-14): Existing PageEditor, Page Templates, Menu Design, renderer, and live browser smoke evidence preserved UI/UX parity. |
+| TASK-464-02 | Extract Pure Editor Host State And Mutation Contracts | High | Large | Done (2026-06-14): Browser-safe host, state, and mutation contracts extracted without moving host API/client ownership into reusable modules. |
+| TASK-464-02-L01 | Extract Host Contracts And Import Guards | High | Medium | Done (2026-06-14): `pageEditorHostContract.ts` owns structural host types and import guards prove reusable modules stay client-free. |
+| TASK-464-02-L02 | Extract Selection Device And Toolbar State Helpers | High | Medium | Done (2026-06-14): Selection, responsive override, and toolbar offset helpers moved to pure Page services with Vitest coverage. |
+| TASK-464-02-L03 | Extract Typed Mutation Action Groups | High | Medium | Done (2026-06-14): Block/section prop, control, visibility, and style mutation helpers moved behind typed sanitizer-aware actions. |
+| TASK-464-03 | Extract Reusable Page Authoring Canvas Module | High | Large | Done (2026-06-14): Page v2 canvas shell, section/block chrome, ghost affordances, slots, and inline edit wiring moved into `PageAuthoringCanvas`. |
+| TASK-464-03-L01 | Extract Canvas Frame And Section Shell | High | Medium | Done (2026-06-14): Canvas frame/section shell moved with exact data markers and shell-owned site token bridge. |
+| TASK-464-03-L02 | Extract Block Frames Ghost Tiles And Slot Affordances | High | Medium | Done (2026-06-14): Block frames, hidden ghosts, add-beside controls, and nested slot affordances extracted with component tests. |
+| TASK-464-03-L03 | Extract Inline Edit And Canvas Runtime Binding Wiring | High | Medium | Done (2026-06-14): Inline edit and runtime binding props remain typed and sanitizer-safe in the reusable canvas. |
+| TASK-464-04 | Extract Reusable Floating Toolbar And Panel Module | High | Large | Done (2026-06-14): Toolbar button chrome and reusable panel metadata were split while full panel orchestration remains shell-owned. |
+| TASK-464-04-L01 | Extract Floating Toolbar Shell And Action Row | High | Medium | Done (2026-06-14): Shared toolbar icon button primitive extracted with tooltip/class parity. |
+| TASK-464-04-L02 | Extract Registry Option Provider And Media Lookup Contract | High | Medium | Done (2026-06-14): Dynamic option/media lookups stay injected by the host shell; reusable modules do not import cached clients. |
+| TASK-464-04-L03 | Extract Registry Panel Renderer And Control Routing | High | Medium | Done (2026-06-14): Registry control routing remains shell-owned and covered while reusable toolbar metadata/labels are shared. |
+| TASK-464-04-L04 | Extract Responsive And Host Appearance Panel Adapters | High | Medium | Done (2026-06-14): Responsive helper logic and host appearance contract remain deterministic without Menu Design UI drift. |
+| TASK-464-05 | Extract Layers Command Palette And Template Picker Modules | High | Large | Done (2026-06-14): Layers, command palette, and Page Template picker UI moved into standalone modules with parity tests. |
+| TASK-464-05-L01 | Extract Layers Tree And Row Actions | High | Medium | Done (2026-06-14): Recursive layers rows and row actions extracted with nested path/slot label coverage. |
+| TASK-464-05-L02 | Extract Command Palette State And Insert Flow | High | Medium | Done (2026-06-14): Command palette group ordering, active rows, and insertion callbacks preserved in extracted UI. |
+| TASK-464-05-L03 | Extract Template Picker And Delete Confirmation Flow | High | Medium | Done (2026-06-14): Template picker UI and id-regeneration path remain shell/template-library owned with tests. |
+| TASK-464-06 | Centralize Authoring Sanitizers And XSS Guardrails | High | Large | Done (2026-06-14): Authoring URL/media/CSS sanitizer helpers now protect normalization, responsive CSS, renderer, and mutations. |
+| TASK-464-06-L01 | Authoring Sink Inventory And Sanitizer Contract | High | Medium | Done (2026-06-14): Text, URL/media/embed, style/color, template, registry, and host appearance sinks documented and guarded. |
+| TASK-464-06-L02 | Implement Safe Authoring Value Helpers | High | Medium | Done (2026-06-14): `pageAuthoringSanitizers.ts` owns safe link/media/style helpers reused across Page v2 sinks. |
+| TASK-464-06-L03 | XSS Regression And Scanner Guard Coverage | High | Medium | Done (2026-06-14): XSS/sanitizer Vitest plus Semgrep/audit/strict security scans passed. |
+| TASK-464-07 | Compose Slim PageEditor Shell And Close Validation | High | Medium | Done (2026-06-14): PageEditor shell recomposed from reusable modules and validated across Pages, Page Templates, Menu Design, and public front. |
+| TASK-464-07-L01 | Compose Slim Shell And Remove Duplicates | High | Medium | Done (2026-06-14): Duplicated canvas/layers/command/toolbar helpers removed from PageEditor while preview/settings/revisions stay in shell. |
+| TASK-464-07-L02 | Final Parity Security Docs And Changelog Closure | High | Medium | Done (2026-06-14): Validation, scans, live smoke, docs, board, and changelog 1172 completed. |
 | TASK-463 | CodeQL Pages Security Remediation | High | Small | Done (2026-06-14): Closed Pages CodeQL alerts plus strict security scan findings for sanitized embed rendering and transitive `esbuild`. |
 | TASK-462 | Admin Browser Runtime Boundary Hardening | High | Large | Done (2026-06-13): Admin build restored by splitting browser-safe contracts from server/runtime loaders; no provider externals, aliases, `@vite-ignore`, or browser stubs. |
 | TASK-462-01 | Admin Build Boundary Audit And Contract Freeze | High | Medium | Done (2026-06-13): Reproduced Azure export failure and froze the import-boundary contract before implementation. |

@@ -18,6 +18,12 @@ import {
 } from "../menus/normalizeMenuAppearance";
 import { createSecureRandomHexFragment } from "../security/secureRandom";
 import { DEFAULT_TOKENS } from "../theme/tokenTypes";
+import {
+  sanitizeAuthoringCssBackground,
+  sanitizeAuthoringCssColor,
+  sanitizeAuthoringLinkHref,
+  sanitizeAuthoringMediaUrl,
+} from "./pageAuthoringSanitizers";
 
 export const PAGE_DOCUMENT_SCHEMA_VERSION = 2 as const;
 
@@ -725,8 +731,10 @@ export type PageListItemV2 = string | { label: string; href: string };
  * else collapses to the legacy plain-string item. Owned here so the panel
  * items editor and normalization agree on the stored contract.
  */
-export const createPageListItem = (label: string, href: string): PageListItemV2 =>
-  href.trim().length > 0 ? { label, href: href.trim() } : label;
+export const createPageListItem = (label: string, href: string): PageListItemV2 => {
+  const safeHref = sanitizeAuthoringLinkHref(href);
+  return safeHref ? { label, href: safeHref } : label;
+};
 
 export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
   heading: { text: "Heading", level: "h2", align: "left" },
@@ -1322,6 +1330,36 @@ const readOptionalText = (value: unknown): string | null | undefined => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const readSafeColor = (value: unknown, fallback: string) =>
+  sanitizeAuthoringCssColor(value) ?? fallback;
+
+const readOptionalSafeColor = (value: unknown): string | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return sanitizeAuthoringCssColor(value);
+};
+
+const readSafeBackground = (value: unknown, fallback: string) =>
+  sanitizeAuthoringCssBackground(value) ?? fallback;
+
+const readOptionalSafeBackground = (value: unknown): string | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return sanitizeAuthoringCssBackground(value);
+};
+
+const readOptionalLinkHref = (value: unknown): string | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return sanitizeAuthoringLinkHref(value);
+};
+
+const readOptionalMediaUrl = (value: unknown): string | null | undefined => {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return sanitizeAuthoringMediaUrl(value);
+};
+
 const readBoolean = (value: unknown, fallback: boolean) =>
   typeof value === "boolean" ? value : fallback;
 
@@ -1605,7 +1643,7 @@ const normalizeSectionStyle = (
   );
   const result: Partial<PageSectionStyleV2> = {};
   if (!partial || input.background !== undefined) {
-    result.background = readText(input.background, defaultStyle.background);
+    result.background = readSafeBackground(input.background, defaultStyle.background);
   }
   if (!partial || input.backgroundType !== undefined) {
     result.backgroundType = normalizeEnum(
@@ -1617,10 +1655,10 @@ const normalizeSectionStyle = (
     );
   }
   if (!partial || input.backgroundImage !== undefined) {
-    result.backgroundImage = readOptionalText(input.backgroundImage) ?? null;
+    result.backgroundImage = readOptionalMediaUrl(input.backgroundImage) ?? null;
   }
   if (!partial || input.accent !== undefined) {
-    result.accent = readText(input.accent, defaultStyle.accent);
+    result.accent = readSafeColor(input.accent, defaultStyle.accent);
   }
   if (!partial || input.radius !== undefined) {
     result.radius = readNumber(input.radius, defaultStyle.radius, 0, 64);
@@ -1729,10 +1767,10 @@ const normalizeBlockStyle = (
     result.column = clamped === null ? null : Math.trunc(clamped);
   }
   if (input.textColor !== undefined) {
-    result.textColor = readOptionalText(input.textColor) ?? null;
+    result.textColor = readOptionalSafeColor(input.textColor) ?? null;
   }
   if (input.background !== undefined) {
-    result.background = readOptionalText(input.background) ?? null;
+    result.background = readOptionalSafeBackground(input.background) ?? null;
   }
   if (input.backgroundType !== undefined) {
     result.backgroundType = normalizeEnum(
@@ -1753,7 +1791,7 @@ const normalizeBlockStyle = (
     result.shadow = normalizeEnum(input.shadow, pageShadowTokens, "none", `${path}.shadow`, mode);
   }
   if (input.borderColor !== undefined) {
-    result.borderColor = readOptionalText(input.borderColor) ?? null;
+    result.borderColor = readOptionalSafeColor(input.borderColor) ?? null;
   }
   if (input.padding !== undefined) {
     const padding = normalizeBlockBoxSpacing(input.padding, mode, `${path}.padding`);
@@ -2019,6 +2057,33 @@ const normalizeFiltersAliases = (
   return normalized;
 };
 
+const normalizeGalleryItems = (value: unknown): Record<string, unknown>[] => {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item) => {
+    if (typeof item === "string") {
+      const src = sanitizeAuthoringMediaUrl(item);
+      return src ? [{ src, alt: "", caption: "" }] : [];
+    }
+    if (!isRecord(item)) return [];
+    const src =
+      readOptionalMediaUrl(item.src) ??
+      readOptionalMediaUrl(item.url) ??
+      readOptionalMediaUrl(item.image) ??
+      readOptionalMediaUrl(item.assetUrl) ??
+      "";
+    const alt = readOptionalText(item.alt) ?? readOptionalText(item.title) ?? "";
+    const caption =
+      readOptionalText(item.caption) ??
+      readOptionalText(item.title) ??
+      readOptionalText(item.label) ??
+      readOptionalText(item.name) ??
+      readOptionalText(item.description) ??
+      "";
+    if (!src && !caption) return [];
+    return [{ src, alt, caption }];
+  });
+};
+
 const normalizeBlockProp = (
   type: PageBlockType,
   key: string,
@@ -2109,7 +2174,10 @@ const normalizeBlockProp = (
     return Boolean(value);
   }
   if (type === "list" && key === "items") return normalizeListItems(value, mode, path);
+  if (type === "gallery" && key === "items") return normalizeGalleryItems(value);
   if (key === "items") return Array.isArray(value) ? cloneRecord(value) : [];
+  if (key === "href") return readOptionalLinkHref(value) ?? null;
+  if (key === "src" || key === "image" || key === "url") return readOptionalMediaUrl(value) ?? null;
   if (value === undefined) return undefined;
   if (value === null) return null;
   if (typeof value === "string") return value.trim();

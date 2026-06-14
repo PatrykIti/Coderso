@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Editor Shell
 **Estimated Effort:** Large
 **Dependencies:** TASK-464-02, TASK-464-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -31,9 +32,9 @@ behavior, and all existing data attributes.
 
 ## Sub-Tasks
 
-- [ ] [TASK-464-05-L01](TASK-464-05-L01-Extract-Layers-Tree-And-Row-Actions.md): Extract layers tree and row actions.
-- [ ] [TASK-464-05-L02](TASK-464-05-L02-Extract-Command-Palette-State-And-Insert-Flow.md): Extract command palette state and insert flow.
-- [ ] [TASK-464-05-L03](TASK-464-05-L03-Extract-Template-Picker-And-Delete-Confirmation-Flow.md): Extract template picker and delete confirmation flow.
+- [x] [TASK-464-05-L01](TASK-464-05-L01-Extract-Layers-Tree-And-Row-Actions.md): Extract layers tree and row actions.
+- [x] [TASK-464-05-L02](TASK-464-05-L02-Extract-Command-Palette-State-And-Insert-Flow.md): Extract command palette state and insert flow.
+- [x] [TASK-464-05-L03](TASK-464-05-L03-Extract-Template-Picker-And-Delete-Confirmation-Flow.md): Extract template picker and delete confirmation flow.
 
 ---
 

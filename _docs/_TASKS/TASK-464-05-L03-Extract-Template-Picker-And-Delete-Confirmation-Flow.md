@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Templates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-05-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,11 +23,11 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Move template option loading/rendering UI behind typed props.
-- [ ] Keep `instantiatePageTemplateSections` as the only id-regeneration path.
-- [ ] Move delete confirmation state/rendering behind typed props.
-- [ ] Preserve confirmation copy and button labels.
-- [ ] Add tests for template apply and delete confirmation.
+- [x] Move template option loading/rendering UI behind typed props.
+- [x] Keep `instantiatePageTemplateSections` as the only id-regeneration path.
+- [x] Move delete confirmation state/rendering behind typed props.
+- [x] Preserve confirmation copy and button labels.
+- [x] Add tests for template apply and delete confirmation.
 
 ---
 

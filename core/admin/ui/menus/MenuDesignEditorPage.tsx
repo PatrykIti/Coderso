@@ -24,11 +24,11 @@ import { mapMenuNodesToNavigationItems } from "../../../services/navigation/navi
 import type { PageBreakpoint, PageDocumentV2 } from "../../../services/pages/pageDocumentV2";
 import { SiteHeaderNav, type SiteShellNavigation } from "../../../site/siteShell";
 import { buildSiteShellPreviewCss } from "../../../site/siteShellCss";
-import {
-  PageEditor,
-  type PageEditorHost,
-  type PageEditorHostSettingsRenderProps,
-} from "../pages/PageEditor";
+import { PageEditor } from "../pages/PageEditor";
+import type {
+  PageEditorHost,
+  PageEditorHostSettingsRenderProps,
+} from "../pages/editor/pageEditorHostContract";
 import { MenuAppearancePanel } from "./MenuAppearancePanel";
 import { resolveMenuId } from "./routeParams";
 

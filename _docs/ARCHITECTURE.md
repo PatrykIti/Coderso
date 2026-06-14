@@ -475,6 +475,16 @@ Runtime admin context:
   apply instantiates sections with fresh ids in the editor. The widget-template
   admin editor/routes/preview surface is deleted; the Page Templates editor
   advertises NO assistant active surface in v1.
+- Page Editor authoring modules (TASK-464) follow a browser-safe dependency
+  direction: host shells own admin clients, cache hydration, settings, preview,
+  publish, revisions, and assistant context; reusable modules under
+  `core/admin/ui/pages/editor/` own canvas chrome, toolbar primitives, layers,
+  command/template picker UI, host contracts, labels, and option metadata.
+  Reusable modules may depend on React UI primitives and pure Page services,
+  but must not value-import admin clients, DB/server/runtime modules, provider
+  SDKs, storage adapters, auth/password hashing, secret stores, or host cache
+  clients. Site-token style values are resolved by the shell and passed into
+  the canvas; reusable canvas modules do not read privileged settings.
 - Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, and writable field names.
 - Writable field names are derived only from widget-aware write-capable targets
   (for example `screen-field-value.value`), so legacy fallback widgets and

@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Layers
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-03-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,10 +23,10 @@ order, empty labels, data attributes, and behavior.
 
 ## Sub-Tasks
 
-- [ ] Move `LayerBlockRows` and related layer helpers.
-- [ ] Create typed `PageEditorLayers` props/actions.
-- [ ] Keep nested path creation and slot labels identical.
-- [ ] Add layers parity tests.
+- [x] Move `LayerBlockRows` and related layer helpers.
+- [x] Create typed `PageEditorLayers` props/actions.
+- [x] Keep nested path creation and slot labels identical.
+- [x] Add layers parity tests.
 
 ---
 

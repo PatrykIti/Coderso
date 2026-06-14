@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Floating Panel
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-04-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -25,13 +26,13 @@ Design editor behavior.
 
 ## Sub-Tasks
 
-- [ ] Define `RegistryOptionProvider` and `AuthoringMediaLookupProvider`
+- [x] Define `RegistryOptionProvider` and `AuthoringMediaLookupProvider`
       contracts in the Page Editor host/registry boundary.
-- [ ] Move current Page Editor dynamic option loading behind the provider.
-- [ ] Move media URL resolution behind the media lookup provider.
-- [ ] Inject providers from the Page Editor/Page Template Editor/Menu Design
+- [x] Move current Page Editor dynamic option loading behind the provider.
+- [x] Move media URL resolution behind the media lookup provider.
+- [x] Inject providers from the Page Editor/Page Template Editor/Menu Design
       hosts; reusable toolbar/panel modules receive only provider callbacks.
-- [ ] Add import-boundary tests so provider contracts stay client-free.
+- [x] Add import-boundary tests so provider contracts stay client-free.
 
 ---
 

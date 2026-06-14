@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,11 +23,11 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Move `CanvasGhostAddTile` and hidden block ghost.
-- [ ] Move `renderBlockFrame` implementation into a canvas adapter.
-- [ ] Move section column trailing and columns slot trailing affordances.
-- [ ] Keep `PageSectionContent` as the shared renderer.
-- [ ] Add parity tests for ghost and block markers.
+- [x] Move `CanvasGhostAddTile` and hidden block ghost.
+- [x] Move `renderBlockFrame` implementation into a canvas adapter.
+- [x] Move section column trailing and columns slot trailing affordances.
+- [x] Keep `PageSectionContent` as the shared renderer.
+- [x] Add parity tests for ghost and block markers.
 
 ---
 

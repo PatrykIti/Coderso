@@ -14,11 +14,11 @@ import {
   type PageTemplateStatus,
 } from "@/services/pageTemplatesClient";
 
-import {
-  PageEditor,
-  type PageEditorHost,
-  type PageEditorHostSettingsRenderProps,
-} from "../PageEditor";
+import { PageEditor } from "../PageEditor";
+import type {
+  PageEditorHost,
+  PageEditorHostSettingsRenderProps,
+} from "../editor/pageEditorHostContract";
 import { SegmentedControl } from "../editorControls";
 
 /**

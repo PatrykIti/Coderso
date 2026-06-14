@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Canvas Security
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -22,11 +23,11 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Move inline text renderer adapter into the canvas module.
-- [ ] Keep sanitizer ownership in `pageInlineEditContract` until TASK-464-06
+- [x] Move inline text renderer adapter into the canvas module.
+- [x] Keep sanitizer ownership in `pageInlineEditContract` until TASK-464-06
       centralizes shared helpers.
-- [ ] Pass `canvasDataByBlockId` through typed props.
-- [ ] Add tests for inline edit markers and unsafe text behavior.
+- [x] Pass `canvasDataByBlockId` through typed props.
+- [x] Add tests for inline edit markers and unsafe text behavior.
 
 ---
 

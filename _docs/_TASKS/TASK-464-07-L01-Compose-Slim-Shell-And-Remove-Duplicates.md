@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Refactor Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-06-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -28,12 +29,12 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Compose extracted canvas module.
-- [ ] Compose extracted floating toolbar module.
-- [ ] Compose extracted layers/command/template modules.
-- [ ] Remove duplicated local helpers.
-- [ ] Verify Pages, Page Templates, and Menu Design imports.
-- [ ] Split residual large module swaps into `TASK-464-07-S01-*` before coding
+- [x] Compose extracted canvas module.
+- [x] Compose extracted floating toolbar module.
+- [x] Compose extracted layers/command/template modules.
+- [x] Remove duplicated local helpers.
+- [x] Verify Pages, Page Templates, and Menu Design imports.
+- [x] Split residual large module swaps into `TASK-464-07-S01-*` before coding
       if this leaf no longer fits Medium effort.
 
 ---

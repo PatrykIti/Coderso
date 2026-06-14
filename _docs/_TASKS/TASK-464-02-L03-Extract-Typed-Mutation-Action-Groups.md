@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Mutation Contracts
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -23,12 +24,12 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Define `PageAuthoringCanvasActions`.
-- [ ] Define `PageFloatingToolbarActions`.
-- [ ] Define `PageLayersActions`.
-- [ ] Define `PageCommandPaletteActions`.
-- [ ] Define `PageTemplatePickerActions`.
-- [ ] Wire existing callbacks through these groups without behavior changes.
+- [x] Define `PageAuthoringCanvasActions`.
+- [x] Define `PageFloatingToolbarActions`.
+- [x] Define `PageLayersActions`.
+- [x] Define `PageCommandPaletteActions`.
+- [x] Define `PageTemplatePickerActions`.
+- [x] Wire existing callbacks through these groups without behavior changes.
 
 ---
 

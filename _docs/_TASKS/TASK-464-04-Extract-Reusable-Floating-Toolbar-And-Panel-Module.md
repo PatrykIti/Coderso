@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Floating Panel
 **Estimated Effort:** Large
 **Dependencies:** TASK-464-02, TASK-464-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -31,10 +32,10 @@ scroll behavior, or copy.
 
 ## Sub-Tasks
 
-- [ ] [TASK-464-04-L01](TASK-464-04-L01-Extract-Floating-Toolbar-Shell-And-Action-Row.md): Extract floating toolbar shell and action row.
-- [ ] [TASK-464-04-L02](TASK-464-04-L02-Extract-Registry-Option-Provider-And-Media-Lookup-Contract.md): Extract registry option provider and media lookup contract.
-- [ ] [TASK-464-04-L03](TASK-464-04-L03-Extract-Registry-Panel-Renderer-And-Control-Routing.md): Extract registry panel renderer and control routing.
-- [ ] [TASK-464-04-L04](TASK-464-04-L04-Extract-Responsive-And-Host-Appearance-Panel-Adapters.md): Extract responsive and host appearance panel adapters.
+- [x] [TASK-464-04-L01](TASK-464-04-L01-Extract-Floating-Toolbar-Shell-And-Action-Row.md): Extract floating toolbar shell and action row.
+- [x] [TASK-464-04-L02](TASK-464-04-L02-Extract-Registry-Option-Provider-And-Media-Lookup-Contract.md): Extract registry option provider and media lookup contract.
+- [x] [TASK-464-04-L03](TASK-464-04-L03-Extract-Registry-Panel-Renderer-And-Control-Routing.md): Extract registry panel renderer and control routing.
+- [x] [TASK-464-04-L04](TASK-464-04-L04-Extract-Responsive-And-Host-Appearance-Panel-Adapters.md): Extract responsive and host appearance panel adapters.
 
 ---
 

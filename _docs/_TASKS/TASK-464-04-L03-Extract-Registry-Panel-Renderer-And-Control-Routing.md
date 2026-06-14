@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Floating Panel
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464-04-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -24,11 +25,11 @@ control primitives, add-block button placement, and close behavior unchanged.
 
 ## Sub-Tasks
 
-- [ ] Extract Page registry panel component.
-- [ ] Keep section/block control selection logic identical.
-- [ ] Keep section variant control behavior identical.
-- [ ] Preserve unsupported-control fail-closed behavior.
-- [ ] Add panel routing tests.
+- [x] Extract Page registry panel component.
+- [x] Keep section/block control selection logic identical.
+- [x] Keep section variant control behavior identical.
+- [x] Preserve unsupported-control fail-closed behavior.
+- [x] Add panel routing tests.
 
 ---
 

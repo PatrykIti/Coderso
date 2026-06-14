@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Canvas
 **Estimated Effort:** Large
 **Dependencies:** TASK-464-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -30,9 +31,9 @@ and selection behavior.
 
 ## Sub-Tasks
 
-- [ ] [TASK-464-03-L01](TASK-464-03-L01-Extract-Canvas-Frame-And-Section-Shell.md): Extract canvas frame and section shell.
-- [ ] [TASK-464-03-L02](TASK-464-03-L02-Extract-Block-Frames-Ghost-Tiles-And-Slot-Affordances.md): Extract block frames, ghost tiles, and slot affordances.
-- [ ] [TASK-464-03-L03](TASK-464-03-L03-Extract-Inline-Edit-And-Canvas-Runtime-Binding-Wiring.md): Extract inline edit and canvas runtime binding wiring.
+- [x] [TASK-464-03-L01](TASK-464-03-L01-Extract-Canvas-Frame-And-Section-Shell.md): Extract canvas frame and section shell.
+- [x] [TASK-464-03-L02](TASK-464-03-L02-Extract-Block-Frames-Ghost-Tiles-And-Slot-Affordances.md): Extract block frames, ghost tiles, and slot affordances.
+- [x] [TASK-464-03-L03](TASK-464-03-L03-Extract-Inline-Edit-And-Canvas-Runtime-Binding-Wiring.md): Extract inline edit and canvas runtime binding wiring.
 
 ---
 

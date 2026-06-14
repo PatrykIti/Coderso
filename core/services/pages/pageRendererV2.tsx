@@ -49,6 +49,14 @@ import {
   type PageRuntimeDataByBlockId,
   type PageRuntimeFormBinding,
 } from "./pageRuntimeBindingContract";
+import {
+  escapeAuthoringCssString,
+  isSafeAuthoringCssGradient,
+  sanitizeAuthoringCssBackground,
+  sanitizeAuthoringCssColor,
+  sanitizeAuthoringLinkHref,
+  sanitizeAuthoringMediaUrl,
+} from "./pageAuthoringSanitizers";
 
 export type PageRenderMode = "runtime" | "admin-preview";
 export type PageSectionLayoutMode = "runtime" | "canvas-device";
@@ -199,19 +207,27 @@ const toBoxSpacingValue = (spacing: PageBlockStyle["padding"] | PageBlockStyle["
 
 const toGradientBackground = (value: string | null | undefined) => {
   if (!value) return undefined;
-  return /(linear|radial|conic)-gradient\(/i.test(value) ? value : undefined;
+  const safe = sanitizeAuthoringCssBackground(value);
+  return safe && isSafeAuthoringCssGradient(safe) ? safe : undefined;
 };
 
 export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProperties => {
   const template = resolvePageSectionTemplate(section);
+  const accent = sanitizeAuthoringCssColor(section.style.accent);
+  const backgroundColor =
+    section.style.backgroundType === "color"
+      ? sanitizeAuthoringCssColor(section.style.background)
+      : undefined;
+  const backgroundImageUrl =
+    section.style.backgroundType === "image"
+      ? sanitizeAuthoringMediaUrl(section.style.backgroundImage)
+      : null;
   return {
-    "--coderso-section-accent": section.style.accent,
-    backgroundColor:
-      section.style.backgroundType === "color" ? section.style.background : undefined,
-    backgroundImage:
-      section.style.backgroundType === "image" && section.style.backgroundImage
-        ? `url(${section.style.backgroundImage})`
-        : undefined,
+    "--coderso-section-accent": accent ?? undefined,
+    backgroundColor: backgroundColor ?? undefined,
+    backgroundImage: backgroundImageUrl
+      ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
+      : undefined,
     borderRadius: `${section.style.radius}px`,
     boxShadow:
       section.style.shadow === "none"
@@ -338,20 +354,24 @@ export const toPageSectionRenderProps = (
 const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties => {
   const style = block.style ?? {};
   const backgroundColor =
-    style.backgroundType === "color" && style.background ? style.background : undefined;
+    style.backgroundType === "color" && style.background
+      ? sanitizeAuthoringCssColor(style.background)
+      : undefined;
+  const textColor = sanitizeAuthoringCssColor(style.textColor);
+  const borderColor = sanitizeAuthoringCssColor(style.borderColor);
   return {
-    "--coderso-block-text": style.textColor ?? undefined,
-    "--coderso-block-surface": backgroundColor,
-    backgroundColor,
+    "--coderso-block-text": textColor ?? undefined,
+    "--coderso-block-surface": backgroundColor ?? undefined,
+    backgroundColor: backgroundColor ?? undefined,
     backgroundImage:
       style.backgroundType === "gradient" ? toGradientBackground(style.background) : undefined,
-    color: style.textColor ?? undefined,
+    color: textColor ?? undefined,
     opacity: style.opacity,
     borderRadius: style.radius !== undefined ? `${style.radius}px` : undefined,
     boxShadow: toPageShadowValue(style.shadow),
-    borderColor: style.borderColor ?? undefined,
-    borderStyle: style.borderColor ? "solid" : undefined,
-    borderWidth: style.borderColor ? "1px" : undefined,
+    borderColor: borderColor ?? undefined,
+    borderStyle: borderColor ? "solid" : undefined,
+    borderWidth: borderColor ? "1px" : undefined,
   };
 };
 
@@ -478,7 +498,7 @@ const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
 };
 
 const renderImage = (block: PageBlockV2) => {
-  const src = readText(block.props.src);
+  const src = sanitizeAuthoringMediaUrl(block.props.src) ?? "";
   const alt = readText(block.props.alt);
   const caption = readText(block.props.caption);
   // Style-target contract: radius/border/shadow must clip the picture itself,
@@ -533,11 +553,12 @@ const readGalleryItemText = (item: Record<string, unknown>, ...keys: string[]): 
 
 const toGalleryItem = (value: unknown): PageGalleryItem | null => {
   if (typeof value === "string") {
-    const src = readText(value);
+    const src = sanitizeAuthoringMediaUrl(value) ?? "";
     return src ? { src, alt: "", caption: "" } : null;
   }
   if (!isRecord(value)) return null;
-  const src = readGalleryItemText(value, "src", "url", "image", "assetUrl");
+  const src =
+    sanitizeAuthoringMediaUrl(readGalleryItemText(value, "src", "url", "image", "assetUrl")) ?? "";
   const alt = readGalleryItemText(value, "alt", "title", "label", "name");
   const caption = readGalleryItemText(value, "caption", "title", "label", "name", "description");
   if (!src && !caption) return null;
@@ -910,7 +931,8 @@ const renderEmbedBlock = (block: PageBlockV2, context: PageBlockRenderContext) =
   if (!binding) {
     return renderInertDataBoundBlock("embed", "Embed content is not available yet.");
   }
-  if (binding.iframeSrc) {
+  const iframeSrc = sanitizeAuthoringMediaUrl(binding.iframeSrc);
+  if (iframeSrc) {
     return (
       <div
         className="overflow-hidden rounded-lg border bg-black/5"
@@ -918,7 +940,7 @@ const renderEmbedBlock = (block: PageBlockV2, context: PageBlockRenderContext) =
       >
         <div className="relative w-full" style={{ paddingTop: "56.25%" }}>
           <iframe
-            src={binding.iframeSrc}
+            src={iframeSrc}
             loading="lazy"
             title={binding.iframeTitle}
             className="absolute inset-0 h-full w-full border-0"
@@ -950,7 +972,7 @@ const renderList = (block: PageBlockV2, context: PageBlockRenderContext) => {
   const items = Array.isArray(block.props.items) ? block.props.items : [];
   const children = items.map((item, index) => {
     const label = isListLinkItem(item) ? item.label : readText(item);
-    const href = isListLinkItem(item) ? item.href : "";
+    const href = isListLinkItem(item) ? (sanitizeAuthoringLinkHref(item.href) ?? "") : "";
     return (
       <li key={`${block.id}-${index}`}>
         {href ? (
@@ -1187,7 +1209,7 @@ export const renderPageBlockContent = (
         </p>
       );
     case "button": {
-      const href = readText(block.props.href, "#");
+      const href = sanitizeAuthoringLinkHref(block.props.href) ?? "#";
       return (
         <a
           className={joinPageRenderClasses(
@@ -1208,7 +1230,7 @@ export const renderPageBlockContent = (
     case "image":
       return renderImage(block);
     case "video": {
-      const src = readText(block.props.src);
+      const src = sanitizeAuthoringMediaUrl(block.props.src) ?? "";
       return src ? (
         <video
           className="w-full rounded"

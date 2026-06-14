@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Architecture
 **Estimated Effort:** Large
 **Dependencies:** TASK-464-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -26,9 +27,9 @@ dirty-state transitions, selected block path semantics, and host behavior.
 
 ## Sub-Tasks
 
-- [ ] [TASK-464-02-L01](TASK-464-02-L01-Extract-Host-Contracts-And-Import-Guards.md): Extract host contracts and import guards.
-- [ ] [TASK-464-02-L02](TASK-464-02-L02-Extract-Selection-Device-And-Toolbar-State-Helpers.md): Extract selection, device, and toolbar state helpers.
-- [ ] [TASK-464-02-L03](TASK-464-02-L03-Extract-Typed-Mutation-Action-Groups.md): Extract typed mutation action groups.
+- [x] [TASK-464-02-L01](TASK-464-02-L01-Extract-Host-Contracts-And-Import-Guards.md): Extract host contracts and import guards.
+- [x] [TASK-464-02-L02](TASK-464-02-L02-Extract-Selection-Device-And-Toolbar-State-Helpers.md): Extract selection, device, and toolbar state helpers.
+- [x] [TASK-464-02-L03](TASK-464-02-L03-Extract-Typed-Mutation-Action-Groups.md): Extract typed mutation action groups.
 
 ---
 

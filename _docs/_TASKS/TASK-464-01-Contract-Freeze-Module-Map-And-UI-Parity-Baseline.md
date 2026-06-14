@@ -6,7 +6,8 @@
 **Category:** Pages / Admin UI / Architecture
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-14
 
 ---
 
@@ -26,8 +27,8 @@ template insertion behavior, Page Templates behavior, and Menu Design behavior.
 
 ## Sub-Tasks
 
-- [ ] [TASK-464-01-L01](TASK-464-01-L01-Map-PageEditor-Monolith-Responsibilities-And-Boundaries.md): Map PageEditor monolith responsibilities and boundaries.
-- [ ] [TASK-464-01-L02](TASK-464-01-L02-Capture-UI-Parity-Characterization-Baseline.md): Capture UI parity characterization baseline.
+- [x] [TASK-464-01-L01](TASK-464-01-L01-Map-PageEditor-Monolith-Responsibilities-And-Boundaries.md): Map PageEditor monolith responsibilities and boundaries.
+- [x] [TASK-464-01-L02](TASK-464-01-L02-Capture-UI-Parity-Characterization-Baseline.md): Capture UI parity characterization baseline.
 
 ---
 
