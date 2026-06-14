@@ -128,7 +128,21 @@ export function resolveInlineEditTarget(
   return null;
 }
 
-const htmlCommentPattern = /<!--[\s\S]*?-->/g;
+const htmlCommentStart = "<!--";
+const htmlCommentEnd = "-->";
+
+const stripHtmlComments = (value: string): string => {
+  let result = "";
+  let cursor = 0;
+  for (;;) {
+    const start = value.indexOf(htmlCommentStart, cursor);
+    if (start === -1) return result + value.slice(cursor);
+    result += value.slice(cursor, start);
+    const end = value.indexOf(htmlCommentEnd, start + htmlCommentStart.length);
+    if (end === -1) return result;
+    cursor = end + htmlCommentEnd.length;
+  }
+};
 
 /** Drops dangerous elements together with their content (shared policy set). */
 const dangerousContentPattern = new RegExp(
@@ -151,8 +165,7 @@ const stripInlineMarkup = (value: string): string => {
   // until a fixpoint to keep obfuscated nestings (e.g. `<<b>script>`) from
   // reassembling into markup after a single pass.
   for (;;) {
-    const next = current
-      .replace(htmlCommentPattern, "")
+    const next = stripHtmlComments(current)
       .replace(dangerousContentPattern, "")
       .replace(elementTagPattern, "");
     if (next === current) return next;

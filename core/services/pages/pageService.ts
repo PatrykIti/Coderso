@@ -16,6 +16,7 @@ import {
   toPublishedPageDocumentV2,
   type PageDocumentV2,
 } from "./pageDocumentV2";
+import { createSecureRandomHexFragment } from "../security/secureRandom";
 import { resolveEmailValue } from "../security/piiEmail";
 import { resolvePageRevisionRetention } from "./revisionRetention";
 
@@ -303,7 +304,8 @@ export async function duplicatePage(id: string, actorId?: string) {
   const page = await getPage(id);
   if (!page) throw new Error("page_not_found");
 
-  const suffix = Math.random().toString(36).slice(2, 8);
+  const suffix = createSecureRandomHexFragment(6);
+  if (!suffix) throw new Error("secure_random_unavailable");
   const baseSlug = page.slug.replace(/\/$/, "");
   const clonedSlug = `${baseSlug}-copy-${suffix}`;
 

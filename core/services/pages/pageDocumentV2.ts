@@ -16,6 +16,7 @@ import {
   sanitizeMenuAppearance,
   type MenuAppearance,
 } from "../menus/normalizeMenuAppearance";
+import { createSecureRandomHexFragment } from "../security/secureRandom";
 import { DEFAULT_TOKENS } from "../theme/tokenTypes";
 
 export const PAGE_DOCUMENT_SCHEMA_VERSION = 2 as const;
@@ -2511,12 +2512,18 @@ const toSectionName = (type: PageSectionType) =>
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 
+const createPageDocumentIdSuffix = () => {
+  const suffix = createSecureRandomHexFragment(12);
+  if (suffix) return suffix;
+  throw new PageDocumentError(
+    "page_document_invalid",
+    "Secure randomness is required to create page document ids.",
+    "id"
+  );
+};
+
 export function createPageDocumentId(prefix: "sec" | "blk" = "sec") {
-  const uuid =
-    typeof globalThis.crypto?.randomUUID === "function"
-      ? globalThis.crypto.randomUUID()
-      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`;
-  return `${prefix}_${uuid.replace(/-/g, "").slice(0, 12)}`;
+  return `${prefix}_${createPageDocumentIdSuffix()}`;
 }
 
 export function createDefaultPageDocumentV2(): PageDocumentV2 {

@@ -31,6 +31,7 @@ import { buildPageEditorFormPreviewBinding } from "../../../core/services/pages/
 import {
   mapPageFiltersBlockToListingFiltersData,
   type PageRuntimeCollectionBinding,
+  type PageRuntimeDataByBlockId,
 } from "../../../core/services/pages/pageRuntimeBindingContract";
 import { normalizeListingFiltersData } from "../../../core/widgets/core/listingFilters";
 import { normalizeContentListData } from "../../../core/widgets/core/contentList";
@@ -781,6 +782,37 @@ test("form block renders a canvas-safe inert preview in canvas layout mode (TASK
   expect(runtimeHtml).not.toContain("Loading form preview...");
   expect(runtimeHtml).not.toContain('data-page-editor-form-preview="inert"');
   expect(runtimeHtml).toContain("Form is not available yet.");
+});
+
+test("embed block renders sanitized inline HTML as React nodes", () => {
+  const section = createPageSectionV2("embed", {
+    id: "sec-inline-embed",
+    blocks: [
+      createPageBlockV2("embed", {
+        id: "blk-inline-embed",
+        props: { provider: "custom", url: "", html: "" },
+      }),
+    ],
+  });
+  const runtimeDataByBlockId: PageRuntimeDataByBlockId = {
+    "blk-inline-embed": {
+      kind: "embed",
+      iframeSrc: null,
+      iframeTitle: "Custom embed",
+      sanitizedHtml:
+        '<p>Fish &amp; chips <strong>menu</strong><br><a href="/menu" rel="nofollow noreferrer" target="_blank">Open</a></p>',
+    },
+  };
+
+  const html = renderToStaticMarkup(
+    <PageSectionContent section={section} runtimeDataByBlockId={runtimeDataByBlockId} />
+  );
+
+  expect(html).toContain('data-page-embed-html="sanitized"');
+  expect(html).toContain("Fish &amp; chips");
+  expect(html).toContain("<strong>menu</strong>");
+  expect(html).toContain("<br/>");
+  expect(html).toContain('<a href="/menu" rel="nofollow noreferrer" target="_blank">Open</a>');
 });
 
 test("collection block renders a canvas-safe inert preview in canvas layout mode (TASK-457)", () => {

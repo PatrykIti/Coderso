@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import Ajv from "ajv";
 
 import {
@@ -6,6 +6,7 @@ import {
   PAGE_BLOCK_MAX_TREE_DEPTH,
   clearResponsiveOverride,
   clearBlockResponsiveOverride,
+  createPageDocumentId,
   createDefaultPageDocumentV2,
   createPageBlockV2,
   createPageSectionV2,
@@ -142,7 +143,58 @@ const createHeadingBlock = (id: string, text = "Nested heading"): PageBlockV2 =>
   visibility: { visible: true },
 });
 
+const withGlobalCrypto = <T>(cryptoValue: Crypto | undefined, run: () => T): T => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis, "crypto");
+  Object.defineProperty(globalThis, "crypto", {
+    value: cryptoValue,
+    configurable: true,
+  });
+  try {
+    return run();
+  } finally {
+    if (descriptor) {
+      Object.defineProperty(globalThis, "crypto", descriptor);
+    } else {
+      Reflect.deleteProperty(globalThis, "crypto");
+    }
+  }
+};
+
 describe("PageDocumentV2", () => {
+  test("compacts crypto randomUUID output into the stored id shape", () => {
+    const cryptoStub = {
+      randomUUID: () => "ABCDEFAB-CDEF-4ABC-8DEF-ABCDEFABCDEF",
+    } as unknown as Crypto;
+
+    withGlobalCrypto(cryptoStub, () => {
+      expect(createPageDocumentId("sec")).toBe("sec_abcdefabcdef");
+    });
+  });
+
+  test("uses crypto getRandomValues when randomUUID is unavailable", () => {
+    const getRandomValues = vi.fn((bytes: Uint8Array) => {
+      bytes.set([0, 1, 2, 3, 4, 5]);
+      return bytes;
+    });
+    const cryptoStub = { getRandomValues } as unknown as Crypto;
+
+    withGlobalCrypto(cryptoStub, () => {
+      expect(createPageDocumentId("blk")).toBe("blk_000102030405");
+    });
+    expect(getRandomValues).toHaveBeenCalledOnce();
+  });
+
+  test("fails closed instead of falling back to insecure randomness", () => {
+    withGlobalCrypto(undefined, () => {
+      try {
+        createPageDocumentId("sec");
+        throw new Error("Expected createPageDocumentId to fail without Web Crypto");
+      } catch (error) {
+        expect(isPageDocumentError(error, "page_document_invalid")).toBe(true);
+      }
+    });
+  });
+
   test("normalizes a strict v2 Page document without widget block coupling", () => {
     const normalized = normalizePageDocumentV2ForWrite(buildDocument());
 

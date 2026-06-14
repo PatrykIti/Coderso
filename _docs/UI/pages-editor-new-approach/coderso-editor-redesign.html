@@ -1926,13 +1926,34 @@
           syncLayers();
         };
         $("#layersClose").onclick = () => layers.classList.remove("show");
+        const layerIconNamespace = "http://www.w3.org/2000/svg";
+        function createLayerIcon() {
+          const svg = document.createElementNS(layerIconNamespace, "svg");
+          svg.setAttribute("viewBox", "0 0 24 24");
+          svg.setAttribute("fill", "none");
+          svg.setAttribute("stroke", "currentColor");
+          svg.setAttribute("stroke-width", "2");
+          const rect = document.createElementNS(layerIconNamespace, "rect");
+          rect.setAttribute("x", "3");
+          rect.setAttribute("y", "3");
+          rect.setAttribute("width", "18");
+          rect.setAttribute("height", "18");
+          rect.setAttribute("rx", "2");
+          const path = document.createElementNS(layerIconNamespace, "path");
+          path.setAttribute("d", "M3 9h18");
+          svg.append(rect, path);
+          return svg;
+        }
         function syncLayers() {
           const body = $("#layersBody");
           body.innerHTML = "";
           $$(".section").forEach((s) => {
             const d = document.createElement("div");
             d.className = "layer" + (s === selected ? " on" : "");
-            d.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/></svg>${s.dataset.name}<span class="eye">●</span>`;
+            const eye = document.createElement("span");
+            eye.className = "eye";
+            eye.textContent = "●";
+            d.append(createLayerIcon(), document.createTextNode(s.dataset.name || ""), eye);
             d.onclick = () => {
               select(s);
               s.scrollIntoView({ behavior: "smooth", block: "center" });

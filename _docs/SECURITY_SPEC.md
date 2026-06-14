@@ -331,9 +331,26 @@ Rotacja klucza:
 - The Pages embed allowlist is intentionally narrow: textual layout tags and
   safe links only. Script-capable tags, event handlers, unsafe URLs, forms,
   frames, and unknown attributes are stripped before public render.
+- Sanitized inline embed markup is rendered as tokenizer-derived React nodes,
+  not through `dangerouslySetInnerHTML`; anchor attributes are rebuilt from the
+  sanitized allowlist.
 - Provider embeds must use hardened first-party resolver output such as the
   YouTube iframe URL resolver; arbitrary iframe HTML from page data is not a
   public runtime contract.
+
+## Pages editor text and ids
+
+- Page v2 block and section ids are generated from Web Crypto only
+  (`randomUUID` or `getRandomValues`) and fail closed when secure randomness is
+  unavailable.
+- Duplicate page slug suffixes use the same secure random fragment helper; do
+  not use `Math.random()` for Page identifiers, slugs, preview tokens, or other
+  user-visible collision guards.
+- Page editor inline text commits remain plain text. The commit sanitizer drops
+  complete and unterminated HTML comments, dangerous element content, element
+  tags, and control characters before values re-enter the Page document.
+- Prototype or reference HTML in `_docs/UI` must construct dynamic text with
+  DOM nodes and `textContent`; do not interpolate DOM text into `innerHTML`.
 
 ## Assistant security baseline (v1)
 

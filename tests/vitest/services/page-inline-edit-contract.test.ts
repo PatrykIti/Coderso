@@ -178,6 +178,16 @@ describe("sanitizeInlineText", () => {
     ).toBe("Safe");
   });
 
+  test("drops unterminated HTML comments instead of leaving comment openers", () => {
+    const sanitized = sanitizeInlineText(
+      heading(),
+      "One <!-- hidden -->Two <!-- unterminated <span>tail</span>"
+    );
+    expect(sanitized).toBe("One Two");
+    expect(sanitized).not.toContain("<!--");
+    expect(sanitized).not.toContain("tail");
+  });
+
   test("never reassembles obfuscated nested markup", () => {
     expect(sanitizeInlineText(heading(), "<<b>script>alert(1)</<b>script>")).toBe("");
   });

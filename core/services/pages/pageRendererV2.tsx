@@ -1,8 +1,13 @@
-import type { CSSProperties, ReactNode } from "react";
+import { createElement, type CSSProperties, type ReactNode } from "react";
 
 import { ContentListBlock } from "../../widgets/core/contentList";
 import { FormEmbedBlock, type FormEmbedData } from "../../widgets/core/formEmbed";
 import { ListingFiltersBlock } from "../../widgets/core/listingFilters";
+import {
+  decodeHtmlEntities,
+  parseHtmlAttributes,
+  tokenizeHtml,
+} from "../posts/editor/postRichTextHtmlUtils";
 import {
   getPageBlockActiveSlotKeys,
   isPageTypographyCapableBlockType,
@@ -37,6 +42,8 @@ import {
 } from "./pageSectionTemplates";
 import {
   mapPageFiltersBlockToListingFiltersData,
+  pageEmbedAllowedTags,
+  pageEmbedSelfClosingTags,
   readPageFiltersBlockLayout,
   type PageRuntimeDataBinding,
   type PageRuntimeDataByBlockId,
@@ -815,6 +822,89 @@ const renderFormBlock = (block: PageBlockV2, context: PageBlockRenderContext) =>
   return embed;
 };
 
+type SanitizedEmbedElementFrame = {
+  tagName: string;
+  rawAttrs: string;
+  children: ReactNode[];
+  key: number;
+};
+
+const toSanitizedEmbedElementProps = (
+  tagName: string,
+  rawAttrs: string,
+  key: number
+): Record<string, string | number> => {
+  if (tagName !== "a") return { key };
+  const attrs = parseHtmlAttributes(rawAttrs);
+  const href = attrs.get("href");
+  const rel = attrs.get("rel");
+  const target = attrs.get("target");
+  return {
+    key,
+    ...(href ? { href } : {}),
+    ...(rel ? { rel } : {}),
+    ...(target ? { target } : {}),
+  };
+};
+
+const createSanitizedEmbedElement = (frame: SanitizedEmbedElementFrame) =>
+  createElement(
+    frame.tagName,
+    toSanitizedEmbedElementProps(frame.tagName, frame.rawAttrs, frame.key),
+    ...frame.children
+  );
+
+const renderSanitizedEmbedHtml = (sanitizedHtml: string): ReactNode[] => {
+  const roots: ReactNode[] = [];
+  const stack: SanitizedEmbedElementFrame[] = [];
+  let nextKey = 0;
+
+  const appendNode = (node: ReactNode) => {
+    const parent = stack.at(-1);
+    if (parent) {
+      parent.children.push(node);
+      return;
+    }
+    roots.push(node);
+  };
+
+  for (const token of tokenizeHtml(sanitizedHtml)) {
+    if (token.kind === "text") {
+      appendNode(decodeHtmlEntities(token.value));
+      continue;
+    }
+    if (token.kind === "comment" || !pageEmbedAllowedTags.has(token.name)) continue;
+
+    if (token.closing) {
+      const current = stack.at(-1);
+      if (current?.tagName === token.name) {
+        stack.pop();
+        appendNode(createSanitizedEmbedElement(current));
+      }
+      continue;
+    }
+
+    if (token.selfClosing || pageEmbedSelfClosingTags.has(token.name)) {
+      appendNode(
+        createElement(
+          token.name,
+          toSanitizedEmbedElementProps(token.name, token.rawAttrs, nextKey++)
+        )
+      );
+      continue;
+    }
+
+    stack.push({ tagName: token.name, rawAttrs: token.rawAttrs, children: [], key: nextKey++ });
+  }
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current) appendNode(createSanitizedEmbedElement(current));
+  }
+
+  return roots;
+};
+
 const renderEmbedBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
   const binding = getRuntimeBinding(block, context, "embed");
   if (!binding) {
@@ -842,11 +932,9 @@ const renderEmbedBlock = (block: PageBlockV2, context: PageBlockRenderContext) =
   }
   if (binding.sanitizedHtml) {
     return (
-      <div
-        className="prose max-w-none"
-        data-page-embed-html="sanitized"
-        dangerouslySetInnerHTML={{ __html: binding.sanitizedHtml }}
-      />
+      <div className="prose max-w-none" data-page-embed-html="sanitized">
+        {renderSanitizedEmbedHtml(binding.sanitizedHtml)}
+      </div>
     );
   }
   return renderInertDataBoundBlock("embed", "Embed content is not available yet.");

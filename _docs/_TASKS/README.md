@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 107 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2454 tasks
+- **Done:** 2455 tasks
 
 ---
 
@@ -216,6 +216,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-463 | CodeQL Pages Security Remediation | High | Small | Done (2026-06-14): Closed Pages CodeQL alerts plus strict security scan findings for sanitized embed rendering and transitive `esbuild`. |
 | TASK-462 | Admin Browser Runtime Boundary Hardening | High | Large | Done (2026-06-13): Admin build restored by splitting browser-safe contracts from server/runtime loaders; no provider externals, aliases, `@vite-ignore`, or browser stubs. |
 | TASK-462-01 | Admin Build Boundary Audit And Contract Freeze | High | Medium | Done (2026-06-13): Reproduced Azure export failure and froze the import-boundary contract before implementation. |
 | TASK-462-01-L01 | Map Admin Browser Import Graph And Server-Only Leaks | High | Medium | Done (2026-06-13): Confirmed Page Editor to runtime resolver/storage/auth leak paths and codified them in `check:admin-boundary`. |

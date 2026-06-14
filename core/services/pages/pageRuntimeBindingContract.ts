@@ -160,7 +160,7 @@ const readBoundedNumber = (value: unknown, fallback: number, min: number, max: n
   return Math.max(min, Math.min(max, Math.trunc(value)));
 };
 
-const pageEmbedAllowedTags = new Set([
+export const pageEmbedAllowedTags: ReadonlySet<string> = new Set([
   "a",
   "blockquote",
   "br",
@@ -177,7 +177,7 @@ const pageEmbedAllowedTags = new Set([
   "ul",
 ]);
 
-const pageEmbedSelfClosingTags = new Set(["br"]);
+export const pageEmbedSelfClosingTags: ReadonlySet<string> = new Set(["br"]);
 
 const isSafeInlineHref = (value: string) => {
   if (value.startsWith("#") || value.startsWith("/")) return true;
