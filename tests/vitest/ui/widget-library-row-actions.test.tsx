@@ -78,7 +78,6 @@ test("WidgetLibraryRowActions keeps core actions source-specific", () => {
 
   const view = mount(
     <WidgetLibraryRowActions
-      source="core"
       section="all-items"
       isFavorite={false}
       onPreview={onPreview}
@@ -118,46 +117,22 @@ test("WidgetLibraryRowActions keeps core actions source-specific", () => {
   }
 });
 
-test("WidgetLibraryRowActions exposes template management only in Templates section", () => {
+test("WidgetLibraryRowActions no longer exposes retired widget-template management", () => {
   const view = mount(
     <WidgetLibraryRowActions
-      source="template"
       section="favorites"
       isFavorite
       onPreview={() => undefined}
-      onEditTemplate={() => undefined}
-      onDuplicateTemplate={() => undefined}
-      onDeleteTemplate={() => undefined}
       onFavoriteToggle={() => undefined}
     />
   );
 
   try {
-    expect(view.container.textContent).toContain("Edit template");
     expect(view.container.textContent).toContain("Remove from favorites");
+    expect(view.container.textContent).not.toContain("Edit template");
     expect(view.container.textContent).not.toContain("Duplicate");
     expect(view.container.textContent).not.toContain("Delete");
   } finally {
     view.cleanup();
-  }
-
-  const templatesView = mount(
-    <WidgetLibraryRowActions
-      source="template"
-      section="templates"
-      isFavorite
-      onPreview={() => undefined}
-      onEditTemplate={() => undefined}
-      onDuplicateTemplate={() => undefined}
-      onDeleteTemplate={() => undefined}
-      onFavoriteToggle={() => undefined}
-    />
-  );
-
-  try {
-    expect(templatesView.container.textContent).toContain("Duplicate");
-    expect(templatesView.container.textContent).toContain("Delete");
-  } finally {
-    templatesView.cleanup();
   }
 });

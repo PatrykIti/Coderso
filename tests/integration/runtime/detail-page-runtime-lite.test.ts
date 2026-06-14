@@ -224,6 +224,7 @@ bunMock?.module("../../../core/services/content/detailPageRuntimeResolver", () =
 bunMock?.module("../../../core/services/pages/pageService", () => ({
   getPageBySlug: async () => null,
   getPage: async () => null,
+  getPageSlugsByIds: async () => new Map<string, string>(),
 }));
 
 bunMock?.module("../../../core/services/navigation/navigationRuntimeResolver", () => ({
@@ -280,6 +281,18 @@ bunMock?.module("../../../core/services/content/contentListResolver", () => ({
   resolveContentListRuntimeData: async () => ({
     items: [],
   }),
+  // Pure list-route helpers publicSite imports from the same module
+  // (TASK-459-03); detail-page renders never reach them, so inert stubs keep
+  // the mocked module's export surface honest.
+  resolveContentListRequestedPage: () => 1,
+  resolveContentListRuntimeNavigationMeta: () => ({
+    page: 1,
+    pageSize: 24,
+    totalPages: 1,
+    pageParamKey: "page",
+    search: "",
+  }),
+  sortContentListRuntimeEntries: <T>(entries: T[]) => entries,
 }));
 
 bunMock?.module("../../../core/services/content/postsFeedResolver", () => ({

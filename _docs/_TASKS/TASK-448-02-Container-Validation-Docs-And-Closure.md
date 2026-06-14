@@ -1,0 +1,53 @@
+# TASK-448-02: Container Validation Docs And Closure
+# FileName: TASK-448-02-Container-Validation-Docs-And-Closure.md
+
+**Parent Task:** TASK-448
+**Priority:** Medium
+**Category:** Pages / Page Editor V2 / QA
+**Estimated Effort:** Medium
+**Dependencies:** TASK-448-01
+**Status:** ⏳ To Do
+
+---
+
+## Overview
+
+Close the Container family with targeted validation, live browser proof, and
+docs/board/changelog synchronization.
+
+---
+
+## Sub-Tasks
+
+- [ ] Run the targeted validation set and capture final evidence.
+- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+
+## Implementation Pseudocode
+
+```text
+1. Exercise the Container block through the final targeted validation set.
+2. Run the lane-owned tests plus lint/type checks for the container contract.
+3. Replay the browser audit steps and confirm the published front still renders a real `container` block with no unresolved dedicated-control drift.
+4. Sync docs, board rows, and changelog evidence before closure.
+Validation commands:
+- `bun run test:vitest`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+```
+
+## Testing Requirements
+
+- Relevant Page editor UI Vitest suites.
+- Nested layout/runtime coverage as needed.
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `coderso-dev-core-host` plus `playwright-cli` Container smoke.
+
+---
+
+## Documentation Updates Required
+
+- `_docs/_TASKS/README.md`
+- `_docs/_CHANGELOG/` entry on completion
+

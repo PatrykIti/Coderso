@@ -138,11 +138,7 @@ test("normalizeAssistantReferencedWidgetTemplate summarizes nested blocks and re
       hasBackgroundMedia: true,
     },
   });
-  expect(summary?.blocks.map((block) => block.id)).toEqual([
-    "hero-1",
-    "cta-1",
-    "nested-template",
-  ]);
+  expect(summary?.blocks.map((block) => block.id)).toEqual(["hero-1", "cta-1", "nested-template"]);
   expect(summary?.blocks[0]).toMatchObject({
     id: "hero-1",
     label: "Visible title",
@@ -162,17 +158,25 @@ test("normalizeAssistantReferencedWidgetTemplate summarizes nested blocks and re
   expect(summary?.warnings).toContain("widget_template_template-a_block_redacted");
 });
 
-test("hydrateAssistantActiveSurfaceContext loads referenced page template summaries", async () => {
+test("hydrateAssistantActiveSurfaceContext loads referenced detail-page template summaries", async () => {
   const templateLoads: string[] = [];
   const deps = {
-    getPage: async (id: string) =>
-      id === "page-1"
+    getPage: async () => null,
+    getDetailPageDocument: async (id: string) =>
+      id === "detail-page-1"
         ? {
             id,
-            title: "Contact from server",
-            slug: "/contact",
+            name: "Product Detail from server",
+            contentTypeId: "ct-products",
             status: "published",
-            currentData: {
+            currentDocument: {
+              schemaVersion: 1,
+              id,
+              name: "Product Detail from server",
+              contentTypeId: "ct-products",
+              contentTypeSlug: "products",
+              status: "published",
+              titlePattern: "{title} | Store",
               blocks: [
                 {
                   id: "persisted-ref",
@@ -222,20 +226,69 @@ test("hydrateAssistantActiveSurfaceContext loads referenced page template summar
         : null;
     },
     getCustomScreen: async () => null,
+    getCollectionWorkspaceSummary: async (contentTypeId: string) => {
+      if (contentTypeId !== "ct-products") throw new Error("content_type_not_found");
+      return {
+        contentType: {
+          id: "ct-products",
+          name: "Products",
+          slug: "products",
+          status: "published",
+          fieldCount: 3,
+          updatedAt: "2026-05-10T10:00:00.000Z",
+        },
+        canonical: {
+          contentRoute: null,
+          detailPage: {
+            id: "detail-page-1",
+            label: "Product Detail",
+            status: "published",
+          },
+          listPage: null,
+          listingQuery: null,
+          listingTemplate: null,
+          adminScreen: null,
+        },
+        linkedSecondary: {
+          pages: [],
+          adminScreens: [],
+        },
+        unresolved: [],
+        candidates: {
+          detailPages: [
+            {
+              id: "detail-page-1",
+              label: "Product Detail",
+              status: "published",
+            },
+          ],
+          pages: [],
+          listingQueries: [],
+          listingTemplates: [],
+          adminScreens: [],
+        },
+      };
+    },
   };
 
   const context = await hydrateAssistantActiveSurfaceContext(
     {
-      page: "/admin/pages/page-1",
+      page: "/admin/advanced/engine/ct-products/collection/detail-template/detail-page-1",
+      collectionWorkspaceHint: {
+        contentTypeId: "ct-products",
+        activeDetailPageId: "detail-page-1",
+      },
       activeSurface: {
-        kind: "page",
-        page: {
-          id: "page-1",
-          title: "Contact local",
-          slug: "/local",
+        kind: "detail-page",
+        detailPage: {
+          id: "detail-page-1",
+          name: "Product Detail local",
           status: "draft",
-          template: "landing",
+          contentTypeId: "ct-products",
+          contentTypeSlug: "products",
+          titlePattern: "{title}",
         },
+        sampleEntryId: "entry-1",
         selectedBlockId: "local-ref",
         blocks: [
           {
@@ -257,13 +310,13 @@ test("hydrateAssistantActiveSurfaceContext loads referenced page template summar
 
   expect(templateLoads.sort()).toEqual(["template-a", "template-b"]);
   expect(context?.activeSurface).toMatchObject({
-    kind: "page",
-    page: {
-      id: "page-1",
-      title: "Contact from server",
-      slug: "/contact",
+    kind: "detail-page",
+    detailPage: {
+      id: "detail-page-1",
+      name: "Product Detail from server",
       status: "published",
-      template: "landing",
+      contentTypeSlug: "products",
+      titlePattern: "{title} | Store",
     },
     templateReferences: [
       {
@@ -293,18 +346,20 @@ test("hydrateAssistantActiveSurfaceContext loads referenced page template summar
   });
 });
 
-test("buildAssistantAdminContext preserves server-hydrated referenced template summaries", () => {
+test("buildAssistantAdminContext preserves server-hydrated detail-page template summaries", () => {
   const context = buildAssistantAdminContext({
-    page: "/admin/pages/page-1",
+    page: "/admin/advanced/engine/ct-products/collection/detail-template/detail-page-1",
     activeSurface: {
-      kind: "page",
-      page: {
-        id: "page-1",
-        title: "Contact",
-        slug: "/contact",
+      kind: "detail-page",
+      detailPage: {
+        id: "detail-page-1",
+        name: "Product Detail",
         status: "published",
-        template: "landing",
+        contentTypeId: "ct-products",
+        contentTypeSlug: "products",
+        titlePattern: "{title}",
       },
+      sampleEntryId: "entry-1",
       selectedBlockId: null,
       blocks: [],
       templateReferences: [
@@ -350,7 +405,7 @@ test("buildAssistantAdminContext preserves server-hydrated referenced template s
   });
 
   expect(context.activeSurface).toMatchObject({
-    kind: "page",
+    kind: "detail-page",
     templateReferences: [
       {
         templateId: "template-a",

@@ -44,6 +44,11 @@ import {
   navigationMobileModeIds,
   navigationVariantIds,
 } from "../../widgets/core/navigationContract";
+import { normalizePageDocumentV2ForWrite, type PageBlockV2 } from "../pages/pageDocumentV2";
+import {
+  isAssistantPageBlockOutputAllowed,
+  isAssistantPageSectionOutputAllowed,
+} from "./pageActiveSurfaceSummary";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -1438,32 +1443,6 @@ const normalizeListingTemplateCardPatchInput = (input: JsonRecord) => {
   };
 };
 
-const normalizePageWidgetPatchBlock = (value: unknown) => {
-  const input = assertRecord(value);
-  assertKeys(input, new Set(["id", "type", "variant", "data", "layout", "visibility", "editor"]));
-  assertTrustedMediaReferences(input.data, {
-    allowCuratedBlockSrc: true,
-    allowCuratedTextUrlFields: true,
-  });
-  if (input.layout !== undefined) {
-    assertTrustedMediaReferences(input.layout, {
-      allowCuratedBlockSrc: true,
-      allowCuratedTextUrlFields: true,
-    });
-  }
-  if (input.visibility !== undefined) assertTrustedMediaReferences(input.visibility);
-  if (input.editor !== undefined) assertTrustedMediaReferences(input.editor);
-  return {
-    id: readText(input.id),
-    type: readText(input.type),
-    ...(input.variant !== undefined ? { variant: readText(input.variant) } : {}),
-    data: assertRecord(input.data),
-    ...(input.layout !== undefined ? { layout: assertRecord(input.layout) } : {}),
-    ...(input.visibility !== undefined ? { visibility: assertRecord(input.visibility) } : {}),
-    ...(input.editor !== undefined ? { editor: assertRecord(input.editor) } : {}),
-  };
-};
-
 const unsafePatchPathSegments = new Set(["__proto__", "prototype", "constructor"]);
 
 const normalizeDataPath = (value: unknown) => {
@@ -1488,31 +1467,6 @@ const normalizePatchValue = (value: unknown) => {
     return value;
   }
   fail();
-};
-
-const normalizePageWidgetPatchInput = (input: JsonRecord) => {
-  assertKeys(
-    input,
-    new Set(["pageSlug", "operation", "block", "blockId", "expectedBlockType", "dataPath", "value"])
-  );
-  const operation = readEnum(input.operation, new Set(["upsert-block", "patch-data"]));
-  if (operation === "upsert-block") {
-    return {
-      pageSlug: readText(input.pageSlug),
-      operation,
-      block: normalizePageWidgetPatchBlock(input.block),
-    };
-  }
-  return {
-    pageSlug: readText(input.pageSlug),
-    operation,
-    blockId: readText(input.blockId),
-    ...(input.expectedBlockType !== undefined
-      ? { expectedBlockType: readOptionalText(input.expectedBlockType) }
-      : {}),
-    dataPath: normalizeDataPath(input.dataPath),
-    value: normalizePatchValue(input.value),
-  };
 };
 
 const normalizeFormAutomationActionInput = (value: unknown) => {
@@ -1641,6 +1595,39 @@ const normalizePageCollectionLinkInput = (value: unknown) => {
   };
 };
 
+const normalizePageSectionsInput = (value: unknown) => {
+  const sections = readRecordArray(value);
+  assertTrustedMediaReferences(sections, {
+    allowCuratedBlockSrc: true,
+    allowCuratedTextUrlFields: true,
+  });
+  try {
+    const normalized = normalizePageDocumentV2ForWrite({
+      schemaVersion: 2,
+      breakpoints: ["desktop", "tablet", "mobile"],
+      seo: {},
+      settings: {
+        template: "page-v2",
+        showInNav: true,
+      },
+      sections,
+    }).sections;
+    for (const section of normalized) {
+      if (!isAssistantPageSectionOutputAllowed(section.type)) fail();
+      const visitBlock = (block: PageBlockV2) => {
+        if (!isAssistantPageBlockOutputAllowed(block.type)) fail();
+        for (const children of Object.values(block.slots ?? {})) {
+          for (const child of children ?? []) visitBlock(child);
+        }
+      };
+      for (const block of section.blocks) visitBlock(block);
+    }
+    return normalized;
+  } catch {
+    fail();
+  }
+};
+
 const normalizePageInput = (input: JsonRecord) => {
   assertKeys(
     input,
@@ -1653,7 +1640,7 @@ const normalizePageInput = (input: JsonRecord) => {
       "introTitle",
       "introBody",
       "ctaLabel",
-      "blocks",
+      "sections",
       "contentListStyle",
       "listingFilters",
       "formEmbed",
@@ -1673,8 +1660,8 @@ const normalizePageInput = (input: JsonRecord) => {
     introTitle: readText(input.introTitle),
     introBody: readText(input.introBody),
     ...(input.ctaLabel !== undefined ? { ctaLabel: readText(input.ctaLabel) } : {}),
-    ...(input.blocks !== undefined
-      ? { blocks: readRecordArray(input.blocks).map(normalizePageWidgetPatchBlock) }
+    ...(input.sections !== undefined
+      ? { sections: normalizePageSectionsInput(input.sections) }
       : {}),
     ...(input.contentListStyle !== undefined
       ? { contentListStyle: normalizeContentListStyle(input.contentListStyle) }
@@ -2109,8 +2096,6 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizeListingQueryFiltersPatchInput(record);
     case "listing-template.card.patch":
       return normalizeListingTemplateCardPatchInput(record);
-    case "page.widget.patch":
-      return normalizePageWidgetPatchInput(record);
     case "form.automation.upsert":
       return normalizeFormAutomationUpsertInput(record);
     case "page.upsert":

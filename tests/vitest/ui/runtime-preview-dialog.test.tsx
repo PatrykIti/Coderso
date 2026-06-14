@@ -99,6 +99,39 @@ test("RuntimePreviewDialog shows actionable loopback failure without leaking tok
   }
 });
 
+test("RuntimePreviewDialog trusts a successful server probe on loopback and skips the client-side check", async () => {
+  // Client-readiness FIX 4b: the server-side probe in the preview response is
+  // authoritative. A slow loopback dev SSR used to lose the race against the
+  // client check's abort timeout and falsely report "Frontend is not
+  // responding" even though the same response carried probe.ok === true.
+  const fetchSpy = vi.spyOn(window, "fetch").mockRejectedValue(new Error("ECONNREFUSED"));
+
+  const view = mount(
+    <RuntimePreviewDialog
+      open
+      onOpenChange={() => undefined}
+      title="Preview"
+      canPreview
+      previewUrl="http://127.0.0.1:3000/preview?type=page&token=secret-token"
+      probeResult={{ ok: true, status: 200, targetLabel: "http://127.0.0.1:3000/preview" }}
+      isLoading={false}
+      error={null}
+    />
+  );
+
+  try {
+    await React.act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain("Live preview unavailable");
+    expect(document.body.querySelector("iframe")).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("RuntimePreviewDialog renders probe failure placeholder before iframe load", () => {
   const view = mount(
     <RuntimePreviewDialog

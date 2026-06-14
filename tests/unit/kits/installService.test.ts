@@ -22,6 +22,11 @@ import {
   rollbackSolutionKitInstall,
 } from "../../../core/services/kits/solutionKitsInstallService";
 import type { SolutionKitDefinition } from "../../../core/services/kits/solutionKitTypes";
+import {
+  PAGE_DOCUMENT_SCHEMA_VERSION,
+  createPageBlockV2,
+  createPageSectionV2,
+} from "../../../core/services/pages/pageDocumentV2";
 import { hasTable } from "../../utils/db";
 
 const hasDb =
@@ -130,6 +135,43 @@ afterAll(async () => {
   await cleanup();
 }, dbHookTimeoutMs);
 
+const buildPageData = (seed: string) => ({
+  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+  sections: [
+    createPageSectionV2("hero", {
+      id: `sec-hero-${seed}`,
+      name: "Hero",
+      blocks: [
+        createPageBlockV2("heading", {
+          id: `hero-${seed}`,
+          props: {
+            text: `Welcome ${seed}`,
+            level: "h1",
+            align: "left",
+          },
+        }),
+      ],
+    }),
+    createPageSectionV2("lead-form", {
+      id: `sec-form-${seed}`,
+      name: "Contact Form",
+      blocks: [
+        createPageBlockV2("form", {
+          id: `form-${seed}`,
+          props: {
+            formId: `contact-${seed}`,
+            title: `Contact ${seed}`,
+          },
+        }),
+      ],
+    }),
+  ],
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+  },
+});
+
 const buildDefinition = (seed: string): SolutionKitDefinition => ({
   id: "automotive-workshop",
   title: `Automotive Kit ${seed}`,
@@ -145,26 +187,7 @@ const buildDefinition = (seed: string): SolutionKitDefinition => ({
         slug: `landing-${seed}`,
         title: `Landing ${seed}`,
         status: "published",
-        data: {
-          blocks: [
-            {
-              id: `hero-${seed}`,
-              type: "hero",
-              data: { title: `Welcome ${seed}` },
-            },
-            {
-              id: `form-${seed}`,
-              type: "form-embed",
-              data: {
-                formId: `contact-${seed}`,
-                title: `Contact ${seed}`,
-              },
-            },
-          ],
-          settings: {
-            showInNav: true,
-          },
-        },
+        data: buildPageData(seed),
         seo: {
           title: `SEO Landing ${seed}`,
           description: `Description ${seed}`,
@@ -434,10 +457,17 @@ testIfDb(
     expect(taxonomyState.tags).toEqual(["Tag One", "Tag Two"]);
     expect(storedFields).toHaveLength(2);
     const pageData = pageRows[0]!.currentData as {
-      blocks?: Array<{ id?: string; type?: string; data?: { formId?: string } }>;
+      schemaVersion?: unknown;
+      sections?: Array<{
+        blocks?: Array<{ type?: string; props?: { formId?: string } }>;
+      }>;
     };
-    const formEmbedBlock = (pageData.blocks ?? []).find((block) => block.type === "form-embed");
-    expect(formEmbedBlock?.data?.formId).toBe(formRows[0]!.id);
+    expect(pageData.schemaVersion).toBe(PAGE_DOCUMENT_SCHEMA_VERSION);
+    expect(pageData).not.toHaveProperty("blocks");
+    const formBlock = (pageData.sections ?? [])
+      .flatMap((section) => section.blocks ?? [])
+      .find((block) => block.type === "form");
+    expect(formBlock?.props?.formId).toBe(formRows[0]!.id);
     expect(storedSeo).toHaveLength(1);
     expect(storedSeo[0]?.title).toBe(definition.resourceBlueprint.pages[0]?.seo?.title);
     expect(storedMenuItems).toHaveLength(2);

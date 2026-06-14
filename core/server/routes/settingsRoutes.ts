@@ -17,6 +17,12 @@ import {
   type SecuritySettingsUpdate,
 } from "../../services/settings/securitySettings";
 import { getResolvedTokens } from "../../services/theme/tokenService";
+import {
+  SITE_FOOTER_TEMPLATE_SETTING_KEY,
+  SITE_NAVIGATION_MENU_SETTING_KEY,
+  assertSiteShellMenuExists,
+  assertSiteShellTemplateExists,
+} from "../../services/pages/publicSiteShell";
 import { logAudit } from "../../services/audit/auditService";
 import {
   securitySettingsSchema,
@@ -63,8 +69,30 @@ export const mapSettingsRouteError = (error: unknown) => {
       return new ApiError("settings_value_invalid", "Invalid setting value", 400);
     case "design_tokens_invalid":
       return new ApiError("design_tokens_invalid", "Invalid design tokens", 400);
+    case "site_shell_menu_not_found":
+      return new ApiError("site_shell_menu_not_found", "Navigation menu not found", 400);
+    case "site_shell_template_not_found":
+      return new ApiError("site_shell_template_not_found", "Footer template not found", 400);
     default:
       return new ApiError("settings_error", SETTINGS_UNEXPECTED_MESSAGE, 500);
+  }
+};
+
+/**
+ * Site-shell reference keys (TASK-455) must point at existing records on
+ * write. Non-string values pass through untouched so the settings schema
+ * keeps rejecting them with `settings_value_invalid`.
+ */
+const assertSiteShellReferencesExist = async (
+  entries: Array<{ key: string; value: unknown }>
+): Promise<void> => {
+  for (const entry of entries) {
+    const value = typeof entry.value === "string" ? entry.value : null;
+    if (entry.key === SITE_NAVIGATION_MENU_SETTING_KEY) {
+      await assertSiteShellMenuExists(value);
+    } else if (entry.key === SITE_FOOTER_TEMPLATE_SETTING_KEY) {
+      await assertSiteShellTemplateExists(value);
+    }
   }
 };
 
@@ -87,131 +115,110 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     });
   });
 
-  router.get(
-    "/settings/storage",
-    requirePermission("settings:read"),
-    async () => {
-      return withSettingsErrors(() => getStorageSettings());
-    }
-  );
+  router.get("/settings/storage", requirePermission("settings:read"), async () => {
+    return withSettingsErrors(() => getStorageSettings());
+  });
 
-  router.get(
-    "/settings/security",
-    requirePermission("settings:read"),
-    async () => {
-      return withSettingsErrors(() => getSecuritySettingsPublic());
-    }
-  );
+  router.get("/settings/security", requirePermission("settings:read"), async () => {
+    return withSettingsErrors(() => getSecuritySettingsPublic());
+  });
 
-  router.get(
-    "/settings/:key",
-    requirePermission("settings:read"),
-    async (ctx) => {
-      const settingKey = await withSettingsErrors(async () =>
-        resolveSettingsRouteKey(ctx.params.key)
-      );
-      if (settingKey === "design.tokens") {
-        const tokens = await withSettingsErrors(() => getResolvedTokens());
-        return { key: settingKey, value: tokens };
-      }
-
-      const value = await withSettingsErrors(() => getSetting(settingKey));
-      return { key: settingKey, value };
-    }
-  );
-
-  router.patch(
-    "/settings/storage",
-    requirePermission("settings:write"),
-    async (ctx) => {
-      validate(storageSettingsSchema, ctx.body);
-      const payload = ctx.body as StorageSettingsUpdate;
-      const updated = await withSettingsErrors(() => setStorageSettings(payload));
-      await withSettingsErrors(async () => {
-        await logAudit({
-          actorId: ctx.user?.id ?? null,
-          action: "settings.update",
-          targetType: "settings",
-          targetId: "storage",
-          metadata: { keys: Object.keys(payload) },
-        });
-      });
-      return updated;
-    }
-  );
-
-  router.patch(
-    "/settings/security",
-    requirePermission("settings:write"),
-    async (ctx) => {
-      validate(securitySettingsSchema, ctx.body);
-      const payload = ctx.body as SecuritySettingsUpdate;
-      const updated = await withSettingsErrors(() =>
-        setSecuritySettingsPublic(payload)
-      );
-      await withSettingsErrors(async () => {
-        await logAudit({
-          actorId: ctx.user?.id ?? null,
-          action: "settings.update",
-          targetType: "settings",
-          targetId: "security",
-          metadata: { keys: Object.keys(payload) },
-        });
-      });
-      return updated;
-    }
-  );
-
-  router.patch(
-    "/settings/:key",
-    requirePermission("settings:write"),
-    async (ctx) => {
-      validate(settingsUpdateSchema, ctx.body);
-      const body = ctx.body as { value: unknown };
-      const settingKey = await withSettingsErrors(async () =>
-        resolveSettingsRouteKey(ctx.params.key)
-      );
-      const updated = await withSettingsErrors(() =>
-        setSetting(settingKey, body.value)
-      );
-      await withSettingsErrors(async () => {
-        await logAudit({
-          actorId: ctx.user?.id ?? null,
-          action: "settings.update",
-          targetType: "settings",
-          targetId: settingKey,
-          metadata: { keys: [settingKey] },
-        });
-      });
-      return updated;
-    }
-  );
-
-  router.patch(
-    "/settings",
-    requirePermission("settings:write"),
-    async (ctx) => {
-      validate(settingsBulkSchema, ctx.body);
-      const payload = ctx.body as Record<string, unknown>;
-      const normalizedKeys = await withSettingsErrors(async () => {
-        const unique = new Set<string>();
-        for (const key of Object.keys(payload)) {
-          unique.add(resolveSettingsRouteKey(key));
-        }
-        return [...unique];
-      });
-      const updated = await withSettingsErrors(() => setSettings(payload));
+  router.get("/settings/:key", requirePermission("settings:read"), async (ctx) => {
+    const settingKey = await withSettingsErrors(async () =>
+      resolveSettingsRouteKey(ctx.params.key)
+    );
+    if (settingKey === "design.tokens") {
       const tokens = await withSettingsErrors(() => getResolvedTokens());
-      await withSettingsErrors(async () => {
-        await logAudit({
-          actorId: ctx.user?.id ?? null,
-          action: "settings.update",
-          targetType: "settings",
-          targetId: "bulk",
-          metadata: { keys: normalizedKeys },
-        });
-      });
-      return { ...updated, "design.tokens": tokens };
+      return { key: settingKey, value: tokens };
     }
-  );
+
+    const value = await withSettingsErrors(() => getSetting(settingKey));
+    return { key: settingKey, value };
+  });
+
+  router.patch("/settings/storage", requirePermission("settings:write"), async (ctx) => {
+    validate(storageSettingsSchema, ctx.body);
+    const payload = ctx.body as StorageSettingsUpdate;
+    const updated = await withSettingsErrors(() => setStorageSettings(payload));
+    await withSettingsErrors(async () => {
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: "storage",
+        metadata: { keys: Object.keys(payload) },
+      });
+    });
+    return updated;
+  });
+
+  router.patch("/settings/security", requirePermission("settings:write"), async (ctx) => {
+    validate(securitySettingsSchema, ctx.body);
+    const payload = ctx.body as SecuritySettingsUpdate;
+    const updated = await withSettingsErrors(() => setSecuritySettingsPublic(payload));
+    await withSettingsErrors(async () => {
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: "security",
+        metadata: { keys: Object.keys(payload) },
+      });
+    });
+    return updated;
+  });
+
+  router.patch("/settings/:key", requirePermission("settings:write"), async (ctx) => {
+    validate(settingsUpdateSchema, ctx.body);
+    const body = ctx.body as { value: unknown };
+    const settingKey = await withSettingsErrors(async () =>
+      resolveSettingsRouteKey(ctx.params.key)
+    );
+    await withSettingsErrors(() =>
+      assertSiteShellReferencesExist([{ key: settingKey, value: body.value }])
+    );
+    const updated = await withSettingsErrors(() => setSetting(settingKey, body.value));
+    await withSettingsErrors(async () => {
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: settingKey,
+        metadata: { keys: [settingKey] },
+      });
+    });
+    return updated;
+  });
+
+  router.patch("/settings", requirePermission("settings:write"), async (ctx) => {
+    validate(settingsBulkSchema, ctx.body);
+    const payload = ctx.body as Record<string, unknown>;
+    const normalizedKeys = await withSettingsErrors(async () => {
+      const unique = new Set<string>();
+      for (const key of Object.keys(payload)) {
+        unique.add(resolveSettingsRouteKey(key));
+      }
+      return [...unique];
+    });
+    await withSettingsErrors(() =>
+      assertSiteShellReferencesExist(
+        Object.entries(payload).map(([key, value]) => ({
+          key: resolveSettingsRouteKey(key),
+          value,
+        }))
+      )
+    );
+    const updated = await withSettingsErrors(() => setSettings(payload));
+    const tokens = await withSettingsErrors(() => getResolvedTokens());
+    await withSettingsErrors(async () => {
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "settings.update",
+        targetType: "settings",
+        targetId: "bulk",
+        metadata: { keys: normalizedKeys },
+      });
+    });
+    return { ...updated, "design.tokens": tokens };
+  });
 }

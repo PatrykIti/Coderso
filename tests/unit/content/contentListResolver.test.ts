@@ -511,3 +511,186 @@ test("resolveContentListRuntimeData ignores stale page params for legacy view-al
     })
   );
 });
+
+test("navigation meta exposes the page param key and search for the numbered pager (TASK-459-03)", () => {
+  const pageKey = buildListingRuntimeParamName("query-1", listingRuntimeTokens.page);
+  const meta = resolveContentListRuntimeNavigationMeta({
+    page: 2,
+    pageSize: 6,
+    total: 15,
+    runtimeSearchParams: new URLSearchParams(`filter=active&${pageKey}=2`),
+    pageKey,
+  });
+
+  expect(meta.pageParamKey).toBe(pageKey);
+  expect(meta.search).toBe(`filter=active&${pageKey}=2`);
+  // Page 1 drops the param: the previous href is the canonical filtered URL.
+  expect(meta.previousPageHref).toBe("?filter=active");
+  expect(meta.nextPageHref).toBe(`?filter=active&${pageKey}=3`);
+});
+
+test("dangling-route guard suppresses card links when no enabled route exists (TASK-459-03 frozen policy)", async () => {
+  const dataset = [
+    {
+      ...createEntry({}),
+      id: "entry-1",
+      slug: "entry-1",
+      title: "Entry 1",
+    },
+  ];
+  const deps = {
+    getContentTypeById: async () => ({
+      id: "type-1",
+      slug: "articles",
+      name: "Articles",
+      status: "published",
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {},
+      },
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
+    listEntriesByTypeId: async () => dataset,
+  };
+  const config = {
+    source: {
+      contentTypeId: "type-1",
+      statusScope: "published" as const,
+      limit: 3,
+      sort: "published-desc" as const,
+    },
+  };
+
+  // No enabled route: the old `/articles/:slug` fallback produced 404 links;
+  // now hrefs are suppressed and the resolver reports the guard state.
+  const unrouted = await resolveContentListRuntimeData(
+    config,
+    { preview: false, contentRoutes: [] },
+    deps
+  );
+  expect(unrouted.cardLinkMode).toBe("missing-route");
+  expect(unrouted.items[0]?.href).toBeUndefined();
+
+  // A disabled route counts as missing.
+  const disabled = await resolveContentListRuntimeData(
+    config,
+    {
+      preview: false,
+      contentRoutes: [
+        { type: "articles", listPath: "/articles", detailPath: "/articles/:slug", enabled: false },
+      ],
+    },
+    deps
+  );
+  expect(disabled.cardLinkMode).toBe("missing-route");
+  expect(disabled.items[0]?.href).toBeUndefined();
+
+  // An enabled route keeps today's linked cards.
+  const routed = await resolveContentListRuntimeData(
+    config,
+    {
+      preview: false,
+      contentRoutes: [
+        { type: "articles", listPath: "/articles", detailPath: "/articles/:slug", enabled: true },
+      ],
+    },
+    deps
+  );
+  expect(routed.cardLinkMode).toBe("ready");
+  expect(routed.items[0]?.href).toBe("/articles/entry-1");
+});
+
+test("listing resolution passes the template style and emptyState through for render consumption (TASK-459-03)", async () => {
+  const executeListingInputs: unknown[] = [];
+  const result = await resolveContentListRuntimeData(
+    {
+      source: {
+        mode: "listing",
+        listingQueryId: "query-1",
+        listingTemplateId: "template-1",
+      },
+    },
+    {
+      preview: false,
+      contentRoutes: [],
+      runtimeSearchParams: new URLSearchParams("rooms=3&page=2"),
+      runtimeAliases: { rooms: "data.rooms.in", page: listingRuntimeTokens.page },
+    },
+    {
+      getListingQueryById: async () => ({
+        id: "query-1",
+        name: "Query",
+        description: null,
+        query: {
+          source: "entries",
+          sourceConfig: { contentTypeId: "type-1", includeDrafts: false },
+          filters: [],
+          sort: [{ field: "title", dir: "asc" }],
+          pagination: { limit: 6, offset: 0 },
+          fields: ["id", "title", "slug"],
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      getListingTemplateById: async () => ({
+        id: "template-1",
+        name: "Template",
+        slug: "template",
+        description: null,
+        layout: "grid",
+        config: {
+          fields: [],
+          itemActions: [],
+          emptyState: {
+            title: "No homes match",
+            description: "Loosen the filters.",
+            ctaLabel: null,
+            ctaHref: null,
+          },
+          style: { columns: 4, gap: "xl", cardVariant: "compact" },
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      executeListing: async (input) => {
+        executeListingInputs.push(input);
+        return {
+          source: "entries",
+          total: 0,
+          limit: 6,
+          offset: 6,
+          rows: [],
+        };
+      },
+      getContentTypeById: async () => ({
+        id: "type-1",
+        slug: "homes",
+        name: "Homes",
+        status: "published",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      getContentTypeBySlug: async () => null,
+    }
+  );
+
+  expect(result.templateStyle).toEqual({ columns: 4, gap: "xl", cardVariant: "compact" });
+  expect(result.templateEmptyState).toEqual({
+    title: "No homes match",
+    description: "Loosen the filters.",
+    ctaLabel: null,
+    ctaHref: null,
+  });
+  // Entries source without an enabled route reports the guard state too.
+  expect(result.cardLinkMode).toBe("missing-route");
+  // The numbered pager fields ride the runtime meta.
+  expect(result.runtime?.pageParamKey).toBe("page");
+  expect(result.runtime?.search).toBe("rooms=3&page=2");
+  expect(executeListingInputs[0]).toMatchObject({
+    filters: [{ field: "data.rooms", op: "in", value: [3] }],
+    pagination: { limit: 6, offset: 6 },
+  });
+});

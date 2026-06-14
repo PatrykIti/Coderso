@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, max, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, max, ne, type SQL } from "drizzle-orm";
 import { db } from "../../db/client";
 import {
   contentEntries,
@@ -13,6 +13,8 @@ import { invalidateContentEntryCache } from "../../site/cache/siteCache";
 import { getContentType } from "./typeService";
 import { getSeoDocumentByTarget, upsertSeoDocument } from "../seo/seoService";
 import { resolveEmailValue } from "../security/piiEmail";
+import type { ListingPushdownPredicate } from "./listingPushdown";
+import { buildEntryDataPredicateSql } from "./listingPushdownSql";
 import {
   getEntryTaxonomies,
   replaceEntryTaxonomies,
@@ -430,54 +432,111 @@ const resolveDuplicateSlug = (sourceSlug: string, index: number) => {
   return `${sourceSlug}-copy-${index + 1}`;
 };
 
+const entryListSelection = {
+  id: contentEntries.id,
+  typeId: contentEntries.typeId,
+  authorId: contentEntries.authorId,
+  title: contentEntries.title,
+  slug: contentEntries.slug,
+  status: contentEntries.status,
+  tags: contentEntries.tags,
+  data: contentEntries.data,
+  publishedAt: contentEntries.publishedAt,
+  scheduledAt: contentEntries.scheduledAt,
+  createdAt: contentEntries.createdAt,
+  updatedAt: contentEntries.updatedAt,
+  authorName: users.name,
+  authorEmail: users.email,
+  authorEmailEncrypted: users.emailEncrypted,
+};
+
+type EntryListSelectionRow = {
+  id: string;
+  typeId: string;
+  authorId: string | null;
+  title: string;
+  slug: string;
+  status: string;
+  tags: unknown;
+  data: unknown;
+  publishedAt: Date | null;
+  scheduledAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  authorName: string | null;
+  authorEmail: string | null;
+  authorEmailEncrypted: unknown;
+};
+
+const mapEntryListSelectionRow = (row: EntryListSelectionRow) => ({
+  id: row.id,
+  typeId: row.typeId,
+  title: row.title,
+  slug: row.slug,
+  status: row.status as EntryStatus,
+  tags: (row.tags ?? []) as string[],
+  data: row.data as EntryData,
+  publishedAt: row.publishedAt,
+  scheduledAt: row.scheduledAt,
+  createdAt: row.createdAt,
+  updatedAt: row.updatedAt,
+  author: row.authorId
+    ? {
+        id: row.authorId,
+        name: row.authorName ?? null,
+        email:
+          resolveEmailValue({
+            emailEncrypted: row.authorEmailEncrypted,
+            email: row.authorEmail,
+          }) ?? "",
+      }
+    : null,
+});
+
 export async function listEntries(typeId: string) {
   const rows = await db
-    .select({
-      id: contentEntries.id,
-      typeId: contentEntries.typeId,
-      authorId: contentEntries.authorId,
-      title: contentEntries.title,
-      slug: contentEntries.slug,
-      status: contentEntries.status,
-      tags: contentEntries.tags,
-      data: contentEntries.data,
-      publishedAt: contentEntries.publishedAt,
-      scheduledAt: contentEntries.scheduledAt,
-      createdAt: contentEntries.createdAt,
-      updatedAt: contentEntries.updatedAt,
-      authorName: users.name,
-      authorEmail: users.email,
-      authorEmailEncrypted: users.emailEncrypted,
-    })
+    .select(entryListSelection)
     .from(contentEntries)
     .leftJoin(users, eq(contentEntries.authorId, users.id))
     .where(eq(contentEntries.typeId, typeId))
     .orderBy(desc(contentEntries.updatedAt));
 
-  return rows.map((row) => ({
-    id: row.id,
-    typeId: row.typeId,
-    title: row.title,
-    slug: row.slug,
-    status: row.status as EntryStatus,
-    tags: (row.tags ?? []) as string[],
-    data: row.data as EntryData,
-    publishedAt: row.publishedAt,
-    scheduledAt: row.scheduledAt,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    author: row.authorId
-      ? {
-          id: row.authorId,
-          name: row.authorName ?? null,
-          email:
-            resolveEmailValue({
-              emailEncrypted: row.authorEmailEncrypted,
-              email: row.authorEmail,
-            }) ?? "",
-        }
-      : null,
-  }));
+  return rows.map(mapEntryListSelectionRow);
+}
+
+/**
+ * Listing-execution fetch with SQL pushdown (TASK-459-04). Unlike
+ * `listEntries`, the published-only scope and the allowlisted `data.*`
+ * superset predicates apply at the SQL level, so a filtered catalog request
+ * no longer transfers the whole content type. The returned rows are a
+ * SUPERSET of the in-memory matcher result for the originating query — the
+ * caller (`executeListingQuery`) always re-runs the JS matcher on them.
+ */
+export async function listEntriesForListing(
+  typeId: string,
+  options: { publishedOnly: boolean; dataPredicates?: ListingPushdownPredicate[] }
+) {
+  const conditions: SQL[] = [];
+  for (const predicate of options.dataPredicates ?? []) {
+    conditions.push(buildEntryDataPredicateSql(predicate));
+  }
+
+  const rows = await db
+    .select(entryListSelection)
+    .from(contentEntries)
+    .leftJoin(users, eq(contentEntries.authorId, users.id))
+    .where(
+      and(
+        eq(contentEntries.typeId, typeId),
+        ...(options.publishedOnly
+          ? [eq(contentEntries.status, "published"), isNotNull(contentEntries.publishedAt)]
+          : []),
+        ...conditions
+      )
+    )
+    .orderBy(desc(contentEntries.updatedAt));
+
+  return rows.map(mapEntryListSelectionRow);
 }
 
 export async function listEntriesWithContentTypes(): Promise<EntryListItem[]> {

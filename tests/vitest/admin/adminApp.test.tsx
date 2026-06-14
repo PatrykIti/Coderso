@@ -117,6 +117,10 @@ vi.mock("@/ui/menus/MenuEditorPage", () => ({
   MenuEditorPage: () => <div>Menu Editor Route</div>,
 }));
 
+vi.mock("@/ui/menus/MenuDesignEditorPage", () => ({
+  MenuDesignEditorPage: () => <div>Menu Design Editor Route</div>,
+}));
+
 vi.mock("@/ui/content-types/CollectionWorkspacePage", () => ({
   CollectionWorkspacePage: () => <div>Collection workspace ct-1</div>,
 }));
@@ -425,6 +429,17 @@ test("AdminApp resolves /menus/:id to the menu editor route", async () => {
   try {
     await flush();
     expect(view.container.textContent).toContain("Menu Editor Route");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("AdminApp resolves /menus/:id/design to the menu design editor route", async () => {
+  const view = mount("/admin/menus/menu-1/design");
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Menu Design Editor Route");
   } finally {
     view.cleanup();
   }

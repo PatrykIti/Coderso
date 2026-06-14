@@ -72,12 +72,6 @@ const activeSurfaceMatchesRoute = (
   if (activeSurface.kind === "page") {
     return selectedResource.kind === "page" && selectedResource.id === activeSurface.page.id;
   }
-  if (activeSurface.kind === "widget-template") {
-    return (
-      selectedResource.kind === "widget-template" &&
-      selectedResource.id === activeSurface.template.id
-    );
-  }
   if (activeSurface.kind === "custom-screen") {
     if (selectedResource.kind === "custom-screen") {
       return selectedResource.id === activeSurface.screen.id;
@@ -182,9 +176,6 @@ const selectedResourceFromRoute = (
   }
   if (segments[1] === "custom-screens" && segments[2]) {
     return { kind: "custom-screen", id: safeDecode(segments[2]) ?? segments[2] };
-  }
-  if (segments[1] === "widgets" && segments[2] === "templates" && segments[3]) {
-    return { kind: "widget-template", id: safeDecode(segments[3]) ?? segments[3] };
   }
   if (segments[1] === "listings" && segments[2] && segments[2] !== "new") {
     return { kind: "listing-query", id: safeDecode(segments[2]) ?? segments[2] };
@@ -315,17 +306,6 @@ const actionsForRoute = (
         kind: "create",
         href: "/admin/advanced/listings",
         requiredPermission: "content:write",
-      })
-    );
-  }
-  if (surface.area === "advanced" && surface.advancedModule === "widgets") {
-    actions.push(
-      action({
-        id: "widget-template.create",
-        label: "Create widget template",
-        kind: "create",
-        href: "/admin/advanced/widgets",
-        requiredPermission: "widgets:write",
       })
     );
   }

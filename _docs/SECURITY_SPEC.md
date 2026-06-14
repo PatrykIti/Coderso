@@ -324,6 +324,35 @@ Rotacja klucza:
   handlers, unsafe URLs, forbidden elements, and malformed unsupported tags are
   stripped before render.
 
+## Pages embed rendering
+
+- Page v2 embed blocks may render sanitized inline embed markup only through
+  `sanitizePageEmbedHtml`, backed by the shared rich-text sanitizer policy.
+- The Pages embed allowlist is intentionally narrow: textual layout tags and
+  safe links only. Script-capable tags, event handlers, unsafe URLs, forms,
+  frames, and unknown attributes are stripped before public render.
+- Sanitized inline embed markup is rendered as tokenizer-derived React nodes,
+  not through `dangerouslySetInnerHTML`; anchor attributes are rebuilt from the
+  sanitized allowlist.
+- Provider embeds must use hardened first-party resolver output such as the
+  YouTube iframe URL resolver; arbitrary iframe HTML from page data is not a
+  public runtime contract.
+
+## Pages editor text and ids
+
+- Page v2 block and section ids are generated from Web Crypto only
+  (`randomUUID` or `getRandomValues`) and fail closed when secure randomness is
+  unavailable.
+- Duplicate page slug suffixes use the same secure random fragment helper; do
+  not use `Math.random()` for Page identifiers, slugs, preview tokens, or other
+  user-visible collision guards.
+- Page editor inline text commits remain plain text. The commit sanitizer uses
+  scanner/token handling to drop complete and unterminated HTML comments,
+  dangerous element content, element-shaped tags, remaining raw angle brackets,
+  and control characters before values re-enter the Page document.
+- Prototype or reference HTML in `_docs/UI` must construct dynamic text with
+  DOM nodes and `textContent`; do not interpolate DOM text into `innerHTML`.
+
 ## Assistant security baseline (v1)
 
 - Konfiguracja limitow asystenta jest trzymana w global settings:
@@ -472,9 +501,8 @@ Rotacja klucza:
   - `form.delete` and `form.archive` are internal-only, require active context or exact server-side catalog target resolution plus `forms:write` for execute, count submissions before mutation, block hard delete when submissions exist, and never expose raw submission payloads,
   - `menu.item.delete` is internal-only, requires exact server-side catalog target resolution plus `menus:write` for execute, deletes through the menu tree service, and preserves unrelated menu items,
   - `seo.document.delete` is internal-only, requires exact server-side catalog target resolution plus `content:write` for execute, deletes only the SEO document, and never deletes the page or entry target,
-  - `page.update` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, revalidates page id/title/slug/status, and preserves unrelated page data/blocks,
-  - active page `template-section` inspection is internal-only and read-only, requires `content:read` for page context plus `widgets:read` for referenced template details, dedupes referenced template ids server-side, and exposes only bounded/redacted template block/config summaries,
-  - template-backed page edit planning returns `needs_input` when page-instance vs reusable-template target is ambiguous; reusable-template patch planning requires a single server-hydrated referenced template block/field before any reviewed mutation can be proposed,
+  - `page.update` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, revalidates page id/title/slug/status, and preserves unrelated Page v2 sections/settings,
+  - active Page context is internal-only and read-only, revalidates page identity through `pageService`, and no longer hydrates widget-template references from Page data,
   - `widget-template.update` and `widget-template.block.patch` are internal-only, require active widget template context plus `widgets:write` for execute, revalidate template id/name/status/category where applicable, and preserve unrelated reusable template blocks/settings,
   - `custom-screen.update` and `custom-screen.widget.patch` are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated blocks/bindings, persist canonical collection-link metadata only through `customScreenService`, and never expose raw entry values,
   - counted multi-target CMS plans are allowed only when trusted context resolves the exact expected target count and every target maps to a strict typed action; mismatched, broad, or partially invalid bulk prompts return `needs_input`,
@@ -488,7 +516,7 @@ Rotacja klucza:
   - `media.reference.attach` is internal-only, requires `media:read` plus `content:write` for execute, accepts existing media ids only, supports entry targets in the first adapter slice, and never transports raw upload bytes,
   - `listing-query.filters.patch` is internal-only, requires `content:write` for execute, and updates only existing listing query `filters` while preserving unrelated query config,
   - `listing-template.card.patch` is internal-only, requires `content:write` for execute, and updates only existing listing template `config.card` while preserving unrelated template config,
-  - `page.widget.patch` is internal-only, requires `content:write` for execute, supports top-level `upsert-block` plus selected block `patch-data`, validates widget type/data before updating page current data, and blocks unknown data paths instead of broad JSON rewrites,
+  - `page.widget.patch` is retired for Pages after TASK-417; Page mutations are internal-only `page.upsert` sections or metadata-only `page.update`, require the owning content permissions, reject unknown Page v2 fields, and do not route Page writes through widget validators,
   - `form.automation.upsert` is internal-only, requires `forms:write` for execute, supports safe non-webhook form actions first, and leaves webhook automation disabled until secret handling is explicit,
   - lead capture blueprint creates public forms through existing Forms runtime; it does not add a new public write endpoint or bypass form nonce/access hardening,
   - booking blueprint is gated as `needs_input` and does not create booking resources until booking action adapters and public booking hardening are explicit,
@@ -521,7 +549,7 @@ Rotacja klucza:
   - `docs-only` remains read-only and cannot mutate resources,
   - `LLM Guide` mutates only through strict typed actions after plan/dry-run/review/execute,
   - executable business setup covers catalog-family packs, lead capture site, product inquiry catalog, portfolio case study, editorial content hub, and `site-kit.recommend` / `site-kit.install` / `site-kit.validate`,
-  - booking resources, checkout/payment, webhook form automation, nested page widget patches, bulk/sample entry creation, field patching, and installed solution-kit refinements remain gated follow-up capabilities,
+  - booking resources, checkout/payment, webhook form automation, fine-grained existing Page section/block patch actions beyond `page.upsert` / `page.update`, bulk/sample entry creation, field patching, and installed solution-kit refinements remain gated follow-up capabilities,
   - executor reuse’uje obecne serwisy domenowe zamiast direct DB writes.
 
 ## API Keys (v1)

@@ -225,38 +225,13 @@ export const buildCmsOperationDraftFromPrompt = (
     operation === "update" &&
     fieldPolicy?.action?.patchPath?.[0] === "dataPath" &&
     typeof inferredMutationValue === "string" &&
-    activeSurface?.kind === resourceKind
+    activeSurface?.kind === resourceKind &&
+    activeSurface.kind !== "page"
       ? (() => {
           const selectedBlockId = activeSurface.selectedBlockId;
           const block = selectedBlockId
             ? (activeSurface.blocks.find((entry) => entry.id === selectedBlockId) ?? null)
             : null;
-          const wantsPageInstance = includesAny(normalizedPrompt, [
-            "only this page",
-            "this page only",
-            "current page",
-            "tylko ta strona",
-            "tylko na tej stronie",
-            "tylko tutaj",
-            "lokalnie",
-            "bez zmiany szablonu",
-          ]);
-          const wantsReusableTemplate = includesAny(normalizedPrompt, [
-            "reusable template",
-            "template-wide",
-            "template everywhere",
-            "global",
-            "w szablonie",
-            "dla wszystkich stron",
-            "na wszystkich stronach",
-          ]);
-          if (
-            activeSurface.kind === "page" &&
-            block?.type === "template-section" &&
-            (!wantsPageInstance || wantsReusableTemplate)
-          ) {
-            return { templateTargetAmbiguous: true };
-          }
           const dataPath = resolveBlockDataPath(normalizedPrompt, block?.type);
           if (!selectedBlockId || !dataPath) {
             return { missingSelectedBlock: true };

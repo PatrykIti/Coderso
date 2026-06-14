@@ -12,7 +12,12 @@ import {
   normalizePageTemplateKey,
   resolvePageTemplatePath,
 } from "../services/pages/pageTemplateService";
+import { type PageBreakpoint, type PageDocumentV2 } from "../services/pages/pageDocumentV2";
+import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBindingContract";
+import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
 import { DefaultRuntimePageShell, type PageTemplateProps } from "./pageRuntime";
+import { DefaultRuntimePageShellV2, type PageTemplatePropsV2 } from "./pageRuntimeV2";
+import { buildSiteShellCss, type SiteShellRenderProps } from "./siteShell";
 
 export type PublicPageRenderOptions = {
   title: string;
@@ -34,6 +39,38 @@ export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
   templateKey?: unknown;
 };
 
+export type PublicPageV2RuntimeRenderOptions = Omit<
+  PublicPageRenderOptions,
+  "blocks" | "layoutSettings"
+> & {
+  document: PageDocumentV2 | unknown;
+  templateKey?: unknown;
+  previewDevice?: PageBreakpoint;
+  runtimeDataByBlockId?: PageRuntimeDataByBlockId;
+  /**
+   * Scoped responsive `@media` overrides (TASK-423-02). Emitted for public
+   * visitors on top of the desktop-resolved base markup; empty/absent on the
+   * explicit `previewDevice` path, which keeps single-breakpoint flattening.
+   * TASK-455 appends the footer template's builder output under the distinct
+   * `[data-site-footer="true"]` scope.
+   */
+  responsiveCss?: string | null;
+  /**
+   * Global site shell (TASK-455), resolved once per request by
+   * `publicSite.tsx` and threaded into `PageTemplatePropsV2`.
+   */
+  siteShell?: SiteShellRenderProps | null;
+  siteName?: string | null;
+  /**
+   * V2 body-script emission seam (TASK-459-02): the registry-rendered runtime
+   * scripts appended before `</body>`, exactly like the legacy WidgetBlock
+   * path. `publicSite.tsx` provides it only when the prepared runtime
+   * document needs a client script (currently the shared listing runtime
+   * script for live filters blocks); absent/null keeps v2 pages script-free.
+   */
+  renderBodyScripts?: (() => ReactNode) | null;
+};
+
 type TemplateComponent<Props> = (props: Props) => ReactNode;
 
 const loadTemplateComponent = async <Props extends PageTemplateProps>(templatePath: string) => {
@@ -48,6 +85,15 @@ const loadTemplateComponent = async <Props extends PageTemplateProps>(templatePa
   return null;
 };
 
+const normalizePageV2TemplateKey = (value: unknown) => {
+  if (typeof value !== "string") return "default";
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-");
+  return normalized.length > 0 ? normalized : "default";
+};
+
 const renderDocument = (
   title: string,
   body: ReactNode,
@@ -59,7 +105,8 @@ const renderDocument = (
   imageUrl?: string | null,
   devModuleScripts?: string[] | null,
   isPreview?: boolean,
-  renderBodyScripts?: () => ReactNode
+  renderBodyScripts?: () => ReactNode,
+  responsiveCss?: string | null
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -85,6 +132,17 @@ const renderDocument = (
 
   if (inlineCss) {
     headTags.push(<style key="inline-css">{inlineCss}</style>);
+  }
+
+  if (responsiveCss) {
+    // The builder contract (`pageResponsiveCss`) escapes ids so the CSS can
+    // never contain `</style>`; React additionally renders style children as
+    // raw text, matching the inline token CSS pattern above.
+    headTags.push(
+      <style key="responsive-css" data-page-responsive="true">
+        {responsiveCss}
+      </style>
+    );
   }
 
   if (isPreview) {
@@ -269,5 +327,76 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     devModuleScripts,
     isPreview,
     () => runtimeScripts.renderScripts()
+  );
+}
+
+export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRenderOptions) {
+  const {
+    title,
+    document: rawDocument,
+    cssHref,
+    inlineCss,
+    devModuleScripts,
+    isPreview,
+    previewDevice,
+    metaDescription,
+    canonicalUrl,
+    robots,
+    templateKey,
+    runtimeDataByBlockId,
+    responsiveCss,
+    siteShell,
+    siteName,
+    renderBodyScripts,
+  } = options;
+
+  const templateInput = resolvePageTemplateInput(rawDocument, {
+    renderMode: isPreview ? "preview-page" : "public-page",
+  });
+  const { document } = templateInput;
+  const normalizedTemplateKey = normalizePageV2TemplateKey(
+    templateKey ?? document.settings.template
+  );
+  const templateProps: PageTemplatePropsV2 = {
+    title,
+    templateKey: normalizedTemplateKey,
+    document,
+    isPreview,
+    previewDevice: previewDevice ?? "desktop",
+    runtimeDataByBlockId,
+    siteShell,
+    siteName,
+  };
+
+  // The shell ships no client JS; its CSS rides the inline style block only
+  // when a shell part actually renders. The stylesheet is built from the
+  // published menu's appearance; a null/legacy appearance reproduces the
+  // pre-appearance stylesheet byte-identically (TASK-458-02).
+  const hasSiteShell = Boolean(siteShell?.navigation || siteShell?.footerDocument);
+  const inlineCssWithShell = hasSiteShell
+    ? [inlineCss, buildSiteShellCss(siteShell?.navigationAppearance ?? null)]
+        .filter(Boolean)
+        .join("\n")
+    : inlineCss;
+
+  const body = (
+    <PageRuntimeRoot templateKey={`v2-${templateProps.templateKey}`} isPreview={isPreview}>
+      <DefaultRuntimePageShellV2 {...templateProps} />
+    </PageRuntimeRoot>
+  );
+
+  return renderDocument(
+    title,
+    body,
+    cssHref,
+    inlineCssWithShell,
+    metaDescription,
+    canonicalUrl,
+    robots,
+    options.imageUrl,
+    devModuleScripts,
+    isPreview,
+    renderBodyScripts ?? undefined,
+    responsiveCss
   );
 }

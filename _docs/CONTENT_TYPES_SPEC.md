@@ -451,7 +451,57 @@ Press/Media:
 - Core dostarcza bazowe widoki listy i szczegolu.
 - Theme moze nadpisac wyglad per content type.
 - Plugin moze dostarczyc wlasny view (opcjonalnie).
-- Page builder moze osadzac listy entries jako blok.
+- Page builder moze osadzac listy entries jako blok. Od TASK-457 blok
+  `collection` jest wstawialny w Page Editorze v2: autor wybiera content type
+  (combobox), opcjonalnie zapisane listing query (przefiltrowane do wybranego
+  typu; zmiana typu czysci referencje query), limit i listing template. Od
+  TASK-459-03 limit ma JEDEN spojny zakres 1..24 (`contentListLimitMax` —
+  schema edytora, suwaki i runtime czytaja te sama granice; zapisane
+  dokumenty z wartosciami 25..50 normalizuja sie przy odczycie do 24, czyli
+  dokladnie tego, co i tak renderowaly). Blok ma tez paginacje dla
+  odwiedzajacych: `paginationMode` (`none` domyslnie — istniejace strony
+  renderuja sie bez zmian, `paged` — numerowany pager z licznikiem wynikow i
+  Previous/Next na tokenach `lq.<queryId>.__page` lub `cl.<blockId>.page`,
+  `load-more` — pojedynczy odnosnik) oraz nullable `pageSize` (puste =
+  podaza za `limit`). Zwiazany listing template styluje liste (kolumny 1..6,
+  gap, wariant karty) i dostarcza tresc pustego stanu. Publiczny runtime
+  rozwiazuje wpisy przez scoped read-only binding
+  (`statusScope: "published"`); szczegoly kontraktu autorskiego w
+  `_docs/PAGE_MODEL.md`.
+- Od TASK-459-02 dostepny jest tez blok `filters` (Page Editor v2): widoczny
+  dla odwiedzajacych panel facetow powiazany z TYM SAMYM zapisanym listing
+  query co sasiedni blok `collection`. Kontrakt filtrowania odwiedzajacego
+  jest w pelni generyczny i oparty o pola schematu (zaden facet nie jest
+  branzowy): facety `checkbox`/`radio`/`taxonomy`/`range`/`date-range`
+  wskazuja sciezke pola (`data.*` lub dozwolone pola systemowe) z operatorem,
+  facet `sort` definiuje opcje sortowania `pole:kierunek`, a opcjonalny wiersz
+  wyszukiwania mapuje sie na token `__q`. Formularz to zwykly GET — parametry
+  `lq.<queryId>.<pole>.<operator>` / `__sort` / `__q` filtruja, sortuja i
+  przeszukuja liste rowniez bez JavaScriptu, bo serwer waliduje kazdy token
+  przez allowlist zapisanego query (nieznane tokeny sa odrzucane, statusy
+  tylko `published`). Z JavaScriptem wspolny skrypt runtime listingu podmienia
+  wyniki przez fetch-swap i `history.pushState` (URL pozostaje udostepnialny).
+  Blok renderuje takze licznik wynikow (`total` egzekucji query; pelne
+  wartosci korpusowe dostarcza TASK-459-04). Szczegoly kontraktu autorskiego
+  w `_docs/PAGE_MODEL.md`.
+- Automatyczne strony list (content route z `listPath`) od TASK-459-03
+  konsumuja `searchParams`: `?page=N` stronicuje opublikowane wpisy w paczkach
+  po 24 (`contentListLimitMax`; strona 1 ma kanoniczny URL bez parametru,
+  strony spoza zakresu sa przycinane do zakresu zamiast 404), a
+  `?sort=<ContentListSort>` (np. `title-asc`, `published-desc`) sortuje przez
+  ten sam walidowany enum co blok `collection` (nieznane wartosci wracaja do
+  domyslnego porzadku). Domyslny template listy i template motywu
+  `content-list` renderuja wspolny numerowany pager (`ContentListPager`) z
+  licznikiem wynikow oraz jawny pusty stan.
+- Polityka wiszacych linkow (zamrozona w TASK-459-01, wdrozona w
+  TASK-459-03): gdy typ wpisu NIE ma wlaczonego content route, resolver list
+  nie buduje juz linkow z fallbackowego wzorca `/<typeSlug>/:slug` (matcher
+  nigdy go nie dopasuje — kazdy taki link to gwarantowane 404). Zamiast tego
+  linki kart sa TLUMIONE: karty renderuja sie bez `<a>`, z nota „links
+  unavailable until a detail route is configured", a dane rozwiazane niosa
+  `cardLinkMode: "missing-route"`. Wlaczenie route w Site Settings przywraca
+  linki przy kolejnym renderze. Linki dostarczane przez listing template
+  (akcje, pola `href`) pozostaja nietkniete.
 
 Resolution order:
 1. Theme template

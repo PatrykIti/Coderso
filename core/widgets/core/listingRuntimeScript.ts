@@ -24,6 +24,40 @@ const runtimeClientScript = String.raw`(() => {
     });
   };
 
+  const readListingParamNames = (form) =>
+    Array.from(
+      new Set(
+        (form.dataset.listingParamAliases || "")
+          .split(",")
+          .map((name) => name.trim())
+          .filter(Boolean)
+          .concat(
+            Array.from(form.querySelectorAll("[data-listing-param-name]"))
+              .map((control) =>
+                control instanceof HTMLElement
+                  ? (control.dataset.listingParamName || "").trim()
+                  : ""
+              )
+              .filter(Boolean)
+          )
+      )
+    );
+
+  const clearListingParams = (form, searchParams, queryId) => {
+    clearQueryPrefix(searchParams, "lq." + queryId + ".");
+    readListingParamNames(form).forEach((paramName) => {
+      searchParams.delete(paramName);
+    });
+  };
+
+  const resolveListingParamName = (queryId, control, token) => {
+    if (control instanceof HTMLElement) {
+      const explicitName = (control.dataset.listingParamName || "").trim();
+      if (explicitName) return explicitName;
+    }
+    return toParamName(queryId, token);
+  };
+
   const readControlValues = (control) => {
     if (!(control instanceof HTMLElement)) return [];
     if (control instanceof HTMLInputElement) {
@@ -200,8 +234,7 @@ const runtimeClientScript = String.raw`(() => {
     const queryId = (form.dataset.listingQueryId || "").trim();
     if (!queryId) return;
 
-    const prefix = "lq." + queryId + ".";
-    clearQueryPrefix(url.searchParams, prefix);
+    clearListingParams(form, url.searchParams, queryId);
 
     const controls = Array.from(form.querySelectorAll("[data-listing-token]"));
     const valueMap = new Map();
@@ -212,15 +245,16 @@ const runtimeClientScript = String.raw`(() => {
       if (!token) return;
       const values = readControlValues(control);
       if (values.length === 0) return;
-      const current = valueMap.get(token) || [];
-      valueMap.set(token, current.concat(values));
+      const paramName = resolveListingParamName(queryId, control, token);
+      const current = valueMap.get(paramName) || [];
+      valueMap.set(paramName, current.concat(values));
     });
 
-    valueMap.forEach((values, token) => {
+    valueMap.forEach((values, paramName) => {
       if (!Array.isArray(values) || values.length === 0) return;
       const deduped = Array.from(new Set(values.map((value) => String(value).trim()).filter(Boolean)));
       if (deduped.length === 0) return;
-      url.searchParams.set(toParamName(queryId, token), deduped.join(","));
+      url.searchParams.set(paramName, deduped.join(","));
     });
   };
 
@@ -331,7 +365,7 @@ const runtimeClientScript = String.raw`(() => {
     const queryId = (form.dataset.listingQueryId || "").trim();
     if (!queryId) return;
     const nextUrl = new URL(window.location.href);
-    clearQueryPrefix(nextUrl.searchParams, "lq." + queryId + ".");
+    clearListingParams(form, nextUrl.searchParams, queryId);
     void runListingRefresh(queryId, nextUrl, pushHistory);
   };
 
@@ -506,6 +540,24 @@ const runtimeClientScript = String.raw`(() => {
     queryIds.forEach((queryId) => {
       void runListingRefresh(queryId, targetUrl, false);
     });
+  });
+
+  // Pager pickup (TASK-459-03): numbered-pager and prev/next anchors carry
+  // data-listing-page-link="1". For listing-bound blocks (a non-empty
+  // data-listing-query-id ancestor) the click fetch-swaps the listing blocks
+  // and pushes history; anything else (legacy cl.* pagers) keeps the plain
+  // server-rendered navigation. Delegated once so swapped pagers stay bound.
+  document.addEventListener("click", (event) => {
+    const origin = event.target;
+    if (!(origin instanceof Element)) return;
+    const link = origin.closest('[data-listing-page-link="1"]');
+    if (!(link instanceof HTMLAnchorElement)) return;
+    const container = link.closest("[data-listing-query-id]");
+    const queryId = (container?.getAttribute("data-listing-query-id") || "").trim();
+    if (!queryId) return;
+    event.preventDefault();
+    const targetUrl = new URL(link.getAttribute("href") || "", window.location.href);
+    void runListingRefresh(queryId, targetUrl, true);
   });
 
   bindListingForms();

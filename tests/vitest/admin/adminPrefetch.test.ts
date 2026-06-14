@@ -9,7 +9,9 @@ import {
   type AdminPrefetchEntry,
 } from "../../../core/admin/utils/adminPrefetch";
 import { clearContentTypesCache } from "../../../core/admin/services/contentTypesClient";
+import { clearMenusCache } from "../../../core/admin/services/menusClient";
 import { clearPagesCache } from "../../../core/admin/services/pagesClient";
+import { clearPageTemplatesCache } from "../../../core/admin/services/pageTemplatesClient";
 import { clearSiteSettingsCache } from "../../../core/admin/services/siteSettingsClient";
 
 const withWindow = async (fn: () => Promise<void> | void) => {
@@ -68,6 +70,8 @@ const installLocalStorage = () => {
     clearSiteSettingsCache();
     clearPagesCache();
     clearContentTypesCache();
+    clearMenusCache();
+    clearPageTemplatesCache();
   };
 };
 
@@ -103,6 +107,12 @@ test("settings site prefetch warms settings and selector caches once", async () 
     if (url.endsWith("/content-types")) {
       return jsonResponse([]);
     }
+    if (url.endsWith("/menus")) {
+      return jsonResponse([]);
+    }
+    if (url.endsWith("/page-templates")) {
+      return jsonResponse({ items: [] });
+    }
     return jsonResponse({});
   };
 
@@ -110,6 +120,8 @@ test("settings site prefetch warms settings and selector caches once", async () 
     clearSiteSettingsCache();
     clearPagesCache();
     clearContentTypesCache();
+    clearMenusCache();
+    clearPageTemplatesCache();
 
     await prefetchSettingsRoute("/settings/site");
     await prefetchSettingsRoute("/settings/site");
@@ -118,6 +130,11 @@ test("settings site prefetch warms settings and selector caches once", async () 
     expect(paths.filter((path) => path.endsWith("/settings"))).toHaveLength(1);
     expect(paths.filter((path) => path.endsWith("/pages"))).toHaveLength(1);
     expect(paths.filter((path) => path.endsWith("/content-types"))).toHaveLength(1);
+    // Site shell pickers moved to the Menus-surface SiteShellDialog
+    // (TASK-458-01): the Site Settings prefetch no longer warms menus or
+    // page-template caches.
+    expect(paths.filter((path) => path.endsWith("/menus"))).toHaveLength(0);
+    expect(paths.filter((path) => path.endsWith("/page-templates"))).toHaveLength(0);
   } finally {
     globalThis.fetch = originalFetch;
     restoreStorage();

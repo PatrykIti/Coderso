@@ -56,6 +56,7 @@ export type FormTableProps = {
   onToggleAll?: () => void;
   onToggleForm?: (id: string) => void;
   onEdit: (id: string) => void;
+  onSubmissions: (id: string) => void;
   onActionLogs: (id: string) => void;
   onPublish: (id: string) => void;
   onMoveToDraft: (id: string) => void;
@@ -72,6 +73,7 @@ export function FormTable({
   onToggleAll,
   onToggleForm,
   onEdit,
+  onSubmissions,
   onActionLogs,
   onPublish,
   onMoveToDraft,
@@ -110,10 +112,7 @@ export function FormTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={6}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
+              <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                 {emptyMessage ?? "No forms yet. Create your first form to get started."}
               </TableCell>
             </TableRow>
@@ -121,79 +120,80 @@ export function FormTable({
           {items.map((form) => {
             const isSelected = selectedIds.includes(form.id);
             return (
-            <TableRow key={form.id} className={isSelected ? "bg-muted/30" : undefined}>
-              <TableCell className="pl-4">
-                <Checkbox
-                  aria-label={`Select ${form.name}`}
-                  checked={isSelected}
-                  onCheckedChange={() => onToggleForm?.(form.id)}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <AdminLink
-                    href={`/advanced/forms/${encodeURIComponent(form.id)}`}
-                    prefetch
-                    className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                    aria-label={`Edit form: ${form.name}`}
-                  >
-                    {form.name}
-                  </AdminLink>
-                  <span className="text-xs text-muted-foreground">
-                    {form.description ?? "No description yet"}
-                  </span>
-                  <span className="text-xs text-muted-foreground break-all">/{form.slug}</span>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                    <Badge
-                      variant="outline"
-                      className={statusStyles[form.status] ?? statusStyles.draft}
+              <TableRow key={form.id} className={isSelected ? "bg-muted/30" : undefined}>
+                <TableCell className="pl-4">
+                  <Checkbox
+                    aria-label={`Select ${form.name}`}
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleForm?.(form.id)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex flex-col">
+                    <AdminLink
+                      href={`/advanced/forms/${encodeURIComponent(form.id)}`}
+                      prefetch
+                      className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                      aria-label={`Edit form: ${form.name}`}
                     >
-                      {statusLabels[form.status] ?? form.status}
-                    </Badge>
-                    <span className="text-muted-foreground/60">•</span>
-                    <Badge
-                      variant="outline"
-                      className={accessStyles[form.submissionAccess] ?? accessStyles.public}
-                    >
-                      {accessLabels[form.submissionAccess] ?? form.submissionAccess}
-                    </Badge>
-                    <span className="text-muted-foreground/60">•</span>
-                    <span>{formatDate(form.updatedAt)}</span>
+                      {form.name}
+                    </AdminLink>
+                    <span className="text-xs text-muted-foreground">
+                      {form.description ?? "No description yet"}
+                    </span>
+                    <span className="text-xs text-muted-foreground break-all">/{form.slug}</span>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                      <Badge
+                        variant="outline"
+                        className={statusStyles[form.status] ?? statusStyles.draft}
+                      >
+                        {statusLabels[form.status] ?? form.status}
+                      </Badge>
+                      <span className="text-muted-foreground/60">•</span>
+                      <Badge
+                        variant="outline"
+                        className={accessStyles[form.submissionAccess] ?? accessStyles.public}
+                      >
+                        {accessLabels[form.submissionAccess] ?? form.submissionAccess}
+                      </Badge>
+                      <span className="text-muted-foreground/60">•</span>
+                      <span>{formatDate(form.updatedAt)}</span>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell className="hidden px-4 md:table-cell">
-                <Badge
-                  variant="outline"
-                  className={statusStyles[form.status] ?? statusStyles.draft}
-                >
-                  {statusLabels[form.status] ?? form.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden px-4 lg:table-cell">
-                <Badge
-                  variant="outline"
-                  className={accessStyles[form.submissionAccess] ?? accessStyles.public}
-                >
-                  {accessLabels[form.submissionAccess] ?? form.submissionAccess}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden px-4 text-sm text-muted-foreground lg:table-cell">
-                {formatDate(form.updatedAt)}
-              </TableCell>
-              <TableCell className="w-12 pr-4 text-right">
-                <FormRowActions
-                  status={form.status}
-                  onEdit={() => onEdit(form.id)}
-                  onActionLogs={() => onActionLogs(form.id)}
-                  onPublish={() => onPublish(form.id)}
-                  onMoveToDraft={() => onMoveToDraft(form.id)}
-                  onArchive={() => onArchive(form.id)}
-                  onDelete={onDelete ? () => onDelete(form.id) : undefined}
-                />
-              </TableCell>
-            </TableRow>
-          );
+                </TableCell>
+                <TableCell className="hidden px-4 md:table-cell">
+                  <Badge
+                    variant="outline"
+                    className={statusStyles[form.status] ?? statusStyles.draft}
+                  >
+                    {statusLabels[form.status] ?? form.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden px-4 lg:table-cell">
+                  <Badge
+                    variant="outline"
+                    className={accessStyles[form.submissionAccess] ?? accessStyles.public}
+                  >
+                    {accessLabels[form.submissionAccess] ?? form.submissionAccess}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden px-4 text-sm text-muted-foreground lg:table-cell">
+                  {formatDate(form.updatedAt)}
+                </TableCell>
+                <TableCell className="w-12 pr-4 text-right">
+                  <FormRowActions
+                    status={form.status}
+                    onEdit={() => onEdit(form.id)}
+                    onSubmissions={() => onSubmissions(form.id)}
+                    onActionLogs={() => onActionLogs(form.id)}
+                    onPublish={() => onPublish(form.id)}
+                    onMoveToDraft={() => onMoveToDraft(form.id)}
+                    onArchive={() => onArchive(form.id)}
+                    onDelete={onDelete ? () => onDelete(form.id) : undefined}
+                  />
+                </TableCell>
+              </TableRow>
+            );
           })}
         </TableBody>
       </Table>

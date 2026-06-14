@@ -10,12 +10,17 @@ import type {
   AssistantActionContext,
   AssistantCollectionWorkspaceSummary,
 } from "./actionPlanTypes";
+import { normalizeStoredPageDocumentV2ForRead } from "../pages/pageDocumentV2";
 import {
   extractAssistantTemplateSectionReferences,
   mergeAssistantTemplateSectionReferences,
   normalizeAssistantReferencedWidgetTemplates,
 } from "./adminContextCatalogNormalizer";
 import type { AssistantTemplateSectionReferenceSummary } from "./adminContextTypes";
+import {
+  resolveAssistantPageSelection,
+  summarizePageSectionsForAssistant,
+} from "./pageActiveSurfaceSummary";
 
 export type AssistantActiveSurfaceHydrationDeps = {
   getPage: typeof getPage;
@@ -28,11 +33,6 @@ export type AssistantActiveSurfaceHydrationDeps = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const readPageBlocks = (currentData: unknown) => {
-  if (!isRecord(currentData)) return [];
-  return Array.isArray(currentData.blocks) ? currentData.blocks : [];
-};
 
 const readDetailPageBlocks = (currentDocument: unknown) => {
   if (!isRecord(currentDocument)) return [];
@@ -158,27 +158,31 @@ export async function hydrateAssistantActiveSurfaceContext(
   if (activeSurface.kind === "page") {
     const page = await deps.getPage(activeSurface.page.id);
     if (!page) return { ...contextWithWorkspace, activeSurface: null };
-    const templateReferences = mergeAssistantTemplateSectionReferences([
-      ...extractAssistantTemplateSectionReferences(activeSurface.blocks),
-      ...extractAssistantTemplateSectionReferences(readPageBlocks(page.currentData)),
-    ]);
-    const referencedTemplates = await hydrateReferencedTemplates(templateReferences, deps);
+    const document = normalizeStoredPageDocumentV2ForRead(
+      isRecord(page) ? page.currentData : undefined
+    );
+    const sections = summarizePageSectionsForAssistant(document.sections);
+    const selection = resolveAssistantPageSelection(sections, {
+      selectedSectionId: activeSurface.selectedSectionId,
+      selectedBlockId: activeSurface.selectedBlockId,
+      selectedBlockPath: activeSurface.selectedBlockPath,
+    });
     return {
       ...contextWithWorkspace,
       activeSurface: {
         ...activeSurface,
+        schemaVersion: 2,
         page: {
           id: page.id,
           title: page.title,
           slug: page.slug,
           status: page.status,
-          template: activeSurface.page.template,
+          template: document.settings.template,
         },
-        templateReferences,
-        referencedTemplates: referencedTemplates.templates,
-        warnings: [...new Set([...activeSurface.warnings, ...referencedTemplates.warnings])].sort(
-          (left, right) => left.localeCompare(right)
-        ),
+        selectedSectionId: selection.selectedSectionId,
+        selectedBlockId: selection.selectedBlockId,
+        selectedBlockPath: selection.selectedBlockPath,
+        sections,
       },
     };
   }

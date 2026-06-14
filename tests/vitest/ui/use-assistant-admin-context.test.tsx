@@ -60,8 +60,15 @@ const readContextFromHtml = (html: string) => {
       };
       sampleEntryId?: string | null;
       selectedEntryId?: string | null;
+      selectedSectionId?: string | null;
       selectedBlockId: string | null;
-      blocks: Array<{ id: string; type: string; templateId: string | null }>;
+      sections?: Array<{
+        id: string;
+        type: string;
+        name: string;
+        blocks: Array<{ id: string; type: string; templateId: string | null }>;
+      }>;
+      blocks?: Array<{ id: string; type: string; templateId: string | null }>;
       bindings?: Array<{ widgetId: string; field: string; propPath: string; mode: string }>;
       writableBindingFields?: string[];
       settings?: {
@@ -135,18 +142,20 @@ test("useAssistantAdminContext falls back to browser path without provider", () 
   );
 });
 
-test("buildAssistantAdminRuntimeSnapshot derives entry and widget-template resources", () => {
+test("buildAssistantAdminRuntimeSnapshot derives entry resources and ignores retired widget-template routes", () => {
   expect(
     buildAssistantAdminRuntimeSnapshot({
       route: "/admin/advanced/entries/articles/entry-1",
     }).selectedResource
   ).toEqual({ kind: "entry", id: "entry-1" });
 
+  // The widget-template editor route is retired; it no longer resolves a
+  // selected resource.
   expect(
     buildAssistantAdminRuntimeSnapshot({
       route: "/admin/advanced/widgets/templates/template-1",
     }).selectedResource
-  ).toEqual({ kind: "widget-template", id: "template-1" });
+  ).toBeNull();
 });
 
 test("useAssistantAdminContext recognizes collection workspace route without changing selected resource", () => {
@@ -182,27 +191,37 @@ test("useAssistantAdminContext includes matching active page surface context", (
       status: "draft",
       template: "landing",
     },
-    selectedBlockId: "hero-1",
-    blocks: [
+    selectedSectionId: "sec-hero",
+    selectedBlockId: null,
+    sections: [
       {
-        id: "hero-1",
+        id: "sec-hero",
         type: "hero",
-        label: "Contact hero",
-        path: "0",
-        childCount: 0,
-        slotKeys: [],
-        templateId: null,
-        templateName: null,
-      },
-      {
-        id: "template-1",
-        type: "template-section",
-        label: null,
-        path: "1",
-        childCount: 0,
-        slotKeys: [],
-        templateId: "tpl-1",
-        templateName: "Contact CTA",
+        name: "Hero",
+        path: "sections.0",
+        blockCount: 2,
+        blocks: [
+          {
+            id: "hero-1",
+            type: "heading",
+            label: "Contact hero",
+            path: "sections.0.blocks.0",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+          {
+            id: "button-1",
+            type: "button",
+            label: "Contact CTA",
+            path: "sections.0.blocks.1",
+            childCount: 0,
+            slotKeys: [],
+            templateId: null,
+            templateName: null,
+          },
+        ],
       },
     ],
     warnings: ["page_has_unsaved_changes"],
@@ -224,10 +243,17 @@ test("useAssistantAdminContext includes matching active page surface context", (
         slug: "/contact",
         template: "landing",
       },
-      selectedBlockId: "hero-1",
-      blocks: [
-        { id: "hero-1", type: "hero", templateId: null },
-        { id: "template-1", type: "template-section", templateId: "tpl-1" },
+      selectedSectionId: "sec-hero",
+      selectedBlockId: null,
+      sections: [
+        {
+          id: "sec-hero",
+          type: "hero",
+          blocks: [
+            { id: "hero-1", type: "heading", templateId: null },
+            { id: "button-1", type: "button", templateId: null },
+          ],
+        },
       ],
       warnings: ["page_has_unsaved_changes"],
     });
@@ -246,8 +272,9 @@ test("useAssistantAdminContext drops active page surface for a different route",
       status: "draft",
       template: null,
     },
+    selectedSectionId: null,
     selectedBlockId: null,
-    blocks: [],
+    sections: [],
     warnings: [],
   });
 
@@ -260,66 +287,6 @@ test("useAssistantAdminContext drops active page surface for a different route",
     const context = readContextFromHtml(html);
 
     expect(context.activeSurface).toBeNull();
-  } finally {
-    clearActiveAssistantSurfaceContext();
-  }
-});
-
-test("useAssistantAdminContext includes matching active widget template context", () => {
-  setActiveAssistantSurfaceContext({
-    kind: "widget-template",
-    template: {
-      id: "template-1",
-      name: "Contact Template",
-      status: "published",
-      category: "Marketing",
-    },
-    selectedBlockId: "cta-1",
-    blocks: [
-      {
-        id: "cta-1",
-        type: "cta-banner",
-        label: "Contact CTA",
-        path: "0",
-        childCount: 0,
-        slotKeys: [],
-        templateId: null,
-        templateName: null,
-      },
-    ],
-    settings: {
-      wrapperContainer: "default",
-      sectionGap: "md",
-      hasBackgroundMedia: false,
-    },
-    warnings: ["template_remote_update_pending"],
-  });
-
-  try {
-    const html = renderToString(
-      <AdminRouterProvider initialPath="/admin/advanced/widgets/templates/template-1">
-        <SnapshotProbe activeHref="/admin/advanced/widgets/templates/template-1" />
-      </AdminRouterProvider>
-    );
-    const context = readContextFromHtml(html);
-
-    expect(context.activeSurface).toMatchObject({
-      kind: "widget-template",
-      template: {
-        id: "template-1",
-        name: "Contact Template",
-        status: "published",
-        category: "Marketing",
-      },
-      selectedBlockId: "cta-1",
-      blocks: [{ id: "cta-1", type: "cta-banner", templateId: null }],
-      settings: {
-        wrapperContainer: "default",
-        sectionGap: "md",
-        hasBackgroundMedia: false,
-      },
-      warnings: ["template_remote_update_pending"],
-    });
   } finally {
     clearActiveAssistantSurfaceContext();
   }

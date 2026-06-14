@@ -126,7 +126,7 @@ test("business blueprint packs expose shared catalog contract", () => {
   expect(getBusinessBlueprintPack("unknown")).toBeNull();
 });
 
-test("editorial content hub pack builds posts feed page without post mutations", () => {
+test("editorial content hub pack builds static hub page without post mutations", () => {
   const pack = getBusinessBlueprintPack("editorial_content_hub");
   const plan = pack?.buildPlan({ promptKind: "setup_request" });
 
@@ -139,7 +139,7 @@ test("editorial content hub pack builds posts feed page without post mutations",
   expect(plan?.status).toBe("ready");
   expect(plan?.actions.map((action) => action.type)).toEqual(["page.upsert"]);
   const page = plan?.actions.find((action) => action.type === "page.upsert");
-  expect(JSON.stringify(page?.input.blocks)).toContain("posts-feed");
+  expect(JSON.stringify(page?.input.sections)).toContain("editorial-hub-posts-overview");
   expect(JSON.stringify(plan)).not.toContain("post.upsert");
 });
 

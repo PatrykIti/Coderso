@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { LayoutTemplate, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -19,6 +19,7 @@ import {
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -203,7 +204,11 @@ export function PageListPage() {
         title: payload.title,
         slug: payload.slug,
         template: payload.template,
-        data: { blocks: [], settings: { template: payload.template } },
+        data: {
+          schemaVersion: 2,
+          sections: [],
+          settings: { template: payload.template ?? "page-v2", showInNav: true },
+        },
       });
       pageListToasts.success("create", { targetLabel: page.title });
       if (payload.openAfterCreate) {
@@ -384,6 +389,12 @@ export function PageListPage() {
                   variant="inline"
                 />
               ) : null}
+              <Button asChild variant="outline" className="gap-2">
+                <AdminLink href="/advanced/page-templates" prefetch>
+                  <LayoutTemplate className="h-4 w-4" />
+                  Templates
+                </AdminLink>
+              </Button>
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
                 New

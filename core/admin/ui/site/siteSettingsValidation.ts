@@ -29,6 +29,34 @@ export type RouteValidationResult = {
   errorsByType: Record<string, RouteFieldErrors>;
 };
 
+/**
+ * RFC 6761 loopback names: `localhost`, any `*.localhost` subdomain (the
+ * multi-tenant dev-host topology, e.g. `coderso-a.localhost`), and the IPv4/
+ * IPv6 loopback literals. Plain http is acceptable for these dev origins;
+ * every other host keeps the HTTPS requirement.
+ */
+const isLoopbackBaseUrlHost = (host: string) =>
+  host === "localhost" ||
+  host.endsWith(".localhost") ||
+  host === "127.0.0.1" ||
+  host === "::1" ||
+  host === "[::1]";
+
+export const validateBaseUrl = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    const host = parsed.hostname.toLowerCase();
+    if (parsed.protocol !== "https:" && !isLoopbackBaseUrlHost(host)) {
+      return "HTTPS is required for non-localhost URLs.";
+    }
+    return null;
+  } catch {
+    return "Enter a valid URL (e.g. https://example.com).";
+  }
+};
+
 export const normalizeRouteInput = (value: string, allowRoot: boolean) => {
   try {
     return allowRoot

@@ -15,9 +15,12 @@ import {
 } from "../../../core/services/content/contentListResolver";
 import {
   ContentListBlock,
+  buildContentListPageHref,
+  buildContentListPagerWindow,
   contentListEditorContract,
   contentListDefaults,
   createContentListWidget,
+  mapListingTemplatePresentationToContentList,
   normalizeContentListData,
   normalizeContentListLimit,
   type ContentListData,
@@ -321,6 +324,8 @@ test("content list renders paged navigation and view-all actions", () => {
             page: 2,
             pageSize: 2,
             totalPages: 3,
+            pageParamKey: "cl.content-list-1.page",
+            search: "cl.content-list-1.page=2",
             previousPageHref: "?cl.content-list-1.page=1",
             nextPageHref: "?cl.content-list-1.page=3",
           },
@@ -369,9 +374,20 @@ test("content list renders paged navigation and view-all actions", () => {
   );
 
   expect(pagedHtml).toContain('aria-label="Content list pagination"');
-  expect(pagedHtml.replace(/<!-- -->/g, "")).toContain("Page 2 of 3");
+  // TASK-459-03 numbered pager: totals line, windowed page numbers with the
+  // current page marked, prev/next anchors flagged for the runtime script.
+  expect(pagedHtml.replace(/<!-- -->/g, "")).toContain("5 results");
+  expect(pagedHtml).toContain('data-content-list-total="5"');
+  expect(pagedHtml).toContain('aria-current="page"');
+  expect(pagedHtml).toContain('data-content-list-page="2"');
+  expect(pagedHtml).toContain('data-listing-page-link="1"');
   expect(pagedHtml).toContain('href="?cl.content-list-1.page=1"');
   expect(pagedHtml).toContain('href="?cl.content-list-1.page=3"');
+  // Numbered links build from the owner page-href helper: page 1 drops the
+  // param (canonical URL), page 3 sets it on the current search params.
+  expect(pagedHtml).toContain('href="?"');
+  expect(pagedHtml).toContain('aria-label="Page 1"');
+  expect(pagedHtml).toContain('aria-label="Page 3"');
   expect(viewAllHtml).toContain('href="/articles"');
   expect(viewAllHtml).toContain("Browse all");
 });
@@ -970,4 +986,101 @@ test("content list listing bindings can hide blocks via conditions", async () =>
   expect(resolved.items[0]?.title).toBe("Oil service");
   expect(resolved.items[0]?.excerpt).toBeUndefined();
   expect(resolved.items[0]?.href).toBeUndefined();
+});
+
+test("pager window and page-href helpers follow the TASK-459-03 contract", () => {
+  expect(buildContentListPagerWindow(1, 1)).toEqual([1]);
+  expect(buildContentListPagerWindow(2, 3)).toEqual([1, 2, 3]);
+  expect(buildContentListPagerWindow(5, 12)).toEqual([
+    1,
+    "ellipsis",
+    3,
+    4,
+    5,
+    6,
+    7,
+    "ellipsis",
+    12,
+  ]);
+  expect(buildContentListPagerWindow(1, 12)).toEqual([1, 2, 3, "ellipsis", 12]);
+  expect(buildContentListPagerWindow(12, 12)).toEqual([1, "ellipsis", 10, 11, 12]);
+  // Degenerate inputs clamp instead of throwing.
+  expect(buildContentListPagerWindow(99, 3)).toEqual([1, 2, 3]);
+
+  // Page 1 drops the param (canonical URL); other pages set it on top of the
+  // existing search params (filters survive paging).
+  expect(buildContentListPageHref("", "lq.q1.__page", 2)).toBe("?lq.q1.__page=2");
+  expect(buildContentListPageHref("lq.q1.data.rooms.eq=3&lq.q1.__page=4", "lq.q1.__page", 1)).toBe(
+    "?lq.q1.data.rooms.eq=3"
+  );
+  expect(buildContentListPageHref("lq.q1.data.rooms.eq=3", "lq.q1.__page", 3)).toBe(
+    "?lq.q1.data.rooms.eq=3&lq.q1.__page=3"
+  );
+  expect(buildContentListPageHref("lq.q1.__page=5", "lq.q1.__page", 1)).toBe("?");
+});
+
+test("listing template presentation maps onto the widget vocabulary (TASK-459-03)", () => {
+  expect(
+    mapListingTemplatePresentationToContentList({
+      style: { columns: 4, gap: "xl", cardVariant: "compact" },
+      emptyState: { title: "No homes", description: "Loosen filters." },
+    })
+  ).toEqual({
+    variant: "compact",
+    style: { columns: "4", gap: "lg", cardStyle: "outlined" },
+    emptyState: { title: "No homes", description: "Loosen filters." },
+  });
+
+  expect(
+    mapListingTemplatePresentationToContentList({
+      style: { columns: 2, gap: "xs", cardVariant: "minimal" },
+      emptyState: { title: null, description: null },
+    })
+  ).toEqual({
+    variant: "cards",
+    style: { columns: "2", gap: "sm", cardStyle: "minimal" },
+  });
+
+  // Absent style keeps today's defaults (no visual change for existing pages).
+  expect(mapListingTemplatePresentationToContentList({})).toEqual({
+    variant: "cards",
+    style: { columns: "3", gap: "md", cardStyle: "outlined" },
+  });
+});
+
+test("cardLinkMode missing-route renders unlinked cards with the route note (TASK-459-03 guard)", () => {
+  const html = renderToString(
+    <ContentListBlock
+      variant="cards"
+      data={normalizeContentListData({
+        ...contentListDefaults,
+        source: {
+          contentTypeId: "blog-type-id",
+          statusScope: "published",
+          limit: 3,
+          sort: "published-desc",
+        },
+        resolved: {
+          items: [
+            {
+              id: "entry-1",
+              title: "Release notes",
+              excerpt: "Latest platform updates.",
+              publishedAt: "2026-02-08T09:00:00.000Z",
+              status: "published",
+            },
+          ],
+          total: 1,
+          sourceTypeId: "blog-type-id",
+          sourceTypeSlug: "blog",
+          cardLinkMode: "missing-route",
+          resolvedAt: "2026-02-08T09:10:00.000Z",
+        },
+      })}
+    />
+  );
+
+  expect(html).toContain('data-content-list-link-unavailable="1"');
+  expect(html).toContain('data-content-list-cta-disabled="missing-route"');
+  expect(html).not.toContain("<a href=");
 });

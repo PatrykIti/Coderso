@@ -33,6 +33,7 @@ test("MenuListPage renders shell and loading state", () => {
   expect(html).toContain("New");
   expect(html).not.toContain("New Menu");
   expect(html).not.toContain("Refresh");
+  expect(html).toContain("Site shell");
   expect(html).toContain("Search menus by name or location");
   expect(html).toContain("Loading menus");
 });
@@ -106,11 +107,8 @@ test("filterMenus searches and filters by status and location", () => {
     }),
   ];
 
-  const apply = (
-    query: string,
-    status: MenuStatusFilter,
-    location: MenuLocationFilter
-  ) => filterMenus(menus, query, status, location).map((menu) => menu.id);
+  const apply = (query: string, status: MenuStatusFilter, location: MenuLocationFilter) =>
+    filterMenus(menus, query, status, location).map((menu) => menu.id);
 
   expect(apply("foot", "all", "all")).toEqual(["menu-2"]);
   expect(apply("assigned", "all", "unassigned")).toEqual(["menu-2"]);

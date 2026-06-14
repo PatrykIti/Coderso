@@ -10,6 +10,51 @@ const deps = {
           title: "Contact from server",
           slug: "/contact",
           status: "published",
+          currentData: {
+            schemaVersion: 2,
+            breakpoints: ["desktop", "tablet", "mobile"],
+            seo: {},
+            settings: { template: "page-v2", showInNav: true },
+            sections: [
+              {
+                id: "sec-hero",
+                type: "hero",
+                name: "Hero from server",
+                variant: "default",
+                layout: {},
+                style: {},
+                spacing: {},
+                visibility: { visible: true },
+                responsive: {},
+                blocks: [
+                  {
+                    id: "hero-1",
+                    type: "container",
+                    props: {},
+                    style: {},
+                    visibility: { visible: true },
+                    slots: {
+                      children: [
+                        {
+                          id: "cta-1",
+                          type: "button",
+                          props: {
+                            label: "Contact CTA",
+                            href: "/contact",
+                            target: "self",
+                            variant: "primary",
+                            size: "md",
+                          },
+                          style: {},
+                          visibility: { visible: true },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              },
+            ],
+          },
         }
       : null,
   getWidgetTemplate: async (id: string) =>
@@ -106,7 +151,7 @@ const deps = {
   },
 };
 
-test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserves block summary", async () => {
+test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserves section summary", async () => {
   const context = await hydrateAssistantActiveSurfaceContext(
     {
       page: "/admin/pages/page-1",
@@ -119,17 +164,28 @@ test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserve
           status: "draft",
           template: "landing",
         },
-        selectedBlockId: "hero-1",
-        blocks: [
+        selectedSectionId: "sec-hero",
+        selectedBlockId: "cta-1",
+        selectedBlockPath: "sections.0.blocks.0.slots.children.0",
+        sections: [
           {
-            id: "hero-1",
+            id: "sec-hero",
             type: "hero",
-            label: "Hero",
-            path: "0",
-            childCount: 0,
-            slotKeys: [],
-            templateId: null,
-            templateName: null,
+            name: "Hero",
+            path: "sections.0",
+            blockCount: 1,
+            blocks: [
+              {
+                id: "hero-1",
+                type: "heading",
+                label: "Hero",
+                path: "sections.0.blocks.0",
+                childCount: 0,
+                slotKeys: [],
+                templateId: null,
+                templateName: null,
+              },
+            ],
           },
         ],
         warnings: [],
@@ -140,14 +196,75 @@ test("hydrateAssistantActiveSurfaceContext rehydrates page identity and preserve
 
   expect(context?.activeSurface).toMatchObject({
     kind: "page",
+    schemaVersion: 2,
     page: {
       id: "page-1",
       title: "Contact from server",
       slug: "/contact",
       status: "published",
-      template: "landing",
+      template: "page-v2",
     },
-    blocks: [{ id: "hero-1", type: "hero" }],
+    selectedSectionId: "sec-hero",
+    selectedBlockId: "cta-1",
+    selectedBlockPath: "sections.0.blocks.0.slots.children.0",
+    sections: [
+      {
+        id: "sec-hero",
+        type: "hero",
+        capabilities: {
+          assistantEmittable: true,
+        },
+        blocks: [
+          {
+            id: "hero-1",
+            type: "container",
+            capabilities: {
+              assistantEmittable: true,
+              runtimeRenderer: "real",
+            },
+            children: [
+              {
+                id: "cta-1",
+                type: "button",
+                path: "sections.0.blocks.0.slots.children.0",
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+});
+
+test("hydrateAssistantActiveSurfaceContext clears stale page block selections", async () => {
+  const context = await hydrateAssistantActiveSurfaceContext(
+    {
+      page: "/admin/pages/page-1",
+      activeSurface: {
+        kind: "page",
+        schemaVersion: 2,
+        page: {
+          id: "page-1",
+          title: "Contact local",
+          slug: "/local",
+          status: "draft",
+          template: "landing",
+        },
+        selectedSectionId: "sec-hero",
+        selectedBlockId: "cta-1",
+        selectedBlockPath: "sections.0.blocks.1",
+        sections: [],
+        warnings: [],
+      },
+    },
+    deps as unknown as Parameters<typeof hydrateAssistantActiveSurfaceContext>[1]
+  );
+
+  expect(context?.activeSurface).toMatchObject({
+    kind: "page",
+    selectedSectionId: "sec-hero",
+    selectedBlockId: null,
+    selectedBlockPath: null,
   });
 });
 

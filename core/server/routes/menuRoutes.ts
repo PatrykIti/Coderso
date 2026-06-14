@@ -7,12 +7,13 @@ import {
   updateMenu,
   type MenuItemInput,
 } from "../../services/menus/menuService";
-import { ApiError } from "../errorHandler";
+import { MENU_NAV_EXTRAS_INVALID, isMenuNavExtrasError } from "../../services/menus/menuNavExtras";
 import {
-  menuCreateSchema,
-  menuItemsSchema,
-  menuUpdateSchema,
-} from "../validation/menuSchemas";
+  MENU_APPEARANCE_INVALID,
+  isMenuAppearanceError,
+} from "../../services/menus/normalizeMenuAppearance";
+import { ApiError } from "../errorHandler";
+import { menuCreateSchema, menuItemsSchema, menuUpdateSchema } from "../validation/menuSchemas";
 
 export type RouteContext = {
   params: Record<string, string>;
@@ -37,6 +38,16 @@ export type MenuRouteDeps = {
 };
 
 const mapMenuError = (error: unknown) => {
+  if (isMenuAppearanceError(error)) {
+    return new ApiError(MENU_APPEARANCE_INVALID, "Menu appearance invalid", 400, {
+      field: error.field,
+    });
+  }
+  if (isMenuNavExtrasError(error)) {
+    return new ApiError(MENU_NAV_EXTRAS_INVALID, "Menu nav extras invalid", 400, {
+      field: error.field,
+    });
+  }
   if (
     error &&
     typeof error === "object" &&
@@ -50,11 +61,7 @@ const mapMenuError = (error: unknown) => {
     };
     if (dbError.code === "23503") {
       if (dbError.constraint?.includes("menu_items_page_id")) {
-        return new ApiError(
-          "menu_item_page_missing",
-          "Menu item references a missing page",
-          400
-        );
+        return new ApiError("menu_item_page_missing", "Menu item references a missing page", 400);
       }
       if (dbError.constraint?.includes("menu_items_parent_id")) {
         return new ApiError(
@@ -73,26 +80,15 @@ const mapMenuError = (error: unknown) => {
       return new ApiError("menu_item_id_duplicate", "Duplicate menu item id", 400);
     }
     if (dbError.code === "23502") {
-      return new ApiError(
-        "menu_item_missing_field",
-        "Menu item missing required field",
-        400
-      );
+      return new ApiError("menu_item_missing_field", "Menu item missing required field", 400);
     }
     if (dbError.code === "42P01") {
-      return new ApiError(
-        "menu_items_table_missing",
-        "Menu items table is missing",
-        500,
-        { detail: dbError.detail }
-      );
+      return new ApiError("menu_items_table_missing", "Menu items table is missing", 500, {
+        detail: dbError.detail,
+      });
     }
     if (dbError.code === "22P02") {
-      return new ApiError(
-        "menu_item_invalid_format",
-        "Menu item contains invalid data",
-        400
-      );
+      return new ApiError("menu_item_invalid_format", "Menu item contains invalid data", 400);
     }
   }
 
@@ -103,27 +99,15 @@ const mapMenuError = (error: unknown) => {
     case "menu_items_invalid":
       return new ApiError("menu_items_invalid", "Menu items invalid", 400);
     case "menu_item_label_required":
-      return new ApiError(
-        "menu_item_label_required",
-        "Menu item label is required",
-        400
-      );
+      return new ApiError("menu_item_label_required", "Menu item label is required", 400);
     case "menu_item_link_invalid":
-      return new ApiError(
-        "menu_item_link_invalid",
-        "Menu item must link to a page or URL",
-        400
-      );
+      return new ApiError("menu_item_link_invalid", "Menu item must link to a page or URL", 400);
     case "menu_item_id_duplicate":
       return new ApiError("menu_item_id_duplicate", "Duplicate menu item id", 400);
     case "menu_items_cycle":
       return new ApiError("menu_items_cycle", "Menu items contain a cycle", 400);
     case "menu_item_page_missing":
-      return new ApiError(
-        "menu_item_page_missing",
-        "Menu item references a missing page",
-        400
-      );
+      return new ApiError("menu_item_page_missing", "Menu item references a missing page", 400);
     default:
       return null;
   }
@@ -173,46 +157,36 @@ export function registerMenuRoutes(router: Router, deps: MenuRouteDeps) {
     });
   });
 
-  router.patch(
-    "/menus/:id",
-    requirePermission("menus:write"),
-    async (ctx) => {
-      return withMenuErrors(async () => {
-        validate(menuUpdateSchema, ctx.body);
-        const body = ctx.body as {
-          name?: string;
-          location?: string | null;
-          status?: "draft" | "published";
-        };
-        const updated = await updateMenu(ctx.params.id, body);
-        if (!updated) throw new Error("menu_not_found");
-        return updated;
-      });
-    }
-  );
+  router.patch("/menus/:id", requirePermission("menus:write"), async (ctx) => {
+    return withMenuErrors(async () => {
+      validate(menuUpdateSchema, ctx.body);
+      const body = ctx.body as {
+        name?: string;
+        location?: string | null;
+        status?: "draft" | "published";
+        appearance?: unknown;
+        extras?: unknown;
+      };
+      const updated = await updateMenu(ctx.params.id, body);
+      if (!updated) throw new Error("menu_not_found");
+      return updated;
+    });
+  });
 
-  router.put(
-    "/menus/:id/items",
-    requirePermission("menus:write"),
-    async (ctx) => {
-      return withMenuErrors(async () => {
-        validate(menuItemsSchema, ctx.body);
-        const body = ctx.body as { items: MenuItemInput[] };
-        await replaceMenuItems(ctx.params.id, body.items);
-        return { ok: true };
-      });
-    }
-  );
+  router.put("/menus/:id/items", requirePermission("menus:write"), async (ctx) => {
+    return withMenuErrors(async () => {
+      validate(menuItemsSchema, ctx.body);
+      const body = ctx.body as { items: MenuItemInput[] };
+      await replaceMenuItems(ctx.params.id, body.items);
+      return { ok: true };
+    });
+  });
 
-  router.delete(
-    "/menus/:id",
-    requirePermission("menus:write"),
-    async (ctx) => {
-      return withMenuErrors(async () => {
-        const removed = await deleteMenu(ctx.params.id);
-        if (!removed) throw new Error("menu_not_found");
-        return { ok: true };
-      });
-    }
-  );
+  router.delete("/menus/:id", requirePermission("menus:write"), async (ctx) => {
+    return withMenuErrors(async () => {
+      const removed = await deleteMenu(ctx.params.id);
+      if (!removed) throw new Error("menu_not_found");
+      return { ok: true };
+    });
+  });
 }

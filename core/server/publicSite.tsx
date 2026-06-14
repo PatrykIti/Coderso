@@ -1,21 +1,27 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import type { ReactNode } from "react";
+
 import type { DeviceTarget, WidgetBlock } from "../widgets/types";
-import { ensureRuntimeWidgetsRegistered } from "../widgets/runtime";
-import { renderPublicPageHtml, renderPublicPageRuntimeHtml } from "../site/renderPublicPage";
+import {
+  renderPublicPageRuntimeHtml,
+  renderPublicPageV2RuntimeHtml,
+} from "../site/renderPublicPage";
 import { renderPublicEntryDetailHtml, renderPublicEntryListHtml } from "../site/renderPublicEntry";
 import {
+  DEFAULT_SITE_CACHE_TTL_SECONDS,
   blocksAllowSiteHtmlCache,
   buildSiteCacheKey,
   configureSiteCache,
   getSiteCacheEntry,
   normalizeSitePath,
+  resolveSiteCacheSearchSignature,
   setSiteCacheEntry,
 } from "../site/cache/siteCache";
 import { matchContentRoute } from "../site/contentRouteMatcher";
 import { toCssVariables } from "../ui/theme/tokenCss";
-import { getPageBySlug, getPage } from "../services/pages/pageService";
+import { getPageBySlug, getPage, getPageSlugsByIds } from "../services/pages/pageService";
 import { type PreviewTargetType, validatePreviewToken } from "../services/pages/previewService";
 import { getEntry, getEntryBySlug, listEntries } from "../services/content/entryService";
 import {
@@ -26,7 +32,13 @@ import {
   POST_CONTENT_TYPE_NAME,
   POST_CONTENT_TYPE_SLUG,
 } from "../services/content/postsService";
-import { resolveContentListRuntimeData } from "../services/content/contentListResolver";
+import {
+  resolveContentListRequestedPage,
+  resolveContentListRuntimeData,
+  resolveContentListRuntimeNavigationMeta,
+  sortContentListRuntimeEntries,
+  type ContentListSortableEntry,
+} from "../services/content/contentListResolver";
 import {
   resolvePreviewDetailPageRuntime,
   resolvePublishedDetailPageRuntime,
@@ -41,18 +53,23 @@ import {
   hydrateProductTableRuntimeData,
   type CommerceRuntimeCache,
 } from "../services/commerce/commerceWidgetRuntime";
-import { getWidgetTemplatePreviewModel } from "../services/widgets/widgetTemplatePreviewService";
+import { getPageTemplatePreviewModel } from "../services/pages/pageTemplateLibraryService";
+import { isPageTemplateError } from "../services/pages/pageTemplateLibrarySchema";
 import { getContentType, getContentTypeBySlug } from "../services/content/typeService";
 import { resolvePublicSeoMetadata } from "../services/seo/seoService";
-import { getSetting, type ContentRouteSetting } from "../services/settings/settingsService";
+import { getSetting } from "../services/settings/settingsService";
+import type { ContentRouteSetting } from "../services/settings/settingsContracts";
 import { getResolvedTokens } from "../services/theme/tokenService";
 import { getActiveThemeProfile } from "../services/themes/themeProfileService";
 import { resolvePublicRedirect } from "../services/redirects/redirectService";
 import type { ContentSchema } from "../services/content/validation";
-import { getPageLayoutSettingsFromData } from "../services/pages/layoutSettings";
-import { getWidgetTemplateLayoutSettings } from "../services/widgets/widgetTemplateSettings";
 import { resolveDevAssetUrl, resolveSiteDevServerUrl } from "./utils/styleUrl";
-import { normalizeContentListData, type ContentListData } from "../widgets/core/contentList";
+import {
+  contentListLimitMax,
+  normalizeContentListData,
+  resolveContentListSort,
+  type ContentListData,
+} from "../widgets/core/contentList";
 import { normalizePostsFeedData, type PostsFeedData } from "../widgets/core/postsFeed";
 import { normalizeEntryTeaserData, type EntryTeaserData } from "../widgets/core/entryTeaser";
 import { type ProductGalleryData } from "../widgets/core/productGallery";
@@ -74,6 +91,8 @@ import {
   normalizeListingFiltersData,
   type ListingFiltersData,
 } from "../widgets/core/listingFilters";
+import { getListingRuntimeClientScript } from "../widgets/core/listingRuntimeScript";
+import { createWidgetRuntimeScriptRegistry } from "../widgets/runtimeScripts";
 import { normalizeSearchBoxData, type SearchBoxData } from "../widgets/core/searchBox";
 import { resolveNavigationRuntimeData } from "../services/navigation/navigationRuntimeResolver";
 import { resolveTemplateSectionRuntimeData } from "../services/widgets/templateSectionRuntime";
@@ -99,6 +118,24 @@ import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
 import { readBindingPathValue } from "../services/utils/bindingPath";
+import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataPreparation";
+import type { PageRuntimeCacheMode } from "../services/pages/pageRuntimeBindingContract";
+import { buildPageResponsiveCss } from "../services/pages/pageResponsiveCss";
+import { resolvePageTemplateInput } from "../services/pages/pageTemplateBoundary";
+import type { PageBreakpoint } from "../services/pages/pageDocumentV2";
+import { resolvePublicSiteShell } from "../services/pages/publicSiteShell";
+import {
+  collectNavigationMenuPageIds,
+  mapMenuNodesToNavigationItems,
+} from "../services/navigation/navigationMenuMapping";
+import type { MenuWithItems } from "../services/menus/menuService";
+import { resolvePublishedMenuNavExtras } from "../services/menus/menuNavExtras";
+import { resolvePublishedMenuAppearance } from "../services/menus/normalizeMenuAppearance";
+import {
+  SITE_FOOTER_SCOPE_SELECTOR,
+  type SiteShellNavigation,
+  type SiteShellRenderProps,
+} from "../site/siteShell";
 
 export type PublicPageData = {
   id: string;
@@ -204,13 +241,6 @@ const resolvePublicStyles = async () => {
 const resolvePublicThemeName = async () => {
   const profile = await getActiveThemeProfile();
   return profile?.themeName ?? "default";
-};
-
-const toBlocks = (data?: Record<string, unknown> | null): WidgetBlock[] => {
-  if (!data || typeof data !== "object") return [];
-  const blocks = (data as { blocks?: unknown }).blocks;
-  if (!Array.isArray(blocks)) return [];
-  return blocks as WidgetBlock[];
 };
 
 const ensureRecord = (value: unknown): Record<string, unknown> => {
@@ -629,6 +659,13 @@ const buildHtmlResponse = (html: string) =>
 type PublicHtmlRenderResult = {
   html: string;
   cacheable: boolean;
+  /**
+   * Granular page cache mode (TASK-459-04, v2 page renders only): listing
+   * bindings allow short-TTL caching of filtered catalog renders while forms
+   * and gated sections stay uncacheable. Absent on render paths that only
+   * report the boolean `cacheable` contract.
+   */
+  cacheMode?: PageRuntimeCacheMode;
 };
 
 const jsonResponse = (payload: unknown, status = 200) =>
@@ -762,6 +799,55 @@ const resolveDetailPageRuntimeSeo = (input: {
   };
 };
 
+/**
+ * Maps the resolved published menu onto render-ready navigation links through
+ * the canonical menu mapping (`pageId` -> published page slug, safe hrefs).
+ */
+const buildSiteShellNavigation = async (
+  menu: MenuWithItems
+): Promise<SiteShellNavigation | null> => {
+  const pageIds = collectNavigationMenuPageIds(menu.items);
+  const pagePathById = await getPageSlugsByIds(pageIds);
+  const items = mapMenuNodesToNavigationItems(menu.items, pagePathById, {
+    includeDefaultTarget: true,
+  });
+  return items.length > 0 ? { label: menu.menu.name, items } : null;
+};
+
+/**
+ * Resolves the global site shell once per request (TASK-455). Fail closed:
+ * resolver nulls or navigation-mapping failures degrade to a missing shell
+ * part, never an error page.
+ */
+const resolveSiteShellRenderProps = async (): Promise<SiteShellRenderProps> => {
+  try {
+    const shell = await resolvePublicSiteShell();
+    return {
+      navigation: shell.navigation ? await buildSiteShellNavigation(shell.navigation) : null,
+      // Published menu appearance snapshot only; top-level draft design
+      // values never leak before publish. Missing/legacy/unparsable stored
+      // values fail closed to the default look (TASK-458-02).
+      navigationAppearance: shell.navigation
+        ? resolvePublishedMenuAppearance(shell.navigation.menu.settings)
+        : null,
+      // Published nav extras snapshot (TASK-458-03); unreadable stored
+      // values fail closed to an empty slot.
+      navigationExtras: shell.navigation
+        ? resolvePublishedMenuNavExtras(shell.navigation.menu.settings)
+        : null,
+      footerDocument: shell.footerDocument,
+    };
+  } catch (error) {
+    console.warn("site_shell_resolution_failed", error);
+    return {
+      navigation: null,
+      navigationAppearance: null,
+      navigationExtras: null,
+      footerDocument: null,
+    };
+  }
+};
+
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
   options?: {
@@ -771,15 +857,11 @@ const renderPublicPageHtmlInternal = async (
     runtimeSearchParams?: URLSearchParams;
   }
 ): Promise<PublicHtmlRenderResult> => {
-  ensureRuntimeWidgetsRegistered();
-
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
   const sourceData = options?.preview ? page.currentData : page.publishedData;
   const sourceRecord = ensureRecord(sourceData);
   const settingsRecord = ensureRecord(sourceRecord.settings);
   const seoRecord = ensureRecord(sourceRecord.seo);
-  const themeName = options?.themeName ?? (await resolvePublicThemeName());
   const fallbackSeo = {
     title: toPublicSeoText(seoRecord.title) ?? page.title ?? "Page",
     description: toPublicSeoText(seoRecord.description),
@@ -795,31 +877,93 @@ const renderPublicPageHtmlInternal = async (
         fallback: fallbackSeo,
       });
   const imageUrl = resolveDetailPageImageUrl(seoRecord.imageUrl ?? seoRecord.socialImage);
-  const blocks = await hydrateRuntimeBlocks(toBlocks(sourceData), {
+  const contentRoutesSetting = await getSetting("site.contentRoutes");
+  const contentRoutes = Array.isArray(contentRoutesSetting)
+    ? (contentRoutesSetting as ContentRouteSetting[])
+    : [];
+  const pageTemplateInput = resolvePageTemplateInput(sourceData, {
+    renderMode: options?.preview ? "preview-page" : "public-page",
+  });
+  const previewDevice = options?.previewDevice;
+  const preparedRuntime = await preparePageRuntimeDocument(pageTemplateInput.document, {
     preview: options?.preview ?? false,
+    breakpoint: (previewDevice ?? "desktop") as PageBreakpoint,
     contentRoutes,
     runtimeSearchParams: options?.runtimeSearchParams,
-    runtimeCache: {},
   });
 
+  // The site shell resolves once per request and renders on every public
+  // Page v2 render, tokenized preview included (TASK-455).
+  const siteShell = await resolveSiteShellRenderProps();
+  const siteNameSetting = await getSetting("site.name");
+  const siteName =
+    typeof siteNameSetting === "string" && siteNameSetting.trim().length > 0
+      ? siteNameSetting.trim()
+      : null;
+
+  // Public visitors receive desktop-resolved base markup plus scoped @media
+  // overrides built from the unflattened document, so one cached HTML serves
+  // every viewport. An explicit previewDevice keeps the current
+  // flatten-to-one-breakpoint semantics and skips public CSS emission.
+  // Builder failures fail closed to desktop-only markup, never malformed HTML.
+  let responsiveCss = "";
+  if (!previewDevice) {
+    try {
+      responsiveCss = buildPageResponsiveCss(pageTemplateInput.document);
+    } catch (error) {
+      console.warn("page_responsive_css_emission_failed", error);
+    }
+    // Footer template responsive CSS rides the same builder under the
+    // distinct [data-site-footer="true"] scope, concatenated after the
+    // page's own rules. Failures fail closed to desktop-only footer markup.
+    if (siteShell.footerDocument) {
+      try {
+        const footerCss = buildPageResponsiveCss(siteShell.footerDocument, {
+          scopeSelector: SITE_FOOTER_SCOPE_SELECTOR,
+        });
+        if (footerCss) {
+          responsiveCss = responsiveCss ? `${responsiveCss}\n${footerCss}` : footerCss;
+        }
+      } catch (error) {
+        console.warn("site_footer_responsive_css_emission_failed", error);
+      }
+    }
+  }
+
+  // V2 body-script seam (TASK-459-02): the runtime-script registry mirrors
+  // the legacy WidgetBlock path, but scripts register from the prepared
+  // runtime contract instead of widget renders. Today exactly one script
+  // exists — the shared listing runtime client (fetch-swap + pushState for
+  // filters blocks) — and it ships only when a live facet form rendered.
+  let renderBodyScripts: (() => ReactNode) | undefined;
+  if (preparedRuntime.needsListingRuntimeScript) {
+    const runtimeScripts = createWidgetRuntimeScriptRegistry();
+    runtimeScripts.registerScript("listing-runtime", getListingRuntimeClientScript());
+    renderBodyScripts = () => runtimeScripts.renderScripts();
+  }
+
   return {
-    html: await renderPublicPageRuntimeHtml({
+    html: renderPublicPageV2RuntimeHtml({
       title: resolvedSeo.title ?? page.title ?? "Page",
-      blocks,
+      document: preparedRuntime.document,
       cssHref,
       inlineCss,
       isPreview: options?.preview ?? false,
-      previewDevice: options?.previewDevice,
-      layoutSettings: getPageLayoutSettingsFromData(sourceData),
+      previewDevice,
       devModuleScripts,
       metaDescription: resolvedSeo.description,
       canonicalUrl: resolvedSeo.canonicalUrl,
       robots: resolvedSeo.robots,
       imageUrl,
-      themeName,
       templateKey: settingsRecord.template,
+      runtimeDataByBlockId: preparedRuntime.runtimeDataByBlockId,
+      responsiveCss,
+      siteShell,
+      siteName,
+      renderBodyScripts,
     }),
-    cacheable: blocksAllowSiteHtmlCache(blocks),
+    cacheable: preparedRuntime.cacheable,
+    cacheMode: preparedRuntime.cacheMode,
   };
 };
 
@@ -831,10 +975,12 @@ export async function renderPublicPage(
   return buildHtmlResponse(result.html);
 }
 
+// "widget-template" deliberately no longer resolves: the retired preview
+// surface returns 404 Not Found instead of rendering legacy widget blocks.
 const resolvePreviewTargetType = (value: string | null): PreviewTargetType | null => {
   if (value === "page") return "page";
   if (value === "content") return "content";
-  if (value === "widget-template") return "widget-template";
+  if (value === "page-template") return "page-template";
   if (value === "detail-page") return "detail-page";
   return null;
 };
@@ -855,29 +1001,38 @@ const resolvePreviewDevice = (value: string | null): DeviceTarget | null => {
   return null;
 };
 
-const renderWidgetTemplatePreviewHtml = async (
+/**
+ * Page Templates render through the SAME public Page v2 pipeline as page
+ * preview: token-gated, `?device=` flatten semantics, scoped data-bound block
+ * handling, and fail-closed boundary enforcement against legacy
+ * `WidgetBlock[]` documents.
+ */
+const renderPageTemplatePreviewHtml = async (
   templateId: string,
-  previewDevice?: DeviceTarget
+  previewDevice?: DeviceTarget,
+  runtimeSearchParams?: URLSearchParams
 ) => {
-  ensureRuntimeWidgetsRegistered();
-  const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
-  const template = await getWidgetTemplatePreviewModel(templateId);
-  const contentRoutes = (await getSetting("site.contentRoutes")) as ContentRouteSetting[];
-  const blocks = await hydrateRuntimeBlocks(template.blocks, {
-    preview: true,
-    contentRoutes,
-    runtimeCache: {},
+  const model = await getPageTemplatePreviewModel(templateId);
+  const input = resolvePageTemplateInput(model.document, {
+    renderMode: "preview-page",
+    enforceFreshBoundary: true,
   });
-  return renderPublicPageHtml({
-    title: template.name,
-    blocks,
-    cssHref,
-    inlineCss,
-    isPreview: true,
-    previewDevice,
-    layoutSettings: getWidgetTemplateLayoutSettings(template.settings),
-    devModuleScripts,
-  });
+  const result = await renderPublicPageHtmlInternal(
+    {
+      id: model.id,
+      title: model.name,
+      slug: `/page-templates/${model.slug}`,
+      status: "draft",
+      currentData: input.document as unknown as Record<string, unknown>,
+      publishedData: null,
+    },
+    {
+      preview: true,
+      previewDevice,
+      runtimeSearchParams,
+    }
+  );
+  return result.html;
 };
 
 const buildDetailHref = (pattern: string, slug: string, id?: string) => {
@@ -893,20 +1048,66 @@ const buildDetailHref = (pattern: string, slug: string, id?: string) => {
 const isEntryPublished = (entry: { status?: string; publishedAt?: Date | null }) =>
   entry.status === "published" && Boolean(entry.publishedAt ?? true);
 
+/** Page size of auto entry-list routes: the single contract bound (24). */
+const entryListRoutePageSize = contentListLimitMax;
+const entryListRoutePageParamKey = "page";
+
+/**
+ * Auto entry-list route pagination (TASK-459-03): consumes `?page=N` and
+ * `?sort=<ContentListSort>` through the SAME listing pipeline primitives the
+ * collection block uses — the sort value validates against the owner enum
+ * (unknown values fall back to the default ordering), the requested page
+ * clamps into range, and the shared navigation meta builds canonical page
+ * hrefs (page 1 drops the param). Out-of-range pages clamp instead of 404ing.
+ */
+const paginateEntryListEntries = <
+  T extends ContentListSortableEntry & { status?: string; publishedAt?: Date | null },
+>(
+  entries: T[],
+  runtimeSearchParams?: URLSearchParams
+) => {
+  const published = entries.filter((entry) => isEntryPublished(entry));
+  const sort = resolveContentListSort(runtimeSearchParams?.get("sort") ?? undefined);
+  const sorted = sortContentListRuntimeEntries(published, sort);
+  const requestedPage = resolveContentListRequestedPage(
+    runtimeSearchParams,
+    entryListRoutePageParamKey
+  );
+  const navigation = resolveContentListRuntimeNavigationMeta({
+    page: requestedPage,
+    pageSize: entryListRoutePageSize,
+    total: sorted.length,
+    runtimeSearchParams,
+    pageKey: entryListRoutePageParamKey,
+  });
+  const sliceStart = (navigation.page - 1) * navigation.pageSize;
+  return {
+    entries: sorted.slice(sliceStart, sliceStart + navigation.pageSize),
+    pagination: {
+      page: navigation.page,
+      totalPages: navigation.totalPages,
+      total: sorted.length,
+      pageParamKey: entryListRoutePageParamKey,
+      search: runtimeSearchParams?.toString() ?? "",
+      ...(navigation.previousPageHref ? { previousPageHref: navigation.previousPageHref } : {}),
+      ...(navigation.nextPageHref ? { nextPageHref: navigation.nextPageHref } : {}),
+    },
+  };
+};
+
 const renderEntryListHtml = async (
   typeSlug: string,
   detailPath: string,
-  options?: { preview?: boolean; themeName?: string }
+  options?: { preview?: boolean; themeName?: string; runtimeSearchParams?: URLSearchParams }
 ) => {
   if (isPostContentTypeSlug(typeSlug)) {
-    const postItems = (await listPosts())
-      .filter((entry) => isEntryPublished(entry))
-      .map((entry) => ({
-        id: entry.id,
-        title: entry.title,
-        href: buildDetailHref(detailPath, entry.slug, entry.id),
-        entry,
-      }));
+    const paged = paginateEntryListEntries(await listPosts(), options?.runtimeSearchParams);
+    const postItems = paged.entries.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      href: buildDetailHref(detailPath, entry.slug, entry.id),
+      entry,
+    }));
 
     const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
     return renderPublicEntryListHtml({
@@ -918,6 +1119,7 @@ const renderEntryListHtml = async (
         schema: DEFAULT_POST_CONTENT_SCHEMA as unknown as ContentSchema,
       },
       items: postItems,
+      pagination: paged.pagination,
       cssHref,
       inlineCss,
       devModuleScripts,
@@ -929,15 +1131,16 @@ const renderEntryListHtml = async (
   const contentType = await getContentTypeBySlug(typeSlug);
   if (!contentType) return null;
 
-  const entries = await listEntries(contentType.id);
-  const items = entries
-    .filter((entry) => isEntryPublished(entry))
-    .map((entry) => ({
-      id: entry.id,
-      title: entry.title,
-      href: buildDetailHref(detailPath, entry.slug, entry.id),
-      entry,
-    }));
+  const paged = paginateEntryListEntries(
+    await listEntries(contentType.id),
+    options?.runtimeSearchParams
+  );
+  const items = paged.entries.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    href: buildDetailHref(detailPath, entry.slug, entry.id),
+    entry,
+  }));
 
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
   return renderPublicEntryListHtml({
@@ -949,6 +1152,7 @@ const renderEntryListHtml = async (
       schema: contentType.schema as ContentSchema,
     },
     items,
+    pagination: paged.pagination,
     cssHref,
     inlineCss,
     devModuleScripts,
@@ -1383,12 +1587,21 @@ export async function handlePublicRequest(req: Request) {
       return buildHtmlResponse(html);
     }
 
-    if (preview.token.targetType === "widget-template") {
+    if (preview.token.targetType === "page-template") {
       try {
-        const html = await renderWidgetTemplatePreviewHtml(preview.token.targetId, previewDevice);
+        const html = await renderPageTemplatePreviewHtml(
+          preview.token.targetId,
+          previewDevice,
+          url.searchParams
+        );
         return buildHtmlResponse(html);
       } catch (error) {
-        if (error instanceof Error && error.message === "widget_template_not_found") {
+        // Fail closed: missing templates, unreadable stored documents, and
+        // boundary violations all return 404 instead of partial rendering.
+        if (isPageTemplateError(error)) {
+          return new Response("Not Found", { status: 404 });
+        }
+        if (error instanceof Error && error.message.startsWith("page_template_")) {
           return new Response("Not Found", { status: 404 });
         }
         throw error;
@@ -1418,10 +1631,22 @@ export async function handlePublicRequest(req: Request) {
   const cacheProfileId = activeProfile?.id ?? "default";
   const themeName = activeProfile?.themeName ?? "default";
   configureSiteCache(cacheTtlSeconds);
-  const hasQueryParams = url.searchParams.toString().length > 0;
-  const shouldUseCache = cacheTtlSeconds > 0 && !hasQueryParams;
+  // Param-aware caching (TASK-459-04): requests whose params all belong to
+  // the listing/pager allowlist are cached under a canonical signature key
+  // (filtered variants under a short TTL); any other param keeps the request
+  // uncacheable, exactly like before.
+  const searchSignature = resolveSiteCacheSearchSignature(url.searchParams);
+  const shouldUseCache = cacheTtlSeconds > 0 && searchSignature.cacheable;
+  const shortCacheTtlSeconds = Math.min(cacheTtlSeconds, DEFAULT_SITE_CACHE_TTL_SECONDS);
+  const defaultStoreTtlSeconds = searchSignature.signature ? shortCacheTtlSeconds : cacheTtlSeconds;
+  const resolveRenderCacheTtl = (result: PublicHtmlRenderResult) => {
+    if (result.cacheMode === "none") return 0;
+    if (result.cacheMode === "short-ttl") return shortCacheTtlSeconds;
+    if (result.cacheMode === "full") return defaultStoreTtlSeconds;
+    return result.cacheable ? defaultStoreTtlSeconds : 0;
+  };
 
-  const cacheKey = buildSiteCacheKey(cacheProfileId, slugPath);
+  const cacheKey = buildSiteCacheKey(cacheProfileId, slugPath, searchSignature.signature);
   if (shouldUseCache) {
     const cachedHtml = getSiteCacheEntry(cacheKey);
     if (cachedHtml) {
@@ -1440,8 +1665,9 @@ export async function handlePublicRequest(req: Request) {
         themeName,
         runtimeSearchParams: url.searchParams,
       });
-      if (shouldUseCache && result.cacheable) {
-        setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
+      const homepageTtlSeconds = resolveRenderCacheTtl(result);
+      if (shouldUseCache && homepageTtlSeconds > 0) {
+        setSiteCacheEntry(cacheKey, result.html, homepageTtlSeconds);
       }
       return buildHtmlResponse(result.html);
     }
@@ -1453,10 +1679,11 @@ export async function handlePublicRequest(req: Request) {
     if (match.mode === "list") {
       const html = await renderEntryListHtml(match.type, match.detailPath, {
         themeName,
+        runtimeSearchParams: url.searchParams,
       });
       if (!html) return new Response("Not Found", { status: 404 });
       if (shouldUseCache) {
-        setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+        setSiteCacheEntry(cacheKey, html, defaultStoreTtlSeconds);
       }
       return buildHtmlResponse(html);
     }
@@ -1473,7 +1700,7 @@ export async function handlePublicRequest(req: Request) {
     const html = typeof detailHtml === "string" ? detailHtml : detailHtml.html;
     const canCache = typeof detailHtml === "string" ? true : detailHtml.cacheable;
     if (shouldUseCache && canCache) {
-      setSiteCacheEntry(cacheKey, html, cacheTtlSeconds);
+      setSiteCacheEntry(cacheKey, html, defaultStoreTtlSeconds);
     }
     return buildHtmlResponse(html);
   }
@@ -1486,8 +1713,9 @@ export async function handlePublicRequest(req: Request) {
     themeName,
     runtimeSearchParams: url.searchParams,
   });
-  if (shouldUseCache && result.cacheable) {
-    setSiteCacheEntry(cacheKey, result.html, cacheTtlSeconds);
+  const pageTtlSeconds = resolveRenderCacheTtl(result);
+  if (shouldUseCache && pageTtlSeconds > 0) {
+    setSiteCacheEntry(cacheKey, result.html, pageTtlSeconds);
   }
   return buildHtmlResponse(result.html);
 }

@@ -5,7 +5,7 @@ const tokenGroups = {
   neutrals: ["bg", "surface", "border", "text"],
   spacing: ["xs", "sm", "md", "lg", "xl", "2xl"],
   radius: ["sm", "md", "lg", "xl"],
-  typography: ["sans", "display", "sm", "md", "lg", "xl", "2xl"],
+  typography: ["sans", "display", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
 } as const;
 
 type TokenGroupName = keyof typeof tokenGroups;
@@ -14,10 +14,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function assertStringRecord(
-  value: Record<string, unknown>,
-  allowed: readonly string[]
-) {
+function assertStringRecord(value: Record<string, unknown>, allowed: readonly string[]) {
   for (const [key, entry] of Object.entries(value)) {
     if (!allowed.includes(key)) {
       throw new Error("design_tokens_invalid");
@@ -28,9 +25,7 @@ function assertStringRecord(
   }
 }
 
-export function assertTokenOverrides(
-  input: unknown
-): asserts input is DesignTokenOverrides {
+export function assertTokenOverrides(input: unknown): asserts input is DesignTokenOverrides {
   if (!isPlainObject(input)) {
     throw new Error("design_tokens_invalid");
   }

@@ -2,11 +2,8 @@ import { desc, eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { customScreens, pages } from "../../db/schema";
-import {
-  getSetting,
-  normalizeContentRoutes,
-  type ContentRouteSetting,
-} from "../settings/settingsService";
+import { getSetting } from "../settings/settingsService";
+import { normalizeContentRoutes, type ContentRouteSetting } from "../settings/settingsContracts";
 import { normalizePageCollectionLink } from "../pages/pageCollectionLink";
 import { listDetailPageDocuments } from "./detailPageDocumentService";
 import { listListingQueries, type ListingQueryRecord } from "./listingQueriesService";

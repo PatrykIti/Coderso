@@ -49,6 +49,7 @@ import {
   EntryEditorRoute,
   EntryListRoute,
   FormActionLogsRoute,
+  FormSubmissionsRoute,
   FormBuilderRoute,
   FormListRoute,
   GeneralSettingsRoute,
@@ -61,6 +62,7 @@ import {
   ListingSearchRoute,
   LoginAlertsRoute,
   MediaLibraryRoute,
+  MenuDesignEditorRoute,
   MenuEditorRoute,
   MenuListRoute,
   PageEditorRoute,
@@ -86,7 +88,8 @@ import {
   UsersRolesRoute,
   WebhooksRoute,
   WidgetLibraryRoute,
-  WidgetTemplateEditorRoute,
+  PageTemplatesRoute,
+  PageTemplateEditorRoute,
 } from "@/app/adminRouteComponents";
 import { AdminRouteErrorBoundary } from "@/app/AdminRouteErrorBoundary";
 import {
@@ -612,6 +615,11 @@ export function AdminApp({ path }: AdminAppProps) {
         permission: "forms:read",
       },
       {
+        pattern: "/advanced/forms/:id/submissions",
+        render: () => <FormSubmissionsRoute.Component />,
+        permission: "forms:read",
+      },
+      {
         pattern: "/advanced/forms/:id",
         render: () => <FormBuilderRoute.Component />,
         permission: "forms:read",
@@ -751,6 +759,11 @@ export function AdminApp({ path }: AdminAppProps) {
         permission: "menus:read",
       },
       {
+        pattern: "/menus/:id/design",
+        render: () => <MenuDesignEditorRoute.Component />,
+        permission: "menus:read",
+      },
+      {
         pattern: "/users",
         render: ({ authPermissions: permissions }) => (
           <UsersRolesRoute.Component permissions={permissions} />
@@ -771,9 +784,14 @@ export function AdminApp({ path }: AdminAppProps) {
         permission: "widgets:read",
       },
       {
-        pattern: "/advanced/widgets/templates/:id",
-        render: () => <WidgetTemplateEditorRoute.Component />,
-        permission: "widgets:read",
+        pattern: "/advanced/page-templates",
+        render: () => <PageTemplatesRoute.Component />,
+        permission: "content:read",
+      },
+      {
+        pattern: "/advanced/page-templates/:id",
+        render: () => <PageTemplateEditorRoute.Component />,
+        permission: "content:read",
       },
       {
         pattern: "/settings",
@@ -1100,6 +1118,12 @@ export function AdminApp({ path }: AdminAppProps) {
               richColors
               closeButton
               duration={4000}
+              // Round-3 friction B: spawn toasts below the 64px admin topbar.
+              // A visible "Draft saved." toast at the default 24px offset sat
+              // directly on top of the topbar actions (Publish) and, being an
+              // interactive element, swallowed real clicks on them.
+              offset={{ top: 76 }}
+              mobileOffset={{ top: 76 }}
               containerAriaLabel="Admin notifications"
             />
             <AdminRouteErrorBoundary resetKey={canonicalRelativePath}>

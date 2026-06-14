@@ -3,6 +3,7 @@ import {
   type AssistantResourceCatalogNormalizeOptions,
 } from "./adminContextCatalogNormalizer";
 import type { AssistantResourceCatalogSnapshot } from "./adminContextTypes";
+import { normalizeContentRoutes } from "../settings/settingsContracts";
 
 export type AssistantFormWithFieldsRaw = {
   form: Record<string, unknown>;
@@ -211,7 +212,7 @@ export async function buildAssistantResourceCatalogSnapshotWithDefaultDeps(
       settingsService.getSetting("site.contentRoutes"),
     ]);
     const linkedRouteTypeByDetailPageId = new Map<string, string>();
-    for (const route of settingsService.normalizeContentRoutes(rawRoutes)) {
+    for (const route of normalizeContentRoutes(rawRoutes)) {
       if (route.detailPageId) {
         linkedRouteTypeByDetailPageId.set(route.detailPageId, route.type);
       }

@@ -31,8 +31,7 @@ import { registerIntegrationsRoutes } from "./integrationsRoutes";
 import { registerPluginsRoutes } from "./pluginsRoutes";
 import { registerUserSettingsRoutes } from "./userSettingsRoutes";
 import { registerWidgetRoutes } from "./widgetRoutes";
-import { registerWidgetTemplateRoutes } from "./widgetTemplateRoutes";
-import { registerWidgetTemplateCategoryRoutes } from "./widgetTemplateCategoryRoutes";
+import { registerPageTemplateRoutes } from "./pageTemplateRoutes";
 import { registerTaxonomyRoutes } from "./taxonomyRoutes";
 import { registerAssistantRoutes } from "./assistantRoutes";
 import { registerListingsRoutes } from "./listingsRoutes";
@@ -168,11 +167,7 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });
-  registerWidgetTemplateRoutes(router, {
-    requirePermission: deps.requirePermission,
-    validate: deps.validate,
-  });
-  registerWidgetTemplateCategoryRoutes(router, {
+  registerPageTemplateRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

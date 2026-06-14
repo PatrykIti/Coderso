@@ -50,7 +50,7 @@ const breadcrumbHrefByLabel: Record<string, string> = {
   "Custom Screens": "/advanced/custom-screens",
   Widgets: "/advanced/widgets",
   Library: "/advanced/widgets",
-  Templates: "/advanced/widgets",
+  "Page Templates": "/advanced/page-templates",
   Listings: "/advanced/listings",
   Filters: "/advanced/filters",
   Forms: "/advanced/forms",

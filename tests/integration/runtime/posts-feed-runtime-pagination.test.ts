@@ -1,18 +1,14 @@
 import { afterEach, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
 import { inArray, sql } from "drizzle-orm";
+import { createElement } from "react";
+import { renderToString } from "react-dom/server";
 
 import { db } from "../../../core/db/client";
-import { pageRevisions, pages, posts, previewTokens, users } from "../../../core/db/schema";
-import { createPage, publishPage } from "../../../core/services/pages/pageService";
-import {
-  deleteSetting,
-  getSettingRecord,
-  setSetting,
-  type ContentRouteSetting,
-} from "../../../core/services/settings/settingsService";
-import { clearSiteCache } from "../../../core/site/cache/siteCache";
-import { handlePublicRequest } from "../../../core/server/publicSite";
+import { posts, previewTokens, users } from "../../../core/db/schema";
+import { resolvePostsFeedRuntimeData } from "../../../core/services/content/postsFeedResolver";
+import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
+import { PostsFeedBlock, type PostsFeedData } from "../../../core/widgets/core/postsFeed";
 import { resetRateLimitBuckets } from "../../../core/server/middleware/rateLimit";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
@@ -33,14 +29,8 @@ async function canConnect() {
   }
 }
 
-const trackedPageIds = new Set<string>();
 const trackedPostIds = new Set<string>();
 const trackedUserIds = new Set<string>();
-const settingSnapshots = new Map<string, { exists: boolean; value: unknown }>();
-
-const trackPage = (id: string | undefined | null) => {
-  if (id) trackedPageIds.add(id);
-};
 
 const trackPost = (id: string | undefined | null) => {
   if (id) trackedPostIds.add(id);
@@ -50,41 +40,9 @@ const trackUser = (id: string | undefined | null) => {
   if (id) trackedUserIds.add(id);
 };
 
-const rememberSetting = async (key: string) => {
-  if (settingSnapshots.has(key)) return;
-  const row = await getSettingRecord(key);
-  settingSnapshots.set(key, {
-    exists: Boolean(row),
-    value: row?.value,
-  });
-};
-
-const setTestSetting = async (key: string, value: unknown) => {
-  await rememberSetting(key);
-  await setSetting(key, value);
-};
-
-const restoreSettings = async () => {
-  for (const [key, snapshot] of [...settingSnapshots].reverse()) {
-    if (snapshot.exists) {
-      await setSetting(key, snapshot.value);
-    } else {
-      await deleteSetting(key);
-    }
-  }
-  settingSnapshots.clear();
-};
-
 const cleanupTrackedRows = async () => {
-  const pageIds = [...trackedPageIds];
   const postIds = [...trackedPostIds];
   const userIds = [...trackedUserIds];
-
-  if (pageIds.length > 0) {
-    await db.delete(previewTokens).where(inArray(previewTokens.targetId, pageIds));
-    await db.delete(pageRevisions).where(inArray(pageRevisions.pageId, pageIds));
-    await db.delete(pages).where(inArray(pages.id, pageIds));
-  }
 
   if (postIds.length > 0) {
     await db.delete(previewTokens).where(inArray(previewTokens.targetId, postIds));
@@ -95,28 +53,15 @@ const cleanupTrackedRows = async () => {
     await db.delete(users).where(inArray(users.id, userIds));
   }
 
-  trackedPageIds.clear();
   trackedPostIds.clear();
   trackedUserIds.clear();
 };
 
 afterEach(async () => {
-  clearSiteCache();
   resetRateLimitBuckets();
   if (!hasDb) return;
-  await restoreSettings();
   await cleanupTrackedRows();
 });
-
-const requestPublicPath = (path: string) =>
-  handlePublicRequest(
-    new Request(`http://public.coderso.test${path}`, {
-      headers: {
-        "user-agent": "posts-feed-runtime-pagination-test",
-        "x-forwarded-for": `127.0.0.${Math.floor(Math.random() * 200) + 1}`,
-      },
-    })
-  );
 
 const createActor = async () => {
   const [actor] = await db
@@ -132,11 +77,34 @@ const createActor = async () => {
   return actor;
 };
 
+const renderPostsFeedPath = async (
+  path: string,
+  block: { id: string; type: "posts-feed"; variant: string; data: PostsFeedData },
+  contentRoutes: ContentRouteSetting[]
+) => {
+  const url = new URL(`http://public.coderso.test${path}`);
+  const resolved = await resolvePostsFeedRuntimeData(block.data, {
+    preview: false,
+    contentRoutes,
+    runtimeSearchParams: url.searchParams,
+    blockId: block.id,
+  });
+  return renderToString(
+    createElement(PostsFeedBlock, {
+      data: {
+        ...block.data,
+        resolved,
+      },
+      variant: block.variant,
+      blockId: block.id,
+    })
+  );
+};
+
 testIfDbWithOptions(
   "posts feed public runtime honors block-scoped pagination params for load-more and view-all",
   async () => {
     resetRateLimitBuckets();
-    await setTestSetting("site.cacheTtlSeconds", 0);
 
     const actor = await createActor();
     const token = randomUUID().slice(0, 8);
@@ -178,17 +146,21 @@ testIfDbWithOptions(
       .returning();
     publishedRows.forEach((row) => trackPost(row.id));
 
-    await setTestSetting("site.contentRoutes", [
+    const contentRoutes: ContentRouteSetting[] = [
       {
         type: "posts",
         listPath: "/news",
         detailPath: "/news/:slug",
         enabled: true,
-      } satisfies ContentRouteSetting,
-    ]);
+      },
+    ];
 
-    const pageSlug = `/posts-feed-runtime-${token}`;
-    const postsFeedPageData = (mode: "load-more" | "view-all") => ({
+    const postsFeedPageData = (
+      mode: "load-more" | "view-all"
+    ): {
+      blocks: Array<{ id: string; type: "posts-feed"; variant: string; data: PostsFeedData }>;
+      settings: { template: string; showInNav: boolean };
+    } => ({
       blocks: [
         {
           id: "posts-feed-1",
@@ -219,30 +191,28 @@ testIfDbWithOptions(
         showInNav: false,
       },
     });
+    const loadMoreBlock = postsFeedPageData("load-more").blocks[0];
+    if (!loadMoreBlock) throw new Error("missing_posts_feed_load_more_block");
 
-    const page = await createPage({
-      title: `Posts Feed Runtime ${token}`,
-      slug: pageSlug,
-      authorId: actor.id,
-      data: postsFeedPageData("load-more"),
-    });
-    trackPage(page.id);
-    await publishPage(page.id, actor.id, postsFeedPageData("load-more"));
-
-    const loadMoreResponse = await requestPublicPath(`${pageSlug}?cl.posts-feed-1.page=2`);
-    expect(loadMoreResponse.status).toBe(200);
-    const loadMoreHtml = await loadMoreResponse.text();
+    const loadMoreHtml = await renderPostsFeedPath(
+      `/posts-feed-runtime-${token}?cl.posts-feed-1.page=2`,
+      loadMoreBlock,
+      contentRoutes
+    );
     expect(loadMoreHtml).toContain('data-content-list-items="2"');
     expect(loadMoreHtml).toContain(`Runtime post A ${token}`);
     expect(loadMoreHtml).toContain(`Runtime post B ${token}`);
     expect(loadMoreHtml).toContain('href="?cl.posts-feed-1.page=3"');
     expect(loadMoreHtml).toContain("Load more");
 
-    await publishPage(page.id, actor.id, postsFeedPageData("view-all"));
+    const viewAllBlock = postsFeedPageData("view-all").blocks[0];
+    if (!viewAllBlock) throw new Error("missing_posts_feed_view_all_block");
 
-    const viewAllResponse = await requestPublicPath(`${pageSlug}?cl.posts-feed-1.page=2`);
-    expect(viewAllResponse.status).toBe(200);
-    const viewAllHtml = await viewAllResponse.text();
+    const viewAllHtml = await renderPostsFeedPath(
+      `/posts-feed-runtime-${token}?cl.posts-feed-1.page=2`,
+      viewAllBlock,
+      contentRoutes
+    );
     expect(viewAllHtml).toContain('data-content-list-items="1"');
     expect(viewAllHtml).toContain(`Runtime post A ${token}`);
     expect(viewAllHtml).not.toContain(`Runtime post B ${token}`);

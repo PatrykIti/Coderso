@@ -41,8 +41,50 @@ import type {
 } from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 import type { WidgetBlock } from "../../../core/widgets/types";
+import {
+  createPageBlockV2,
+  createPageSectionV2,
+  type PageSectionV2,
+} from "../../../core/services/pages/pageDocumentV2";
 
 type ExecutorDeps = NonNullable<Parameters<typeof dryRunAssistantActionPlan>[1]>;
+
+const createTestPageIntroSection = (id: string, text: string) =>
+  createPageSectionV2("content", {
+    id,
+    name: "Intro",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: `${id}-heading`,
+        props: { text, level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+const createTestPageData = (sections: PageSectionV2[] = []) => ({
+  schemaVersion: 2,
+  sections,
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+  },
+});
+
+const readPageSections = (data: unknown) => {
+  if (!data || typeof data !== "object") return [];
+  const sections = (data as { sections?: unknown }).sections;
+  return Array.isArray(sections)
+    ? (sections as Array<{ type?: string; blocks?: Array<{ type?: string; props?: unknown }> }>)
+    : [];
+};
+
+const readPageBlockTypes = (data: unknown) =>
+  readPageSections(data).flatMap((section) => section.blocks?.map((block) => block.type) ?? []);
+
+const readPageBlocks = (data: unknown) =>
+  readPageSections(data).flatMap((section) => section.blocks ?? []);
+
+const hasPageBlockType = (data: unknown, type: string) => readPageBlockTypes(data).includes(type);
 
 const automotiveSiteKitInput: AssistantSiteKitPlanInput = {
   businessType: "automotive_workshop",
@@ -2166,10 +2208,10 @@ test("executeAssistantActionPlan deletes pages through explicit delete actions",
   const page = await deps.createPage({
     title: "Contact",
     slug: "contact",
-    data: { blocks: [] },
+    data: createTestPageData(),
     authorId: "user-1",
   });
-  await deps.publishPage(page.id, "user-1", { blocks: [] });
+  await deps.publishPage(page.id, "user-1", createTestPageData());
   const plan: AssistantActionPlan = {
     id: "plan-delete-contact-page",
     status: "ready",
@@ -2218,18 +2260,23 @@ test("executeAssistantActionPlan deletes pages through explicit delete actions",
   expect(await deps.getPage(page.id)).toBeNull();
 });
 
-test("executeAssistantActionPlan updates page metadata and preserves page blocks", async () => {
+test("executeAssistantActionPlan updates page metadata and preserves page sections", async () => {
   const deps = createDeps();
   const page = await deps.createPage({
     title: "Contact",
     slug: "/contact",
-    data: {
-      blocks: [{ id: "hero", type: "hero", data: { title: "Hello" } }],
-      settings: {
-        template: "landing",
-        showInNav: true,
-      },
-    },
+    data: createTestPageData([
+      createPageSectionV2("hero", {
+        id: "hero-section",
+        name: "Hero",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "hero",
+            props: { text: "Hello", level: "h1", align: "left" },
+          }),
+        ],
+      }),
+    ]),
   });
   const plan: AssistantActionPlan = {
     id: "plan-update-contact-page",
@@ -2287,7 +2334,13 @@ test("executeAssistantActionPlan updates page metadata and preserves page blocks
   expect(executed.results[0]?.message).toBe('Updated page "Contact Us".');
   expect(deps.__state.pages[0]?.title).toBe("Contact Us");
   expect(deps.__state.pages[0]?.slug).toBe("/contact-us");
-  expect((deps.__state.pages[0]?.currentData.blocks as Array<{ id: string }>)[0]?.id).toBe("hero");
+  expect(
+    (
+      deps.__state.pages[0]?.currentData.sections as Array<{
+        blocks?: Array<{ id?: string }>;
+      }>
+    )[0]?.blocks?.[0]?.id
+  ).toBe("hero");
   expect((deps.__state.pages[0]?.currentData.settings as { showInNav?: boolean })?.showInNav).toBe(
     false
   );
@@ -2298,13 +2351,18 @@ test("executeAssistantActionPlan accepts normalized page slug matches for update
   const page = await deps.createPage({
     title: "Contact",
     slug: "contact",
-    data: {
-      blocks: [{ id: "hero", type: "hero", data: { title: "Hello" } }],
-      settings: {
-        template: "landing",
-        showInNav: true,
-      },
-    },
+    data: createTestPageData([
+      createPageSectionV2("hero", {
+        id: "hero-section",
+        name: "Hero",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "hero",
+            props: { text: "Hello", level: "h1", align: "left" },
+          }),
+        ],
+      }),
+    ]),
   });
   const plan: AssistantActionPlan = {
     id: "plan-update-contact-page-normalized-slug",
@@ -2359,10 +2417,18 @@ test("executeAssistantActionPlan refreshes published page state when updating a 
   const page = await deps.createPage({
     title: "Contact",
     slug: "contact",
-    data: {
-      blocks: [{ id: "hero", type: "hero", data: { title: "Old public title" } }],
-      settings: { showInNav: true },
-    },
+    data: createTestPageData([
+      createPageSectionV2("hero", {
+        id: "hero-section",
+        name: "Hero",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "hero",
+            props: { text: "Old public title", level: "h1", align: "left" },
+          }),
+        ],
+      }),
+    ]),
   });
   await deps.publishPage(page.id, "user-1", page.currentData);
 
@@ -2425,16 +2491,35 @@ test("executeAssistantActionPlan does not publish unrelated pending draft page d
   const page = await deps.createPage({
     title: "Contact",
     slug: "contact",
-    data: {
-      blocks: [{ id: "public-hero", type: "hero", data: { title: "Published" } }],
-      settings: { showInNav: true },
-    },
+    data: createTestPageData([
+      createPageSectionV2("hero", {
+        id: "public-section",
+        name: "Hero",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "public-hero",
+            props: { text: "Published", level: "h1", align: "left" },
+          }),
+        ],
+      }),
+    ]),
   });
   await deps.publishPage(page.id, "user-1", page.currentData);
   await deps.updatePage(page.id, {
     data: {
-      blocks: [{ id: "draft-hero", type: "hero", data: { title: "Pending draft" } }],
-      settings: { showInNav: true, draftOnly: true },
+      ...createTestPageData([
+        createPageSectionV2("hero", {
+          id: "draft-section",
+          name: "Hero",
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "draft-hero",
+              props: { text: "Pending draft", level: "h1", align: "left" },
+            }),
+          ],
+        }),
+      ]),
+      settings: { template: "page-v2", showInNav: true, draftOnly: true },
     },
   });
   const plan: AssistantActionPlan = {
@@ -2483,18 +2568,18 @@ test("executeAssistantActionPlan does not publish unrelated pending draft page d
   );
 
   const currentData = deps.__state.pages[0]?.currentData as {
-    blocks?: Array<{ id?: string }>;
+    sections?: Array<{ blocks?: Array<{ id?: string }> }>;
     settings?: { showInNav?: boolean; draftOnly?: boolean };
   };
   const publishedData = deps.__state.pages[0]?.publishedData as {
-    blocks?: Array<{ id?: string }>;
+    sections?: Array<{ blocks?: Array<{ id?: string }> }>;
     settings?: { showInNav?: boolean; draftOnly?: boolean };
   };
 
-  expect(currentData.blocks?.[0]?.id).toBe("draft-hero");
+  expect(currentData.sections?.[0]?.blocks?.[0]?.id).toBe("draft-hero");
   expect(currentData.settings?.draftOnly).toBe(true);
   expect(currentData.settings?.showInNav).toBe(false);
-  expect(publishedData.blocks?.[0]?.id).toBe("public-hero");
+  expect(publishedData.sections?.[0]?.blocks?.[0]?.id).toBe("public-hero");
   expect(publishedData.settings?.draftOnly).toBeUndefined();
   expect(publishedData.settings?.showInNav).toBe(false);
 });
@@ -2504,7 +2589,7 @@ test("executeAssistantActionPlan publishes page updates through page service", a
   const page = await deps.createPage({
     title: "Landing",
     slug: "/landing",
-    data: { blocks: [] },
+    data: createTestPageData(),
   });
   const plan: AssistantActionPlan = {
     id: "plan-publish-landing-page",
@@ -3610,7 +3695,7 @@ test("executeAssistantActionPlan upserts seo documents for known targets", async
   const page = await deps.createPage({
     title: "Products",
     slug: "/products",
-    data: { blocks: [] },
+    data: createTestPageData(),
   });
   const plan: AssistantActionPlan = {
     id: "plan-seo-document",
@@ -3882,7 +3967,7 @@ test("executeAssistantActionPlan deletes SEO documents through explicit delete a
   const page = await deps.createPage({
     title: "Products",
     slug: "/products",
-    data: { blocks: [] },
+    data: createTestPageData(),
   });
   const seo = await deps.upsertSeoDocument({
     targetType: "page",
@@ -4401,254 +4486,6 @@ test("executeAssistantActionPlan patches listing template card config without re
   expect(noopPreview.changes[0]?.operation).toBe("noop");
 });
 
-test("executeAssistantActionPlan upserts top-level page widget blocks and preserves legacy blocks", async () => {
-  const deps = createDeps();
-  await deps.createPage({
-    title: "Products",
-    slug: "/products",
-    data: {
-      blocks: [
-        {
-          id: "legacy-1",
-          type: "legacy-widget",
-          data: {
-            untouched: true,
-          },
-        },
-      ],
-      settings: {
-        template: "default",
-      },
-    },
-  });
-  const plan: AssistantActionPlan = {
-    id: "plan-page-widget",
-    status: "ready",
-    intentId: "page-widget",
-    promptKind: "refinement_request",
-    intentFamily: "product_catalog",
-    title: "Patch page widget",
-    answer: "I can patch a page widget.",
-    summary: "Append a spacer block.",
-    confidence: 0.9,
-    assumptions: [],
-    questions: [],
-    actions: [
-      {
-        id: "page-widget-spacer",
-        type: "page.widget.patch",
-        title: "Add spacer",
-        description: "Append a spacer block to the page.",
-        input: {
-          pageSlug: "/products",
-          operation: "upsert-block",
-          block: {
-            id: "assistant-spacer",
-            type: "spacer",
-            data: {},
-          },
-        },
-      },
-    ],
-  };
-
-  const preview = await dryRunAssistantActionPlan({ plan }, deps);
-  expect(preview.changes[0]?.operation).toBe("update");
-
-  await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-page-widget-1",
-    },
-    deps
-  );
-
-  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<Record<string, unknown>>;
-  expect(blocks).toHaveLength(2);
-  expect(blocks[0]).toMatchObject({ id: "legacy-1", type: "legacy-widget" });
-  expect(blocks[1]).toMatchObject({
-    id: "assistant-spacer",
-    type: "spacer",
-    variant: "responsive",
-  });
-
-  const noopPreview = await dryRunAssistantActionPlan({ plan }, deps);
-  expect(noopPreview.changes[0]?.operation).toBe("noop");
-});
-
-test("executeAssistantActionPlan patches selected page widget data and preserves unrelated blocks", async () => {
-  const deps = createDeps();
-  await deps.createPage({
-    title: "Landing",
-    slug: "/landing",
-    data: {
-      blocks: [
-        {
-          id: "hero-1",
-          type: "hero",
-          data: {
-            headline: "Old title",
-            body: "Welcome",
-          },
-        },
-        {
-          id: "text-1",
-          type: "rich-text-section",
-          data: {
-            text: "Keep this",
-          },
-        },
-      ],
-    },
-  });
-  const plan: AssistantActionPlan = {
-    id: "plan-page-widget-data",
-    status: "ready",
-    intentId: "page-widget-patch",
-    promptKind: "refinement_request",
-    intentFamily: "unknown",
-    title: "Patch selected block",
-    answer: "I can patch the selected block.",
-    summary: "Patch hero title.",
-    confidence: 0.9,
-    assumptions: [],
-    questions: [],
-    actions: [
-      {
-        id: "page-widget-title",
-        type: "page.widget.patch",
-        title: "Patch hero title",
-        description: "Patch selected block data.",
-        input: {
-          pageSlug: "/landing",
-          operation: "patch-data",
-          blockId: "hero-1",
-          expectedBlockType: "hero",
-          dataPath: ["headline"],
-          value: "New title",
-        },
-      },
-    ],
-  };
-
-  const preview = await dryRunAssistantActionPlan({ plan }, deps);
-  expect(preview.changes[0]?.operation).toBe("update");
-
-  await executeAssistantActionPlan(
-    {
-      plan,
-      actorId: "user-1",
-      idempotencyKey: "assistant-page-widget-data-1",
-    },
-    deps
-  );
-
-  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<{
-    id: string;
-    data: Record<string, unknown>;
-  }>;
-  expect(blocks[0]?.data.headline).toBe("New title");
-  expect(blocks[0]?.data.body).toBe("Welcome");
-  expect(blocks[1]?.data.text).toBe("Keep this");
-});
-
-test("dryRunAssistantActionPlan blocks missing page widget data paths", async () => {
-  const deps = createDeps();
-  await deps.createPage({
-    title: "Landing",
-    slug: "/landing",
-    data: {
-      blocks: [
-        {
-          id: "hero-1",
-          type: "hero",
-          data: {
-            title: "Old title",
-          },
-        },
-      ],
-    },
-  });
-  const plan: AssistantActionPlan = {
-    id: "plan-page-widget-missing-path",
-    status: "ready",
-    intentId: "page-widget-patch",
-    promptKind: "refinement_request",
-    intentFamily: "unknown",
-    title: "Patch selected block",
-    answer: "I can patch the selected block.",
-    summary: "Patch missing field.",
-    confidence: 0.9,
-    assumptions: [],
-    questions: [],
-    actions: [
-      {
-        id: "page-widget-missing",
-        type: "page.widget.patch",
-        title: "Patch missing field",
-        description: "Patch selected block data.",
-        input: {
-          pageSlug: "/landing",
-          operation: "patch-data",
-          blockId: "hero-1",
-          expectedBlockType: "hero",
-          dataPath: ["missing"],
-          value: "New value",
-        },
-      },
-    ],
-  };
-
-  const preview = await dryRunAssistantActionPlan({ plan }, deps);
-  expect(preview.changes[0]?.conflicts[0]?.message).toBe(
-    "Selected page widget data path does not exist."
-  );
-});
-
-test("dryRunAssistantActionPlan rejects unsupported page widget patch types", async () => {
-  const deps = createDeps();
-  await deps.createPage({
-    title: "Products",
-    slug: "/products",
-    data: {
-      blocks: [],
-    },
-  });
-  const plan: AssistantActionPlan = {
-    id: "plan-page-widget-unsupported",
-    status: "ready",
-    intentId: "page-widget",
-    promptKind: "refinement_request",
-    intentFamily: "product_catalog",
-    title: "Patch page widget",
-    answer: "I can patch a page widget.",
-    summary: "Append a widget block.",
-    confidence: 0.9,
-    assumptions: [],
-    questions: [],
-    actions: [
-      {
-        id: "page-widget-unknown",
-        type: "page.widget.patch",
-        title: "Add unknown widget",
-        description: "Append an unknown widget block to the page.",
-        input: {
-          pageSlug: "/products",
-          operation: "upsert-block",
-          block: {
-            id: "assistant-unknown",
-            type: "unknown-widget",
-            data: {},
-          },
-        },
-      },
-    ],
-  };
-
-  await expect(dryRunAssistantActionPlan({ plan }, deps)).rejects.toThrow("widget_unknown_type");
-});
-
 test("executeAssistantActionPlan upserts safe form automation without duplicates", async () => {
   const deps = createDeps();
   const form = await deps.createForm({
@@ -4772,8 +4609,9 @@ test("executeAssistantActionPlan creates lead capture form and landing page", as
   expect(deps.__state.formFields.get("form-1")).toHaveLength(4);
   expect(deps.__state.pages).toHaveLength(1);
   expect(deps.__state.pages[0]?.slug).toBe("/kontakt");
-  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<Record<string, unknown>>;
-  expect(blocks.map((block) => block.type)).toEqual(["rich-text-section", "form-embed"]);
+  expect(readPageBlockTypes(deps.__state.pages[0]?.currentData)).toEqual(
+    expect.arrayContaining(["heading", "text", "form"])
+  );
 
   await executeAssistantActionPlan(
     {
@@ -4803,8 +4641,9 @@ test("executeAssistantActionPlan creates editorial hub page without post mutatio
   expect(result.summary.failed).toBe(0);
   expect(deps.__state.pages).toHaveLength(1);
   expect(deps.__state.pages[0]?.slug).toBe("/blog");
-  const blocks = deps.__state.pages[0]?.currentData.blocks as Array<Record<string, unknown>>;
-  expect(blocks.map((block) => block.type)).toEqual(["rich-text-section", "posts-feed"]);
+  const blockTypes = readPageBlockTypes(deps.__state.pages[0]?.currentData);
+  expect(blockTypes).toEqual(expect.arrayContaining(["heading", "text", "list", "button"]));
+  expect(blockTypes).not.toContain("collection");
 });
 
 test("executeAssistantActionPlan creates resources and reuses idempotency key", async () => {
@@ -5104,8 +4943,7 @@ test("executeAssistantActionPlan refines existing house-project catalog without 
   expect(refinementResult.summary.create).toBe(0);
   expect(refinementResult.summary.update).toBeGreaterThan(0);
   expect(deps.__state.pages).toHaveLength(1);
-  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
-  expect(pageBlocks.some((block) => block.type === "listing-filters")).toBe(true);
+  expect(hasPageBlockType(deps.__state.pages[0]?.currentData, "collection")).toBe(true);
 });
 
 test("executeAssistantActionPlan adds inquiry form without creating duplicate page", async () => {
@@ -5146,8 +4984,7 @@ test("executeAssistantActionPlan adds inquiry form without creating duplicate pa
   const form = deps.__state.forms[0];
   if (!form) throw new Error("missing_form");
   expect(deps.__state.formFields.get(form.id)?.length).toBeGreaterThan(0);
-  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
-  expect(pageBlocks.some((block) => block.type === "form-embed")).toBe(true);
+  expect(hasPageBlockType(deps.__state.pages[0]?.currentData, "form")).toBe(true);
 });
 
 test("executeAssistantActionPlan creates product inquiry catalog and form", async () => {
@@ -5167,8 +5004,7 @@ test("executeAssistantActionPlan creates product inquiry catalog and form", asyn
   expect(deps.__state.contentTypes.some((entry) => entry.slug === "products")).toBe(true);
   expect(deps.__state.forms[0]?.slug).toBe("product-catalog-inquiry");
   expect(deps.__state.pages[0]?.slug).toBe("/produkty");
-  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
-  expect(pageBlocks.some((block) => block.type === "form-embed")).toBe(true);
+  expect(hasPageBlockType(deps.__state.pages[0]?.currentData, "form")).toBe(true);
   expect(
     (deps.__state.pages[0]?.currentData.settings as { collectionLink?: Record<string, unknown> })
       ?.collectionLink
@@ -5250,56 +5086,40 @@ test("executeAssistantActionPlan executes the full-service architecture studio p
   ]);
   const allowedPageSlugs = new Set(deps.__state.pages.map((page) => page.slug));
   for (const page of deps.__state.pages) {
-    const publishedData = page.publishedData as { blocks?: unknown[] } | null;
+    const sections = readPageSections(page.publishedData);
     expect(page.status).toBe("published");
-    expect(Array.isArray(publishedData?.blocks)).toBe(true);
-    expect(publishedData?.blocks?.length).toBeGreaterThan(0);
-    expect(publishedData?.blocks?.[0]).toMatchObject({ type: "navigation" });
-    expect(publishedData?.blocks?.at(-1)).toMatchObject({ type: "footer" });
-    const footerBlock = publishedData?.blocks?.find(
-      (block): block is { type?: string; data?: unknown } =>
-        Boolean(block) &&
-        typeof block === "object" &&
-        (block as { type?: string }).type === "footer"
-    );
-    const footerData = footerBlock?.data as
-      | {
-          columns?: Array<{ links?: Array<{ href?: string }> }>;
-          legal?: { enabled?: boolean };
-        }
+    expect(sections.length).toBeGreaterThan(0);
+    expect(sections[0]).toMatchObject({
+      id: "full-service-primary-navigation",
+      type: "content",
+    });
+    expect(sections.at(-1)).toMatchObject({ type: "cta" });
+    const footerList = sections.at(-1)?.blocks?.find((block) => block.type === "list") as
+      | { props?: { items?: Array<{ href?: string }> } }
       | undefined;
-    expect(footerData?.legal?.enabled).toBe(false);
     const footerHrefs =
-      footerData?.columns?.flatMap((column) =>
-        (column.links ?? [])
-          .map((link) => link.href)
-          .filter((href): href is string => Boolean(href))
-      ) ?? [];
+      footerList?.props?.items
+        ?.map((link) => link.href)
+        .filter((href): href is string => Boolean(href)) ?? [];
     expect(footerHrefs).not.toEqual(
       expect.arrayContaining(["/polityka-prywatnosci", "/regulamin"])
     );
     expect(footerHrefs.every((href) => allowedPageSlugs.has(href))).toBe(true);
   }
   const homePage = deps.__state.pages.find((page) => page.slug === "/");
-  const homeBlocks = homePage?.publishedData as
-    | { blocks?: Array<{ type?: string; data?: { titleBlock?: { title?: string } } }> }
-    | null
-    | undefined;
   expect(
-    homeBlocks?.blocks?.some(
+    readPageBlocks(homePage?.publishedData).some(
       (block) =>
-        block.type === "rich-text-section" && block.data?.titleBlock?.title === "Studio Forma"
+        block.type === "heading" &&
+        typeof (block.props as { text?: unknown } | undefined)?.text === "string" &&
+        (block.props as { text: string }).text.includes("Studio Forma")
     )
   ).toBe(true);
   const servicesPage = deps.__state.pages.find((page) => page.slug === "/uslugi");
-  const servicesBlocks = servicesPage?.publishedData as
-    | { blocks?: Array<{ type?: string }> }
-    | null
-    | undefined;
-  expect(servicesBlocks?.blocks?.map((block) => block.type)).toEqual([
-    "navigation",
-    "content-list",
-    "footer",
+  expect(readPageSections(servicesPage?.publishedData).map((section) => section.type)).toEqual([
+    "content",
+    "collection",
+    "cta",
   ]);
   expect(deps.__state.entries.filter((entry) => entry.status === "published")).toHaveLength(6);
   for (const entry of deps.__state.entries) {
@@ -5348,16 +5168,10 @@ test("executeAssistantActionPlan keeps media readiness pending without a require
   const driftedPlan = structuredClone(plan) as AssistantActionPlan;
   for (const action of driftedPlan.actions) {
     if (action.type !== "page.upsert" || action.input.slug !== "/o-nas") continue;
-    for (const block of action.input.blocks ?? []) {
-      if (block.type !== "rich-text-section") continue;
-      const data = block.data as {
-        body?: { blocks?: Array<Record<string, unknown>> };
-      };
-      data.body = {
-        ...data.body,
-        blocks: (data.body?.blocks ?? []).filter((bodyBlock) => bodyBlock.kind !== "image"),
-      };
-    }
+    action.input.sections = (action.input.sections ?? []).map((section) => ({
+      ...section,
+      blocks: section.blocks.filter((block) => block.type !== "image"),
+    }));
   }
 
   const executed = await executeAssistantActionPlan(
@@ -5415,16 +5229,7 @@ test("executeAssistantActionPlan resolves supporting page collection links from 
           status: "draft",
           introTitle: "Compare products",
           introBody: "Pick the right model.",
-          blocks: [
-            {
-              id: "hero-1",
-              type: "hero",
-              variant: "centered",
-              data: {
-                headline: "Compare products",
-              },
-            },
-          ],
+          sections: [createTestPageIntroSection("products-comparison-intro", "Compare products")],
           collectionLink: {
             contentTypeSlug: "products",
             pageRole: "supporting-page",
@@ -5455,7 +5260,7 @@ test("executeAssistantActionPlan resolves supporting page collection links from 
   });
 });
 
-test("executeAssistantActionPlan preserves trusted media asset ids in page.upsert blocks", async () => {
+test("executeAssistantActionPlan preserves trusted media asset ids in page.upsert section blocks", async () => {
   const deps = createDeps();
 
   const result = await executeAssistantActionPlan(
@@ -5484,23 +5289,21 @@ test("executeAssistantActionPlan preserves trusted media asset ids in page.upser
               status: "draft",
               introTitle: "Media landing",
               introBody: "Showcase the trusted hero asset.",
-              blocks: [
-                {
-                  id: "hero-1",
-                  type: "hero",
-                  variant: "centered",
-                  data: {
-                    headline: "Media landing",
-                    background: {
-                      media: {
-                        type: "image",
-                        source: "library",
+              sections: [
+                createPageSectionV2("content", {
+                  id: "media-landing-hero",
+                  name: "Media landing hero",
+                  blocks: [
+                    createPageBlockV2("image", {
+                      id: "media-landing-image",
+                      props: {
                         assetId: "media-hero",
                         src: "/media/hero.jpg",
+                        alt: "Media landing",
                       },
-                    },
-                  },
-                },
+                    }),
+                  ],
+                }),
               ],
             },
           },
@@ -5515,10 +5318,10 @@ test("executeAssistantActionPlan preserves trusted media asset ids in page.upser
   expect(result.summary.failed).toBe(0);
   expect(
     (
-      deps.__state.pages[0]?.currentData.blocks as Array<{
-        data?: { background?: { media?: { assetId?: string } } };
+      deps.__state.pages[0]?.currentData.sections as Array<{
+        blocks?: Array<{ props?: { assetId?: string } }>;
       }>
-    )?.[0]?.data?.background?.media?.assetId
+    )?.[0]?.blocks?.[0]?.props?.assetId
   ).toBe("media-hero");
 });
 
@@ -5536,15 +5339,17 @@ test("executeAssistantActionPlan resolves supporting page collection-link listin
       status: "draft",
       introTitle: "Compare products",
       introBody: "Pick the right model.",
-      blocks: [
-        {
-          id: "hero-1",
-          type: "hero",
-          variant: "centered",
-          data: {
-            headline: "Compare products",
-          },
-        },
+      sections: [
+        createPageSectionV2("content", {
+          id: "products-comparison-intro",
+          name: "Intro",
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "products-comparison-heading",
+              props: { text: "Compare products", level: "h2", align: "left" },
+            }),
+          ],
+        }),
       ],
       collectionLink: {
         contentTypeSlug: PRODUCT_CATALOG_PRESET.contentTypeSlug,
@@ -5635,15 +5440,17 @@ test("executeAssistantActionPlan accepts supporting page collection-link ids wit
           status: "draft",
           introTitle: "Compare products",
           introBody: "Pick the right model.",
-          blocks: [
-            {
-              id: "hero-1",
-              type: "hero",
-              variant: "centered",
-              data: {
-                headline: "Compare products",
-              },
-            },
+          sections: [
+            createPageSectionV2("content", {
+              id: "products-comparison-intro",
+              name: "Intro",
+              blocks: [
+                createPageBlockV2("heading", {
+                  id: "products-comparison-heading",
+                  props: { text: "Compare products", level: "h2", align: "left" },
+                }),
+              ],
+            }),
           ],
           collectionLink: {
             contentTypeId: contentType.id,
@@ -5738,16 +5545,7 @@ test("dryRunAssistantActionPlan flags conflicting supporting page collection-lin
           status: "draft",
           introTitle: "Compare cars",
           introBody: "Pick the right model.",
-          blocks: [
-            {
-              id: "hero-1",
-              type: "hero",
-              variant: "centered",
-              data: {
-                headline: "Compare cars",
-              },
-            },
-          ],
+          sections: [createTestPageIntroSection("cars-comparison-intro", "Compare cars")],
           collectionLink: {
             contentTypeSlug: "cars",
             pageRole: "supporting-page",
@@ -5823,16 +5621,7 @@ test("executeAssistantActionPlan rejects conflicting collection-link content typ
           status: "draft",
           introTitle: "Compare cars",
           introBody: "Pick the right model.",
-          blocks: [
-            {
-              id: "hero-1",
-              type: "hero",
-              variant: "centered",
-              data: {
-                headline: "Compare cars",
-              },
-            },
-          ],
+          sections: [createTestPageIntroSection("cars-comparison-intro", "Compare cars")],
           collectionLink: {
             contentTypeSlug: "cars",
             pageRole: "supporting-page",
@@ -5909,16 +5698,7 @@ test("executeAssistantActionPlan rejects stale supporting page collection-link l
           status: "draft",
           introTitle: "Compare products",
           introBody: "Pick the right model.",
-          blocks: [
-            {
-              id: "hero-1",
-              type: "hero",
-              variant: "centered",
-              data: {
-                headline: "Compare products",
-              },
-            },
-          ],
+          sections: [createTestPageIntroSection("products-comparison-intro", "Compare products")],
           collectionLink: {
             contentTypeSlug: "products",
             pageRole: "supporting-page",
@@ -6720,6 +6500,5 @@ test("executeAssistantActionPlan resolves renamed listing resources from existin
   expect(deps.__state.pages).toHaveLength(1);
   expect(deps.__state.listingQueries).toHaveLength(1);
   expect(deps.__state.listingTemplates).toHaveLength(1);
-  const pageBlocks = deps.__state.pages[0]?.currentData.blocks as Array<{ type?: string }>;
-  expect(pageBlocks.some((block) => block.type === "listing-filters")).toBe(true);
+  expect(hasPageBlockType(deps.__state.pages[0]?.currentData, "collection")).toBe(true);
 });

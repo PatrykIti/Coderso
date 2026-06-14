@@ -6,25 +6,303 @@ import {
 } from "./solutionKitTypes";
 import { buildSolutionKitManifest } from "./kitManifest";
 import { getCuratedMediaAsset, type CuratedMediaAssetId } from "../media/curatedMediaProfiles";
+import {
+  PAGE_DOCUMENT_SCHEMA_VERSION,
+  createPageBlockV2,
+  createPageSectionV2,
+  type PageBlockType,
+  type PageBlockV2,
+  type PageSectionType,
+  type PageSectionV2,
+} from "../pages/pageDocumentV2";
 
-const block = (id: string, type: string, data: Record<string, unknown> = {}, variant?: string) => ({
+type LegacyKitBlock = {
+  id: string;
+  type: string;
+  data: Record<string, unknown>;
+  variant?: string;
+};
+
+const block = (
+  id: string,
+  type: string,
+  data: Record<string, unknown> = {},
+  variant?: string
+): LegacyKitBlock => ({
   id,
   type,
   ...(variant ? { variant } : {}),
   data,
 });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const readText = (...values: unknown[]) => {
+  for (const value of values) {
+    if (typeof value !== "string") continue;
+    const trimmed = value.trim();
+    if (trimmed.length > 0) return trimmed;
+  }
+  return null;
+};
+
+const toLabel = (value: string) =>
+  value
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+
+const readNestedRecord = (source: Record<string, unknown>, key: string) =>
+  isRecord(source[key]) ? source[key] : null;
+
+const readNestedText = (source: Record<string, unknown>, ...path: string[]) => {
+  let value: unknown = source;
+  for (const key of path) {
+    if (!isRecord(value)) return null;
+    value = value[key];
+  }
+  return readText(value);
+};
+
+const normalizeHref = (value: unknown) => {
+  const href = readText(value);
+  if (!href) return null;
+  if (href.startsWith("/") || href.startsWith("#") || href.startsWith("http")) return href;
+  return `/${href.replace(/^\/+/, "")}`;
+};
+
+const collectLinkItems = (value: unknown): Array<string | { label: string; href: string }> => {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((item): Array<string | { label: string; href: string }> => {
+    if (typeof item === "string") return [item];
+    if (!isRecord(item)) return [];
+    const label = readText(item.label, item.title, item.name, item.text);
+    if (!label) return [];
+    const href = normalizeHref(item.href ?? item.url ?? item.pageSlug);
+    return href ? [{ label, href }] : [label];
+  });
+};
+
+const collectLegacyLinks = (data: Record<string, unknown>) => {
+  const direct = [...collectLinkItems(data.items), ...collectLinkItems(data.links)];
+  const columns = Array.isArray(data.columns)
+    ? data.columns.flatMap((column) => (isRecord(column) ? collectLinkItems(column.links) : []))
+    : [];
+  return [...direct, ...columns];
+};
+
+const readLegacyMedia = (data: Record<string, unknown>) => {
+  const media = readNestedRecord(data, "media") ?? readNestedRecord(data, "image");
+  if (media) {
+    return {
+      src: readText(media.src, media.url),
+      alt: readText(media.alt, media.title) ?? "",
+      caption: readText(media.caption) ?? "",
+    };
+  }
+  return {
+    src: readText(data.src, data.imageUrl),
+    alt: readText(data.alt, data.imageAlt) ?? "",
+    caption: readText(data.caption) ?? "",
+  };
+};
+
+const readLegacyCta = (data: Record<string, unknown>) =>
+  readNestedRecord(data, "primaryCta") ??
+  readNestedRecord(data, "cta") ??
+  readNestedRecord(data, "button");
+
+const readLegacyFormId = (data: Record<string, unknown>) =>
+  readText(data.formId, readNestedText(data, "form", "submission", "formId"));
+
+const legacySectionType = (type: string): PageSectionType => {
+  const map: Record<string, PageSectionType> = {
+    navigation: "navigation",
+    footer: "navigation",
+    hero: "hero",
+    contact: "lead-form",
+    "form-embed": "lead-form",
+    "feature-grid": "feature-grid",
+    "logo-cloud": "feature-grid",
+    team: "feature-grid",
+    "pricing-plans": "comparison",
+    "stats-kpi": "feature-grid",
+    "content-list": "collection",
+    "product-gallery": "gallery",
+    "product-table": "collection",
+    "listing-filters": "filters",
+    "search-box": "filters",
+    "faq-accordion": "faq",
+    "gallery-mosaic": "gallery",
+    "cta-banner": "cta",
+    "rich-text-section": "content",
+    testimonials: "testimonials",
+  };
+  return map[type] ?? "custom";
+};
+
+const legacySectionVariant = (type: string): PageSectionV2["variant"] => {
+  if (type === "hero") return "split";
+  if (type === "navigation") return "horizontal";
+  if (type === "footer") return "compact";
+  if (type === "feature-grid" || type === "team" || type === "logo-cloud") return "grid";
+  if (type === "cta-banner") return "centered";
+  if (type === "pricing-plans") return "cards";
+  return "default";
+};
+
+const makeBlock = (
+  type: PageBlockType,
+  id: string,
+  props: Record<string, unknown>,
+  style?: PageBlockV2["style"]
+) => createPageBlockV2(type, { id, props, style });
+
+const legacyBlockToAtomicBlocks = (legacy: LegacyKitBlock): PageBlockV2[] => {
+  const data = legacy.data;
+  const blocks: PageBlockV2[] = [];
+  const title = readText(
+    data.headline,
+    data.title,
+    data.heading,
+    data.name,
+    legacy.type === "navigation" || legacy.type === "footer" ? null : toLabel(legacy.type)
+  );
+  const body = readText(data.body, data.description, data.text, data.copy, data.subhead);
+  const media = readLegacyMedia(data);
+  const cta = readLegacyCta(data);
+  const links = collectLegacyLinks(data);
+  const formId = readLegacyFormId(data);
+
+  if (title && legacy.type !== "navigation" && legacy.type !== "footer") {
+    blocks.push(
+      makeBlock("heading", `${legacy.id}-heading`, {
+        text: title,
+        level: legacy.type === "hero" ? "h1" : "h2",
+        align: legacy.type === "cta-banner" ? "center" : "left",
+      })
+    );
+  }
+
+  if (body) {
+    blocks.push(
+      makeBlock("text", `${legacy.id}-text`, {
+        text: body,
+        format: "plain",
+        align: legacy.type === "cta-banner" ? "center" : "left",
+      })
+    );
+  }
+
+  if (media.src) {
+    blocks.push(
+      makeBlock("image", `${legacy.id}-image`, {
+        assetId: null,
+        src: media.src,
+        alt: media.alt,
+        caption: media.caption,
+        fit: "cover",
+      })
+    );
+  }
+
+  if (formId) {
+    blocks.push(
+      makeBlock("form", `${legacy.id}-form`, {
+        formId,
+        title: readText(data.title, data.heading, data.name) ?? "Contact form",
+      })
+    );
+  }
+
+  if (links.length > 0) {
+    blocks.push(makeBlock("list", `${legacy.id}-links`, { items: links, ordered: false }));
+  }
+
+  if (legacy.type === "content-list" || legacy.type === "product-table") {
+    blocks.push(
+      makeBlock("collection", `${legacy.id}-collection`, {
+        contentTypeId: readText(data.contentTypeId, data.contentTypeSlug),
+        queryId: readText(data.queryId, data.listingQueryId),
+        limit: typeof data.limit === "number" ? data.limit : 6,
+        templateId: readText(data.templateId, data.listingTemplateId),
+      })
+    );
+  }
+
+  if (legacy.type === "gallery-mosaic" || legacy.type === "product-gallery") {
+    blocks.push(
+      makeBlock("gallery", `${legacy.id}-gallery`, {
+        items: Array.isArray(data.items)
+          ? data.items
+          : Array.isArray(data.images)
+            ? data.images
+            : [],
+        layout: "grid",
+      })
+    );
+  }
+
+  if (Array.isArray(data.items) && legacy.type === "stats-kpi") {
+    data.items.forEach((item, index) => {
+      if (!isRecord(item)) return;
+      blocks.push(
+        makeBlock("statistic", `${legacy.id}-stat-${index + 1}`, {
+          value: readText(item.value, item.metric) ?? "0",
+          label: readText(item.label, item.title) ?? "Metric",
+          caption: readText(item.caption, item.description) ?? "",
+        })
+      );
+    });
+  }
+
+  if (cta) {
+    blocks.push(
+      makeBlock("button", `${legacy.id}-cta`, {
+        label: readText(cta.label, cta.title, cta.text) ?? "Learn more",
+        href: normalizeHref(cta.href ?? cta.url) ?? "/",
+        target: "self",
+        variant: "primary",
+        size: "md",
+      })
+    );
+  }
+
+  if (blocks.length === 0) {
+    blocks.push(
+      makeBlock("card", `${legacy.id}-card`, {
+        title: title ?? toLabel(legacy.type),
+        text: body ?? "",
+        image: media.src ? { src: media.src, alt: media.alt } : null,
+        href: null,
+      })
+    );
+  }
+
+  return blocks;
+};
+
+const legacyBlockToSection = (legacy: LegacyKitBlock) =>
+  createPageSectionV2(legacySectionType(legacy.type), {
+    id: `sec_${legacy.id}`,
+    name: toLabel(legacy.type),
+    variant: legacySectionVariant(legacy.type),
+    blocks: legacyBlockToAtomicBlocks(legacy),
+  });
+
 const pageData = (
-  blocks: Array<{ id: string; type: string; data: Record<string, unknown>; variant?: string }>,
+  blocks: LegacyKitBlock[],
   options?: {
     showInNav?: boolean;
     template?: string;
   }
 ) => ({
-  blocks,
+  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+  sections: blocks.map(legacyBlockToSection),
   settings: {
+    template: options?.template ?? "page-v2",
     showInNav: options?.showInNav ?? true,
-    ...(options?.template ? { template: options.template } : {}),
   },
 });
 

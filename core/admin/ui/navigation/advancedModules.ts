@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
 import {
-  Blocks,
   Briefcase,
   Calendar,
   ClipboardList,
@@ -24,7 +23,7 @@ export type AdvancedModuleId =
   | "entries"
   | "custom-screens"
   | "widgets"
-  | "templates"
+  | "page-templates"
   | "forms"
   | "posts"
   | "listings"
@@ -135,21 +134,16 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
     lifecycle: "stable",
     description: "Widget library and reusable block editor experiences.",
     dependencies: [],
-    nav: {
-      href: "/admin/advanced/widgets",
-      icon: Blocks,
-      defaultEnabled: true,
-      permission: "widgets:read",
-    },
+    nav: null,
   },
   {
-    id: "templates",
-    label: "Templates",
+    id: "page-templates",
+    label: "Page Templates",
     tier: "v1",
     ownerArea: "design",
     lifecycle: "stable",
-    description: "Template presets and layout skeletons for reusable pages.",
-    dependencies: ["widgets"],
+    description: "Reusable Page v2 section templates authored with the Page Editor.",
+    dependencies: [],
     nav: null,
   },
   {
@@ -356,7 +350,7 @@ export const ADVANCED_MODULE_REGISTRY: AdvancedModuleDefinition[] = [
     ownerArea: "growth",
     lifecycle: "preview",
     description: "Template kits with AI-assisted setup and guided defaults.",
-    dependencies: ["templates", "widgets", "entries"],
+    dependencies: ["page-templates", "widgets", "entries"],
     nav: {
       href: "/admin/advanced/solution-kits",
       icon: Sparkles,

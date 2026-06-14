@@ -108,8 +108,9 @@ test("resolveSiteBuilderFollowUpTarget resolves active page follow-ups from acti
         status: "draft",
         template: null,
       },
+      selectedSectionId: null,
       selectedBlockId: null,
-      blocks: [],
+      sections: [],
       warnings: [],
     },
   });
@@ -150,8 +151,9 @@ test("resolveSiteBuilderFollowUpTarget accepts unnamed active page prompts from 
         status: "draft",
         template: null,
       },
+      selectedSectionId: null,
       selectedBlockId: null,
-      blocks: [],
+      sections: [],
       warnings: [],
     },
   });
@@ -193,8 +195,9 @@ test("resolveSiteBuilderFollowUpTarget asks when a named prompt conflicts with a
           status: "draft",
           template: null,
         },
+        selectedSectionId: null,
         selectedBlockId: null,
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     }

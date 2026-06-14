@@ -85,7 +85,7 @@ prompts that ask for a complete service site route to
 and portfolio catalogs, route-linked detail templates, six published sample
 entries, primary/footer navigation, a lead-capture form, page SEO, and launch
 readiness metadata. Site-builder blueprints may attach backend-owned curated
-media profile URLs to explicit string fields and page blocks so the first public
+media profile URLs to explicit string fields and Page atom blocks so the first public
 site is visually populated with industry/theme-appropriate assets. Media
 upload/generation and arbitrary provider/user remote media remain gated
 workflows; `xFieldType: "media"` fields still require trusted media-library
@@ -136,8 +136,8 @@ prompt-specific theme or media generation.
 TASK-407-07-L06 closes the guided site-builder family. The final drift pass
 resolved duplicated Advanced Navigation option literals by making the Navigation
 widget contract the single runtime owner for variant and mobile-mode ids, and
-added validator coverage for produced Advanced Navigation, Hero, and section
-blocks. Curated media profile selection now requires an industry/vertical match
+added validator coverage for produced navigation, hero, and Page sections.
+Curated media profile selection now requires an industry/vertical match
 before theme keywords can influence ranking, which keeps the adapter generic
 for multiple businesses instead of matching unrelated profiles by broad words
 such as booking.
@@ -296,7 +296,7 @@ The provider is treated as untrusted. The backend reconstructs any executable pl
 - **Operation-draft-only output.** Provider-supplied `actions[]`, ids, and executor payloads are rejected or ignored. The generic CMS path makes this explicit: the provider produces only a `CmsOperationDraft`, validated and repaired locally by `cmsOperationDraftSchema.ts`, `assistantOperationPolicy`, and `cmsTargetResolver.ts` before any action runs.
 - **Strict schemas** reject unknown fields before persistence, render, or cache. Idempotency is enforced via `actionExecutionStore.ts`.
 - **Edits and deletes are reviewed operations** (typed plan + dry-run + conflict-aware execution), never shortcuts. Targets resolve only from active context or server-side catalogs — a browser-supplied `context.resourceCatalog` is not trusted and is only hydrated when `includeResourceCatalog=true`.
-- **Gated domains** (booking, checkout/payment, webhook automation, nested page-widget patches, installed solution-kit refinements) return `needs_input` / `gated` with no executable actions until adapters and permissions land.
+- **Gated domains** (booking, checkout/payment, webhook automation, fine-grained existing Page section/block patch actions beyond `page.upsert`/`page.update`, installed solution-kit refinements) return `needs_input` / `gated` with no executable actions until adapters and permissions land.
 - **Secrets never leak.** Provider keys, cookies, auth headers, upload bytes,
   signed URLs, and raw media must not appear in provider packages, diagnostics,
   cache, or action payloads. Diagnostics log a prompt hash, not prompt text;
@@ -386,11 +386,11 @@ to the UI, but key them by the shared id type so TypeScript catches drift.
 The assistant may automatically benefit from a widget change only when all of
 these are true:
 
-1. Existing generated blocks still validate through `normalizeWidgetBlock`.
+1. Existing generated non-Page widget blocks still validate through `normalizeWidgetBlock`.
 2. Existing assistant mappings do not need new option ids or new action payload
    fields.
-3. The public renderer remains backward-compatible for saved blocks and
-   solution-kit starter pages.
+3. The public renderer remains backward-compatible for saved non-Page widget
+   blocks and Page v2 starter sections.
 4. The change is not something the assistant must explain to end users from the
    docs corpus.
 

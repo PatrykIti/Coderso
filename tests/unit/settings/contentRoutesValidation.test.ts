@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-import { normalizeContentRoutes } from "../../../core/services/settings/settingsService";
+import { normalizeContentRoutes } from "../../../core/services/settings/settingsContracts";
 
 test("normalizeContentRoutes normalizes paths and defaults enabled", () => {
   const routes = normalizeContentRoutes([

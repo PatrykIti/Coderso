@@ -13,12 +13,12 @@ keywords:
 
 # Basic
 
-Widget Library is the discovery surface for reusable interface components and
-templates. It helps you browse available items, search by name, narrow the
-catalog by scope or category, and jump into template work when reusable layout
-assets are needed.
+Widget Library is a direct compatibility discovery surface for reusable
+interface components. It helps support/admin users browse available widget
+items by scope or category while daily authoring happens through Pages, Page
+Templates, and Menus.
 
-In the current UI, the library includes:
+In the compatibility UI, the library includes:
 - left-side navigation for library scopes,
 - widget category shortcuts,
 - one favorites scope with accessible favorite controls,
@@ -35,9 +35,9 @@ Use Widget Library when you need to answer one of these questions:
 - Which widgets belong to layout, content, forms, navigation, or media?
 - Which items have I favorited for frequent use?
 
-The library route is a selection and routing surface, not the final place where
-complex template composition happens. It is best used for discovery, filtering,
-and deciding whether to insert, inspect, or edit a reusable item.
+The library route is hidden from default navigation. It is best used for
+support, diagnostics, and discovery while regular composition happens in the
+contextual editor palettes on Pages, Page Templates, and Menus.
 
 The current workflow areas are:
 - scopes:
@@ -56,14 +56,11 @@ wizard data, then use the insert dialog to choose the target page/template and
 placement. Successful inserts show an admin notification with an editor action;
 failed inserts keep the dialog open and show bounded error copy.
 
-Template rows can be edited, duplicated, selected, and deleted from the
-Templates scope. Destructive row and bulk actions require confirmation and use
-the shared admin notification pattern.
-
 # Instruction
 
-1. Open `Coderso > Widgets`.
-2. Start in the left library rail.
+1. Open the direct Widget Library compatibility route only when support or
+   diagnostics require it.
+2. Start in the library filters.
    Decide whether you are looking for:
    - any reusable item,
    - a favorite,
@@ -78,12 +75,9 @@ the shared admin notification pattern.
    - complexity filter
 5. Switch between grid and list view if one layout is easier for the current
    discovery task.
-6. If the item is a template, use row actions to edit, duplicate, or delete it.
-7. If the item is a core widget, configure it first, then insert it into the
+6. If the item is a core widget, configure it first, then insert it into the
    target surface from the insert dialog.
-8. Use favorites for repeat-use items instead of relying only on search.
-9. Open `Categories` when you need to manage template categories for reusable
-   organization.
+7. Use favorites for repeat-use items instead of relying only on search.
 
 Use this safe discovery flow when you want fewer reuse mistakes:
 1. Search first.

@@ -394,19 +394,14 @@ vi.mock("@/ui/pages/builder/BlockSettings", () => ({
 vi.mock("@/ui/pages/builder/LibraryPanel", () => ({
   LibraryPanel: ({
     onAddWidget,
-    onAddTemplate,
     onAddForm,
   }: {
     onAddWidget: (type: string) => void;
-    onAddTemplate: (template: { id: string; name: string }) => void;
     onAddForm: (form: { id: string; name: string }) => void;
   }) => (
     <div>
       <button type="button" onClick={() => onAddWidget("hero")}>
         add-widget
-      </button>
-      <button type="button" onClick={() => onAddTemplate({ id: "tpl-1", name: "Template" })}>
-        add-template
       </button>
       <button type="button" onClick={() => onAddForm({ id: "form-1", name: "Lead Form" })}>
         add-form
@@ -834,7 +829,7 @@ test("detail template editor publishes through detail pages lifecycle", async ()
 
   try {
     await flush();
-    clickButton(view.container, "add-template");
+    clickButton(view.container, "add-widget");
     clickButton(view.container, "Publish");
     await flush();
 

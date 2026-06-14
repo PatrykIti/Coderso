@@ -65,7 +65,6 @@ const actionOrder: Record<AssistantPlannedAction["type"], number> = {
   "media.reference.attach": 90,
   "listing-query.filters.patch": 90,
   "listing-template.card.patch": 90,
-  "page.widget.patch": 90,
   "form.automation.upsert": 90,
   "page.upsert": 70,
   "detail-page.upsert": 75,
@@ -452,11 +451,11 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
   ) {
     return null;
   }
-  const blocks = mergeBlocksById(
-    left.input.blocks as Array<Record<string, unknown>> | undefined,
-    right.input.blocks as Array<Record<string, unknown>> | undefined
+  const sections = mergeBlocksById(
+    left.input.sections as Array<Record<string, unknown>> | undefined,
+    right.input.sections as Array<Record<string, unknown>> | undefined
   );
-  if (blocks === null) return null;
+  if (sections === null) return null;
   const listingFilters = mergePageListingFilters(
     left.input.listingFilters,
     right.input.listingFilters
@@ -483,7 +482,7 @@ const mergePageUpsert = (left: AssistantPageUpsertAction, right: AssistantPageUp
       listingQueryName: left.input.listingQueryName ?? right.input.listingQueryName,
       listingTemplateSlug: left.input.listingTemplateSlug ?? right.input.listingTemplateSlug,
       ctaLabel: left.input.ctaLabel ?? right.input.ctaLabel,
-      blocks: blocks as typeof left.input.blocks,
+      sections: sections as typeof left.input.sections,
       contentListStyle: left.input.contentListStyle ?? right.input.contentListStyle,
       listingFilters: listingFilters ?? null,
       formEmbed: left.input.formEmbed ?? right.input.formEmbed ?? null,

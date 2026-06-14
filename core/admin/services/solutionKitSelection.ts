@@ -1,7 +1,4 @@
-import type {
-  SolutionKitId,
-  SolutionKitSummary,
-} from "./solutionKitsClient";
+import type { SolutionKitId, SolutionKitSummary } from "./solutionKitsClient";
 import {
   ADVANCED_MODULE_REGISTRY,
   type AdvancedFeatureFlags,
@@ -35,8 +32,7 @@ const isAdvancedModuleId = (value: unknown): value is AdvancedModuleId =>
 const readStoredValue = () => {
   if (typeof window === "undefined") return null;
   const raw =
-    window.localStorage.getItem(STORAGE_KEY) ??
-    window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
   if (isSolutionKitId(raw) && !window.localStorage.getItem(STORAGE_KEY)) {
     window.localStorage.setItem(STORAGE_KEY, raw);
   }
@@ -71,9 +67,7 @@ export function setActiveSolutionKitId(kitId: SolutionKitId | null) {
   emitSelectionChange(kitId);
 }
 
-export function subscribeActiveSolutionKitId(
-  listener: (kitId: SolutionKitId | null) => void
-) {
+export function subscribeActiveSolutionKitId(listener: (kitId: SolutionKitId | null) => void) {
   if (typeof window === "undefined") return () => undefined;
 
   const handleStorage = (event: StorageEvent) => {
@@ -132,7 +126,6 @@ export function buildAdvancedFeatureFlagsForSolutionKit(
 
   const enabledModules = collectKitModules(kit);
   return ADVANCED_MODULE_REGISTRY.reduce<AdvancedFeatureFlags>((result, module) => {
-    if (!module.nav) return result;
     result[module.id] = enabledModules.has(module.id);
     return result;
   }, {});

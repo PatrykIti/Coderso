@@ -11,8 +11,12 @@ import type {
   AssistantSiteBuilderIntakeSession,
   AssistantSiteBuilderIntakeStepId,
 } from "./assistantSiteBuilderIntakeTypes";
-import type { WidgetBlock } from "../../widgets/types";
 import type { NormalizedFormAction } from "../forms/formActionsContract";
+import type {
+  PageBlockPublicDataBinding,
+  PageBlockRuntimeRendererState,
+  PageSectionV2,
+} from "../pages/pageDocumentV2";
 import type {
   GuidedSiteBuilderExecuteResult,
   GuidedSiteBuilderPlanResult,
@@ -163,10 +167,39 @@ export type AssistantActiveSurfaceBlockSummary = {
   slotKeys: string[];
   templateId: string | null;
   templateName: string | null;
+  capabilities?: AssistantActiveSurfaceBlockCapabilities;
+  children?: AssistantActiveSurfaceBlockSummary[];
+};
+
+export type AssistantActiveSurfaceBlockCapabilities = {
+  editorInsertable: boolean;
+  insertable: boolean;
+  assistantEmittable: boolean;
+  runtimeRenderer: PageBlockRuntimeRendererState;
+  publicDataBinding: PageBlockPublicDataBinding;
+  slots: string[];
+  reason: string | null;
+};
+
+export type AssistantActiveSurfaceSectionCapabilities = {
+  insertable: boolean;
+  assistantEmittable: boolean;
+  reason: string | null;
+};
+
+export type AssistantActivePageSectionSummary = {
+  id: string;
+  type: string;
+  name: string;
+  path: string;
+  blockCount: number;
+  blocks: AssistantActiveSurfaceBlockSummary[];
+  capabilities?: AssistantActiveSurfaceSectionCapabilities;
 };
 
 export type AssistantActivePageSurfaceContext = {
   kind: "page";
+  schemaVersion?: 2;
   page: {
     id: string;
     title: string;
@@ -174,10 +207,10 @@ export type AssistantActivePageSurfaceContext = {
     status: string;
     template: string | null;
   };
+  selectedSectionId: string | null;
   selectedBlockId: string | null;
-  blocks: AssistantActiveSurfaceBlockSummary[];
-  templateReferences?: AssistantTemplateSectionReferenceSummary[];
-  referencedTemplates?: AssistantReferencedWidgetTemplateSummary[];
+  selectedBlockPath?: string | null;
+  sections: AssistantActivePageSectionSummary[];
   warnings: string[];
 };
 
@@ -826,27 +859,6 @@ export type AssistantListingTemplateCardPatchAction = {
   };
 };
 
-export type AssistantPageWidgetPatchAction = {
-  id: string;
-  type: "page.widget.patch";
-  title: string;
-  description: string;
-  input:
-    | {
-        pageSlug: string;
-        operation: "upsert-block";
-        block: WidgetBlock;
-      }
-    | {
-        pageSlug: string;
-        operation: "patch-data";
-        blockId: string;
-        expectedBlockType?: string | null;
-        dataPath: string[];
-        value: string | number | boolean | null;
-      };
-};
-
 export type AssistantFormAutomationUpsertAction = {
   id: string;
   type: "form.automation.upsert";
@@ -883,7 +895,7 @@ export type AssistantPageUpsertAction = {
     introTitle: string;
     introBody: string;
     ctaLabel?: string;
-    blocks?: WidgetBlock[];
+    sections?: PageSectionV2[];
     contentListStyle?: {
       columns?: "1" | "2" | "3";
       cardStyle?: "outlined" | "elevated" | "minimal";
@@ -1074,7 +1086,6 @@ export type AssistantPlannedAction =
   | AssistantMediaReferenceAttachAction
   | AssistantListingQueryFiltersPatchAction
   | AssistantListingTemplateCardPatchAction
-  | AssistantPageWidgetPatchAction
   | AssistantFormAutomationUpsertAction
   | AssistantPageUpsertAction
   | AssistantDetailPageUpsertAction

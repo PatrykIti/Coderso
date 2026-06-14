@@ -7,7 +7,7 @@ import {
   isEncryptedSecret,
   type EncryptedSecret,
 } from "../security/secretStore";
-import { isPasswordPepperConfigured } from "../auth/password";
+import { isPasswordPepperConfigured } from "../auth/passwordPepper";
 
 export type RateLimitBucket =
   | "auth"

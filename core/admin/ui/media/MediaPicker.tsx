@@ -24,6 +24,14 @@ type MediaPickerProps = {
   multiple?: boolean;
   accept?: string[];
   maxItems?: number;
+  /**
+   * Chrome override for the "Browse media" trigger on surfaces where the
+   * admin-theme button variables do not apply (e.g. the dark page-editor
+   * floating toolbar). The dialog itself is portaled and keeps theme chrome.
+   */
+  triggerButtonClassName?: string;
+  /** Chrome override for the selected-asset remove buttons (same surfaces). */
+  removeButtonClassName?: string;
 };
 
 const normalizeAccept = (accept?: string[]) =>
@@ -52,6 +60,8 @@ export function MediaPicker({
   multiple = false,
   accept,
   maxItems,
+  triggerButtonClassName,
+  removeButtonClassName,
 }: MediaPickerProps) {
   const initialCached = useMemo(() => getCachedMedia(), []);
   const hasInitialCache = initialCached !== null;
@@ -159,7 +169,7 @@ export function MediaPicker({
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" className={triggerButtonClassName}>
               <ImagePlus className="mr-2 h-4 w-4" />
               Browse media
             </Button>
@@ -261,6 +271,7 @@ export function MediaPicker({
                 type="button"
                 variant="ghost"
                 size="icon"
+                className={removeButtonClassName}
                 onClick={() => handleRemove(item.id)}
               >
                 <X className="h-4 w-4" />

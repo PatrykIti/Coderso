@@ -14,7 +14,8 @@ export type ContentListSort =
   | "title-asc"
   | "title-desc";
 export type ContentListSourceMode = "legacy" | "listing";
-export type ContentListColumns = "1" | "2" | "3";
+/** Grid columns; 4-6 exist for listing-template style consumption (TASK-459-03). */
+export type ContentListColumns = "1" | "2" | "3" | "4" | "5" | "6";
 export type ContentListGap = "none" | "sm" | "md" | "lg";
 export type ContentListCardStyle = "outlined" | "elevated" | "minimal";
 export type ContentListImageAspect = "compact" | "standard" | "wide" | "square";
@@ -100,7 +101,22 @@ export type ContentListData = {
       totalPages?: number;
       previousPageHref?: string;
       nextPageHref?: string;
+      /**
+       * Page query-param key for THIS list (TASK-459-03): the canonical
+       * `lq.<queryId>.__page` token for listing-bound lists, the legacy
+       * `cl.<blockId>.page` key otherwise. Together with `search` it lets the
+       * pager build an href for any page number server-side (no-JS safe).
+       */
+      pageParamKey?: string;
+      /** Serialized current search params the pager builds page hrefs from. */
+      search?: string;
     };
+    /**
+     * Dangling-route guard state (TASK-459-03 frozen policy): "missing-route"
+     * when the resolver found no enabled content route for the source type,
+     * so card links were suppressed instead of pointing at unmatched URLs.
+     */
+    cardLinkMode?: "ready" | "missing-route";
     error?: string;
   };
 };
@@ -327,7 +343,7 @@ export const contentListSchema = {
       type: "object",
       additionalProperties: false,
       properties: {
-        columns: { enum: ["1", "2", "3"] },
+        columns: { enum: ["1", "2", "3", "4", "5", "6"] },
         gap: { enum: ["none", "sm", "md", "lg"] },
         cardStyle: { enum: ["outlined", "elevated", "minimal"] },
         imageAspect: { enum: ["compact", "standard", "wide", "square"] },
@@ -387,8 +403,11 @@ export const contentListSchema = {
             totalPages: { type: "number" },
             previousPageHref: { type: "string" },
             nextPageHref: { type: "string" },
+            pageParamKey: { type: "string" },
+            search: { type: "string" },
           },
         },
+        cardLinkMode: { enum: ["ready", "missing-route"] },
         error: { type: "string" },
       },
     },
@@ -454,6 +473,9 @@ const gridColumnsClassMap: Record<ContentListColumns, string> = {
   "1": "grid-cols-1",
   "2": "grid-cols-1 md:grid-cols-2",
   "3": "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  "4": "grid-cols-1 md:grid-cols-2 lg:grid-cols-4",
+  "5": "grid-cols-1 md:grid-cols-2 lg:grid-cols-5",
+  "6": "grid-cols-1 md:grid-cols-3 lg:grid-cols-6",
 };
 
 const gapClassMap: Record<ContentListGap, string> = {
@@ -489,7 +511,7 @@ const resolveContentListStatusScope = (value: string | undefined): ContentListSt
   return "published";
 };
 
-const resolveContentListSort = (value: string | undefined): ContentListSort => {
+export const resolveContentListSort = (value: string | undefined): ContentListSort => {
   if (
     value === "published-asc" ||
     value === "updated-desc" ||
@@ -513,7 +535,9 @@ const resolveContentListSourceMode = (
 };
 
 const resolveContentListColumns = (value: string | undefined): ContentListColumns => {
-  if (value === "1" || value === "2") return value;
+  if (value === "1" || value === "2" || value === "4" || value === "5" || value === "6") {
+    return value;
+  }
   return "3";
 };
 
@@ -555,6 +579,51 @@ export const resolveContentListVariant = (variant: string): ContentListVariantId
 export const normalizeContentListLimit = (value: number) => {
   if (!Number.isFinite(value)) return contentListDefaults.source?.limit ?? 6;
   return Math.min(contentListLimitMax, Math.max(contentListLimitMin, Math.floor(value)));
+};
+
+/**
+ * Canonical page-href builder for list pagination (TASK-459-03). Owned by the
+ * widget contract so the server resolver and the rendered pager agree on the
+ * exact URL shape: page 1 DROPS the param (canonical unpaged URL), any other
+ * page sets `pageKey=N` on top of the current serialized search params.
+ */
+export const buildContentListPageHref = (search: string, pageKey: string, page: number) => {
+  const params = new URLSearchParams(search);
+  if (page <= 1) {
+    params.delete(pageKey);
+  } else {
+    params.set(pageKey, String(page));
+  }
+  const query = params.toString();
+  return query.length > 0 ? `?${query}` : "?";
+};
+
+/**
+ * Windowed pager model (TASK-459-03): always page 1 and the last page, a
+ * +/- `windowSize` window around the current page, `"ellipsis"` tokens where
+ * the sequence gaps (e.g. 1 … 4 5 6 … 12). Pure so renderer tests can pin the
+ * windowing without DOM assertions.
+ */
+export const buildContentListPagerWindow = (
+  page: number,
+  totalPages: number,
+  windowSize = 2
+): Array<number | "ellipsis"> => {
+  const safeTotal = Math.max(1, Math.floor(totalPages));
+  const current = Math.min(Math.max(1, Math.floor(page)), safeTotal);
+  const pages = new Set<number>([1, safeTotal]);
+  for (let candidate = current - windowSize; candidate <= current + windowSize; candidate += 1) {
+    if (candidate >= 1 && candidate <= safeTotal) pages.add(candidate);
+  }
+  const sorted = [...pages].sort((left, right) => left - right);
+  const result: Array<number | "ellipsis"> = [];
+  let previous = 0;
+  for (const value of sorted) {
+    if (previous > 0 && value - previous > 1) result.push("ellipsis");
+    result.push(value);
+    previous = value;
+  }
+  return result;
 };
 
 export function normalizeContentListRuntimeItems(
@@ -764,11 +833,80 @@ export function normalizeContentListData(data: ContentListData): ContentListData
         })(),
         previousPageHref: resolveTrimmedOptionalString(data.resolved?.runtime?.previousPageHref),
         nextPageHref: resolveTrimmedOptionalString(data.resolved?.runtime?.nextPageHref),
+        pageParamKey: resolveTrimmedOptionalString(data.resolved?.runtime?.pageParamKey),
+        search: resolveOptionalString(data.resolved?.runtime?.search),
       },
+      cardLinkMode:
+        data.resolved?.cardLinkMode === "missing-route" || data.resolved?.cardLinkMode === "ready"
+          ? data.resolved.cardLinkMode
+          : undefined,
       error: resolveOptionalString(data.resolved?.error),
     },
   };
 }
+
+/**
+ * Listing-template presentation input (TASK-459-03), typed structurally so
+ * the pure widget contract never imports the content-service template module.
+ * Shape mirrors `ListingTemplateConfig.style` / `.emptyState`
+ * (`core/services/content/listingTemplateConfig.ts`).
+ */
+export type ContentListTemplatePresentationInput = {
+  style?: { columns?: number; gap?: string; cardVariant?: string } | null;
+  emptyState?: { title?: string | null; description?: string | null } | null;
+};
+
+export type ContentListTemplatePresentation = {
+  variant: ContentListVariantId;
+  style: { columns: ContentListColumns; gap: ContentListGap; cardStyle: ContentListCardStyle };
+  emptyState?: { title?: string; description?: string };
+};
+
+const templateGapToContentListGap: Record<string, ContentListGap> = {
+  xs: "sm",
+  sm: "sm",
+  md: "md",
+  lg: "lg",
+  xl: "lg",
+};
+
+/**
+ * Maps a listing template's `config.style` + `config.emptyState` onto the
+ * widget presentation vocabulary (TASK-459-03 template-style consumption):
+ * columns 1-6 map 1:1, the 5-step gap scale collapses onto the widget's
+ * none/sm/md/lg, `cardVariant: "compact"` selects the compact list variant,
+ * `"minimal"` keeps cards with the minimal card style. Absent/invalid values
+ * fall back to today's grid defaults, so templates without style render
+ * exactly as before.
+ */
+export const mapListingTemplatePresentationToContentList = (
+  input: ContentListTemplatePresentationInput
+): ContentListTemplatePresentation => {
+  const style = input.style ?? null;
+  const columnsNumber =
+    typeof style?.columns === "number" && Number.isFinite(style.columns)
+      ? Math.min(6, Math.max(1, Math.trunc(style.columns)))
+      : 3;
+  const columns = resolveContentListColumns(String(columnsNumber));
+  const gap = templateGapToContentListGap[style?.gap ?? ""] ?? "md";
+  const cardVariant = style?.cardVariant ?? "default";
+  const variant: ContentListVariantId = cardVariant === "compact" ? "compact" : "cards";
+  const cardStyle: ContentListCardStyle = cardVariant === "minimal" ? "minimal" : "outlined";
+  const emptyTitle = resolveTrimmedOptionalString(input.emptyState?.title ?? undefined);
+  const emptyDescription = resolveTrimmedOptionalString(input.emptyState?.description ?? undefined);
+  return {
+    variant,
+    style: { columns, gap, cardStyle },
+    ...(emptyTitle || emptyDescription
+      ? {
+          emptyState: {
+            ...(emptyTitle ? { title: emptyTitle } : {}),
+            ...(emptyDescription ? { description: emptyDescription } : {}),
+          },
+        }
+      : {}),
+  };
+};
 
 type ContentListDateParts = {
   dateTime: string;
@@ -987,6 +1125,120 @@ function ContentListItemCard({
   );
 }
 
+export type ContentListPagerProps = {
+  page: number;
+  totalPages: number;
+  total: number;
+  /** Page param key + serialized search the numbered links are built from. */
+  pageParamKey?: string;
+  search?: string;
+  /** Resolver-provided prev/next hrefs (preferred when present). */
+  previousPageHref?: string;
+  nextPageHref?: string;
+  viewAllHref?: string;
+  viewAllLabel?: string;
+};
+
+/**
+ * Shared numbered pager (TASK-459-03): totals line ("N results"), windowed
+ * page numbers, prev/next — all server-rendered hrefs (no-JS safe). Anchors
+ * carry `data-listing-page-link="1"` so the listing runtime client script can
+ * fetch-swap listing-bound blocks instead of a full navigation. Reused by the
+ * content-list widget and the auto entry-list route template.
+ */
+export function ContentListPager({
+  page,
+  totalPages,
+  total,
+  pageParamKey,
+  search,
+  previousPageHref,
+  nextPageHref,
+  viewAllHref,
+  viewAllLabel,
+}: ContentListPagerProps) {
+  const safeTotalPages = Math.max(1, Math.floor(totalPages));
+  const currentPage = Math.min(Math.max(1, Math.floor(page)), safeTotalPages);
+  const hrefFor = (target: number) =>
+    pageParamKey ? buildContentListPageHref(search ?? "", pageParamKey, target) : undefined;
+  const resolvedPreviousHref =
+    previousPageHref ?? (currentPage > 1 ? hrefFor(currentPage - 1) : undefined);
+  const resolvedNextHref =
+    nextPageHref ?? (currentPage < safeTotalPages ? hrefFor(currentPage + 1) : undefined);
+  if (!resolvedPreviousHref && !resolvedNextHref) return null;
+  const windowItems = buildContentListPagerWindow(currentPage, safeTotalPages);
+  const linkClassName = "font-medium underline-offset-4 hover:underline";
+
+  return (
+    <nav
+      className="mt-6 flex flex-wrap items-center justify-between gap-3 text-sm"
+      aria-label="Content list pagination"
+      data-content-list-pagination="paged"
+    >
+      <span className="text-[var(--color-text)]/75" data-content-list-total={String(total)}>
+        {total === 1 ? "1 result" : `${total} results`}
+      </span>
+      <span className="flex flex-wrap items-center gap-2">
+        {resolvedPreviousHref ? (
+          <a href={resolvedPreviousHref} className={linkClassName} data-listing-page-link="1">
+            Previous
+          </a>
+        ) : (
+          <span className="font-medium opacity-60">Previous</span>
+        )}
+        {windowItems.map((item, index) =>
+          item === "ellipsis" ? (
+            <span key={`ellipsis-${index}`} aria-hidden="true" className="opacity-60">
+              …
+            </span>
+          ) : item === currentPage ? (
+            <span
+              key={item}
+              aria-current="page"
+              className="rounded border border-[var(--color-border)] px-2 py-0.5 font-semibold"
+              data-content-list-page={String(item)}
+            >
+              {item}
+            </span>
+          ) : (
+            (() => {
+              const href = hrefFor(item);
+              return href ? (
+                <a
+                  key={item}
+                  href={href}
+                  className={joinClasses(linkClassName, "px-1")}
+                  aria-label={`Page ${item}`}
+                  data-listing-page-link="1"
+                  data-content-list-page={String(item)}
+                >
+                  {item}
+                </a>
+              ) : (
+                <span key={item} className="px-1 opacity-60" data-content-list-page={String(item)}>
+                  {item}
+                </span>
+              );
+            })()
+          )
+        )}
+        {resolvedNextHref ? (
+          <a href={resolvedNextHref} className={linkClassName} data-listing-page-link="1">
+            Next
+          </a>
+        ) : (
+          <span className="font-medium opacity-60">Next</span>
+        )}
+      </span>
+      {viewAllHref ? (
+        <a href={viewAllHref} className={linkClassName} data-content-list-view-all="1">
+          {viewAllLabel ?? "View all"}
+        </a>
+      ) : null}
+    </nav>
+  );
+}
+
 function ContentListPaginationActions({
   pagination,
   resolved,
@@ -1010,11 +1262,12 @@ function ContentListPaginationActions({
   const mode = pagination.mode ?? "none";
   const previousPageHref = normalizePaginationHref(resolved.runtime?.previousPageHref);
   const nextPageHref = normalizePaginationHref(resolved.runtime?.nextPageHref);
+  const explicitViewAllHref = normalizeWidgetSafeHref(pagination.viewAllHref, {
+    allowRelative: true,
+    allowHttp: true,
+  });
   const viewAllHref =
-    normalizeWidgetSafeHref(pagination.viewAllHref, {
-      allowRelative: true,
-      allowHttp: true,
-    }) ??
+    explicitViewAllHref ??
     normalizeWidgetSafeHref(resolved.listPath, {
       allowRelative: true,
       allowHttp: true,
@@ -1024,28 +1277,17 @@ function ContentListPaginationActions({
 
   if (mode === "paged" && state === "ready" && (previousPageHref || nextPageHref)) {
     return (
-      <nav
-        className="mt-6 flex items-center justify-between gap-3 text-sm"
-        aria-label="Content list pagination"
-      >
-        {previousPageHref ? (
-          <a href={previousPageHref} className="font-medium underline-offset-4 hover:underline">
-            Previous
-          </a>
-        ) : (
-          <span className="font-medium opacity-60">Previous</span>
-        )}
-        <span className="text-[var(--color-text)]/75">
-          Page {currentPage} of {totalPages}
-        </span>
-        {nextPageHref ? (
-          <a href={nextPageHref} className="font-medium underline-offset-4 hover:underline">
-            Next
-          </a>
-        ) : (
-          <span className="font-medium opacity-60">Next</span>
-        )}
-      </nav>
+      <ContentListPager
+        page={currentPage}
+        totalPages={totalPages}
+        total={resolved.total ?? 0}
+        pageParamKey={resolved.runtime?.pageParamKey}
+        search={resolved.runtime?.search}
+        previousPageHref={previousPageHref}
+        nextPageHref={nextPageHref}
+        viewAllHref={explicitViewAllHref}
+        viewAllLabel={pagination.viewAllLabel}
+      />
     );
   }
 
@@ -1103,6 +1345,12 @@ export function ContentListBlock({
   const fields = normalized.fields ?? contentListDefaults.fields!;
   const style = normalized.style ?? contentListDefaults.style!;
   const resolvedItems = normalizeContentListRuntimeItems(normalized.resolved?.items);
+  // Dangling-route guard (TASK-459-03): when the resolver suppressed card
+  // links because no enabled content route exists, surface the explicit
+  // "missing-route" state even when the caller passed no override prop.
+  const effectiveLinkUnavailableReason =
+    linkUnavailableReason ??
+    (normalized.resolved?.cardLinkMode === "missing-route" ? "missing-route" : undefined);
   const sourceMode = source.mode ?? "legacy";
   const hasSource =
     sourceMode === "listing"
@@ -1187,7 +1435,7 @@ export function ContentListBlock({
                 variant={resolvedVariant}
                 fields={fields}
                 style={style}
-                linkUnavailableReason={linkUnavailableReason}
+                linkUnavailableReason={effectiveLinkUnavailableReason}
               />
             ))}
           </div>

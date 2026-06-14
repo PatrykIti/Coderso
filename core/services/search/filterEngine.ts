@@ -3,16 +3,18 @@ import {
   type ListingFilter,
   type ListingQuery,
   type ListingSort,
-} from "../content/queryBuilderService";
+} from "../content/listingQueryContract";
 import { readListingRowField } from "../content/listingRuntimeResolver";
 import {
   LISTING_RUNTIME_QUERY_PREFIX,
   buildFacetSortToken,
   listingRuntimeTokens,
+  normalizeListingRuntimeSearchParams,
   resolveFacetToken,
   type ListingFacetConfig,
   type ListingFacetMetric,
   type ListingFilterOperator,
+  type ListingRuntimeAliasMap,
 } from "./filterContract";
 
 const runtimeSortToken = listingRuntimeTokens.sort;
@@ -233,10 +235,16 @@ const rowMatchesOption = (rowValue: unknown, optionValue: string) => {
 
 export function parseListingRuntimeOverrides(
   searchParams: URLSearchParams,
-  listingQueryId: string
+  listingQueryId: string,
+  aliases?: ListingRuntimeAliasMap
 ): ListingRuntimeOverrideDraft {
   const normalizedListingQueryId = listingQueryId.trim();
   const prefix = `${LISTING_RUNTIME_QUERY_PREFIX}.${normalizedListingQueryId}.`;
+  const normalizedSearchParams = normalizeListingRuntimeSearchParams(
+    searchParams,
+    normalizedListingQueryId,
+    aliases
+  );
   const rawTokens = new Map<string, string[]>();
   const filters: ListingRuntimeFilterDraft[] = [];
   let sort: ListingRuntimeSortDraft | null = null;
@@ -244,7 +252,7 @@ export function parseListingRuntimeOverrides(
   let searchQuery: string | null = null;
   const rejectedTokens: string[] = [];
 
-  for (const [key, value] of searchParams.entries()) {
+  for (const [key, value] of normalizedSearchParams.entries()) {
     if (!key.startsWith(prefix)) continue;
     const token = key.slice(prefix.length).trim();
     if (!token) continue;

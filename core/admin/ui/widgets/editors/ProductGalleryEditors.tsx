@@ -597,9 +597,7 @@ function ProductGalleryPreviewSummary({
         ) : null}
       </div>
       {typeof onRefresh !== "function" ? (
-        <p className="text-xs">
-          Preview refresh is available inside page and widget-template editors.
-        </p>
+        <p className="text-xs">Preview refresh is available inside the page editor.</p>
       ) : null}
     </div>
   );

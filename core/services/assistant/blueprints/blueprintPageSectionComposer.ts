@@ -1,11 +1,12 @@
-import { ensureRuntimeWidgetsRegistered } from "../../../widgets/runtime";
-import type { WidgetBlock } from "../../../widgets/types";
-import { normalizeWidgetBlock } from "../../../widgets/validator";
 import type { PageCollectionLink } from "../../pages/pageCollectionLink";
-import type { AssistantPageUpsertAction } from "../actionPlanTypes";
-import { buildBlueprintPageSectionSeed } from "./blueprintPageSectionLibrary";
-
-type AssistantPageUpsertInput = AssistantPageUpsertAction["input"];
+import {
+  createPageBlockV2,
+  createPageSectionV2,
+  normalizePageDocumentV2ForWrite,
+  type PageBlockV2,
+  type PageDocumentV2,
+  type PageSectionV2,
+} from "../../pages/pageDocumentV2";
 
 type ResolvedFormEmbed = {
   formId: string;
@@ -18,196 +19,232 @@ type ResolvedFormEmbed = {
 export type BlueprintPageSectionCompositionInput = {
   introTitle: string;
   introBody: string;
-  blocks?: WidgetBlock[];
+  sections?: PageSectionV2[];
   listingQueryId?: string | null;
   listingTemplateId?: string | null;
   ctaLabel?: string | null;
-  contentListStyle?: AssistantPageUpsertInput["contentListStyle"];
-  listingFilters?: AssistantPageUpsertInput["listingFilters"];
+  contentListStyle?: {
+    columns?: "1" | "2" | "3";
+    cardStyle?: "outlined" | "elevated" | "minimal";
+  };
+  listingFilters?: {
+    title: string;
+    description: string;
+    autoApply: boolean;
+    showSearch: boolean;
+    searchPlaceholder: string;
+    searchLabel: string;
+    applyLabel: string;
+    facets: Array<Record<string, unknown>>;
+  } | null;
   formEmbed?: ResolvedFormEmbed | null;
   collectionLink?: PageCollectionLink | null;
 };
 
-const normalizePageBlock = (block: WidgetBlock) => {
-  ensureRuntimeWidgetsRegistered();
-  return normalizeWidgetBlock(block);
-};
-
-const buildResolvedFormEmbedBlock = (input: { id: string; formEmbed: ResolvedFormEmbed }) =>
-  buildBlueprintPageSectionSeed("form-embed", {
-    id: input.id,
-    data: {
-      formId: input.formEmbed.formId,
-      title: input.formEmbed.title,
-      description: input.formEmbed.description,
-      submitLabel: input.formEmbed.submitLabel,
-      successMessage: input.formEmbed.successMessage,
-      layout: {
-        alignment: "start",
-        width: "lg",
-        spacing: "md",
-        buttonAlignment: "start",
-      },
-      style: {
-        background: "transparent",
-        surface: "var(--color-bg)",
-        borderColor: "var(--color-border)",
-        borderWidth: "1",
-        radius: "md",
-        inputSize: "md",
-      },
-      fields: {
-        showLabels: true,
-        showRequiredIndicator: true,
-      },
-    },
+const cloneSection = (section: PageSectionV2) =>
+  createPageSectionV2(section.type, {
+    ...section,
+    blocks: section.blocks.map((block) => createPageBlockV2(block.type, block)),
   });
 
-const composeCollectionBlocks = (
-  input: Required<
-    Pick<BlueprintPageSectionCompositionInput, "listingQueryId" | "listingTemplateId">
-  > &
-    Pick<
-      BlueprintPageSectionCompositionInput,
-      "blocks" | "ctaLabel" | "contentListStyle" | "listingFilters" | "formEmbed"
-    >
-) => {
-  const inputBlocks = (input.blocks ?? []).map(normalizePageBlock);
-  const beforeCollectionBlocks = inputBlocks.filter((block) => block.type !== "footer");
-  const afterCollectionBlocks = inputBlocks.filter((block) => block.type === "footer");
+const splitTrailingFooterSections = (sections: PageSectionV2[] | undefined) => {
+  const cloned = (sections ?? []).map(cloneSection);
+  const trailing: PageSectionV2[] = [];
 
-  return [
-    ...beforeCollectionBlocks,
-    ...(input.listingFilters
-      ? [
-          buildBlueprintPageSectionSeed("listing-filters", {
-            id: "catalog-listing-filters",
-            data: {
-              listingQueryId: input.listingQueryId,
-              title: input.listingFilters.title,
-              description: input.listingFilters.description,
-              autoApply: input.listingFilters.autoApply,
-              showSearch: input.listingFilters.showSearch,
-              searchPlaceholder: input.listingFilters.searchPlaceholder,
-              searchLabel: input.listingFilters.searchLabel,
-              applyLabel: input.listingFilters.applyLabel,
-              facets: input.listingFilters.facets,
-              resolved: {
-                listingQueryId: input.listingQueryId,
-                metrics: [],
-                searchQuery: "",
-                rejectedTokens: [],
-              },
-            },
-          }),
-        ]
-      : []),
-    buildBlueprintPageSectionSeed("content-list", {
-      id: "catalog-content-list",
-      variant: "cards",
-      data: {
-        source: {
+  while (cloned.length > 0) {
+    const section = cloned.at(-1);
+    if (!section || section.type !== "cta" || !/footer/i.test(`${section.id} ${section.name}`)) {
+      break;
+    }
+    trailing.unshift(cloned.pop()!);
+  }
+
+  return { body: cloned, footer: trailing };
+};
+
+const headingBlock = (id: string, text: string, level: "h1" | "h2" = "h2"): PageBlockV2 =>
+  createPageBlockV2("heading", {
+    id,
+    props: { text, level, align: level === "h1" ? "center" : "left" },
+  });
+
+const textBlock = (id: string, text: string, align: "left" | "center" = "left"): PageBlockV2 =>
+  createPageBlockV2("text", {
+    id,
+    props: { text, format: "plain", align },
+  });
+
+const createIntroSection = (input: BlueprintPageSectionCompositionInput) =>
+  createPageSectionV2("hero", {
+    id: "assistant-intro",
+    name: "Intro",
+    variant: "centered",
+    blocks: [
+      headingBlock("assistant-intro-heading", input.introTitle, "h1"),
+      textBlock("assistant-intro-copy", input.introBody, "center"),
+    ],
+  });
+
+/**
+ * Canonical filters composition (TASK-459-02, frozen TASK-459-01 decision):
+ * the filter surface is the dedicated `filters` BLOCK bound to the same
+ * saved query the sibling collection block lists. The historical shape — a
+ * collection block carrying `mode: "filters"` — keeps rendering through the
+ * non-destructive legacy adapter in `pageDocumentV2`, but the composer emits
+ * the canonical block going forward.
+ */
+const createListingFiltersSection = (
+  filters: NonNullable<BlueprintPageSectionCompositionInput["listingFilters"]>,
+  listingQueryId: string
+) =>
+  createPageSectionV2("filters", {
+    id: "assistant-listing-filters",
+    name: filters.title,
+    variant: "compact",
+    blocks: [
+      headingBlock("assistant-listing-filters-heading", filters.title),
+      textBlock("assistant-listing-filters-copy", filters.description),
+      createPageBlockV2("filters", {
+        id: "assistant-listing-filters-block",
+        props: {
+          queryId: listingQueryId,
+          autoApply: filters.autoApply,
+          showSearch: filters.showSearch,
+          searchPlaceholder: filters.searchPlaceholder,
+          searchLabel: filters.searchLabel,
+          applyLabel: filters.applyLabel,
+          facets: filters.facets,
+        },
+      }),
+    ],
+  });
+
+const createCollectionSection = (input: {
+  listingQueryId: string;
+  listingTemplateId: string;
+  ctaLabel?: string | null;
+  contentListStyle?: BlueprintPageSectionCompositionInput["contentListStyle"];
+}) =>
+  createPageSectionV2("collection", {
+    id: "assistant-content-list",
+    name: "Collection",
+    variant: "cards",
+    layout: {
+      columns: Number(input.contentListStyle?.columns ?? 3),
+      align: "stretch",
+      justify: "start",
+      maxWidth: 1080,
+    },
+    blocks: [
+      createPageBlockV2("collection", {
+        id: "assistant-content-list-block",
+        props: {
           mode: "listing",
-          listingQueryId: input.listingQueryId,
-          listingTemplateId: input.listingTemplateId,
+          queryId: input.listingQueryId,
+          templateId: input.listingTemplateId,
           statusScope: "published",
           limit: 9,
           sort: "title-asc",
-        },
-        fields: {
-          showImage: true,
-          showExcerpt: true,
-          showMeta: true,
-          showCta: true,
-        },
-        emptyState: {
-          title: "No catalog items yet",
-          description: "Add your first catalog entry in Coderso to populate this page.",
-        },
-        style: {
-          columns: input.contentListStyle?.columns ?? "3",
-          gap: "md",
           cardStyle: input.contentListStyle?.cardStyle ?? "outlined",
           ctaLabel: input.ctaLabel ?? "Read more",
-          backgroundColor: "var(--color-bg)",
-          borderColor: "var(--color-border)",
-          textColor: "var(--color-text)",
         },
-        resolved: {
-          items: [],
-          total: 0,
-          sourceTypeId: "",
-          sourceTypeSlug: "",
-          listingQueryId: input.listingQueryId,
-          listingTemplateId: input.listingTemplateId,
-          resolvedAt: "",
-          runtime: {
-            rejectedTokens: [],
-            searchQuery: "",
-            page: 1,
-          },
+      }),
+    ],
+  });
+
+const createFormSection = (id: string, formEmbed: ResolvedFormEmbed) =>
+  createPageSectionV2("lead-form", {
+    id,
+    name: formEmbed.title,
+    blocks: [
+      headingBlock(`${id}-heading`, formEmbed.title),
+      textBlock(`${id}-copy`, formEmbed.description),
+      createPageBlockV2("form", {
+        id: `${id}-form`,
+        props: {
+          formId: formEmbed.formId,
+          submitLabel: formEmbed.submitLabel,
+          successMessage: formEmbed.successMessage,
         },
-      },
+      }),
+    ],
+  });
+
+const composeCollectionSections = (
+  input: {
+    listingQueryId: string;
+    listingTemplateId: string;
+  } & Pick<
+    BlueprintPageSectionCompositionInput,
+    "sections" | "ctaLabel" | "contentListStyle" | "listingFilters" | "formEmbed"
+  >
+) => {
+  const { body, footer } = splitTrailingFooterSections(input.sections);
+  return [
+    ...body,
+    ...(input.listingFilters
+      ? [createListingFiltersSection(input.listingFilters, input.listingQueryId)]
+      : []),
+    createCollectionSection({
+      listingQueryId: input.listingQueryId,
+      listingTemplateId: input.listingTemplateId,
+      ctaLabel: input.ctaLabel,
+      contentListStyle: input.contentListStyle,
     }),
     ...(input.formEmbed
-      ? [
-          buildResolvedFormEmbedBlock({
-            id: "catalog-inquiry-form",
-            formEmbed: input.formEmbed,
-          }),
-        ]
+      ? [createFormSection("assistant-catalog-inquiry-form", input.formEmbed)]
       : []),
-    ...afterCollectionBlocks,
+    ...footer,
   ];
 };
 
-const composeSimpleBlocks = (
-  input: Pick<BlueprintPageSectionCompositionInput, "blocks" | "formEmbed">
+const composeSimpleSections = (
+  input: Pick<
+    BlueprintPageSectionCompositionInput,
+    "introTitle" | "introBody" | "sections" | "formEmbed"
+  >
 ) => {
-  const inputBlocks = (input.blocks ?? []).map(normalizePageBlock);
-  const beforeFormBlocks = inputBlocks.filter((block) => block.type !== "footer");
-  const afterFormBlocks = inputBlocks.filter((block) => block.type === "footer");
-
+  const { body, footer } = splitTrailingFooterSections(input.sections);
   return [
-    ...beforeFormBlocks,
-    ...(input.formEmbed
-      ? [
-          buildResolvedFormEmbedBlock({
-            id: "lead-capture-form",
-            formEmbed: input.formEmbed,
-          }),
-        ]
-      : []),
-    ...afterFormBlocks,
+    ...(body.length > 0 ? body : [createIntroSection(input)]),
+    ...(input.formEmbed ? [createFormSection("assistant-lead-capture-form", input.formEmbed)] : []),
+    ...footer,
   ];
 };
 
-export const composeBlueprintPageData = (input: BlueprintPageSectionCompositionInput) => {
-  const blocks =
+export const composeBlueprintPageData = (
+  input: BlueprintPageSectionCompositionInput
+): PageDocumentV2 => {
+  const sections =
     input.listingQueryId && input.listingTemplateId
-      ? composeCollectionBlocks({
+      ? composeCollectionSections({
           listingQueryId: input.listingQueryId,
           listingTemplateId: input.listingTemplateId,
-          blocks: input.blocks,
+          sections: input.sections,
           ctaLabel: input.ctaLabel,
           contentListStyle: input.contentListStyle,
           listingFilters: input.listingFilters,
           formEmbed: input.formEmbed,
         })
-      : composeSimpleBlocks({
-          blocks: input.blocks,
+      : composeSimpleSections({
+          introTitle: input.introTitle,
+          introBody: input.introBody,
+          sections: input.sections,
           formEmbed: input.formEmbed,
         });
 
-  return {
-    blocks,
+  return normalizePageDocumentV2ForWrite({
+    schemaVersion: 2,
+    breakpoints: ["desktop", "tablet", "mobile"],
+    seo: {
+      title: input.introTitle,
+      description: input.introBody,
+    },
     settings: {
+      template: "page-v2",
       showInNav: true,
-      seo: {
-        title: input.introTitle,
-        description: input.introBody,
-      },
       ...(input.collectionLink ? { collectionLink: input.collectionLink } : {}),
     },
-  };
+    sections,
+  });
 };

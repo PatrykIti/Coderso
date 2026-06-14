@@ -140,9 +140,10 @@ Use this safe Assistant Settings order when you want fewer runtime mistakes:
 - The current LLM Guide surface supports typed actions for catalog,
   lead-capture, product-inquiry, portfolio, editorial-hub, site-kit setup flows,
   and reviewed edits/deletes for supported existing admin resources. Booking,
-  checkout/payment, webhook automation, nested page widget patches, and
-  installed-kit refinements remain gated until their adapters and hardening are
-  explicit.
+  checkout/payment, webhook automation, fine-grained existing Page
+  section/block patch actions beyond reviewed Page upserts/metadata updates,
+  and installed-kit refinements remain gated until their adapters and hardening
+  are explicit.
 - Token/time limits and request quotas are part of runtime governance, not only
   technical tuning.
 - The launcher avatar settings affect assistant presentation, but they should

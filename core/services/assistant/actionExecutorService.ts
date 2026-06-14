@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 
-import { getSetting, setSetting, type ContentRouteSetting } from "../settings/settingsService";
+import { getSetting, setSetting } from "../settings/settingsService";
+import type { ContentRouteSetting } from "../settings/settingsContracts";
 import {
   createContentType,
   getContentType,
@@ -101,6 +102,7 @@ import type { WidgetBlock } from "../../widgets/types";
 import { composeBlueprintPageData } from "./blueprints/blueprintPageSectionComposer";
 import { isCuratedMediaUrl } from "../media/curatedMediaProfiles";
 import { normalizePageCollectionLink, type PageCollectionLink } from "../pages/pageCollectionLink";
+import type { PageSectionV2 } from "../pages/pageDocumentV2";
 import type {
   AssistantActionDryRunResult,
   AssistantActionExecuteResult,
@@ -138,7 +140,6 @@ import type {
   AssistantMenuItemUpdateAction,
   AssistantMenuItemUpsertAction,
   AssistantMenuUpsertAction,
-  AssistantPageWidgetPatchAction,
   AssistantPageUpdateAction,
   AssistantPageUpsertAction,
   AssistantPageDeleteAction,
@@ -277,7 +278,7 @@ const reconcileLaunchReadinessAfterExecution = (
     (action) => action.type === "entry.sample.create" && action.input.seo
   ).length;
   const successfulPagesWithCuratedMedia = successfulActions.filter(
-    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.blocks)
+    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.sections)
   );
   const successfulCuratedMediaPageSlugs = new Set(
     successfulPagesWithCuratedMedia
@@ -285,7 +286,7 @@ const reconcileLaunchReadinessAfterExecution = (
       .filter((slug): slug is string => Boolean(slug))
   );
   const plannedPagesWithCuratedMedia = plan.actions.filter(
-    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.blocks)
+    (action) => action.type === "page.upsert" && hasCuratedMediaUrl(action.input.sections)
   );
   const successfulEntrySamplesWithCuratedMedia = successfulActions.filter(
     (action) =>
@@ -399,15 +400,16 @@ const readCatalogBlockSource = (page: unknown) => {
       ? page.publishedData
       : null;
   if (!sourceData) return null;
-  const blocks = Array.isArray(sourceData.blocks) ? sourceData.blocks : [];
+  const sections = Array.isArray(sourceData.sections) ? sourceData.sections : [];
+  const blocks = sections.flatMap((section) =>
+    isRecord(section) && Array.isArray(section.blocks) ? section.blocks : []
+  );
 
   for (const block of blocks) {
     if (!isRecord(block)) continue;
-    if (block.type !== "content-list") continue;
-    const data = isRecord(block.data) ? block.data : {};
-    const source = isRecord(data.source) ? data.source : {};
-    const listingQueryId = readString(source.listingQueryId);
-    const listingTemplateId = readString(source.listingTemplateId);
+    const props = isRecord(block.props) ? block.props : {};
+    const listingQueryId = readString(props.queryId) ?? readString(props.listingQueryId);
+    const listingTemplateId = readString(props.templateId) ?? readString(props.listingTemplateId);
     if (!listingQueryId && !listingTemplateId) continue;
     return { listingQueryId, listingTemplateId };
   }
@@ -446,13 +448,16 @@ const readFormEmbedSource = (page: unknown) => {
       ? page.publishedData
       : null;
   if (!sourceData) return null;
-  const blocks = Array.isArray(sourceData.blocks) ? sourceData.blocks : [];
+  const sections = Array.isArray(sourceData.sections) ? sourceData.sections : [];
+  const blocks = sections.flatMap((section) =>
+    isRecord(section) && Array.isArray(section.blocks) ? section.blocks : []
+  );
 
   for (const block of blocks) {
     if (!isRecord(block)) continue;
-    if (block.type !== "form-embed") continue;
-    const data = isRecord(block.data) ? block.data : {};
-    const formId = readString(data.formId);
+    if (block.type !== "form") continue;
+    const props = isRecord(block.props) ? block.props : {};
+    const formId = readString(props.formId);
     if (formId) return { formId };
   }
 
@@ -557,7 +562,7 @@ const formatListingReferenceSummary = (references: ListingResourceReference[]) =
 const buildCatalogPageData = (input: {
   introTitle: string;
   introBody: string;
-  blocks?: WidgetBlock[];
+  sections?: PageSectionV2[];
   listingQueryId: string;
   listingTemplateId: string;
   ctaLabel: string;
@@ -587,7 +592,7 @@ const buildCatalogPageData = (input: {
   composeBlueprintPageData({
     introTitle: input.introTitle,
     introBody: input.introBody,
-    blocks: input.blocks,
+    sections: input.sections,
     listingQueryId: input.listingQueryId,
     listingTemplateId: input.listingTemplateId,
     ctaLabel: input.ctaLabel,
@@ -600,7 +605,7 @@ const buildCatalogPageData = (input: {
 const buildSimplePageData = (input: {
   introTitle: string;
   introBody: string;
-  blocks?: WidgetBlock[];
+  sections?: PageSectionV2[];
   formEmbed?: {
     formId: string;
     title: string;
@@ -613,7 +618,7 @@ const buildSimplePageData = (input: {
   composeBlueprintPageData({
     introTitle: input.introTitle,
     introBody: input.introBody,
-    blocks: input.blocks,
+    sections: input.sections,
     formEmbed: input.formEmbed,
     collectionLink: input.collectionLink,
   });
@@ -1703,108 +1708,9 @@ const buildListingTemplateUpdatePreview = async (
   });
 };
 
-const readPageBlocks = (page: unknown): WidgetBlock[] => {
-  if (!isRecord(page)) return [];
-  const data = isRecord(page.currentData) ? page.currentData : {};
-  return Array.isArray(data.blocks) ? (data.blocks as WidgetBlock[]) : [];
-};
-
 const normalizeAssistantPagePatchBlock = (block: WidgetBlock) => {
   ensureRuntimeWidgetsRegistered();
   return normalizeWidgetBlock(block);
-};
-
-const applyPageWidgetPatch = (blocks: WidgetBlock[], patchBlock: WidgetBlock) => {
-  const normalized = normalizeAssistantPagePatchBlock(patchBlock);
-  const existingIndex = blocks.findIndex((block) => block?.id === normalized.id);
-  if (existingIndex >= 0) {
-    const next = [...blocks];
-    next[existingIndex] = normalized;
-    return next;
-  }
-  return [...blocks, normalized];
-};
-
-const buildPageWidgetPatchPreview = async (
-  action: AssistantPageWidgetPatchAction,
-  deps: ActionExecutorDeps
-) => {
-  const existing = await deps.getPageBySlug(action.input.pageSlug);
-  const blocks = readPageBlocks(existing);
-  if (action.input.operation === "patch-data") {
-    const patch = existing ? applyPageWidgetDataPatch(blocks, action.input) : null;
-    const conflictMessage =
-      patch?.status === "missing_block"
-        ? "Selected page widget block was not found."
-        : patch?.status === "type_mismatch"
-          ? "Selected page widget block type changed."
-          : patch?.status === "missing_path"
-            ? "Selected page widget data path does not exist."
-            : "Page is required before widget block can be patched.";
-
-    return createPreviewChange({
-      action,
-      targetType: "page",
-      targetKey: `${action.input.pageSlug}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
-      summary: `Patch widget block "${action.input.blockId}" on page ${action.input.pageSlug}`,
-      warnings: existing ? [] : ["The page does not exist."],
-      conflicts:
-        existing && patch?.status === "ok"
-          ? []
-          : [
-              {
-                code: "assistant_action_dependency_missing",
-                severity: "error",
-                message: conflictMessage,
-              },
-            ],
-      beforeValue:
-        existing && patch?.status === "ok"
-          ? {
-              blockId: action.input.blockId,
-              dataPath: action.input.dataPath,
-              value: patch.beforeValue,
-            }
-          : null,
-      nextValue:
-        existing && patch?.status === "ok"
-          ? {
-              blockId: action.input.blockId,
-              dataPath: action.input.dataPath,
-              value: patch.nextValue,
-            }
-          : null,
-    });
-  }
-
-  const nextBlocks = existing ? applyPageWidgetPatch(blocks, action.input.block) : [];
-
-  return createPreviewChange({
-    action,
-    targetType: "page",
-    targetKey: `${action.input.pageSlug}/${action.input.block.id}`,
-    summary: `Upsert widget block "${action.input.block.id}" on page ${action.input.pageSlug}`,
-    warnings: existing ? [] : ["The page does not exist."],
-    conflicts: existing
-      ? []
-      : [
-          {
-            code: "assistant_action_dependency_missing",
-            severity: "error",
-            message: "Page is required before widget block can be patched.",
-          },
-        ],
-    beforeValue: existing
-      ? {
-          blocks,
-        }
-      : null,
-    nextValue: existing
-      ? {
-          blocks: nextBlocks,
-        }
-      : null,
-  });
 };
 
 const buildFormAutomationPreview = async (
@@ -2972,7 +2878,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, ctx: ActionHa
   const deps = ctx.deps;
   const existing = await deps.getPageBySlug(action.input.slug);
   const simplePageMode =
-    Boolean(action.input.blocks) ||
+    Boolean(action.input.sections) ||
     !action.input.listingQueryName ||
     !action.input.listingTemplateSlug;
   const existingData = isRecord(existing?.currentData) ? existing.currentData : {};
@@ -3121,7 +3027,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, ctx: ActionHa
                   status: existing.status,
                   ...(simplePageMode
                     ? {
-                        blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                        sections: Array.isArray(existingData.sections) ? existingData.sections : [],
                         formEmbed: action.input.formEmbed ?? null,
                         collectionLink: existingCollectionLink,
                       }
@@ -3152,7 +3058,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, ctx: ActionHa
                   status: existing.status,
                   ...(simplePageMode
                     ? {
-                        blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                        sections: Array.isArray(existingData.sections) ? existingData.sections : [],
                         formEmbed: action.input.formEmbed ?? null,
                         collectionLink: existingCollectionLink,
                       }
@@ -3171,24 +3077,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, ctx: ActionHa
         title: action.input.title,
         slug: action.input.slug,
         status: action.input.status,
-        blocks: [
-          ...(action.input.blocks ?? []).map(normalizeAssistantPagePatchBlock),
-          ...(action.input.formEmbed
-            ? [
-                normalizeAssistantPagePatchBlock({
-                  id: "lead-capture-form",
-                  type: "form-embed",
-                  data: {
-                    ...(form ? { formId: form.id } : {}),
-                    title: action.input.formEmbed.title,
-                    description: action.input.formEmbed.description,
-                    submitLabel: action.input.formEmbed.submitLabel,
-                    successMessage: action.input.formEmbed.successMessage,
-                  },
-                }),
-              ]
-            : []),
-        ],
+        sections: action.input.sections ?? [],
         formEmbed: action.input.formEmbed ?? null,
         collectionLink: resolvedCollectionLink,
       }
@@ -3217,7 +3106,7 @@ const buildPagePreview = async (action: AssistantPageUpsertAction, ctx: ActionHa
           status: existing.status,
           ...(simplePageMode
             ? {
-                blocks: Array.isArray(existingData.blocks) ? existingData.blocks : [],
+                sections: Array.isArray(existingData.sections) ? existingData.sections : [],
                 formEmbed: action.input.formEmbed ?? null,
                 collectionLink: existingCollectionLink,
               }
@@ -4479,58 +4368,6 @@ const executeListingTemplateUpdateAction = async (
   };
 };
 
-const executePageWidgetPatchAction = async (
-  action: AssistantPageWidgetPatchAction,
-  preview: AssistantActionPreviewChange,
-  deps: ActionExecutorDeps
-) => {
-  const existing = await deps.getPageBySlug(action.input.pageSlug);
-  if (!existing) {
-    throw new Error("assistant_action_dependency_missing");
-  }
-  const currentData = isRecord(existing.currentData) ? existing.currentData : {};
-  const blocks = Array.isArray(currentData.blocks) ? (currentData.blocks as WidgetBlock[]) : [];
-  let nextBlocks: WidgetBlock[];
-  if (action.input.operation === "patch-data") {
-    const patch = applyPageWidgetDataPatch(blocks, action.input);
-    if (patch.status !== "ok") {
-      throw new Error("assistant_action_dependency_missing");
-    }
-    normalizeAssistantPagePatchBlock(patch.block!);
-    nextBlocks = patch.blocks;
-  } else {
-    nextBlocks = applyPageWidgetPatch(blocks, action.input.block);
-  }
-  const record =
-    preview.operation === "noop"
-      ? existing
-      : await deps.updatePage(existing.id, {
-          data: {
-            ...currentData,
-            blocks: nextBlocks,
-          },
-        });
-
-  return {
-    actionId: action.id,
-    type: action.type,
-    targetType: "page",
-    targetKey:
-      action.input.operation === "patch-data"
-        ? `${action.input.pageSlug}/${action.input.blockId}/${action.input.dataPath.join(".")}`
-        : `${action.input.pageSlug}/${action.input.block.id}`,
-    operation: preview.operation,
-    status: "success" as const,
-    resourceId: record?.id ?? null,
-    adminHref: record ? `/admin/pages/${encodeURIComponent(record.id)}` : "/admin/pages",
-    publicHref: action.input.pageSlug,
-    message:
-      preview.operation === "noop"
-        ? "Page widget block already matched the planned patch."
-        : "Page widget block is updated.",
-  };
-};
-
 const executeFormAutomationAction = async (
   action: AssistantFormAutomationUpsertAction,
   preview: AssistantActionPreviewChange,
@@ -5346,19 +5183,19 @@ const executePageAction = async (
     ? buildSimplePageData({
         introTitle: action.input.introTitle,
         introBody: action.input.introBody,
-        blocks: action.input.blocks,
+        sections: action.input.sections,
         formEmbed: resolvedFormEmbed,
         collectionLink: resolvedCollectionLink,
       })
     : buildCatalogPageData({
         introTitle: action.input.introTitle,
         introBody: action.input.introBody,
-        blocks: action.input.blocks,
         listingQueryId: listingQuery!.id,
         listingTemplateId: listingTemplate!.id,
         ctaLabel: action.input.ctaLabel ?? "Read more",
         contentListStyle: action.input.contentListStyle,
         listingFilters: action.input.listingFilters,
+        sections: action.input.sections,
         formEmbed: resolvedFormEmbed,
         collectionLink: resolvedCollectionLink,
       });
@@ -5947,16 +5784,6 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
     execute: (action, preview, ctx) =>
       action.type === "listing-template.card.patch"
         ? executeListingTemplateCardPatchAction(action, preview, ctx.deps)
-        : unexpectedAction(),
-  },
-  "page.widget.patch": {
-    preview: (action, ctx) =>
-      action.type === "page.widget.patch"
-        ? buildPageWidgetPatchPreview(action, ctx.deps)
-        : unexpectedAction(),
-    execute: (action, preview, ctx) =>
-      action.type === "page.widget.patch"
-        ? executePageWidgetPatchAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "form.automation.upsert": {

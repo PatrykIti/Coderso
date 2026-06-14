@@ -1,11 +1,8 @@
 import { executeCommerceQuery, type CommerceQueryInput } from "./commerceQueryService";
 import type { CommerceProduct } from "./commerceTypes";
 import { getMediaById } from "../media/mediaService";
-import {
-  getSetting,
-  normalizeContentRoutes,
-  type ContentRouteSetting,
-} from "../settings/settingsService";
+import { getSetting } from "../settings/settingsService";
+import { normalizeContentRoutes, type ContentRouteSetting } from "../settings/settingsContracts";
 
 export type CommerceRuntimeCard = {
   id: string;

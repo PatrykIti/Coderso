@@ -27,8 +27,7 @@ const action = (
 const readOnlyAction = (operation: AssistantPolicyAction["operation"] = "inspect") =>
   action(operation, "read-only");
 
-const gatedAction = (operation: AssistantPolicyAction["operation"]) =>
-  action(operation, "gated");
+const gatedAction = (operation: AssistantPolicyAction["operation"]) => action(operation, "gated");
 
 const notApplicableAction = (operation: AssistantPolicyAction["operation"] = "inspect") =>
   action(operation, "not-applicable");
@@ -152,7 +151,8 @@ export const filtersPolicy: AssistantResourcePolicy = modulePolicy({
   },
   coverageState: "live-gated",
   task: "TASK-184-11",
-  notes: "Filter/search module prompts stay non-executable unless covered by listing typed actions.",
+  notes:
+    "Filter/search module prompts stay non-executable unless covered by listing typed actions.",
 });
 
 export const advancedSearchPolicy: AssistantResourcePolicy = modulePolicy({
@@ -192,9 +192,17 @@ export const bookingPolicy: AssistantResourcePolicy = modulePolicy({
     resources: field("resources", ["resources", "staff", "rooms"], "record"),
     services: field("services", ["services", "usługi", "uslugi"], "record"),
     schedule: field("schedule", ["schedule", "calendar", "kalendarz"], "record"),
-    access: field("submissionAccess", ["access", "public", "internal"], "enum", ["public", "internal"]),
+    access: field("submissionAccess", ["access", "public", "internal"], "enum", [
+      "public",
+      "internal",
+    ]),
   },
-  secrets: redactedSecrets(["customer.email", "customer.phone", "reservation.notes", "payment.intent"]),
+  secrets: redactedSecrets([
+    "customer.email",
+    "customer.phone",
+    "reservation.notes",
+    "payment.intent",
+  ]),
   destructive: gatedDestructivePolicy,
   coverageState: "live-gated",
   task: "TASK-184-11",
@@ -225,7 +233,11 @@ export const reviewsPolicy: AssistantResourcePolicy = modulePolicy({
   executePermissions: ["reviews:write"],
   actions: previewGatedActions,
   fields: {
-    status: field("status", ["status", "approved", "pending"], "enum", ["pending", "approved", "rejected"]),
+    status: field("status", ["status", "approved", "pending"], "enum", [
+      "pending",
+      "approved",
+      "rejected",
+    ]),
     rating: field("rating", ["rating", "ocena"], "number"),
     author: field("author", ["author", "customer", "klient"], "string"),
   },
@@ -250,7 +262,12 @@ export const commercePolicy: AssistantResourcePolicy = modulePolicy({
     price: field("price", ["price", "cena"], "number"),
     checkout: field("checkout", ["checkout", "payment", "płatność", "platnosc"], "record"),
   },
-  secrets: redactedSecrets(["payment.secret", "checkout.token", "customer.email", "customer.address"]),
+  secrets: redactedSecrets([
+    "payment.secret",
+    "checkout.token",
+    "customer.email",
+    "customer.address",
+  ]),
   destructive: gatedDestructivePolicy,
   coverageState: "live-gated",
   task: "TASK-184-11",
@@ -390,8 +407,24 @@ export const themePolicy: AssistantResourcePolicy = modulePolicy({
   notes: "Theme mutation prompts stay non-executable without typed contracts.",
 });
 
+export const pageTemplatesPolicy: AssistantResourcePolicy = modulePolicy({
+  kind: "page-template",
+  label: "Page Templates",
+  aliases: ["page template", "page templates", "szablon strony", "szablony stron"],
+  route: "/admin/advanced/page-templates",
+  operations: ["inspect"],
+  readPermissions: ["content:read"],
+  executePermissions: ["content:write"],
+  actions: previewGatedActions,
+  coverageState: "live-gated",
+  task: "TASK-420-03",
+  notes:
+    "Page Templates editor advertises no assistant active surface in v1; prompts stay manual-UI gated.",
+});
+
 export const advancedModulePolicies = {
   post: postPolicy,
+  "page-template": pageTemplatesPolicy,
   filters: filtersPolicy,
   "advanced-search": advancedSearchPolicy,
   booking: bookingPolicy,

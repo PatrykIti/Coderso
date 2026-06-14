@@ -81,13 +81,17 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `commerce:products:detail:<id>`
 - `commerce:collections:list`
 - `widgetCatalog:list`
-- `widgetTemplateCategories:list`
-- `widgetTemplates:list`
-- `widgetTemplates:detail:<id>`
+- `pageTemplates:list`
+- `pageTemplates:detail:<id>`
 - `media:list`
 - `adminThemeTemplates:list`
 - `adminThemeProfiles:list`
 - `settings:redacted`
+
+Page detail cache payloads use the Pages v2 document contract:
+`currentData`/`publishedData` are `schemaVersion: 2` documents with
+`sections[]`; the old Page `blocks[]` shape is rejected for fresh writes and
+legacy stored rows are normalized before admin caching.
 
 ## Prefetch
 - Sidebar navigation can trigger optional prefetch on hover/focus.
@@ -119,7 +123,9 @@ Defined in `core/admin/services/cachePolicy.ts`:
   `/admin/redirects` warms `redirects:list`.
 - `/settings` prefetch warms only `settings:redacted` with `{ force: false }`.
   `/settings/site` additionally warms `pages:list` and `contentTypes:list` for
-  selectors, also with `{ force: false }`.
+  selectors, also with `{ force: false }`. The Site shell pickers moved to the
+  Menus-surface `SiteShellDialog` (TASK-458-01), which loads `menus:list` and
+  `pageTemplates:list` lazily on dialog open instead of via prefetch.
 
 ### Prefetch budgets
 - Per-hover burst request budget is gated by:
@@ -203,6 +209,12 @@ Contract:
 `core/admin/utils/cacheBus.ts` broadcasts cache events:
 - Primary: `BroadcastChannel`.
 - Fallback: `localStorage` storage event.
+- Consumers must treat broadcasts as hints, not truth: the Page Editor
+  rehydrates from `pages:detail:<id>` events only when the cached record is
+  strictly newer (`updatedAt`) than the loaded page (TASK-449-02). Stale,
+  same-timestamp, or unparsable records are ignored so a replayed/poisoned
+  cache event can never replace newer live editor content; the dirty-state
+  guard is unchanged.
 - Same-tab subscribers are notified directly after broadcast, so assistant
   executions and other mutations can refresh the current admin surface without
   waiting for a cross-tab storage event or full reload.
@@ -258,9 +270,22 @@ contain credentials or security-sensitive material.
   cache entry exists; otherwise it broadcasts `invalidate` and clears the
   redacted settings cache.
 - Site Settings hydrates from `settings:redacted`, `pages:list`, and
-  `contentTypes:list`, revalidates Settings in the background when cache exists,
-  and no longer force-refetches pages/content types on every mount when those
-  selector caches are fresh.
+  `contentTypes:list`, revalidates Settings in the background when cache
+  exists, and no longer force-refetches selector lists on every mount when
+  those selector caches are fresh. The Site shell pickers (TASK-455) moved to
+  the Menus-surface `SiteShellDialog` (TASK-458-01): the dialog hydrates from
+  `settings:redacted`, `menus:list`, and `pageTemplates:list` lazily on open,
+  revalidates Settings in the background, and saves through a scoped partial
+  `updateSiteSettings()` PATCH carrying exactly the two shell keys.
+- Site shell reference keys (`site.navigationMenuId`, `site.footerTemplateId`)
+  are part of the redacted Site settings cache (nullable id strings only; no
+  secrets). Their server-side write path has an additional invalidation
+  trigger: because public page HTML embeds the rendered shell, any settings
+  write or delete touching either key clears the whole server-side public site
+  cache (`clearSiteCache()` in `core/services/settings/settingsService.ts`) so
+  the change propagates on the next render instead of waiting out the TTL.
+  This is the Bun runtime LRU (`core/site/cache/siteCache.ts`), not a browser
+  cache.
 - `settings:redacted` cache-bus updates hydrate from storage first, so same-tab
   and cross-tab mutations see the patched cache. Dirty Settings forms ignore
   background cache updates to avoid draft overwrites.
@@ -291,7 +316,6 @@ Clients update caches and broadcast events on:
   - `form.automation.upsert` -> `forms:actions:<id>`, `forms:action-runs:<id>`
   - `listing-query.*` -> `listings:queries:list`, touched `listings:queries:detail:<id>`
   - `listing-template.*` -> `listings:templates:list`, touched `listings:templates:detail:<id>`
-  - `widget-template.*` -> `widgetTemplates:list`, `widgetCatalog:list`, touched `widgetTemplates:detail:<id>`
   - `menu.item.*` -> `menus:list`, touched `menus:detail:<menuId>`
   - `seo.document.*` -> `seo:list`, touched `seo:detail:<id>`
 - `media.reference.attach`, `setting.content-route.upsert`, and `site-kit.*`
@@ -319,33 +343,49 @@ Clients update caches and broadcast events on:
   - Redirect create/update/delete patches `redirects:list` and broadcasts an
     update so other tabs refresh public-routing-affecting rows promptly.
 
-### Widget template cache note
+### Page templates cache note (TASK-420-03)
 
-- Widget template duplicate/create/update/delete mutations keep
-  `widgetTemplates:list`, touched `widgetTemplates:detail:<id>`, and
-  `widgetCatalog:list` synchronized through the existing widget template client
-  cache/bus contract.
-- `duplicateWidgetTemplate(id)` inserts the returned draft into cached template
-  lists, warms the new detail cache, broadcasts template/catalog updates, and
-  treats the server response as source of truth.
-- Failed name-conflict or delete mutations must not patch browser cache state.
+- Page Templates are owned by `core/admin/services/pageTemplatesClient.ts`
+  with keys `pageTemplates:list` and `pageTemplates:detail:<id>` (default
+  list/detail TTLs).
+- Create/update/duplicate broadcast `{ key: pageTemplates:list, action:
+  "update" }` plus the touched `pageTemplates:detail:<id>`; delete broadcasts
+  `invalidate` for the list and the detail key.
+- The list page (`/advanced/page-templates`) hydrates from cache, revalidates
+  in the background, and subscribes to `pageTemplates:list` cache-bus events.
+  TASK-460 moves the visible entry point to the Pages list header while keeping
+  this technical route and cache ownership unchanged.
+- The editor (`/advanced/page-templates/:id`) is the shared Page Editor v2
+  surface bound through the editor host: it hydrates from
+  `pageTemplates:detail:<id>`, revalidates via cache-bus events, and keeps
+  dirty-state protection (background revalidation never overwrites unsaved
+  edits).
+- Route prefetch warms `pageTemplates:list` with `{ force: false }` only.
+- Detail-driven merges (`getPageTemplateCached`, create/update/duplicate
+  responses) update `pageTemplates:list` only when a full list cache already
+  exists. They never ESTABLISH the list cache: a single-item partial written
+  while the full list was missing/expired would look authoritative and hide
+  published templates in pickers (client-readiness FIX 3). With no cached
+  list, only `pageTemplates:detail:<id>` is written and the next list call
+  fetches the complete set.
+- Template documents contain no secrets; nothing secret-bearing enters
+  browser cache/localStorage/debug payloads.
+- Retired with the widget-template surface: `widgetTemplates:list`,
+  `widgetTemplates:detail:<id>`, `widgetTemplateCategories:list`, their cached
+  clients, and the `/advanced/widgets/templates/:id` prefetch/route entries.
 
 ### Widget library cache note
 
 - Widget library list state is owned by
   `core/admin/ui/widgets/WidgetLibraryPage.tsx` and is backed by
-  `widgetCatalog:list`, `widgetTemplateCategories:list`, and `pages:list`.
-- The page hydrates catalog, template categories, and pages from
-  `getCachedWidgetCatalog()`, `getCachedWidgetTemplateCategories()`, and
+  `widgetCatalog:list` and `pages:list` (the catalog is core-widget-only after
+  the Page Templates rewrite).
+- The page hydrates catalog and pages from `getCachedWidgetCatalog()` and
   `getCachedPages()` on first render, then revalidates in the background when a
   cache entry exists.
-- Cache-bus events for `widgetCatalog:list`,
-  `widgetTemplateCategories:list`, and `pages:list` refresh the list model in
-  the background. The section dropdown, table/grid mode, and selected row ids
-  remain shell-owned UI state and are not persisted into browser cache.
-- Template duplicate/delete/category mutations continue to refresh the catalog
-  through the existing template/category clients; TASK-215 adds no new cache key
-  or public write path.
+- Cache-bus events for `widgetCatalog:list` and `pages:list` refresh the list
+  model in the background. The section dropdown, table/grid mode, and selected
+  row ids remain shell-owned UI state and are not persisted into browser cache.
 
 ### Media cache note
 
@@ -504,6 +544,11 @@ Clients update caches and broadcast events on:
   caches and broadcasts invalidation. Retained submissions or action-run
   diagnostics block hard delete through `form_delete_restricted`, so failed
   deletes must not remove rows from browser cache as success.
+- Form submissions (`/admin/advanced/forms/:id/submissions`) are intentionally
+  UNCACHED: the read-only screen fetches on open through
+  `listFormSubmissions()` (no `cachePolicy` key, no localStorage entry —
+  submissions carry visitor-provided data). Only the form name/field labels
+  hydrate through the existing `forms:detail:<id>` cached client.
 
 ### Tools cache note
 

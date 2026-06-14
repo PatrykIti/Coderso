@@ -11,7 +11,7 @@ import {
   normalizeListingFacetConfigs,
   listingRuntimeTokens,
 } from "../../../core/services/search/filterContract";
-import type { ListingQuery } from "../../../core/services/content/queryBuilderService";
+import type { ListingQuery } from "../../../core/services/content/listingQueryContract";
 
 const baseUsersQuery: ListingQuery = {
   source: "users",
@@ -25,10 +25,7 @@ const baseUsersQuery: ListingQuery = {
 test("parseListingRuntimeOverrides reads valid runtime tokens", () => {
   const params = new URLSearchParams();
   params.set(buildListingRuntimeParamName("query-1", "status.eq"), "active");
-  params.set(
-    buildListingRuntimeParamName("query-1", "roleIds.in"),
-    "admin,editor"
-  );
+  params.set(buildListingRuntimeParamName("query-1", "roleIds.in"), "admin,editor");
   params.set(
     buildListingRuntimeParamName("query-1", listingRuntimeTokens.sort),
     buildFacetSortToken("updatedAt", "asc")
@@ -49,6 +46,37 @@ test("parseListingRuntimeOverrides reads valid runtime tokens", () => {
   expect(draft.page).toBe(2);
   expect(draft.searchQuery).toBe("john");
   expect(draft.rejectedTokens).toContain("invalid-token");
+});
+
+test("parseListingRuntimeOverrides canonicalizes safe runtime aliases", () => {
+  const params = new URLSearchParams();
+  params.set("rooms", "3,4");
+  params.set("sort", buildFacetSortToken("updatedAt", "asc"));
+  params.set("q", "loft");
+  params.set("page", "2");
+  params.set(buildListingRuntimeParamName("query-1", "status.eq"), "active");
+  params.set(buildListingRuntimeParamName("query-1", "data.rooms.in"), "5");
+
+  const draft = parseListingRuntimeOverrides(params, "query-1", {
+    rooms: "data.rooms.in",
+    sort: listingRuntimeTokens.sort,
+    q: listingRuntimeTokens.search,
+    page: listingRuntimeTokens.page,
+  });
+
+  expect(draft.filters).toEqual(
+    expect.arrayContaining([
+      { field: "status", op: "eq", value: "active", token: "status.eq" },
+      { field: "data.rooms", op: "in", value: [5], token: "data.rooms.in" },
+    ])
+  );
+  expect(draft.sort).toEqual({
+    field: "updatedAt",
+    dir: "asc",
+    token: listingRuntimeTokens.sort,
+  });
+  expect(draft.searchQuery).toBe("loft");
+  expect(draft.page).toBe(2);
 });
 
 test("resolveListingRuntimeOverrides applies safe runtime filters and rejects invalid ones", () => {

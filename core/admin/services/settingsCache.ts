@@ -43,6 +43,8 @@ export type RedactedSettingsCache = {
     adminRedirectEnabled: boolean;
     homepageId: string | null;
     notFoundPageId: string | null;
+    navigationMenuId: string | null;
+    footerTemplateId: string | null;
     previewEnabled: boolean;
     cacheTtlSeconds: number;
     contentRoutes: RedactedSettingsContentRoute[];
@@ -102,6 +104,8 @@ const redactedSiteKeys = new Set([
   "adminRedirectEnabled",
   "homepageId",
   "notFoundPageId",
+  "navigationMenuId",
+  "footerTemplateId",
   "previewEnabled",
   "cacheTtlSeconds",
   "contentRoutes",
@@ -261,6 +265,8 @@ export const isRedactedSettingsCache = (value: unknown): value is RedactedSettin
   if (typeof value.site.adminRedirectEnabled !== "boolean") return false;
   if (!isNullableString(value.site.homepageId)) return false;
   if (!isNullableString(value.site.notFoundPageId)) return false;
+  if (!isNullableString(value.site.navigationMenuId)) return false;
+  if (!isNullableString(value.site.footerTemplateId)) return false;
   if (typeof value.site.previewEnabled !== "boolean") return false;
   if (typeof value.site.cacheTtlSeconds !== "number") return false;
   if (!Array.isArray(value.site.contentRoutes)) return false;
@@ -322,6 +328,8 @@ export const toRedactedSettingsCache = (
     adminRedirectEnabled: normalizeBoolean(payload["site.adminRedirectEnabled"], false),
     homepageId: normalizeNullableString(payload["site.homepageId"]),
     notFoundPageId: normalizeNullableString(payload["site.notFoundPageId"]),
+    navigationMenuId: normalizeNullableString(payload["site.navigationMenuId"]),
+    footerTemplateId: normalizeNullableString(payload["site.footerTemplateId"]),
     previewEnabled: normalizeBoolean(payload["site.previewEnabled"], true),
     cacheTtlSeconds: normalizeInteger(payload["site.cacheTtlSeconds"], 30, 0),
     contentRoutes: normalizeContentRoutes(payload["site.contentRoutes"]),
@@ -366,6 +374,8 @@ export const toSettingsResponseFromRedactedCache = (
   "site.adminRedirectEnabled": cache.site.adminRedirectEnabled,
   "site.homepageId": cache.site.homepageId,
   "site.notFoundPageId": cache.site.notFoundPageId,
+  "site.navigationMenuId": cache.site.navigationMenuId,
+  "site.footerTemplateId": cache.site.footerTemplateId,
   "site.previewEnabled": cache.site.previewEnabled,
   "site.cacheTtlSeconds": cache.site.cacheTtlSeconds,
   "site.contentRoutes": cache.site.contentRoutes,

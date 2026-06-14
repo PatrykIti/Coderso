@@ -1,6 +1,9 @@
 import type {
   AssistantActionContext,
+  AssistantActivePageSectionSummary,
+  AssistantActiveSurfaceBlockCapabilities,
   AssistantActiveSurfaceBlockSummary,
+  AssistantActiveSurfaceSectionCapabilities,
   AssistantActiveSurfaceContext,
   AssistantAdminContext,
   AssistantAdminRuntimeActionKind,
@@ -28,6 +31,13 @@ const actionKinds = new Set<AssistantAdminRuntimeActionKind>([
 ]);
 const permissionPattern = /^[a-z0-9*:_-]+$/i;
 const secretLikePattern = /(token|secret|password|api[-_]?key|credential|cookie|session|csrf)/i;
+const pageBlockRuntimeRendererStates = new Set<
+  AssistantActiveSurfaceBlockCapabilities["runtimeRenderer"]
+>(["real", "placeholder", "unsupported"]);
+const pageBlockPublicDataBindingStates = new Set<
+  AssistantActiveSurfaceBlockCapabilities["publicDataBinding"]
+>(["none", "scoped-read-only"]);
+const activeSurfaceBlockChildDepthLimit = 3;
 
 const normalizeRoute = (value: string | null | undefined) => {
   if (typeof value !== "string") return null;
@@ -206,17 +216,71 @@ const normalizeStringArray = (value: unknown, maxItems = 20, maxLength = 120) =>
   return [...new Set(output)].sort((left, right) => left.localeCompare(right));
 };
 
-const normalizeSurfaceBlock = (value: unknown): AssistantActiveSurfaceBlockSummary | null => {
+const normalizeSurfaceBlockCapabilities = (
+  value: unknown
+): AssistantActiveSurfaceBlockCapabilities | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  const runtimeRenderer =
+    typeof record.runtimeRenderer === "string" &&
+    pageBlockRuntimeRendererStates.has(
+      record.runtimeRenderer as AssistantActiveSurfaceBlockCapabilities["runtimeRenderer"]
+    )
+      ? (record.runtimeRenderer as AssistantActiveSurfaceBlockCapabilities["runtimeRenderer"])
+      : null;
+  const publicDataBinding =
+    typeof record.publicDataBinding === "string" &&
+    pageBlockPublicDataBindingStates.has(
+      record.publicDataBinding as AssistantActiveSurfaceBlockCapabilities["publicDataBinding"]
+    )
+      ? (record.publicDataBinding as AssistantActiveSurfaceBlockCapabilities["publicDataBinding"])
+      : null;
+  if (!runtimeRenderer || !publicDataBinding) return undefined;
+  return {
+    editorInsertable: record.editorInsertable === true,
+    insertable: record.insertable === true,
+    assistantEmittable: record.assistantEmittable === true,
+    runtimeRenderer,
+    publicDataBinding,
+    slots: normalizeStringArray(record.slots, 20, 120),
+    reason: normalizeText(record.reason, 160),
+  };
+};
+
+const normalizeSurfaceSectionCapabilities = (
+  value: unknown
+): AssistantActiveSurfaceSectionCapabilities | undefined => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const record = value as Record<string, unknown>;
+  return {
+    insertable: record.insertable === true,
+    assistantEmittable: record.assistantEmittable === true,
+    reason: normalizeText(record.reason, 160),
+  };
+};
+
+const normalizeSurfaceBlock = (
+  value: unknown,
+  depth = 0
+): AssistantActiveSurfaceBlockSummary | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
   const id = normalizeText(record.id, 120);
   const type = normalizeText(record.type, 120);
   const path = normalizeText(record.path, 240) ?? id;
   if (!id || !type || !path) return null;
+  const children =
+    depth < activeSurfaceBlockChildDepthLimit && Array.isArray(record.children)
+      ? record.children
+          .map((child) => normalizeSurfaceBlock(child, depth + 1))
+          .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
+          .slice(0, 40)
+      : [];
+  const capabilities = normalizeSurfaceBlockCapabilities(record.capabilities);
   const childCount =
     typeof record.childCount === "number" && Number.isFinite(record.childCount)
       ? Math.max(0, Math.min(999, Math.floor(record.childCount)))
-      : 0;
+      : children.length;
   return {
     id,
     type,
@@ -226,6 +290,38 @@ const normalizeSurfaceBlock = (value: unknown): AssistantActiveSurfaceBlockSumma
     slotKeys: normalizeStringArray(record.slotKeys),
     templateId: normalizeText(record.templateId, 160),
     templateName: normalizeText(record.templateName, 160),
+    ...(capabilities ? { capabilities } : {}),
+    ...(children.length > 0 ? { children } : {}),
+  };
+};
+
+const normalizePageSurfaceSection = (value: unknown): AssistantActivePageSectionSummary | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const record = value as Record<string, unknown>;
+  const id = normalizeText(record.id, 120);
+  const type = normalizeText(record.type, 120);
+  const name = normalizeText(record.name, 160);
+  const path = normalizeText(record.path, 240) ?? id;
+  if (!id || !type || !name || !path) return null;
+  const blocks = Array.isArray(record.blocks)
+    ? record.blocks
+        .map(normalizeSurfaceBlock)
+        .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
+        .slice(0, 40)
+    : [];
+  const blockCount =
+    typeof record.blockCount === "number" && Number.isFinite(record.blockCount)
+      ? Math.max(0, Math.min(999, Math.floor(record.blockCount)))
+      : blocks.length;
+  const capabilities = normalizeSurfaceSectionCapabilities(record.capabilities);
+  return {
+    id,
+    type,
+    name,
+    path,
+    blockCount,
+    blocks,
+    ...(capabilities ? { capabilities } : {}),
   };
 };
 
@@ -265,13 +361,6 @@ const normalizeActiveSurface = (
   value: AssistantActionContext["activeSurface"] | undefined
 ): AssistantActiveSurfaceContext | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  const blocks = Array.isArray(value.blocks)
-    ? value.blocks
-        .map(normalizeSurfaceBlock)
-        .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
-        .slice(0, 80)
-    : [];
-
   if (value.kind === "page") {
     const page = value.page;
     if (!page || typeof page !== "object" || Array.isArray(page)) return null;
@@ -280,8 +369,15 @@ const normalizeActiveSurface = (
     const slug = normalizeText(page.slug, 240);
     const status = normalizeText(page.status, 80);
     if (!id || !title || !slug || !status) return null;
+    const sections = Array.isArray(value.sections)
+      ? value.sections
+          .map(normalizePageSurfaceSection)
+          .filter((section): section is AssistantActivePageSectionSummary => Boolean(section))
+          .slice(0, 40)
+      : [];
     return {
       kind: "page",
+      schemaVersion: 2,
       page: {
         id,
         title,
@@ -289,16 +385,20 @@ const normalizeActiveSurface = (
         status,
         template: normalizeText(page.template, 160),
       },
+      selectedSectionId: normalizeText(value.selectedSectionId, 120),
       selectedBlockId: normalizeText(value.selectedBlockId, 120),
-      blocks,
-      templateReferences: mergeAssistantTemplateSectionReferences([
-        ...extractAssistantTemplateSectionReferences(blocks),
-        ...(Array.isArray(value.templateReferences) ? value.templateReferences : []),
-      ]),
-      referencedTemplates: normalizeAssistantReferencedWidgetTemplates(value.referencedTemplates),
+      selectedBlockPath: normalizeText(value.selectedBlockPath, 240),
+      sections,
       warnings: normalizeStringArray(value.warnings, 20, 160),
     };
   }
+
+  const blocks = Array.isArray(value.blocks)
+    ? value.blocks
+        .map(normalizeSurfaceBlock)
+        .filter((block): block is AssistantActiveSurfaceBlockSummary => Boolean(block))
+        .slice(0, 80)
+    : [];
 
   if (value.kind === "widget-template") {
     const template = value.template;

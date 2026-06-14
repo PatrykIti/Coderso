@@ -20,7 +20,15 @@ This document covers:
 - `blocks` (widget block JSON array)
 - `settings` (`WidgetTemplateSettings`, currently layout settings)
 
-Template edits remain available in regular template editor after kit install.
+TASK-420-03 Ring 2 outcome: the widget-template admin editor, routes, preview
+target, and cached clients are deleted (the reusable-template product surface
+is Page Templates, Page v2-only, in `page_templates`). The `widget_templates`
+and `widget_template_revisions` tables STAY because live consumers remain:
+solution-kit seeding below, the `template-section` core widget on custom
+screens/detail pages, and existing rows. Kit-seeded templates are no longer
+editable through an admin surface; `widgetTemplateService` and the
+settings-backed `widgets.templateCategories` registry remain data-layer-only
+for the installer. The storage drop is an explicit follow-up task.
 
 ## Solution Kit Template Seed Contract
 

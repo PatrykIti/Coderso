@@ -418,6 +418,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
   const { FieldListPanel } = await import("../../../core/admin/ui/forms/FieldListPanel");
 
   const onEdit = vi.fn();
+  const onSubmissions = vi.fn();
   const onActionLogs = vi.fn();
   const onPublish = vi.fn();
   const onMoveToDraft = vi.fn();
@@ -431,6 +432,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
       <FormTable
         items={[]}
         onEdit={onEdit}
+        onSubmissions={onSubmissions}
         onActionLogs={onActionLogs}
         onPublish={onPublish}
         onMoveToDraft={onMoveToDraft}
@@ -474,6 +476,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
           },
         ]}
         onEdit={onEdit}
+        onSubmissions={onSubmissions}
         onActionLogs={onActionLogs}
         onPublish={onPublish}
         onMoveToDraft={onMoveToDraft}
@@ -517,6 +520,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
 
     React.act(() => {
       buttons.find((button) => button.textContent === "Edit")?.click();
+      buttons.find((button) => button.textContent === "Submissions")?.click();
       buttons.find((button) => button.textContent === "Action logs")?.click();
       buttons.find((button) => button.textContent === "Move to draft")?.click();
       buttons.find((button) => button.textContent === "Archive")?.click();
@@ -528,6 +532,7 @@ test("FormTable and FieldListPanel render empty and interactive states", async (
     });
 
     expect(onEdit).toHaveBeenCalledWith("form-1");
+    expect(onSubmissions).toHaveBeenCalledWith("form-1");
     expect(onActionLogs).toHaveBeenCalledWith("form-1");
     expect(onMoveToDraft).toHaveBeenCalledWith("form-1");
     expect(onArchive).toHaveBeenCalledWith("form-1");

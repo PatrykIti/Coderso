@@ -33,7 +33,6 @@ export const assistantActionTypes = [
   "media.reference.attach",
   "listing-query.filters.patch",
   "listing-template.card.patch",
-  "page.widget.patch",
   "form.automation.upsert",
   "page.upsert",
   "detail-page.upsert",

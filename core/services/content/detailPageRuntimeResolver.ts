@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { detailPageDocuments } from "../../db/schema";
-import type { ContentRouteSetting } from "../settings/settingsService";
+import type { ContentRouteSetting } from "../settings/settingsContracts";
 import {
   resolveDetailPageBlocks,
   type DetailPageBindingResolverContentType,

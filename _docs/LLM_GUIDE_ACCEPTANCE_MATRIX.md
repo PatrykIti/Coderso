@@ -72,7 +72,7 @@ Rules:
 | `listing-template.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `listing-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact unreferenced listing templates after review |
 | `listing-template.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Updates listing template metadata/layout/card config |
-| `page.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + public runtime smoke | `content:read/write/publish` | Supports catalog and simple block-backed page mode |
+| `page.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + public runtime smoke | `content:read/write/publish` | Supports catalog and simple Pages v2 section documents |
 | `detail-page.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write/publish` | Persists strict detail-page documents through the content-domain owner seam; `setting.content-route.upsert` owns `detailPageId` route linkage |
 | `form.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` through per-action permissions when applicable | Public submissions use existing Forms runtime hardening |
 | `form.delete` | Vitest planner/schema | Bun executor | Bun executor + DB service count | `forms:read/write` | Deletes exact zero-submission forms after review |
@@ -92,13 +92,16 @@ Rules:
 | `listing-query.filters.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `query.filters` only |
 | `listing-template.card.patch` | Vitest `action-plan-schema` | Bun executor | Bun executor | `content:read/write` | Patches `config.card` only |
 | `page.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Edits active page metadata/settings and preserves page data |
-| `page.widget.patch` | Vitest `action-plan-schema` + pure patch helper | Bun executor | Bun executor | `content:read/write` | Top-level `upsert-block` and selected block `patch-data` |
 | `page.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write/publish` | Deletes active-context pages after review |
 | `widget-template.delete` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Deletes active-context reusable widget templates after review |
 | `widget-template.update` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Edits reusable template metadata/settings |
 | `widget-template.block.patch` | Vitest planner/schema | Bun executor | Bun executor | `widgets:read/write` | Patches selected reusable template block data paths |
 | `form.automation.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor | `forms:read/write` | Safe non-webhook actions only |
 | `site-kit.recommend/install/validate` | Vitest + Bun | Bun executor | Bun executor | plan/dry-run: `settings:read`, `content:read`, `solution-kits:read`; execute: `settings:write`, `content:write`, `content:publish`, `solution-kits:write`; LLM availability gate | Existing unified site-kit action flow; reviewed intake gates static page/menu/form/SEO preview coverage and may carry bounded Advanced runtime overrides for existing menu/Navigation, Hero, and section widget surfaces before execute |
+
+`page.widget.patch` is retired for Pages after TASK-417. Page mutations use
+`page.upsert` with `sections[]` or metadata-only `page.update`; widget-template
+and custom-screen patch actions remain the widget-owned mutation surfaces.
 
 ---
 
@@ -154,7 +157,8 @@ Rules:
 
 These are intentional follow-up capabilities, not current production claims:
 - Webhook form automation through `form.automation.upsert`.
-- Nested/slot page widget patches.
+- Fine-grained existing Page section/block patch actions beyond `page.upsert` /
+  `page.update`.
 - Nested object-array Content Type fields from free-text prompts, such as arbitrary repeater/object schemas.
 - `menu.structure.patch`.
 - `entry.bulk-draft.create` and `entry.field.patch`.

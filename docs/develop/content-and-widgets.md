@@ -39,38 +39,50 @@ Content can render through theme/plugin/core templates (`content-<typeSlug>-list
 
 ## The page model
 
-A page is a JSON document stored in `pages.current_data` (draft) and `pages.published_data` (live). The root shape is:
+A page is a JSON document stored in `pages.current_data` (draft) and `pages.published_data` (live). TASK-417 moved Pages to a v2 sections-and-atomic-blocks document. The root shape is:
 
 ```json
-{ "schemaVersion": 1, "title": "...", "seo": {}, "blocks": [], "settings": {} }
+{ "schemaVersion": 2, "seo": {}, "sections": [], "settings": {} }
 ```
 
-`settings` controls layout and routing: `settings.layout` (wrapper container/maxWidth/padding/background plus per-section `defaults` — the source of `inherit` tokens), `settings.template` (resolved theme → plugins → core), `settings.showInNav` (feeds the Navigation widget), and `settings.revisionRetention` (default 10, range 1–100).
+`settings` controls routing and lifecycle: `settings.template`, `settings.showInNav`, `settings.revisionRetention` (default 10, range 1–100), and optional `settings.collectionLink` metadata for assistant/catalog no-duplicate matching.
 
-### Blocks
+### Sections And Atomic Blocks
 
-Each block in `blocks` is the unit the renderer understands:
+Each section owns layout, spacing, style, visibility, responsive overrides, and
+an ordered list of atomic blocks:
 
 ```json
-{ "id": "...", "type": "hero", "variant": "...", "data": {}, "layout": {}, "visibility": {}, "editor": {}, "slots": {}, "children": [] }
+{
+  "id": "sec_hero",
+  "type": "hero",
+  "layout": {},
+  "style": {},
+  "spacing": {},
+  "visibility": {},
+  "responsive": {},
+  "blocks": [
+    { "id": "blk_heading", "type": "heading", "props": {}, "visibility": {} }
+  ]
+}
 ```
 
-- **Layout tokens:** container `default | narrow | full | inherit`; spacing `none | xs | sm | md | lg | xl | 2xl | inherit`.
-- **Visibility:** `visibility.devices: []` means hidden everywhere; an omitted `devices` means all devices.
-- **`editor`** (mode + `wizardCompleted`) is stripped on publish by `pageService.toPublishedData`.
-- **`slots`** is the nesting model — fixed ids like `content`/`right`/`bottom`, plus repeatable instances keyed `<slotId>:<instanceId>` (e.g. `column:1`). `children` is the legacy form and maps to `slots.default`.
+- Core section types include `hero`, `content`, `collection`, `lead-form`,
+  `navigation`, `filters`, `cta`, and `custom`.
+- Core block types include `heading`, `text`, `button`, `image`, `form`,
+  `list`, `card`, `collection`, `divider`, `spacer`, and `quote`.
+- Fresh writes reject unknown fields and reject legacy/versionless `blocks[]`
+  Page documents. Stored legacy Pages reset to an empty v2 document on read and
+  render paths.
 
 ### Render pipeline
 
-`WidgetRenderer` (in `core/widgets/renderers/widgetRenderer.tsx`) drives the rendering:
+Pages render through `core/site/pageRuntimeV2.tsx`, not through
+`WidgetRenderer`. The renderer resolves responsive overrides, renders section
+containers, and renders atom blocks directly.
 
-1. Resolve `getWidget(block.type)` — falls back to `MissingWidget` if unknown.
-2. Normalize the block.
-3. Drop it if `visibility.enabled === false` or it's hidden on the active device.
-4. Resolve `inherit` layout tokens against `pageDefaults`.
-5. Render `def.render`.
-
-Widgets without `slots` get their legacy `children`/`slots.default` rendered inside the section container. Widgets *with* `slots` render them themselves (hero → `content`, navigation → `right`, footer → columns/`bottom`).
+Widget rendering remains the contract for non-Page surfaces: widget templates,
+custom screens, detail pages, and post/content block runtimes.
 
 ## The widget contract
 

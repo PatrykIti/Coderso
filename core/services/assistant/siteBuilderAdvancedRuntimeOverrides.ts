@@ -3,6 +3,16 @@ import type {
   SolutionKitMenuItemBlueprint,
   SolutionKitResourceBlueprint,
 } from "../kits/solutionKitTypes";
+import {
+  createPageBlockV2,
+  createPageSectionV2,
+  normalizeStoredPageDocumentV2ForRead,
+  type PageBlockV2,
+  type PageDocumentV2,
+  type PageSectionType,
+  type PageSectionV2,
+  type PageSectionVariant,
+} from "../pages/pageDocumentV2";
 import type {
   AssistantSiteBuilderAdvancedHeroVariantFacts,
   AssistantSiteBuilderAdvancedMenuBehaviorId,
@@ -82,9 +92,6 @@ const pageRoleFallbackLabels: Record<AssistantSiteBuilderPageRoleId, string> = {
   legal: "Privacy",
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
 const normalizePath = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed || trimmed === "/") return "/";
@@ -100,49 +107,125 @@ const slugMatchesPath = (slug: string, path: string) => {
   return normalizedSlug === normalizedPath || normalizePath(`/${slug}`) === normalizedPath;
 };
 
-const ensureBlocks = (pageData: Record<string, unknown>): Record<string, unknown>[] => {
-  const blocks = Array.isArray(pageData.blocks)
-    ? pageData.blocks.filter(isRecord).map((block) => block)
-    : [];
-  pageData.blocks = blocks;
-  return blocks;
+const readPageDocument = (page: SolutionKitResourceBlueprint["pages"][number]) => {
+  const document = normalizeStoredPageDocumentV2ForRead(page.data);
+  page.data = document as unknown as Record<string, unknown>;
+  return document;
 };
 
-const findFirstBlock = (
-  blocks: Record<string, unknown>[],
-  type: string
-): Record<string, unknown> | null => {
-  for (const block of blocks) {
-    if (block.type === type) return block;
-    if (Array.isArray(block.children)) {
-      const child = findFirstBlock(block.children.filter(isRecord), type);
-      if (child) return child;
-    }
-    if (isRecord(block.slots)) {
-      for (const slotBlocks of Object.values(block.slots)) {
-        if (!Array.isArray(slotBlocks)) continue;
-        const child = findFirstBlock(slotBlocks.filter(isRecord), type);
-        if (child) return child;
-      }
-    }
+const sectionTypeByLegacyWidget: Record<string, PageSectionType> = {
+  navigation: "navigation",
+  hero: "hero",
+  testimonials: "testimonials",
+  "faq-accordion": "faq",
+  "cta-banner": "cta",
+  contact: "lead-form",
+  "form-embed": "lead-form",
+  "feature-grid": "feature-grid",
+  "content-list": "collection",
+  "listing-filters": "filters",
+};
+
+const normalizeSectionVariant = (variantId: string): PageSectionVariant => {
+  if (variantId === "centered") return "centered";
+  if (
+    variantId === "split" ||
+    variantId === "media-left" ||
+    variantId === "form-left" ||
+    variantId === "form-right"
+  ) {
+    return "split";
   }
-  return null;
+  if (variantId === "cards" || variantId === "spotlight") return "cards";
+  if (variantId === "grid" || variantId === "two-column") return "grid";
+  if (variantId === "list" || variantId === "single-column" || variantId === "standard") {
+    return "default";
+  }
+  if (variantId === "simple" || variantId === "with-cta") return "horizontal";
+  return "default";
 };
 
-const patchFirstMatchingBlockVariant = (
+const findFirstSection = (document: PageDocumentV2, type: PageSectionType) =>
+  document.sections.find((section) => section.type === type) ?? null;
+
+const patchFirstMatchingSectionVariant = (
   pages: SolutionKitResourceBlueprint["pages"],
   widgetType: string,
   widgetVariantId: string
 ) => {
+  const sectionType = sectionTypeByLegacyWidget[widgetType];
+  if (!sectionType) return false;
   for (const page of pages) {
-    const pageData = isRecord(page.data) ? page.data : {};
-    page.data = pageData;
-    const target = findFirstBlock(ensureBlocks(pageData), widgetType);
+    const document = readPageDocument(page);
+    const target = findFirstSection(document, sectionType);
     if (!target) continue;
-    target.variant = widgetVariantId;
+    target.variant = normalizeSectionVariant(widgetVariantId);
     return true;
   }
   return false;
+};
+
+const menuItemToListItem = (item: SolutionKitMenuItemBlueprint) => ({
+  label: item.label,
+  href: item.href ? normalizePath(item.href) : normalizePath(item.pageSlug ?? "/"),
+});
+
+const buildNavigationBlocks = (
+  kit: SolutionKitDefinition,
+  cta: RuntimeCtaTarget | null
+): PageBlockV2[] => {
+  const menu = kit.resourceBlueprint.menus.find((candidate) => candidate.location === "primary");
+  const items = (menu?.items ?? []).map(menuItemToListItem);
+  const blocks: PageBlockV2[] = [
+    createPageBlockV2("list", {
+      id: "assistant-advanced-navigation-links",
+      props: { items, ordered: false },
+    }),
+  ];
+  if (cta) {
+    blocks.push(
+      createPageBlockV2("button", {
+        id: "assistant-advanced-navigation-cta",
+        props: {
+          label: cta.label,
+          href: cta.href,
+          target: "self",
+          variant: "primary",
+          size: "md",
+        },
+      })
+    );
+  }
+  if (items.length === 0 && !cta) {
+    blocks.unshift(
+      createPageBlockV2("heading", {
+        id: "assistant-advanced-navigation-brand",
+        props: { text: kit.title, level: "h2", align: "left" },
+      })
+    );
+  }
+  return blocks;
+};
+
+const upsertNavigationSection = (
+  document: PageDocumentV2,
+  section: PageSectionV2 | null,
+  blocks: PageBlockV2[],
+  variant: PageSectionVariant
+) => {
+  if (section) {
+    section.variant = variant;
+    section.blocks = blocks;
+    return;
+  }
+  document.sections.unshift(
+    createPageSectionV2("navigation", {
+      id: "sec_assistant_advanced_navigation",
+      name: "Navigation",
+      variant,
+      blocks,
+    })
+  );
 };
 
 const resolveCtaTarget = (
@@ -200,38 +283,14 @@ const applyNavigationWidgetOverride = (
 ) => {
   if (!menu) return;
   for (const page of kit.resourceBlueprint.pages) {
-    const pageData = isRecord(page.data) ? page.data : {};
-    page.data = pageData;
-    const blocks = ensureBlocks(pageData);
-    const existing = findFirstBlock(blocks, "navigation");
-    const navigationBlock =
-      existing ??
-      ({
-        id: `assistant-advanced-navigation-${page.slug.trim() || "home"}`,
-        type: "navigation",
-        data: {},
-      } satisfies Record<string, unknown>);
-    const data = isRecord(navigationBlock.data) ? navigationBlock.data : {};
-    navigationBlock.variant = menu.variantId;
-    navigationBlock.data = {
-      ...data,
-      logo: {
-        type: "text",
-        value: kit.title,
-        href: "/",
-        source: "external",
-      },
-      linksSource: "menu",
-      ...(cta ? { cta: { label: cta.label, href: cta.href } } : {}),
-      behavior: {
-        ...(isRecord(data.behavior) ? data.behavior : {}),
-        sticky: menu.sticky,
-        collapseOnScroll: menu.collapseOnScroll,
-        transparent: menu.transparent,
-        mobileMode: menu.mobileMode,
-      },
-    };
-    if (!existing) blocks.unshift(navigationBlock);
+    const document = readPageDocument(page);
+    const existing = findFirstSection(document, "navigation");
+    upsertNavigationSection(
+      document,
+      existing,
+      buildNavigationBlocks(kit, cta),
+      normalizeSectionVariant(menu.variantId)
+    );
   }
 };
 
@@ -294,14 +353,14 @@ export const applyAdvancedRuntimeOverridesToKit = (
   );
   applyNavigationWidgetOverride(kit, overrides.menu, cta);
   if (overrides.hero) {
-    patchFirstMatchingBlockVariant(
+    patchFirstMatchingSectionVariant(
       kit.resourceBlueprint.pages,
       overrides.hero.widgetType,
       overrides.hero.widgetVariantId
     );
   }
   for (const variant of overrides.sectionVariants ?? []) {
-    patchFirstMatchingBlockVariant(
+    patchFirstMatchingSectionVariant(
       kit.resourceBlueprint.pages,
       variant.widgetType,
       variant.widgetVariantId

@@ -290,6 +290,56 @@ test("publishPage posts empty object payload when publishing from list", async (
   }
 });
 
+test("publishPage merges the post-publish detail into the cache so reloads keep the published draft", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const publishedDetail = pageDetail({
+    status: "published",
+    currentData: { schemaVersion: 2, sections: [{ id: "sec-new", type: "content" }] },
+    updatedAt: "2026-02-14T01:00:00.000Z",
+  });
+  const fetchMock = installFetch(async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) return jsonResponse({ token: "csrf-token" });
+    return jsonResponse({ ok: true, page: publishedDetail });
+  });
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    setCacheValue(storage, cacheKeys.pagesList, [
+      pageSummary({ id: "page-1", title: "Home", status: "draft" }),
+    ]);
+    setCacheValue(
+      storage,
+      cacheKeys.pageDetail("page-1"),
+      pageDetail({ id: "page-1", status: "draft", currentData: { schemaVersion: 2, sections: [] } })
+    );
+
+    const result = await publishPage("page-1", publishedDetail.currentData);
+
+    expect(result).toMatchObject({ ok: true, page: { id: "page-1", status: "published" } });
+    // The cached draft must not resurrect stale sections after a reload: the
+    // detail cache now holds the post-publish currentData, not just a status
+    // patch on the old draft.
+    expect(readCacheValue(storage, cacheKeys.pageDetail("page-1"))).toMatchObject({
+      status: "published",
+      updatedAt: "2026-02-14T01:00:00.000Z",
+      currentData: { schemaVersion: 2, sections: [{ id: "sec-new", type: "content" }] },
+    });
+    expect(readCacheValue(storage, cacheKeys.pagesList)).toEqual([
+      pageSummary({
+        id: "page-1",
+        title: "Home",
+        status: "published",
+        updatedAt: "2026-02-14T01:00:00.000Z",
+      }),
+    ]);
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
 test("duplicatePage posts to duplicate endpoint", async () => {
   const originalFetch = globalThis.fetch;
   const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];

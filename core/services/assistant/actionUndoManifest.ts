@@ -45,7 +45,6 @@ export type AssistantUndoManifestItem = {
 const patchActionTypes = new Set<AssistantPlannedAction["type"]>([
   "listing-query.filters.patch",
   "listing-template.card.patch",
-  "page.widget.patch",
   "widget-template.block.patch",
   "custom-screen.widget.patch",
   "form.automation.upsert",
@@ -55,7 +54,6 @@ const restoreOnlyActionTypes = new Set<AssistantPlannedAction["type"]>([
   "setting.content-route.upsert",
   "listing-query.filters.patch",
   "listing-template.card.patch",
-  "page.widget.patch",
   "widget-template.block.patch",
   "custom-screen.widget.patch",
 ]);

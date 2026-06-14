@@ -122,9 +122,8 @@ const pagesListCache = createMemoryBackedLocalCache({
 const isPageDetail = (value: unknown): value is PageDetail =>
   Boolean(value && typeof value === "object");
 
-const isPageDetailPayload = (
-  value: PageSummary | PageDetail
-): value is PageDetail => "currentData" in value;
+const isPageDetailPayload = (value: PageSummary | PageDetail): value is PageDetail =>
+  "currentData" in value;
 
 const hasAuthorField = (page: PageSummary | PageDetail) =>
   Object.prototype.hasOwnProperty.call(page, "author");
@@ -132,20 +131,19 @@ const hasAuthorField = (page: PageSummary | PageDetail) =>
 const toPageSummaryPatch = (page: PageSummary | PageDetail) => {
   const patch: Partial<PageSummary> &
     Pick<PageSummary, "id" | "title" | "slug" | "status" | "updatedAt"> = {
-      id: page.id,
-      title: page.title,
-      slug: page.slug,
-      status: page.status,
-      updatedAt: page.updatedAt,
-    };
+    id: page.id,
+    title: page.title,
+    slug: page.slug,
+    status: page.status,
+    updatedAt: page.updatedAt,
+  };
   if (hasAuthorField(page)) {
     patch.author = page.author ?? null;
   }
   return patch;
 };
 
-const readPagesCache = () =>
-  pagesListCache.read();
+const readPagesCache = () => pagesListCache.read();
 
 const readPageDetailCache = (id: string) =>
   readLocalCache(cacheKeys.pageDetail(id), cacheTtlMs.detail, isPageDetail);
@@ -171,7 +169,10 @@ const mergeCachedPageIntoList = (page: PageSummary | PageDetail) => {
   } else {
     next[index] = { ...next[index], ...summaryPatch };
   }
-  if (next.length !== current.length || next.some((item, itemIndex) => item !== current[itemIndex])) {
+  if (
+    next.length !== current.length ||
+    next.some((item, itemIndex) => item !== current[itemIndex])
+  ) {
     primePagesCacheInternal(next);
   }
   if (isPageDetailPayload(page)) {
@@ -182,9 +183,7 @@ const mergeCachedPageIntoList = (page: PageSummary | PageDetail) => {
 const updateCachedPageStatus = (id: string, status: PageStatus) => {
   const current = readPagesCache();
   if (current) {
-    primePagesCacheInternal(
-      current.map((item) => (item.id === id ? { ...item, status } : item))
-    );
+    primePagesCacheInternal(current.map((item) => (item.id === id ? { ...item, status } : item)));
   }
   const detail = readPageDetailCache(id);
   if (detail) {
@@ -231,9 +230,7 @@ const normalizePreviewProbe = (value: unknown): PreviewProbeResult | undefined =
   if (!value || typeof value !== "object") return undefined;
   const record = value as Record<string, unknown>;
   const status =
-    typeof record.status === "number" && Number.isFinite(record.status)
-      ? record.status
-      : undefined;
+    typeof record.status === "number" && Number.isFinite(record.status) ? record.status : undefined;
   const targetLabel = sanitizePreviewTargetLabel(record.targetLabel);
 
   if (record.ok === true) {
@@ -260,8 +257,7 @@ const normalizePreviewProbe = (value: unknown): PreviewProbeResult | undefined =
 };
 
 const normalizePreviewResponse = (value: unknown): PreviewResponse => {
-  const record =
-    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const record = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const probe = normalizePreviewProbe(record.probe);
   return {
     token: typeof record.token === "string" ? record.token : "",
@@ -360,8 +356,13 @@ export async function autosavePage(id: string, payload: PageAutosavePayload) {
   );
 }
 
+export type PagePublishResponse = {
+  ok: boolean;
+  page?: PageDetail | null;
+};
+
 export async function publishPage(id: string, data?: Record<string, unknown>) {
-  const result = await apiRequest<{ ok: boolean }>(
+  const result = await apiRequest<PagePublishResponse>(
     `/pages/${id}/publish`,
     {
       method: "POST",
@@ -371,7 +372,14 @@ export async function publishPage(id: string, data?: Record<string, unknown>) {
     { withCsrf: true }
   );
   if (result?.ok) {
-    updateCachedPageStatus(id, "published");
+    if (result.page && isPageDetail(result.page) && isPageDetailPayload(result.page)) {
+      // Publish persists the published document as the draft too; merge the
+      // post-publish detail so cached `currentData` never resurrects a stale
+      // draft after an editor reload.
+      mergeCachedPageIntoList(result.page);
+    } else {
+      updateCachedPageStatus(id, "published");
+    }
     broadcastCacheEvent({ key: cacheKeys.pagesList, action: "update" });
     broadcastCacheEvent({ key: cacheKeys.pageDetail(id), action: "update" });
   }
@@ -392,14 +400,11 @@ export async function unpublishPage(id: string) {
   return result;
 }
 
-export async function previewPage(
-  id: string,
-  ttlMinutesOrOptions?: number | PreviewPageOptions
-) {
+export async function previewPage(id: string, ttlMinutesOrOptions?: number | PreviewPageOptions) {
   const options =
     typeof ttlMinutesOrOptions === "number"
       ? { ttlMinutes: ttlMinutesOrOptions }
-      : ttlMinutesOrOptions ?? {};
+      : (ttlMinutesOrOptions ?? {});
   const body: PreviewPageOptions = {};
   if (options.ttlMinutes !== undefined) body.ttlMinutes = options.ttlMinutes;
   if (options.probe !== undefined) body.probe = options.probe;
@@ -440,11 +445,7 @@ export async function restorePageRevision(id: string, revisionId: string) {
     restored: boolean;
     revision: PageRevision;
     page: PageDetail;
-  }>(
-    `/pages/${id}/revisions/${revisionId}/restore`,
-    { method: "POST" },
-    { withCsrf: true }
-  );
+  }>(`/pages/${id}/revisions/${revisionId}/restore`, { method: "POST" }, { withCsrf: true });
   if (result?.page) {
     mergeCachedPageIntoList(result.page);
     broadcastCacheEvent({ key: cacheKeys.pagesList, action: "update" });

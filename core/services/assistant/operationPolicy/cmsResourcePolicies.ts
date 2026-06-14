@@ -61,33 +61,11 @@ export const pagePolicy: AssistantResourcePolicy = {
       valueType: "boolean",
       action: { type: "page.update", patchPath: ["settings", "showInNav"] },
     },
-    blockData: {
-      field: "blockData",
-      aliases: [
-        "widget",
-        "block",
-        "blok",
-        "headline",
-        "title",
-        "label",
-        "description",
-        "text",
-        "tekst",
-      ],
-      valueType: "record",
-      action: { type: "page.widget.patch", patchPath: ["dataPath"] },
-    },
   },
   actions: {
     create: { operation: "create", type: "page.upsert", target: "explicit", mode: "executable" },
     update: { operation: "update", type: "page.update", target: "single", mode: "executable" },
     delete: { operation: "delete", type: "page.delete", target: "multiple", mode: "executable" },
-    patchWidget: {
-      operation: "update",
-      type: "page.widget.patch",
-      target: "active",
-      mode: "executable",
-    },
   },
   destructive: filteredDestructivePolicy,
   coverage: {

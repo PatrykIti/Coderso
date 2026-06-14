@@ -1,15 +1,5 @@
-import { useMemo } from "react";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   normalizeTemplateSectionData,
   resolveTemplateSectionState,
@@ -17,25 +7,17 @@ import {
   type TemplateSectionData,
   type TemplateSectionResolutionState,
 } from "../../../../widgets/core/templateSection";
-import type { WidgetTemplate } from "@/services/widgetTemplatesClient";
-import { useWidgetTemplates } from "../hooks/useWidgetTemplates";
 import type { WidgetBlock, WidgetEditorProps } from "../../../../widgets/types";
 import {
   ReadonlyWidgetSummaryRow,
-  type WidgetControlFieldProps,
   WidgetControlRow,
   WidgetEditorSection,
 } from "./WidgetEditorControls";
 
-const NO_TEMPLATE_VALUE = "__no-template__";
-
-const statusLabelMap: Record<string, string> = {
-  draft: "Draft",
-  published: "Published",
-};
-
-const resolveTemplateStatusLabel = (status?: string | null) =>
-  status ? (statusLabelMap[status] ?? status) : "Unknown";
+// The widget-template authoring surface is retired (replaced by the Page
+// Templates surface, which is Page v2-only). These editors keep already
+// stored legacy template-section blocks readable and presentational metadata
+// editable, but no longer offer new widget-template selection.
 
 function updateValue(
   value: TemplateSectionData,
@@ -59,82 +41,6 @@ function updateValue(
   onChange(next);
 }
 
-function TemplateSelectField({
-  value,
-  onChange,
-  fieldProps,
-}: {
-  value: TemplateSectionData;
-  onChange: (next: TemplateSectionData) => void;
-  fieldProps: WidgetControlFieldProps;
-}) {
-  const { items: templates, isLoading, error } = useWidgetTemplates();
-
-  const options = useMemo(() => templates, [templates]);
-  const selectedId = value.templateId?.trim();
-  const selectValue = selectedId && selectedId.length > 0 ? selectedId : NO_TEMPLATE_VALUE;
-  const selectedTemplate = options.find((item) => item.id === selectedId) ?? null;
-
-  const handleSelect = (nextValue: string) => {
-    if (nextValue === NO_TEMPLATE_VALUE) {
-      updateValue(value, onChange, {
-        templateId: templateSectionDefaults.templateId ?? "",
-        templateName: templateSectionDefaults.templateName ?? "",
-        resolved: undefined,
-      });
-      return;
-    }
-
-    const template = options.find((item) => item.id === nextValue);
-    updateValue(value, onChange, {
-      templateId: nextValue,
-      templateName: template?.name ?? templateSectionDefaults.templateName ?? "",
-      resolved: undefined,
-    });
-  };
-
-  return (
-    <div className="space-y-3">
-      <div className="space-y-2">
-        <p className="text-sm font-medium">Template selection</p>
-        <Select value={selectValue} onValueChange={handleSelect}>
-          <SelectTrigger {...fieldProps}>
-            <SelectValue
-              placeholder={isLoading ? "Loading templates..." : "Choose a widget template"}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={NO_TEMPLATE_VALUE}>No template</SelectItem>
-            {options.map((template) => (
-              <SelectItem key={template.id} value={template.id}>
-                {template.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {error ? <p className="text-xs text-destructive">{error}</p> : null}
-      </div>
-      {selectedTemplate ? (
-        <div className="rounded-lg border bg-muted/20 p-3 text-xs">
-          <div className="flex items-center justify-between gap-2">
-            <p className="font-semibold text-foreground">{selectedTemplate.name}</p>
-            <Badge variant={selectedTemplate.status === "published" ? "default" : "outline"}>
-              {resolveTemplateStatusLabel(selectedTemplate.status)}
-            </Badge>
-          </div>
-          {selectedTemplate.description ? (
-            <p className="mt-1 text-muted-foreground">{selectedTemplate.description}</p>
-          ) : null}
-        </div>
-      ) : (
-        <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-          Select a widget template to render in this section.
-        </div>
-      )}
-    </div>
-  );
-}
-
 function humanizeTemplateResolutionState(state: TemplateSectionResolutionState): string {
   switch (state) {
     case "not_selected":
@@ -152,85 +58,6 @@ function humanizeTemplateResolutionState(state: TemplateSectionResolutionState):
     case "ready":
       return "Resolved content is ready.";
   }
-}
-
-function resolveTemplateEditorDiagnostics({
-  normalized,
-  selectedTemplate,
-  templateListLoading,
-  templateListError,
-}: {
-  normalized: TemplateSectionData;
-  selectedTemplate: WidgetTemplate | null;
-  templateListLoading: boolean;
-  templateListError: string | null;
-}) {
-  const baseState = resolveTemplateSectionState(normalized);
-  if (!normalized.templateId?.trim()) {
-    return {
-      state: "not_selected" as const,
-      summary: humanizeTemplateResolutionState("not_selected"),
-      sourceBlocks: "No template selected.",
-    };
-  }
-  if (normalized.resolved?.error) {
-    return {
-      state: baseState,
-      summary: humanizeTemplateResolutionState(baseState),
-      sourceBlocks: "Runtime reported a resolver error.",
-    };
-  }
-  if (baseState === "ready" || baseState === "template_empty") {
-    return {
-      state: baseState,
-      summary: humanizeTemplateResolutionState(baseState),
-      sourceBlocks: selectedTemplate
-        ? `${selectedTemplate.blocks.length} source block${
-            selectedTemplate.blocks.length === 1 ? "" : "s"
-          } in the selected template.`
-        : "Source block count unavailable.",
-    };
-  }
-  if (selectedTemplate?.status && selectedTemplate.status !== "published") {
-    return {
-      state: "template_unpublished" as const,
-      summary: humanizeTemplateResolutionState("template_unpublished"),
-      sourceBlocks: `${selectedTemplate.blocks.length} source block${
-        selectedTemplate.blocks.length === 1 ? "" : "s"
-      } in the draft template.`,
-    };
-  }
-  if (!selectedTemplate && !templateListLoading && !templateListError) {
-    return {
-      state: "template_missing" as const,
-      summary: humanizeTemplateResolutionState("template_missing"),
-      sourceBlocks: "Template is absent from the admin template list.",
-    };
-  }
-  if (templateListError) {
-    return {
-      state: baseState,
-      summary: "template_list_unavailable: template status could not be confirmed.",
-      sourceBlocks: templateListError,
-    };
-  }
-  if (templateListLoading) {
-    return {
-      state: baseState,
-      summary: "template_list_loading: template status is still loading.",
-      sourceBlocks: "Template list is loading.",
-    };
-  }
-
-  return {
-    state: "preview_unresolved" as const,
-    summary: humanizeTemplateResolutionState("preview_unresolved"),
-    sourceBlocks: selectedTemplate
-      ? `${selectedTemplate.blocks.length} source block${
-          selectedTemplate.blocks.length === 1 ? "" : "s"
-        } in the selected template; editor preview has not resolved them.`
-      : "Source block count unavailable.",
-  };
 }
 
 function humanizeWidgetType(type: string | undefined): string {
@@ -253,6 +80,19 @@ function summarizeResolvedBlocks(blocks: WidgetBlock[] | undefined): string {
     .map(([label, count]) => (count === 1 ? label : `${label} (${count})`))
     .join(", ");
   return `${blocks.length} content block${blocks.length === 1 ? "" : "s"} resolved: ${typeSummary}.`;
+}
+
+function RetiredSelectionNotice() {
+  return (
+    <Alert>
+      <AlertTitle>Widget-template selection retired</AlertTitle>
+      <AlertDescription>
+        The reusable widget-template surface was replaced by Page Templates. Existing
+        template-section blocks keep rendering their stored template; selecting a different widget
+        template is no longer supported.
+      </AlertDescription>
+    </Alert>
+  );
 }
 
 function TemplatePresentationEditor({
@@ -327,34 +167,27 @@ function TemplatePresentationEditor({
   );
 }
 
-export function TemplateSectionWizardEditor({
-  value,
-  onChange,
-}: WidgetEditorProps<TemplateSectionData>) {
+export function TemplateSectionWizardEditor({ value }: WidgetEditorProps<TemplateSectionData>) {
+  const normalized = normalizeTemplateSectionData(value);
   return (
-    <>
-      <WidgetEditorSection
-        id="template-section.wizard.template-setup"
-        mode="wizard"
-        role="setup"
-        title="Template setup"
-        description="Choose which widget template should render as this section."
-      >
-        <WidgetControlRow
-          id="template-section.wizard.template-id"
-          label="Template selection"
-          path="templateId"
-        >
-          {(fieldProps) => (
-            <TemplateSelectField
-              value={normalizeTemplateSectionData(value)}
-              onChange={onChange}
-              fieldProps={fieldProps}
-            />
-          )}
-        </WidgetControlRow>
-      </WidgetEditorSection>
-    </>
+    <WidgetEditorSection
+      id="template-section.wizard.template-setup"
+      mode="wizard"
+      role="setup"
+      title="Template setup"
+      description="Stored legacy widget-template reference for this section."
+    >
+      <ReadonlyWidgetSummaryRow
+        id="template-section.wizard.template-id"
+        label="Stored template"
+        path="templateId"
+        value={
+          normalized.templateName ||
+          (normalized.templateId ? normalized.templateId : "Not selected")
+        }
+      />
+      <RetiredSelectionNotice />
+    </WidgetEditorSection>
   );
 }
 
@@ -380,7 +213,7 @@ export function TemplateSectionVisualEditor({
           </div>
         ) : (
           <div className="rounded-lg border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
-            No template selected yet. Run setup to choose one before editing presentation labels.
+            No legacy widget template is stored on this section.
           </div>
         )}
       </WidgetEditorSection>
@@ -392,19 +225,9 @@ export function TemplateSectionVisualEditor({
 export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<TemplateSectionData>) {
   const normalized = normalizeTemplateSectionData(value);
   const metadata = normalized.metadata ?? templateSectionDefaults.metadata ?? {};
-  const {
-    items: templates,
-    isLoading: templateListLoading,
-    error: templateListError,
-  } = useWidgetTemplates();
-  const selectedTemplate =
-    templates.find((template) => template.id === normalized.templateId?.trim()) ?? null;
-  const diagnostics = resolveTemplateEditorDiagnostics({
-    normalized,
-    selectedTemplate,
-    templateListLoading,
-    templateListError,
-  });
+  const state = normalized.templateId?.trim()
+    ? resolveTemplateSectionState(normalized)
+    : ("not_selected" as const);
   const resolvedBlockCount = Array.isArray(normalized.resolved?.blocks)
     ? normalized.resolved.blocks.length
     : 0;
@@ -457,13 +280,13 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
           path="resolved.blocks"
           value={`${resolvedBlockCount} editor-resolved block${
             resolvedBlockCount === 1 ? "" : "s"
-          }; ${diagnostics.sourceBlocks}`}
+          }.`}
         />
         <ReadonlyWidgetSummaryRow
           id="template-section.advanced.resolution-status"
           label="Resolution status"
           path="resolved.error"
-          value={diagnostics.summary}
+          value={humanizeTemplateResolutionState(state)}
         />
       </WidgetEditorSection>
       <WidgetEditorSection
@@ -483,7 +306,7 @@ export function TemplateSectionAdvancedEditor({ value }: WidgetEditorProps<Templ
           id="template-section.advanced.preview-state"
           label="Preview state"
           path="resolved"
-          value={humanizeTemplateResolutionState(diagnostics.state)}
+          value={humanizeTemplateResolutionState(state)}
         />
       </WidgetEditorSection>
       <WidgetEditorSection

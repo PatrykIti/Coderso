@@ -2,9 +2,7 @@ import type { DesignTokens } from "../../services/theme/tokenTypes";
 import type { AdminThemeTokens } from "../../services/adminThemes/tokenTypes";
 
 export function toCssVariables(tokens: DesignTokens) {
-  const entries = Object.entries(toCssVariableMap(tokens)).map(
-    ([key, value]) => `${key}:${value}`
-  );
+  const entries = Object.entries(toCssVariableMap(tokens)).map(([key, value]) => `${key}:${value}`);
   return `:root{${entries.join(";")};}`;
 }
 
@@ -59,6 +57,31 @@ export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
   return `:root{${entries.join(";")};}`;
 }
 
+/**
+ * Site typography token variables consumed by the Page V2 typography contract
+ * (`pageTypographyFontFamilyCssValues`/`pageTypographyFontSizeCssValues` in
+ * `core/services/pages/pageDocumentV2.ts`). Single owner of the variable
+ * names: the front emits them on `:root` through {@link toCssVariables}, and
+ * the page editor canvas re-paints the same map inline on the canvas frame so
+ * the canvas resolves the SAME effective values as the front (the admin shell
+ * defines admin-theme `--text-*`/`--font-*` variables on `:root` that would
+ * otherwise leak into the canvas and cause WYSIWYG drift).
+ */
+export function toPageTypographyCssVariableMap(tokens: DesignTokens): Record<string, string> {
+  return {
+    "--font-sans": tokens.typography.sans,
+    "--font-display": tokens.typography.display,
+    "--text-sm": tokens.typography.sm,
+    "--text-md": tokens.typography.md,
+    "--text-lg": tokens.typography.lg,
+    "--text-xl": tokens.typography.xl,
+    "--text-2xl": tokens.typography["2xl"],
+    "--text-3xl": tokens.typography["3xl"],
+    "--text-4xl": tokens.typography["4xl"],
+    "--text-5xl": tokens.typography["5xl"],
+  };
+}
+
 export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
   return {
     "--color-primary": tokens.colors.primary,
@@ -78,13 +101,7 @@ export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
     "--radius-md": tokens.radius.md,
     "--radius-lg": tokens.radius.lg,
     "--radius-xl": tokens.radius.xl,
-    "--font-sans": tokens.typography.sans,
-    "--font-display": tokens.typography.display,
-    "--text-sm": tokens.typography.sm,
-    "--text-md": tokens.typography.md,
-    "--text-lg": tokens.typography.lg,
-    "--text-xl": tokens.typography.xl,
-    "--text-2xl": tokens.typography["2xl"],
+    ...toPageTypographyCssVariableMap(tokens),
     "--background": "var(--color-bg)",
     "--foreground": "var(--color-text)",
     "--primary": "var(--color-primary)",
@@ -107,9 +124,7 @@ export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
   };
 }
 
-export function toAdminThemeCssVariableMap(
-  tokens: AdminThemeTokens
-): Record<string, string> {
+export function toAdminThemeCssVariableMap(tokens: AdminThemeTokens): Record<string, string> {
   return {
     "--admin-base-bg": tokens.base.bg,
     "--admin-base-surface": tokens.base.surface,

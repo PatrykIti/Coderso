@@ -1,4 +1,4 @@
-import { Layers, PlusCircle, Save, SlidersHorizontal, Upload } from "lucide-react";
+import { Layers, Paintbrush, PlusCircle, Save, SlidersHorizontal, Upload } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -790,6 +790,17 @@ export function MenuEditorPage() {
                       Details
                     </Button>
                   ) : null}
+                  {/* Menu DESIGN view (TASK-458-03): canvas + floating panel
+                      editing this menu's appearance and nav extras. */}
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    data-menu-design-button="true"
+                    onClick={() => navigate(`/menus/${originalMenu.id}/design`)}
+                  >
+                    <Paintbrush className="h-4 w-4" />
+                    Design
+                  </Button>
                   <Button variant="ghost" onClick={handleDiscard} disabled={!canSave || isMutating}>
                     Discard
                   </Button>

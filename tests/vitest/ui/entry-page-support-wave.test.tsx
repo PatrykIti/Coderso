@@ -687,15 +687,10 @@ test("EntryMetadataPanel handles checklist, seo, taxonomy, and save actions", as
   }
 });
 
-test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore, and discard", async () => {
-  const { PageSettingsDrawer } = await import("../../../core/admin/ui/pages/PageSettingsDrawer");
+test("PageRevisionDrawer forwards restore and discard", async () => {
   const { PageRevisionDrawer } = await import("../../../core/admin/ui/pages/PageRevisionDrawer");
-  const { PageTable } = await import("../../../core/admin/ui/pages/PageTable");
-  const { EntryTable } = await import("../../../core/admin/ui/entries/EntryTable");
 
   const onOpenChange = vi.fn();
-  const onSave = vi.fn(async () => true);
-  const onAutosave = vi.fn(async () => undefined);
   const onRestore = vi.fn();
   const onDiscard = vi.fn();
   Object.defineProperty(window, "confirm", {
@@ -705,93 +700,36 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
   });
 
   const view = mount(
-    <>
-      <PageSettingsDrawer
-        open
-        onOpenChange={onOpenChange}
-        page={
+    <PageRevisionDrawer
+      open
+      onOpenChange={onOpenChange}
+      revisions={
+        [
           {
-            id: "page-1",
-            title: "Landing",
-            slug: "/landing",
-            status: "draft",
-            currentData: { blocks: [] },
-            updatedAt: "2026-03-06T12:00:00.000Z",
-          } as never
-        }
-        settings={{
-          template: "landing",
-          showInNav: true,
-          layout: {
-            wrapper: {
-              container: "default",
-              maxWidth: undefined,
-              padding: { top: "none", bottom: "none" },
-              background: {
-                color: "#ffffff",
-                image: null,
-                media: { type: "none", source: "external", src: null },
-              },
-            },
-            sections: {
-              gap: "lg",
-              defaults: {
-                container: "default",
-                padding: { top: "xl", bottom: "xl" },
-                margin: { top: "none", bottom: "none" },
-              },
-            },
-            applyDefaultsToNewBlocks: true,
+            id: "rev-1",
+            pageId: "page-1",
+            version: 1,
+            kind: "autosave",
+            title: "Draft",
+            slug: "/draft",
+            data: { schemaVersion: 2, sections: [] },
+            createdAt: "2026-03-06T12:00:00.000Z",
+            createdBy: { name: "Admin", email: "admin@example.com" },
           },
-          revisionRetention: 10,
-        }}
-        templateOptions={[{ key: "landing", label: "Landing" } as never]}
-        onSave={onSave}
-        onAutosave={onAutosave}
-        isSubmitting={false}
-        isAutosaving={false}
-        error={null}
-      />
-      <PageRevisionDrawer
-        open
-        onOpenChange={onOpenChange}
-        revisions={
-          [
-            {
-              id: "rev-1",
-              pageId: "page-1",
-              version: 1,
-              kind: "autosave",
-              title: "Draft",
-              slug: "/draft",
-              data: { blocks: [] },
-              createdAt: "2026-03-06T12:00:00.000Z",
-              createdBy: { name: "Admin", email: "admin@example.com" },
-            },
-          ] as never
-        }
-        isLoading={false}
-        error={null}
-        onRestore={onRestore}
-        onDiscard={onDiscard}
-      />
-    </>
+        ] as never
+      }
+      isLoading={false}
+      error={null}
+      onRestore={onRestore}
+      onDiscard={onDiscard}
+    />
   );
 
   try {
-    expect(view.container.textContent).toContain("Template and navigation");
     expect(view.container.textContent).toContain("Draft version");
-    const inputs = Array.from(view.container.querySelectorAll("input"));
-    const selects = Array.from(view.container.querySelectorAll("select"));
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
     React.act(() => {
-      setInputValue(inputs[0], "About us");
-      setInputValue(inputs[1], "/about");
-      setSelectValue(selects[0], "landing");
-      inputs[2]?.dispatchEvent(new Event("change", { bubbles: true }));
-      buttons.find((button) => button.textContent?.includes("Reset to theme defaults"))?.click();
-      buttons.find((button) => button.textContent?.includes("Save settings"))?.click();
       buttons.find((button) => button.textContent?.includes("Close and keep draft"))?.click();
       buttons.find((button) => button.textContent === "Discard")?.click();
     });
@@ -824,8 +762,6 @@ test("PageSettingsDrawer and PageRevisionDrawer forward save, autosave, restore,
       nextButtons.find((button) => button.textContent === "Delete")?.click();
     });
 
-    expect(onSave).toHaveBeenCalled();
-    expect(onAutosave).toHaveBeenCalled();
     expect(onDiscard).toHaveBeenCalledWith("rev-1");
     expect(onRestore).toHaveBeenCalledWith("rev-1");
   } finally {

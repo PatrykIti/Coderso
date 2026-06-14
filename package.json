@@ -20,6 +20,7 @@
     "lint:repo": "bun run lint:repo:types",
     "lint:repo:types": "tsc -p tsconfig.json --noEmit",
     "check:admin-bundle": "bun scripts/check-admin-bundle.ts",
+    "check:admin-boundary": "bun scripts/check-admin-boundary.ts",
     "test": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run test:bun && bun run test:vitest",
     "test:full": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run test:bun && bun run test:vitest",
     "test:bun": "set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test --parallel=1 --timeout=15000 tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/perf tests/security",
@@ -82,7 +83,7 @@
     "@typescript-eslint/eslint-plugin": "^8.59.0",
     "@typescript-eslint/parser": "^8.59.0",
     "@vitest/coverage-v8": "^4.1.5",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.3",
     "eslint": "^9.39.4",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -98,6 +99,7 @@
     "semver": "^7.7.3"
   },
   "overrides": {
+    "esbuild": "^0.28.1",
     "fast-uri": "^3.1.2",
     "fast-xml-builder": "^1.1.7",
     "fast-xml-parser": "^5.5.6",

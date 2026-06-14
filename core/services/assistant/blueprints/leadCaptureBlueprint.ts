@@ -4,6 +4,7 @@ import type {
   AssistantPlannedAction,
   AssistantPromptKind,
 } from "../actionPlanTypes";
+import { createPageBlockV2, createPageSectionV2 } from "../../pages/pageDocumentV2";
 import type { AssistantBusinessBlueprintPack } from "./businessBlueprintTypes";
 
 const leadCaptureFormName = "Lead Capture Inquiry";
@@ -66,32 +67,25 @@ const buildLeadCaptureActions = (): AssistantPlannedAction[] => [
       status: "published",
       introTitle: "Porozmawiajmy o Twoim projekcie",
       introBody: "Opisz, czego potrzebujesz, a przygotujemy kolejne kroki i wrócimy z odpowiedzią.",
-      blocks: [
-        {
+      sections: [
+        createPageSectionV2("content", {
           id: "lead-capture-intro",
-          type: "rich-text-section",
-          variant: "single-column",
-          data: {
-            titleBlock: {
-              eyebrow: "Kontakt",
-              title: "Opowiedz nam o swoim projekcie",
-            },
-            body: {
-              html: "",
-              blocks: [
-                {
-                  id: "lead-capture-intro-copy",
-                  heading: "Szybki start",
-                  content: "Uzupełnij formularz, a zespół wróci z informacją, jak możemy pomóc.",
-                },
-              ],
-            },
-            options: {
-              outputMode: "blocks",
-              maxWidth: "lg",
-            },
-          },
-        },
+          name: "Intro",
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "lead-capture-intro-heading",
+              props: { text: "Opowiedz nam o swoim projekcie", level: "h2", align: "left" },
+            }),
+            createPageBlockV2("text", {
+              id: "lead-capture-intro-copy",
+              props: {
+                text: "Uzupelnij formularz, a zespol wroci z informacja, jak mozemy pomoc.",
+                format: "plain",
+                align: "left",
+              },
+            }),
+          ],
+        }),
       ],
       formEmbed: {
         formName: leadCaptureFormName,

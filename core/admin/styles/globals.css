@@ -142,7 +142,34 @@
     grid-template-columns: minmax(0, 1fr) !important;
   }
 
+  /* Page editor canvas: while the floating toolbar is visible the canvas
+     scroller exposes its measured footprint as a clearance variable. Canvas
+     targets carry it as scroll-margin-bottom so every scroll-into-view
+     (keyboard focus, assistive tech, automation, Playwright clicks) lands
+     them above the toolbar instead of underneath it (round-3 friction A). */
+  [data-page-editor-canvas-scroller] [data-page-editor-section],
+  [data-page-editor-canvas-scroller] [data-page-editor-section-gap],
+  [data-page-editor-canvas-scroller] [data-page-editor-block],
+  [data-page-editor-canvas-scroller] [data-page-editor-ghost],
+  [data-page-editor-canvas-scroller] button {
+    scroll-margin-bottom: var(--page-editor-toolbar-clearance, 0px);
+  }
+
+  /* Standard sonner click-through pattern (round-3 friction B): the fixed
+     toast viewport must never swallow clicks aimed at the UI underneath —
+     only live toasts themselves stay interactive (close button, actions),
+     and exiting toasts release pointer events immediately. */
+  .toaster[data-sonner-toaster] {
+    pointer-events: none;
+  }
+
+  .toaster [data-sonner-toast][data-removed="true"],
+  .toaster [data-sonner-toast][data-visible="false"] {
+    pointer-events: none;
+  }
+
   .toaster [data-sonner-toast] {
+    pointer-events: auto;
     background: var(--normal-bg);
     color: var(--normal-text);
     border-color: var(--normal-border);

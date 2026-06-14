@@ -41,13 +41,13 @@ test("buildPreviewPath keeps content detail-page preview overrides on the shared
   );
 });
 
-test("buildPreviewPath builds widget template preview query", () => {
+test("buildPreviewPath builds page template preview query", () => {
   const path = buildPreviewPath({
-    targetType: "widget-template",
+    targetType: "page-template",
     token: "t1",
   });
 
-  expect(path).toBe("/preview?type=widget-template&token=t1");
+  expect(path).toBe("/preview?type=page-template&token=t1");
 });
 
 test("buildPreviewPath builds detail-page preview query", () => {
@@ -75,13 +75,13 @@ test("buildPreviewUrl returns absolute URL when base URL is provided", () => {
 test("buildPreviewUrl falls back to relative path when base URL is missing", () => {
   const url = buildPreviewUrl(
     {
-      targetType: "widget-template",
+      targetType: "page-template",
       token: "t1",
     },
     null
   );
 
-  expect(url).toBe("/preview?type=widget-template&token=t1");
+  expect(url).toBe("/preview?type=page-template&token=t1");
 });
 
 test("createPublicUrlContextFromHeaders maps forwarded host/proto headers", () => {

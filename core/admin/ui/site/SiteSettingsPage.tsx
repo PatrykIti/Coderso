@@ -52,6 +52,7 @@ import {
   normalizeDetailPageIdInput,
   mergeContentRoutes,
   normalizeRouteInput,
+  validateBaseUrl,
   validateContentRoutes,
   type SiteContentRouteForm,
 } from "./siteSettingsValidation";
@@ -68,6 +69,9 @@ type SiteSettingsForm = {
   contentRoutes: SiteContentRouteForm[];
 };
 
+// The "Site shell" section moved to the Menus surface (`SiteShellDialog`,
+// TASK-458-01); `site.navigationMenuId` / `site.footerTemplateId` are no
+// longer read or written by this page.
 type SiteSectionId = "base" | "pages" | "preview" | "routes" | "cache" | "performance";
 
 const SITE_SECTIONS: Array<{
@@ -162,23 +166,6 @@ const resolveInitialSiteSettingsState = () => {
     hasPagesCache: Boolean(pages),
     hasContentTypesCache: Boolean(contentTypes),
   };
-};
-
-const validateBaseUrl = (value: string) => {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  try {
-    const parsed = new URL(trimmed);
-    const host = parsed.hostname.toLowerCase();
-    if (parsed.protocol !== "https:") {
-      if (host !== "localhost" && host !== "127.0.0.1") {
-        return "HTTPS is required for non-localhost URLs.";
-      }
-    }
-    return null;
-  } catch {
-    return "Enter a valid URL (e.g. https://example.com).";
-  }
 };
 
 const validateAdminPath = (value: string) => {

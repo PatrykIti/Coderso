@@ -1,0 +1,2119 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coderso — Edytor (redesign)</title>
+    <style>
+      :root {
+        --bg: #eef1f4;
+        --bg-grid: #e4e8ed;
+        --surface: #ffffff;
+        --surface-2: #f8fafc;
+        --border: #e2e8f0;
+        --border-strong: #cbd5e1;
+        --text: #0f172a;
+        --text-2: #475569;
+        --text-3: #94a3b8;
+        --accent: #0d9488;
+        --accent-strong: #0f766e;
+        --accent-tint: #f0fdfa;
+        --accent-tint-2: #ccfbf1;
+        --danger: #e11d48;
+        --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+        --shadow: 0 8px 28px rgba(15, 23, 42, 0.12);
+        --shadow-lg: 0 20px 60px rgba(15, 23, 42, 0.22);
+        --mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", monospace;
+        --sans:
+          -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+        --r: 12px;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        font-family: var(--sans);
+        color: var(--text);
+        background: var(--bg);
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+      }
+      button {
+        font-family: inherit;
+        cursor: pointer;
+        border: none;
+        background: none;
+        color: inherit;
+      }
+      ::selection {
+        background: var(--accent-tint-2);
+      }
+
+      /* ---------- TOP BAR ---------- */
+      .topbar {
+        height: 56px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 0 16px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        position: relative;
+        z-index: 40;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding-right: 14px;
+        border-right: 1px solid var(--border);
+      }
+      .logo {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #fff;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+        font-size: 15px;
+      }
+      .crumbs {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 13.5px;
+        color: var(--text-2);
+      }
+      .crumbs b {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .crumbs .sep {
+        color: var(--text-3);
+      }
+
+      .topbar .spacer {
+        flex: 1;
+      }
+
+      /* breakpoint switch — central, makes the "editing scope" explicit */
+      .bp {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 3px;
+      }
+      .bp button {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 11px;
+        border-radius: 7px;
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--text-2);
+        transition: 0.15s;
+      }
+      .bp button .px {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-3);
+        font-weight: 500;
+      }
+      .bp button.on {
+        background: var(--surface);
+        color: var(--accent-strong);
+        box-shadow: var(--shadow-sm);
+      }
+      .bp button.on .px {
+        color: var(--accent);
+      }
+      .bp button:hover:not(.on) {
+        color: var(--text);
+      }
+      .bp svg {
+        width: 16px;
+        height: 16px;
+      }
+
+      .scope-pill {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        color: var(--text-2);
+        background: var(--accent-tint);
+        border: 1px solid var(--accent-tint-2);
+        padding: 6px 11px;
+        border-radius: 8px;
+      }
+      .scope-pill .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+      }
+      .scope-pill b {
+        color: var(--accent-strong);
+        font-weight: 600;
+      }
+
+      .tb-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .icobtn {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        display: grid;
+        place-items: center;
+        color: var(--text-2);
+        border: 1px solid transparent;
+        transition: 0.15s;
+        position: relative;
+      }
+      .icobtn:hover {
+        background: var(--surface-2);
+        color: var(--text);
+        border-color: var(--border);
+      }
+      .icobtn svg {
+        width: 18px;
+        height: 18px;
+      }
+      .txtbtn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 13px;
+        border-radius: 9px;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-2);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        transition: 0.15s;
+      }
+      .txtbtn:hover {
+        color: var(--text);
+        border-color: var(--border-strong);
+        background: var(--surface-2);
+      }
+      .txtbtn svg {
+        width: 16px;
+        height: 16px;
+      }
+      .publish {
+        background: var(--accent);
+        color: #fff;
+        border-color: var(--accent);
+        box-shadow:
+          0 1px 0 rgba(15, 118, 110, 0.4),
+          var(--shadow-sm);
+      }
+      .publish:hover {
+        background: var(--accent-strong);
+        border-color: var(--accent-strong);
+        color: #fff;
+      }
+      .save-state {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        color: var(--text-2);
+        margin-right: 2px;
+      }
+      .save-state .pulse {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #f59e0b;
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+        animation: pulse 2s infinite;
+      }
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
+        }
+        70% {
+          box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+        }
+      }
+
+      /* ---------- STAGE ---------- */
+      .stage {
+        position: absolute;
+        inset: 56px 0 0 0;
+        overflow: auto;
+        background:
+          radial-gradient(circle at 1px 1px, var(--bg-grid) 1.4px, transparent 0) 0 0/22px 22px,
+          var(--bg);
+        padding: 40px 24px 200px;
+      }
+      .canvas {
+        margin: 0 auto;
+        background: var(--surface);
+        border-radius: 14px;
+        box-shadow:
+          0 1px 0 var(--border),
+          0 18px 50px rgba(15, 23, 42, 0.1);
+        transition: max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+        position: relative;
+      }
+      .canvas[data-bp="desktop"] {
+        max-width: 1080px;
+      }
+      .canvas[data-bp="tablet"] {
+        max-width: 744px;
+      }
+      .canvas[data-bp="mobile"] {
+        max-width: 390px;
+      }
+
+      /* canvas width readout */
+      .canvas-meta {
+        margin: 0 auto 12px;
+        text-align: center;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-3);
+        letter-spacing: 0.04em;
+        transition: 0.35s;
+      }
+
+      /* ---------- SECTIONS ---------- */
+      .section {
+        position: relative;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color 0.12s;
+      }
+      .section:hover {
+        border-color: var(--accent-tint-2);
+      }
+      .section.selected {
+        border-color: var(--accent);
+      }
+      .section .sec-tag {
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        transform: translateY(-100%);
+        background: var(--accent);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 4px 9px;
+        border-radius: 7px 7px 0 0;
+        display: none;
+        align-items: center;
+        gap: 6px;
+        white-space: nowrap;
+        z-index: 5;
+      }
+      .section.selected .sec-tag {
+        display: flex;
+      }
+      .sec-tag .variant {
+        background: rgba(255, 255, 255, 0.22);
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      /* override badge for non-desktop breakpoints */
+      .ovr {
+        display: none;
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 4;
+        font-size: 10px;
+        font-weight: 600;
+        font-family: var(--mono);
+        background: #fef3c7;
+        color: #92400e;
+        border: 1px solid #fde68a;
+        padding: 2px 7px;
+        border-radius: 6px;
+      }
+      .canvas:not([data-bp="desktop"]) .section.has-override .ovr {
+        display: block;
+      }
+
+      /* section visual content */
+      .pad {
+        padding: 34px 40px;
+      }
+      .canvas[data-bp="mobile"] .pad {
+        padding: 22px 20px;
+      }
+      .tmpl {
+        background: var(--surface-2);
+        border: 1px dashed var(--border-strong);
+        border-radius: 10px;
+        margin: 18px 24px;
+        padding: 18px;
+      }
+      .tmpl .eyebrow {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: var(--text-3);
+      }
+      .tmpl h4 {
+        font-size: 16px;
+        margin: 5px 0 4px;
+      }
+      .tmpl p {
+        font-size: 12.5px;
+        color: var(--text-3);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        align-items: center;
+      }
+      .canvas[data-bp="mobile"] .hero,
+      .canvas[data-bp="tablet"] .hero {
+        grid-template-columns: 1fr;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--accent-strong);
+        background: var(--accent-tint);
+        border: 1px solid var(--accent-tint-2);
+        padding: 6px 12px;
+        border-radius: 99px;
+      }
+      .hero h1 {
+        font-size: 40px;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        margin: 16px 0 14px;
+        font-weight: 800;
+      }
+      .canvas[data-bp="mobile"] .hero h1 {
+        font-size: 30px;
+      }
+      .hero p {
+        color: var(--text-2);
+        font-size: 15px;
+        line-height: 1.6;
+        max-width: 42ch;
+      }
+      .hero .cta {
+        margin-top: 20px;
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        background: var(--accent);
+        color: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .hero-img {
+        aspect-ratio: 4/3;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #cfe3df, #9bbdb5 60%, #6f9089);
+        position: relative;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+      }
+      .hero-img::after {
+        content: "artas-407 · projekt domu";
+        position: absolute;
+        left: 14px;
+        top: 12px;
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0.9;
+      }
+
+      .steps {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+      .canvas[data-bp="mobile"] .steps {
+        flex-direction: column;
+      }
+      .step {
+        flex: 1;
+        min-width: 160px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 18px;
+        background: var(--surface-2);
+      }
+      .step .n {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        font-weight: 700;
+        display: grid;
+        place-items: center;
+        font-size: 14px;
+        margin-bottom: 12px;
+      }
+      .step h5 {
+        font-size: 15px;
+        margin-bottom: 6px;
+      }
+      .step p {
+        font-size: 12.5px;
+        color: var(--text-2);
+        line-height: 1.5;
+      }
+
+      .grid3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+      }
+      .canvas[data-bp="mobile"] .grid3 {
+        grid-template-columns: 1fr;
+      }
+      .canvas[data-bp="tablet"] .grid3 {
+        grid-template-columns: 1fr 1fr;
+      }
+      .card {
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .card .ph {
+        aspect-ratio: 16/11;
+        background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+      }
+      .card .body {
+        padding: 14px;
+      }
+      .card h6 {
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .card .price {
+        font-size: 13px;
+        color: var(--accent-strong);
+        font-weight: 700;
+      }
+      .sec-title {
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        margin-bottom: 4px;
+      }
+      .sec-sub {
+        font-size: 13.5px;
+        color: var(--text-2);
+        margin-bottom: 22px;
+      }
+
+      /* ---------- INSERT GAP ---------- */
+      .gap {
+        height: 18px;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .gap::before {
+        content: "";
+        position: absolute;
+        left: 10%;
+        right: 10%;
+        height: 2px;
+        background: var(--accent);
+        border-radius: 2px;
+        opacity: 0;
+        transition: 0.15s;
+      }
+      .gap .ins {
+        opacity: 0;
+        transform: scale(0.9);
+        transition: 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 99px;
+        box-shadow: var(--shadow);
+        z-index: 6;
+      }
+      .gap:hover {
+        height: 40px;
+      }
+      .gap:hover::before {
+        opacity: 0.3;
+      }
+      .gap:hover .ins {
+        opacity: 1;
+        transform: scale(1);
+      }
+      .gap .ins svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      /* empty section state */
+      .empty {
+        margin: 18px 24px;
+        border: 2px dashed var(--border-strong);
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        color: var(--text-3);
+      }
+      .empty h4 {
+        font-size: 15px;
+        color: var(--text-2);
+        margin-bottom: 4px;
+      }
+      .empty p {
+        font-size: 12.5px;
+        margin-bottom: 14px;
+      }
+      .empty .addblk {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        border: 1px solid var(--accent-tint-2);
+        padding: 9px 16px;
+        border-radius: 9px;
+        font-weight: 600;
+        font-size: 13px;
+      }
+
+      /* ---------- FLOATING TOOLBAR (signature element) ---------- */
+      .float {
+        position: fixed;
+        z-index: 50;
+        left: 50%;
+        bottom: 28px;
+        transform: translateX(-50%);
+        background: rgba(15, 23, 42, 0.96);
+        backdrop-filter: blur(12px);
+        border-radius: 16px;
+        box-shadow: var(--shadow-lg);
+        color: #fff;
+        min-width: 520px;
+        display: none;
+        animation: rise 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      .float.show {
+        display: block;
+      }
+      @keyframes rise {
+        from {
+          opacity: 0;
+          transform: translateX(-50%) translateY(14px);
+        }
+        to {
+          opacity: 1;
+          transform: translateX(-50%) translateY(0);
+        }
+      }
+
+      .float-head {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 8px;
+      }
+      .grip {
+        width: 18px;
+        display: grid;
+        place-items: center;
+        color: #64748b;
+        cursor: grab;
+        align-self: stretch;
+      }
+      .grip:active {
+        cursor: grabbing;
+      }
+      .float-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 8px 0 4px;
+        font-size: 12.5px;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .float-label .chip {
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 10px;
+        padding: 2px 7px;
+        border-radius: 5px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #5eead4;
+      }
+      .float-divider {
+        width: 1px;
+        align-self: stretch;
+        background: rgba(255, 255, 255, 0.12);
+        margin: 6px 4px;
+      }
+
+      .tools {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .tool {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        color: #cbd5e1;
+        transition: 0.13s;
+        position: relative;
+      }
+      .tool:hover {
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+      }
+      .tool.on {
+        background: var(--accent);
+        color: #fff;
+      }
+      .tool svg {
+        width: 18px;
+        height: 18px;
+      }
+      .tool .tip {
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        background: #0f172a;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 500;
+        padding: 4px 8px;
+        border-radius: 6px;
+        white-space: nowrap;
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.12s;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+      .tool:hover .tip {
+        opacity: 1;
+      }
+
+      .tool.act {
+        color: #94a3b8;
+      }
+      .tool.act:hover {
+        color: #fff;
+      }
+      .tool.del:hover {
+        background: rgba(225, 29, 72, 0.2);
+        color: #fda4af;
+      }
+
+      /* sub panel below the bar */
+      .subpanel {
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 16px;
+        display: none;
+        animation: fade 0.18s ease;
+        max-height: 360px;
+        overflow: auto;
+      }
+      .subpanel.show {
+        display: block;
+      }
+      @keyframes fade {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      .sp-title {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #5eead4;
+        margin-bottom: 14px;
+      }
+      .field {
+        margin-bottom: 14px;
+      }
+      .field:last-child {
+        margin-bottom: 0;
+      }
+      .field label {
+        display: block;
+        font-size: 11.5px;
+        color: #94a3b8;
+        margin-bottom: 6px;
+        font-weight: 500;
+      }
+      .seg {
+        display: flex;
+        background: rgba(255, 255, 255, 0.06);
+        border-radius: 9px;
+        padding: 3px;
+        gap: 2px;
+      }
+      .seg button {
+        flex: 1;
+        padding: 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #cbd5e1;
+        transition: 0.12s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .seg button.on {
+        background: var(--accent);
+        color: #fff;
+      }
+      .seg button:hover:not(.on) {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .seg svg {
+        width: 15px;
+        height: 15px;
+      }
+      .row2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .row3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+      .inp {
+        width: 100%;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        color: #fff;
+        padding: 9px 11px;
+        font-size: 12.5px;
+        font-family: inherit;
+      }
+      .inp:focus {
+        outline: none;
+        border-color: var(--accent);
+        background: rgba(13, 148, 136, 0.12);
+      }
+      .inp.mono {
+        font-family: var(--mono);
+      }
+      .slider {
+        width: 100%;
+        accent-color: var(--accent);
+      }
+      .swatches {
+        display: flex;
+        gap: 8px;
+      }
+      .swatch {
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        cursor: pointer;
+      }
+      .swatch.on {
+        border-color: #fff;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2);
+      }
+      .toggle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 9px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+      }
+      .toggle-row:last-child {
+        border: none;
+      }
+      .toggle-row span {
+        font-size: 12.5px;
+      }
+      .sw {
+        width: 38px;
+        height: 22px;
+        border-radius: 99px;
+        background: rgba(255, 255, 255, 0.18);
+        position: relative;
+        transition: 0.15s;
+        flex-shrink: 0;
+      }
+      .sw::after {
+        content: "";
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #fff;
+        transition: 0.15s;
+      }
+      .sw.on {
+        background: var(--accent);
+      }
+      .sw.on::after {
+        left: 18px;
+      }
+      .hint {
+        font-size: 11px;
+        color: #64748b;
+        line-height: 1.5;
+        margin-top: 8px;
+      }
+      .hint b {
+        color: #fbbf24;
+      }
+      .resetlink {
+        font-size: 11px;
+        color: #5eead4;
+        font-weight: 600;
+        cursor: pointer;
+        float: right;
+      }
+
+      /* ---------- COMMAND PALETTE ---------- */
+      .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(3px);
+        z-index: 60;
+        display: none;
+        align-items: flex-start;
+        justify-content: center;
+        padding-top: 14vh;
+      }
+      .overlay.show {
+        display: flex;
+      }
+      .palette {
+        width: min(620px, 92vw);
+        background: var(--surface);
+        border-radius: 16px;
+        box-shadow: var(--shadow-lg);
+        overflow: hidden;
+        animation: rise 0.2s ease;
+      }
+      .pal-search {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--border);
+      }
+      .pal-search svg {
+        width: 20px;
+        height: 20px;
+        color: var(--text-3);
+      }
+      .pal-search input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 16px;
+        font-family: inherit;
+        color: var(--text);
+      }
+      .pal-search kbd {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text-3);
+        border: 1px solid var(--border);
+        padding: 2px 7px;
+        border-radius: 5px;
+      }
+      .pal-body {
+        max-height: 50vh;
+        overflow: auto;
+        padding: 8px;
+      }
+      .pal-group {
+        font-size: 10.5px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-3);
+        padding: 10px 12px 6px;
+      }
+      .pal-item {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        padding: 11px 12px;
+        border-radius: 10px;
+        cursor: pointer;
+        transition: 0.1s;
+      }
+      .pal-item:hover,
+      .pal-item.cur {
+        background: var(--accent-tint);
+      }
+      .pal-ico {
+        width: 36px;
+        height: 36px;
+        border-radius: 9px;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        display: grid;
+        place-items: center;
+        color: var(--accent-strong);
+        flex-shrink: 0;
+      }
+      .pal-ico svg {
+        width: 18px;
+        height: 18px;
+      }
+      .pal-item:hover .pal-ico,
+      .pal-item.cur .pal-ico {
+        background: #fff;
+        border-color: var(--accent-tint-2);
+      }
+      .pal-txt b {
+        display: block;
+        font-size: 13.5px;
+      }
+      .pal-txt span {
+        font-size: 12px;
+        color: var(--text-2);
+      }
+
+      /* ---------- LAYERS OVERLAY ---------- */
+      .layers {
+        position: fixed;
+        left: 16px;
+        top: 72px;
+        bottom: auto;
+        width: 248px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: var(--shadow);
+        z-index: 45;
+        display: none;
+        overflow: hidden;
+      }
+      .layers.show {
+        display: block;
+      }
+      .layers-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .layers-head b {
+        font-size: 13px;
+      }
+      .layers-head .x {
+        color: var(--text-3);
+        cursor: pointer;
+      }
+      .layers-body {
+        padding: 6px;
+        max-height: 50vh;
+        overflow: auto;
+      }
+      .layer {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 9px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+        color: var(--text-2);
+      }
+      .layer:hover {
+        background: var(--surface-2);
+      }
+      .layer.on {
+        background: var(--accent-tint);
+        color: var(--accent-strong);
+        font-weight: 600;
+      }
+      .layer svg {
+        width: 15px;
+        height: 15px;
+        flex-shrink: 0;
+        color: var(--text-3);
+      }
+      .layer.on svg {
+        color: var(--accent);
+      }
+      .layer .eye {
+        margin-left: auto;
+        color: var(--text-3);
+      }
+
+      /* ---------- TOAST ---------- */
+      .toast {
+        position: fixed;
+        bottom: 28px;
+        right: 28px;
+        background: #0f172a;
+        color: #fff;
+        padding: 13px 18px;
+        border-radius: 11px;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: var(--shadow-lg);
+        z-index: 70;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transform: translateY(20px);
+        opacity: 0;
+        transition: 0.25s;
+        pointer-events: none;
+      }
+      .toast.show {
+        transform: translateY(0);
+        opacity: 1;
+      }
+      .toast svg {
+        width: 18px;
+        height: 18px;
+        color: #5eead4;
+      }
+
+      .nudge {
+        position: fixed;
+        left: 50%;
+        bottom: 96px;
+        transform: translateX(-50%);
+        font-size: 12px;
+        color: var(--text-3);
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 7px 13px;
+        border-radius: 99px;
+        box-shadow: var(--shadow-sm);
+        z-index: 49;
+        display: none;
+      }
+      .nudge kbd {
+        font-family: var(--mono);
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 11px;
+      }
+      .nudge.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ===== TOP BAR ===== -->
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">C</div>
+        <div class="crumbs"><span>Pages</span><span class="sep">/</span><b>Strona Główna</b></div>
+      </div>
+
+      <div class="save-state"><span class="pulse"></span>Niezapisane zmiany</div>
+
+      <div class="spacer"></div>
+
+      <!-- breakpoint switch = defines what you're editing -->
+      <div class="bp" id="bp">
+        <button data-bp="desktop" class="on">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="4" width="20" height="13" rx="2" />
+            <path d="M8 21h8M12 17v4" />
+          </svg>
+          Duży <span class="px">1080</span>
+        </button>
+        <button data-bp="tablet">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="5" y="2" width="14" height="20" rx="2" />
+            <path d="M12 18h.01" />
+          </svg>
+          Średni <span class="px">744</span>
+        </button>
+        <button data-bp="mobile">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="7" y="2" width="10" height="20" rx="2" />
+            <path d="M12 18h.01" />
+          </svg>
+          Mały <span class="px">390</span>
+        </button>
+      </div>
+
+      <div class="scope-pill" id="scope">
+        <span class="dot"></span>Edytujesz: <b id="scopeText">Duży ekran</b>
+      </div>
+
+      <div class="float-divider" style="background: var(--border); height: 24px"></div>
+
+      <div class="tb-actions">
+        <button class="icobtn" id="layersBtn" title="Warstwy (sekcje)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+            <path d="m2 17 10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+        </button>
+        <button class="txtbtn" id="settingsBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"
+            />
+          </svg>
+          Page settings
+        </button>
+        <button class="txtbtn" id="historyBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+            <path d="M3 3v5h5M12 7v5l3 3" />
+          </svg>
+          History
+        </button>
+        <button class="txtbtn" id="previewBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          Preview
+        </button>
+        <button class="txtbtn publish" id="publishBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m5 12 5 5L20 7" />
+          </svg>
+          Publish
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== STAGE / CANVAS ===== -->
+    <div class="stage" id="stage">
+      <div class="canvas-meta" id="canvasMeta">DUŻY EKRAN · 1080px · widok bazowy</div>
+      <div class="canvas" data-bp="desktop" id="canvas">
+        <!-- gap insert -->
+        <div class="gap">
+          <div class="ins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" /></svg
+            >Dodaj sekcję
+          </div>
+        </div>
+
+        <!-- SECTION 1 -->
+        <div class="section" data-name="Menu górne" data-variant="Template">
+          <div class="sec-tag">
+            <svg
+              viewBox="0 0 24 24"
+              width="13"
+              height="13"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="9" cy="5" r="1" />
+              <circle cx="9" cy="12" r="1" />
+              <circle cx="9" cy="19" r="1" />
+              <circle cx="15" cy="5" r="1" />
+              <circle cx="15" cy="12" r="1" />
+              <circle cx="15" cy="19" r="1" /></svg
+            >Menu górne <span class="variant">Template</span>
+          </div>
+          <div class="ovr"></div>
+          <div class="tmpl">
+            <div class="eyebrow">TEMPLATE SECTION</div>
+            <h4>Menu górne</h4>
+            <p>Renderowane z reużywalnego szablonu w runtime.</p>
+          </div>
+        </div>
+
+        <div class="gap">
+          <div class="ins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" /></svg
+            >Dodaj sekcję
+          </div>
+        </div>
+
+        <!-- SECTION 2 -->
+        <div class="section" data-name="Hero" data-variant="Split">
+          <div class="sec-tag">
+            <svg
+              viewBox="0 0 24 24"
+              width="13"
+              height="13"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="9" cy="5" r="1" />
+              <circle cx="9" cy="12" r="1" />
+              <circle cx="9" cy="19" r="1" />
+              <circle cx="15" cy="5" r="1" />
+              <circle cx="15" cy="12" r="1" />
+              <circle cx="15" cy="19" r="1" /></svg
+            >Hero <span class="variant">Split</span>
+          </div>
+          <div class="ovr"></div>
+          <div class="pad">
+            <div class="hero">
+              <div>
+                <span class="badge">Architektura Premium</span>
+                <h1>Twój wymarzony dom zaczyna się tutaj</h1>
+                <p>
+                  Energooszczędne, nowoczesne projekty domów gotowych z gwarancją kosztów budowy.
+                  Łączymy nagradzany design ze zrównoważoną technologią.
+                </p>
+                <div class="cta">
+                  Zobacz projekty
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="16"
+                    height="16"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </div>
+              </div>
+              <div class="hero-img"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gap">
+          <div class="ins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" /></svg
+            >Dodaj sekcję
+          </div>
+        </div>
+
+        <!-- SECTION 3 -->
+        <div class="section" data-name="Proces budowy" data-variant="Timeline · Horizontal">
+          <div class="sec-tag">
+            <svg
+              viewBox="0 0 24 24"
+              width="13"
+              height="13"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="9" cy="5" r="1" />
+              <circle cx="9" cy="12" r="1" />
+              <circle cx="9" cy="19" r="1" />
+              <circle cx="15" cy="5" r="1" />
+              <circle cx="15" cy="12" r="1" />
+              <circle cx="15" cy="19" r="1" /></svg
+            >Proces budowy <span class="variant">Timeline</span>
+          </div>
+          <div class="ovr"></div>
+          <div class="pad">
+            <div class="sec-title">Jak wygląda proces</div>
+            <div class="sec-sub">Trzy proste kroki od projektu do kluczy.</div>
+            <div class="steps">
+              <div class="step">
+                <div class="n">1</div>
+                <h5>Wybór projektu</h5>
+                <p>Dobieramy projekt do działki i Twoich potrzeb.</p>
+              </div>
+              <div class="step">
+                <div class="n">2</div>
+                <h5>Wycena i umowa</h5>
+                <p>Stała cena, jasny harmonogram, zero niespodzianek.</p>
+              </div>
+              <div class="step">
+                <div class="n">3</div>
+                <h5>Budowa pod klucz</h5>
+                <p>Realizacja z gwarancją terminu i kosztów.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gap">
+          <div class="ins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" /></svg
+            >Dodaj sekcję
+          </div>
+        </div>
+
+        <!-- SECTION 4 -->
+        <div class="section" data-name="Polecane projekty" data-variant="Gallery · Grid">
+          <div class="sec-tag">
+            <svg
+              viewBox="0 0 24 24"
+              width="13"
+              height="13"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="9" cy="5" r="1" />
+              <circle cx="9" cy="12" r="1" />
+              <circle cx="9" cy="19" r="1" />
+              <circle cx="15" cy="5" r="1" />
+              <circle cx="15" cy="12" r="1" />
+              <circle cx="15" cy="19" r="1" /></svg
+            >Polecane projekty <span class="variant">Gallery</span>
+          </div>
+          <div class="ovr"></div>
+          <div class="pad">
+            <div class="sec-title">Polecane projekty</div>
+            <div class="sec-sub">Najczęściej wybierane domy z naszej kolekcji.</div>
+            <div class="grid3">
+              <div class="card">
+                <div class="ph"></div>
+                <div class="body">
+                  <h6>artas-407 Modern</h6>
+                  <div class="price">od 489 000 zł</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="ph"></div>
+                <div class="body">
+                  <h6>artas-212 Compact</h6>
+                  <div class="price">od 342 000 zł</div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="ph"></div>
+                <div class="body">
+                  <h6>artas-560 Estate</h6>
+                  <div class="price">od 712 000 zł</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="gap">
+          <div class="ins">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 5v14M5 12h14" /></svg
+            >Dodaj sekcję
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== FLOATING TOOLBAR ===== -->
+    <div class="float" id="float">
+      <div class="float-head">
+        <div class="grip" id="grip">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+            <circle cx="8" cy="6" r="1.5" />
+            <circle cx="8" cy="12" r="1.5" />
+            <circle cx="8" cy="18" r="1.5" />
+            <circle cx="14" cy="6" r="1.5" />
+            <circle cx="14" cy="12" r="1.5" />
+            <circle cx="14" cy="18" r="1.5" />
+          </svg>
+        </div>
+        <div class="float-label">
+          <span id="floatName">Hero</span><span class="chip" id="floatVariant">Split</span>
+        </div>
+        <div class="float-divider"></div>
+        <div class="tools">
+          <button class="tool" data-panel="layout">
+            <span class="tip">Układ</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18M9 21V9" />
+            </svg>
+          </button>
+          <button class="tool" data-panel="content">
+            <span class="tip">Treść</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 7V4h16v3M9 20h6M12 4v16" />
+            </svg>
+          </button>
+          <button class="tool" data-panel="style">
+            <span class="tip">Wygląd</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="13.5" cy="6.5" r="2.5" />
+              <circle cx="17.5" cy="10.5" r="2.5" />
+              <circle cx="8.5" cy="7.5" r="2.5" />
+              <circle cx="6.5" cy="12.5" r="2.5" />
+              <path d="M12 2a10 10 0 1 0 0 20 4 4 0 0 1 0-8 6 6 0 0 0 0-12Z" />
+            </svg>
+          </button>
+          <button class="tool" data-panel="spacing">
+            <span class="tip">Odstępy</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="6" y="6" width="12" height="12" rx="1" />
+              <path d="M3 3v18M21 3v18M3 3h18M3 21h18" />
+            </svg>
+          </button>
+          <button class="tool" data-panel="bg">
+            <span class="tip">Tło</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <circle cx="9" cy="9" r="2" />
+              <path d="m21 15-3.5-3.5L9 20" />
+            </svg>
+          </button>
+          <button class="tool" data-panel="responsive">
+            <span class="tip">Responsywność</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="4" width="14" height="11" rx="1" />
+              <rect x="14" y="9" width="8" height="11" rx="1" />
+            </svg>
+          </button>
+          <button class="tool" data-panel="visibility">
+            <span class="tip">Widoczność</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </button>
+        </div>
+        <div class="float-divider"></div>
+        <div class="tools">
+          <button class="tool act" id="moveUp">
+            <span class="tip">W górę</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </button>
+          <button class="tool act" id="moveDown">
+            <span class="tip">W dół</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 5v14M5 12l7 7 7-7" />
+            </svg>
+          </button>
+          <button class="tool act" id="dup">
+            <span class="tip">Duplikuj</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="9" width="11" height="11" rx="2" />
+              <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+            </svg>
+          </button>
+          <button class="tool del" id="del">
+            <span class="tip">Usuń</span
+            ><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path
+                d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- SUBPANELS -->
+      <div class="subpanel" data-sub="layout">
+        <div class="sp-title">Układ sekcji</div>
+        <div class="field">
+          <label>Wariant</label>
+          <div class="seg">
+            <button class="on">Split</button><button>Wyśrodkowany</button
+            ><button>Pełna szerokość</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Kolumny treści</label>
+          <div class="seg">
+            <button>1</button><button class="on">2</button><button>3</button><button>4</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Wyrównanie pionowe</label>
+            <div class="seg">
+              <button>Góra</button><button class="on">Środek</button><button>Dół</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Max szerokość</label><input class="inp mono" value="1080px" />
+          </div>
+        </div>
+      </div>
+
+      <div class="subpanel" data-sub="content">
+        <div class="sp-title">Treść · bloki sekcji</div>
+        <div class="field">
+          <label>Nagłówek</label><input class="inp" value="Twój wymarzony dom zaczyna się tutaj" />
+        </div>
+        <div class="field">
+          <label>Opis</label
+          ><input class="inp" value="Energooszczędne, nowoczesne projekty domów gotowych…" />
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Tekst przycisku</label><input class="inp" value="Zobacz projekty" />
+          </div>
+          <div class="field">
+            <label>Cel (URL)</label><input class="inp mono" value="/projekty" />
+          </div>
+        </div>
+        <div class="hint">
+          Bloki dodajesz przez <b>„+"</b> wewnątrz sekcji lub paletę <b>⌘K</b>.
+        </div>
+      </div>
+
+      <div class="subpanel" data-sub="style">
+        <div class="sp-title">Wygląd</div>
+        <div class="field">
+          <label>Kolor akcentu</label>
+          <div class="swatches">
+            <div class="swatch on" style="background: #0d9488"></div>
+            <div class="swatch" style="background: #4f46e5"></div>
+            <div class="swatch" style="background: #e11d48"></div>
+            <div class="swatch" style="background: #f59e0b"></div>
+            <div class="swatch" style="background: #0f172a"></div>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Zaokrąglenie</label
+            ><input type="range" class="slider" min="0" max="24" value="14" />
+          </div>
+          <div class="field">
+            <label>Cień</label>
+            <div class="seg">
+              <button>Brak</button><button class="on">Mały</button><button>Duży</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subpanel" data-sub="spacing">
+        <div class="sp-title">Odstępy</div>
+        <div class="field">
+          <label>Padding (góra / dół)</label>
+          <div class="row2">
+            <input class="inp mono" value="34px" /><input class="inp mono" value="34px" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Padding (lewo / prawo)</label>
+          <div class="row2">
+            <input class="inp mono" value="40px" /><input class="inp mono" value="40px" />
+          </div>
+        </div>
+        <div class="field">
+          <label>Odstęp między blokami</label
+          ><input type="range" class="slider" min="0" max="60" value="30" />
+        </div>
+      </div>
+
+      <div class="subpanel" data-sub="bg">
+        <div class="sp-title">Tło</div>
+        <div class="field">
+          <label>Typ</label>
+          <div class="seg">
+            <button class="on">Kolor</button><button>Gradient</button><button>Obraz</button
+            ><button>Brak</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Kolor tła</label>
+          <div class="swatches">
+            <div class="swatch on" style="background: #ffffff; border-color: #fff"></div>
+            <div class="swatch" style="background: #f8fafc"></div>
+            <div class="swatch" style="background: #f0fdfa"></div>
+            <div class="swatch" style="background: #0f172a"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="subpanel" data-sub="responsive">
+        <div class="sp-title">Responsywność · kaskada</div>
+        <div class="hint" style="margin-bottom: 14px">
+          Edytujesz teraz: <b id="bpEditing">Duży ekran (baza)</b>. Zmiany na mniejszych ekranach
+          <b>nadpisują</b> bazę, reszta jest dziedziczona.
+        </div>
+        <div class="toggle-row">
+          <span>Ukryj sekcję na tym ekranie</span>
+          <div class="sw" data-toggle></div>
+        </div>
+        <div class="toggle-row">
+          <span>Zmień układ na pionowy (mobile)</span>
+          <div class="sw" data-toggle></div>
+        </div>
+        <div class="field" style="margin-top: 14px">
+          <label
+            >Rozmiar nagłówka na tym ekranie
+            <span class="resetlink" id="resetBp">↺ przywróć dziedziczenie</span></label
+          ><input class="inp mono" value="40px" />
+        </div>
+      </div>
+
+      <div class="subpanel" data-sub="visibility">
+        <div class="sp-title">Widoczność i logika</div>
+        <div class="toggle-row">
+          <span>Widoczna</span>
+          <div class="sw on" data-toggle></div>
+        </div>
+        <div class="toggle-row">
+          <span>Tylko dla zalogowanych</span>
+          <div class="sw" data-toggle></div>
+        </div>
+        <div class="toggle-row">
+          <span>Pokaż w zakresie dat</span>
+          <div class="sw" data-toggle></div>
+        </div>
+        <div class="field" style="margin-top: 12px">
+          <label>ID kotwicy (anchor)</label><input class="inp mono" value="#hero" />
+        </div>
+      </div>
+    </div>
+
+    <div class="nudge" id="nudge">
+      Naciśnij <kbd>⌘K</kbd> aby dodać sekcję · <kbd>Esc</kbd> by odznaczyć
+    </div>
+
+    <!-- ===== COMMAND PALETTE ===== -->
+    <div class="overlay" id="overlay">
+      <div class="palette">
+        <div class="pal-search">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.3-4.3" />
+          </svg>
+          <input id="palInput" placeholder="Szukaj sekcji lub bloku…" autocomplete="off" />
+          <kbd>Esc</kbd>
+        </div>
+        <div class="pal-body" id="palBody"></div>
+      </div>
+    </div>
+
+    <!-- ===== LAYERS OVERLAY ===== -->
+    <div class="layers" id="layers">
+      <div class="layers-head"><b>Warstwy strony</b><span class="x" id="layersClose">✕</span></div>
+      <div class="layers-body" id="layersBody"></div>
+    </div>
+
+    <!-- ===== TOAST ===== -->
+    <div class="toast" id="toast">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="m5 12 5 5L20 7" /></svg
+      ><span id="toastMsg">Opublikowano</span>
+    </div>
+
+    <script>
+      (function () {
+        const $ = (s) => document.querySelector(s),
+          $$ = (s) => [...document.querySelectorAll(s)];
+        const canvas = $("#canvas"),
+          float = $("#float"),
+          stage = $("#stage");
+        let selected = null,
+          openPanel = null;
+
+        /* ---- toast ---- */
+        let toastT;
+        function toast(msg) {
+          const t = $("#toast");
+          $("#toastMsg").textContent = msg;
+          t.classList.add("show");
+          clearTimeout(toastT);
+          toastT = setTimeout(() => t.classList.remove("show"), 2200);
+        }
+
+        /* ---- selection ---- */
+        function select(sec) {
+          if (selected) selected.classList.remove("selected");
+          selected = sec;
+          sec.classList.add("selected");
+          $("#floatName").textContent = sec.dataset.name;
+          $("#floatVariant").textContent = sec.dataset.variant.split(" · ")[0];
+          float.classList.add("show");
+          $("#nudge").classList.add("show");
+          closePanel();
+          syncLayers();
+        }
+        function deselect() {
+          if (selected) selected.classList.remove("selected");
+          selected = null;
+          float.classList.remove("show");
+          $("#nudge").classList.remove("show");
+          closePanel();
+          syncLayers();
+        }
+        $$(".section").forEach((s) =>
+          s.addEventListener("click", (e) => {
+            e.stopPropagation();
+            select(s);
+          })
+        );
+        stage.addEventListener("click", deselect);
+        float.addEventListener("click", (e) => e.stopPropagation());
+
+        /* ---- subpanels ---- */
+        function closePanel() {
+          $$(".tool").forEach((t) => t.classList.remove("on"));
+          $$(".subpanel").forEach((p) => p.classList.remove("show"));
+          openPanel = null;
+        }
+        $$(".tool[data-panel]").forEach((t) => {
+          t.addEventListener("click", () => {
+            const name = t.dataset.panel;
+            if (openPanel === name) {
+              closePanel();
+              return;
+            }
+            closePanel();
+            t.classList.add("on");
+            $(`.subpanel[data-sub="${name}"]`).classList.add("show");
+            openPanel = name;
+          });
+        });
+
+        /* ---- section actions ---- */
+        $("#moveUp").onclick = () => {
+          const p = selected.previousElementSibling.previousElementSibling;
+          if (p && p.classList.contains("section")) {
+            canvas.insertBefore(selected, p.previousElementSibling);
+          }
+          toast("Przeniesiono w górę");
+        };
+        $("#moveDown").onclick = () => {
+          const n = selected.nextElementSibling.nextElementSibling;
+          if (n && n.classList.contains("section")) {
+            canvas.insertBefore(n.nextElementSibling.cloneNode(false) || selected, selected);
+          }
+          toast("Przeniesiono w dół");
+        };
+        $("#dup").onclick = () => {
+          const c = selected.cloneNode(true);
+          const gap = selected.nextElementSibling.cloneNode(true);
+          selected.after(c, gap);
+          bindSection(c);
+          toast("Zduplikowano sekcję");
+          syncLayers();
+        };
+        $("#del").onclick = () => {
+          const g = selected.nextElementSibling;
+          selected.remove();
+          if (g && g.classList.contains("gap")) g.remove();
+          deselect();
+          toast("Usunięto sekcję");
+        };
+
+        function bindSection(s) {
+          s.addEventListener("click", (e) => {
+            e.stopPropagation();
+            select(s);
+          });
+        }
+
+        /* ---- toggles & swatches ---- */
+        document.addEventListener("click", (e) => {
+          if (e.target.matches("[data-toggle]")) e.target.classList.toggle("on");
+          if (e.target.classList.contains("swatch")) {
+            e.target.parentElement
+              .querySelectorAll(".swatch")
+              .forEach((s) => s.classList.remove("on"));
+            e.target.classList.add("on");
+          }
+          if (e.target.closest(".seg button")) {
+            const b = e.target.closest(".seg button");
+            b.parentElement.querySelectorAll("button").forEach((x) => x.classList.remove("on"));
+            b.classList.add("on");
+          }
+        });
+
+        /* ---- breakpoints ---- */
+        const meta = {
+          desktop: ["DUŻY EKRAN · 1080px · widok bazowy", "Duży ekran", "Duży ekran (baza)"],
+          tablet: [
+            "ŚREDNI EKRAN · 744px · dziedziczy z dużego",
+            "Średni ekran",
+            "Średni ekran (nadpisuje bazę)",
+          ],
+          mobile: [
+            "MAŁY EKRAN · 390px · dziedziczy z dużego",
+            "Mały ekran",
+            "Mały ekran (nadpisuje bazę)",
+          ],
+        };
+        $$("#bp button").forEach((b) => {
+          b.onclick = () => {
+            $$("#bp button").forEach((x) => x.classList.remove("on"));
+            b.classList.add("on");
+            const bp = b.dataset.bp;
+            canvas.dataset.bp = bp;
+            $("#canvasMeta").textContent = meta[bp][0];
+            $("#scopeText").textContent = meta[bp][1];
+            const be = $("#bpEditing");
+            if (be) be.textContent = meta[bp][2];
+            // show "override" demo badges on non-desktop
+            $$(".section").forEach((s, i) => {
+              s.classList.toggle("has-override", bp !== "desktop" && i % 2 === 1);
+            });
+            $$(".ovr").forEach(
+              (o) => (o.textContent = "nadpisane na " + (bp === "mobile" ? "małym" : "średnim"))
+            );
+          };
+        });
+
+        /* ---- top bar buttons ---- */
+        $("#publishBtn").onclick = () => {
+          toast("Opublikowano · zmiany na żywo");
+          $(".save-state").style.display = "none";
+        };
+        $("#previewBtn").onclick = () => toast("Podgląd otwarty w nowej karcie");
+        $("#historyBtn").onclick = () => toast("Historia wersji");
+        $("#settingsBtn").onclick = () => toast("Ustawienia strony");
+
+        /* ---- layers ---- */
+        const layers = $("#layers");
+        $("#layersBtn").onclick = () => {
+          layers.classList.toggle("show");
+          syncLayers();
+        };
+        $("#layersClose").onclick = () => layers.classList.remove("show");
+        const layerIconNamespace = "http://www.w3.org/2000/svg";
+        function createLayerIcon() {
+          const svg = document.createElementNS(layerIconNamespace, "svg");
+          svg.setAttribute("viewBox", "0 0 24 24");
+          svg.setAttribute("fill", "none");
+          svg.setAttribute("stroke", "currentColor");
+          svg.setAttribute("stroke-width", "2");
+          const rect = document.createElementNS(layerIconNamespace, "rect");
+          rect.setAttribute("x", "3");
+          rect.setAttribute("y", "3");
+          rect.setAttribute("width", "18");
+          rect.setAttribute("height", "18");
+          rect.setAttribute("rx", "2");
+          const path = document.createElementNS(layerIconNamespace, "path");
+          path.setAttribute("d", "M3 9h18");
+          svg.append(rect, path);
+          return svg;
+        }
+        function syncLayers() {
+          const body = $("#layersBody");
+          body.innerHTML = "";
+          $$(".section").forEach((s) => {
+            const d = document.createElement("div");
+            d.className = "layer" + (s === selected ? " on" : "");
+            const eye = document.createElement("span");
+            eye.className = "eye";
+            eye.textContent = "●";
+            d.append(createLayerIcon(), document.createTextNode(s.dataset.name || ""), eye);
+            d.onclick = () => {
+              select(s);
+              s.scrollIntoView({ behavior: "smooth", block: "center" });
+            };
+            body.appendChild(d);
+          });
+        }
+
+        /* ---- command palette ---- */
+        const overlay = $("#overlay"),
+          palInput = $("#palInput"),
+          palBody = $("#palBody");
+        const blocks = [
+          {
+            g: "Sekcje",
+            i: "M4 7V4h16v3M9 20h6M12 4v16",
+            n: "Hero",
+            d: "Sekcja otwierająca z nagłówkiem i CTA",
+          },
+          {
+            g: "Sekcje",
+            i: "M3 12h18M3 6h18M3 18h18",
+            n: "Timeline",
+            d: "Kroki, kamienie milowe lub wydarzenia",
+          },
+          {
+            g: "Sekcje",
+            i: "M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z",
+            n: "Galeria produktów",
+            d: "Karty z metadanymi ceny i stanu",
+          },
+          {
+            g: "Sekcje",
+            i: "M3 3h18v18H3zM3 9h18M9 21V9",
+            n: "Porównanie produktów",
+            d: "Macierz porównania z wariantami",
+          },
+          {
+            g: "Sekcje",
+            i: "M4 6h16M4 12h16M4 18h10",
+            n: "Filtry listingu",
+            d: "Fasetowe filtry dla list runtime",
+          },
+          {
+            g: "Bloki",
+            i: "M4 7V4h16v3M9 20h6M12 4v16",
+            n: "Tekst",
+            d: "Nagłówek, akapit lub lista",
+          },
+          {
+            g: "Bloki",
+            i: "M3 3h18v18H3zM3 9h18",
+            n: "Obraz",
+            d: "Pojedynczy obraz lub media z biblioteki",
+          },
+          {
+            g: "Bloki",
+            i: "m5 12 5 5L20 7",
+            n: "Przycisk / CTA",
+            d: "Akcja z celem URL lub formularzem",
+          },
+          {
+            g: "Bloki",
+            i: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+            n: "Formularz",
+            d: "Reużywalny formularz z Forms",
+          },
+        ];
+        let curIdx = 0,
+          filtered = blocks;
+        function renderPal(q = "") {
+          filtered = blocks.filter((b) => (b.n + b.d).toLowerCase().includes(q.toLowerCase()));
+          palBody.innerHTML = "";
+          curIdx = 0;
+          let lastG = "";
+          filtered.forEach((b, i) => {
+            if (b.g !== lastG) {
+              const h = document.createElement("div");
+              h.className = "pal-group";
+              h.textContent = b.g;
+              palBody.appendChild(h);
+              lastG = b.g;
+            }
+            const el = document.createElement("div");
+            el.className = "pal-item" + (i === 0 ? " cur" : "");
+            el.innerHTML = `<div class="pal-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="${b.i}"/></svg></div><div class="pal-txt"><b>${b.n}</b><span>${b.d}</span></div>`;
+            el.onclick = () => addBlock(b.n);
+            palBody.appendChild(el);
+          });
+        }
+        function openPal() {
+          overlay.classList.add("show");
+          palInput.value = "";
+          renderPal();
+          palInput.focus();
+        }
+        function closePal() {
+          overlay.classList.remove("show");
+        }
+        function addBlock(name) {
+          closePal();
+          toast("Dodano: " + name);
+        }
+        palInput.addEventListener("input", (e) => renderPal(e.target.value));
+        overlay.addEventListener("click", (e) => {
+          if (e.target === overlay) closePal();
+        });
+        $$(".gap .ins").forEach((g) =>
+          g.parentElement.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openPal();
+          })
+        );
+
+        /* ---- keyboard ---- */
+        document.addEventListener("keydown", (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+            e.preventDefault();
+            openPal();
+          }
+          if (e.key === "Escape") {
+            if (overlay.classList.contains("show")) closePal();
+            else deselect();
+          }
+        });
+
+        /* ---- draggable float ---- */
+        const grip = $("#grip");
+        let drag = false,
+          sx,
+          sy,
+          fx,
+          fy,
+          moved = false;
+        grip.addEventListener("mousedown", (e) => {
+          drag = true;
+          moved = false;
+          sx = e.clientX;
+          sy = e.clientY;
+          const r = float.getBoundingClientRect();
+          fx = r.left;
+          fy = r.top;
+          document.body.style.userSelect = "none";
+        });
+        window.addEventListener("mousemove", (e) => {
+          if (!drag) return;
+          moved = true;
+          float.style.left = fx + e.clientX - sx + "px";
+          float.style.top = fy + e.clientY - sy + "px";
+          float.style.bottom = "auto";
+          float.style.transform = "none";
+        });
+        window.addEventListener("mouseup", () => {
+          drag = false;
+          document.body.style.userSelect = "";
+        });
+
+        /* select hero by default for the demo */
+        select($$(".section")[1]);
+      })();
+    </script>
+  </body>
+</html>

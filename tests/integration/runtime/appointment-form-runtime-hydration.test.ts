@@ -164,6 +164,7 @@ bunMock?.module("../../../core/services/pages/pageService", () => ({
         }
       : null,
   getPage: async () => null,
+  getPageSlugsByIds: async () => new Map<string, string>(),
 }));
 
 bunMock?.module("../../../core/services/pages/previewService", () => ({
@@ -198,6 +199,15 @@ bunMock?.module("../../../core/services/content/contentListResolver", () => ({
   resolveContentListRuntimeData: async () => ({
     items: [],
   }),
+  resolveContentListRequestedPage: () => 1,
+  resolveContentListRuntimeNavigationMeta: () => ({
+    page: 1,
+    pageSize: 24,
+    totalPages: 1,
+    pageParamKey: "page",
+    search: "",
+  }),
+  sortContentListRuntimeEntries: <T>(entries: T[]) => entries,
 }));
 
 bunMock?.module("../../../core/services/content/detailPageRuntimeResolver", () => ({
@@ -289,10 +299,6 @@ bunMock?.module("../../../core/services/search/searchIndexService", () => ({
   }),
 }));
 
-bunMock?.module("../../../core/services/widgets/widgetTemplatePreviewService", () => ({
-  getWidgetTemplatePreviewModel: async () => null,
-}));
-
 bunMock?.module("../../../core/services/widgets/templateSectionRuntime", () => ({
   resolveTemplateSectionRuntimeData: async () => ({
     blocks: [],
@@ -344,17 +350,37 @@ bunMock?.module("../../../core/widgets/core/appointmentForm", () => ({
   }),
 }));
 
-const { handlePublicRequest } = await import("../../../core/server/publicSite");
+const { renderPublicPageRuntimeHtml } = await import("../../../core/site/renderPublicPage");
+const { resolveBookingRuntimeData } =
+  await import("../../../core/services/booking/bookingRuntimeResolver");
+const { ensureRuntimeWidgetsRegistered } = await import("../../../core/widgets/runtime");
 
-const requestPublicPath = (path: string) =>
-  handlePublicRequest(
-    new Request(`http://public.coderso.test${path}`, {
-      headers: {
-        "user-agent": "appointment-form-runtime-test",
-        "x-forwarded-for": "127.0.0.1",
+ensureRuntimeWidgetsRegistered();
+
+const renderAppointmentRuntimeHtml = async () => {
+  const resolved = await resolveBookingRuntimeData({ preview: false });
+  return renderPublicPageRuntimeHtml({
+    title: "Appointments",
+    cssHref: null,
+    inlineCss: "",
+    devModuleScripts: null,
+    blocks: [
+      {
+        id: "appointment-form-1",
+        type: "appointment-form",
+        variant: "default",
+        data: {
+          flowId: "booking-flow",
+          resolved: {
+            submissionNonce: resolved.submissionNonce,
+            captcha: resolved.captcha,
+            ...(resolved.error ? { error: resolved.error } : {}),
+          },
+        },
       },
-    })
-  );
+    ],
+  });
+};
 
 beforeEach(() => {
   currentBotProtection = {
@@ -387,10 +413,8 @@ afterEach(() => {
 });
 
 test("appointment form runtime hydration includes public captcha bridge without secret leakage", async () => {
-  const response = await requestPublicPath("/appointments");
+  const html = await renderAppointmentRuntimeHtml();
 
-  expect(response.status).toBe(200);
-  const html = await response.text();
   expect(html).toContain("&quot;submissionNonce&quot;:&quot;booking-nonce-1&quot;");
   expect(html).toContain("&quot;provider&quot;:&quot;recaptcha_v3&quot;");
   expect(html).toContain("&quot;siteKey&quot;:&quot;public-site-key&quot;");
@@ -404,10 +428,8 @@ test("appointment form runtime hydration keeps captcha bridge null when no publi
     siteKey: null,
   };
 
-  const response = await requestPublicPath("/appointments");
+  const html = await renderAppointmentRuntimeHtml();
 
-  expect(response.status).toBe(200);
-  const html = await response.text();
   expect(html).toContain("&quot;submissionNonce&quot;:&quot;booking-nonce-1&quot;");
   expect(html).toContain("&quot;captcha&quot;:null");
   expect(html).not.toContain("server-secret");

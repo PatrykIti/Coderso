@@ -454,11 +454,13 @@ testIfDbWithOptions(
     expect(refinement.summary.update).toBeGreaterThan(0);
 
     const refinedPage = await getPageBySlug(pageSlug);
-    const refinedData = refinedPage?.currentData as { blocks?: unknown } | undefined;
-    const blocks = Array.isArray(refinedData?.blocks)
-      ? (refinedData.blocks as Array<{ type?: string }>)
-      : [];
-    expect(blocks.some((block) => block.type === "listing-filters")).toBe(true);
+    const refinedData = refinedPage?.currentData as
+      | { sections?: Array<{ type?: string; blocks?: Array<{ type?: string }> }> }
+      | undefined;
+    const sections = Array.isArray(refinedData?.sections) ? refinedData.sections : [];
+    const blocks = sections.flatMap((section) => section.blocks ?? []);
+    expect(sections.some((section) => section.type === "filters")).toBe(true);
+    expect(blocks.some((block) => block.type === "filters")).toBe(true);
   },
   { timeout: 40_000 }
 );

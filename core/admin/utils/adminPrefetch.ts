@@ -34,8 +34,7 @@ import { listRecentSearchesCached } from "@/services/searchClient";
 import { listSeoCached } from "@/services/seoClient";
 import { getSettingsCached } from "@/services/settingsClient";
 import { getSiteSettingsCached } from "@/services/siteSettingsClient";
-import { listWidgetTemplateCategoriesCached } from "@/services/widgetTemplateCategoriesClient";
-import { listWidgetTemplatesCached } from "@/services/widgetTemplatesClient";
+import { listPageTemplatesCached } from "@/services/pageTemplatesClient";
 import { listWidgetCatalogCached } from "@/services/widgetsClient";
 import {
   isExternalHref,
@@ -272,6 +271,9 @@ export async function prefetchDetailTemplateEditor(path: string) {
 
 export async function prefetchSettingsRoute(path: string) {
   if (path === "/settings/site" || path.startsWith("/settings/site/")) {
+    // The Site shell pickers moved to the Menus surface (`SiteShellDialog`,
+    // TASK-458-01); the Site Settings page no longer consumes menus or
+    // page-template caches, and the dialog loads them lazily on open.
     await Promise.all([
       getSiteSettingsCached(prefetchWarmupOptions),
       listPagesCached(prefetchWarmupOptions),
@@ -290,13 +292,12 @@ const defaultEntries: AdminPrefetchEntry[] = [
     run: () => listPagesCached(prefetchWarmupOptions),
   },
   {
+    match: "/advanced/page-templates",
+    run: () => listPageTemplatesCached(prefetchWarmupOptions),
+  },
+  {
     match: "/advanced/widgets",
-    run: () =>
-      Promise.all([
-        listWidgetCatalogCached(prefetchWarmupOptions),
-        listWidgetTemplateCategoriesCached(prefetchWarmupOptions),
-        listWidgetTemplatesCached(prefetchWarmupOptions),
-      ]),
+    run: () => listWidgetCatalogCached(prefetchWarmupOptions),
   },
   {
     match: (path) => resolveDetailTemplatePrefetchTarget(path) !== null,

@@ -8,6 +8,12 @@ import {
 } from "../../server/validation/listingSchemas";
 import { validate } from "../../server/validation/schemaValidator";
 import {
+  buildListingPushdownPlan,
+  summarizeListingPushdown,
+  type ListingPushdownPlan,
+  type ListingPushdownSummary,
+} from "./listingPushdown";
+import {
   fetchListingSourceRows,
   getListingSourceDefinition,
   isListingFieldAllowed,
@@ -78,11 +84,31 @@ export type ListingExecutionResult = {
   limit: number;
   offset: number;
   rows: ListingSourceRow[];
+  /**
+   * SQL pushdown observability (TASK-459-04): which filters were pushed to
+   * the database as superset predicates and which fell back to the in-memory
+   * matcher. `null` for sources without pushdown support.
+   */
+  pushdown?: ListingPushdownSummary | null;
+};
+
+/**
+ * Corpus execution result (TASK-459-04): the FULL filtered row set —
+ * unprojected, unsorted, unsliced — plus the truthful total. Used for
+ * corpus-wide facet metrics; memory cost is bounded by the filtered corpus,
+ * which is never larger than what the previous full-scan execution already
+ * loaded.
+ */
+export type ListingCorpusResult = {
+  source: ListingSource;
+  total: number;
+  rows: ListingSourceRow[];
 };
 
 export type ListingRowsResolver = (
   source: ListingSource,
-  config: ListingSourceConfig
+  config: ListingSourceConfig,
+  pushdown?: ListingPushdownPlan | null
 ) => Promise<ListingSourceRow[]>;
 
 const reservedFieldSegments = new Set(["__proto__", "prototype", "constructor"]);
@@ -92,8 +118,7 @@ const rangeOperators = new Set<ListingFilterOperator>(["between"]);
 const stringOperators = new Set<ListingFilterOperator>(["contains", "startsWith"]);
 const comparableOperators = new Set<ListingFilterOperator>(["gt", "gte", "lt", "lte"]);
 
-const hasOwn = (value: object, key: string) =>
-  Object.prototype.hasOwnProperty.call(value, key);
+const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 
 const isApiValidationError = (error: unknown): error is ApiError =>
   error instanceof ApiError && error.code === "validation_error";
@@ -123,11 +148,7 @@ const normalizeFieldPath = (value: string, context: "field" | "sort" | "filter")
   );
 
   if (normalized.length === 0 || hasInvalidSegment) {
-    throw new ApiError(
-      "listing_query_invalid_field",
-      `Invalid ${context} path "${value}"`,
-      400
-    );
+    throw new ApiError("listing_query_invalid_field", `Invalid ${context} path "${value}"`, 400);
   }
 
   return normalized;
@@ -144,11 +165,7 @@ const getSafeFieldSegments = (
   );
 
   if (normalized.length === 0 || hasInvalidSegment) {
-    throw new ApiError(
-      "listing_query_invalid_field",
-      `Invalid ${context} path "${value}"`,
-      400
-    );
+    throw new ApiError("listing_query_invalid_field", `Invalid ${context} path "${value}"`, 400);
   }
 
   return segments;
@@ -378,11 +395,7 @@ const setFieldValue = (target: ListingSourceRow, field: string, value: unknown) 
   for (let index = 0; index < segments.length; index += 1) {
     const segment = segments[index];
     if (reservedFieldSegments.has(segment)) {
-      throw new ApiError(
-        "listing_query_invalid_field",
-        `Invalid execution path "${field}"`,
-        400
-      );
+      throw new ApiError("listing_query_invalid_field", `Invalid execution path "${field}"`, 400);
     }
     const isLast = index === segments.length - 1;
     if (isLast) {
@@ -407,7 +420,11 @@ const normalizeComparableValue = (value: unknown): unknown => {
 
 const toComparableScalar = (value: unknown) => {
   const normalized = normalizeComparableValue(value);
-  if (typeof normalized === "number" || typeof normalized === "string" || typeof normalized === "boolean") {
+  if (
+    typeof normalized === "number" ||
+    typeof normalized === "string" ||
+    typeof normalized === "boolean"
+  ) {
     return normalized;
   }
   if (normalized === null || normalized === undefined) return null;
@@ -494,7 +511,9 @@ const matchesFilter = (row: ListingSourceRow, filter: ListingFilter): boolean =>
   if (filter.op === "in" || filter.op === "nin") {
     const values = Array.isArray(expected) ? expected : [];
     const hasMatch = Array.isArray(fieldValue)
-      ? fieldValue.some((entry) => values.some((candidate) => compareScalarValues(entry, candidate) === 0))
+      ? fieldValue.some((entry) =>
+          values.some((candidate) => compareScalarValues(entry, candidate) === 0)
+        )
       : values.some((candidate) => compareScalarValues(fieldValue, candidate) === 0);
     return filter.op === "in" ? hasMatch : !hasMatch;
   }
@@ -508,10 +527,7 @@ const matchesFilter = (row: ListingSourceRow, filter: ListingFilter): boolean =>
   }
 
   if (
-    (filter.op === "gt" ||
-      filter.op === "gte" ||
-      filter.op === "lt" ||
-      filter.op === "lte") &&
+    (filter.op === "gt" || filter.op === "gte" || filter.op === "lt" || filter.op === "lte") &&
     (typeof expected === "number" || typeof expected === "string")
   ) {
     const delta = compareRangeValues(fieldValue, expected);
@@ -529,10 +545,7 @@ const matchesFilter = (row: ListingSourceRow, filter: ListingFilter): boolean =>
     ) {
       return false;
     }
-    return (
-      compareRangeValues(fieldValue, start) >= 0 &&
-      compareRangeValues(fieldValue, end) <= 0
-    );
+    return compareRangeValues(fieldValue, start) >= 0 && compareRangeValues(fieldValue, end) <= 0;
   }
 
   return false;
@@ -583,10 +596,7 @@ const assertFieldAllowedForSource = (
   }
 };
 
-const normalizeExecutionFields = (
-  source: ListingSourceDefinition,
-  fields: string[]
-) => {
+const normalizeExecutionFields = (source: ListingSourceDefinition, fields: string[]) => {
   const selected = fields.length > 0 ? [...fields] : [...source.defaultFields];
   if (!selected.includes("id")) {
     selected.unshift("id");
@@ -596,10 +606,7 @@ const normalizeExecutionFields = (
   return deduped;
 };
 
-const normalizeExecutionSort = (
-  source: ListingSourceDefinition,
-  sort: ListingSort[]
-) => {
+const normalizeExecutionSort = (source: ListingSourceDefinition, sort: ListingSort[]) => {
   const selected = sort.length > 0 ? [...sort] : [...source.defaultSort];
   selected.forEach((item) => assertFieldAllowedForSource(source, item.field, "sort"));
   if (!selected.some((item) => item.field === "id")) {
@@ -636,8 +643,12 @@ export async function executeListingQuery(
   options?: { rowsResolver?: ListingRowsResolver }
 ): Promise<ListingExecutionResult> {
   const plan = buildListingExecutionPlan(input);
+  // TASK-459-04: superset SQL pushdown. The plan shrinks the fetched row set
+  // at the database; the in-memory matcher below stays the semantics oracle
+  // and ALWAYS re-runs, so results are identical to the pre-pushdown path.
+  const pushdown = buildListingPushdownPlan(plan.query);
   const resolver = options?.rowsResolver ?? fetchListingSourceRows;
-  const sourceRows = await resolver(plan.query.source, plan.query.sourceConfig);
+  const sourceRows = await resolver(plan.query.source, plan.query.sourceConfig, pushdown);
   const filteredRows = applyFilters(sourceRows, plan.query.filters);
   const sortedRows = applySort(filteredRows, plan.sort);
   const total = sortedRows.length;
@@ -649,6 +660,31 @@ export async function executeListingQuery(
     limit: plan.limit,
     offset: plan.offset,
     rows: projectRows(pageRows, plan.fields),
+    pushdown: summarizeListingPushdown(pushdown),
+  };
+}
+
+/**
+ * Executes a listing query WITHOUT projection, sorting, or pagination and
+ * returns the full filtered corpus (TASK-459-04). This is the backing call
+ * for corpus-wide facet counts and range bounds: metrics must be computed
+ * over the entire filtered set, not the current page slice, and they need
+ * raw `data.*` values that the projected page rows may not carry.
+ */
+export async function executeListingCorpus(
+  input: unknown,
+  options?: { rowsResolver?: ListingRowsResolver }
+): Promise<ListingCorpusResult> {
+  const plan = buildListingExecutionPlan(input);
+  const pushdown = buildListingPushdownPlan(plan.query);
+  const resolver = options?.rowsResolver ?? fetchListingSourceRows;
+  const sourceRows = await resolver(plan.query.source, plan.query.sourceConfig, pushdown);
+  const filteredRows = applyFilters(sourceRows, plan.query.filters);
+
+  return {
+    source: plan.query.source,
+    total: filteredRows.length,
+    rows: filteredRows,
   };
 }
 
@@ -657,9 +693,7 @@ export function parseListingQuery(payload: unknown): ListingQuery {
   return normalizeQuery(payload as ListingQuery);
 }
 
-export function parseListingQueryCreateInput(
-  payload: unknown
-): ListingQueryCreateInput {
+export function parseListingQueryCreateInput(payload: unknown): ListingQueryCreateInput {
   validateSchemaOrThrow(listingQueryCreateSchema, payload);
   const typed = payload as {
     name: string;
@@ -669,11 +703,7 @@ export function parseListingQueryCreateInput(
 
   const name = typed.name.trim();
   if (name.length === 0) {
-    throw new ApiError(
-      "listing_query_invalid_name",
-      "Listing query name must not be empty",
-      400
-    );
+    throw new ApiError("listing_query_invalid_name", "Listing query name must not be empty", 400);
   }
 
   return {
@@ -683,9 +713,7 @@ export function parseListingQueryCreateInput(
   };
 }
 
-export function parseListingQueryUpdateInput(
-  payload: unknown
-): ListingQueryUpdateInput {
+export function parseListingQueryUpdateInput(payload: unknown): ListingQueryUpdateInput {
   validateSchemaOrThrow(listingQueryUpdateSchema, payload);
   const typed = payload as {
     name?: string;
@@ -694,22 +722,14 @@ export function parseListingQueryUpdateInput(
   };
 
   if (!hasOwn(typed, "name") && !hasOwn(typed, "description") && !hasOwn(typed, "query")) {
-    throw new ApiError(
-      "listing_query_update_empty",
-      "Listing query update payload is empty",
-      400
-    );
+    throw new ApiError("listing_query_update_empty", "Listing query update payload is empty", 400);
   }
 
   const input: ListingQueryUpdateInput = {};
   if (hasOwn(typed, "name")) {
     const name = normalizeOptionalText(typed.name);
     if (!name) {
-      throw new ApiError(
-        "listing_query_invalid_name",
-        "Listing query name must not be empty",
-        400
-      );
+      throw new ApiError("listing_query_invalid_name", "Listing query name must not be empty", 400);
     }
     input.name = name;
   }

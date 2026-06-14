@@ -54,6 +54,28 @@ Model:
   context, not a second Pages-only insert dialog.
 - Completing the widget wizard moves the operator into layout/styling refinement
   with explicit transition copy.
+- Pages v2 keep sections as top-level bands. Flexible composition inside a
+  section uses bounded Page layout blocks (`container`, `columns`, `group`) with
+  named `slots`, max depth 4, and max 24 children per slot. Other slot-owner
+  block families require explicit contract extensions before they can be
+  inserted or rendered.
+- Public and preview Pages v2 rendering recurses through those layout-block
+  slots and resolves responsive overrides for nested children. Assistant Page
+  active surfaces now expose bounded server-revalidated nested block paths and
+  capability summaries, so layout blocks can be emitted through the assistant
+  Page vocabulary.
+- Page template inputs are explicitly Page v2 documents:
+  `pageTemplateBoundary` resolves `kind: "page-v2"` with
+  `documentContract: "page-v2-section-block-contract"`. Widget-template,
+  custom-screen, and detail-page surfaces remain on the legacy
+  `WidgetBlock[]` contract and must not receive Page v2 `sections[]`.
+- Page block runtime parity is capability-gated. Current runtime-real editor
+  blocks include the atomic content blocks plus `container`, `columns`, and
+  `group`; `gallery` has a real static public renderer for emitted kit data but
+  remains hidden from author insertion until controls ship. `collection`,
+  `form`, and `embed` now have scoped public runtime rendering and
+  `publicDataBinding: "scoped-read-only"` while staying hidden from editor
+  insertion and assistant emission until focused controls ship.
 
 Przechowywanie:
 - Biezacy stan strony trzymany w `pages.current_data` (JSONB).
@@ -66,6 +88,20 @@ Przechowywanie:
 - Public rendering i runtime preview korzystaja z tego samego pipeline.
 - `page.data.settings.template` wybiera page template przez resolver theme -> plugin -> core (fallback `landing`).
 - Navigation widget moze zrodlo `linksSource = "pages"` i filtruje po `settings.showInNav` (fallback do manual przy zbyt malej liczbie linkow).
+- Pages v2 public/runtime preview output uses the shared renderer for sections,
+  atomic blocks, nested layout slots, static galleries, and scoped data-bound
+  `collection`/`form`/`embed` blocks. Public collection output is published-only,
+  form output reuses the existing forms runtime security projection, and embed
+  output is limited to hardened provider iframes or sanitized inline markup.
+- Page Templates (TASK-420-03) is the reusable-template surface: Page v2
+  `sections[]` documents stored in `page_templates`, authored with the shared
+  Page Editor v2 surface at `/advanced/page-templates`, previewed through
+  `type=page-template` tokens, and inserted into pages by instantiating
+  sections with fresh ids. TASK-460 keeps `/advanced/page-templates` as the
+  technical admin route but exposes the visible entry point from the Pages list
+  header. The legacy Advanced Widgets widget-template editor, its routes,
+  preview target, and cache keys are deleted; the Widget Library is a
+  core-widget catalog only.
 
 ---
 

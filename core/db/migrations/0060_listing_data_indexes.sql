@@ -1,0 +1,2 @@
+CREATE INDEX "content_entries_type_status_published_idx" ON "content_entries" USING btree ("type_id","status","published_at");--> statement-breakpoint
+CREATE INDEX "content_entries_data_gin_idx" ON "content_entries" USING gin ("data" jsonb_path_ops);

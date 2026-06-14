@@ -564,27 +564,12 @@ Create/Update payload (summary):
   "title": "Home",
   "slug": "home",
   "data": {
-    "schemaVersion": 1,
-    "blocks": [],
+    "schemaVersion": 2,
+    "sections": [],
     "settings": {
-      "template": "landing",
+      "template": "page-v2",
       "showInNav": true,
-      "layout": {
-        "wrapper": {
-          "container": "full",
-          "padding": { "top": "none", "bottom": "none" },
-          "background": { "color": "transparent", "image": null }
-        },
-        "sections": {
-          "gap": "none",
-          "defaults": {
-            "container": "default",
-            "padding": { "top": "xl", "bottom": "xl" },
-            "margin": { "top": "none", "bottom": "none" }
-          }
-        },
-        "applyDefaultsToNewBlocks": false
-      }
+      "revisionRetention": 10
     }
   }
 }
@@ -594,9 +579,13 @@ Create/Update payload (summary):
 
 ```json
 {
-  "data": { "schemaVersion": 1, "blocks": [] }
+  "data": { "schemaVersion": 2, "sections": [] }
 }
 ```
+
+Publishing persists the published document as the draft too (`currentData` and
+`publishedData` stay coherent) and responds with `{ "ok": true, "page": { ... } }`
+where `page` is the post-publish page detail.
 
 `POST /pages/:id/autosave` payload (summary):
 
@@ -605,10 +594,10 @@ Create/Update payload (summary):
   "title": "Home draft",
   "slug": "/home-draft",
   "data": {
-    "schemaVersion": 1,
-    "blocks": [],
+    "schemaVersion": 2,
+    "sections": [],
     "settings": {
-      "template": "landing",
+      "template": "page-v2",
       "showInNav": false
     }
   }
@@ -628,7 +617,7 @@ Create/Update payload (summary):
     "kind": "autosave",
     "title": "Home draft",
     "slug": "/home-draft",
-    "data": { "schemaVersion": 1, "blocks": [] }
+    "data": { "schemaVersion": 2, "sections": [] }
   }
 }
 ```
@@ -692,7 +681,7 @@ Revision item summary:
   "kind": "publish",
   "title": "Home",
   "slug": "/home",
-  "data": { "schemaVersion": 1, "blocks": [] },
+  "data": { "schemaVersion": 2, "sections": [] },
   "createdAt": "2026-03-06T12:00:00.000Z",
   "createdBy": {
     "id": "user-id",
@@ -705,8 +694,17 @@ Revision item summary:
 Notes:
 - `kind = autosave` is used for Page Settings snapshots created on drawer close.
 - `DELETE /pages/:id/revisions/:revisionId` is supported only for autosave revisions (discard).
+- Fresh Page writes require `schemaVersion: 2` plus `sections[]`, reject
+  unknown fields, and reject legacy/versionless `blocks[]`. Stored legacy Page
+  rows are reset to an empty v2 document on read/render/preview/revision paths.
+- Page block payloads may include bounded layout blocks `container`, `columns`,
+  and `group` with named `slots`. Writes reject `slots` on non-layout blocks,
+  unknown slot keys, duplicate block ids, cyclic programmatic references,
+  nesting deeper than 4 block levels, and more than 24 children in one slot.
+  Stored-read normalization prunes malformed slot data without resetting the
+  full document.
 
-Preview URL resolution policy (dotyczy pages/content/widget templates):
+Preview URL resolution policy (dotyczy pages/content/page templates):
 - 1) `settings["site.publicBaseUrl"]`
 - 2) `PUBLIC_BASE_URL` (ENV fallback)
 - 3) request-derived `proto://host` (`x-forwarded-host` / `x-forwarded-proto` / `host`)
@@ -1550,19 +1548,16 @@ Runtime behavior (v1):
 
 Permissions: `widgets:read`, `widgets:write`
 
-- `GET /widgets` (catalog: core + templates)
+- `GET /widgets` (catalog: core widgets only)
 - `POST /widgets/entry-teaser/preview` (internal admin preview hydration, permission: `content:read`)
 - `POST /widgets/product-compare/preview` (internal admin preview hydration, permission: `commerce:read`)
 - `POST /widgets/product-gallery/preview` (internal admin preview hydration, permission: `widgets:read`)
-- `GET /widgets/templates` (alias: `GET /widget-templates`)
-- `GET /widgets/templates/:id` (alias: `GET /widget-templates/:id`)
-- `POST /widgets/templates` (alias: `POST /widget-templates`)
-- `PATCH /widgets/templates/:id` (alias: `PATCH /widget-templates/:id`)
-- `DELETE /widgets/templates/:id` (alias: `DELETE /widget-templates/:id`)
-- `POST /widgets/templates/:id/duplicate` (alias: `POST /widget-templates/:id/duplicate`)
-- `POST /widgets/templates/:id/preview` (alias: `POST /widget-templates/:id/preview`)
-- `GET /widgets/templates/:id/revisions` (alias: `GET /widget-templates/:id/revisions`)
-- `POST /widgets/templates/:id/revisions/:revisionId/restore`
+
+Retired route families (TASK-420-03): every `/widget-templates*` and
+`/widgets/templates*` route (CRUD, preview, revisions, restore, duplicate) and
+the `/widgets/template-categories*` routes are deleted. Hits return the
+router's standard `404 Not Found`. The reusable-template product surface is
+now Page Templates (`/page-templates`, below).
 
 `GET /widgets` catalog item shape (summary):
 - `id`, `source`, `name`, `description`, `category`, `variants`, `status`
@@ -1583,54 +1578,81 @@ Internal widget preview routes:
 - accept widget-owned payloads only (`additionalProperties: false`)
 - return transient preview data for the current builder canvas and do not persist resolved runtime payload into widget JSON
 
-Template create/update payload (summary):
+---
+
+## Page Templates (Internal Admin API)
+
+Permissions: `content:read` (reads + preview issue), `content:write`
+(mutations). Single canonical route family (no aliases):
+
+- `GET /page-templates`
+- `GET /page-templates/:id`
+- `POST /page-templates`
+- `PATCH /page-templates/:id`
+- `DELETE /page-templates/:id`
+- `POST /page-templates/:id/duplicate`
+- `POST /page-templates/:id/preview`
+
+Page Templates store full Page v2 documents (`schemaVersion: 2`, `sections[]`)
+validated by the strict Page v2 owner normalizer. Legacy `WidgetBlock[]`
+payloads (root `blocks[]`) reject with
+`page_template_legacy_widget_blocks_invalid` (HTTP 400).
+
+Create payload (strict, `additionalProperties: false`):
 
 ```json
 {
-  "name": "Homepage Hero A",
-  "description": "Reusable hero stack",
-  "category": "layout",
+  "name": "Landing hero stack",
+  "slug": "landing-hero-stack",
+  "description": null,
+  "category": "marketing",
   "status": "draft",
-  "blocks": [],
-  "settings": {
-    "layout": {
-      "wrapper": {
-        "container": "full",
-        "padding": { "top": "none", "bottom": "none" },
-        "background": { "color": "transparent", "image": null }
-      },
-      "sections": {
-        "gap": "none",
-        "defaults": {
-          "container": "default",
-          "padding": { "top": "xl", "bottom": "xl" },
-          "margin": { "top": "none", "bottom": "none" }
-        }
-      }
-    }
-  }
+  "document": { "schemaVersion": 2, "sections": [] }
 }
 ```
 
-Template create/update rejects case-insensitive duplicate template names with
-`widget_template_name_conflict` (HTTP 409).
+- `slug` is optional and derived deterministically from `name` (trim,
+  lowercase, `[^a-z0-9]+` -> `-`, strip edge dashes). Conflicts reject with
+  `page_template_slug_conflict` (HTTP 409); there is no silent suffixing on
+  direct writes.
+- `status` is `draft | published` (default `draft`); invalid values reject
+  with `page_template_status_invalid` (HTTP 400). Published templates are
+  offered by the Page editor insert picker.
+- `PATCH` accepts the same fields, all optional, at least one key.
+- `POST /page-templates/:id/duplicate` accepts a strict empty object and
+  returns a server-owned draft copy with deterministic naming: name
+  `"<name> (copy)"`, slug `<slug>-copy`, then `-copy-2`, `-copy-3`, ... on
+  conflict (bounded at `-copy-100`; exhaustion rejects with
+  `page_template_slug_conflict`).
+- `GET /page-templates` returns summaries (with `sectionsCount`) ordered by
+  `updatedAt` descending. Non-UUID `:id` params resolve to
+  `page_template_not_found` (404).
 
-`POST /widgets/templates/:id/duplicate` accepts an empty strict JSON payload and
-returns the created draft template. The server loads the source template and
-decides which fields are safe to copy; callers cannot supply replacement
-`blocks`, `settings`, revision ids, or preview tokens. Duplicate names are
-resolved intentionally with `Copy of ...` style suffixes.
-
-`POST /widgets/templates/:id/preview` response:
+`POST /page-templates/:id/preview` accepts an optional `ttlMinutes` (default
+30; rounded and clamped to 1..120 minutes). Response:
 
 ```json
 {
   "token": "preview-token",
-  "previewUrl": "/preview?type=widget-template&token=preview-token",
+  "previewUrl": "/preview?type=page-template&token=preview-token",
   "expiresAt": "2026-02-07T12:00:00.000Z",
-  "blocksCount": 3
+  "sectionsCount": 3
 }
 ```
+
+Domain errors are mapped centrally by `mapPageTemplateError`:
+`page_template_not_found` (404), `page_template_invalid` (400),
+`page_template_slug_conflict` (409), `page_template_status_invalid` (400),
+`page_template_legacy_widget_blocks_invalid` (400). Strict Page v2 document
+failures pass through as `page_template_invalid` with the original field path
+preserved in the message.
+
+Apply/insert is NOT a server endpoint: the admin editor instantiates template
+sections with fresh ids (`instantiatePageTemplateSections`) and persists them
+through the existing Page write paths.
+
+Audit log actions: `pages.template.create|update|delete|duplicate` with
+`targetType: "page_template"`.
 
 ---
 
@@ -1817,7 +1839,7 @@ Publiczne renderowanie stron działa bez `/admin`.
   opcjonalnym published detail-page override (token)
 - `GET /preview?type=detail-page&token=...` → podgląd draft/current
   detail-page document z server-side sample-entry context (token)
-- `GET /preview?type=widget-template&token=...` → podgląd runtime template widgetów (token)
+- `GET /preview?type=page-template&token=...` → podgląd runtime Page Template (token); `type=widget-template` jest wycofane i zwraca 404
 - `GET <content list route>` → lista wpisów dla danego content type
 - `GET <content detail route>` → pojedynczy wpis (slug)
 
@@ -3459,8 +3481,8 @@ Permissions:
 - `settings:write` dla `POST /assistant/reindex`
 - `settings:read` + `content:read` dla `POST /assistant/actions/plan`
 - dodatkowo `widgets:read` dla `POST /assistant/actions/plan`, gdy
-  `context.activeSurface.kind` to `page` z template-section inspection albo
-  `detail-page`
+  `context.activeSurface.kind` to `widget-template` albo `detail-page`; aktywne
+  Pages v2 uzywaja tylko sekcji/blokow atomowych i nie hydratuja template refs
 - `POST /assistant/actions/dry-run` i `POST /assistant/actions/execute`
   egzekwuja per-action permissions z registry kontraktow zamiast dokladac
   jeden szerszy wspolny bundle write/read dla wszystkich action families
@@ -3486,7 +3508,7 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-170-03-02-03` promuje `media.reference.attach` do executable typed action dla istniejacych media assetow i targetow `entry`.
 `TASK-170-03-03-01` promuje `listing-query.filters.patch` do executable typed action dla patchowania `query.filters` na istniejacych listing queries.
 `TASK-170-03-03-02` promuje `listing-template.card.patch` do executable typed action dla patchowania `config.card` na istniejacych listing templates.
-`TASK-170-03-03-03` promuje `page.widget.patch` do executable typed action dla top-level `upsert-block` na istniejacych stronach.
+`TASK-170-03-03-03` historycznie promowal `page.widget.patch` dla widgetowych Page rows; TASK-417 wycofuje te akcje z Pages.
 `TASK-170-03-03-04` promuje `form.automation.upsert` do executable typed action dla bezpiecznych non-webhook form actions; webhook automation pozostaje poza zakresem do czasu jawnej obslugi sekretow.
 `TASK-170-03-04` domyka executor adapter wave: `/assistant/actions/dry-run` i `/assistant/actions/execute` egzekwuja action-specific permissions z registry kontraktow bez dokladania jednego szerszego endpoint-level write bundle ponad sam action family contract.
 `TASK-174-03-01` promuje `custom-screen.delete` do executable typed action dla custom screenow rozwiazanych z server-side resource catalog context; execute ponownie sprawdza id/name/prefix przed usunieciem.
@@ -3496,8 +3518,8 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-03-05` promuje `listing-query.delete` i `listing-template.delete` do executable typed actions; dry-run/execute blokuje usuniecie, gdy page/widget-template reference scan nadal widzi zalezne referencje.
 `TASK-174-03-06` promuje `form.delete` i `form.archive` do executable typed actions; hard delete jest blokowany, gdy formularz ma submissions, a archiwizacja zachowuje historie submissions bez ujawniania payloadow.
 `TASK-174-03-07` promuje `menu.item.delete` i `seo.document.delete` do executable typed actions; menu item delete zachowuje niezalezne elementy drzewa menu, a SEO delete usuwa tylko dokument SEO bez usuwania target page/entry.
-`TASK-174-04-01` promuje `page.update` do executable typed action dla aktywnej strony; akcja edytuje title/slug/status/settings i zachowuje niepowiazane page data oraz blocks.
-`TASK-174-04-02` rozszerza `page.widget.patch` o selected-block `patch-data`; akcja wymaga istniejacego block id i dataPath, a brak sciezki blokuje patch zamiast wykonywac szeroki rewrite.
+`TASK-174-04-01` promuje `page.update` do executable typed action dla aktywnej strony; akcja edytuje title/slug/status/settings i zachowuje niepowiazane Page data.
+`TASK-174-04-02` historycznie rozszerzal `page.widget.patch`; po TASK-417 Page mutations ida przez `page.upsert` z `sections[]` albo metadata-only `page.update`.
 `TASK-174-04-03` promuje `widget-template.update` i `widget-template.block.patch` do executable typed actions dla aktywnego reusable widget template; page-instance vs reusable-template ambiguity zwraca `needs_input`.
 `TASK-174-04-04` promuje `custom-screen.update` i `custom-screen.widget.patch` do executable typed actions dla aktywnego custom screen; binding target jest rozpoznawany po `widgetId + propPath + field`, bez ujawniania entry payloadow.
 `TASK-190-06-01` przenosi kompozycje katalogowych admin review screens do `blueprintAdminSurfaceComposer`: helper sklada istniejace `screen-*` custom-screen blocks, waliduje referencje do pol content schema, odrzuca secret-like field refs i nadal zwraca obecny `custom-screen.upsert` `blocks` / `bindings` payload bez nowego layout DSL.
@@ -3506,8 +3528,8 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.
 `TASK-190-07-02` dodaje catalog-backed no-duplicate matcher przed handoffem do strict executor path: bounded resource catalog zawiera bezpieczne detail-page summaries, page `collectionLink` metadata, custom-screen `collectionRole` / `compositionKey`, media summaries bez raw/signed payloadow, a matcher przepisuje wspierane create-like akcje na istniejace stable ids albo zwraca blocking conflict dla niejednoznacznych query/screen/media kandydatow. W executorze istnieje tylko compatibility fallback dla pojedynczego exact-name custom screena bez `collectionRole` i bez `compositionKey`; ekran o tej samej nazwie z innymi metadanymi pozostaje konfliktem zaleznosci zamiast silent reuse.
 `TASK-190-05-03-08` promuje `detail-page` do generic CMS operation vocabulary tylko jako bounded resource-context seam: provider guidance/package metadata moga opisywac `detail-page`, target resolver akceptuje zaufane id, stable `contentTypeId`, exact route/content-type linkage albo aktywny detail-template surface, a generic `detail-page` mutation pozostaje policy-gated bez nowej sciezki wykonawczej poza lokalnym `detail-page.upsert`.
-`TASK-174-05-01` dodaje read-only active page template-section inspection: refy sa deduplikowane server-side, referenced widget templates sa streszczane bez raw config values/secrets, a aktywna strona z template inspection wymaga `widgets:read` poza `content:read`.
-`TASK-174-05-02` dodaje konserwatywne target resolution dla template-backed page edits: ambiguous prompt zwraca `needs_input`, page-instance prompt idzie do `page.widget.patch`, a template-wide prompt idzie do `widget-template.block.patch` tylko przy jednoznacznym zhydratowanym nested block target.
+`TASK-174-05-01` historycznie dodawal read-only active page template-section inspection. Po TASK-417 Pages v2 nie hydratuja widget-template refs z Page data i nie wymagaja `widgets:read`; template reference summaries pozostaja przy aktywnych widget templates/detail-page surfaces.
+`TASK-174-05-02` historycznie obslugiwal template-backed page widget edits. Po TASK-417 Pages nie zawieraja `template-section`; reusable-template prompts nadal moga isc do `widget-template.block.patch`, a Page instance edits musza byc planowane jako `page.upsert`/`page.update`.
 `TASK-174-06-01` aktualizuje admin review/result UI dla resource operations: preview pokazuje operation badges, destructive/blocked states i warningi, execute pokazuje partial counts i redaguje secret-like dynamic text.
 `TASK-180` rozszerza generic CMS operation mapping o counted multi-target delete/archive/update oraz jawne multi-create z `mutation.patch.items[]`; kazda mutacja nadal mapuje sie do istniejacych strict typed actions i wymaga review/dry-run/execute. Assistant execute invaliduje znane admin cache keys dla successful non-noop CMS action results, w tym pages, entries, content types, custom screens, forms, listings, widget templates, menus i SEO.
 `TASK-172-02` dodaje lead capture blueprint pack: prompt o stronie kontaktowej/leadowej moze zwrocic plan `form.upsert` + prosty `page.upsert` z embedem formularza.
@@ -3520,7 +3542,11 @@ Declared capability limits:
 - `docs-only` remains read-only and never returns executable action plans.
 - `LLM Guide` can execute only strict typed actions listed in `_docs/LLM_GUIDE_ACCEPTANCE_MATRIX.md`, after plan/dry-run/review/execute.
 - Executable business setup currently covers catalog-family packs, lead capture site, product inquiry catalog, portfolio case study, editorial content hub, and `site-kit.recommend/install/validate`.
-- Booking resources, checkout/payment, webhook form automation, nested page widget patches, `menu.structure.patch`, bulk/sample entry creation, field patching, and installed solution-kit refinements remain gated follow-up capabilities.
+- Booking resources, checkout/payment, webhook form automation, fine-grained
+  existing Page section/block patch actions beyond `page.upsert` /
+  `page.update`, `menu.structure.patch`, bulk/sample entry creation, field
+  patching, and installed solution-kit refinements remain gated follow-up
+  capabilities.
 - No assistant action endpoint supports arbitrary code execution or autonomous mutation outside the reviewed execute flow.
 
 `retrievalBackend` ma wartosc `db` dla official assistant corpus.
@@ -3770,9 +3796,17 @@ The legacy CMS resource registry has been removed; policy lookup is the source o
 truth for generic CMS planning.
 TASK-188 final validation kept the OpenAI/OpenRouter live assistant matrix green
 after the policy cutover.
-When the active admin surface is `Pages > :id`, `activeSurface` may include a bounded page canvas summary with page identity, selected block id, block id/type/path summaries, slot keys, template-section references, and warnings such as unsaved local changes. The server normalizes/redacts this context before planning.
-For active page surfaces, planning hydration also dedupes `template-section` references from the advisory surface plus persisted page canvas data and attaches bounded referenced widget template summaries (`id`, name/status/category, layout summary, nested block ids/types/paths/data keys). Template summaries do not include raw block config values or secret-like keys, and this inspection requires `widgets:read`.
-If a template-backed page edit could target either only the current page instance or the reusable template, the planner returns `needs_input` with a target question. Explicit page-instance prompts can plan `page.widget.patch`; explicit reusable-template prompts can plan `widget-template.block.patch` only when the hydrated template summary resolves one supported nested block field.
+When the active admin surface is `Pages > :id`, `activeSurface` includes a
+bounded Page v2 canvas summary with `schemaVersion: 2`, page identity, selected
+section id, optional selected block id, server-revalidated `selectedBlockPath`,
+nested section/block summaries, Page capability metadata, and warnings such as
+unsaved local changes. The server normalizes/redacts this context before
+planning.
+For active Page surfaces, planning hydration revalidates page identity,
+normalized current sections, nested block paths, and selected section/block/path
+context server-side and does not hydrate widget-template refs from Page data.
+Page mutations use `page.upsert` sections or `page.update`; `page.widget.patch`
+is rejected for Pages.
 When the active admin surface is `Advanced > Widgets > Templates > :id`, `activeSurface` may include a bounded widget template summary with template identity, selected block id, block id/type/path summaries, slot keys, template-section references, wrapper/section settings summary, and remote-update warnings.
 When the active admin surface is `Advanced > Custom Screens`, `activeSurface` may include a bounded custom screen summary with screen identity, canonical `collectionRole` / `compositionKey` metadata, capabilities mode, selected entry id, selected block id, block summaries, bindings, writable field names, and unsaved/remote-update warnings.
 When the active admin surface is
@@ -3782,7 +3816,7 @@ the existing browser active-surface transport. The route keeps
 `runtimeSnapshot.selectedResource.kind = "content-type"` for the workspace
 shell, derives only the bounded `collectionWorkspaceHint`, then rehydrates
 `collectionWorkspace` and detail-page identity server-side before planning.
-Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active pages also require `widgets:read` for template-section inspection; active widget templates require `widgets:read`; active detail pages require `content:read` plus `widgets:read`. If the server-side resource is missing, active surface context is dropped.
+Before planning, the route rehydrates active surface identity server-side. Active pages/custom screens require `content:read`; active Pages v2 do not require `widgets:read`; active widget templates require `widgets:read`; active detail pages require `content:read` plus `widgets:read` for retained template-reference summaries. If the server-side resource is missing, active surface context is dropped.
 
 Reviewed site-builder intake uzywa `context.siteBuilderIntakeState.activeSession`.
 Bezposrednie `context.siteKit` nie jest publicznym/admin payloadem dla

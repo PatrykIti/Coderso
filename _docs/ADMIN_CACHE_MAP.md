@@ -9,6 +9,10 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Page editor
   - UI: `core/admin/ui/pages/PageEditor.tsx`
   - Cached APIs: `getPageCached`, `getCachedPageDetail`
+  - Data shape: cached page detail `currentData`/`publishedData` are
+    `PageDocumentV2` documents with `schemaVersion: 2` and `sections[]`.
+    Legacy/versionless Page rows are normalized to an empty v2 document by the
+    service before they reach the admin cache.
 
 ## Posts
 - Posts list
@@ -181,26 +185,35 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     users without that permission keep default Advanced nav context without a
     solution-kit list fetch.
 
-## Widget Templates
-- Template editor
-  - UI: `core/admin/ui/widgets/WidgetTemplateEditorPage.tsx`
-  - Cached APIs: `getWidgetTemplateCached`, `listWidgetTemplateCategoriesCached`, `getCachedWidgetTemplateCategories`
-- Templates list hook
-  - UI: `core/admin/ui/widgets/hooks/useWidgetTemplates.ts`
-  - Cached APIs: `listWidgetTemplatesCached`, `getCachedWidgetTemplates`
-  - Mutations: `deleteWidgetTemplate`, `duplicateWidgetTemplate`
-  - Cache bus: `widgetTemplates:list`, `widgetCatalog:list`,
-    `widgetTemplates:detail:<id>`
+## Page Templates
+- Templates list
+  - UI: `core/admin/ui/pages/templates/PageTemplatesPage.tsx` (+ hook
+    `core/admin/ui/pages/templates/usePageTemplates.ts`)
+  - Cached APIs: `listPageTemplatesCached`, `getCachedPageTemplates`
+  - Mutations: `createPageTemplate`, `duplicatePageTemplate`,
+    `deletePageTemplate`
+  - Cache bus: `pageTemplates:list`, `pageTemplates:detail:<id>`
+- Template editor (shared Page Editor v2 surface via editor host)
+  - UI: `core/admin/ui/pages/templates/PageTemplateEditorPage.tsx`
+  - Cached APIs: `getPageTemplateCached`, `getCachedPageTemplateDetail`
+  - Mutations: `updatePageTemplate` (document + metadata), `previewPageTemplate`
+  - Cache bus: `pageTemplates:detail:<id>` background revalidation with
+    dirty-state protection
+- Page editor insert picker (published templates)
+  - UI: `core/admin/ui/pages/PageEditor.tsx` (command palette group)
+  - Cached APIs: `listPageTemplatesCached`, `getPageTemplateCached`
+
+## Widgets
 - Widget insert dialog
   - UI: `core/admin/ui/widgets/WidgetInsertDialog.tsx`
-  - Cached APIs: `getWidgetTemplateCached`, `getPageCached`
+  - Cached APIs: `getPageCached`
 - Widget library
   - UI: `core/admin/ui/widgets/WidgetLibraryPage.tsx`
-  - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listWidgetTemplateCategoriesCached`, `getCachedWidgetTemplateCategories`, `listPagesCached`, `getCachedPages`, `getPageCached`
+  - Cached APIs: `listWidgetCatalogCached`, `getCachedWidgetCatalog`, `listPagesCached`, `getCachedPages`, `getPageCached`
   - UI state: section dropdown, table/grid mode, pagination, and selected row ids
-    are shell-owned; only catalog/category/page data comes from cache.
-  - Cache bus: `widgetCatalog:list`, `widgetTemplateCategories:list`, and
-    `pages:list` refresh the section-aware model in the background.
+    are shell-owned; only catalog/page data comes from cache.
+  - Cache bus: `widgetCatalog:list` and `pages:list` refresh the section-aware
+    model in the background.
 
 
 ## Media
@@ -219,6 +232,19 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Menus list
   - UI: `core/admin/ui/menus/MenuListPage.tsx`
   - Cached APIs: `listMenusCached`, `getCachedMenus`
+- Site shell dialog (Menus surface, TASK-458-01)
+  - UI: `core/admin/ui/menus/SiteShellDialog.tsx` (wraps the presentational
+    `core/admin/ui/site/SiteShellCard.tsx`)
+  - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
+    `listMenusCached`, `getCachedMenus`, `listPageTemplatesCached`,
+    `getCachedPageTemplates`
+  - Cache policy: all reads are LAZY on dialog open (no page-mount or
+    prefetch warmup beyond the existing `/menus` -> `menus:list` entry);
+    cached values hydrate instantly and settings revalidate in the background
+    on open. Save issues a scoped partial settings PATCH carrying exactly
+    `site.navigationMenuId` + `site.footerTemplateId`, which primes
+    `settings:redacted` and broadcasts the standard `settings:redacted`
+    update event.
 - Menu editor
   - UI: `core/admin/ui/menus/MenuEditorPage.tsx`
   - Cached APIs: `getMenuWithItemsCached`, `getCachedMenuDetail`, `listPagesCached`, `getCachedPages`
@@ -294,13 +320,20 @@ This file maps admin UI surfaces to their implementation files and the cached AP
   - Cache bus: `settings:redacted`
   - Prefetch: `/settings` warms `settings:redacted`
 - Site settings
-  - UI: `core/admin/ui/site/SiteSettingsPage.tsx`
+  - UI: `core/admin/ui/site/SiteSettingsPage.tsx` (the Site shell card moved
+    to the Menus-surface `SiteShellDialog`, TASK-458-01; this page no longer
+    reads or writes `site.navigationMenuId` / `site.footerTemplateId`)
   - Cached APIs: `getSiteSettingsCached`, `getCachedSiteSettings`,
     `listPagesCached`, `getCachedPages`, `listContentTypesCached`,
     `getCachedContentTypes`
   - Cache bus: `settings:redacted`, `pages:list`, `contentTypes:list`
   - Prefetch: `/settings/site` warms `settings:redacted`, `pages:list`, and
     `contentTypes:list` with `{ force: false }`
+  - Server-side invalidation trigger: settings writes/deletes touching
+    `site.navigationMenuId` or `site.footerTemplateId` clear the server-side
+    public site HTML cache (`clearSiteCache()` via
+    `core/services/settings/settingsService.ts`) because cached public pages
+    embed the rendered site shell
   - Safety: only redacted/non-secret Settings values are stored in
     `settings:redacted`; credential-bearing Settings endpoints remain uncached
     in browser storage.

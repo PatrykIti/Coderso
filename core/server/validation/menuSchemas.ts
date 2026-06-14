@@ -16,6 +16,14 @@ export const menuUpdateSchema = {
     name: { type: "string" },
     location: { type: ["string", "null"] },
     status: { enum: ["draft", "published"] },
+    // Deep validation is owned by `normalizeMenuAppearance` in the menu
+    // service (reject-unknown, machine-readable `menu_appearance_invalid`);
+    // `null` clears the stored appearance (TASK-458-02).
+    appearance: { type: ["object", "null"] },
+    // Deep validation is owned by `normalizeMenuNavExtras` (Page v2 block
+    // schema + button/image allowlist, machine-readable
+    // `menu_nav_extras_invalid`); `null` clears the slot (TASK-458-03).
+    extras: { type: ["array", "null"] },
   },
   additionalProperties: false,
 };

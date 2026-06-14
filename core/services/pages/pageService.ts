@@ -10,9 +10,13 @@ import {
 } from "./revisionService";
 import { invalidateSiteCachePath, normalizeSitePath } from "../../site/cache/siteCache";
 import { getSetting } from "../settings/settingsService";
-import { normalizePageDataLayout } from "./layoutSettings";
-import { normalizePageDataCollectionLink } from "./pageCollectionLink";
-import { normalizePageWidgetData } from "./pageWidgetData";
+import {
+  normalizePageDocumentV2ForWrite,
+  normalizeStoredPageDocumentV2ForRead,
+  toPublishedPageDocumentV2,
+  type PageDocumentV2,
+} from "./pageDocumentV2";
+import { createSecureRandomHexFragment } from "../security/secureRandom";
 import { resolveEmailValue } from "../security/piiEmail";
 import { resolvePageRevisionRetention } from "./revisionRetention";
 
@@ -58,17 +62,21 @@ export type PageAutosaveResult = PageAutosaveRevisionResult & {
   savedAt: string;
 };
 
-function toPublishedData(data: PageData): PageData {
-  const blocks = Array.isArray(data.blocks)
-    ? data.blocks.map((block) => {
-        if (!block || typeof block !== "object") return block;
-        const { editor: _editor, ...rest } = block as Record<string, unknown>;
-        return rest;
-      })
-    : data.blocks;
+type PageRow = typeof pages.$inferSelect;
 
-  return { ...data, blocks };
-}
+const toPageData = (document: PageDocumentV2): PageData => document as unknown as PageData;
+
+const prepareStoredPageDataForRead = (data: unknown): PageData =>
+  toPageData(normalizeStoredPageDocumentV2ForRead(data));
+
+const preparePublishedPageData = (data: unknown): PageData =>
+  toPageData(toPublishedPageDocumentV2(data));
+
+const normalizePageRowForRead = <T extends PageRow>(page: T): T => ({
+  ...page,
+  currentData: prepareStoredPageDataForRead(page.currentData),
+  publishedData: page.publishedData ? preparePublishedPageData(page.publishedData) : null,
+});
 
 function applyTemplate(data: PageData, template?: string): PageData {
   if (!template) return data;
@@ -84,9 +92,7 @@ function applyTemplate(data: PageData, template?: string): PageData {
 
 function preparePageData(data: PageData, template?: string): PageData {
   const withTemplate = applyTemplate(data, template);
-  return normalizePageWidgetData(
-    normalizePageDataCollectionLink(normalizePageDataLayout(withTemplate)) as PageData
-  ) as PageData;
+  return toPageData(normalizePageDocumentV2ForWrite(withTemplate));
 }
 
 const buildRevisionSnapshot = (
@@ -99,7 +105,7 @@ const buildRevisionSnapshot = (
 ) => ({
   title: overrides?.title ?? page.title,
   slug: overrides?.slug ?? page.slug,
-  data: preparePageData(overrides?.data ?? (page.currentData as PageData)) as RevisionData,
+  data: (overrides?.data ?? prepareStoredPageDataForRead(page.currentData)) as RevisionData,
 });
 
 export async function createPage(input: CreatePageInput) {
@@ -113,7 +119,7 @@ export async function createPage(input: CreatePageInput) {
       currentData: preparePageData(input.data, input.template),
     })
     .returning();
-  return page;
+  return page ? normalizePageRowForRead(page) : page;
 }
 
 export async function listPages(): Promise<PageSummary[]> {
@@ -155,7 +161,7 @@ export async function listPages(): Promise<PageSummary[]> {
 
 export async function getPage(id: string) {
   const [page] = await db.select().from(pages).where(eq(pages.id, id));
-  return page ?? null;
+  return page ? normalizePageRowForRead(page) : null;
 }
 
 export async function getPageBySlug(slug: string) {
@@ -167,7 +173,7 @@ export async function getPageBySlug(slug: string) {
 
   for (const candidate of candidates) {
     const [page] = await db.select().from(pages).where(eq(pages.slug, candidate)).limit(1);
-    if (page) return page;
+    if (page) return normalizePageRowForRead(page);
   }
 
   return null;
@@ -188,7 +194,7 @@ export async function updatePage(id: string, input: UpdatePageInput) {
   }
 
   const [page] = await db.update(pages).set(updates).where(eq(pages.id, id)).returning();
-  return page ?? null;
+  return page ? normalizePageRowForRead(page) : null;
 }
 
 export async function publishPage(id: string, userId: string, data?: PageData) {
@@ -196,7 +202,8 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
     const [page] = await tx.select().from(pages).where(eq(pages.id, id));
     if (!page) throw new Error("page_not_found");
 
-    const nextData = preparePageData((data ?? page.currentData) as PageData);
+    const nextData =
+      data === undefined ? prepareStoredPageDataForRead(page.currentData) : preparePageData(data);
 
     const retention = resolvePageRevisionRetention(nextData as Record<string, unknown>);
 
@@ -209,7 +216,7 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
     );
     await pruneRevisionsTx(tx, id, retention);
 
-    const publishedData = toPublishedData(nextData);
+    const publishedData = preparePublishedPageData(nextData);
     const [updated] = await tx
       .update(pages)
       .set({
@@ -222,7 +229,7 @@ export async function publishPage(id: string, userId: string, data?: PageData) {
       .where(eq(pages.id, id))
       .returning();
 
-    return updated ?? null;
+    return updated ? normalizePageRowForRead(updated) : null;
   });
 
   if (updated) {
@@ -250,7 +257,7 @@ export async function autosavePage(id: string, input: PageAutosaveInput, userId:
   const snapshot = buildRevisionSnapshot(page, {
     title: input.title ?? undefined,
     slug: input.slug ?? undefined,
-    data: input.data,
+    data: input.data === undefined ? undefined : preparePageData(input.data),
   });
 
   const result = await db.transaction(async (tx) =>
@@ -290,14 +297,15 @@ export async function unpublishPage(id: string) {
     }
   }
 
-  return page ?? null;
+  return page ? normalizePageRowForRead(page) : null;
 }
 
 export async function duplicatePage(id: string, actorId?: string) {
   const page = await getPage(id);
   if (!page) throw new Error("page_not_found");
 
-  const suffix = Math.random().toString(36).slice(2, 8);
+  const suffix = createSecureRandomHexFragment(6);
+  if (!suffix) throw new Error("secure_random_unavailable");
   const baseSlug = page.slug.replace(/\/$/, "");
   const clonedSlug = `${baseSlug}-copy-${suffix}`;
 
@@ -308,16 +316,16 @@ export async function duplicatePage(id: string, actorId?: string) {
       slug: clonedSlug,
       status: "draft",
       authorId: actorId ?? page.authorId ?? null,
-      currentData: page.currentData,
+      currentData: prepareStoredPageDataForRead(page.currentData),
     })
     .returning();
 
-  return clone ?? null;
+  return clone ? normalizePageRowForRead(clone) : null;
 }
 
 export async function deletePage(id: string) {
   const [page] = await db.delete(pages).where(eq(pages.id, id)).returning();
-  return page ?? null;
+  return page ? normalizePageRowForRead(page) : null;
 }
 
 type PublishedPageNavigationRow = {
@@ -334,13 +342,9 @@ export type NavigationPageSummary = {
   showInNav: boolean;
 };
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
 const resolveShowInNav = (publishedData: unknown): boolean => {
-  if (!isRecord(publishedData)) return true;
-  const settings = isRecord(publishedData.settings) ? publishedData.settings : {};
-  return typeof settings.showInNav === "boolean" ? settings.showInNav : true;
+  const document = normalizeStoredPageDocumentV2ForRead(publishedData);
+  return document.settings.showInNav;
 };
 
 export async function listPublishedPagesForNavigation(): Promise<NavigationPageSummary[]> {

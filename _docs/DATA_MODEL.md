@@ -83,6 +83,17 @@ Note (v2+):
 - published_at
 - scheduled_at
 
+Visitor listing indexes (TASK-459-04):
+
+- `content_entries_type_status_published_idx` btree on
+  `(type_id, status, published_at)` keeps published-scope list scans bounded.
+- `content_entries_data_gin_idx` GIN on `data jsonb_path_ops` supports
+  allowlisted containment-style visitor filters. The project deliberately does
+  not ship per-field expression indexes in the static migration because field
+  paths are content-type authored and not globally known; hot deployments can
+  add site-specific expression indexes later without changing the generic
+  schema contract.
+
 `content_revisions`
 - id (uuid, pk)
 - entry_id (fk content_entries)
@@ -156,6 +167,7 @@ Note (v2+):
 - status (draft|published)
 - published_at (nullable)
 - created_at
+- settings (nullable jsonb; appearance envelope, TASK-458-02)
 
 `menu_items`
 - id (uuid, pk)
@@ -172,6 +184,20 @@ Zasady:
 - Runtime navigation uzywa tylko menu ze statusem `published`.
 - `menu_items` musi miec dokladnie jedno z `href` lub `page_id`.
 - `parent_id` referencjonuje element w tym samym menu.
+- `menus.settings` to nullowalna koperta
+  `{ appearance?: MenuAppearance; extras?: PageBlockV2[]; published?: { appearance?: MenuAppearance; extras?: PageBlockV2[] } }`
+  (TASK-458-02/03). Top-level `appearance`/`extras` to draft edytora designu;
+  `published` to publiczny snapshot kopiowany przez `publishMenu`.
+  `appearance` waliduje `normalizeMenuAppearance` (reject-unknown, zacisniete
+  liczby, tokenowe kolory); `extras` (bloki nav extras: tylko `button` i
+  `image`, limit slotu) waliduje `normalizeMenuNavExtras` przez schemat
+  blokow Page v2 (`menu_nav_extras_invalid`). `updateMenu` merguje draft per
+  klucz (aktualizacja jednego klucza nie kasuje drugiego) i przy pierwszej
+  edycji opublikowanego menu zachowuje obecny publiczny snapshot. Publiczny
+  shell czyta `published` przez `resolvePublishedMenuAppearance` /
+  `resolvePublishedMenuNavExtras`; starsze koperty bez `published` zachowuja
+  kompatybilny fallback do top-level. `null` lub pusty snapshot = wyglad
+  legacy i brak slotu extras.
 
 ## Widgets & Templates
 

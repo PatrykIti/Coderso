@@ -7,6 +7,7 @@ import {
   getSiteCacheEntry,
   invalidateLinkedDetailPageRouteCaches,
   invalidateSiteCachePath,
+  resolveSiteCacheSearchSignature,
   resolveContentEntryPaths,
   setSiteCacheEntry,
 } from "../../../core/site/cache/siteCache";
@@ -39,6 +40,26 @@ test("invalidateSiteCachePath clears all profiles for a path", () => {
   expect(getSiteCacheEntry(keyOne, 1)).toBe(null);
   expect(getSiteCacheEntry(keyTwo, 1)).toBe(null);
   expect(getSiteCacheEntry(keyOther, 1)).toBe("other");
+});
+
+test("site cache search signature accepts only bounded runtime query grammar", () => {
+  const canonical = resolveSiteCacheSearchSignature(
+    new URLSearchParams(
+      "lq.query-1.data.rooms.in=3&lq.query-1.__sort=data.rooms%3Aasc&cl.block_1.page=2&page=3&sort=title"
+    )
+  );
+  expect(canonical.cacheable).toBe(true);
+  expect(canonical.signature).toBe(
+    "cl.block_1.page=2&lq.query-1.__sort=data.rooms%3Aasc&lq.query-1.data.rooms.in=3&page=3&sort=title"
+  );
+
+  expect(
+    resolveSiteCacheSearchSignature(new URLSearchParams("lq.query-1.not-a-token=value")).cacheable
+  ).toBe(false);
+  expect(
+    resolveSiteCacheSearchSignature(new URLSearchParams("lq.query-1.data.rooms.nope=3")).cacheable
+  ).toBe(false);
+  expect(resolveSiteCacheSearchSignature(new URLSearchParams("rooms=3")).cacheable).toBe(false);
 });
 
 test("resolveContentEntryPaths builds list and detail paths", () => {

@@ -13,6 +13,7 @@ import type {
   SolutionKitInstallRunRecord,
 } from "../../../core/services/kits/solutionKitsInstallService";
 import type { SolutionKitDefinition } from "../../../core/services/kits/solutionKitTypes";
+import { PAGE_DOCUMENT_SCHEMA_VERSION } from "../../../core/services/pages/pageDocumentV2";
 
 const now = new Date("2026-02-20T12:00:00.000Z");
 
@@ -72,6 +73,24 @@ const getCatalogKit = (
   const kit = getSolutionKitFromCatalog(id);
   if (!kit) throw new Error("missing_test_kit");
   return kit;
+};
+
+type TestPageBlock = {
+  type?: string;
+  props?: Record<string, unknown>;
+};
+
+type TestPageSection = {
+  type?: string;
+  variant?: string;
+  blocks?: TestPageBlock[];
+};
+
+const readPageSections = (value: unknown) => {
+  const document = value as { schemaVersion?: unknown; sections?: TestPageSection[] } | undefined;
+  expect(document?.schemaVersion).toBe(PAGE_DOCUMENT_SCHEMA_VERSION);
+  expect(document).not.toHaveProperty("blocks");
+  return Array.isArray(document?.sections) ? document.sections : [];
 };
 
 test("previewGuidedSiteBuilderPlan is deterministic and keeps fixed steps", () => {
@@ -242,8 +261,9 @@ test("executeGuidedSiteBuilder applies Advanced runtime overrides to executable 
   if (!selectedManifest) throw new Error("missing_test_manifest");
   let capturedApplyInput: ApplySolutionKitInstallInput | null = null;
 
-  const originalHomeData = selectedKit.resourceBlueprint.pages.find((page) => page.slug === "")
-    ?.data as { blocks?: Array<Record<string, unknown>> } | undefined;
+  const originalHomeData = selectedKit.resourceBlueprint.pages.find(
+    (page) => page.slug === ""
+  )?.data;
 
   const executionResult = {
     run: makeRun({ kitId: "local-service-business" }),
@@ -384,40 +404,41 @@ test("executeGuidedSiteBuilder applies Advanced runtime overrides to executable 
   const executableKit = captured.kitDefinitionOverride;
   if (!executableKit) throw new Error("missing_executable_kit");
   const home = executableKit.resourceBlueprint.pages.find((page) => page.slug === "");
-  const homeData = home?.data as { blocks?: Array<Record<string, unknown>> } | undefined;
-  const blocks = homeData?.blocks ?? [];
+  const sections = readPageSections(home?.data);
+  const firstSectionByType = new Map(sections.map((section) => [section.type, section]));
+  const navigationSection = firstSectionByType.get("navigation");
+  const navigationList = navigationSection?.blocks?.find((block) => block.type === "list");
+  const navigationCta = navigationSection?.blocks?.find((block) => block.type === "button");
   const primaryMenu = executableKit.resourceBlueprint.menus.find(
     (menu) => menu.location === "primary"
   );
 
-  expect(blocks[0]).toMatchObject({
+  expect(navigationSection).toMatchObject({
     type: "navigation",
-    variant: "with-cta",
-    data: {
-      linksSource: "menu",
-      cta: {
-        href: "/contact",
-      },
-      behavior: {
-        sticky: true,
-        mobileMode: "drawer",
-      },
-    },
+    variant: "horizontal",
   });
-  expect(blocks.find((block) => block.type === "hero")).toMatchObject({ variant: "media-left" });
-  expect(blocks.find((block) => block.type === "testimonials")).toMatchObject({
-    variant: "spotlight",
-  });
-  expect(blocks.find((block) => block.type === "faq-accordion")).toMatchObject({
-    variant: "two-column",
-  });
+  expect(navigationList?.props?.items).toEqual(
+    expect.arrayContaining([expect.objectContaining({ href: "/contact" })])
+  );
+  expect(navigationCta?.props).toMatchObject({ href: "/contact" });
+  expect(firstSectionByType.get("hero")).toMatchObject({ variant: "split" });
+  expect(firstSectionByType.get("testimonials")).toMatchObject({ variant: "cards" });
+  expect(firstSectionByType.get("faq")).toMatchObject({ variant: "grid" });
   expect(primaryMenu?.items?.find((item) => item.key === "assistant-advanced-cta")).toMatchObject({
     pageSlug: "contact",
   });
-  expect(originalHomeData?.blocks?.[0]).toMatchObject({
-    type: "hero",
-  });
-  expect(originalHomeData?.blocks?.[0]).not.toHaveProperty("variant");
+  const originalSections = readPageSections(originalHomeData);
+  expect(originalSections[0]).toMatchObject({ type: "hero" });
+  expect(
+    selectedKit.resourceBlueprint.menus
+      .flatMap((menu) => menu.items ?? [])
+      .some((item) => item.key === "assistant-advanced-cta")
+  ).toBe(false);
+  expect(
+    originalSections
+      .find((section) => section.type === "navigation")
+      ?.blocks?.some((block) => block.type === "button") ?? false
+  ).toBe(false);
 });
 
 test("validateGuidedSiteBuilderRun reports unresolved checks for failed items", async () => {

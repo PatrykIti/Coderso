@@ -9,9 +9,61 @@ import {
   type RouteContext,
   type RouteHandler,
 } from "../../../core/server/routes/pageRoutes";
-import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
 
 type Route = { method: string; path: string; handlers: RouteHandler[] };
+
+const buildPageData = (settings: Record<string, unknown> = {}) => ({
+  schemaVersion: 2,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  seo: {},
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+    ...settings,
+  },
+  sections: [
+    {
+      id: "sec_hero",
+      type: "hero",
+      name: "Hero",
+      variant: "split",
+      layout: { columns: 2, align: "center", justify: "between", maxWidth: 1080 },
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "sm",
+      },
+      spacing: {
+        paddingTop: 72,
+        paddingBottom: 72,
+        paddingLeft: 40,
+        paddingRight: 40,
+        gap: 32,
+      },
+      visibility: {
+        visible: true,
+        authOnly: false,
+        anchor: "hero",
+        startsAt: null,
+        endsAt: null,
+      },
+      responsive: {
+        mobile: { layout: { columns: 1 }, spacing: { paddingLeft: 20, paddingRight: 20 } },
+      },
+      blocks: [
+        {
+          id: "blk_heading",
+          type: "heading",
+          props: { text: "Route Page", level: "h1", align: "left" },
+          visibility: { visible: true },
+        },
+      ],
+    },
+  ],
+});
 
 const makeRouter = () => {
   const routes: Route[] = [];
@@ -102,6 +154,15 @@ const runRoute = async (
     if (output !== undefined) result = output;
   }
   return result;
+};
+
+const expectRouteApiError = async (promise: Promise<unknown>, code: string, status: number) => {
+  try {
+    await promise;
+    throw new Error("expected_route_error");
+  } catch (error) {
+    expect(error).toMatchObject({ code, status });
+  }
 };
 
 const makeValidatingDeps = () => {
@@ -286,19 +347,16 @@ testIfDb(
       body: {
         title: "Route Page",
         slug,
-        data: {
-          blocks: [],
-          settings: {
-            template: "landing",
-            showInNav: true,
-            collectionLink: {
-              contentTypeId: "content-type-1",
-              pageRole: "canonical-list-page",
-              listingQueryId: "query-1",
-              listingTemplateId: "template-1",
-            },
+        data: buildPageData({
+          template: "landing",
+          showInNav: true,
+          collectionLink: {
+            contentTypeId: "content-type-1",
+            pageRole: "canonical-list-page",
+            listingQueryId: "query-1",
+            listingTemplateId: "template-1",
           },
-        },
+        }),
       },
     })) as typeof pages.$inferSelect;
     trackPage(created.id);
@@ -326,17 +384,14 @@ testIfDb(
       params: { id: created.id },
       body: {
         title: "Route Page Updated",
-        data: {
-          blocks: [],
-          settings: {
-            collectionLink: {
-              contentTypeId: "content-type-1",
-              pageRole: "canonical-list-page",
-              listingQueryId: "query-2",
-              listingTemplateId: "template-2",
-            },
+        data: buildPageData({
+          collectionLink: {
+            contentTypeId: "content-type-1",
+            pageRole: "canonical-list-page",
+            listingQueryId: "query-2",
+            listingTemplateId: "template-2",
           },
-        },
+        }),
       },
     })) as typeof pages.$inferSelect;
     expect(updated.title).toBe("Route Page Updated");
@@ -359,31 +414,45 @@ testIfDb(
       body: {
         title: "Route Page Autosave",
         slug: `${slug}-autosave`,
-        data: { blocks: [], settings: { showInNav: false } },
+        data: buildPageData({ showInNav: false }),
       },
     })) as { revision: { id: string; kind: string }; reusedRevision: boolean };
     expect(autosave.revision.kind).toBe("autosave");
     expect(autosave.reusedRevision).toBe(false);
 
-    const publish = await runRoute(routes, "POST", "/pages/:id/publish", {
+    const publish = (await runRoute(routes, "POST", "/pages/:id/publish", {
       params: { id: created.id },
       user: { id: actor.id },
       body: {
-        data: {
-          blocks: [],
-          settings: {
-            showInNav: true,
-            collectionLink: {
-              contentTypeId: "content-type-1",
-              pageRole: "canonical-list-page",
-              listingQueryId: "query-2",
-              listingTemplateId: "template-2",
-            },
+        data: buildPageData({
+          showInNav: true,
+          collectionLink: {
+            contentTypeId: "content-type-1",
+            pageRole: "canonical-list-page",
+            listingQueryId: "query-2",
+            listingTemplateId: "template-2",
           },
-        },
+        }),
       },
+    })) as { ok: boolean; page: typeof pages.$inferSelect };
+    expect(publish.ok).toBe(true);
+    // The route returns the post-publish detail so admin clients can keep
+    // the cached draft coherent with the published state: the published
+    // document is also persisted as `currentData`.
+    expect(publish.page.id).toBe(created.id);
+    expect(publish.page.status).toBe("published");
+    expect(
+      (
+        publish.page.currentData as {
+          settings?: { collectionLink?: Record<string, unknown> };
+        }
+      ).settings?.collectionLink
+    ).toEqual({
+      contentTypeId: "content-type-1",
+      pageRole: "canonical-list-page",
+      listingQueryId: "query-2",
+      listingTemplateId: "template-2",
     });
-    expect(publish).toEqual({ ok: true });
 
     const preview = (await runRoute(routes, "POST", "/pages/:id/preview", {
       params: { id: created.id },
@@ -528,110 +597,81 @@ testIfDb("page preview route returns sanitized probe metadata", async () => {
   }
 });
 
-testIfDb("page routes reject invalid Section widget payloads before persistence", async () => {
-  ensureRuntimeWidgetsRegistered();
+testIfDb("page routes reject fresh legacy widget payloads before persistence", async () => {
   const { router, routes } = makeRouter();
   const deps = makeValidatingDeps();
   const actor = await createRouteActor();
-  const page = await createPageDirectly("Invalid Section Payload Page");
-  const invalidData = {
-    blocks: [
-      {
-        id: "section-invalid",
-        type: "section",
-        variant: "default",
-        data: {
-          heading: {
-            level: "h8",
-          },
-          style: {
-            borderWidth: "9",
-            radius: "circle",
-          },
-        },
-        layout: {
-          container: "inherit",
-          padding: { top: "inherit", bottom: "inherit" },
-          margin: { top: "inherit", bottom: "inherit" },
-          background: { color: "transparent", image: null },
-        },
-        visibility: { devices: ["desktop", "tablet", "mobile"], enabled: true },
-        editor: { mode: "visual", wizardCompleted: true },
-      },
-    ],
-  };
+  const page = await createPageDirectly("Invalid Legacy Payload Page");
+  const legacyData = { blocks: [] };
 
   registerPageRoutes(router, deps);
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "PATCH", "/pages/:id", {
       params: { id: page.id },
-      body: { data: invalidData },
-    })
-  ).rejects.toThrow("widget_schema_invalid");
+      body: { data: legacyData },
+    }),
+    "page_document_invalid",
+    400
+  );
 
   const afterSaveAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
   expect(afterSaveAttempt[0]?.currentData).toEqual({ blocks: [] });
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "POST", "/pages/:id/publish", {
       params: { id: page.id },
       user: { id: actor.id },
-      body: { data: invalidData },
-    })
-  ).rejects.toThrow("widget_schema_invalid");
+      body: { data: legacyData },
+    }),
+    "page_document_invalid",
+    400
+  );
 
   const afterPublishAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
   expect(afterPublishAttempt[0]?.status).toBe("draft");
   expect(afterPublishAttempt[0]?.publishedData).toBeNull();
 });
 
-testIfDb("page routes reject invalid Template Section references before persistence", async () => {
-  ensureRuntimeWidgetsRegistered();
+testIfDb("page routes reject unknown v2 document fields before persistence", async () => {
   const { router, routes } = makeRouter();
   const deps = makeValidatingDeps();
   const actor = await createRouteActor();
-  const page = await createPageDirectly("Invalid Template Section Page");
+  const page = await createPageDirectly("Invalid V2 Field Page");
+  const invalidSection = buildPageData().sections[0]!;
   const invalidData = {
-    blocks: [
+    ...buildPageData(),
+    sections: [
       {
-        id: "template-section-invalid",
-        type: "template-section",
-        variant: "default",
-        data: {
-          templateId: "missing-template-31-05",
-        },
-        layout: {
-          container: "inherit",
-          padding: { top: "inherit", bottom: "inherit" },
-          margin: { top: "inherit", bottom: "inherit" },
-          background: { color: "transparent", image: null },
-        },
-        visibility: { devices: ["desktop", "tablet", "mobile"], enabled: true },
-        editor: { mode: "visual", wizardCompleted: true },
+        ...invalidSection,
+        unknownField: "nope",
       },
     ],
   };
 
   registerPageRoutes(router, deps);
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "PATCH", "/pages/:id", {
       params: { id: page.id },
       body: { data: invalidData },
-    })
-  ).rejects.toThrow("widget_schema_invalid");
+    }),
+    "page_document_unknown_field",
+    400
+  );
 
   const afterSaveAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
   expect(afterSaveAttempt[0]?.currentData).toEqual({ blocks: [] });
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "POST", "/pages/:id/publish", {
       params: { id: page.id },
       user: { id: actor.id },
       body: { data: invalidData },
-    })
-  ).rejects.toThrow("widget_schema_invalid");
+    }),
+    "page_document_unknown_field",
+    400
+  );
 
   const afterPublishAttempt = await db.select().from(pages).where(eq(pages.id, page.id));
   expect(afterPublishAttempt[0]?.status).toBe("draft");
@@ -647,74 +687,92 @@ testIfDb("page route handlers surface not-found and revision guard errors", asyn
 
   const missingPageId = randomUUID();
 
-  await expect(
-    runRoute(routes, "GET", "/pages/:id", { params: { id: missingPageId } })
-  ).rejects.toThrow("page_not_found");
+  await expectRouteApiError(
+    runRoute(routes, "GET", "/pages/:id", { params: { id: missingPageId } }),
+    "page_not_found",
+    404
+  );
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "PATCH", "/pages/:id", {
       params: { id: missingPageId },
       body: { title: "Missing" },
-    })
-  ).rejects.toThrow("page_not_found");
+    }),
+    "page_not_found",
+    404
+  );
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "POST", "/pages/:id/preview", {
       params: { id: missingPageId },
       body: {},
-    })
-  ).rejects.toThrow("page_not_found");
+    }),
+    "page_not_found",
+    404
+  );
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "POST", "/pages/:id/publish", {
       params: { id: missingPageId },
       user: { id: actor.id },
       body: {},
-    })
-  ).rejects.toThrow("page_not_found");
+    }),
+    "page_not_found",
+    404
+  );
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "POST", "/pages/:id/unpublish", {
       params: { id: missingPageId },
       user: { id: actor.id },
       body: {},
-    })
-  ).rejects.toThrow("page_not_found");
+    }),
+    "page_not_found",
+    404
+  );
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "POST", "/pages/:id/duplicate", {
       params: { id: missingPageId },
       user: { id: actor.id },
       body: {},
-    })
-  ).rejects.toThrow("page_not_found");
+    }),
+    "page_not_found",
+    404
+  );
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "DELETE", "/pages/:id", {
       params: { id: missingPageId },
       user: { id: actor.id },
       body: {},
-    })
-  ).rejects.toThrow("page_not_found");
+    }),
+    "page_not_found",
+    404
+  );
 
   const page = await createPageDirectly();
   const missingRevisionId = randomUUID();
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "POST", "/pages/:id/revisions/:revisionId/restore", {
       params: { id: page.id, revisionId: missingRevisionId },
       user: { id: actor.id },
       body: {},
-    })
-  ).rejects.toThrow("revision_not_found");
+    }),
+    "revision_not_found",
+    404
+  );
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "DELETE", "/pages/:id/revisions/:revisionId", {
       params: { id: page.id, revisionId: missingRevisionId },
       user: { id: actor.id },
       body: {},
-    })
-  ).rejects.toThrow("revision_not_found");
+    }),
+    "revision_not_found",
+    404
+  );
 
   await runRoute(routes, "POST", "/pages/:id/publish", {
     params: { id: page.id },
@@ -727,11 +785,13 @@ testIfDb("page route handlers surface not-found and revision guard errors", asyn
   const publishRevision = publishRevisions.find((revision) => revision.kind === "publish");
   expect(typeof publishRevision?.id).toBe("string");
 
-  await expect(
+  await expectRouteApiError(
     runRoute(routes, "DELETE", "/pages/:id/revisions/:revisionId", {
       params: { id: page.id, revisionId: publishRevision!.id },
       user: { id: actor.id },
       body: {},
-    })
-  ).rejects.toThrow("revision_delete_forbidden");
+    }),
+    "revision_delete_forbidden",
+    409
+  );
 });

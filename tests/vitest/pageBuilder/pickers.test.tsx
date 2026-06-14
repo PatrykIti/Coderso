@@ -5,7 +5,6 @@ import { createRoot } from "react-dom/client";
 import { expect, test, vi } from "vitest";
 
 import { FormPicker } from "../../../core/admin/ui/pages/builder/FormPicker";
-import { TemplatePicker } from "../../../core/admin/ui/pages/builder/TemplatePicker";
 import { WidgetPicker } from "../../../core/admin/ui/pages/builder/WidgetPicker";
 
 vi.mock("lucide-react", () => ({
@@ -108,20 +107,6 @@ const formsState = vi.hoisted(() => ({
   },
 }));
 
-const templatesState = vi.hoisted(() => ({
-  current: {
-    items: [] as Array<{
-      id: string;
-      name: string;
-      description: string | null;
-      category: string;
-      status: string;
-    }>,
-    isLoading: false,
-    error: null as string | null,
-  },
-}));
-
 const widgetPickerState = vi.hoisted(() => ({
   current: [
     {
@@ -147,10 +132,6 @@ const widgetPickerState = vi.hoisted(() => ({
 
 vi.mock("@/ui/forms/hooks/useForms", () => ({
   useForms: () => formsState.current,
-}));
-
-vi.mock("@/ui/widgets/hooks/useWidgetTemplates", () => ({
-  useWidgetTemplates: () => templatesState.current,
 }));
 
 vi.mock("../../../core/admin/ui/pages/builder/widgetRegistry", () => ({
@@ -244,75 +225,6 @@ test("FormPicker renders loading, error, filtering, and add flows", () => {
     });
 
     expect(view.container.textContent).toContain("No forms match this search.");
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("TemplatePicker renders loading, error, filtering, and add flows", () => {
-  const onAdd = vi.fn();
-  templatesState.current = { items: [], isLoading: true, error: null };
-  const view = mount(<TemplatePicker onAdd={onAdd} />);
-
-  try {
-    expect(view.container.firstElementChild?.className).toContain("min-h-0");
-    expect(view.container.firstElementChild?.className).toContain("overflow-hidden");
-    expect(view.container.textContent).toContain("Loading templates...");
-
-    templatesState.current = { items: [], isLoading: false, error: "Broken feed" };
-    view.rerender(<TemplatePicker onAdd={onAdd} />);
-    expect(view.container.textContent).toContain("Broken feed");
-
-    templatesState.current = {
-      isLoading: false,
-      error: null,
-      items: [
-        {
-          id: "template-1",
-          name: "Hero Promo",
-          description: null,
-          category: "marketing",
-          status: "published",
-        },
-        {
-          id: "template-2",
-          name: "Footer Links",
-          description: "Navigation cluster",
-          category: "footer",
-          status: "draft",
-        },
-      ],
-    };
-    view.rerender(<TemplatePicker onAdd={onAdd} />);
-    expect(view.container.textContent).toContain("Reusable template section.");
-
-    React.act(() => {
-      view.container
-        .querySelector("button[data-input-action='match']")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    expect(view.container.textContent).toContain("Footer Links");
-    expect(view.container.textContent).not.toContain("Hero Promo");
-
-    React.act(() => {
-      Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "plus-icon")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    expect(onAdd).toHaveBeenCalledWith({
-      id: "template-2",
-      name: "Footer Links",
-    });
-
-    React.act(() => {
-      view.container
-        .querySelector("button[data-input-action='empty']")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    expect(view.container.textContent).toContain("No templates match this search.");
   } finally {
     view.cleanup();
   }

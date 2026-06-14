@@ -20,7 +20,37 @@ niestandardowych klas Tailwind w runtime.
 - neutrals: `--color-bg`, `--color-surface`, `--color-text`
 - spacing: `--space-xs` ... `--space-2xl`
 - radius: `--radius-sm` ... `--radius-xl`
-- typography: `--font-sans`, `--font-display`, `--text-sm` ... `--text-2xl`
+- typography: `--font-sans`, `--font-display`, `--text-sm` ... `--text-5xl`
+  (`3xl`/`4xl`/`5xl` extend the heading scale: 1.875rem/2.25rem/3rem; `5xl`
+  matches the baked h1 utility class so the largest explicit preset never
+  shrinks a default h1).
+
+## Pages v2 typography consumption (TASK-424)
+
+Page block typography (`PageBlockStyleV2.fontFamily/fontSize`) is token-backed
+and references the typography group above:
+
+- `fontFamily: "sans" | "display"` renders as
+  `var(--font-sans/--font-display, <DEFAULT_TOKENS stack>)`.
+- `fontSize: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl"`
+  renders as `var(--text-*, <DEFAULT_TOKENS size>)`.
+- `fontWeight: "normal" | "medium" | "semibold" | "bold"` maps to
+  400/500/600/700 (no CSS variable; weights are not part of the v1 token
+  groups).
+- The owner mapping lives in `core/services/pages/pageDocumentV2.ts`
+  (`pageTypographyFontFamilyCssValues`, `pageTypographyFontSizeCssValues`,
+  `pageTypographyFontWeightCssValues`) and references
+  `DesignTokens.typography` from `core/services/theme/tokenTypes.ts`.
+- The published front resolves the variables from the `:root` token stylesheet
+  (`toCssVariables` in `core/ui/theme/tokenCss.ts`). The admin shell defines
+  its OWN admin-theme `--text-*`/`--font-*` variables on `:root`, so the page
+  editor canvas frame re-paints the SITE typography variables inline
+  (`toPageTypographyCssVariableMap` over the resolved `design.tokens`
+  settings value, `DEFAULT_TOKENS` when none are cached) — otherwise the
+  admin typography scale would leak into the canvas and drift from the front
+  (phase2 smoke anomaly #2).
+- Free-form font strings are not accepted: the Pages schema rejects unknown
+  typography tokens on fresh writes.
 
 ## Tailwind integration
 

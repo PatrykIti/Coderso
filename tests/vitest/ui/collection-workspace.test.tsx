@@ -123,6 +123,8 @@ const collectionWorkspaceState = vi.hoisted(() => {
     adminRedirectEnabled: false,
     homepageId: null,
     notFoundPageId: null,
+    navigationMenuId: null,
+    footerTemplateId: null,
     previewEnabled: true,
     cacheTtlSeconds: 30,
     contentRoutes: [

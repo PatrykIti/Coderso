@@ -216,10 +216,7 @@ export function RuntimePreviewDialog({
     () => (previewUrl ? isLoopbackHost(previewUrl) : false),
     [previewUrl]
   );
-  const probeFailure = useMemo(
-    () => resolveProbeFailure(probeResult),
-    [probeResult]
-  );
+  const probeFailure = useMemo(() => resolveProbeFailure(probeResult), [probeResult]);
   const loadFailure = useMemo<PreviewLoadFailure | null>(() => {
     if (probeFailure) return probeFailure;
     if (!loadError || !previewTargetLabel) return null;
@@ -241,12 +238,20 @@ export function RuntimePreviewDialog({
   }, [iframeKey, open, probeResult]);
 
   useEffect(() => {
+    // The server-side probe carried in the preview response is authoritative:
+    // it performed a real request against the actual preview target. When any
+    // probe result is present (ok or failure), the weaker client-side opaque
+    // `no-cors` reachability fetch must not run — its short timeout used to
+    // lose the race against a slow dev SSR (~1.5s) and override a successful
+    // server probe with a false "frontend is not responding" (client-readiness
+    // FIX 4b). The client-side check stays only as a fallback for preview
+    // responses that carry no probe (e.g. template previews).
     if (
       typeof window === "undefined" ||
       !open ||
       !previewUrl ||
       isLoading ||
-      probeFailure ||
+      probeResult ||
       !previewUsesLoopback ||
       !previewOrigin
     ) {
@@ -254,7 +259,9 @@ export function RuntimePreviewDialog({
     }
 
     const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), 1500);
+    // Generous budget for probe-less callers: a cold dev SSR can take several
+    // seconds; this fallback only reports a failure, it never gates success.
+    const timeoutId = window.setTimeout(() => controller.abort(), 8000);
     let active = true;
 
     window
@@ -277,7 +284,7 @@ export function RuntimePreviewDialog({
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [isLoading, open, previewOrigin, previewUrl, previewUsesLoopback, probeFailure]);
+  }, [isLoading, open, previewOrigin, previewUrl, previewUsesLoopback, probeResult]);
 
   useEffect(() => {
     if (
@@ -356,20 +363,13 @@ export function RuntimePreviewDialog({
           ) : loadFailure ? (
             <div className="rounded-2xl border border-amber-500/30 bg-background p-10 text-center shadow-sm">
               <div className="space-y-3">
-                <p className="text-base font-semibold text-foreground">
-                  Live preview unavailable
-                </p>
+                <p className="text-base font-semibold text-foreground">Live preview unavailable</p>
                 <p className="text-sm text-muted-foreground">
                   {resolveLoadFailureMessage(loadFailure)}
                 </p>
                 {onFixPreviewTarget ? (
                   <div className="flex justify-center">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={onFixPreviewTarget}
-                    >
+                    <Button type="button" variant="outline" size="sm" onClick={onFixPreviewTarget}>
                       {fixPreviewTargetLabel}
                     </Button>
                   </div>

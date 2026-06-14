@@ -50,7 +50,7 @@ and the React admin SPA. Key subdirectories:
 | `core/admin/` | React admin SPA. `main.tsx` (client entry), `entry-server.tsx` (SSR entry), `app/`, `ui/`, `components/`, `services/` (admin API clients). |
 | `core/services/` | ~38 business-rule domains (`pages`, `posts`, `content`, `menus`, `media`, `forms`, `commerce`, `auth`, `security`, `seo`, `themes`, `assistant`, `kits`, …). |
 | `core/db/` | Drizzle layer: `client.ts`, `schema.ts`, `migrations/`, `drizzle.config.ts`, `seed.ts`. |
-| `core/site/` | Public runtime: `pageRuntime.tsx`, `renderPublicPage.tsx`, `contentRouteMatcher.ts`, `cache/`. |
+| `core/site/` | Public runtime: `pageRuntime.tsx` for widget/detail surfaces, `pageRuntimeV2.tsx` for Pages v2 sections, `renderPublicPage.tsx`, `contentRouteMatcher.ts`, `cache/`. |
 | `core/widgets/` | Block/widget system: `registry.ts`, `runtime.tsx`, `renderers/`, `validator.ts`, `editorContract.ts`. |
 | `core/plugins/` | Runtime plugin engine: `loader.ts`, `pluginManager.ts`, `installService.ts`, `registry.ts`. |
 | `core/store/` | Client to the Store backend: `client.ts`, `downloader.ts`, `verifier.ts` (ed25519), `updater.ts`. |

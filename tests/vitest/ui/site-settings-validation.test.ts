@@ -4,9 +4,30 @@ import {
   mergeContentRoutes,
   normalizeDetailPageIdInput,
   normalizeRouteInput,
+  validateBaseUrl,
   validateContentRoutes,
   type SiteContentRouteForm,
 } from "../../../core/admin/ui/site/siteSettingsValidation";
+
+test("validateBaseUrl allows http for RFC 6761 loopback hosts and keeps HTTPS for everything else", () => {
+  // Client-readiness FIX 4a: the multi-tenant dev host serves the public site
+  // on http://*.localhost; rejecting it blocked configuring the dev public
+  // origin (and the preview-target fix path) entirely.
+  expect(validateBaseUrl("http://localhost:3000")).toBeNull();
+  expect(validateBaseUrl("http://127.0.0.1:3000")).toBeNull();
+  expect(validateBaseUrl("http://coderso-a.localhost:3000")).toBeNull();
+  expect(validateBaseUrl("http://sub.tenant.localhost:5173")).toBeNull();
+  expect(validateBaseUrl("http://[::1]:3000")).toBeNull();
+  expect(validateBaseUrl("https://www.example.com")).toBeNull();
+  expect(validateBaseUrl("  ")).toBeNull();
+
+  expect(validateBaseUrl("http://example.com")).toBe("HTTPS is required for non-localhost URLs.");
+  // Lookalike domains never inherit the loopback exemption.
+  expect(validateBaseUrl("http://notlocalhost.dev")).toBe(
+    "HTTPS is required for non-localhost URLs."
+  );
+  expect(validateBaseUrl("not a url")).toBe("Enter a valid URL (e.g. https://example.com).");
+});
 
 test("normalizeRouteInput prefixes leading slash", () => {
   expect(normalizeRouteInput("blog", true)).toBe("/blog");

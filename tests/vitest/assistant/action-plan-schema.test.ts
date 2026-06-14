@@ -9,6 +9,10 @@ import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/bluepri
 import { buildFullServiceSitePlan } from "../../../core/services/assistant/blueprints/fullServiceSiteBlueprint";
 import { planAssistantActions } from "../../../core/services/assistant/actionPlannerService";
 import { buildBasicSiteBuilderNeedsInputPlan } from "../../../core/services/assistant/assistantSiteBuilderIntakeBasicFlow";
+import {
+  createPageBlockV2,
+  createPageSectionV2,
+} from "../../../core/services/pages/pageDocumentV2";
 
 test("normalizeAssistantActionPlan accepts current catalog family plans", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
@@ -1338,63 +1342,34 @@ test("normalizeAssistantActionPlan accepts listing template card patch actions",
   expect(normalized.actions[0]?.type).toBe("listing-template.card.patch");
 });
 
-test("normalizeAssistantActionPlan accepts page widget patch actions", () => {
+test("normalizeAssistantActionPlan rejects retired page widget patch actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
   });
 
-  const normalized = normalizeAssistantActionPlan({
-    ...plan,
-    actions: [
-      {
-        id: "page-spacer",
-        type: "page.widget.patch",
-        title: "Add spacer",
-        description: "Append a spacer block to the page.",
-        input: {
-          pageSlug: "/products",
-          operation: "upsert-block",
-          block: {
-            id: "assistant-spacer",
-            type: "spacer",
-            data: {},
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-spacer",
+          type: "page.widget.patch",
+          title: "Add spacer",
+          description: "Append a spacer block to the page.",
+          input: {
+            pageSlug: "/products",
+            operation: "upsert-block",
+            block: {
+              id: "assistant-spacer",
+              type: "spacer",
+              data: {},
+            },
           },
         },
-      },
-    ],
-  });
-
-  expect(normalized.actions[0]?.type).toBe("page.widget.patch");
-});
-
-test("normalizeAssistantActionPlan accepts page widget data patch actions", () => {
-  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
-    promptKind: "setup_request",
-    intentFamily: "product_catalog",
-  });
-
-  const normalized = normalizeAssistantActionPlan({
-    ...plan,
-    actions: [
-      {
-        id: "page-hero-title",
-        type: "page.widget.patch",
-        title: "Patch hero title",
-        description: "Patch selected block title.",
-        input: {
-          pageSlug: "/products",
-          operation: "patch-data",
-          blockId: "hero-1",
-          expectedBlockType: "hero",
-          dataPath: ["title"],
-          value: "New title",
-        },
-      },
-    ],
-  });
-
-  expect(normalized.actions[0]?.type).toBe("page.widget.patch");
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
 });
 
 test("normalizeAssistantActionPlan accepts page update actions", () => {
@@ -1490,7 +1465,7 @@ test("normalizeAssistantActionPlan accepts page upsert collection-link metadata"
   });
 });
 
-test("normalizeAssistantActionPlan accepts page upsert blocks that reference trusted media library asset ids", () => {
+test("normalizeAssistantActionPlan accepts page upsert sections that reference trusted media library asset ids", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
@@ -1510,20 +1485,20 @@ test("normalizeAssistantActionPlan accepts page upsert blocks that reference tru
           status: "published",
           introTitle: "Products",
           introBody: "Browse products.",
-          blocks: [
-            {
+          sections: [
+            createPageSectionV2("hero", {
               id: "hero-1",
-              type: "hero",
-              variant: "centered",
-              data: {
-                headline: "Browse products",
-                media: {
-                  type: "image",
-                  source: "library",
-                  assetId: "media-hero",
-                },
-              },
-            },
+              name: "Hero",
+              blocks: [
+                createPageBlockV2("image", {
+                  id: "hero-media",
+                  props: {
+                    assetId: "media-hero",
+                    alt: "Product hero",
+                  },
+                }),
+              ],
+            }),
           ],
         },
       },
@@ -1533,15 +1508,15 @@ test("normalizeAssistantActionPlan accepts page upsert blocks that reference tru
   expect(normalized.actions[0]).toMatchObject({
     type: "page.upsert",
     input: {
-      blocks: [
+      sections: [
         {
-          data: {
-            media: {
-              type: "image",
-              source: "library",
-              assetId: "media-hero",
+          blocks: [
+            {
+              props: {
+                assetId: "media-hero",
+              },
             },
-          },
+          ],
         },
       ],
     },
@@ -2446,20 +2421,20 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
               status: "published",
               introTitle: "Products",
               introBody: "Browse products.",
-              blocks: [
-                {
+              sections: [
+                createPageSectionV2("hero", {
                   id: "hero-1",
-                  type: "hero",
-                  variant: "centered",
-                  data: {
-                    headline: "Browse products",
-                    media: {
-                      type: "image",
-                      source: "external",
-                      src,
-                    },
-                  },
-                },
+                  name: "Hero",
+                  blocks: [
+                    createPageBlockV2("image", {
+                      id: "hero-media",
+                      props: {
+                        src,
+                        alt: "Browse products",
+                      },
+                    }),
+                  ],
+                }),
               ],
             },
           },
@@ -2467,6 +2442,168 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
       })
     ).toThrow("assistant_action_plan_invalid");
   }
+});
+
+test("normalizeAssistantActionPlan accepts assistant-emittable nested layout page blocks", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  const normalized = normalizeAssistantActionPlan({
+    ...plan,
+    actions: [
+      {
+        id: "page-layout",
+        type: "page.upsert",
+        title: "Create layout page",
+        description: "Create a page with nested layout blocks.",
+        input: {
+          title: "Layout",
+          slug: "/layout",
+          status: "published",
+          introTitle: "Layout",
+          introBody: "Nested layout content.",
+          sections: [
+            createPageSectionV2("content", {
+              id: "section-layout",
+              blocks: [
+                createPageBlockV2("container", {
+                  id: "container-1",
+                  slots: {
+                    children: [
+                      createPageBlockV2("heading", {
+                        id: "nested-heading",
+                        props: { text: "Nested heading", level: "h2", align: "left" },
+                      }),
+                    ],
+                  },
+                }),
+              ],
+            }),
+          ],
+        },
+      },
+    ],
+  });
+
+  const pageAction = normalized.actions[0];
+  expect(pageAction?.type).toBe("page.upsert");
+  expect(
+    pageAction?.type === "page.upsert" ? pageAction.input.sections?.[0]?.blocks[0] : null
+  ).toMatchObject({
+    type: "container",
+    slots: {
+      children: [{ id: "nested-heading", type: "heading" }],
+    },
+  });
+});
+
+test("normalizeAssistantActionPlan rejects data-bound sections outside assistant vocabulary", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-form-section",
+          type: "page.upsert",
+          title: "Create form page",
+          description: "Attempt to create an assistant-gated form section.",
+          input: {
+            title: "Contact",
+            slug: "/contact",
+            status: "published",
+            introTitle: "Contact",
+            introBody: "Send a message.",
+            sections: [
+              createPageSectionV2("lead-form", {
+                id: "section-form",
+                blocks: [createPageBlockV2("text", { id: "form-copy" })],
+              }),
+            ],
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects data-bound blocks outside assistant vocabulary", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-form-block",
+          type: "page.upsert",
+          title: "Create form block page",
+          description: "Attempt to create an assistant-gated form block.",
+          input: {
+            title: "Contact",
+            slug: "/contact",
+            status: "published",
+            introTitle: "Contact",
+            introBody: "Send a message.",
+            sections: [
+              createPageSectionV2("content", {
+                id: "section-content",
+                blocks: [
+                  createPageBlockV2("form", {
+                    id: "form-1",
+                    props: { formId: "form-contact", title: "Contact form" },
+                  }),
+                ],
+              }),
+            ],
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
+});
+
+test("normalizeAssistantActionPlan rejects page blocks outside assistant vocabulary", () => {
+  const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
+    promptKind: "setup_request",
+    intentFamily: "product_catalog",
+  });
+
+  expect(() =>
+    normalizeAssistantActionPlan({
+      ...plan,
+      actions: [
+        {
+          id: "page-icon",
+          type: "page.upsert",
+          title: "Create icon page",
+          description: "Attempt to create a gated icon block.",
+          input: {
+            title: "Icon",
+            slug: "/icon",
+            status: "published",
+            introTitle: "Icon",
+            introBody: "Unsupported block.",
+            sections: [
+              createPageSectionV2("content", {
+                id: "section-icon",
+                blocks: [createPageBlockV2("icon", { id: "icon-1" })],
+              }),
+            ],
+          },
+        },
+      ],
+    })
+  ).toThrow("assistant_action_plan_invalid");
 });
 
 test("normalizeAssistantActionPlan rejects raw media URLs inside entry media fields", () => {
@@ -2619,7 +2756,7 @@ test("normalizeAssistantActionPlan requires source and license metadata for cura
   ).toThrow("assistant_action_plan_invalid");
 });
 
-test("normalizeAssistantActionPlan keeps non-media URL fields available to widget contracts", () => {
+test("normalizeAssistantActionPlan keeps non-media URL fields available to page section contracts", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
@@ -2639,16 +2776,20 @@ test("normalizeAssistantActionPlan keeps non-media URL fields available to widge
           status: "published",
           introTitle: "Products",
           introBody: "Browse products.",
-          blocks: [
-            {
+          sections: [
+            createPageSectionV2("hero", {
               id: "hero-1",
-              type: "hero",
-              variant: "centered",
-              data: {
-                headline: "Browse products",
-                ctaUrl: "https://example.com/buy",
-              },
-            },
+              name: "Hero",
+              blocks: [
+                createPageBlockV2("button", {
+                  id: "hero-cta",
+                  props: {
+                    href: "https://example.com/buy",
+                    label: "Buy",
+                  },
+                }),
+              ],
+            }),
           ],
         },
       },
@@ -2658,11 +2799,15 @@ test("normalizeAssistantActionPlan keeps non-media URL fields available to widge
   expect(normalized.actions[0]).toMatchObject({
     type: "page.upsert",
     input: {
-      blocks: [
+      sections: [
         {
-          data: {
-            ctaUrl: "https://example.com/buy",
-          },
+          blocks: [
+            {
+              props: {
+                href: "https://example.com/buy",
+              },
+            },
+          ],
         },
       ],
     },

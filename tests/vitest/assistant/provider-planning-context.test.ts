@@ -537,7 +537,7 @@ test("buildProviderPlanningPromptPackage includes redacted active surface summar
   ).toBeNull();
 });
 
-test("buildProviderPlanningPromptPackage includes referenced template target context", () => {
+test("buildProviderPlanningPromptPackage includes page section target context", () => {
   const prompt = buildProviderPlanningPromptPackage({
     prompt: "Edit the template-backed page section",
     context: {
@@ -551,55 +551,28 @@ test("buildProviderPlanningPromptPackage includes referenced template target con
           status: "draft",
           template: "landing",
         },
+        selectedSectionId: "section-1",
         selectedBlockId: "template-section-1",
-        blocks: [
+        selectedBlockPath: "sections.0.blocks.0",
+        sections: [
           {
-            id: "template-section-1",
-            type: "template-section",
-            label: "Template section",
-            path: "0",
-            childCount: 0,
-            slotKeys: [],
-            templateId: "template-1",
-            templateName: "Hero Template",
-          },
-        ],
-        templateReferences: [
-          {
-            templateId: "template-1",
-            templateName: "Hero Template",
-            blockIds: ["template-section-1"],
-            paths: ["0"],
-            count: 1,
-          },
-        ],
-        referencedTemplates: [
-          {
-            id: "template-1",
+            id: "section-1",
+            type: "template",
             name: "Hero Template",
-            status: "published",
-            category: "Marketing",
-            description: null,
+            path: "sections.0",
             blockCount: 1,
             blocks: [
               {
-                id: "hero-1",
-                type: "hero",
-                label: "apiKey should be hidden",
-                path: "0",
+                id: "template-section-1",
+                type: "template-section",
+                label: "Template section",
+                path: "sections.0.blocks.0",
                 childCount: 0,
                 slotKeys: [],
-                dataKeys: ["headline", "apiKey"],
-                templateId: null,
-                templateName: null,
+                templateId: "template-1",
+                templateName: "Hero Template",
               },
             ],
-            settings: {
-              wrapperContainer: "default",
-              sectionGap: "md",
-              hasBackgroundMedia: false,
-            },
-            warnings: [],
           },
         ],
         warnings: [],
@@ -609,26 +582,21 @@ test("buildProviderPlanningPromptPackage includes referenced template target con
 
   expect(prompt.activeSurface).toMatchObject({
     kind: "page",
-    templateReferences: [
+    selectedSectionId: "section-1",
+    selectedBlockId: "template-section-1",
+    selectedBlockPath: "sections.0.blocks.0",
+    sections: [
       {
-        templateId: "template-1",
-        blockIds: ["template-section-1"],
-      },
-    ],
-    referencedTemplates: [
-      {
-        id: "template-1",
+        id: "section-1",
         blocks: [
           {
-            id: "hero-1",
-            dataKeys: ["headline"],
+            id: "template-section-1",
+            templateId: "template-1",
           },
         ],
       },
     ],
   });
-  expect(JSON.stringify(prompt)).not.toContain("apiKey should be hidden");
-  expect(JSON.stringify(prompt)).not.toContain("apiKey");
 });
 
 test("buildProviderPlanningPromptPackage includes only hydrated collection workspace context", () => {

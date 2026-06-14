@@ -6,8 +6,12 @@ import {
   resolveDetailPageBlocks,
   type DetailPageBindingResolverEntry,
 } from "../../../core/services/content/detailPageBindingResolver";
-import { renderPublicPageRuntimeHtml } from "../../../core/site/renderPublicPage";
+import {
+  renderPublicPageRuntimeHtml,
+  renderPublicPageV2RuntimeHtml,
+} from "../../../core/site/renderPublicPage";
 import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
+import { PAGE_DOCUMENT_SCHEMA_VERSION } from "../../../core/services/pages/pageDocumentV2";
 
 type PageUpsertAction = Extract<AssistantPlannedAction, { type: "page.upsert" }>;
 type ContentTypeUpsertAction = Extract<AssistantPlannedAction, { type: "content-type.upsert" }>;
@@ -37,12 +41,14 @@ const getPageAction = (actions: PageUpsertAction[], slug: string) => {
 };
 
 const renderPlanPage = async (action: PageUpsertAction) =>
-  renderPublicPageRuntimeHtml({
+  renderPublicPageV2RuntimeHtml({
     title: action.input.title,
-    blocks: action.input.blocks ?? [],
+    document: {
+      schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+      sections: action.input.sections ?? [],
+    },
     inlineCss:
       ":root{--color-bg:#fff;--color-text:#111827;--color-border:#d1d5db;--color-primary:#1d4ed8;--color-surface:#f8fafc;}",
-    themeName: "default",
     templateKey: "landing",
   });
 
@@ -80,9 +86,9 @@ test("full-service assistant plan renders public runtime pages with valid naviga
   );
 
   for (const action of pageActions) {
-    const blockTypes = (action.input.blocks ?? []).map((block) => block.type);
-    expect(blockTypes[0]).toBe("navigation");
-    expect(blockTypes.at(-1)).toBe("footer");
+    const sectionTypes = (action.input.sections ?? []).map((section) => section.type);
+    expect(sectionTypes[0]).toBe("content");
+    expect(sectionTypes.at(-1)).toBe("cta");
 
     const html = await renderPlanPage(action);
     expect(html).not.toContain("This page has no content yet.");

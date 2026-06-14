@@ -24,6 +24,9 @@ In the current UI, the Menus experience includes:
 
 - a list-first screen with `New`, filters, selection, lifecycle actions, and
   one row per menu,
+- a `Site shell` action on the list screen that opens a dialog for picking the
+  published navigation menu and footer template rendered around every public
+  page (this setting lives only here; it is no longer part of Site Settings),
 - an editor route that opens only after you choose a menu from the list,
 - save state controls such as `Unsaved changes`, `Discard`, and `Save changes`,
 - lifecycle controls such as `Draft`, `Published`, `Publish`, and
@@ -40,12 +43,15 @@ Use Menus after you already know which pages, posts, or external destinations
 should be reachable from navigation. The list screen helps you choose the
 correct navigation surface first; the editor then focuses on exactly one menu.
 
-The Menus experience is easiest to understand as five connected workflows:
+The Menus experience is easiest to understand as six connected workflows:
 
 - menu selection:
   start on the list and choose the menu you want to edit
 - menu creation:
   create a new named menu and optionally assign a location
+- site shell configuration:
+  use the `Site shell` dialog on the list screen to choose which published
+  menu and which published footer template wrap every public page
 - menu-level editing:
   update location and menu name on the selected menu
 - structure editing:
@@ -53,6 +59,11 @@ The Menus experience is easiest to understand as five connected workflows:
   parent/child hierarchy
 - item-level editing:
   define what each link points to and when it should appear
+- design editing:
+  use the `Design` button in the menu editor header to open a visual canvas
+  where you style how this menu looks on the public site (colors, spacing,
+  typography, sticky behavior, mobile mode) and add optional header extras
+  (a call-to-action button and a logo image)
 
 The editor also exposes a clear save model:
 
@@ -138,6 +149,19 @@ with usable items.
 24. Use the contextual `Refresh` action only when the editor warns that the
     same menu changed elsewhere and you intentionally want the latest server
     state.
+25. Use `Design` in the menu editor header when you want to change how the
+    published menu LOOKS instead of what it contains:
+    - the canvas shows the live site header for this menu; the device switcher
+      previews the desktop dropdowns and the collapsed mobile menu,
+    - the floating `Menu appearance` panel edits colors (including a
+      first-class transparent swatch), item gap, bar padding, alignment, font
+      size/weight/transform, border, shadow, sticky header, dropdown
+      direction, and the mobile mode,
+    - the add affordances offer only `Button` and `Image` here — these are the
+      header extras (call-to-action and logo) rendered next to the navigation,
+    - `Save` stores the design on the menu draft and `Publish` makes it live;
+      menu items stay read-only in this view (edit them in the structure
+      editor).
 
 Use this safe working order when you want the fewest mistakes:
 
@@ -193,6 +217,10 @@ Use this safe working order when you want the fewest mistakes:
 - A menu looks correct but is not appearing where expected:
   review the menu `Location` value and the theme/runtime mapping that consumes
   it, then confirm the menu is `Published`.
+- The public site header or footer is missing or shows the wrong menu:
+  open `Site shell` on the Menus list and confirm the selected navigation menu
+  and footer template are the intended published records. Unpublished
+  selections stay listed in the pickers but are hidden on the public site.
 - You want to remove an item but are unsure whether children will be affected:
   open delete intentionally and read the confirmation dialog before continuing.
 

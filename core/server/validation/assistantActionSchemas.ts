@@ -483,7 +483,50 @@ const runtimeSnapshotSchema = {
   anyOf: [runtimeSnapshotV2Schema, runtimeSnapshotV1LegacySchema],
 } as const;
 
-const activeSurfaceBlockSchema = {
+const activeSurfaceBlockCapabilitiesSchema = {
+  type: "object",
+  required: [
+    "editorInsertable",
+    "insertable",
+    "assistantEmittable",
+    "runtimeRenderer",
+    "publicDataBinding",
+    "slots",
+    "reason",
+  ],
+  additionalProperties: false,
+  properties: {
+    editorInsertable: { type: "boolean" },
+    insertable: { type: "boolean" },
+    assistantEmittable: { type: "boolean" },
+    runtimeRenderer: { enum: ["real", "placeholder", "unsupported"] },
+    publicDataBinding: { enum: ["none", "scoped-read-only"] },
+    slots: {
+      type: "array",
+      maxItems: 20,
+      items: { type: "string", minLength: 1, maxLength: 120 },
+      uniqueItems: true,
+    },
+    reason: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+    },
+  },
+} as const;
+
+const activeSurfaceSectionCapabilitiesSchema = {
+  type: "object",
+  required: ["insertable", "assistantEmittable", "reason"],
+  additionalProperties: false,
+  properties: {
+    insertable: { type: "boolean" },
+    assistantEmittable: { type: "boolean" },
+    reason: {
+      anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
+    },
+  },
+} as const;
+
+const createActiveSurfaceBlockSchema = (depth: number): Record<string, unknown> => ({
   type: "object",
   required: ["id", "type", "label", "path", "childCount", "slotKeys", "templateId", "templateName"],
   additionalProperties: false,
@@ -505,6 +548,33 @@ const activeSurfaceBlockSchema = {
     templateName: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
     },
+    capabilities: activeSurfaceBlockCapabilitiesSchema,
+    children: {
+      type: "array",
+      maxItems: 40,
+      items: depth < 3 ? createActiveSurfaceBlockSchema(depth + 1) : { not: {} },
+    },
+  },
+});
+
+const activeSurfaceBlockSchema = createActiveSurfaceBlockSchema(0);
+
+const activeSurfacePageSectionSchema = {
+  type: "object",
+  required: ["id", "type", "name", "path", "blockCount", "blocks"],
+  additionalProperties: false,
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 120 },
+    type: { type: "string", minLength: 1, maxLength: 120 },
+    name: { type: "string", minLength: 1, maxLength: 160 },
+    path: { type: "string", minLength: 1, maxLength: 240 },
+    blockCount: { type: "integer", minimum: 0, maximum: 999 },
+    blocks: {
+      type: "array",
+      maxItems: 40,
+      items: activeSurfaceBlockSchema,
+    },
+    capabilities: activeSurfaceSectionCapabilitiesSchema,
   },
 } as const;
 
@@ -512,10 +582,11 @@ const activeSurfaceSchema = {
   anyOf: [
     {
       type: "object",
-      required: ["kind", "page", "selectedBlockId", "blocks", "warnings"],
+      required: ["kind", "page", "selectedSectionId", "selectedBlockId", "sections", "warnings"],
       additionalProperties: false,
       properties: {
         kind: { enum: ["page"] },
+        schemaVersion: { enum: [2] },
         page: {
           type: "object",
           required: ["id", "title", "slug", "status", "template"],
@@ -530,13 +601,19 @@ const activeSurfaceSchema = {
             },
           },
         },
+        selectedSectionId: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
+        },
         selectedBlockId: {
           anyOf: [{ type: "string", minLength: 1, maxLength: 120 }, { type: "null" }],
         },
-        blocks: {
+        selectedBlockPath: {
+          anyOf: [{ type: "string", minLength: 1, maxLength: 240 }, { type: "null" }],
+        },
+        sections: {
           type: "array",
-          maxItems: 80,
-          items: activeSurfaceBlockSchema,
+          maxItems: 40,
+          items: activeSurfacePageSectionSchema,
         },
         warnings: {
           type: "array",

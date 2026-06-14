@@ -11,9 +11,10 @@ test("WidgetLibraryPage renders a Pages-style table shell by default", () => {
   expect(html).toContain("Available widget library sections:");
   expect(html).toContain("All Items");
   expect(html).toContain("All Widgets");
-  expect(html).toContain("Templates");
   expect(html).toContain("Favorites");
-  expect(html).toContain("Categories");
+  // The reusable widget-template surface is retired from the library shell.
+  expect(html).not.toContain("Templates");
+  expect(html).not.toContain("Categories");
   expect(html).toContain("Section:");
   expect(html).toContain("Default view: table");
   expect(html).toContain("Show widgets as table");

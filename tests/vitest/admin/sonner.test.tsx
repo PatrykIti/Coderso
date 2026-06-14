@@ -115,6 +115,27 @@ test("Toaster exposes shared state icons and avoids bundled hard-coded palettes"
   }
 });
 
+test("global CSS keeps the Sonner viewport click-through while live toasts stay interactive", () => {
+  const css = fs.readFileSync(path.join(process.cwd(), "core/admin/styles/globals.css"), "utf8");
+
+  // Round-3 friction B: the fixed toast viewport must never swallow clicks
+  // aimed at the UI underneath (standard sonner pattern): container is
+  // pointer-events none, live toasts re-enable themselves, and exiting or
+  // overflow-hidden toasts release pointer events again.
+  const readRule = (selector: string) => {
+    const start = css.indexOf(selector);
+    expect(start, `selector ${selector} present`).toBeGreaterThanOrEqual(0);
+    return css.slice(start, css.indexOf("}", start));
+  };
+
+  expect(readRule(".toaster[data-sonner-toaster]")).toContain("pointer-events: none");
+  expect(readRule(".toaster [data-sonner-toast] {")).toContain("pointer-events: auto");
+  expect(readRule('.toaster [data-sonner-toast][data-removed="true"]')).toContain(
+    "pointer-events: none"
+  );
+  expect(css).toContain('.toaster [data-sonner-toast][data-visible="false"]');
+});
+
 test("global CSS scopes Sonner sub-parts to shared Admin UI toast variables", () => {
   const css = fs.readFileSync(path.join(process.cwd(), "core/admin/styles/globals.css"), "utf8");
 

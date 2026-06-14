@@ -1,0 +1,115 @@
+# TASK-418-07-L01: Targeted Lint Type Tests And Gates
+# FileName: TASK-418-07-L01-Targeted-Lint-Type-Tests-And-Gates.md
+
+**Parent Subtask:** TASK-418-07
+**Priority:** High
+**Category:** QA / Pages
+**Estimated Effort:** Medium
+**Dependencies:** TASK-418-02, TASK-418-03, TASK-418-04, TASK-418-05, TASK-418-06
+**Status:** ✅ Done
+**Completed:** 2026-06-10
+
+---
+
+## Overview
+
+Run and record all relevant validation lanes for the completed TASK-418 code
+changes. Validation must follow ownership: Vitest for pure/admin UI contracts
+and Bun for runtime/route/preview/assistant executor behavior.
+
+---
+
+## Implementation Pseudocode
+
+```ts
+async function runTask418Validation() {
+  run("bun --cwd core lint");
+  run("bun --cwd core lint:types");
+  run("bun run test:vitest -- page-editor pageDocumentV2 assistant pages");
+  run("set -a && source .env && set +a && bun test <pages-runtime-and-routes>");
+  run("bun run gates:coderso");
+  recordValidationEvidence({
+    lint: "passed",
+    types: "passed",
+    vitest: "targeted suites passed",
+    bun: "targeted runtime suites passed",
+    gates: "passed"
+  });
+}
+```
+
+Expected data flow:
+
+- Collect exact commands and results.
+- If a broad suite fails for unrelated legacy reasons, isolate targeted suites
+  and record the pre-existing failure separately.
+- Keep DB-backed tests scoped to fixtures they own.
+
+Error handling:
+
+- If `DATABASE_URL` is unavailable or unreachable, pause DB-backed tests and
+  report the blocker.
+- Do not claim a lane passed unless the command completed successfully.
+
+Regression-test shape:
+
+- This leaf owns evidence collection rather than a production behavior.
+- This leaf also owns verification that obsolete editor mockup files/tests are
+  removed or no longer imported after the shared renderer lands.
+
+---
+
+## Security Contract
+
+- **Endpoint visibility:** validation must include route boundary coverage for
+  any changed route family.
+- **Auth model:** validate admin/preview/assistant auth boundaries touched by
+  TASK-418.
+- **RBAC:** validate existing Pages and assistant permissions.
+- **CSRF:** validate internal writes still use existing CSRF protections where
+  route tests cover them.
+- **Rate-limit bucket:** run relevant route/security suites if buckets changed.
+- **Validation:** strict unknown-field rejection must be covered.
+- **Anti-abuse controls:** run relevant security/sanitizer tests for embed/form/
+  media changes.
+
+---
+
+## Testing Requirements
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- Targeted Vitest suites for Pages domain/admin UI/assistant.
+- AJV/schema parity tests for strict nested Page document validation, including
+  block props/style/responsive and recursive slots.
+- Direct renderer tests for every insertable block type and per-block responsive
+  cascade, in addition to route-level runtime assertions.
+- Targeted Bun suites for Pages runtime/routes/preview/assistant executor.
+- `bun run gates:coderso`
+
+## Completion Notes
+
+Validation passed:
+
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-runtime-capabilities.test.ts tests/vitest/ui/page-editor-v2-flow.test.ts`
+  (2 files, 35 tests)
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-block-paths.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-runtime-capabilities.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-template-boundary.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor.test.tsx tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/action-plan-schema.test.ts`
+  (11 files, 156 tests)
+- Post-audit drift fix validation: `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-block-paths.test.ts tests/vitest/pages/page-editor-control-registry.test.ts tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/pages/page-runtime-capabilities.test.ts tests/vitest/pages/page-runtime-data-binding.test.ts tests/vitest/pages/page-template-boundary.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-editor.test.tsx tests/vitest/assistant/active-surface-hydration.test.ts tests/vitest/assistant/action-plan-schema.test.ts tests/vitest/assistant/catalogBlueprintEngine.test.ts tests/vitest/assistant/actionPlannerService.test.ts tests/vitest/assistant/blueprint-action-assembler.test.ts tests/vitest/assistant/blueprint-capability-registry.test.ts tests/vitest/assistant/blueprint-provider-context.test.ts tests/vitest/assistant/blueprint-page-section-composer.test.ts`
+  (17 files, 317 tests)
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/integration/runtime/pages-runtime.test.ts tests/integration/routes/pages.test.ts tests/unit/pages/previewService.test.ts tests/unit/assistant/siteBuilderExecutor.test.ts tests/unit/assistant/actionExecutorService.test.ts`
+  (106 tests, 0 failures)
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run precommit`
+- `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun run gates:coderso`
+  (functional, ux, performance, security, reliability PASS)
+- After the command palette viewport class was corrected from the browser smoke,
+  `set -a && { [ ! -f .env ] || . ./.env; } && set +a && NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/ui/page-editor-v2-flow.test.tsx`
+  passed again (1 file, 33 tests).
+
+---
+
+## Documentation Updates Required
+
+- TASK-418 completion notes and validation evidence.

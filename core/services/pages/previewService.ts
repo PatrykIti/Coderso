@@ -3,7 +3,7 @@ import { eq, lt } from "drizzle-orm";
 import { db } from "../../db/client";
 import { previewTokens } from "../../db/schema";
 
-export type PreviewTargetType = "page" | "content" | "widget-template" | "detail-page";
+export type PreviewTargetType = "page" | "content" | "page-template" | "detail-page";
 
 export type PreviewTokenContext = null | {
   kind: "detail-page";
@@ -87,10 +87,12 @@ const normalizeUuid = (value: unknown) => {
   return normalized;
 };
 
+// Stale stored "widget-template" tokens intentionally fail closed here after
+// the widget-template preview surface retirement (preview_token_invalid).
 const normalizeStoredTargetType = (value: unknown): PreviewTargetType => {
   if (value === "page") return "page";
   if (value === "content") return "content";
-  if (value === "widget-template") return "widget-template";
+  if (value === "page-template") return "page-template";
   if (value === "detail-page") return "detail-page";
   throw new Error("preview_token_invalid");
 };
@@ -168,6 +170,26 @@ const cancelResponseBody = (response: Response) => {
 
 const isAbortError = (error: unknown) => error instanceof Error && error.name === "AbortError";
 
+// RFC 6761 reserves `localhost` and `*.localhost` for the loopback interface.
+// Browsers resolve these names themselves, but server-side resolvers in some
+// environments miss the name entirely or return `::1` first while the HTTP
+// server only listens on IPv4 — so a direct probe fetch throws even though the
+// admin browser can load the same URL. The probe stays environment-robust by
+// retrying a failed loopback-name connection once against `127.0.0.1` with the
+// original Host header preserved (host-based routing still applies). Target
+// labels, allowed-origin checks, and token semantics are unchanged.
+const isLoopbackName = (hostname: string) => {
+  const normalized = hostname.toLowerCase();
+  return normalized === "localhost" || normalized.endsWith(".localhost");
+};
+
+const buildLoopbackFallbackProbeUrl = (url: URL) => {
+  if (!isLoopbackName(url.hostname)) return null;
+  const fallback = new URL(url.toString());
+  fallback.hostname = "127.0.0.1";
+  return fallback;
+};
+
 const fetchPreviewProbe = async (
   fetchImpl: PreviewProbeFetch,
   url: URL,
@@ -176,18 +198,27 @@ const fetchPreviewProbe = async (
 ) => {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const baseHeaders: Record<string, string> | undefined =
+    method === "GET" ? { Range: "bytes=0-0" } : undefined;
   try {
-    return await fetchImpl(url.toString(), {
-      method,
-      redirect: "manual",
-      signal: controller.signal,
-      headers:
-        method === "GET"
-          ? {
-              Range: "bytes=0-0",
-            }
-          : undefined,
-    });
+    try {
+      return await fetchImpl(url.toString(), {
+        method,
+        redirect: "manual",
+        signal: controller.signal,
+        headers: baseHeaders,
+      });
+    } catch (error) {
+      if (isAbortError(error)) throw error;
+      const fallbackUrl = buildLoopbackFallbackProbeUrl(url);
+      if (!fallbackUrl) throw error;
+      return await fetchImpl(fallbackUrl.toString(), {
+        method,
+        redirect: "manual",
+        signal: controller.signal,
+        headers: { ...(baseHeaders ?? {}), Host: url.host },
+      });
+    }
   } finally {
     clearTimeout(timeout);
   }

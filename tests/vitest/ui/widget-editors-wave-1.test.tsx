@@ -230,14 +230,6 @@ vi.mock("@/services/listingsClient", () => ({
   }),
 }));
 
-vi.mock("../../../core/admin/ui/widgets/hooks/useWidgetTemplates", () => ({
-  useWidgetTemplates: () => ({
-    items: widgetEditorState.widgetTemplates,
-    isLoading: false,
-    error: widgetEditorState.templateError,
-  }),
-}));
-
 const mount = (node: React.ReactNode) => {
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -316,15 +308,12 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
   );
 
   try {
-    expect(emptyView.container.textContent).toContain("No template");
-    expect(emptyView.container.textContent).toContain(
-      "Select a widget template to render in this section."
-    );
+    expect(emptyView.container.textContent).toContain("Not selected");
+    expect(emptyView.container.textContent).toContain("Widget-template selection retired");
   } finally {
     emptyView.cleanup();
   }
 
-  widgetEditorState.templateError = "Template load failed";
   const view = mount(
     <>
       <TemplateSectionVisualEditor
@@ -358,7 +347,6 @@ test("TemplateSection editors cover setup, visual summaries, and advanced diagno
     expect(view.container.textContent).toContain("Resolved template");
     expect(view.container.textContent).toContain("Resolved content summary");
     expect(view.container.textContent).toContain("Resolved content is ready.");
-    expect(view.container.textContent).not.toContain("Template load failed");
     expect(view.container.textContent).not.toContain("Resolved payload");
 
     expect(view.container.querySelector("select")).toBeNull();

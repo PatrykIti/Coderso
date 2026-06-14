@@ -104,55 +104,27 @@ const createPageWithReferencedTemplateContext = (
       status: "draft",
       template: "landing",
     },
+    selectedSectionId: "section-1",
     selectedBlockId: "template-section-1",
-    blocks: [
+    sections: [
       {
-        id: "template-section-1",
-        type: "template-section",
-        label: "Hero Template",
-        path: "0",
-        childCount: 0,
-        slotKeys: [],
-        templateId: "template-1",
-        templateName: "Hero Template",
-      },
-    ],
-    templateReferences: [
-      {
-        templateId: "template-1",
-        templateName: "Hero Template",
-        blockIds: ["template-section-1"],
-        paths: ["0"],
-        count: 1,
-      },
-    ],
-    referencedTemplates: [
-      {
-        id: "template-1",
+        id: "section-1",
+        type: "template",
         name: "Hero Template",
-        status: "published",
-        category: "Marketing",
-        description: null,
+        path: "sections.0",
         blockCount: 1,
         blocks: [
           {
-            id: "hero-1",
-            type: "hero",
-            label: "Hero",
-            path: "0",
+            id: "template-section-1",
+            type: "template-section",
+            label: "Hero Template",
+            path: "sections.0.blocks.0",
             childCount: 0,
             slotKeys: [],
-            dataKeys: ["headline", "body"],
-            templateId: null,
-            templateName: null,
+            templateId: "template-1",
+            templateName: "Hero Template",
           },
         ],
-        settings: {
-          wrapperContainer: "default",
-          sectionGap: "md",
-          hasBackgroundMedia: false,
-        },
-        warnings: [],
       },
     ],
     warnings: [],
@@ -1815,8 +1787,9 @@ test("planAssistantActions builds page delete plan from active page context", ()
           status: "published",
           template: "landing",
         },
+        selectedSectionId: null,
         selectedBlockId: "hero-1",
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     },
@@ -1930,8 +1903,9 @@ test("planAssistantActions treats beginner section or gallery setup on an active
           status: "published",
           template: "landing",
         },
+        selectedSectionId: null,
         selectedBlockId: null,
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     },
@@ -2001,8 +1975,9 @@ test("planAssistantActionsWithProviderDraft asks for the guided follow-up target
           status: "published",
           template: "landing",
         },
+        selectedSectionId: null,
         selectedBlockId: null,
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     },
@@ -2294,8 +2269,9 @@ test("planAssistantActions builds page update plan from active page context", ()
           status: "draft",
           template: "landing",
         },
+        selectedSectionId: null,
         selectedBlockId: null,
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     },
@@ -2397,8 +2373,9 @@ test("planAssistantActions builds page navigation update plan from active page c
           status: "published",
           template: "landing",
         },
+        selectedSectionId: null,
         selectedBlockId: null,
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     },
@@ -2418,7 +2395,7 @@ test("planAssistantActions builds page navigation update plan from active page c
   });
 });
 
-test("planAssistantActions builds selected page widget data patch plan", () => {
+test("planAssistantActions builds page metadata update plan from active page context", () => {
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku na 'New headline'",
     context: {
@@ -2433,17 +2410,27 @@ test("planAssistantActions builds selected page widget data patch plan", () => {
           status: "draft",
           template: "landing",
         },
+        selectedSectionId: "section-hero",
         selectedBlockId: "hero-1",
-        blocks: [
+        sections: [
           {
-            id: "hero-1",
+            id: "section-hero",
             type: "hero",
-            label: "Hero",
-            path: "0",
-            childCount: 0,
-            slotKeys: [],
-            templateId: null,
-            templateName: null,
+            name: "Hero",
+            path: "sections.0",
+            blockCount: 1,
+            blocks: [
+              {
+                id: "hero-1",
+                type: "heading",
+                label: "Hero",
+                path: "sections.0.blocks.0",
+                childCount: 0,
+                slotKeys: [],
+                templateId: null,
+                templateName: null,
+              },
+            ],
           },
         ],
         warnings: [],
@@ -2452,59 +2439,54 @@ test("planAssistantActions builds selected page widget data patch plan", () => {
   });
 
   expect(plan.status).toBe("ready");
-  expect(plan.intentId).toBe("page-widget-patch");
+  expect(plan.intentId).toBe("page-update");
   expect(plan.actions[0]).toMatchObject({
-    id: "page-widget-patch-hero-1",
-    type: "page.widget.patch",
+    id: "page-update-page-home",
+    type: "page.update",
     input: {
-      pageSlug: "/",
-      operation: "patch-data",
-      blockId: "hero-1",
-      expectedBlockType: "hero",
-      dataPath: ["headline"],
-      value: "New headline",
+      id: "page-home",
+      patch: {
+        title: "New headline",
+      },
     },
   });
 });
 
-test("planAssistantActions asks for page instance vs template target on ambiguous template-section edits", () => {
+test("planAssistantActions treats page section edits as page metadata updates", () => {
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku na 'New headline'",
     context: createPageWithReferencedTemplateContext(),
   });
 
-  expect(plan.status).toBe("needs_input");
-  expect(plan.intentId).toBe("page-update-needs-input");
-  expect(plan.actions).toEqual([]);
-  expect(plan.questions).toEqual([
-    {
-      id: "cms-operation-target",
-      label: "Which exact CMS resource should I use?",
-      description:
-        "Choose one exact candidate, provide a stricter name, or add the expected count.",
-      required: true,
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-update");
+  expect(plan.actions[0]).toMatchObject({
+    type: "page.update",
+    input: {
+      id: "page-home",
+      patch: {
+        title: "New headline",
+      },
     },
-  ]);
+  });
 });
 
-test("planAssistantActions routes explicit template-section page instance edits to page widget patch", () => {
+test("planAssistantActions keeps explicit page instance edits on the page update action", () => {
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku tylko na tej stronie na 'New headline'",
     context: createPageWithReferencedTemplateContext(),
   });
 
   expect(plan.status).toBe("ready");
-  expect(plan.intentId).toBe("page-widget-patch");
+  expect(plan.intentId).toBe("page-update");
   expect(plan.actions[0]).toMatchObject({
-    id: "page-widget-patch-template-section-1",
-    type: "page.widget.patch",
+    id: "page-update-page-home",
+    type: "page.update",
     input: {
-      pageSlug: "/",
-      operation: "patch-data",
-      blockId: "template-section-1",
-      expectedBlockType: "template-section",
-      dataPath: ["title"],
-      value: "New headline",
+      id: "page-home",
+      patch: {
+        title: "New headline",
+      },
     },
   });
 });
@@ -2520,7 +2502,7 @@ test("planAssistantActions gates template-wide edits without generic planner fal
   expect(plan.actions).toEqual([]);
 });
 
-test("planAssistantActions asks for selected block before page widget data patch", () => {
+test("planAssistantActions updates active pages without requiring a selected block", () => {
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku na 'New headline'",
     context: {
@@ -2535,15 +2517,16 @@ test("planAssistantActions asks for selected block before page widget data patch
           status: "draft",
           template: "landing",
         },
+        selectedSectionId: null,
         selectedBlockId: null,
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     },
   });
 
-  expect(plan.status).toBe("needs_input");
-  expect(plan.intentId).toBe("page-update-needs-input");
+  expect(plan.status).toBe("ready");
+  expect(plan.intentId).toBe("page-update");
 });
 
 test("planAssistantActions builds widget template delete plan from active template context", () => {
@@ -2716,8 +2699,9 @@ test("planAssistantActions asks for explicit template target outside reusable te
           status: "draft",
           template: "landing",
         },
+        selectedSectionId: null,
         selectedBlockId: null,
-        blocks: [],
+        sections: [],
         warnings: [],
       },
     },
@@ -4070,7 +4054,7 @@ test("planAssistantActions returns gated needs-input plan for booking service pr
   expect(plan.actions).toEqual([]);
 });
 
-test("planAssistantActions builds editorial content hub without post mutations", () => {
+test("planAssistantActions builds static editorial content hub without post mutations", () => {
   const plan = planAssistantActions({
     prompt: "stworz blog z aktualnosciami i najnowszymi wpisami",
     context: {
@@ -4083,7 +4067,7 @@ test("planAssistantActions builds editorial content hub without post mutations",
   expect(plan.intentFamily).toBe("editorial_content_hub");
   expect(plan.intentId).toBe("editorial-content-hub");
   expect(plan.actions.map((action) => action.type)).toEqual(["page.upsert"]);
-  expect(JSON.stringify(plan.actions)).toContain("posts-feed");
+  expect(JSON.stringify(plan.actions)).toContain("editorial-hub-posts-overview");
 });
 
 test("planAssistantActions inspects posts from resource catalog", () => {
