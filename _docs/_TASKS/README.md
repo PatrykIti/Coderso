@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 107 tasks
+- **To Do:** 134 tasks
 - **In Progress:** 9 tasks
 - **Done:** 2455 tasks
 
@@ -88,6 +88,33 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-464 | Page Editor Modular Reuse And Security Hardening | High | Very Large | Split the monolithic PageEditor into reusable canvas, floating panel, shell, state, and sanitizer modules with zero UX/UI changes. |
+| TASK-464-01 | Contract Freeze Module Map And UI Parity Baseline | High | Medium | Freeze module ownership and parity baselines before any extraction. |
+| TASK-464-01-L01 | Map PageEditor Monolith Responsibilities And Boundaries | High | Small | Produce the source-range/module map, ownership boundaries, and forbidden imports before moving code. |
+| TASK-464-01-L02 | Capture UI Parity Characterization Baseline | High | Medium | Lock current DOM, data-attribute, host, panel, and interaction baselines so extraction cannot alter UX/UI. |
+| TASK-464-02 | Extract Pure Editor Host State And Mutation Contracts | High | Large | Pull host/state/mutation contracts into browser-safe modules before JSX moves. |
+| TASK-464-02-L01 | Extract Host Contracts And Import Guards | High | Medium | Move host types and browser-safe import rules into a dedicated contract module. |
+| TASK-464-02-L02 | Extract Selection Device And Toolbar State Helpers | High | Medium | Extract pure selection/device/toolbar derivation while preserving current defaults and behavior. |
+| TASK-464-02-L03 | Extract Typed Mutation Action Groups | High | Medium | Define typed action groups for canvas, toolbar, layers, command, templates, and host writes. |
+| TASK-464-03 | Extract Reusable Page Authoring Canvas Module | High | Large | Move canvas chrome/block frames/ghost tiles into a reusable Page v2 canvas module without visual changes. |
+| TASK-464-03-L01 | Extract Canvas Frame And Section Shell | High | Medium | Move the canvas scroller/frame, device sizing, site-token bridge, and section shell with exact markup parity. |
+| TASK-464-03-L02 | Extract Block Frames Ghost Tiles And Slot Affordances | High | Medium | Move block frame chrome, ghost add tiles, hidden ghosts, slot trailing affordances, and selection markers. |
+| TASK-464-03-L03 | Extract Inline Edit And Canvas Runtime Binding Wiring | High | Medium | Move inline-edit wrappers and canvas-only runtime preview binding wiring behind typed sanitizer-safe props. |
+| TASK-464-04 | Extract Reusable Floating Toolbar And Panel Module | High | Large | Move the bottom floating toolbar, registry panels, and host appearance slot into reusable modules without visual changes. |
+| TASK-464-04-L01 | Extract Floating Toolbar Shell And Action Row | High | Medium | Move toolbar shell, drag/collapse state plumbing, action icons, tooltips, and clearance measurement. |
+| TASK-464-04-L02 | Extract Registry Panel Renderer And Control Routing | High | Medium | Move registry-driven section/block panel rendering and control routing without raw fallback regressions. |
+| TASK-464-04-L03 | Extract Responsive And Host Appearance Panel Adapters | High | Medium | Move responsive panel and host appearance panel adapter while preserving reset/inheritance semantics. |
+| TASK-464-05 | Extract Layers Command Palette And Template Picker Modules | High | Large | Pull layers, command palette, and template picker out of the PageEditor shell while preserving behavior. |
+| TASK-464-05-L01 | Extract Layers Tree And Row Actions | High | Medium | Move layers overlay/tree row rendering plus select/add/move/add-beside callbacks. |
+| TASK-464-05-L02 | Extract Command Palette State And Insert Flow | High | Medium | Move command palette search, active-index keyboard flow, and section/block insertion orchestration. |
+| TASK-464-05-L03 | Extract Template Picker And Delete Confirmation Flow | High | Medium | Move template picker/application and delete confirmation flow with existing copy and id-regeneration semantics. |
+| TASK-464-06 | Centralize Authoring Sanitizers And XSS Guardrails | High | Large | Centralize editor sanitizer helpers and add scanner-oriented XSS guard coverage across authoring surfaces. |
+| TASK-464-06-L01 | Authoring Sink Inventory And Sanitizer Contract | High | Medium | Inventory all author-controlled render/mutation sinks and freeze sanitizer ownership before code changes. |
+| TASK-464-06-L02 | Implement Safe Authoring Value Helpers | High | Medium | Add browser-safe helpers for text, URLs, media, style tokens, labels, and inline-edit commits. |
+| TASK-464-06-L03 | XSS Regression And Scanner Guard Coverage | High | Medium | Add scanner-friendly tests for script/event/URL/style/template/control-label payloads and dangerous sinks. |
+| TASK-464-07 | Compose Slim PageEditor Shell And Close Validation | High | Medium | Recompose PageEditor from extracted modules, validate Pages/Page Templates/Menu Design parity, and close docs/changelog. |
+| TASK-464-07-L01 | Compose Slim Shell And Remove Duplicates | High | Medium | Replace local chunks with extracted modules and remove duplicated helpers without UX/UI changes. |
+| TASK-464-07-L02 | Final Parity Security Docs And Changelog Closure | High | Medium | Run final validation, real browser parity smoke, scanner checks, docs, board, and changelog closeout. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
