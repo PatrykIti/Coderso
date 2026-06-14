@@ -192,6 +192,15 @@ describe("sanitizeInlineText", () => {
     expect(sanitizeInlineText(heading(), "<<b>script>alert(1)</<b>script>")).toBe("");
   });
 
+  test("never reassembles split dangerous tag names", () => {
+    const sanitized = sanitizeInlineText(
+      heading(),
+      "<scrip<script>hidden</script>t>alert(123)</script>Visible"
+    );
+    expect(sanitized).toBe("hiddentalert(123)Visible");
+    expect(sanitized).not.toContain("<script");
+  });
+
   test("drops raw angle brackets even when they look like prose", () => {
     expect(sanitizeInlineText(heading(), "5 < 10 and a < b > c")).toBe("5  10 and a  b  c");
   });

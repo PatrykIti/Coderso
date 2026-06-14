@@ -144,24 +144,104 @@ const stripHtmlComments = (value: string): string => {
   }
 };
 
-const escapeForRegExpLiteral = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+const angleBracketPattern = /[<>]/g;
+
+type InlineHtmlTagToken = {
+  name: string;
+  closing: boolean;
+  selfClosing: boolean;
+  endIndex: number;
+};
+
+const isAsciiLetter = (char: string | undefined): boolean => {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+};
+
+const isTagNameCharacter = (char: string | undefined): boolean => {
+  if (!char) return false;
+  const code = char.charCodeAt(0);
+  return (
+    (code >= 65 && code <= 90) ||
+    (code >= 97 && code <= 122) ||
+    (code >= 48 && code <= 57) ||
+    char === "-"
+  );
+};
+
+const readInlineHtmlTag = (value: string, start: number): InlineHtmlTagToken | null => {
+  if (value[start] !== "<") return null;
+
+  let cursor = start + 1;
+  const closing = value[cursor] === "/";
+  if (closing) cursor += 1;
+  if (!isAsciiLetter(value[cursor])) return null;
+
+  const nameStart = cursor;
+  while (isTagNameCharacter(value[cursor])) cursor += 1;
+
+  const endIndex = value.indexOf(">", cursor);
+  if (endIndex === -1) return null;
+
+  return {
+    name: value.slice(nameStart, cursor).toLowerCase(),
+    closing,
+    selfClosing: !closing && value.slice(cursor, endIndex).trimEnd().endsWith("/"),
+    endIndex,
+  };
+};
 
 /** Drops dangerous elements together with their content (shared policy set). */
-const dangerousContentPattern = new RegExp(
-  `<(${[...dangerousHtmlContentTagSet].map(escapeForRegExpLiteral).join("|")})\\b[^>]*>[\\s\\S]*?</\\1\\s*>`,
-  "gi"
-);
+const stripDangerousElementContent = (value: string): string => {
+  let result = "";
+  let cursor = 0;
+  const dropStack: string[] = [];
 
-/**
- * Matches element-shaped tags only: `<` (or `</`) immediately followed by a
- * tag name. Plain-text angle brackets such as `5 < 10` or `a < b > c` never
- * match, so legitimate prose is preserved. We intentionally do not run a full
- * HTML tokenizer here: the commit path feeds DOM `textContent` (text-only
- * handling), so this is layered defense, not the primary parser.
- */
-const elementTagPattern = /<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s[^<>]*)?\/?>/g;
-const angleBracketPattern = /[<>]/g;
+  while (cursor < value.length) {
+    const tag = readInlineHtmlTag(value, cursor);
+    if (!tag) {
+      if (dropStack.length === 0) result += value[cursor] ?? "";
+      cursor += 1;
+      continue;
+    }
+
+    if (dangerousHtmlContentTagSet.has(tag.name)) {
+      if (tag.closing) {
+        const dropIndex = dropStack.lastIndexOf(tag.name);
+        if (dropIndex !== -1) dropStack.splice(dropIndex);
+      } else if (!tag.selfClosing) {
+        dropStack.push(tag.name);
+      }
+      cursor = tag.endIndex + 1;
+      continue;
+    }
+
+    if (dropStack.length === 0) {
+      result += value.slice(cursor, tag.endIndex + 1);
+    }
+    cursor = tag.endIndex + 1;
+  }
+
+  return result;
+};
+
+const stripElementTags = (value: string): string => {
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const tag = readInlineHtmlTag(value, cursor);
+    if (tag) {
+      cursor = tag.endIndex + 1;
+      continue;
+    }
+    result += value[cursor] ?? "";
+    cursor += 1;
+  }
+
+  return result;
+};
 
 const stripInlineMarkup = (value: string): string => {
   let current = value;
@@ -169,11 +249,11 @@ const stripInlineMarkup = (value: string): string => {
   // until a fixpoint to keep obfuscated nestings (e.g. `<<b>script>`) from
   // reassembling into markup after a single pass.
   for (;;) {
-    const next = stripHtmlComments(current)
-      .replace(dangerousContentPattern, "")
-      .replace(elementTagPattern, "")
-      .replace(dangerousContentPattern, "")
-      .replace(angleBracketPattern, "");
+    const withoutComments = stripHtmlComments(current);
+    const withoutDangerousContent = stripDangerousElementContent(withoutComments);
+    const withoutTags = stripElementTags(withoutDangerousContent);
+    const withoutReassembledDangerousContent = stripDangerousElementContent(withoutTags);
+    const next = withoutReassembledDangerousContent.replace(angleBracketPattern, "");
     if (next === current) return next;
     current = next;
   }
