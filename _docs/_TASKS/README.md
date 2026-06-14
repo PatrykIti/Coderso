@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 115 tasks
+- **To Do:** 151 tasks
 - **In Progress:** 9 tasks
 - **Done:** 2485 tasks
 
@@ -96,6 +96,42 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Medium | Replace the eager widget editor barrel with typed lazy editor component bundles. |
 | TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
 | TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
+| TASK-468 | Custom Screens Canvas Content Views Rewrite | High | Very Large | Rewrite Custom Screens from legacy widget blocks to a screen-owned canvas contract for custom content data. |
+| TASK-468-01 | Contract Freeze Drift Audit And Migration Decision Record | High | Medium | Freeze V4 ScreenDocument contract, resolve binding drift, and require a fresh drift audit before implementation. |
+| TASK-468-01-L01 | Current State Inventory And Drift Freeze | High | Medium | Inventory current Custom Screen implementation, legacy storage, active routes, tests, and drift risks before changing contracts. |
+| TASK-468-01-L02 | V4 Contract Decision Record And Validation Plan | High | Medium | Freeze V4 screen/list/binding decisions, migration policy, validation lanes, and external audit expectations. |
+| TASK-468-02 | Screen Document V4 Service Contract And Migration Adapters | High | Large | Add V4 screen document schemas, normalizers, service mapping, and V1/V2/V3 migration adapters. |
+| TASK-468-02-L01 | Screen Document Domain Owner | High | Large | Own V4 screen document types, defaults, strict normalizers, binding validation, and pure tests. |
+| TASK-468-02-L02 | Legacy V1-V3 Read Migration Adapters | High | Large | Convert legacy rows into V4 read models or explicit placeholders without destructive writes. |
+| TASK-468-02-L03 | V4 Service Mapping And Route Validation | High | Large | Route Custom Screen service and admin validation through strict V4 schemas and machine-readable errors. |
+| TASK-468-02-L04 | V4 Write Transition And Compatibility Guards | High | Medium | Transition writes to V4 only while preserving read compatibility and rejecting legacy write drift. |
+| TASK-468-03 | Neutral Authoring Shell Extraction For Screen Canvas Reuse | High | Large | Extract Page Editor authoring chrome into neutral adapters without leaking Page v2 services into Screens. |
+| TASK-468-03-L01 | Authoring Inventory And Boundary Guards | High | Medium | Classify reusable Page Editor authoring modules and add import-boundary guards before extraction. |
+| TASK-468-03-L02 | Neutral Canvas Frame And Selection Primitives | High | Large | Extract document-agnostic canvas frame, selection, drag/drop, and viewport primitives. |
+| TASK-468-03-L03 | Neutral Toolbar Layers And Command Shell | High | Large | Extract reusable toolbar, layers, command dispatch, and inspector slot chrome behind adapters. |
+| TASK-468-03-L04 | Page Adapter Parity Validation | High | Medium | Prove Page Editor behavior and bundle boundaries remain stable after authoring extraction. |
+| TASK-468-04 | Custom Screen Canvas Editor Cutover | High | Very Large | Replace the legacy widget builder with a content-type-aware screen section/block canvas editor. |
+| TASK-468-04-L01 | V4 Editor Client And Local Model | High | Large | Add V4 editor client, reducer-owned draft state, dirty protection, and conflict handling. |
+| TASK-468-04-L02 | Screen Canvas Shell And Section Block Operations | High | Large | Implement screen canvas adapter and pure section/block insert, move, duplicate, delete helpers. |
+| TASK-468-04-L03 | Field Palette Binding Inspector And Missing Field States | High | Large | Add content-type field palette, binding inspector, and repair states for deleted or invalid fields. |
+| TASK-468-04-L04 | Save Dirty State Cache And Preview Flow | High | Large | Wire V4 save, preview, cache invalidation, conflict handling, and unsaved-change protection. |
+| TASK-468-04-L05 | Editor Cutover Tests And Legacy Builder Guard | High | Medium | Prove active editor no longer imports the legacy widget builder and record bundle evidence. |
+| TASK-468-05 | Screen Runtime Records List And Entry Editing Cutover | High | Very Large | Render records and entry editing through V4 screen runtime instead of the widget bridge. |
+| TASK-468-05-L01 | Screen Runtime Renderer | High | Large | Render V4 screen sections/blocks directly without WidgetRenderer or screen-field widget bridges. |
+| TASK-468-05-L02 | Entry Field Controls And Draft Bridge | High | Large | Connect writable screen bindings to existing custom content entry field controls and save payloads. |
+| TASK-468-05-L03 | Records List Presentation Modes | High | Large | Move record lists to V4 list presentation config with content-type-aware columns/cards. |
+| TASK-468-05-L04 | Record Workspace Routing Cache And Active Context | High | Medium | Use canonical admin paths, cache invalidation, prefetch, and bounded active context for records. |
+| TASK-468-05-L05 | Runtime Entry Tests And Legacy Bridge Guard | High | Medium | Prove list/runtime/entry routes no longer use the legacy widget bridge. |
+| TASK-468-06 | Assistant Active Surface And Cache Cutover | High | Large | Move assistant actions and active-surface summaries from widget patches to screen sections, blocks, and bindings. |
+| TASK-468-06-L01 | Assistant V4 Action Schemas Registry And Mapper | High | Large | Replace widget-patch assistant actions with strict V4 section/block/binding action schemas. |
+| TASK-468-06-L02 | V4 Active Surface Context Hydration | High | Medium | Hydrate bounded, redacted active-surface summaries from V4 screen state. |
+| TASK-468-06-L03 | Assistant Executor Policy Dry Run And Undo | High | Large | Route V4 assistant actions through dry-run, apply, audit, conflict, and undo policy. |
+| TASK-468-06-L04 | Assistant Client Cache And Regression Coverage | High | Medium | Invalidate Custom Screen caches after assistant mutations without regressing lightweight imports. |
+| TASK-468-07 | Legacy Removal DB Cleanup Docs And Closure Validation | High | Large | Remove legacy screen widgets, duplicated blocks/bindings storage, stale docs, and close the family with validation. |
+| TASK-468-07-L01 | V4 Backfill Verification Migration | High | Large | Verify or backfill all Custom Screen rows to V4 before any destructive cleanup. |
+| TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Remove active screen-only widget builder/runtime surfaces after V4 cutover and backfill verification. |
+| TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Drop duplicate legacy `custom_screens.blocks` and `custom_screens.bindings` after guards pass. |
+| TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
