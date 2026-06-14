@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 107 tasks
+- **To Do:** 115 tasks
 - **In Progress:** 9 tasks
 - **Done:** 2485 tasks
 
@@ -88,6 +88,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
+| TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
+| TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |
+| TASK-467-03 | Lazy Split Widget Editor Registry | High | Large | Stop metadata registry access from statically importing every widget editor module. |
+| TASK-467-03-L01 | Lazy Editor Component Contract And Registry Compatibility | High | Medium | Preserve the required editor object while allowing `React.lazy` editor components. |
+| TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Medium | Replace the eager widget editor barrel with typed lazy editor component bundles. |
+| TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
+| TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
