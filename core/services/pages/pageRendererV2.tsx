@@ -324,7 +324,7 @@ export const toPageSectionRenderProps = (
   // (ghost tiles, left/right move steps) always agree with the painted grid.
   const columns = getPageSectionEffectiveColumns(section);
   return {
-    sectionClassName: "w-full px-4 py-6",
+    sectionClassName: template.variant === "full-width" ? "w-full" : "w-full px-4 py-6",
     contentClassName: joinPageRenderClasses(
       "grid w-full",
       options?.layoutMode === "canvas-device"

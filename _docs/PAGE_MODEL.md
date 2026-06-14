@@ -783,6 +783,12 @@ It emits both `data-page-section` and the resolved `data-page-variant`, plus
 `data-page-section-template`, so public runtime and admin canvas consume the
 same type/variant layout output before editor chrome is added.
 
+For resolved `full-width` variants, the outer section band must not add the
+default page gutter. The painted content node already owns background, spacing,
+grid, and `max-width: none`; keeping wrapper `px`/`py` on the outer `<section>`
+would leave white strips around hero/CTA backgrounds and break the full-bleed
+authoring contract.
+
 The shared renderer owns block frame render props for `PageBlockStyleV2`:
 width/alignment classes, text/background variables, opacity, radius, border,
 shadow, padding, and margin are applied before public runtime or admin preview

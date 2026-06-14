@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 107 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2484 tasks
+- **Done:** 2485 tasks
 
 ---
 
@@ -216,6 +216,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-466 | Page Full Width Section Background Bleed | High | Small | Done (2026-06-14): Full-width section variants no longer keep the outer wrapper gutter, so hero/CTA backgrounds can fill the full band. |
 | TASK-464 | Page Editor Modular Reuse And Security Hardening | High | Very Large | Done (2026-06-14): PageEditor split into reusable browser-safe authoring modules with centralized sanitizer guards and live Pages/Templates/Menu Design smoke evidence. |
 | TASK-464-01 | Contract Freeze Module Map And UI Parity Baseline | High | Medium | Done (2026-06-14): Module ownership, host boundaries, and UI parity baseline closed in the TASK-464 family validation. |
 | TASK-464-01-L01 | Map PageEditor Monolith Responsibilities And Boundaries | High | Small | Done (2026-06-14): Responsibilities mapped into host contracts, state/mutation helpers, canvas, toolbar, layers, command/template, and sanitizer owners. |
