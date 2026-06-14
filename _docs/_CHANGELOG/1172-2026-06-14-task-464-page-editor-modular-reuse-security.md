@@ -33,6 +33,8 @@ TASK-464-06-L03, TASK-464-07, TASK-464-07-L01, TASK-464-07-L02
 - Routed Page document normalization, responsive CSS emission, and renderer
   sinks through sanitizer helpers so unsafe `javascript:`/`data:` URLs and
   CSS `url(javascript:...)` style payloads fail closed.
+- Preserved safe contact links for link sinks (`mailto:` and `tel:`) while
+  keeping media URL sinks restricted to relative and HTTP(S) assets.
 - Added scanner-friendly XSS regression coverage for authoring values, render
   sinks, and extracted reusable modules.
 
@@ -62,6 +64,10 @@ TASK-464-06-L03, TASK-464-07, TASK-464-07-L01, TASK-464-07-L02
 - `set -a && source .env && set +a && bun .tmp/task-464-live-smoke-runner.ts`
   through `coderso-dev-core-host` for Pages editor, Page Templates editor,
   Menu Design editor, and public front runtime.
+- Post-commit read-only drift audit found a `mailto:`/`tel:` link sanitizer
+  mismatch; the implementation and regression tests were updated, then the
+  targeted sanitizer/XSS suites, lint, typecheck, security tests, Semgrep, and
+  strict security scan were rerun cleanly.
 
 Local CodeQL CLI was not available on `PATH`; GitHub CodeQL/code scanning
 remains the final external confirmation for CodeQL-specific queries.

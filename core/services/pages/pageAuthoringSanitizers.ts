@@ -6,6 +6,7 @@ const hexColorPattern = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/
 const namedColorPattern = /^[a-z]+$/i;
 const functionalColorPattern = /^(?:rgb|rgba|hsl|hsla)\(\s*[0-9a-z .,%/-]*\)$/i;
 const gradientCharsetPattern = /^(?:linear|radial|conic)-gradient\([0-9a-z #%,.()/\s-]*\)$/i;
+const specialLinkProtocols = new Set(["mailto:", "tel:"]);
 
 const hasBalancedParens = (value: string): boolean => {
   let depth = 0;
@@ -51,7 +52,17 @@ export const sanitizeAuthoringUrl = (
     allowHash: kind === "link",
     allowHttp: true,
   });
-  return safe ?? null;
+  if (safe || kind !== "link" || typeof value !== "string") return safe ?? null;
+
+  const trimmed = value.trim();
+  if (!trimmed || /\s/.test(trimmed)) return null;
+
+  try {
+    const parsed = new URL(trimmed);
+    return specialLinkProtocols.has(parsed.protocol) ? trimmed : null;
+  } catch {
+    return null;
+  }
 };
 
 export const sanitizeAuthoringLinkHref = (value: unknown): string | null =>

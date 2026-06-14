@@ -118,6 +118,40 @@ test("Page v2 renderer fails closed for unsafe legacy href, src, and style value
   expect(toPageBlockStyle(unsafeSection.blocks[0]!).color).toBeUndefined();
 });
 
+test("Page v2 renderer preserves safe contact links while sanitizing href sinks", () => {
+  const section: PageSectionV2 = {
+    ...unsafeSection,
+    style: {
+      background: "#ffffff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+    blocks: [
+      {
+        id: "blk-mail-button",
+        type: "button",
+        props: { label: "Email", href: "mailto:hello@example.com", target: "self" },
+        visibility: { visible: true },
+      },
+      {
+        id: "blk-tel-list",
+        type: "list",
+        props: { items: [{ label: "Call", href: "tel:+15550100" }] },
+        visibility: { visible: true },
+      },
+    ],
+  };
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('href="mailto:hello@example.com"');
+  expect(html).toContain('href="tel:+15550100"');
+  assertNoExecutablePayload(html);
+});
+
 test("Page document renderer does not surface unsafe payloads from section trees", () => {
   const document: PageDocumentV2 = {
     schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,

@@ -19,10 +19,14 @@ test("authoring URL sanitizers keep current safe hrefs and reject scriptable pro
   expect(sanitizeAuthoringLinkHref("https://example.com/pricing")).toBe(
     "https://example.com/pricing"
   );
+  expect(sanitizeAuthoringLinkHref("mailto:hello@example.com")).toBe("mailto:hello@example.com");
+  expect(sanitizeAuthoringLinkHref("tel:+15550100")).toBe("tel:+15550100");
   expect(sanitizeAuthoringMediaUrl("/uploads/hero.jpg")).toBe("/uploads/hero.jpg");
   expect(sanitizeAuthoringMediaUrl("https://cdn.example.com/hero.jpg")).toBe(
     "https://cdn.example.com/hero.jpg"
   );
+  expect(sanitizeAuthoringMediaUrl("mailto:hello@example.com")).toBeNull();
+  expect(sanitizeAuthoringMediaUrl("tel:+15550100")).toBeNull();
 
   for (const unsafe of [
     "javascript:alert(1)",

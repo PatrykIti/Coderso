@@ -187,6 +187,10 @@ callbacks, without importing Page document services.
 - Local CodeQL CLI was not available on `PATH`; GitHub CodeQL/code scanning
   remains the final external scanner confirmation for the CodeQL-specific
   query class.
+- A post-commit read-only drift audit found one real mismatch: link sanitizer
+  docs allowed `mailto:`/`tel:` while implementation rejected them. The
+  sanitizer now preserves those schemes for link sinks only, media sinks remain
+  restricted, and regression coverage pins the behavior.
 
 ## Validation Evidence
 
@@ -207,3 +211,7 @@ callbacks, without importing Page document services.
 - `set -a && source .env && set +a && bun .tmp/task-464-live-smoke-runner.ts`
   against `coderso-dev-core-host`: passed for Pages editor, Page Templates
   editor, Menu Design editor, and the published public front page.
+- Follow-up drift fix validation: targeted sanitizer/XSS Vitest suites,
+  `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun test tests/security`, `bun run scan:semgrep`, and
+  `bun run scan:security:strict` passed after preserving safe contact links.

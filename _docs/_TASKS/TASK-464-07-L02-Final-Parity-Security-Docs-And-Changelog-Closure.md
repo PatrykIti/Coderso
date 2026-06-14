@@ -129,6 +129,11 @@ Regression-test shape:
 - Release/security gates passed: `bun test tests/security`,
   `bun run gates:coderso`, `bun run scan:semgrep`, `bun run scan:audit`, and
   `bun run scan:security:strict`.
+- The first post-commit read-only drift audit found a `mailto:`/`tel:` link
+  sanitizer mismatch against `_docs/SECURITY_SPEC.md`; TASK-464 was corrected
+  by preserving those schemes for link sinks only, adding regression coverage,
+  and rerunning sanitizer/XSS tests, lint, typecheck, security tests, Semgrep,
+  and strict security scan cleanly.
 - Live browser smoke passed through `coderso-dev-core-host` using
   `http://coderso-a.localhost:5173/admin/` and
   `http://coderso-a.localhost:3000`: Pages editor, Page Templates editor, Menu
