@@ -34,6 +34,7 @@ assistant policy coverage fix. Use 1173 for the next changelog entry.
 | No. | Date | Title | Type |
 |-----|------|-------|------|
 | 1172 | 2026-06-14 | TASK-464 Page Editor modular reuse and security | Pages/Admin UI/Architecture/Security/QA/Docs |
+| 1171 | 2026-06-14 | TASK-465 Page route validation memory hardening | Pages/Templates/API/Performance/QA |
 | 1170 | 2026-06-14 | TASK-463 CodeQL Pages security remediation | Security/Pages/Dependencies/QA/Docs |
 | 1169 | 2026-06-13 | TASK-462 admin browser/runtime boundary hardening | Admin Build/Architecture/Runtime Boundary/QA/Docs |
 | 1168 | 2026-06-13 | TASK-461 hide Advanced Widgets entry point | Widgets/Admin UI/Navigation/Docs |

@@ -8,6 +8,7 @@ import {
 } from "../../../core/server/validation/pageSchemas";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
+  normalizePageDocumentV2ForWrite,
   type PageBlockV2,
   type PageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
@@ -162,22 +163,40 @@ test("pageCreateSchema rejects unknown root fields", () => {
   expect(validateCreate(payload)).toBe(false);
 });
 
-test("pageCreateSchema rejects malformed collection link metadata", () => {
+test("page document owner rejects malformed collection link metadata", () => {
+  const payload = {
+    ...validCreatePayload.data,
+    settings: {
+      ...validCreatePayload.data.settings,
+      collectionLink: {
+        contentTypeId: "",
+        pageRole: "maybe-canonical",
+      },
+    },
+  };
+
+  expect(validateCreate({ ...validCreatePayload, data: payload })).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(payload)).toThrow();
+});
+
+test("page route schemas keep document validation lightweight", () => {
+  expect(JSON.stringify(pageCreateSchema)).not.toContain("pageBlockDepth");
+  expect(validateCreate(validCreatePayload)).toBe(true);
   expect(
     validateCreate({
       ...validCreatePayload,
       data: {
         ...validCreatePayload.data,
-        settings: {
-          ...validCreatePayload.data.settings,
-          collectionLink: {
-            contentTypeId: "",
-            pageRole: "maybe-canonical",
-          },
-        },
+        rogue: true,
       },
     })
-  ).toBe(false);
+  ).toBe(true);
+  expect(() =>
+    normalizePageDocumentV2ForWrite({
+      ...validCreatePayload.data,
+      rogue: true,
+    })
+  ).toThrow();
 });
 
 test("pageUpdateSchema accepts partial update", () => {
@@ -219,25 +238,28 @@ test("pageUpdateSchema accepts responsive overrides", () => {
   ).toBe(true);
 });
 
-test("page schemas validate bounded recursive layout block slots", () => {
+test("page document owner validates bounded recursive layout block slots", () => {
   const payload = cloneValue(validCreatePayload);
   payload.data.sections[0]!.blocks = [nestedLayoutBlock];
 
   expect(validateCreate(payload)).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(payload.data)).not.toThrow();
 
   const unknownNestedField = cloneValue(payload);
   unknownNestedField.data.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0] = {
     ...unknownNestedField.data.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0],
     debug: true,
   } as PageBlockV2;
-  expect(validateCreate(unknownNestedField)).toBe(false);
+  expect(validateCreate(unknownNestedField)).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(unknownNestedField.data)).toThrow();
 
   const slotsOnAtom = cloneValue(payload);
   slotsOnAtom.data.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0] = {
     ...slotsOnAtom.data.sections[0]!.blocks[0]!.slots!.children![0]!.slots!["column:1"]![0],
     slots: { children: [] },
   } as PageBlockV2;
-  expect(validateCreate(slotsOnAtom)).toBe(false);
+  expect(validateCreate(slotsOnAtom)).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(slotsOnAtom.data)).toThrow();
 
   const unknownSlot = cloneValue(payload);
   const unknownSlotMap = unknownSlot.data.sections[0]!.blocks[0]!.slots as Record<
@@ -245,7 +267,8 @@ test("page schemas validate bounded recursive layout block slots", () => {
     PageBlockV2[]
   >;
   unknownSlotMap.header = [];
-  expect(validateCreate(unknownSlot)).toBe(false);
+  expect(validateCreate(unknownSlot)).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(unknownSlot.data)).toThrow();
 
   const tooManyChildren = cloneValue(payload);
   tooManyChildren.data.sections[0]!.blocks[0]!.slots!.children = Array.from(
@@ -257,7 +280,8 @@ test("page schemas validate bounded recursive layout block slots", () => {
       visibility: { visible: true },
     })
   );
-  expect(validateCreate(tooManyChildren)).toBe(false);
+  expect(validateCreate(tooManyChildren)).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(tooManyChildren.data)).toThrow();
 
   const tooDeep = cloneValue(payload);
   tooDeep.data.sections[0]!.blocks = [
@@ -308,10 +332,11 @@ test("page schemas validate bounded recursive layout block slots", () => {
       },
     },
   ];
-  expect(validateCreate(tooDeep)).toBe(false);
+  expect(validateCreate(tooDeep)).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(tooDeep.data)).toThrow();
 });
 
-test("pageCreateSchema rejects invalid section layout tokens", () => {
+test("page document owner rejects invalid section layout tokens", () => {
   const payload = {
     ...validCreatePayload,
     data: {
@@ -327,7 +352,8 @@ test("pageCreateSchema rejects invalid section layout tokens", () => {
       ],
     },
   };
-  expect(validateCreate(payload)).toBe(false);
+  expect(validateCreate(payload)).toBe(true);
+  expect(() => normalizePageDocumentV2ForWrite(payload.data)).toThrow();
 });
 
 test("pagePreviewSchema accepts bounded probe option and rejects unknown fields", () => {

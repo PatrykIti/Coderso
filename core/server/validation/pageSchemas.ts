@@ -1,12 +1,21 @@
-import { pageDocumentV2JsonSchema } from "../../services/pages/pageDocumentV2";
-
-export const pageDataSchema = pageDocumentV2JsonSchema;
-const pageDataSchemaDefs = {
-  $defs: pageDocumentV2JsonSchema.$defs,
+/**
+ * Route-level Page v2 envelope only. The Page domain normalizer owns full
+ * recursive section/block validation and unknown-field rejection; keeping AJV
+ * away from the complete recursive block union avoids a large first-write
+ * memory spike on small production instances.
+ */
+export const pageDataSchema = {
+  type: "object",
+  required: ["schemaVersion", "sections"],
+  additionalProperties: true,
+  properties: {
+    schemaVersion: { const: 2 },
+    sections: { type: "array" },
+    blocks: false,
+  },
 };
 
 export const pageCreateSchema = {
-  ...pageDataSchemaDefs,
   type: "object",
   required: ["title", "slug", "data"],
   additionalProperties: false,
@@ -19,7 +28,6 @@ export const pageCreateSchema = {
 };
 
 export const pageUpdateSchema = {
-  ...pageDataSchemaDefs,
   type: "object",
   additionalProperties: false,
   properties: {
@@ -30,7 +38,6 @@ export const pageUpdateSchema = {
 };
 
 export const pageAutosaveSchema = {
-  ...pageDataSchemaDefs,
   type: "object",
   minProperties: 1,
   additionalProperties: false,
@@ -51,7 +58,6 @@ export const pagePreviewSchema = {
 };
 
 export const pagePublishSchema = {
-  ...pageDataSchemaDefs,
   type: "object",
   additionalProperties: false,
   properties: {

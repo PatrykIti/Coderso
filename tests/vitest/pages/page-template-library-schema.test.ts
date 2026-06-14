@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import Ajv from "ajv";
 
 import {
   PAGE_TEMPLATE_PREVIEW_TTL_DEFAULT_MINUTES,
@@ -12,6 +13,8 @@ import {
   normalizePageTemplateSlug,
   normalizePageTemplateUpdateInput,
   normalizeStoredPageTemplateDocument,
+  pageTemplateCreateSchema,
+  pageTemplateUpdateSchema,
   resolvePageTemplateCopyNaming,
 } from "../../../core/services/pages/pageTemplateLibrarySchema";
 import {
@@ -52,6 +55,35 @@ const legacyWidgetDocument = () => ({
 });
 
 describe("page template library schema", () => {
+  test("route schemas validate only the Page v2 envelope before domain normalization", () => {
+    const ajv = new Ajv({
+      allErrors: true,
+      strict: true,
+      strictTypes: false,
+      allowUnionTypes: true,
+    });
+    const validateCreate = ajv.compile(pageTemplateCreateSchema);
+    const validateUpdate = ajv.compile(pageTemplateUpdateSchema);
+    const document = templateDocument();
+
+    expect(JSON.stringify(pageTemplateCreateSchema)).not.toContain("pageBlockDepth");
+    expect(validateCreate({ name: "Empty", document: { schemaVersion: 2, sections: [] } })).toBe(
+      true
+    );
+    expect(validateUpdate({ document })).toBe(true);
+    expect(validateCreate({ name: "Legacy", document: legacyWidgetDocument() })).toBe(false);
+    expect(validateCreate({ name: "Extra", document, debug: true })).toBe(false);
+
+    const nestedUnknown = {
+      ...document,
+      sections: [{ ...document.sections[0], rogue: true }],
+    };
+    expect(validateCreate({ name: "Deep owner check", document: nestedUnknown })).toBe(true);
+    expect(() =>
+      normalizePageTemplateCreateInput({ name: "Deep owner check", document: nestedUnknown })
+    ).toThrowError(/rogue/);
+  });
+
   test("normalizes a strict create payload and derives the slug from the name", () => {
     const created = normalizePageTemplateCreateInput({
       name: "  Landing Hero Stack!  ",

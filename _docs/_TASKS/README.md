@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 107 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2483 tasks
+- **Done:** 2484 tasks
 
 ---
 
@@ -244,6 +244,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-464-07 | Compose Slim PageEditor Shell And Close Validation | High | Medium | Done (2026-06-14): PageEditor shell recomposed from reusable modules and validated across Pages, Page Templates, Menu Design, and public front. |
 | TASK-464-07-L01 | Compose Slim Shell And Remove Duplicates | High | Medium | Done (2026-06-14): Duplicated canvas/layers/command/toolbar helpers removed from PageEditor while preview/settings/revisions stay in shell. |
 | TASK-464-07-L02 | Final Parity Security Docs And Changelog Closure | High | Medium | Done (2026-06-14): Validation, scans, live smoke, docs, board, and changelog 1172 completed. |
+| TASK-465 | Page Route Validation Memory Hardening | High | Small | Done (2026-06-14): Page/Page Template route schemas no longer compile the full recursive Page v2 block union in AJV; domain normalizers keep strict validation before persistence. |
 | TASK-463 | CodeQL Pages Security Remediation | High | Small | Done (2026-06-14): Closed Pages CodeQL alerts plus strict security scan findings for sanitized embed rendering and transitive `esbuild`. |
 | TASK-462 | Admin Browser Runtime Boundary Hardening | High | Large | Done (2026-06-13): Admin build restored by splitting browser-safe contracts from server/runtime loaders; no provider externals, aliases, `@vite-ignore`, or browser stubs. |
 | TASK-462-01 | Admin Build Boundary Audit And Contract Freeze | High | Medium | Done (2026-06-13): Reproduced Azure export failure and froze the import-boundary contract before implementation. |
