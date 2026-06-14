@@ -348,7 +348,8 @@ Rotacja klucza:
   user-visible collision guards.
 - Page editor inline text commits remain plain text. The commit sanitizer drops
   complete and unterminated HTML comments, dangerous element content, element
-  tags, and control characters before values re-enter the Page document.
+  tags, remaining raw angle brackets, and control characters before values
+  re-enter the Page document.
 - Prototype or reference HTML in `_docs/UI` must construct dynamic text with
   DOM nodes and `textContent`; do not interpolate DOM text into `innerHTML`.
 

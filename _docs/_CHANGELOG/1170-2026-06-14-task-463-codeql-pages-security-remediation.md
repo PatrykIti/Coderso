@@ -23,7 +23,8 @@
   secure randomness is unavailable.
 - Duplicate page slug suffixes now use the same secure random fragment helper.
 - Inline edit commits drop complete and unterminated HTML comments before tag
-  stripping, keeping the stored Page document text-only.
+  stripping and remove any remaining raw angle brackets, keeping the stored Page
+  document text-only and fail-closed for malformed `<script` openers.
 - The `_docs/UI` Pages editor prototype now builds dynamic layer rows with DOM
   nodes and `textContent` instead of interpolating section names into HTML.
 

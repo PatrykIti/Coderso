@@ -146,13 +146,15 @@ No API routes are added or changed.
 - Added a pure secure-random fragment helper and reused it for duplicate page
   slug suffixes.
 - Replaced regex-only comment stripping in inline edit commits with a scanner
-  that drops complete and unterminated HTML comments before tag stripping.
+  that drops complete and unterminated HTML comments before tag stripping, then
+  removes any remaining raw angle brackets so malformed `<script` openers cannot
+  survive as text destined for later DOM rendering.
 - Removed `dangerouslySetInnerHTML` from Page embed rendering; sanitized embed
   HTML now renders through tokenizer-derived React nodes.
 - Added root `overrides.esbuild = ^0.28.1` and refreshed `bun.lock`, clearing
   `GHSA-gv7w-rqvm-qjhr` from Bun audit and Trivy lockfile scans.
 - Validation passed:
-  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/services/page-inline-edit-contract.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-renderer-v2.test.tsx` (`109 pass`, `0 fail`)
+  - `NODE_ENV=test ./node_modules/.bin/vitest run --config vitest.config.ts tests/vitest/services/page-inline-edit-contract.test.ts tests/vitest/pages/page-document-v2.test.ts tests/vitest/pages/page-renderer-v2.test.tsx` (`110 pass`, `0 fail`)
   - `set -a && { [ ! -f .env ] || . ./.env; } && set +a && bun test tests/unit/pages/pageService.test.ts` (`5 pass`, `0 fail`)
   - focused Semgrep on reported files (`0 findings`)
   - `bun audit --audit-level high`

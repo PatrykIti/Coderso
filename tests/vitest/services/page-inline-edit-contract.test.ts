@@ -192,8 +192,14 @@ describe("sanitizeInlineText", () => {
     expect(sanitizeInlineText(heading(), "<<b>script>alert(1)</<b>script>")).toBe("");
   });
 
-  test("preserves plain-text angle brackets in prose", () => {
-    expect(sanitizeInlineText(heading(), "5 < 10 and a < b > c")).toBe("5 < 10 and a < b > c");
+  test("drops raw angle brackets even when they look like prose", () => {
+    expect(sanitizeInlineText(heading(), "5 < 10 and a < b > c")).toBe("5  10 and a  b  c");
+  });
+
+  test("drops malformed script openers that do not form complete tags", () => {
+    const sanitized = sanitizeInlineText(heading(), "Lead <script alert(1) tail");
+    expect(sanitized).toBe("Lead script alert(1) tail");
+    expect(sanitized).not.toContain("<script");
   });
 
   test("normalizes non-breaking spaces to regular spaces", () => {

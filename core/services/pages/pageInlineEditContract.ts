@@ -144,9 +144,12 @@ const stripHtmlComments = (value: string): string => {
   }
 };
 
+const escapeForRegExpLiteral = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 /** Drops dangerous elements together with their content (shared policy set). */
 const dangerousContentPattern = new RegExp(
-  `<(${[...dangerousHtmlContentTagSet].join("|")})\\b[^>]*>[\\s\\S]*?</\\1\\s*>`,
+  `<(${[...dangerousHtmlContentTagSet].map(escapeForRegExpLiteral).join("|")})\\b[^>]*>[\\s\\S]*?</\\1\\s*>`,
   "gi"
 );
 
@@ -158,6 +161,7 @@ const dangerousContentPattern = new RegExp(
  * handling), so this is layered defense, not the primary parser.
  */
 const elementTagPattern = /<\/?[a-zA-Z][a-zA-Z0-9-]*(?:\s[^<>]*)?\/?>/g;
+const angleBracketPattern = /[<>]/g;
 
 const stripInlineMarkup = (value: string): string => {
   let current = value;
@@ -167,7 +171,9 @@ const stripInlineMarkup = (value: string): string => {
   for (;;) {
     const next = stripHtmlComments(current)
       .replace(dangerousContentPattern, "")
-      .replace(elementTagPattern, "");
+      .replace(elementTagPattern, "")
+      .replace(dangerousContentPattern, "")
+      .replace(angleBracketPattern, "");
     if (next === current) return next;
     current = next;
   }
