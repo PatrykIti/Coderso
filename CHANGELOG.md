@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.6.0] - 2026-06-14
+### Added
+- Page Editor V2 authoring/runtime model with sections, atomic blocks, dedicated inspector controls, inline canvas editing, responsive public CSS, and preview support.
+- Page Templates as a Page-native admin/runtime surface.
+- Public site shell support with menu-based header/footer configuration and menu appearance/design authoring.
+- Form and collection authoring in Pages, form submissions admin view, and visitor listing filters/search/sort/pagination.
+
+### Changed
+- Page Templates are now discovered from the Pages header instead of Advanced navigation.
+- Advanced Widgets is hidden from default navigation while direct compatibility remains.
+- Assistant/page-builder actions now target the Page V2 authoring/runtime contract.
+
+### Fixed
+- Page Editor stale-cache data-loss path, preview loopback probe behavior, responsive front delivery, Page V2 publish/reload parity, and Bun/Vitest regression coverage for the completed waves.
+
+### Removed
+- Obsolete widget-template admin/template routes, clients, and cache surfaces replaced by the Page Templates contract.
+
+### Security
+- Strengthened schema-first validation, fail-closed preview/template behavior, canonical listing query/cache handling, and documented security review coverage for new admin/public runtime paths.
 ## [1.5.0] - 2026-06-08
 ### Added
 - Six MUI-aligned timeline presets as block variants (vertical-right, vertical-left, alternating, alternating-opposite, cards, compact) with an interactive preset gallery in the Wizard.
