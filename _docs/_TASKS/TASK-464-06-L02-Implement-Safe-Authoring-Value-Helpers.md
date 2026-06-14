@@ -22,9 +22,12 @@ Hard constraint: no UX/UI changes.
 
 ## Sub-Tasks
 
-- [ ] Add safe authoring text helper.
+- [ ] Add safe authoring display-text helper for labels/tooltips/summaries.
 - [ ] Add safe URL/media URL helper with explicit protocols/policies.
 - [ ] Add safe color/style token helper.
+- [ ] Encode the TASK-464-06-L01 field-path policy as typed helper policies for
+      link URLs, media URLs, embed URLs, safe HTML/embed content, colors,
+      gradients, numerics, and enums.
 - [ ] Route inline-edit and registry mutation boundaries through helpers.
 - [ ] Add pure sanitizer tests.
 
@@ -33,14 +36,23 @@ Hard constraint: no UX/UI changes.
 ## Implementation Pseudocode
 
 ```ts
-export function sanitizeAuthoringText(input: unknown): string {
-  return sanitizeInlineText(String(input ?? ""));
+export function sanitizeAuthoringDisplayText(input: unknown): string {
+  return sanitizeStaticTextLabel(String(input ?? ""));
+}
+
+export function commitInlineAuthoringText(
+  target: InlineEditableTarget,
+  previous: string,
+  raw: string
+): string {
+  return commitInlineText(target, previous, raw);
 }
 
 export function sanitizeAuthoringUrl(input: unknown, policy: AuthoringUrlPolicy): string | null {
   const value = String(input ?? "").trim();
   if (!value) return null;
-  return isAllowedAuthoringUrl(value, policy) ? normalizeSafeUrl(value) : null;
+  if (policy.kind === "link-url") return normalizeWidgetSafeHref(value);
+  return isAllowedAuthoringUrl(value, policy) ? normalizeAuthoringSafeUrl(value, policy) : null;
 }
 
 export function sanitizeAuthoringControlValue(
@@ -49,14 +61,24 @@ export function sanitizeAuthoringControlValue(
 ): unknown {
   if (control.input === "color") return normalizeSafeColorToken(value);
   if (control.input === "range" || control.input === "number") return clampControlNumber(control, value);
-  return value;
+  if (control.input === "url") return sanitizeAuthoringUrl(value, control.urlPolicy);
+  if (control.input === "media") return sanitizeAuthoringUrl(value, { kind: "media-url" });
+  if (control.input === "select") return normalizeControlEnumValue(control, value);
+  return sanitizeAuthoringDisplayText(value);
 }
 ```
 
 Expected data flow:
 
 - User input is sanitized before document mutation.
+- Inline-edit commits keep using the target-aware
+  `commitInlineText(target, previous, raw)` path from `pageInlineEditContract`;
+  generic display-text helpers are only for static labels, tooltips, summaries,
+  and option text.
 - Renderers receive normalized values.
+- Field paths identified in TASK-464-06-L01 map to an explicit policy before
+  mutation: link URL, media URL, embed URL, safe embed HTML, color, gradient,
+  numeric, enum, or plain text.
 - Public renderer safety remains intact and separate.
 
 Error handling:
@@ -74,15 +96,23 @@ Regression-test shape:
 ## Security Contract
 
 - Helpers must be pure and browser-safe.
+- Reuse or consolidate existing sanitizer owners before adding new logic:
+  `widgetSafeHref` for safe link hrefs, existing widget color normalizers for
+  color-like controls, `pageInlineEditContract` for inline text, and TASK-463
+  embed sanitizer owners for embed HTML/URLs.
 - No broad allowlists for `javascript:`, event handlers, CSS `url()`, or raw
   HTML.
+- Style helpers must reject CSS `url(...)` payloads unless a field-specific
+  media URL policy owns that sink.
+- Embed HTML must go through the existing TASK-463 sanitizer/normalizer owner;
+  do not create a second raw HTML allowlist.
 - No server imports or secrets.
 
 ---
 
 ## Testing Requirements
 
-- New Vitest sanitizer suite.
+- `bun run test:vitest -- tests/vitest/pages/page-authoring-sanitizers.test.ts`
 - `bun run test:vitest -- tests/vitest/services/page-inline-edit-contract.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

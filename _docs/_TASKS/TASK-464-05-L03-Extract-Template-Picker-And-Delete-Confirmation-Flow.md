@@ -35,11 +35,10 @@ Hard constraint: no UX/UI changes.
 ```tsx
 export function applyTemplateToDocument(
   document: PageDocumentV2,
-  templateDocument: PageDocumentV2,
-  target: PageTemplateInsertTarget
+  templateDocument: PageDocumentV2
 ): PageDocumentV2 {
   const freshSections = instantiatePageTemplateSections(templateDocument);
-  return insertTemplateSections(document, freshSections, target);
+  return appendTemplateSections(document, freshSections);
 }
 
 export function DeleteSelectionDialog(props: DeleteSelectionDialogProps) {
@@ -51,13 +50,16 @@ Expected data flow:
 
 - Host template library remains injected through `PageEditorHost`.
 - Template summaries render as text.
+- Template application preserves the current append-only behavior unless
+  TASK-464-01 parity evidence proves an existing targeted template path.
 - Delete confirmation calls parent action only after explicit confirm.
 
 Error handling:
 
 - Template load failure leaves document unchanged and shows existing bounded
   error copy.
-- Missing target appends according to current behavior.
+- No template target is accepted in this leaf; target-aware insertion must be a
+  separate behavior task if parity evidence does not already exist.
 
 Regression-test shape:
 
@@ -71,13 +73,15 @@ Regression-test shape:
 
 - Template names/descriptions render as text only.
 - Template documents normalize/instantiate before insertion.
+- Template insertion is append-only for the current contract; do not introduce
+  target-aware insertion while extracting.
 - Delete confirmation must not log raw document content.
 
 ---
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-templates-surface.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-template-picker.test.tsx tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run check:admin-boundary`

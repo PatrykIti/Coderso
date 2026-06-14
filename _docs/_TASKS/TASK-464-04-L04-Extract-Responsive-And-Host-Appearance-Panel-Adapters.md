@@ -1,11 +1,11 @@
-# TASK-464-04-L03: Extract Responsive And Host Appearance Panel Adapters
-# FileName: TASK-464-04-L03-Extract-Responsive-And-Host-Appearance-Panel-Adapters.md
+# TASK-464-04-L04: Extract Responsive And Host Appearance Panel Adapters
+# FileName: TASK-464-04-L04-Extract-Responsive-And-Host-Appearance-Panel-Adapters.md
 
 **Parent Subtask:** TASK-464-04
 **Priority:** High
 **Category:** Pages / Admin UI / Floating Panel
 **Estimated Effort:** Medium
-**Dependencies:** TASK-464-04-L02
+**Dependencies:** TASK-464-04-L03
 **Status:** ⏳ To Do
 
 ---
@@ -45,14 +45,21 @@ export function PageEditorResponsivePanel(props: PageEditorResponsivePanelProps)
 }
 
 export function HostAppearancePanelSlot(props: HostAppearancePanelSlotProps) {
-  return props.panel.render({ document: props.document, device: props.device, updateDocument: props.updateDocument });
+  return props.panel.render({
+    document: props.document,
+    device: props.device,
+    actions: props.sanitizedHostAppearanceActions
+  });
 }
 ```
 
 Expected data flow:
 
 - Page responsive adapter receives base target and callbacks.
-- Host appearance panel receives only current draft, device, and draft updater.
+- Host appearance panel receives only current draft, device, and typed
+  sanitizer-safe actions. If a host still needs draft-style ergonomics, wrap the
+  updater so the result is normalized through the Page/Menu owner normalizers
+  before persistence.
 
 Error handling:
 
@@ -68,7 +75,12 @@ Regression-test shape:
 
 ## Security Contract
 
-- Host appearance panel writes must use typed draft updater.
+- Host appearance panel writes must use typed sanitizer-safe mutation helpers.
+- Raw `(current) => PageDocumentV2` updater callbacks must not cross this
+  reusable seam unless wrapped by a normalizing adapter that rejects unsafe
+  values before save.
+- This leaf must provide the typed/normalizing seam before TASK-464-06 lands;
+  TASK-464-06 later centralizes the shared helper owners behind that seam.
 - Host appearance content must not bypass sanitizer helpers after TASK-464-06.
 - No server/client imports in reusable panel shell.
 

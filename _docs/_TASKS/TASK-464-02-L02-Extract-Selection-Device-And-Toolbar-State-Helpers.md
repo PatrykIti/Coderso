@@ -79,10 +79,11 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- New Vitest suite for extracted state helpers.
+- `bun run test:vitest -- tests/vitest/pages/page-editor-state-helpers.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run check:admin-boundary`
 
 ---
 

@@ -25,8 +25,8 @@ Hard constraint: no UX/UI changes.
 - [ ] Create a browser-safe host contract module.
 - [ ] Move `PageEditorHost`, host preview/publish/revision/settings types, and
       host extension slots into that module.
-- [ ] Update Page Editor, Page Template Editor, Menu Design, and tests to import
-      from the new owner.
+- [ ] Update Page Editor, Page Template Editor, `MenuAppearancePanel.tsx`, Menu
+      Design, and tests to import from the new owner.
 - [ ] Extend import-boundary guard coverage if needed.
 
 ---

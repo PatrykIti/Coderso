@@ -18,6 +18,10 @@ template library picker/application flow, delete confirmation ownership, and
 small shell helpers that currently keep `PageEditor.tsx` large and hard to
 reuse.
 
+Each leaf must rewire `PageEditor.tsx` to consume the extracted module within
+the same leaf. TASK-464-07 is final cleanup and convergence, not the first large
+module swap.
+
 Hard constraint: **no UX/UI changes**. Preserve layer row labels and actions,
 command palette grouping/search/active-index behavior, template picker labels
 and insertion semantics, delete confirmation copy, keyboard behavior, focus
@@ -58,11 +62,11 @@ export type PageEditorCommandPaletteProps = {
 };
 
 export function applyPageTemplateSelection(
-  template: PageTemplateDetail,
-  target: PageTemplateInsertTarget
+  document: PageDocumentV2,
+  template: PageTemplateDetail
 ): PageDocumentV2 {
   const sections = instantiatePageTemplateSections(template.document);
-  return insertSectionsAtTarget(sections, target);
+  return appendTemplateSections(document, sections);
 }
 ```
 
@@ -73,6 +77,8 @@ Expected data flow:
   injected callbacks.
 - Template picker uses host `templateLibrary` callbacks and the existing Page
   template schema helper for safe section instantiation.
+- Template application preserves the current append-only behavior unless the
+  TASK-464-01 parity baseline proves an existing targeted template path.
 
 Error handling:
 
@@ -86,8 +92,8 @@ Error handling:
 Regression-test shape:
 
 - Tests cover command palette section/block insertion, pending targeted insert,
-  add-beside insert, layer select/move/add, template option loading, and
-  template section id regeneration.
+  add-beside insert, layer select/move/add, template option loading,
+  append-only template application, and template section id regeneration.
 - Tests assert existing visible copy and data attributes remain stable.
 
 ---
@@ -105,9 +111,8 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- New focused Vitest suites for extracted layers/command/template helpers if
-  practical.
-- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-templates-surface.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-layers.test.tsx tests/vitest/ui/page-editor-command-palette.test.tsx tests/vitest/ui/page-editor-template-picker.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run check:admin-boundary`

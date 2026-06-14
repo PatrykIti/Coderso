@@ -17,6 +17,10 @@ module. The new module should own section canvas chrome, block frames, ghost add
 tiles, hidden block placeholders, inline text renderer wiring, canvas frame
 props, canvas chrome slot rendering, and device frame sizing.
 
+Each leaf must rewire `PageEditor.tsx` to consume the extracted canvas module
+within the same leaf. Do not defer large parallel old/new canvas implementations
+to TASK-464-07.
+
 Hard constraint: **no UX/UI changes**. The extracted canvas must copy the
 current markup, class names, data attributes, focus/hover behavior, ghost tile
 behavior, scroll clearance usage, canvas frame widths, typography token bridge,
@@ -101,7 +105,7 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- New focused Vitest UI suite for `PageAuthoringCanvas` if practical.
+- `bun run test:vitest -- tests/vitest/ui/page-authoring-canvas.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

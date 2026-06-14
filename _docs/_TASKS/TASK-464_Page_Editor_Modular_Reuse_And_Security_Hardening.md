@@ -20,6 +20,11 @@ floating toolbar, registry panel rendering, command palette, layers overlay,
 template insertion, inline edit, preview/settings/revisions, and sanitizer
 boundaries.
 
+Preview/settings/revisions remain in the slim shell during this family unless a
+later task explicitly extracts them; TASK-464 focuses on reusable authoring
+canvas, floating panel, layers, command, template, mutation, and sanitizer
+surfaces.
+
 This family converts the Page Editor into a composed shell over reusable
 modules:
 
@@ -153,6 +158,8 @@ callbacks, without importing Page document services.
 
 - `_docs/PAGE_MODEL.md` for the Page Editor modular architecture and reuse
   contract.
+- `_docs/ARCHITECTURE.md` if the reusable module dependency direction becomes
+  a general admin authoring rule.
 - `_docs/CMS_SPEC.md` if the reusable module boundary changes CMS authoring
   surface rules.
 - `_docs/SECURITY_SPEC.md` if scanner runbooks or authoring sanitizer

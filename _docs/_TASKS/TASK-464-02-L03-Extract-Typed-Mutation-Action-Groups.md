@@ -81,9 +81,10 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
+- `bun run test:vitest -- tests/vitest/pages/page-editor-action-groups.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+- `bun run check:admin-boundary`
 
 ---
 

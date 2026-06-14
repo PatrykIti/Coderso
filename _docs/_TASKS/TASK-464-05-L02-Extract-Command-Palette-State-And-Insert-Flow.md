@@ -52,6 +52,8 @@ Expected data flow:
 
 - Parent owns document mutation and pending insert targets.
 - Palette resolves display results and emits typed selected result.
+- Template results must preserve current append-only template application by
+  delegating template execution to TASK-464-05-L03.
 
 Error handling:
 
@@ -75,7 +77,7 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-command-palette.test.tsx tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run check:admin-boundary`

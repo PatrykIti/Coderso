@@ -27,6 +27,8 @@ Hard constraint: no UX/UI changes.
 - [ ] Add tests for unsafe template names/descriptions and control labels.
 - [ ] Add dangerous-sink tests for extracted admin authoring modules.
 - [ ] Run local security scans where tooling is available.
+- [ ] Run local CodeQL CLI when available; otherwise record that GitHub code
+      scanning/CodeQL is the final confirmation gate.
 
 ---
 
@@ -57,6 +59,9 @@ Error handling:
 
 - If scanner tooling is unavailable locally, record the skipped command and
   leave CI as the remaining gate.
+- If local CodeQL CLI is unavailable, record that GitHub code scanning/CodeQL
+  remains the required final confirmation for the TASK-463/TASK-464 security
+  class.
 
 Regression-test shape:
 
@@ -75,10 +80,12 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- New XSS-focused Vitest suites.
+- `bun run test:vitest -- tests/vitest/pages/page-editor-xss-guards.test.tsx tests/vitest/pages/page-authoring-sanitizers.test.ts`
 - `bun run scan:semgrep`
 - `bun run scan:audit`
 - `bun run scan:security:strict` where local tooling is available.
+- Local CodeQL CLI for the Pages/Admin UI query pack where available; otherwise
+  GitHub code scanning/CodeQL final confirmation is required before closure.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 

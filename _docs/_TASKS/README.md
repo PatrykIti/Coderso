@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 134 tasks
+- **To Do:** 135 tasks
 - **In Progress:** 9 tasks
 - **Done:** 2455 tasks
 
@@ -102,8 +102,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-464-03-L03 | Extract Inline Edit And Canvas Runtime Binding Wiring | High | Medium | Move inline-edit wrappers and canvas-only runtime preview binding wiring behind typed sanitizer-safe props. |
 | TASK-464-04 | Extract Reusable Floating Toolbar And Panel Module | High | Large | Move the bottom floating toolbar, registry panels, and host appearance slot into reusable modules without visual changes. |
 | TASK-464-04-L01 | Extract Floating Toolbar Shell And Action Row | High | Medium | Move toolbar shell, drag/collapse state plumbing, action icons, tooltips, and clearance measurement. |
-| TASK-464-04-L02 | Extract Registry Panel Renderer And Control Routing | High | Medium | Move registry-driven section/block panel rendering and control routing without raw fallback regressions. |
-| TASK-464-04-L03 | Extract Responsive And Host Appearance Panel Adapters | High | Medium | Move responsive panel and host appearance panel adapter while preserving reset/inheritance semantics. |
+| TASK-464-04-L02 | Extract Registry Option Provider And Media Lookup Contract | High | Medium | Move dynamic option/media lookup behind injected provider contracts so reusable panels stay client-free. |
+| TASK-464-04-L03 | Extract Registry Panel Renderer And Control Routing | High | Medium | Move registry-driven section/block panel rendering and control routing without raw fallback regressions. |
+| TASK-464-04-L04 | Extract Responsive And Host Appearance Panel Adapters | High | Medium | Move responsive panel and host appearance panel adapter while preserving reset/inheritance semantics. |
 | TASK-464-05 | Extract Layers Command Palette And Template Picker Modules | High | Large | Pull layers, command palette, and template picker out of the PageEditor shell while preserving behavior. |
 | TASK-464-05-L01 | Extract Layers Tree And Row Actions | High | Medium | Move layers overlay/tree row rendering plus select/add/move/add-beside callbacks. |
 | TASK-464-05-L02 | Extract Command Palette State And Insert Flow | High | Medium | Move command palette search, active-index keyboard flow, and section/block insertion orchestration. |

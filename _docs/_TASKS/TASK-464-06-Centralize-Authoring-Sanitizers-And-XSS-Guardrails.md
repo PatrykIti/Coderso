@@ -36,15 +36,24 @@ fail-closed equivalent.
 ## Implementation Pseudocode
 
 ```ts
-export function sanitizeAuthoringText(input: unknown): string {
-  return sanitizeInlineText(String(input ?? ""));
+export function sanitizeAuthoringDisplayText(input: unknown): string {
+  return sanitizeStaticTextLabel(String(input ?? ""));
+}
+
+export function commitInlineAuthoringText(
+  target: InlineEditableTarget,
+  previous: string,
+  raw: string
+): string {
+  return commitInlineText(target, previous, raw);
 }
 
 export function sanitizeAuthoringUrl(input: unknown, policy: UrlPolicy): string | null {
   const value = String(input ?? "").trim();
   if (!value) return null;
+  if (policy.kind === "link-url") return normalizeWidgetSafeHref(value);
   if (!isAllowedUrlProtocol(value, policy)) return null;
-  return normalizeSafeUrl(value);
+  return normalizeAuthoringSafeUrl(value, policy);
 }
 
 export function sanitizeAuthoringStyleValue(
@@ -58,7 +67,7 @@ export function sanitizeAuthoringStyleValue(
     case "number":
       return clampNumericControlValue(control, value);
     default:
-      return value;
+      return sanitizeAuthoringDisplayText(value);
   }
 }
 
@@ -72,9 +81,12 @@ export function assertNoAuthoringDangerousHtml(rendered: HTMLElement) {
 Expected data flow:
 
 - Inline edit commits go through the inline-edit sanitizer before document
-  mutation.
+  mutation, using the target-aware `commitInlineText(target, previous, raw)`
+  contract from `pageInlineEditContract`.
 - Media/source controls normalize URL-like input before persistence.
-- Registry controls clamp enum/number/style values before mutation.
+- Registry controls clamp enum/number/style values before mutation and reuse
+  existing URL/color sanitizer owners where they already exist, such as
+  `widgetSafeHref` and widget color normalizers.
 - Host appearance panels receive sanitized update helpers or must use the same
   sanitizer helpers before writing into the document draft.
 - Public/runtime rendering remains protected by the Page v2 render pipeline;
@@ -115,7 +127,7 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- New targeted Vitest suites for authoring sanitizers and dangerous sink guards.
+- `bun run test:vitest -- tests/vitest/pages/page-authoring-sanitizers.test.ts tests/vitest/pages/page-editor-xss-guards.test.tsx`
 - `bun run test:vitest -- tests/vitest/pages/page-renderer-v2.test.tsx tests/vitest/services/page-inline-edit-contract.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

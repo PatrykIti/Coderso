@@ -17,6 +17,11 @@ remove duplicate helpers left behind by earlier leaves. `PageEditor.tsx` should
 become a host lifecycle and orchestration shell, not the owner of every canvas
 and panel detail.
 
+Earlier leaves must already rewire `PageEditor.tsx` to consume their extracted
+modules. This leaf is for removing residual duplicates and composing the final
+shell. If a large residual module swap remains, split it into a physical
+`TASK-464-07-S01-*` follow-up before implementing this leaf.
+
 Hard constraint: no UX/UI changes.
 
 ---
@@ -28,6 +33,8 @@ Hard constraint: no UX/UI changes.
 - [ ] Compose extracted layers/command/template modules.
 - [ ] Remove duplicated local helpers.
 - [ ] Verify Pages, Page Templates, and Menu Design imports.
+- [ ] Split residual large module swaps into `TASK-464-07-S01-*` before coding
+      if this leaf no longer fits Medium effort.
 
 ---
 

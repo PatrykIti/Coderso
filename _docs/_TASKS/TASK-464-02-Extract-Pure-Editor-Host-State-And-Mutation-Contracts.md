@@ -93,7 +93,7 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- New targeted Vitest suite for extracted host/state helpers.
+- `bun run test:vitest -- tests/vitest/pages/page-editor-host-contract.test.ts tests/vitest/pages/page-editor-state-helpers.test.ts tests/vitest/pages/page-editor-action-groups.test.ts`
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

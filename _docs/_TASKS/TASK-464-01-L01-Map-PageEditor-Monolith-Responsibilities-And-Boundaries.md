@@ -88,6 +88,7 @@ Regression-test shape:
 
 - `rg -n "const SectionCanvas|const ToolbarSubpanel|const ResponsivePanelContent|const LayerBlockRows|export function PageEditor" core/admin/ui/pages/PageEditor.tsx`
 - `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ---
 

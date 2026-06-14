@@ -26,7 +26,14 @@ Hard constraint: no UX/UI changes.
       tooltip/control labels, and host appearance copy from data.
 - [ ] List URL/media/embed sinks.
 - [ ] List style/color/numeric sinks.
-- [ ] Identify existing sanitizer owners and missing gaps.
+- [ ] Freeze a field-by-field policy for current Page v2 sinks: block
+      `href`, `src`, `image`, `url`, and `html`; list item `href`; media
+      gallery/video/image sources; section `backgroundImage`; block
+      style/background/color fields; gradients; embed URLs/HTML; host
+      appearance fields; and Menu Design style fields.
+- [ ] Identify existing sanitizer owners and missing gaps, including
+      `widgetSafeHref`, existing widget color normalizers,
+      `pageInlineEditContract`, and TASK-463 embed sanitizers.
 - [ ] Update security docs or TASK-464 docs with the sanitizer contract.
 
 ---
@@ -37,8 +44,10 @@ Hard constraint: no UX/UI changes.
 type AuthoringSink = {
   source: "inline-edit" | "registry-control" | "template" | "host-appearance" | "runtime-binding";
   valueKind: "text" | "url" | "media" | "style" | "html-like";
+  fieldPath: string;
   renderSink: string;
   mutationSink: string;
+  allowedPolicy: "text" | "link-url" | "media-url" | "embed-url" | "safe-html" | "color" | "gradient" | "numeric" | "enum";
   sanitizerOwner: string;
 };
 
@@ -55,6 +64,8 @@ Expected data flow:
 Error handling:
 
 - Unknown sink ownership blocks TASK-464-06-L02 until resolved.
+- Missing field-path policy for any render-sensitive sink blocks
+  TASK-464-06-L02 until resolved.
 
 Regression-test shape:
 
@@ -68,6 +79,11 @@ Regression-test shape:
 - No route changes.
 - No sanitizer bypasses may be accepted as known debt unless split into a
   blocking follow-up before TASK-464 closes.
+- The inventory must explicitly cover link URLs, media URLs, image/video/gallery
+  sources, section background images, embed URLs/HTML, colors, gradients, host
+  appearance style fields, and Menu Design style fields.
+- Do not create duplicate URL/color sanitizer ownership if an existing owner can
+  be reused or moved into a shared authoring sanitizer module.
 - Do not add scanner suppressions in this leaf.
 
 ---
@@ -76,6 +92,7 @@ Regression-test shape:
 
 - `rg -n "dangerouslySetInnerHTML|innerHTML|javascript:|onerror|style=|backgroundImage|iframe|embed" core/admin core/services/pages tests`
 - `bun --cwd core lint`
+- `bun --cwd core lint:types`
 
 ---
 
