@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.6.1] - 2026-06-15
+### Added
+- Reusable browser-safe Page authoring modules under `core/admin/ui/pages/editor/` (canvas, floating toolbar, layers, command/template picker, host contract) and pure state/mutation helpers under `core/services/pages/`, enabling future non-Page-v2 CMS surfaces to mount the authoring shell. Planning docs for TASK-467 (admin bundle hardening) and TASK-468 (custom screens canvas rewrite).
+
+### Changed
+- `PageEditor.tsx` reduced to a slim host orchestrator (~1563 fewer lines) over the new modules with full UI/UX parity; route-level Page/Page Template validation now uses a lightweight Page v2 envelope schema, with full recursive validation owned by the domain normalizers (empty-template create-validation RSS ~810 MB → ~76 MB).
+
+### Fixed
+- Full-width Pages v2 section variants now fill the entire horizontal band for hero/CTA backgrounds instead of leaving white gutter strips, identically in public runtime and admin preview.
+
+### Removed
+- Recursive `pageDocumentV2JsonSchema` `$defs` spread from route-level AJV validators (pageCreate/Update/Autosave/Publish and pageTemplateCreate/Update).
+
+### Security
+- Centralized Page authoring sanitizers (`pageAuthoringSanitizers.ts`) now gate all author-controlled link/media/CSS sinks at persistence and render time, failing closed on `javascript:`/`data:`/protocol-relative/CSS-breakout payloads; `mailto:`/`tel:` preserved on link sinks only; reusable authoring modules constrained to browser-safe imports (no admin clients/DB/server/SDK/secrets).
 ## [1.6.0] - 2026-06-14
 ### Added
 - Page Editor V2 authoring/runtime model with sections, atomic blocks, dedicated inspector controls, inline canvas editing, responsive public CSS, and preview support.
