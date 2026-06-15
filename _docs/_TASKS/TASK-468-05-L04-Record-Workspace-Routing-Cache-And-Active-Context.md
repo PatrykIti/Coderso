@@ -54,9 +54,19 @@ export function customScreenRecordWorkspacePath(input: {
   });
 }
 
-function invalidateScreenRecordWorkspace(input: { screenId: string; recordId?: string }) {
-  customScreenCache.invalidate(["screen", input.screenId, "records"]);
-  cacheBus.emit("customScreenRecords:changed", input);
+function invalidateScreenRecordWorkspace(input: {
+  screenId: string;
+  contentTypeSlug: string;
+  recordId?: string;
+}) {
+  broadcastCacheEvent({ key: cacheKeys.customScreenDetail(input.screenId), action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.entriesList(input.contentTypeSlug), action: "update" });
+  if (input.recordId) {
+    broadcastCacheEvent({
+      key: cacheKeys.entryDetail(input.contentTypeSlug, input.recordId),
+      action: "update",
+    });
+  }
 }
 ```
 
@@ -66,6 +76,9 @@ Data flow:
 - Prefetch uses route helper-owned aliases.
 - Entry mutations invalidate record list, record detail, and active-context
   summaries.
+- Any new record-workspace cache key must be added to `cachePolicy.ts`,
+  `_docs/ADMIN_CACHE.md`, and `_docs/ADMIN_CACHE_MAP.md`; otherwise reuse the
+  existing `entries:*` and `customScreens:*` keys.
 
 Error handling:
 

@@ -33,7 +33,7 @@ blocks, writable controls, and professional record layouts.
 | `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx` | Replace widget bridge with field-aware screen blocks. |
 | `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` | Render list/table/card views from V4 list presentation and content entries. |
 | `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Use V4 screen runtime for entry editing. |
-| `core/admin/ui/custom-screens/screenRuntimeRenderer.tsx` | New renderer for screen sections and blocks. |
+| `core/admin/ui/custom-screens/runtime/ScreenRuntimeRenderer.tsx` | New renderer for screen sections and blocks. |
 | Content entry route/service tests | Update only if write payload shape changes. |
 | Custom Screen runtime/UI tests | Cover list, preview, edit, save, validation, and reload. |
 
@@ -42,7 +42,7 @@ blocks, writable controls, and professional record layouts.
 ```tsx
 type ScreenRuntimeContext = {
   contentType: ContentTypeSummary;
-  entry: ContentEntryRecord;
+  entry: ContentEntryRuntimeRecord;
   mode: "preview" | "edit" | "list-item";
   values: Record<string, unknown>;
   errors: Record<string, string>;

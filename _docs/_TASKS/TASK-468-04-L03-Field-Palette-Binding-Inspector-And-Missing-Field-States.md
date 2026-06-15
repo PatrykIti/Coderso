@@ -45,12 +45,14 @@ export function createFieldBlockForContentField(
   field: ContentTypeFieldSummary,
   options: { mode: "read" | "write" }
 ): { block: ScreenBlockV1; binding: ScreenBlockBinding } {
+  const block = createScreenBlock({
+    type: "field",
+    props: defaultFieldBlockProps(field),
+  });
   return {
-    block: createScreenBlock({
-      type: "field",
-      props: defaultFieldBlockProps(field),
-    }),
+    block,
     binding: createScreenFieldBinding({
+      blockId: block.id,
       field: field.name,
       mode: options.mode,
       propPath: "value",

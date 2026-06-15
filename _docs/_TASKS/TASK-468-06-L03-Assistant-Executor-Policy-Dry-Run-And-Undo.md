@@ -24,6 +24,8 @@ idempotent application through the Custom Screens service.
   assistant infrastructure supports undo.
 - [ ] Ensure action execution uses the same V4 service validation as manual
   editor saves.
+- [ ] Remove `custom-screen.widget.patch` from executable registry/policy/undo
+  handling for V4 screens, or mark it non-executable legacy-only before closure.
 - [ ] Add executor tests for dry-run, apply, conflict, undo, and audit events.
 
 ## Files To Change
@@ -35,6 +37,7 @@ idempotent application through the Custom Screens service.
 | `core/services/assistant/operationPolicy/cmsResourcePolicies.ts` | RBAC/operation policy hooks for screen actions. |
 | `core/services/assistant/operationPolicy/adminSurfacePolicies.ts` | Audit-log/admin-surface policy updates if audit payload gating changes. |
 | `core/services/customScreens/customScreenService.ts` | Reuse V4 mutation/save path. |
+| `core/services/content/typeService.ts` | Load the current screen content-type context when executor dry-run needs normalization before persistence. |
 | `tests/vitest/assistant/customScreenExecutor.test.ts` | Executor policy coverage. |
 
 ## Implementation Pseudocode
@@ -42,18 +45,21 @@ idempotent application through the Custom Screens service.
 ```ts
 export async function executeCustomScreenAction(input: ExecuteScreenActionInput) {
   const mutation = mapAssistantActionToScreenMutation(input.action);
-  const current = await customScreenService.getDefinition(input.screenId);
-  const next = normalizeCustomScreenDefinitionV4(mutation(current.definition));
+  const current = await deps.customScreens.getCustomScreen(input.screenId);
+  if (!current) throw new Error("custom_screen_not_found");
+  const contentType = await deps.getContentType(current.contentTypeId);
+  const next = normalizeCustomScreenDefinitionForWrite(
+    { schemaVersion: 4, definition: mutation(current.definition) },
+    { contentType }
+  );
 
   if (input.mode === "dry-run") {
     return createDryRunResult({ before: current.definition, after: next });
   }
 
-  return customScreenService.updateDefinition({
-    screenId: input.screenId,
+  return deps.customScreens.updateCustomScreen(input.screenId, {
+    schemaVersion: 4,
     definition: next,
-    expectedVersion: input.expectedVersion,
-    actor: input.actor,
   });
 }
 ```
@@ -69,6 +75,9 @@ Data flow:
 Error handling:
 
 - Conflicts return reviewable errors and do not overwrite newer definitions.
+- Do not invent a definition-specific conflict-control service API in this leaf;
+  reload current screen state before applying unless the service owner adds an
+  explicit conflict contract first.
 - Invalid actions fail before service write.
 - Undo records are omitted only with explicit unsupported-operation reason.
 
@@ -78,7 +87,7 @@ Regression-test shape:
 test("dry-run returns V4 diff and does not persist", async () => {
   const result = await executeCustomScreenAction({ action, mode: "dry-run" });
   expect(result.changedBlocks).toContain("title");
-  expect(customScreenService.updateDefinition).not.toHaveBeenCalled();
+  expect(deps.customScreens.updateCustomScreen).not.toHaveBeenCalled();
 });
 ```
 

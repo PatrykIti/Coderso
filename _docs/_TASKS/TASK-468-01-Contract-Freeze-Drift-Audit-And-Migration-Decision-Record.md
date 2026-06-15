@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Architecture / Custom Screens / Task Contract
 **Estimated Effort:** Medium
-**Dependencies:** TASK-468
+**Dependencies:** TASK-464, TASK-467
 **Status:** ⏳ To Do
 
 ---

@@ -53,6 +53,8 @@ Data flow:
 - Runtime renders V4 document and entry draft controls.
 - Save/reload proves entry writes use content entry routes with screen-bound
   payload construction.
+- This guard covers runtime route imports only; assistant blueprint generation
+  and assistant action tests are closed by TASK-468-06 and TASK-468-07-L02.
 
 Error handling:
 

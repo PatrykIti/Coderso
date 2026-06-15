@@ -33,14 +33,23 @@ removes active code paths before database columns are dropped.
 | `core/widgets/**` | Remove screen-only widget registrations or mark fully retired when safe. |
 | `core/admin/ui/custom-screens/**` | Remove bridge imports and fallback paths. |
 | `core/services/customScreens/**` | Remove legacy active widget mapping after V4 migration. |
+| `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` | Remove legacy widget generation from assistant-created Custom Screens. |
+| `core/services/assistant/blueprints/catalogFamilyBlueprint.ts` | Ensure catalog family screen generation no longer emits legacy widget blocks. |
 | `tests/vitest/customScreens/**` | Update tests from bridge expectations to V4 runtime expectations. |
+| `tests/vitest/assistant/blueprint-admin-surface-composer.test.ts` | Assert assistant blueprints emit V4 screen contracts and no retired widget ids. |
 | `_docs/WIDGETS.md` | Remove retired screen widget references. |
 
 ## Implementation Pseudocode
 
 ```ts
 function assertLegacyScreenWidgetsAreRetired(registry: WidgetRegistry) {
-  for (const id of ["custom-screen-builder", "screen-field-value", "screen-field-group"]) {
+  for (const id of [
+    "custom-screen-builder",
+    "screen-record-header",
+    "screen-field-value",
+    "screen-field-group",
+    "screen-two-column",
+  ]) {
     expect(registry.has(id)).toBe(false);
   }
 }
@@ -51,6 +60,8 @@ Data flow:
 - V4 screen runtime remains active for editor/list/record views.
 - Legacy screen widget ids may appear only in migration fixtures and retired
   docs/changelog notes.
+- Assistant blueprint, planner, schema, and executor tests must assert absence
+  of legacy widget ids rather than preserve old expectations.
 - Generic widgets used elsewhere remain untouched.
 
 Error handling:

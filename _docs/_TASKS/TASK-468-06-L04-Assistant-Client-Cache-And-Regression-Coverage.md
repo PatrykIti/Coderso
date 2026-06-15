@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Assistant / Admin Cache / Regression Validation
 **Estimated Effort:** Medium
-**Dependencies:** TASK-468-06-L03
+**Dependencies:** TASK-468-06-L03, TASK-467-01
 **Status:** ⏳ To Do
 
 ---
@@ -21,6 +21,9 @@ path fixed by TASK-467.
 
 - [ ] Wire assistant mutation success to lightweight Custom Screen cache
   invalidation helpers.
+- [ ] Do not start this leaf until TASK-467-01 has landed
+  `core/admin/services/customScreensCache.ts`,
+  `clearCustomScreensCacheLightweight`, and invalidator registration.
 - [ ] Ensure active-surface cache refreshes after screen and entry mutations.
 - [ ] Add regression tests proving assistant client imports do not pull the full
   custom screen editor client into lightweight bundles.
@@ -35,7 +38,7 @@ path fixed by TASK-467.
 | `core/admin/services/customScreensClient.ts` | Register full-client cache invalidators with the lightweight owner; do not import this module from `assistantClient.ts`. |
 | `core/admin/services/customScreenShortcutsClient.ts` | Register shortcut/sidebar invalidators with the lightweight owner. |
 | `core/admin/services/cachePolicy.ts` | Extend cache keys/TTLs if needed. |
-| `core/admin/ui/assistant/*activeSurface*.ts` | Refresh active-surface cache after V4 mutations. |
+| `core/admin/ui/assistant/activeSurfaceContext.ts` | Add or reuse an explicit active-surface invalidation hook for V4 screen mutations. |
 | `core/admin/ui/custom-screens/assistantSurface.ts` | Keep screen-specific active-surface summaries coherent after V4 mutations. |
 | `tests/vitest/assistant/customScreenAssistantCache.test.ts` | Cache/invalidation regression coverage. |
 | `_docs/_TASKS/TASK-468-06-Assistant-Active-Surface-And-Cache-Cutover.md` | Bundle/cache evidence. |
@@ -48,8 +51,9 @@ function handleAssistantScreenMutationSuccess(result: AssistantMutationResult) {
     return;
   }
   clearCustomScreensCacheLightweight();
-  emitCustomScreenCacheEvents(result);
-  refreshAssistantActiveSurface({ kind: "custom-screen", screenId: result.screenId });
+  broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.customScreenDetail(result.screenId), action: "update" });
+  invalidateAssistantActiveSurface({ kind: "custom-screen", screenId: result.screenId });
 }
 ```
 
@@ -71,9 +75,16 @@ Regression-test shape:
 ```ts
 test("assistant client invalidates custom screen cache without full editor import", async () => {
   await handleAssistantScreenMutationSuccess(customScreenMutationResult);
-  expect(cacheBusEvents()).toContainEqual(expect.objectContaining({ screenId: "products" }));
-  expect(moduleGraph("assistantClient")).not.toContain("customScreensEditorClient");
-  expect(moduleGraph("assistantClient")).not.toContain("customScreensClient");
+  expect(broadcastCacheEvent).toHaveBeenCalledWith({
+    key: cacheKeys.customScreenDetail("products"),
+    action: "update",
+  });
+  expect(readSourceImports("core/admin/services/assistantClient.ts")).not.toContain(
+    "customScreensEditorClient"
+  );
+  expect(readSourceImports("core/admin/services/assistantClient.ts")).not.toContain(
+    "customScreensClient"
+  );
 });
 ```
 

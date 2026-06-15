@@ -32,6 +32,9 @@ and stale docs.
 | `core/db/migrations/*` | Add SQL migration for backfill/assert/drop. |
 | `core/db/migrations/meta/*_snapshot.json` | Add updated Drizzle snapshot. |
 | `core/db/migrations/meta/_journal.json` | Add migration journal entry. |
+| `package.json` | Add any new `tests/integration/customScreens` DB migration suite to `test:bun` and `test:integration`. |
+| `scripts/run-bun-lane.ts` | Register Custom Screen DB migration suites in the curated Bun lane when they are release-gate relevant. |
+| `tests/README.md` | Document ownership for Custom Screen DB migration suites. |
 | `core/widgets/core/*screen*` and registry files | Remove legacy screen widgets from active widget surfaces. |
 | `core/services/customScreens/customScreenSchemas.ts` | Remove active V1/V2/V3 write support after migration; keep read guards only if required by restore/import contract. |
 | `core/admin/ui/custom-screens/*` | Delete unused legacy widget builder/render bridge files. |

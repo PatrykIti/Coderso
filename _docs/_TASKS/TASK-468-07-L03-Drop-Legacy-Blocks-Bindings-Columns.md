@@ -34,7 +34,11 @@ This is the destructive cleanup leaf and must include full migration artifacts.
 | `core/db/migrations/meta/*_snapshot.json` | Snapshot update. |
 | `core/db/migrations/meta/_journal.json` | Journal update. |
 | `core/services/customScreens/**` | Remove row mapping for dropped columns. |
-| `tests/integration/customScreens/*migration*.test.ts` | Drop-column migration coverage. |
+| `core/services/customScreens/customScreenSchemas.ts` | Remove active V1/V2/V3 write support after migration; preserve read-only migration helpers only if restore/import still needs them. |
+| `package.json` | Add `tests/integration/customScreens` to Bun integration commands if this new directory is used. |
+| `scripts/run-bun-lane.ts` | Register the drop-column migration suite in the curated Bun lane. |
+| `tests/README.md` | Document `tests/integration/customScreens` ownership. |
+| `tests/integration/customScreens/customScreensDropLegacyColumnsMigration.test.ts` | DB-backed Bun migration coverage for refusing legacy rows and verifying dropped columns; skip cleanly when `DATABASE_URL` is unavailable. |
 | `_docs/DATA_MODEL.md` | Remove legacy column documentation. |
 
 ## Implementation Pseudocode
@@ -48,7 +52,10 @@ ALTER TABLE custom_screens DROP COLUMN bindings;
 function mapCustomScreenRow(row: CustomScreenRowAfterV4Cleanup) {
   return {
     id: row.id,
-    definition: normalizeCustomScreenDefinitionV4(row.definition),
+    definition: normalizeCustomScreenDefinitionForRead({
+      schemaVersion: 4,
+      definition: row.definition,
+    }),
   };
 }
 ```
@@ -92,6 +99,8 @@ test("custom screen row mapping does not read dropped legacy columns", () => {
 - `rg -n "custom_screens\\.blocks|custom_screens\\.bindings|\\.blocks\\b|\\.bindings\\b" core tests _docs`
   with migration-history exceptions reviewed.
 - Load env before DB tests: `set -a && source .env && set +a`.
+- `bun test tests/integration/customScreens/customScreensDropLegacyColumnsMigration.test.ts`
+- `bun run test:bun:lane`
 - DB migration tests when `DATABASE_URL` is reachable.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

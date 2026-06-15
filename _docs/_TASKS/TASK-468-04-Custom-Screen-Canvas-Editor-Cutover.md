@@ -78,7 +78,7 @@ function addFieldBlock(field: ContentTypeFieldSummary) {
   updateDocument((document) => insertScreenBlock(document, selectedSectionId, block));
   updateBindings((bindings) => [
     ...bindings,
-    createScreenFieldBinding({ blockId: block.id, field: field.name, mode: "write" }),
+    createScreenFieldBinding({ blockId: block.id, field: field.name, mode: "write", propPath: "value" }),
   ]);
 }
 ```

@@ -21,6 +21,10 @@ or blocking migration errors.
 
 - [ ] Add a non-destructive migration/backfill step that verifies
   `custom_screens.definition` rows normalize to schemaVersion 4.
+- [ ] Backfill and verify `custom_screens.schema_version = 4` in lockstep with
+  `definition->>'schemaVersion' = '4'`.
+- [ ] Set the `custom_screens.schema_version` DB default to `4` before
+  destructive cleanup.
 - [ ] Record counts for migrated rows, already-V4 rows, unsupported placeholder
   rows, and hard failures.
 - [ ] Add DB-backed tests for V1/V2/V3/V4 rows when `DATABASE_URL` is available.
@@ -32,10 +36,15 @@ or blocking migration errors.
 | File | Required change |
 |---|---|
 | `core/db/migrations/*_custom_screens_v4_backfill_verification.sql` | New non-destructive verification/backfill migration. |
+| `core/db/migrations/*_custom_screens_v4_schema_version_default.sql` | Backfill `schema_version` to `4` for V4 definitions and set `DEFAULT 4`. |
 | `core/db/migrations/meta/*_snapshot.json` | Migration snapshot update. |
 | `core/db/migrations/meta/_journal.json` | Journal update. |
+| `core/db/schema.ts` | Update `customScreens.schemaVersion` default/contract to V4 after the backfill/default migration. |
 | `core/services/customScreens/customScreenService.ts` | Backfill helper or migration adapter reuse if needed. |
-| `tests/integration/customScreens/*migration*.test.ts` | DB-backed migration coverage where available. |
+| `package.json` | Add `tests/integration/customScreens` to Bun integration commands if this new directory is used. |
+| `scripts/run-bun-lane.ts` | Register the backfill migration suite in the curated Bun lane. |
+| `tests/README.md` | Document `tests/integration/customScreens` ownership. |
+| `tests/integration/customScreens/customScreensV4BackfillMigration.test.ts` | DB-backed Bun migration coverage for V1/V2/V3/V4 rows; skip cleanly when `DATABASE_URL` is unavailable. |
 
 ## Implementation Pseudocode
 
@@ -48,7 +57,10 @@ async function verifyCustomScreensV4Backfill(db: Db) {
       legacyBlocks: row.blocks,
       legacyBindings: row.bindings,
     });
-    await persistMigratedDefinition(db, row.id, migrated);
+    await persistMigratedDefinitionAndSchemaVersion(db, row.id, {
+      schemaVersion: 4,
+      definition: migrated,
+    });
     report.record(migrated);
   }
   return report;
@@ -60,6 +72,8 @@ Data flow:
 - Migration reads existing `definition`, `blocks`, and `bindings` while legacy
   columns still exist.
 - Migration adapters convert rows to V4 or explicit placeholders.
+- Backfill writes both the integer `schema_version` column and JSON
+  `definition.schemaVersion` as `4` atomically.
 - Report is logged safely and tests assert deterministic row outcomes.
 
 Error handling:
@@ -76,6 +90,7 @@ test("backfill converts v3 widget screen into v4 placeholder document", async ()
   const row = await seedLegacyCustomScreen(v3UnsupportedWidgetFixture);
   await runCustomScreensV4Backfill();
   const migrated = await readCustomScreen(row.id);
+  expect(migrated.schemaVersion).toBe(4);
   expect(migrated.definition.schemaVersion).toBe(4);
   expect(migrated.definition.editorView.document.sections[0].blocks[0].type).toBe("legacy-placeholder");
 });
@@ -97,6 +112,8 @@ test("backfill converts v3 widget screen into v4 placeholder document", async ()
 ## Testing Requirements
 
 - Load env before DB tests: `set -a && source .env && set +a`.
+- `bun test tests/integration/customScreens/customScreensV4BackfillMigration.test.ts`
+- `bun run test:bun:lane`
 - DB migration tests when `DATABASE_URL` is reachable.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -113,3 +130,5 @@ test("backfill converts v3 widget screen into v4 placeholder document", async ()
    destructive cleanup.
 2. Legacy columns remain available until the drop-column leaf.
 3. Migration artifacts include SQL, snapshot, and journal updates.
+4. DB `schema_version` and JSON `definition.schemaVersion` are both `4` for
+   migrated rows and new writes.

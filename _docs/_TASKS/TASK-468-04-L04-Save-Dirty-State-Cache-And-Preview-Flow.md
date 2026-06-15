@@ -36,7 +36,7 @@ avoid force-refetch loops or dirty-state overwrites.
 | `core/admin/services/customScreensClient.ts` | Existing Custom Screen cache hydration/invalidation updates if needed. |
 | `core/admin/services/customScreenShortcutsClient.ts` | Shortcut/sidebar cache invalidation updates if needed. |
 | `core/admin/services/cachePolicy.ts` | Cache key/TTL updates if ownership changes. |
-| `core/admin/ui/custom-screens/RuntimePreviewDialog.tsx` or equivalent | V4 preview support. |
+| `core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx` or shared `core/admin/ui/preview/RuntimePreviewDialog.tsx` | V4 preview support. |
 | `_docs/ADMIN_CACHE.md` | Update if cache keys/owners change. |
 | `_docs/ADMIN_CACHE_MAP.md` | Update if cache keys/owners change. |
 | `tests/vitest/ui-integration/custom-screens/*Save*.test.tsx` | Save/cache/preview coverage. |
@@ -45,13 +45,16 @@ avoid force-refetch loops or dirty-state overwrites.
 
 ```ts
 async function saveCustomScreenDraft(state: CustomScreenEditorState) {
-  const payload = normalizeCustomScreenDefinitionV4(state.draft);
-  const result = await customScreensEditorClient.updateDefinition({
-    id: state.screenId,
+  const payload = normalizeCustomScreenDefinitionForWrite(
+    { schemaVersion: 4, definition: state.draft },
+    { contentType: state.contentType }
+  );
+  const result = await saveCustomScreenEditorDefinition(state.screenId, {
+    schemaVersion: 4,
     definition: payload,
-    serverVersion: state.serverVersion,
   });
-  cacheBus.emit("customScreens:changed", { id: state.screenId });
+  broadcastCacheEvent({ key: cacheKeys.customScreensList, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.customScreenDetail(state.screenId), action: "update" });
   return markCleanFromServer(result);
 }
 
@@ -71,6 +74,8 @@ Data flow:
   `customScreensClient`/`updateCustomScreen` path from editor UI or model code,
   because TASK-467 keeps full editor normalization out of list/cache clients.
 - Internal admin route persists definition and returns normalized server state.
+- Conflict-control fields may only be sent if the Custom Screen service owner
+  introduces that contract first.
 - Cache invalidation updates list/sidebar/editor consumers.
 - Preview receives a sanitized V4 draft plus bounded sample metadata.
 
@@ -86,7 +91,10 @@ Regression-test shape:
 test("successful save marks editor clean and broadcasts cache invalidation", async () => {
   render(<CustomScreenEditorPage fixture={dirtyScreenFixture} />);
   await user.click(screen.getByRole("button", { name: "Save" }));
-  expect(cacheBusEvents()).toContainEqual(expect.objectContaining({ id: "screen-a" }));
+  expect(broadcastCacheEvent).toHaveBeenCalledWith({
+    key: cacheKeys.customScreenDetail("screen-a"),
+    action: "update",
+  });
   expect(screen.queryByText("Unsaved changes")).not.toBeInTheDocument();
 });
 ```

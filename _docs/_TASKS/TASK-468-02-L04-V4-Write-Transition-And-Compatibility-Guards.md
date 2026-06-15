@@ -30,8 +30,10 @@ cutover starts.
 | File | Required change |
 |---|---|
 | `core/services/customScreens/customScreenService.ts` | Force create/update writes to V4 after cutover. |
-| `core/services/customScreens/customScreenSchemas.ts` | Reject V1/V2/V3 writes when strict mode is enabled. |
+| `core/services/customScreens/customScreenSchemas.ts` | Reject V1/V2/V3 writes through write-specific V4 create/update schemas while preserving read migration helpers for legacy rows. |
+| `core/server/routes/customScreenRoutes.ts` | Map `custom_screen_legacy_write_unsupported` to a 400 `ApiError`. |
 | `core/admin/services/customScreensEditorClient.ts` | Send V4 editor payloads only. |
+| `tests/integration/routes/customScreensRoutes.test.ts` | Cover `custom_screen_legacy_write_unsupported` error mapping and legacy POST/PATCH rejection if route payload behavior changes. |
 | Tests for service/admin client | Cover V4-only write behavior. |
 
 ## Implementation Pseudocode
@@ -41,11 +43,11 @@ export function normalizeCustomScreenDefinitionForWrite(
   input: CustomScreenWriteInput,
   context: CustomScreenDefinitionContext
 ): CustomScreenDefinitionV4 {
-  const version = normalizeCustomScreenSchemaVersion(input.schemaVersion);
+  const version = normalizeCustomScreenWriteSchemaVersion(input.schemaVersion);
   if (version !== 4) {
     throw new Error("custom_screen_legacy_write_unsupported");
   }
-  return normalizeCustomScreenDefinitionV4(input.definition, context);
+  return normalizeCustomScreenDefinition({ schemaVersion: 4, definition: input.definition }, context);
 }
 
 function toCompatibilityProjection(definition: CustomScreenDefinitionV4) {
@@ -59,6 +61,8 @@ Data flow:
 - Writes: create/update accepts V4 only after strict mode.
 - DB: `definition` stores V4; legacy columns store inert empty projections until
   TASK-468-07-L03 drops them.
+- Writes must persist both the row `schema_version` column and
+  `definition.schemaVersion` as `4`.
 
 Error handling:
 
@@ -91,6 +95,7 @@ test("strict write mode rejects V3 definitions", () => {
 
 - Service/domain tests for V4-only writes.
 - Admin client tests for V4 write payloads.
+- `bun test tests/integration/routes/customScreensRoutes.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`

@@ -49,6 +49,8 @@ Data flow:
 - Tests open legacy fixtures through service migration adapters.
 - Editor receives normalized V4 definitions.
 - Save/reload confirms V4 persists without active legacy builder fields.
+- This guard covers editor-route imports only; assistant blueprint generation
+  and assistant action tests are closed by TASK-468-06 and TASK-468-07-L02.
 
 Error handling:
 

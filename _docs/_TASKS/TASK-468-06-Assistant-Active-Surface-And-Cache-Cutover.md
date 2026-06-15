@@ -37,6 +37,9 @@ field names.
 | `core/services/assistant/actionUndoManifest.ts` | Add undo-manifest entries for V4 screen mutations. |
 | `core/services/assistant/actionExecutorService.ts` | Execute V4 screen actions through the Custom Screen service and preserve dry-run/review semantics. |
 | `core/services/assistant/blueprints/blueprintActionAssembler.ts` | Add blueprint assembly/ordering support for V4 screen actions if blueprints can create/update screens. |
+| `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` | Emit V4 screen sections/blocks/bindings only; do not generate `custom-screen-builder` widgets. |
+| `core/services/assistant/blueprints/catalogFamilyBlueprint.ts` | Route catalog family screen plans through V4 screen documents instead of legacy widget blocks. |
+| `tests/vitest/assistant/blueprint-admin-surface-composer.test.ts` | Flip blueprint assertions to V4 screen blocks and absence of retired widget ids. |
 | Assistant active surface context files | Summarize V4 screen documents and writable field names. |
 | `core/admin/services/assistantClient.ts` | Invalidate V4 screen/list/detail caches through TASK-467 lightweight helper. |
 | Custom Screen service/action executor tests | Cover V4 assistant actions and legacy rejection. |
@@ -143,6 +146,9 @@ test("assistant patches V4 screen block without raw entry payload", async () => 
 - Active-surface hydration tests.
 - Operation policy, undo manifest, dry-run/review, and blueprint assembler tests
   for the new V4 action types.
+- Blueprint admin-surface composer tests proving generated screen plans do not
+  reference `custom-screen-builder`, `screen-field-value`, `screen-field-group`,
+  or `screen-two-column`.
 - `bun run test:vitest -- tests/vitest/admin/assistantClient.test.ts`
 - `bun run check:admin-boundary`
 - `bun --cwd core lint`

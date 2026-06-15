@@ -14,7 +14,7 @@
 
 Add the admin editor client and local editing model for V4 Custom Screen
 definitions. This leaf owns loading, local draft state, dirty tracking, conflict
-metadata, and mapping server errors into editor-safe UI state.
+UI state, and mapping server errors into editor-safe UI state.
 
 ## Sub-Tasks
 
@@ -41,7 +41,7 @@ metadata, and mapping server errors into editor-safe UI state.
 
 ```ts
 type CustomScreenEditorState = {
-  serverVersion: string | null;
+  serverUpdatedAt: string | null;
   draft: CustomScreenDefinitionV4;
   baseline: CustomScreenDefinitionV4;
   status: "idle" | "loading" | "saving" | "conflict" | "error";
@@ -59,7 +59,7 @@ function customScreenEditorReducer(
     case "saved":
       return markClean(action.payload);
     case "conflict":
-      return { ...state, status: "conflict", serverVersion: action.serverVersion };
+      return { ...state, status: "conflict" };
   }
 }
 ```
@@ -69,7 +69,11 @@ Data flow:
 - Editor route loads screen metadata through cached admin client wrappers.
 - V4 definition is normalized before it enters local state.
 - Reducer owns draft mutations and dirty-state decisions.
-- Save submits the full V4 definition plus server version/etag when available.
+- Save submits only fields owned by `CustomScreenUpdateInput`; do not add
+  ad-hoc conflict-control payloads unless the Custom Screen service owner adds
+  that contract first.
+- `serverUpdatedAt` is local display/reload metadata from the read response, not
+  a write input.
 
 Error handling:
 

@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Assistant / Custom Screens / Action Contracts
 **Estimated Effort:** Large
-**Dependencies:** TASK-468-04-L05
+**Dependencies:** TASK-468-05-L05
 **Status:** ⏳ To Do
 
 ---
@@ -24,7 +24,11 @@ presentation, and field mappings through strict validation.
 - [ ] Add mapping from assistant action payloads to screen document operation
   helpers.
 - [ ] Reject legacy widget patch actions for V4 screens.
-- [ ] Add pure schema and mapper tests.
+- [ ] Flip existing custom-screen widget-patch acceptance/planner tests to assert
+  `custom-screen.widget.patch` is rejected for V4 screens and replaced by V4
+  section, block, binding, and list-view actions.
+- [ ] Convert assistant blueprint/custom-screen generation to V4 screen documents
+  without legacy screen widget ids.
 
 ## Files To Change
 
@@ -35,8 +39,15 @@ presentation, and field mappings through strict validation.
 | `core/services/assistant/cmsOperationActionMapper.ts` | Map CMS operation drafts to V4 screen actions. |
 | `core/services/assistant/actionRegistry.ts` | Register V4 screen actions. |
 | `core/services/assistant/actionFamilyContracts.ts` | Add action-family metadata and merge/conflict behavior. |
+| `core/services/assistant/operationPolicy/cmsResourcePolicies.ts` | Replace legacy widget-patch resource policy entries with V4 screen action policies. |
+| `core/services/assistant/actionUndoManifest.ts` | Remove or mark legacy widget-patch undo support as non-executable for V4 screens and add V4 screen undo metadata. |
+| `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` | Emit V4 screen documents instead of `screen-field-*` widget blocks. |
+| `core/services/assistant/blueprints/catalogFamilyBlueprint.ts` | Ensure catalog-family screen plans use V4 screen action/document payloads. |
 | `core/services/customScreens/screenDocument.ts` | Reuse V4 operation/validation helpers. |
 | `tests/vitest/assistant/customScreenActions.test.ts` | Action schema and mapper coverage. |
+| `tests/vitest/assistant/action-plan-schema.test.ts` | Flip legacy widget-patch acceptance cases to V4 rejection/replacement coverage. |
+| `tests/vitest/assistant/actionPlannerService.test.ts` | Prove planning emits V4 screen actions instead of widget patches for V4 screens. |
+| `tests/vitest/assistant/blueprint-admin-surface-composer.test.ts` | Prove blueprint-generated screen plans contain V4 screen blocks only. |
 
 ## Implementation Pseudocode
 
@@ -100,6 +111,9 @@ test("rejects legacy widget patch action for V4 custom screen", () => {
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/assistant/customScreenActions.test.ts`
+- `bun run test:vitest -- tests/vitest/assistant/action-plan-schema.test.ts`
+- `bun run test:vitest -- tests/vitest/assistant/actionPlannerService.test.ts`
+- `bun run test:vitest -- tests/vitest/assistant/blueprint-admin-surface-composer.test.ts`
 - Assistant service tests for action registry if separate.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
@@ -115,3 +129,5 @@ test("rejects legacy widget patch action for V4 custom screen", () => {
 1. Assistant Custom Screen actions target V4 screen contracts, not widget blocks.
 2. Action schemas are strict and reuse domain validation.
 3. Legacy widget patch actions cannot mutate V4 screens.
+4. Assistant blueprint/custom-screen generation rejects legacy widget ids and
+   catalog-family plans emit V4 screen blocks only.
