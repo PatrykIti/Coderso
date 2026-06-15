@@ -1141,7 +1141,9 @@ testIfDbWithOptions(
       await deleteListingQuery(listingQuery.id);
     }
   },
-  { timeout: dbRuntimeTimeout }
+  // Five full public renders plus scoped DB cleanup; keep the budget aligned
+  // with the comparable pagination runtime test below.
+  { timeout: dbRuntimeTimeout * 2 }
 );
 
 testIfDbWithOptions(
