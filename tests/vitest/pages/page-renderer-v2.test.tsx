@@ -153,6 +153,45 @@ test("section templates branch supported variants and fall back without mutating
   );
 });
 
+test("full-width section variants remove the outer section gutter so backgrounds fill the band", () => {
+  const bounded = createPageSectionV2("hero", {
+    id: "sec-bounded-hero",
+    variant: "default",
+    style: {
+      background: "#eef2ff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+  const fullWidth = createPageSectionV2("hero", {
+    id: "sec-full-width-hero",
+    variant: "full-width",
+    style: {
+      background: "#dcfce7",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+
+  const boundedProps = toPageSectionRenderProps(bounded);
+  const fullWidthProps = toPageSectionRenderProps(fullWidth);
+  const fullWidthHtml = renderToStaticMarkup(<PageSectionRender section={fullWidth} />);
+
+  expect(boundedProps.sectionClassName).toBe("w-full px-4 py-6");
+  expect(fullWidthProps.sectionClassName).toBe("w-full");
+  expect(fullWidthProps.style.backgroundColor).toBe("#dcfce7");
+  expect(fullWidthProps.style.maxWidth).toBe("none");
+  expect(fullWidthHtml).toContain('<section class="w-full"');
+  expect(fullWidthHtml).toContain("background-color:#dcfce7");
+  expect(fullWidthHtml).not.toContain('class="w-full px-4 py-6"');
+});
+
 test("stackVertical forces a single-column section grid on canvas and front (TASK-425)", () => {
   const base = createSection();
   const stacked: PageSectionV2 = { ...base, layout: { ...base.layout, stackVertical: true } };

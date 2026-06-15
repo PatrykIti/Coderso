@@ -10,31 +10,22 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
-  Baseline,
-  Brush,
   Columns2,
   Copy,
   Eye,
   GripVertical,
   History,
   Layers,
-  LayoutPanelTop,
-  ListPlus,
   Maximize2,
   Minimize2,
-  MonitorSmartphone,
-  PaintBucket,
   Palette,
   PanelTop,
   Plus,
   RotateCcw,
   Save,
-  Search,
   Settings2,
   Trash2,
-  Type,
   X,
-  type LucideIcon,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -82,18 +73,11 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
   clearBlockResponsiveOverride,
   clearResponsiveOverride,
-  PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
-  PAGE_BLOCK_MAX_TREE_DEPTH,
   createPageBlockV2,
   createPageDocumentId,
   createPageSectionV2,
   isPageTypographyCapableBlockType,
   normalizeStoredPageDocumentV2ForRead,
-  pageBlockCapabilities,
-  pageBlockPropKeys,
-  pageBlockTypes,
-  pageSectionCapabilities,
-  pageSectionTypes,
   resolvePageSectionForBreakpoint,
   type PageBlockType,
   type PageBlockV2,
@@ -108,7 +92,6 @@ import {
   getPageSectionVariantControl,
   isPageSectionVariantOption,
   getPageEditorControlsForTarget,
-  pageEditorDeviceMetadata,
   pageResponsiveHideToggles,
   pageSectionStackVerticalControl,
   pageUniversalSectionControls,
@@ -139,9 +122,6 @@ import {
 } from "./editorControls";
 import {
   editorCanvasCtaButtonClass,
-  editorCanvasGhostBesideHandleClass,
-  editorCanvasGhostTileClass,
-  editorCanvasGhostTileCompactClass,
   editorControlFocusClass,
   editorControlLabelClass,
   editorDarkButtonClass,
@@ -157,17 +137,13 @@ import {
   getPageBlockBesideInsertStatus,
   getPageBlockContainerLayout,
   getPageBlockEditorSlotKeys,
-  getPageBlockInsertTargetStatus,
   getPageBlockListAtPath,
   getPageBlockSiblingMoveTarget,
   insertPageBlockAtTarget,
   insertPageBlockBeside,
-  isPageBlockPathDescendant,
-  isSamePageBlockPath,
   movePageBlockToTarget,
   movePageSectionBlockToAdjacentColumn,
   movePageSectionBlockWithinColumn,
-  serializePageBlockPath,
   updatePageBlockAtPath,
   type PageBlockInsertTarget,
   type PageBlockPath,
@@ -187,6 +163,22 @@ import {
   getPageSectionFallbackVariant,
 } from "../../../services/pages/pageSectionTemplates";
 import {
+  patchBlockControlForDevice,
+  patchBlockPropsForDevice,
+  patchSectionControlForDevice,
+  sanitizePageSectionStylePatch,
+  setBlockVisibleForBreakpoint,
+  setSectionVisibleForBreakpoint,
+} from "../../../services/pages/pageEditorMutationActions";
+import {
+  clampToolbarOffset,
+  hasAnyResponsiveOverride,
+  hasPathValue,
+  hasResponsiveOverride,
+  readBlockBreakpointOverride,
+  readSectionBreakpointOverride,
+} from "../../../services/pages/pageEditorState";
+import {
   buildPageEditorCollectionPreviewBindings,
   collectPageEditorCollectionPreviewContentTypeIds,
   type PageEditorCollectionPreviewSource,
@@ -196,8 +188,30 @@ import {
   collectPageEditorFormPreviewFormIds,
   type PageEditorFormPreviewDetail,
 } from "../../../services/pages/pageEditorFormPreview";
+import {
+  blockOptions,
+  canvasDeviceFrameClassMap,
+  deviceScopeReadout,
+  pageEditorStatusBadgeClassName,
+  resolveToolbarTargetLabel,
+  sectionOptions,
+  toolbarActionTooltips,
+  toolbarPanelOptions,
+  type ToolbarPanel,
+  type ToolbarPanelOption,
+} from "./editor/pageEditorOptions";
+import { getBlockDisplayLabel } from "./editor/pageEditorLabels";
+import {
+  SectionCanvas,
+  SectionGapInsertZone,
+  type PageEditorInlineEditCommit,
+  type PageEditorInlineEditTarget,
+} from "./editor/PageAuthoringCanvas";
+import { LayerBlockRows } from "./editor/PageEditorLayers";
+import { PageEditorCommandPalette } from "./editor/PageEditorCommandPalette";
+import { ToolbarIconButton } from "./editor/FloatingEditorToolbar";
+import type { PageEditorHost } from "./editor/pageEditorHostContract";
 import type { PageRuntimeDataByBlockId } from "../../../services/pages/pageRuntimeBindingContract";
-import { joinPageRenderClasses, PageSectionContent } from "../../../services/pages/pageRendererV2";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
 import {
   resolveAssistantPageSelection,
@@ -205,122 +219,17 @@ import {
 } from "../../../services/assistant/pageActiveSurfaceSummary";
 import { DeviceSwitcher } from "./DeviceSwitcher";
 
-export type PageEditorHostRevisions = {
-  list: (id: string) => Promise<PageRevision[]>;
-  restore: (
-    id: string,
-    revisionId: string
-  ) => Promise<{ ok: boolean; restored: boolean; revision: PageRevision; page: PageDetail }>;
-  discard: (id: string, revisionId: string) => Promise<{ ok: boolean }>;
-};
-
-export type PageEditorHostPreviewResponse = {
-  previewUrl: string;
-  probe?: PreviewProbeResult;
-};
-
-/**
- * Hosts that return the post-publish detail let the editor adopt the
- * authoritative status/timestamps instead of hand-building a page object.
- */
-export type PageEditorHostPublishResult = {
-  ok?: boolean;
-  page?: PageDetail | null;
-};
-
-export type PageEditorHostSettingsRenderProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  detail: PageDetail | null;
-  onSaved: (detail: PageDetail) => void;
-};
-
-/**
- * Host-side palette scoping (TASK-458-03): when present, the listed types
- * INTERSECT the globally insertable section/block options everywhere insert
- * choices surface (command palette, ghost tiles, add-beside). The palette
- * can only narrow the global capability tables, never widen them — gated
- * types (e.g. the `navigation` section) stay gated even when listed.
- * Absent palette (page + page-template hosts) keeps the full catalog.
- */
-export type PageEditorHostPalette = {
-  sections?: PageSectionType[];
-  blocks?: PageBlockType[];
-};
-
-export type PageEditorHostAppearancePanelProps = {
-  document: PageDocumentV2;
-  device: PageBreakpoint;
-  /** Draft-discipline write path: patches mark the document unsaved. */
-  updateDocument: (updater: (current: PageDocumentV2) => PageDocumentV2) => void;
-};
-
-/**
- * Host-owned floating-toolbar panel (TASK-458-03): rendered as an extra
- * always-available panel tab ahead of the registry panels. The menu host
- * uses it to expose the menu appearance controls through the shared control
- * primitives, writing into the document draft.
- */
-export type PageEditorHostAppearancePanel = {
-  label: string;
-  description: string;
-  render: (props: PageEditorHostAppearancePanelProps) => ReactNode;
-};
-
-export type PageEditorHostCanvasChromeProps = {
-  document: PageDocumentV2;
-  device: PageBreakpoint;
-};
-
-/**
- * Document host abstraction: the Page Editor v2 surface (canvas, floating
- * panel, registry control pipeline, inline edit) is shared verbatim between
- * Pages and Page Templates. Hosts only swap the page-chrome concerns: load
- * and save endpoints, cache keys, publish/revisions availability, preview
- * issuance, the settings sheet, and assistant surface advertisement.
- */
-export type PageEditorHost = {
-  mode: "page" | "page-template" | "menu";
-  resourceLabel: string;
-  settingsLabel: string;
-  previewTitle: string;
-  loadFailedMessage: string;
-  /** Advertise the assistant active surface only when the host owns one. */
-  assistantSurface: boolean;
-  detailCacheKey: (id: string) => string;
-  getCachedDetail: (id: string) => PageDetail | null;
-  loadDetail: (id: string) => Promise<PageDetail | null>;
-  saveDocument: (id: string, document: PageDocumentV2) => Promise<PageDetail>;
-  autosaveDocument?: (id: string, document: PageDocumentV2) => Promise<unknown>;
-  publish?: (
-    id: string,
-    document: PageDocumentV2
-  ) => Promise<PageEditorHostPublishResult | null | undefined>;
-  /**
-   * Preview-token issuance. Optional (TASK-458-03): hosts without a preview
-   * route (menus — the live canvas IS the preview) omit it and the toolbar
-   * preview affordance is hidden, consistent with publish/revisions.
-   */
-  preview?: (id: string) => Promise<PageEditorHostPreviewResponse>;
-  revisions?: PageEditorHostRevisions;
-  /** Page-chrome settings: defaults to the page settings sheet when omitted. */
-  renderSettings?: (props: PageEditorHostSettingsRenderProps) => ReactNode;
-  /** Published reusable templates offered by the insert/apply picker. */
-  templateLibrary?: {
-    listPublished: () => Promise<{ id: string; name: string; description: string | null }[]>;
-    instantiateSections: (id: string) => Promise<PageSectionV2[]>;
-  };
-  /** Host-side narrowing of the insertable section/block options. */
-  palette?: PageEditorHostPalette;
-  /** Extra host-owned floating-toolbar panel (e.g. menu appearance). */
-  appearancePanel?: PageEditorHostAppearancePanel;
-  /**
-   * Host-owned chrome rendered inside the canvas frame above the document
-   * sections (e.g. the live menu shell preview). Receives the CURRENT draft
-   * so it restyles live as the panel edits it.
-   */
-  canvasChrome?: (props: PageEditorHostCanvasChromeProps) => ReactNode;
-};
+export type {
+  PageEditorHost,
+  PageEditorHostAppearancePanelProps,
+  PageEditorHostCanvasChromeProps,
+  PageEditorHostPalette,
+  PageEditorHostPreviewResponse,
+  PageEditorHostPublishResult,
+  PageEditorHostRevisions,
+  PageEditorHostSettingsRenderProps,
+} from "./editor/pageEditorHostContract";
+export { resolveToolbarTargetLabel } from "./editor/pageEditorOptions";
 
 const defaultPagesEditorHost: PageEditorHost = {
   mode: "page",
@@ -364,43 +273,6 @@ export type PageEditorProps = {
   host?: PageEditorHost;
 };
 
-type ToolbarPanel =
-  | "layout"
-  | "content"
-  | "typography"
-  | "style"
-  | "spacing"
-  | "background"
-  | "responsive"
-  | "visibility"
-  /** Host-owned appearance panel slot (only offered when the host provides one). */
-  | "host-appearance";
-
-type SectionOption = {
-  type: PageSectionType;
-  label: string;
-  description: string;
-};
-
-type BlockOption = {
-  type: PageBlockType;
-  label: string;
-  description: string;
-};
-
-type ToolbarPanelOption = {
-  panel: ToolbarPanel;
-  label: string;
-  /** Hover tooltip description for the panel category icon. */
-  description: string;
-  Icon: LucideIcon;
-};
-
-type ToolbarActionTooltip = {
-  label: string;
-  description: string;
-};
-
 type ToolbarDeleteTarget =
   | {
       kind: "section";
@@ -426,215 +298,6 @@ const pageEditorActionToasts = createAdminActionToastAdapter({
     },
   },
 });
-
-const sectionOptionCopy: Record<PageSectionType, Omit<SectionOption, "type">> = {
-  template: { label: "Template", description: "Template boundary section." },
-  navigation: { label: "Navigation", description: "Runtime navigation boundary." },
-  hero: { label: "Hero", description: "Headline, copy, and primary action." },
-  content: { label: "Content", description: "Simple text-led section." },
-  "feature-grid": { label: "Feature grid", description: "Cards or repeated highlights." },
-  "media-split": { label: "Media split", description: "Copy next to image or video." },
-  timeline: { label: "Timeline", description: "Ordered story or milestone section." },
-  gallery: { label: "Gallery", description: "Visual collection section." },
-  collection: { label: "Collection", description: "Data-bound listing boundary." },
-  comparison: { label: "Comparison", description: "Compare options or service tiers." },
-  filters: { label: "Filters", description: "Listing filter boundary." },
-  "lead-form": { label: "Lead form", description: "Form-focused conversion boundary." },
-  faq: { label: "FAQ", description: "Question and answer content." },
-  testimonials: { label: "Testimonials", description: "Quotes or social proof." },
-  cta: { label: "CTA", description: "Focused call to action." },
-  embed: { label: "Embed", description: "Trusted embed boundary." },
-  custom: { label: "Custom", description: "Flexible generic section." },
-};
-
-const sectionOptions: SectionOption[] = pageSectionTypes.flatMap((type) =>
-  pageSectionCapabilities[type].insertable ? [{ type, ...sectionOptionCopy[type] }] : []
-);
-
-const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> = {
-  heading: { label: "Heading", description: "Section title or subheading." },
-  text: { label: "Text", description: "Paragraph copy." },
-  button: { label: "Button", description: "Clickable call to action." },
-  image: { label: "Image", description: "Image from media or URL." },
-  video: { label: "Video", description: "Embedded video from media or URL." },
-  gallery: { label: "Gallery", description: "Visual collection block." },
-  form: { label: "Form", description: "Configured form embed." },
-  list: { label: "List", description: "Bulleted or numbered points." },
-  card: { label: "Card", description: "Compact title and body block." },
-  collection: { label: "Collection", description: "Data-bound listing block." },
-  filters: { label: "Filters", description: "Visitor facet filters for a bound listing." },
-  embed: { label: "Embed", description: "Trusted external embed." },
-  divider: { label: "Divider", description: "Visual separator." },
-  spacer: { label: "Spacer", description: "Vertical rhythm control." },
-  statistic: { label: "Statistic", description: "Metric value with label and caption." },
-  icon: { label: "Icon", description: "Small symbolic block." },
-  quote: { label: "Quote", description: "Pull quote with optional citation." },
-  container: { label: "Container", description: "Nested layout container." },
-  columns: { label: "Columns", description: "Nested column layout." },
-  group: { label: "Group", description: "Nested grouped layout." },
-};
-
-const blockOptions: BlockOption[] = pageBlockTypes.flatMap((type) =>
-  pageBlockCapabilities[type].editorInsertable ? [{ type, ...blockOptionCopy[type] }] : []
-);
-
-const toolbarPanelOptions: ToolbarPanelOption[] = [
-  {
-    panel: "layout",
-    label: "Layout",
-    description: "Variant, columns, alignment, and max width presets.",
-    Icon: LayoutPanelTop,
-  },
-  {
-    panel: "content",
-    label: "Content",
-    description: "Copy and content fields for the selected block.",
-    Icon: Type,
-  },
-  {
-    panel: "typography",
-    label: "Typography",
-    description: "Font family, size, weight, line height, letter spacing, and text align.",
-    Icon: Baseline,
-  },
-  {
-    panel: "style",
-    label: "Style",
-    description: "Accent color, radius, and shadow presets.",
-    Icon: Brush,
-  },
-  {
-    panel: "background",
-    label: "Background",
-    description: "Background type, color, and image.",
-    Icon: PaintBucket,
-  },
-  {
-    panel: "spacing",
-    label: "Spacing",
-    description: "Padding and block gap presets.",
-    Icon: ListPlus,
-  },
-  {
-    panel: "responsive",
-    label: "Responsive",
-    description: "Breakpoint override state for this selection.",
-    Icon: MonitorSmartphone,
-  },
-  {
-    panel: "visibility",
-    label: "Visibility",
-    description: "Visibility, anchor, and date range scheduling.",
-    Icon: Eye,
-  },
-];
-
-/**
- * Hover tooltip copy for the floating-toolbar action icons. Labels double as
- * the accessible names so tests and assistive tech read the same metadata the
- * tooltip shows; no ad hoc `title` strings.
- */
-const toolbarActionTooltips = {
-  drag: {
-    label: "Drag toolbar",
-    description: "Drag to reposition the toolbar over the canvas.",
-  },
-  collapse: {
-    label: "Collapse toolbar",
-    description: "Hide the panel icons and actions; the selection stays.",
-  },
-  expand: {
-    label: "Expand toolbar",
-    description: "Show the panel icons and actions again.",
-  },
-  closePanel: {
-    label: "Close panel",
-    description: "Close this panel; the toolbar stays open.",
-  },
-  moveSectionUp: {
-    label: "Move section up",
-    description: "Move the selected section one position earlier.",
-  },
-  moveSectionDown: {
-    label: "Move section down",
-    description: "Move the selected section one position later.",
-  },
-  moveBlockUp: {
-    label: "Move block up",
-    description: "Move the selected block one position earlier.",
-  },
-  moveBlockDown: {
-    label: "Move block down",
-    description: "Move the selected block one position later.",
-  },
-  moveBlockUpRow: {
-    label: "Move block up",
-    description: "Move the selected block one grid row earlier.",
-  },
-  moveBlockDownRow: {
-    label: "Move block down",
-    description: "Move the selected block one grid row later.",
-  },
-  moveBlockUpColumn: {
-    label: "Move block up",
-    description: "Move the selected block one position earlier in its column.",
-  },
-  moveBlockDownColumn: {
-    label: "Move block down",
-    description: "Move the selected block one position later in its column.",
-  },
-  moveBlockLeft: {
-    label: "Move block left",
-    description: "Move the selected block one position left in its row.",
-  },
-  moveBlockRight: {
-    label: "Move block right",
-    description: "Move the selected block one position right in its row.",
-  },
-  moveBlockLeftColumn: {
-    label: "Move block left",
-    description: "Move the selected block into the previous column.",
-  },
-  moveBlockRightColumn: {
-    label: "Move block right",
-    description: "Move the selected block into the next column.",
-  },
-  addBlockBeside: {
-    label: "Add block beside",
-    description: "Insert a new block next to the selected block in a row.",
-  },
-  duplicateSection: {
-    label: "Duplicate section",
-    description: "Insert a copy of the selected section below it.",
-  },
-  duplicateBlock: {
-    label: "Duplicate block",
-    description: "Insert a copy of the selected block after it.",
-  },
-  deleteSection: {
-    label: "Delete section",
-    description: "Remove the selected section after confirmation.",
-  },
-  deleteBlock: {
-    label: "Delete block",
-    description: "Remove the selected block after confirmation.",
-  },
-} satisfies Record<string, ToolbarActionTooltip>;
-
-/**
- * Static Tailwind canvas frame widths. Tailwind scans literal class strings,
- * so these stay hardcoded — they MUST match the canonical widths in
- * `pageEditorDeviceMetadata` (the switcher/scope readouts derive from there).
- */
-const canvasDeviceFrameClassMap: Record<PageBreakpoint, string> = {
-  desktop: "max-w-[1080px]",
-  tablet: "max-w-[744px]",
-  mobile: "max-w-[390px]",
-};
-
-/** "Tablet · 744px" readout used by the scope pill and the canvas context bar. */
-const deviceScopeReadout = (device: PageBreakpoint) =>
-  `${pageEditorDeviceMetadata[device].label} · ${pageEditorDeviceMetadata[device].width}px`;
 
 /**
  * Site token overrides stored under `design.tokens` in the admin settings
@@ -704,11 +367,6 @@ const useCanvasSiteTokenVariables = (): CSSProperties => {
   );
 };
 
-const pageEditorStatusBadgeClassName = (status: string) =>
-  status === "published"
-    ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
-    : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
-
 const resolvePageId = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
   const pageIndex = parts.findIndex((segment) => segment === "pages");
@@ -719,100 +377,8 @@ const resolvePageId = (pathname: string) => {
 const cloneDocument = (document: PageDocumentV2): PageDocumentV2 =>
   JSON.parse(JSON.stringify(document)) as PageDocumentV2;
 
-const readText = (value: unknown, fallback = "") => {
-  if (typeof value !== "string") return fallback;
-  const trimmed = value.trim();
-  return trimmed.length > 0 ? trimmed : fallback;
-};
-
-const primaryContentPropByBlockType: Partial<Record<PageBlockType, string>> = {
-  heading: "text",
-  text: "text",
-  button: "label",
-  image: "alt",
-  video: "title",
-  card: "title",
-  form: "title",
-  statistic: "value",
-  icon: "label",
-  quote: "text",
-};
-
-const filterBlockPropsPatch = (type: PageBlockType, patch: Record<string, unknown>) => {
-  const allowed = pageBlockPropKeys[type];
-  return Object.fromEntries(
-    Object.entries(patch).filter(([key, value]) => value !== undefined && allowed.includes(key))
-  );
-};
-
-const getPrimaryBlockContent = (block: PageBlockV2 | undefined) => {
-  if (!block) return "";
-  const prop = primaryContentPropByBlockType[block.type];
-  return prop ? readText(block.props[prop]) : "";
-};
-
-const getBlockDisplayLabel = (block: PageBlockV2) =>
-  getPrimaryBlockContent(block) ||
-  readText(block.props.title) ||
-  readText(block.props.alt) ||
-  block.type.replace(/-/g, " ");
-
-export type ToolbarLabelTarget =
-  | { kind: "section"; type: PageSectionType }
-  | { kind: "block"; type: PageBlockType }
-  | null;
-
-type ResolveToolbarTargetLabelOptions = {
-  /**
-   * When true (the shared default), targets without curated display copy fall
-   * back to a humanized type name. The fallback never reads user content.
-   */
-  fallbackToTypeName?: boolean;
-};
-
-const humanizeTypeName = (type: string) => {
-  const spaced = type.replace(/-/g, " ").trim();
-  return spaced ? `${spaced.charAt(0).toUpperCase()}${spaced.slice(1)}` : "Selection";
-};
-
-// Single owner of the floating-toolbar label contract (TASK-451-02-L01).
-// Toolbar labels and their aria text always resolve from the block/section
-// TYPE display name ("Text tools", "Statistic tools", "Quote tools",
-// "Hero tools") — user-entered content (copy, statistic values, quote text)
-// must never leak into the toolbar label. Content hints stay only where they
-// already exist (layer rows, delete dialogs, content panel header).
-// TASK-438/446/447 adopt this helper for their per-type fallback labels.
-export const resolveToolbarTargetLabel = (
-  target: ToolbarLabelTarget,
-  options: ResolveToolbarTargetLabelOptions = {}
-): string => {
-  const { fallbackToTypeName = true } = options;
-  if (!target) return "Page";
-  const copy =
-    target.kind === "block" ? blockOptionCopy[target.type] : sectionOptionCopy[target.type];
-  if (copy?.label) return copy.label;
-  return fallbackToTypeName ? humanizeTypeName(target.type) : "Selection";
-};
-
-type BlockControlGroup = "props" | "style" | "visibility";
-type SectionControlGroup = "layout" | "style" | "spacing" | "visibility";
-
-const blockControlGroups: readonly BlockControlGroup[] = ["props", "style", "visibility"];
-const sectionControlGroups: readonly SectionControlGroup[] = [
-  "layout",
-  "style",
-  "spacing",
-  "visibility",
-];
-
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
-const isBlockControlGroup = (value: string | undefined): value is BlockControlGroup =>
-  blockControlGroups.includes(value as BlockControlGroup);
-
-const isSectionControlGroup = (value: string | undefined): value is SectionControlGroup =>
-  sectionControlGroups.includes(value as SectionControlGroup);
 
 const readPathValue = (source: unknown, path: readonly string[]): unknown =>
   path.reduce<unknown>((current, key) => {
@@ -820,163 +386,7 @@ const readPathValue = (source: unknown, path: readonly string[]): unknown =>
     return current[key];
   }, source);
 
-const setNestedPathValue = (
-  source: unknown,
-  path: readonly string[],
-  value: unknown
-): Record<string, unknown> => {
-  const current = isPlainRecord(source) ? source : {};
-  const [key, ...rest] = path;
-  if (!key) return { ...current };
-  if (rest.length === 0) return { ...current, [key]: value };
-  return {
-    ...current,
-    [key]: setNestedPathValue(current[key], rest, value),
-  };
-};
-
-const patchBlockPropsForDevice = (
-  block: PageBlockV2,
-  device: PageBreakpoint,
-  patch: Record<string, unknown>
-): PageBlockV2 => {
-  const knownPatch = filterBlockPropsPatch(block.type, patch);
-  if (Object.keys(knownPatch).length === 0) return block;
-  if (device === "desktop") {
-    return { ...block, props: { ...block.props, ...knownPatch } };
-  }
-  return {
-    ...block,
-    responsive: {
-      ...block.responsive,
-      [device]: {
-        ...(block.responsive?.[device] ?? {}),
-        props: {
-          ...(block.responsive?.[device]?.props ?? {}),
-          ...knownPatch,
-        },
-      },
-    },
-  };
-};
-
-const patchBlockControlForDevice = (
-  block: PageBlockV2,
-  device: PageBreakpoint,
-  control: PageEditorControlDefinition,
-  value: unknown
-): PageBlockV2 => {
-  const [group, ...path] = control.overridePath;
-  if (!isBlockControlGroup(group) || path.length === 0) return block;
-  if (group === "props") {
-    const [key] = path;
-    if (!key) return block;
-    // Reference coupling (TASK-457): saved listing queries are scoped to one
-    // content type, so switching the collection block's content type clears
-    // the stored queryId in the same deliberate (and undoable) write — a
-    // stale query for the previous type must never linger as a dangling ref.
-    if (block.type === "collection" && key === "contentTypeId") {
-      return patchBlockPropsForDevice(block, device, { contentTypeId: value, queryId: null });
-    }
-    return patchBlockPropsForDevice(block, device, { [key]: value });
-  }
-
-  if (device === "desktop") {
-    return {
-      ...block,
-      [group]: setNestedPathValue(block[group], path, value),
-    };
-  }
-
-  const breakpoint = block.responsive?.[device] ?? {};
-  return {
-    ...block,
-    responsive: {
-      ...block.responsive,
-      [device]: {
-        ...breakpoint,
-        [group]: setNestedPathValue(breakpoint[group], path, value),
-      },
-    },
-  };
-};
-
 type PageOverrideBreakpoint = Exclude<PageBreakpoint, "desktop">;
-
-/**
- * Responsive-panel hide toggles write an EXPLICIT breakpoint (not the active
- * canvas device): desktop writes the base `visibility.visible`, tablet and
- * mobile write the existing sparse `responsive[bp].visibility.visible`
- * override containers (TASK-425). No new schema paths.
- */
-const setSectionVisibleForBreakpoint = (
-  section: PageSectionV2,
-  breakpoint: PageBreakpoint,
-  visible: boolean
-): PageSectionV2 => {
-  if (breakpoint === "desktop") {
-    return { ...section, visibility: { ...section.visibility, visible } };
-  }
-  return {
-    ...section,
-    responsive: {
-      ...section.responsive,
-      [breakpoint]: {
-        ...(section.responsive[breakpoint] ?? {}),
-        visibility: { ...(section.responsive[breakpoint]?.visibility ?? {}), visible },
-      },
-    },
-  };
-};
-
-const setBlockVisibleForBreakpoint = (
-  block: PageBlockV2,
-  breakpoint: PageBreakpoint,
-  visible: boolean
-): PageBlockV2 => {
-  if (breakpoint === "desktop") {
-    return { ...block, visibility: { ...block.visibility, visible } };
-  }
-  return {
-    ...block,
-    responsive: {
-      ...block.responsive,
-      [breakpoint]: {
-        ...(block.responsive?.[breakpoint] ?? {}),
-        visibility: { ...(block.responsive?.[breakpoint]?.visibility ?? {}), visible },
-      },
-    },
-  };
-};
-
-const patchSectionControlForDevice = (
-  section: PageSectionV2,
-  device: PageBreakpoint,
-  control: PageEditorControlDefinition,
-  value: unknown
-): PageSectionV2 => {
-  const [group, ...path] = control.overridePath;
-  if (!isSectionControlGroup(group) || path.length === 0) return section;
-
-  if (device === "desktop") {
-    return {
-      ...section,
-      [group]: setNestedPathValue(section[group], path, value),
-    };
-  }
-
-  const breakpoint = section.responsive[device] ?? {};
-  return {
-    ...section,
-    responsive: {
-      ...section.responsive,
-      [device]: {
-        ...breakpoint,
-        [group]: setNestedPathValue(breakpoint[group], path, value),
-      },
-    },
-  };
-};
 
 /**
  * EFFECTIVE display value of a control (TASK-449 owner bug #9, round 3): the
@@ -1025,24 +435,6 @@ const coerceControlFieldValue = (control: PageEditorControlDefinition, value: st
   return value;
 };
 
-const hasPathValue = (source: unknown, path: readonly string[]) =>
-  path.reduce<unknown>((current, key) => {
-    if (!isPlainRecord(current) || !(key in current)) return undefined;
-    return current[key];
-  }, source) !== undefined;
-
-const hasResponsiveOverride = (
-  breakpoint: PageBreakpoint,
-  source: unknown,
-  path: readonly string[]
-) => breakpoint !== "desktop" && hasPathValue(source, path);
-
-const hasAnyResponsiveOverride = (breakpoint: PageBreakpoint, source: unknown) =>
-  breakpoint !== "desktop" && isPlainRecord(source) && Object.keys(source).length > 0;
-
-const clampToolbarOffset = (value: number, min: number, max: number) =>
-  Math.max(min, Math.min(max, value));
-
 // Round-3 friction A: the floating toolbar anchors `bottom-6` (24px) over the
 // canvas, so its measured height plus the anchor offset plus breathing room is
 // reserved as scroll clearance below the canvas content. Without it, targets
@@ -1068,40 +460,6 @@ const isEditableShortcutTarget = (target: EventTarget | null) => {
 const isInteractiveActivationTarget = (target: EventTarget | null) => {
   if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) return false;
   return Boolean(target.closest("button, a, [role='button'], [role='menuitem'], [role='option']"));
-};
-
-type PageEditorInlineEditTarget = {
-  blockId: string;
-  propPath: string;
-};
-
-type PageEditorInlineEditCommit = {
-  blockId: string;
-  propPath: string;
-  /** Text content of the contenteditable region at blur time. */
-  text: string;
-  /** Text the canvas painted when editing started (includes renderer fallbacks). */
-  renderedText: string;
-};
-
-/** Stable ref callback: focuses a freshly activated inline-edit region with the caret at the end. */
-const focusInlineEditableNode = (node: HTMLElement | null) => {
-  if (!node || typeof document === "undefined" || document.activeElement === node) return;
-  node.focus();
-  const selection = node.ownerDocument.defaultView?.getSelection?.();
-  if (!selection || typeof node.ownerDocument.createRange !== "function") return;
-  const range = node.ownerDocument.createRange();
-  range.selectNodeContents(node);
-  range.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
-};
-
-const readInlineEditableElementText = (element: HTMLElement): string => {
-  // innerText preserves line breaks typed into multiline regions in real
-  // browsers; DOM test environments without it fall back to textContent.
-  const { innerText } = element as HTMLElement & { innerText?: unknown };
-  return typeof innerText === "string" ? innerText : (element.textContent ?? "");
 };
 
 /** First contract target rendered for a block: drives Enter-to-edit on the selected block. */
@@ -1175,98 +533,6 @@ const patchInlineTextPropForDevice = (
   nextItems[index] = nextText;
   return patchBlockPropsForDevice(block, device, { [rootKey]: nextItems });
 };
-
-const InlineEditableCanvasText = ({
-  block,
-  propPath,
-  text,
-  selected,
-  editing,
-  onStartEdit,
-  onCommit,
-}: {
-  block: PageBlockV2;
-  propPath: string;
-  text: string;
-  selected: boolean;
-  editing: boolean;
-  onStartEdit: (target: PageEditorInlineEditTarget) => void;
-  onCommit: (commit: PageEditorInlineEditCommit) => void;
-}) => {
-  const target = resolveInlineEditTarget(block, propPath);
-  // Fail closed: anything outside the inline-edit contract renders the plain
-  // text node with no contentEditable surface at all.
-  if (!target) return <>{text}</>;
-  const { multiline } = target;
-  return (
-    <span
-      // Key by painted text so a commit replaces the DOM node instead of
-      // reconciling text nodes the browser restructured while editing.
-      key={`${propPath}:${text}`}
-      ref={editing ? focusInlineEditableNode : undefined}
-      contentEditable={editing ? true : undefined}
-      suppressContentEditableWarning
-      data-page-editor-inline-edit={editing ? "active" : "idle"}
-      data-page-editor-inline-edit-prop={propPath}
-      className={
-        editing ? "cursor-text outline-none ring-1 ring-primary/60 ring-offset-2" : undefined
-      }
-      onDoubleClick={
-        editing || !selected
-          ? undefined
-          : (event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onStartEdit({ blockId: block.id, propPath });
-            }
-      }
-      onClick={
-        editing
-          ? (event) => {
-              event.stopPropagation();
-            }
-          : undefined
-      }
-      onKeyDown={
-        editing
-          ? (event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                event.stopPropagation();
-                event.currentTarget.blur();
-                return;
-              }
-              if (event.key === "Enter" && !multiline) {
-                event.preventDefault();
-                event.stopPropagation();
-                event.currentTarget.blur();
-              }
-            }
-          : undefined
-      }
-      onBlur={
-        editing
-          ? (event) => {
-              onCommit({
-                blockId: block.id,
-                propPath,
-                text: readInlineEditableElementText(event.currentTarget),
-                renderedText: text,
-              });
-            }
-          : undefined
-      }
-    >
-      {text}
-    </span>
-  );
-};
-
-const readSectionBreakpointOverride = (section: PageSectionV2, breakpoint: PageBreakpoint) =>
-  breakpoint === "desktop" ? undefined : section.responsive[breakpoint];
-
-const readBlockBreakpointOverride = (block: PageBlockV2 | undefined, breakpoint: PageBreakpoint) =>
-  breakpoint === "desktop" ? undefined : block?.responsive?.[breakpoint];
 
 const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: unknown) => {
   if (isSessionExpiredApiError(error)) {
@@ -1355,534 +621,6 @@ const duplicateSectionWithIds = (section: PageSectionV2): PageSectionV2 => ({
   name: `${section.name} copy`,
   blocks: section.blocks.map(duplicatePageBlockTreeWithNewIds),
 });
-
-const HiddenBlockGhost = ({ block }: { block: PageBlockV2 }) => (
-  <div
-    className="flex min-h-14 items-center justify-between gap-3 rounded border border-dashed border-muted-foreground/40 bg-muted/70 px-3 py-2 text-xs text-muted-foreground"
-    data-page-editor-hidden-block-ghost="true"
-  >
-    <span className="shrink-0 font-semibold uppercase">Hidden {block.type}</span>
-    <span className="min-w-0 truncate">{getBlockDisplayLabel(block)}</span>
-  </div>
-);
-
-// Hover-revealed "+" insertion zone rendered in every canvas gap (above the
-// first section, between sections, and below the last one). Activating it
-// opens the existing command palette pre-targeted at the gap index.
-const SectionGapInsertZone = ({
-  index,
-  onInsert,
-}: {
-  index: number;
-  onInsert: (gapIndex: number) => void;
-}) => (
-  <div
-    className="group relative flex h-7 items-center justify-center"
-    data-page-editor-section-gap={index}
-    onClick={(event) => event.stopPropagation()}
-  >
-    <div
-      className="absolute inset-x-6 top-1/2 h-px -translate-y-1/2 bg-primary/30 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
-      aria-hidden="true"
-    />
-    <Button
-      type="button"
-      variant="outline"
-      size="sm"
-      className={`${editorCanvasCtaButtonClass} relative z-10 h-6 gap-1 rounded-full px-2 text-xs opacity-0 transition-opacity focus-visible:opacity-100 group-focus-within:opacity-100 group-hover:opacity-100`}
-      aria-label={`Add section at position ${index + 1}`}
-      onClick={() => onInsert(index)}
-    >
-      <Plus className="h-3 w-3" />
-      Add section
-    </Button>
-  </div>
-);
-
-/**
- * Canvas-only ghost "Add block" tile (owner findings #5/#8). Always stops
- * propagation so activating it never changes the selection through bubbling;
- * the insert path itself is explicit via the pre-targeted command palette.
- */
-const CanvasGhostAddTile = ({
-  ghostKind,
-  ariaLabel,
-  compact = false,
-  onAdd,
-}: {
-  ghostKind: string;
-  ariaLabel: string;
-  compact?: boolean;
-  onAdd: () => void;
-}) => (
-  <button
-    type="button"
-    className={compact ? editorCanvasGhostTileCompactClass : editorCanvasGhostTileClass}
-    data-page-editor-ghost={ghostKind}
-    aria-label={ariaLabel}
-    onClick={(event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      onAdd();
-    }}
-  >
-    <Plus className={compact ? "h-3 w-3" : "h-4 w-4"} />
-    Add block
-  </button>
-);
-
-const SectionCanvas = ({
-  section,
-  baseSection,
-  selected,
-  selectedBlockPath,
-  selectedBlockId,
-  inlineEditTarget,
-  device,
-  canAddBlockBeside,
-  canvasDataByBlockId,
-  onSelect,
-  onSelectBlock,
-  onAddBlock,
-  onAddBlockToTarget,
-  onAddBlockBeside,
-  onStartInlineEdit,
-  onCommitInlineEdit,
-}: {
-  section: PageSectionV2;
-  baseSection: PageSectionV2;
-  selected: boolean;
-  selectedBlockPath: PageBlockPath | null;
-  selectedBlockId: string | null;
-  inlineEditTarget: PageEditorInlineEditTarget | null;
-  device: PageBreakpoint;
-  canAddBlockBeside: boolean;
-  /**
-   * Editor-resolved preview bindings for data-bound blocks (TASK-456 form
-   * previews, TASK-457 collection previews). Canvas-only data — publish and
-   * public runtime paths never see this map.
-   */
-  canvasDataByBlockId: PageRuntimeDataByBlockId;
-  onSelect: () => void;
-  onSelectBlock: (blockPath: PageBlockPath) => void;
-  onAddBlock: () => void;
-  onAddBlockToTarget: (target: PageBlockInsertTarget, options?: { column?: number }) => void;
-  onAddBlockBeside: () => void;
-  onStartInlineEdit: (target: PageEditorInlineEditTarget) => void;
-  onCommitInlineEdit: (commit: PageEditorInlineEditCommit) => void;
-}) => {
-  const sectionHasOverride = hasAnyResponsiveOverride(
-    device,
-    readSectionBreakpointOverride(baseSection, device)
-  );
-  const visibilityBadges = [
-    !section.visibility.visible ? "Hidden" : null,
-    section.visibility.authOnly ? "Auth only" : null,
-    section.visibility.startsAt ? `Starts ${section.visibility.startsAt}` : null,
-    section.visibility.endsAt ? `Ends ${section.visibility.endsAt}` : null,
-  ].filter((badge): badge is string => Boolean(badge));
-  // The painted grid column count (template floors + stackVertical), NOT the
-  // raw layout.columns value — ghost tiles must map onto real grid cells.
-  const effectiveColumns = getPageSectionEffectiveColumns(section);
-  // Owner finding #5 (round 3): every column-targeted ghost tile appends at
-  // the END of the root list and stamps `style.column` on the new block, so
-  // the block lands at the bottom of that column's stack regardless of how
-  // the remaining blocks are distributed.
-  const addBlockToSectionColumn = (column: number) => {
-    onSelect();
-    onAddBlockToTarget({ listPath: {}, index: section.blocks.length }, { column });
-  };
-  return (
-    <section
-      className={`group relative transition ${
-        selected
-          ? "outline outline-2 outline-offset-2 outline-primary"
-          : "hover:outline hover:outline-1 hover:outline-offset-2 hover:outline-primary/40"
-      } ${section.visibility.visible ? "" : "opacity-65"}`}
-      data-page-editor-section={section.type}
-      data-section-id={section.id}
-      data-page-editor-responsive-target={sectionHasOverride ? "override" : "inherited"}
-      data-page-editor-visibility={section.visibility.visible ? "visible" : "hidden"}
-      onClick={(event) => {
-        event.stopPropagation();
-        onSelect();
-      }}
-    >
-      <div className="absolute -top-3 left-4 hidden rounded bg-primary px-2 py-0.5 text-[10px] font-semibold uppercase text-primary-foreground group-hover:block group-focus-within:block">
-        {section.name} · {section.variant}
-      </div>
-      {sectionHasOverride ? (
-        <span className="absolute right-3 top-3 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
-          {device} override
-        </span>
-      ) : null}
-      {visibilityBadges.length > 0 ? (
-        <div className="absolute right-3 top-9 z-10 flex max-w-[70%] flex-wrap justify-end gap-1">
-          {visibilityBadges.map((badge) => (
-            <span
-              key={badge}
-              className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground"
-              data-page-editor-visibility-badge={badge}
-            >
-              {badge}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      <PageSectionContent
-        section={section}
-        layoutMode="canvas-device"
-        includeHiddenBlocks
-        runtimeDataByBlockId={canvasDataByBlockId}
-        emptyContent={
-          effectiveColumns >= 2 ? (
-            // Owner finding #5 (round 3): an empty multi-column section paints
-            // one ghost tile per column cell, and each tile inserts WITH that
-            // column's assignment so "column 2 starts empty while column 1
-            // fills" works from the very first block.
-            <>
-              {Array.from({ length: effectiveColumns }, (_, columnIndex) => (
-                <CanvasGhostAddTile
-                  key={`section-column-ghost-${columnIndex + 1}`}
-                  ghostKind="section-column"
-                  ariaLabel={`Add block to column ${columnIndex + 1}`}
-                  onAdd={() => addBlockToSectionColumn(columnIndex + 1)}
-                />
-              ))}
-            </>
-          ) : (
-            <button
-              type="button"
-              className={`rounded border-dashed p-6 text-center text-sm ${editorCanvasCtaButtonClass}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSelect();
-                onAddBlock();
-              }}
-            >
-              Add the first block
-            </button>
-          )
-        }
-        trailingContent={
-          effectiveColumns >= 2 && section.blocks.length > 0 ? (
-            // Owner finding #5 (round 3): while the section still auto-flows
-            // (no column assignments yet), EVERY column keeps its own
-            // persistent add tile. The tiles append after the last block, so
-            // N consecutive auto-flow cells cover each column exactly once at
-            // the bottom of its stack; tile order maps each tile to the
-            // column its cell lands in. Once assignments are active the
-            // per-column trailing hook below owns these affordances instead
-            // (the renderer ignores trailingContent in wrapper mode).
-            <>
-              {Array.from({ length: effectiveColumns }, (_, offset) => {
-                const column = ((section.blocks.length + offset) % effectiveColumns) + 1;
-                return (
-                  <CanvasGhostAddTile
-                    key={`section-column-append-ghost-${column}`}
-                    ghostKind="section-column-append"
-                    ariaLabel={`Add block to column ${column}`}
-                    compact
-                    onAdd={() => addBlockToSectionColumn(column)}
-                  />
-                );
-              })}
-            </>
-          ) : null
-        }
-        renderSectionColumnTrailing={({ column, childCount }) => (
-          // Owner finding #5 (round 3): with per-column composition active,
-          // every column stack ends in a persistent ghost add tile (full-size
-          // in an empty column, compact under existing blocks).
-          <CanvasGhostAddTile
-            ghostKind={childCount === 0 ? "section-column" : "section-column-append"}
-            ariaLabel={`Add block to column ${column}`}
-            compact={childCount > 0}
-            onAdd={() => addBlockToSectionColumn(column)}
-          />
-        )}
-        renderColumnsSlotTrailing={({ slotKey, ownerPath, childCount }) => {
-          // Owner finding #8: per-slot add affordances on the canvas, wired to
-          // the same insert path the Layers panel uses ("Add block to Column N").
-          const canAdd =
-            ownerPath.length + 1 <= PAGE_BLOCK_MAX_TREE_DEPTH &&
-            childCount < PAGE_BLOCK_MAX_CHILDREN_PER_SLOT;
-          if (!canAdd) return null;
-          const slotLabel = formatSlotLabel(slotKey);
-          return (
-            <CanvasGhostAddTile
-              ghostKind={childCount === 0 ? "columns-slot" : "columns-slot-append"}
-              ariaLabel={`Add block to ${slotLabel}`}
-              compact={childCount > 0}
-              onAdd={() => {
-                onSelect();
-                onAddBlockToTarget({
-                  listPath: { ownerPath, slotKey },
-                  index: childCount,
-                });
-              }}
-            />
-          );
-        }}
-        renderInlineText={({ block, propPath, text }) => (
-          <InlineEditableCanvasText
-            block={block}
-            propPath={propPath}
-            text={text}
-            selected={block.id === selectedBlockId}
-            editing={Boolean(
-              inlineEditTarget &&
-              inlineEditTarget.blockId === block.id &&
-              inlineEditTarget.propPath === propPath
-            )}
-            onStartEdit={onStartInlineEdit}
-            onCommit={onCommitInlineEdit}
-          />
-        )}
-        renderBlockFrame={({
-          block,
-          content,
-          renderProps: blockRenderProps,
-          blockPath,
-          depth,
-          slotKey,
-        }) => {
-          const baseBlock = getPageBlockAtPath(baseSection, blockPath) ?? undefined;
-          const blockHasOverride = hasAnyResponsiveOverride(
-            device,
-            readBlockBreakpointOverride(baseBlock, device)
-          );
-          const blockSelected = isSamePageBlockPath(blockPath, selectedBlockPath);
-          return (
-            <div
-              className={joinPageRenderClasses(
-                "relative transition outline outline-1 outline-offset-2",
-                blockRenderProps.className,
-                blockSelected
-                  ? "outline-primary ring-2 ring-primary/20"
-                  : "outline-transparent hover:outline-primary/30",
-                block.visibility.visible ? undefined : "opacity-70"
-              )}
-              style={blockRenderProps.style}
-              {...blockRenderProps.dataAttributes}
-              data-page-editor-block={block.type}
-              data-page-editor-block-id={block.id}
-              data-page-editor-block-path={serializePageBlockPath(blockPath)}
-              data-page-editor-block-depth={depth}
-              data-page-editor-block-slot-key={slotKey}
-              data-page-editor-responsive-target={blockHasOverride ? "override" : "inherited"}
-              data-page-editor-visibility={block.visibility.visible ? "visible" : "hidden"}
-              data-selected={blockSelected ? "true" : undefined}
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                onSelectBlock(blockPath);
-              }}
-            >
-              {blockHasOverride ? (
-                <span className="absolute right-2 top-2 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-primary">
-                  {device}
-                </span>
-              ) : null}
-              {block.visibility.visible ? content : <HiddenBlockGhost block={block} />}
-              {blockSelected && canAddBlockBeside ? (
-                // Owner finding #7 (round 3): canvas-side "Add block beside"
-                // affordance — a compact ghost "+" handle straddling the
-                // selected block's right edge. Same action as the toolbar
-                // button; canvas-only chrome, never rendered on the front.
-                <button
-                  type="button"
-                  className={editorCanvasGhostBesideHandleClass}
-                  data-page-editor-ghost="add-block-beside"
-                  title="Add block beside"
-                  aria-label="Add block beside"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    onAddBlockBeside();
-                  }}
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                </button>
-              ) : null}
-            </div>
-          );
-        }}
-      />
-    </section>
-  );
-};
-
-const createLayerBlockPath = (
-  ownerPath: PageBlockPath | null,
-  slotKey: PageBlockPath[number]["slotKey"],
-  index: number
-): PageBlockPath =>
-  ownerPath
-    ? ([...ownerPath, { slotKey, index }] as PageBlockPath)
-    : ([{ index }] as PageBlockPath);
-
-const formatSlotLabel = (slotKey: string) =>
-  slotKey.startsWith("column:")
-    ? `Column ${slotKey.replace("column:", "")}`
-    : slotKey.replace(/-/g, " ").replace(/^./, (character) => character.toUpperCase());
-
-const LayerBlockRows = ({
-  section,
-  blocks,
-  ownerPath,
-  slotKey,
-  selectedBlockPath,
-  canAddBeside,
-  device,
-  onSelectBlock,
-  onAddToTarget,
-  onMoveToTarget,
-  onAddBeside,
-}: {
-  section: PageSectionV2;
-  blocks: readonly PageBlockV2[];
-  ownerPath: PageBlockPath | null;
-  slotKey?: PageBlockPath[number]["slotKey"];
-  selectedBlockPath: PageBlockPath | null;
-  canAddBeside: boolean;
-  device: PageBreakpoint;
-  onSelectBlock: (blockPath: PageBlockPath) => void;
-  onAddToTarget: (target: PageBlockInsertTarget) => void;
-  onMoveToTarget: (target: PageBlockInsertTarget) => void;
-  onAddBeside: () => void;
-}) => (
-  <div className="space-y-1">
-    {blocks.map((block, index) => {
-      const blockPath = createLayerBlockPath(ownerPath, slotKey, index);
-      const serializedPath = serializePageBlockPath(blockPath);
-      const slotKeys = getPageBlockEditorSlotKeys(block);
-      const blockSelected = isSamePageBlockPath(blockPath, selectedBlockPath);
-      return (
-        <div key={block.id} className="space-y-1">
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              className={`flex min-w-0 flex-1 items-center justify-between rounded px-2 py-1.5 text-left text-xs ${
-                blockSelected ? "bg-primary/10 text-primary" : "hover:bg-muted"
-              }`}
-              data-page-editor-layer-block-id={block.id}
-              data-page-editor-layer-block-path={serializedPath}
-              data-page-editor-responsive-target={
-                hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
-                  ? "override"
-                  : "inherited"
-              }
-              onClick={() => onSelectBlock(blockPath)}
-            >
-              <span className="truncate">{getBlockDisplayLabel(block)}</span>
-              <span className="ml-2 shrink-0 uppercase text-muted-foreground">
-                {hasAnyResponsiveOverride(device, readBlockBreakpointOverride(block, device))
-                  ? `${device} `
-                  : ""}
-                {block.type}
-              </span>
-            </button>
-            {blockSelected ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="xs"
-                className="shrink-0"
-                title="Add block beside"
-                aria-label="Add block beside"
-                disabled={!canAddBeside}
-                onClick={onAddBeside}
-              >
-                Beside
-              </Button>
-            ) : null}
-          </div>
-          {slotKeys.length > 0 ? (
-            <div className="space-y-1 border-l pl-3">
-              {slotKeys.map((childSlotKey) => {
-                const children = block.slots?.[childSlotKey] ?? [];
-                const target: PageBlockInsertTarget = {
-                  listPath: { ownerPath: blockPath, slotKey: childSlotKey },
-                  index: children.length,
-                };
-                const listResult = getPageBlockListAtPath(section, target.listPath);
-                const canAdd =
-                  listResult.status === "ok" &&
-                  blockPath.length + 1 <= PAGE_BLOCK_MAX_TREE_DEPTH &&
-                  listResult.blocks.length < PAGE_BLOCK_MAX_CHILDREN_PER_SLOT;
-                const selectedBlockForMove = selectedBlockPath
-                  ? getPageBlockAtPath(section, selectedBlockPath)
-                  : null;
-                const canMove =
-                  selectedBlockPath !== null &&
-                  selectedBlockForMove !== null &&
-                  canAdd &&
-                  getPageBlockInsertTargetStatus(section, target, selectedBlockForMove) === "ok" &&
-                  !isSamePageBlockPath(selectedBlockPath, blockPath) &&
-                  !(selectedBlockPath && isPageBlockPathDescendant(blockPath, selectedBlockPath));
-                const slotLabel = formatSlotLabel(childSlotKey);
-                return (
-                  <div
-                    key={`${serializedPath}:${childSlotKey}`}
-                    className="space-y-1"
-                    data-page-editor-layer-slot-key={childSlotKey}
-                    data-page-editor-layer-slot-owner-path={serializedPath}
-                  >
-                    <div className="flex items-center justify-between gap-2 rounded bg-muted/60 px-2 py-1 text-[11px] uppercase text-muted-foreground">
-                      <span>{slotLabel}</span>
-                      <span className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          title={`Add block to ${slotLabel}`}
-                          aria-label={`Add block to ${slotLabel}`}
-                          disabled={!canAdd}
-                          onClick={() => onAddToTarget(target)}
-                        >
-                          Add
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="xs"
-                          title={`Move selected block to ${slotLabel}`}
-                          aria-label={`Move selected block to ${slotLabel}`}
-                          disabled={!canMove}
-                          onClick={() => onMoveToTarget(target)}
-                        >
-                          Move here
-                        </Button>
-                      </span>
-                    </div>
-                    {children.length > 0 ? (
-                      <LayerBlockRows
-                        section={section}
-                        blocks={children}
-                        ownerPath={blockPath}
-                        slotKey={childSlotKey}
-                        selectedBlockPath={selectedBlockPath}
-                        canAddBeside={canAddBeside}
-                        device={device}
-                        onSelectBlock={onSelectBlock}
-                        onAddToTarget={onAddToTarget}
-                        onMoveToTarget={onMoveToTarget}
-                        onAddBeside={onAddBeside}
-                      />
-                    ) : (
-                      <p className="px-2 py-1 text-[11px] text-muted-foreground">Empty</p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          ) : null}
-        </div>
-      );
-    })}
-  </div>
-);
 
 export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEditorProps) {
   const editorHost = host ?? defaultPagesEditorHost;
@@ -2283,9 +1021,15 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       key: Key,
       patch: Partial<PageSectionV2[Key]>
     ) => {
+      const safePatch =
+        key === "style"
+          ? (sanitizePageSectionStylePatch(patch as Partial<PageSectionV2["style"]>) as Partial<
+              PageSectionV2[Key]
+            >)
+          : patch;
       updateSelectedSection((section) => {
         if (device === "desktop") {
-          return { ...section, [key]: { ...section[key], ...patch } };
+          return { ...section, [key]: { ...section[key], ...safePatch } };
         }
         return {
           ...section,
@@ -2296,7 +1040,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
               [key]: {
                 ...((section.responsive[device]?.[key] as Record<string, unknown> | undefined) ??
                   {}),
-                ...patch,
+                ...safePatch,
               },
             },
           },
@@ -3818,96 +2562,27 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         ) : null}
 
         {commandOpen ? (
-          <div
-            className="absolute inset-0 z-40 flex items-start justify-center overflow-hidden bg-background/50 p-4 backdrop-blur-sm sm:p-6"
-            role="dialog"
-            aria-label="Command palette"
-          >
-            <div
-              className="flex max-h-[calc(100dvh_-_8rem)] min-h-0 w-full max-w-xl flex-col overflow-hidden rounded-xl border bg-background p-4 shadow-2xl sm:max-h-[calc(100dvh_-_9rem)]"
-              data-page-editor-command-dialog="viewport-safe"
-            >
-              <div className="flex shrink-0 items-center gap-2 rounded border px-3 py-2">
-                <Search className="h-4 w-4 text-muted-foreground" />
-                <input
-                  className="w-full bg-transparent text-sm outline-none"
-                  value={commandQuery}
-                  onChange={(event) => handleCommandQueryChange(event.target.value)}
-                  onKeyDown={handleCommandKeyDown}
-                  placeholder="Search sections and blocks"
-                  aria-label="Search sections and blocks"
-                  aria-controls="page-editor-command-results"
-                  autoFocus
-                />
-              </div>
-              <div
-                id="page-editor-command-results"
-                className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1"
-                data-page-editor-command-results-scroll="true"
-              >
-                <div className="grid gap-4 md:grid-cols-2">
-                  {canInsertSections ? (
-                    <CommandGroup title="Sections">
-                      {filteredSections.map((option, index) => (
-                        <CommandButton
-                          key={option.type}
-                          label={option.label}
-                          description={option.description}
-                          active={commandActiveIndex === index}
-                          onClick={() => addSection(option.type)}
-                        />
-                      ))}
-                    </CommandGroup>
-                  ) : null}
-                  <CommandGroup title="Blocks">
-                    {filteredBlocks.map((option, index) => {
-                      const resultIndex = filteredSections.length + index;
-                      return (
-                        <CommandButton
-                          key={option.type}
-                          label={option.label}
-                          description={option.description}
-                          active={commandActiveIndex === resultIndex}
-                          onClick={() => addBlock(option.type)}
-                        />
-                      );
-                    })}
-                  </CommandGroup>
-                  {editorHost.templateLibrary && filteredTemplates.length > 0 ? (
-                    <CommandGroup title="Page templates">
-                      {filteredTemplates.map((option, index) => {
-                        const resultIndex = filteredSections.length + filteredBlocks.length + index;
-                        return (
-                          <CommandButton
-                            key={option.id}
-                            label={option.name}
-                            description={option.description ?? "Insert template sections"}
-                            active={commandActiveIndex === resultIndex}
-                            onClick={() => void insertTemplate(option.id)}
-                          />
-                        );
-                      })}
-                    </CommandGroup>
-                  ) : null}
-                </div>
-              </div>
-              <div className="mt-4 flex shrink-0 justify-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setCommandOpen(false);
-                    setCommandActiveIndex(0);
-                    setPendingBlockInsert(null);
-                    setPendingSectionInsertIndex(null);
-                    setPendingBesideBlockPath(null);
-                  }}
-                >
-                  Close
-                </Button>
-              </div>
-            </div>
-          </div>
+          <PageEditorCommandPalette
+            commandQuery={commandQuery}
+            commandActiveIndex={commandActiveIndex}
+            canInsertSections={canInsertSections}
+            sections={filteredSections}
+            blocks={filteredBlocks}
+            templates={filteredTemplates}
+            showTemplates={Boolean(editorHost.templateLibrary)}
+            onQueryChange={handleCommandQueryChange}
+            onKeyDown={handleCommandKeyDown}
+            onAddSection={addSection}
+            onAddBlock={addBlock}
+            onInsertTemplate={(id) => void insertTemplate(id)}
+            onClose={() => {
+              setCommandOpen(false);
+              setCommandActiveIndex(0);
+              setPendingBlockInsert(null);
+              setPendingSectionInsertIndex(null);
+              setPendingBesideBlockPath(null);
+            }}
+          />
         ) : null}
 
         <ConfirmActionDialog
@@ -3991,38 +2666,6 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     </EditorShell>
   );
 }
-
-const CommandGroup = ({ title, children }: { title: string; children: ReactNode }) => (
-  <div>
-    <p className="mb-2 text-xs font-semibold uppercase text-muted-foreground">{title}</p>
-    <div className="space-y-2">{children}</div>
-  </div>
-);
-
-const CommandButton = ({
-  label,
-  description,
-  active,
-  onClick,
-}: {
-  label: string;
-  description: string;
-  active?: boolean;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    className={`w-full rounded border p-3 text-left hover:bg-muted ${
-      active ? "border-primary bg-primary/10" : ""
-    }`}
-    aria-current={active ? "true" : undefined}
-    data-page-editor-command-active={active ? "true" : "false"}
-    onClick={onClick}
-  >
-    <span className="block text-sm font-semibold">{label}</span>
-    <span className="mt-1 block text-xs text-muted-foreground">{description}</span>
-  </button>
-);
 
 const ToolbarSubpanel = ({
   panel,
@@ -4415,54 +3058,6 @@ const ResponsivePanelResetButton = ({
     <RotateCcw className="h-3 w-3" />
     Reset
   </button>
-);
-
-/**
- * Icon button for the dark floating toolbar. The accessible name and the
- * hover description both come from toolbar panel/action metadata and render
- * through the shared tooltip component instead of native `title` strings.
- */
-const ToolbarIconButton = ({
-  tooltip,
-  active = false,
-  expanded,
-  panelId,
-  disabled = false,
-  onClick,
-  onPointerDown,
-  children,
-}: {
-  tooltip: ToolbarActionTooltip;
-  active?: boolean;
-  expanded?: boolean;
-  panelId?: ToolbarPanel;
-  disabled?: boolean;
-  onClick?: () => void;
-  onPointerDown?: (event: ReactPointerEvent<HTMLButtonElement>) => void;
-  children: ReactNode;
-}) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <button
-        type="button"
-        aria-label={tooltip.label}
-        aria-expanded={expanded}
-        data-page-editor-toolbar-icon={panelId}
-        disabled={disabled}
-        className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors ${editorControlFocusClass} ${
-          active ? "bg-white/15 text-white" : "text-slate-300 hover:bg-white/10 hover:text-white"
-        } disabled:pointer-events-none disabled:opacity-40`}
-        onClick={onClick}
-        onPointerDown={onPointerDown}
-      >
-        {children}
-      </button>
-    </TooltipTrigger>
-    <TooltipContent side="top" sideOffset={8} className="max-w-[240px]">
-      <p className="text-xs font-semibold">{tooltip.label}</p>
-      <p className="text-xs opacity-80">{tooltip.description}</p>
-    </TooltipContent>
-  </Tooltip>
 );
 
 const SectionRegistryControlField = ({

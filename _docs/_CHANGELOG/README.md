@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1164.
+Ordinary new entries continue at 1174.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,13 @@ Ordinary new entries continue at 1164.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1171 for the next changelog entry.
+assistant policy coverage fix. Use 1174 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1173 | 2026-06-14 | TASK-466 Page full-width section background bleed | Pages/Public Runtime/Admin Preview/QA/Docs |
+| 1172 | 2026-06-14 | TASK-464 Page Editor modular reuse and security | Pages/Admin UI/Architecture/Security/QA/Docs |
+| 1171 | 2026-06-14 | TASK-465 Page route validation memory hardening | Pages/Templates/API/Performance/QA |
 | 1170 | 2026-06-14 | TASK-463 CodeQL Pages security remediation | Security/Pages/Dependencies/QA/Docs |
 | 1169 | 2026-06-13 | TASK-462 admin browser/runtime boundary hardening | Admin Build/Architecture/Runtime Boundary/QA/Docs |
 | 1168 | 2026-06-13 | TASK-461 hide Advanced Widgets entry point | Widgets/Admin UI/Navigation/Docs |

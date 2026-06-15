@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 107 tasks
+- **To Do:** 151 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2455 tasks
+- **Done:** 2485 tasks
 
 ---
 
@@ -88,6 +88,50 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
+| TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
+| TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |
+| TASK-467-03 | Lazy Split Widget Editor Registry | High | Large | Stop metadata registry access from statically importing every widget editor module. |
+| TASK-467-03-L01 | Lazy Editor Component Contract And Registry Compatibility | High | Medium | Preserve the required editor object while allowing `React.lazy` editor components. |
+| TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Large | Replace the eager widget editor barrel with typed lazy editor component bundles. |
+| TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
+| TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
+| TASK-468 | Custom Screens Canvas Content Views Rewrite | High | Very Large | Rewrite Custom Screens from legacy widget blocks to a screen-owned canvas contract for custom content data. |
+| TASK-468-01 | Contract Freeze Drift Audit And Migration Decision Record | High | Medium | Freeze V4 ScreenDocument contract, resolve binding drift, and require a fresh drift audit before implementation. |
+| TASK-468-01-L01 | Current State Inventory And Drift Freeze | High | Medium | Inventory current Custom Screen implementation, legacy storage, active routes, tests, and drift risks before changing contracts. |
+| TASK-468-01-L02 | V4 Contract Decision Record And Validation Plan | High | Medium | Freeze V4 screen/list/binding decisions, migration policy, validation lanes, and external audit expectations. |
+| TASK-468-02 | Screen Document V4 Service Contract And Migration Adapters | High | Large | Add V4 screen document schemas, normalizers, service mapping, and V1/V2/V3 migration adapters. |
+| TASK-468-02-L01 | Screen Document Domain Owner | High | Large | Own V4 screen document types, defaults, strict normalizers, binding validation, and pure tests. |
+| TASK-468-02-L02 | Legacy V1-V3 Read Migration Adapters | High | Large | Convert legacy rows into V4 read models or explicit placeholders without destructive writes. |
+| TASK-468-02-L03 | V4 Service Mapping And Route Validation | High | Large | Route Custom Screen service and admin validation through strict V4 schemas and machine-readable errors. |
+| TASK-468-02-L04 | V4 Write Transition And Compatibility Guards | High | Medium | Transition writes to V4 only while preserving read compatibility and rejecting legacy write drift. |
+| TASK-468-03 | Neutral Authoring Shell Extraction For Screen Canvas Reuse | High | Large | Extract Page Editor authoring chrome into neutral adapters without leaking Page v2 services into Screens. |
+| TASK-468-03-L01 | Authoring Inventory And Boundary Guards | High | Medium | Classify reusable Page Editor authoring modules and add import-boundary guards before extraction. |
+| TASK-468-03-L02 | Neutral Canvas Frame And Selection Primitives | High | Large | Extract document-agnostic canvas frame, selection, drag/drop, and viewport primitives. |
+| TASK-468-03-L03 | Neutral Toolbar Layers And Command Shell | High | Large | Extract reusable toolbar, layers, command dispatch, and inspector slot chrome behind adapters. |
+| TASK-468-03-L04 | Page Adapter Parity Validation | High | Medium | Prove Page Editor behavior and bundle boundaries remain stable after authoring extraction. |
+| TASK-468-04 | Custom Screen Canvas Editor Cutover | High | Very Large | Replace the legacy widget builder with a content-type-aware screen section/block canvas editor. |
+| TASK-468-04-L01 | V4 Editor Client And Local Model | High | Large | Add V4 editor client, reducer-owned draft state, dirty protection, and conflict handling. |
+| TASK-468-04-L02 | Screen Canvas Shell And Section Block Operations | High | Large | Implement screen canvas adapter and pure section/block insert, move, duplicate, delete helpers. |
+| TASK-468-04-L03 | Field Palette Binding Inspector And Missing Field States | High | Large | Add content-type field palette, binding inspector, and repair states for deleted or invalid fields. |
+| TASK-468-04-L04 | Save Dirty State Cache And Preview Flow | High | Large | Wire V4 save, preview, cache invalidation, conflict handling, and unsaved-change protection. |
+| TASK-468-04-L05 | Editor Cutover Tests And Legacy Builder Guard | High | Medium | Prove active editor no longer imports the legacy widget builder and record bundle evidence. |
+| TASK-468-05 | Screen Runtime Records List And Entry Editing Cutover | High | Very Large | Render records and entry editing through V4 screen runtime instead of the widget bridge. |
+| TASK-468-05-L01 | Screen Runtime Renderer | High | Large | Render V4 screen sections/blocks directly without WidgetRenderer or screen-field widget bridges. |
+| TASK-468-05-L02 | Entry Field Controls And Draft Bridge | High | Large | Connect writable screen bindings to existing custom content entry field controls and save payloads. |
+| TASK-468-05-L03 | Records List Presentation Modes | High | Large | Move record lists to V4 list presentation config with content-type-aware columns/cards. |
+| TASK-468-05-L04 | Record Workspace Routing Cache And Active Context | High | Medium | Use canonical admin paths, cache invalidation, prefetch, and bounded active context for records. |
+| TASK-468-05-L05 | Runtime Entry Tests And Legacy Bridge Guard | High | Medium | Prove list/runtime/entry routes no longer use the legacy widget bridge. |
+| TASK-468-06 | Assistant Active Surface And Cache Cutover | High | Large | Move assistant actions and active-surface summaries from widget patches to screen sections, blocks, and bindings. |
+| TASK-468-06-L01 | Assistant V4 Action Schemas Registry And Mapper | High | Large | Replace widget-patch assistant actions with strict V4 section/block/binding action schemas. |
+| TASK-468-06-L02 | V4 Active Surface Context Hydration | High | Medium | Hydrate bounded, redacted active-surface summaries from V4 screen state. |
+| TASK-468-06-L03 | Assistant Executor Policy Dry Run And Undo | High | Large | Route V4 assistant actions through dry-run, apply, audit, conflict, and undo policy. |
+| TASK-468-06-L04 | Assistant Client Cache And Regression Coverage | High | Medium | Invalidate Custom Screen caches after assistant mutations without regressing lightweight imports. |
+| TASK-468-07 | Legacy Removal DB Cleanup Docs And Closure Validation | High | Large | Remove legacy screen widgets, duplicated blocks/bindings storage, stale docs, and close the family with validation. |
+| TASK-468-07-L01 | V4 Backfill Verification Migration | High | Large | Verify or backfill all Custom Screen rows to V4 before any destructive cleanup. |
+| TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Remove active screen-only widget builder/runtime surfaces after V4 cutover and backfill verification. |
+| TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Drop duplicate legacy `custom_screens.blocks` and `custom_screens.bindings` after guards pass. |
+| TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
 | TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
 | TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
 | TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
@@ -216,6 +260,36 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-466 | Page Full Width Section Background Bleed | High | Small | Done (2026-06-14): Full-width section variants no longer keep the outer wrapper gutter, so hero/CTA backgrounds can fill the full band. |
+| TASK-464 | Page Editor Modular Reuse And Security Hardening | High | Very Large | Done (2026-06-14): PageEditor split into reusable browser-safe authoring modules with centralized sanitizer guards and live Pages/Templates/Menu Design smoke evidence. |
+| TASK-464-01 | Contract Freeze Module Map And UI Parity Baseline | High | Medium | Done (2026-06-14): Module ownership, host boundaries, and UI parity baseline closed in the TASK-464 family validation. |
+| TASK-464-01-L01 | Map PageEditor Monolith Responsibilities And Boundaries | High | Small | Done (2026-06-14): Responsibilities mapped into host contracts, state/mutation helpers, canvas, toolbar, layers, command/template, and sanitizer owners. |
+| TASK-464-01-L02 | Capture UI Parity Characterization Baseline | High | Medium | Done (2026-06-14): Existing PageEditor, Page Templates, Menu Design, renderer, and live browser smoke evidence preserved UI/UX parity. |
+| TASK-464-02 | Extract Pure Editor Host State And Mutation Contracts | High | Large | Done (2026-06-14): Browser-safe host, state, and mutation contracts extracted without moving host API/client ownership into reusable modules. |
+| TASK-464-02-L01 | Extract Host Contracts And Import Guards | High | Medium | Done (2026-06-14): `pageEditorHostContract.ts` owns structural host types and import guards prove reusable modules stay client-free. |
+| TASK-464-02-L02 | Extract Selection Device And Toolbar State Helpers | High | Medium | Done (2026-06-14): Selection, responsive override, and toolbar offset helpers moved to pure Page services with Vitest coverage. |
+| TASK-464-02-L03 | Extract Typed Mutation Action Groups | High | Medium | Done (2026-06-14): Block/section prop, control, visibility, and style mutation helpers moved behind typed sanitizer-aware actions. |
+| TASK-464-03 | Extract Reusable Page Authoring Canvas Module | High | Large | Done (2026-06-14): Page v2 canvas shell, section/block chrome, ghost affordances, slots, and inline edit wiring moved into `PageAuthoringCanvas`. |
+| TASK-464-03-L01 | Extract Canvas Frame And Section Shell | High | Medium | Done (2026-06-14): Canvas frame/section shell moved with exact data markers and shell-owned site token bridge. |
+| TASK-464-03-L02 | Extract Block Frames Ghost Tiles And Slot Affordances | High | Medium | Done (2026-06-14): Block frames, hidden ghosts, add-beside controls, and nested slot affordances extracted with component tests. |
+| TASK-464-03-L03 | Extract Inline Edit And Canvas Runtime Binding Wiring | High | Medium | Done (2026-06-14): Inline edit and runtime binding props remain typed and sanitizer-safe in the reusable canvas. |
+| TASK-464-04 | Extract Reusable Floating Toolbar And Panel Module | High | Large | Done (2026-06-14): Toolbar button chrome and reusable panel metadata were split while full panel orchestration remains shell-owned. |
+| TASK-464-04-L01 | Extract Floating Toolbar Shell And Action Row | High | Medium | Done (2026-06-14): Shared toolbar icon button primitive extracted with tooltip/class parity. |
+| TASK-464-04-L02 | Extract Registry Option Provider And Media Lookup Contract | High | Medium | Done (2026-06-14): Dynamic option/media lookups stay injected by the host shell; reusable modules do not import cached clients. |
+| TASK-464-04-L03 | Extract Registry Panel Renderer And Control Routing | High | Medium | Done (2026-06-14): Registry control routing remains shell-owned and covered while reusable toolbar metadata/labels are shared. |
+| TASK-464-04-L04 | Extract Responsive And Host Appearance Panel Adapters | High | Medium | Done (2026-06-14): Responsive helper logic and host appearance contract remain deterministic without Menu Design UI drift. |
+| TASK-464-05 | Extract Layers Command Palette And Template Picker Modules | High | Large | Done (2026-06-14): Layers, command palette, and Page Template picker UI moved into standalone modules with parity tests. |
+| TASK-464-05-L01 | Extract Layers Tree And Row Actions | High | Medium | Done (2026-06-14): Recursive layers rows and row actions extracted with nested path/slot label coverage. |
+| TASK-464-05-L02 | Extract Command Palette State And Insert Flow | High | Medium | Done (2026-06-14): Command palette group ordering, active rows, and insertion callbacks preserved in extracted UI. |
+| TASK-464-05-L03 | Extract Template Picker And Delete Confirmation Flow | High | Medium | Done (2026-06-14): Template picker UI and id-regeneration path remain shell/template-library owned with tests. |
+| TASK-464-06 | Centralize Authoring Sanitizers And XSS Guardrails | High | Large | Done (2026-06-14): Authoring URL/media/CSS sanitizer helpers now protect normalization, responsive CSS, renderer, and mutations. |
+| TASK-464-06-L01 | Authoring Sink Inventory And Sanitizer Contract | High | Medium | Done (2026-06-14): Text, URL/media/embed, style/color, template, registry, and host appearance sinks documented and guarded. |
+| TASK-464-06-L02 | Implement Safe Authoring Value Helpers | High | Medium | Done (2026-06-14): `pageAuthoringSanitizers.ts` owns safe link/media/style helpers reused across Page v2 sinks. |
+| TASK-464-06-L03 | XSS Regression And Scanner Guard Coverage | High | Medium | Done (2026-06-14): XSS/sanitizer Vitest plus Semgrep/audit/strict security scans passed. |
+| TASK-464-07 | Compose Slim PageEditor Shell And Close Validation | High | Medium | Done (2026-06-14): PageEditor shell recomposed from reusable modules and validated across Pages, Page Templates, Menu Design, and public front. |
+| TASK-464-07-L01 | Compose Slim Shell And Remove Duplicates | High | Medium | Done (2026-06-14): Duplicated canvas/layers/command/toolbar helpers removed from PageEditor while preview/settings/revisions stay in shell. |
+| TASK-464-07-L02 | Final Parity Security Docs And Changelog Closure | High | Medium | Done (2026-06-14): Validation, scans, live smoke, docs, board, and changelog 1172 completed. |
+| TASK-465 | Page Route Validation Memory Hardening | High | Small | Done (2026-06-14): Page/Page Template route schemas no longer compile the full recursive Page v2 block union in AJV; domain normalizers keep strict validation before persistence. |
 | TASK-463 | CodeQL Pages Security Remediation | High | Small | Done (2026-06-14): Closed Pages CodeQL alerts plus strict security scan findings for sanitized embed rendering and transitive `esbuild`. |
 | TASK-462 | Admin Browser Runtime Boundary Hardening | High | Large | Done (2026-06-13): Admin build restored by splitting browser-safe contracts from server/runtime loaders; no provider externals, aliases, `@vite-ignore`, or browser stubs. |
 | TASK-462-01 | Admin Build Boundary Audit And Contract Freeze | High | Medium | Done (2026-06-13): Reproduced Azure export failure and froze the import-boundary contract before implementation. |

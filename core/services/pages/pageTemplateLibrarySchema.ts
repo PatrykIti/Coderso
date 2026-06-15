@@ -4,7 +4,6 @@ import {
   isPageDocumentError,
   normalizePageDocumentV2,
   normalizePageDocumentV2ForWrite,
-  pageDocumentV2JsonSchema,
   type PageBlockV2,
   type PageDocumentV2,
   type PageSectionV2,
@@ -333,12 +332,24 @@ export function instantiatePageTemplateSections(
   });
 }
 
-const pageTemplateDocumentSchemaDefs = {
-  $defs: pageDocumentV2JsonSchema.$defs,
+/**
+ * Route-level document envelope only. Full Page v2 validation is deliberately
+ * owned by `normalizePageTemplateDocumentForWrite`; compiling the complete
+ * recursive Page block JSON schema with AJV can spike memory above small
+ * production instances for an otherwise empty template create request.
+ */
+export const pageTemplateDocumentRouteSchema = {
+  type: "object",
+  required: ["schemaVersion", "sections"],
+  additionalProperties: true,
+  properties: {
+    schemaVersion: { const: 2 },
+    sections: { type: "array" },
+    blocks: false,
+  },
 };
 
 export const pageTemplateCreateSchema = {
-  ...pageTemplateDocumentSchemaDefs,
   type: "object",
   required: ["name", "document"],
   additionalProperties: false,
@@ -351,12 +362,11 @@ export const pageTemplateCreateSchema = {
     },
     category: { type: ["string", "null"], maxLength: PAGE_TEMPLATE_CATEGORY_MAX_LENGTH },
     status: { type: "string", enum: [...pageTemplateStatuses] },
-    document: pageDocumentV2JsonSchema,
+    document: pageTemplateDocumentRouteSchema,
   },
 };
 
 export const pageTemplateUpdateSchema = {
-  ...pageTemplateDocumentSchemaDefs,
   type: "object",
   minProperties: 1,
   additionalProperties: false,
@@ -369,7 +379,7 @@ export const pageTemplateUpdateSchema = {
     },
     category: { type: ["string", "null"], maxLength: PAGE_TEMPLATE_CATEGORY_MAX_LENGTH },
     status: { type: "string", enum: [...pageTemplateStatuses] },
-    document: pageDocumentV2JsonSchema,
+    document: pageTemplateDocumentRouteSchema,
   },
 };
 

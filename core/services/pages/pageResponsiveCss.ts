@@ -51,6 +51,12 @@ import {
   resolvePageSectionTemplate,
   resolvePageSectionTemplateColumns,
 } from "./pageSectionTemplates";
+import {
+  escapeAuthoringCssString,
+  isSafeAuthoringCssColor,
+  isSafeAuthoringCssGradient,
+  sanitizeAuthoringMediaUrl,
+} from "./pageAuthoringSanitizers";
 
 /**
  * Stable per-node attribute hooks. `pageRendererV2.tsx` already emits all
@@ -138,20 +144,7 @@ type CssDeclaration = { property: string; value: string };
  * hex-escaped so the emitted stylesheet can never contain a literal
  * `</style>` sequence when injected into an HTML style element.
  */
-const escapeCssString = (value: string): string => {
-  let escaped = "";
-  for (const char of value) {
-    const code = char.codePointAt(0) ?? 0;
-    if (char === '"' || char === "\\") {
-      escaped += `\\${char}`;
-    } else if (code < 0x20 || code === 0x7f || char === "<" || char === ">") {
-      escaped += `\\${code.toString(16)} `;
-    } else {
-      escaped += char;
-    }
-  }
-  return escaped;
-};
+const escapeCssString = escapeAuthoringCssString;
 
 const sectionRootSelector = (id: string) =>
   `[${PAGE_SECTION_ID_ATTRIBUTE}="${escapeCssString(id)}"]`;
@@ -171,41 +164,19 @@ const blockElementSelector = (id: string) =>
 const blockTextSelector = (id: string) =>
   `${blockSelector(id)} [${PAGE_BLOCK_TEXT_ATTRIBUTE}="true"]`;
 
-const hexColorPattern = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
-const namedColorPattern = /^[a-z]+$/i;
-const functionalColorPattern = /^(?:rgb|rgba|hsl|hsla)\(\s*[0-9a-z .,%/-]*\)$/i;
-
 /**
  * Stored color strings are NOT format-clamped by `pageDocumentV2` (`readText`
  * accepts any non-empty string), so the builder validates them against a
  * strict grammar before they may reach the stylesheet. Unknown shapes fail
  * closed into diagnostics.
  */
-const isSafeCssColor = (value: string): boolean =>
-  hexColorPattern.test(value) ||
-  namedColorPattern.test(value) ||
-  functionalColorPattern.test(value);
-
-const gradientCharsetPattern = /^(?:linear|radial|conic)-gradient\([0-9a-z #%,.()/\s-]*\)$/i;
-
-const hasBalancedParens = (value: string): boolean => {
-  let depth = 0;
-  for (const char of value) {
-    if (char === "(") depth += 1;
-    if (char === ")") {
-      depth -= 1;
-      if (depth < 0) return false;
-    }
-  }
-  return depth === 0;
-};
+const isSafeCssColor = isSafeAuthoringCssColor;
 
 /**
  * Stricter than the renderer's gradient sniff (`toGradientBackground`): the
  * stylesheet context additionally requires a safe charset and balanced parens.
  */
-const isSafeCssGradient = (value: string): boolean =>
-  gradientCharsetPattern.test(value) && hasBalancedParens(value);
+const isSafeCssGradient = isSafeAuthoringCssGradient;
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -379,11 +350,16 @@ const collectSectionDeclarations = (
         diag("style.background", "unsafe_color_value");
       }
     } else if (mergedStyle.backgroundType === "image" && mergedStyle.backgroundImage) {
-      content.push({ property: "background-color", value: "transparent" });
-      content.push({
-        property: "background-image",
-        value: `url("${escapeCssString(mergedStyle.backgroundImage)}")`,
-      });
+      const safeBackgroundImage = sanitizeAuthoringMediaUrl(mergedStyle.backgroundImage);
+      if (!safeBackgroundImage) {
+        diag("style.backgroundImage", "unsafe_background_value");
+      } else {
+        content.push({ property: "background-color", value: "transparent" });
+        content.push({
+          property: "background-image",
+          value: `url("${escapeCssString(safeBackgroundImage)}")`,
+        });
+      }
     } else {
       content.push({ property: "background-color", value: "transparent" });
       content.push({ property: "background-image", value: "none" });
