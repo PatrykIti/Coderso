@@ -77,7 +77,7 @@ test("backfill converts v3 widget screen into v4 placeholder document", async ()
   await runCustomScreensV4Backfill();
   const migrated = await readCustomScreen(row.id);
   expect(migrated.definition.schemaVersion).toBe(4);
-  expect(migrated.definition.editorView.document.sections[0].blocks[0].type).toBe("unsupportedLegacy");
+  expect(migrated.definition.editorView.document.sections[0].blocks[0].type).toBe("legacy-placeholder");
 });
 ```
 

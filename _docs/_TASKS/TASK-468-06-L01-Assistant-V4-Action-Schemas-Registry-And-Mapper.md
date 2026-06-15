@@ -30,8 +30,11 @@ presentation, and field mappings through strict validation.
 
 | File | Required change |
 |---|---|
-| `core/services/assistant/actions/customScreens*.ts` | Replace or extend Custom Screen actions with V4 screen actions. |
-| `core/services/assistant/actionRegistry*.ts` | Register V4 screen actions. |
+| `core/services/assistant/actionPlanSchema.ts` | Add strict V4 Custom Screen action schemas. |
+| `core/services/assistant/actionPlanTypes.ts` | Add typed V4 Custom Screen action variants. |
+| `core/services/assistant/cmsOperationActionMapper.ts` | Map CMS operation drafts to V4 screen actions. |
+| `core/services/assistant/actionRegistry.ts` | Register V4 screen actions. |
+| `core/services/assistant/actionFamilyContracts.ts` | Add action-family metadata and merge/conflict behavior. |
 | `core/services/customScreens/screenDocument.ts` | Reuse V4 operation/validation helpers. |
 | `tests/vitest/assistant/customScreenActions.test.ts` | Action schema and mapper coverage. |
 
@@ -47,9 +50,9 @@ const patchScreenBlockActionSchema = strictObject({
 
 export function mapAssistantActionToScreenMutation(action: AssistantScreenAction) {
   switch (action.type) {
-    case "screen.block.patch":
+    case "custom-screen.block.patch":
       return (draft) => patchScreenBlock(draft, action.payload);
-    case "screen.binding.patch":
+    case "custom-screen.binding.set":
       return (draft) => patchScreenBinding(draft, action.payload);
   }
 }

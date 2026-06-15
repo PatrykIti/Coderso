@@ -33,7 +33,9 @@ avoid force-refetch loops or dirty-state overwrites.
 |---|---|
 | `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` | Save/preview wiring. |
 | `core/admin/services/customScreensEditorClient.ts` | Save and preview helpers. |
-| `core/admin/services/customScreenCache*.ts` | Cache invalidation/broadcast updates if needed. |
+| `core/admin/services/customScreensClient.ts` | Existing Custom Screen cache hydration/invalidation updates if needed. |
+| `core/admin/services/customScreenShortcutsClient.ts` | Shortcut/sidebar cache invalidation updates if needed. |
+| `core/admin/services/cachePolicy.ts` | Cache key/TTL updates if ownership changes. |
 | `core/admin/ui/custom-screens/RuntimePreviewDialog.tsx` or equivalent | V4 preview support. |
 | `_docs/ADMIN_CACHE.md` | Update if cache keys/owners change. |
 | `_docs/ADMIN_CACHE_MAP.md` | Update if cache keys/owners change. |

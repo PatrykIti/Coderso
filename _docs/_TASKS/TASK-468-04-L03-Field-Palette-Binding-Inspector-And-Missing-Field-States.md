@@ -44,22 +44,22 @@ schema changes.
 export function createFieldBlockForContentField(
   field: ContentTypeFieldSummary,
   options: { mode: "read" | "write" }
-): { block: ScreenBlockV1; binding: ScreenBlockBindingV1 } {
+): { block: ScreenBlockV1; binding: ScreenBlockBinding } {
   return {
     block: createScreenBlock({
       type: "field",
       props: defaultFieldBlockProps(field),
     }),
-    binding: createScreenBlockBinding({
-      fieldName: field.name,
+    binding: createScreenFieldBinding({
+      field: field.name,
       mode: options.mode,
       propPath: "value",
     }),
   };
 }
 
-export function resolveBindingStatus(binding: ScreenBlockBindingV1, contentType: ContentTypeSummary) {
-  const field = contentType.fields.find((candidate) => candidate.name === binding.fieldName);
+export function resolveBindingStatus(binding: ScreenBlockBinding, contentType: ContentTypeSummary) {
+  const field = contentType.fields.find((candidate) => candidate.name === binding.field);
   return field ? { status: "valid", field } : { status: "missing" };
 }
 ```

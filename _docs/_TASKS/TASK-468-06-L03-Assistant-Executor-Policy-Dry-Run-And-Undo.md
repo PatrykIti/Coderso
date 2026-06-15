@@ -30,8 +30,10 @@ idempotent application through the Custom Screens service.
 
 | File | Required change |
 |---|---|
-| `core/services/assistant/executors/customScreens*.ts` | V4 screen executor policy. |
-| `core/services/assistant/audit*.ts` | Audit event payload updates if needed. |
+| `core/services/assistant/actionExecutorService.ts` | V4 screen executor policy. |
+| `core/services/assistant/actionUndoManifest.ts` | Undo metadata for V4 screen mutations. |
+| `core/services/assistant/operationPolicy/cmsResourcePolicies.ts` | RBAC/operation policy hooks for screen actions. |
+| `core/services/assistant/operationPolicy/adminSurfacePolicies.ts` | Audit-log/admin-surface policy updates if audit payload gating changes. |
 | `core/services/customScreens/customScreenService.ts` | Reuse V4 mutation/save path. |
 | `tests/vitest/assistant/customScreenExecutor.test.ts` | Executor policy coverage. |
 

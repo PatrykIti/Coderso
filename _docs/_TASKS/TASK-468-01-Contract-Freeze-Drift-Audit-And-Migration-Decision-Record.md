@@ -71,21 +71,17 @@ export type ScreenSectionV1 = {
   blocks: ScreenBlockV1[];
 };
 
-export type ScreenBlockV1 = {
-  id: string;
-  type:
-    | "record-header"
-    | "field"
-    | "field-group"
-    | "columns"
-    | "rich-text"
-    | "media-field"
-    | "relation-field"
-    | "status-badge"
-    | "actions"
-    | "legacy-placeholder";
-  props: Record<string, unknown>;
-};
+export type ScreenBlockV1 =
+  | { id: string; type: "record-header"; props: ScreenRecordHeaderBlockProps }
+  | { id: string; type: "field"; props: ScreenFieldBlockProps }
+  | { id: string; type: "field-group"; props: ScreenFieldGroupBlockProps }
+  | { id: string; type: "columns"; props: ScreenColumnsBlockProps }
+  | { id: string; type: "rich-text"; props: ScreenRichTextBlockProps }
+  | { id: string; type: "media-field"; props: ScreenMediaFieldBlockProps }
+  | { id: string; type: "relation-field"; props: ScreenRelationFieldBlockProps }
+  | { id: string; type: "status-badge"; props: ScreenStatusBadgeBlockProps }
+  | { id: string; type: "actions"; props: ScreenActionsBlockProps }
+  | { id: string; type: "legacy-placeholder"; props: ScreenLegacyPlaceholderProps };
 
 export type ScreenBlockBinding = {
   id: string;
