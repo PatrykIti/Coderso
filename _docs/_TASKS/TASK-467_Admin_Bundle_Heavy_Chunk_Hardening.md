@@ -42,6 +42,17 @@ The source analysis found three concrete owners:
 This family keeps the current admin product behavior and route contracts. It is
 not a redesign of Custom Screens and it must not change Page Editor UX.
 
+Downstream note: TASK-468 depends on this family and reuses the lightweight
+Custom Screens list/cache split. Keep the TASK-467 Custom Screens editor-client
+extraction minimal and move-only where possible; TASK-468 owns the later V4
+Custom Screens canvas rewrite.
+
+Pre-implementation note: the current source still contains the heavy
+`assistantClient -> customScreensClient`, Custom Screens list/editor, and widget
+editor barrel edges described above. That is expected while this family is
+`⏳ To Do`; TASK-467 closure is blocked until the child tasks implement the
+listed source/test/script changes and L04 records fresh validation evidence.
+
 ## Sub-Tasks
 
 - [ ] TASK-467-01: Extract lightweight Custom Screens cache invalidation.
@@ -99,12 +110,17 @@ Forbidden closure criteria:
 - `bun run check:admin-bundle`
 - Add or update `check:admin-bundle` coverage so the Vite 500 kB raw JS
   chunk-warning target is asserted for dynamic chunks, not only reported.
+- `bun run gates:coderso:perf`
 - `bun run check:admin-boundary`
-- `bun run test:vitest -- tests/vitest/admin/assistantClient.test.ts tests/vitest/admin/customScreensClient.test.ts tests/vitest/admin/adminBundleReport.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/assistantClient.test.ts tests/vitest/admin/customScreensClient.test.ts tests/vitest/customScreens/customScreenSummaryContract.test.ts tests/vitest/admin/adminBundleReport.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts tests/vitest/admin/widgetsClient.test.ts tests/vitest/admin/widgetEditorLayoutCss.test.ts`
+- `bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/pageBuilder/advancedPanelLeaf.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx`
 - Add or update focused Vitest tests for any new lightweight Custom Screens
-  cache module and widget editor loader module.
+  cache module, summary DTO contract, and widget editor loader module.
 - Run affected Custom Screens UI tests when list/editor imports change.
 - Run affected widget/admin UI tests when registry/editor loading changes.
+- `bun run gates:coderso` as the final Coderso release-gate baseline before
+  TASK-467 closure.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -134,11 +150,14 @@ Forbidden closure criteria:
 5. `bun --cwd core build:admin` and `bun run check:admin-bundle` produce
    before/after evidence for `customScreensClient-*`, `registry-*`, initial
    static graph gzip, largest dynamic chunk gzip, and largest dynamic chunk raw
-   size.
+   size. The final before/after numbers must be recorded in the TASK-467
+   changelog or closeout notes; `.tmp/admin-bundle-report.json` alone is not
+   sufficient closure evidence.
 6. No validation is weakened: server/domain normalizers remain the write
    authority, and client-side lightweight DTO checks are only browser cache/UI
    guards.
 7. TASK-467 cannot close while the production admin build still emits the
    500 kB minified raw JS chunk warning for a TASK-467-owned chunk. If a
    remaining warning is outside this family, split a follow-up with exact
-   ownership and evidence.
+   ownership and evidence; L04 validation must fail until every over-budget
+   dynamic chunk is either fixed or explicitly tied to that follow-up.

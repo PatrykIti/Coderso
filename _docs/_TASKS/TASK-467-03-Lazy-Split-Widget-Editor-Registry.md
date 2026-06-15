@@ -107,14 +107,11 @@ const editorLoaders = {
       "ListingFiltersAdvancedEditor"
     ),
   },
+  // ...all remaining CoreWidgetEditors keys...
 } satisfies CoreWidgetEditors;
 
 export function ensureCoreWidgetsRegistered() {
-  registerCoreWidgets({
-    hero: editorLoaders.hero,
-    listingFilters: editorLoaders.listingFilters,
-    // ...
-  });
+  registerCoreWidgets(editorLoaders);
 }
 ```
 
@@ -135,8 +132,15 @@ Data flow:
 - Widget metadata registration remains synchronous so pickers, filters, surfaces,
   capabilities, and pack matrix checks still work without waiting for editor
   modules.
+- The lazy editor map must be exhaustive for every `CoreWidgetEditors` key
+  through `satisfies CoreWidgetEditors` and typecheck, not through a manually
+  maintained count. The current audit observed 42 required widget keys across 39
+  editor modules, including grouped modules such as `ScreenEditors`.
 - Editor modules are represented by `React.lazy` components and load only after
   a concrete widget and editor mode are rendered.
+- Do not replace the static barrel with `import("./editors")` or
+  `import("./editors/index")`; lazy imports must target concrete editor modules
+  such as `HeroEditors` or grouped modules such as `ScreenEditors`.
 - Tests can still import editor modules directly when they own editor behavior.
 
 Error handling:
@@ -155,8 +159,9 @@ Regression-test shape:
 ```ts
 test("admin widget registry does not import the editor barrel eagerly", () => {
   const source = readFile("core/admin/ui/widgets/registry.ts");
-  expect(source).not.toContain('from "./editors"');
-  expect(source).toContain("import(\"./editors/HeroEditors\")");
+  expect(source).not.toMatch(/from\s+["']\.\/editors(?:\/index)?["']/);
+  expect(source).not.toMatch(/import\s*\(\s*["']\.\/editors(?:\/index)?["']\s*\)/);
+  expect(source).toContain('import("./editors/');
 });
 
 test("selected widget editor loads lazily", async () => {
@@ -182,13 +187,15 @@ test("selected widget editor loads lazily", async () => {
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/admin/widgetsClient.test.ts tests/vitest/admin/widgetEditorLayoutCss.test.ts`
+- `bun run test:vitest -- tests/vitest/widgets/editorContract.test.ts tests/vitest/admin/widgetsClient.test.ts tests/vitest/admin/widgetEditorLayoutCss.test.ts`
+- `bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/pageBuilder/advancedPanelLeaf.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx`
 - Focused UI tests for widget editor lazy loading in the surfaces changed by the
   implementation.
 - Source/import-boundary test proving `core/admin/ui/widgets/registry.ts` does
   not import `./editors` eagerly.
 - `bun --cwd core build:admin`
 - `bun run check:admin-bundle`
+- `bun run gates:coderso:perf`
 - `bun run check:admin-boundary`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`

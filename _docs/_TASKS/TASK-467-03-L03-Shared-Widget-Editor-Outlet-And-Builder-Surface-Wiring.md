@@ -40,6 +40,10 @@ while `React.lazy` editor modules load on demand.
 | `core/admin/ui/pages/builder/BlockSettings.tsx` | Preserve tab/mode behavior while delegating editor rendering. |
 | `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` | Update only if it renders widget editors directly. |
 | `tests/vitest/admin/widgetEditorLayoutCss.test.ts` | Keep layout/CSS behavior green. |
+| `tests/vitest/pageBuilder/wizardPanel.test.tsx` | Cover Page builder wizard panel parity after outlet routing. |
+| `tests/vitest/pageBuilder/visualPanel.test.tsx` | Cover Page builder visual panel parity after outlet routing. |
+| `tests/vitest/pageBuilder/advancedPanelLeaf.test.tsx` | Cover advanced panel leaf behavior after outlet routing. |
+| `tests/vitest/pageBuilder/blockSettings.test.tsx` | Cover tab/mode and selected-block settings behavior after outlet routing. |
 | Focused UI tests under `tests/vitest/ui-integration/` | Cover lazy loading, stale-selection cancellation, and loader failure state. |
 
 ## Implementation Pseudocode
@@ -115,6 +119,7 @@ test("widget editor outlet keeps non-lazy editors synchronous", () => {
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/admin/widgetEditorLayoutCss.test.ts`
+- `bun run test:vitest -- tests/vitest/pageBuilder/wizardPanel.test.tsx tests/vitest/pageBuilder/visualPanel.test.tsx tests/vitest/pageBuilder/advancedPanelLeaf.test.tsx tests/vitest/pageBuilder/blockSettings.test.tsx`
 - Focused UI integration tests for Page builder and Custom Screens builder
   surfaces touched by the outlet.
 - `bun run check:admin-boundary`

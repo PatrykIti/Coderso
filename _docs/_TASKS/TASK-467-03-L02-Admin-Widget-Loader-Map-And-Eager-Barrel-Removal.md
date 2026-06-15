@@ -4,7 +4,7 @@
 **Parent Subtask:** TASK-467-03
 **Priority:** High
 **Category:** Admin UI / Widgets / Bundle Performance
-**Estimated Effort:** Medium
+**Estimated Effort:** Large
 **Dependencies:** TASK-467-03-L01
 **Status:** ⏳ To Do
 
@@ -34,7 +34,7 @@ synchronous, but editor modules should load only when an editor is rendered.
 |---|---|
 | `core/admin/ui/widgets/registry.ts` | Replace static editor barrel import with typed lazy editor component map. |
 | `core/admin/ui/widgets/editors/index.ts` | Stop being imported by the registry; keep only if tests still need direct named exports. |
-| `core/widgets/core/index.ts` | Consume loader map entries without forcing eager editor bundles. |
+| `core/widgets/core/index.ts` | Reference only if L01 did not already widen `EditorBundle<T>` for lazy components; `ensureCoreWidgetsRegistered` remains in the admin registry. |
 | `tests/vitest/admin/widgetsClient.test.ts` | Assert registry behavior remains stable. |
 | `tests/vitest/admin/adminBundleReport.test.ts` | Add bundle evidence for `registry-*` chunk reduction/splitting. |
 
@@ -63,14 +63,23 @@ const editorLoaders = {
       "ListingFiltersAdvancedEditor"
     ),
   },
+  // ...all remaining CoreWidgetEditors keys...
 } satisfies CoreWidgetEditors;
 ```
 
 ```ts
+// core/admin/ui/widgets/registry.ts
 export function ensureCoreWidgetsRegistered() {
   registerCoreWidgets(editorLoaders);
 }
 ```
+
+The implementation must make `editorLoaders` exhaustive for every
+`CoreWidgetEditors` key through `satisfies CoreWidgetEditors` and typecheck, not
+through a manually maintained count. The current audit observed 42 required
+widget keys across 39 editor modules, including grouped modules such as
+`ScreenEditors` that export editors for `screenRecordHeader`,
+`screenFieldValue`, `screenFieldGroup`, and `screenTwoColumn`.
 
 Data flow:
 
@@ -78,14 +87,19 @@ Data flow:
 - Dynamic imports inside `React.lazy` are not executed during metadata
   registration.
 - Existing editor modules remain split by widget or small editor family.
+- Do not replace the static barrel with `import("./editors")` or
+  `import("./editors/index")`; lazy imports must target concrete editor modules
+  such as `HeroEditors` or grouped modules such as `ScreenEditors`.
 - The existing `ensureCoreWidgetsRegistered` entry point and
   `registerCoreWidgets(editors: CoreWidgetEditors)` shape remain intact.
+- `core/widgets/core/index.ts` should only need type widening from L01; it should
+  not become the owner of admin lazy-loader wiring.
 
 Error handling:
 
 - Loader map keys must be exhaustive for admin-editable core widgets.
-- A missing lazy editor component should fail during registration/test setup, not at random
-  user interaction time.
+- A missing loader-map entry should fail during typecheck or test setup, not at
+  random user interaction time.
 - Lazy module resolution should fail through the panel error boundary when an
   export is missing.
 
@@ -94,13 +108,13 @@ Regression-test shape:
 ```ts
 test("admin widget registry does not import the editor barrel eagerly", () => {
   const source = readFile("core/admin/ui/widgets/registry.ts");
-  expect(source).not.toContain('from "./editors"');
+  expect(source).not.toMatch(/from\s+["']\.\/editors(?:\/index)?["']/);
+  expect(source).not.toMatch(/import\s*\(\s*["']\.\/editors(?:\/index)?["']\s*\)/);
   expect(source).toContain('import("./editors/');
 });
 
 test("every editable core widget has an editor bundle", () => {
   const missing = listRegisteredWidgets()
-    .filter((widget) => isAdminEditable(widget))
     .filter((widget) => !widget.editor?.wizard || !widget.editor.visual || !widget.editor.advanced);
 
   expect(missing).toEqual([]);

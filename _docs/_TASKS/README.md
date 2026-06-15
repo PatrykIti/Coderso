@@ -93,7 +93,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |
 | TASK-467-03 | Lazy Split Widget Editor Registry | High | Large | Stop metadata registry access from statically importing every widget editor module. |
 | TASK-467-03-L01 | Lazy Editor Component Contract And Registry Compatibility | High | Medium | Preserve the required editor object while allowing `React.lazy` editor components. |
-| TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Medium | Replace the eager widget editor barrel with typed lazy editor component bundles. |
+| TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Large | Replace the eager widget editor barrel with typed lazy editor component bundles. |
 | TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
 | TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
 | TASK-468 | Custom Screens Canvas Content Views Rewrite | High | Very Large | Rewrite Custom Screens from legacy widget blocks to a screen-owned canvas contract for custom content data. |

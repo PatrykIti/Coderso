@@ -56,13 +56,17 @@ flows.
 | `core/admin/services/customScreensClient.ts` | Either become the lightweight client or re-export from split modules without importing heavy editor-only code. |
 | `core/admin/services/customScreenShortcutsClient.ts` | Reuse as the existing lightweight list/sidebar client or migrate it onto the shared summary contract and cache invalidation owner. Do not leave it as an uncoordinated duplicate cache owner. |
 | `core/admin/services/customScreensEditorClient.ts` | New optional owner for full definition normalization and editor-detail helpers. |
+| `scripts/adminBoundaryReport.ts` or focused import-graph test helper | Add TASK-467 Custom Screens browser-client forbidden-path coverage when the existing admin boundary rules are not specific enough. |
 | `core/admin/ui/custom-screens/CustomScreenListPage.tsx` | Import only lightweight list/mutation helpers. |
 | `core/admin/ui/custom-screens/hooks/useCustomScreens.ts` | Import only lightweight list/cache helpers. |
 | `core/admin/ui/custom-screens/customScreenListModel.ts` | Stop importing `resolveCustomScreenCapabilities`, `bindingResolver`, or runtime widget registration. Consume server summary capabilities or a lightweight primitive summary only. |
 | `core/admin/ui/custom-screens/CustomScreenEditorPage.tsx` | Import full editor/detail helpers. |
 | `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` | Use lightweight or editor-detail helper according to actual data needs. |
 | `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Use editor-detail helper only if it needs normalized full definitions. |
+| `core/admin/utils/adminPrefetchCustomScreens.ts` | Classify the dynamic `customScreensClient` import and keep prefetch on the lightest client/detail helper that preserves existing prefetch behavior. |
+| `tests/vitest/customScreens/customScreenSummaryContract.test.ts` | New focused pure-contract tests for summary DTO normalization, null defaults, invalid row rejection, preserved unknown editor payloads, and import boundary. |
 | `tests/vitest/admin/customScreensClient.test.ts` | Split lightweight vs editor-normalized behavior coverage. |
+| `tests/vitest/admin/adminPrefetch.test.ts` | Preserve Custom Screens prefetch behavior after moving list/detail imports. |
 | `tests/vitest/admin/adminBundleReport.test.ts` | Add or update assertions/evidence for reduced initial/static graph. |
 
 ## Implementation Pseudocode
@@ -83,6 +87,7 @@ export type CustomScreenSummaryRecord = {
   blocks?: unknown[];
   bindings?: unknown[];
   capabilities?: {
+    supportsDedicatedPreview?: boolean;
     supportsDedicatedEditor?: boolean;
     [key: string]: unknown;
   } | null;
@@ -120,6 +125,8 @@ import {
   resolveCustomScreenCapabilities,
 } from "../../services/customScreens/capabilities";
 import {
+  // New helper exported by the lightweight client. It returns the cache-safe raw
+  // summary DTO without importing editor-only normalization.
   getCustomScreenRawCached,
   type CustomScreenSummaryRecord,
 } from "./customScreensClient";
@@ -157,6 +164,13 @@ Data flow:
 
 - List/sidebar routes read lightweight summary records and server-provided
   `capabilities` when available.
+- The lightweight summary contract must preserve both `supportsDedicatedPreview`
+  and `supportsDedicatedEditor` when the server sends capabilities, or expose an
+  equivalent primitive mode field so list/sidebar UI can keep "Preview only" and
+  "Workspace ready" states without calling full capability resolution.
+- Keep this split as move-not-redesign work: TASK-467 should extract the current
+  full editor normalization behind a lazy boundary, while TASK-468 owns the later
+  Custom Screens V4 canvas/data-model rewrite.
 - The implementation must choose one lightweight list owner:
   `customScreenShortcutsClient.ts` is extended/renamed into the primary
   lightweight client, or both shortcut and list clients share the same
@@ -167,6 +181,15 @@ Data flow:
   shortcut/sidebar flows must not derive capabilities through
   `resolveCustomScreenCapabilities`; they consume only the primitive summary
   contract.
+- `adminPrefetchCustomScreens.ts` currently uses a dynamic import of
+  `customScreensClient`; it must be classified with the other list/detail
+  consumers and either point at the lightweight list/detail client or an
+  editor-detail helper according to the actual prefetch path. Do not leave it
+  as an accidental full-normalization preload edge.
+- Boundary validation must follow the import graph, not only direct source text:
+  the lightweight client, shortcut/list client, and list model entrypoints must
+  not reach `customScreenSchemas`, `capabilities`, `bindingResolver`, or
+  `widgets/runtime` through one-hop wrapper modules.
 - Builder/editor routes import the editor client and run full normalization
   before rendering blocks/bindings.
 - Mutations still send the existing API payloads through the same internal
@@ -186,6 +209,20 @@ Error handling:
 Regression-test shape:
 
 ```ts
+test("summary contract normalizes nullables and preserves editor payloads", () => {
+  const record = normalizeCustomScreenSummaryRecord(rawSummaryFixture);
+  expect(record.collectionRole).toBeNull();
+  expect(record.compositionKey).toBeNull();
+  expect(record.sidebarLabel).toBeNull();
+  expect(record.capabilities?.supportsDedicatedPreview).toBe(
+    rawSummaryFixture.capabilities.supportsDedicatedPreview
+  );
+  expect(record.capabilities?.supportsDedicatedEditor).toBe(
+    rawSummaryFixture.capabilities.supportsDedicatedEditor
+  );
+  expect(record.definition).toBe(rawSummaryFixture.definition);
+});
+
 test("lightweight custom screens client does not import domain widget runtime", () => {
   const source = readFile("core/admin/services/customScreensClient.ts");
   expect(source).not.toContain("customScreens/customScreenSchemas");
@@ -206,6 +243,38 @@ test("list custom screen model stays on lightweight summary contract", () => {
     expect(source).not.toContain("bindingResolver");
     expect(source).not.toContain("widgets/runtime");
   }
+});
+
+test("lightweight custom screen graph cannot reach editor-only modules", () => {
+  const report = analyzeAdminBoundary({
+    entrypoints: [
+      "core/admin/services/customScreensClient.ts",
+      "core/admin/services/customScreenShortcutsClient.ts",
+      "core/admin/utils/adminPrefetchCustomScreens.ts",
+      "core/admin/ui/custom-screens/customScreenListModel.ts",
+      "core/admin/ui/custom-screens/hooks/useCustomScreens.ts",
+    ],
+    forbiddenPathRules: [
+      {
+        label: "custom screen full definition schema",
+        path: "core/services/customScreens/customScreenSchemas.ts",
+        exact: true,
+      },
+      {
+        label: "custom screen capability resolver",
+        path: "core/services/customScreens/capabilities.ts",
+        exact: true,
+      },
+      {
+        label: "custom screen binding resolver",
+        path: "core/services/customScreens/bindingResolver.ts",
+        exact: true,
+      },
+      { label: "widget runtime", path: "core/widgets/runtime.tsx", exact: true },
+    ],
+  });
+
+  expect(report.violations).toEqual([]);
 });
 
 test("editor custom screens client keeps full definition normalization", async () => {
@@ -232,9 +301,12 @@ test("editor custom screens client keeps full definition normalization", async (
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts`
-- A focused import-boundary or source test proving the lightweight client does
-  not import `customScreenSchemas`, `bindingResolver`, or `widgets/runtime`.
+- `bun run test:vitest -- tests/vitest/customScreens/customScreenSummaryContract.test.ts`
+- `bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts tests/vitest/admin/adminPrefetch.test.ts`
+- A focused import-graph boundary test proving the lightweight client,
+  shortcut/list client, admin prefetch helper, and list model entrypoints do not
+  transitively import `customScreenSchemas`, `capabilities`, `bindingResolver`,
+  or `widgets/runtime`.
 - Relevant Custom Screens UI tests for list, editor, records, and shortcut nav
   imports.
 - `bun --cwd core build:admin`

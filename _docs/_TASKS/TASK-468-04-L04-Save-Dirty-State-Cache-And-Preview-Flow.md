@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Admin UI / Custom Screens / Save And Preview
 **Estimated Effort:** Large
-**Dependencies:** TASK-468-04-L03
+**Dependencies:** TASK-468-04-L03, TASK-467-02
 **Status:** ⏳ To Do
 
 ---
@@ -67,6 +67,9 @@ function createScreenPreviewPayload(state: CustomScreenEditorState) {
 Data flow:
 
 - Save validates local draft through V4 normalizer before network write.
+- Save goes through `customScreensEditorClient`; do not import the lightweight
+  `customScreensClient`/`updateCustomScreen` path from editor UI or model code,
+  because TASK-467 keeps full editor normalization out of list/cache clients.
 - Internal admin route persists definition and returns normalized server state.
 - Cache invalidation updates list/sidebar/editor consumers.
 - Preview receives a sanitized V4 draft plus bounded sample metadata.

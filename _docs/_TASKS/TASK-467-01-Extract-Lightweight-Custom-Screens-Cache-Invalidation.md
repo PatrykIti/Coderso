@@ -79,7 +79,10 @@ export function clearCustomScreensCacheLightweight() {
 // assistantClient.ts
 import { clearCustomScreensCacheLightweight } from "./customScreensCache";
 
+case "custom-screen.upsert":
+case "custom-screen.delete":
 case "custom-screen.update":
+case "custom-screen.widget.patch":
   clearCustomScreensCacheLightweight();
   emit(cacheKeys.customScreensList, cacheAction);
   if (id) clearAndEmitDetail(cacheKeys.customScreenDetail(id), cacheAction, emit);
@@ -135,9 +138,19 @@ test("assistant custom screen invalidation stays lightweight", async () => {
 });
 
 test("custom screen assistant actions clear list and detail cache keys", () => {
-  const events = executeNotifyFixture("custom-screen.update");
-  expect(events).toContainEqual({ key: cacheKeys.customScreensList, action: "update" });
-  expect(events).toContainEqual({ key: cacheKeys.customScreenDetail("screen-1"), action: "update" });
+  for (const actionType of [
+    "custom-screen.upsert",
+    "custom-screen.delete",
+    "custom-screen.update",
+    "custom-screen.widget.patch",
+  ]) {
+    const events = executeNotifyFixture(actionType);
+    expect(events).toContainEqual({ key: cacheKeys.customScreensList, action: expect.any(String) });
+    expect(events).toContainEqual({
+      key: cacheKeys.customScreenDetail("screen-1"),
+      action: expect.any(String),
+    });
+  }
 });
 
 test("assistant custom screen invalidation clears registered memory caches", () => {
