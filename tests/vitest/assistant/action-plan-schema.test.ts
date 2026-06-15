@@ -2399,6 +2399,16 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
     promptKind: "setup_request",
     intentFamily: "product_catalog",
   });
+  const imageBlock = createPageBlockV2("image", {
+    id: "hero-media",
+    props: {
+      alt: "Browse products",
+    },
+  });
+  const heroSection = createPageSectionV2("hero", {
+    id: "hero-1",
+    name: "Hero",
+  });
 
   for (const src of [
     "https://example.com/hero.jpg",
@@ -2422,19 +2432,18 @@ test("normalizeAssistantActionPlan rejects raw media URLs inside page upsert blo
               introTitle: "Products",
               introBody: "Browse products.",
               sections: [
-                createPageSectionV2("hero", {
-                  id: "hero-1",
-                  name: "Hero",
+                {
+                  ...heroSection,
                   blocks: [
-                    createPageBlockV2("image", {
-                      id: "hero-media",
+                    {
+                      ...imageBlock,
                       props: {
+                        ...imageBlock.props,
                         src,
-                        alt: "Browse products",
                       },
-                    }),
+                    },
                   ],
-                }),
+                },
               ],
             },
           },
