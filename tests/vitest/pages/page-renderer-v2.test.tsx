@@ -97,6 +97,8 @@ const stripSectionTemplateMarker = (className: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const countMarkup = (markup: string, needle: string) => markup.split(needle).length - 1;
+
 test("section render props expose shared classes, styles, and data attributes", () => {
   const section = createSection();
   const renderProps = toPageSectionRenderProps(section);
@@ -222,9 +224,22 @@ test("phase 3b section variants change published surfaces beyond marker classes"
     id: "sec-cta-full",
     variant: "full-width",
   });
-  expect(
-    stripSectionTemplateMarker(toPageSectionRenderProps(ctaCentered).contentClassName)
-  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(ctaDefault).contentClassName));
+  const ctaDefaultClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps(ctaDefault).contentClassName
+  );
+  const ctaCenteredClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps(ctaCentered).contentClassName
+  );
+  // The CTA variants must stay VISUALLY distinct, not merely string-different:
+  // `default` is left-aligned while `centered` centers its content. A prior
+  // working-tree regression collapsed `default` onto the centered classes (only
+  // an inert `content-center` token differed), which a `.not.toBe` string check
+  // failed to catch — so assert the actual alignment tokens on each.
+  expect(ctaDefaultClass).toContain("text-left");
+  expect(ctaDefaultClass).not.toContain("text-center");
+  expect(ctaCenteredClass).toContain("text-center");
+  expect(ctaCenteredClass).not.toContain("text-left");
+  expect(ctaCenteredClass).not.toBe(ctaDefaultClass);
   expect(toPageSectionRenderProps(ctaFullWidth).style.maxWidth).toBe("none");
   expect(
     stripSectionTemplateMarker(toPageSectionRenderProps(ctaFullWidth).contentClassName)
@@ -243,6 +258,23 @@ test("phase 3b section variants change published surfaces beyond marker classes"
   ).not.toBe(
     stripSectionTemplateMarker(toPageSectionRenderProps(testimonialsGrid).contentClassName)
   );
+  const testimonialsDefault = createPageSectionV2("testimonials", {
+    id: "sec-testimonials-default",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+  });
+  const testimonialsDefaultClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps(testimonialsDefault).contentClassName
+  );
+  const testimonialsGridClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps({
+      ...testimonialsGrid,
+      layout: testimonialsDefault.layout,
+    }).contentClassName
+  );
+  expect(testimonialsDefaultClass).not.toBe(testimonialsGridClass);
+  expect(testimonialsDefaultClass).not.toContain("md:grid-cols-3");
+  expect(testimonialsGridClass).toContain("md:grid-cols-3");
 });
 
 test("phase 3b guard sections keep real grid geometry beyond marker classes", () => {
@@ -396,6 +428,321 @@ test("phase 3b section templates add truthful structure around existing blocks",
   );
   expect(testimonialsHtml).toContain('data-page-testimonial-card="true"');
   expect(testimonialsHtml).toContain('data-page-testimonial-variant="cards"');
+});
+
+test("phase 3b media-split variants classify media, preserve default identity, and inherit media sanitizers", () => {
+  const mixedMedia = createPageSectionV2("media-split", {
+    id: "sec-media-split-mixed",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-copy",
+        props: { text: "Copy", format: "plain", align: "left" },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video",
+        props: { src: "/tour.mp4", title: "Tour", autoplay: false },
+      }),
+      createPageBlockV2("gallery", {
+        id: "blk-gallery",
+        props: {
+          items: [{ src: "/one.jpg", alt: "One" }],
+          layout: "grid",
+          columns: 1,
+          gap: 8,
+        },
+      }),
+    ],
+  });
+  const mixedHtml = renderToStaticMarkup(<PageSectionContent section={mixedMedia} />);
+  const mediaZoneStart = mixedHtml.indexOf('data-page-media-split-zone="media"');
+  const contentZoneStart = mixedHtml.indexOf('data-page-media-split-zone="content"');
+  expect(mediaZoneStart).toBeGreaterThan(-1);
+  expect(contentZoneStart).toBeGreaterThan(-1);
+  expect(mediaZoneStart).toBeLessThan(contentZoneStart);
+  const mediaZoneHtml = mixedHtml.slice(mediaZoneStart, contentZoneStart);
+  const contentZoneHtml = mixedHtml.slice(contentZoneStart);
+  expect(mediaZoneHtml).toContain('data-block-id="blk-video"');
+  expect(mediaZoneHtml).toContain('data-block-id="blk-gallery"');
+  expect(mediaZoneHtml).not.toContain('data-block-id="blk-copy"');
+  expect(contentZoneHtml).toContain('data-block-id="blk-copy"');
+
+  const noMedia = createPageSectionV2("media-split", {
+    id: "sec-media-split-empty-media",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-only-copy",
+        props: { text: "Only copy", level: "h2", align: "left" },
+      }),
+    ],
+  });
+  const noMediaHtml = renderToStaticMarkup(<PageSectionContent section={noMedia} />);
+  expect(noMediaHtml).toContain('data-page-media-split-empty="true"');
+
+  const defaultMediaSplit = createPageSectionV2("media-split", {
+    id: "sec-media-split-default",
+    variant: "default",
+    blocks: mixedMedia.blocks,
+  });
+  const defaultHtml = renderToStaticMarkup(<PageSectionContent section={defaultMediaSplit} />);
+  expect(defaultHtml).not.toContain("data-page-media-split-zone");
+  expect(defaultHtml).not.toContain("data-page-media-split-empty");
+
+  const unsafeMedia = createPageSectionV2("media-split", {
+    id: "sec-media-split-unsafe",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-unsafe-media",
+        props: { src: "javascript:alert(1)", alt: "Unsafe" },
+      }),
+      createPageBlockV2("text", {
+        id: "blk-safe-copy",
+        props: { text: "Safe copy", format: "plain", align: "left" },
+      }),
+    ],
+  });
+  const unsafeHtml = renderToStaticMarkup(<PageSectionContent section={unsafeMedia} />);
+  expect(unsafeHtml).toContain('data-page-media-split-zone="media"');
+  expect(unsafeHtml).not.toContain("javascript:alert");
+});
+
+test("phase 3b wrapper variants expose default, grid, card, and index semantics", () => {
+  const galleryBlocks = [
+    createPageBlockV2("image", {
+      id: "blk-gallery-one",
+      props: { src: "/gallery-one.jpg", alt: "One" },
+    }),
+    createPageBlockV2("image", {
+      id: "blk-gallery-two",
+      props: { src: "/gallery-two.jpg", alt: "Two" },
+    }),
+  ];
+  const galleryCardsHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-cards-coverage",
+        variant: "cards",
+        blocks: galleryBlocks,
+      })}
+    />
+  );
+  expect(galleryCardsHtml).toContain('data-page-gallery-section-item="1"');
+  expect(galleryCardsHtml).toContain('data-page-gallery-section-item="2"');
+  expect(galleryCardsHtml).toContain("shadow-sm");
+  const galleryGridHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-grid-coverage",
+        variant: "grid",
+        blocks: galleryBlocks,
+      })}
+    />
+  );
+  const galleryDefaultHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-default-coverage",
+        variant: "default",
+        blocks: galleryBlocks,
+      })}
+    />
+  );
+  expect(galleryGridHtml).toContain('data-page-gallery-section-variant="grid"');
+  expect(galleryDefaultHtml).toContain('data-page-gallery-section-variant="default"');
+  expect(galleryGridHtml).not.toContain("shadow-sm");
+  expect(galleryDefaultHtml).not.toContain("shadow-sm");
+
+  const faqBlocks = [
+    createPageBlockV2("text", {
+      id: "blk-faq-one",
+      props: { text: "Answer one", format: "plain", align: "left" },
+    }),
+    createPageBlockV2("text", {
+      id: "blk-faq-two",
+      props: { text: "Answer two", format: "plain", align: "left" },
+    }),
+  ];
+  const faqDefaultHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("faq", {
+        id: "sec-faq-default-coverage",
+        variant: "default",
+        blocks: faqBlocks,
+      })}
+    />
+  );
+  const faqCompactHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("faq", {
+        id: "sec-faq-compact-coverage",
+        variant: "compact",
+        blocks: faqBlocks,
+      })}
+    />
+  );
+  expect(faqDefaultHtml).toContain('data-page-faq-item="1"');
+  expect(faqDefaultHtml).toContain('data-page-faq-item="2"');
+  expect(faqDefaultHtml).toContain("p-5 shadow-sm");
+  expect(faqCompactHtml).toContain("px-4 py-3 shadow-none");
+
+  const testimonialBlocks = [
+    createPageBlockV2("quote", {
+      id: "blk-testimonial-one",
+      props: { text: "First", cite: "A" },
+    }),
+    createPageBlockV2("quote", {
+      id: "blk-testimonial-two",
+      props: { text: "Second", cite: "B" },
+    }),
+  ];
+  const testimonialCardsHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-cards-coverage",
+        variant: "cards",
+        blocks: testimonialBlocks,
+      })}
+    />
+  );
+  const testimonialGridHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-grid-coverage",
+        variant: "grid",
+        blocks: testimonialBlocks,
+      })}
+    />
+  );
+  const testimonialDefaultHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-default-coverage",
+        variant: "default",
+        blocks: testimonialBlocks,
+      })}
+    />
+  );
+  expect(countMarkup(testimonialCardsHtml, 'data-page-testimonial-card="true"')).toBe(2);
+  expect(testimonialGridHtml).not.toContain('data-page-testimonial-card="true"');
+  expect(testimonialDefaultHtml).not.toContain('data-page-testimonial-card="true"');
+  expect(testimonialGridHtml).toContain('data-page-testimonial-variant="grid"');
+  expect(testimonialDefaultHtml).toContain('data-page-testimonial-variant="default"');
+});
+
+test("phase 3b wrapped template sections keep exactly one wrapper per block in column composition", () => {
+  const assignedBlocks = [
+    createPageBlockV2("text", {
+      id: "blk-assigned-one",
+      props: { text: "Assigned one", format: "plain", align: "left" },
+      style: { column: 1 },
+    }),
+    createPageBlockV2("text", {
+      id: "blk-assigned-two",
+      props: { text: "Assigned two", format: "plain", align: "left" },
+      style: { column: 2 },
+    }),
+  ];
+  const assertWrappedComposition = (
+    section: PageSectionV2,
+    itemAttribute: string,
+    expectedColumns: number
+  ) => {
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    expect(countMarkup(html, 'data-page-section-column="')).toBe(expectedColumns);
+    expect(countMarkup(html, `${itemAttribute}=`)).toBe(section.blocks.length);
+    expect(countMarkup(html, 'data-block-id="blk-assigned-one"')).toBe(1);
+    expect(countMarkup(html, 'data-block-id="blk-assigned-two"')).toBe(1);
+    return html;
+  };
+
+  const timelineHtml = assertWrappedComposition(
+    createPageSectionV2("timeline", {
+      id: "sec-timeline-composition-coverage",
+      variant: "horizontal",
+      layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-timeline-item",
+    3
+  );
+  expect(countMarkup(timelineHtml, 'data-page-timeline-marker="true"')).toBe(2);
+
+  assertWrappedComposition(
+    createPageSectionV2("gallery", {
+      id: "sec-gallery-composition-coverage",
+      variant: "cards",
+      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-gallery-section-item",
+    3
+  );
+
+  const faqHtml = assertWrappedComposition(
+    createPageSectionV2("faq", {
+      id: "sec-faq-composition-coverage",
+      variant: "compact",
+      layout: { columns: 2, align: "stretch", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-faq-item",
+    2
+  );
+  expect(faqHtml).toContain("px-4 py-3 shadow-none");
+
+  const testimonialsHtml = assertWrappedComposition(
+    createPageSectionV2("testimonials", {
+      id: "sec-testimonials-composition-coverage",
+      variant: "cards",
+      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-testimonial-item",
+    3
+  );
+  expect(countMarkup(testimonialsHtml, 'data-page-testimonial-card="true"')).toBe(2);
+});
+
+test("phase 3b leaves non-wrapped section families wrapper-free", () => {
+  const block = createPageBlockV2("text", {
+    id: "blk-identity",
+    props: { text: "Identity", format: "plain", align: "left" },
+  });
+  const sections = [
+    createPageSectionV2("hero", { id: "sec-hero-identity", variant: "centered", blocks: [block] }),
+    createPageSectionV2("content", {
+      id: "sec-content-identity",
+      variant: "compact",
+      blocks: [block],
+    }),
+    createPageSectionV2("feature-grid", {
+      id: "sec-feature-identity",
+      variant: "cards",
+      blocks: [block],
+    }),
+    createPageSectionV2("comparison", {
+      id: "sec-comparison-identity",
+      variant: "grid",
+      blocks: [block],
+    }),
+    createPageSectionV2("cta", { id: "sec-cta-identity", variant: "default", blocks: [block] }),
+    createPageSectionV2("custom", {
+      id: "sec-custom-identity",
+      variant: "grid",
+      blocks: [block],
+    }),
+  ];
+  for (const section of sections) {
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    expect(html).not.toContain("data-page-media-split-zone");
+    expect(html).not.toContain("data-page-timeline-item");
+    expect(html).not.toContain("data-page-gallery-section-item");
+    expect(html).not.toContain("data-page-faq-item");
+    expect(html).not.toContain("data-page-testimonial-item");
+    expect(countMarkup(html, 'data-block-id="blk-identity"')).toBe(1);
+  }
 });
 
 test("full-width section variants remove the outer section gutter so backgrounds fill the band", () => {
