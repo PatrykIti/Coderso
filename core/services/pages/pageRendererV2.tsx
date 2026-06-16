@@ -255,8 +255,34 @@ const toGradientBackground = (value: string | null | undefined) => {
   return safe && isSafeAuthoringCssGradient(safe) ? safe : undefined;
 };
 
+const scalePageSectionSpacing = (value: number, scale: number, minimum: number) =>
+  value <= 0 ? 0 : Math.max(minimum, Math.round(value * scale));
+
+const toPageSectionVariantSpacing = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate
+): PageSectionV2["spacing"] => {
+  if (
+    template.variant === "compact" &&
+    (template.template === "content" ||
+      template.template === "faq" ||
+      template.template === "timeline")
+  ) {
+    return {
+      ...section.spacing,
+      paddingTop: scalePageSectionSpacing(section.spacing.paddingTop, 0.55, 16),
+      paddingBottom: scalePageSectionSpacing(section.spacing.paddingBottom, 0.55, 16),
+      paddingLeft: scalePageSectionSpacing(section.spacing.paddingLeft, 0.75, 16),
+      paddingRight: scalePageSectionSpacing(section.spacing.paddingRight, 0.75, 16),
+      gap: scalePageSectionSpacing(section.spacing.gap, 0.6, 8),
+    };
+  }
+  return section.spacing;
+};
+
 export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProperties => {
   const template = resolvePageSectionTemplate(section);
+  const spacing = toPageSectionVariantSpacing(section, template);
   const accent = sanitizeAuthoringCssColor(section.style.accent);
   const backgroundColor =
     section.style.backgroundType === "color"
@@ -281,10 +307,10 @@ export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProp
           : section.style.shadow === "md"
             ? "0 14px 40px rgba(15, 23, 42, 0.12)"
             : "0 22px 60px rgba(15, 23, 42, 0.16)",
-    padding: `${section.spacing.paddingTop}px ${section.spacing.paddingRight}px ${section.spacing.paddingBottom}px ${section.spacing.paddingLeft}px`,
+    padding: `${spacing.paddingTop}px ${spacing.paddingRight}px ${spacing.paddingBottom}px ${spacing.paddingLeft}px`,
     maxWidth: template.variant === "full-width" ? "none" : `${section.layout.maxWidth}px`,
     margin: "0 auto",
-    gap: `${section.spacing.gap}px`,
+    gap: `${spacing.gap}px`,
   };
 };
 
@@ -324,8 +350,30 @@ const pageSectionTemplateClass = (template: ResolvedPageSectionTemplate) => {
   if (template.template === "hero" && template.variant === "full-width") {
     return `${marker} min-h-[420px] place-items-center text-center`;
   }
-  if (template.template === "hero" || template.template === "cta") {
+  if (template.template === "cta") {
+    if (template.variant === "full-width") {
+      return `${marker} min-h-[320px] place-items-center justify-items-center text-center`;
+    }
+    if (template.variant === "centered") {
+      return `${marker} place-items-center justify-items-center text-center`;
+    }
+    return `${marker} items-start justify-items-start text-left`;
+  }
+  if (template.template === "hero") {
     return `${marker} place-items-center text-center`;
+  }
+  if (template.template === "timeline") {
+    if (template.variant === "horizontal") return `${marker} auto-rows-fr items-start`;
+    if (template.variant === "compact") return `${marker} content-start`;
+    return `${marker} content-start`;
+  }
+  if (template.template === "gallery") {
+    if (template.variant === "cards") return `${marker} auto-rows-fr items-stretch`;
+    if (template.variant === "grid") return `${marker} auto-rows-fr`;
+  }
+  if (template.template === "testimonials") {
+    if (template.variant === "cards") return `${marker} auto-rows-fr items-stretch`;
+    if (template.variant === "grid") return `${marker} auto-rows-fr`;
   }
   if (template.variant === "compact") return `${marker} content-start`;
   if (template.variant === "cards") return `${marker} auto-rows-fr`;
@@ -1635,6 +1683,197 @@ const pageSectionContentDataAttributes = {
   [PAGE_SECTION_CONTENT_ATTRIBUTE]: "true",
 } as const;
 
+type PageSectionBlockRenderer = (block: PageBlockV2, index: number) => ReactNode;
+
+const pageSectionMediaBlockTypes = new Set<PageBlockV2["type"]>(["image", "video", "gallery"]);
+
+const isPageSectionMediaBlock = (block: PageBlockV2): boolean =>
+  pageSectionMediaBlockTypes.has(block.type);
+
+const renderMediaSplitPlaceholder = () => (
+  <div
+    className="flex min-h-56 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm font-medium text-slate-500"
+    data-page-media-split-empty="true"
+  >
+    Media
+  </div>
+);
+
+const wrapSectionTemplateBlock = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate,
+  block: PageBlockV2,
+  index: number,
+  rendered: ReactNode
+): ReactNode => {
+  if (!rendered) return rendered;
+
+  if (template.template === "timeline") {
+    return (
+      <div
+        key={`${section.id}-timeline-${block.id}`}
+        className={joinPageRenderClasses(
+          "relative min-w-0",
+          template.variant === "horizontal"
+            ? "grid gap-3 md:grid-rows-[auto_1fr]"
+            : "grid grid-cols-[auto_minmax(0,1fr)] gap-4",
+          template.variant === "compact" ? "py-2" : "py-3"
+        )}
+        data-page-timeline-item={index + 1}
+      >
+        <span
+          className={joinPageRenderClasses(
+            "mt-1 h-3 w-3 rounded-full ring-4 ring-white",
+            template.variant === "horizontal" ? "justify-self-center" : undefined
+          )}
+          style={{ backgroundColor: "var(--coderso-section-accent,#0d9488)" }}
+          data-page-timeline-marker="true"
+        />
+        <div
+          className={joinPageRenderClasses(
+            "min-w-0",
+            template.variant === "horizontal" ? "text-center" : undefined
+          )}
+          data-page-timeline-content="true"
+        >
+          {rendered}
+        </div>
+      </div>
+    );
+  }
+
+  if (template.template === "gallery") {
+    return (
+      <div
+        key={`${section.id}-gallery-${block.id}`}
+        className={joinPageRenderClasses(
+          "min-w-0",
+          template.variant === "cards"
+            ? "overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+            : undefined
+        )}
+        data-page-gallery-section-item={index + 1}
+        data-page-gallery-section-variant={template.variant}
+      >
+        {rendered}
+      </div>
+    );
+  }
+
+  if (template.template === "faq") {
+    return (
+      <div
+        key={`${section.id}-faq-${block.id}`}
+        className={joinPageRenderClasses(
+          "min-w-0 rounded-lg border border-slate-200 bg-white",
+          template.variant === "compact" ? "px-4 py-3 shadow-none" : "p-5 shadow-sm"
+        )}
+        data-page-faq-item={index + 1}
+        data-page-faq-variant={template.variant}
+      >
+        {rendered}
+      </div>
+    );
+  }
+
+  if (template.template === "testimonials") {
+    return (
+      <div
+        key={`${section.id}-testimonial-${block.id}`}
+        className={joinPageRenderClasses(
+          "min-w-0",
+          template.variant === "cards"
+            ? "rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            : undefined
+        )}
+        data-page-testimonial-item={index + 1}
+        data-page-testimonial-variant={template.variant}
+        {...(template.variant === "cards" ? { "data-page-testimonial-card": "true" } : {})}
+      >
+        {rendered}
+      </div>
+    );
+  }
+
+  return rendered;
+};
+
+const renderMediaSplitSectionChildren = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate,
+  blocks: readonly PageBlockV2[],
+  renderBlock: PageSectionBlockRenderer
+): ReactNode => {
+  const mediaBlocks: Array<{ block: PageBlockV2; index: number }> = [];
+  const contentBlocks: Array<{ block: PageBlockV2; index: number }> = [];
+
+  blocks.forEach((block, index) => {
+    (isPageSectionMediaBlock(block) ? mediaBlocks : contentBlocks).push({ block, index });
+  });
+
+  const mediaZone = (
+    <div
+      key={`${section.id}-media-zone`}
+      className="min-w-0 space-y-4"
+      data-page-media-split-zone="media"
+    >
+      {mediaBlocks.length > 0
+        ? mediaBlocks.map(({ block, index }) => renderBlock(block, index))
+        : renderMediaSplitPlaceholder()}
+    </div>
+  );
+  const contentZone = (
+    <div
+      key={`${section.id}-content-zone`}
+      className={joinPageRenderClasses(
+        "min-w-0 space-y-4",
+        template.variant === "horizontal" ? "self-center" : undefined
+      )}
+      data-page-media-split-zone="content"
+    >
+      {contentBlocks.map(({ block, index }) => renderBlock(block, index))}
+    </div>
+  );
+
+  return (
+    <div
+      className={joinPageRenderClasses(
+        "contents",
+        template.variant === "horizontal" ? "page-media-split-content-first" : undefined
+      )}
+      data-page-media-split={template.variant}
+    >
+      {template.variant === "horizontal" ? (
+        <>
+          {contentZone}
+          {mediaZone}
+        </>
+      ) : (
+        <>
+          {mediaZone}
+          {contentZone}
+        </>
+      )}
+    </div>
+  );
+};
+
+const renderTemplateSectionChildren = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate,
+  blocks: readonly PageBlockV2[],
+  renderBlock: PageSectionBlockRenderer,
+  renderRawBlock: PageSectionBlockRenderer
+): ReactNode => {
+  if (template.template === "media-split" && template.variant !== "default") {
+    return renderMediaSplitSectionChildren(section, template, blocks, renderRawBlock);
+  }
+
+  return blocks.map((block, index) =>
+    wrapSectionTemplateBlock(section, template, block, index, renderBlock(block, index))
+  );
+};
+
 export function PageSectionContent({
   section,
   emptyContent = defaultEmptySectionContent,
@@ -1671,6 +1910,7 @@ export function PageSectionContent({
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
 }) {
   const renderProps = toPageSectionRenderProps(section, { layoutMode });
+  const template = resolvePageSectionTemplate(section);
   const blocks = includeHiddenBlocks
     ? section.blocks
     : section.blocks.filter((block) => block.visibility.visible);
@@ -1684,6 +1924,16 @@ export function PageSectionContent({
     runtimeDataByBlockId,
     layoutMode,
   });
+  const renderBlockAtIndex = (block: PageBlockV2, index: number) =>
+    renderPageBlockWithFrame(block, blockRenderContext(index));
+  const renderWrappedBlockAtIndex = (block: PageBlockV2, index: number) =>
+    wrapSectionTemplateBlock(
+      section,
+      template,
+      block,
+      index,
+      renderPageBlockWithFrame(block, blockRenderContext(index))
+    );
   // Per-column composition (owner finding #5, round 3): when the section
   // composes 2+ columns AND at least one rendered root block carries a
   // `style.column` assignment, blocks render inside one wrapper stack per
@@ -1720,9 +1970,7 @@ export function PageSectionContent({
             data-page-section-column={columnIndex + 1}
             data-page-section-column-owner={section.id}
           >
-            {members.map(({ block, index }) =>
-              renderPageBlockWithFrame(block, blockRenderContext(index))
-            )}
+            {members.map(({ block, index }) => renderWrappedBlockAtIndex(block, index))}
             {renderSectionColumnTrailing?.({
               section,
               column: columnIndex + 1,
@@ -1732,7 +1980,13 @@ export function PageSectionContent({
         ))
       ) : blocks.length > 0 ? (
         <>
-          {blocks.map((block, index) => renderPageBlockWithFrame(block, blockRenderContext(index)))}
+          {renderTemplateSectionChildren(
+            section,
+            template,
+            blocks,
+            renderBlockAtIndex,
+            renderBlockAtIndex
+          )}
           {trailingContent}
         </>
       ) : (

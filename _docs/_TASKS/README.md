@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 103 tasks
+- **To Do:** 59 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2533 tasks
+- **Done:** 2577 tasks
 
 ---
 
@@ -132,50 +132,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Remove active screen-only widget builder/runtime surfaces after V4 cutover and backfill verification. |
 | TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Drop duplicate legacy `custom_screens.blocks` and `custom_screens.bindings` after guards pass. |
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
-| TASK-426 | Hero Section Audit Remediation | High | Medium | Hero already renders truthfully; this family closes dedicated-control drift and verifies hero-side accent emission after the TASK-439-owned accent fix lands. |
-| TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Freeze the Hero-specific remediation contract for variant behavior, dedicated controls, and hero-side accent verification (accent fix owned by TASK-439). |
-| TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Adopt the shared dedicated controls for Hero and verify hero-side accent/variant emission on the front after the TASK-439 accent fix lands. |
-| TASK-426-02 | Hero Validation Docs And Closure | High | Medium | Close the Hero family with targeted validation, live browser proof, and docs/board/changelog sync. |
-| TASK-427 | Content Section Audit Remediation | High | Medium | `variant=compact` emits only a visually inert marker class today; give it a visible published-layout effect and remove shared inspector drift. |
-| TASK-427-01 | Content Contract And Audit Freeze | High | Medium | Freeze the Content-section remediation contract around the visually inert `compact` variant and control-surface adoption. |
-| TASK-427-01-L01 | Content Compact Variant Runtime And Dedicated Controls | High | Medium | Implement a real published-layout effect for `compact` and adopt the shared dedicated inspector widgets. |
-| TASK-427-02 | Content Validation Docs And Closure | High | Medium | Close the Content family with targeted validation, live `compact` proof, and docs/board/changelog sync. |
-| TASK-428 | Feature Grid Section Audit Remediation | Medium | Medium | Preserve working cards/grid runtime behavior while adopting the redesigned control surface. |
-| TASK-428-01 | Feature Grid Contract And Audit Freeze | Medium | Medium | Freeze the Feature Grid remediation contract while preserving the current working cards/grid runtime behavior. |
-| TASK-428-01-L01 | Feature Grid Runtime Guard And Dedicated Controls | Medium | Medium | Keep Feature Grid runtime behavior truthful while migrating its inspector to the dedicated control surface. |
-| TASK-428-02 | Feature Grid Validation Docs And Closure | Medium | Medium | Close the Feature Grid family with targeted validation, live cards/grid proof, and docs/board/changelog sync. |
-| TASK-429 | Media Split Section Audit Remediation | High | Large | Media Split variants already switch column geometry but lack a media-beside-content presentation; implement the real split/horizontal layouts plus media/responsive controls. |
-| TASK-429-01 | Media Split Contract And Audit Freeze | High | Medium | Freeze the Media Split remediation contract around the missing media-beside-content presentation and media/responsive controls. |
-| TASK-429-01-L01 | Media Split Variant Layout And Dedicated Controls | High | Large | Implement a real media-beside-content `split`/`horizontal` presentation and adopt dedicated media/responsive controls. |
-| TASK-429-02 | Media Split Validation Docs And Closure | High | Medium | Close the Media Split family with targeted validation, live variant proof, and docs/board/changelog sync. |
-| TASK-430 | Timeline Section Audit Remediation | High | Large | Timeline still renders like generic text content; add truthful timeline runtime behavior and dedicated controls. |
-| TASK-430-01 | Timeline Contract And Audit Freeze | High | Medium | Freeze the Timeline remediation contract around visually inert variants and generic front rendering. |
-| TASK-430-01-L01 | Timeline Runtime Layout And Dedicated Controls | High | Large | Implement truthful timeline runtime behavior and adopt the shared dedicated control surface. |
-| TASK-430-02 | Timeline Validation Docs And Closure | High | Medium | Close the Timeline family with targeted validation, live runtime proof, and docs/board/changelog sync. |
-| TASK-431 | Gallery Section Audit Remediation | High | Large | Gallery still renders generic heading/text content; add truthful gallery/card runtime behavior and dedicated controls. |
-| TASK-431-01 | Gallery Contract And Audit Freeze | High | Medium | Freeze the Gallery remediation contract around marker-only variants and generic front rendering. |
-| TASK-431-01-L01 | Gallery Runtime Layout And Dedicated Controls | High | Large | Implement truthful Gallery runtime behavior and adopt the shared dedicated media/style controls. |
-| TASK-431-02 | Gallery Validation Docs And Closure | High | Medium | Close the Gallery family with targeted validation, live runtime proof, and docs/board/changelog sync. |
-| TASK-432 | Comparison Section Audit Remediation | Medium | Medium | Preserve working grid/cards runtime behavior while replacing shared native-control drift. |
-| TASK-432-01 | Comparison Contract And Audit Freeze | Medium | Medium | Freeze the Comparison remediation contract while preserving the current working grid/cards runtime behavior. |
-| TASK-432-01-L01 | Comparison Runtime Guard And Dedicated Controls | Medium | Medium | Keep Comparison runtime behavior truthful while migrating its inspector to the dedicated control surface. |
-| TASK-432-02 | Comparison Validation Docs And Closure | Medium | Medium | Close the Comparison family with targeted validation, live grid/cards proof, and docs/board/changelog sync. |
-| TASK-433 | FAQ Section Audit Remediation | Medium | Medium | FAQ compact variant already works; close the remaining dedicated-control drift and guard the truthful runtime path. |
-| TASK-433-01 | FAQ Contract And Audit Freeze | Medium | Medium | Freeze the FAQ remediation contract while preserving the current working compact runtime behavior. |
-| TASK-433-01-L01 | FAQ Compact Runtime And Dedicated Controls | Medium | Medium | Keep FAQ compact behavior truthful while migrating its inspector to the dedicated control surface. |
-| TASK-433-02 | FAQ Validation Docs And Closure | Medium | Medium | Close the FAQ family with targeted validation, live compact proof, and docs/board/changelog sync. |
-| TASK-434 | Testimonials Section Audit Remediation | Medium | Medium | Testimonials already switches runtime marker classes; close the remaining inspector/control drift. |
-| TASK-434-01 | Testimonials Contract And Audit Freeze | Medium | Medium | Freeze the Testimonials remediation contract while preserving the current runtime marker behavior. |
-| TASK-434-01-L01 | Testimonials Variant Guard And Dedicated Controls | Medium | Medium | Keep Testimonials runtime behavior truthful while migrating its inspector to the dedicated control surface. |
-| TASK-434-02 | Testimonials Validation Docs And Closure | Medium | Medium | Close the Testimonials family with targeted validation, live variant proof, and docs/board/changelog sync. |
-| TASK-435 | CTA Section Audit Remediation | High | Medium | CTA variant classes collapse so `centered` renders like `default` (only full-width's inline max-width differs); give both variants a visible published-layout effect. |
-| TASK-435-01 | CTA Contract And Audit Freeze | High | Medium | Freeze the CTA remediation contract around the visually identical `centered`/`full-width` runtime semantics. |
-| TASK-435-01-L01 | CTA Variant Layout And Dedicated Controls | High | Medium | Implement real CTA variant layouts and adopt the shared dedicated inspector widgets. |
-| TASK-435-02 | CTA Validation Docs And Closure | High | Medium | Close the CTA family with targeted validation, live variant proof, and docs/board/changelog sync. |
-| TASK-436 | Custom Section Audit Remediation | Medium | Medium | Preserve working custom-grid runtime behavior while replacing shared native-control drift. |
-| TASK-436-01 | Custom Contract And Audit Freeze | Medium | Medium | Freeze the Custom remediation contract while preserving the current working `grid` runtime behavior. |
-| TASK-436-01-L01 | Custom Grid Runtime And Dedicated Controls | Medium | Medium | Keep Custom `grid` behavior truthful while migrating its inspector to the dedicated control surface. |
-| TASK-436-02 | Custom Validation Docs And Closure | Medium | Medium | Close the Custom family with targeted validation, live `grid` proof, and docs/board/changelog sync. |
 | TASK-453 | Page Editor V2 Audit Followup Closure Program | High | Medium | Aggregate closure family for `_FOLLOWUP_REPORT_2026-06-10.md`, mapping cross-family acceptance and residual risks. |
 | TASK-453-01 | Followup Report Closure Matrix And Ownership Freeze | High | Medium | Freeze the acceptance matrix that maps each aggregate follow-up finding onto concrete task families. |
 | TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Build the matrix that links every aggregate finding to concrete task owners and evidence requirements. |
@@ -212,6 +168,50 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-426 | Hero Section Audit Remediation | High | Medium | Done (2026-06-16): Hero dedicated-control closure and post-TASK-439 accent evidence validated in Phase 3B section smoke. |
+| TASK-426-01 | Hero Contract And Audit Freeze | High | Medium | Done (2026-06-16): Hero contract refreshed after TASK-439 so accent is verification-only, not duplicate implementation. |
+| TASK-426-01-L01 | Hero Dedicated Controls And Accent Truthfulness | High | Medium | Done (2026-06-16): Shared controls and hero accent emission/consumption guarded by renderer/control coverage. |
+| TASK-426-02 | Hero Validation Docs And Closure | High | Medium | Done (2026-06-16): Hero validation, board sync, and changelog 1177 close the family. |
+| TASK-427 | Content Section Audit Remediation | High | Medium | Done (2026-06-16): Content `compact` now changes published spacing/gap beyond marker classes. |
+| TASK-427-01 | Content Contract And Audit Freeze | High | Medium | Done (2026-06-16): Content compact contract frozen around visible spacing semantics and shared controls. |
+| TASK-427-01-L01 | Content Compact Variant Runtime And Dedicated Controls | High | Medium | Done (2026-06-16): Compact spacing is runtime-visible and covered by renderer/control tests. |
+| TASK-427-02 | Content Validation Docs And Closure | High | Medium | Done (2026-06-16): Content validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-428 | Feature Grid Section Audit Remediation | Medium | Medium | Done (2026-06-16): Feature Grid keeps truthful cards/grid geometry while shared dedicated controls are guarded. |
+| TASK-428-01 | Feature Grid Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Feature Grid contract confirmed as guard/evidence shaped. |
+| TASK-428-01-L01 | Feature Grid Runtime Guard And Dedicated Controls | Medium | Medium | Done (2026-06-16): Runtime guard proves cards/grid differ beyond inert markers. |
+| TASK-428-02 | Feature Grid Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Feature Grid validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-429 | Media Split Section Audit Remediation | High | Large | Done (2026-06-16): Media Split now groups child blocks into media/content zones with split/horizontal order semantics. |
+| TASK-429-01 | Media Split Contract And Audit Freeze | High | Medium | Done (2026-06-16): Contract refreshed around `resolvePageSectionTemplateColumns` plus semantic zones. |
+| TASK-429-01-L01 | Media Split Variant Layout And Dedicated Controls | High | Large | Done (2026-06-16): Split/horizontal media-beside-content layout and control evidence are covered. |
+| TASK-429-02 | Media Split Validation Docs And Closure | High | Medium | Done (2026-06-16): Media Split validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-430 | Timeline Section Audit Remediation | High | Large | Done (2026-06-16): Timeline now wraps child blocks as timeline items with markers and horizontal 3-column floor. |
+| TASK-430-01 | Timeline Contract And Audit Freeze | High | Medium | Done (2026-06-16): Timeline contract refreshed from marker-only to truthful item/marker structure. |
+| TASK-430-01-L01 | Timeline Runtime Layout And Dedicated Controls | High | Large | Done (2026-06-16): Timeline runtime structure and shared control evidence are covered. |
+| TASK-430-02 | Timeline Validation Docs And Closure | High | Medium | Done (2026-06-16): Timeline validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-431 | Gallery Section Audit Remediation | High | Large | Done (2026-06-16): Gallery section composes existing child blocks into grid/card section surfaces. |
+| TASK-431-01 | Gallery Contract And Audit Freeze | High | Medium | Done (2026-06-16): Contract clarified section Gallery versus standalone gated gallery block. |
+| TASK-431-01-L01 | Gallery Runtime Layout And Dedicated Controls | High | Large | Done (2026-06-16): Gallery card wrappers and shared media/style control evidence are covered. |
+| TASK-431-02 | Gallery Validation Docs And Closure | High | Medium | Done (2026-06-16): Gallery validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-432 | Comparison Section Audit Remediation | Medium | Medium | Done (2026-06-16): Comparison keeps truthful grid/cards geometry while shared dedicated controls are guarded. |
+| TASK-432-01 | Comparison Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Comparison contract confirmed as guard/evidence shaped. |
+| TASK-432-01-L01 | Comparison Runtime Guard And Dedicated Controls | Medium | Medium | Done (2026-06-16): Runtime guard proves grid/cards behavior beyond inert markers. |
+| TASK-432-02 | Comparison Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Comparison validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-433 | FAQ Section Audit Remediation | Medium | Medium | Done (2026-06-16): FAQ compact now has compact spacing and item wrappers beyond generic marker behavior. |
+| TASK-433-01 | FAQ Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): FAQ contract refreshed after the merged audit corrected the earlier premise. |
+| TASK-433-01-L01 | FAQ Compact Runtime And Dedicated Controls | Medium | Medium | Done (2026-06-16): FAQ compact runtime and shared control evidence are covered. |
+| TASK-433-02 | FAQ Validation Docs And Closure | Medium | Medium | Done (2026-06-16): FAQ validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-434 | Testimonials Section Audit Remediation | Medium | Medium | Done (2026-06-16): Testimonials cards now render distinct card surfaces while grid stays flat. |
+| TASK-434-01 | Testimonials Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Testimonials contract refreshed around `resolvePageSectionTemplateColumns` plus card surfaces. |
+| TASK-434-01-L01 | Testimonials Variant Guard And Dedicated Controls | Medium | Medium | Done (2026-06-16): Cards/grid distinction and shared control evidence are covered. |
+| TASK-434-02 | Testimonials Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Testimonials validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-435 | CTA Section Audit Remediation | High | Medium | Done (2026-06-16): CTA variants now differ by alignment/min-height with full-width max-width preserved. |
+| TASK-435-01 | CTA Contract And Audit Freeze | High | Medium | Done (2026-06-16): CTA no-op mechanism refreshed around `toPageSectionStyle` and class semantics. |
+| TASK-435-01-L01 | CTA Variant Layout And Dedicated Controls | High | Medium | Done (2026-06-16): CTA default/centered/full-width layout differences and controls are covered. |
+| TASK-435-02 | CTA Validation Docs And Closure | High | Medium | Done (2026-06-16): CTA validation, docs, board sync, and changelog 1177 close the family. |
+| TASK-436 | Custom Section Audit Remediation | Medium | Medium | Done (2026-06-16): Custom grid geometry remains guarded while shared dedicated controls are covered. |
+| TASK-436-01 | Custom Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Custom contract confirmed as guard/evidence shaped. |
+| TASK-436-01-L01 | Custom Grid Runtime And Dedicated Controls | Medium | Medium | Done (2026-06-16): Custom grid guard and shared control evidence are covered. |
+| TASK-436-02 | Custom Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Custom validation, docs, board sync, and changelog 1177 close the family. |
 | TASK-437 | Heading Block Audit Remediation | Medium | Medium | Done (2026-06-16): Heading inline-edit, typography, dedicated controls, and publish/reload parity closed with shared Page editor validation. |
 | TASK-437-01 | Heading Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Heading ownership freeze confirmed no post-modularization drift remained outside the shared editor/control contracts. |
 | TASK-437-01-L01 | Heading Inline Edit Typography And Dedicated Controls | Medium | Medium | Done (2026-06-16): Heading uses the shared inline-edit, typography, and dedicated control surfaces without renderer changes. |

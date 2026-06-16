@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -29,7 +30,7 @@ the mapping.
 
 ## Sub-Tasks
 
-- [ ] TASK-429-01-L01: Media Split variant layout and dedicated controls.
+- [x] TASK-429-01-L01: Media Split variant layout and dedicated controls.
 
 ---
 
@@ -46,3 +47,9 @@ the mapping.
 
 - `_docs/PAGE_MODEL.md`
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

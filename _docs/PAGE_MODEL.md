@@ -139,6 +139,26 @@ without mutating stored data. Stored valid non-insertable sections still keep
 universal editor controls and render through generic fallback templates, while
 command-palette insertion stays gated by `pageSectionCapabilities`.
 
+Phase 3B section template semantics are part of the public runtime contract:
+
+- `content.compact`, `faq.compact`, and `timeline.compact` reduce published
+  spacing/gap rather than emitting marker-only classes.
+- `media-split.split` and `media-split.horizontal` keep the two-column template
+  floor and group existing child blocks into media and content zones. `split`
+  renders media first; `horizontal` renders content first.
+- `timeline.horizontal` floors the grid to at least three columns and wraps
+  each child block in a timeline item with a marker. Other timeline variants
+  keep the item/marker structure with their resolved grid/spacing.
+- `gallery` remains a section template over existing child blocks. `cards`
+  wraps child blocks in card surfaces while `grid` keeps the flat section grid;
+  this does not ungate or redefine the standalone `gallery` block.
+- `testimonials.cards` wraps child blocks in card surfaces while
+  `testimonials.grid` keeps flat grid rendering.
+- `cta.default`, `cta.centered`, and `cta.full-width` have distinct published
+  alignment/min-height classes. `full-width` still pins `max-width: none`.
+- `feature-grid`, `comparison`, and `custom` keep their existing truthful
+  grid/card geometry guards while using the shared dedicated control surface.
+
 ## Blocks And Layout Slots
 
 Most blocks are small content atoms. They are not the old specialized widget
@@ -793,6 +813,11 @@ The shared renderer resolves section templates through `pageSectionTemplates`.
 It emits both `data-page-section` and the resolved `data-page-variant`, plus
 `data-page-section-template`, so public runtime and admin canvas consume the
 same type/variant layout output before editor chrome is added.
+Section-template wrappers (`data-page-media-split-zone`,
+`data-page-timeline-item`, `data-page-gallery-section-item`,
+`data-page-faq-item`, and `data-page-testimonial-item`) are emitted by the same
+renderer path and compose existing child blocks instead of introducing
+widget-template runtime dependencies.
 
 For resolved `full-width` variants, the outer section band must not add the
 default page gutter. The painted content node already owns background, spacing,

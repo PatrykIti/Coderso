@@ -5,36 +5,32 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Large
 **Dependencies:** TASK-421, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Remediate the Media Split findings from
-`_docs/AUDIT/media-split-2026-06-10.md`. Premise correction (2026-06-11 drift
-audit): non-default Media Split variants ALREADY change the published layout
-at HEAD — `pageSectionTemplateColumns` forces two columns (`md:grid-cols-2`)
-for any non-default variant, `horizontal` additionally gets `items-center`,
-and a per-variant marker class is emitted on the inner content node
-(`core/services/pages/pageRendererV2.tsx`; introduced by commit 04069629 as
-the closed TASK-418-04-L04 contract). The audit's "marker-only, no layout
-effect" observation measured the variant-invariant outer `<section>` node
-against a stale build. The genuine gaps this family owns are a real
-media-beside-content split presentation with a VISIBLE split-vs-horizontal
-distinction on the published front, plus the empty Responsive tab (owned by
-TASK-425) and the media/style controls that degrade to native primitives
-(shared widgets owned by TASK-421).
+`_docs/AUDIT/media-split-2026-06-10.md`. Premise correction (2026-06-16 merged
+audit): non-default Media Split variants already changed grid geometry through
+`resolvePageSectionTemplateColumns`, but they still lacked a semantic
+media-beside-content presentation. The completed remediation keeps the
+two-column floor, groups media-bearing child blocks into a media zone, groups
+remaining blocks into a content zone, and makes `split` media-first while
+`horizontal` is content-first. TASK-425 owns the shared Responsive-tab closure
+and TASK-421 owns the shared dedicated control widgets.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-429-01: Media Split runtime variant and media-surface contract.
-- [ ] TASK-429-01-L01: Make `split`/`horizontal` visibly distinct with a real
+- [x] TASK-429-01: Media Split runtime variant and media-surface contract.
+- [x] TASK-429-01-L01: Make `split`/`horizontal` visibly distinct with a real
       media-beside-content presentation and verify the shared TASK-421
       media/toggle/color/segmented widgets render for Media Split panels.
-- [ ] TASK-429-02: Validation, docs, and closure.
+- [x] TASK-429-02: Validation, docs, and closure.
 
 ---
 
@@ -53,3 +49,9 @@ TASK-425) and the media/style controls that degrade to native primitives
 - `_docs/PAGE_MODEL.md`
 - `_docs/_TASKS/README.md`
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-426-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -14,22 +15,18 @@
 
 Adopt the shared dedicated inspector controls for Hero and verify that variant,
 alignment, and background behavior remain truthful on the published front
-instead of regressing into marker-only state. For accent, this leaf only
-re-verifies the hero-side flow — the section truthfully emits
-`--coderso-section-accent` from `section.style.accent`
-(`core/services/pages/pageRendererV2.tsx:126`) — after the TASK-439-owned
-accent->button binding fix (TASK-439-01-L01, consumption site
-`pageRendererV2.tsx:758`) lands; the investigation and fix of the
-not-visibly-applied accent on the published front belong to TASK-439, not this
-leaf.
+instead of regressing into marker-only state. For accent, this leaf verifies
+the post-TASK-439 flow: the section emits `--coderso-section-accent` from
+`section.style.accent`, and the published button consumes the variable through
+`toPageButtonElementStyle`.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -42,8 +39,8 @@ const heroControls = getPageEditorControlsForTarget({ kind: "section", type: "he
 // re-implement them.
 // Published front: variant is top-level `section.variant`, resolved via
 // resolvePageSectionTemplate(section) (core/services/pages/pageRendererV2.tsx:239);
-// hero-side accent emission via toPageSectionStyle
-// ("--coderso-section-accent": section.style.accent, pageRendererV2.tsx:126).
+// hero-side accent emission via toPageSectionStyle and button consumption via
+// toPageButtonElementStyle.
 ```
 
 Owner files:
@@ -105,3 +102,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

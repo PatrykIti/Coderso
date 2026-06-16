@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-424, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -14,10 +15,9 @@
 
 Freeze the Testimonials remediation contract from
 `_docs/AUDIT/testimonials-2026-06-10.md`. Audit fact to record: `cards` and
-`grid` resolve to identical published geometry (`md:grid-cols-3 auto-rows-fr`
-via `pageSectionTemplateColumns` at
-`core/services/pages/pageRendererV2.tsx:181-188` and `:210`/`:212`); only the
-marker class from `:199` differs and no stylesheet consumes it. Decision:
+`grid` shared the same published geometry (`md:grid-cols-3 auto-rows-fr`)
+through `resolvePageSectionTemplateColumns`; only the marker class differed.
+Decision:
 differentiate `cards` visually — `cards` adds a per-item card surface
 (padding/border/shadow) on the published front while `grid` stays flat —
 preserving the current marker contract and default single-column behavior,
@@ -28,7 +28,7 @@ matching Responsive-tab closure from `TASK-425`.
 
 ## Sub-Tasks
 
-- [ ] TASK-434-01-L01: Testimonials variant guard and dedicated controls.
+- [x] TASK-434-01-L01: Testimonials variant guard and dedicated controls.
 
 ---
 
@@ -45,3 +45,9 @@ matching Responsive-tab closure from `TASK-425`.
 
 - `_docs/PAGE_MODEL.md` if Testimonials semantics change
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

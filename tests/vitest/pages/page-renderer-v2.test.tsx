@@ -91,6 +91,12 @@ const createSection = () =>
     ],
   });
 
+const stripSectionTemplateMarker = (className: string) =>
+  className
+    .replace(/page-section-template-\S+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
 test("section render props expose shared classes, styles, and data attributes", () => {
   const section = createSection();
   const renderProps = toPageSectionRenderProps(section);
@@ -151,6 +157,245 @@ test("section templates branch supported variants and fall back without mutating
   expect(renderToStaticMarkup(<PageSectionRender section={split} />)).toContain(
     'data-page-variant="split"'
   );
+});
+
+test("phase 3b section variants change published surfaces beyond marker classes", () => {
+  const contentDefault = createPageSectionV2("content", {
+    id: "sec-content-default",
+    variant: "default",
+    spacing: { paddingTop: 80, paddingRight: 40, paddingBottom: 80, paddingLeft: 40, gap: 30 },
+  });
+  const contentCompact = createPageSectionV2("content", {
+    id: "sec-content-compact",
+    variant: "compact",
+    spacing: contentDefault.spacing,
+  });
+  expect(toPageSectionRenderProps(contentCompact).style.padding).toBe("44px 30px 44px 30px");
+  expect(toPageSectionRenderProps(contentCompact).style.padding).not.toBe(
+    toPageSectionRenderProps(contentDefault).style.padding
+  );
+  expect(toPageSectionRenderProps(contentCompact).style.gap).toBe("18px");
+
+  const timelineDefault = createPageSectionV2("timeline", {
+    id: "sec-timeline-default",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+  });
+  const timelineHorizontal = createPageSectionV2("timeline", {
+    id: "sec-timeline-horizontal",
+    variant: "horizontal",
+    layout: timelineDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(timelineHorizontal).contentClassName)
+  ).toContain("md:grid-cols-3");
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(timelineHorizontal).contentClassName)
+  ).not.toBe(
+    stripSectionTemplateMarker(toPageSectionRenderProps(timelineDefault).contentClassName)
+  );
+
+  const faqDefault = createPageSectionV2("faq", {
+    id: "sec-faq-default",
+    variant: "default",
+    spacing: { paddingTop: 64, paddingRight: 40, paddingBottom: 64, paddingLeft: 40, gap: 24 },
+  });
+  const faqCompact = createPageSectionV2("faq", {
+    id: "sec-faq-compact",
+    variant: "compact",
+    spacing: faqDefault.spacing,
+  });
+  expect(toPageSectionRenderProps(faqCompact).style.gap).toBe("14px");
+  expect(toPageSectionRenderProps(faqCompact).style.padding).not.toBe(
+    toPageSectionRenderProps(faqDefault).style.padding
+  );
+
+  const ctaDefault = createPageSectionV2("cta", {
+    id: "sec-cta-default",
+    variant: "default",
+  });
+  const ctaCentered = createPageSectionV2("cta", {
+    id: "sec-cta-centered",
+    variant: "centered",
+  });
+  const ctaFullWidth = createPageSectionV2("cta", {
+    id: "sec-cta-full",
+    variant: "full-width",
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(ctaCentered).contentClassName)
+  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(ctaDefault).contentClassName));
+  expect(toPageSectionRenderProps(ctaFullWidth).style.maxWidth).toBe("none");
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(ctaFullWidth).contentClassName)
+  ).toContain("min-h-[320px]");
+
+  const testimonialsCards = createPageSectionV2("testimonials", {
+    id: "sec-testimonials-cards",
+    variant: "cards",
+  });
+  const testimonialsGrid = createPageSectionV2("testimonials", {
+    id: "sec-testimonials-grid",
+    variant: "grid",
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(testimonialsCards).contentClassName)
+  ).not.toBe(
+    stripSectionTemplateMarker(toPageSectionRenderProps(testimonialsGrid).contentClassName)
+  );
+});
+
+test("phase 3b guard sections keep real grid geometry beyond marker classes", () => {
+  const featureDefault = createPageSectionV2("feature-grid", {
+    id: "sec-feature-default",
+    variant: "default",
+    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+  });
+  const featureCards = createPageSectionV2("feature-grid", {
+    id: "sec-feature-cards",
+    variant: "cards",
+    layout: featureDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(featureCards).contentClassName)
+  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(featureDefault).contentClassName));
+  expect(toPageSectionRenderProps(featureCards).contentClassName).toContain("md:grid-cols-3");
+
+  const comparisonDefault = createPageSectionV2("comparison", {
+    id: "sec-comparison-default",
+    variant: "default",
+    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+  });
+  const comparisonGrid = createPageSectionV2("comparison", {
+    id: "sec-comparison-grid",
+    variant: "grid",
+    layout: comparisonDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(comparisonGrid).contentClassName)
+  ).not.toBe(
+    stripSectionTemplateMarker(toPageSectionRenderProps(comparisonDefault).contentClassName)
+  );
+  expect(toPageSectionRenderProps(comparisonGrid).contentClassName).toContain("md:grid-cols-2");
+
+  const customDefault = createPageSectionV2("custom", {
+    id: "sec-custom-default",
+    variant: "default",
+    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+  });
+  const customGrid = createPageSectionV2("custom", {
+    id: "sec-custom-grid",
+    variant: "grid",
+    layout: customDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(customGrid).contentClassName)
+  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(customDefault).contentClassName));
+  expect(toPageSectionRenderProps(customGrid).contentClassName).toContain("md:grid-cols-2");
+});
+
+test("phase 3b section templates add truthful structure around existing blocks", () => {
+  const mediaSplit = createPageSectionV2("media-split", {
+    id: "sec-media-split",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-media",
+        props: { src: "/studio.jpg", alt: "Studio" },
+      }),
+      createPageBlockV2("heading", {
+        id: "blk-copy",
+        props: { text: "Story", level: "h2", align: "left" },
+      }),
+    ],
+  });
+  const mediaHorizontal = createPageSectionV2("media-split", {
+    id: "sec-media-horizontal",
+    variant: "horizontal",
+    blocks: mediaSplit.blocks,
+  });
+  const splitHtml = renderToStaticMarkup(<PageSectionContent section={mediaSplit} />);
+  const horizontalHtml = renderToStaticMarkup(<PageSectionContent section={mediaHorizontal} />);
+  expect(splitHtml).toContain('data-page-media-split="split"');
+  expect(splitHtml.indexOf('data-page-media-split-zone="media"')).toBeLessThan(
+    splitHtml.indexOf('data-page-media-split-zone="content"')
+  );
+  expect(horizontalHtml).toContain('data-page-media-split="horizontal"');
+  expect(horizontalHtml.indexOf('data-page-media-split-zone="content"')).toBeLessThan(
+    horizontalHtml.indexOf('data-page-media-split-zone="media"')
+  );
+
+  const timelineHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("timeline", {
+        id: "sec-timeline-structure",
+        variant: "horizontal",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "blk-milestone-1",
+            props: { text: "Launch", level: "h3", align: "left" },
+          }),
+          createPageBlockV2("text", {
+            id: "blk-milestone-2",
+            props: { text: "Second milestone", format: "plain", align: "left" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(timelineHtml.match(/data-page-timeline-item=/g)).toHaveLength(2);
+  expect(timelineHtml.match(/data-page-timeline-marker="true"/g)).toHaveLength(2);
+
+  const galleryHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-structure",
+        variant: "cards",
+        blocks: [
+          createPageBlockV2("image", {
+            id: "blk-gallery-image",
+            props: { src: "/gallery.jpg", alt: "Gallery" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(galleryHtml).toContain('data-page-gallery-section-item="1"');
+  expect(galleryHtml).toContain('data-page-gallery-section-variant="cards"');
+
+  const faqHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("faq", {
+        id: "sec-faq-structure",
+        variant: "compact",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-faq-answer",
+            props: { text: "Answer", format: "plain", align: "left" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(faqHtml).toContain('data-page-faq-item="1"');
+  expect(faqHtml).toContain('data-page-faq-variant="compact"');
+
+  const testimonialsHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-structure",
+        variant: "cards",
+        blocks: [
+          createPageBlockV2("quote", {
+            id: "blk-testimonial",
+            props: { text: "Reliable product", cite: "Customer" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(testimonialsHtml).toContain('data-page-testimonial-card="true"');
+  expect(testimonialsHtml).toContain('data-page-testimonial-variant="cards"');
 });
 
 test("full-width section variants remove the outer section gutter so backgrounds fill the band", () => {

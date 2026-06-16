@@ -5,32 +5,28 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Large
 **Dependencies:** TASK-421, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Remediate the Timeline-section findings from
-`_docs/AUDIT/timeline-2026-06-10.md`. The current section behaves like generic
-heading/text content: variants currently resolve only to a per-variant marker
-class plus generic single-utility tweaks (`items-center` for `horizontal`,
-`content-start` for `compact`) emitted by `pageSectionTemplateClass` on the
-inner content node (`core/services/pages/pageRendererV2.tsx`), with no
-timeline-specific structure or column semantics on the front — that missing
-timeline/milestone layout remains the real gap this family fixes, and the
-remediation extends/replaces the existing generic variant-class mapping rather
-than adding variant handling from zero. The audit also calls out an empty
-Responsive tab, and the dedicated control surface is still missing.
+`_docs/AUDIT/timeline-2026-06-10.md`. The completed remediation replaces the
+former marker-only/generic utility behavior with timeline item wrappers,
+markers, compact spacing, and a horizontal variant that floors the published
+grid to three columns. TASK-425 owns the shared Responsive-tab closure and
+TASK-421 owns the shared dedicated control widgets.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-430-01: Timeline runtime semantics and variant contract.
-- [ ] TASK-430-01-L01: Implement real timeline/milestone layout behavior and
+- [x] TASK-430-01: Timeline runtime semantics and variant contract.
+- [x] TASK-430-01-L01: Implement real timeline/milestone layout behavior and
       adopt the dedicated control surface for timeline-specific options.
-- [ ] TASK-430-02: Validation, docs, and closure.
+- [x] TASK-430-02: Validation, docs, and closure.
 
 ---
 
@@ -48,3 +44,9 @@ Responsive tab, and the dedicated control surface is still missing.
 
 - `_docs/PAGE_MODEL.md`
 - `_docs/_TASKS/README.md`
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.
