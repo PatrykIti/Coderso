@@ -11,6 +11,7 @@ import {
   sanitizeAuthoringCssColor,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
+  sanitizeAuthoringRichTextHtml,
 } from "../../../core/services/pages/pageAuthoringSanitizers";
 
 test("authoring URL sanitizers keep current safe hrefs and reject scriptable protocols", () => {
@@ -59,6 +60,20 @@ test("authoring CSS string escaping prevents style element breakout", () => {
   expect(escaped).toContain("\\3c /style\\3e ");
   expect(escaped).not.toContain("</style>");
   expect(escaped).not.toContain("<script>");
+});
+
+test("authoring rich text sanitizer keeps safe inline markup and rejects active content", () => {
+  const sanitized = sanitizeAuthoringRichTextHtml(
+    '<p>Hello <strong>rich</strong> <a href="/safe" onclick="alert(1)">safe</a><script>alert(1)</script><a href="javascript:alert(1)">bad</a></p>'
+  );
+
+  expect(sanitized).toContain("<strong>rich</strong>");
+  expect(sanitized).toContain('<a href="/safe" rel="nofollow noreferrer">safe</a>');
+  expect(sanitized).toContain("bad");
+  expect(sanitized).not.toContain("onclick");
+  expect(sanitized).not.toContain("<script");
+  expect(sanitized).not.toContain("alert(1)");
+  expect(sanitized).not.toContain("javascript:");
 });
 
 test("Page v2 normalizers sanitize URL and style fields before persistence", () => {

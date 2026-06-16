@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -22,11 +23,11 @@ capitalized `Quote tools` fallback after that owner lands.
 
 ## Sub-Tasks
 
-- [ ] TASK-447-01: Quote text/control contract freeze.
-- [ ] TASK-447-01-L01: Adopt inline-edit and dedicated controls for quote/cite
+- [x] TASK-447-01: Quote text/control contract freeze.
+- [x] TASK-447-01-L01: Adopt inline-edit and dedicated controls for quote/cite
       content and verify the toolbar-label fallback (owned by
       TASK-451-02-L01).
-- [ ] TASK-447-02: Validation, docs, and closure.
+- [x] TASK-447-02: Validation, docs, and closure.
 
 ---
 

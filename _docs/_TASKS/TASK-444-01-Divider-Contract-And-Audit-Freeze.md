@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Small
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,7 +21,7 @@ truthfulness around tone, style, and visibility.
 
 ## Sub-Tasks
 
-- [ ] TASK-444-01-L01: Divider dedicated controls and runtime guard.
+- [x] TASK-444-01-L01: Divider dedicated controls and runtime guard.
 
 ---
 

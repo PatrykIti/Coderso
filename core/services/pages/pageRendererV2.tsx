@@ -56,6 +56,7 @@ import {
   sanitizeAuthoringCssColor,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
+  sanitizeAuthoringRichTextHtml,
 } from "./pageAuthoringSanitizers";
 
 export type PageRenderMode = "runtime" | "admin-preview";
@@ -110,16 +111,19 @@ export type PageBlockFrameRenderer = (input: {
 }) => ReactNode;
 
 /**
- * Admin-canvas hook (TASK-422-02): receives the exact text node a text-bearing
- * block paints (including renderer fallbacks) so the Page Editor can layer
- * inline editing on top of the same content the front renders. Runtime render
- * paths never provide it, so public output is unchanged. `propPath` follows
- * the `pageInlineEditContract` convention (`"text"`, `"label"`, `"items.0"`).
+ * Admin-canvas hook (TASK-422-02): receives the exact text source a
+ * text-bearing block paints (including renderer fallbacks) so the Page Editor
+ * can layer inline editing on top of the same content the front renders. Rich
+ * text can also pass sanitized React children for the idle canvas view while
+ * keeping plain-text commit semantics. Runtime render paths never provide it,
+ * so public output is unchanged. `propPath` follows the
+ * `pageInlineEditContract` convention (`"text"`, `"label"`, `"items.0"`).
  */
 export type PageInlineTextRenderer = (input: {
   block: PageBlockV2;
   propPath: string;
   text: string;
+  children?: ReactNode;
 }) => ReactNode;
 
 /**
@@ -190,6 +194,41 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
 const toHrefTarget = (value: unknown) => (value === "blank" ? "_blank" : undefined);
+
+const readButtonVariant = (value: unknown) =>
+  value === "secondary" || value === "ghost" || value === "link" ? value : "primary";
+
+const readButtonSize = (value: unknown) => (value === "sm" || value === "lg" ? value : "md");
+
+const pageButtonSizeClass = (size: string, variant: string) => {
+  if (variant === "link") {
+    if (size === "sm") return "text-sm";
+    if (size === "lg") return "text-lg";
+    return "text-base";
+  }
+  if (size === "sm") return "px-3 py-2 text-sm";
+  if (size === "lg") return "px-6 py-4 text-base";
+  return "px-5 py-3 text-sm";
+};
+
+const pageButtonVariantClass = (variant: string) => {
+  if (variant === "secondary") {
+    return "border bg-transparent shadow-sm transition hover:opacity-90";
+  }
+  if (variant === "ghost") {
+    return "bg-transparent shadow-none transition hover:opacity-80";
+  }
+  if (variant === "link") {
+    return "bg-transparent underline underline-offset-4 shadow-none transition hover:opacity-80";
+  }
+  return "shadow-sm transition hover:opacity-90";
+};
+
+const pageDividerToneClass = (value: unknown) => {
+  if (value === "muted") return "border-slate-300";
+  if (value === "accent") return "border-[var(--coderso-section-accent,#0d9488)]";
+  return "border-slate-200";
+};
 
 const toPageShadowValue = (shadow: PageBlockStyle["shadow"]) => {
   if (shadow === "sm") return "0 6px 20px rgba(15, 23, 42, 0.08)";
@@ -440,6 +479,44 @@ export const toPageBlockElementStyle = (block: PageBlockV2): PageBlockStylePrope
   return { ...visual, ...toPageBlockTypographyStyle(block) };
 };
 
+const toPageButtonElementStyle = (
+  block: PageBlockV2,
+  variant: string
+): PageBlockStyleProperties => {
+  const style = toPageBlockElementStyle(block);
+  const definedStyle = Object.fromEntries(
+    Object.entries(style).filter(([, value]) => value !== undefined)
+  ) as PageBlockStyleProperties;
+  const accentColor = "var(--coderso-section-accent,#0d9488)";
+
+  if (variant === "primary") {
+    return {
+      backgroundColor: accentColor,
+      color: "var(--coderso-block-text,#ffffff)",
+      ...definedStyle,
+    };
+  }
+
+  if (variant === "secondary") {
+    return {
+      backgroundColor: "transparent",
+      borderColor: accentColor,
+      color: accentColor,
+      ...definedStyle,
+    };
+  }
+
+  if (variant === "ghost" || variant === "link") {
+    return {
+      backgroundColor: "transparent",
+      color: accentColor,
+      ...definedStyle,
+    };
+  }
+
+  return definedStyle;
+};
+
 export const pageBlockElementDataAttributes = {
   [PAGE_BLOCK_ELEMENT_ATTRIBUTE]: "true",
 } as const;
@@ -473,6 +550,103 @@ const renderBlockText = (
   context: PageBlockRenderContext
 ): ReactNode =>
   context.renderInlineText ? context.renderInlineText({ block, propPath, text }) : text;
+
+const pageRichTextAllowedTags: ReadonlySet<string> = new Set([
+  "a",
+  "br",
+  "code",
+  "em",
+  "i",
+  "li",
+  "ol",
+  "p",
+  "strong",
+  "ul",
+]);
+
+const pageRichTextSelfClosingTags: ReadonlySet<string> = new Set(["br"]);
+
+const renderSanitizedRichTextHtml = (sanitizedHtml: string): ReactNode[] => {
+  const roots: ReactNode[] = [];
+  const stack: SanitizedEmbedElementFrame[] = [];
+  let nextKey = 0;
+
+  const appendNode = (node: ReactNode) => {
+    const parent = stack.at(-1);
+    if (parent) {
+      parent.children.push(node);
+      return;
+    }
+    roots.push(node);
+  };
+
+  for (const token of tokenizeHtml(sanitizedHtml)) {
+    if (token.kind === "text") {
+      appendNode(decodeHtmlEntities(token.value));
+      continue;
+    }
+    if (token.kind === "comment" || !pageRichTextAllowedTags.has(token.name)) continue;
+
+    if (token.closing) {
+      const current = stack.at(-1);
+      if (current?.tagName === token.name) {
+        stack.pop();
+        appendNode(createSanitizedEmbedElement(current));
+      }
+      continue;
+    }
+
+    if (token.selfClosing || pageRichTextSelfClosingTags.has(token.name)) {
+      appendNode(
+        createElement(
+          token.name,
+          toSanitizedEmbedElementProps(token.name, token.rawAttrs, nextKey++)
+        )
+      );
+      continue;
+    }
+
+    stack.push({ tagName: token.name, rawAttrs: token.rawAttrs, children: [], key: nextKey++ });
+  }
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current) appendNode(createSanitizedEmbedElement(current));
+  }
+
+  return roots;
+};
+
+const renderTextBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
+  const className = joinPageRenderClasses(
+    block.props.format === "rich"
+      ? "prose max-w-none text-base leading-7 text-[var(--coderso-block-text,#334155)]"
+      : "text-base leading-7 text-[var(--coderso-block-text,#334155)]",
+    pageTextAlignClass(block.props.align)
+  );
+  const style = toPageBlockTypographyStyle(block);
+  if (block.props.format === "rich") {
+    const sanitizedHtml = sanitizeAuthoringRichTextHtml(block.props.text);
+    const richChildren = renderSanitizedRichTextHtml(sanitizedHtml);
+    return (
+      <div className={className} style={style} {...pageBlockTextDataAttributes}>
+        {context.renderInlineText
+          ? context.renderInlineText({
+              block,
+              propPath: "text",
+              text: readText(block.props.text),
+              children: richChildren,
+            })
+          : richChildren}
+      </div>
+    );
+  }
+  return (
+    <p className={className} style={style} {...pageBlockTextDataAttributes}>
+      {renderBlockText(block, "text", readText(block.props.text), context)}
+    </p>
+  );
+};
 
 const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
   const text = renderBlockText(block, "text", readText(block.props.text, "Heading"), context);
@@ -1196,28 +1370,21 @@ export const renderPageBlockContent = (
     case "heading":
       return renderHeading(block, context);
     case "text":
-      return (
-        <p
-          className={joinPageRenderClasses(
-            "text-base leading-7 text-[var(--coderso-block-text,#334155)]",
-            pageTextAlignClass(block.props.align)
-          )}
-          style={toPageBlockTypographyStyle(block)}
-          {...pageBlockTextDataAttributes}
-        >
-          {renderBlockText(block, "text", readText(block.props.text), context)}
-        </p>
-      );
+      return renderTextBlock(block, context);
     case "button": {
       const href = sanitizeAuthoringLinkHref(block.props.href) ?? "#";
+      const variant = readButtonVariant(block.props.variant);
+      const size = readButtonSize(block.props.size);
       return (
         <a
           className={joinPageRenderClasses(
-            "inline-flex w-fit items-center justify-center rounded bg-[var(--coderso-section-accent,#0d9488)] px-5 py-3 text-sm font-semibold text-[var(--coderso-block-text,#ffffff)] shadow-sm transition hover:opacity-90"
+            "inline-flex w-fit items-center justify-center rounded font-semibold",
+            pageButtonSizeClass(size, variant),
+            pageButtonVariantClass(variant)
           )}
           // Style-target contract: the anchor IS the button the user styles,
           // so the visual style surface lands here, not on the block frame.
-          style={toPageBlockElementStyle(block)}
+          style={toPageButtonElementStyle(block, variant)}
           {...pageBlockElementDataAttributes}
           href={href}
           target={toHrefTarget(block.props.target)}
@@ -1231,12 +1398,15 @@ export const renderPageBlockContent = (
       return renderImage(block);
     case "video": {
       const src = sanitizeAuthoringMediaUrl(block.props.src) ?? "";
+      const autoplay = readBoolean(block.props.autoplay, false);
       return src ? (
         <video
           className="w-full rounded"
           src={src}
           controls
-          muted={readBoolean(block.props.muted, true)}
+          autoPlay={autoplay || undefined}
+          muted={readBoolean(block.props.muted, true) || autoplay}
+          playsInline={autoplay || undefined}
         />
       ) : (
         <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
@@ -1250,29 +1420,42 @@ export const renderPageBlockContent = (
       // Card paints two text nodes; only explicitly set typography fields are
       // emitted, so unset fields keep each node's own baked scale.
       const cardTypography = toPageBlockTypographyStyle(block);
+      const image = sanitizeAuthoringMediaUrl(block.props.image);
+      const href = sanitizeAuthoringLinkHref(block.props.href);
+      const title = readText(block.props.title, "Card title");
+      const titleNode = href ? (
+        <a href={href} className="hover:underline">
+          {title}
+        </a>
+      ) : (
+        title
+      );
       return (
-        <article className="rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)] p-5 shadow-sm">
-          <h3
-            className="text-lg font-semibold text-[var(--coderso-block-text,#020617)]"
-            style={cardTypography}
-            {...pageBlockTextDataAttributes}
-          >
-            {readText(block.props.title, "Card title")}
-          </h3>
-          <p
-            className="mt-2 text-sm leading-6 text-[var(--coderso-block-text,#475569)]"
-            style={cardTypography}
-            {...pageBlockTextDataAttributes}
-          >
-            {readText(block.props.text)}
-          </p>
+        <article className="overflow-hidden rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)] shadow-sm">
+          {image ? <img className="aspect-video w-full object-cover" src={image} alt="" /> : null}
+          <div className="p-5">
+            <h3
+              className="text-lg font-semibold text-[var(--coderso-block-text,#020617)]"
+              style={cardTypography}
+              {...pageBlockTextDataAttributes}
+            >
+              {titleNode}
+            </h3>
+            <p
+              className="mt-2 text-sm leading-6 text-[var(--coderso-block-text,#475569)]"
+              style={cardTypography}
+              {...pageBlockTextDataAttributes}
+            >
+              {readText(block.props.text)}
+            </p>
+          </div>
         </article>
       );
     }
     case "divider":
       return (
         <hr
-          className="border-slate-200"
+          className={pageDividerToneClass(block.props.tone)}
           style={{ borderWidth: `${readNumber(block.props.thickness, 1)}px` }}
         />
       );

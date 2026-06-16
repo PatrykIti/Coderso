@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -26,10 +27,10 @@ the card target after those land, plus card-specific residue only.
 
 ## Sub-Tasks
 
-- [ ] TASK-443-01: Card media/link/control contract freeze.
-- [ ] TASK-443-01-L01: Adopt shared media-picker and dedicated layout/style
+- [x] TASK-443-01: Card media/link/control contract freeze.
+- [x] TASK-443-01-L01: Adopt shared media-picker and dedicated layout/style
       controls while preserving truthful card rendering.
-- [ ] TASK-443-02: Validation, docs, and closure.
+- [x] TASK-443-02: Validation, docs, and closure.
 
 ---
 

@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,7 +21,7 @@ yes/no selects to the shared media/toggle control surfaces.
 
 ## Sub-Tasks
 
-- [ ] TASK-441-01-L01: Video media picker, toggle controls, and runtime guard.
+- [x] TASK-441-01-L01: Video media picker, toggle controls, and runtime guard.
 
 ---
 

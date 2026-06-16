@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-441-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -18,9 +19,9 @@ Replace raw source entry with the shared media-picker path for Video, replace th
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 

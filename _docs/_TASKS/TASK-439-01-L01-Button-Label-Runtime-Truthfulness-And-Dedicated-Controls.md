@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-439-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -31,9 +32,9 @@ label target against the TASK-422 contract.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -111,6 +112,19 @@ Regression-test shape:
 - Button runtime/render coverage as needed.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+## Completion Notes
+
+- Final read-only drift pass flagged that the first implementation still
+  relied on Tailwind arbitrary CSS-var classes and did not satisfy this leaf's
+  computed-style proof requirement.
+- The closure fix moved Button primary/secondary/ghost/link accent surfaces to
+  inline styles (`backgroundColor`, `borderColor`, `color`) that consume
+  `var(--coderso-section-accent,#0d9488)`, so the visible accent no longer
+  depends on generated CSS asset coverage.
+- `playwright-cli` smoke on 2026-06-16 verified the minimal published-style
+  path computes `backgroundColor` to `rgb(0, 255, 0)` when the parent emits
+  `--coderso-section-accent:#00ff00`.
 
 
 

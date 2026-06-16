@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,7 +21,7 @@ paths that must now converge on one truthful block-editing surface.
 
 ## Sub-Tasks
 
-- [ ] TASK-437-01-L01: Heading inline-edit, typography, and dedicated controls.
+- [x] TASK-437-01-L01: Heading inline-edit, typography, and dedicated controls.
 
 ---
 

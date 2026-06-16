@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,10 +21,10 @@ inline-edit and typography paths.
 
 ## Sub-Tasks
 
-- [ ] TASK-437-01: Heading text/control contract freeze.
-- [ ] TASK-437-01-L01: Adopt inline-edit, typography, and dedicated control
+- [x] TASK-437-01: Heading text/control contract freeze.
+- [x] TASK-437-01-L01: Adopt inline-edit, typography, and dedicated control
       behavior for heading props without regressing publish/reload parity.
-- [ ] TASK-437-02: Validation, docs, and closure.
+- [x] TASK-437-02: Validation, docs, and closure.
 
 ---
 

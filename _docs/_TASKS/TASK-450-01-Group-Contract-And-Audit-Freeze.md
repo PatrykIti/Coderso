@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,7 +21,7 @@ direction, wrap, and group gap.
 
 ## Sub-Tasks
 
-- [ ] TASK-450-01-L01: Group direction, wrap, gap, and dedicated controls.
+- [x] TASK-450-01-L01: Group direction, wrap, gap, and dedicated controls.
 
 ---
 

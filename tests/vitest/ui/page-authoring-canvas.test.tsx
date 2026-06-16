@@ -85,3 +85,46 @@ test("SectionCanvas renders hidden block ghost through the reusable label helper
   expect(html).toContain("Hidden text");
   expect(html).toContain("Hidden canvas text");
 });
+
+test("SectionCanvas renders rich text output inside the inline edit hook", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-rich-canvas",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-rich-text",
+        props: {
+          text: '<p>Canvas <strong>rich</strong> <script>alert(1)</script><a href="/safe">safe</a></p>',
+          format: "rich",
+          align: "left",
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected
+      selectedBlockPath={[{ index: 0 }]}
+      selectedBlockId="blk-rich-text"
+      inlineEditTarget={null}
+      device="desktop"
+      canAddBlockBeside={false}
+      canvasDataByBlockId={{}}
+      onSelect={vi.fn()}
+      onSelectBlock={vi.fn()}
+      onAddBlock={vi.fn()}
+      onAddBlockToTarget={vi.fn()}
+      onAddBlockBeside={vi.fn()}
+      onStartInlineEdit={vi.fn()}
+      onCommitInlineEdit={vi.fn()}
+    />
+  );
+
+  expect(html).toContain('data-page-editor-inline-edit-prop="text"');
+  expect(html).toContain("<strong>rich</strong>");
+  expect(html).toContain('href="/safe"');
+  expect(html).not.toContain("<script");
+  expect(html).not.toContain("alert(1)");
+});

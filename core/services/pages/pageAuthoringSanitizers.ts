@@ -1,4 +1,10 @@
 import { normalizeWidgetSafeHref } from "../../widgets/core/widgetSafeHref";
+import {
+  dangerousHtmlContentTagSet,
+  escapeHtml,
+  parseHtmlAttributes,
+  sanitizeHtmlWithPolicy,
+} from "../posts/editor/postRichTextHtmlUtils";
 
 export type AuthoringUrlKind = "link" | "media";
 
@@ -70,6 +76,39 @@ export const sanitizeAuthoringLinkHref = (value: unknown): string | null =>
 
 export const sanitizeAuthoringMediaUrl = (value: unknown): string | null =>
   sanitizeAuthoringUrl(value, "media");
+
+const pageRichTextAllowedTags: ReadonlySet<string> = new Set([
+  "a",
+  "br",
+  "code",
+  "em",
+  "i",
+  "li",
+  "ol",
+  "p",
+  "strong",
+  "ul",
+]);
+
+const pageRichTextSelfClosingTags: ReadonlySet<string> = new Set(["br"]);
+
+const sanitizePageRichTextAttributes = (tagName: string, rawAttrs: string) => {
+  if (tagName !== "a") return "";
+  const attrs = parseHtmlAttributes(rawAttrs);
+  const href = sanitizeAuthoringLinkHref(attrs.get("href"));
+  if (!href) return null;
+  return ` href="${escapeHtml(href)}" rel="nofollow noreferrer"`;
+};
+
+export const sanitizeAuthoringRichTextHtml = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  return sanitizeHtmlWithPolicy(value, {
+    allowedTags: pageRichTextAllowedTags,
+    selfClosingTags: pageRichTextSelfClosingTags,
+    dropContentTags: dangerousHtmlContentTagSet,
+    sanitizeAttributes: sanitizePageRichTextAttributes,
+  });
+};
 
 /**
  * Escape a value for use inside a double-quoted CSS string such as

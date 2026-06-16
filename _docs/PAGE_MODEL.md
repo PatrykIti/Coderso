@@ -313,6 +313,26 @@ Examples:
 - `columns`: `count`, `gap`, `distribution`
 - `group`: `direction`, `wrap`, `gap`
 
+Pages v2 public/admin-preview rendering must keep the following block props
+truthful:
+
+- `text.format: "plain"` escapes and renders copy as text. `text.format:
+  "rich"` renders a small sanitized HTML subset (`p`, `strong`, `em`, `i`,
+  `code`, `ul`, `ol`, `li`, `br`, and safe `a[href]` with
+  `rel="nofollow noreferrer"`), drops active content, and never uses raw
+  `dangerouslySetInnerHTML`.
+- `button.variant` changes the anchor visual surface (`primary`, `secondary`,
+  `ghost`, `link`), `button.size` changes anchor spacing/type scale, and the
+  primary/accent surfaces consume `--coderso-section-accent` through inline
+  styles on the anchor, not through generated utility-class availability.
+- `video.autoplay` emits `autoPlay` on the rendered `<video>` and forces the
+  browser policy companions `muted` and `playsInline`; unset/false autoplay
+  preserves manual playback behavior.
+- `card.image` renders a sanitized image above the card copy and `card.href`
+  wraps the title in a safe link. Unsafe media/link values fail closed.
+- `divider.tone` changes the public border color (`neutral`, `muted`,
+  `accent`) while `divider.thickness` keeps controlling border width.
+
 `list.items[]` may be plain strings or simple `{ "label": "...", "href": "..." }`
 objects for navigation/footer links.
 

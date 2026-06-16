@@ -65,8 +65,8 @@ const defineInlineEditableTargets = (
  * The frozen inline-editable map (TASK-422-01 contract). Anything not listed
  * here is panel-only. `text.text` is the only multiline target; the optional
  * `quote.cite` and `statistic.caption` fields are the only ones that may
- * commit empty. While `text.format === "rich"` has no real rich rendering
- * (TASK-438), rich text blocks still commit plain text through this contract.
+ * commit empty. `text.format === "rich"` renders sanitized rich output, but
+ * inline edit still commits plain text through this contract.
  */
 export const inlineEditableTargets: readonly InlineEditableTarget[] = defineInlineEditableTargets([
   { blockType: "heading", propPath: "text", multiline: false, allowEmpty: false },

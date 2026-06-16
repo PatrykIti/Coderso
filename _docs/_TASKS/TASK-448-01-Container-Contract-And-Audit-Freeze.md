@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,7 +21,7 @@ layout/runtime path while replacing the shared dedicated-control drift.
 
 ## Sub-Tasks
 
-- [ ] TASK-448-01-L01: Container dedicated controls and nested-runtime guard.
+- [x] TASK-448-01-L01: Container dedicated controls and nested-runtime guard.
 
 ---
 

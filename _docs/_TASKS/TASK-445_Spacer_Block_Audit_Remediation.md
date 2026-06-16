@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Small
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,10 +21,10 @@ dedicated surface without overcomplicating the minimal block contract.
 
 ## Sub-Tasks
 
-- [ ] TASK-445-01: Spacer control contract freeze.
-- [ ] TASK-445-01-L01: Adopt dedicated shared style/visibility controls while
+- [x] TASK-445-01: Spacer control contract freeze.
+- [x] TASK-445-01-L01: Adopt dedicated shared style/visibility controls while
       preserving the existing size clamp/runtime behavior.
-- [ ] TASK-445-02: Validation, docs, and closure.
+- [x] TASK-445-02: Validation, docs, and closure.
 
 ---
 

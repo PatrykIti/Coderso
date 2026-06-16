@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -18,12 +19,12 @@ runtime path is real, but the source path remains a raw URL, all three toggle-li
 
 ## Sub-Tasks
 
-- [ ] TASK-441-01: Video source/toggle/control contract freeze.
-- [ ] TASK-441-01-L01: Adopt shared media-picker and switch controls for video
+- [x] TASK-441-01: Video source/toggle/control contract freeze.
+- [x] TASK-441-01-L01: Adopt shared media-picker and switch controls for video
       props and bind `autoplay` (with muted/playsInline autoplay-policy
       companions) into the published `<video>` render so the toggle is truthful
       end-to-end.
-- [ ] TASK-441-02: Validation, docs, and closure.
+- [x] TASK-441-02: Validation, docs, and closure.
 
 ---
 

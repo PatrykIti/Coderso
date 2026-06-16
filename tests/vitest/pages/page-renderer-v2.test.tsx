@@ -428,9 +428,78 @@ test("gradient button backgrounds clear the variant background color inline", ()
   const anchorTag =
     renderToStaticMarkup(<PageSectionContent section={section} />).match(/<a[^>]*>/)?.[0] ?? "";
   expect(anchorTag).toContain("background-image:linear-gradient(90deg, #000000, #ffffff)");
-  // Inline transparent background-color keeps the variant accent class from
-  // bleeding through translucent gradient stops.
+  // Inline transparent background-color keeps the variant accent fallback
+  // from bleeding through translucent gradient stops.
   expect(anchorTag).toContain("background-color:transparent");
+});
+
+test("primary button section accent lands inline instead of relying on generated CSS", () => {
+  const section = createPageSectionV2("cta", {
+    id: "sec-button-accent",
+    style: {
+      background: "#ffffff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#00ff00",
+      radius: 0,
+      shadow: "none",
+    },
+    blocks: [
+      createPageBlockV2("button", {
+        id: "blk-primary-accent",
+        props: { label: "Accent", href: "/accent", target: "self", variant: "primary" },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionRender section={section} />);
+  const contentTag =
+    html.match(/<div[^>]*data-page-section-layout-mode="runtime"[^>]*>/)?.[0] ?? "";
+  const anchorTag = html.match(/<a[^>]*>/)?.[0] ?? "";
+
+  expect(contentTag).toContain("--coderso-section-accent:#00ff00");
+  expect(anchorTag).toContain("background-color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTag).toContain("color:var(--coderso-block-text,#ffffff)");
+  expect(anchorTag).not.toContain("bg-[var(--coderso-section-accent");
+});
+
+test("button variant and size props change the rendered anchor surface", () => {
+  const section = createPageSectionV2("cta", {
+    id: "sec-button-variants",
+    blocks: [
+      createPageBlockV2("button", {
+        id: "blk-secondary-small",
+        props: {
+          label: "Secondary",
+          href: "/secondary",
+          target: "self",
+          variant: "secondary",
+          size: "sm",
+        },
+      }),
+      createPageBlockV2("button", {
+        id: "blk-link-large",
+        props: { label: "Link", href: "/link", target: "self", variant: "link", size: "lg" },
+      }),
+    ],
+  });
+
+  const anchorTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<a[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(anchorTags[0]).toContain('href="/secondary"');
+  expect(anchorTags[0]).toContain("border-color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTags[0]).toContain("color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTags[0]).toContain("border");
+  expect(anchorTags[0]).toContain("px-3");
+  expect(anchorTags[0]).toContain("py-2");
+  expect(anchorTags[1]).toContain('href="/link"');
+  expect(anchorTags[1]).toContain("underline");
+  expect(anchorTags[1]).toContain("color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTags[1]).toContain("text-lg");
+  expect(anchorTags[1]).not.toContain("px-5");
 });
 
 test("typography style paints inline on the exact text node, not the block frame", () => {
@@ -507,6 +576,33 @@ test("button typography lands on the anchor element with the visual surface", ()
   expect(frameTag).not.toContain("font-size");
 });
 
+test("rich text blocks render sanitized rich output instead of plain source", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-rich-text",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-rich-text",
+        props: {
+          text: '<p>Hello <strong>rich</strong> <script>alert(1)</script><a href="javascript:alert(1)">bad</a> <a href="/safe">safe</a><br />Tail</p>',
+          format: "rich",
+          align: "center",
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain("<strong>rich</strong>");
+  expect(html).toContain('href="/safe"');
+  expect(html).toContain('rel="nofollow noreferrer"');
+  expect(html).toContain("<br/>Tail");
+  expect(html).toContain("text-center");
+  expect(html).not.toContain("<script");
+  expect(html).not.toContain("alert(1)");
+  expect(html).not.toContain("javascript:");
+});
+
 test("multi-text and flow blocks carry typography on every painted text node", () => {
   const section = createPageSectionV2("content", {
     id: "sec-typo-multi",
@@ -543,6 +639,39 @@ test("multi-text and flow blocks carry typography on every painted text node", (
   // p + blockquote + ul + 3 statistic nodes + card title + card body = 8.
   expect(html.match(/data-page-block-text="true"/g)).toHaveLength(8);
   expect(html.match(/font-size:var\(--text-sm/g)).toHaveLength(8);
+});
+
+test("card image and href props render on the public card output", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-card-runtime",
+    blocks: [
+      createPageBlockV2("card", {
+        id: "blk-card-linked",
+        props: {
+          title: "Case study",
+          text: "Detailed outcome.",
+          image: "https://cdn.example.test/card.jpg",
+          href: "/case-study",
+        },
+      }),
+      createPageBlockV2("card", {
+        id: "blk-card-unsafe",
+        props: {
+          title: "Unsafe",
+          text: "Sanitized.",
+          image: "javascript:alert(1)",
+          href: "javascript:alert(1)",
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('src="https://cdn.example.test/card.jpg"');
+  expect(html).toContain('href="/case-study"');
+  expect(html).toContain(">Case study</a>");
+  expect(html).not.toContain("javascript:");
 });
 
 test("unset typography keeps legacy markup free of inline font styles", () => {
@@ -740,6 +869,74 @@ test("shared renderer provides safe inert states while rendering active layout s
   expect(html).not.toContain("form-private");
   expect(html).not.toContain("<script>");
   expect(html).not.toContain("alert(1)");
+});
+
+test("video autoplay prop reaches the rendered video with policy companions", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-video-autoplay",
+    blocks: [
+      createPageBlockV2("video", {
+        id: "blk-video-autoplay",
+        props: {
+          src: "https://cdn.example.test/intro.mp4",
+          title: "Intro",
+          autoplay: true,
+          muted: false,
+        },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video-manual",
+        props: {
+          src: "https://cdn.example.test/manual.mp4",
+          title: "Manual",
+          autoplay: false,
+          muted: false,
+        },
+      }),
+    ],
+  });
+
+  const videoTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<video[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(videoTags[0]).toContain("autoPlay");
+  expect(videoTags[0]).toContain("muted");
+  expect(videoTags[0]).toContain("playsInline");
+  expect(videoTags[1]).not.toContain("autoPlay");
+  expect(videoTags[1]).not.toContain("playsInline");
+  expect(videoTags[1]).not.toContain("muted");
+});
+
+test("divider tone prop changes the rendered divider border class", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-divider-tone",
+    blocks: [
+      createPageBlockV2("divider", {
+        id: "blk-divider-accent",
+        props: { tone: "accent", thickness: 3 },
+      }),
+      createPageBlockV2("divider", {
+        id: "blk-divider-muted",
+        props: { tone: "muted", thickness: 2 },
+      }),
+      createPageBlockV2("divider", {
+        id: "blk-divider-neutral",
+        props: { tone: "neutral", thickness: 1 },
+      }),
+    ],
+  });
+
+  const hrTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<hr[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(hrTags[0]).toContain("border-[var(--coderso-section-accent,#0d9488)]");
+  expect(hrTags[0]).toContain("border-width:3px");
+  expect(hrTags[1]).toContain("border-slate-300");
+  expect(hrTags[2]).toContain("border-slate-200");
 });
 
 test("form block renders a canvas-safe inert preview in canvas layout mode (TASK-456)", () => {

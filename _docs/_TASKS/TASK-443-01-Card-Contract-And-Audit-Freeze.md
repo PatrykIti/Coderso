@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,7 +21,7 @@ to the shared media-picker path.
 
 ## Sub-Tasks
 
-- [ ] TASK-443-01-L01: Card media picker and dedicated controls.
+- [x] TASK-443-01-L01: Card media picker and dedicated controls.
 
 ---
 

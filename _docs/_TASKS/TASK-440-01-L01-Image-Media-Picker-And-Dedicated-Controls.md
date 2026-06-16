@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-440-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -24,10 +25,10 @@ land and owns image-specific residual gaps.
 
 ## Sub-Tasks
 
-- [ ] Verify the scoped owner-file behavior described below and land any
+- [x] Verify the scoped owner-file behavior described below and land any
       image-specific residue.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 

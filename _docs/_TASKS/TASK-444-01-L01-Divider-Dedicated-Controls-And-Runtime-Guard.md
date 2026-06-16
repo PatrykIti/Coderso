@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Small
 **Dependencies:** TASK-444-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -24,9 +25,9 @@ this leaf verifies the divider target after those land and owns only the
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 

@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,10 +21,10 @@ buttons, toggles, and sliders instead of native primitives.
 
 ## Sub-Tasks
 
-- [ ] TASK-450-01: Group layout/control contract freeze.
-- [ ] TASK-450-01-L01: Adopt dedicated direction, wrap, gap, and shared style
+- [x] TASK-450-01: Group layout/control contract freeze.
+- [x] TASK-450-01-L01: Adopt dedicated direction, wrap, gap, and shared style
       controls without regressing nested rendering.
-- [ ] TASK-450-02: Validation, docs, and closure.
+- [x] TASK-450-02: Validation, docs, and closure.
 
 ---
 

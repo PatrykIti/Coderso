@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -24,7 +25,7 @@ residue (e.g. media-type acceptance metadata) if verification surfaces any.
 
 ## Sub-Tasks
 
-- [ ] TASK-440-01-L01: Image media picker and dedicated controls.
+- [x] TASK-440-01-L01: Image media picker and dedicated controls.
 
 ---
 

@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -29,7 +30,7 @@ flow afterwards.
 
 ## Sub-Tasks
 
-- [ ] TASK-439-01-L01: Button label, runtime truthfulness, and dedicated
+- [x] TASK-439-01-L01: Button label, runtime truthfulness, and dedicated
       controls.
 
 ---

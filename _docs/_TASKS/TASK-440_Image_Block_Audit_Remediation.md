@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -26,11 +27,11 @@ TASK-425; this family only verifies the image target once TASK-425 lands.
 
 ## Sub-Tasks
 
-- [ ] TASK-440-01: Image source/control contract freeze.
-- [ ] TASK-440-01-L01: Verify image source entry resolves through the shared
+- [x] TASK-440-01: Image source/control contract freeze.
+- [x] TASK-440-01-L01: Verify image source entry resolves through the shared
       TASK-421 media-picker path and that the image panels render the shared
       TASK-421 widgets.
-- [ ] TASK-440-02: Validation, docs, and closure.
+- [x] TASK-440-02: Validation, docs, and closure.
 
 ---
 

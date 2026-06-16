@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -32,13 +33,13 @@ this family lands.
 
 ## Sub-Tasks
 
-- [ ] TASK-439-01: Button label/style/control contract freeze.
-- [ ] TASK-439-01-L01: Adopt inline-edit and dedicated button controls, prove
+- [x] TASK-439-01: Button label/style/control contract freeze.
+- [x] TASK-439-01-L01: Adopt inline-edit and dedicated button controls, prove
       variant/size/target/link behavior stays truthful on the front, and fix
       the accent application so the button visibly consumes
       `--coderso-section-accent` on the published front (audit observed
       computed slate/transparent at `#00ff00`).
-- [ ] TASK-439-02: Validation, docs, and closure.
+- [x] TASK-439-02: Validation, docs, and closure.
 
 ---
 

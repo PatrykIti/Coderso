@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -30,7 +31,7 @@ a plain `<p>` via `readText` and never reads `block.props.format`.
 
 ## Sub-Tasks
 
-- [ ] TASK-438-01-L01: Text inline-edit, typography, format truthfulness, and
+- [x] TASK-438-01-L01: Text inline-edit, typography, format truthfulness, and
       toolbar labeling.
 
 ---

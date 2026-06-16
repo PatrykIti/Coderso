@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,7 @@ const InlineEditableCanvasText = ({
   block,
   propPath,
   text,
+  children,
   selected,
   editing,
   onStartEdit,
@@ -79,6 +81,7 @@ const InlineEditableCanvasText = ({
   block: PageBlockV2;
   propPath: string;
   text: string;
+  children?: ReactNode;
   selected: boolean;
   editing: boolean;
   onStartEdit: (target: PageEditorInlineEditTarget) => void;
@@ -144,7 +147,7 @@ const InlineEditableCanvasText = ({
           : undefined
       }
     >
-      {text}
+      {editing ? text : (children ?? text)}
     </span>
   );
 };
@@ -381,7 +384,7 @@ export const SectionCanvas = ({
             />
           );
         }}
-        renderInlineText={({ block, propPath, text }) => (
+        renderInlineText={({ block, propPath, text, children }) => (
           <InlineEditableCanvasText
             block={block}
             propPath={propPath}
@@ -394,7 +397,9 @@ export const SectionCanvas = ({
             )}
             onStartEdit={onStartInlineEdit}
             onCommit={onCommitInlineEdit}
-          />
+          >
+            {children}
+          </InlineEditableCanvasText>
         )}
         renderBlockFrame={({
           block,

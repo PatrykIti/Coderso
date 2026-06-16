@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -21,10 +22,10 @@ control case for `columns`.
 
 ## Sub-Tasks
 
-- [ ] TASK-448-01: Container layout/control contract freeze.
-- [ ] TASK-448-01-L01: Adopt dedicated container controls without regressing
+- [x] TASK-448-01: Container layout/control contract freeze.
+- [x] TASK-448-01-L01: Adopt dedicated container controls without regressing
       nested layout persistence or front rendering.
-- [ ] TASK-448-02: Validation, docs, and closure.
+- [x] TASK-448-02: Validation, docs, and closure.
 
 ---
 
