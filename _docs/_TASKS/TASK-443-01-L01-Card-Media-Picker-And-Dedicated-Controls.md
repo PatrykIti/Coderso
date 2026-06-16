@@ -13,9 +13,8 @@
 
 ## Overview
 
-Replace raw URL entry with the shared media-picker path for Card image content
-and adopt the shared dedicated layout/style controls without regressing current
-runtime rendering.
+Verify the shared media-picker path for Card image content and adopt the shared
+dedicated layout/style controls without regressing current runtime rendering.
 
 ---
 
@@ -29,15 +28,13 @@ runtime rendering.
 
 ```tsx
 // Registry already declares card.image as `input: "media"`
-// (core/services/pages/pageEditorControlRegistry.ts:429-433); the media-picker
+// (core/services/pages/pageEditorControlRegistry.ts:708-715); the media-picker
 // primitive is TASK-421-02-L02's. The real registry accessor is
-// getPageEditorControlsForTarget (pageEditorControlRegistry.ts:508).
+// getPageEditorControlsForTarget (pageEditorControlRegistry.ts:870-890).
 const cardControls = getPageEditorControlsForTarget({ kind: "block", type: "card" });
-// Verify RegistryControlField (core/admin/ui/pages/PageEditor.tsx ~2524-2614)
-// resolves the card image through the shared picker (today `input: "media"`
-// falls through to the raw TextField) and renders the card layout/style
-// controls through the shared TASK-421 widgets, including the Visible switch
-// as a toggle.
+// Verify PageEditor resolves the card image through the shared picker and
+// renders the card layout/style controls through the shared TASK-421 widgets,
+// including the Visible switch as a toggle.
 ```
 
 Owner files:
@@ -56,8 +53,8 @@ Validation commands:
 Expected data flow:
 
 - Card image selection resolves through the shared media picker.
-- Existing title/body/link semantics remain unchanged.
-- Published runtime keeps rendering a real card block.
+- Existing title/body/link semantics remain safe and truthful.
+- Published runtime renders the safe image and safe title link.
 
 Error handling:
 

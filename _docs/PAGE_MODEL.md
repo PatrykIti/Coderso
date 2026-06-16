@@ -249,28 +249,12 @@ Layout block slot contract:
   `column`, `wrap` is boolean, and `gap` clamps to `0..120`. It owns
   `slots.children`.
 
-Layout blocks normalize and validate as Page data. Their capability transition
-is intentionally staged during TASK-418-05:
-
-- L01 keeps them hidden while the recursive data contract lands.
-- L02 may expose them only in the admin editor through
-  `pageBlockCapabilities[type].editorInsertable`, so editors can compose draft
-  nested structures and edit slot children by path.
-- During that L02 staging state, `container`, `columns`, and `group` still carry
-  `insertable: false`, `assistantEmittable: false`,
-  `runtimeRenderer: "placeholder"`, allowed `slots`, and a pending-nesting
-  reason. Assistant emitters, solution kits, and public-ready catalogs must not
-  consume `editorInsertable`.
-- L03 owns recursive public/admin-preview rendering and responsive cascade. Only
-  `container`, `columns`, and `group` are
-  `editorInsertable: true`, `insertable: true`, `runtimeRenderer: "real"`,
-  `assistantEmittable: false`, `publicDataBinding: "none"`, and no pending
-  `reason`. Assistant emission stays false until TASK-418-06-L02 validates
-  nested active-surface paths and blueprint alignment.
-- L02 completes that assistant alignment: `container`, `columns`, and `group`
-  now have `assistantEmittable: true`. Assistant `page.upsert` still gates
-  block and section output through Page capabilities plus the explicit staged
-  data-bound exceptions.
+Layout blocks normalize and validate as Page data. Current capability state:
+`container`, `columns`, and `group` are editor-insertable, public insertable,
+runtime-rendered as real blocks, assistant-emittable, and use
+`publicDataBinding: "none"` with no pending reason. Assistant `page.upsert`
+still gates block and section output through Page capabilities plus the
+explicit staged data-bound exceptions.
 
 Runtime/admin-preview slot rendering is intentionally narrower than stored data
 preservation:

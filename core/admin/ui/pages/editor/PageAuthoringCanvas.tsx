@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { FocusEvent, KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,7 @@ const InlineEditableCanvasText = ({
   propPath,
   text,
   children,
+  display = "inline",
   selected,
   editing,
   onStartEdit,
@@ -82,6 +83,7 @@ const InlineEditableCanvasText = ({
   propPath: string;
   text: string;
   children?: ReactNode;
+  display?: "inline" | "block";
   selected: boolean;
   editing: boolean;
   onStartEdit: (target: PageEditorInlineEditTarget) => void;
@@ -90,64 +92,66 @@ const InlineEditableCanvasText = ({
   const target = resolveInlineEditTarget(block, propPath);
   if (!target) return <>{text}</>;
   const { multiline } = target;
+  const wrapperKey = `${propPath}:${text}`;
+  const wrapperProps = {
+    ref: editing ? focusInlineEditableNode : undefined,
+    contentEditable: editing ? true : undefined,
+    suppressContentEditableWarning: true,
+    "data-page-editor-inline-edit": editing ? "active" : "idle",
+    "data-page-editor-inline-edit-prop": propPath,
+    className: editing
+      ? "cursor-text outline-none ring-1 ring-primary/60 ring-offset-2"
+      : undefined,
+    onDoubleClick:
+      editing || !selected
+        ? undefined
+        : (event: MouseEvent<HTMLElement>) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onStartEdit({ blockId: block.id, propPath });
+          },
+    onClick: editing
+      ? (event: MouseEvent<HTMLElement>) => {
+          event.stopPropagation();
+        }
+      : undefined,
+    onKeyDown: editing
+      ? (event: KeyboardEvent<HTMLElement>) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.blur();
+            return;
+          }
+          if (event.key === "Enter" && !multiline) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.blur();
+          }
+        }
+      : undefined,
+    onBlur: editing
+      ? (event: FocusEvent<HTMLElement>) => {
+          onCommit({
+            blockId: block.id,
+            propPath,
+            text: readInlineEditableElementText(event.currentTarget),
+            renderedText: text,
+          });
+        }
+      : undefined,
+  };
+  const content = editing ? text : (children ?? text);
+  if (display === "block") {
+    return (
+      <div key={wrapperKey} {...wrapperProps}>
+        {content}
+      </div>
+    );
+  }
   return (
-    <span
-      key={`${propPath}:${text}`}
-      ref={editing ? focusInlineEditableNode : undefined}
-      contentEditable={editing ? true : undefined}
-      suppressContentEditableWarning
-      data-page-editor-inline-edit={editing ? "active" : "idle"}
-      data-page-editor-inline-edit-prop={propPath}
-      className={
-        editing ? "cursor-text outline-none ring-1 ring-primary/60 ring-offset-2" : undefined
-      }
-      onDoubleClick={
-        editing || !selected
-          ? undefined
-          : (event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              onStartEdit({ blockId: block.id, propPath });
-            }
-      }
-      onClick={
-        editing
-          ? (event) => {
-              event.stopPropagation();
-            }
-          : undefined
-      }
-      onKeyDown={
-        editing
-          ? (event) => {
-              if (event.key === "Escape") {
-                event.preventDefault();
-                event.stopPropagation();
-                event.currentTarget.blur();
-                return;
-              }
-              if (event.key === "Enter" && !multiline) {
-                event.preventDefault();
-                event.stopPropagation();
-                event.currentTarget.blur();
-              }
-            }
-          : undefined
-      }
-      onBlur={
-        editing
-          ? (event) => {
-              onCommit({
-                blockId: block.id,
-                propPath,
-                text: readInlineEditableElementText(event.currentTarget),
-                renderedText: text,
-              });
-            }
-          : undefined
-      }
-    >
-      {editing ? text : (children ?? text)}
+    <span key={wrapperKey} {...wrapperProps}>
+      {content}
     </span>
   );
 };
@@ -384,11 +388,12 @@ export const SectionCanvas = ({
             />
           );
         }}
-        renderInlineText={({ block, propPath, text, children }) => (
+        renderInlineText={({ block, propPath, text, children, display }) => (
           <InlineEditableCanvasText
             block={block}
             propPath={propPath}
             text={text}
+            display={display}
             selected={block.id === selectedBlockId}
             editing={Boolean(
               inlineEditTarget &&

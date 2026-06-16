@@ -34,15 +34,14 @@ land and owns image-specific residual gaps.
 
 ```tsx
 // Registry already declares image.src as `input: "media"`
-// (core/services/pages/pageEditorControlRegistry.ts:408); no registry change is
+// (core/services/pages/pageEditorControlRegistry.ts:674-683); no registry change is
 // expected unless verification surfaces image-specific media-type metadata.
 const imageControls = getPageEditorControlsForTarget({ kind: "block", type: "image" });
-// (real accessor at core/services/pages/pageEditorControlRegistry.ts:508)
+// (real accessor at core/services/pages/pageEditorControlRegistry.ts:870-890)
 
-// Verify that RegistryControlField (core/admin/ui/pages/PageEditor.tsx
-// ~2524-2614) stops falling through to the raw TextField for `input: "media"`
-// once the shared TASK-421 picker lands, and that image source selection
-// resolves through the shared picker into the saved `src` value.
+// Verify that the PageEditor registry control switch resolves `input: "media"`
+// through the shared TASK-421 picker and that image source selection resolves
+// into the saved `src` value.
 ```
 
 Owner files:

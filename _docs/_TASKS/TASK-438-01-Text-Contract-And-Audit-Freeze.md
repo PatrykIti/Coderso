@@ -19,13 +19,12 @@ verification, and truthful `plain`/`rich` behavior. Toolbar-label derivation is
 owned by TASK-451-02-L01 (`resolveToolbarTargetLabel`); this family only
 verifies the `Text tools` fallback.
 
-Reproduction gate (hard, before any fix contract is frozen): reproduce
-`format:rich` rendering on HEAD. The source of the rich-renders-plain claim is
-the §5 block-table row in `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md`. Verify
-the `pageTextFormats` enum (`core/services/pages/pageDocumentV2.ts:62`,
-normalize fallback to `plain` at `:1308`) and the text render branch in
-`core/services/pages/pageRendererV2.tsx` (`case "text"`), which currently emits
-a plain `<p>` via `readText` and never reads `block.props.format`.
+The rich-text reproduction gate is closed: `pageTextFormats` is defined in
+`core/services/pages/pageDocumentV2.ts:148`, normalization falls back to
+`plain` at `pageDocumentV2.ts:2100-2102`, and the `case "text"` branch now
+routes `format: "rich"` through sanitized rich output in
+`core/services/pages/pageRendererV2.tsx:1424-1426` plus
+`renderTextBlock` at `pageRendererV2.tsx:677-700`.
 
 ---
 
@@ -48,4 +47,3 @@ a plain `<p>` via `readText` and never reads `block.props.format`.
 ## Documentation Updates Required
 
 - `_docs/PAGE_MODEL.md`
-

@@ -115,8 +115,9 @@ export type PageBlockFrameRenderer = (input: {
  * text-bearing block paints (including renderer fallbacks) so the Page Editor
  * can layer inline editing on top of the same content the front renders. Rich
  * text can also pass sanitized React children for the idle canvas view while
- * keeping plain-text commit semantics. Runtime render paths never provide it,
- * so public output is unchanged. `propPath` follows the
+ * keeping plain-text commit semantics; block-rich children pass `display:
+ * "block"` so the canvas does not nest block elements inside inline wrappers.
+ * Runtime render paths never provide it, so public output is unchanged. `propPath` follows the
  * `pageInlineEditContract` convention (`"text"`, `"label"`, `"items.0"`).
  */
 export type PageInlineTextRenderer = (input: {
@@ -124,6 +125,7 @@ export type PageInlineTextRenderer = (input: {
   propPath: string;
   text: string;
   children?: ReactNode;
+  display?: "inline" | "block";
 }) => ReactNode;
 
 /**
@@ -224,10 +226,10 @@ const pageButtonVariantClass = (variant: string) => {
   return "shadow-sm transition hover:opacity-90";
 };
 
-const pageDividerToneClass = (value: unknown) => {
-  if (value === "muted") return "border-slate-300";
-  if (value === "accent") return "border-[var(--coderso-section-accent,#0d9488)]";
-  return "border-slate-200";
+const pageDividerToneBorderColor = (value: unknown) => {
+  if (value === "muted") return "#cbd5e1";
+  if (value === "accent") return "var(--coderso-section-accent,#0d9488)";
+  return "#e2e8f0";
 };
 
 const toPageShadowValue = (shadow: PageBlockStyle["shadow"]) => {
@@ -566,7 +568,47 @@ const pageRichTextAllowedTags: ReadonlySet<string> = new Set([
 
 const pageRichTextSelfClosingTags: ReadonlySet<string> = new Set(["br"]);
 
-const renderSanitizedRichTextHtml = (sanitizedHtml: string): ReactNode[] => {
+const richTextStyledElementTags: ReadonlySet<string> = new Set(["li", "ol", "p", "ul"]);
+
+const toSanitizedRichTextElementProps = (
+  tagName: string,
+  rawAttrs: string,
+  key: number,
+  style: PageBlockStyleProperties
+): Record<string, string | number | CSSProperties> => {
+  const attrs = toSanitizedEmbedElementProps(tagName, rawAttrs, key);
+  if (!richTextStyledElementTags.has(tagName)) return attrs;
+  return {
+    ...attrs,
+    ...pageBlockTextDataAttributes,
+    style,
+  };
+};
+
+const renderRichTextRootText = (
+  text: string,
+  key: number,
+  style: PageBlockStyleProperties
+): ReactNode => (
+  <span key={key} style={style} {...pageBlockTextDataAttributes}>
+    {text}
+  </span>
+);
+
+const createSanitizedRichTextElement = (
+  frame: SanitizedEmbedElementFrame,
+  style: PageBlockStyleProperties
+) =>
+  createElement(
+    frame.tagName,
+    toSanitizedRichTextElementProps(frame.tagName, frame.rawAttrs, frame.key, style),
+    ...frame.children
+  );
+
+const renderSanitizedRichTextHtml = (
+  sanitizedHtml: string,
+  style: PageBlockStyleProperties
+): ReactNode[] => {
   const roots: ReactNode[] = [];
   const stack: SanitizedEmbedElementFrame[] = [];
   let nextKey = 0;
@@ -582,7 +624,12 @@ const renderSanitizedRichTextHtml = (sanitizedHtml: string): ReactNode[] => {
 
   for (const token of tokenizeHtml(sanitizedHtml)) {
     if (token.kind === "text") {
-      appendNode(decodeHtmlEntities(token.value));
+      const text = decodeHtmlEntities(token.value);
+      if (stack.length > 0) {
+        appendNode(text);
+      } else if (text.length > 0) {
+        appendNode(renderRichTextRootText(text, nextKey++, style));
+      }
       continue;
     }
     if (token.kind === "comment" || !pageRichTextAllowedTags.has(token.name)) continue;
@@ -591,7 +638,7 @@ const renderSanitizedRichTextHtml = (sanitizedHtml: string): ReactNode[] => {
       const current = stack.at(-1);
       if (current?.tagName === token.name) {
         stack.pop();
-        appendNode(createSanitizedEmbedElement(current));
+        appendNode(createSanitizedRichTextElement(current, style));
       }
       continue;
     }
@@ -600,7 +647,7 @@ const renderSanitizedRichTextHtml = (sanitizedHtml: string): ReactNode[] => {
       appendNode(
         createElement(
           token.name,
-          toSanitizedEmbedElementProps(token.name, token.rawAttrs, nextKey++)
+          toSanitizedRichTextElementProps(token.name, token.rawAttrs, nextKey++, style)
         )
       );
       continue;
@@ -611,7 +658,7 @@ const renderSanitizedRichTextHtml = (sanitizedHtml: string): ReactNode[] => {
 
   while (stack.length > 0) {
     const current = stack.pop();
-    if (current) appendNode(createSanitizedEmbedElement(current));
+    if (current) appendNode(createSanitizedRichTextElement(current, style));
   }
 
   return roots;
@@ -627,15 +674,16 @@ const renderTextBlock = (block: PageBlockV2, context: PageBlockRenderContext) =>
   const style = toPageBlockTypographyStyle(block);
   if (block.props.format === "rich") {
     const sanitizedHtml = sanitizeAuthoringRichTextHtml(block.props.text);
-    const richChildren = renderSanitizedRichTextHtml(sanitizedHtml);
+    const richChildren = renderSanitizedRichTextHtml(sanitizedHtml, style);
     return (
-      <div className={className} style={style} {...pageBlockTextDataAttributes}>
+      <div className={className}>
         {context.renderInlineText
           ? context.renderInlineText({
               block,
               propPath: "text",
               text: readText(block.props.text),
               children: richChildren,
+              display: "block",
             })
           : richChildren}
       </div>
@@ -1455,8 +1503,10 @@ export const renderPageBlockContent = (
     case "divider":
       return (
         <hr
-          className={pageDividerToneClass(block.props.tone)}
-          style={{ borderWidth: `${readNumber(block.props.thickness, 1)}px` }}
+          style={{
+            borderColor: pageDividerToneBorderColor(block.props.tone),
+            borderWidth: `${readNumber(block.props.thickness, 1)}px`,
+          }}
         />
       );
     case "spacer":

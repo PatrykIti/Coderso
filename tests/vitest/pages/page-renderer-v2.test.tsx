@@ -583,21 +583,39 @@ test("rich text blocks render sanitized rich output instead of plain source", ()
       createPageBlockV2("text", {
         id: "blk-rich-text",
         props: {
-          text: '<p>Hello <strong>rich</strong> <script>alert(1)</script><a href="javascript:alert(1)">bad</a> <a href="/safe">safe</a><br />Tail</p>',
+          text: '<p>Hello <strong>rich</strong> <code>mono</code> <script>alert(1)</script><a href="javascript:alert(1)">bad</a> <a href="/safe">safe</a><br />Tail</p>',
           format: "rich",
           align: "center",
         },
+        style: { fontFamily: "display", fontSize: "lg", fontWeight: "normal", lineHeight: 1.6 },
       }),
     ],
   });
 
   const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const paragraphTag = html.match(/<p[^>]*>/)?.[0] ?? "";
+  const strongTag = html.match(/<strong[^>]*>/)?.[0] ?? "";
+  const codeTag = html.match(/<code[^>]*>/)?.[0] ?? "";
 
-  expect(html).toContain("<strong>rich</strong>");
+  expect(html).toContain("<strong");
+  expect(html).toContain(">rich</strong>");
+  expect(html).toContain("<code>mono</code>");
   expect(html).toContain('href="/safe"');
   expect(html).toContain('rel="nofollow noreferrer"');
   expect(html).toContain("<br/>Tail");
   expect(html).toContain("text-center");
+  expect(paragraphTag).toContain('data-page-block-text="true"');
+  expect(paragraphTag).toContain("font-family:var(--font-display");
+  expect(paragraphTag).toContain("font-size:var(--text-lg");
+  expect(paragraphTag).toContain("font-weight:400");
+  expect(paragraphTag).toContain("line-height:1.6");
+  expect(strongTag).not.toContain("style=");
+  expect(strongTag).not.toContain('data-page-block-text="true"');
+  expect(codeTag).not.toContain("style=");
+  expect(codeTag).not.toContain('data-page-block-text="true"');
+  expect(html.match(/<div[^>]*class="prose[^>]*>/)?.[0] ?? "").not.toContain(
+    'data-page-block-text="true"'
+  );
   expect(html).not.toContain("<script");
   expect(html).not.toContain("alert(1)");
   expect(html).not.toContain("javascript:");
@@ -909,7 +927,7 @@ test("video autoplay prop reaches the rendered video with policy companions", ()
   expect(videoTags[1]).not.toContain("muted");
 });
 
-test("divider tone prop changes the rendered divider border class", () => {
+test("divider tone prop changes the rendered divider border style", () => {
   const section = createPageSectionV2("content", {
     id: "sec-divider-tone",
     blocks: [
@@ -933,10 +951,11 @@ test("divider tone prop changes the rendered divider border class", () => {
     (match) => match[0]
   );
 
-  expect(hrTags[0]).toContain("border-[var(--coderso-section-accent,#0d9488)]");
+  expect(hrTags[0]).toContain("border-color:var(--coderso-section-accent,#0d9488)");
   expect(hrTags[0]).toContain("border-width:3px");
-  expect(hrTags[1]).toContain("border-slate-300");
-  expect(hrTags[2]).toContain("border-slate-200");
+  expect(hrTags[0]).not.toContain("border-[var(--coderso-section-accent");
+  expect(hrTags[1]).toContain("border-color:#cbd5e1");
+  expect(hrTags[2]).toContain("border-color:#e2e8f0");
 });
 
 test("form block renders a canvas-safe inert preview in canvas layout mode (TASK-456)", () => {
@@ -1485,6 +1504,14 @@ test("shared renderer remains inside the Bun-free Pages service boundary", () =>
 
   expect(source).toContain('from "./pageDocumentV2"');
   expect(source).not.toMatch(/@\/|db\/client|settingsService|pagesClient|server\/|core\/site/);
+});
+
+test("admin and site Tailwind entrypoints scan Pages service renderer classes", () => {
+  const adminCss = readFileSync("core/admin/styles/globals.css", "utf8");
+  const siteCss = readFileSync("core/site/styles/site.css", "utf8");
+
+  expect(adminCss).toContain('@source "../../services/pages/**/*.{ts,tsx}"');
+  expect(siteCss).toContain('@source "../../services/pages/**/*.{ts,tsx}"');
 });
 
 test("front render of multi-column grids keeps editor ghost affordances out of the markup", () => {

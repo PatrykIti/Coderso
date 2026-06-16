@@ -19,12 +19,11 @@ sanitized rich output on canvas and the published front (per the §5 block-table
 row in `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md`, reproduced on HEAD during
 the TASK-438-01 contract freeze). Inline-edit entry/commit machinery is owned
 by TASK-422 (`core/services/pages/pageInlineEditContract.ts` targets map plus
-the shared canvas contenteditable flow); this leaf only registers the text
-targets in `inlineEditableTargets` and verifies behavior. Toolbar-label
-derivation is owned by TASK-451-02-L01 via
-`resolveToolbarTargetLabel(target, { fallbackToTypeName: true })` (new helper,
-to be created in `core/admin/ui/pages/PageEditor.tsx`); this leaf only verifies
-the `Text tools` fallback.
+the shared canvas contenteditable flow); this leaf only verifies the existing
+`text.text` target in `inlineEditableTargets` and its behavior. Toolbar-label
+derivation is owned by TASK-451-02-L01 via `resolveToolbarTargetLabel` in
+`core/admin/ui/pages/editor/pageEditorOptions.ts`; this leaf only verifies the
+`Text tools` fallback.
 
 ---
 
@@ -38,36 +37,42 @@ the `Text tools` fallback.
 
 ```tsx
 // Toolbar label: derivation owned by TASK-451-02-L01
-// (resolveToolbarTargetLabel(target, { fallbackToTypeName: true }) in
-// core/admin/ui/pages/PageEditor.tsx). This leaf only verifies the fallback
-// once the owner lands:
+// (resolveToolbarTargetLabel in core/admin/ui/pages/editor/pageEditorOptions.ts).
+// This leaf verifies the existing fallback:
 expect(floatingToolbar.getAttribute("aria-label")).toBe("Text tools");
 
-// Inline edit: machinery owned by TASK-422. Register/verify the text targets
+// Inline edit: machinery owned by TASK-422. Verify the existing text targets
 // in the TASK-422-owned inlineEditableTargets map
 // (core/services/pages/pageInlineEditContract.ts).
 
 // Dedicated controls: verify the text panels render the shared TASK-421
 // widgets resolved via getPageEditorControlsForTarget(...)
-// (core/services/pages/pageEditorControlRegistry.ts:508) and rendered through
-// RegistryControlField in core/admin/ui/pages/PageEditor.tsx (text controls:
-// text/format/align, registry lines ~375-387).
+// (core/services/pages/pageEditorControlRegistry.ts:870-890) and rendered
+// through the PageEditor registry control switch (text controls: text/format/
+// align, registry lines 636-652).
 
 // Rich format fix (owned here): extend the text branch of
 // renderPageBlockContent (core/services/pages/pageRendererV2.tsx, case "text")
-// so format === "rich" emits sanitized rich output instead of the current
-// plain readText() <p>; keep format === "plain" output unchanged.
+// so format === "rich" emits sanitized rich output and paints typography on the
+// generated rich text nodes. The admin canvas inline-edit hook passes rich
+// children with display: "block", so PageAuthoringCanvas must render a block
+// wrapper instead of nesting <p>/<ul>/<ol> under <span>. Keep
+// format === "plain" output unchanged.
 ```
 
 Owner files:
 
 - `core/services/pages/pageRendererV2.tsx` (text branch rich-format output)
+- `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` (rich canvas wrapper
+  selection for block children)
 - `core/services/pages/pageDocumentV2.ts` (rich-content sanitization/normalize
   contract if the fix needs it)
 - `core/services/pages/pageEditorControlRegistry.ts` (verify-only: text
   format/align controls already exist)
-- `core/admin/ui/pages/PageEditor.tsx` (verify-only: toolbar-label fallback is
-  owned by TASK-451-02-L01; inline-edit machinery is owned by TASK-422)
+- `core/admin/ui/pages/editor/pageEditorOptions.ts` (verify-only:
+  toolbar-label fallback is owned by TASK-451-02-L01)
+- `core/admin/ui/pages/PageEditor.tsx` (verify-only: inline-edit machinery is
+  owned by TASK-422 and consumes the shared label helper)
 
 Validation commands:
 
@@ -94,7 +99,9 @@ Regression-test shape:
 
 - Vitest UI coverage for inline edit, toolbar-label verification (`Text
   tools`), format changes, and front runtime truthfulness, including a
-  renderer regression that proves `format:rich` no longer renders plain.
+  renderer regression that proves `format:rich` no longer renders plain and a
+  mounted canvas regression that proves rich block children are not nested under
+  an inline `<span>`.
 
 ---
 

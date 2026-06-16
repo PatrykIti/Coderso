@@ -13,7 +13,12 @@
 
 ## Overview
 
-Replace raw source entry with the shared media-picker path for Video, replace the current yes/no selects for autoplay/muted/visible with the dedicated toggle controls, and close the remaining shared dedicated-control drift from the audit for layout/style/background/visibility through the shared `TASK-421` surface work. This leaf also owns a runtime fix, not just preservation: `block.props.autoplay` is currently a dead prop — the `case "video"` branch of `core/services/pages/pageRendererV2.tsx` (~lines 770-784) binds only `src`/`controls`/`muted`, so toggling Autoplay has zero effect on the published page. The leaf must bind autoplay to the rendered `<video>` element with the standard autoplay-policy companions.
+Verify the shared media-picker path for Video, the dedicated switch controls
+for autoplay/muted/visible, and the remaining shared dedicated-control drift
+from the audit for layout/style/background/visibility through the shared
+`TASK-421` surface work. This leaf also owns the runtime fix: `block.props.autoplay`
+binds to the rendered `<video>` element with the standard autoplay-policy
+companions.
 
 ---
 
@@ -27,15 +32,15 @@ Replace raw source entry with the shared media-picker path for Video, replace th
 
 ```tsx
 // Editor surface: the registry already declares the right inputs
-// (core/services/pages/pageEditorControlRegistry.ts:418-421 — src: "media",
+// (core/services/pages/pageEditorControlRegistry.ts:684-689 — src: "media",
 // autoplay/muted: "switch"); verify they resolve through
 // getPageEditorControlsForTarget({ kind: "block", type: "video" })
-// (pageEditorControlRegistry.ts:508) and render via the shared TASK-421
-// media-picker/toggle widgets in RegistryControlField (PageEditor.tsx ~2524-2614).
+// (pageEditorControlRegistry.ts:870-890) and render via the shared TASK-421
+// media-picker/toggle widgets in PageEditor.
 const videoControls = getPageEditorControlsForTarget({ kind: "block", type: "video" });
 
 // Runtime fix in the `case "video"` branch of renderPageBlockContent
-// (core/services/pages/pageRendererV2.tsx ~770-784) — bind the dead autoplay prop:
+// (core/services/pages/pageRendererV2.tsx:1452-1468):
 const autoplay = readBoolean(block.props.autoplay, false);
 <video
   className="w-full rounded"

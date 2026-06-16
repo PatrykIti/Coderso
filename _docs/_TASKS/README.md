@@ -236,7 +236,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-443-01 | Card Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Card contract was rechecked after shared media/control modularization and kept card-specific runtime residue local. |
 | TASK-443-01-L01 | Card Media Picker And Dedicated Controls | Medium | Medium | Done (2026-06-16): Card media/control adoption is shared and runtime tests cover safe image plus link rendering. |
 | TASK-443-02 | Card Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Card validation, docs, board sync, and changelog 1174 close the family. |
-| TASK-444 | Divider Block Audit Remediation | Low | Small | Done (2026-06-16): Divider tone now changes the rendered border class while thickness remains truthful. |
+| TASK-444 | Divider Block Audit Remediation | Low | Small | Done (2026-06-16): Divider tone now changes the rendered inline border color/style while thickness remains truthful. |
 | TASK-444-01 | Divider Contract And Audit Freeze | Low | Small | Done (2026-06-16): Divider contract freeze confirmed only low-risk tone/style/visibility drift remained. |
 | TASK-444-01-L01 | Divider Dedicated Controls And Runtime Guard | Low | Small | Done (2026-06-16): Divider dedicated controls are shared and renderer coverage proves tone plus thickness behavior. |
 | TASK-444-02 | Divider Validation Docs And Closure | Low | Small | Done (2026-06-16): Divider validation, docs, board sync, and changelog 1174 close the family. |

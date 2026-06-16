@@ -28,12 +28,12 @@ preserving the currently-correct fixed-height runtime output.
 
 ```tsx
 // Controls: the real registry accessor is getPageEditorControlsForTarget
-// (core/services/pages/pageEditorControlRegistry.ts:508); the spacer Size row
-// (input "number", clamp 0..240) lives at pageEditorControlRegistry.ts:449-455.
+// (core/services/pages/pageEditorControlRegistry.ts:870-890); the spacer Size row
+// (input "number", clamp 0..240) lives at pageEditorControlRegistry.ts:807-813.
 const spacerControls = getPageEditorControlsForTarget({ kind: "block", type: "spacer" });
 
 // Runtime guard: published spacer output comes from the `case "spacer"` branch
-// of renderPageBlockContent (core/services/pages/pageRendererV2.tsx ~:805-806,
+// of renderPageBlockContent (core/services/pages/pageRendererV2.tsx:1517-1518,
 // `<div aria-hidden="true" style={{ height: `${size}px` }} />`); assert against
 // PageDocumentRender output in tests/vitest/pages/page-renderer-v2.test.tsx:
 expect(html).toContain('aria-hidden="true"');
