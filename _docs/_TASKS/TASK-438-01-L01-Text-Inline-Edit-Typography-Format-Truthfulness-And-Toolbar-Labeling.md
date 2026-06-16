@@ -54,17 +54,16 @@ expect(floatingToolbar.getAttribute("aria-label")).toBe("Text tools");
 // Rich format fix (owned here): extend the text branch of
 // renderPageBlockContent (core/services/pages/pageRendererV2.tsx, case "text")
 // so format === "rich" emits sanitized rich output and paints typography on the
-// generated rich text nodes. The admin canvas inline-edit hook passes rich
-// children with display: "block", so PageAuthoringCanvas must render a block
-// wrapper instead of nesting <p>/<ul>/<ol> under <span>. Keep
-// format === "plain" output unchanged.
+// generated rich text nodes. Rich blocks must stay panel-only for inline edit
+// so PageAuthoringCanvas cannot collapse stored HTML through the plain-text
+// inline sanitizer. Keep format === "plain" output unchanged.
 ```
 
 Owner files:
 
 - `core/services/pages/pageRendererV2.tsx` (text branch rich-format output)
 - `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx` (rich canvas wrapper
-  selection for block children)
+  rendering and panel-only rich inline-edit guard)
 - `core/services/pages/pageDocumentV2.ts` (rich-content sanitization/normalize
   contract if the fix needs it)
 - `core/services/pages/pageEditorControlRegistry.ts` (verify-only: text
@@ -83,7 +82,9 @@ Validation commands:
 Expected data flow:
 
 - Text content edits on canvas and in the inspector share the one owner path
-  registered in the TASK-422 inline-edit contract.
+  registered in the TASK-422 inline-edit contract for `format: "plain"`.
+  `format: "rich"` renders sanitized rich output on the canvas and remains
+  editable in the panel only.
 - After TASK-451-02-L01 lands, the floating toolbar reads `Text tools` for
   default/placeholder text content (verified here, not implemented here).
 - Acceptance: `format:rich` must produce sanitized rich output on canvas and
@@ -100,8 +101,8 @@ Regression-test shape:
 - Vitest UI coverage for inline edit, toolbar-label verification (`Text
   tools`), format changes, and front runtime truthfulness, including a
   renderer regression that proves `format:rich` no longer renders plain and a
-  mounted canvas regression that proves rich block children are not nested under
-  an inline `<span>`.
+  mounted canvas regression that proves rich block children stay out of the
+  lossy inline-edit hook.
 
 ---
 

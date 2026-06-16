@@ -26,8 +26,8 @@ companions, while non-autoplay videos preserve manual playback behavior.
 - [x] TASK-441-01: Video source/toggle/control contract freeze.
 - [x] TASK-441-01-L01: Adopt shared media-picker and switch controls for video
       props and bind `autoplay` (with muted/playsInline autoplay-policy
-      companions) into the published `<video>` render so the toggle is truthful
-      end-to-end.
+      companions) plus `title` accessible labeling into the published `<video>`
+      render so the controls are truthful end-to-end.
 - [x] TASK-441-02: Validation, docs, and closure.
 
 ---

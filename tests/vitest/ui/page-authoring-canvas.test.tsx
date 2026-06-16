@@ -122,7 +122,7 @@ test("SectionCanvas renders hidden block ghost through the reusable label helper
   expect(html).toContain("Hidden canvas text");
 });
 
-test("SectionCanvas renders rich text output inside the inline edit hook", () => {
+test("SectionCanvas renders rich text output without exposing lossy inline edit", () => {
   const section = createPageSectionV2("content", {
     id: "sec-rich-canvas",
     blocks: [
@@ -144,7 +144,7 @@ test("SectionCanvas renders rich text output inside the inline edit hook", () =>
       selected
       selectedBlockPath={[{ index: 0 }]}
       selectedBlockId="blk-rich-text"
-      inlineEditTarget={null}
+      inlineEditTarget={{ blockId: "blk-rich-text", propPath: "text" }}
       device="desktop"
       canAddBlockBeside={false}
       canvasDataByBlockId={{}}
@@ -158,7 +158,8 @@ test("SectionCanvas renders rich text output inside the inline edit hook", () =>
     />
   );
 
-  expect(html).toContain('data-page-editor-inline-edit-prop="text"');
+  expect(html).not.toContain('data-page-editor-inline-edit-prop="text"');
+  expect(html).not.toContain('contentEditable="true"');
   expect(html).toContain("<strong");
   expect(html).toContain(">rich</strong>");
   expect(html).toContain('href="/safe"');
@@ -166,7 +167,7 @@ test("SectionCanvas renders rich text output inside the inline edit hook", () =>
   expect(html).not.toContain("alert(1)");
 });
 
-test("SectionCanvas mounts rich text inline-edit chrome without invalid block-in-span nesting", () => {
+test("SectionCanvas mounts rich text blocks directly without invalid inline-edit nesting", () => {
   const section = createPageSectionV2("content", {
     id: "sec-rich-canvas-dom",
     blocks: [
@@ -194,10 +195,11 @@ test("SectionCanvas mounts rich text inline-edit chrome without invalid block-in
   );
 
   try {
-    const inline = mounted.container.querySelector('[data-page-editor-inline-edit-prop="text"]');
-    expect(inline?.tagName).toBe("DIV");
-    expect(inline?.querySelector("p")).toBeTruthy();
-    expect(inline?.querySelector("ul")).toBeTruthy();
+    expect(
+      mounted.container.querySelector('[data-page-editor-inline-edit-prop="text"]')
+    ).toBeNull();
+    expect(mounted.container.querySelector(".prose p")).toBeTruthy();
+    expect(mounted.container.querySelector(".prose ul")).toBeTruthy();
     expect(
       mounted.container.querySelector('span[data-page-editor-inline-edit-prop="text"] p')
     ).toBeNull();

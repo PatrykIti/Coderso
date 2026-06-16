@@ -19,7 +19,8 @@ regressing current runtime rendering. Ownership boundary: TASK-421-02-L02
 implements the media-picker primitive, TASK-421-02-L01/L02 the dedicated
 segmented/toggle/slider/swatch widgets, and TASK-421-03-L02 the image block
 panel adoption — this leaf only verifies/wires the Image target after those
-land and owns image-specific residual gaps.
+land and owns image-specific residual gaps such as `image.fit` runtime
+truthfulness.
 
 ---
 
@@ -48,13 +49,11 @@ Owner files:
 
 - `core/admin/ui/pages/PageEditor.tsx` (verification surface for the shared
   picker/widget adoption)
-- `core/services/pages/pageEditorControlRegistry.ts` (only if image-specific
-  media metadata is needed)
-
-The leaf's own data flow keeps alt/caption/fit semantics and published runtime
-rendering unchanged, so `core/services/pages/pageRendererV2.tsx` and
-`core/services/pages/pageDocumentV2.ts` are not owner files here — they are
-covered read-only by the regression assertions.
+- `core/services/pages/pageEditorControlRegistry.ts` (verify-only: image source
+  and fit controls)
+- `core/services/pages/pageRendererV2.tsx` (`image.fit` runtime truthfulness)
+- `core/services/pages/pageDocumentV2.ts` (verify-only: image prop
+  normalization)
 
 Validation commands:
 
@@ -65,7 +64,9 @@ Validation commands:
 Expected data flow:
 
 - Image source selection resolves through the shared media picker.
-- Existing alt/caption/fit semantics remain unchanged.
+- Existing alt/caption semantics remain unchanged.
+- `image.fit` reaches the rendered `<img>` as `object-cover` or
+  `object-contain`.
 - Published runtime keeps rendering a real image block.
 
 Error handling:
@@ -76,7 +77,7 @@ Error handling:
 Regression-test shape:
 
 - Vitest UI coverage for media picking and runtime coverage for rendered Image
-  output.
+  output, including `fit`.
 
 ---
 

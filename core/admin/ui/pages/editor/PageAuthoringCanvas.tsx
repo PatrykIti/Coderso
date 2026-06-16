@@ -90,7 +90,7 @@ const InlineEditableCanvasText = ({
   onCommit: (commit: PageEditorInlineEditCommit) => void;
 }) => {
   const target = resolveInlineEditTarget(block, propPath);
-  if (!target) return <>{text}</>;
+  if (!target) return <>{children ?? text}</>;
   const { multiline } = target;
   const wrapperKey = `${propPath}:${text}`;
   const wrapperProps = {

@@ -218,7 +218,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-437-02 | Heading Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Heading validation, board sync, and changelog 1174 close the family. |
 | TASK-438 | Text Block Audit Remediation | High | Medium | Done (2026-06-16): Text `format:rich` now renders sanitized rich output and the shared toolbar/control closure is validated. |
 | TASK-438-01 | Text Contract And Audit Freeze | High | Medium | Done (2026-06-16): Text drift was rechecked against the modularized editor and scoped to rich runtime plus closure validation. |
-| TASK-438-01-L01 | Text Inline Edit Typography Format Truthfulness And Toolbar Labeling | High | Medium | Done (2026-06-16): Text rich format emits safe markup while inline edit, typography, and toolbar fallback stay shared. |
+| TASK-438-01-L01 | Text Inline Edit Typography Format Truthfulness And Toolbar Labeling | High | Medium | Done (2026-06-16): Text rich format emits safe markup, stays panel-only for inline edit, and keeps typography plus toolbar fallback shared. |
 | TASK-438-02 | Text Validation Docs And Closure | High | Medium | Done (2026-06-16): Text renderer/control tests, docs, board sync, and changelog 1174 close the family. |
 | TASK-439 | Button Block Audit Remediation | High | Medium | Done (2026-06-16): Button variant/size and section-accent inline styles now land on the public anchor surface. |
 | TASK-439-01 | Button Contract And Audit Freeze | High | Medium | Done (2026-06-16): Button contract was revalidated after shared label/edit modularization and kept renderer ownership local. |
@@ -226,11 +226,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-439-02 | Button Validation Docs And Closure | High | Medium | Done (2026-06-16): Button validation, docs, board sync, and changelog 1174 close the family. |
 | TASK-440 | Image Block Audit Remediation | Medium | Medium | Done (2026-06-16): Image media-picker/dedicated-control drift is closed by the shared editor surface and existing truthful renderer path. |
 | TASK-440-01 | Image Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Image contract freeze confirmed the post-modularization media/control ownership boundary. |
-| TASK-440-01-L01 | Image Media Picker And Dedicated Controls | Medium | Medium | Done (2026-06-16): Image authoring uses shared media and style controls while runtime image styling remains covered. |
+| TASK-440-01-L01 | Image Media Picker And Dedicated Controls | Medium | Medium | Done (2026-06-16): Image authoring uses shared media/style controls and `fit` now reaches runtime image styling. |
 | TASK-440-02 | Image Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Image validation, docs, board sync, and changelog 1174 close the family. |
-| TASK-441 | Video Block Audit Remediation | Medium | Medium | Done (2026-06-16): Video autoplay now reaches public `<video>` output with muted and playsInline policy companions. |
+| TASK-441 | Video Block Audit Remediation | Medium | Medium | Done (2026-06-16): Video autoplay now reaches public `<video>` output with muted/playsInline policy companions, and title labels the media element. |
 | TASK-441-01 | Video Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Video contract was rechecked after shared media/toggle controls and scoped to runtime autoplay truthfulness. |
-| TASK-441-01-L01 | Video Media Picker Toggle Controls And Runtime Guard | Medium | Medium | Done (2026-06-16): Video media/toggle controls are shared and renderer coverage proves autoplay, muted, and playsInline output. |
+| TASK-441-01-L01 | Video Media Picker Toggle Controls And Runtime Guard | Medium | Medium | Done (2026-06-16): Video media/toggle controls are shared and renderer coverage proves autoplay, muted, playsInline, and title label output. |
 | TASK-441-02 | Video Validation Docs And Closure | Medium | Medium | Done (2026-06-16): Video validation, docs, board sync, and changelog 1174 close the family. |
 | TASK-443 | Card Block Audit Remediation | Medium | Medium | Done (2026-06-16): Card image and href props now render safely on the public card output. |
 | TASK-443-01 | Card Contract And Audit Freeze | Medium | Medium | Done (2026-06-16): Card contract was rechecked after shared media/control modularization and kept card-specific runtime residue local. |

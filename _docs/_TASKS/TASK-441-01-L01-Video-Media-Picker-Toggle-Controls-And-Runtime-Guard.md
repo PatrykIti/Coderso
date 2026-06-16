@@ -18,7 +18,8 @@ for autoplay/muted/visible, and the remaining shared dedicated-control drift
 from the audit for layout/style/background/visibility through the shared
 `TASK-421` surface work. This leaf also owns the runtime fix: `block.props.autoplay`
 binds to the rendered `<video>` element with the standard autoplay-policy
-companions.
+companions, and `block.props.title` reaches the rendered media element as
+accessible labeling metadata.
 
 ---
 
@@ -42,9 +43,12 @@ const videoControls = getPageEditorControlsForTarget({ kind: "block", type: "vid
 // Runtime fix in the `case "video"` branch of renderPageBlockContent
 // (core/services/pages/pageRendererV2.tsx:1452-1468):
 const autoplay = readBoolean(block.props.autoplay, false);
+const title = readText(block.props.title);
 <video
   className="w-full rounded"
   src={src}
+  title={title || undefined}
+  aria-label={title || undefined}
   controls
   autoPlay={autoplay}
   // Autoplay-policy companions: browsers only honor autoplay when muted;
@@ -76,6 +80,8 @@ Expected data flow:
   `core/services/pages/pageRendererV2.tsx`, with `muted`/`playsInline` forced on
   while autoplay is enabled so browser autoplay policies allow playback; the
   toggle must have a visible published-front effect, not stay a dead prop.
+- `title` reaches the rendered `<video>` as both `title` and `aria-label` when
+  present, and stays absent when empty.
 - Published runtime keeps rendering a real video block.
 
 Error handling:
@@ -90,7 +96,7 @@ Regression-test shape:
   which today only exercises an empty-src video placeholder) asserting that
   `autoplay` and `muted` reach the rendered `<video>` element: autoplay=true
   emits `autoplay` plus the muted/playsinline companions, autoplay=false emits
-  no `autoplay` attribute.
+  no `autoplay` attribute, and `title` emits accessible media labels.
 
 ---
 

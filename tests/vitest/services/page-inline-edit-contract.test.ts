@@ -91,11 +91,11 @@ describe("resolveInlineEditTarget", () => {
     }
   });
 
-  test("text blocks with rich format still resolve to the plain-text contract", () => {
+  test("text blocks with rich format stay panel-only to avoid lossy inline commits", () => {
     const block = createPageBlockV2("text", {
       props: { text: "Rich copy", format: "rich", align: "left" },
     });
-    expect(resolveInlineEditTarget(block, "text")).toBe(targetFor("text", "text"));
+    expect(resolveInlineEditTarget(block, "text")).toBeNull();
   });
 
   test("resolves indexed list string items to concrete targets", () => {

@@ -304,13 +304,18 @@ truthful:
   "rich"` renders a small sanitized HTML subset (`p`, `strong`, `em`, `i`,
   `code`, `ul`, `ol`, `li`, `br`, and safe `a[href]` with
   `rel="nofollow noreferrer"`), drops active content, and never uses raw
-  `dangerouslySetInnerHTML`.
+  `dangerouslySetInnerHTML`. Rich text is panel-only for inline editing on the
+  canvas so stored HTML cannot be collapsed into plain text by a lossy
+  contenteditable commit.
 - `button.variant` changes the anchor visual surface (`primary`, `secondary`,
   `ghost`, `link`), `button.size` changes anchor spacing/type scale, and the
   primary/accent surfaces consume `--coderso-section-accent` through inline
   styles on the anchor, not through generated utility-class availability.
+- `image.fit` changes the public image object-fit class (`cover` or
+  `contain`).
 - `video.autoplay` emits `autoPlay` on the rendered `<video>` and forces the
-  browser policy companions `muted` and `playsInline`; unset/false autoplay
+  browser policy companions `muted` and `playsInline`; `video.title` emits
+  `title` and `aria-label` on the rendered media element; unset/false autoplay
   preserves manual playback behavior.
 - `card.image` renders a sanitized image above the card copy and `card.href`
   wraps the title in a safe link. Unsafe media/link values fail closed.
@@ -624,8 +629,10 @@ site-token style bridging. Reusable authoring modules live under
   provider SDKs, storage adapters, password hashing, or secret stores.
 - `PageAuthoringCanvas.tsx` owns the Page v2 canvas frame, section shell,
   block frames, ghost add affordances, nested slot chrome, and inline-edit
-  wiring. It receives resolved site-token style values from the shell instead
-  of reading settings itself.
+  wiring. Rich text blocks render sanitized rich output on canvas but stay
+  panel-only for inline edit, so the canvas never commits stored HTML through
+  the plain-text inline sanitizer. It receives resolved site-token style values
+  from the shell instead of reading settings itself.
 - `FloatingEditorToolbar.tsx` owns shared toolbar button chrome only. The
   full panel orchestration remains shell-owned until a future task extracts a
   generic non-Page-v2 panel engine.

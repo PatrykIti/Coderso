@@ -26,7 +26,7 @@ covered; it no longer owns a raw-URL media picker migration.
 - [x] TASK-440-01: Image source/control contract freeze.
 - [x] TASK-440-01-L01: Verify image source entry resolves through the shared
       TASK-421 media-picker path and that the image panels render the shared
-      TASK-421 widgets.
+      TASK-421 widgets, including `fit` runtime truthfulness.
 - [x] TASK-440-02: Validation, docs, and closure.
 
 ---

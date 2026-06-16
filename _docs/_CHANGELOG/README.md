@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1176.
+Ordinary new entries continue at 1177.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1176.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1176 for the next changelog entry.
+assistant policy coverage fix. Use 1177 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1176 | 2026-06-16 | TASK-438/440/441/445 post-implementation Phase 3a drift | Pages Runtime/Admin UI/Docs/Drift Audit |
 | 1175 | 2026-06-16 | TASK-437..450 Phase 3a drift pass | Pages Runtime/Admin UI/CSS/Docs/Task Contracts/Drift Audit |
 | 1174 | 2026-06-16 | TASK-437..450 Pages editor Phase 3a block closure | Pages/Admin UI/Public Runtime/QA/Docs/Drift Audit |
 | 1173 | 2026-06-14 | TASK-466 Page full-width section background bleed | Pages/Public Runtime/Admin Preview/QA/Docs |

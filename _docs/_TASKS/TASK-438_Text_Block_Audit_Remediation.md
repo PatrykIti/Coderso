@@ -30,7 +30,7 @@ label derivation fix is owned by TASK-451-02-L01; this family only verifies the
       including reproducing `format:rich` rendering on HEAD.
 - [x] TASK-438-01-L01: Adopt inline-edit and dedicated controls, verify
       toolbar labeling (owned by TASK-451-02-L01), and make `format:rich`
-      produce sanitized rich output.
+      produce sanitized rich output while staying panel-only for inline edit.
 - [x] TASK-438-02: Validation, docs, and closure.
 
 ---
@@ -48,4 +48,3 @@ label derivation fix is owned by TASK-451-02-L01; this family only verifies the
 
 - `_docs/PAGE_MODEL.md` if text format semantics change
 - `_docs/_TASKS/README.md`
-

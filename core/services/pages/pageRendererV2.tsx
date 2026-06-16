@@ -226,6 +226,9 @@ const pageButtonVariantClass = (variant: string) => {
   return "shadow-sm transition hover:opacity-90";
 };
 
+const pageImageFitClass = (value: unknown) =>
+  value === "contain" ? "object-contain" : "object-cover";
+
 const pageDividerToneBorderColor = (value: unknown) => {
   if (value === "muted") return "#cbd5e1";
   if (value === "accent") return "var(--coderso-section-accent,#0d9488)";
@@ -741,7 +744,7 @@ const renderImage = (block: PageBlockV2) => {
   return (
     <figure className="space-y-2">
       <img
-        className="w-full rounded object-cover"
+        className={joinPageRenderClasses("w-full rounded", pageImageFitClass(block.props.fit))}
         style={elementStyle}
         {...pageBlockElementDataAttributes}
         src={src}
@@ -1446,11 +1449,14 @@ export const renderPageBlockContent = (
       return renderImage(block);
     case "video": {
       const src = sanitizeAuthoringMediaUrl(block.props.src) ?? "";
+      const title = readText(block.props.title);
       const autoplay = readBoolean(block.props.autoplay, false);
       return src ? (
         <video
           className="w-full rounded"
           src={src}
+          title={title || undefined}
+          aria-label={title || undefined}
           controls
           autoPlay={autoplay || undefined}
           muted={readBoolean(block.props.muted, true) || autoplay}

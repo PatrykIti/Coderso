@@ -692,6 +692,42 @@ test("card image and href props render on the public card output", () => {
   expect(html).not.toContain("javascript:");
 });
 
+test("image fit prop changes the rendered image object-fit class", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-image-fit",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-image-contain",
+        props: {
+          src: "https://cdn.example.test/contain.jpg",
+          alt: "Contain image",
+          fit: "contain",
+        },
+      }),
+      createPageBlockV2("image", {
+        id: "blk-image-cover",
+        props: {
+          src: "https://cdn.example.test/cover.jpg",
+          alt: "Cover image",
+          fit: "cover",
+        },
+      }),
+    ],
+  });
+
+  const imgTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<img[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(imgTags[0]).toContain('src="https://cdn.example.test/contain.jpg"');
+  expect(imgTags[0]).toContain("object-contain");
+  expect(imgTags[0]).not.toContain("object-cover");
+  expect(imgTags[1]).toContain('src="https://cdn.example.test/cover.jpg"');
+  expect(imgTags[1]).toContain("object-cover");
+  expect(imgTags[1]).not.toContain("object-contain");
+});
+
 test("unset typography keeps legacy markup free of inline font styles", () => {
   const section = createPageSectionV2("content", {
     id: "sec-typo-legacy",
@@ -922,9 +958,13 @@ test("video autoplay prop reaches the rendered video with policy companions", ()
   expect(videoTags[0]).toContain("autoPlay");
   expect(videoTags[0]).toContain("muted");
   expect(videoTags[0]).toContain("playsInline");
+  expect(videoTags[0]).toContain('title="Intro"');
+  expect(videoTags[0]).toContain('aria-label="Intro"');
   expect(videoTags[1]).not.toContain("autoPlay");
   expect(videoTags[1]).not.toContain("playsInline");
   expect(videoTags[1]).not.toContain("muted");
+  expect(videoTags[1]).toContain('title="Manual"');
+  expect(videoTags[1]).toContain('aria-label="Manual"');
 });
 
 test("divider tone prop changes the rendered divider border style", () => {
@@ -956,6 +996,32 @@ test("divider tone prop changes the rendered divider border style", () => {
   expect(hrTags[0]).not.toContain("border-[var(--coderso-section-accent");
   expect(hrTags[1]).toContain("border-color:#cbd5e1");
   expect(hrTags[2]).toContain("border-color:#e2e8f0");
+});
+
+test("spacer size prop reaches the rendered inert spacer height", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-spacer-size",
+    blocks: [
+      createPageBlockV2("spacer", {
+        id: "blk-spacer-default",
+        props: {},
+      }),
+      createPageBlockV2("spacer", {
+        id: "blk-spacer-large",
+        props: { size: 72 },
+      }),
+    ],
+  });
+
+  const spacerTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(
+      /<div[^>]*aria-hidden="true"[^>]*>/g
+    ),
+    (match) => match[0]
+  );
+
+  expect(spacerTags[0]).toContain("height:32px");
+  expect(spacerTags[1]).toContain("height:72px");
 });
 
 test("form block renders a canvas-safe inert preview in canvas layout mode (TASK-456)", () => {
