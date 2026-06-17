@@ -14,7 +14,8 @@
 
 Implement one-shot mount revalidation in `PageEditor`. Cached detail should
 render immediately, but a forced server detail must verify it. Fresh server
-detail wins only when strictly newer and the editor is not dirty.
+detail wins only when the editor is not dirty and the host freshness policy
+allows it.
 
 ## Sub-Tasks
 
@@ -36,7 +37,7 @@ detail wins only when strictly newer and the editor is not dirty.
 
 ```tsx
 const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
-const latestLoadedPageRef = useRef<PageDetail | null>(page);
+const latestLoadedPageRef = useRef<PageEditorResourceDetail | null>(page);
 const revalidatedResourceRef = useRef<string | null>(null);
 
 useEffect(() => {
@@ -47,7 +48,7 @@ useEffect(() => {
   latestLoadedPageRef.current = page;
 }, [page]);
 
-const hydrateFromDetail = useCallback((detail: PageDetail, options?: { selectFirst?: boolean }) => {
+const hydrateFromDetail = useCallback((detail: PageEditorResourceDetail, options?: { selectFirst?: boolean }) => {
   const document = normalizePageData(detail.currentData);
   setPage(detail);
   setPageDocument(document);
@@ -73,8 +74,12 @@ useEffect(() => {
       const fresh = await editorHost.loadDetail(pageId, { force: true });
       if (cancelled || !fresh || hasUnsavedChangesRef.current) return;
       const currentLoaded = latestLoadedPageRef.current;
-      if (loaded && !isNewerPageDetailTimestamp(fresh.updatedAt, loaded.updatedAt)) return;
-      if (currentLoaded && !isNewerPageDetailTimestamp(fresh.updatedAt, currentLoaded.updatedAt)) return;
+      if (!shouldApplyFreshDetail({
+        current: currentLoaded ?? loaded,
+        fresh,
+        isDirty: hasUnsavedChangesRef.current,
+        mode: editorHost.freshnessMode ?? "updatedAt",
+      })) return;
       hydrateFromDetail(fresh);
       setError(null);
     } catch (revalidationError) {
@@ -92,10 +97,12 @@ useEffect(() => {
 
 Data flow:
 
-- `initialPage` or cached detail seeds state.
+- `initialPageDetail` (from `initialPage` or cached detail) seeds state.
 - Forced server detail revalidates once.
 - Existing cache client writes the fresh detail into localStorage.
 - Fresh detail updates editor state only through `hydrateFromDetail`.
+- Menu Design forced revalidation does not rely on the adapter's
+  `createdAt`-backed `updatedAt`.
 
 Error handling:
 
@@ -113,6 +120,14 @@ test("poisoned initial cache is corrected by forced fresh detail", async () => {
   expect(view.container.textContent).not.toContain("Welcome to Coderso");
   await flush();
   expect(view.container.textContent).toContain("Welcome to Coderso");
+});
+
+test("menu design forced fresh detail can replace same-createdAt poisoned cache", async () => {
+  menuDesignState.cachedMenu = menuWithSettings({ createdAt: "2026-01-01T00:00:00Z", settings: emptyNavExtras() });
+  menuDesignState.currentMenu = menuWithSettings({ createdAt: "2026-01-01T00:00:00Z", settings: populatedNavExtras() });
+  const view = mountMenuDesignEditor();
+  await flush();
+  expect(view.container.textContent).toContain("Primary CTA");
 });
 ```
 

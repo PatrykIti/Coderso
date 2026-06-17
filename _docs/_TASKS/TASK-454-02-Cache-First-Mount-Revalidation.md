@@ -14,11 +14,14 @@
 
 Close the mount-path cache trust vector. The Page Editor must keep cache-first
 hydration for speed, then perform exactly one forced server revalidation for the
-mounted resource and apply it only when it is strictly newer and the editor is
-not dirty.
+mounted resource. Fresh detail applies only when the editor is not dirty and the
+host freshness policy allows it.
 
 This is host-neutral work for Pages, Page Templates, and Menu Design because all
-three use `PageEditorHost.loadDetail`.
+three use `PageEditorHost.loadDetail`. Pages and Page Templates use strict
+`updatedAt` freshness. Menu Design currently maps `updatedAt` from
+`menu.createdAt`, so it must use an explicit forced-clean replacement mode or
+gain a real menu freshness source before timestamps are treated as authoritative.
 
 ## Sub-Tasks
 
@@ -41,8 +44,26 @@ three use `PageEditorHost.loadDetail`.
 
 ```tsx
 type PageEditorHostLoadOptions = { force?: boolean };
+type PageEditorHostFreshnessMode = "updatedAt" | "forced-clean-replace";
 
-const hydrateFromDetail = (detail: PageDetail) => {
+const shouldApplyFreshDetail = ({
+  current,
+  fresh,
+  isDirty,
+  mode,
+}: {
+  current: PageEditorResourceDetail | null;
+  fresh: PageEditorResourceDetail;
+  isDirty: boolean;
+  mode: PageEditorHostFreshnessMode;
+}) => {
+  if (isDirty) return false;
+  if (!current) return true;
+  if (mode === "forced-clean-replace") return true;
+  return isNewerPageDetailTimestamp(fresh.updatedAt, current.updatedAt);
+};
+
+const hydrateFromDetail = (detail: PageEditorResourceDetail) => {
   const document = normalizePageData(detail.currentData);
   setPage(detail);
   setPageDocument(document);
@@ -59,7 +80,12 @@ useEffect(() => {
   const loadedAtStart = page;
   void editorHost.loadDetail(pageId, { force: true }).then((fresh) => {
     if (cancelled || !fresh || hasUnsavedChangesRef.current) return;
-    if (loadedAtStart && !isNewerPageDetailTimestamp(fresh.updatedAt, loadedAtStart.updatedAt)) return;
+    if (!shouldApplyFreshDetail({
+      current: loadedAtStart,
+      fresh,
+      isDirty: hasUnsavedChangesRef.current,
+      mode: editorHost.freshnessMode ?? "updatedAt",
+    })) return;
     hydrateFromDetail(fresh);
   });
   return () => {
@@ -74,6 +100,9 @@ Data flow:
   placeholder.
 - Forced read writes the normal detail cache through the existing cached client.
 - Fresh detail does not overwrite unsaved local edits.
+- Timestamp-authoritative hosts reject older/same/unparsable candidates.
+- Menu Design has explicit coverage for forced clean replacement when
+  `createdAt` cannot prove freshness.
 
 Error handling:
 
@@ -83,7 +112,9 @@ Error handling:
 Regression-test shape:
 
 - Initial poisoned cache renders first, then fresh server detail replaces it.
-- Fresh detail older than cache does not replace.
+- Fresh detail older than cache does not replace for timestamp-authoritative
+  hosts.
+- Menu Design same-`createdAt` fresh detail corrects a poisoned clean cache.
 - Dirty editor blocks revalidation overwrite.
 - Page Template and Menu Design host load signatures stay compatible.
 
@@ -111,6 +142,7 @@ Regression-test shape:
 
 ## Acceptance Criteria
 
-1. TTL-fresh poisoned detail cache cannot remain authoritative after mount.
+1. TTL-fresh poisoned detail cache cannot remain authoritative after mount,
+   including Menu Design caches that lack a real `updatedAt` source.
 2. Cache-bus monotonic behavior remains unchanged.
 3. No prefetch or mount refetch loop is introduced.

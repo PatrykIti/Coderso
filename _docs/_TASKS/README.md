@@ -135,7 +135,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Follow-up from the TASK-449 reproduction: surface recoverable autosaved drafts on reopen, add an SPA unsaved-changes navigation guard, and revalidate mount hydration so a TTL-fresh poisoned cache cannot remain authoritative. |
 | TASK-454-01 | Contract Freeze And Host Boundary | High | Medium | Correct stale TASK-454 assumptions, preserve host/page ownership decisions, and require a fresh drift pass before implementation. |
 | TASK-454-01-L01 | Contract Corrections And Fresh Drift Pass | High | Small | Verify the corrected TASK-454 contract against current source before source edits. |
-| TASK-454-02 | Cache-First Mount Revalidation | High | Medium | Keep cache-first editor hydration but force one server detail revalidation and apply only strictly newer clean-state data. |
+| TASK-454-02 | Cache-First Mount Revalidation | High | Medium | Keep cache-first editor hydration, force one server detail revalidation, and apply fresh data through each host's freshness policy. |
 | TASK-454-02-L01 | Host Load Options And Freshness Helper | High | Medium | Add host `loadDetail(..., { force })` support and centralize the timestamp comparison rule. |
 | TASK-454-02-L02 | PageEditor Mount Revalidation And Error State | High | Medium | Replace mount cache trust with one-shot forced revalidation and bounded non-destructive error UI. |
 | TASK-454-02-L03 | Cache Regression Coverage And Docs | High | Small | Pin poisoned-cache mount behavior in Vitest and update the admin cache contract. |

@@ -68,8 +68,9 @@ Data flow:
 Error handling:
 
 - If navigation target is current editor route, do not prompt.
-- If no router context exists in a test host, either no-op safely or use the
-  required provider in tests; do not crash production admin.
+- If no router context exists in a direct Page Editor test host, the shared
+  guard no-ops for SPA blocking and must not throw. Tests that assert routing
+  behavior must wrap `AdminRouterProvider`.
 
 Regression-test shape:
 

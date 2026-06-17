@@ -43,16 +43,20 @@ function useAdminDirtyNavigationGuard(input: {
   confirmLabel: string;
   onConfirmDiscard?: () => void;
 }) {
-  const { path, navigate, registerBlocker } = useAdminRouter();
+  const router = useOptionalAdminRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   const requestNavigation = useCallback((href: string) => {
-    if (!input.blocked || isCurrentHref(path, href)) return true;
+    if (!router) return true;
+    if (!input.blocked || isCurrentHref(router.path, href)) return true;
     setPendingHref(href);
     return false;
-  }, [input.blocked, path]);
+  }, [input.blocked, router]);
 
-  useEffect(() => registerBlocker(requestNavigation), [registerBlocker, requestNavigation]);
+  useEffect(() => {
+    if (!router) return undefined;
+    return router.registerBlocker(requestNavigation);
+  }, [requestNavigation, router]);
   useEffect(() => {
     if (!input.blocked || typeof window === "undefined") return undefined;
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -67,7 +71,7 @@ function useAdminDirtyNavigationGuard(input: {
     const href = pendingHref;
     input.onConfirmDiscard?.();
     setPendingHref(null);
-    if (href) navigate(href, { skipBlockers: true });
+    if (href && router) router.navigate(href, { skipBlockers: true });
   };
 
   return { dialogProps: { open: Boolean(pendingHref), onConfirm: confirm } };
@@ -78,6 +82,8 @@ Data flow:
 
 - `AdminLink`, explicit `navigate`, and popstate keep routing through
   `AdminRouterContext.registerBlocker`.
+- Direct Page Editor tests without `AdminRouterProvider` get a no-op SPA guard
+  instead of a thrown missing-context error.
 - Confirmed navigation uses existing `skipBlockers`.
 - Hard navigation/browser close uses `beforeunload` while blocked.
 
@@ -92,6 +98,7 @@ Regression-test shape:
 
 - Dirty Page Editor blocks sidebar/AdminLink SPA navigation.
 - Dirty Page Editor blocks popstate and restores previous history path.
+- Existing direct Page Editor tests still mount without a router provider.
 - Confirm continues; cancel stays.
 - Settings dirty navigation behavior remains green.
 

@@ -36,7 +36,10 @@ autosave semantics.
 ## Implementation Pseudocode
 
 ```tsx
-function findRecoverableAutosave(revisions: PageRevision[], page: PageDetail) {
+function findRecoverableAutosave(
+  revisions: PageEditorRevision[],
+  page: PageEditorResourceDetail
+) {
   return revisions
     .filter((revision) => revision.kind === "autosave")
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))

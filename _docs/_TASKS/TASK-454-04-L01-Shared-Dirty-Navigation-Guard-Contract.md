@@ -14,8 +14,8 @@
 
 Extract the existing Settings dirty-navigation pattern into a shared guard
 without changing Settings behavior. The shared guard must use
-`AdminRouterContext.registerBlocker`, `resolveAdminHref`, `ConfirmActionDialog`,
-and `beforeunload`.
+`AdminRouterContext.registerBlocker` when a router context exists,
+`resolveAdminHref`, `ConfirmActionDialog`, and `beforeunload`.
 
 ## Sub-Tasks
 
@@ -55,20 +55,25 @@ export function useAdminDirtyNavigationGuard(options: {
   onConfirmDiscard?: () => void;
 }) {
   const adminBasePath = useAdminBasePath();
-  const { path, navigate, registerBlocker } = useAdminRouter();
+  const router = useOptionalAdminRouter();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   const isCurrentHref = useCallback((href: string) => {
-    return normalizeAdminHrefForComparison(resolveAdminHref(adminBasePath, href)) === normalizeAdminHrefForComparison(path);
-  }, [adminBasePath, path]);
+    if (!router) return false;
+    return normalizeAdminHrefForComparison(resolveAdminHref(adminBasePath, href)) === normalizeAdminHrefForComparison(router.path);
+  }, [adminBasePath, router]);
 
   const requestNavigation = useCallback((href: string) => {
+    if (!router) return true;
     if (!options.blocked || isCurrentHref(href)) return true;
     setPendingHref(href);
     return false;
-  }, [isCurrentHref, options.blocked]);
+  }, [isCurrentHref, options.blocked, router]);
 
-  useEffect(() => registerBlocker(requestNavigation), [registerBlocker, requestNavigation]);
+  useEffect(() => {
+    if (!router) return undefined;
+    return router.registerBlocker(requestNavigation);
+  }, [requestNavigation, router]);
   useEffect(() => {
     if (!options.blocked || typeof window === "undefined") return undefined;
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -81,13 +86,15 @@ export function useAdminDirtyNavigationGuard(options: {
 
   return {
     requestNavigation,
-    dialog: <ConfirmActionDialog ... onConfirm={confirmNavigation} />,
+    dialog: <ConfirmActionDialog ... onConfirm={() => confirmNavigation(router)} />,
   };
 }
 ```
 
 Data flow: shared guard stores only pending href and delegates actual route
-transition to `navigate(href, { skipBlockers: true })`.
+transition to `router.navigate(href, { skipBlockers: true })`. Without a router
+provider, SPA blocking is a no-op so direct component tests do not crash;
+navigation-guard behavior tests must wrap `AdminRouterProvider`.
 
 Error handling: cancel clears only `pendingHref`; confirm calls optional discard
 callback before navigating.
@@ -123,3 +130,5 @@ Regression-test shape:
 1. Settings dirty navigation is unchanged.
 2. Shared guard is reusable by Page Editor without duplicate router logic.
 3. Hard-navigation warning is owned by the shared guard.
+4. Page Editor tests that do not exercise routing can render without
+   `AdminRouterProvider`; routing tests must include the provider.

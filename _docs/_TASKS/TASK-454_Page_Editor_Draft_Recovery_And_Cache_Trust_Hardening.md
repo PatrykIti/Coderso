@@ -44,14 +44,18 @@ Scope decisions:
 - **Revision filtering is client-side.** Use existing `listPageRevisions(id)`
   and filter `kind === "autosave"` in the Page Editor. Do not add route query
   parameters unless a later task explicitly expands the API contract.
-- **Mount revalidation is host-neutral.** Pages, Page Templates, and Menu Design
-  share `PageEditor`; cache-first mount revalidation and dirty navigation guard
-  must preserve all three host modes. Autosave recovery is Pages-only because
-  only the Pages host exposes autosave/revisions.
+- **Mount revalidation is host-neutral, freshness policy is host-owned.** Pages,
+  Page Templates, and Menu Design share `PageEditor`; cache-first mount
+  revalidation and dirty navigation guard must preserve all three host modes.
+  Pages and Page Templates can use strict `updatedAt` freshness. Menu Design
+  currently adapts `updatedAt` from `menu.createdAt`, so the contract must use
+  an explicit forced-clean replacement mode or add a real menu freshness source
+  before relying on timestamps. Autosave recovery is Pages-only because only the
+  Pages host exposes autosave/revisions.
 - **No mount refetch loop.** Cached detail may render immediately, but the
   editor performs one explicit forced server revalidation per resource mount.
-  The server detail replaces local state only when strictly newer and the editor
-  is not dirty.
+  The server detail replaces local state only when the editor is not dirty and
+  the host freshness policy allows it.
 
 ---
 
@@ -114,16 +118,23 @@ before editing source code.
 ```tsx
 // Host load contract:
 type PageEditorHostLoadOptions = { force?: boolean };
+type PageEditorHostFreshnessMode = "updatedAt" | "forced-clean-replace";
 type PageEditorHost = {
-  loadDetail(id: string, options?: PageEditorHostLoadOptions): Promise<PageDetail | null>;
+  freshnessMode?: PageEditorHostFreshnessMode;
+  loadDetail(id: string, options?: PageEditorHostLoadOptions): Promise<PageEditorResourceDetail | null>;
 };
 
 // Mount revalidation:
-const cached = initialPage ?? host.getCachedDetail(id);
+const cached = initialPageDetail ?? host.getCachedDetail(id);
 if (cached) hydrateFromDetail(cached);
 
 const fresh = await host.loadDetail(id, { force: true });
-if (!hasUnsavedChanges && fresh && (!loaded || isNewerPageDetailTimestamp(fresh.updatedAt, loaded.updatedAt))) {
+if (fresh && shouldApplyFreshDetail({
+  current: loaded,
+  fresh,
+  isDirty: hasUnsavedChanges,
+  mode: host.freshnessMode ?? "updatedAt",
+})) {
   hydrateFromDetail(fresh);
 }
 
@@ -148,8 +159,11 @@ Expected data flow:
 
 - Cache-first render remains fast.
 - One forced server detail read verifies the cache on mount.
-- Strict timestamp comparison is shared between mount revalidation, cache-bus
-  rehydration, and autosave recovery.
+- Strict timestamp comparison is shared between cache-bus rehydration, autosave
+  recovery, and mount revalidation for timestamp-authoritative hosts.
+- Menu Design must not rely on `createdAt` as freshness; its forced
+  revalidation either uses a real freshness source or replaces clean cached
+  state through an explicit host mode.
 - Autosave restore uses existing revision restore, which promotes the selected
   revision into `currentData` through the normal service/route path.
 - Navigation confirmation discards only local editor state for the transition;
@@ -159,7 +173,8 @@ Error handling:
 
 - Revalidation fetch failures keep the cached/editor view and surface bounded
   inline copy; they never blank the document.
-- Unparsable or same-timestamp candidates fail closed.
+- Unparsable or same-timestamp candidates fail closed for timestamp-authoritative
+  hosts.
 - Autosave revision listing failures show a bounded recovery warning and do not
   block manual Save.
 - Restore/discard failures remain visible and keep the prompt actionable.
@@ -167,8 +182,9 @@ Error handling:
 Regression-test shape:
 
 - Vitest UI: poisoned cache renders initially then corrects from forced server
-  detail; older/same/unparsable fresh details do not overwrite; dirty editor is
-  not overwritten by revalidation.
+  detail; older/same/unparsable fresh details do not overwrite for
+  timestamp-authoritative hosts; Menu Design covers same-`createdAt` forced
+  clean replacement; dirty editor is not overwritten by revalidation.
 - Vitest UI: newer autosave revision triggers a recovery prompt; restore
   applies the revision; dismiss leaves the revision untouched.
 - Vitest UI/router: SPA navigate and popstate are blocked when dirty; confirm

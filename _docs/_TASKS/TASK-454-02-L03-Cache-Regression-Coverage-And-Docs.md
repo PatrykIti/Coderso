@@ -19,6 +19,8 @@ leaf is the cache-specific validation/documentation pass for TASK-454-02.
 
 - [ ] Add Vitest cases for cache-first plus forced fresh detail.
 - [ ] Add stale/same/unparsable mount candidates to mirror cache-bus behavior.
+- [ ] Add a Menu Design case where forced fresh detail replaces a poisoned
+      clean cache despite identical `createdAt`.
 - [ ] Document that Page Editor treats cached detail as provisional on mount.
 
 ## Files To Change
@@ -33,10 +35,11 @@ leaf is the cache-specific validation/documentation pass for TASK-454-02.
 
 ```ts
 describe("PageEditor mount revalidation", () => {
-  test("renders cached detail then applies strictly newer fresh detail");
+  test("renders cached detail then applies strictly newer fresh detail for timestamp-authoritative hosts");
   test("does not apply same timestamp fresh detail");
   test("does not apply older fresh detail");
   test("does not apply unparsable timestamp fresh detail");
+  test("menu design same-createdAt fresh detail replaces poisoned clean cache");
   test("does not apply fresh detail while dirty");
 });
 ```
@@ -71,6 +74,7 @@ client call options.
 
 ## Acceptance Criteria
 
-1. Mount path and cache-bus path share the same monotonic rule.
+1. Mount path and cache-bus path share the same monotonic rule for
+   timestamp-authoritative hosts.
 2. Admin cache docs mention the one-shot forced revalidation.
 3. Tests fail on the pre-TASK-454 poisoned-cache reload behavior.

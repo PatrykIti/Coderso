@@ -35,9 +35,9 @@ and uses the existing revision list response.
 
 ```ts
 export function findRecoverableAutosaveRevision(
-  revisions: PageRevision[],
-  page: Pick<PageDetail, "updatedAt">
-): PageRevision | null {
+  revisions: PageEditorRevision[],
+  page: Pick<PageEditorResourceDetail, "updatedAt">
+): PageEditorRevision | null {
   const candidates = revisions
     .filter((revision) => revision.kind === "autosave")
     .filter((revision) => isNewerPageDetailTimestamp(revision.createdAt, page.updatedAt))
