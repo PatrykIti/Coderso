@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 57 tasks
+- **To Do:** 71 tasks
 - **In Progress:** 9 tasks
 - **Done:** 2581 tasks
 
@@ -132,7 +132,21 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Remove active screen-only widget builder/runtime surfaces after V4 cutover and backfill verification. |
 | TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Drop duplicate legacy `custom_screens.blocks` and `custom_screens.bindings` after guards pass. |
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
-| TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Follow-up from the TASK-449 reproduction: surface/promote autosaved drafts on reopen, add an SPA unsaved-changes navigation guard, and revalidate mount hydration so a TTL-fresh poisoned cache cannot render a stale document. |
+| TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Follow-up from the TASK-449 reproduction: surface recoverable autosaved drafts on reopen, add an SPA unsaved-changes navigation guard, and revalidate mount hydration so a TTL-fresh poisoned cache cannot remain authoritative. |
+| TASK-454-01 | Contract Freeze And Host Boundary | High | Medium | Correct stale TASK-454 assumptions, preserve host/page ownership decisions, and require a fresh drift pass before implementation. |
+| TASK-454-01-L01 | Contract Corrections And Fresh Drift Pass | High | Small | Verify the corrected TASK-454 contract against current source before source edits. |
+| TASK-454-02 | Cache-First Mount Revalidation | High | Medium | Keep cache-first editor hydration but force one server detail revalidation and apply only strictly newer clean-state data. |
+| TASK-454-02-L01 | Host Load Options And Freshness Helper | High | Medium | Add host `loadDetail(..., { force })` support and centralize the timestamp comparison rule. |
+| TASK-454-02-L02 | PageEditor Mount Revalidation And Error State | High | Medium | Replace mount cache trust with one-shot forced revalidation and bounded non-destructive error UI. |
+| TASK-454-02-L03 | Cache Regression Coverage And Docs | High | Small | Pin poisoned-cache mount behavior in Vitest and update the admin cache contract. |
+| TASK-454-03 | Autosave Recovery Prompt | High | Medium | Detect newer autosave revisions after reopen and offer explicit restore/discard recovery for Pages. |
+| TASK-454-03-L01 | Recoverable Autosave Detection | High | Medium | Add client-side latest-autosave selector and Pages-only revision check. |
+| TASK-454-03-L02 | Recovery Prompt Restore And Discard Flow | High | Medium | Surface recoverable drafts with restore/discard/dismiss actions backed by existing revision routes. |
+| TASK-454-04 | Shared Unsaved Navigation Guard | High | Medium | Extract/reuse the admin dirty-navigation blocker and wire Page Editor dirty/recovery state into it. |
+| TASK-454-04-L01 | Shared Dirty Navigation Guard Contract | High | Medium | Factor Settings dirty-navigation behavior into a shared guard without regressions. |
+| TASK-454-04-L02 | PageEditor Guard Wiring And Regression Coverage | High | Medium | Block Page Editor SPA/popstate/hard navigation when dirty or recovery is pending. |
+| TASK-454-05 | Validation Docs And Closure | High | Medium | Run final targeted lanes, live Playwright smoke, docs, changelog, board sync, and drift pass. |
+| TASK-454-05-L01 | Live Smoke Docs Changelog And Board Closure | High | Medium | Prove poisoned-cache reload and autosave recovery flows live, then close docs/changelog/board. |
 | TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): inline canvas edit of rich-text blocks is lossy (commit strips markup via `stripInlineMarkup`) while the panel field preserves it; round-trip formatting with the sanitized rich-text contract. |
 | TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): `image.fit` (renderImage hardcodes object-cover) and `video.title` (no title/aria-label on `<video>`) are editable/persisted dead-props; wire both to the painted output. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |

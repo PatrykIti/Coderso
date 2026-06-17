@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Pages / Editor Persistence
 **Estimated Effort:** Medium
-**Dependencies:** None
+**Dependencies:** TASK-449-02
 **Status:** ⏳ To Do
 
 ---
@@ -14,131 +14,190 @@
 Follow-up split out of the TASK-449-01 live reproduction and the TASK-449-02
 post-fix verification (2026-06-11, evidence in `.tmp/phase0/columns-repro.md`
 and `.tmp/phase0/postfix-verify.md`). TASK-449-02 closed the broadcast-driven
-data-loss path (stale `pageDetail` cache events are now ignored unless
-strictly newer than the loaded page). Three adjacent, pre-existing gaps
-remain and together can still lose author work or render a poisoned view:
+data-loss path: `pageDetail` cache-bus updates are ignored unless their
+`updatedAt` is strictly newer than the loaded editor detail. Three adjacent
+pre-existing gaps remain:
 
-1. **Autosave is never promoted.** `pageService.autosavePage` writes only an
-   autosave revision; `pages.currentData` is untouched. An author who inserts
-   content, sees autosave succeed, and leaves without a manual Save reopens an
-   editor whose content silently reverted — the work survives only as an
-   un-surfaced revision.
-2. **No SPA unsaved-changes navigation guard.** Editor state with
-   `hasUnsavedChanges=true` (or with autosaved-but-unpromoted content) can be
-   abandoned via admin SPA navigation without any confirmation; only hard
-   navigation paths are guarded today.
-3. **Mount path trusts a TTL-fresh poisoned cache.** `PageEditor` hydrates
-   from `initialCachedPage` (~`PageEditor.tsx:896`) and the load effect early
-   returns when an initial detail exists (~`:1474`), with no timestamp check
-   or server revalidation; `pagesClient.ts:189-191` merges only `status` into
-   the cached detail on publish/status changes. Observed live: reloading the
-   editor while a poisoned (empty) cached record was in localStorage rendered
-   `s=0/b=0` until the cache was cleared.
+1. **Autosave is not surfaced on reopen.** `pageService.autosavePage` writes
+   only an autosave revision; `pages.currentData` is untouched. An author who
+   inserts content, sees autosave succeed, and leaves without manual Save
+   reopens an editor whose visible content silently reverted. The work survives
+   only as a hidden autosave revision.
+2. **Page Editor has no SPA unsaved-changes navigation guard.** Editor state
+   with `hasUnsavedChanges=true` can be abandoned via admin SPA navigation
+   without confirmation. The shared admin router already supports blockers and
+   Settings already proves the dialog + `beforeunload` pattern; Page Editor
+   does not use that seam.
+3. **Mount path still trusts TTL-fresh poisoned detail cache.** `PageEditor`
+   hydrates from `initialCachedPage` and skips the load effect when an initial
+   detail exists. TASK-449-02 guarded cache-bus rehydration only; a poisoned
+   localStorage detail can still render on full editor reload until the cache is
+   cleared. The earlier note that publish/status flows only merge `status` is
+   stale for the normal publish path at current HEAD: `publishPage` now merges
+   the full returned detail when available. The mount trust vector remains open.
 
-Additional evidence (2026-06-11 Phase 2 smoke): when the dev host died
-mid-session, the editor silently reloaded and dropped unsaved work, and a Save
-issued during the outage failed with no visible error UI — the recovery and
-error-surfacing scope below covers this path too.
+Scope decisions:
 
-Scope: surface autosaved drafts on reopen (restore prompt or promote-on-open
-contract — decide explicitly; revision restore UI already exists), add an
-unsaved-changes guard for SPA navigation consistent with existing admin UX
-patterns, and make mount hydration revalidate against the server (cache
-renders first, fresh detail wins by `updatedAt` — same monotonic rule
-TASK-449-02 established for broadcasts).
+- **Autosave recovery is explicit and non-destructive.** Reopen offers a
+  restore/discard prompt for a newer autosave revision. Do not silently promote
+  autosave revisions into `currentData`.
+- **Revision filtering is client-side.** Use existing `listPageRevisions(id)`
+  and filter `kind === "autosave"` in the Page Editor. Do not add route query
+  parameters unless a later task explicitly expands the API contract.
+- **Mount revalidation is host-neutral.** Pages, Page Templates, and Menu Design
+  share `PageEditor`; cache-first mount revalidation and dirty navigation guard
+  must preserve all three host modes. Autosave recovery is Pages-only because
+  only the Pages host exposes autosave/revisions.
+- **No mount refetch loop.** Cached detail may render immediately, but the
+  editor performs one explicit forced server revalidation per resource mount.
+  The server detail replaces local state only when strictly newer and the editor
+  is not dirty.
+
+---
+
+## Audit Evidence
+
+Pre-split read-only audits were run on 2026-06-17 against clean HEAD
+`09d1094a739da9aa89c4aabaaa9101aee88fb574`:
+
+- Subagent Carver: contract drift audit; found stale `{ revalidate: true }`
+  pseudocode, missing host-scope split, and validation lane gaps.
+- Subagent Lagrange: implementation-surface inventory; confirmed shared
+  `PageEditor` blast radius and the existing router blocker pattern.
+- Claude CLI (`--permission-mode plan --effort xhigh`): read-only task-contract
+  audit; confirmed the three gaps, noted stale publish-cache wording, and
+  recommended the four implementation tracks below.
+
+Because this file and its children now correct task contract drift, any later
+implementation run must start from a fresh read-only pre-implementation audit
+before editing source code.
 
 ---
 
 ## Security Contract
 
-- **Endpoint visibility:** no new endpoints; existing internal admin page
-  detail/revision routes.
+- **Endpoint visibility:** no new endpoints in the planned implementation.
+  Existing internal admin page detail/revision routes stay under `/admin/api`.
 - **Auth model:** existing admin session.
-- **RBAC:** existing Pages permissions.
-- **CSRF:** unchanged admin write behavior.
+- **RBAC:** existing Pages permissions: `content:read` for detail/revision
+  reads, `content:write` for restore/discard/save/autosave.
+- **CSRF:** unchanged admin write behavior for save, autosave, restore, discard,
+  publish, and unpublish.
 - **Rate-limit bucket:** unchanged.
-- **Validation:** restored/promoted documents flow through the existing
-  `normalizePageDocumentV2ForWrite` path; reject-unknown preserved.
-- **Anti-abuse controls:** not applicable.
+- **Validation:** restored documents flow through the existing
+  `normalizePageDocumentV2ForWrite` path. Unknown fields remain rejected.
+- **Anti-abuse controls:** not applicable; no public write path.
+- **Secret handling:** no browser cache or debug payload may include secrets.
+  Page documents/revisions contain authored content only.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] Decide and record the autosave-recovery contract (restore prompt on
-      reopen vs explicit draft promotion) and implement it on the existing
-      revision machinery.
-- [ ] Add the SPA unsaved-changes navigation guard through the shared admin
-      navigation helpers (no hand-built href/guard logic).
-- [ ] Revalidate mount hydration: cached detail renders immediately, server
-      detail is fetched and applied when strictly newer (`updatedAt`), reusing
-      the TASK-449-02 monotonic comparison.
-- [ ] Regression coverage in the Vitest UI lane + live `playwright-cli`
-      replay of the poisoned-cache reload and abandon-after-autosave flows.
+- [ ] TASK-454-01: Contract Freeze And Host Boundary
+- [ ] TASK-454-02: Cache-First Mount Revalidation
+- [ ] TASK-454-03: Autosave Recovery Prompt
+- [ ] TASK-454-04: Shared Unsaved Navigation Guard
+- [ ] TASK-454-05: Validation Docs And Closure
 
----
+## Implementation Order
+
+1. Freeze the corrected contract and rerun a read-only drift audit.
+2. Add host load options and one-shot mount revalidation.
+3. Add page-only autosave recovery prompt on top of the fresh detail baseline.
+4. Extract/wire the shared dirty-navigation guard.
+5. Run targeted lanes, live `playwright-cli` replay, docs, board, changelog,
+   and final drift pass.
 
 ## Implementation Pseudocode
 
 ```tsx
-// Mount revalidation (PageEditor load effect):
-const cached = initialCachedPage ?? getCachedPageDetail(pageId);
-if (cached) hydrate(cached);                      // render fast from cache
-const fresh = await getPageCached(pageId, { revalidate: true });
-if (fresh && (!cached || isNewerPageDetailTimestamp(fresh.updatedAt, cached.updatedAt))) {
-  hydrate(fresh);                                  // server wins when newer
+// Host load contract:
+type PageEditorHostLoadOptions = { force?: boolean };
+type PageEditorHost = {
+  loadDetail(id: string, options?: PageEditorHostLoadOptions): Promise<PageDetail | null>;
+};
+
+// Mount revalidation:
+const cached = initialPage ?? host.getCachedDetail(id);
+if (cached) hydrateFromDetail(cached);
+
+const fresh = await host.loadDetail(id, { force: true });
+if (!hasUnsavedChanges && fresh && (!loaded || isNewerPageDetailTimestamp(fresh.updatedAt, loaded.updatedAt))) {
+  hydrateFromDetail(fresh);
 }
 
-// Autosave recovery on reopen:
-const latestAutosave = await listPageRevisions(pageId, { kind: "autosave", limit: 1 });
-if (latestAutosave && isNewerPageDetailTimestamp(latestAutosave.createdAt, fresh.updatedAt)) {
-  offerRestorePrompt(latestAutosave);              // explicit, non-destructive
+// Autosave recovery:
+const autosave = revisions
+  .filter((revision) => revision.kind === "autosave")
+  .sort(byCreatedAtDesc)
+  .find((revision) => isNewerPageDetailTimestamp(revision.createdAt, page.updatedAt));
+if (autosave) {
+  showRecoverableDraftBanner(autosave);
 }
 
-// SPA navigation guard:
-useAdminNavigationGuard({
-  blocked: hasUnsavedChanges,
-  message: "You have unsaved page changes.",
+// SPA/hard navigation guard:
+useAdminDirtyNavigationGuard({
+  blocked: hasUnsavedChanges || Boolean(recoverableAutosave),
+  title: "Discard unsaved page changes?",
+  description: "Cancel to keep editing, or discard the local draft and continue.",
 });
 ```
 
 Expected data flow:
 
-- Cache-first render is preserved (no mount-force refetch loops); the server
-  response only replaces state when strictly newer — mirroring the
-  TASK-449-02 broadcast rule so the two hydration paths share one contract.
-- Autosave recovery is explicit and non-destructive (prompt + existing
-  restore path), never a silent overwrite in either direction.
-- Navigation guard goes through shared admin navigation helpers per
-  `AGENTS.md` (no parallel guard implementations).
+- Cache-first render remains fast.
+- One forced server detail read verifies the cache on mount.
+- Strict timestamp comparison is shared between mount revalidation, cache-bus
+  rehydration, and autosave recovery.
+- Autosave restore uses existing revision restore, which promotes the selected
+  revision into `currentData` through the normal service/route path.
+- Navigation confirmation discards only local editor state for the transition;
+  server autosave revisions remain until the author restores or discards them.
 
 Error handling:
 
-- Revalidation fetch failures keep the cached view and surface the existing
-  inline error affordances; they never blank the document.
-- Restore declines leave both the draft and the autosave revision untouched.
+- Revalidation fetch failures keep the cached/editor view and surface bounded
+  inline copy; they never blank the document.
+- Unparsable or same-timestamp candidates fail closed.
+- Autosave revision listing failures show a bounded recovery warning and do not
+  block manual Save.
+- Restore/discard failures remain visible and keep the prompt actionable.
 
 Regression-test shape:
 
-- Vitest UI: poisoned-cache mount renders cached then corrects to fresh;
-  fresh-older-than-cache does not regress state; autosave-newer-than-draft
-  triggers the restore prompt; SPA navigation with unsaved changes prompts.
-- Live `playwright-cli`: reload with poisoned cache shows correct content;
-  insert -> autosave -> navigate away -> reopen offers recovery.
+- Vitest UI: poisoned cache renders initially then corrects from forced server
+  detail; older/same/unparsable fresh details do not overwrite; dirty editor is
+  not overwritten by revalidation.
+- Vitest UI: newer autosave revision triggers a recovery prompt; restore
+  applies the revision; dismiss leaves the revision untouched.
+- Vitest UI/router: SPA navigate and popstate are blocked when dirty; confirm
+  continues with `skipBlockers`; `beforeunload` is registered only while dirty.
+- Bun route/service: existing revision restore/discard/autosave contract remains
+  green if touched.
 
 ---
 
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/pagesClient.test.ts tests/vitest/ui/admin-router-context-blocker.test.tsx tests/vitest/ui/settings-shell.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
+- `set -a && source .env && set +a && bun test tests/unit/pages/pageRevisionAutosave.test.ts tests/unit/pages/revisionService.test.ts tests/integration/routes/pages.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- Live `coderso-dev-core-host` + `playwright-cli` replay of both flows.
+- `bun run gates:coderso`
+- `git diff --check`
+- Live `coderso-dev-core-host` + `playwright-cli` replay:
+  poisoned-cache reload and insert -> autosave -> guarded navigation -> reopen
+  recovery prompt.
 
 ---
 
 ## Documentation Updates Required
 
-- `_docs/ADMIN_CACHE.md` (pages detail hydration/revalidation contract).
+- `_docs/ADMIN_CACHE.md` for page detail mount revalidation and dirty guard
+  semantics.
+- `docs/guide/screens/page-editor-preview-settings-and-history.md` if recovery
+  prompt UX wording changes.
 - `_docs/_TASKS/README.md` board + statistics sync.
 - `_docs/_CHANGELOG/` entry on completion.
