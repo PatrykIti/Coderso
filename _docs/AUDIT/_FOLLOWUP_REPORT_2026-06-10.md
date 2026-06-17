@@ -192,3 +192,53 @@ Każda kontrolka musi przejść **4 warstwy**, inaczej będzie atrapą:
 - **Klasyfikator widgetów:** per panel zlicza `select/number/text/range/switch/swatch/segmentedGroup` + mapuje `registry input → rendered widget → reference control → verdykt`. Evidence JSON: `.tmp/audit/evidence/<typ>.json`. Screenshoty: `.tmp/audit/shots/` (34).
 - **Pliki cząstkowe:** 25 per‑target + `_cross-gating` + `_cross-responsive` + `_cross-parity` + `_cross-canvas-inline-typography` (`_docs/AUDIT/*-2026-06-10.md`).
 - **Uwaga:** drzewo źródeł zmieniało się w trakcie (równoległy agent 418 sanity‑fix, `a06049ba`→`1fb8604a`); ponowny szybki re‑check High (columns, responsywność runtime, in‑place) zalecany na finalnym HEAD.
+
+---
+
+## 9. Matryca domknięcia (TASK‑453) — 2026‑06‑16
+
+> Zbudowana przez TASK‑453‑01‑L01 / freeze TASK‑453‑01 / walidacja TASK‑453‑02.
+> Mapuje **każdy** finding §3 oraz wiersze tabel §4/§5 na rodzinę‑właściciela + dowód
+> akceptacji + status. Wiersze sprzeczne z dowodem per‑target są oznaczone jako **superseded**
+> (nie usuwane). Dowód kanoniczny: post‑impl audyty `_docs/AUDIT/TASKS/_POSTIMPL-AUDIT-phase3a-blocks-2026-06-16.md`
+> i `_POSTIMPL-AUDIT-phase3b-sections-2026-06-16.md`, changelogi 1161–1178, oraz **live‑sweep 2026‑06‑16**
+> (`coderso-dev-core-host`, `playwright-cli`, evidence `.tmp/verify-3b/`).
+
+### 9.1 Matryca akceptacji findingów §3
+
+| Finding | Sev | Rodzina‑właściciel | Dowód akceptacji | Status |
+|---|---|---|---|---|
+| **§3.1 Drift kontrolek (wszystko natywne)** | HIGH | TASK‑421 (widgety) + TASK‑424 (typografia/`color`) + per‑target 426‑450 (live‑sweep) | **Live 2026‑06‑16:** sekcja hero + blok heading, **wszystkie 7 zakładek** panelu → `select=0, number=0`; segmented/swatch/slider/switch `>0` (Layout 16 pigułek, Style 11 pigułek+slider+7 swatchy, Spacing 5 sliderów, Visibility 3 switche, Responsive 4 switche, Background bgType+7 swatchy). Wspólny pipeline `resolvePageEditorControlUiModel` + `RegistryControlWidget` (PageEditor.tsx:3456). Natywny `<select>` zostaje WYŁĄCZNIE dla pól wielo‑opcyjnych referencyjnych (content‑type/collection/form) + dynamicznych facetów listingu — celowy wyjątek kontraktu. | ✅ **CLOSED** |
+| **§3.2 Responsywność nie dociera na front** | HIGH | TASK‑423 | `core/services/pages/pageResponsiveCss.ts` emituje bloki `@media` per breakpoint (scope `data-block-id`/`data-section-id`); changelog 1162 | ✅ **CLOSED** |
+| **§3.3 Blok `columns` nie persistuje** | HIGH | TASK‑449 | Reprodukcja wskazała realną warstwę: **stale `pageDetail` cache broadcast** (nie serializacja slotów) — fix `isNewerPageDetailTimestamp` monotonic guard; changelog 1161 | ✅ **CLOSED** |
+| **§3.4 Brak edycji in‑place na canvasie** | HIGH (prio) | TASK‑422 | `pageInlineEditContract` + hook tekstowy renderera; changelog 1162. **Residuum:** rich‑text inline edit jest stratny (→ §9.4) | ✅ **CLOSED** (residuum odnotowane) |
+| **§3.5 Brak kontrolek czcionki w „T"** | MEDIUM | TASK‑424 | Tokenowe kontrolki typografii (w tym brakujący `case "color"`); changelog 1163 | ✅ **CLOSED** |
+| **§3.6 Preview 404** | MEDIUM | TASK‑451 | Root cause = Bun fetch IPv6‑vs‑IPv4 na `*.localhost` (probe retry 127.0.0.1), model tokenu bez zmian; changelog 1163 | ✅ **CLOSED** |
+| **§3.7 Zakładka Responsive pusta + wariant‑no‑op** | MEDIUM | TASK‑425 + warianty 3b (427/435/426/434…) | **Live 2026‑06‑16:** Responsive = **4 switche** (hide‑on‑screen / `stackVertical`); cta `centered`≠`default`+`full‑width`, content `compact`=realna redukcja spacingu, media‑split/testimonials/timeline/gallery/faq = realny layout (zrzuty `.tmp/verify-3b/`) | ✅ **CLOSED** |
+| **§3.8 LOW** (inline „+", `list` items=[], akcent na przycisk hero, etykiety breakpointu) | LOW | TASK‑451 (inline „+"/breakpoint), TASK‑442 (`list`), TASK‑439 (akcent przycisku) | inline gap‑insert + readout breakpointu (changelog 1163); `list` persist (changelog 1161); akcent przeniesiony do inline‑style `toPageButtonElementStyle` (changelog 1174) | ✅ **CLOSED** |
+
+### 9.2 Reconciliacja tabel §4 (sekcje) i §5 (bloki)
+
+- **§4 — wiersze wariant ⚠️** (content `compact`, media‑split, timeline, gallery, faq, testimonials, cta): domknięte przez Fazę 3b (TASK‑426..436), post‑impl audyt `_POSTIMPL-AUDIT-phase3b-sections-2026-06-16.md` (deliverable + closure TRUE_AND_COMPLETE, bramki 4138/4138) + live‑sweep 2026‑06‑16.
+- **§5 — wiersze PARTIAL(drift)** bloków: domknięte przez TASK‑421 (widgety) + Fazę 3a (TASK‑437..450; text `format:rich` sanityzowany, video `autoplay`, card `image`/`href`, divider `tone`), post‑impl `_POSTIMPL-AUDIT-phase3a-blocks-2026-06-16.md`.
+- **§5 — `columns` BROKEN/high** → TASK‑449 (jak §3.3).
+
+**Wiersze SUPERSEDED (anotacja, nie open):**
+- *faq variant‑to‑front ⚠️ (§4)* → **superseded** przez `_docs/AUDIT/faq-2026-06-10.md` §4 („Variant control works end‑to‑end"). Pozostawał tylko drift pigułki segmented → domknięty (TASK‑421/TASK‑433).
+- *testimonials cards==grid identical‑geometry ⚠️ (§4)* → własność **TASK‑434** (rozszerzona akceptacja: `cards` zyskuje odrębną powierzchnię karty, `grid` zostaje płaski). **Zweryfikowane live 2026‑06‑16:** `cards` → `data-page-testimonial-card` wrapper z border/cień/padding; `grid` → bez (zrzuty `testimonials.png` vs `testimonials-cards.png`).
+
+### 9.3 Bramka §3.1 (główny zarzut właściciela) — werdykt
+
+Klasyfikator z §1/§3.1 deklarował `switch=swatch=slider=segmentedGroup=0 w 25/25` targetów. **Obalone na żywo 2026‑06‑16**: na reprezentatywnych targetach (sekcja + blok), we wszystkich 7 zakładkach, liczniki dedykowanych widgetów `>0`, a natywne `select/number` `=0`. Generalizacja na 25/25: wszystkie panele renderują przez ten sam resolver UI‑modelu i `RegistryControlWidget` — brak per‑target rozgałęzień na natywne prymitywy. **Bramka domknięcia §3.1 SPEŁNIONA.**
+
+### 9.4 Residua przeniesione (jawnie owłaścicielnione — NIE blokery domknięcia)
+
+Zgodnie z regułą error‑handling TASK‑453‑01‑L01 („unowned findings produce a new follow‑on task, not a silent note"):
+
+1. **Rich‑text inline edit stratny** (residuum §3.4 / Faza 3a) — edycja inline pokazuje surowe HTML, commit usuwa markup (`stripInlineMarkup`), choć pole panelu zachowuje. **Owner: TASK‑469** (Rich‑Text Inline Canvas Edit Fidelity). Severity: MEDIUM (UX).
+2. **`image.fit` + `video.title` martwe‑propsy** (Faza 3a, ta sama klasa) — edytowalne+persistowane, nie malowane przez renderer. **Owner: TASK‑470** (Image Fit & Video Title Render Wiring). Severity: LOW.
+3. **TASK‑454 (Draft Recovery & Cache Trust Hardening)** — autosave nie promowany do `currentData`, brak SPA unsaved‑nav guard, mount ufa zatrutemu TTL‑fresh cache. **Owner: TASK‑454 (otwarty, częściowo naprawiony).** Severity: HIGH (osobny tor, nie część wizji panelu).
+
+### 9.5 Oświadczenie domknięcia
+
+Każdy finding §3 (High/Medium/Low) oraz każdy wiersz §4/§5 mapuje się na **domkniętą rodzinę** albo **jawnie owłaścicielnione residuum** (§9.4). Bramka HIGH §3.1 (kontrolki = dedykowane widgety) jest zweryfikowana jako spełniona. **Brak nieprzypisanych i nieudokumentowanych findingów.** Program audytu follow‑up jest domknięty; pozostające residua są przeniesione do TASK‑454 + wskazanych drobnych follow‑upów.

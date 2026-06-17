@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 59 tasks
+- **To Do:** 57 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2577 tasks
+- **Done:** 2581 tasks
 
 ---
 
@@ -132,11 +132,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Remove active screen-only widget builder/runtime surfaces after V4 cutover and backfill verification. |
 | TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Drop duplicate legacy `custom_screens.blocks` and `custom_screens.bindings` after guards pass. |
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
-| TASK-453 | Page Editor V2 Audit Followup Closure Program | High | Medium | Aggregate closure family for `_FOLLOWUP_REPORT_2026-06-10.md`, mapping cross-family acceptance and residual risks. |
-| TASK-453-01 | Followup Report Closure Matrix And Ownership Freeze | High | Medium | Freeze the acceptance matrix that maps each aggregate follow-up finding onto concrete task families. |
-| TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Build the matrix that links every aggregate finding to concrete task owners and evidence requirements. |
-| TASK-453-02 | Followup Validation Board And Changelog Closure | High | Medium | Close the aggregate follow-up report with final validation and board/changelog synchronization. |
 | TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Follow-up from the TASK-449 reproduction: surface/promote autosaved drafts on reopen, add an SPA unsaved-changes navigation guard, and revalidate mount hydration so a TTL-fresh poisoned cache cannot render a stale document. |
+| TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): inline canvas edit of rich-text blocks is lossy (commit strips markup via `stripInlineMarkup`) while the panel field preserves it; round-trip formatting with the sanitized rich-text contract. |
+| TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): `image.fit` (renderImage hardcodes object-cover) and `video.title` (no title/aria-label on `<video>`) are editable/persisted dead-props; wire both to the painted output. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
@@ -383,6 +381,10 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-452-02 | Gated Entry Negative Tests And Placeholder Guard Rails | Medium | Medium | Done (2026-06-11): gated-entry negative coverage landed. |
 | TASK-452-02-L01 | Prove Gated Entries Stay Absent And Placeholder Paths Stay Unreachable | Medium | Medium | Done (2026-06-11): palette title-level negatives and icon placeholder guards landed. |
 | TASK-452-03 | Validation Docs And Catalog Closure | Medium | Small | Done (2026-06-11): validation green (45 tests, lint, types), docs/board/changelog synchronized (changelog 1161). |
+| TASK-453 | Page Editor V2 Audit Followup Closure Program | High | Medium | Done (2026-06-16): aggregate closure matrix (§9 of `_FOLLOWUP_REPORT_2026-06-10.md`) maps every §3/§4/§5 finding to a closed family or owned residual; §3.1 control-drift gate live-verified resolved; changelog 1179. |
+| TASK-453-01 | Followup Report Closure Matrix And Ownership Freeze | High | Medium | Done (2026-06-16): acceptance matrix frozen; §4/§5 superseded rows annotated (faq variant, testimonials cards==grid) with citations. |
+| TASK-453-01-L01 | Map Followup Findings To Task Families And Acceptance Criteria | High | Medium | Done (2026-06-16): every High/Medium/Low finding mapped to owner family + acceptance proof; residuals carried to TASK-454 + named follow-ups. |
+| TASK-453-02 | Followup Validation Board And Changelog Closure | High | Medium | Done (2026-06-16): live §3.1 widget sweep (0 native, dedicated >0 across all 7 panel tabs), board/changelog synchronized, no unowned findings left. |
 | TASK-418 | Page Editor V2 Authoring Nesting And Runtime Remediation | High | Very Large | Done (2026-06-10): section-first Page Editor v2 remediation closed with nested Page blocks, runtime/assistant/template parity, live Playwright CLI smoke, docs/changelog/board sync, and final drift closure. |
 | TASK-418-06 | Runtime Assistant And Template Parity | High | Large | Done (2026-06-10): public runtime, assistant surface/schema parity, Page template boundary freeze, and collection/form/embed scoped runtime binding are complete. |
 | TASK-418-07 | Validation Docs Changelog And Live Smoke Closure | High | Large | Done (2026-06-10): targeted Vitest/Bun/lint/type/gates, live admin/public Playwright CLI smoke, docs, changelog, board, and final drift workflow are complete. |
