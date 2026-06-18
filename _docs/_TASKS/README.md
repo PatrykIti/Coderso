@@ -79,8 +79,8 @@ Task board for project work. Keep task files and this board in sync.
   exists or the family changelog records that leaf.
 
 - **To Do:** 54 tasks
-- **In Progress:** 9 tasks
-- **Done:** 2598 tasks
+- **In Progress:** 7 tasks
+- **Done:** 2600 tasks
 
 ---
 
@@ -148,8 +148,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-458 | Menus Site Shell And Menu Design Editor | High | Very Large | In progress: implementation leaves are complete; final TASK-458-04 live smoke remains open for dev-host Playwright proof. |
-| TASK-458-04 | Validation Live Smoke And Closure | High | Medium | In progress: targeted lanes, gates, and route/runtime smoke passed; remaining work is the requested live restyle->publish, Settings removal, and palette restriction proof. |
 | TASK-459 | Visitor Facing Catalog Filters Sort And Pagination | High | Very Large | In progress: implementation leaves are complete through filtered caching; final TASK-459-05 live catalog demo remains open. |
 | TASK-459-05 | Validation Catalog Demo And Closure | High | Medium | In progress: targeted lanes, release gates, perf, and EXPLAIN evidence passed; remaining work is the live otodom-style catalog demo with shareable pretty URLs. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
@@ -319,6 +317,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-458-01 | Site Shell Relocation And Settings Removal | High | Medium | Done (2026-06-13): Site shell dialog moved to Menus, Settings shell copy/docs/test drift fixed, and scoped route/admin coverage passed. |
 | TASK-458-02 | Menu Appearance Model And Shell Css Bridge | High | Large | Done (2026-06-13): menus.settings appearance model, fail-closed shell CSS bridge, migrations, docs, and validation lanes are complete. |
 | TASK-458-03 | Menu Design Editor Canvas And Restricted Palette | High | Large | Done (2026-06-13): /menus/:id/design route, optional-preview host support, restricted palette, menu canvas, appearance panel, and route coverage are complete. |
+| TASK-458 | Menus Site Shell And Menu Design Editor | High | Very Large | Done (2026-06-18): family closed after fresh dev-host `playwright-cli` proof of Site shell relocation, restricted menu design palette, draft-private design saves, and published public shell rendering. |
+| TASK-458-04 | Validation Live Smoke And Closure | High | Medium | Done (2026-06-18): live smoke evidence recorded in `.tmp/task-458-459-live-audit-result.json` plus the supplemental Page editor full-catalog check. |
 | TASK-459-01 | Filters Contract Param Aliases And Pagination Plan | High | Medium | Done (2026-06-13): filters block contract, alias grammar, legacy pair normalization, pagination/clamp/count/route policy, and docs are frozen. |
 | TASK-459-02 | Filters Block Sort Control And V2 Client Script | High | Large | Done (2026-06-13): filters block, alias-aware form/runtime script, fetch-swap, sort/search/count display, and script emission are covered. |
 | TASK-459-03 | Pagination Counts And List Routes | High | Medium | Done (2026-06-13): paged/load-more props, numbered pager/totals, route searchParams, template style, clamp unification, and dangling-route guard are complete. |
