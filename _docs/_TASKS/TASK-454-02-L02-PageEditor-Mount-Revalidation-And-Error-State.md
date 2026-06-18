@@ -6,7 +6,8 @@
 **Category:** Admin UI / Page Editor / Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -19,12 +20,12 @@ allows it.
 
 ## Sub-Tasks
 
-- [ ] Extract a local `hydrateFromDetail` helper that updates page, document,
+- [x] Extract a local `hydrateFromDetail` helper that updates page, document,
       selection, settings title/slug, nav visibility, and revision retention.
-- [ ] Replace the current early-return load effect with cache-first plus forced
+- [x] Replace the current early-return load effect with cache-first plus forced
       server revalidation.
-- [ ] Keep dirty-state protection: revalidation never overwrites local edits.
-- [ ] Surface bounded revalidation errors without blanking the document.
+- [x] Keep dirty-state protection: revalidation never overwrites local edits.
+- [x] Surface bounded revalidation errors without blanking the document.
 
 ## Files To Change
 

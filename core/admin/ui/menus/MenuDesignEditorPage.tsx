@@ -263,8 +263,9 @@ export function MenuDesignEditorPage({ menuId }: { menuId?: string }) {
         const cached = getCachedMenuDetail(id);
         return cached ? toMenuDesignEditorDetail(cached.menu) : null;
       },
-      loadDetail: async (id) => {
-        const detail = await getMenuWithItemsCached(id);
+      freshnessMode: "forced-clean-replace",
+      loadDetail: async (id, options) => {
+        const detail = await getMenuWithItemsCached(id, { force: options?.force });
         return detail ? toMenuDesignEditorDetail(detail.menu) : null;
       },
       saveDocument: async (id, document) => {

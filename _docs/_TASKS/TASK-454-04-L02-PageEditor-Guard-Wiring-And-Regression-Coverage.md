@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor / Dirty State
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-04-L01, TASK-454-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -18,10 +19,10 @@ when a recoverable autosave prompt is pending.
 
 ## Sub-Tasks
 
-- [ ] Register Page Editor dirty state with the shared guard.
-- [ ] Include recoverable autosave state in the block condition.
-- [ ] Confirm navigation discards local editor state for the transition only.
-- [ ] Add Vitest coverage for SPA navigate, AdminLink/sidebar click, popstate,
+- [x] Register Page Editor dirty state with the shared guard.
+- [x] Include recoverable autosave state in the block condition.
+- [x] Confirm navigation discards local editor state for the transition only.
+- [x] Add Vitest coverage for SPA navigate, AdminLink/sidebar click, popstate,
       and `beforeunload`.
 
 ## Files To Change

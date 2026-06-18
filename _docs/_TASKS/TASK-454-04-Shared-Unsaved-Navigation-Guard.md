@@ -6,7 +6,8 @@
 **Category:** Admin UI / Navigation / Dirty State
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -19,8 +20,8 @@ stays unchanged and Page Editor does not hand-build link interception.
 
 ## Sub-Tasks
 
-- [ ] TASK-454-04-L01: Shared Dirty Navigation Guard Contract
-- [ ] TASK-454-04-L02: PageEditor Guard Wiring And Regression Coverage
+- [x] TASK-454-04-L01: Shared Dirty Navigation Guard Contract
+- [x] TASK-454-04-L02: PageEditor Guard Wiring And Regression Coverage
 
 ## Files To Change
 

@@ -6,7 +6,8 @@
 **Category:** Admin UI / Page Editor / Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -25,9 +26,9 @@ gain a real menu freshness source before timestamps are treated as authoritative
 
 ## Sub-Tasks
 
-- [ ] TASK-454-02-L01: Host Load Options And Freshness Helper
-- [ ] TASK-454-02-L02: PageEditor Mount Revalidation And Error State
-- [ ] TASK-454-02-L03: Cache Regression Coverage And Docs
+- [x] TASK-454-02-L01: Host Load Options And Freshness Helper
+- [x] TASK-454-02-L02: PageEditor Mount Revalidation And Error State
+- [x] TASK-454-02-L03: Cache Regression Coverage And Docs
 
 ## Files To Change
 

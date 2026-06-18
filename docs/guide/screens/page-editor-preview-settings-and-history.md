@@ -67,17 +67,24 @@ The breadcrumb/status strip also matters:
    - confirm the page title in the breadcrumb,
    - confirm whether the page is `Draft` or `Published`,
    - check whether `Unsaved changes` is already shown.
-3. Use the add/command controls when you need a new section or atomic block.
+3. If `Recover draft version` appears, decide before continuing:
+   - choose `Restore draft` to load the autosaved version into the editor,
+   - choose `Discard draft` to remove that autosave revision,
+   - choose `Keep current` to hide the prompt for this editing session without
+     deleting the autosave.
+   Leaving the editor while this prompt is pending asks for confirmation; it
+   does not delete the autosaved revision.
+4. Use the add/command controls when you need a new section or atomic block.
    - The `Add section` button at the top of the canvas opens the command
      palette and appends the chosen section at the end of the page.
    - Hovering the gap above, between, or below sections reveals an inline
      `Add section` insertion point. It opens the same command palette, and the
      chosen section is inserted exactly at that gap instead of being appended.
-4. Move your focus to the canvas:
+5. Move your focus to the canvas:
    - select a section,
    - confirm it appears in the canvas where you expect,
    - use the canvas as the editable version of the page.
-5. After selecting a section, use the floating toolbar at the bottom of the
+6. After selecting a section, use the floating toolbar at the bottom of the
    canvas for layout, content, style, spacing, responsive, and visibility
    controls. The toolbar names the selection by its type (`Hero`, `Text`,
    `Statistic`, `Quote`, ...), never by the text you typed into the block, so
@@ -168,32 +175,32 @@ The breadcrumb/status strip also matters:
        the selection with its `Base` / `Override` / `Inherited` state and a
        `Reset` action next to each overridden field. On Desktop the list is
        informational because desktop is the base.
-6. Save your work early with `Save draft`.
+7. Save your work early with `Save draft`.
    Do this before opening preview if you want to validate the latest draft.
-7. Use the device control to choose desktop,
+8. Use the device control to choose desktop,
    tablet, or mobile editing/preview mode. Each option shows its label and
    canvas width (`Desktop 1080`, `Tablet 744`, `Mobile 390`), and the floating
    toolbar shows an `Editing: …` pill so you always know which breakpoint your
    edits target. Edits made on Tablet or Mobile become overrides; Desktop edits
    change the base.
-8. Click `Runtime preview` to open the read-only runtime dialog.
+9. Click `Runtime preview` to open the read-only runtime dialog.
     Use it to verify site-theme rendering, not to edit content. The dialog
     renders the saved draft ("Runtime preview of the saved draft"); if the
     preview target is temporarily unreachable, the dialog shows a bounded
     diagnostic and a `Retry preview` button that regenerates the preview.
-9. Open `Page settings` when you need page-wide controls rather than one
+10. Open `Page settings` when you need page-wide controls rather than one
    section’s controls.
-10. In `Page settings`, work top to bottom:
+11. In `Page settings`, work top to bottom:
     - confirm `Page title`,
     - confirm `Slug`,
     - choose `Template`,
     - decide `Show in navigation`,
     - set `Revisions to keep`.
-11. Click `Save settings` when the drawer values are correct.
+12. Click `Save settings` when the drawer values are correct.
     If you close the drawer instead, the UI can keep one settings autosave
     snapshot, but that is not the same as a published revision.
-12. Open `History` when you need to inspect or restore revisions.
-13. Use `Publish` only after:
+13. Open `History` when you need to inspect or restore revisions.
+14. Use `Publish` only after:
     - the canvas is correct,
     - settings are correct,
     - runtime preview has been checked,
@@ -237,6 +244,14 @@ Use this safe working order when you want the lowest chance of mistakes:
   the page may have no inserted sections yet. Use the add/command controls.
 - You changed something but do not see `Unsaved changes` clear:
   use `Save draft`.
+- You try to leave and see a discard confirmation:
+  the editor has unsaved local changes or a recoverable autosave prompt is
+  pending. Cancel to keep editing, or confirm only when it is safe to leave the
+  current local state.
+- `Recover draft version` appears after reopening:
+  a newer autosave revision exists than the saved draft currently loaded in the
+  page. Restore it to continue from that autosave, discard it to remove that
+  autosave revision, or keep the current draft for this session.
 - Runtime preview opens but looks empty:
   confirm the page has actual content and that you saved the draft before
   previewing.

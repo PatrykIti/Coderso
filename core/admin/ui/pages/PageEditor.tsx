@@ -64,6 +64,7 @@ import { getCachedSettings, getSettingsCached } from "@/services/settingsClient"
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
+import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import {
   clearActiveAssistantSurfaceContext,
@@ -210,7 +211,13 @@ import {
 import { LayerBlockRows } from "./editor/PageEditorLayers";
 import { PageEditorCommandPalette } from "./editor/PageEditorCommandPalette";
 import { ToolbarIconButton } from "./editor/FloatingEditorToolbar";
-import type { PageEditorHost } from "./editor/pageEditorHostContract";
+import {
+  isNewerPageDetailTimestamp,
+  shouldApplyFreshPageEditorDetail,
+  type PageEditorHost,
+  type PageEditorRevision,
+  type PageEditorResourceDetail,
+} from "./editor/pageEditorHostContract";
 import type { PageRuntimeDataByBlockId } from "../../../services/pages/pageRuntimeBindingContract";
 import { normalizePageRevisionRetentionValue } from "../../../services/pages/revisionRetention";
 import {
@@ -223,6 +230,8 @@ export type {
   PageEditorHost,
   PageEditorHostAppearancePanelProps,
   PageEditorHostCanvasChromeProps,
+  PageEditorHostFreshnessMode,
+  PageEditorHostLoadOptions,
   PageEditorHostPalette,
   PageEditorHostPreviewResponse,
   PageEditorHostPublishResult,
@@ -240,7 +249,7 @@ const defaultPagesEditorHost: PageEditorHost = {
   assistantSurface: true,
   detailCacheKey: (id) => cacheKeys.pageDetail(id),
   getCachedDetail: (id) => getCachedPageDetail(id),
-  loadDetail: (id) => getPageCached(id),
+  loadDetail: (id, options) => getPageCached(id, { force: options?.force }),
   saveDocument: (id, document) => updatePage(id, { data: document }),
   autosaveDocument: (id, document) => autosavePage(id, { data: document }),
   publish: (id, document) => publishPage(id, document),
@@ -561,15 +570,16 @@ const resolveInlineError = (error: unknown, fallback: string) => {
 const normalizePageData = (data?: Record<string, unknown> | null): PageDocumentV2 =>
   normalizeStoredPageDocumentV2ForRead(data);
 
-// Stale or replayed pageDetail cache events must never replace a newer loaded
-// document: autosave persists only a revision (not currentData), so an older
-// cached record can otherwise wipe live editor content (TASK-449-02).
-const isNewerPageDetailTimestamp = (candidate: string, loaded: string): boolean => {
-  const candidateMs = Date.parse(candidate);
-  const loadedMs = Date.parse(loaded);
-  if (Number.isNaN(candidateMs) || Number.isNaN(loadedMs)) return false;
-  return candidateMs > loadedMs;
-};
+export function findRecoverableAutosaveRevision(
+  revisions: PageEditorRevision[],
+  page: Pick<PageEditorResourceDetail, "updatedAt">
+): PageEditorRevision | null {
+  const candidates = revisions
+    .filter((revision) => revision.kind === "autosave")
+    .filter((revision) => isNewerPageDetailTimestamp(revision.createdAt, page.updatedAt))
+    .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+  return candidates[0] ?? null;
+}
 
 const createStarterSection = (type: PageSectionType) => {
   const blocks =
@@ -650,7 +660,15 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [isSaving, setIsSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [revalidationError, setRevalidationError] = useState<string | null>(null);
   const [autosaveError, setAutosaveError] = useState<string | null>(null);
+  const [recoverableAutosave, setRecoverableAutosave] = useState<PageEditorRevision | null>(null);
+  const [dismissedRecoverableAutosaveId, setDismissedRecoverableAutosaveId] = useState<
+    string | null
+  >(null);
+  const [recoveryCheckError, setRecoveryCheckError] = useState<string | null>(null);
+  const [recoveryActionError, setRecoveryActionError] = useState<string | null>(null);
+  const [revalidatedResourceKey, setRevalidatedResourceKey] = useState<string | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const [commandActiveIndex, setCommandActiveIndex] = useState(0);
@@ -712,6 +730,9 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [canvasFormDetails, setCanvasFormDetails] = useState<
     Record<string, PageEditorFormPreviewDetail | null>
   >({});
+  const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  const latestLoadedPageRef = useRef<PageEditorResourceDetail | null>(initialPageDetail ?? null);
+  const revalidatedResourceRef = useRef<string | null>(null);
   // FormIds already requested in this editor session; transient load failures
   // are removed again so a later document change can retry the fetch.
   const requestedFormIdsRef = useRef<Set<string>>(new Set());
@@ -997,6 +1018,28 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     setSelectedSectionId(sectionId);
     setSelectedBlockPath(null);
   }, []);
+
+  const hydrateFromDetail = useCallback(
+    (
+      detail: PageEditorResourceDetail | null,
+      options: { selectFirst?: boolean; resetDirty?: boolean } = {}
+    ) => {
+      setPage(detail);
+      const document = normalizePageData(detail?.currentData);
+      setPageDocument(document);
+      if (options.selectFirst ?? true) {
+        selectSection(document.sections[0]?.id ?? null);
+      }
+      setSettingsTitle(detail?.title ?? "Homepage");
+      setSettingsSlug(detail?.slug ?? "/");
+      setShowInNav(document.settings.showInNav);
+      setRevisionRetention(
+        normalizePageRevisionRetentionValue(document.settings.revisionRetention)
+      );
+      if (options.resetDirty) setHasUnsavedChanges(false);
+    },
+    [selectSection]
+  );
 
   const selectBlock = useCallback((sectionId: string, blockPath: PageBlockPath) => {
     setSelectedSectionId(sectionId);
@@ -1762,26 +1805,50 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   ]);
 
   useEffect(() => {
-    if (!pageId || initialPageDetail) return;
+    hasUnsavedChangesRef.current = hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    latestLoadedPageRef.current = page;
+  }, [page]);
+
+  useEffect(() => {
+    if (!pageId) return undefined;
+    const resourceKey = `${editorHost.mode}:${pageId}`;
+    if (revalidatedResourceRef.current === resourceKey) return undefined;
+    revalidatedResourceRef.current = resourceKey;
     let cancelled = false;
     const load = async () => {
-      setIsLoading(true);
-      setError(null);
+      const loadedAtStart = latestLoadedPageRef.current;
+      if (!loadedAtStart) setIsLoading(true);
       try {
-        const loaded = await editorHost.loadDetail(pageId);
+        const fresh = await editorHost.loadDetail(pageId, { force: true });
         if (cancelled) return;
-        setPage(loaded);
-        const document = normalizePageData(loaded?.currentData);
-        setPageDocument(document);
-        selectSection(document.sections[0]?.id ?? null);
-        setSettingsTitle(loaded?.title ?? "Homepage");
-        setSettingsSlug(loaded?.slug ?? "/");
-        setShowInNav(document.settings.showInNav);
-        setRevisionRetention(
-          normalizePageRevisionRetentionValue(document.settings.revisionRetention)
-        );
+        const currentLoaded = latestLoadedPageRef.current ?? loadedAtStart;
+        if (
+          fresh &&
+          shouldApplyFreshPageEditorDetail({
+            current: currentLoaded,
+            fresh,
+            isDirty: hasUnsavedChangesRef.current,
+            mode: editorHost.freshnessMode ?? "updatedAt",
+          })
+        ) {
+          hydrateFromDetail(fresh);
+          setError(null);
+          setRevalidationError(null);
+        } else if (!currentLoaded && !fresh) {
+          hydrateFromDetail(null);
+        }
+        setRevalidatedResourceKey(resourceKey);
       } catch (loadError) {
-        if (!cancelled) setError(resolveInlineError(loadError, editorHost.loadFailedMessage));
+        if (cancelled) return;
+        const message = resolveInlineError(loadError, editorHost.loadFailedMessage);
+        if (loadedAtStart || latestLoadedPageRef.current) {
+          setRevalidationError(message);
+        } else {
+          setError(message);
+        }
       } finally {
         if (!cancelled) setIsLoading(false);
       }
@@ -1790,7 +1857,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     return () => {
       cancelled = true;
     };
-  }, [editorHost, initialPageDetail, pageId, selectSection]);
+  }, [editorHost, hydrateFromDetail, pageId]);
 
   useEffect(() => {
     // Hosts without an assistant contract (Page Templates v1) advertise no
@@ -1829,13 +1896,19 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       if (hasUnsavedChanges) return;
       const cached = editorHost.getCachedDetail(pageId);
       if (!cached) return;
-      if (page && !isNewerPageDetailTimestamp(cached.updatedAt, page.updatedAt)) return;
-      const cachedDocument = normalizePageData(cached.currentData);
-      setPage(cached);
-      setPageDocument(cachedDocument);
-      selectSection(cachedDocument.sections[0]?.id ?? null);
+      if (
+        !shouldApplyFreshPageEditorDetail({
+          current: page,
+          fresh: cached,
+          isDirty: hasUnsavedChanges,
+          mode: "updatedAt",
+        })
+      ) {
+        return;
+      }
+      hydrateFromDetail(cached);
     });
-  }, [editorHost, hasUnsavedChanges, page, pageId, selectSection]);
+  }, [editorHost, hasUnsavedChanges, hydrateFromDetail, page, pageId]);
 
   useEffect(() => {
     const autosaveDocument = editorHost.autosaveDocument;
@@ -1962,6 +2035,40 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
 
   const revisionsHost = editorHost.revisions;
 
+  useEffect(() => {
+    if (!page || editorHost.mode !== "page" || !revisionsHost) return undefined;
+    if (hasUnsavedChanges) return undefined;
+    if (revalidatedResourceKey !== `${editorHost.mode}:${page.id}`) return undefined;
+    let cancelled = false;
+    void revisionsHost
+      .list(page.id)
+      .then((items) => {
+        if (cancelled) return;
+        setRecoveryCheckError(null);
+        const candidate = findRecoverableAutosaveRevision(items, page);
+        setRecoverableAutosave(
+          candidate && candidate.id !== dismissedRecoverableAutosaveId ? candidate : null
+        );
+      })
+      .catch((revisionError) => {
+        if (!cancelled) {
+          setRecoveryCheckError(
+            resolveInlineError(revisionError, "Could not check for draft recovery.")
+          );
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    dismissedRecoverableAutosaveId,
+    editorHost.mode,
+    hasUnsavedChanges,
+    page,
+    revalidatedResourceKey,
+    revisionsHost,
+  ]);
+
   const openRevisions = async () => {
     if (!page || !revisionsHost) return;
     setRevisionsOpen(true);
@@ -1982,11 +2089,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     try {
       const result = await revisionsHost.restore(page.id, revisionId);
       if (result.page) {
-        const restoredDocument = normalizePageData(result.page.currentData);
-        setPage(result.page);
-        setPageDocument(restoredDocument);
-        selectSection(restoredDocument.sections[0]?.id ?? null);
-        setHasUnsavedChanges(false);
+        hydrateFromDetail(result.page, { resetDirty: true });
       }
       setRevisions(await revisionsHost.list(page.id));
     } catch (restoreError) {
@@ -2009,6 +2112,45 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     }
   };
 
+  const restoreRecoverableAutosave = async () => {
+    if (!page || !recoverableAutosave || !revisionsHost) return;
+    setRestoringRevisionId(recoverableAutosave.id);
+    setRecoveryActionError(null);
+    try {
+      const result = await revisionsHost.restore(page.id, recoverableAutosave.id);
+      if (result.page) {
+        hydrateFromDetail(result.page, { resetDirty: true });
+      }
+      setRecoverableAutosave(null);
+      setDismissedRecoverableAutosaveId(null);
+    } catch (restoreError) {
+      setRecoveryActionError(resolveInlineError(restoreError, "Failed to restore draft version."));
+    } finally {
+      setRestoringRevisionId(null);
+    }
+  };
+
+  const discardRecoverableAutosave = async () => {
+    if (!page || !recoverableAutosave || !revisionsHost) return;
+    setDiscardingRevisionId(recoverableAutosave.id);
+    setRecoveryActionError(null);
+    try {
+      await revisionsHost.discard(page.id, recoverableAutosave.id);
+      setRecoverableAutosave(null);
+      setDismissedRecoverableAutosaveId(null);
+    } catch (discardError) {
+      setRecoveryActionError(resolveInlineError(discardError, "Failed to discard draft version."));
+    } finally {
+      setDiscardingRevisionId(null);
+    }
+  };
+
+  const dismissRecoverableAutosave = () => {
+    if (recoverableAutosave) setDismissedRecoverableAutosaveId(recoverableAutosave.id);
+    setRecoverableAutosave(null);
+    setRecoveryActionError(null);
+  };
+
   const handlePreview = async () => {
     // Optional host capability (TASK-458-03): the affordance is hidden when
     // the host issues no preview tokens, so this is a type guard only.
@@ -2029,6 +2171,26 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setPreviewLoading(false);
     }
   };
+
+  const navigationBlocked = hasUnsavedChanges || Boolean(recoverableAutosave);
+  const { dialog: dirtyNavigationDialog } = useAdminDirtyNavigationGuard({
+    blocked: navigationBlocked,
+    title: recoverableAutosave
+      ? "Leave without recovering draft version?"
+      : "Discard unsaved page changes?",
+    description: recoverableAutosave
+      ? "A saved draft version is available. Cancel to recover it, or continue and leave it in history."
+      : "Cancel to keep editing, or discard local changes and continue.",
+    confirmLabel: "Discard and continue",
+    cancelLabel: "Keep editing",
+    onConfirmDiscard: () => {
+      setHasUnsavedChanges(false);
+      if (recoverableAutosave) {
+        setDismissedRecoverableAutosaveId(recoverableAutosave.id);
+        setRecoverableAutosave(null);
+      }
+    },
+  });
 
   const topbarActions = (
     <div className="flex items-center gap-2">
@@ -2121,6 +2283,67 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           <Alert variant="destructive" className="m-4">
             <AlertTitle>Autosave paused</AlertTitle>
             <AlertDescription>{autosaveError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {revalidationError ? (
+          <Alert variant="warning" className="m-4">
+            <AlertTitle>Cached draft shown</AlertTitle>
+            <AlertDescription>{revalidationError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {recoveryCheckError ? (
+          <Alert variant="warning" className="m-4">
+            <AlertTitle>Draft recovery unavailable</AlertTitle>
+            <AlertDescription>{recoveryCheckError}</AlertDescription>
+          </Alert>
+        ) : null}
+
+        {recoverableAutosave ? (
+          <Alert variant="warning" className="m-4">
+            <AlertTitle>Recover draft version</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                A newer draft version from{" "}
+                {new Date(recoverableAutosave.createdAt).toLocaleString()} is available in history.
+              </span>
+              <span className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={restoringRevisionId === recoverableAutosave.id}
+                  onClick={() => void restoreRecoverableAutosave()}
+                >
+                  {restoringRevisionId === recoverableAutosave.id
+                    ? "Restoring..."
+                    : "Restore draft"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={discardingRevisionId === recoverableAutosave.id}
+                  onClick={() => void discardRecoverableAutosave()}
+                >
+                  {discardingRevisionId === recoverableAutosave.id
+                    ? "Discarding..."
+                    : "Discard draft"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={dismissRecoverableAutosave}
+                >
+                  Keep current
+                </Button>
+              </span>
+            </AlertDescription>
+            {recoveryActionError ? (
+              <AlertDescription>{recoveryActionError}</AlertDescription>
+            ) : null}
           </Alert>
         ) : null}
 
@@ -2662,6 +2885,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             fixPreviewTargetLabel="Retry preview"
           />
         ) : null}
+        {dirtyNavigationDialog}
       </div>
     </EditorShell>
   );

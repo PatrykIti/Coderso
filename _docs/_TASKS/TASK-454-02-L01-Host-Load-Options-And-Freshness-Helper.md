@@ -6,7 +6,8 @@
 **Category:** Admin UI / Page Editor / Host Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -20,13 +21,13 @@ where the host has an authoritative `updatedAt`.
 
 ## Sub-Tasks
 
-- [ ] Add `PageEditorHostLoadOptions = { force?: boolean }`.
-- [ ] Add a host-owned freshness mode so hosts without reliable `updatedAt`
+- [x] Add `PageEditorHostLoadOptions = { force?: boolean }`.
+- [x] Add a host-owned freshness mode so hosts without reliable `updatedAt`
       can opt into forced clean replacement.
-- [ ] Update Pages, Page Templates, and Menu Design hosts to pass `force` into
+- [x] Update Pages, Page Templates, and Menu Design hosts to pass `force` into
       their cached clients.
-- [ ] Reuse `isNewerPageDetailTimestamp` from one local helper location.
-- [ ] Keep existing cache-bus behavior unchanged.
+- [x] Reuse `isNewerPageDetailTimestamp` from one local helper location.
+- [x] Keep existing cache-bus behavior unchanged.
 
 ## Files To Change
 

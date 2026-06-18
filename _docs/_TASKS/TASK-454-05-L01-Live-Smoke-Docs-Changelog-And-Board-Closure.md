@@ -6,7 +6,8 @@
 **Category:** Pages / Validation / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-02-L03, TASK-454-03-L02, TASK-454-04-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -18,11 +19,11 @@ read-only drift pass.
 
 ## Sub-Tasks
 
-- [ ] Run targeted Vitest/Bun/lint/type lanes.
-- [ ] Run live poisoned-cache reload smoke.
-- [ ] Run live autosave -> guarded navigation -> reopen recovery smoke.
-- [ ] Update docs, changelog, board, and task statuses.
-- [ ] Run final drift pass until no unresolved findings remain.
+- [x] Run targeted Vitest/Bun/lint/type lanes.
+- [x] Run live poisoned-cache reload smoke.
+- [x] Run live autosave -> guarded navigation -> reopen recovery smoke.
+- [x] Update docs, changelog, board, and task statuses.
+- [x] Run final drift pass until no unresolved findings remain.
 
 ## Files To Change
 
@@ -101,3 +102,18 @@ status in changelog and task completion notes.
 2. Live smoke evidence proves both residual TASK-449 vectors are closed.
 3. Changelog lists every closed task ID.
 4. Final drift pass has no unresolved findings.
+
+## Completion Notes
+
+- Targeted Vitest, Bun route/service, lint, typecheck, Coderso gates, and diff
+  checks passed.
+- Live smoke used `coderso-dev-core-host`, `playwright-cli`, and `.env` admin
+  credentials without recording secrets.
+- The live smoke was split into two focused browser proofs:
+  - forced correction of poisoned `pages:detail:<id>` cache, section insert,
+    autosave wait, custom dirty guard prompt, and confirmed discard;
+  - reopen with recoverable autosave prompt, restore, save, publish, public
+    frontend render, and cleanup.
+- Temporary smoke pages using `/task-454-live-*` prefixes were removed after
+  validation.
+- Changelog 1179 covers TASK-454 and every physical descendant.

@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor / Revisions
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -21,8 +22,8 @@ autosave semantics.
 
 ## Sub-Tasks
 
-- [ ] TASK-454-03-L01: Recoverable Autosave Detection
-- [ ] TASK-454-03-L02: Recovery Prompt Restore And Discard Flow
+- [x] TASK-454-03-L01: Recoverable Autosave Detection
+- [x] TASK-454-03-L02: Recovery Prompt Restore And Discard Flow
 
 ## Files To Change
 

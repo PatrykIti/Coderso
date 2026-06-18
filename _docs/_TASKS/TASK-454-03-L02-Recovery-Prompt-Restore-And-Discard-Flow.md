@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor / UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -18,11 +19,11 @@ actions; dismissing the prompt must leave the autosave revision untouched.
 
 ## Sub-Tasks
 
-- [ ] Add inline recovery banner/dialog with user-facing "draft version" copy.
-- [ ] Restore calls existing `revisions.restore`.
-- [ ] Discard calls existing `revisions.discard`.
-- [ ] Dismiss hides the prompt for the current session only.
-- [ ] Decide whether to keep the local `HistorySheet`; do not wire the dead
+- [x] Add inline recovery banner/dialog with user-facing "draft version" copy.
+- [x] Restore calls existing `revisions.restore`.
+- [x] Discard calls existing `revisions.discard`.
+- [x] Dismiss hides the prompt for the current session only.
+- [x] Decide whether to keep the local `HistorySheet`; do not wire the dead
       `PageRevisionDrawer` unless it replaces the local history surface.
 
 ## Files To Change

@@ -321,6 +321,7 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
     },
     path: "/admin/menus/menu-1/design",
   }),
+  useOptionalAdminRouter: () => null,
 }));
 
 import { MenuDesignEditorPage } from "../../../core/admin/ui/menus/MenuDesignEditorPage";
@@ -448,6 +449,9 @@ test("menu host restricts every insert entry point to button/image and hides sec
   const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
   await flush();
 
+  expect(menusClientState.getMenuWithItemsCached).toHaveBeenCalledWith("menu-1", {
+    force: true,
+  });
   // The live shell preview renders this menu's items.
   const chrome = container.querySelector('[data-menu-design-canvas-chrome="true"]');
   expect(chrome).toBeTruthy();

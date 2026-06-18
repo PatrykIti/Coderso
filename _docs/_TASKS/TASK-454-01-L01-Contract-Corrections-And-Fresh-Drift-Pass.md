@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Contract
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -19,11 +20,11 @@ edits.
 
 ## Sub-Tasks
 
-- [ ] Compare all TASK-454 files with current Page Editor, Pages client,
+- [x] Compare all TASK-454 files with current Page Editor, Pages client,
       router blocker, Settings guard, and revision routes.
-- [ ] Confirm the decisions: explicit restore prompt, client-side revision
+- [x] Confirm the decisions: explicit restore prompt, client-side revision
       filtering, host-neutral mount revalidation, page-only autosave recovery.
-- [ ] Record any audit notes in the task closeout before implementation starts.
+- [x] Record any audit notes in the task closeout before implementation starts.
 
 ## Files To Change
 

@@ -235,12 +235,39 @@ Consumers subscribe and revalidate when matching keys change.
 6. On true invalidation or explicit refresh, use `force: true` in background.
 
 ### Editors
-1. Hydrate from cache.
-2. Revalidate in background.
-3. If a remote update arrives and there are unsaved changes:
+1. Hydrate from cache when a detail cache exists.
+2. Treat cached detail as provisional on mount.
+3. Revalidate in background.
+4. If a remote update arrives and there are unsaved changes:
    - Do not overwrite.
    - Show a “remote update” hint.
    - Allow manual refresh to apply the latest data.
+
+### Page Editor Detail Mounts
+The shared Page Editor v2 host contract verifies detail cache on every mounted
+resource (TASK-454):
+
+- Pages and Page Templates may render `pages:detail:<id>` or
+  `pageTemplates:detail:<id>` immediately, then run one forced detail read with
+  `{ force: true }`.
+- Timestamp-authoritative hosts apply the forced detail only when the editor is
+  clean and the server `updatedAt` is strictly newer than the loaded detail.
+  Same, older, or unparsable timestamps fail closed.
+- Menu Design uses an explicit clean forced-replace mode because its editor
+  adapter does not yet expose a reliable menu `updatedAt`; replacement is still
+  blocked while the editor is dirty.
+- Forced read failures keep the current editor view and surface bounded inline
+  copy instead of blanking the document.
+- Page Editor dirty state and pending recoverable autosaves register the shared
+  admin dirty-navigation guard. Admin SPA navigation, popstate, and hard
+  browser navigation require confirmation while blocked. Confirming navigation
+  discards only local editor state; it does not delete server autosave
+  revisions.
+- Pages check existing autosave revisions after the fresh detail baseline is
+  known. A newer autosave revision shows a recovery prompt with restore,
+  discard, and keep-current actions; recovery uses the existing internal
+  revision routes and does not silently promote autosave data into
+  `currentData`.
 
 ### Settings
 Settings uses a dedicated redacted cache because raw settings payloads can

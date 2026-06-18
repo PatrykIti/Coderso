@@ -6,7 +6,8 @@
 **Category:** Pages / Validation / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-02, TASK-454-03, TASK-454-04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -18,7 +19,7 @@ state, and run the final read-only drift pass.
 
 ## Sub-Tasks
 
-- [ ] TASK-454-05-L01: Live Smoke Docs Changelog And Board Closure
+- [x] TASK-454-05-L01: Live Smoke Docs Changelog And Board Closure
 
 ## Files To Change
 

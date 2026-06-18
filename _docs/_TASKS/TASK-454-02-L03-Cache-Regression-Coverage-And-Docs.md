@@ -6,7 +6,8 @@
 **Category:** Admin UI / Cache / Tests
 **Estimated Effort:** Small
 **Dependencies:** TASK-454-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -17,11 +18,11 @@ leaf is the cache-specific validation/documentation pass for TASK-454-02.
 
 ## Sub-Tasks
 
-- [ ] Add Vitest cases for cache-first plus forced fresh detail.
-- [ ] Add stale/same/unparsable mount candidates to mirror cache-bus behavior.
-- [ ] Add a Menu Design case where forced fresh detail replaces a poisoned
+- [x] Add Vitest cases for cache-first plus forced fresh detail.
+- [x] Add stale/same/unparsable mount candidates to mirror cache-bus behavior.
+- [x] Add a Menu Design case where forced fresh detail replaces a poisoned
       clean cache despite identical `createdAt`.
-- [ ] Document that Page Editor treats cached detail as provisional on mount.
+- [x] Document that Page Editor treats cached detail as provisional on mount.
 
 ## Files To Change
 

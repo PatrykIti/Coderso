@@ -6,6 +6,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { PageEditor, resolveToolbarTargetLabel } from "../../../core/admin/ui/pages/PageEditor";
+import {
+  AdminRouterProvider,
+  useAdminRouter,
+} from "../../../core/admin/ui/contexts/AdminRouterContext";
 import type { PageDetail, PageRevision } from "../../../core/admin/services/pagesClient";
 import {
   createPageBlockV2,
@@ -103,6 +107,7 @@ const pageEditorState = vi.hoisted(() => {
     restorePageRevision: vi.fn(async (_pageId: string, revisionId: string) => {
       const restored = createPage({
         title: "Restored Homepage",
+        updatedAt: "2026-03-08T09:15:00.000Z",
         currentData: createDocument({
           sections: [
             createPageSectionV2("cta", {
@@ -652,8 +657,23 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+function PageEditorNavigationHarness() {
+  const router = useAdminRouter();
+
+  return (
+    <div>
+      <span data-testid="admin-path">{router.path}</span>
+      <PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />
+      <button type="button" onClick={() => router.navigate("/admin/pages")}>
+        Go pages
+      </button>
+    </div>
+  );
+}
+
 const flush = async () => {
   await React.act(async () => {
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -948,7 +968,7 @@ test("PageEditor loads v2 documents, subscribes to cache updates, and exposes se
   try {
     await flush();
 
-    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-1");
+    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-1", { force: true });
     expect(view.container.textContent).toContain("Welcome to Coderso");
     expect(activeSurfaceState.contexts.at(-1)).toMatchObject({
       kind: "page",
@@ -1022,6 +1042,161 @@ test("PageEditor ignores stale pageDetail cache events instead of wiping the loa
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     expect(view.container.textContent).toContain("Welcome to Coderso");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor treats initial cached detail as provisional and applies forced fresh detail", async () => {
+  pageEditorState.cachedPage = createPage({
+    updatedAt: "2026-03-08T09:00:00.000Z",
+    currentData: createDocument({ sections: [] }),
+  });
+  pageEditorState.currentPage = createPage({
+    updatedAt: "2026-03-08T09:05:00.000Z",
+  });
+  const view = mount(<PageEditor pageId="page-1" />);
+
+  try {
+    expect(view.container.textContent).toContain("This page has no sections yet.");
+    expect(view.container.textContent).not.toContain("Welcome to Coderso");
+
+    await flush();
+
+    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-1", { force: true });
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor rejects non-newer forced detail for timestamp-authoritative hosts", async () => {
+  const candidates = [
+    createPage({
+      updatedAt: "2026-03-08T08:00:00.000Z",
+      currentData: createDocument({ sections: [] }),
+    }),
+    createPage({
+      updatedAt: "2026-03-08T09:00:00.000Z",
+      currentData: createDocument({ sections: [] }),
+    }),
+    createPage({
+      updatedAt: "not-a-date",
+      currentData: createDocument({ sections: [] }),
+    }),
+  ];
+
+  for (const candidate of candidates) {
+    pageEditorState.reset();
+    pageEditorState.cachedPage = createPage({ updatedAt: "2026-03-08T09:00:00.000Z" });
+    pageEditorState.currentPage = candidate;
+    const view = mount(<PageEditor pageId="page-1" />);
+
+    try {
+      await flush();
+      expect(view.container.textContent).toContain("Welcome to Coderso");
+      expect(view.container.textContent).not.toContain("This page has no sections yet.");
+    } finally {
+      view.cleanup();
+    }
+  }
+});
+
+test("PageEditor forced revalidation never overwrites dirty local edits", async () => {
+  let resolveLoad: (detail: PageDetail | null) => void = () => undefined;
+  pageEditorState.getPageCached.mockImplementationOnce(
+    () =>
+      new Promise<PageDetail | null>((resolve) => {
+        resolveLoad = resolve;
+      })
+  );
+  pageEditorState.cachedPage = createPage({
+    updatedAt: "2026-03-08T09:00:00.000Z",
+  });
+  const freshEmpty = createPage({
+    updatedAt: "2026-03-08T09:05:00.000Z",
+    currentData: createDocument({ sections: [] }),
+  });
+  const view = mount(<PageEditor pageId="page-1" />);
+
+  try {
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "FAQ");
+    await flush();
+    expect(view.container.textContent).toContain("faq section");
+
+    await React.act(async () => {
+      resolveLoad(freshEmpty);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+    expect(view.container.textContent).toContain("faq section");
+    expect(view.container.textContent).not.toContain("This page has no sections yet.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor dirty state blocks SPA, popstate, and hard navigation until confirmed", async () => {
+  window.history.replaceState({}, "", "/admin/pages/page-1");
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/pages/page-1">
+      <PageEditorNavigationHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "Content");
+    await flush();
+
+    const unloadEvent = new Event("beforeunload", { cancelable: true });
+    expect(window.dispatchEvent(unloadEvent)).toBe(false);
+    expect(unloadEvent.defaultPrevented).toBe(true);
+
+    window.history.replaceState({}, "", "/admin/pages");
+    React.act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages/page-1"
+    );
+    expect(window.location.pathname).toBe("/admin/pages/page-1");
+    expect(document.body.textContent).toContain(
+      "Cancel to keep editing, or discard local changes and continue."
+    );
+
+    clickButton(document.body, "Cancel");
+    await flush();
+
+    clickButton(view.container, "Go pages");
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages/page-1"
+    );
+    expect(document.body.textContent).toContain(
+      "Cancel to keep editing, or discard local changes and continue."
+    );
+
+    clickButton(document.body, "Discard and continue");
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages"
+    );
+    expect(window.location.pathname).toBe("/admin/pages");
   } finally {
     view.cleanup();
   }
@@ -3632,6 +3807,197 @@ test("PageEditor surfaces bounded autosave errors", async () => {
   }
 });
 
+test("PageEditor surfaces recoverable autosave drafts after mount revalidation", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    expect(pageEditorState.listPageRevisions).toHaveBeenCalledWith("page-1");
+    expect(view.container.textContent).toContain("Recover draft version");
+    expect(view.container.textContent).toContain("Restore draft");
+    expect(view.container.textContent).toContain("Discard draft");
+
+    clickButton(view.container, "Keep current");
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Recover draft version");
+    expect(pageEditorState.restorePageRevision).not.toHaveBeenCalled();
+    expect(pageEditorState.discardPageRevision).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor ignores non-recoverable autosave candidates", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-old",
+      pageId: "page-1",
+      version: 1,
+      kind: "autosave",
+      title: "Old draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T08:50:00.000Z",
+      createdBy: null,
+    },
+    {
+      id: "rev-same",
+      pageId: "page-1",
+      version: 2,
+      kind: "autosave",
+      title: "Same draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:00:00.000Z",
+      createdBy: null,
+    },
+    {
+      id: "rev-invalid",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Invalid draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "not-a-date",
+      createdBy: null,
+    },
+  ];
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Recover draft version");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor recoverable autosave prompt restores and discards through revision actions", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  const restoreView = mount(
+    <PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />
+  );
+
+  try {
+    await flush();
+    clickButton(restoreView.container, "Restore draft");
+    await flush();
+
+    expect(pageEditorState.restorePageRevision).toHaveBeenCalledWith("page-1", "rev-autosave");
+    expect(restoreView.container.textContent).toContain("Restored rev-autosave");
+    expect(restoreView.container.textContent).not.toContain("Recover draft version");
+  } finally {
+    restoreView.cleanup();
+  }
+
+  pageEditorState.reset();
+  pageEditorState.cachedPage = createPage();
+  pageEditorState.currentPage = createPage();
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  const discardView = mount(
+    <PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />
+  );
+
+  try {
+    await flush();
+    clickButton(discardView.container, "Discard draft");
+    await flush();
+
+    expect(pageEditorState.discardPageRevision).toHaveBeenCalledWith("page-1", "rev-autosave");
+    expect(discardView.container.textContent).not.toContain("Recover draft version");
+  } finally {
+    discardView.cleanup();
+  }
+});
+
+test("PageEditor recoverable autosave blocks navigation without deleting the revision", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  window.history.replaceState({}, "", "/admin/pages/page-1");
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/pages/page-1">
+      <PageEditorNavigationHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Recover draft version");
+
+    clickButton(view.container, "Go pages");
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages/page-1"
+    );
+    expect(document.body.textContent).toContain(
+      "A saved draft version is available. Cancel to recover it, or continue and leave it in history."
+    );
+
+    clickButton(document.body, "Discard and continue");
+    await flush();
+
+    expect(pageEditorState.discardPageRevision).not.toHaveBeenCalled();
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor previews, publishes, updates settings, and manages revisions with v2 payloads", async () => {
   pageEditorState.revisions = [
     {
@@ -3642,7 +4008,7 @@ test("PageEditor previews, publishes, updates settings, and manages revisions wi
       title: "Draft",
       slug: "homepage",
       data: createDocument(),
-      createdAt: "2026-03-08T09:10:00.000Z",
+      createdAt: "2026-03-08T08:50:00.000Z",
       createdBy: null,
     },
     {

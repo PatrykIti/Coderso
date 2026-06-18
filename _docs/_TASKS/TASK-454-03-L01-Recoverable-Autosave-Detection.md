@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor / Revisions
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -18,11 +19,11 @@ and uses the existing revision list response.
 
 ## Sub-Tasks
 
-- [ ] Add `findRecoverableAutosaveRevision(revisions, page)` near Page Editor
+- [x] Add `findRecoverableAutosaveRevision(revisions, page)` near Page Editor
       helpers or in a Bun-free helper module.
-- [ ] Load revisions after mount revalidation for Pages host only.
-- [ ] Ignore same/older/unparsable autosave timestamps.
-- [ ] Keep listing failure bounded and non-blocking.
+- [x] Load revisions after mount revalidation for Pages host only.
+- [x] Ignore same/older/unparsable autosave timestamps.
+- [x] Keep listing failure bounded and non-blocking.
 
 ## Files To Change
 

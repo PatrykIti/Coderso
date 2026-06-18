@@ -5,7 +5,8 @@
 **Category:** Admin UI / Pages / Editor Persistence
 **Estimated Effort:** Medium
 **Dependencies:** TASK-449-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -98,11 +99,11 @@ before editing source code.
 
 ## Sub-Tasks
 
-- [ ] TASK-454-01: Contract Freeze And Host Boundary
-- [ ] TASK-454-02: Cache-First Mount Revalidation
-- [ ] TASK-454-03: Autosave Recovery Prompt
-- [ ] TASK-454-04: Shared Unsaved Navigation Guard
-- [ ] TASK-454-05: Validation Docs And Closure
+- [x] TASK-454-01: Contract Freeze And Host Boundary
+- [x] TASK-454-02: Cache-First Mount Revalidation
+- [x] TASK-454-03: Autosave Recovery Prompt
+- [x] TASK-454-04: Shared Unsaved Navigation Guard
+- [x] TASK-454-05: Validation Docs And Closure
 
 ## Implementation Order
 
@@ -217,3 +218,33 @@ Regression-test shape:
   prompt UX wording changes.
 - `_docs/_TASKS/README.md` board + statistics sync.
 - `_docs/_CHANGELOG/` entry on completion.
+
+## Completion Notes
+
+- Implemented host-neutral one-shot forced mount revalidation for shared Page
+  Editor hosts with host-owned freshness policy.
+- Added Pages-only recoverable autosave detection and restore/discard/keep
+  current prompt backed by existing revision routes.
+- Extracted shared admin dirty-navigation guard and wired Page Editor dirty and
+  recoverable-autosave state into SPA, popstate, and hard-navigation
+  confirmation flows.
+- Updated admin cache docs, user guide recovery instructions, board status, and
+  changelog entry 1179.
+- A fresh local read-only pre-implementation audit against HEAD
+  `6190242a433d36c89bd233e5478a4471f6fb4481` found no blocking contract drift.
+  Final drift was checked against the validated working tree before closure.
+
+## Validation Evidence
+
+- `bun run test:vitest -- tests/vitest/pages/page-editor-host-contract.test.ts tests/vitest/ui/page-editor-v2-flow.test.tsx tests/vitest/ui/settings-shell.test.tsx tests/vitest/ui/admin-router-context-blocker.test.tsx tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/menu-design-editor-flow.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/pagesClient.test.ts`
+- `set -a && source .env && set +a && bun test tests/unit/pages/pageRevisionAutosave.test.ts tests/unit/pages/revisionService.test.ts tests/integration/routes/pages.test.ts`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `bun run gates:coderso`
+- `git diff --check`
+- Live `coderso-dev-core-host` + `playwright-cli` smoke on
+  `http://coderso-a.localhost:5173/admin/` and
+  `http://coderso-a.localhost:3000`: poisoned cache corrected, dirty guard
+  prompted, recoverable autosave restored, saved, published, and rendered on the
+  public frontend.

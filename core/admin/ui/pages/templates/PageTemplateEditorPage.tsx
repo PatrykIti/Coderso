@@ -198,8 +198,8 @@ export function PageTemplateEditorPage({ templateId }: { templateId?: string }) 
         const cached = getCachedPageTemplateDetail(id);
         return cached ? toEditorDetail(cached) : null;
       },
-      loadDetail: async (id) => {
-        const detail = await getPageTemplateCached(id);
+      loadDetail: async (id, options) => {
+        const detail = await getPageTemplateCached(id, { force: options?.force });
         return detail ? toEditorDetail(detail) : null;
       },
       saveDocument: async (id, document) => {

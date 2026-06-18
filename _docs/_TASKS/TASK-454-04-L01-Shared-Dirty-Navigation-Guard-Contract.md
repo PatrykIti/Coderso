@@ -6,7 +6,8 @@
 **Category:** Admin UI / Navigation / Shared UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-17
 
 ---
 
@@ -19,11 +20,11 @@ without changing Settings behavior. The shared guard must use
 
 ## Sub-Tasks
 
-- [ ] Create a shared hook/component for dirty navigation.
-- [ ] Migrate `SettingsDirtyNavigationProvider` to use it or wrap it without
+- [x] Create a shared hook/component for dirty navigation.
+- [x] Migrate `SettingsDirtyNavigationProvider` to use it or wrap it without
       changing public exports.
-- [ ] Preserve `skipBlockers` confirm flow.
-- [ ] Keep current-route navigation prompt-free.
+- [x] Preserve `skipBlockers` confirm flow.
+- [x] Keep current-route navigation prompt-free.
 
 ## Files To Change
 
