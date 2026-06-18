@@ -488,6 +488,34 @@ test("menu host restricts every insert entry point to button/image and hides sec
   cleanup();
 });
 
+test("menu host keeps Ctrl+K block inserts inside the fixed extras section without selection", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  const initialSectionCount = container.querySelectorAll("[data-page-editor-section]").length;
+  expect(initialSectionCount).toBe(1);
+
+  clickSelector(container, '[data-page-editor-canvas-scroller="true"]');
+  React.act(() => {
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", ctrlKey: true }));
+  });
+
+  expect(getCommandGroupTitles(container)).toEqual(["Blocks"]);
+  expect(getCommandEntryLabels(container)).toEqual(["Button", "Image"]);
+
+  clickButton(container, "Button");
+  await flush();
+
+  expect(container.querySelectorAll("[data-page-editor-section]")).toHaveLength(
+    initialSectionCount
+  );
+  expect(
+    container.querySelector('[data-menu-design-canvas-chrome="true"] [data-site-nav-extras="true"]')
+  ).toBeTruthy();
+
+  cleanup();
+});
+
 test("menu host hides the preview affordance and publish rides the menu flow", async () => {
   const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
   await flush();

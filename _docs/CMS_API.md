@@ -1941,7 +1941,29 @@ Menu summary response includes:
   "location": "primary",
   "status": "published",
   "publishedAt": "2026-04-23T10:00:00.000Z",
-  "createdAt": "2026-04-22T10:00:00.000Z"
+  "createdAt": "2026-04-22T10:00:00.000Z",
+  "settings": {
+    "appearance": { "surfaceColor": "#ffffff", "itemGap": 12 },
+    "extras": [
+      {
+        "id": "blk-cta",
+        "type": "button",
+        "props": { "label": "Book now", "href": "/booking" },
+        "visibility": { "visible": true }
+      }
+    ],
+    "published": {
+      "appearance": { "surfaceColor": "#ffffff", "itemGap": 12 },
+      "extras": [
+        {
+          "id": "blk-cta",
+          "type": "button",
+          "props": { "label": "Book now", "href": "/booking" },
+          "visibility": { "visible": true }
+        }
+      ]
+    }
+  }
 }
 ```
 
@@ -1959,12 +1981,33 @@ create payloads include the key explicitly and may set it to `null`.
 Update menu payload:
 
 ```json
-{ "name": "Primary", "location": "primary", "status": "published" }
+{
+  "name": "Primary",
+  "location": "primary",
+  "status": "published",
+  "appearance": { "surfaceColor": "#ffffff", "itemGap": 12, "mobileMode": "disclosure" },
+  "extras": [
+    {
+      "id": "blk-cta",
+      "type": "button",
+      "props": { "label": "Book now", "href": "/booking" },
+      "visibility": { "visible": true }
+    }
+  ]
+}
 ```
 
 `PATCH /menus/:id` rejects empty payloads and unknown fields. Setting
 `status: "published"` sets `publishedAt`; setting `status: "draft"` clears it.
-Public runtime navigation resolves only published menus.
+Public runtime navigation resolves only published menus. `appearance` and
+`extras` are stored in the `menus.settings` envelope as draft menu design state;
+publishing snapshots that draft state under `settings.published` for public
+runtime rendering, so unpublished design edits do not leak to the front site.
+Set `appearance: null` or `extras: null` to clear those draft values. `extras`
+uses Page v2 block objects but only accepts the menu nav allowlist
+(`button`, `image`) and is capped by the menu extras contract. Invalid
+appearance or extras payloads map to `menu_appearance_invalid` or
+`menu_nav_extras_invalid` with a field path in `details.field`.
 
 Update menu items payload:
 

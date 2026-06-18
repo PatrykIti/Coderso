@@ -70,6 +70,7 @@ function SiteShellDialogForm({ onOpenChange }: { onOpenChange: (open: boolean) =
   const [status, setStatus] = useState<SiteShellLoadStatus>(initialState.status);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [revalidationError, setRevalidationError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<SiteShellFieldErrors>({});
   const [saving, setSaving] = useState(false);
@@ -92,11 +93,18 @@ function SiteShellDialogForm({ onOpenChange }: { onOpenChange: (open: boolean) =
           setValues(toShellValues(settings));
         }
         setLoadError(null);
+        setRevalidationError(null);
         setStatus("ready");
       })
       .catch((err) => {
         if (!active) return;
         const message = isApiClientError(err) ? err.message : "Failed to load site shell settings.";
+        if (hasSettingsCacheRef.current) {
+          setLoadError(null);
+          setRevalidationError(message);
+          setStatus("ready");
+          return;
+        }
         setLoadError(message);
         setStatus("error");
       });
@@ -108,6 +116,7 @@ function SiteShellDialogForm({ onOpenChange }: { onOpenChange: (open: boolean) =
   const handleRetry = () => {
     setStatus("loading");
     setLoadError(null);
+    setRevalidationError(null);
     setLoadAttempt((attempt) => attempt + 1);
   };
 
@@ -174,6 +183,12 @@ function SiteShellDialogForm({ onOpenChange }: { onOpenChange: (open: boolean) =
               <Alert variant="destructive" data-site-shell-dialog-error="save">
                 <AlertTitle>Save failed</AlertTitle>
                 <AlertDescription>{saveError}</AlertDescription>
+              </Alert>
+            ) : null}
+            {revalidationError ? (
+              <Alert data-site-shell-dialog-error="revalidate">
+                <AlertTitle>Showing cached site shell settings</AlertTitle>
+                <AlertDescription>{revalidationError}</AlertDescription>
               </Alert>
             ) : null}
             {status === "loading" ? (

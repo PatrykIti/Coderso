@@ -933,6 +933,9 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   // Hosts with zero insertable sections get no section-insert affordances
   // (gap zones, "Add section" buttons, palette section group).
   const canInsertSections = availableSectionOptions.length > 0;
+  const canCreateContentSectionFromUntargetedBlock = availableSectionOptions.some(
+    (option) => option.type === "content"
+  );
 
   const filteredSections = useMemo(() => {
     const query = commandQuery.trim().toLowerCase();
@@ -1276,6 +1279,30 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           : undefined
       );
       if (!selectedSectionId) {
+        if (!canCreateContentSectionFromUntargetedBlock) {
+          const fallbackSection = pageDocument.sections[0];
+          if (!fallbackSection) return;
+          const result = insertPageBlockAtTarget(
+            fallbackSection,
+            getDefaultPageBlockInsertTarget(fallbackSection, null),
+            block
+          );
+          if (result.status !== "ok" || !result.path) return;
+          setDocumentDraft((current) => ({
+            ...current,
+            sections: current.sections.map((section) =>
+              section.id === fallbackSection.id ? result.section : section
+            ),
+          }));
+          selectBlock(fallbackSection.id, result.path);
+          setCommandOpen(false);
+          setCommandQuery("");
+          setCommandActiveIndex(0);
+          setPendingBlockInsert(null);
+          setPendingSectionInsertIndex(null);
+          setPendingBesideBlockPath(null);
+          return;
+        }
         const section = createPageSectionV2("content", { blocks: [block] });
         setDocumentDraft((current) => ({ ...current, sections: [...current.sections, section] }));
         selectBlock(section.id, [{ index: 0 }]);
@@ -1314,6 +1341,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setPendingBesideBlockPath(null);
     },
     [
+      canCreateContentSectionFromUntargetedBlock,
+      pageDocument.sections,
       pendingBesideBlockPath,
       pendingBlockInsert,
       selectBlock,

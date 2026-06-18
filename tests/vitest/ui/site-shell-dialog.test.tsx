@@ -10,6 +10,7 @@ import {
   clearPageTemplatesCache,
   type PageTemplateSummary,
 } from "../../../core/admin/services/pageTemplatesClient";
+import { primeRedactedSettingsCache } from "../../../core/admin/services/settingsCache";
 import { clearSiteSettingsCache } from "../../../core/admin/services/siteSettingsClient";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { SiteShellDialog } from "../../../core/admin/ui/menus/SiteShellDialog";
@@ -257,6 +258,38 @@ test("SiteShellDialog hydrates from cached clients without refetching options", 
     expect(paths.filter((path) => path.endsWith("/menus"))).toHaveLength(0);
     expect(paths.filter((path) => path.endsWith("/page-templates"))).toHaveLength(0);
     expect(paths.filter((path) => path.endsWith("/settings"))).toHaveLength(1);
+    view.cleanup();
+  } finally {
+    fetchMock.restore();
+    restoreStorage();
+  }
+});
+
+test("SiteShellDialog keeps cached settings visible when forced revalidation fails", async () => {
+  const { storage, restore: restoreStorage } = installLocalStorage();
+  const fetchMock = installFetch({
+    failSettingsGet: () => true,
+  });
+
+  try {
+    primeRedactedSettingsCache(rawSiteSettingsPayload());
+    setCacheValue(storage, cacheKeys.menusList, [menuSummary("menu-published", "Main menu")]);
+    setCacheValue(storage, cacheKeys.pageTemplatesList, [
+      templateSummary("template-published", "Footer columns"),
+    ]);
+
+    const view = mountOpenDialog();
+    await flushEffects();
+
+    const paths = fetchMock.calls.map((call) => String(call.input));
+    expect(paths.filter((path) => path.endsWith("/settings"))).toHaveLength(1);
+    expect(document.body.querySelector('[data-site-shell-dialog-error="load"]')).toBeNull();
+    expect(
+      document.body.querySelector('[data-site-shell-dialog-error="revalidate"]')
+    ).not.toBeNull();
+    expect(document.body.textContent).toContain("Settings exploded");
+    expect(document.body.querySelector('[data-site-shell-card="true"]')).not.toBeNull();
+    expect(findButton(document.body, "Save changes").disabled).toBe(false);
     view.cleanup();
   } finally {
     fetchMock.restore();

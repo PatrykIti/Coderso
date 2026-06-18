@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../../core/db/client";
 import { menuItems, menus } from "../../../core/db/schema";
 import { createMenu } from "../../../core/services/menus/menuService";
+import { createPageBlockV2 } from "../../../core/services/pages/pageDocumentV2";
 import { registerMenuRoutes } from "../../../core/server/routes/menuRoutes";
 import { ApiError } from "../../../core/server/errorHandler";
 import {
@@ -62,11 +63,13 @@ test("registerMenuRoutes wires endpoints", () => {
   );
 });
 
-test("menu schemas accept the appearance field on update only", () => {
+test("menu schemas accept design fields on update only", () => {
   expect(() =>
     validate(menuUpdateSchema, { appearance: { surfaceColor: "#0f172a" } })
   ).not.toThrow();
   expect(() => validate(menuUpdateSchema, { appearance: null })).not.toThrow();
+  expect(() => validate(menuUpdateSchema, { extras: [createPageBlockV2("button")] })).not.toThrow();
+  expect(() => validate(menuUpdateSchema, { extras: null })).not.toThrow();
   expect(() =>
     validate(menuCreateSchema, {
       name: "Primary",
@@ -129,6 +132,30 @@ testIfDb(
 );
 
 testIfDb(
+  "PATCH /menus/:id persists valid extras through the menus.settings envelope",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Extras ${randomUUID()}`,
+      location: `route-extras-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const block = createPageBlockV2("button", { id: "blk-route-cta" });
+    const handler = getPatchHandler();
+    const updated = (await handler({
+      params: { id: menu.id },
+      query: {},
+      body: { extras: [block] },
+    })) as typeof menus.$inferSelect;
+
+    expect(updated.settings).toEqual({
+      extras: [block],
+    });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
   "PATCH /menus/:id maps invalid appearance to a 400 menu_appearance_invalid ApiError",
   async () => {
     const menu = await createMenu({
@@ -164,6 +191,34 @@ testIfDb(
     } catch (error) {
       expect((error as ApiError).code).toBe("menu_appearance_invalid");
       expect((error as ApiError).details).toEqual({ field: "logoColor" });
+    }
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps invalid extras to a 400 menu_nav_extras_invalid ApiError",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Extras Invalid ${randomUUID()}`,
+      location: `route-extras-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: { extras: [createPageBlockV2("heading", { id: "blk-route-heading" })] },
+      });
+      throw new Error("expected menu_nav_extras_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_nav_extras_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({ field: "extras[0].type" });
     }
   },
   dbTestTimeoutMs
