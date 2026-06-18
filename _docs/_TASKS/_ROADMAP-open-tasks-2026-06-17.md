@@ -26,8 +26,8 @@
 ### In-progress domknięcia (cross-theme)
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
 |----|---------|-----------|--------|--------|------------------------|------------------|
-| TASK-458 | Menus Site Shell + Menu Design Editor | High | Small | near-done | 3 leaves Done, draft-leak naprawiony envelope'em, wszystkie gates zielone; zostaje live smoke + closure. | Stale-board / closure-hygiene (kod bezpieczny). |
-| TASK-336 | Widget Editor Contract V2 + One-Time Wizard | High | Medium | In Progress (near-done) | 18 leaves Done, smoke 38/38 zielony; zostaje 336-17: strict 38/38 gate (soft→hard) + closure. | Przyszły widget przejdzie CI bez kontraktu V2 / z duplikatem writable owner. |
+| TASK-458 | Menus Site Shell + Menu Design Editor | High | Small | near-done | 3 leaves Done, draft-leak naprawiony envelope'em, wszystkie gates zielone; zostaje live smoke + closure. | Stale-board / closure-hygiene (kod bezpieczny). | Done
+| TASK-336 | Widget Editor Contract V2 + One-Time Wizard | High | Medium | In Progress (near-done) | 18 leaves Done, smoke 38/38 zielony; zostaje 336-17: strict 38/38 gate (soft→hard) + closure. | Przyszły widget przejdzie CI bez kontraktu V2 / z duplikatem writable owner. | DONE
 
 ### Bundle / Custom Screens
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
