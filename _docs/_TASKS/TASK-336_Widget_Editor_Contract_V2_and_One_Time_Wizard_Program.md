@@ -6,7 +6,8 @@
 **Category:** Widgets + Page Builder + Admin UI + UX Contract + Playwright
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-256, TASK-287, TASK-288, TASK-334
-**Status:** To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-18
 
 ---
 
@@ -25,6 +26,23 @@ the first fix.
 
 Execution rule: fix ownership and enforceability first, remove per-widget
 duplication second, then introduce the one-time Wizard and daily-work tabs.
+
+## Completion Notes
+
+Completed 2026-06-18 as a task-board closure correction.
+
+TASK-336 is not deprecated. Pages v2 no longer uses legacy widget page data:
+Pages now write `schemaVersion: 2` documents with `sections[]` and atomic
+blocks, while old Page `blocks[]` data is reset on read/save paths. The widget
+editor contract remains valid historical infrastructure for retained non-Page
+surfaces such as Custom Screens, detail/template compatibility paths, the direct
+Widget Library route, and widget catalog/runtime compatibility.
+
+Final family evidence is recorded in the completed leaves, especially
+`TASK-336-19`, whose strict full widget-contract smoke closed with
+`adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and `metadataGaps=0`.
+Future removal of active legacy widget surfaces is explicitly owned by
+`TASK-468-07-L02`, not by this closure task.
 
 ## Current Evidence
 
@@ -138,9 +156,9 @@ Recommended semantic split:
 - [x] TASK-336-14: Layout Widget Advanced Technical Token Policy
 - [x] TASK-336-15: Renderer Fixture Overflow and Team UX Contract
 - [x] TASK-336-16: Existing One-Time Wizard Lifecycle and Daily Work Tabs
-- [ ] TASK-336-17: Report Docs Changelog and Closure
+- [x] TASK-336-17: Report Docs Changelog and Closure
 - [x] TASK-336-18: Remaining Page Builder Widget Contract Coverage
-- [ ] TASK-336-19: Remaining Widget UI Mode Drift Cleanup
+- [x] TASK-336-19: Remaining Widget UI Mode Drift Cleanup
 
 Numbering note: `TASK-336-18` was added after the initial closure leaf during
 task-family audit. It must land before `TASK-336-16` and `TASK-336-17`; closure

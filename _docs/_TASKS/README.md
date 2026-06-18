@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 56 tasks
+- **To Do:** 54 tasks
 - **In Progress:** 9 tasks
-- **Done:** 2596 tasks
+- **Done:** 2598 tasks
 
 ---
 
@@ -135,8 +135,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): inline canvas edit of rich-text blocks is lossy (commit strips markup via `stripInlineMarkup`) while the panel field preserves it; round-trip formatting with the sanitized rich-text contract. |
 | TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): `image.fit` (renderImage hardcodes object-cover) and `video.title` (no title/aria-label on `<video>`) are editable/persisted dead-props; wire both to the painted output. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
-| TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | New 38-widget editor ownership program: contract first, per-widget duplicate cleanup second, one-time Wizard last |
-| TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Close with strict 38-widget validation, Playwright evidence, docs, board, and changelog |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
 | TASK-105-08 | Final Per-File 100% Gap Closure | High | Large | Close final file-level line/branch/function gaps |
@@ -165,6 +163,8 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | Done (2026-06-18): historical widget editor contract program closed; Pages v2 now use sections/blocks, while retained non-Page widget surfaces stay covered until TASK-468-07-L02 removes legacy widget bridges. |
+| TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Done (2026-06-18): board/changelog closure correction records TASK-336-19 final strict smoke evidence and the Pages v2 boundary; not marked deprecated because widget contracts remain active outside Pages. |
 | TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Done (2026-06-17): Forced mount revalidation, recoverable autosave prompt, shared dirty guard, docs, changelog 1179, and live dev smoke passed. |
 | TASK-454-01 | Contract Freeze And Host Boundary | High | Medium | Done (2026-06-17): Corrected contract and fresh local read-only audit completed before source edits. |
 | TASK-454-01-L01 | Contract Corrections And Fresh Drift Pass | High | Small | Done (2026-06-17): Current source/task tree audit found no blocking drift before implementation. |
