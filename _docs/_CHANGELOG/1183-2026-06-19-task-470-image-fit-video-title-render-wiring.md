@@ -14,8 +14,13 @@
   closed the dead-prop class. The roadmap still listed it open because
   `_ROADMAP-open-tasks-2026-06-17.md` was generated against `main`, where that
   commit is not yet merged.
-- Moved TASK-470 from `To Do` to `Done` and updated `_docs/_TASKS/README.md`
-  statistics (To Do 54→53, Done 2602→2603).
+- Set the TASK-470 task file to `✅ Done` with a verification completion note.
+- Board table sync note: `_docs/_TASKS/README.md` (move the TASK-470 row from
+  `To Do` to `Done`, stats To Do −1 / Done +1) and the audit §9.4 item-2
+  reconciliation were left to the owning process — both files are under
+  concurrent edit by a sibling agent (TASK-469/471) and were repeatedly reset to
+  HEAD during this closure, so they are flagged for that owner rather than
+  fought over here.
 
 ### Renderer Wiring (already in code, confirmed)
 - `image.fit` → `core/services/pages/pageRendererV2.tsx#renderImage` applies
@@ -27,8 +32,11 @@
 ### Docs
 - Recorded the discovery, verification evidence, and live-environment limitation
   in `TASK-470_Pages_Editor_Image_Fit_And_Video_Title_Render_Wiring.md`.
-- Reconciled `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md` §9.4 item 2 to
-  `RESOLVED 2026-06-19`.
+- Updated `_docs/_TASKS/_ROADMAP-open-tasks-2026-06-17.md` (TASK-470 row → Done
+  + dated note).
+- Pending for the owning process: `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md`
+  §9.4 item 2 should be marked `RESOLVED 2026-06-19` (the file is reset-protected
+  / under concurrent edit, so the note did not persist from this closure).
 
 ## Validation
 

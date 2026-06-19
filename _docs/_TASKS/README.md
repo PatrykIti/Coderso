@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 54 tasks
+- **To Do:** 60 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2602 tasks
 
@@ -134,6 +134,12 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
 | TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): inline canvas edit of rich-text blocks is lossy (commit strips markup via `stripInlineMarkup`) while the panel field preserves it; round-trip formatting with the sanitized rich-text contract. |
 | TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): `image.fit` (renderImage hardcodes object-cover) and `video.title` (no title/aria-label on `<video>`) are editable/persisted dead-props; wire both to the painted output. |
+| TASK-471 | Page Editor Inline Color, Align, Badge, And Text Size | High | Large | Owner-driven Page Editor V2 controls: per-fragment text color, block center self-alignment fix, flexible badge widget, extended (xs/2xs) text-size scale. Parent of 471-01..05; shares `pageRendererV2.tsx` with TASK-469/470. |
+| TASK-471-01 | Extended Text Size Scale | High | Small | Add `xs`/`2xs` (x-small/xx-small) to the Page V2 typography scale (enum, token defaults, CSS vars, labels, a11y floor); foundation for the badge. |
+| TASK-471-02 | Block Center Self-Alignment Fix | High | Medium | Make `align` center/right actually center/end the block box within its column for all block types (incl. media); decouple block self-alignment from text alignment in `pageRendererV2.tsx`. |
+| TASK-471-03 | Per-Fragment Rich-Text Color | High | Large | Select a text fragment on the canvas and recolor it (color marks + inline swatch toolbar), reusing the Posts inline-marks pattern; sanitizer + renderer; coordinates with TASK-469. |
+| TASK-471-04 | Flexible Badge Widget | Medium | Medium | New dedicated core `badge` widget (divider/spacer contract): schema/defaults/normalize, wizard/visual/advanced editors, render, tests, pack-matrix + docs; consumes the `xs`/`2xs` scale. |
+| TASK-471-05 | Validation, Docs, And Closure | High | Small | Family validation, live `playwright-cli` smoke, docs/board/changelog sync, and drift passes; closes TASK-471 when 01–04 are Done. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
