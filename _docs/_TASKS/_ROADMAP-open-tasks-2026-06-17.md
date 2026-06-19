@@ -2,6 +2,8 @@
 > (57 To Do + 9 In Progress) na ten dzień — ocena realnego stanu/zależności/ryzyka per rodzina
 > + synteza. Zastępuje nieaktualny `_TMP_KOLEJNOSC_TASKOW_420-453_2026-06-11.md` (program
 > Pages Editor V2 / TASK-420..453 jest już CLOSED). Plik planistyczny — odświeżyć po domknięciu Fazy A.
+> Aktualizacja 2026-06-18: TASK-459 został zamknięty po świeżej walidacji
+> live `coderso-dev-core-host` + `playwright-cli`; patrz changelog 1182.
 
 # Roadmap otwartych programów Coderso
 
@@ -9,7 +11,10 @@
 
 - **Otwartych programów: 11** (+ 3 wstrzyknięte residua Pages: TASK-454, 469, 470). Program Pages Editor V2 (TASK-420..453) jest **CLOSED**.
 - **Dominuje skala**: aż **6 programów jest OGROMNYCH (Very Large, wielofazowych)** — TASK-414, TASK-468, TASK-239, TASK-240, TASK-105 oraz Store 021/022/023. Każdy wymaga **własnego planu**, nie wolno traktować ich jako pojedynczego taska.
-- **Najbliżej domknięcia** (tani, szybki zysk): **TASK-458** i **TASK-459** — kod, gates i offline lanes zielone; zostaje wyłącznie **live Playwright smoke + zamknięcie board/changelog**. Tuż za nimi **TASK-336** (18/18 leaves Done, zostaje tylko strict 38/38 gate + closure).
+- **Najbliżej domknięcia** (tani, szybki zysk): po aktualizacji 2026-06-18
+  TASK-458, TASK-459 i TASK-336 są CLOSED; kolejne ready-now pozycje to
+  TASK-454 oraz kontraktowy start TASK-468-01 / TASK-467 zgodnie z fazami
+  poniżej.
 - **Najpilniejszy realny defekt**: **TASK-454 §A** — autosave nigdy nie jest promowany do `currentData`, więc praca autora **cicho cofa się po ponownym otwarciu** (silent data-loss).
 - **Najcięższe zależności**: **TASK-467 blokuje TASK-468**; w Store sekwencja **021 → 023 → 022**; TASK-468 faza 01 (freeze kontraktu) jest tania i ready-now mimo zablokowanej reszty.
 
@@ -18,8 +23,8 @@
 ### Pages / Public Runtime / residua
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
 |----|---------|-----------|--------|--------|------------------------|------------------|
-| TASK-459 | Visitor Catalog: filtry, sort, paginacja | High | Small | near-done | 459-01..04 Done z przypiętą walidacją (SQL pushdown, migracja 0060, oracle parity); brakuje tylko live demo + board/changelog. | Keystone listingowy shipnięty, ale nieudowodniony E2E; latent integration gap. |
-| TASK-454 | Draft Recovery & Cache Trust Hardening | High | Medium | To Do | Cache-guard już shipnięty (449-02), ale §A autosave nie promowany do currentData, §B brak SPA nav-guard, §C hydration revalidation. | **Silent data-loss autora** + poisoned-cache render. |
+| TASK-459 | Visitor Catalog: filtry, sort, paginacja | High | Small | Done | Closed 2026-06-18: 459-01..05 Done; live demo, board, and changelog 1182 completed with fresh `playwright-cli` evidence. | None; retained here as historical closure note for this dated roadmap. | Done
+| TASK-454 | Draft Recovery & Cache Trust Hardening | High | Medium | To Do | Cache-guard już shipnięty (449-02), ale §A autosave nie promowany do currentData, §B brak SPA nav-guard, §C hydration revalidation. | **Silent data-loss autora** + poisoned-cache render. | Done
 | TASK-469 | Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | To Do | Inline edit gubi markup (`stripInlineMarkup`) gdy panel go zachowuje. | Lossy edit — korektność UX. |
 | TASK-470 | image.fit + video.title dead-props → renderer | Low | Small | To Do | Dwa martwe opcje panelu niewpięte do renderera; dzieli `pageRendererV2.tsx` z 469. | Drobne — dwie inert opcje panelu. |
 
@@ -60,11 +65,15 @@
 ## 3. Rekomendowana kolejność w fazach
 
 ### Faza A — domknięcia in-progress (tani, szybki zysk; ready-now)
-1. **TASK-458** (Small) — odpal live dev-host + Playwright, 3 scenariusze, evidence pod `.tmp/`, zamknij board+changelog. **Uwaga**: artefakty audytu z 2026-06-13 (`.tmp/task-458-459-live-audit-*`) to NIE acceptance smoke — potrzebny świeży przebieg.
-2. **TASK-459** (Small) — live demo otodom-style (facety, truthful counts, pager, shareable URL w świeżej sesji, no-JS GET fallback, draft nie wycieka) desktop+mobile; zamknij board+changelog. Seed przypiąć jako reusable fixture.
-3. **TASK-336** (Medium) — 336-17: wpiąć strict `listWidgetsForSurface('page-builder').toHaveLength(38)` + `requireContract:true` (soft→hard), finalny 38-widget smoke, wyzerować temporary duplicate-allowance entries, sync docs/board/changelog.
+1. **TASK-458** — CLOSED 2026-06-18: live smoke and board/changelog closure
+   completed.
+2. **TASK-459** — CLOSED 2026-06-18: live demo otodom-style, board sync,
+   and changelog 1182 completed.
+3. **TASK-336** — CLOSED 2026-06-18: historical widget contract closure,
+   board sync, and changelog completed.
 
-> Wszystkie trzy są niezależne i ready-now; jedyna bariera to czas operatora na live dev host. 458 i 459 mogą iść **równolegle** (różne tematy, brak kolizji plików).
+> Faza A została zrealizowana dla TASK-458, TASK-459 i TASK-336; kolejne
+> ready-now pozycje zaczynają się od Fazy B.
 
 ### Faza B — High z realnym ryzykiem (data-loss / perf / blokery)
 4. **TASK-454** (Medium) — **najpilniejszy realny defekt**: napraw §A (promocja autosave do `currentData`), §B (prawdziwy SPA unsaved-nav guard), §C (mount hydration revalidation). Ready-now, brak zależności.
@@ -101,6 +110,6 @@
 
 - **Blokery twarde**: TASK-467 → TASK-468 (impl 02–07); w Store 021 → 023 → 022.
 - **Współdzielone pliki**: TASK-469 + TASK-470 dzielą `pageRendererV2.tsx` → robić razem. TASK-240 krok 3 koliduje z page/post/content services → po pracach Pages.
-- **Może iść równolegle (brak kolizji plików)**: TASK-105 (testy) z dowolną fazą; TASK-458 ∥ TASK-459 (różne tematy); faza 01 TASK-468 ∥ TASK-467 (decision-record vs impl).
+- **Może iść równolegle (brak kolizji plików)**: TASK-105 (testy) z dowolną fazą; faza 01 TASK-468 ∥ TASK-467 (decision-record vs impl).
 - **Koordynacja zakresu**: TASK-406 ↔ acceptance-matrix child TASK-414 (nie dublować destructive/reset E2E).
 - **Do weryfikacji przed startem**: 5 zewn. deps TASK-467 (399-04/462/464/209/054-22); w TASK-414 cross-refy 404/405/406/410/412; w TASK-240 path-drift w "Files to Change".
