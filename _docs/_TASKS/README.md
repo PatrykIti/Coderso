@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 71 tasks
+- **To Do:** 81 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2602 tasks
 
@@ -134,23 +134,33 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
 | TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): inline canvas edit of rich-text blocks is lossy (commit strips markup via `stripInlineMarkup`) while the panel field preserves it; round-trip formatting with the sanitized rich-text contract. |
 | TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): `image.fit` (renderImage hardcodes object-cover) and `video.title` (no title/aria-label on `<video>`) are editable/persisted dead-props; wire both to the painted output. |
-| TASK-471 | Page Editor Inline Color, Align, Badge, And Text Size | High | Large | Owner-driven Page Editor V2 controls: per-fragment text color, block center self-alignment fix, flexible badge widget, extended (xs/2xs) text-size scale. Parent of 471-01..05; shares `pageRendererV2.tsx` with TASK-469/470. |
-| TASK-471-01 | Extended Text Size Scale | High | Small | Add `xs`/`2xs` (x-small/xx-small) to the Page V2 typography scale (enum, token defaults, CSS vars, labels, a11y floor); foundation for the badge. |
-| TASK-471-02 | Block Center Self-Alignment Fix | High | Medium | Make `align` center/right actually center/end the block box within its column for all block types (incl. media); decouple block self-alignment from text alignment in `pageRendererV2.tsx`. |
-| TASK-471-03 | Per-Fragment Rich-Text Color | High | Large | Select a text fragment on the canvas and recolor it (color marks + inline swatch toolbar), reusing the Posts inline-marks pattern; sanitizer + renderer; coordinates with TASK-469. |
-| TASK-471-04 | Flexible Badge Widget | Medium | Medium | New dedicated core `badge` widget (divider/spacer contract): schema/defaults/normalize, wizard/visual/advanced editors, render, tests, pack-matrix + docs; consumes the `xs`/`2xs` scale. |
-| TASK-471-05 | Validation, Docs, And Closure | High | Small | Family validation, live `playwright-cli` smoke, docs/board/changelog sync, and drift passes; closes TASK-471 when 01–04 are Done. |
-| TASK-472 | Page Editor Block Style Control Completeness | High | Small | Quick-win block-frame control fixes: surface registered margin controls in the Spacing panel + add border width/style (renderer hardcodes `1px solid`). Parent of 472-01/02. |
-| TASK-472-01 | Surface Block Margin Controls | High | Small | Margin controls are registered (`pageEditorControlRegistry.ts:464-475`) and painted (`pageRendererV2.tsx:511`) but missing from the Spacing panel; reproduce-first and surface them. |
-| TASK-472-02 | Block Border Width And Style Controls | High | Small | Add `borderWidth` (0–12px) + `borderStyle` enum to schema/controls; renderer reads them with a `1px solid` legacy fallback. |
-| TASK-473 | Page Editor Block Background Authoring | Medium | Medium | Visual gradient editor + block background-image wiring (gradient is raw CSS today; block bg image allowed by schema but unwired). Parent of 473-01/02. |
-| TASK-473-01 | Visual Gradient Editor | Medium | Medium | Compose a sanitized gradient (stops + direction) into the existing `style.background` string instead of pasting raw CSS. |
-| TASK-473-02 | Block Background Image Wiring | Medium | Medium | Add a block `style.backgroundImage` media control + paint it, reusing the section media-URL policy; video deferred. |
-| TASK-474 | Page Editor Editing Session History And Clipboard | Medium | Medium | Session undo/redo + copy/paste of blocks/sections (only `Cmd+D` duplicate exists today). Parent of 474-01/02; coordinate with TASK-454 dirty/autosave. |
-| TASK-474-01 | Editor Session Undo/Redo | Medium | Medium | Bounded in-session history + `Cmd+Z`/`Cmd+Shift+Z`, reset on save/publish/load; reducer-backed, hooks-safe. |
-| TASK-474-02 | Copy/Paste Blocks And Sections | Medium | Medium | `Cmd+C`/`Cmd+V` (+ palette) serialize/insert blocks/sections; paste re-normalizes untrusted clipboard input + regenerates ids. |
-| TASK-475 | Page Editor Design-Token Color Binding | Medium | Medium | Token-aware color control: bind colors to site tokens (`var(--color-*)` allowlist) instead of only raw hex; complements TASK-471-03/04 color sinks. |
-| TASK-476 | Page Editor Inline Rich-Text Formatting Marks | Medium | Medium | Extend TASK-471-03 fragment marks with bold/italic/link/highlight on the same canvas selection; reuses the Posts inline-marks pattern. Depends on TASK-471-03. |
+| TASK-471 | Page Editor Inline Color, Align, Badge, And Text Size | High | Large | Business umbrella: 4 owner capabilities — multi-color headings, real block centering, flexible badges, smaller text. Topic subtasks 471-01..05 (each with executable leaves). |
+| TASK-471-01 | Extended Text Size Scale | High | Small | Topic: add `xs`/`2xs` to the Page V2 typography scale. → L01. |
+| TASK-471-01-L01 | Add XS And 2XS Scale Steps | High | Small | Leaf: enum + token defaults + CSS vars + labels + a11y floor; foundation for the badge. |
+| TASK-471-02 | Block Center Self-Alignment Fix | High | Medium | Topic: `align` center/right centers the block box for all block types. → L01. |
+| TASK-471-02-L01 | Decouple Self-Alignment From Content | High | Medium | Leaf: split block self-alignment from text alignment in `pageRendererV2.tsx`; center via a grid-safe mechanism; honor align on media blocks. |
+| TASK-471-03 | Per-Fragment Rich-Text Color | High | Large | Topic: recolor a selected text fragment on the canvas. → L01. |
+| TASK-471-03-L01 | Text Color Marks And Inline Toolbar | High | Large | Leaf: color marks model + inline swatch toolbar + safe segment render, reusing the Posts inline-marks pattern; coordinates with TASK-469. |
+| TASK-471-04 | Flexible Badge Widget | Medium | Medium | Topic: new dedicated core `badge` widget. → L01. |
+| TASK-471-04-L01 | Badge Widget Schema, Editors, Render | Medium | Medium | Leaf: schema/defaults/normalize, wizard/visual/advanced editors, render, tests, pack-matrix + docs; consumes the `xs`/`2xs` scale. |
+| TASK-471-05 | Validation, Docs, And Closure | High | Small | Topic: family closure. → L01. |
+| TASK-471-05-L01 | Live Smoke, Docs, And Board Closure | High | Small | Leaf: lanes + live `playwright-cli` smoke + docs/board/changelog + drift passes; closes TASK-471 when 01–04 Done. |
+| TASK-472 | Page Editor V2 Authoring Controls Backlog | Medium | Large | Business umbrella: power-user authoring backlog (style completeness, background authoring, undo/redo + clipboard, token color binding, inline formatting). Topic subtasks 472-01..06. Sibling of TASK-471. |
+| TASK-472-01 | Block Style Control Completeness | High | Small | Topic: surface margins + add border width/style. → L01, L02. |
+| TASK-472-01-L01 | Surface Block Margin Controls | High | Small | Leaf: margin controls registered (`:464-475`) + painted (`:511`) but missing from the Spacing panel; reproduce-first + surface. |
+| TASK-472-01-L02 | Block Border Width And Style Controls | High | Small | Leaf: add `borderWidth` (0–12) + `borderStyle` enum; renderer reads them with a `1px solid` legacy fallback. |
+| TASK-472-02 | Block Background Authoring | Medium | Medium | Topic: gradient editor + block bg image. → L01, L02. |
+| TASK-472-02-L01 | Visual Gradient Editor | Medium | Medium | Leaf: compose a sanitized gradient into `style.background` instead of raw CSS. |
+| TASK-472-02-L02 | Block Background Image Wiring | Medium | Medium | Leaf: add block `style.backgroundImage` media control + paint it (reuse section media-URL policy); video deferred. |
+| TASK-472-03 | Editing Session History And Clipboard | Medium | Medium | Topic: undo/redo + copy/paste. → L01, L02. Coordinate with TASK-454. |
+| TASK-472-03-L01 | Editor Session Undo/Redo | Medium | Medium | Leaf: bounded history + `Cmd+Z`/`Cmd+Shift+Z`, reset on save/publish; reducer-backed, hooks-safe. |
+| TASK-472-03-L02 | Copy/Paste Blocks And Sections | Medium | Medium | Leaf: `Cmd+C`/`Cmd+V` (+ palette); paste re-normalizes untrusted clipboard + regenerates ids. |
+| TASK-472-04 | Design-Token Color Binding | Medium | Medium | Topic: bind colors to site tokens. → L01. |
+| TASK-472-04-L01 | Token-Aware Color Control | Medium | Medium | Leaf: token palette + `var(--color-*)` allowlist sink; raw values still via `sanitizeAuthoringCssColor`. |
+| TASK-472-05 | Inline Rich-Text Formatting Marks | Medium | Medium | Topic: bold/italic/link/highlight marks. → L01. Depends on TASK-471-03. |
+| TASK-472-05-L01 | Bold / Italic / Link / Highlight Marks | Medium | Medium | Leaf: extend the 471-03 marks union; link via `normalizeWidgetSafeHref`, highlight via `isSafeAuthoringCssColor`. |
+| TASK-472-06 | Validation, Docs, And Closure | Medium | Small | Topic: family closure. → L01. |
+| TASK-472-06-L01 | Live Smoke, Docs, And Board Closure | Medium | Small | Leaf: lanes + live `playwright-cli` smoke + docs/board/changelog + drift; closes TASK-472 when 01–05 Done. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
