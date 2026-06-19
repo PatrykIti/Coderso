@@ -6,7 +6,51 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-440, TASK-441
 
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-19
+
+---
+
+## Completion Note (2026-06-19)
+
+Closed after verification, not new implementation: both render-wiring fixes
+already landed on `feature/visual` in commit `540c7131` ("Fix Pages phase 3a
+post-impl drift", 2026-06-16) — the same drift-fix pass that closed the Phase 3A
+dead-prop class. The board/roadmap still listed this as open because the audit
+that generated `_ROADMAP-open-tasks-2026-06-17.md` ran against `main`, where the
+commit is not yet merged.
+
+Current `core/services/pages/pageRendererV2.tsx` state:
+
+- **`image.fit`** — `renderImage` now applies `pageImageFitClass(block.props.fit)`
+  (`object-contain` / `object-cover`) to the `<img>` class, replacing the
+  hardcoded `object-cover`.
+- **`video.title`** — the rendered `<video>` emits `title={title || undefined}`
+  and `aria-label={title || undefined}` from `block.props.title`.
+
+Verification evidence:
+
+- **Tests (green):** `bun run test:vitest tests/vitest/pages/page-renderer-v2.test.tsx`
+  → 51/51 passed, including `"image fit prop changes the rendered image
+  object-fit class"` (asserts `object-contain` vs `object-cover`) and
+  `"video autoplay prop reaches the rendered video with policy companions"`
+  (asserts `title="Intro"` + `aria-label="Intro"` on the autoplay block and
+  `title="Manual"` on the manual block).
+- **Live (`playwright-cli`, dev host `coderso-a.localhost`):** published a
+  throwaway page with an image block set to `fit=contain`; the public-runtime
+  DOM rendered `<img class="w-full rounded object-contain">` — confirming
+  panel → persistence → front paint end-to-end. The verify page was deleted
+  afterward (front now returns not-found).
+- **`video.title` live limitation:** the front `<video>` element could not be
+  rendered live because the renderer's `src` guard emits a placeholder when no
+  video source is set, and this environment has no `video/*` asset (a synthetic
+  142-byte MP4 was correctly rejected by media validation with HTTP 400; no
+  `ffmpeg` available to author a decodable clip). The panel Title value persists
+  and the renderer→DOM step is proven deterministically by the vitest assertion
+  above.
+
+No API routes are touched (renderer-only change), so no Security Contract
+subsection applies.
 
 ---
 
@@ -34,9 +78,9 @@ these two targets.
 
 ## Sub-Tasks
 
-- [ ] Map `image.fit` to the object-fit class in `renderImage` (cover/contain/fill per the schema enum).
-- [ ] Emit `title`/`aria-label` on the rendered `<video>` from `video.title`.
-- [ ] Add renderer regression coverage for both props (non-default value changes the painted output).
+- [x] Map `image.fit` to the object-fit class in `renderImage` (cover/contain per the schema enum; `pageImageFitClass`).
+- [x] Emit `title`/`aria-label` on the rendered `<video>` from `video.title`.
+- [x] Add renderer regression coverage for both props (non-default value changes the painted output).
 
 ---
 

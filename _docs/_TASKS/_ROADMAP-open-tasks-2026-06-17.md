@@ -4,6 +4,10 @@
 > Pages Editor V2 / TASK-420..453 jest już CLOSED). Plik planistyczny — odświeżyć po domknięciu Fazy A.
 > Aktualizacja 2026-06-18: TASK-459 został zamknięty po świeżej walidacji
 > live `coderso-dev-core-host` + `playwright-cli`; patrz changelog 1182.
+> Aktualizacja 2026-06-19: TASK-470 zamknięty jako verify-not-reimplement —
+> oba propsy (`image.fit`, `video.title`) wpięte już w commicie `540c7131`
+> (Faza 3a) na `feature/visual`; audyt patrzył na `main`, stąd wpis "otwarty".
+> vitest 51/51 + live `playwright-cli` (`object-contain` na froncie); changelog 1183.
 
 # Roadmap otwartych programów Coderso
 
@@ -26,7 +30,7 @@
 | TASK-459 | Visitor Catalog: filtry, sort, paginacja | High | Small | Done | Closed 2026-06-18: 459-01..05 Done; live demo, board, and changelog 1182 completed with fresh `playwright-cli` evidence. | None; retained here as historical closure note for this dated roadmap. | Done
 | TASK-454 | Draft Recovery & Cache Trust Hardening | High | Medium | To Do | Cache-guard już shipnięty (449-02), ale §A autosave nie promowany do currentData, §B brak SPA nav-guard, §C hydration revalidation. | **Silent data-loss autora** + poisoned-cache render. | Done
 | TASK-469 | Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | To Do | Inline edit gubi markup (`stripInlineMarkup`) gdy panel go zachowuje. | Lossy edit — korektność UX. |
-| TASK-470 | image.fit + video.title dead-props → renderer | Low | Small | To Do | Dwa martwe opcje panelu niewpięte do renderera; dzieli `pageRendererV2.tsx` z 469. | Drobne — dwie inert opcje panelu. |
+| TASK-470 | image.fit + video.title dead-props → renderer | Low | Small | Done | Closed 2026-06-19: oba propsy już wpięte w `pageRendererV2.tsx` (commit `540c7131`, Faza 3a); vitest 51/51 + live `playwright-cli` (`object-contain`); changelog 1183. | None; verify-not-reimplement, audyt patrzył na `main`. |
 
 ### In-progress domknięcia (cross-theme)
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
