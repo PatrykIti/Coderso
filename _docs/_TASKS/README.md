@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 74 tasks
+- **To Do:** 79 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2609 tasks
+- **Done:** 2610 tasks
 
 ---
 
@@ -132,7 +132,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Remove active screen-only widget builder/runtime surfaces after V4 cutover and backfill verification. |
 | TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Drop duplicate legacy `custom_screens.blocks` and `custom_screens.bindings` after guards pass. |
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
-| TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): `image.fit` (renderImage hardcodes object-cover) and `video.title` (no title/aria-label on `<video>`) are editable/persisted dead-props; wire both to the painted output. |
 | TASK-471 | Page Editor Inline Color, Align, Badge, And Text Size | High | Large | Business umbrella: 4 owner capabilities — multi-color headings, real block centering, flexible badges, smaller text. Topic subtasks 471-01..05 (each with executable leaves). |
 | TASK-471-01 | Extended Text Size Scale | High | Small | Topic: add `xs`/`2xs` to the Page V2 typography scale. → L01. |
 | TASK-471-01-L01 | Add XS And 2XS Scale Steps | High | Small | Leaf: enum + token defaults + CSS vars + labels + a11y floor; foundation for the badge. |
@@ -192,6 +191,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-469-02-L01 | Canvas Rich ContentEditable And Panel Parity | Medium | Medium | Done (2026-06-20): Rich inline edits preserve bold/link markup while plain targets remain text-only. |
 | TASK-469-03 | Validation Docs And Closure | Medium | Small | Done (2026-06-20): Validation, docs, board, changelog, and audit residual closure recorded. |
 | TASK-469-03-L01 | Live Smoke Docs Changelog And Audit Closure | Medium | Small | Done (2026-06-20): Targeted Vitest, lint/types/gates, live smoke, changelog, and audit reconciliation close the family. |
+| TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Done (2026-06-19): `image.fit` and `video.title` render wiring verified; board/audit drift reconciled on 2026-06-20 with changelog 1185. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | Done (2026-06-18): historical widget editor contract program closed; Pages v2 now use sections/blocks, while retained non-Page widget surfaces stay covered until TASK-468-07-L02 removes legacy widget bridges. |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Done (2026-06-18): board/changelog closure correction records TASK-336-19 final strict smoke evidence and the Pages v2 boundary; not marked deprecated because widget contracts remain active outside Pages. |
 | TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Done (2026-06-17): Forced mount revalidation, recoverable autosave prompt, shared dirty guard, docs, changelog 1179, and live dev smoke passed. |

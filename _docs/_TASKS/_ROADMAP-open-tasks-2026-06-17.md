@@ -13,7 +13,7 @@
 
 ## 1. Podsumowanie
 
-- **Otwartych programów: 11** (+ 3 wstrzyknięte residua Pages: TASK-454, 469, 470). Program Pages Editor V2 (TASK-420..453) jest **CLOSED**.
+- **Otwartych programów: 11** (+ 1 pozostające wstrzyknięte residuum Pages: TASK-454; TASK-469 i TASK-470 są zamknięte). Program Pages Editor V2 (TASK-420..453) jest **CLOSED**.
 - **Dominuje skala**: aż **6 programów jest OGROMNYCH (Very Large, wielofazowych)** — TASK-414, TASK-468, TASK-239, TASK-240, TASK-105 oraz Store 021/022/023. Każdy wymaga **własnego planu**, nie wolno traktować ich jako pojedynczego taska.
 - **Najbliżej domknięcia** (tani, szybki zysk): po aktualizacji 2026-06-18
   TASK-458, TASK-459 i TASK-336 są CLOSED; kolejne ready-now pozycje to
@@ -27,7 +27,6 @@
 ### Pages / Public Runtime / residua
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
 |----|---------|-----------|--------|--------|------------------------|------------------|
-| TASK-469 | Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | To Do | Inline edit gubi markup (`stripInlineMarkup`) gdy panel go zachowuje. | Lossy edit — korektność UX. |
 | TASK-470 | image.fit + video.title dead-props → renderer | Low | Small | Done | Closed 2026-06-19: oba propsy już wpięte w `pageRendererV2.tsx` (commit `540c7131`, Faza 3a); vitest 51/51 + live `playwright-cli` (`object-contain`); changelog 1183. | None; verify-not-reimplement, audyt patrzył na `main`. |
 
 ### Bundle / Custom Screens
@@ -75,8 +74,8 @@
 4. **TASK-454** (Medium) — **najpilniejszy realny defekt**: napraw §A (promocja autosave do `currentData`), §B (prawdziwy SPA unsaved-nav guard), §C (mount hydration revalidation). Ready-now, brak zależności.
 5. **TASK-467** (Large) — **najpierw zweryfikuj 5 zewn. deps**: 399-04, 462, 464, 209, 054-22. Łańcuch ściśle sekwencyjny 01→02→03(L01→L02→L03→L04); **nie paralelizować**. L04 to hard closure gate (musi failować, póki któryś over-budget chunk niezfixowany). Land przed TASK-468.
 
-### Faza C — residua/polish Pages (wstawki, tanie)
-6. **TASK-469** (Medium) + **TASK-470** (Small) — **zrobić razem**: oba dzielą `pageRendererV2.tsx`, więc jeden touch pliku zamiast dwóch. 469 = fidelity inline edit (zachowanie markupu), 470 = wpięcie `image.fit` + `video.title`. Deps (422/438/440/441) Done.
+### Faza C — residua/polish Pages (zamknięte TASK-469/TASK-470)
+6. **TASK-469** (Medium) + **TASK-470** (Small) — **zamknięte**: oba dzieliły `pageRendererV2.tsx`; TASK-469 domknął rich inline edit fidelity 2026-06-20, a TASK-470 zweryfikował wpięcie `image.fit` + `video.title` 2026-06-19. Deps (422/438/440/441) Done.
 
 ### Faza D — duże programy produktowe (wg zależności i wartości)
 7. **TASK-468 — faza 01 NATYCHMIAST** (tania, odblokowująca): freeze kontraktu V4 + drift audit + decision record. Reszta (02–07) czeka na **TASK-467** (blocker) i 464 (Done). **OGROMNY — własny plan**; faza 07 destructive (drop `blocks/bindings`) tylko po backfill verification.
@@ -105,7 +104,7 @@
 ## 5. Notatki o zależnościach i równoległości
 
 - **Blokery twarde**: TASK-467 → TASK-468 (impl 02–07); w Store 021 → 023 → 022.
-- **Współdzielone pliki**: TASK-469 + TASK-470 dzielą `pageRendererV2.tsx` → robić razem. TASK-240 krok 3 koliduje z page/post/content services → po pracach Pages.
+- **Współdzielone pliki**: TASK-469 + TASK-470 dzieliły `pageRendererV2.tsx` i są zamknięte; TASK-240 krok 3 koliduje z page/post/content services → po pracach Pages.
 - **Może iść równolegle (brak kolizji plików)**: TASK-105 (testy) z dowolną fazą; faza 01 TASK-468 ∥ TASK-467 (decision-record vs impl).
 - **Koordynacja zakresu**: TASK-406 ↔ acceptance-matrix child TASK-414 (nie dublować destructive/reset E2E).
 - **Do weryfikacji przed startem**: 5 zewn. deps TASK-467 (399-04/462/464/209/054-22); w TASK-414 cross-refy 404/405/406/410/412; w TASK-240 path-drift w "Files to Change".

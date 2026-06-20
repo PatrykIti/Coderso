@@ -52,6 +52,31 @@ Verification evidence:
 No API routes are touched (renderer-only change), so no Security Contract
 subsection applies.
 
+## Post-Closure Drift Reconciliation (2026-06-20)
+
+Local reconciliation confirmed the renderer code still has no TASK-470 drift:
+`image.fit` is mapped through `pageImageFitClass`, and `video.title` is emitted
+only on a rendered `<video>`. The remaining drift was closure hygiene:
+
+- `_docs/_TASKS/README.md` moved TASK-470 from `To Do` to `Done` and refreshed
+  board statistics.
+- `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md` §9.4 item 2 is now marked
+  resolved against TASK-470 and changelog 1183.
+- `_docs/_TASKS/_ROADMAP-open-tasks-2026-06-17.md` no longer counts TASK-470
+  as an open residual or future "do together" item.
+- `_docs/_CHANGELOG/1185-2026-06-20-task-470-drift-reconciliation.md` records
+  this reconciliation, and changelog 1183 now points to the follow-up.
+- `tests/vitest/pages/page-renderer-v2.test.tsx` adds a negative guard proving
+  that an empty or unsafe video `src` renders the placeholder without leaking
+  `title` / `aria-label` onto inert markup.
+
+Reconciliation validation:
+
+- `bun run test:vitest -- tests/vitest/pages/page-renderer-v2.test.tsx`
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `git diff --check`
+
 ---
 
 ## Overview

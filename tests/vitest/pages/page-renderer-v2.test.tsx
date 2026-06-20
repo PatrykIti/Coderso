@@ -1559,6 +1559,45 @@ test("video autoplay prop reaches the rendered video with policy companions", ()
   expect(videoTags[1]).toContain('aria-label="Manual"');
 });
 
+test("video title stays off the inert placeholder when no safe source renders", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-video-placeholder-title",
+    blocks: [
+      createPageBlockV2("video", {
+        id: "blk-video-empty-src",
+        props: {
+          src: "",
+          title: "No source",
+          autoplay: false,
+          muted: true,
+        },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video-unsafe-src",
+        props: {
+          src: "javascript:alert(1)",
+          title: "Unsafe source",
+          autoplay: true,
+          muted: false,
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-block-id="blk-video-empty-src"');
+  expect(html).toContain('data-block-id="blk-video-unsafe-src"');
+  expect(html).toContain("Video");
+  expect(html).not.toContain("<video");
+  expect(html).not.toContain("No source");
+  expect(html).not.toContain("Unsafe source");
+  expect(html).not.toContain("title=");
+  expect(html).not.toContain("aria-label=");
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("alert(1)");
+});
+
 test("divider tone prop changes the rendered divider border style", () => {
   const section = createPageSectionV2("content", {
     id: "sec-divider-tone",

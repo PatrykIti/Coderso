@@ -236,7 +236,7 @@ Klasyfikator z §1/§3.1 deklarował `switch=swatch=slider=segmentedGroup=0 w 25
 Zgodnie z regułą error‑handling TASK‑453‑01‑L01 („unowned findings produce a new follow‑on task, not a silent note"):
 
 1. ✅ **RESOLVED 2026‑06‑20 — Rich‑text inline edit stratny** (residuum §3.4 / Faza 3a) — TASK‑469 routes `format:"rich"` canvas inline edits through `sanitizeAuthoringRichTextHtml`, preserving allowlisted markup (`strong`, `em`, safe `a[href]`, lists, `br`) while dangerous tags/content and unsafe links fail closed. Plain inline targets still use the text‑only `stripInlineMarkup` path. Severity: MEDIUM (UX).
-2. **`image.fit` + `video.title` martwe‑propsy** (Faza 3a, ta sama klasa) — edytowalne+persistowane, nie malowane przez renderer. **Owner: TASK‑470** (Image Fit & Video Title Render Wiring). Severity: LOW.
+2. ✅ **RESOLVED 2026‑06‑19 — `image.fit` + `video.title` martwe‑propsy** (Faza 3a, ta sama klasa) — TASK‑470 verified that both values are now painted by `pageRendererV2.tsx`: `image.fit` reaches the image object-fit class and `video.title` reaches the rendered `<video>` `title` / `aria-label` when a safe source exists. Changelog 1183 records the renderer closure; changelog 1185 reconciles the deferred board/audit drift. Severity: LOW.
 3. **TASK‑454 (Draft Recovery & Cache Trust Hardening)** — autosave nie promowany do `currentData`, brak SPA unsaved‑nav guard, mount ufa zatrutemu TTL‑fresh cache. **Owner: TASK‑454 (otwarty, częściowo naprawiony).** Severity: HIGH (osobny tor, nie część wizji panelu).
 
 ### 9.5 Oświadczenie domknięcia

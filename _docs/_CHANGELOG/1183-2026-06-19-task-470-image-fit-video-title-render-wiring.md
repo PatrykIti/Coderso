@@ -21,6 +21,8 @@
   concurrent edit by a sibling agent (TASK-469/471) and were repeatedly reset to
   HEAD during this closure, so they are flagged for that owner rather than
   fought over here.
+- Follow-up 2026-06-20: changelog 1185 resolved this deferred board/audit sync
+  and added the no-source video placeholder regression guard.
 
 ### Renderer Wiring (already in code, confirmed)
 - `image.fit` → `core/services/pages/pageRendererV2.tsx#renderImage` applies
