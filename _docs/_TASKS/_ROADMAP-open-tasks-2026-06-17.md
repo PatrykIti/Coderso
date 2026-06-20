@@ -27,16 +27,8 @@
 ### Pages / Public Runtime / residua
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
 |----|---------|-----------|--------|--------|------------------------|------------------|
-| TASK-459 | Visitor Catalog: filtry, sort, paginacja | High | Small | Done | Closed 2026-06-18: 459-01..05 Done; live demo, board, and changelog 1182 completed with fresh `playwright-cli` evidence. | None; retained here as historical closure note for this dated roadmap. | Done
-| TASK-454 | Draft Recovery & Cache Trust Hardening | High | Medium | To Do | Cache-guard już shipnięty (449-02), ale §A autosave nie promowany do currentData, §B brak SPA nav-guard, §C hydration revalidation. | **Silent data-loss autora** + poisoned-cache render. | Done
 | TASK-469 | Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | To Do | Inline edit gubi markup (`stripInlineMarkup`) gdy panel go zachowuje. | Lossy edit — korektność UX. |
 | TASK-470 | image.fit + video.title dead-props → renderer | Low | Small | Done | Closed 2026-06-19: oba propsy już wpięte w `pageRendererV2.tsx` (commit `540c7131`, Faza 3a); vitest 51/51 + live `playwright-cli` (`object-contain`); changelog 1183. | None; verify-not-reimplement, audyt patrzył na `main`. |
-
-### In-progress domknięcia (cross-theme)
-| ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
-|----|---------|-----------|--------|--------|------------------------|------------------|
-| TASK-458 | Menus Site Shell + Menu Design Editor | High | Small | near-done | 3 leaves Done, draft-leak naprawiony envelope'em, wszystkie gates zielone; zostaje live smoke + closure. | Stale-board / closure-hygiene (kod bezpieczny). | Done
-| TASK-336 | Widget Editor Contract V2 + One-Time Wizard | High | Medium | In Progress (near-done) | 18 leaves Done, smoke 38/38 zielony; zostaje 336-17: strict 38/38 gate (soft→hard) + closure. | Przyszły widget przejdzie CI bez kontraktu V2 / z duplikatem writable owner. | DONE
 
 ### Bundle / Custom Screens
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
