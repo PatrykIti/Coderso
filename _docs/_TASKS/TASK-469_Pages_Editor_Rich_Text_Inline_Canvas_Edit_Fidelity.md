@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Inline Edit
 **Estimated Effort:** Medium
 **Dependencies:** TASK-422 (inline-edit contract + canvas `contentEditable` infrastructure, Done), TASK-438 (text-block remediation that made `format:"rich"` panel-only, Done). Shares `core/services/pages/pageRendererV2.tsx` with sibling TASK-470 — coordinate so both land in one renderer touch.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-20
 
 ---
 
@@ -95,9 +96,9 @@ so the sanitizer invariants are load-bearing and enforced per leaf:
 
 ## Sub-Tasks
 
-- [ ] TASK-469-01: Inline-Edit Contract Rich-Aware Sanitization
-- [ ] TASK-469-02: Canvas Inline Rich-Text Surface And Commit Wiring
-- [ ] TASK-469-03: Validation Docs And Closure
+- [x] TASK-469-01: Inline-Edit Contract Rich-Aware Sanitization
+- [x] TASK-469-02: Canvas Inline Rich-Text Surface And Commit Wiring
+- [x] TASK-469-03: Validation Docs And Closure
 
 ## Implementation Order
 

@@ -4306,6 +4306,12 @@ const setInlineRegionText = (element: HTMLElement, value: string) => {
   });
 };
 
+const setInlineRegionHtml = (element: HTMLElement, value: string) => {
+  React.act(() => {
+    element.innerHTML = value;
+  });
+};
+
 test("PageEditor canvas dblclick enters inline edit and typing plus blur updates the panel field", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
@@ -4590,6 +4596,74 @@ test("PageEditor inline edit commits sanitized plain text and never writes marku
     const committed = savedDocument.sections[0]?.blocks[1]?.props.text;
     expect(committed).toBe("Pasted rich content");
     expect(String(committed)).not.toContain("<");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor rich inline edit preserves sanitized markup and updates the panel field", async () => {
+  const richPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-rich-inline",
+          name: "Rich inline",
+          blocks: [
+            createPageBlockV2("text", {
+              id: "blk-rich-inline",
+              props: {
+                text: "<p>Existing <strong>rich</strong> copy</p>",
+                format: "rich",
+                align: "left",
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = richPage;
+  pageEditorState.currentPage = richPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={richPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-rich-inline"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-rich-inline", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-rich-inline", "text");
+    expect(region.getAttribute("data-page-editor-inline-edit")).toBe("active");
+    expect(region.querySelector("strong")?.textContent).toBe("rich");
+
+    setInlineRegionHtml(
+      region,
+      '<p>Edited <strong>rich</strong> <a href="/safe" onclick="alert(1)">safe</a><script>alert(1)</script></p>'
+    );
+    blurElement(region);
+    await flush();
+
+    const expected =
+      '<p>Edited <strong>rich</strong> <a href="/safe" rel="nofollow noreferrer">safe</a></p>';
+    expect(findFieldControl(view.container, "Primary text").value).toBe(expected);
+    expect(
+      view.container.querySelector('[data-page-editor-block-id="blk-rich-inline"] strong')
+        ?.textContent
+    ).toBe("rich");
+    expect(
+      view.container
+        .querySelector('[data-page-editor-block-id="blk-rich-inline"] a')
+        ?.getAttribute("href")
+    ).toBe("/safe");
+    expect(view.container.textContent).not.toContain("alert(1)");
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks[0]?.props.text).toBe(expected);
   } finally {
     view.cleanup();
   }

@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 81 tasks
+- **To Do:** 74 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2602 tasks
+- **Done:** 2609 tasks
 
 ---
 
@@ -132,7 +132,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Remove active screen-only widget builder/runtime surfaces after V4 cutover and backfill verification. |
 | TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Drop duplicate legacy `custom_screens.blocks` and `custom_screens.bindings` after guards pass. |
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Close docs, changelog, board status, validation evidence, and final drift pass for TASK-468. |
-| TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): inline canvas edit of rich-text blocks is lossy (commit strips markup via `stripInlineMarkup`) while the panel field preserves it; round-trip formatting with the sanitized rich-text contract. |
 | TASK-470 | Pages Editor Image Fit And Video Title Render Wiring | Low | Small | Carried-forward residual (`_FOLLOWUP_REPORT_2026-06-10.md` §9.4): `image.fit` (renderImage hardcodes object-cover) and `video.title` (no title/aria-label on `<video>`) are editable/persisted dead-props; wire both to the painted output. |
 | TASK-471 | Page Editor Inline Color, Align, Badge, And Text Size | High | Large | Business umbrella: 4 owner capabilities — multi-color headings, real block centering, flexible badges, smaller text. Topic subtasks 471-01..05 (each with executable leaves). |
 | TASK-471-01 | Extended Text Size Scale | High | Small | Topic: add `xs`/`2xs` to the Page V2 typography scale. → L01. |
@@ -186,6 +185,13 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Done (2026-06-20): Rich `text` blocks now inline-edit on canvas and round-trip allowlisted markup through the shared authoring sanitizer. |
+| TASK-469-01 | Inline-Edit Contract Rich-Aware Sanitization | Medium | Medium | Done (2026-06-20): `preserveMarkup` targets, rich sanitizer dispatch, and contract coverage landed. |
+| TASK-469-01-L01 | Rich Target Resolution And Shared-Sanitizer Commit | Medium | Medium | Done (2026-06-20): Rich string targets resolve, non-string values fail closed, and required empty commits retain previous markup. |
+| TASK-469-02 | Canvas Inline Rich-Text Surface And Commit Wiring | Medium | Medium | Done (2026-06-20): Canvas rich contenteditable reads `innerHTML` and commits through `commitInlineText`. |
+| TASK-469-02-L01 | Canvas Rich ContentEditable And Panel Parity | Medium | Medium | Done (2026-06-20): Rich inline edits preserve bold/link markup while plain targets remain text-only. |
+| TASK-469-03 | Validation Docs And Closure | Medium | Small | Done (2026-06-20): Validation, docs, board, changelog, and audit residual closure recorded. |
+| TASK-469-03-L01 | Live Smoke Docs Changelog And Audit Closure | Medium | Small | Done (2026-06-20): Targeted Vitest, lint/types/gates, live smoke, changelog, and audit reconciliation close the family. |
 | TASK-336 | Widget Editor Contract V2 and One-Time Wizard Program | High | Very Large | Done (2026-06-18): historical widget editor contract program closed; Pages v2 now use sections/blocks, while retained non-Page widget surfaces stay covered until TASK-468-07-L02 removes legacy widget bridges. |
 | TASK-336-17 | Report Docs Changelog and Closure | High | Medium | Done (2026-06-18): board/changelog closure correction records TASK-336-19 final strict smoke evidence and the Pages v2 boundary; not marked deprecated because widget contracts remain active outside Pages. |
 | TASK-454 | Page Editor Draft Recovery And Cache Trust Hardening | High | Medium | Done (2026-06-17): Forced mount revalidation, recoverable autosave prompt, shared dirty guard, docs, changelog 1179, and live dev smoke passed. |

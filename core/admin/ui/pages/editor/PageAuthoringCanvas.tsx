@@ -44,7 +44,7 @@ export type PageEditorInlineEditTarget = {
 export type PageEditorInlineEditCommit = {
   blockId: string;
   propPath: string;
-  /** Text content of the contenteditable region at blur time. */
+  /** Plain text or rich HTML content of the contenteditable region at blur time. */
   text: string;
   /** Text the canvas painted when editing started (includes renderer fallbacks). */
   renderedText: string;
@@ -92,6 +92,7 @@ const InlineEditableCanvasText = ({
   const target = resolveInlineEditTarget(block, propPath);
   if (!target) return <>{children ?? text}</>;
   const { multiline } = target;
+  const preserveMarkup = target.preserveMarkup === true;
   const wrapperKey = `${propPath}:${text}`;
   const wrapperProps = {
     ref: editing ? focusInlineEditableNode : undefined,
@@ -135,13 +136,15 @@ const InlineEditableCanvasText = ({
           onCommit({
             blockId: block.id,
             propPath,
-            text: readInlineEditableElementText(event.currentTarget),
+            text: preserveMarkup
+              ? event.currentTarget.innerHTML
+              : readInlineEditableElementText(event.currentTarget),
             renderedText: text,
           });
         }
       : undefined,
   };
-  const content = editing ? text : (children ?? text);
+  const content = editing && !preserveMarkup ? text : (children ?? text);
   if (display === "block") {
     return (
       <div key={wrapperKey} {...wrapperProps}>

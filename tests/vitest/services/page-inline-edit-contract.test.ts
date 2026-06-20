@@ -11,9 +11,11 @@ import {
   inlineEditableTargets,
   inlineListItemPropPath,
   resolveInlineEditTarget,
+  sanitizeInlineRichText,
   sanitizeInlineText,
   type InlineEditableTarget,
 } from "../../../core/services/pages/pageInlineEditContract";
+import { sanitizeAuthoringRichTextHtml } from "../../../core/services/pages/pageAuthoringSanitizers";
 
 const targetFor = (blockType: PageBlockType, propPath: string): InlineEditableTarget => {
   const target = inlineEditableTargets.find(
@@ -91,10 +93,28 @@ describe("resolveInlineEditTarget", () => {
     }
   });
 
-  test("text blocks with rich format stay panel-only to avoid lossy inline commits", () => {
+  test("text blocks with rich format resolve to markup-preserving targets", () => {
     const block = createPageBlockV2("text", {
-      props: { text: "Rich copy", format: "rich", align: "left" },
+      props: { text: "<p>Rich <strong>copy</strong></p>", format: "rich", align: "left" },
     });
+    const target = resolveInlineEditTarget(block, "text");
+    expect(target).toEqual({
+      blockType: "text",
+      propPath: "text",
+      multiline: true,
+      allowEmpty: false,
+      preserveMarkup: true,
+    });
+    expect(Object.isFrozen(target)).toBe(true);
+  });
+
+  test("text blocks with rich format fail closed when the stored value is not a string", () => {
+    const block: PageBlockV2 = {
+      ...createPageBlockV2("text", {
+        props: { text: "Rich copy", format: "rich", align: "left" },
+      }),
+      props: { text: 42, format: "rich", align: "left" },
+    };
     expect(resolveInlineEditTarget(block, "text")).toBeNull();
   });
 
@@ -236,6 +256,51 @@ describe("sanitizeInlineText", () => {
   });
 });
 
+describe("sanitizeInlineRichText", () => {
+  const richTarget = (): InlineEditableTarget => {
+    const target = resolveInlineEditTarget(
+      createPageBlockV2("text", {
+        props: { text: "<p>Existing</p>", format: "rich", align: "left" },
+      }),
+      "text"
+    );
+    if (!target) throw new Error("Missing rich inline edit target");
+    return target;
+  };
+
+  test("preserves the page rich-text allowlist and safe links", () => {
+    const raw =
+      '<p>Hello <strong>bold</strong> <em>em</em> <i>i</i> <code>code</code><br><a href="/safe" onclick="alert(1)">safe</a></p><ul><li>One</li></ul><ol><li>Two</li></ol>';
+    const sanitized = sanitizeInlineRichText(richTarget(), raw);
+
+    expect(sanitized).toBe(
+      '<p>Hello <strong>bold</strong> <em>em</em> <i>i</i> <code>code</code><br><a href="/safe" rel="nofollow noreferrer">safe</a></p><ul><li>One</li></ul><ol><li>Two</li></ol>'
+    );
+  });
+
+  test("matches the shared authoring rich-text sanitizer after line/control cleanup", () => {
+    const raw = "<p>Line\r\nbreak\u0000 <strong>safe</strong></p>";
+    expect(sanitizeInlineRichText(richTarget(), raw)).toBe(
+      sanitizeAuthoringRichTextHtml("<p>Line\nbreak <strong>safe</strong></p>").trim()
+    );
+  });
+
+  test("drops dangerous tags, dangerous content, and unsafe hrefs", () => {
+    const sanitized = sanitizeInlineRichText(
+      richTarget(),
+      '<p>Safe <strong>copy</strong></p><script>alert(1)</script><style>p{color:red}</style><a href="javascript:alert(1)">bad</a><svg><p>hidden</p></svg>'
+    );
+
+    expect(sanitized).toContain("<strong>copy</strong>");
+    expect(sanitized).toContain("bad");
+    expect(sanitized).not.toContain("<script");
+    expect(sanitized).not.toContain("<style");
+    expect(sanitized).not.toContain("alert(1)");
+    expect(sanitized).not.toContain("javascript:");
+    expect(sanitized).not.toContain("hidden");
+  });
+});
+
 describe("commitInlineText", () => {
   test("commits sanitized text for required targets", () => {
     expect(commitInlineText(targetFor("heading", "text"), "Old", "<b>New</b> title ")).toBe(
@@ -272,6 +337,43 @@ describe("commitInlineText", () => {
       '<script>alert(1)</script><span data-x="1">Users</span>'
     );
     expect(committed).toBe("Users");
+  });
+
+  test("preserves sanitized markup for rich targets", () => {
+    const target = resolveInlineEditTarget(
+      createPageBlockV2("text", {
+        props: { text: "<p>Old</p>", format: "rich", align: "left" },
+      }),
+      "text"
+    );
+    expect(target?.preserveMarkup).toBe(true);
+
+    const committed = commitInlineText(
+      target as InlineEditableTarget,
+      "<p>Old</p>",
+      '<p>New <strong>copy</strong> <a href="https://example.com">link</a></p>'
+    );
+
+    expect(committed).toBe(
+      '<p>New <strong>copy</strong> <a href="https://example.com" rel="nofollow noreferrer">link</a></p>'
+    );
+  });
+
+  test("keeps the previous rich value when a required rich commit sanitizes empty", () => {
+    const target = resolveInlineEditTarget(
+      createPageBlockV2("text", {
+        props: { text: "<p>Old <strong>copy</strong></p>", format: "rich", align: "left" },
+      }),
+      "text"
+    );
+    expect(target?.preserveMarkup).toBe(true);
+    expect(
+      commitInlineText(
+        target as InlineEditableTarget,
+        "<p>Old <strong>copy</strong></p>",
+        "  <script>alert(1)</script>  "
+      )
+    ).toBe("<p>Old <strong>copy</strong></p>");
   });
 });
 

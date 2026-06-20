@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Admin Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-469-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-20
 
 ---
 
@@ -22,12 +23,12 @@ through `commitInlineText`.
 
 ## Sub-Tasks
 
-- [ ] Branch the editable surface: rich targets render the sanitized rich
+- [x] Branch the editable surface: rich targets render the sanitized rich
       `children` inside the `contentEditable`; plain targets keep text.
-- [ ] On commit, read `innerHTML` for rich targets and the existing plain-text
+- [x] On commit, read `innerHTML` for rich targets and the existing plain-text
       reader otherwise; call `commitInlineText(target, previous, raw)`.
-- [ ] Keep the null-guard fail-closed render for non-resolving targets.
-- [ ] Preserve existing focus/blur/escape behavior and dirty-state semantics.
+- [x] Keep the null-guard fail-closed render for non-resolving targets.
+- [x] Preserve existing focus/blur/escape behavior and dirty-state semantics.
 
 ## Files To Change
 

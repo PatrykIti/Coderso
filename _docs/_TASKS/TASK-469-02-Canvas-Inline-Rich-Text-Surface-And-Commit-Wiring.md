@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Admin Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-469-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-20
 
 ---
 
@@ -21,7 +22,7 @@ Plain-text targets keep their existing behavior. Result: inline ↔ panel parity
 
 ## Sub-Tasks
 
-- [ ] TASK-469-02-L01: Canvas Rich ContentEditable And Panel Parity
+- [x] TASK-469-02-L01: Canvas Rich ContentEditable And Panel Parity
 
 ## Files To Change
 

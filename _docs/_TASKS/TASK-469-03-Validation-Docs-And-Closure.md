@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Closure
 **Estimated Effort:** Small
 **Dependencies:** TASK-469-01, TASK-469-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-20
 
 ---
 
@@ -18,7 +19,7 @@ landed with TASK-470, coordinate the single shared `pageRendererV2.tsx` touch.
 
 ## Sub-Tasks
 
-- [ ] TASK-469-03-L01: Live Smoke Docs Changelog And Audit Closure
+- [x] TASK-469-03-L01: Live Smoke Docs Changelog And Audit Closure
 
 ## Files To Change
 

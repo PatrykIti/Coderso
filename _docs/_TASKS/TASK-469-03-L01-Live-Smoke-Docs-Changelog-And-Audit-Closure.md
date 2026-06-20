@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Closure
 **Estimated Effort:** Small
 **Dependencies:** TASK-469-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-20
 
 ---
 
@@ -18,17 +19,17 @@ reconcile the audit residual.
 
 ## Sub-Tasks
 
-- [ ] Run the Vitest contract + sanitizer suites, the canvas UI flow suite, lint,
+- [x] Run the Vitest contract + sanitizer suites, the canvas UI flow suite, lint,
       types, and `bun run gates:coderso`; record results.
-- [ ] Live `coderso-dev-core-host` + `playwright-cli`: publish a page with a
+- [x] Live `coderso-dev-core-host` + `playwright-cli`: publish a page with a
       `format:"rich"` block, inline-edit on the canvas (add `<strong>` + a link),
       blur, confirm the panel field shows the same markup and the public front
       paints it; delete the throwaway page afterward.
-- [ ] Add a dated changelog entry (next free number at closure) and index it in
+- [x] Add a dated changelog entry (next free number at closure) and index it in
       `_docs/_CHANGELOG/README.md`.
-- [ ] Move TASK-469 and all children to `✅ Done` in `_docs/_TASKS/README.md`;
+- [x] Move TASK-469 and all children to `✅ Done` in `_docs/_TASKS/README.md`;
       update To Do / Done statistics.
-- [ ] Reconcile `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md` §9.4 item 1 and the
+- [x] Reconcile `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md` §9.4 item 1 and the
       §3.4 row to resolved, referencing TASK-469.
 
 ## Files To Change
@@ -59,3 +60,22 @@ reconcile the audit residual.
 2. Changelog entry added + indexed; board + statistics synced.
 3. Audit §9.4 item 1 + §3.4 reconciled to resolved.
 4. TASK-469 has no open children.
+
+## Completion Notes
+
+Completed 2026-06-20.
+
+- Targeted Vitest passed: `tests/vitest/services/page-inline-edit-contract.test.ts`,
+  `tests/vitest/pages/page-authoring-sanitizers.test.ts`,
+  `tests/vitest/ui/page-authoring-canvas.test.tsx`, and
+  `tests/vitest/ui/page-editor-v2-flow.test.tsx` (`4` files, `144` tests).
+- `bun --cwd core lint`, `bun --cwd core lint:types`, `bun run gates:coderso`,
+  and `git diff --check` passed.
+- Live smoke used `coderso-dev-core-host` plus `playwright-cli`; the browser
+  replay edited a rich text block inline, preserved `<strong>` and a safe link,
+  dropped the unsafe payload, verified panel + stored data parity, published to
+  the front, and deleted the throwaway page (`GET /admin/api/pages/:id` returned
+  `404` after cleanup).
+- Environment note: `playwright-cli`/Node could not resolve
+  `coderso-a.localhost` (`ENOTFOUND`) in this shell, so the smoke used the
+  equivalent local URLs `http://localhost:5173/admin` and `http://localhost:3000`.

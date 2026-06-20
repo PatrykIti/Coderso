@@ -2,7 +2,7 @@
 
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 
@@ -122,7 +122,7 @@ test("SectionCanvas renders hidden block ghost through the reusable label helper
   expect(html).toContain("Hidden canvas text");
 });
 
-test("SectionCanvas renders rich text output without exposing lossy inline edit", () => {
+test("SectionCanvas exposes sanitized rich text through the inline edit wrapper", () => {
   const section = createPageSectionV2("content", {
     id: "sec-rich-canvas",
     blocks: [
@@ -158,8 +158,8 @@ test("SectionCanvas renders rich text output without exposing lossy inline edit"
     />
   );
 
-  expect(html).not.toContain('data-page-editor-inline-edit-prop="text"');
-  expect(html).not.toContain('contentEditable="true"');
+  expect(html).toContain('data-page-editor-inline-edit="active"');
+  expect(html).toContain('data-page-editor-inline-edit-prop="text"');
   expect(html).toContain("<strong");
   expect(html).toContain(">rich</strong>");
   expect(html).toContain('href="/safe"');
@@ -167,7 +167,7 @@ test("SectionCanvas renders rich text output without exposing lossy inline edit"
   expect(html).not.toContain("alert(1)");
 });
 
-test("SectionCanvas mounts rich text blocks directly without invalid inline-edit nesting", () => {
+test("SectionCanvas mounts rich text blocks with a block inline-edit wrapper", () => {
   const section = createPageSectionV2("content", {
     id: "sec-rich-canvas-dom",
     blocks: [
@@ -195,17 +195,69 @@ test("SectionCanvas mounts rich text blocks directly without invalid inline-edit
   );
 
   try {
-    expect(
-      mounted.container.querySelector('[data-page-editor-inline-edit-prop="text"]')
-    ).toBeNull();
+    const wrapper = mounted.container.querySelector(
+      'div[data-page-editor-inline-edit-prop="text"]'
+    );
+    expect(wrapper).toBeTruthy();
     expect(mounted.container.querySelector(".prose p")).toBeTruthy();
     expect(mounted.container.querySelector(".prose ul")).toBeTruthy();
+    expect(wrapper?.querySelector("p")).toBeTruthy();
+    expect(wrapper?.querySelector("ul")).toBeTruthy();
     expect(
-      mounted.container.querySelector('span[data-page-editor-inline-edit-prop="text"] p')
+      mounted.container.querySelector('span[data-page-editor-inline-edit-prop="text"]')
     ).toBeNull();
-    expect(
-      mounted.container.querySelector('span[data-page-editor-inline-edit-prop="text"] ul')
-    ).toBeNull();
+  } finally {
+    mounted.cleanup();
+  }
+});
+
+test("SectionCanvas rich inline edit commits innerHTML for the sanitizer owner", () => {
+  const onCommitInlineEdit = vi.fn();
+  const section = createPageSectionV2("content", {
+    id: "sec-rich-canvas-commit",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-rich-text-commit",
+        props: {
+          text: "<p>Canvas <strong>rich</strong></p>",
+          format: "rich",
+          align: "left",
+        },
+      }),
+    ],
+  });
+
+  const mounted = mount(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected
+      selectedBlockPath={[{ index: 0 }]}
+      selectedBlockId="blk-rich-text-commit"
+      inlineEditTarget={{ blockId: "blk-rich-text-commit", propPath: "text" }}
+      {...baseCanvasProps}
+      onCommitInlineEdit={onCommitInlineEdit}
+    />
+  );
+
+  try {
+    const region = mounted.container.querySelector(
+      '[data-page-editor-inline-edit="active"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    expect(region).toBeTruthy();
+    React.act(() => {
+      if (!region) return;
+      region.innerHTML =
+        '<p>Edited <strong>rich</strong> <a href="/safe" onclick="alert(1)">safe</a></p>';
+      region.blur();
+    });
+
+    expect(onCommitInlineEdit).toHaveBeenCalledWith({
+      blockId: "blk-rich-text-commit",
+      propPath: "text",
+      text: '<p>Edited <strong>rich</strong> <a href="/safe" onclick="alert(1)">safe</a></p>',
+      renderedText: "<p>Canvas <strong>rich</strong></p>",
+    });
   } finally {
     mounted.cleanup();
   }

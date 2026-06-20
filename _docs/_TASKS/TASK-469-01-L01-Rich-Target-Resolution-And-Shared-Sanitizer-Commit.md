@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Inline Edit Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-422, TASK-438
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-20
 
 ---
 
@@ -22,15 +23,15 @@ targets.
 
 ## Sub-Tasks
 
-- [ ] Add optional `preserveMarkup` to `InlineEditableTarget` (defaults false).
-- [ ] In `resolveInlineEditTarget`, replace the `format === "rich"` `null` branch
+- [x] Add optional `preserveMarkup` to `InlineEditableTarget` (defaults false).
+- [x] In `resolveInlineEditTarget`, replace the `format === "rich"` `null` branch
       (lines 114–116) with a frozen rich-aware target when the stored value is a
       string; keep every other fail-closed branch intact.
-- [ ] Add `sanitizeInlineRichText(target, raw)` delegating to
+- [x] Add `sanitizeInlineRichText(target, raw)` delegating to
       `sanitizeAuthoringRichTextHtml`; never call `stripInlineMarkup`.
-- [ ] Branch `commitInlineText` on `target.preserveMarkup`; wrap both branches in
+- [x] Branch `commitInlineText` on `target.preserveMarkup`; wrap both branches in
       the unchanged empty-commit guard.
-- [ ] Replace the panel-only assertion at
+- [x] Replace the panel-only assertion at
       `page-inline-edit-contract.test.ts:94–99` and add rich coverage.
 
 ## Files To Change
