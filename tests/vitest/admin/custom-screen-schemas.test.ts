@@ -4,6 +4,7 @@ import {
   buildDefaultListViewDefinition,
   customScreenCreateSchema,
   customScreenUpdateSchema,
+  getCustomScreenEditorViewCompat,
   normalizeCustomScreenCollectionLink,
   normalizeCustomScreenBindings,
   normalizeCustomScreenDefinition,
@@ -87,9 +88,11 @@ test("custom screen schemas reject unknown canonical collection metadata", () =>
 
 test("normalizeCustomScreenDefinition returns defaults", () => {
   const definition = normalizeCustomScreenDefinition();
-  expect(definition.schemaVersion).toBe(3);
-  expect(definition.editorView.blocks).toEqual([]);
-  expect(definition.editorView.bindings).toEqual([]);
+  const editorView = getCustomScreenEditorViewCompat(definition);
+  expect(definition.schemaVersion).toBe(4);
+  expect(definition.editorView.document).toEqual({ schemaVersion: 1, sections: [] });
+  expect(editorView.blocks).toEqual([]);
+  expect(editorView.bindings).toEqual([]);
   expect(definition.editorView.interactionMode).toBe("inline");
   expect(definition.listView).toMatchObject({
     defaultSort: { field: "updatedAt", direction: "desc" },
@@ -114,8 +117,10 @@ test("normalizeCustomScreenDefinition normalizes blocks", () => {
     blocks: [{ id: "section-1", type: "section", data: {} }],
     bindings: [],
   });
-  expect(definition.schemaVersion).toBe(3);
-  expect(definition.editorView.blocks[0]?.type).toBe("section");
+  const editorView = getCustomScreenEditorViewCompat(definition);
+  expect(definition.schemaVersion).toBe(4);
+  expect(definition.editorView.document.sections[0]?.type).toBe("legacy-widget");
+  expect(editorView.blocks[0]?.type).toBe("section");
   expect(definition.editorView.interactionMode).toBe("inline");
 });
 
@@ -222,7 +227,7 @@ test("normalizeCustomScreenDefinition rejects explicit v2 write definitions", ()
   ).toThrow("custom_screen_definition_invalid");
 });
 
-test("normalizeCustomScreenDefinitionForRead migrates strict v2 definitions to v3", () => {
+test("normalizeCustomScreenDefinitionForRead migrates strict v2 definitions to v4", () => {
   const definition = normalizeCustomScreenDefinitionForRead(
     {
       definition: {
@@ -275,16 +280,17 @@ test("normalizeCustomScreenDefinitionForRead migrates strict v2 definitions to v
     }
   );
 
-  expect(definition.schemaVersion).toBe(3);
+  expect(definition.schemaVersion).toBe(4);
   expect(definition.listView.columns[0]).toMatchObject({
     id: "field-projectstatus",
     field: "projectStatus",
     formatter: "select",
   });
+  expect(definition.editorView.document).toEqual({ schemaVersion: 1, sections: [] });
   expect(definition.editorView.interactionMode).toBe("inline");
 });
 
-test("normalizeCustomScreenDefinitionForRead tolerates stale field references and falls back to a safe v3 shape", () => {
+test("normalizeCustomScreenDefinitionForRead tolerates stale field references and falls back to a safe v4 shape", () => {
   const definition = normalizeCustomScreenDefinitionForRead(
     {
       definition: {
@@ -336,12 +342,13 @@ test("normalizeCustomScreenDefinitionForRead tolerates stale field references an
     }
   );
 
-  expect(definition.schemaVersion).toBe(3);
+  const editorView = getCustomScreenEditorViewCompat(definition);
+  expect(definition.schemaVersion).toBe(4);
   expect(definition.listView.defaultSort).toEqual({
     field: "updatedAt",
     direction: "desc",
   });
-  expect(definition.editorView.bindings[0]).toMatchObject({
+  expect(editorView.bindings[0]).toMatchObject({
     field: "removedField",
   });
 });
@@ -364,6 +371,76 @@ test("normalizeCustomScreenDefinition rejects definition-owned content type ids 
         schemaVersion: 3,
         listView: { extra: true },
         editorView: { blocks: [], bindings: [], saveMode: "entry", interactionMode: "inline" },
+      },
+    })
+  ).toThrow("custom_screen_definition_invalid");
+});
+
+test("custom screen schemas accept v4 screen documents without definition-owned contentTypeId", () => {
+  const definition = {
+    schemaVersion: 4,
+    listView: {
+      columns: [],
+      filters: [],
+      defaultSort: { field: "updatedAt", direction: "desc" },
+      bulkActions: { delete: true, publish: true, unpublish: true },
+    },
+    editorView: {
+      document: {
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "field-title",
+            type: "field",
+            data: { label: "Title" },
+          },
+        ],
+      },
+      bindings: [
+        {
+          id: "field-title-value",
+          blockId: "field-title",
+          propPath: "value",
+          source: "entry",
+          field: "title",
+          mode: "readwrite",
+        },
+      ],
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+
+  expect(() =>
+    validate(customScreenCreateSchema, {
+      name: "Catalog",
+      contentTypeId: "type-1",
+      schemaVersion: 4,
+      definition,
+    })
+  ).not.toThrow();
+
+  expect(normalizeCustomScreenDefinition({ definition })).toMatchObject({
+    schemaVersion: 4,
+    editorView: {
+      document: {
+        sections: [{ id: "field-title", type: "field" }],
+      },
+      bindings: [
+        {
+          blockId: "field-title",
+          source: "entry",
+          field: "title",
+        },
+      ],
+    },
+  });
+
+  expect(() =>
+    normalizeCustomScreenDefinition({
+      definition: {
+        ...definition,
+        contentTypeId: "type-1",
       },
     })
   ).toThrow("custom_screen_definition_invalid");

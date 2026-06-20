@@ -841,18 +841,18 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - endpoints Listings sa internal (`content:read/write`), bez public write API,
   - public runtime dla entries/posts wymusza `includeDrafts=false` poza preview.
 
-## Coderso Custom Screens (v1 foundation)
+## Coderso Custom Screens (V4 screen document foundation)
 
-- Definicje ekranow admina z widgetow sa w `custom_screens`:
-  - `name`, `contentTypeId`, `schemaVersion`, `blocks`, `bindings`, `status`,
+- Definicje ekranow admina sa w `custom_screens`:
+  - `name`, `contentTypeId`, `schemaVersion`, `definition`, `status`,
   - `showInSidebar`, `sidebarLabel` dla szybkich skrotow w admin nav.
+- `custom_screens.content_type_id` jest kanonicznym powiazaniem z content type;
+  persisted `definition` nie duplikuje `contentTypeId`.
 - `customScreenService` trzyma CRUD + normalizacje:
-  - `blocks` sa walidowane przez widget schema + normalizer,
-  - `bindings` mapuja `widgetId + propPath` -> field key i sa wykonywane przez
-    `bindingResolver`,
-  - save path odrzuca unsupported write combinations dla screen widgets, wiec
-    tylko widget-owned write-capable targets licza sie do dedicated-editor
-    readiness i writable field lists.
+  - `definition.schemaVersion=4` jest aktywnym source of truth,
+  - V1/V2/V3 definitions migruja przy odczycie do `ScreenDocumentV1`,
+  - legacy `blocks`/`bindings` sa tylko compatibility projection do czasu
+    TASK-468-07 backfill/drop.
 - Shortcut model:
   - tylko `active` screen z `showInSidebar=true` moze trafic do lewego menu,
   - skrot jest renderowany po grupie `Coderso`,
@@ -860,15 +860,15 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `sidebarLabel` nadpisuje domyslna nazwe screena, ale jest opcjonalny.
 - Builder (`/admin/advanced/custom-screens/:id`) ma trzy warstwy pracy:
   - screen settings,
-  - widget-level bindings dla zaznaczonego bloku,
+  - screen block bindings dla zaznaczonego elementu,
   - bound preview, ktory materializuje drzewo widgetow przed renderem przez `WidgetRenderer`.
 - `Editor View` preview owner jest cached-first nad `entries:list:<typeSlug>`:
   pierwszy cached record hydratuje i builder canvas, i preview dialog; cold
   cache fallback pozostaje schema-shaped z jawna notka dla `no-records` albo
   `read-failed`.
-- `Screens` nie korzysta juz z calej public/page widget library:
+- TASK-468 V4 target: `Screens` nie korzysta juz z calej public/page widget library:
   - insert library filtruje do surface `custom-screen-builder`,
-  - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa ukryte w `Advanced/Widgets`,
+  - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa legacy migration/compatibility inputs,
   - wspoldzielone prymitywy layoutowe musza byc jawnie dopuszczone do obu surface'ow.
 - Kazdy custom screen ma derived capabilities:
   - `collection-only`: brak dedykowanego record screen; shortcut zawęża tylko liste rekordow,
@@ -880,10 +880,13 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - list route: `/admin/advanced/custom-screens/:screenId/entries`,
   - editor route: `/admin/advanced/custom-screens/:screenId/entries/:entryId`,
   - `contentTypeId` z `custom_screens` jest rozwiazywany do `content_types.slug`, a zapis/listowanie dalej ida przez `content_entries`.
+- Records list pozostaje istniejaca tabela. TASK-468 nie dodaje card/compact
+  list presentation modes.
 - Record workflow jest gate'owany przez capabilities:
   - `collection-only` prowadzi rekord bezposrednio do classic editor,
   - `dashboard` otwiera read-only screen z CTA do classic editor,
-  - `editor` pokazuje tylko pola wynikajace z `write/readwrite` bindings i zapisuje standardowy `entry.data`.
+  - `editor` pokazuje tylko pola wynikajace z `write/readwrite` bindings i zapisuje standardowy `entry.data`;
+    entry canvas nie pokazuje builderowych operacji sekcji/blokow.
 
 ## Coderso Filters & Search (v2 beta)
 

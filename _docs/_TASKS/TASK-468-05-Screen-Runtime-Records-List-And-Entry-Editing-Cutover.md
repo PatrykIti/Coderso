@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Runtime / Entries
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-468-04
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-20
 
 ---
 
@@ -17,11 +18,22 @@ Render Custom Screen list and entry-editing experiences from
 screen runtime that knows about content entry data, field metadata, readable
 blocks, writable controls, and professional record layouts.
 
+2026-06-20 scope correction:
+
+- The records list remains the existing table/list workflow. This task no
+  longer owns card/compact list presentation modes.
+- Entry detail mode is field-editing-only: clicking a field may open the field
+  panel and save entry data, but it must not expose section/block builder
+  controls.
+- First slice removed the widget edit button from `CustomScreenEntryCanvas` and
+  wired entry editor reads through V4 helper projections.
+
 ## Sub-Tasks
 
 - [ ] TASK-468-05-L01: Screen Runtime Renderer.
 - [ ] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
-- [ ] TASK-468-05-L03: Records List Presentation Modes.
+- [x] TASK-468-05-L03: Records List Presentation Modes. Superseded by the
+  table-only scope correction.
 - [ ] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
 - [ ] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
 

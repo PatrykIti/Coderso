@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Services / Migration
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-01
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-20
 
 ---
 
@@ -16,6 +17,16 @@ Implement the service/domain contract for `CustomScreenDefinitionV4` and migrate
 legacy V1/V2/V3 reads into `ScreenDocumentV1`. The server remains the write
 authority; admin clients may use defensive DTO validation but must not own the
 persistence schema.
+
+2026-06-20 first slice:
+
+- V4 definition, `ScreenDocumentV1`, and `ScreenFieldBinding` normalization now
+  live in `customScreenSchemas.ts`.
+- V1/V2/V3 reads migrate to V4; V3 writes are accepted as compatibility input
+  and persisted as V4.
+- `custom_screens.blocks` and `custom_screens.bindings` remain compatibility
+  projections until TASK-468-07 verifies backfill and removes columns.
+- Route schemas accept V4 and still reject definition-owned `contentTypeId`.
 
 ## Sub-Tasks
 
@@ -60,7 +71,6 @@ export function migrateCustomScreenDefinitionToV4(
   const legacy = normalizeLegacyDefinitionForRead(input, context);
   return {
     schemaVersion: 4,
-    dataContext: defaultScreenDataContext(),
     listView: migrateListViewToV4(legacy.listView),
     editorView: {
       document: migrateLegacyBlocksToScreenDocument(legacy.editorView.blocks, context),

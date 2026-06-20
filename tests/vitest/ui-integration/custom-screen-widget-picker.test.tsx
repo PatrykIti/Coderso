@@ -38,9 +38,9 @@ const createScreenRecord = (): CustomScreenRecord => ({
   compositionKey: null,
   showInSidebar: true,
   sidebarLabel: "Projects",
-  schemaVersion: 3,
+  schemaVersion: 4,
   definition: {
-    schemaVersion: 3,
+    schemaVersion: 4,
     listView: {
       columns: [],
       filters: [],
@@ -50,7 +50,10 @@ const createScreenRecord = (): CustomScreenRecord => ({
     editorView: {
       saveMode: "entry" as const,
       interactionMode: "inline" as const,
-      blocks: [],
+      document: {
+        schemaVersion: 1 as const,
+        sections: [],
+      },
       bindings: [],
     },
   },
@@ -180,19 +183,22 @@ test("Editor View keeps legacy selected widgets editable without exposing them i
     ...baseScreen,
     definition: {
       ...baseScreen.definition!,
-      schemaVersion: 3,
       editorView: {
         ...baseScreen.definition!.editorView,
-        blocks: [
-          {
-            id: "hero-1",
-            type: "hero",
-            variant: "centered",
-            data: {
-              headline: "Legacy hero",
+        document: {
+          schemaVersion: 1 as const,
+          sections: [
+            {
+              id: "hero-1",
+              type: "legacy-widget",
+              legacyWidgetType: "hero",
+              variant: "centered",
+              data: {
+                headline: "Legacy hero",
+              },
             },
-          },
-        ],
+          ],
+        },
       },
     },
     blocks: [

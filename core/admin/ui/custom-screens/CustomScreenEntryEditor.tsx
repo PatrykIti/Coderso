@@ -37,6 +37,11 @@ import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { getRegisteredWidget } from "@/ui/widgets/registry";
+import {
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
+  getCustomScreenEditorViewCompat,
+} from "../../../services/customScreens/customScreenSchemas";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { CustomScreenEntryCanvas } from "./CustomScreenEntryCanvas";
@@ -56,6 +61,24 @@ import {
 } from "./customScreenEntryDraft";
 
 type DetailsTab = "record" | "element";
+
+const resolveRuntimeEditorView = (screen: CustomScreenRecord) =>
+  screen.definition
+    ? getCustomScreenEditorViewCompat(screen.definition)
+    : {
+        blocks: screen.blocks,
+        bindings: screen.bindings,
+        saveMode: "entry" as const,
+        interactionMode: "inline" as const,
+      };
+
+const resolveRuntimeBlocks = (screen: CustomScreenRecord | null) =>
+  screen?.definition ? getCustomScreenEditorViewBlocks(screen.definition) : (screen?.blocks ?? []);
+
+const resolveRuntimeBindings = (screen: CustomScreenRecord | null) =>
+  screen?.definition
+    ? getCustomScreenEditorViewBindings(screen.definition)
+    : (screen?.bindings ?? []);
 
 const hasBlockId = (
   blocks: Array<{ id: string; slots?: Record<string, unknown>; children?: unknown }>,
@@ -146,23 +169,13 @@ export function CustomScreenEntryEditor() {
     if (isCreateMode) {
       return buildInitialEntryDraft({
         contentType: initialContentType,
-        editorView: initialScreen.definition?.editorView ?? {
-          blocks: initialScreen.blocks,
-          bindings: initialScreen.bindings,
-          saveMode: "entry",
-          interactionMode: "inline",
-        },
+        editorView: resolveRuntimeEditorView(initialScreen),
       });
     }
     if (!initialEntry) return null;
     return hydrateEditorViewDraft({
       contentType: initialContentType,
-      editorView: initialScreen.definition?.editorView ?? {
-        blocks: initialScreen.blocks,
-        bindings: initialScreen.bindings,
-        saveMode: "entry",
-        interactionMode: "inline",
-      },
+      editorView: resolveRuntimeEditorView(initialScreen),
       entry: initialEntry,
     });
   }, [initialContentType, initialEntry, initialScreen, isCreateMode]);
@@ -201,7 +214,7 @@ export function CustomScreenEntryEditor() {
 
   const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
   const readOnlyBindingCount = useMemo(
-    () => screen?.bindings.filter((binding) => binding.mode === "read").length ?? 0,
+    () => resolveRuntimeBindings(screen).filter((binding) => binding.mode === "read").length,
     [screen]
   );
   const screenCapabilities = useMemo(
@@ -209,20 +222,14 @@ export function CustomScreenEntryEditor() {
       screen?.capabilities ??
       resolveCustomScreenCapabilities({
         definition: screen?.definition,
-        blocks: screen?.blocks,
-        bindings: screen?.bindings,
+        blocks: resolveRuntimeBlocks(screen),
+        bindings: resolveRuntimeBindings(screen),
       }),
     [screen]
   );
   const canEditInScreen = screenCapabilities.supportsDedicatedEditor;
-  const runtimeBlocks = useMemo(
-    () => screen?.definition?.editorView.blocks ?? screen?.blocks ?? [],
-    [screen]
-  );
-  const runtimeBindings = useMemo(
-    () => screen?.definition?.editorView.bindings ?? screen?.bindings ?? [],
-    [screen]
-  );
+  const runtimeBlocks = useMemo(() => resolveRuntimeBlocks(screen), [screen]);
+  const runtimeBindings = useMemo(() => resolveRuntimeBindings(screen), [screen]);
   const selectedRuntimeBlock = useMemo(
     () => findBlockById(runtimeBlocks, selectedRuntimeBlockId),
     [runtimeBlocks, selectedRuntimeBlockId]
@@ -284,12 +291,7 @@ export function CustomScreenEntryEditor() {
       nextEntry: EntryDetail | null
     ) => {
       const nextFields = fieldsFromSchema(nextContentType.schema);
-      const editorView = nextScreen.definition?.editorView ?? {
-        blocks: nextScreen.blocks,
-        bindings: nextScreen.bindings,
-        saveMode: "entry" as const,
-        interactionMode: "inline" as const,
-      };
+      const editorView = resolveRuntimeEditorView(nextScreen);
       const nextDraft = nextEntry
         ? hydrateEditorViewDraft({
             contentType: nextContentType,
@@ -312,7 +314,7 @@ export function CustomScreenEntryEditor() {
       setFieldErrors({});
       setHasUnsavedChanges(false);
       setRemoteUpdatePending(false);
-      const nextBlocks = nextScreen.definition?.editorView.blocks ?? nextScreen.blocks;
+      const nextBlocks = resolveRuntimeBlocks(nextScreen);
       setSelectedRuntimeBlockId((current) =>
         preserveSelectedElementAcrossRefresh({
           selectedBlockId: current,
@@ -622,12 +624,14 @@ export function CustomScreenEntryEditor() {
       setSlug(saved.slug);
       const savedDraft = hydrateEditorViewDraft({
         contentType,
-        editorView: screen?.definition?.editorView ?? {
-          blocks: screen?.blocks ?? [],
-          bindings: screen?.bindings ?? [],
-          saveMode: "entry",
-          interactionMode: "inline",
-        },
+        editorView: screen
+          ? resolveRuntimeEditorView(screen)
+          : {
+              blocks: [],
+              bindings: [],
+              saveMode: "entry",
+              interactionMode: "inline",
+            },
         entry: saved,
       });
       setValues(savedDraft.data);
@@ -669,7 +673,7 @@ export function CustomScreenEntryEditor() {
     >
       <TabsList variant="line" className="px-1">
         <TabsTrigger value="record">Record</TabsTrigger>
-        <TabsTrigger value="element">Selected Element</TabsTrigger>
+        <TabsTrigger value="element">Selected Field</TabsTrigger>
       </TabsList>
       <TabsContent value="record" className="mt-4 space-y-4">
         <div className="space-y-1">
@@ -712,11 +716,9 @@ export function CustomScreenEntryEditor() {
       </TabsContent>
       <TabsContent value="element" className="mt-4 space-y-4">
         <div className="space-y-1">
-          <p className="text-sm font-medium">
-            {selectedRuntimeWidget?.title ?? "Selected element"}
-          </p>
+          <p className="text-sm font-medium">{selectedRuntimeWidget?.title ?? "Selected field"}</p>
           <p className="text-xs text-muted-foreground">
-            Click a widget on the canvas and use the pencil action to focus its bound content here.
+            Click a field on the canvas to focus and edit its bound content here.
           </p>
         </div>
         {renderSelectedBlockBindingEditor()}
@@ -824,8 +826,8 @@ export function CustomScreenEntryEditor() {
               </div>
             ) : screen && canEditInScreen ? (
               <CustomScreenEntryCanvas
-                blocks={screen.definition?.editorView.blocks ?? screen.blocks}
-                bindings={screen.definition?.editorView.bindings ?? screen.bindings}
+                blocks={runtimeBlocks}
+                bindings={runtimeBindings}
                 fieldValues={buildCanvasFieldValues()}
                 fieldErrors={fieldErrors}
                 fields={fields}
@@ -837,17 +839,13 @@ export function CustomScreenEntryEditor() {
                 onSelectBlock={(blockId) => {
                   setSelectedRuntimeBlockId(blockId);
                   setActiveDetailsTab("element");
-                }}
-                onEditBlock={(blockId) => {
-                  setSelectedRuntimeBlockId(blockId);
-                  setActiveDetailsTab("element");
                   setDetailsOpen(true);
                 }}
               />
             ) : screen ? (
               <CustomScreenPreview
-                blocks={screen.definition?.editorView.blocks ?? screen.blocks}
-                bindings={screen.definition?.editorView.bindings ?? screen.bindings}
+                blocks={runtimeBlocks}
+                bindings={runtimeBindings}
                 data={buildPayloadData()}
                 emptyTitle="Editor upgrade required"
                 emptyMessage="Add writable screen widgets and bindings in the builder before using this route as the dedicated record editor."

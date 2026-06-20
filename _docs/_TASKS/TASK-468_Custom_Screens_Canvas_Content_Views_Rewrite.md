@@ -5,7 +5,8 @@
 **Category:** Admin UI / Custom Screens / Content Modeling / Architecture
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-464, TASK-467
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-20
 
 ---
 
@@ -33,14 +34,36 @@ Target state:
 
 - `custom_screens.definition` is the source of truth.
 - `schemaVersion: 4` owns `ScreenDocumentV1`.
+- `custom_screens.content_type_id` remains the canonical content type link;
+  V4 definitions must not persist a duplicate `contentTypeId`/`dataContext`
+  mirror inside `definition`.
 - `ScreenDocumentV1.sections[]`, `ScreenSectionV1`, and `ScreenBlockV1` are screen-specific data
   structures, not Page v2 objects.
 - Screen blocks bind to custom content fields through explicit
   `ScreenBlockBinding` records.
-- List, record preview, and entry editing views render through a screen runtime,
-  not through the generic widget runtime.
+- Existing tabular record lists remain the active list UX for this family.
+  Card/compact list presentation modes are out of scope unless a later task
+  reopens them.
+- Record preview and entry editing views render through a screen runtime, not
+  through the generic widget runtime.
+- Entry detail mode is field-editing only: no section/block add, move,
+  duplicate, delete, or widget editing controls may appear in the entry canvas.
 - The old `custom-screen-builder` widget surface is fully removed after
   migration and validation.
+
+## 2026-06-20 Drift Reconciliation
+
+- Roadmap drift corrected: TASK-468 is not greenfield. V3 Custom Screens already
+  exist across schemas, services, routes, admin UI, widget bridges, assistant
+  previews, and tests.
+- User scope clarified: the records list stays table-only and unchanged; the V4
+  work targets the screen detail builder and entry-detail field editing canvas.
+- Persistence clarified: builder canvas changes mutate the screen definition;
+  entry-detail floating panel changes mutate the selected entry fields through
+  the existing entry payload path.
+- First implementation slice landed V4 definition normalization, V1/V2/V3 read
+  migration to V4, compatibility `blocks`/`bindings` projections, V4-aware
+  service/client capabilities, and entry canvas removal of widget edit buttons.
 
 ## Sub-Tasks
 
@@ -175,8 +198,8 @@ Forbidden closure criteria:
    `ScreenDocumentV1`.
 2. Screens expose a flexible section/block canvas for custom content data without
    accepting Page v2 `sections[]`.
-3. Screen editor, record list, and entry editing no longer depend on arbitrary
-   widget runtime rendering.
+3. Screen editor and entry editing no longer depend on arbitrary widget runtime
+   rendering; the record list keeps the existing table UX.
 4. Existing V1/V2/V3 screen rows migrate deterministically or render safe
    placeholders for unsupported legacy widgets until final cleanup.
 5. Legacy `custom-screen-builder` widgets, active fallback paths, and duplicated

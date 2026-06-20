@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 79 tasks
-- **In Progress:** 5 tasks
-- **Done:** 2610 tasks
+- **To Do:** 73 tasks
+- **In Progress:** 10 tasks
+- **Done:** 2611 tasks
 
 ---
 
@@ -96,11 +96,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Large | Replace the eager widget editor barrel with typed lazy editor component bundles. |
 | TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
 | TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
-| TASK-468 | Custom Screens Canvas Content Views Rewrite | High | Very Large | Rewrite Custom Screens from legacy widget blocks to a screen-owned canvas contract for custom content data. |
-| TASK-468-01 | Contract Freeze Drift Audit And Migration Decision Record | High | Medium | Freeze V4 ScreenDocument contract, resolve binding drift, and require a fresh drift audit before implementation. |
 | TASK-468-01-L01 | Current State Inventory And Drift Freeze | High | Medium | Inventory current Custom Screen implementation, legacy storage, active routes, tests, and drift risks before changing contracts. |
 | TASK-468-01-L02 | V4 Contract Decision Record And Validation Plan | High | Medium | Freeze V4 screen/list/binding decisions, migration policy, validation lanes, and external audit expectations. |
-| TASK-468-02 | Screen Document V4 Service Contract And Migration Adapters | High | Large | Add V4 screen document schemas, normalizers, service mapping, and V1/V2/V3 migration adapters. |
 | TASK-468-02-L01 | Screen Document Domain Owner | High | Large | Own V4 screen document types, defaults, strict normalizers, binding validation, and pure tests. |
 | TASK-468-02-L02 | Legacy V1-V3 Read Migration Adapters | High | Large | Convert legacy rows into V4 read models or explicit placeholders without destructive writes. |
 | TASK-468-02-L03 | V4 Service Mapping And Route Validation | High | Large | Route Custom Screen service and admin validation through strict V4 schemas and machine-readable errors. |
@@ -110,16 +107,13 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-03-L02 | Neutral Canvas Frame And Selection Primitives | High | Large | Extract document-agnostic canvas frame, selection, drag/drop, and viewport primitives. |
 | TASK-468-03-L03 | Neutral Toolbar Layers And Command Shell | High | Large | Extract reusable toolbar, layers, command dispatch, and inspector slot chrome behind adapters. |
 | TASK-468-03-L04 | Page Adapter Parity Validation | High | Medium | Prove Page Editor behavior and bundle boundaries remain stable after authoring extraction. |
-| TASK-468-04 | Custom Screen Canvas Editor Cutover | High | Very Large | Replace the legacy widget builder with a content-type-aware screen section/block canvas editor. |
 | TASK-468-04-L01 | V4 Editor Client And Local Model | High | Large | Add V4 editor client, reducer-owned draft state, dirty protection, and conflict handling. |
 | TASK-468-04-L02 | Screen Canvas Shell And Section Block Operations | High | Large | Implement screen canvas adapter and pure section/block insert, move, duplicate, delete helpers. |
 | TASK-468-04-L03 | Field Palette Binding Inspector And Missing Field States | High | Large | Add content-type field palette, binding inspector, and repair states for deleted or invalid fields. |
 | TASK-468-04-L04 | Save Dirty State Cache And Preview Flow | High | Large | Wire V4 save, preview, cache invalidation, conflict handling, and unsaved-change protection. |
 | TASK-468-04-L05 | Editor Cutover Tests And Legacy Builder Guard | High | Medium | Prove active editor no longer imports the legacy widget builder and record bundle evidence. |
-| TASK-468-05 | Screen Runtime Records List And Entry Editing Cutover | High | Very Large | Render records and entry editing through V4 screen runtime instead of the widget bridge. |
 | TASK-468-05-L01 | Screen Runtime Renderer | High | Large | Render V4 screen sections/blocks directly without WidgetRenderer or screen-field widget bridges. |
 | TASK-468-05-L02 | Entry Field Controls And Draft Bridge | High | Large | Connect writable screen bindings to existing custom content entry field controls and save payloads. |
-| TASK-468-05-L03 | Records List Presentation Modes | High | Large | Move record lists to V4 list presentation config with content-type-aware columns/cards. |
 | TASK-468-05-L04 | Record Workspace Routing Cache And Active Context | High | Medium | Use canonical admin paths, cache invalidation, prefetch, and bounded active context for records. |
 | TASK-468-05-L05 | Runtime Entry Tests And Legacy Bridge Guard | High | Medium | Prove list/runtime/entry routes no longer use the legacy widget bridge. |
 | TASK-468-06 | Assistant Active Surface And Cache Cutover | High | Large | Move assistant actions and active-surface summaries from widget patches to screen sections, blocks, and bindings. |
@@ -173,6 +167,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-468 | Custom Screens Canvas Content Views Rewrite | High | Very Large | In progress (2026-06-20): V4 definition/read-migration slice landed; table list remains unchanged and entry canvas is field-editing-only. |
+| TASK-468-01 | Contract Freeze Drift Audit And Migration Decision Record | High | Medium | In progress (2026-06-20): drift corrections recorded for existing V3 code, table-only list scope, canonical row `content_type_id`, and entry-field persistence. |
+| TASK-468-02 | Screen Document V4 Service Contract And Migration Adapters | High | Large | In progress (2026-06-20): V4 definition normalization, V1/V2/V3 migration, service/client projections, and schema coverage landed. |
+| TASK-468-04 | Custom Screen Canvas Editor Cutover | High | Very Large | In progress (2026-06-20): editor page now reads/saves through V4 helper projections while the screen-native canvas remains pending. |
+| TASK-468-05 | Screen Runtime Records List And Entry Editing Cutover | High | Very Large | In progress (2026-06-20): entry editor reads V4 projections and entry canvas no longer exposes widget edit buttons; table list preserved. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -184,6 +183,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-468-05-L03 | Records List Presentation Modes | High | Large | Superseded (2026-06-20): TASK-468 keeps the existing tabular records list unchanged; card/compact modes are out of scope. |
 | TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Done (2026-06-20): Rich `text` blocks now inline-edit on canvas and round-trip allowlisted markup through the shared authoring sanitizer. |
 | TASK-469-01 | Inline-Edit Contract Rich-Aware Sanitization | Medium | Medium | Done (2026-06-20): `preserveMarkup` targets, rich sanitizer dispatch, and contract coverage landed. |
 | TASK-469-01-L01 | Rich Target Resolution And Shared-Sanitizer Commit | Medium | Medium | Done (2026-06-20): Rich string targets resolve, non-string values fail closed, and required empty commits retain previous markup. |

@@ -87,3 +87,49 @@ test("resolveCustomScreenCapabilities treats writable header bindings as editor-
     supportsDedicatedEditor: true,
   });
 });
+
+test("resolveCustomScreenCapabilities derives editor mode from v4 screen documents", () => {
+  expect(
+    resolveCustomScreenCapabilities({
+      definition: {
+        schemaVersion: 4,
+        listView: {
+          columns: [],
+          filters: [],
+          defaultSort: { field: "updatedAt", direction: "desc" },
+          bulkActions: { delete: true, publish: true, unpublish: true },
+        },
+        editorView: {
+          document: {
+            schemaVersion: 1,
+            sections: [
+              {
+                id: "field-headline",
+                type: "field",
+                data: {},
+              },
+            ],
+          },
+          bindings: [
+            {
+              id: "field-headline-value",
+              blockId: "field-headline",
+              propPath: "value",
+              source: "entry",
+              field: "headline",
+              mode: "readwrite",
+            },
+          ],
+          saveMode: "entry",
+          interactionMode: "inline",
+        },
+      },
+    })
+  ).toMatchObject({
+    mode: "editor",
+    hasBlocks: true,
+    hasReadableBindings: true,
+    hasWritableBindings: true,
+    supportsDedicatedEditor: true,
+  });
+});

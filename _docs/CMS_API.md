@@ -1168,7 +1168,7 @@ Public runtime safety:
 - runtime hydration: `resolvePostsFeedRuntimeData` (SSR, public runtime),
 - public output (`preview=false`) filtruje do `status=published`; preview moze pokazywac wszystkie statusy.
 
-## Coderso Custom Screens (workspace builder V3)
+## Coderso Custom Screens (workspace builder V4)
 
 Permissions (internal, routes in TASK-054-22-02): `content:read`, `content:write`
 
@@ -1181,9 +1181,9 @@ Custom screen payload (summary):
   "status": "draft",
   "showInSidebar": true,
   "sidebarLabel": "Katalog domow",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "definition": {
-    "schemaVersion": 3,
+    "schemaVersion": 4,
     "listView": {
       "columns": [
         {
@@ -1223,18 +1223,22 @@ Custom screen payload (summary):
     "editorView": {
       "saveMode": "entry",
       "interactionMode": "inline",
-      "blocks": [
-        {
-          "id": "field-1",
-          "type": "screen-field-value",
-          "data": {}
-        }
-      ],
+      "document": {
+        "schemaVersion": 1,
+        "sections": [
+          {
+            "id": "field-1",
+            "type": "field",
+            "data": { "label": "Project status" }
+          }
+        ]
+      },
       "bindings": [
         {
           "id": "field-1-value",
-          "widgetId": "field-1",
+          "blockId": "field-1",
           "propPath": "value",
+          "source": "entry",
           "field": "projectStatus",
           "mode": "readwrite"
         }
@@ -1246,22 +1250,29 @@ Custom screen payload (summary):
 
 Notes:
 - `contentTypeId` pozostaje stanem rekordu `custom_screens.content_type_id`;
-  persisted `definition` odrzuca top-level `contentTypeId`.
-- `definition.schemaVersion=3` jest zrodlem prawdy dla aktywnego workspace
+  persisted `definition` odrzuca top-level `contentTypeId` i nie zapisuje
+  duplikatu `dataContext.contentTypeId`.
+- `definition.schemaVersion=4` jest zrodlem prawdy dla aktywnego workspace
   Custom Screens.
-- Legacy `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
-  `definition.editorView` oraz kompatybilnoscia dla starszych rows.
-- V1/V2 rows bez gotowego V3 payloadu sa migrowane przy odczycie do V3:
+- Legacy root `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
+  `definition.editorView` oraz kompatybilnoscia dla starszych rows do czasu
+  TASK-468-07.
+- V1/V2/V3 rows bez gotowego V4 payloadu sa migrowane przy odczycie do V4:
   `listView` dostaje deterministyczne domyslne kolumny/filtry z wybranego
-  content type, a dawne `blocks`/`bindings` trafiaja do `editorView`.
+  content type, a dawne `blocks`/`bindings` trafiaja do
+  `editorView.document` + `editorView.bindings`.
 - `definition.listView` jest wlascicielem tabeli rekordow: system/field
-  columns, filters, `defaultSort`, i bulk action visibility.
+  columns, filters, `defaultSort`, i bulk action visibility. TASK-468 keeps
+  this existing tabular list UX; card/compact presentation modes are out of
+  scope.
 - `definition.editorView` jest wlascicielem canvasa create/edit:
-  `blocks`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
-- `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
+  `document`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
+- `document.sections[]` korzysta z screen-owned block types such as `field`,
+  `field-group`, `record-header`, and `columns`; legacy widget blocks are
+  compatibility migration inputs only.
 - builder insert library filtruje do admin surface `admin-editor-view`; public
   page builder i widget library nadal uzywaja swoich powierzchni.
-- `bindings` mapuja `widgetId + propPath` do pola wybranego content type albo
+- `bindings` mapuja `blockId + propPath` do pola wybranego content type albo
   do dozwolonych system fields.
 - Dla screen widgets kontrakt zapisuje tez widget-owned binding targets:
   `screen-record-header` wystawia tylko read-only props
@@ -1273,12 +1284,13 @@ Notes:
   `wizard` ustawia wariant i glowna strukture, `visual` jest binding-aware dla
   codziennej edycji tresci, a `advanced` trzyma alignment/tone oraz clearable
   chrome tokens.
-- builder preview i read-only fragmenty record editora renderuja
-  `definition.editorView.blocks` przez wspolny screen-widget read bridge, wiec
-  ten sam payload blokow zasila preview dialog, nested layout widgets, i
-  readonly runtime record surface. Inline write pozostaje zachowaniem widgetow
-  takich jak `screen-field-value`, gdy `value` binding wskazuje writable field.
-- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `3`.
+- builder preview i read-only fragmenty record editora moga nadal uzywac
+  compatibility projection podczas TASK-468, ale zapis V4 przechowuje
+  `editorView.document`.
+- Entry detail mode jest field-editing-only: klikniecie pola moze otworzyc
+  floating field panel i zapisac istniejace entry fields; nie pokazuje
+  operacji dodawania/przenoszenia/usuwania sekcji lub blokow.
+- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `4`.
 - `showInSidebar=true` + `status=active` + `supportsDedicatedEditor=true`
   pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.

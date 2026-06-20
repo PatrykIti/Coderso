@@ -1,6 +1,11 @@
 import type { WidgetBlock } from "../../widgets/types";
 
-import type { CustomScreenBinding, CustomScreenDefinition } from "./customScreenSchemas";
+import {
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
+  type CustomScreenBinding,
+  type CustomScreenDefinition,
+} from "./customScreenSchemas";
 import { isBindingWriteAllowed, resolveCustomScreenBindingContracts } from "./bindingResolver";
 
 export type CustomScreenMode = "collection-only" | "dashboard" | "editor";
@@ -25,18 +30,18 @@ export function resolveCustomScreenCapabilities(input: {
   bindings?: CustomScreenBinding[] | null;
   definition?: CustomScreenDefinition | null;
   listView?: CustomScreenDefinition["listView"] | null;
-  editorView?: CustomScreenDefinition["editorView"] | null;
+  editorView?: unknown;
 }): CustomScreenCapabilities {
-  const editorView = input.definition?.editorView ?? input.editorView ?? null;
+  const definition = input.definition ?? null;
   const blocks = Array.isArray(input.blocks)
     ? input.blocks
-    : Array.isArray(editorView?.blocks)
-      ? editorView.blocks
+    : definition
+      ? getCustomScreenEditorViewBlocks(definition)
       : [];
   const bindings = Array.isArray(input.bindings)
     ? input.bindings
-    : Array.isArray(editorView?.bindings)
-      ? editorView.bindings
+    : definition
+      ? getCustomScreenEditorViewBindings(definition)
       : [];
   const readable = bindings.filter((binding) => binding.mode !== "write").length;
   const contracts = blocks.length > 0 ? resolveCustomScreenBindingContracts(blocks) : null;

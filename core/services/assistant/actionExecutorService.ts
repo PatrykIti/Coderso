@@ -20,7 +20,12 @@ import {
   listCustomScreens,
   updateCustomScreen,
 } from "../customScreens/customScreenService";
-import type { CustomScreenBinding } from "../customScreens/customScreenSchemas";
+import {
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
+  normalizeCustomScreenDefinitionForRead,
+  type CustomScreenBinding,
+} from "../customScreens/customScreenSchemas";
 import {
   createListingQuery,
   deleteListingQuery,
@@ -1147,6 +1152,14 @@ const buildCustomScreenPreview = async (
     action,
     deps
   );
+  const existingDefinition = existing
+    ? normalizeCustomScreenDefinitionForRead({
+        definition: existing.definition,
+        schemaVersion: existing.schemaVersion,
+        blocks: existing.blocks,
+        bindings: existing.bindings,
+      })
+    : null;
   const comparableExisting = existing
     ? {
         name: existing.name,
@@ -1156,20 +1169,12 @@ const buildCustomScreenPreview = async (
         compositionKey: existing.compositionKey ?? null,
         showInSidebar: existing.showInSidebar,
         sidebarLabel: existing.sidebarLabel,
-        blocks:
-          "definition" in existing &&
-          isRecord(existing.definition) &&
-          isRecord(existing.definition.editorView) &&
-          Array.isArray(existing.definition.editorView.blocks)
-            ? (existing.definition.editorView.blocks as WidgetBlock[])
-            : existing.blocks,
-        bindings:
-          "definition" in existing &&
-          isRecord(existing.definition) &&
-          isRecord(existing.definition.editorView) &&
-          Array.isArray(existing.definition.editorView.bindings)
-            ? (existing.definition.editorView.bindings as CustomScreenBinding[])
-            : existing.bindings,
+        blocks: existingDefinition
+          ? getCustomScreenEditorViewBlocks(existingDefinition)
+          : existing.blocks,
+        bindings: existingDefinition
+          ? getCustomScreenEditorViewBindings(existingDefinition)
+          : existing.bindings,
       }
     : null;
   const nextValue = {

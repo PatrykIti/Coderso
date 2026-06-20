@@ -6,7 +6,8 @@
 **Category:** Architecture / Custom Screens / Task Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464, TASK-467
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-20
 
 ---
 
@@ -23,6 +24,15 @@ Known drift to resolve:
   `screen-record-header` bindings.
 - Runtime entry editing currently swaps only `screen-field-value` into field
   controls.
+- `_docs/_TASKS/_ROADMAP-open-tasks-2026-06-17.md` described TASK-468 as pure
+  greenfield, but V3 code is live across schemas, services, routes, admin UI,
+  widgets, assistant previews, and tests.
+- TASK-468-05-L03 proposed card/compact list presentation modes; the accepted
+  scope keeps the existing tabular records list unchanged.
+- Earlier pseudocode duplicated `contentTypeId` inside `definition.dataContext`;
+  the row `custom_screens.content_type_id` remains canonical.
+- Entry detail editing persists to the selected entry's existing fields, not to
+  the global screen definition.
 
 ## Sub-Tasks
 
@@ -44,12 +54,7 @@ Known drift to resolve:
 ```ts
 export type CustomScreenDefinitionV4 = {
   schemaVersion: 4;
-  dataContext: {
-    source: "content-entry";
-    contentTypeId: string;
-    entryAlias: "entry";
-  };
-  listView: CustomScreenListViewDefinitionV4;
+  listView: CustomScreenListViewDefinition;
   editorView: {
     document: ScreenDocumentV1;
     bindings: ScreenBlockBinding[];
@@ -89,7 +94,7 @@ export type ScreenBlockBinding = {
   propPath: string;
   source: "entry";
   field: string;
-  mode: "read" | "write";
+  mode: "read" | "write" | "readwrite";
 };
 ```
 
@@ -100,6 +105,12 @@ Decision record checklist:
   independently from the Custom Screen definition envelope.
 - `ScreenDocumentV1` is allowed in Custom Screens only.
 - Page v2 `PageDocumentV2` remains Page/Page Template only.
+- `custom_screens.content_type_id` remains canonical; definitions reject
+  definition-owned `contentTypeId`.
+- Existing records list/table configuration remains the active list contract in
+  this family; card/compact modes are not accepted scope.
+- Entry view mode is field-editing-only and must not expose section/block
+  builder operations.
 - Canonical element names are `ScreenSectionV1`, `ScreenBlockV1`, and
   `ScreenBlockBinding`.
 - V4 uses screen block types such as `record-header`, `field`, `field-group`,

@@ -37,9 +37,9 @@ const createScreenRecord = () => ({
   status: "active" as const,
   showInSidebar: true,
   sidebarLabel: "Projects",
-  schemaVersion: 3,
+  schemaVersion: 4,
   definition: {
-    schemaVersion: 3,
+    schemaVersion: 4,
     listView: {
       columns: [],
       filters: [],
@@ -49,35 +49,39 @@ const createScreenRecord = () => ({
     editorView: {
       saveMode: "entry" as const,
       interactionMode: "inline" as const,
-      blocks: [
-        {
-          id: "group-1",
-          type: "screen-field-group",
-          variant: "card",
-          data: {
-            title: "Details",
-            description: "Main project fields",
-          },
-          slots: {
-            content: [
-              {
-                id: "field-1",
-                type: "screen-field-value",
-                variant: "stacked",
-                data: {
-                  label: "Headline",
-                  value: "Fallback headline",
+      document: {
+        schemaVersion: 1 as const,
+        sections: [
+          {
+            id: "group-1",
+            type: "field-group",
+            variant: "card",
+            data: {
+              title: "Details",
+              description: "Main project fields",
+            },
+            slots: {
+              content: [
+                {
+                  id: "field-1",
+                  type: "field",
+                  variant: "stacked",
+                  data: {
+                    label: "Headline",
+                    value: "Fallback headline",
+                  },
                 },
-              },
-            ],
+              ],
+            },
           },
-        },
-      ],
+        ],
+      },
       bindings: [
         {
           id: "binding-1",
-          widgetId: "field-1",
+          blockId: "field-1",
           propPath: "value",
+          source: "entry" as const,
           field: "headline",
           mode: "readwrite" as const,
         },
@@ -251,15 +255,9 @@ test("record editor keeps child selection scoped and preserves it across refresh
     });
     expect(view.container.textContent).toContain("Headline");
 
-    const childEditButton = child?.querySelector("button");
-    expect(childEditButton).not.toBeNull();
-    React.act(() => {
-      childEditButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    await flush();
-
-    expect(document.body.textContent).toContain("Selected Element");
+    expect(child?.querySelector("button")).toBeNull();
     expect(document.body.textContent).toContain("Screen Field Value");
+    expect(document.body.textContent).toContain("Selected Field");
 
     await React.act(async () => {
       cacheListener?.({ key: cacheKeys.customScreenDetail("screen-1") });

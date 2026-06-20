@@ -8,6 +8,9 @@ import {
   normalizeCustomScreenDefinitionForRead,
   normalizeCustomScreenSchemaVersion,
   normalizeCustomScreenCollectionLink,
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
+  withCustomScreenEditorViewCompat,
   type CustomScreenBinding,
   type CustomScreenCollectionRole,
   type CustomScreenDefinition,
@@ -128,9 +131,9 @@ const mapRow = (
     sidebarLabel: row.sidebarLabel ?? null,
     schemaVersion: definition.schemaVersion,
     definition,
-    blocks: definition.editorView.blocks,
-    bindings: definition.editorView.bindings,
-    capabilities: resolveCustomScreenCapabilities(definition),
+    blocks: getCustomScreenEditorViewBlocks(definition),
+    bindings: getCustomScreenEditorViewBindings(definition),
+    capabilities: resolveCustomScreenCapabilities({ definition }),
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -208,8 +211,8 @@ export async function createCustomScreen(input: CustomScreenCreateInput) {
       sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,
       definition,
-      blocks: definition.editorView.blocks,
-      bindings: definition.editorView.bindings,
+      blocks: getCustomScreenEditorViewBlocks(definition),
+      bindings: getCustomScreenEditorViewBindings(definition),
       createdAt: now,
       updatedAt: now,
     })
@@ -252,22 +255,20 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
       : input.blocks !== undefined ||
           input.bindings !== undefined ||
           input.schemaVersion !== undefined
-        ? nextSchemaVersion === 3
+        ? nextSchemaVersion === 3 || nextSchemaVersion === 4
           ? {
-              definition: {
-                schemaVersion: 3,
-                listView: baseDefinition.listView,
-                editorView: {
-                  blocks:
-                    input.blocks !== undefined ? input.blocks : baseDefinition.editorView.blocks,
-                  bindings:
-                    input.bindings !== undefined
-                      ? input.bindings
-                      : baseDefinition.editorView.bindings,
-                  saveMode: "entry",
-                  interactionMode: "inline",
-                },
-              },
+              definition: withCustomScreenEditorViewCompat(baseDefinition, {
+                blocks:
+                  input.blocks !== undefined
+                    ? (input.blocks ?? [])
+                    : getCustomScreenEditorViewBlocks(baseDefinition),
+                bindings:
+                  input.bindings !== undefined
+                    ? (input.bindings ?? [])
+                    : getCustomScreenEditorViewBindings(baseDefinition),
+                saveMode: "entry",
+                interactionMode: "inline",
+              }),
             }
           : {
               schemaVersion: nextSchemaVersion,
@@ -305,8 +306,8 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
       sidebarLabel: sidebar.sidebarLabel,
       schemaVersion: definition.schemaVersion,
       definition,
-      blocks: definition.editorView.blocks,
-      bindings: definition.editorView.bindings,
+      blocks: getCustomScreenEditorViewBlocks(definition),
+      bindings: getCustomScreenEditorViewBindings(definition),
       updatedAt: new Date(),
     })
     .where(eq(customScreens.id, id))

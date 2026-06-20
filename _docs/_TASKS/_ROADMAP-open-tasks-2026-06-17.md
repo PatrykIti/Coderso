@@ -33,7 +33,7 @@
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
 |----|---------|-----------|--------|--------|------------------------|------------------|
 | TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | To Do | Greenfield (0 plików), 3 ciężkie krawędzie importu wciąż żywe; ściśle sekwencyjny łańcuch. | Chunki >1MB raw degradują first-load; **TASK-468 dziedziczy coupling**. |
-| **TASK-468** | **Custom Screens Canvas → V4** | High | **Very Large** | To Do | Pure greenfield, kontrakt V4 tylko jako pseudokod; 7 faz, ~35 subtasków. | Tech-debt + **data-loss przy migracji V1/V2/V3 i drop kolumn** w fazie 07. |
+| **TASK-468** | **Custom Screens Canvas → V4** | High | **Very Large** | In Progress | Nie greenfield: V3 Custom Screens istnieją w schemas/services/routes/admin UI/widget bridges/tests; 2026-06-20 landed first V4 definition/projection slice. | Tech-debt + **data-loss przy migracji V1/V2/V3 i drop kolumn** w fazie 07; table list scope stays unchanged. |
 
 ### Store (security-critical backend)
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
@@ -78,7 +78,7 @@
 6. **TASK-469** (Medium) + **TASK-470** (Small) — **zamknięte**: oba dzieliły `pageRendererV2.tsx`; TASK-469 domknął rich inline edit fidelity 2026-06-20, a TASK-470 zweryfikował wpięcie `image.fit` + `video.title` 2026-06-19. Deps (422/438/440/441) Done.
 
 ### Faza D — duże programy produktowe (wg zależności i wartości)
-7. **TASK-468 — faza 01 NATYCHMIAST** (tania, odblokowująca): freeze kontraktu V4 + drift audit + decision record. Reszta (02–07) czeka na **TASK-467** (blocker) i 464 (Done). **OGROMNY — własny plan**; faza 07 destructive (drop `blocks/bindings`) tylko po backfill verification.
+7. **TASK-468 — aktywny slice V4**: faza 01 drift reconciliation rozpoczęta, a pierwszy slice 02/04/05 landed 2026-06-20 (V4 definition, projections, entry field-only canvas guard). Reszta 02–07 nadal wymaga **TASK-467** przed ciężkim UI cutoverem. **OGROMNY — własny plan**; faza 07 destructive (drop `blocks/bindings`) tylko po backfill verification.
 8. **Store 021/022/023** — sekwencja **021 → 023 → 022** (publish potrzebuje auth/tokenów z 023, mimo płaskich nagłówków "depends on 021"). **OGROMNY, security-critical — własny plan**; rozstrzygnij wcześnie key-lifecycle/rotation oraz storage ZIP (brak własnych subtasków). Core-side klient już czeka.
 9. **TASK-414** — **OGROMNY, własny plan**: krok 1 = read-only drift audit, krok 2 = promocja 12 bullets do plików TASK-414-NN w kolejności zależności, potem **capability-sync guardrail child PRZED poszerzaniem scope** (parent tego wymaga). Najwyższa near-term wartość: follow-up editing depth, helper-mode, brand-token, broad vertical coverage.
 10. **TASK-406** (Large) — guardrail-test, po czystym baseline E2E z TASK-405. **Koordynować z acceptance-matrix dzieckiem TASK-414**, by nie dublować destructive/reset E2E. Pilnować evidence hygiene (brak kluczy/cookies/CSRF) i izolacji disposable DB.

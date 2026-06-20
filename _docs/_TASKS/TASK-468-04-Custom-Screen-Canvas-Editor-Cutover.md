@@ -6,7 +6,8 @@
 **Category:** Admin UI / Custom Screens / Canvas Editor
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-468-03
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-20
 
 ---
 
@@ -16,6 +17,13 @@ Replace the current Custom Screen editor builder with a screen-owned section and
 block canvas. The editor must let admins design professional backend views for
 custom content entries using field-aware blocks, layout sections, inspector
 controls, layers, and preview states.
+
+2026-06-20 first slice:
+
+- `CustomScreenEditorPage` now reads and saves through V4 helper projections
+  instead of assuming persisted `definition.editorView.blocks`.
+- Existing widget/page-builder UI remains a compatibility adapter until the
+  neutral authoring shell and screen-native canvas land.
 
 ## Sub-Tasks
 

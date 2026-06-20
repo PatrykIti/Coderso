@@ -25,8 +25,13 @@ import {
   type CustomScreenStatus,
 } from "@/services/customScreensClient";
 import {
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
+  getCustomScreenEditorViewCompat,
   normalizeCustomScreenDefinitionForRead,
+  type CustomScreenBinding,
   type CustomScreenDefinition,
+  withCustomScreenEditorViewCompat,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
   getCachedContentTypes,
@@ -89,7 +94,7 @@ const normalizeText = (value: string) => value.trim();
 type EditorDetailsTab = "screen" | "data" | "widget";
 
 const resolveBindingState = (
-  bindings: CustomScreenDefinition["editorView"]["bindings"],
+  bindings: CustomScreenBinding[],
   selectedBlockId: string | null,
   propPath: string
 ): "literal" | "bound" | "mixed" => {
@@ -132,15 +137,13 @@ const resolveScreenDefinition = (
     blocks: screen?.blocks,
     bindings: screen?.bindings,
   });
-  return {
-    ...definition,
-    editorView: {
-      ...definition.editorView,
-      bindings: sanitizeUnsupportedWriteBindings(definition.editorView.bindings, {
-        blocks: definition.editorView.blocks as Block[],
-      }),
-    },
-  };
+  const compat = getCustomScreenEditorViewCompat(definition);
+  return withCustomScreenEditorViewCompat(definition, {
+    ...compat,
+    bindings: sanitizeUnsupportedWriteBindings(compat.bindings, {
+      blocks: compat.blocks as Block[],
+    }),
+  });
 };
 
 function PreviewStateNotice({
@@ -200,10 +203,10 @@ export function CustomScreenEditorPage() {
   const [definition, setDefinition] = useState<CustomScreenDefinition>(() =>
     resolveScreenDefinition(screen)
   );
-  const blocks = definition.editorView.blocks as Block[];
-  const bindings = definition.editorView.bindings;
+  const blocks = getCustomScreenEditorViewBlocks(definition) as Block[];
+  const bindings = getCustomScreenEditorViewBindings(definition);
   const [selectedId, setSelectedId] = useState<string | null>(() =>
-    getFirstBlockId(resolveScreenDefinition(screen).editorView.blocks as Block[])
+    getFirstBlockId(getCustomScreenEditorViewBlocks(resolveScreenDefinition(screen)) as Block[])
   );
   const [isLoading, setIsLoading] = useState(() => !isCreateMode && !screen);
   const [isSaving, setIsSaving] = useState(false);
@@ -357,7 +360,7 @@ export function CustomScreenEditorPage() {
   const updateDefinition = useCallback(
     (next: CustomScreenDefinition) => {
       definitionRef.current = next;
-      blocksRef.current = next.editorView.blocks as Block[];
+      blocksRef.current = getCustomScreenEditorViewBlocks(next) as Block[];
       setDefinition(next);
       markDirty();
     },
@@ -366,13 +369,12 @@ export function CustomScreenEditorPage() {
 
   const updateBlocks = useCallback(
     (next: Block[]) => {
-      updateDefinition({
-        ...definitionRef.current,
-        editorView: {
-          ...definitionRef.current.editorView,
+      updateDefinition(
+        withCustomScreenEditorViewCompat(definitionRef.current, {
+          ...getCustomScreenEditorViewCompat(definitionRef.current),
           blocks: next,
-        },
-      });
+        })
+      );
     },
     [updateDefinition]
   );
@@ -392,8 +394,9 @@ export function CustomScreenEditorPage() {
 
   const applyScreen = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
+    const nextBlocks = getCustomScreenEditorViewBlocks(nextDefinition) as Block[];
     definitionRef.current = nextDefinition;
-    blocksRef.current = nextDefinition.editorView.blocks as Block[];
+    blocksRef.current = nextBlocks;
     setScreen(record);
     setName(record.name);
     setContentTypeId(record.contentTypeId);
@@ -401,7 +404,7 @@ export function CustomScreenEditorPage() {
     setShowInSidebar(record.showInSidebar ?? false);
     setSidebarLabel(record.sidebarLabel ?? "");
     setDefinition(nextDefinition);
-    setSelectedId(getFirstBlockId(nextDefinition.editorView.blocks as Block[]));
+    setSelectedId(getFirstBlockId(nextBlocks));
     setFocusedBindingPropPath(null);
     setSelectedListColumnId(nextDefinition.listView.columns[0]?.id ?? null);
     setHasUnsavedChanges(false);
@@ -609,8 +612,8 @@ export function CustomScreenEditorPage() {
       showInSidebar,
       sidebarLabel: sidebarLabel.trim() || null,
       definition,
-      blocks: definition.editorView.blocks,
-      bindings: definition.editorView.bindings,
+      blocks,
+      bindings,
     };
 
     try {
@@ -801,13 +804,12 @@ export function CustomScreenEditorPage() {
             focusedPropPath={focusedBindingPropPath}
             onFocusedPropPathChange={setFocusedBindingPropPath}
             onChange={(next) => {
-              updateDefinition({
-                ...definition,
-                editorView: {
-                  ...definition.editorView,
+              updateDefinition(
+                withCustomScreenEditorViewCompat(definition, {
+                  ...getCustomScreenEditorViewCompat(definition),
                   bindings: next,
-                },
-              });
+                })
+              );
             }}
           />
         </TabsContent>

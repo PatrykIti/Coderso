@@ -657,8 +657,8 @@ Widget availability is surface-scoped:
 
 - `page-builder` - public page builder canvas.
 - `widget-library` - reusable widget/template catalog.
-- `custom-screen-builder` - legacy Custom Screens surface kept for V1
-  compatibility.
+- `custom-screen-builder` - legacy Custom Screens surface kept for V1/V2/V3
+  migration compatibility during TASK-468.
 - `admin-list-view` - Custom Screens `List View` configuration surface.
 - `admin-editor-view` - Custom Screens `Editor View` canvas and screen-owned
   inline record editing surface.
@@ -674,8 +674,9 @@ Admin-only widgets may declare `dataAccess` metadata:
   Custom Screens `Data`; they define labels, descriptions, and per-prop read vs
   write capability instead of leaving the panel to infer paths from defaults.
 - Existing `screen-record-header`, `screen-field-value`, `screen-field-group`,
-  and `screen-two-column` widgets can be reused in `admin-editor-view` for
-  screen-owned inline editing when their bindings target writable entry fields.
+  and `screen-two-column` widgets are TASK-468 compatibility/migration inputs.
+  V4 screen documents persist screen-owned blocks and project to these widgets
+  only while the legacy bridge remains in place.
 
 `listWidgetsForSurfaceContext()` filters selected-entry and selected-content-type
 widgets until the current Custom Screen has a resolved content type. This keeps
@@ -701,10 +702,10 @@ the mature public widgets:
   sentinel strings.
 
 Custom Screens preview and the read-only portions of the inline record editor
-reuse one shared screen-widget render bridge for nested `screen-field-group`
-and `screen-two-column` layouts. The editable record canvas can still swap a
-bound `screen-field-value` into an inline field control when the `value`
-binding targets a writable schema or system field.
+temporarily reuse one shared screen-widget render bridge for nested
+`screen-field-group` and `screen-two-column` layouts. V4 entry mode is
+field-editing-only: the canvas may open field controls for writable bindings,
+but it must not expose section/block builder actions in the record editor.
 
 ---
 

@@ -1,8 +1,6 @@
 import type { ReactNode } from "react";
-import { Pencil } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import type { WidgetBlock } from "../../../widgets/types";
 import { getWidgetBindings } from "../../../services/customScreens/bindingResolver";
@@ -26,7 +24,6 @@ type CustomScreenEntryCanvasProps = {
   onSlugChange: (value: string) => void;
   selectedBlockId?: string | null;
   onSelectBlock?: (blockId: string) => void;
-  onEditBlock?: (blockId: string) => void;
 };
 
 const fieldTypeLabels = {
@@ -51,7 +48,6 @@ export function CustomScreenEntryCanvas({
   onSlugChange,
   selectedBlockId,
   onSelectBlock,
-  onEditBlock,
 }: CustomScreenEntryCanvasProps) {
   const fieldMap = new Map(fields.map((field) => [field.name, field] as const));
   const systemFieldMap = new Map<string, ContentField>([
@@ -90,20 +86,6 @@ export function CustomScreenEntryCanvas({
           onSelectBlock?.(block.id);
         }}
       >
-        <div className="absolute right-3 top-3 z-10 opacity-0 transition group-hover:opacity-100 group-hover:pointer-events-auto">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            className="bg-background/90 backdrop-blur"
-            onClick={(event) => {
-              event.stopPropagation();
-              onEditBlock?.(block.id);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-          </Button>
-        </div>
         {content}
       </div>
     );

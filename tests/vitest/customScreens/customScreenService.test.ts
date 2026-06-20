@@ -126,10 +126,15 @@ test("listCustomScreens falls back to legacy blocks and bindings when persisted 
   const result = await listCustomScreens();
 
   expect(result).toHaveLength(1);
-  expect(result[0]?.schemaVersion).toBe(3);
-  expect(result[0]?.definition.editorView.blocks[0]).toMatchObject({
+  expect(result[0]?.schemaVersion).toBe(4);
+  expect(result[0]?.blocks[0]).toMatchObject({
     id: "section-1",
     type: "section",
+  });
+  expect(result[0]?.definition.editorView.document.sections[0]).toMatchObject({
+    id: "section-1",
+    type: "legacy-widget",
+    legacyWidgetType: "section",
   });
   expect(result[0]?.capabilities.mode).toBe("dashboard");
 });
@@ -170,16 +175,26 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     compositionKey: "catalog-tools",
     showInSidebar: true,
     sidebarLabel: "Catalog Tools",
-    schemaVersion: 3,
+    schemaVersion: 4,
     definition: {
-      schemaVersion: 3,
+      schemaVersion: 4,
       editorView: {
-        blocks: [{ id: "section-1", type: "section", data: {} }],
+        document: {
+          schemaVersion: 1,
+          sections: [
+            expect.objectContaining({
+              id: "section-1",
+              type: "legacy-widget",
+              legacyWidgetType: "section",
+            }),
+          ],
+        },
         bindings: [
           {
             id: "binding-1",
-            widgetId: "section-1",
+            blockId: "section-1",
             propPath: "title",
+            source: "entry",
             field: "name",
             mode: "read",
           },
@@ -191,12 +206,22 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
         defaultSort: { field: "updatedAt", direction: "desc" },
       }),
     },
+    blocks: [expect.objectContaining({ id: "section-1", type: "section" })],
+    bindings: [
+      {
+        id: "binding-1",
+        widgetId: "section-1",
+        propPath: "title",
+        field: "name",
+        mode: "read",
+      },
+    ],
   });
   expect(mockDb.state.lastInsertValues?.createdAt).toBeInstanceOf(Date);
   expect(mockDb.state.lastInsertValues?.updatedAt).toBeInstanceOf(Date);
   expect(result.status).toBe("draft");
   expect(result.collectionRole).toBeNull();
-  expect(result.schemaVersion).toBe(3);
+  expect(result.schemaVersion).toBe(4);
   expect(result.bindings[0]?.id).toBe("field-1-value");
   expect(result.capabilities.mode).toBe("editor");
 });
@@ -267,11 +292,19 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
     compositionKey: "catalog-secondary",
     showInSidebar: false,
     sidebarLabel: null,
-    schemaVersion: 3,
+    schemaVersion: 4,
     definition: expect.objectContaining({
-      schemaVersion: 3,
+      schemaVersion: 4,
       editorView: expect.objectContaining({
-        blocks: [expect.objectContaining({ id: "section-1", type: "section" })],
+        document: expect.objectContaining({
+          sections: [
+            expect.objectContaining({
+              id: "section-1",
+              type: "legacy-widget",
+              legacyWidgetType: "section",
+            }),
+          ],
+        }),
         bindings: [],
         saveMode: "entry",
         interactionMode: "inline",
@@ -285,7 +318,7 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
   expect(result?.capabilities.mode).toBe("collection-only");
 });
 
-test("updateCustomScreen preserves v3 definition shape when blocks are patched", async () => {
+test("updateCustomScreen migrates v3 definition to v4 when blocks are patched", async () => {
   const existingDefinition = {
     schemaVersion: 3,
     listView: {
@@ -343,12 +376,21 @@ test("updateCustomScreen preserves v3 definition shape when blocks are patched",
   });
 
   expect(mockDb.state.lastUpdateValues).toMatchObject({
-    schemaVersion: 3,
+    schemaVersion: 4,
     definition: {
-      schemaVersion: 3,
+      schemaVersion: 4,
       listView: existingDefinition.listView,
       editorView: {
-        blocks: [{ id: "section-2", type: "section", data: {} }],
+        document: {
+          schemaVersion: 1,
+          sections: [
+            expect.objectContaining({
+              id: "section-2",
+              type: "legacy-widget",
+              legacyWidgetType: "section",
+            }),
+          ],
+        },
         bindings: [],
         saveMode: "entry",
         interactionMode: "inline",
@@ -358,10 +400,9 @@ test("updateCustomScreen preserves v3 definition shape when blocks are patched",
     bindings: [],
   });
   expect(result?.definition.listView).toEqual(existingDefinition.listView);
-  expect(result?.definition.editorView.blocks[0]).toMatchObject({
+  expect(result?.blocks[0]).toMatchObject({
     id: "section-2",
     type: "section",
-    data: {},
   });
 });
 

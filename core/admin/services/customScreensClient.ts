@@ -14,6 +14,8 @@ import {
 } from "../../services/customScreens/capabilities";
 import {
   customScreenCollectionRoleValues,
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
   normalizeCustomScreenDefinitionForRead,
   type CustomScreenCollectionRole,
   type CustomScreenDefinition,
@@ -130,13 +132,13 @@ const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenReco
     ...item,
     schemaVersion: definition.schemaVersion,
     definition,
-    blocks: definition.editorView.blocks,
-    bindings: definition.editorView.bindings,
+    blocks: getCustomScreenEditorViewBlocks(definition),
+    bindings: getCustomScreenEditorViewBindings(definition),
     collectionRole: item.collectionRole ?? null,
     compositionKey: item.compositionKey ?? null,
     showInSidebar: item.showInSidebar ?? false,
     sidebarLabel: item.sidebarLabel ?? null,
-    capabilities: item.capabilities ?? resolveCustomScreenCapabilities(definition),
+    capabilities: item.capabilities ?? resolveCustomScreenCapabilities({ definition }),
   };
 };
 
