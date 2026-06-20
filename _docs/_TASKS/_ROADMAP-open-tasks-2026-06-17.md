@@ -27,7 +27,7 @@
 ### Pages / Public Runtime / residua
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
 |----|---------|-----------|--------|--------|------------------------|------------------|
-| TASK-470 | image.fit + video.title dead-props → renderer | Low | Small | Done | Closed 2026-06-19: oba propsy już wpięte w `pageRendererV2.tsx` (commit `540c7131`, Faza 3a); vitest 51/51 + live `playwright-cli` (`object-contain`); changelog 1183. | None; verify-not-reimplement, audyt patrzył na `main`. |
+
 
 ### Bundle / Custom Screens
 | ID | Program | Priorytet | Effort | Status | Realny stan (1 zdanie) | Ryzyko-jeśli-nie |
