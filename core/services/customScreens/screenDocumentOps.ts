@@ -3,7 +3,9 @@ import type {
   ScreenBlockV1,
   ScreenDocumentV1,
   ScreenFieldBinding,
+  ScreenSectionV1,
 } from "./customScreenSchemas";
+import { defaultScreenSectionId } from "./customScreenSchemas";
 
 export type ScreenBlockKind =
   | "record-header"
@@ -16,6 +18,10 @@ export type ScreenBlockKind =
 
 export type ScreenBlockPatch = Partial<
   Pick<ScreenBlockV1, "label" | "variant" | "data" | "slots" | "children">
+>;
+
+export type ScreenSectionPatch = Partial<
+  Pick<ScreenSectionV1, "label" | "data" | "layout" | "visibility">
 >;
 
 const slugify = (value: string) =>
@@ -37,6 +43,23 @@ export const screenBlockLabels: Record<ScreenBlockKind, string> = {
   actions: "Actions",
   "legacy-widget": "Legacy Widget",
 };
+
+export function createScreenSection(
+  input: {
+    id?: string;
+    label?: string;
+    blocks?: ScreenBlockV1[];
+  } = {}
+): ScreenSectionV1 {
+  const label = input.label ?? "Details";
+  return {
+    id: input.id ?? createId("section"),
+    type: "section",
+    label,
+    data: { title: label },
+    blocks: input.blocks ?? [],
+  };
+}
 
 export function createScreenBlock(input: {
   type: ScreenBlockKind;
@@ -178,25 +201,66 @@ const visitBlocks = (
     );
   });
 
+const visitDocumentBlocks = (
+  document: ScreenDocumentV1,
+  visitor: (block: ScreenBlockV1, index: number, siblings: ScreenBlockV1[]) => ScreenBlockV1
+): ScreenDocumentV1 => ({
+  ...document,
+  sections: document.sections.map((section) => ({
+    ...section,
+    blocks: visitBlocks(section.blocks, visitor),
+  })),
+});
+
+const ensureSectionForInsert = (document: ScreenDocumentV1): ScreenDocumentV1 => {
+  if (document.sections.length > 0) return document;
+  return {
+    ...document,
+    sections: [
+      {
+        id: defaultScreenSectionId,
+        type: "section",
+        label: "Details",
+        data: { title: "Details" },
+        blocks: [],
+      },
+    ],
+  };
+};
+
 export function addScreenBlock(
   document: ScreenDocumentV1,
   block: ScreenBlockV1,
   target?: { parentId: string; slotId: string }
 ): ScreenDocumentV1 {
-  if (!target) return { ...document, sections: [...document.sections, block] };
+  if (!target) {
+    const nextDocument = ensureSectionForInsert(document);
+    const [firstSection, ...remainingSections] = nextDocument.sections;
+    if (!firstSection) return nextDocument;
+    return {
+      ...nextDocument,
+      sections: [
+        { ...firstSection, blocks: [...firstSection.blocks, block] },
+        ...remainingSections,
+      ],
+    };
+  }
   return {
     ...document,
-    sections: visitBlocks(document.sections, (current) => {
-      if (current.id !== target.parentId) return current;
-      const slots = current.slots ?? {};
-      return {
-        ...current,
-        slots: {
-          ...slots,
-          [target.slotId]: [...(slots[target.slotId] ?? []), block],
-        },
-      };
-    }),
+    sections: document.sections.map((section) => ({
+      ...section,
+      blocks: visitBlocks(section.blocks, (current) => {
+        if (current.id !== target.parentId) return current;
+        const slots = current.slots ?? {};
+        return {
+          ...current,
+          slots: {
+            ...slots,
+            [target.slotId]: [...(slots[target.slotId] ?? []), block],
+          },
+        };
+      }),
+    })),
   };
 }
 
@@ -205,12 +269,24 @@ export function updateScreenBlock(
   blockId: string,
   patch: ScreenBlockPatch | ((block: ScreenBlockV1) => ScreenBlockV1)
 ): ScreenDocumentV1 {
+  return visitDocumentBlocks(document, (block) => {
+    if (block.id !== blockId) return block;
+    if (typeof patch === "function") return patch(block);
+    return { ...block, ...patch, data: patch.data ?? block.data };
+  });
+}
+
+export function updateScreenSection(
+  document: ScreenDocumentV1,
+  sectionId: string,
+  patch: ScreenSectionPatch | ((section: ScreenSectionV1) => ScreenSectionV1)
+): ScreenDocumentV1 {
   return {
     ...document,
-    sections: visitBlocks(document.sections, (block) => {
-      if (block.id !== blockId) return block;
-      if (typeof patch === "function") return patch(block);
-      return { ...block, ...patch, data: patch.data ?? block.data };
+    sections: document.sections.map((section) => {
+      if (section.id !== sectionId) return section;
+      if (typeof patch === "function") return patch(section);
+      return { ...section, ...patch, data: patch.data ?? section.data };
     }),
   };
 }
@@ -248,10 +324,15 @@ const removeFromBlocks = (
 };
 
 export function removeScreenBlock(document: ScreenDocumentV1, blockId: string) {
-  const result = removeFromBlocks(document.sections, blockId);
+  let removed: ScreenBlockV1 | null = null;
+  const sections = document.sections.map((section) => {
+    const result = removeFromBlocks(section.blocks, blockId);
+    if (result.removed) removed = result.removed;
+    return { ...section, blocks: result.blocks };
+  });
   return {
-    document: { ...document, sections: result.blocks },
-    removed: result.removed,
+    document: { ...document, sections },
+    removed,
   };
 }
 
@@ -261,6 +342,24 @@ export const collectScreenBlockIds = (block: ScreenBlockV1): string[] => {
     ? Object.values(block.slots).flatMap((items) => items.flatMap(collectScreenBlockIds))
     : [];
   return [block.id, ...childIds, ...slotIds];
+};
+
+export const collectScreenDocumentBlocks = (document: ScreenDocumentV1): ScreenBlockV1[] => {
+  const collect = (blocks: ScreenBlockV1[]): ScreenBlockV1[] =>
+    blocks.flatMap((block) => [
+      block,
+      ...(block.children ? collect(block.children) : []),
+      ...(block.slots ? Object.values(block.slots).flatMap((items) => collect(items)) : []),
+    ]);
+  return document.sections.flatMap((section) => collect(section.blocks));
+};
+
+export const findScreenSectionById = (
+  document: ScreenDocumentV1,
+  sectionId: string | null
+): ScreenSectionV1 | null => {
+  if (!sectionId) return null;
+  return document.sections.find((section) => section.id === sectionId) ?? null;
 };
 
 export const findScreenBlockById = (
@@ -282,7 +381,11 @@ export const findScreenBlockById = (
     }
     return null;
   };
-  return findInList(document.sections);
+  for (const section of document.sections) {
+    const match = findInList(section.blocks);
+    if (match) return match;
+  }
+  return null;
 };
 
 export const getFirstScreenBlockId = (document: ScreenDocumentV1): string | null => {
@@ -292,7 +395,11 @@ export const getFirstScreenBlockId = (document: ScreenDocumentV1): string | null
     }
     return null;
   };
-  return first(document.sections);
+  for (const section of document.sections) {
+    const id = first(section.blocks);
+    if (id) return id;
+  }
+  return null;
 };
 
 const cloneBlock = (
@@ -340,7 +447,13 @@ export function duplicateScreenBlock(
     });
     return result;
   };
-  return { ...document, sections: insertDuplicate(document.sections) };
+  return {
+    ...document,
+    sections: document.sections.map((section) => ({
+      ...section,
+      blocks: insertDuplicate(section.blocks),
+    })),
+  };
 }
 
 export function duplicateScreenBlockWithBindings(
@@ -371,7 +484,13 @@ export function duplicateScreenBlockWithBindings(
     });
     return result;
   };
-  const nextDocument = { ...document, sections: insertDuplicate(document.sections) };
+  const nextDocument = {
+    ...document,
+    sections: document.sections.map((section) => ({
+      ...section,
+      blocks: insertDuplicate(section.blocks),
+    })),
+  };
   const duplicatedBindings = bindings.flatMap((binding) => {
     const nextBlockId = idMap.get(binding.blockId);
     if (!nextBlockId) return [];
@@ -416,7 +535,13 @@ export function moveScreenBlock(
       ...(block.children ? { children: moveInList(block.children) } : {}),
     }));
   };
-  return { ...document, sections: moveInList(document.sections) };
+  return {
+    ...document,
+    sections: document.sections.map((section) => ({
+      ...section,
+      blocks: moveInList(section.blocks),
+    })),
+  };
 }
 
 export function removeScreenBindingsForBlock(bindings: ScreenFieldBinding[], blockId: string) {

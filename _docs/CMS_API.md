@@ -1227,9 +1227,17 @@ Custom screen payload (summary):
         "schemaVersion": 1,
         "sections": [
           {
-            "id": "field-1",
-            "type": "field",
-            "data": { "label": "Project status" }
+            "id": "section-details",
+            "type": "section",
+            "label": "Details",
+            "data": { "title": "Details" },
+            "blocks": [
+              {
+                "id": "field-1",
+                "type": "field",
+                "data": { "label": "Project status" }
+              }
+            ]
           }
         ]
       },
@@ -1267,9 +1275,13 @@ Notes:
   scope.
 - `definition.editorView` jest wlascicielem canvasa create/edit:
   `document`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
-- `document.sections[]` korzysta z screen-owned block types such as `field`,
-  `field-group`, `record-header`, and `columns`; legacy widget blocks are
-  compatibility migration inputs only.
+- `document.sections[]` jest lista `ScreenSectionV1` containers:
+  `type: "section"`, `data`, opcjonalne `layout`/`visibility`, oraz
+  `blocks[]`. Strict V4 writes reject flat block arrays; read normalization can
+  wrap stale flat V4 arrays into a default section without destructive save.
+- `section.blocks[]` korzysta z screen-owned block types such as `field`,
+  `field-group`, `record-header`, `columns`, and `rich-text`; legacy widget
+  blocks are compatibility migration inputs only.
 - builder insert library pokazuje screen-owned blocks oraz pola wybranego
   content type; public page builder i widget library nadal uzywaja swoich
   powierzchni.
@@ -1285,9 +1297,16 @@ Notes:
   `BlockList`, `BlockSettings`, `FieldBindingPanel`, ani `WidgetRenderer`.
 - builder preview i read-only fragmenty record editora renderuja
   `editorView.document` przez screen runtime.
-- Entry detail mode jest field-editing-only: klikniecie pola moze otworzyc
-  floating field panel i zapisac istniejace entry fields; nie pokazuje
-  operacji dodawania/przenoszenia/usuwania sekcji lub blokow.
+- `Editor View` uses the neutral authoring canvas shell: insert, layers,
+  content, binding, style, and screen settings open as floating panels rather
+  than permanent Editor View rails.
+- Entry detail mode jest field-editing-only: klikniecie pola otwiera floating
+  `Value` panel i zapisuje istniejace entry fields; nie pokazuje operacji
+  dodawania/przenoszenia/usuwania sekcji lub blokow, block library, builder
+  settings, ani right Sheet.
+- Persistent per-record presentation overrides are intentionally absent from
+  this payload. TASK-473 owns any future storage/API contract for record-specific
+  image/text-size/style overrides outside validated `content_entries.data`.
 - `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `4`.
 - `showInSidebar=true` + `status=active` + `supportsDedicatedEditor=true`
   pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.

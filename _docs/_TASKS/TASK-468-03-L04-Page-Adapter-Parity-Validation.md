@@ -6,7 +6,8 @@
 **Category:** Admin UI / Regression Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-03-L02, TASK-468-03-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -15,6 +16,11 @@
 Validate that Page Editor behavior remains stable after neutral authoring
 extraction. This leaf closes the extraction subtask before Custom Screens start
 using the shared primitives.
+
+2026-06-21 completion: Page Editor stayed on its existing Page-owned authoring
+surface while Custom Screens adopted the additive neutral shell. Boundary tests
+now prove Page Editor files do not import Custom Screen modules and active
+Custom Screen canvas modules do not import Page builder/runtime widget code.
 
 ## Sub-Tasks
 

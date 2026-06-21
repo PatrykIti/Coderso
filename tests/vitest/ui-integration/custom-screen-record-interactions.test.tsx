@@ -53,26 +53,33 @@ const createScreenRecord = () => ({
         schemaVersion: 1 as const,
         sections: [
           {
-            id: "group-1",
-            type: "field-group",
-            variant: "card",
-            data: {
-              title: "Details",
-              description: "Main project fields",
-            },
-            slots: {
-              content: [
-                {
-                  id: "field-1",
-                  type: "field",
-                  variant: "stacked",
-                  data: {
-                    label: "Headline",
-                    value: "Fallback headline",
-                  },
+            id: "section-1",
+            type: "section",
+            data: { title: "Details" },
+            blocks: [
+              {
+                id: "group-1",
+                type: "field-group",
+                variant: "card",
+                data: {
+                  title: "Details",
+                  description: "Main project fields",
                 },
-              ],
-            },
+                slots: {
+                  content: [
+                    {
+                      id: "field-1",
+                      type: "field",
+                      variant: "stacked",
+                      data: {
+                        label: "Headline",
+                        value: "Fallback headline",
+                      },
+                    },
+                  ],
+                },
+              },
+            ],
           },
         ],
       },
@@ -256,8 +263,8 @@ test("record editor keeps child selection scoped and preserves it across refresh
     expect(view.container.textContent).toContain("Headline");
 
     expect(child?.querySelector("button")).toBeNull();
-    expect(document.body.textContent).toContain("field");
-    expect(document.body.textContent).toContain("Selected Field");
+    expect(document.body.querySelector("[data-custom-screen-record-value-panel]")).not.toBeNull();
+    expect(document.body.textContent).toContain("Value");
 
     await React.act(async () => {
       cacheListener?.({ key: cacheKeys.customScreenDetail("screen-1") });

@@ -119,7 +119,7 @@ test("normalizeCustomScreenDefinition normalizes blocks", () => {
   });
   const editorView = getCustomScreenEditorViewCompat(definition);
   expect(definition.schemaVersion).toBe(4);
-  expect(definition.editorView.document.sections[0]?.type).toBe("legacy-widget");
+  expect(definition.editorView.document.sections[0]?.blocks[0]?.type).toBe("legacy-widget");
   expect(editorView.blocks[0]?.type).toBe("section");
   expect(definition.editorView.interactionMode).toBe("inline");
 });
@@ -390,9 +390,16 @@ test("custom screen schemas accept v4 screen documents without definition-owned 
         schemaVersion: 1,
         sections: [
           {
-            id: "field-title",
-            type: "field",
-            data: { label: "Title" },
+            id: "section-default",
+            type: "section",
+            data: { title: "Details" },
+            blocks: [
+              {
+                id: "field-title",
+                type: "field",
+                data: { label: "Title" },
+              },
+            ],
           },
         ],
       },
@@ -424,7 +431,13 @@ test("custom screen schemas accept v4 screen documents without definition-owned 
     schemaVersion: 4,
     editorView: {
       document: {
-        sections: [{ id: "field-title", type: "field" }],
+        sections: [
+          {
+            id: "section-default",
+            type: "section",
+            blocks: [{ id: "field-title", type: "field" }],
+          },
+        ],
       },
       bindings: [
         {
@@ -444,6 +457,82 @@ test("custom screen schemas accept v4 screen documents without definition-owned 
       },
     })
   ).toThrow("custom_screen_definition_invalid");
+});
+
+test("normalizeCustomScreenDefinition rejects flat v4 screen document writes", () => {
+  expect(() =>
+    normalizeCustomScreenDefinition({
+      definition: {
+        schemaVersion: 4,
+        listView: {
+          columns: [],
+          filters: [],
+          defaultSort: { field: "updatedAt", direction: "desc" },
+          bulkActions: { delete: true, publish: true, unpublish: true },
+        },
+        editorView: {
+          document: {
+            schemaVersion: 1,
+            sections: [{ id: "field-title", type: "field", data: { label: "Title" } }],
+          },
+          bindings: [
+            {
+              id: "field-title-value",
+              blockId: "field-title",
+              propPath: "value",
+              source: "entry",
+              field: "title",
+              mode: "readwrite",
+            },
+          ],
+          saveMode: "entry",
+          interactionMode: "inline",
+        },
+      },
+    })
+  ).toThrow("custom_screen_definition_invalid");
+});
+
+test("normalizeCustomScreenDefinitionForRead wraps legacy flat v4 screen documents", () => {
+  const definition = normalizeCustomScreenDefinitionForRead({
+    definition: {
+      schemaVersion: 4,
+      listView: {
+        columns: [],
+        filters: [],
+        defaultSort: { field: "updatedAt", direction: "desc" },
+        bulkActions: { delete: true, publish: true, unpublish: true },
+      },
+      editorView: {
+        document: {
+          schemaVersion: 1,
+          sections: [{ id: "field-title", type: "field", data: { label: "Title" } }],
+        },
+        bindings: [
+          {
+            id: "field-title-value",
+            blockId: "field-title",
+            propPath: "value",
+            source: "entry",
+            field: "title",
+            mode: "readwrite",
+          },
+        ],
+        saveMode: "entry",
+        interactionMode: "inline",
+      },
+    },
+  });
+
+  expect(definition.editorView.document.sections).toHaveLength(1);
+  expect(definition.editorView.document.sections[0]).toMatchObject({
+    id: "section-default",
+    type: "section",
+  });
+  expect(definition.editorView.document.sections[0]?.blocks[0]).toMatchObject({
+    id: "field-title",
+    type: "field",
+  });
 });
 
 test("buildDefaultListViewDefinition derives columns from the selected content type", () => {

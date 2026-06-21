@@ -705,8 +705,11 @@ the mature public widgets:
 Custom Screens preview and the inline record editor now render
 `ScreenDocumentV1` through the screen runtime, not through `WidgetRenderer` or
 the screen-widget render bridge. V4 entry mode is field-editing-only: the
-canvas may open field controls for writable bindings, but it must not expose
-section/block builder actions in the record editor.
+canvas may open the floating `Value` panel for writable bindings, but it must
+not expose section/block builder actions in the record editor. V4 Editor View
+authoring uses screen-owned sections/blocks through `ScreenAuthoringCanvas` and
+neutral authoring UI primitives rather than inserting `screen-*` widgets from
+the widget registry.
 
 ---
 

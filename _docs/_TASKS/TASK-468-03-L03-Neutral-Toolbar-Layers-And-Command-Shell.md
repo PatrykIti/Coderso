@@ -6,7 +6,8 @@
 **Category:** Admin UI / Authoring Architecture
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-03-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -16,6 +17,12 @@ Extract toolbar, layers tree, command dispatch, and inspector slot chrome into
 neutral authoring modules. The extracted shell must support Page Editor and
 Custom Screens without embedding Page-specific labels, publish commands, route
 paths, or block registries.
+
+2026-06-21 completion: added `AuthoringFloatingToolbar`,
+`AuthoringLayersPanel`, `AuthoringCommandPalette`, and
+`authoringCommands`. Screen labels, block menus, bindings, and persistence
+commands are assembled by the Custom Screen adapter rather than the neutral
+modules.
 
 ## Sub-Tasks
 

@@ -80,6 +80,19 @@ Target state:
   render as non-writable placeholders until TASK-468-07-L02 removes the retained
   compatibility surface.
 
+## 2026-06-21 Corrective Neutral Authoring Repair
+
+- A follow-up audit found TASK-468-04 and TASK-468-05 were closed before
+  TASK-468-03 existed in source. The corrective pass added the missing neutral
+  authoring shell and rewired Custom Screen Editor View plus record entry detail
+  to consume it through screen-specific adapters.
+- `ScreenDocumentV1.sections[]` now contains `ScreenSectionV1` objects with
+  nested `blocks[]`. Existing flat block-array V4 documents are repaired on
+  read into the default section and strict writes save the sectioned shape.
+- Persistent per-record presentation overrides are explicitly deferred to
+  TASK-473 because `content_entries.data` is content-type validated and must not
+  carry hidden style/image override fields.
+
 ## Sub-Tasks
 
 - [ ] TASK-468-01: Contract freeze, drift audit, and migration decision record.
@@ -90,11 +103,11 @@ Target state:
   - [ ] TASK-468-02-L02: Legacy V1-V3 Read Migration Adapters.
   - [ ] TASK-468-02-L03: V4 Service Mapping And Route Validation.
   - [ ] TASK-468-02-L04: V4 Write Transition And Compatibility Guards.
-- [ ] TASK-468-03: Neutral authoring shell extraction for screen canvas reuse.
-  - [ ] TASK-468-03-L01: Authoring Inventory And Boundary Guards.
-  - [ ] TASK-468-03-L02: Neutral Canvas Frame And Selection Primitives.
-  - [ ] TASK-468-03-L03: Neutral Toolbar Layers And Command Shell.
-  - [ ] TASK-468-03-L04: Page Adapter Parity Validation.
+- [x] TASK-468-03: Neutral authoring shell extraction for screen canvas reuse.
+  - [x] TASK-468-03-L01: Authoring Inventory And Boundary Guards.
+  - [x] TASK-468-03-L02: Neutral Canvas Frame And Selection Primitives.
+  - [x] TASK-468-03-L03: Neutral Toolbar Layers And Command Shell.
+  - [x] TASK-468-03-L04: Page Adapter Parity Validation.
 - [x] TASK-468-04: Custom Screen canvas editor cutover.
   - [x] TASK-468-04-L01: V4 Editor Client And Local Model.
   - [x] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.

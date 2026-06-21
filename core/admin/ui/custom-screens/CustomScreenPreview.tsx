@@ -24,7 +24,7 @@ export function CustomScreenPreview({
   emptyTitle,
   emptyMessage,
 }: CustomScreenPreviewProps) {
-  if (document.sections.length === 0) {
+  if (!document.sections.some((section) => section.blocks.length > 0)) {
     return (
       <div className="mx-auto flex w-full max-w-4xl flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">

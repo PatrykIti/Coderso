@@ -6,7 +6,8 @@
 **Category:** Admin UI / Page Editor Reuse / Authoring
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-02, TASK-464
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -16,12 +17,23 @@ Extract neutral authoring chrome from the Page Editor modules so Custom Screens
 can reuse the professional canvas, layers, toolbar, and command patterns without
 importing Page v2 document services or Page-specific mutation state.
 
+2026-06-21 corrective completion:
+
+- A post-commit drift review found TASK-468-04/05 had been closed before the
+  neutral authoring extraction existed. This corrective slice added
+  `core/admin/ui/authoring/*` as UI-only canvas, selection, toolbar, layers,
+  command palette, and insertion-zone primitives.
+- Custom Screens now consume those primitives through `ScreenAuthoringCanvas`
+  while Page Editor remains Page-owned and guarded from Custom Screen imports.
+- Boundary tests cover neutral authoring imports, active Custom Screen canvas
+  imports, and Page Editor reverse-coupling.
+
 ## Sub-Tasks
 
-- [ ] TASK-468-03-L01: Authoring Inventory And Boundary Guards.
-- [ ] TASK-468-03-L02: Neutral Canvas Frame And Selection Primitives.
-- [ ] TASK-468-03-L03: Neutral Toolbar Layers And Command Shell.
-- [ ] TASK-468-03-L04: Page Adapter Parity Validation.
+- [x] TASK-468-03-L01: Authoring Inventory And Boundary Guards.
+- [x] TASK-468-03-L02: Neutral Canvas Frame And Selection Primitives.
+- [x] TASK-468-03-L03: Neutral Toolbar Layers And Command Shell.
+- [x] TASK-468-03-L04: Page Adapter Parity Validation.
 
 ## Files To Change
 
@@ -113,6 +125,7 @@ test("page editor still renders existing authoring canvas chrome", () => {
 
 ## Testing Requirements
 
+- `bun run test:vitest -- tests/vitest/ui/authoring-canvas.test.tsx tests/vitest/ui/custom-screen-authoring-boundary.test.ts tests/vitest/customScreens/screenDocumentOps.test.ts tests/vitest/admin/custom-screen-schemas.test.ts tests/vitest/customScreens/customScreenService.test.ts tests/vitest/customScreens/capabilities.test.ts tests/vitest/ui/custom-screen-entry-draft.test.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx tests/vitest/widgets/screenWidgets.test.tsx`
 - Focused Vitest/UI tests for Page Editor canvas, toolbar, layers, and command
   palette reuse.
 - Import-boundary/source tests for Page-vs-Screen ownership.

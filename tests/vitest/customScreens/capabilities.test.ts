@@ -104,9 +104,16 @@ test("resolveCustomScreenCapabilities derives editor mode from v4 screen documen
             schemaVersion: 1,
             sections: [
               {
-                id: "field-headline",
-                type: "field",
-                data: {},
+                id: "section-1",
+                type: "section",
+                data: { title: "Details" },
+                blocks: [
+                  {
+                    id: "field-headline",
+                    type: "field",
+                    data: {},
+                  },
+                ],
               },
             ],
           },

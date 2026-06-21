@@ -1,4 +1,4 @@
-import { Save } from "lucide-react";
+import { Save, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -6,8 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -33,12 +31,14 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
+import { AuthoringCanvasFrame, AuthoringFloatingToolbar } from "@/ui/authoring";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
   normalizeCustomScreenDefinitionForRead,
   type CustomScreenDefinition,
+  type CustomScreenEditorViewDefinitionV4,
   type ScreenDocumentV1,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
@@ -62,11 +62,16 @@ import {
   type CustomScreenEntryDraft,
 } from "./customScreenEntryDraft";
 
-type DetailsTab = "record" | "element";
-
 const emptyScreenDocument: ScreenDocumentV1 = {
   schemaVersion: 1,
   sections: [],
+};
+
+const emptyEditorView: CustomScreenEditorViewDefinitionV4 = {
+  document: emptyScreenDocument,
+  bindings: [],
+  saveMode: "entry",
+  interactionMode: "inline",
 };
 
 const resolveRuntimeDefinition = (screen: CustomScreenRecord): CustomScreenDefinition =>
@@ -161,8 +166,7 @@ export function CustomScreenEntryEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [activeDetailsTab, setActiveDetailsTab] = useState<DetailsTab>("record");
+  const [valuePanelOpen, setValuePanelOpen] = useState(false);
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
   const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
     () =>
@@ -209,7 +213,7 @@ export function CustomScreenEntryEditor() {
     setActiveAssistantSurfaceContext(
       buildCustomScreenAssistantSurface({
         screen,
-        blocks: runtimeDocument.sections,
+        blocks: runtimeDocument.sections.flatMap((section) => section.blocks),
         bindings: runtimeBindings,
         capabilities: screenCapabilities,
         selectedBlockId: selectedRuntimeBlockId,
@@ -576,14 +580,7 @@ export function CustomScreenEntryEditor() {
       setSlug(saved.slug);
       const savedDraft = hydrateEditorViewDraft({
         contentType,
-        editorView: screen
-          ? resolveRuntimeEditorView(screen)
-          : {
-              blocks: [],
-              bindings: [],
-              saveMode: "entry",
-              interactionMode: "inline",
-            },
+        editorView: screen ? resolveRuntimeEditorView(screen) : emptyEditorView,
         entry: saved,
       });
       setValues(savedDraft.data);
@@ -617,65 +614,25 @@ export function CustomScreenEntryEditor() {
     }
   };
 
-  const detailsPanel = (
-    <Tabs
-      value={activeDetailsTab}
-      onValueChange={(next) => setActiveDetailsTab(next as DetailsTab)}
-      className="flex h-full flex-col p-6"
-    >
-      <TabsList variant="line" className="px-1">
-        <TabsTrigger value="record">Record</TabsTrigger>
-        <TabsTrigger value="element">Selected Field</TabsTrigger>
-      </TabsList>
-      <TabsContent value="record" className="mt-4 space-y-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Workspace details</p>
-          <p className="text-xs text-muted-foreground">
-            {canEditInScreen
-              ? "This record is edited directly through the screen-owned canvas."
-              : "This screen is not yet ready for the screen-owned editor workflow."}
-          </p>
+  const valuePanel = (
+    <div className="space-y-4" data-custom-screen-record-value-panel="true">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Value
+        </p>
+        <p className="text-sm font-medium">{selectedRuntimeBlock?.type ?? "Selected field"}</p>
+        <p className="text-xs text-muted-foreground">
+          Click a field on the canvas to focus and edit its bound content here.
+        </p>
+      </div>
+      {renderSelectedBlockBindingEditor()}
+      {readOnlyBindingCount > 0 ? (
+        <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+          {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are preview-only and
+          remain read-only in this screen workflow.
         </div>
-
-        {!canEditInScreen ? (
-          <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-            Use the builder to add writable screen blocks and bindings before using this record
-            route as the active editor flow.
-          </div>
-        ) : (
-          <>
-            <div className="space-y-2 rounded-lg border p-3">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Title
-              </label>
-              <Input value={title} onChange={(event) => handleTitleChange(event.target.value)} />
-            </div>
-            <div className="space-y-2 rounded-lg border p-3">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Slug
-              </label>
-              <Input value={slug} onChange={(event) => handleSlugChange(event.target.value)} />
-            </div>
-          </>
-        )}
-
-        {readOnlyBindingCount > 0 ? (
-          <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-            {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are preview-only
-            and remain read-only in this screen workflow.
-          </div>
-        ) : null}
-      </TabsContent>
-      <TabsContent value="element" className="mt-4 space-y-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium">{selectedRuntimeBlock?.type ?? "Selected field"}</p>
-          <p className="text-xs text-muted-foreground">
-            Click a field on the canvas to focus and edit its bound content here.
-          </p>
-        </div>
-        {renderSelectedBlockBindingEditor()}
-      </TabsContent>
-    </Tabs>
+      ) : null}
+    </div>
   );
 
   const screenRecordsHref = screenId
@@ -777,23 +734,46 @@ export function CustomScreenEntryEditor() {
                 Loading custom screen record...
               </div>
             ) : screen && canEditInScreen ? (
-              <CustomScreenEntryCanvas
-                document={runtimeDocument}
-                bindings={runtimeBindings}
-                fieldValues={buildCanvasFieldValues()}
-                fieldErrors={fieldErrors}
-                fields={fields}
-                relationTargets={relationTargets}
-                onFieldChange={handleFieldChange}
-                onTitleChange={handleTitleChange}
-                onSlugChange={handleSlugChange}
-                selectedBlockId={selectedRuntimeBlockId}
-                onSelectBlock={(blockId) => {
-                  setSelectedRuntimeBlockId(blockId);
-                  setActiveDetailsTab("element");
-                  setDetailsOpen(true);
+              <AuthoringCanvasFrame
+                onClearSelection={() => {
+                  setSelectedRuntimeBlockId(null);
+                  setValuePanelOpen(false);
                 }}
-              />
+                toolbar={
+                  <AuthoringFloatingToolbar
+                    label={selectedRuntimeBlock?.type ?? "Record"}
+                    panels={[
+                      {
+                        id: "value",
+                        label: "Value",
+                        description: "Edit the selected bound field value.",
+                        icon: SlidersHorizontal,
+                        active: valuePanelOpen,
+                        disabled: !selectedRuntimeBlock,
+                        onSelect: () => setValuePanelOpen((current) => !current),
+                      },
+                    ]}
+                  />
+                }
+                floatingPanel={valuePanelOpen ? valuePanel : null}
+              >
+                <CustomScreenEntryCanvas
+                  document={runtimeDocument}
+                  bindings={runtimeBindings}
+                  fieldValues={buildCanvasFieldValues()}
+                  fieldErrors={fieldErrors}
+                  fields={fields}
+                  relationTargets={relationTargets}
+                  onFieldChange={handleFieldChange}
+                  onTitleChange={handleTitleChange}
+                  onSlugChange={handleSlugChange}
+                  selectedBlockId={selectedRuntimeBlockId}
+                  onSelectBlock={(blockId) => {
+                    setSelectedRuntimeBlockId(blockId);
+                    setValuePanelOpen(true);
+                  }}
+                />
+              </AuthoringCanvasFrame>
             ) : screen ? (
               <CustomScreenPreview
                 document={runtimeDocument}
@@ -811,16 +791,6 @@ export function CustomScreenEntryEditor() {
           </div>
         </ScrollArea>
       </EditorShell>
-
-      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent side="right" className="w-96 p-0">
-          <SheetTitle className="sr-only">Bound fields</SheetTitle>
-          <SheetDescription className="sr-only">
-            Edit the content fields mapped by this custom screen.
-          </SheetDescription>
-          <ScrollArea className="h-full">{detailsPanel}</ScrollArea>
-        </SheetContent>
-      </Sheet>
     </>
   );
 }

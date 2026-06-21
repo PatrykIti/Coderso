@@ -139,6 +139,9 @@ const findButton = (container: ParentNode, text: string) =>
     button.textContent?.includes(text)
   ) as HTMLButtonElement | undefined;
 
+const findButtonByLabel = (container: ParentNode, label: string) =>
+  container.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement | null;
+
 beforeEach(() => {
   currentScreenRecord = createScreenRecord();
   window.history.replaceState({}, "", "/admin/advanced/custom-screens/screen-1");
@@ -157,6 +160,13 @@ test("Editor View library exposes screen blocks and content fields without page 
 
     React.act(() => {
       findButton(view.container, "Editor View")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+    });
+    await flush();
+
+    React.act(() => {
+      findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
     });
@@ -186,13 +196,20 @@ test("Editor View keeps legacy blocks visible without exposing page widgets in t
           schemaVersion: 1 as const,
           sections: [
             {
-              id: "hero-1",
-              type: "legacy-widget",
-              legacyWidgetType: "hero",
-              variant: "centered",
-              data: {
-                headline: "Legacy hero",
-              },
+              id: "section-1",
+              type: "section",
+              data: { title: "Details" },
+              blocks: [
+                {
+                  id: "hero-1",
+                  type: "legacy-widget",
+                  legacyWidgetType: "hero",
+                  variant: "centered",
+                  data: {
+                    headline: "Legacy hero",
+                  },
+                },
+              ],
             },
           ],
         },
@@ -222,6 +239,13 @@ test("Editor View keeps legacy blocks visible without exposing page widgets in t
     });
     await flush();
 
+    React.act(() => {
+      findButtonByLabel(view.container, "Insert")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+    });
+    await flush();
+
     expect(view.container.textContent).toContain("Legacy block placeholder");
     expect(view.container.textContent).toContain("hero");
     expect(view.container.textContent).toContain("Record header");
@@ -244,6 +268,13 @@ test("Editor View field library stays empty until a content type is selected", a
 
     React.act(() => {
       findButton(view.container, "Editor View")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+    });
+    await flush();
+
+    React.act(() => {
+      findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
     });

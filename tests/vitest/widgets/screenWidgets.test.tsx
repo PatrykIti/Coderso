@@ -134,12 +134,19 @@ test("CustomScreenPreview renders V4 screen bindings without WidgetRenderer", ()
         schemaVersion: 1,
         sections: [
           {
-            id: "header-1",
-            type: "record-header",
-            data: {
-              title: "Untitled record",
-              subtitle: "Preview subtitle",
-            },
+            id: "section-1",
+            type: "section",
+            data: { title: "Details" },
+            blocks: [
+              {
+                id: "header-1",
+                type: "record-header",
+                data: {
+                  title: "Untitled record",
+                  subtitle: "Preview subtitle",
+                },
+              },
+            ],
           },
         ],
       }}

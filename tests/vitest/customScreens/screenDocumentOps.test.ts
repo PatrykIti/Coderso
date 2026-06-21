@@ -14,18 +14,25 @@ const document: ScreenDocumentV1 = {
   schemaVersion: 1,
   sections: [
     {
-      id: "group-1",
-      type: "field-group",
+      id: "section-1",
+      type: "section",
       data: { title: "Details" },
-      slots: {
-        content: [
-          {
-            id: "field-1",
-            type: "field",
-            data: { label: "Headline" },
+      blocks: [
+        {
+          id: "group-1",
+          type: "field-group",
+          data: { title: "Details" },
+          slots: {
+            content: [
+              {
+                id: "field-1",
+                type: "field",
+                data: { label: "Headline" },
+              },
+            ],
           },
-        ],
-      },
+        },
+      ],
     },
   ],
 };
@@ -44,14 +51,15 @@ const bindings: ScreenFieldBinding[] = [
 test("removeScreenBindingsForBlockTree removes nested bindings with the deleted block", () => {
   const result = removeScreenBlock(document, "group-1");
 
-  expect(result.document.sections).toEqual([]);
+  expect(result.document.sections[0]?.blocks).toEqual([]);
   expect(removeScreenBindingsForBlockTree(bindings, result.removed)).toEqual([]);
 });
 
 test("duplicateScreenBlockWithBindings clones nested bindings onto cloned block ids", () => {
   const result = duplicateScreenBlockWithBindings(document, bindings, "group-1");
 
-  expect(result.document.sections).toHaveLength(2);
+  expect(result.document.sections).toHaveLength(1);
+  expect(result.document.sections[0]?.blocks).toHaveLength(2);
   expect(result.bindings).toHaveLength(2);
   expect(result.bindings[1]).toMatchObject({
     propPath: "value",

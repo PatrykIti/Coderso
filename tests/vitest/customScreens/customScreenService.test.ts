@@ -131,7 +131,7 @@ test("listCustomScreens falls back to legacy blocks and bindings when persisted 
     id: "section-1",
     type: "section",
   });
-  expect(result[0]?.definition.editorView.document.sections[0]).toMatchObject({
+  expect(result[0]?.definition.editorView.document.sections[0]?.blocks[0]).toMatchObject({
     id: "section-1",
     type: "legacy-widget",
     legacyWidgetType: "section",
@@ -183,9 +183,15 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
           schemaVersion: 1,
           sections: [
             expect.objectContaining({
-              id: "section-1",
-              type: "legacy-widget",
-              legacyWidgetType: "section",
+              id: "section-default",
+              type: "section",
+              blocks: [
+                expect.objectContaining({
+                  id: "section-1",
+                  type: "legacy-widget",
+                  legacyWidgetType: "section",
+                }),
+              ],
             }),
           ],
         },
@@ -299,9 +305,15 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
         document: expect.objectContaining({
           sections: [
             expect.objectContaining({
-              id: "section-1",
-              type: "legacy-widget",
-              legacyWidgetType: "section",
+              id: "section-default",
+              type: "section",
+              blocks: [
+                expect.objectContaining({
+                  id: "section-1",
+                  type: "legacy-widget",
+                  legacyWidgetType: "section",
+                }),
+              ],
             }),
           ],
         }),
@@ -385,9 +397,15 @@ test("updateCustomScreen migrates v3 definition to v4 when blocks are patched", 
           schemaVersion: 1,
           sections: [
             expect.objectContaining({
-              id: "section-2",
-              type: "legacy-widget",
-              legacyWidgetType: "section",
+              id: "section-default",
+              type: "section",
+              blocks: [
+                expect.objectContaining({
+                  id: "section-2",
+                  type: "legacy-widget",
+                  legacyWidgetType: "section",
+                }),
+              ],
             }),
           ],
         },

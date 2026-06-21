@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 64 tasks
+- **To Do:** 60 tasks
 - **In Progress:** 8 tasks
-- **Done:** 2622 tasks
+- **Done:** 2627 tasks
 
 ---
 
@@ -102,11 +102,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-02-L02 | Legacy V1-V3 Read Migration Adapters | High | Large | Convert legacy rows into V4 read models or explicit placeholders without destructive writes. |
 | TASK-468-02-L03 | V4 Service Mapping And Route Validation | High | Large | Route Custom Screen service and admin validation through strict V4 schemas and machine-readable errors. |
 | TASK-468-02-L04 | V4 Write Transition And Compatibility Guards | High | Medium | Transition writes to V4 only while preserving read compatibility and rejecting legacy write drift. |
-| TASK-468-03 | Neutral Authoring Shell Extraction For Screen Canvas Reuse | High | Large | Extract Page Editor authoring chrome into neutral adapters without leaking Page v2 services into Screens. |
-| TASK-468-03-L01 | Authoring Inventory And Boundary Guards | High | Medium | Classify reusable Page Editor authoring modules and add import-boundary guards before extraction. |
-| TASK-468-03-L02 | Neutral Canvas Frame And Selection Primitives | High | Large | Extract document-agnostic canvas frame, selection, drag/drop, and viewport primitives. |
-| TASK-468-03-L03 | Neutral Toolbar Layers And Command Shell | High | Large | Extract reusable toolbar, layers, command dispatch, and inspector slot chrome behind adapters. |
-| TASK-468-03-L04 | Page Adapter Parity Validation | High | Medium | Prove Page Editor behavior and bundle boundaries remain stable after authoring extraction. |
 | TASK-468-06 | Assistant Active Surface And Cache Cutover | High | Large | Move assistant actions and active-surface summaries from widget patches to screen sections, blocks, and bindings. |
 | TASK-468-06-L01 | Assistant V4 Action Schemas Registry And Mapper | High | Large | Replace widget-patch assistant actions with strict V4 section/block/binding action schemas. |
 | TASK-468-06-L02 | V4 Active Surface Context Hydration | High | Medium | Hydrate bounded, redacted active-surface summaries from V4 screen state. |
@@ -144,6 +139,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-472-05-L01 | Bold / Italic / Link / Highlight Marks | Medium | Medium | Leaf: extend the 471-03 marks union; link via `normalizeWidgetSafeHref`, highlight via `isSafeAuthoringCssColor`. |
 | TASK-472-06 | Validation, Docs, And Closure | Medium | Small | Topic: family closure. → L01. |
 | TASK-472-06-L01 | Live Smoke, Docs, And Board Closure | Medium | Small | Leaf: lanes + live `playwright-cli` smoke + docs/board/changelog + drift; closes TASK-472 when 01–05 Done. |
+| TASK-473 | Custom Screen Per-Record Presentation Overrides | Medium | Large | Follow-up storage/API contract for per-record image/text/style overrides outside validated `content_entries.data`. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
@@ -172,6 +168,11 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-468-03 | Neutral Authoring Shell Extraction For Screen Canvas Reuse | High | Large | Done (2026-06-21): Added UI-only authoring canvas, toolbar, layers, command, selection, and insertion primitives plus Page/Screen boundary tests. |
+| TASK-468-03-L01 | Authoring Inventory And Boundary Guards | High | Medium | Done (2026-06-21): Kept Page Editor Page-owned and added source-boundary guards for neutral authoring and reverse imports. |
+| TASK-468-03-L02 | Neutral Canvas Frame And Selection Primitives | High | Large | Done (2026-06-21): Added neutral canvas frame, selection helpers, and insertion zone primitives. |
+| TASK-468-03-L03 | Neutral Toolbar Layers And Command Shell | High | Large | Done (2026-06-21): Added neutral floating toolbar, layers panel, command palette, and command dispatcher. |
+| TASK-468-03-L04 | Page Adapter Parity Validation | High | Medium | Done (2026-06-21): Boundary tests prove Page Editor does not import Custom Screen modules and active Screens avoid Page builder/runtime widget imports. |
 | TASK-468-04 | Custom Screen Canvas Editor Cutover | High | Very Large | Done (2026-06-21): Editor View authoring now uses native screen blocks, runtime canvas, inspector, and V4 bindings instead of Page/widget builder components. |
 | TASK-468-04-L01 | V4 Editor Client And Local Model | High | Large | Done (2026-06-21): Custom Screen editor local state reads/saves normalized V4 definitions and preserves list-view configuration. |
 | TASK-468-04-L02 | Screen Canvas Shell And Section Block Operations | High | Large | Done (2026-06-21): Added screen-native add, move, duplicate, delete, nested-slot, and binding-preserving document helpers. |

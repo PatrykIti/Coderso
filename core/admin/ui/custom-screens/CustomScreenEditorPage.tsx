@@ -1,4 +1,4 @@
-import { Eye, Save, Settings2 } from "lucide-react";
+import { Eye, Save } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -28,6 +28,7 @@ import {
   normalizeCustomScreenDefinitionForRead,
   type CustomScreenDefinition,
   type ScreenBlockV1,
+  type ScreenDocumentV1,
   type ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
@@ -73,13 +74,36 @@ import {
   useCustomScreenPreviewRecordState,
   type CustomScreenPreviewRecordState,
 } from "./customScreenPreviewData";
-import { ScreenBlockInspector, createScreenFieldBinding } from "./ScreenBlockInspector";
-import { ScreenBlockLibrary } from "./ScreenBlockLibrary";
-import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
+import { createScreenFieldBinding } from "./ScreenBlockInspector";
+import { ScreenAuthoringCanvas } from "./ScreenAuthoringCanvas";
 import type { ContentField } from "../content-types/SchemaBuilder";
 
 const normalizeText = (value: string) => value.trim();
-type EditorDetailsTab = "screen" | "block";
+
+const blockTreeContains = (blocks: readonly ScreenBlockV1[], blockId: string): boolean =>
+  blocks.some(
+    (block) =>
+      block.id === blockId ||
+      (block.children ? blockTreeContains(block.children, blockId) : false) ||
+      (block.slots
+        ? Object.values(block.slots).some((slotBlocks) => blockTreeContains(slotBlocks, blockId))
+        : false)
+  );
+
+const findBlockSectionId = (document: ScreenDocumentV1, blockId: string | null) => {
+  if (!blockId) return null;
+  return (
+    document.sections.find((section) => blockTreeContains(section.blocks, blockId))?.id ?? null
+  );
+};
+
+const resolveInitialSelection = (document: ScreenDocumentV1) => {
+  const blockId = getFirstScreenBlockId(document);
+  return {
+    blockId,
+    sectionId: findBlockSectionId(document, blockId) ?? document.sections[0]?.id ?? null,
+  };
+};
 
 const resolveScreenDefinition = (
   screen: CustomScreenRecord | null | undefined
@@ -151,8 +175,11 @@ export function CustomScreenEditorPage() {
   );
   const screenDocument = definition.editorView.document;
   const screenBindings = definition.editorView.bindings;
-  const [selectedId, setSelectedId] = useState<string | null>(() =>
-    getFirstScreenBlockId(resolveScreenDefinition(screen).editorView.document)
+  const [selectedId, setSelectedId] = useState<string | null>(
+    () => resolveInitialSelection(resolveScreenDefinition(screen).editorView.document).blockId
+  );
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
+    () => resolveInitialSelection(resolveScreenDefinition(screen).editorView.document).sectionId
   );
   const [isLoading, setIsLoading] = useState(() => !isCreateMode && !screen);
   const [isSaving, setIsSaving] = useState(false);
@@ -165,7 +192,6 @@ export function CustomScreenEditorPage() {
   const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
     "list-view"
   );
-  const [activeEditorDetailsTab, setActiveEditorDetailsTab] = useState<EditorDetailsTab>("screen");
   const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
     () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
   );
@@ -184,7 +210,6 @@ export function CustomScreenEditorPage() {
     [definition]
   );
 
-  const selectedBlock = findScreenBlockById(screenDocument, selectedId);
   const selectedListColumn = useMemo(
     () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
     [definition.listView.columns, selectedListColumnId]
@@ -216,7 +241,7 @@ export function CustomScreenEditorPage() {
           sidebarLabel: sidebarLabel.trim() || null,
           definition,
         },
-        blocks: screenDocument.sections,
+        blocks: screenDocument.sections.flatMap((section) => section.blocks),
         bindings: screenBindings,
         capabilities: previewCapabilities,
         selectedBlockId: selectedId,
@@ -295,6 +320,7 @@ export function CustomScreenEditorPage() {
 
   const applyScreen = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
+    const nextSelection = resolveInitialSelection(nextDefinition.editorView.document);
     definitionRef.current = nextDefinition;
     setScreen(record);
     setName(record.name);
@@ -303,7 +329,8 @@ export function CustomScreenEditorPage() {
     setShowInSidebar(record.showInSidebar ?? false);
     setSidebarLabel(record.sidebarLabel ?? "");
     setDefinition(nextDefinition);
-    setSelectedId(getFirstScreenBlockId(nextDefinition.editorView.document));
+    setSelectedId(nextSelection.blockId);
+    setSelectedSectionId(nextSelection.sectionId);
     setSelectedListColumnId(nextDefinition.listView.columns[0]?.id ?? null);
     setHasUnsavedChanges(false);
   }, []);
@@ -328,8 +355,11 @@ export function CustomScreenEditorPage() {
     [applyScreen, isCreateMode, screenId]
   );
 
-  const handleSelectBlock = useCallback((id: string) => {
+  const handleSelectBlock = useCallback((id: string | null) => {
     setSelectedId(id);
+    if (id) {
+      setSelectedSectionId(findBlockSectionId(definitionRef.current.editorView.document, id));
+    }
   }, []);
 
   useEffect(() => {
@@ -402,7 +432,7 @@ export function CustomScreenEditorPage() {
       bindings: [...current.editorView.bindings, ...created.bindings],
     });
     setSelectedId(created.block.id);
-    setActiveEditorDetailsTab("block");
+    setSelectedSectionId(findBlockSectionId(nextDocument, created.block.id));
   };
 
   const handleMoveBlock = (blockId: string, direction: "up" | "down") => {
@@ -423,7 +453,10 @@ export function CustomScreenEditorPage() {
       document: result.document,
       bindings: result.bindings,
     });
-    if (result.duplicatedBlockId) setSelectedId(result.duplicatedBlockId);
+    if (result.duplicatedBlockId) {
+      setSelectedId(result.duplicatedBlockId);
+      setSelectedSectionId(findBlockSectionId(result.document, result.duplicatedBlockId));
+    }
   };
 
   const handleDeleteBlock = (blockId: string) => {
@@ -435,7 +468,9 @@ export function CustomScreenEditorPage() {
       bindings: removeScreenBindingsForBlockTree(current.editorView.bindings, result.removed),
     });
     if (selectedId && !findScreenBlockById(result.document, selectedId)) {
-      setSelectedId(getFirstScreenBlockId(result.document));
+      const nextSelection = resolveInitialSelection(result.document);
+      setSelectedId(nextSelection.blockId);
+      setSelectedSectionId(nextSelection.sectionId);
     }
   };
 
@@ -606,15 +641,9 @@ export function CustomScreenEditorPage() {
     }
   };
 
-  const libraryPanel =
-    activeBuilderTab === "list-view" ? (
-      <ListViewElementLibrary
-        options={availableListFieldOptions}
-        onAddColumn={handleAddListColumn}
-      />
-    ) : (
-      <ScreenBlockLibrary fields={contentFields} onAddBlock={handleAddBlock} />
-    );
+  const libraryPanel = (
+    <ListViewElementLibrary options={availableListFieldOptions} onAddColumn={handleAddListColumn} />
+  );
 
   const screenSettingsPanel = (
     <div className="space-y-4">
@@ -715,62 +744,32 @@ export function CustomScreenEditorPage() {
     </div>
   );
 
-  const detailsPanel =
-    activeBuilderTab === "list-view" ? (
-      <Tabs key="list-view-details" defaultValue="screen" className="flex h-full flex-col">
-        <TabsList variant="line" className="px-1">
-          <TabsTrigger value="screen">Screen</TabsTrigger>
-          <TabsTrigger value="column">Selected Column</TabsTrigger>
-        </TabsList>
-        <TabsContent value="screen" className="mt-4 space-y-6">
-          {screenSettingsPanel}
-          <div className="rounded-xl border p-4">
-            <ListViewDesigner
-              contentType={selectedContentType}
-              value={definition.listView}
-              onChange={updateListView}
-            />
-          </div>
-        </TabsContent>
-        <TabsContent value="column" className="mt-4">
-          <ListViewColumnInspector
-            column={selectedListColumn}
-            onChange={handleChangeSelectedListColumn}
-            onRemove={handleRemoveSelectedListColumn}
+  const detailsPanel = (
+    <Tabs key="list-view-details" defaultValue="screen" className="flex h-full flex-col">
+      <TabsList variant="line" className="px-1">
+        <TabsTrigger value="screen">Screen</TabsTrigger>
+        <TabsTrigger value="column">Selected Column</TabsTrigger>
+      </TabsList>
+      <TabsContent value="screen" className="mt-4 space-y-6">
+        {screenSettingsPanel}
+        <div className="rounded-xl border p-4">
+          <ListViewDesigner
+            contentType={selectedContentType}
+            value={definition.listView}
+            onChange={updateListView}
           />
-        </TabsContent>
-      </Tabs>
-    ) : (
-      <Tabs
-        key="editor-view-details"
-        value={activeEditorDetailsTab}
-        onValueChange={(next) => setActiveEditorDetailsTab(next as EditorDetailsTab)}
-        className="flex h-full flex-col"
-      >
-        <TabsList variant="line" className="px-1">
-          <TabsTrigger value="screen">Screen</TabsTrigger>
-          <TabsTrigger value="block">Selected Block</TabsTrigger>
-        </TabsList>
-        <TabsContent value="screen" className="mt-4">
-          {screenSettingsPanel}
-        </TabsContent>
-        <TabsContent value="block" className="mt-4">
-          <ScreenBlockInspector
-            selectedBlock={selectedBlock}
-            bindings={screenBindings}
-            fields={contentFields}
-            onPatchBlock={handlePatchBlock}
-            onPatchBlockData={handlePatchBlockData}
-            onPatchBinding={handlePatchBinding}
-            onMove={handleMoveBlock}
-            onDuplicate={handleDuplicateBlock}
-            onDelete={handleDeleteBlock}
-          />
-        </TabsContent>
-      </Tabs>
-    );
+        </div>
+      </TabsContent>
+      <TabsContent value="column" className="mt-4">
+        <ListViewColumnInspector
+          column={selectedListColumn}
+          onChange={handleChangeSelectedListColumn}
+          onRemove={handleRemoveSelectedListColumn}
+        />
+      </TabsContent>
+    </Tabs>
+  );
 
-  const showEmptyState = !isLoading && screenDocument.sections.length === 0;
   const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 
   return (
@@ -782,8 +781,8 @@ export function CustomScreenEditorPage() {
             status={status}
             hasUnsavedChanges={hasUnsavedChanges}
             isCreateMode={isCreateMode}
-            leftPanel={libraryPanel}
-            rightPanel={detailsPanel}
+            leftPanel={activeBuilderTab === "list-view" ? libraryPanel : undefined}
+            rightPanel={activeBuilderTab === "list-view" ? detailsPanel : undefined}
             rightPanelClassName="p-6"
           >
             <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
@@ -840,17 +839,23 @@ export function CustomScreenEditorPage() {
                     {isSaving ? "Saving..." : "Save"}
                   </Button>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 lg:hidden">
-                  <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
-                    Components
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
-                    Details
-                  </Button>
-                </div>
+                {activeBuilderTab === "list-view" ? (
+                  <div className="flex flex-wrap items-center gap-2 lg:hidden">
+                    <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
+                      Components
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
+                      Details
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </div>
-            <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
+            <div
+              className={`mx-auto flex w-full flex-col gap-4 px-6 py-8 ${
+                activeBuilderTab === "editor-view" ? "max-w-6xl" : "max-w-4xl"
+              }`}
+            >
               {error ? (
                 <Alert variant="destructive">
                   <AlertTitle>Custom screen error</AlertTitle>
@@ -881,67 +886,59 @@ export function CustomScreenEditorPage() {
                   onSelectColumn={setSelectedListColumnId}
                   onMoveColumn={handleMoveListColumn}
                 />
-              ) : showEmptyState ? (
-                <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                    <Settings2 className="h-10 w-10" />
-                  </div>
-                  <h2 className="text-2xl font-semibold text-foreground">
-                    Build your custom screen
-                  </h2>
-                  <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                    Add screen blocks from the library to compose the admin experience for this
-                    content type.
-                  </p>
-                </div>
               ) : (
-                <div className="space-y-4">
-                  <PreviewStateNotice
-                    contentType={selectedContentType}
-                    previewRecordState={previewRecordState}
-                    isLoading={previewDataLoading}
-                  />
-                  <div
-                    className="w-full overflow-hidden rounded-xl border border-border/50 bg-background p-4"
-                    onClick={() => setSelectedId(null)}
-                  >
-                    <ScreenRuntimeRenderer
-                      document={screenDocument}
-                      bindings={screenBindings}
-                      values={previewRecordState.data}
-                      fields={contentFields}
-                      mode="builder"
-                      selectedBlockId={selectedId}
-                      onSelectBlock={(blockId) => {
-                        handleSelectBlock(blockId);
-                        setActiveEditorDetailsTab("block");
-                      }}
+                <ScreenAuthoringCanvas
+                  document={screenDocument}
+                  bindings={screenBindings}
+                  fields={contentFields}
+                  values={previewRecordState.data}
+                  previewNotice={
+                    <PreviewStateNotice
+                      contentType={selectedContentType}
+                      previewRecordState={previewRecordState}
+                      isLoading={previewDataLoading}
                     />
-                  </div>
-                </div>
+                  }
+                  settingsPanel={screenSettingsPanel}
+                  selectedSectionId={selectedSectionId}
+                  selectedBlockId={selectedId}
+                  onSelectSection={setSelectedSectionId}
+                  onSelectBlock={handleSelectBlock}
+                  onAddBlock={handleAddBlock}
+                  onPatchBlock={handlePatchBlock}
+                  onPatchBlockData={handlePatchBlockData}
+                  onPatchBinding={handlePatchBinding}
+                  onMove={handleMoveBlock}
+                  onDuplicate={handleDuplicateBlock}
+                  onDelete={handleDeleteBlock}
+                />
               )}
             </div>
           </CustomScreenShell>
 
-          <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
-            <SheetContent side="left" className="w-80 p-0">
-              <SheetTitle className="sr-only">Screen block library</SheetTitle>
-              <SheetDescription className="sr-only">
-                Insert blocks into the custom screen layout.
-              </SheetDescription>
-              {libraryPanel}
-            </SheetContent>
-          </Sheet>
+          {activeBuilderTab === "list-view" ? (
+            <>
+              <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
+                <SheetContent side="left" className="w-80 p-0">
+                  <SheetTitle className="sr-only">List view elements</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Add columns to the custom screen list view.
+                  </SheetDescription>
+                  {libraryPanel}
+                </SheetContent>
+              </Sheet>
 
-          <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
-            <SheetContent side="right" className="w-96 p-6">
-              <SheetTitle className="sr-only">Screen details</SheetTitle>
-              <SheetDescription className="sr-only">
-                Configure screen metadata and selected block settings.
-              </SheetDescription>
-              {detailsPanel}
-            </SheetContent>
-          </Sheet>
+              <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
+                <SheetContent side="right" className="w-96 p-6">
+                  <SheetTitle className="sr-only">Screen details</SheetTitle>
+                  <SheetDescription className="sr-only">
+                    Configure screen metadata and selected list column settings.
+                  </SheetDescription>
+                  {detailsPanel}
+                </SheetContent>
+              </Sheet>
+            </>
+          ) : null}
 
           <CustomScreenWorkspacePreviewDialog
             open={previewOpen}

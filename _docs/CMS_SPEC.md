@@ -170,6 +170,25 @@ Storage:
   when the content type slug is `post` or `posts`; dedicated Posts storage is
   used only for real posts.
 
+### Custom Screens authoring and records
+
+- Custom Screens are admin-only workspaces bound to one Engine content type.
+- `definition.schemaVersion=4` owns `listView` plus `editorView`.
+- `editorView.document` is `ScreenDocumentV1`: `sections[]` contains
+  `ScreenSectionV1` objects with nested `blocks[]`; it is not a Page v2
+  document and strict writes reject flat block arrays.
+- Read migration may wrap older flat V4 block arrays into a default section
+  without destructive persistence.
+- `Editor View` uses a neutral authoring canvas shell through a screen adapter:
+  insert, layers, content, binding, style, and screen settings are floating
+  panels, not permanent Editor View rails.
+- Record detail mode reuses the same neutral canvas shell but exposes only a
+  floating `Value` panel for bound field values. It does not show builder add,
+  move, duplicate, delete, library, or settings controls.
+- Per-record presentation overrides are out of this contract until TASK-473;
+  do not store hidden style/image/text-size override fields in
+  `content_entries.data`.
+
 ### Posts admin authoring contract
 
 - Posts list wspiera visible-scope bulk actions (`Publish`, `Move to Draft`,

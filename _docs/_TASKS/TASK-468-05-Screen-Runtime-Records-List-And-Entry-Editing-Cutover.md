@@ -40,6 +40,14 @@ blocks, writable controls, and professional record layouts.
 - Active-surface hydration reports native screen block types and V4 bindings;
   legacy placeholders stay non-writable.
 
+2026-06-21 corrective closure:
+
+- Record entry detail now uses the neutral authoring canvas shell with a
+  floating Value panel. It does not expose add, move, duplicate, delete, block
+  library, builder settings, or a right Sheet in record mode.
+- Per-record text size, image, and style persistence remains out of scope and is
+  tracked by TASK-473.
+
 ## Sub-Tasks
 
 - [x] TASK-468-05-L01: Screen Runtime Renderer.

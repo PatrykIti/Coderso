@@ -29,7 +29,8 @@ export function resolveCustomScreenCapabilities(input: {
 }): CustomScreenCapabilities {
   const definition = input.definition ?? null;
   if (definition) {
-    const blocks = definition.editorView.document.sections;
+    const sections = definition.editorView.document.sections;
+    const blocks = sections.flatMap((section) => section.blocks);
     const bindings = definition.editorView.bindings;
     const blockTypesById = new Map<string, string>();
     const visit = (items: typeof blocks) => {

@@ -21,12 +21,15 @@ type ScreenRuntimeRendererProps = {
   fieldErrors?: Record<string, string>;
   relationTargets?: Array<{ slug: string; name: string }>;
   mode: "builder" | "preview" | "entry";
+  selectedSectionId?: string | null;
   selectedBlockId?: string | null;
+  onSelectSection?: (sectionId: string) => void;
   onSelectBlock?: (blockId: string) => void;
   onFieldChange?: (field: string, value: unknown) => void;
   onTitleChange?: (value: string) => void;
   onSlugChange?: (value: string) => void;
   renderBuilderActions?: (block: ScreenBlockV1) => ReactNode;
+  enableInlineFieldEditing?: boolean;
   emptyMessage?: string;
 };
 
@@ -122,12 +125,15 @@ export function ScreenRuntimeRenderer({
   fieldErrors = {},
   relationTargets = [],
   mode,
+  selectedSectionId,
   selectedBlockId,
+  onSelectSection,
   onSelectBlock,
   onFieldChange,
   onTitleChange,
   onSlugChange,
   renderBuilderActions,
+  enableInlineFieldEditing = false,
   emptyMessage,
 }: ScreenRuntimeRendererProps) {
   const renderBlock = (block: ScreenBlockV1): ReactNode => {
@@ -218,6 +224,7 @@ export function ScreenRuntimeRenderer({
       const writable = binding?.mode === "write" || binding?.mode === "readwrite";
       const canEdit =
         mode === "entry" &&
+        enableInlineFieldEditing &&
         writable &&
         field &&
         (field.name === "title" ||
@@ -333,7 +340,8 @@ export function ScreenRuntimeRenderer({
     );
   };
 
-  if (document.sections.length === 0) {
+  const hasBlocks = document.sections.some((section) => section.blocks.length > 0);
+  if (!hasBlocks) {
     return (
       <div className="rounded-xl border border-dashed bg-background/40 px-8 py-16 text-center text-sm text-muted-foreground">
         {emptyMessage ?? "Add screen blocks to compose this view."}
@@ -341,5 +349,66 @@ export function ScreenRuntimeRenderer({
     );
   }
 
-  return <div className="space-y-4">{document.sections.map((block) => renderBlock(block))}</div>;
+  return (
+    <div className="space-y-5">
+      {document.sections.map((section) => {
+        const selected = selectedSectionId === section.id;
+        const isInteractive = mode === "builder" && Boolean(onSelectSection);
+        const title =
+          typeof section.data.title === "string" && section.data.title.trim()
+            ? section.data.title.trim()
+            : section.label || "Section";
+        return (
+          <section
+            key={section.id}
+            className={cn(
+              "relative rounded-2xl border bg-background/80 p-4 transition",
+              mode === "builder" && "shadow-sm hover:border-primary/30",
+              selected && "ring-2 ring-primary/35"
+            )}
+            data-screen-section-id={section.id}
+            data-screen-section-type={section.type}
+            data-selected={selected ? "true" : "false"}
+            role={isInteractive ? "button" : undefined}
+            tabIndex={isInteractive ? 0 : undefined}
+            onClick={
+              isInteractive
+                ? (event) => {
+                    event.stopPropagation();
+                    onSelectSection?.(section.id);
+                  }
+                : undefined
+            }
+            onKeyDown={
+              isInteractive
+                ? (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onSelectSection?.(section.id);
+                    }
+                  }
+                : undefined
+            }
+          >
+            {mode === "builder" ? (
+              <div className="mb-3 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                <span className="font-semibold uppercase">{title}</span>
+                <span className="font-mono">{section.id}</span>
+              </div>
+            ) : null}
+            <div className="space-y-4">
+              {section.blocks.length > 0 ? (
+                section.blocks.map((block) => renderBlock(block))
+              ) : (
+                <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                  Empty section
+                </div>
+              )}
+            </div>
+          </section>
+        );
+      })}
+    </div>
+  );
 }

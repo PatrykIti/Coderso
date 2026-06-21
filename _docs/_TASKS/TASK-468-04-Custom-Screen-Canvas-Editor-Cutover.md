@@ -36,6 +36,17 @@ controls, layers, and preview states.
   and V4 preview.
 - List View configuration remains unchanged and table-only.
 
+2026-06-21 corrective closure:
+
+- The initial closure was premature because TASK-468-03 neutral authoring
+  extraction did not yet exist. The corrective pass replaced the fixed Editor
+  View rails with `ScreenAuthoringCanvas` over `core/admin/ui/authoring/*`,
+  moved insert/layers/content/binding/style controls into floating canvas
+  panels, and kept List View rails unchanged.
+- Editor View saves strict sectioned `ScreenDocumentV1` documents; stale flat
+  V4 block arrays are read-repaired into the default section without destructive
+  writes.
+
 ## Sub-Tasks
 
 - [x] TASK-468-04-L01: V4 Editor Client And Local Model.

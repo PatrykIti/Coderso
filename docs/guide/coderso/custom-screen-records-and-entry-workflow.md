@@ -21,8 +21,9 @@ as:
 - a writable custom record screen.
 
 In the current local UI, the records route is present and shows a
-`Collection-only screen` state. The deeper record-editing workflow is also
-implemented in code for screens that provide the required bindings and widgets.
+`Collection-only screen` state when the screen is not editor-ready. Screens that
+provide writable bindings open a canvas-based record editor with a floating
+Value panel for the selected bound field.
 
 # Medium
 
@@ -55,7 +56,7 @@ The local runtime currently demonstrates the collection-only branch:
 3. If the route shows `Collection-only screen`, interpret it literally:
    the route is narrowing the records workflow, but it is not yet replacing the
    classic entry editor.
-4. Use `Open builder` when the screen still needs dedicated widgets and
+4. Use `Open builder` when the screen still needs dedicated blocks and
    bindings.
 5. Use `New record` when the content type is ready and you want to create a new
    entry from the screen-bound workflow.
@@ -64,14 +65,11 @@ The local runtime currently demonstrates the collection-only branch:
 7. When the screen-bound record editor is available, expect these workflow
    layers:
    - breadcrumb path back to Screens,
-   - screen-aware record title/slug area,
-   - custom screen preview canvas,
-   - bound field details panel,
-   - `Back to records`,
-   - `Classic editor`,
+   - custom screen record canvas,
+   - floating `Value` panel after selecting a bound field,
    - `Save record`.
-8. Use `Classic editor` when the custom screen is read-only or not yet complete
-   for full editing.
+8. Use the default Entries editor when the custom screen is read-only or not yet
+   complete for full editing.
 9. Use `Save record` only when the custom screen is in a writable mode and the
    required bindings exist.
 10. Use the custom screen preview to confirm that mapped record data appears in
@@ -82,7 +80,7 @@ Use this safe records workflow when a screen is still maturing:
 2. Confirm whether the screen is collection-only, read-only, or writable.
 3. If it is collection-only, use it as a shortcut and fall back to the classic
    editor for edits.
-4. If it is writable, test save behavior only after bindings and screen widgets
+4. If it is writable, test save behavior only after bindings and screen blocks
    are coherent.
 
 # Advanced
@@ -94,11 +92,17 @@ Use this safe records workflow when a screen is still maturing:
 - The read-only dashboard mode is also a legitimate intermediate state. It can
   preview mapped record data while preserving the classic editor as the true
   editing surface.
-- `Classic editor` is not a failure fallback. It is a deliberate interoperability
-  path while the custom screen workflow evolves.
+- The default Entries editor is not a failure fallback. It is a deliberate
+  interoperability path while the custom screen workflow evolves.
 - A writable custom screen should be treated like workflow-specific tooling: it
   must be simpler and safer for the target job than the generic editor, not just
   visually different.
+- Record mode intentionally does not show builder controls. Add, move,
+  duplicate, delete, block library, settings, and right-side Sheet controls
+  belong to the screen builder, not the record editor.
+- Record-specific presentation overrides such as custom image choices or
+  text-size/style tweaks are not persisted yet; they require a separate storage
+  contract and are tracked outside this workflow.
 
 # Troubleshooting
 
@@ -108,9 +112,12 @@ Use this safe records workflow when a screen is still maturing:
   check whether the screen is operating in a read-only/dashboard mode.
 - The custom screen does not show meaningful data:
   review bindings and the underlying content type fields in the builder.
+- You selected a field but cannot find builder controls:
+  that is expected in record mode; use the floating Value panel for record data
+  and return to the builder for layout changes.
 - The route exists but work still needs the classic editor:
-  use `Classic editor` intentionally instead of forcing edits through an
-  incomplete custom surface.
+  use the default Entries editor intentionally instead of forcing edits through
+  an incomplete custom surface.
 - `New record` is available but the workflow still feels generic:
   the screen may only be narrowing the records list, not replacing record
   editing.

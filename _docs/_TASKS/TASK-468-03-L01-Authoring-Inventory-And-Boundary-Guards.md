@@ -6,7 +6,8 @@
 **Category:** Admin UI / Authoring Architecture
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -15,6 +16,11 @@
 Inventory the Page Editor modules that can become neutral authoring primitives
 and freeze explicit boundaries before extraction. This task must identify which
 pieces are reusable chrome and which remain Page-document-specific adapters.
+
+2026-06-21 completion: the corrective pass kept Page Editor modules
+Page-owned, extracted only reusable shell primitives into
+`core/admin/ui/authoring/*`, and added source-boundary tests for neutral
+authoring, active Custom Screen canvases, and Page Editor reverse imports.
 
 ## Sub-Tasks
 

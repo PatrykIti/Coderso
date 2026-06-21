@@ -97,7 +97,7 @@ export const buildCustomScreenAssistantSurface = (input: {
 }): AssistantActiveCustomScreenSurfaceContext => {
   const blocks =
     input.blocks ??
-    input.screen.definition?.editorView.document.sections ??
+    input.screen.definition?.editorView.document.sections.flatMap((section) => section.blocks) ??
     (input.screen.blocks as Block[]);
   const bindings =
     input.bindings ?? input.screen.definition?.editorView.bindings ?? input.screen.bindings;

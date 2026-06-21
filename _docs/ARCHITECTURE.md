@@ -863,6 +863,19 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - screen block bindings dla zaznaczonego elementu,
   - bound preview renderowany bezposrednio z `ScreenDocumentV1` przez
     screen runtime.
+- `ScreenDocumentV1.sections[]` jest lista `ScreenSectionV1`, a nie plaska
+  lista blokow. Kazda sekcja ma `id`, `type: "section"`, `data`, opcjonalne
+  layout/visibility i `blocks[]`. Stare plaskie V4 block-array dokumenty sa
+  migrowane przy odczycie do sekcji domyslnej bez destrukcyjnego zapisu; nowe
+  zapisy musza przejsc strict sectioned shape.
+- Neutral authoring ownership:
+  - `core/admin/ui/authoring/*` zawiera tylko UI shell: canvas frame,
+    selection helpers, insertion zones, floating toolbar, layers, and command
+    palette,
+  - neutral modules nie importuja Page services, Custom Screen services,
+    widget runtime, DB, server adapters, ani clients,
+  - Page Editor pozostaje Page-owned; Custom Screens uzywaja
+    `ScreenAuthoringCanvas` jako adaptera nad `ScreenDocumentV1`.
 - `Editor View` preview owner jest cached-first nad `entries:list:<typeSlug>`:
   pierwszy cached record hydratuje i builder canvas, i preview dialog; cold
   cache fallback pozostaje schema-shaped z jawna notka dla `no-records` albo
@@ -871,6 +884,8 @@ Zakres CMS, model danych, auth i security opisane sa w:
   library w Editor View:
   - insert library pokazuje screen-owned blocks oraz pola wybranego content
     type,
+  - `Editor View` nie uzywa stalych lewych/prawych rails; insert, layers,
+    content, binding, style, and settings sa panelami floating canvas,
   - active canvas renderuje `record-header`, `field`, `field-group`,
     `columns`, `rich-text`, oraz bounded legacy placeholders,
   - screen-only widgets (`screen-record-header`, `screen-field-value`,
@@ -892,7 +907,11 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `collection-only` prowadzi rekord bezposrednio do classic editor,
   - `dashboard` otwiera read-only screen z CTA do classic editor,
   - `editor` pokazuje tylko pola wynikajace z `write/readwrite` bindings i zapisuje standardowy `entry.data`;
-    entry canvas nie pokazuje builderowych operacji sekcji/blokow.
+    entry canvas nie pokazuje builderowych operacji sekcji/blokow i edytuje
+    wartosci przez floating `Value` panel.
+- Trwale per-record presentation overrides (np. image/text-size/style per
+  rekord) nie sa zapisywane w `content_entries.data`; osobny storage/API
+  kontrakt jest deferowany do TASK-473.
 
 ## Coderso Filters & Search (v2 beta)
 

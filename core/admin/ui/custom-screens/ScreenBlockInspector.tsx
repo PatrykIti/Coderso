@@ -23,6 +23,8 @@ type ScreenBlockInspectorProps = {
   selectedBlock: ScreenBlockV1 | null;
   bindings: ScreenFieldBinding[];
   fields: ContentField[];
+  panel?: "all" | "content" | "binding" | "layout" | "style" | "visibility";
+  showBlockActions?: boolean;
   onPatchBlock: (blockId: string, patch: Partial<ScreenBlockV1>) => void;
   onPatchBlockData: (blockId: string, patch: Record<string, unknown>) => void;
   onPatchBinding: (
@@ -159,6 +161,8 @@ export function ScreenBlockInspector({
   selectedBlock,
   bindings,
   fields,
+  panel = "all",
+  showBlockActions = true,
   onPatchBlock,
   onPatchBlockData,
   onPatchBinding,
@@ -179,6 +183,9 @@ export function ScreenBlockInspector({
   const patchData = (patch: Record<string, unknown>) => {
     onPatchBlockData(selectedBlock.id, patch);
   };
+  const showContent = panel === "all" || panel === "content";
+  const showBinding = panel === "all" || panel === "binding";
+  const showStyle = panel === "all" || panel === "style";
 
   return (
     <div className="space-y-5">
@@ -192,103 +199,113 @@ export function ScreenBlockInspector({
             {selectedBlock.type}
           </Badge>
         </div>
-        <div className="grid grid-cols-4 gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label="Move selected block up"
-            onClick={() => onMove(selectedBlock.id, "up")}
-          >
-            <MoveUp className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label="Move selected block down"
-            onClick={() => onMove(selectedBlock.id, "down")}
-          >
-            <MoveDown className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label="Duplicate selected block"
-            onClick={() => onDuplicate(selectedBlock.id)}
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            aria-label="Delete selected block"
-            onClick={() => onDelete(selectedBlock.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
+        {showBlockActions ? (
+          <div className="grid grid-cols-4 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Move selected block up"
+              onClick={() => onMove(selectedBlock.id, "up")}
+            >
+              <MoveUp className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Move selected block down"
+              onClick={() => onMove(selectedBlock.id, "down")}
+            >
+              <MoveDown className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Duplicate selected block"
+              onClick={() => onDuplicate(selectedBlock.id)}
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-label="Delete selected block"
+              onClick={() => onDelete(selectedBlock.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : null}
       </div>
 
-      {selectedBlock.type === "record-header" ? (
+      {selectedBlock.type === "record-header" && (showBinding || showContent) ? (
         <div className="space-y-3">
-          <FieldBindingControls
-            block={selectedBlock}
-            propPath="title"
-            bindings={bindings}
-            fields={fields}
-            onPatchBinding={onPatchBinding}
-            defaultMode="read"
-          />
-          <div className="space-y-2 rounded-lg border p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Header text
-            </p>
-            <Input
-              value={readString(selectedBlock.data.eyebrow)}
-              onChange={(event) => patchData({ eyebrow: event.target.value })}
-              placeholder="Eyebrow"
+          {showBinding ? (
+            <FieldBindingControls
+              block={selectedBlock}
+              propPath="title"
+              bindings={bindings}
+              fields={fields}
+              onPatchBinding={onPatchBinding}
+              defaultMode="read"
             />
-            <Input
-              value={readString(selectedBlock.data.subtitle)}
-              onChange={(event) => patchData({ subtitle: event.target.value })}
-              placeholder="Subtitle"
-            />
-          </div>
+          ) : null}
+          {showContent ? (
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Header text
+              </p>
+              <Input
+                value={readString(selectedBlock.data.eyebrow)}
+                onChange={(event) => patchData({ eyebrow: event.target.value })}
+                placeholder="Eyebrow"
+              />
+              <Input
+                value={readString(selectedBlock.data.subtitle)}
+                onChange={(event) => patchData({ subtitle: event.target.value })}
+                placeholder="Subtitle"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {selectedBlock.type === "field" ? (
+      {selectedBlock.type === "field" && (showBinding || showContent) ? (
         <div className="space-y-3">
-          <FieldBindingControls
-            block={selectedBlock}
-            propPath="value"
-            bindings={bindings}
-            fields={fields}
-            onPatchBinding={onPatchBinding}
-            defaultMode="readwrite"
-          />
-          <div className="space-y-2 rounded-lg border p-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Field presentation
-            </p>
-            <Input
-              value={readString(selectedBlock.data.label)}
-              onChange={(event) => patchData({ label: event.target.value })}
-              placeholder="Label"
+          {showBinding ? (
+            <FieldBindingControls
+              block={selectedBlock}
+              propPath="value"
+              bindings={bindings}
+              fields={fields}
+              onPatchBinding={onPatchBinding}
+              defaultMode="readwrite"
             />
-            <Input
-              value={readString(selectedBlock.data.helper)}
-              onChange={(event) => patchData({ helper: event.target.value })}
-              placeholder="Helper text"
-            />
-          </div>
+          ) : null}
+          {showContent ? (
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Field presentation
+              </p>
+              <Input
+                value={readString(selectedBlock.data.label)}
+                onChange={(event) => patchData({ label: event.target.value })}
+                placeholder="Label"
+              />
+              <Input
+                value={readString(selectedBlock.data.helper)}
+                onChange={(event) => patchData({ helper: event.target.value })}
+                placeholder="Helper text"
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {selectedBlock.type === "field-group" ? (
+      {selectedBlock.type === "field-group" && showContent ? (
         <div className="space-y-2 rounded-lg border p-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Group presentation
@@ -306,7 +323,7 @@ export function ScreenBlockInspector({
         </div>
       ) : null}
 
-      {selectedBlock.type === "columns" ? (
+      {selectedBlock.type === "columns" && showContent ? (
         <div className="space-y-2 rounded-lg border p-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Columns
@@ -319,7 +336,7 @@ export function ScreenBlockInspector({
         </div>
       ) : null}
 
-      {selectedBlock.type === "rich-text" ? (
+      {selectedBlock.type === "rich-text" && showContent ? (
         <div className="space-y-2 rounded-lg border p-3">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Shared text
@@ -332,27 +349,29 @@ export function ScreenBlockInspector({
         </div>
       ) : null}
 
-      {selectedBlock.type === "legacy-widget" ? (
+      {selectedBlock.type === "legacy-widget" && showContent ? (
         <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
           Legacy widget content is preserved as a read-only placeholder until it is rebuilt with
           native screen blocks.
         </div>
       ) : null}
 
-      <div className="space-y-2 rounded-lg border p-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Variant
-        </p>
-        <Input
-          value={selectedBlock.variant ?? ""}
-          onChange={(event) =>
-            onPatchBlock(selectedBlock.id, {
-              variant: event.target.value.trim() || undefined,
-            })
-          }
-          placeholder="Default"
-        />
-      </div>
+      {showStyle ? (
+        <div className="space-y-2 rounded-lg border p-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Variant
+          </p>
+          <Input
+            value={selectedBlock.variant ?? ""}
+            onChange={(event) =>
+              onPatchBlock(selectedBlock.id, {
+                variant: event.target.value.trim() || undefined,
+              })
+            }
+            placeholder="Default"
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

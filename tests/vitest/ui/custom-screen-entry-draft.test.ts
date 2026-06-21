@@ -116,14 +116,21 @@ const v4EditorView: CustomScreenEditorViewDefinitionV4 = {
     schemaVersion: 1,
     sections: [
       {
-        id: "field-project-status",
-        type: "field",
-        data: {},
-      },
-      {
-        id: "field-budget",
-        type: "field",
-        data: {},
+        id: "section-1",
+        type: "section",
+        data: { title: "Details" },
+        blocks: [
+          {
+            id: "field-project-status",
+            type: "field",
+            data: {},
+          },
+          {
+            id: "field-budget",
+            type: "field",
+            data: {},
+          },
+        ],
       },
     ],
   },
