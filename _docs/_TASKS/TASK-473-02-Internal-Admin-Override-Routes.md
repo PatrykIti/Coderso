@@ -30,7 +30,8 @@ service.
 
 - [ ] Add internal admin routes: read overrides + replace overrides for
   `(screenId, entryId)` (or extend the existing entry-screen route group).
-- [ ] Enforce RBAC (`content:read` / `content:write`) and CSRF for writes.
+- [ ] Enforce RBAC (`content:read` / `content:write`); writes stay protected by
+  the existing global admin CSRF and rate-limit middleware.
 - [ ] Validate payloads with reject-unknown; delegate to the service.
 - [ ] Map `custom_screen_override_*` domain errors to `ApiError` via a centralized
   `map*Error` helper.
@@ -40,36 +41,43 @@ service.
 
 | File | Required change |
 |---|---|
-| `core/server/routes/customScreenRoutes.ts` | Add/extend override read+write routes, RBAC, CSRF, error mapping. |
+| `core/server/routes/customScreenRoutes.ts` | Add/extend override read+write routes, local Router `put` typing if needed, RBAC, error mapping. |
 | `core/services/customScreens/screenEntryPresentationOverrides.ts` | Consume service + error map (from TASK-473-01). |
-| `tests/integration/routes/customScreenRoutes.test.ts` | Route registration, validation, RBAC, CSRF, `map*Error`. |
+| `tests/integration/routes/customScreensRoutes.test.ts` | Route registration, validation, RBAC, global CSRF/write-path coverage, `map*Error`. |
 
 ## Implementation Pseudocode
 
 ```ts
-// customScreenRoutes.ts (orchestration-only)
-router.get("/admin/api/custom-screens/:screenId/entries/:entryId/overrides",
+// customScreenRoutes.ts (API-relative; externally mounted under /admin/api)
+router.get("/custom-screens/:screenId/entries/:entryId/overrides",
   requirePermission("content:read"),
-  async (ctx) => json(await getScreenEntryPresentationOverrides(ctx.params.screenId, ctx.params.entryId)));
+  async (ctx) => withCustomScreenOverrideErrors(async () => ({
+    overrides: await getScreenEntryPresentationOverrides(ctx.params.screenId, ctx.params.entryId),
+  })));
 
-router.put("/admin/api/custom-screens/:screenId/entries/:entryId/overrides",
-  requirePermission("content:write"), requireCsrf(),
+router.put("/custom-screens/:screenId/entries/:entryId/overrides",
+  requirePermission("content:write"),
   async (ctx) => {
-    try {
-      const body = parseJson(ctx); // reject-unknown happens in the normalizer
+    return withCustomScreenOverrideErrors(async () => {
+      // ctx.body is already parsed by the shared router; service normalizer rejects unknown keys.
+      const actorId = ctx.user?.id;
+      if (!actorId) throw new Error("custom_screen_override_invalid");
       const saved = await saveScreenEntryPresentationOverrides({
         screenId: ctx.params.screenId, entryId: ctx.params.entryId,
-        overrides: body.overrides, actorId: ctx.session.userId,
+        overrides: (ctx.body as { overrides?: unknown }).overrides,
+        actorId,
       });
-      return json(saved);
-    } catch (err) { throw mapCustomScreenOverrideError(err); }
+      return { overrides: saved };
+    });
   });
 ```
 
 Data flow:
 
-- Route validates auth/permission/CSRF, does minimal coercion, delegates to the
+- Route validates auth/permission, does minimal coercion, delegates to the
   service, and maps known domain errors to `ApiError`.
+- Admin CSRF and read/write rate buckets remain enforced by the shared
+  `httpServer.ts` middleware; do not add a one-off `requireCsrf()` route helper.
 - No business logic in the route; the service owns normalization and persistence.
 
 Error handling:
@@ -95,7 +103,8 @@ test("PUT overrides rejects unknown keys and requires content:write + CSRF", asy
 - **Auth model:** authenticated admin session.
 - **RBAC:** `content:read` for reads; `content:write` for writes; preserve any
   stronger screen/entry permissions from TASK-468 follow-ups.
-- **CSRF expectations:** required for all override write routes.
+- **CSRF expectations:** required for all override write routes via the existing
+  global admin CSRF middleware (`X-CSRF-Token`).
 - **Rate-limit bucket:** existing admin write bucket for mutations; admin read
   bucket for reads.
 - **Reject unknown validation:** required at the route+service boundary for
@@ -107,7 +116,7 @@ test("PUT overrides rejects unknown keys and requires content:write + CSRF", asy
 
 ## Testing Requirements
 
-- `set -a && source .env && set +a && bun test tests/integration/routes/customScreenRoutes.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Security: run Semgrep/Trivy/Gitleaks per `_docs/SECURITY_SPEC.md` when feasible

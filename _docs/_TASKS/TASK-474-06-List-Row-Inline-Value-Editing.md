@@ -12,16 +12,18 @@
 
 ## Overview
 
-Enable editing a record value directly in a List View row (owner decision
-2026-06-21: List View gets chrome parity **and** inline row editing). The flat V4
-`CustomScreenListViewDefinition` has no block/binding model for rows, so this
-subtask adds an **additive, backward-compatible** row-template document +
-bindings, a normalizer + V1/V2/V3 migration that backfills a default row template
-from the visible columns, a list-row binding resolver, and wires
-`ListViewCanvas` cells to the neutral `InlineEditWrapper`. Field **values**
-persist through the existing content-entry write path; any per-record
-*presentation* override coordinates with TASK-473's storage (no duplicate
-contract).
+Enable editing a real record value directly in a Custom Screen **records
+workspace** List View row (owner decision 2026-06-21: builder List View gets
+chrome parity, while row value editing applies to real rows in the records
+workspace). The flat V4 `CustomScreenListViewDefinition` has no block/binding
+model for rows, so this subtask adds an **additive, backward-compatible**
+row-template document + bindings, a normalizer + V1/V2/V3 migration that
+backfills a default row template from the visible columns, a list-row binding
+resolver, and wires records-workspace table cells to the neutral
+`InlineEditWrapper`. Field **values** persist through the existing content-entry
+write path; any per-record *presentation* override coordinates with TASK-473's
+storage (no duplicate contract). Builder `ListViewCanvas` remains
+configuration/preview and does not mutate preview rows.
 
 ## Current State (summary)
 
@@ -29,7 +31,10 @@ contract).
   (`:80`) is a flat columns/filters/sort/bulk shape; the V4 envelope is
   `schemaVersion: 4` (`:159`); `rejectUnknownKeys` guards definitions (`:226`,
   `:377`, `:454`, `:485`).
-- `ListViewCanvas.tsx` renders a static table; cells are read-only text.
+- `ListViewCanvas.tsx` renders a static builder preview table; cells are
+  read-only preview text and stay non-mutating.
+- `CustomScreenEntriesPage.tsx` / `CustomScreenEntriesTable.tsx` own the real
+  records workspace rows that this task makes inline-editable.
 - `core/services/customScreens/bindingResolver.ts` resolves block→field bindings
   for the editor/entry document (reusable shape for rows).
 - `core/admin/ui/custom-screens/customScreenListModel.ts` owns list field options
@@ -42,8 +47,14 @@ contract).
 - [ ] Add a normalizer + V1/V2/V3→V4 migration that backfills a default
   `rowTemplate` from the visible columns when none is stored (non-destructive).
 - [ ] Add a list-row binding resolver (reuse `bindingResolver` patterns).
-- [ ] Wire writable `ListViewCanvas` cells to `InlineEditWrapper`, committing
-  field values through the content-entry write path; fail-closed on read-only.
+- [ ] Wire writable records-workspace row cells to `InlineEditWrapper`,
+  committing field values through the content-entry write path; fail-closed on
+  read-only/unbound cells.
+- [ ] Keep builder `ListViewCanvas` as configuration/preview only; it may display
+  row-template affordances but must not call content-entry writes for generated
+  preview rows.
+- [ ] Preserve entries cache behavior (`entries:list:<typeSlug>` and
+  `entries:detail:<typeSlug>:<entryId>`) after inline row commits.
 - [ ] Coordinate any presentation override persistence with TASK-473.
 
 ## Files To Change
@@ -53,9 +64,13 @@ contract).
 | `core/services/customScreens/customScreenSchemas.ts` | Additive `rowTemplate` type + normalizer + reject-unknown. |
 | `core/services/customScreens/bindingResolver.ts` | List-row binding resolution helper. |
 | `core/admin/ui/custom-screens/customScreenListModel.ts` | Default-row backfill from visible columns. |
-| `core/admin/ui/custom-screens/ListViewCanvas.tsx` | Inline-editable writable cells via `InlineEditWrapper`. |
+| `core/admin/ui/custom-screens/CustomScreenEntriesPage.tsx` | Pass row-template bindings and commit handlers into the records table. |
+| `core/admin/ui/custom-screens/CustomScreenEntriesTable.tsx` | Inline-editable writable real-row cells via `InlineEditWrapper`. |
+| `core/admin/services/entriesClient.ts` | Reuse/update existing entry update + cache invalidation behavior for row commits. |
+| `core/admin/ui/custom-screens/ListViewCanvas.tsx` | Builder preview remains read-only; reflect row-template shape only if needed for preview. |
 | `tests/vitest/admin/custom-screen-schemas.test.ts` | Migration round-trips + unknown-key rejection. |
-| `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx` | Inline row-edit + fail-closed coverage. |
+| `tests/vitest/ui/custom-screen-records.test.tsx` | Records-workspace inline row-edit + fail-closed coverage. |
+| `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx` | Builder preview remains non-mutating and chrome-compatible. |
 
 ## Implementation Pseudocode
 
@@ -76,7 +91,7 @@ function normalizeCustomScreenListViewDefinition(input) {
 ```
 
 ```tsx
-// ListViewCanvas.tsx — writable cell inline edit
+// CustomScreenEntriesTable.tsx — writable real-row cell inline edit
 const writable = isRowFieldWritable(rowTemplate.bindings, column.field);
 <td>
   {writable
@@ -88,11 +103,15 @@ const writable = isRowFieldWritable(rowTemplate.bindings, column.field);
 
 Data flow:
 
-- Read: list canvas loads entries + the V4 `rowTemplate` bindings; cells map
-  columns→fields.
+- Read: records workspace loads entries + the V4 `rowTemplate` bindings; cells
+  map columns→fields.
 - Write: inline cell commit calls `onCommitRowField`, which persists the field
   value through the existing content-entry update service (content data, not
   presentation).
+- Cache: successful row commits update/invalidate `entries:list:<typeSlug>` and
+  `entries:detail:<typeSlug>:<entryId>` through the existing entries client
+  pattern.
+- Builder preview: generated preview rows remain read-only and cannot write.
 - Presentation overrides (if any) defer to TASK-473's override service.
 
 Error handling:
@@ -134,8 +153,10 @@ test("legacy flat list-view definition migrates with a backfilled rowTemplate", 
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/admin/custom-screen-schemas.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/custom-screen-records.test.tsx`
 - `bun run test:vitest -- tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`
-- `set -a && source .env && set +a && bun test tests/integration/routes/customScreenRoutes.test.ts` (when `DATABASE_URL` available)
+- `set -a && source .env && set +a && bun test tests/integration/routes/contentEntriesRoutes.test.ts` (when `DATABASE_URL` available)
+- `set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts` (when `DATABASE_URL` available)
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -152,7 +173,10 @@ test("legacy flat list-view definition migrates with a backfilled rowTemplate", 
    bindings; the normalizer round-trips and rejects unknown keys.
 2. Legacy flat-column (V1/V2/V3) definitions migrate without error, backfilling a
    default `rowTemplate` from the visible columns.
-3. List canvas rows allow inline edit of writable bound fields, persisting through
-   the content-entry write path; read-only/unbound cells are not editable.
-4. Presentation override persistence (if used) reuses TASK-473 storage with no
+3. Records-workspace list rows allow inline edit of writable bound fields,
+   persisting through the content-entry write path and entries cache contract;
+   read-only/unbound cells are not editable.
+4. Builder List View remains configuration/preview only and never mutates
+   generated preview rows.
+5. Presentation override persistence (if used) reuses TASK-473 storage with no
    duplicate contract; vitest, lint, and types are green.

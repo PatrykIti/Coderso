@@ -22,13 +22,18 @@ rendering before cleanup runs.
 
 - Override store + service owned by TASK-473-01
   (`screenEntryPresentationOverrides.ts`).
-- Screen/entry lifecycle is owned by `customScreenService.ts` and the content
-  entry services; delete paths must trigger override cleanup.
+- Screen lifecycle is owned by `customScreenService.ts`; entry lifecycle is owned
+  by `core/services/content/entryService.ts`; content-type field changes are
+  owned by the content type services. Cleanup must use DB cascades where the FK
+  owner is available and service/read filtering where the target is logical
+  (field/block path) rather than a table row.
 
 ## Sub-Tasks
 
-- [ ] On screen delete: remove all overrides scoped to that `screenId`.
-- [ ] On entry delete: remove all overrides scoped to that `entryId`.
+- [ ] On screen delete: remove all overrides scoped to that `screenId` through FK
+  cascade or the Custom Screen service cleanup hook.
+- [ ] On entry delete: remove all overrides scoped to that `entryId` through FK
+  cascade or the content entry service cleanup hook.
 - [ ] On field/block removal: drop overrides whose `blockId`/`propPath` no longer
   resolves (or ignore them at read time and reap lazily).
 - [ ] Make override reads defensively skip unresolved targets.
@@ -39,7 +44,9 @@ rendering before cleanup runs.
 | File | Required change |
 |---|---|
 | `core/services/customScreens/screenEntryPresentationOverrides.ts` | Cleanup helpers + defensive read filtering. |
-| `core/services/customScreens/customScreenService.ts` | Trigger override cleanup on screen/entry/definition mutations. |
+| `core/services/customScreens/customScreenService.ts` | Trigger override cleanup on screen delete and definition/block mutations. |
+| `core/services/content/entryService.ts` | Trigger or verify override cleanup on entry delete when not handled by FK cascade. |
+| `core/services/content/typeService.ts` | Trigger or verify field-target cleanup/read filtering after field removal. |
 | `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts` | Cleanup + defensive-read coverage. |
 
 ## Implementation Pseudocode
@@ -51,7 +58,7 @@ async function cleanupOverridesForDeletedScreen(screenId: string) {
 async function cleanupOverridesForDeletedEntry(entryId: string) {
   await overrideRepository.deleteByEntry(entryId);
 }
-// Read-time defense: drop overrides whose block/prop no longer resolves
+// Read-time defense: drop overrides whose block/prop/field no longer resolves
 function resolveActiveOverrides(overrides, document, contentType) {
   return overrides.filter((o) =>
     findBlock(document, o.blockId) && isAllowedPropPath(o.propPath, contentType));
@@ -60,7 +67,8 @@ function resolveActiveOverrides(overrides, document, contentType) {
 
 Data flow:
 
-- Delete hooks call cleanup synchronously with the owning mutation.
+- Delete hooks call cleanup synchronously with the owning mutation unless the
+  migration owns the same behavior through FK cascade.
 - Read paths filter unresolved overrides so rendering is correct even before a
   lazy reap.
 

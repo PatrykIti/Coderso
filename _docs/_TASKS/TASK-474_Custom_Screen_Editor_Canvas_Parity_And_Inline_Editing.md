@@ -30,8 +30,8 @@ owns the UX completion (owner request, 2026-06-21):
    still present as a table, **and** clicking a value in a row edits it inline
    (owner decision 2026-06-21).
 2. **Editor View** stays an interactive canvas + floating panel but becomes more
-   advanced — the advanced (typography/style) controls open in **modals**, and the
-   canvas styling/behavior matches the Pages editor.
+   advanced — existing advanced style controls open in **modals**, and the canvas
+   styling/behavior matches the Pages editor.
 3. **Per-record target view** stops over-bordering every block and lets the user
    **click a text on the canvas and edit only that bound field inline** — not a
    detached "Value" modal/panel.
@@ -151,18 +151,23 @@ additive, backward-compatible schema with `rejectUnknownKeys`. Per-record
   additive + backward-compatible only.
 - **Old 3-pane definitions** must keep loading (read-repair preserved).
 
-## Open Decisions (owner)
+## Resolved Decisions (owner)
 
 1. ~~**List View scope**~~ — **RESOLVED 2026-06-21:** chrome parity **plus** inline
-   editing of record values in the list canvas → TASK-474-06 is in scope.
-2. **Screen metadata home** once the right rail is gone: a settings modal/panel on
-   the floating bar (*recommended*) or the topbar?
+   editing of real record values in the records workspace → TASK-474-06 is in
+   scope. Builder List View remains configuration + preview only.
+2. **Screen metadata home** once the right rail is gone — **RESOLVED 2026-06-21:**
+   move metadata into a settings panel/modal opened from the floating bar.
 3. ~~**Editor View modals**~~ — **RESOLVED 2026-06-21:** only the advanced
-   (typography/style) groups become modals; simple controls stay inline.
-4. **Detached Value panel:** fully remove (*recommended*), or keep read-only for
-   inspecting read-mode/unbound bindings?
-5. **TASK-473 timing:** 474-03 persists only field values today; per-record
-   *presentation* persistence requires TASK-473 — land before or after?
+   style groups that exist in `ScreenBlockInspector` become modals; simple
+   controls stay inline. Adding new typography controls requires schema,
+   normalizer, persistence, and tests in that task or a follow-up.
+4. **Detached Value panel** — **RESOLVED 2026-06-21:** remove it entirely in
+   TASK-474-03. Read-only/unbound bindings fail closed inline and do not open a
+   detached inspector.
+5. **TASK-473 timing** — **RESOLVED 2026-06-21:** 474-03 persists only content
+   field values through the existing entry path. Per-record presentation
+   persistence lands through TASK-473 before presentation controls are wired.
 
 ## Testing Requirements (umbrella)
 

@@ -25,10 +25,14 @@ type schema; overrides are a separate, validated, auditable layer.
   (`customScreenSchemas.ts`, `customScreenService.ts`, `bindingResolver.ts`).
 - No override storage exists today; per-record style/image/text-size was punted
   here from TASK-468-05.
-- Migrations live in `core/db/migrations/` (latest `0060_*`) with
-  `meta/_journal.json` + `meta/*_snapshot.json`.
+- Migrations live in `core/db/migrations/` with `meta/_journal.json` +
+  `meta/*_snapshot.json`; allocate the next available migration number at
+  implementation time (`0061_*` at audit HEAD `aff5ca42`).
+- Drizzle table exports live in `core/db/schema.ts` and must be updated for a new
+  table-backed override store.
 - `rejectUnknownKeys` + `normalize*` discipline is established in
-  `customScreenSchemas.ts` and reused here.
+  `customScreenSchemas.ts`; those helpers are private today, so this module must
+  own or export explicit equivalents instead of importing private internals.
 
 ## Sub-Tasks
 
@@ -48,8 +52,9 @@ type schema; overrides are a separate, validated, auditable layer.
 |---|---|
 | `core/services/customScreens/screenEntryPresentationOverrides.ts` *(new)* | Types, schema, normalizer, service, error map owner. |
 | `core/services/customScreens/customScreenService.ts` | Re-export / wire override service where needed. |
-| `core/db/migrations/0061_*.sql` *(new)* | Override table (or chosen store). |
-| `core/db/migrations/meta/0061_snapshot.json` *(new)* | Migration snapshot. |
+| `core/db/schema.ts` | Add the Drizzle table export for the override store. |
+| `core/db/migrations/0061_*.sql` *(new; next available number)* | Override table (or chosen store). |
+| `core/db/migrations/meta/0061_snapshot.json` *(new; matching migration number)* | Migration snapshot. |
 | `core/db/migrations/meta/_journal.json` | Journal update. |
 | `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts` *(new)* | Pure schema/service tests. |
 
@@ -62,10 +67,10 @@ type ScreenEntryPresentationOverride = {
 };
 
 function normalizeScreenEntryPresentationOverride(input: unknown) {
-  rejectUnknownKeys(input, ["blockId", "propPath", "value"]);
+  rejectUnknownOverrideKeys(input, ["blockId", "propPath", "value"]);
   return {
-    blockId: normalizePath(input.blockId),
-    propPath: normalizeSafeBindingPath(input.propPath),
+    blockId: normalizeOverridePath(input.blockId),
+    propPath: normalizeOverridePath(input.propPath),
     value: normalizeAllowedPresentationValue(input.value), // bounded enums/sizes/media-id only
   };
 }
@@ -87,6 +92,8 @@ Data flow:
   module without DB/runtime coupling (Bun-free domain).
 - Allowed value domains are bounded (presentation enums, text-size tokens,
   media ids), never arbitrary content data.
+- The override module owns its reject-unknown and safe-path helpers unless the
+  shared Custom Screen schema module deliberately exports public equivalents.
 
 Error handling:
 

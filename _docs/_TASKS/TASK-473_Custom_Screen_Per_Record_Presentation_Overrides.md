@@ -36,12 +36,13 @@ wiring (TASK-473-03) builds on the canvas TASK-474-03 produces.
 |----|-------|--------|------------|
 | TASK-473-01 | Override Storage Domain Owner And Schemas | Large | — |
 | TASK-473-02 | Internal Admin Override Routes | Medium | 473-01 |
-| TASK-473-03 | Record Detail Override Panel Wiring | Medium | 473-02 |
+| TASK-473-03 | Record Detail Override Panel Wiring | Medium | 473-02, 474-03 |
 | TASK-473-04 | Override Cleanup And Backfill | Medium | 473-01 |
 | TASK-473-05 | Docs, Validation, And Board Closure | Small | 473-01..04 |
 
 Implement in dependency order: 473-01 (domain + migration) first, then 473-02
-(routes) and 473-04 (cleanup) in parallel, then 473-03 (UI), then 473-05 (closure).
+(routes) and 473-04 (cleanup) in parallel, then 473-03 (UI) after TASK-474-03 has
+removed the detached Value panel, then 473-05 (closure).
 
 > **Decomposition note:** each `TASK-473-NN` is authored as an **execution-ready
 > terminal unit** (own implementation pseudocode + Security Contract) rather than
@@ -74,7 +75,7 @@ Per-subtask Security Contracts live in the child files. Summary:
 Each child runs its own lane. Family gates:
 
 - `bun run test:vitest -- tests/vitest/customScreens`
-- `set -a && source .env && set +a && bun test tests/integration/routes/customScreenRoutes.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts`
 - DB migration tests when `DATABASE_URL` is available.
 - `bun --cwd core lint`, `bun --cwd core lint:types`, `bun --cwd core build:admin`,
   `bun run check:admin-boundary`, `git diff --check`.

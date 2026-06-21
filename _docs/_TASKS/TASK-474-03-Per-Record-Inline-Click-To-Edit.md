@@ -45,8 +45,9 @@ path.
   bound field is read-only or unbound.
 - [ ] Wire writable `field` blocks to inline edit on the displayed value (no card
   `<Input>`), still routing rich/relation/media types through `FieldRenderer`.
-- [ ] Remove the detached `valuePanel`, or demote it to **read-only** inspection
-  for read-mode/unbound bindings; delete `renderSelectedBlockBindingEditor`.
+- [ ] Remove the detached `valuePanel` entirely and delete
+  `renderSelectedBlockBindingEditor`; read-only/unbound bindings render inline
+  read-only states and never open an inspector.
 - [ ] Verify save still flows through `buildEditorViewUpdatePayload` /
   `customScreenEntryDraft`.
 
@@ -56,7 +57,7 @@ path.
 |---|---|
 | `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx` | Pass `enableInlineFieldEditing`. |
 | `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` | Inline `record-header` + writable `field` via `InlineEditWrapper`; fail-closed. |
-| `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Remove/demote `valuePanel`; delete `renderSelectedBlockBindingEditor`; keep commit handlers. |
+| `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Remove `valuePanel`; delete `renderSelectedBlockBindingEditor`; keep commit handlers. |
 | `core/services/customScreens/bindingResolver.ts` | Reuse `collectWritableBindingFields` for the editable check (no contract change expected). |
 | `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` | Inline-edit + fail-closed coverage. |
 
@@ -151,6 +152,6 @@ test("read-only binding renders no contentEditable", () => {
    the title field; no modal/detached panel opens.
 2. Writable field blocks edit inline on the displayed value; read-only/unbound
    bindings show no `contentEditable`.
-3. The detached Value panel is removed or read-only; `renderSelectedBlockBindingEditor`
-   is deleted; saving persists inline edits via the existing draft path.
+3. The detached Value panel is removed; `renderSelectedBlockBindingEditor` is
+   deleted; saving persists inline edits via the existing draft path.
 4. vitest, lint, and types are green.

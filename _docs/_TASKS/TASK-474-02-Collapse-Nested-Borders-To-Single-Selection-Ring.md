@@ -36,7 +36,7 @@ workspace preview dialog, so changes must be mode-gated.
 ## Sub-Tasks
 
 - [ ] Set `AuthoringCanvasFrame` to `borderless` in `ScreenAuthoringCanvas` and
-  `CustomScreenEntryCanvas`.
+  the entry frame inside `CustomScreenEntryEditor`.
 - [ ] Drop the block-wrapper border and the inner content-card border so each
   block is one surface; keep at most one `selectionBorder({ level: "item" })`.
 - [ ] Replace the section border with a lightweight grouping (label/handle), not
@@ -53,7 +53,7 @@ workspace preview dialog, so changes must be mode-gated.
 |---|---|
 | `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` | Collapse section/block/content borders to one `selectionBorder` ring; mode-gate preview. |
 | `core/admin/ui/custom-screens/ScreenAuthoringCanvas.tsx` | Use `AuthoringCanvasFrame borderless`. |
-| `core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx` | Use `AuthoringCanvasFrame borderless`. |
+| `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Use `AuthoringCanvasFrame borderless` around the entry canvas. |
 | `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` | Add a de-border DOM guard. |
 
 ## Implementation Pseudocode

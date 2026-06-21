@@ -51,7 +51,9 @@ Not applicable (docs + closure). Validation flow:
 ```
 bun --cwd core lint && bun --cwd core lint:types
 bun run test:vitest -- tests/vitest/customScreens
-set -a && source .env && set +a && bun test tests/integration/routes/customScreenRoutes.test.ts
+bun run test:vitest -- tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx
+bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts
+set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts
 bun run check:admin-boundary && bun --cwd core build:admin && bun run check:admin-bundle
 ```
 
@@ -78,8 +80,12 @@ Regression-test shape:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun run test:vitest -- tests/vitest/customScreens`
-- `set -a && source .env && set +a && bun test tests/integration/routes/customScreenRoutes.test.ts`
+- `bun run test:vitest -- tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts`
+- `set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts`
 - `bun run check:admin-boundary`
+- `bun --cwd core build:admin`
+- `bun run check:admin-bundle`
 - `git diff --check`
 
 ## Documentation Updates Required

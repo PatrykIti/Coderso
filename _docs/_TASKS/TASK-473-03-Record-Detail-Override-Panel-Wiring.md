@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Custom Screens / Entry Presentation
 **Estimated Effort:** Medium
-**Dependencies:** TASK-473-02
+**Dependencies:** TASK-473-02, TASK-474-03
 **Status:** ⏳ To Do
 
 ---
@@ -23,8 +23,8 @@ override client.
 ## Current State (summary)
 
 - The record editor is `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx`;
-  TASK-474-03 retires the detached "Value" panel for content editing, so this
-  panel is presentation-only.
+  TASK-474-03 must retire the detached "Value" panel for content editing before
+  this task adds presentation-only override controls.
 - Custom Screen cached client + cache keys are the established admin pattern
   (cache key, cached wrapper, invalidation + `cacheBus`).
 - The renderer is `ScreenRuntimeRenderer.tsx`; override merge happens at render

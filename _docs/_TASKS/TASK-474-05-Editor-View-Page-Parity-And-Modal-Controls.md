@@ -14,9 +14,12 @@
 
 Bring the Editor View canvas to parity with the Pages editor: dock the control
 panels to the floating toolbar (instead of a detached top-right box), upgrade the
-command palette to a real focus-trapped dialog, and make the **advanced** control
-groups (typography/style) open in modals. Owner decision (2026-06-21): only the
-advanced groups become modals; simple controls stay inline in the attached panel.
+command palette to a real focus-trapped dialog, and make the existing
+**advanced** style controls open in modals. Owner decision (2026-06-21): only
+advanced groups that already exist in `ScreenBlockInspector` become modals;
+simple controls stay inline in the attached panel. New typography controls are
+out of scope unless this task also adds their schema/defaults/normalizer,
+persistence, and tests.
 
 ## Current State (summary)
 
@@ -28,8 +31,9 @@ advanced groups become modals; simple controls stay inline in the attached panel
   `FloatingEditorToolbar` (`core/admin/ui/pages/editor/FloatingEditorToolbar.tsx`).
 - `AuthoringCommandPalette.tsx` is an absolute `inset-0` pseudo-dialog (no real
   focus trap / Escape semantics).
-- `ScreenBlockInspector.tsx` renders advanced controls as inline form fields, not
-  per-option modals.
+- `ScreenBlockInspector.tsx` currently exposes only a simple `Variant` style
+  field as its advanced-style surface; it does not yet own separate typography
+  controls.
 
 ## Sub-Tasks
 
@@ -40,8 +44,10 @@ advanced groups become modals; simple controls stay inline in the attached panel
 - [ ] Upgrade `AuthoringCommandPalette` to a real `Dialog`/`Sheet`
   (`@/components/ui/dialog`) with focus trap and Escape/outside-click close;
   preserve keyboard insert (Enter) semantics.
-- [ ] Wrap the advanced `ScreenBlockInspector` control groups (typography/style)
-  in modal triggers; keep simple controls inline.
+- [ ] Wrap the existing advanced `ScreenBlockInspector` style controls in modal
+  triggers; keep simple controls inline.
+- [ ] Do not add new typography controls unless the same change adds schema,
+  defaults, normalizer, persistence, and regression coverage.
 
 ## Files To Change
 
@@ -64,10 +70,10 @@ advanced groups become modals; simple controls stay inline in the attached panel
   <ScreenRuntimeRenderer mode="builder" {...rendererProps} />
 </AuthoringCanvasFrame>
 
-// ScreenBlockInspector.tsx — advanced groups via modal
+// ScreenBlockInspector.tsx — existing advanced style group via modal
 <Dialog>
-  <DialogTrigger asChild><button>Typography</button></DialogTrigger>
-  <DialogContent>{/* typography controls */}</DialogContent>
+  <DialogTrigger asChild><button>Style</button></DialogTrigger>
+  <DialogContent>{/* existing advanced style controls */}</DialogContent>
 </Dialog>
 // simple controls (e.g. label, visibility) render inline as today
 
@@ -83,7 +89,8 @@ Data flow:
   `ScreenAuthoringCanvas`); rendering moves from the detached box to the toolbar
   subpanel slot.
 - Command palette open/close is controlled; insert actions unchanged.
-- Modal-wrapped advanced groups still call the same inspector patch helpers.
+- Modal-wrapped advanced groups still call the same inspector patch helpers; new
+  persisted style/typography fields are not introduced by this task.
 
 Error handling:
 
@@ -136,7 +143,7 @@ test("editor view panel docks to the toolbar and palette traps focus", async () 
 1. Editor View panels render attached to the floating toolbar (not a detached
    top-right box); Escape and outside-click close them.
 2. The command palette is a focus-trapped dialog; keyboard insert/close preserved.
-3. The advanced (typography/style) control groups open in modals; simple controls
-   stay inline.
+3. The existing advanced style controls open in modals; simple controls stay
+   inline; no new typography schema is introduced without full contract coverage.
 4. Selection ring and canvas surface match the Pages editor via shared tokens;
    vitest, lint, and types are green.

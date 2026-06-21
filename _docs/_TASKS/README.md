@@ -142,7 +142,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-473 | Custom Screen Per-Record Presentation Overrides | Medium | Large | Umbrella: storage/API contract for per-record image/text/style overrides outside validated `content_entries.data`. Subtasks 473-01..05. |
 | TASK-473-01 | Override Storage Domain Owner And Schemas | Medium | Large | Domain types, schemas/normalizers, override service, errors + DB migration (Bun-free). |
 | TASK-473-02 | Internal Admin Override Routes | Medium | Medium | Internal admin read/replace override routes; RBAC, CSRF, reject-unknown, `map*Error`. |
-| TASK-473-03 | Record Detail Override Panel Wiring | Medium | Medium | Cached read/save/clear/reload of overrides; render-only merge; no dirty-state loss. |
+| TASK-473-03 | Record Detail Override Panel Wiring | Medium | Medium | Cached read/save/clear/reload of overrides after TASK-474-03 canvas work; render-only merge; no dirty-state loss. |
 | TASK-473-04 | Override Cleanup And Backfill | Medium | Medium | Cleanup on deleted screens/entries/fields/blocks; defensive read filtering. |
 | TASK-473-05 | Docs, Validation, And Board Closure | Medium | Small | Docs + validation surface + board/changelog closure for the 473 family. |
 | TASK-474 | Custom Screen Editor Canvas Parity & Inline Editing | High | Very Large | Umbrella: UX completion of TASK-468 — List View canvas + floating bar (no rails) + inline row editing, Editor View page-parity + modal controls, per-record de-border + inline click-to-edit; shared neutral authoring primitives (boundary-safe). Subtasks 474-01..06. |
@@ -151,7 +151,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-474-03 | Per-Record Inline Click-To-Edit | High | Large | Inline record-header + writable field editing on canvas; retire the detached Value panel; fail-closed. |
 | TASK-474-04 | List View Canvas And Floating Bar | High | Large | List View → `AuthoringCanvasFrame` + floating bar; remove rails/Sheets; delete dead `EditorViewDesigner`. |
 | TASK-474-05 | Editor View Page Parity And Modal Controls | High | Large | Attached toolbar subpanel + focus-trapped palette + modal advanced controls; Pages-parity chrome. |
-| TASK-474-06 | List Row Inline Value Editing | Medium | Large | Additive V4 `rowTemplate` + bindings + migration; inline editable list cells; coordinates TASK-473. |
+| TASK-474-06 | List Row Inline Value Editing | Medium | Large | Additive V4 `rowTemplate` + bindings + migration; inline editable records-workspace row cells; coordinates TASK-473. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
