@@ -25,13 +25,10 @@ import {
   type CustomScreenStatus,
 } from "@/services/customScreensClient";
 import {
-  getCustomScreenEditorViewBindings,
-  getCustomScreenEditorViewBlocks,
-  getCustomScreenEditorViewCompat,
   normalizeCustomScreenDefinitionForRead,
-  type CustomScreenBinding,
   type CustomScreenDefinition,
-  withCustomScreenEditorViewCompat,
+  type ScreenBlockV1,
+  type ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
   getCachedContentTypes,
@@ -45,11 +42,9 @@ import {
 } from "@/ui/assistant/activeSurfaceContext";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { listRegisteredWidgets, listRegisteredWidgetsForSurface } from "@/ui/widgets/registry";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
-import { FieldBindingPanel } from "./FieldBindingPanel";
 import { ListViewDesigner } from "./ListViewDesigner";
 import { ListViewCanvas } from "./ListViewCanvas";
 import { ListViewColumnInspector } from "./ListViewColumnInspector";
@@ -57,92 +52,43 @@ import { ListViewElementLibrary } from "./ListViewElementLibrary";
 import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
 import { resolveCustomScreenId } from "./routeParams";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
-import { BlockList } from "@/ui/pages/builder/BlockList";
-import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
-import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
 import {
-  applyWidgetBlockPatch,
-  appendSlotBlock,
-  createBlock,
-  deleteBlockById,
-  duplicateBlock,
-  findBlockById,
-  getFirstBlockId,
-  moveBlockIntoSlot,
-  reorderBlocksAtPath,
-  updateBlockById,
-  type BlockPath,
-} from "@/ui/pages/builder/blockUtils";
-import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
-import type { Block, WidgetEditorContext } from "@/ui/pages/builder/types";
+  addScreenBlock,
+  createScreenBlock,
+  duplicateScreenBlockWithBindings,
+  findScreenBlockById,
+  getFirstScreenBlockId,
+  moveScreenBlock,
+  removeScreenBindingsForBlockTree,
+  removeScreenBlock,
+  updateScreenBlock,
+  type ScreenBlockKind,
+} from "../../../services/customScreens/screenDocumentOps";
 import {
   buildListColumnFromOption,
   getVisibleListColumns,
   listSelectableListFields,
 } from "./customScreenListModel";
 import {
-  applyBindingsToBlocks,
-  sanitizeUnsupportedWriteBindings,
-  type CustomScreenBindingWidgetSource,
-} from "../../../services/customScreens/bindingResolver";
-import {
   useCustomScreenPreviewRecordState,
   type CustomScreenPreviewRecordState,
 } from "./customScreenPreviewData";
+import { ScreenBlockInspector, createScreenFieldBinding } from "./ScreenBlockInspector";
+import { ScreenBlockLibrary } from "./ScreenBlockLibrary";
+import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
+import type { ContentField } from "../content-types/SchemaBuilder";
 
 const normalizeText = (value: string) => value.trim();
-type EditorDetailsTab = "screen" | "data" | "widget";
-
-const resolveBindingState = (
-  bindings: CustomScreenBinding[],
-  selectedBlockId: string | null,
-  propPath: string
-): "literal" | "bound" | "mixed" => {
-  const matching = bindings.filter(
-    (binding) => binding.widgetId === selectedBlockId && binding.propPath === propPath
-  );
-  if (matching.length > 1) return "mixed";
-  return matching.length === 1 ? "bound" : "literal";
-};
-
-const collectBlockTypes = (blocks: Block[]): string[] => {
-  const result = new Set<string>();
-
-  const visit = (items: Block[]) => {
-    items.forEach((block) => {
-      result.add(block.type);
-      if (Array.isArray(block.children) && block.children.length > 0) {
-        visit(block.children);
-      }
-      if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
-        Object.values(block.slots).forEach((slotItems) => {
-          if (Array.isArray(slotItems) && slotItems.length > 0) {
-            visit(slotItems as Block[]);
-          }
-        });
-      }
-    });
-  };
-
-  visit(blocks);
-  return Array.from(result);
-};
+type EditorDetailsTab = "screen" | "block";
 
 const resolveScreenDefinition = (
   screen: CustomScreenRecord | null | undefined
 ): CustomScreenDefinition => {
-  const definition = normalizeCustomScreenDefinitionForRead({
+  return normalizeCustomScreenDefinitionForRead({
     definition: screen?.definition,
     schemaVersion: screen?.schemaVersion,
     blocks: screen?.blocks,
     bindings: screen?.bindings,
-  });
-  const compat = getCustomScreenEditorViewCompat(definition);
-  return withCustomScreenEditorViewCompat(definition, {
-    ...compat,
-    bindings: sanitizeUnsupportedWriteBindings(compat.bindings, {
-      blocks: compat.blocks as Block[],
-    }),
   });
 };
 
@@ -203,10 +149,10 @@ export function CustomScreenEditorPage() {
   const [definition, setDefinition] = useState<CustomScreenDefinition>(() =>
     resolveScreenDefinition(screen)
   );
-  const blocks = getCustomScreenEditorViewBlocks(definition) as Block[];
-  const bindings = getCustomScreenEditorViewBindings(definition);
+  const screenDocument = definition.editorView.document;
+  const screenBindings = definition.editorView.bindings;
   const [selectedId, setSelectedId] = useState<string | null>(() =>
-    getFirstBlockId(getCustomScreenEditorViewBlocks(resolveScreenDefinition(screen)) as Block[])
+    getFirstScreenBlockId(resolveScreenDefinition(screen).editorView.document)
   );
   const [isLoading, setIsLoading] = useState(() => !isCreateMode && !screen);
   const [isSaving, setIsSaving] = useState(false);
@@ -220,77 +166,29 @@ export function CustomScreenEditorPage() {
     "list-view"
   );
   const [activeEditorDetailsTab, setActiveEditorDetailsTab] = useState<EditorDetailsTab>("screen");
-  const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
   const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
     () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
   );
   const definitionRef = useRef(definition);
-  const blocksRef = useRef(blocks);
 
   const selectedContentType = useMemo(
     () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
     [contentTypeId, contentTypes]
   );
-  const screenWidgetRegistry = useMemo(() => {
-    if (!selectedContentType) return [];
-    return listRegisteredWidgetsForSurface({
-      surface: "admin-editor-view",
-      contentType: selectedContentType,
-    });
-  }, [selectedContentType]);
-  const allWidgetRegistry = useMemo(() => listRegisteredWidgets(), []);
-  const widgetRegistry = useMemo(() => {
-    const byType = new Map(screenWidgetRegistry.map((widget) => [widget.type, widget]));
-    collectBlockTypes(blocks).forEach((type) => {
-      const existing = byType.get(type);
-      if (existing) return;
-      const legacy = allWidgetRegistry.find((widget) => widget.type === type);
-      if (legacy) {
-        byType.set(legacy.type, legacy);
-      }
-    });
-    return Array.from(byType.values());
-  }, [allWidgetRegistry, blocks, screenWidgetRegistry]);
   const contentFields = useMemo(
     () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
     [selectedContentType]
   );
   const previewCapabilities = useMemo(
-    () => resolveCustomScreenCapabilities({ blocks, bindings }),
-    [bindings, blocks]
+    () => resolveCustomScreenCapabilities({ definition }),
+    [definition]
   );
 
-  const selectedBlock = findBlockById(blocks, selectedId);
-  const selectedWidget = selectedBlock
-    ? (widgetRegistry.find((item) => item.type === selectedBlock.type) ?? null)
-    : null;
-  const selectedWidgetSource = useMemo<CustomScreenBindingWidgetSource | null>(() => {
-    if (!selectedBlock) return null;
-    if (screenWidgetRegistry.some((widget) => widget.type === selectedBlock.type)) {
-      return "screen-registry";
-    }
-    if (allWidgetRegistry.some((widget) => widget.type === selectedBlock.type)) {
-      return "legacy-fallback";
-    }
-    return null;
-  }, [allWidgetRegistry, screenWidgetRegistry, selectedBlock]);
+  const selectedBlock = findScreenBlockById(screenDocument, selectedId);
   const selectedListColumn = useMemo(
     () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
     [definition.listView.columns, selectedListColumnId]
   );
-  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
-  const adminEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
-    if (activeBuilderTab !== "editor-view" || !selectedBlock) return undefined;
-    return {
-      surface: "admin-editor-view",
-      bookingFlows,
-      jumpToBindingPropPath: (propPath: string) => {
-        setActiveEditorDetailsTab("data");
-        setFocusedBindingPropPath(propPath);
-      },
-      getBindingState: (propPath: string) => resolveBindingState(bindings, selectedId, propPath),
-    };
-  }, [activeBuilderTab, bindings, bookingFlows, selectedBlock, selectedId]);
   const availableListFieldOptions = useMemo(() => {
     if (!selectedContentType) return [];
     const selectedKeys = new Set(
@@ -317,11 +215,9 @@ export function CustomScreenEditorPage() {
           showInSidebar,
           sidebarLabel: sidebarLabel.trim() || null,
           definition,
-          blocks,
-          bindings,
         },
-        blocks,
-        bindings,
+        blocks: screenDocument.sections,
+        bindings: screenBindings,
         capabilities: previewCapabilities,
         selectedBlockId: selectedId,
         warnings: [
@@ -335,8 +231,6 @@ export function CustomScreenEditorPage() {
       clearActiveAssistantSurfaceContext();
     };
   }, [
-    bindings,
-    blocks,
     contentTypeId,
     definition,
     hasUnsavedChanges,
@@ -345,6 +239,8 @@ export function CustomScreenEditorPage() {
     previewCapabilities,
     remoteUpdatePending,
     screen,
+    screenBindings,
+    screenDocument.sections,
     screenId,
     selectedId,
     showInSidebar,
@@ -360,21 +256,26 @@ export function CustomScreenEditorPage() {
   const updateDefinition = useCallback(
     (next: CustomScreenDefinition) => {
       definitionRef.current = next;
-      blocksRef.current = getCustomScreenEditorViewBlocks(next) as Block[];
       setDefinition(next);
       markDirty();
     },
     [markDirty]
   );
 
-  const updateBlocks = useCallback(
-    (next: Block[]) => {
-      updateDefinition(
-        withCustomScreenEditorViewCompat(definitionRef.current, {
-          ...getCustomScreenEditorViewCompat(definitionRef.current),
-          blocks: next,
-        })
-      );
+  const updateEditorView = useCallback(
+    (next: {
+      document?: CustomScreenDefinition["editorView"]["document"];
+      bindings?: ScreenFieldBinding[];
+    }) => {
+      const current = definitionRef.current;
+      updateDefinition({
+        ...current,
+        editorView: {
+          ...current.editorView,
+          document: next.document ?? current.editorView.document,
+          bindings: next.bindings ?? current.editorView.bindings,
+        },
+      });
     },
     [updateDefinition]
   );
@@ -394,9 +295,7 @@ export function CustomScreenEditorPage() {
 
   const applyScreen = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
-    const nextBlocks = getCustomScreenEditorViewBlocks(nextDefinition) as Block[];
     definitionRef.current = nextDefinition;
-    blocksRef.current = nextBlocks;
     setScreen(record);
     setName(record.name);
     setContentTypeId(record.contentTypeId);
@@ -404,8 +303,7 @@ export function CustomScreenEditorPage() {
     setShowInSidebar(record.showInSidebar ?? false);
     setSidebarLabel(record.sidebarLabel ?? "");
     setDefinition(nextDefinition);
-    setSelectedId(getFirstBlockId(nextBlocks));
-    setFocusedBindingPropPath(null);
+    setSelectedId(getFirstScreenBlockId(nextDefinition.editorView.document));
     setSelectedListColumnId(nextDefinition.listView.columns[0]?.id ?? null);
     setHasUnsavedChanges(false);
   }, []);
@@ -432,7 +330,6 @@ export function CustomScreenEditorPage() {
 
   const handleSelectBlock = useCallback((id: string) => {
     setSelectedId(id);
-    setFocusedBindingPropPath(null);
   }, []);
 
   useEffect(() => {
@@ -480,56 +377,130 @@ export function CustomScreenEditorPage() {
     });
   }, [hasUnsavedChanges, isCreateMode, refreshScreen, screenId]);
 
-  const handleAddBlock = (type: string) => {
-    const nextBlock = createBlock(type);
-    updateBlocks([...blocks, nextBlock]);
-    setSelectedId(nextBlock.id);
-    setFocusedBindingPropPath(null);
+  const resolveSelectedSlotTarget = (
+    document: CustomScreenDefinition["editorView"]["document"]
+  ) => {
+    const selected = findScreenBlockById(document, selectedId);
+    if (!selected?.slots) return undefined;
+    if (selected.type === "field-group") return { parentId: selected.id, slotId: "content" };
+    if (selected.type === "columns") return { parentId: selected.id, slotId: "left" };
+    const slotId = Object.keys(selected.slots)[0];
+    return slotId ? { parentId: selected.id, slotId } : undefined;
   };
 
-  const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
-    const nextBlock = createBlock(type);
-    updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
-    setSelectedId(nextBlock.id);
-    setFocusedBindingPropPath(null);
+  const handleAddBlock = (type: ScreenBlockKind, field?: ContentField) => {
+    const current = definitionRef.current;
+    const created = createScreenBlock({
+      type,
+      field: field?.name,
+      label: field?.label,
+    });
+    const target = resolveSelectedSlotTarget(current.editorView.document);
+    const nextDocument = addScreenBlock(current.editorView.document, created.block, target);
+    updateEditorView({
+      document: nextDocument,
+      bindings: [...current.editorView.bindings, ...created.bindings],
+    });
+    setSelectedId(created.block.id);
+    setActiveEditorDetailsTab("block");
   };
 
-  const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
-    updateBlocks(moveBlockIntoSlot(blocks, blockId, parentId, slotId));
+  const handleMoveBlock = (blockId: string, direction: "up" | "down") => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: moveScreenBlock(current.editorView.document, blockId, direction),
+    });
   };
 
-  const handleMove = (path: BlockPath, from: number, to: number) => {
-    if (to < 0) return;
-    updateBlocks(reorderBlocksAtPath(blocks, path, from, to));
+  const handleDuplicateBlock = (blockId: string) => {
+    const current = definitionRef.current;
+    const result = duplicateScreenBlockWithBindings(
+      current.editorView.document,
+      current.editorView.bindings,
+      blockId
+    );
+    updateEditorView({
+      document: result.document,
+      bindings: result.bindings,
+    });
+    if (result.duplicatedBlockId) setSelectedId(result.duplicatedBlockId);
   };
 
-  const handleDuplicate = (id: string) => {
-    updateBlocks(duplicateBlock(blocks, id));
-  };
-
-  const handleDelete = (id: string) => {
-    const result = deleteBlockById(blocks, id);
-    if (!result.deleted) return;
-    updateBlocks(result.blocks);
-    if (selectedId && !findBlockById(result.blocks, selectedId)) {
-      setSelectedId(getFirstBlockId(result.blocks));
-      setFocusedBindingPropPath(null);
+  const handleDeleteBlock = (blockId: string) => {
+    const current = definitionRef.current;
+    const result = removeScreenBlock(current.editorView.document, blockId);
+    if (!result.removed) return;
+    updateEditorView({
+      document: result.document,
+      bindings: removeScreenBindingsForBlockTree(current.editorView.bindings, result.removed),
+    });
+    if (selectedId && !findScreenBlockById(result.document, selectedId)) {
+      setSelectedId(getFirstScreenBlockId(result.document));
     }
   };
 
-  const handleChangeBlock = (next: Block) => {
-    updateBlocks(updateBlockById(blocks, next.id, () => next));
+  const handlePatchBlock = (blockId: string, patch: Partial<ScreenBlockV1>) => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: updateScreenBlock(current.editorView.document, blockId, patch),
+    });
   };
 
-  const handlePatchBlock = (
+  const handlePatchBlockData = (blockId: string, patch: Record<string, unknown>) => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: updateScreenBlock(current.editorView.document, blockId, (block) => ({
+        ...block,
+        data: {
+          ...block.data,
+          ...patch,
+        },
+      })),
+    });
+  };
+
+  const handlePatchBinding = (
     blockId: string,
-    patch: Parameters<typeof applyWidgetBlockPatch>[1]
+    propPath: string,
+    patch: Partial<Pick<ScreenFieldBinding, "field" | "mode">>
   ) => {
-    updateBlocks(
-      updateBlockById(blocksRef.current, blockId, (current) =>
-        applyWidgetBlockPatch(current, patch)
-      )
+    const current = definitionRef.current;
+    const existing = current.editorView.bindings.find(
+      (binding) => binding.blockId === blockId && binding.propPath === propPath
     );
+    const fieldName = patch.field ?? existing?.field ?? "title";
+    const nextBinding = existing
+      ? {
+          ...existing,
+          ...patch,
+        }
+      : createScreenFieldBinding({
+          blockId,
+          propPath,
+          field: fieldName,
+          mode: patch.mode,
+        });
+    const nextBindings = existing
+      ? current.editorView.bindings.map((binding) =>
+          binding.id === existing.id ? nextBinding : binding
+        )
+      : [...current.editorView.bindings, nextBinding];
+    const matchingField = contentFields.find((field) => field.name === fieldName);
+    const nextDocument =
+      propPath === "value"
+        ? updateScreenBlock(current.editorView.document, blockId, (block) => ({
+            ...block,
+            data: {
+              ...block.data,
+              field: fieldName,
+              ...(matchingField ? { label: matchingField.label } : {}),
+            },
+          }))
+        : current.editorView.document;
+    updateEditorView({
+      document: nextDocument,
+      bindings: nextBindings,
+    });
   };
 
   const handleAddListColumn = (option: ReturnType<typeof listSelectableListFields>[number]) => {
@@ -612,8 +583,6 @@ export function CustomScreenEditorPage() {
       showInSidebar,
       sidebarLabel: sidebarLabel.trim() || null,
       definition,
-      blocks,
-      bindings,
     };
 
     try {
@@ -644,15 +613,7 @@ export function CustomScreenEditorPage() {
         onAddColumn={handleAddListColumn}
       />
     ) : (
-      <WidgetPicker
-        widgets={screenWidgetRegistry}
-        onAdd={handleAddBlock}
-        draggable
-        onDragStart={(event, type) => {
-          event.dataTransfer.setData("widget-type", type);
-          event.dataTransfer.effectAllowed = "copy";
-        }}
-      />
+      <ScreenBlockLibrary fields={contentFields} onAddBlock={handleAddBlock} />
     );
 
   const screenSettingsPanel = (
@@ -788,246 +749,214 @@ export function CustomScreenEditorPage() {
       >
         <TabsList variant="line" className="px-1">
           <TabsTrigger value="screen">Screen</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
-          <TabsTrigger value="widget">Selected Widget</TabsTrigger>
+          <TabsTrigger value="block">Selected Block</TabsTrigger>
         </TabsList>
         <TabsContent value="screen" className="mt-4">
           {screenSettingsPanel}
         </TabsContent>
-        <TabsContent value="data" className="mt-4">
-          <FieldBindingPanel
+        <TabsContent value="block" className="mt-4">
+          <ScreenBlockInspector
             selectedBlock={selectedBlock}
-            selectedWidget={selectedWidget}
-            selectedWidgetSource={selectedWidgetSource}
-            value={bindings}
+            bindings={screenBindings}
             fields={contentFields}
-            focusedPropPath={focusedBindingPropPath}
-            onFocusedPropPathChange={setFocusedBindingPropPath}
-            onChange={(next) => {
-              updateDefinition(
-                withCustomScreenEditorViewCompat(definition, {
-                  ...getCustomScreenEditorViewCompat(definition),
-                  bindings: next,
-                })
-              );
-            }}
-          />
-        </TabsContent>
-        <TabsContent value="widget" className="mt-4">
-          <BlockSettings
-            block={selectedBlock}
-            widget={selectedWidget ?? undefined}
-            onChange={handleChangeBlock}
-            onBlockPatch={
-              selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
-            }
-            editorContext={adminEditorWidgetContext}
+            onPatchBlock={handlePatchBlock}
+            onPatchBlockData={handlePatchBlockData}
+            onPatchBinding={handlePatchBinding}
+            onMove={handleMoveBlock}
+            onDuplicate={handleDuplicateBlock}
+            onDelete={handleDeleteBlock}
           />
         </TabsContent>
       </Tabs>
     );
 
-  const showEmptyState = !isLoading && blocks.length === 0;
+  const showEmptyState = !isLoading && screenDocument.sections.length === 0;
   const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 
   return (
     <CustomScreenPreviewRecordOwner key={previewOwnerKey} contentType={selectedContentType}>
-      {({ isLoading: previewDataLoading, previewRecordState }) => {
-        const editorPreviewBlocks = applyBindingsToBlocks(
-          blocks,
-          bindings,
-          previewRecordState.data
-        ) as Block[];
-
-        return (
-          <>
-            <CustomScreenShell
-              name={name}
-              status={status}
-              hasUnsavedChanges={hasUnsavedChanges}
-              isCreateMode={isCreateMode}
-              leftPanel={libraryPanel}
-              rightPanel={detailsPanel}
-              rightPanelClassName="p-6"
-            >
-              <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
-                <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setPreviewOpen(true)}
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </Button>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
-                        <Button
-                          variant={activeBuilderTab === "list-view" ? "secondary" : "ghost"}
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => setActiveBuilderTab("list-view")}
-                        >
-                          List View
-                        </Button>
-                        <Button
-                          variant={activeBuilderTab === "editor-view" ? "secondary" : "ghost"}
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => setActiveBuilderTab("editor-view")}
-                        >
-                          Editor View
-                        </Button>
-                      </div>
+      {({ isLoading: previewDataLoading, previewRecordState }) => (
+        <>
+          <CustomScreenShell
+            name={name}
+            status={status}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isCreateMode={isCreateMode}
+            leftPanel={libraryPanel}
+            rightPanel={detailsPanel}
+            rightPanelClassName="p-6"
+          >
+            <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
+              <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => setPreviewOpen(true)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    Preview
+                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
                       <Button
-                        variant="outline"
+                        variant={activeBuilderTab === "list-view" ? "secondary" : "ghost"}
                         size="sm"
-                        className="gap-2 sm:hidden"
-                        onClick={() =>
-                          setActiveBuilderTab((current) =>
-                            current === "list-view" ? "editor-view" : "list-view"
-                          )
-                        }
+                        className="gap-2"
+                        onClick={() => setActiveBuilderTab("list-view")}
                       >
-                        {activeBuilderTab === "list-view" ? "Editor View" : "List View"}
+                        List View
+                      </Button>
+                      <Button
+                        variant={activeBuilderTab === "editor-view" ? "secondary" : "ghost"}
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => setActiveBuilderTab("editor-view")}
+                      >
+                        Editor View
                       </Button>
                     </div>
                     <Button
+                      variant="outline"
                       size="sm"
-                      className="gap-2"
-                      onClick={handleSave}
-                      disabled={isLoading || isSaving}
+                      className="gap-2 sm:hidden"
+                      onClick={() =>
+                        setActiveBuilderTab((current) =>
+                          current === "list-view" ? "editor-view" : "list-view"
+                        )
+                      }
                     >
-                      <Save className="h-4 w-4" />
-                      {isSaving ? "Saving..." : "Save"}
+                      {activeBuilderTab === "list-view" ? "Editor View" : "List View"}
                     </Button>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 lg:hidden">
-                    <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
-                      Components
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
-                      Details
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleSave}
+                    disabled={isLoading || isSaving}
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 lg:hidden">
+                  <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
+                    Components
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
+                    Details
+                  </Button>
                 </div>
               </div>
-              <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
-                {error ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Custom screen error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                ) : null}
-                {remoteUpdatePending ? (
-                  <Alert>
-                    <AlertTitle>Updated in another tab</AlertTitle>
-                    <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span>New changes are available. Refresh to load the latest version.</span>
-                      <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
-                        Refresh
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
+            </div>
+            <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Custom screen error</AlertTitle>
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              {remoteUpdatePending ? (
+                <Alert>
+                  <AlertTitle>Updated in another tab</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span>New changes are available. Refresh to load the latest version.</span>
+                    <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
+                      Refresh
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
 
-                {isLoading ? (
-                  <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-                    Loading custom screen...
+              {isLoading ? (
+                <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+                  Loading custom screen...
+                </div>
+              ) : activeBuilderTab === "list-view" ? (
+                <ListViewCanvas
+                  contentType={selectedContentType}
+                  listView={definition.listView}
+                  selectedColumnId={selectedListColumnId}
+                  onSelectColumn={setSelectedListColumnId}
+                  onMoveColumn={handleMoveListColumn}
+                />
+              ) : showEmptyState ? (
+                <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
+                  <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
+                    <Settings2 className="h-10 w-10" />
                   </div>
-                ) : activeBuilderTab === "list-view" ? (
-                  <ListViewCanvas
+                  <h2 className="text-2xl font-semibold text-foreground">
+                    Build your custom screen
+                  </h2>
+                  <p className="mt-3 max-w-xs text-sm text-muted-foreground">
+                    Add screen blocks from the library to compose the admin experience for this
+                    content type.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <PreviewStateNotice
                     contentType={selectedContentType}
-                    listView={definition.listView}
-                    selectedColumnId={selectedListColumnId}
-                    onSelectColumn={setSelectedListColumnId}
-                    onMoveColumn={handleMoveListColumn}
+                    previewRecordState={previewRecordState}
+                    isLoading={previewDataLoading}
                   />
-                ) : showEmptyState ? (
-                  <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                      <Settings2 className="h-10 w-10" />
-                    </div>
-                    <h2 className="text-2xl font-semibold text-foreground">
-                      Build your custom screen
-                    </h2>
-                    <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                      Add dedicated screen widgets from the library to compose the admin experience
-                      for this content type.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <PreviewStateNotice
-                      contentType={selectedContentType}
-                      previewRecordState={previewRecordState}
-                      isLoading={previewDataLoading}
+                  <div
+                    className="w-full overflow-hidden rounded-xl border border-border/50 bg-background p-4"
+                    onClick={() => setSelectedId(null)}
+                  >
+                    <ScreenRuntimeRenderer
+                      document={screenDocument}
+                      bindings={screenBindings}
+                      values={previewRecordState.data}
+                      fields={contentFields}
+                      mode="builder"
+                      selectedBlockId={selectedId}
+                      onSelectBlock={(blockId) => {
+                        handleSelectBlock(blockId);
+                        setActiveEditorDetailsTab("block");
+                      }}
                     />
-                    <div
-                      className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"
-                      onDragOver={(event) => {
-                        event.preventDefault();
-                      }}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        const type = event.dataTransfer.getData("widget-type");
-                        if (type) handleAddBlock(type);
-                      }}
-                    >
-                      <BlockList
-                        blocks={editorPreviewBlocks}
-                        className="p-4"
-                        widgetRegistry={widgetRegistry}
-                        selectedId={selectedId}
-                        onSelect={handleSelectBlock}
-                        onMove={handleMove}
-                        onDuplicate={handleDuplicate}
-                        onDelete={handleDelete}
-                        onInsert={handleInsertIntoSlot}
-                        onMoveToSlot={handleMoveIntoSlot}
-                      />
-                    </div>
                   </div>
-                )}
-              </div>
-            </CustomScreenShell>
+                </div>
+              )}
+            </div>
+          </CustomScreenShell>
 
-            <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
-              <SheetContent side="left" className="w-80 p-0">
-                <SheetTitle className="sr-only">Widget library</SheetTitle>
-                <SheetDescription className="sr-only">
-                  Insert widgets into the custom screen layout.
-                </SheetDescription>
-                {libraryPanel}
-              </SheetContent>
-            </Sheet>
+          <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
+            <SheetContent side="left" className="w-80 p-0">
+              <SheetTitle className="sr-only">Screen block library</SheetTitle>
+              <SheetDescription className="sr-only">
+                Insert blocks into the custom screen layout.
+              </SheetDescription>
+              {libraryPanel}
+            </SheetContent>
+          </Sheet>
 
-            <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
-              <SheetContent side="right" className="w-96 p-6">
-                <SheetTitle className="sr-only">Screen details</SheetTitle>
-                <SheetDescription className="sr-only">
-                  Configure screen metadata and widget settings.
-                </SheetDescription>
-                {detailsPanel}
-              </SheetContent>
-            </Sheet>
+          <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
+            <SheetContent side="right" className="w-96 p-6">
+              <SheetTitle className="sr-only">Screen details</SheetTitle>
+              <SheetDescription className="sr-only">
+                Configure screen metadata and selected block settings.
+              </SheetDescription>
+              {detailsPanel}
+            </SheetContent>
+          </Sheet>
 
-            <CustomScreenWorkspacePreviewDialog
-              open={previewOpen}
-              onOpenChange={setPreviewOpen}
-              mode={activeBuilderTab}
-              contentType={selectedContentType}
-              listView={definition.listView}
-              blocks={blocks}
-              bindings={bindings}
-              previewRecordState={previewRecordState}
-              previewLoading={previewDataLoading}
-            />
-          </>
-        );
-      }}
+          <CustomScreenWorkspacePreviewDialog
+            open={previewOpen}
+            onOpenChange={setPreviewOpen}
+            mode={activeBuilderTab}
+            contentType={selectedContentType}
+            listView={definition.listView}
+            document={screenDocument}
+            bindings={screenBindings}
+            fields={contentFields}
+            previewRecordState={previewRecordState}
+            previewLoading={previewDataLoading}
+          />
+        </>
+      )}
     </CustomScreenPreviewRecordOwner>
   );
 }

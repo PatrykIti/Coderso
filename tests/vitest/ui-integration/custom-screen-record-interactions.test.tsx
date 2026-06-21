@@ -238,8 +238,8 @@ test("record editor keeps child selection scoped and preserves it across refresh
   try {
     await flush();
 
-    const parent = view.container.querySelector('[data-selected-block-id="group-1"]');
-    const child = view.container.querySelector('[data-selected-block-id="field-1"]');
+    const parent = view.container.querySelector('[data-screen-block-id="group-1"]');
+    const child = view.container.querySelector('[data-screen-block-id="field-1"]');
     expect(parent?.getAttribute("data-selected")).toBe("true");
     expect(child?.getAttribute("data-selected")).toBe("false");
 
@@ -256,7 +256,7 @@ test("record editor keeps child selection scoped and preserves it across refresh
     expect(view.container.textContent).toContain("Headline");
 
     expect(child?.querySelector("button")).toBeNull();
-    expect(document.body.textContent).toContain("Screen Field Value");
+    expect(document.body.textContent).toContain("field");
     expect(document.body.textContent).toContain("Selected Field");
 
     await React.act(async () => {
@@ -267,7 +267,7 @@ test("record editor keeps child selection scoped and preserves it across refresh
 
     expect(
       view.container
-        .querySelector('[data-selected-block-id="field-1"]')
+        .querySelector('[data-screen-block-id="field-1"]')
         ?.getAttribute("data-selected")
     ).toBe("true");
   } finally {
@@ -298,8 +298,8 @@ test("assistant surface uses editorView blocks and bindings even when legacy roo
         },
       ],
       blocks: expect.arrayContaining([
-        expect.objectContaining({ id: "group-1", type: "screen-field-group" }),
-        expect.objectContaining({ id: "field-1", type: "screen-field-value" }),
+        expect.objectContaining({ id: "group-1", type: "field-group" }),
+        expect.objectContaining({ id: "field-1", type: "field" }),
       ]),
     });
   } finally {

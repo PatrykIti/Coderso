@@ -115,6 +115,7 @@ export function CustomScreenEntriesPage() {
     () =>
       screen?.capabilities ??
       resolveCustomScreenCapabilities({
+        definition: screen?.definition,
         blocks: screen?.blocks,
         bindings: screen?.bindings,
       }),

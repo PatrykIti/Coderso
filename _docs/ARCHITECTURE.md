@@ -861,20 +861,26 @@ Zakres CMS, model danych, auth i security opisane sa w:
 - Builder (`/admin/advanced/custom-screens/:id`) ma trzy warstwy pracy:
   - screen settings,
   - screen block bindings dla zaznaczonego elementu,
-  - bound preview, ktory materializuje drzewo widgetow przed renderem przez `WidgetRenderer`.
+  - bound preview renderowany bezposrednio z `ScreenDocumentV1` przez
+    screen runtime.
 - `Editor View` preview owner jest cached-first nad `entries:list:<typeSlug>`:
   pierwszy cached record hydratuje i builder canvas, i preview dialog; cold
   cache fallback pozostaje schema-shaped z jawna notka dla `no-records` albo
   `read-failed`.
-- TASK-468 V4 target: `Screens` nie korzysta juz z calej public/page widget library:
-  - insert library filtruje do surface `custom-screen-builder`,
-  - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa legacy migration/compatibility inputs,
-  - wspoldzielone prymitywy layoutowe musza byc jawnie dopuszczone do obu surface'ow.
+- TASK-468 V4 active surface: `Screens` nie korzysta juz z public/page widget
+  library w Editor View:
+  - insert library pokazuje screen-owned blocks oraz pola wybranego content
+    type,
+  - active canvas renderuje `record-header`, `field`, `field-group`,
+    `columns`, `rich-text`, oraz bounded legacy placeholders,
+  - screen-only widgets (`screen-record-header`, `screen-field-value`,
+    `screen-field-group`, `screen-two-column`) sa legacy
+    migration/compatibility inputs do TASK-468-07.
 - Kazdy custom screen ma derived capabilities:
   - `collection-only`: brak dedykowanego record screen; shortcut zawęża tylko liste rekordow,
   - `dashboard`: screen moze previewowac dane rekordu, ale nie ma ani jednego
-    widget-aware write-capable target,
-  - `editor`: screen ma co najmniej jeden widget-aware write-capable binding i
+    native write-capable binding,
+  - `editor`: screen ma co najmniej jeden native write-capable binding i
     moze pelnic role dedykowanego record editor.
 - Workflow rekordow custom screen korzysta z istniejacego domain `entries`, bez nowego storage:
   - list route: `/admin/advanced/custom-screens/:screenId/entries`,

@@ -43,6 +43,7 @@ export const resolveCustomScreenModeLabel = (screen: CustomScreenRecord) => {
   const capabilities =
     screen.capabilities ??
     resolveCustomScreenCapabilities({
+      definition: screen.definition,
       blocks: screen.blocks,
       bindings: screen.bindings,
     });

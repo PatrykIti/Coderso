@@ -65,6 +65,21 @@ Target state:
   migration to V4, compatibility `blocks`/`bindings` projections, V4-aware
   service/client capabilities, and entry canvas removal of widget edit buttons.
 
+## 2026-06-21 Active Surface Cutover
+
+- Custom Screen Editor View now uses native `ScreenDocumentV1` blocks through a
+  screen block library, screen runtime canvas, and screen block inspector.
+  Active authoring no longer imports Page builder `WidgetPicker`, `BlockList`,
+  `BlockSettings`, `FieldBindingPanel`, page block utils, or widget registry
+  contracts.
+- Record preview and entry-detail editing render through `ScreenRuntimeRenderer`
+  from V4 documents and `ScreenFieldBinding` records. Writable bindings map to
+  the existing content entry field controls and save payloads; entry detail mode
+  remains field-only with no section/block builder controls.
+- The records list remains the existing table workflow. Legacy migrated widgets
+  render as non-writable placeholders until TASK-468-07-L02 removes the retained
+  compatibility surface.
+
 ## Sub-Tasks
 
 - [ ] TASK-468-01: Contract freeze, drift audit, and migration decision record.
@@ -80,18 +95,19 @@ Target state:
   - [ ] TASK-468-03-L02: Neutral Canvas Frame And Selection Primitives.
   - [ ] TASK-468-03-L03: Neutral Toolbar Layers And Command Shell.
   - [ ] TASK-468-03-L04: Page Adapter Parity Validation.
-- [ ] TASK-468-04: Custom Screen canvas editor cutover.
-  - [ ] TASK-468-04-L01: V4 Editor Client And Local Model.
-  - [ ] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
-  - [ ] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
-  - [ ] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
-  - [ ] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
-- [ ] TASK-468-05: Screen runtime, records list, and entry editing cutover.
-  - [ ] TASK-468-05-L01: Screen Runtime Renderer.
-  - [ ] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
-  - [ ] TASK-468-05-L03: Records List Presentation Modes.
-  - [ ] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
-  - [ ] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
+- [x] TASK-468-04: Custom Screen canvas editor cutover.
+  - [x] TASK-468-04-L01: V4 Editor Client And Local Model.
+  - [x] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
+  - [x] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
+  - [x] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
+  - [x] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
+- [x] TASK-468-05: Screen runtime, records list, and entry editing cutover.
+  - [x] TASK-468-05-L01: Screen Runtime Renderer.
+  - [x] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
+  - [x] TASK-468-05-L03: Records List Presentation Modes. Superseded by
+    table-only scope correction.
+  - [x] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
+  - [x] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
 - [ ] TASK-468-06: Assistant active-surface and cache cutover.
   - [ ] TASK-468-06-L01: Assistant V4 Action Schemas Registry And Mapper.
   - [ ] TASK-468-06-L02: V4 Active Surface Context Hydration.

@@ -11,7 +11,10 @@ import {
   resolveEntryFieldErrorsFromApiError,
   validateEntryDraft,
 } from "../../../core/admin/ui/custom-screens/customScreenEntryDraft";
-import type { CustomScreenEditorViewDefinition } from "../../../core/services/customScreens/customScreenSchemas";
+import type {
+  CustomScreenEditorViewDefinition,
+  CustomScreenEditorViewDefinitionV4,
+} from "../../../core/services/customScreens/customScreenSchemas";
 
 const contentType: ContentTypeSummary = {
   id: "type-house-projects",
@@ -106,6 +109,52 @@ const readOnlyEditorView: CustomScreenEditorViewDefinition = {
   ],
 };
 
+const v4EditorView: CustomScreenEditorViewDefinitionV4 = {
+  saveMode: "entry",
+  interactionMode: "inline",
+  document: {
+    schemaVersion: 1,
+    sections: [
+      {
+        id: "field-project-status",
+        type: "field",
+        data: {},
+      },
+      {
+        id: "field-budget",
+        type: "field",
+        data: {},
+      },
+    ],
+  },
+  bindings: [
+    {
+      id: "project-status-value",
+      blockId: "field-project-status",
+      propPath: "value",
+      source: "entry",
+      field: "projectStatus",
+      mode: "readwrite",
+    },
+    {
+      id: "budget-value",
+      blockId: "field-budget",
+      propPath: "value",
+      source: "entry",
+      field: "budget",
+      mode: "write",
+    },
+    {
+      id: "notes-value",
+      blockId: "field-notes",
+      propPath: "value",
+      source: "entry",
+      field: "internalNotes",
+      mode: "read",
+    },
+  ],
+};
+
 test("buildInitialEntryDraft initializes defaults for writable Editor View fields only", () => {
   const draft = buildInitialEntryDraft({ contentType, editorView });
 
@@ -125,6 +174,16 @@ test("buildInitialEntryDraft does not fall back to the whole schema without writ
 
   expect(draft.editableFields).toEqual([]);
   expect(draft.data).toEqual({});
+});
+
+test("buildInitialEntryDraft reads writable V4 screen bindings without widget contracts", () => {
+  const draft = buildInitialEntryDraft({ contentType, editorView: v4EditorView });
+
+  expect(draft.editableFields).toEqual(["projectStatus", "budget"]);
+  expect(draft.data).toEqual({
+    projectStatus: "planned",
+    budget: 100000,
+  });
 });
 
 test("hydrateEditorViewDraft preserves existing data and does not overwrite defaults with undefined", () => {

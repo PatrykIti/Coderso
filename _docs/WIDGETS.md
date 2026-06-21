@@ -445,19 +445,19 @@ TASK-461 and follows the shared Pages-style list contract when opened:
 - Template destructive actions continue through `ConfirmActionDialog`,
   `deleteWidgetTemplate`, partial-failure feedback, and cache refresh.
 
-Minimalny screen widget pack dla admin UI:
+Legacy screen widget pack dla Custom Screens compatibility:
 - `screen-record-header`
 - `screen-field-value`
 - `screen-field-group`
 - `screen-two-column`
 
-Current intent for that pack:
+Current compatibility intent for that pack:
 - `screen-record-header` is a selected-entry summary surface with widget-owned
   binding targets for `eyebrow`, `title`, `subtitle`, `description`, and
   `badge`; those props can participate in write-capable record editing again.
-- `screen-field-value` is the record-row/card primitive that can stay read-only
-  or become inline-editable when its widget-owned `value` target points at a
-  writable field; `label` and `helper` remain read-only binding targets.
+- `screen-field-value` is the legacy migration input for a V4 `field` screen
+  block. Active V4 entry editing now reads `ScreenFieldBinding` directly and
+  does not rely on this widget at runtime.
 - `screen-field-group` is the fixed-slot section wrapper for related field
   widgets and keeps its `selected-content-type` layout contract without
   selected-entry binding cards.
@@ -660,8 +660,9 @@ Widget availability is surface-scoped:
 - `custom-screen-builder` - legacy Custom Screens surface kept for V1/V2/V3
   migration compatibility during TASK-468.
 - `admin-list-view` - Custom Screens `List View` configuration surface.
-- `admin-editor-view` - Custom Screens `Editor View` canvas and screen-owned
-  inline record editing surface.
+- `admin-editor-view` - legacy screen-widget metadata surface retained until
+  TASK-468-07; active V4 Custom Screens authoring uses screen-owned blocks and
+  field bindings instead of widget registry insertion.
 
 Admin-only widgets may declare `dataAccess` metadata:
 
@@ -701,11 +702,11 @@ the mature public widgets:
   actions remove the nested style key instead of writing `transparent` or other
   sentinel strings.
 
-Custom Screens preview and the read-only portions of the inline record editor
-temporarily reuse one shared screen-widget render bridge for nested
-`screen-field-group` and `screen-two-column` layouts. V4 entry mode is
-field-editing-only: the canvas may open field controls for writable bindings,
-but it must not expose section/block builder actions in the record editor.
+Custom Screens preview and the inline record editor now render
+`ScreenDocumentV1` through the screen runtime, not through `WidgetRenderer` or
+the screen-widget render bridge. V4 entry mode is field-editing-only: the
+canvas may open field controls for writable bindings, but it must not expose
+section/block builder actions in the record editor.
 
 ---
 

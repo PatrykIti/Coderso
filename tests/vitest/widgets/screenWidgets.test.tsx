@@ -127,31 +127,36 @@ test("screen widgets render through WidgetRenderer without invalid widget data f
   expect(field).not.toContain("Invalid widget data");
 });
 
-test("CustomScreenPreview applies bindings before rendering screen widgets", () => {
+test("CustomScreenPreview renders V4 screen bindings without WidgetRenderer", () => {
   const html = renderAdminUi(
     <CustomScreenPreview
-      blocks={[
-        {
-          id: "header-1",
-          type: "screen-record-header",
-          data: {
-            title: "Untitled record",
-            subtitle: "Preview subtitle",
+      document={{
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "header-1",
+            type: "record-header",
+            data: {
+              title: "Untitled record",
+              subtitle: "Preview subtitle",
+            },
           },
-        },
-      ]}
+        ],
+      }}
       bindings={[
         {
           id: "binding-title",
-          widgetId: "header-1",
+          blockId: "header-1",
           propPath: "title",
+          source: "entry",
           field: "title",
           mode: "readwrite",
         },
         {
           id: "binding-subtitle",
-          widgetId: "header-1",
+          blockId: "header-1",
           propPath: "subtitle",
+          source: "entry",
           field: "projectTitle",
           mode: "readwrite",
         },

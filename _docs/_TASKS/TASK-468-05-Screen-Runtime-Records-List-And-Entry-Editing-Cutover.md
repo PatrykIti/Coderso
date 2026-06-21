@@ -6,8 +6,9 @@
 **Category:** Custom Screens / Runtime / Entries
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-468-04
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-20
+**Completed:** 2026-06-21
 
 ---
 
@@ -28,14 +29,25 @@ blocks, writable controls, and professional record layouts.
 - First slice removed the widget edit button from `CustomScreenEntryCanvas` and
   wired entry editor reads through V4 helper projections.
 
+2026-06-21 completion:
+
+- `CustomScreenPreview` and `CustomScreenEntryCanvas` now render
+  `ScreenDocumentV1` through `ScreenRuntimeRenderer`, not through
+  `WidgetRenderer` or `screenWidgetRenderBridge`.
+- Entry detail mode maps writable `ScreenFieldBinding` records to existing
+  field controls and entry payloads, while the record list remains the existing
+  table workflow.
+- Active-surface hydration reports native screen block types and V4 bindings;
+  legacy placeholders stay non-writable.
+
 ## Sub-Tasks
 
-- [ ] TASK-468-05-L01: Screen Runtime Renderer.
-- [ ] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
+- [x] TASK-468-05-L01: Screen Runtime Renderer.
+- [x] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
 - [x] TASK-468-05-L03: Records List Presentation Modes. Superseded by the
   table-only scope correction.
-- [ ] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
-- [ ] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
+- [x] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
+- [x] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
 
 ## Files To Change
 

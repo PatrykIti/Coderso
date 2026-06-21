@@ -74,7 +74,7 @@ test("CustomScreenWorkspacePreviewDialog renders list preview table", () => {
         defaultSort: { field: "updatedAt", direction: "desc" },
         bulkActions: { delete: true, publish: true, unpublish: true },
       }}
-      blocks={[]}
+      document={{ schemaVersion: 1, sections: [] }}
       bindings={[]}
       previewRecordState={{
         source: "fallback",
@@ -97,7 +97,7 @@ test("CustomScreenWorkspacePreviewDialog renders list preview table", () => {
   }
 });
 
-test("CustomScreenWorkspacePreviewDialog renders editor preview from widget bindings", () => {
+test("CustomScreenWorkspacePreviewDialog renders editor preview from screen bindings", () => {
   const view = mount(
     <CustomScreenWorkspacePreviewDialog
       open
@@ -110,28 +110,33 @@ test("CustomScreenWorkspacePreviewDialog renders editor preview from widget bind
         defaultSort: { field: "updatedAt", direction: "desc" },
         bulkActions: { delete: true, publish: true, unpublish: true },
       }}
-      blocks={[
-        {
-          id: "header-1",
-          type: "screen-record-header",
-          data: {
-            title: "Untitled record",
-            subtitle: "Preview subtitle",
+      document={{
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "header-1",
+            type: "record-header",
+            data: {
+              title: "Untitled record",
+              subtitle: "Preview subtitle",
+            },
           },
-        },
-      ]}
+        ],
+      }}
       bindings={[
         {
           id: "binding-title",
-          widgetId: "header-1",
+          blockId: "header-1",
           propPath: "title",
+          source: "entry",
           field: "title",
           mode: "read",
         },
         {
           id: "binding-subtitle",
-          widgetId: "header-1",
+          blockId: "header-1",
           propPath: "subtitle",
+          source: "entry",
           field: "projectTitle",
           mode: "read",
         },

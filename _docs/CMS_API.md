@@ -1270,23 +1270,21 @@ Notes:
 - `document.sections[]` korzysta z screen-owned block types such as `field`,
   `field-group`, `record-header`, and `columns`; legacy widget blocks are
   compatibility migration inputs only.
-- builder insert library filtruje do admin surface `admin-editor-view`; public
-  page builder i widget library nadal uzywaja swoich powierzchni.
+- builder insert library pokazuje screen-owned blocks oraz pola wybranego
+  content type; public page builder i widget library nadal uzywaja swoich
+  powierzchni.
 - `bindings` mapuja `blockId + propPath` do pola wybranego content type albo
   do dozwolonych system fields.
-- Dla screen widgets kontrakt zapisuje tez widget-owned binding targets:
-  `screen-record-header` wystawia tylko read-only props
-  (`eyebrow`, `title`, `subtitle`, `description`, `badge`), a
-  `screen-field-value` pozwala na write-capable binding tylko dla `value`;
-  `label` i `helper` pozostaja read-only.
-- screen widget editor bundles nadal uzywaja wspolnego kontraktu
-  `wizard -> visual -> advanced`:
-  `wizard` ustawia wariant i glowna strukture, `visual` jest binding-aware dla
-  codziennej edycji tresci, a `advanced` trzyma alignment/tone oraz clearable
-  chrome tokens.
-- builder preview i read-only fragmenty record editora moga nadal uzywac
-  compatibility projection podczas TASK-468, ale zapis V4 przechowuje
-  `editorView.document`.
+- Dla V4 active surface binding targets sa screen-owned:
+  `record-header.title` moze czytac metadata wpisu, a `field.value` moze byc
+  `read`, `write`, albo `readwrite`. `field.label` i `field.helper` sa
+  wspolnymi parametrami layoutu zapisanymi w screen definition, nie danymi
+  pojedynczego wpisu.
+- Legacy `screen-*` widget editor bundles pozostaja compatibility/migration
+  inputami do TASK-468-07; aktywny Editor View nie uzywa juz `WidgetPicker`,
+  `BlockList`, `BlockSettings`, `FieldBindingPanel`, ani `WidgetRenderer`.
+- builder preview i read-only fragmenty record editora renderuja
+  `editorView.document` przez screen runtime.
 - Entry detail mode jest field-editing-only: klikniecie pola moze otworzyc
   floating field panel i zapisac istniejace entry fields; nie pokazuje
   operacji dodawania/przenoszenia/usuwania sekcji lub blokow.
@@ -1311,7 +1309,7 @@ Notes:
 - `Preview` w builderze otwiera dedykowany dialog:
   - `List View` preview pokazuje zywy widok tabeli rekordow dla aktualnej
     konfiguracji z inline header reorder controls zachowanymi w canvasie,
-  - `Editor View` preview pokazuje widgetowy record surface w szerszym,
+  - `Editor View` preview pokazuje screen-block record surface w szerszym,
     Pages-like shell i startuje od desktop frame na first open,
   - `Editor View` preview oraz mounted builder canvas wspoldziela cached-first
     owner nad `entries:list:<typeSlug>`; przy braku rekordow albo cold-cache

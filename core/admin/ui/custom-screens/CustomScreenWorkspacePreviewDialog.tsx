@@ -12,10 +12,11 @@ import {
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 
 import type {
-  CustomScreenBinding,
   CustomScreenListViewDefinition,
+  ScreenDocumentV1,
+  ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
-import type { Block } from "@/ui/pages/builder/types";
+import type { ContentField } from "../content-types/SchemaBuilder";
 import { CustomScreenEntriesTable } from "./CustomScreenEntriesTable";
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { buildCustomScreenPreviewEntries } from "./ListViewCanvas";
@@ -35,8 +36,9 @@ type CustomScreenWorkspacePreviewDialogProps = {
   mode: "list-view" | "editor-view";
   contentType: ContentTypeSummary | null;
   listView: CustomScreenListViewDefinition;
-  blocks: Block[];
-  bindings: CustomScreenBinding[];
+  document: ScreenDocumentV1;
+  bindings: ScreenFieldBinding[];
+  fields?: ContentField[];
   previewRecordState: CustomScreenPreviewRecordState;
   previewLoading?: boolean;
 };
@@ -47,8 +49,9 @@ export function CustomScreenWorkspacePreviewDialog({
   mode,
   contentType,
   listView,
-  blocks,
+  document,
   bindings,
+  fields,
   previewRecordState,
   previewLoading = false,
 }: CustomScreenWorkspacePreviewDialogProps) {
@@ -59,7 +62,7 @@ export function CustomScreenWorkspacePreviewDialog({
   const description =
     mode === "list-view"
       ? "Preview the records table the current screen will render in the admin workspace."
-      : "Preview the widget-based record surface the current screen will render for record editing.";
+      : "Preview the screen-block record surface the current screen will render for record editing.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -126,11 +129,12 @@ export function CustomScreenWorkspacePreviewDialog({
                 }}
               >
                 <CustomScreenPreview
-                  blocks={blocks}
+                  document={document}
                   bindings={bindings}
                   data={previewRecordState.data}
+                  fields={fields}
                   emptyTitle="Preview unavailable"
-                  emptyMessage="Add screen widgets and bindings to preview the editor view."
+                  emptyMessage="Add screen blocks and bindings to preview the editor view."
                 />
               </div>
             </div>

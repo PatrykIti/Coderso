@@ -4,25 +4,32 @@ import {
   resolveCustomScreenCapabilities,
   type CustomScreenCapabilities,
 } from "../../../services/customScreens/capabilities";
-import type { CustomScreenBinding } from "../../../services/customScreens/customScreenSchemas";
+import type {
+  CustomScreenBinding,
+  ScreenBlockV1,
+  ScreenFieldBinding,
+} from "../../../services/customScreens/customScreenSchemas";
 import {
   collectWritableBindingFields,
   resolveCustomScreenBindingContracts,
 } from "../../../services/customScreens/bindingResolver";
 import type { Block } from "@/ui/pages/builder/types";
 
-const readBlockDataText = (block: Block, key: string) => {
+type AssistantSurfaceBlock = Block | ScreenBlockV1;
+type AssistantSurfaceBinding = CustomScreenBinding | ScreenFieldBinding;
+
+const readBlockDataText = (block: AssistantSurfaceBlock, key: string) => {
   const data = block.data;
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const value = (data as Record<string, unknown>)[key];
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
 };
 
-const summarizeBlocks = (blocks: Block[], options: { maxBlocks?: number } = {}) => {
+const summarizeBlocks = (blocks: AssistantSurfaceBlock[], options: { maxBlocks?: number } = {}) => {
   const maxBlocks = options.maxBlocks ?? 80;
   const result: AssistantActiveCustomScreenSurfaceContext["blocks"] = [];
 
-  const visit = (items: Block[], pathPrefix: string) => {
+  const visit = (items: AssistantSurfaceBlock[], pathPrefix: string) => {
     items.forEach((block, index) => {
       if (result.length >= maxBlocks) return;
       const path = pathPrefix ? `${pathPrefix}.${index}` : String(index);
@@ -52,7 +59,8 @@ const summarizeBlocks = (blocks: Block[], options: { maxBlocks?: number } = {}) 
       if (childBlocks.length > 0) visit(childBlocks, `${path}.children`);
       for (const [slotId, value] of slotEntries) {
         if (result.length >= maxBlocks) break;
-        if (Array.isArray(value)) visit(value as Block[], `${path}.slots.${slotId}`);
+        if (Array.isArray(value))
+          visit(value as AssistantSurfaceBlock[], `${path}.slots.${slotId}`);
       }
     });
   };
@@ -61,10 +69,13 @@ const summarizeBlocks = (blocks: Block[], options: { maxBlocks?: number } = {}) 
   return result;
 };
 
-const normalizeBindings = (bindings: CustomScreenBinding[]) =>
+const bindingBlockId = (binding: AssistantSurfaceBinding) =>
+  "blockId" in binding ? binding.blockId : binding.widgetId;
+
+const normalizeBindings = (bindings: AssistantSurfaceBinding[]) =>
   bindings
     .map((binding) => ({
-      widgetId: binding.widgetId,
+      widgetId: bindingBlockId(binding),
       field: binding.field,
       propPath: binding.propPath,
       mode: binding.mode,
@@ -77,24 +88,40 @@ const normalizeBindings = (bindings: CustomScreenBinding[]) =>
 
 export const buildCustomScreenAssistantSurface = (input: {
   screen: CustomScreenRecord;
-  blocks?: Block[];
-  bindings?: CustomScreenBinding[];
+  blocks?: AssistantSurfaceBlock[];
+  bindings?: AssistantSurfaceBinding[];
   capabilities?: CustomScreenCapabilities;
   selectedBlockId?: string | null;
   selectedEntryId?: string | null;
   warnings?: string[];
 }): AssistantActiveCustomScreenSurfaceContext => {
-  const blocks = input.blocks ?? (input.screen.blocks as Block[]);
-  const bindings = input.bindings ?? input.screen.bindings;
+  const blocks =
+    input.blocks ??
+    input.screen.definition?.editorView.document.sections ??
+    (input.screen.blocks as Block[]);
+  const bindings =
+    input.bindings ?? input.screen.definition?.editorView.bindings ?? input.screen.bindings;
   const capabilities =
     input.capabilities ??
     input.screen.capabilities ??
-    resolveCustomScreenCapabilities({ blocks, bindings });
-  const contracts = resolveCustomScreenBindingContracts(blocks);
-  const writableBindingFields = collectWritableBindingFields(bindings, {
-    contracts,
-    fallbackToModeOnly: false,
-  });
+    resolveCustomScreenCapabilities({
+      definition: input.screen.definition ?? undefined,
+      blocks: input.screen.definition ? undefined : (blocks as Block[]),
+      bindings: input.screen.definition ? undefined : (bindings as CustomScreenBinding[]),
+    });
+  const writableBindingFields =
+    bindings.length > 0 && "blockId" in bindings[0]!
+      ? Array.from(
+          new Set(
+            (bindings as ScreenFieldBinding[])
+              .filter((binding) => binding.mode === "write" || binding.mode === "readwrite")
+              .map((binding) => binding.field)
+          )
+        )
+      : collectWritableBindingFields(bindings as CustomScreenBinding[], {
+          contracts: resolveCustomScreenBindingContracts(blocks as Block[]),
+          fallbackToModeOnly: false,
+        });
 
   return {
     kind: "custom-screen",

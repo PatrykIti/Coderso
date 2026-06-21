@@ -5,17 +5,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
-import { createBlock } from "@/ui/pages/builder/blockUtils";
-import type { CustomScreenEditorViewDefinition } from "../../../services/customScreens/customScreenSchemas";
+import {
+  addScreenBlock,
+  createScreenBlock,
+  removeScreenBindingsForBlockTree,
+  removeScreenBlock,
+} from "../../../services/customScreens/screenDocumentOps";
+import type { CustomScreenEditorViewDefinitionV4 } from "../../../services/customScreens/customScreenSchemas";
 
 type EditorViewDesignerProps = {
   contentType: ContentTypeSummary | null;
-  value: CustomScreenEditorViewDefinition;
-  onChange: (next: CustomScreenEditorViewDefinition) => void;
+  value: CustomScreenEditorViewDefinitionV4;
+  onChange: (next: CustomScreenEditorViewDefinitionV4) => void;
 };
-
-const toBindingId = (blockId: string, field: string) =>
-  `${blockId}-${field}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
 export function EditorViewDesigner({ contentType, value, onChange }: EditorViewDesignerProps) {
   const fields = useMemo(
@@ -35,40 +37,27 @@ export function EditorViewDesigner({ contentType, value, onChange }: EditorViewD
   const addField = (fieldName: string) => {
     const field = fields.find((item) => item.name === fieldName);
     if (!field || writableFields.has(field.name)) return;
-    const block = {
-      ...createBlock("screen-field-value"),
-      data: {
-        label: field.label,
-        value: field.label,
-        helper: field.help ?? "",
-      },
-    };
+    const created = createScreenBlock({
+      type: "field",
+      field: field.name,
+      label: field.label,
+    });
     onChange({
       ...value,
-      blocks: [...value.blocks, block],
-      bindings: [
-        ...value.bindings,
-        {
-          id: toBindingId(block.id, field.name),
-          widgetId: block.id,
-          propPath: "value",
-          field: field.name,
-          mode: "readwrite",
-        },
-      ],
+      document: addScreenBlock(value.document, created.block),
+      bindings: [...value.bindings, ...created.bindings],
     });
   };
 
   const removeField = (fieldName: string) => {
-    const bindingWidgetIds = new Set(
-      value.bindings
-        .filter((binding) => binding.field === fieldName)
-        .map((binding) => binding.widgetId)
-    );
+    const binding = value.bindings.find((item) => item.field === fieldName);
+    if (!binding) return;
+    const result = removeScreenBlock(value.document, binding.blockId);
+    if (!result.removed) return;
     onChange({
       ...value,
-      blocks: value.blocks.filter((block) => !bindingWidgetIds.has(block.id)),
-      bindings: value.bindings.filter((binding) => binding.field !== fieldName),
+      document: result.document,
+      bindings: removeScreenBindingsForBlockTree(value.bindings, result.removed),
     });
   };
 

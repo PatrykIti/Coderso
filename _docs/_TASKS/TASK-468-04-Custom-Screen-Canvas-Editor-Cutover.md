@@ -6,8 +6,9 @@
 **Category:** Admin UI / Custom Screens / Canvas Editor
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-468-03
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-20
+**Completed:** 2026-06-21
 
 ---
 
@@ -25,13 +26,23 @@ controls, layers, and preview states.
 - Existing widget/page-builder UI remains a compatibility adapter until the
   neutral authoring shell and screen-native canvas land.
 
+2026-06-21 completion:
+
+- `CustomScreenEditorPage` no longer uses `WidgetPicker`, `BlockList`,
+  `BlockSettings`, `FieldBindingPanel`, page-builder block utils, or widget
+  registry contracts for active Editor View authoring.
+- Added screen-native block library, runtime canvas, inspector, and
+  `screenDocumentOps` helpers for add, move, duplicate, delete, binding repair,
+  and V4 preview.
+- List View configuration remains unchanged and table-only.
+
 ## Sub-Tasks
 
-- [ ] TASK-468-04-L01: V4 Editor Client And Local Model.
-- [ ] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
-- [ ] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
-- [ ] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
-- [ ] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
+- [x] TASK-468-04-L01: V4 Editor Client And Local Model.
+- [x] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
+- [x] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
+- [x] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
+- [x] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
 
 ## Files To Change
 
