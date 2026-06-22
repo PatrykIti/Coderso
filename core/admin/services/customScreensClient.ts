@@ -2,7 +2,10 @@ import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import {
-  clearLocalCache,
+  clearCustomScreenDetailBrowserCache,
+  clearCustomScreensBrowserCache,
+} from "@/services/customScreensCache";
+import {
   createMemoryBackedLocalCache,
   readLocalCache,
   writeLocalCache,
@@ -75,10 +78,8 @@ export type CustomScreenCreateInput = {
   compositionKey?: string | null;
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
-  schemaVersion?: number;
+  schemaVersion?: 4;
   definition?: CustomScreenDefinition | null;
-  blocks?: WidgetBlock[] | null;
-  bindings?: CustomScreenBinding[] | null;
 };
 
 export type CustomScreenUpdateInput = Partial<CustomScreenCreateInput>;
@@ -180,7 +181,7 @@ const upsertCachedScreen = (item: CustomScreenRecord) => {
 const removeCachedScreen = (id: string) => {
   const current = readScreensCache();
   if (current) primeScreensCacheInternal(current.filter((entry) => entry.id !== id));
-  clearLocalCache(cacheKeys.customScreenDetail(id));
+  clearCustomScreenDetailBrowserCache(id);
 };
 
 export const getCachedCustomScreens = () => {
@@ -197,6 +198,7 @@ export const getCachedCustomScreen = (id: string) => {
 export const clearCustomScreensCache = () => {
   cachedScreensPromise = null;
   customScreensListCache.clear();
+  clearCustomScreensBrowserCache();
 };
 
 export async function listCustomScreens() {

@@ -5,8 +5,9 @@
 **Category:** Admin UI / Custom Screens / Content Modeling / Architecture
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-464, TASK-467
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-20
+**Completed:** 2026-06-22
 
 ---
 
@@ -95,10 +96,10 @@ Target state:
 
 ## Sub-Tasks
 
-- [ ] TASK-468-01: Contract freeze, drift audit, and migration decision record.
+- [x] TASK-468-01: Contract freeze, drift audit, and migration decision record.
   - [ ] TASK-468-01-L01: Current State Inventory And Drift Freeze.
   - [ ] TASK-468-01-L02: V4 Contract Decision Record And Validation Plan.
-- [ ] TASK-468-02: Screen document V4 service contract and migration adapters.
+- [x] TASK-468-02: Screen document V4 service contract and migration adapters.
   - [ ] TASK-468-02-L01: Screen Document Domain Owner.
   - [ ] TASK-468-02-L02: Legacy V1-V3 Read Migration Adapters.
   - [ ] TASK-468-02-L03: V4 Service Mapping And Route Validation.
@@ -121,12 +122,12 @@ Target state:
     table-only scope correction.
   - [x] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
   - [x] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
-- [ ] TASK-468-06: Assistant active-surface and cache cutover.
+- [x] TASK-468-06: Assistant active-surface and cache cutover.
   - [ ] TASK-468-06-L01: Assistant V4 Action Schemas Registry And Mapper.
   - [ ] TASK-468-06-L02: V4 Active Surface Context Hydration.
   - [ ] TASK-468-06-L03: Assistant Executor Policy Dry Run And Undo.
   - [ ] TASK-468-06-L04: Assistant Client Cache And Regression Coverage.
-- [ ] TASK-468-07: Legacy removal, DB cleanup, docs, and closure validation.
+- [x] TASK-468-07: Legacy removal, DB cleanup, docs, and closure validation.
   - [ ] TASK-468-07-L01: V4 Backfill Verification Migration.
   - [ ] TASK-468-07-L02: Legacy Widget Surface And Bridge Removal.
   - [ ] TASK-468-07-L03: Drop Legacy Blocks Bindings Columns.
@@ -236,3 +237,21 @@ Forbidden closure criteria:
    the closure task.
 6. Assistant actions and active-surface summaries use screen sections, blocks,
    bindings, and writable field names instead of widget-block patch semantics.
+
+## V4 Completion Evidence - 2026-06-22
+
+- The TASK-468 family is closed with all physical descendants terminal and the
+  task-board/changelog indexes synchronized.
+- Custom Screen writes now accept only V4 `definition` payloads, while legacy
+  V1/V2/V3 rows remain migratable on read and through the V4 backfill.
+- Migrations `0061_custom_screen_v4_backfill.sql` and
+  `0062_drop_custom_screen_legacy_columns.sql` backfill V4 definitions, switch
+  the default schema version to 4, and remove legacy `blocks` / `bindings`
+  storage.
+- Assistant, blueprint, active-surface, undo, operation-policy, and cache
+  contracts now use V4 section/block/binding/list-view actions. The retired
+  `custom-screen.widget.patch` action remains covered only as a rejected legacy
+  input.
+- Final validation evidence is recorded in
+  `TASK-468-07-L04-Docs-Changelog-Board-And-Final-Validation.md` and changelog
+  entry `1189-2026-06-22-task-468-v4-custom-screen-completion.md`.

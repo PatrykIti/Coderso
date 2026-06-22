@@ -6,7 +6,8 @@
 **Category:** Assistant / Custom Screens / Execution Policy
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-06-L01, TASK-468-06-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,15 +19,15 @@ idempotent application through the Custom Screens service.
 
 ## Sub-Tasks
 
-- [ ] Route V4 screen actions through existing assistant dry-run/review flow.
-- [ ] Produce human-readable mutation summaries without exposing raw secret data.
-- [ ] Store undo metadata for section/block/binding mutations where existing
+- [x] Route V4 screen actions through existing assistant dry-run/review flow.
+- [x] Produce human-readable mutation summaries without exposing raw secret data.
+- [x] Store undo metadata for section/block/binding mutations where existing
   assistant infrastructure supports undo.
-- [ ] Ensure action execution uses the same V4 service validation as manual
+- [x] Ensure action execution uses the same V4 service validation as manual
   editor saves.
-- [ ] Remove `custom-screen.widget.patch` from executable registry/policy/undo
+- [x] Remove `custom-screen.widget.patch` from executable registry/policy/undo
   handling for V4 screens, or mark it non-executable legacy-only before closure.
-- [ ] Add executor tests for dry-run, apply, conflict, undo, and audit events.
+- [x] Add executor tests for dry-run, apply, conflict, undo, and audit events.
 
 ## Files To Change
 

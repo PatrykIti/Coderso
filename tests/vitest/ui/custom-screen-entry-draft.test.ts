@@ -163,7 +163,7 @@ const v4EditorView: CustomScreenEditorViewDefinitionV4 = {
 };
 
 test("buildInitialEntryDraft initializes defaults for writable Editor View fields only", () => {
-  const draft = buildInitialEntryDraft({ contentType, editorView });
+  const draft = buildInitialEntryDraft({ contentType, editorView: v4EditorView });
 
   expect(draft.editableFields).toEqual(["projectStatus", "budget"]);
   expect(draft.data).toEqual({
@@ -208,7 +208,7 @@ test("hydrateEditorViewDraft preserves existing data and does not overwrite defa
     updatedAt: "2026-05-01T00:00:00.000Z",
   };
 
-  const draft = hydrateEditorViewDraft({ contentType, editorView, entry });
+  const draft = hydrateEditorViewDraft({ contentType, editorView: v4EditorView, entry });
 
   expect(draft.data).toEqual({
     projectStatus: "active",
@@ -220,7 +220,7 @@ test("hydrateEditorViewDraft preserves existing data and does not overwrite defa
 test("Editor View payload builders keep create scoped and update non-destructive", () => {
   const draft = hydrateEditorViewDraft({
     contentType,
-    editorView,
+    editorView: v4EditorView,
     entry: {
       id: "entry-1",
       typeId: "type-house-projects",
@@ -267,7 +267,7 @@ test("Editor View payload builders keep create scoped and update non-destructive
 });
 
 test("validateEntryDraft reports title, slug, and required editable fields", () => {
-  const draft = buildInitialEntryDraft({ contentType, editorView });
+  const draft = buildInitialEntryDraft({ contentType, editorView: v4EditorView });
 
   expect(
     validateEntryDraft({

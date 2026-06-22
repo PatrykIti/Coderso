@@ -174,6 +174,9 @@ Storage:
 
 - Custom Screens are admin-only workspaces bound to one Engine content type.
 - `definition.schemaVersion=4` owns `listView` plus `editorView`.
+- Fresh create/update requests accept V4 `definition` only; legacy
+  `blocks`/`bindings` writes are rejected with
+  `custom_screen_legacy_write_unsupported`.
 - `editorView.document` is `ScreenDocumentV1`: `sections[]` contains
   `ScreenSectionV1` objects with nested `blocks[]`; it is not a Page v2
   document and strict writes reject flat block arrays.

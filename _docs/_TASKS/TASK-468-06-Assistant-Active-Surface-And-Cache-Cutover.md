@@ -6,7 +6,8 @@
 **Category:** Assistant / Custom Screens / Admin Cache
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-05, TASK-467
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -19,10 +20,10 @@ field names.
 
 ## Sub-Tasks
 
-- [ ] TASK-468-06-L01: Assistant V4 Action Schemas Registry And Mapper.
-- [ ] TASK-468-06-L02: V4 Active Surface Context Hydration.
-- [ ] TASK-468-06-L03: Assistant Executor Policy Dry Run And Undo.
-- [ ] TASK-468-06-L04: Assistant Client Cache And Regression Coverage.
+- [x] TASK-468-06-L01: Assistant V4 Action Schemas Registry And Mapper.
+- [x] TASK-468-06-L02: V4 Active Surface Context Hydration.
+- [x] TASK-468-06-L03: Assistant Executor Policy Dry Run And Undo.
+- [x] TASK-468-06-L04: Assistant Client Cache And Regression Coverage.
 
 ## Files To Change
 

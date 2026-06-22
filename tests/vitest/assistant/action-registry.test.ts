@@ -17,7 +17,13 @@ test("assistantActionTypes lists every supported action type once", () => {
     "custom-screen.upsert",
     "custom-screen.delete",
     "custom-screen.update",
-    "custom-screen.widget.patch",
+    "custom-screen.section.add",
+    "custom-screen.block.add",
+    "custom-screen.block.patch",
+    "custom-screen.block.move",
+    "custom-screen.block.remove",
+    "custom-screen.binding.set",
+    "custom-screen.list-view.patch",
     "listing-query.upsert",
     "listing-query.delete",
     "listing-query.update",
@@ -91,7 +97,14 @@ test("getAssistantActionHandler returns whitelisted handlers", () => {
   expect(isAssistantActionType("content-type.delete")).toBe(true);
   expect(isAssistantActionType("custom-screen.delete")).toBe(true);
   expect(isAssistantActionType("custom-screen.update")).toBe(true);
-  expect(isAssistantActionType("custom-screen.widget.patch")).toBe(true);
+  expect(isAssistantActionType("custom-screen.section.add")).toBe(true);
+  expect(isAssistantActionType("custom-screen.block.add")).toBe(true);
+  expect(isAssistantActionType("custom-screen.block.patch")).toBe(true);
+  expect(isAssistantActionType("custom-screen.block.move")).toBe(true);
+  expect(isAssistantActionType("custom-screen.block.remove")).toBe(true);
+  expect(isAssistantActionType("custom-screen.binding.set")).toBe(true);
+  expect(isAssistantActionType("custom-screen.list-view.patch")).toBe(true);
+  expect(isAssistantActionType("custom-screen.widget.patch")).toBe(false);
   expect(isAssistantActionType("menu.item.upsert")).toBe(true);
   expect(isAssistantActionType("menu.item.delete")).toBe(true);
   expect(isAssistantActionType("seo.document.upsert")).toBe(true);

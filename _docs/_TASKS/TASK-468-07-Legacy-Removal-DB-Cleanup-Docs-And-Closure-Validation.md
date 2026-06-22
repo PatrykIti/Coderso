@@ -6,7 +6,8 @@
 **Category:** Migration / DB / Docs / Validation
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -19,10 +20,10 @@ and stale docs.
 
 ## Sub-Tasks
 
-- [ ] TASK-468-07-L01: V4 Backfill Verification Migration.
-- [ ] TASK-468-07-L02: Legacy Widget Surface And Bridge Removal.
-- [ ] TASK-468-07-L03: Drop Legacy Blocks Bindings Columns.
-- [ ] TASK-468-07-L04: Docs Changelog Board And Final Validation.
+- [x] TASK-468-07-L01: V4 Backfill Verification Migration.
+- [x] TASK-468-07-L02: Legacy Widget Surface And Bridge Removal.
+- [x] TASK-468-07-L03: Drop Legacy Blocks Bindings Columns.
+- [x] TASK-468-07-L04: Docs Changelog Board And Final Validation.
 
 ## Files To Change
 

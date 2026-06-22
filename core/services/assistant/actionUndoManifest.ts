@@ -46,7 +46,13 @@ const patchActionTypes = new Set<AssistantPlannedAction["type"]>([
   "listing-query.filters.patch",
   "listing-template.card.patch",
   "widget-template.block.patch",
-  "custom-screen.widget.patch",
+  "custom-screen.section.add",
+  "custom-screen.block.add",
+  "custom-screen.block.patch",
+  "custom-screen.block.move",
+  "custom-screen.block.remove",
+  "custom-screen.binding.set",
+  "custom-screen.list-view.patch",
   "form.automation.upsert",
 ]);
 
@@ -55,7 +61,13 @@ const restoreOnlyActionTypes = new Set<AssistantPlannedAction["type"]>([
   "listing-query.filters.patch",
   "listing-template.card.patch",
   "widget-template.block.patch",
-  "custom-screen.widget.patch",
+  "custom-screen.section.add",
+  "custom-screen.block.add",
+  "custom-screen.block.patch",
+  "custom-screen.block.move",
+  "custom-screen.block.remove",
+  "custom-screen.binding.set",
+  "custom-screen.list-view.patch",
 ]);
 
 const nonMutatingActionTypes = new Set<AssistantPlannedAction["type"]>([

@@ -1262,9 +1262,10 @@ Notes:
   duplikatu `dataContext.contentTypeId`.
 - `definition.schemaVersion=4` jest zrodlem prawdy dla aktywnego workspace
   Custom Screens.
-- Legacy root `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
-  `definition.editorView` oraz kompatybilnoscia dla starszych rows do czasu
-  TASK-468-07.
+- Legacy root `schemaVersion`, `blocks`, i `bindings` sa read-only
+  compatibility inputs for older rows. Fresh create/update requests accept only
+  `schemaVersion: 4` plus V4 `definition`; legacy write attempts return
+  `custom_screen_legacy_write_unsupported`.
 - V1/V2/V3 rows bez gotowego V4 payloadu sa migrowane przy odczycie do V4:
   `listView` dostaje deterministyczne domyslne kolumny/filtry z wybranego
   content type, a dawne `blocks`/`bindings` trafiaja do
@@ -1292,9 +1293,10 @@ Notes:
   `read`, `write`, albo `readwrite`. `field.label` i `field.helper` sa
   wspolnymi parametrami layoutu zapisanymi w screen definition, nie danymi
   pojedynczego wpisu.
-- Legacy `screen-*` widget editor bundles pozostaja compatibility/migration
-  inputami do TASK-468-07; aktywny Editor View nie uzywa juz `WidgetPicker`,
-  `BlockList`, `BlockSettings`, `FieldBindingPanel`, ani `WidgetRenderer`.
+- Legacy `screen-*` widget editor bundles sa retired compatibility/migration
+  inputs; aktywny Editor View nie uzywa juz `WidgetPicker`, `BlockList`,
+  `BlockSettings`, `FieldBindingPanel`, `WidgetRenderer`, ani active widget
+  surface registration.
 - builder preview i read-only fragmenty record editora renderuja
   `editorView.document` przez screen runtime.
 - `Editor View` uses the neutral authoring canvas shell: insert, layers,
@@ -1319,9 +1321,9 @@ Notes:
   `active + showInSidebar + !supportsDedicatedEditor` -> requires editor setup,
   `draft + showInSidebar` -> configured after activation,
   otherwise -> not shown.
-- create drawer na liscie wysyla tylko istniejace pola create schema:
-  `name`, `contentTypeId`, `status`, `showInSidebar`, `sidebarLabel`,
-  `blocks`, `bindings`.
+- create drawer na liscie wysyla tylko pola V4 create schema:
+  `name`, `contentTypeId`, `status`, `showInSidebar`, `sidebarLabel`, and
+  optional V4 `definition`.
 - builder topbar uzywa `Preview`, `List View`, `Editor View`, i `Save`; aktywny
   runtime flow nie uzywa juz `Builder / Preview`, `Open records`, ani
   classic-editor / drawer branches.
@@ -1832,29 +1834,38 @@ Create payload (summary):
 {
   "name": "Catalog screen",
   "contentTypeId": "content-type-uuid",
-  "status": "draft",
+  "status": "active",
   "collectionRole": "canonical-admin-screen",
   "compositionKey": "catalog-screen",
-  "schemaVersion": 1,
-  "blocks": [
-    { "id": "section-1", "type": "section", "data": {} }
-  ],
-  "bindings": [
-    {
-      "id": "title",
-      "widgetId": "section-1",
-      "propPath": "title",
-      "field": "title",
-      "mode": "readwrite"
+  "schemaVersion": 4,
+  "definition": {
+    "schemaVersion": 4,
+    "listView": {
+      "columns": [],
+      "filters": [],
+      "defaultSort": { "field": "updatedAt", "direction": "desc" },
+      "bulkActions": { "delete": true, "publish": true, "unpublish": true }
+    },
+    "editorView": {
+      "saveMode": "entry",
+      "interactionMode": "inline",
+      "document": {
+        "schemaVersion": 1,
+        "sections": []
+      },
+      "bindings": []
     }
-  ]
+  }
 }
 ```
 
 Record shape (summary):
 - `id`, `name`, `contentTypeId`, `status`, `collectionRole`,
-  `compositionKey`, `schemaVersion`, `blocks`, `bindings`
+  `compositionKey`, `schemaVersion`, `definition`
 - `createdAt`, `updatedAt`
+- Read responses may still include derived legacy `blocks` / `bindings`
+  projections for old callers; create/update requests must not send those
+  fields.
 
 ---
 
@@ -3593,8 +3604,8 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-04-01` promuje `page.update` do executable typed action dla aktywnej strony; akcja edytuje title/slug/status/settings i zachowuje niepowiazane Page data.
 `TASK-174-04-02` historycznie rozszerzal `page.widget.patch`; po TASK-417 Page mutations ida przez `page.upsert` z `sections[]` albo metadata-only `page.update`.
 `TASK-174-04-03` promuje `widget-template.update` i `widget-template.block.patch` do executable typed actions dla aktywnego reusable widget template; page-instance vs reusable-template ambiguity zwraca `needs_input`.
-`TASK-174-04-04` promuje `custom-screen.update` i `custom-screen.widget.patch` do executable typed actions dla aktywnego custom screen; binding target jest rozpoznawany po `widgetId + propPath + field`, bez ujawniania entry payloadow.
-`TASK-190-06-01` przenosi kompozycje katalogowych admin review screens do `blueprintAdminSurfaceComposer`: helper sklada istniejace `screen-*` custom-screen blocks, waliduje referencje do pol content schema, odrzuca secret-like field refs i nadal zwraca obecny `custom-screen.upsert` `blocks` / `bindings` payload bez nowego layout DSL.
+`TASK-174-04-04` historycznie promowal `custom-screen.widget.patch`; po TASK-468 aktywne Custom Screen mutacje V4 ida przez `custom-screen.update` dla metadanych oraz `custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, i `custom-screen.list-view.patch` dla ekranu. Binding target jest rozpoznawany po `blockId + propPath + field`, bez ujawniania entry payloadow.
+`TASK-190-06-01` po TASK-468 sklada katalogowe admin review screens jako V4 `ScreenDocumentV1` sections/blocks w `definition`; helper waliduje referencje do pol content schema, odrzuca secret-like field refs i nie emituje legacy `screen-*` widget blocks ani `blocks` / `bindings` write payload.
 `TASK-190-06-02` przenosi binding composition do `blueprintBindingComposer` i rozszerza obecny custom-screen owner seam o top-level `collectionRole` / `compositionKey`; `custom-screen.upsert` oraz `custom-screen.update` moga przenosic te pola przez strict action schema, executor i `customScreenService` bez assistant-only metadata store.
 `TASK-174-04-05` promuje `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update` i `seo.document.update` do executable typed actions; wszystkie mutacje ida przez istniejace domain services i zachowuja unrelated fields/config.
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.

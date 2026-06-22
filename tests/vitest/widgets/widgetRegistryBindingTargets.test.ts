@@ -8,21 +8,11 @@ afterEach(() => {
   clearWidgets();
 });
 
-test("admin widget registry exposes widget-owned binding targets for screen widgets", () => {
+test("admin widget registry does not expose retired screen widgets", () => {
   ensureCoreWidgetsRegistered();
 
-  expect(getRegisteredWidget("screen-record-header")?.bindingTargets).toEqual([
-    expect.objectContaining({ propPath: "eyebrow", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "title", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "subtitle", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "description", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "badge", modes: ["read", "write"] }),
-  ]);
-  expect(getRegisteredWidget("screen-field-value")?.bindingTargets).toEqual([
-    expect.objectContaining({ propPath: "label", modes: ["read"] }),
-    expect.objectContaining({ propPath: "value", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "helper", modes: ["read"] }),
-  ]);
-  expect(getRegisteredWidget("screen-field-group")?.bindingTargets).toEqual([]);
-  expect(getRegisteredWidget("screen-two-column")?.bindingTargets).toEqual([]);
+  expect(getRegisteredWidget("screen-record-header")).toBeNull();
+  expect(getRegisteredWidget("screen-field-value")).toBeNull();
+  expect(getRegisteredWidget("screen-field-group")).toBeNull();
+  expect(getRegisteredWidget("screen-two-column")).toBeNull();
 });

@@ -48,7 +48,9 @@ Widget library module filter is pack-aware:
 This keeps non-technical users focused on complete module packs first.
 
 Note:
-- screen-only widgets from surface `custom-screen-builder` are excluded from the page/widget-library module pack matrix.
+- retired screen-only Custom Screens migration widgets from the historical
+  `custom-screen-builder` surface are excluded from the page/widget-library
+  module pack matrix.
 - assistant page-section alias resolution for `TASK-190` reuses this matrix plus
   current page-builder widget metadata; it does not add a second section
   readiness registry or separate preset counters.

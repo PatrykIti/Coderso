@@ -82,7 +82,13 @@ import { clearCustomScreensCacheLightweight } from "./customScreensCache";
 case "custom-screen.upsert":
 case "custom-screen.delete":
 case "custom-screen.update":
-case "custom-screen.widget.patch":
+case "custom-screen.section.add":
+case "custom-screen.block.add":
+case "custom-screen.block.patch":
+case "custom-screen.block.move":
+case "custom-screen.block.remove":
+case "custom-screen.binding.set":
+case "custom-screen.list-view.patch":
   clearCustomScreensCacheLightweight();
   emit(cacheKeys.customScreensList, cacheAction);
   if (id) clearAndEmitDetail(cacheKeys.customScreenDetail(id), cacheAction, emit);
@@ -142,7 +148,13 @@ test("custom screen assistant actions clear list and detail cache keys", () => {
     "custom-screen.upsert",
     "custom-screen.delete",
     "custom-screen.update",
-    "custom-screen.widget.patch",
+    "custom-screen.section.add",
+    "custom-screen.block.add",
+    "custom-screen.block.patch",
+    "custom-screen.block.move",
+    "custom-screen.block.remove",
+    "custom-screen.binding.set",
+    "custom-screen.list-view.patch",
   ]) {
     const events = executeNotifyFixture(actionType);
     expect(events).toContainEqual({ key: cacheKeys.customScreensList, action: expect.any(String) });

@@ -131,6 +131,33 @@ Note (v2+):
 - `content_revisions` z duzymi JSONB moze szybko rosnac. Warto dodac pruning
   starych rewizji i/lub kompresje danych.
 
+## Custom Screens
+
+`custom_screens`
+- id (uuid, pk)
+- content_type_id (fk content_types)
+- name
+- status (draft|active|archived)
+- schema_version (int, default 4)
+- definition (jsonb, not null)
+- show_in_sidebar (boolean)
+- sidebar_label (nullable)
+- collection_role (nullable)
+- composition_key (nullable)
+- created_at
+- updated_at
+
+Rules:
+- `definition.schemaVersion=4` is the source of truth for Custom Screens.
+- `definition.listView` owns records-list columns, filters, default sort, and
+  bulk-action visibility.
+- `definition.editorView.document` owns `ScreenDocumentV1.sections[]`; it is
+  not a Page v2 document.
+- `definition.editorView.bindings` maps `blockId + propPath` to content entry
+  fields or allowlisted system fields.
+- Legacy `blocks` and `bindings` columns were removed by TASK-468 after the V4
+  backfill; older payloads are migration inputs only, not active storage.
+
 ## Preview
 
 `preview_tokens`

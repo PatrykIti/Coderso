@@ -28,7 +28,14 @@ import type {
   AssistantResourceCatalogSnapshot,
   AssistantTemplateSectionReferenceSummary,
 } from "./adminContextTypes";
-import type { CustomScreenCollectionRole } from "../customScreens/customScreenSchemas";
+import type {
+  CustomScreenCollectionRole,
+  CustomScreenDefinition,
+  CustomScreenListViewDefinition,
+  ScreenBlockV1,
+  ScreenFieldBinding,
+  ScreenSectionV1,
+} from "../customScreens/customScreenSchemas";
 import { isAssistantActionPlanStrict } from "./actionPlanSchema";
 import type { DetailPageDocument } from "../content/detailPageTypes";
 import type { CollectionWorkspaceSummary } from "../content/collectionWorkspaceService";
@@ -390,8 +397,7 @@ export type AssistantCustomScreenUpsertAction = {
     compositionKey?: string | null;
     showInSidebar: boolean;
     sidebarLabel: string | null;
-    blocks: Array<Record<string, unknown>>;
-    bindings: Array<Record<string, unknown>>;
+    definition: CustomScreenDefinition;
   };
 };
 
@@ -424,19 +430,43 @@ export type AssistantCustomScreenUpdateAction = {
       compositionKey?: string | null;
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
-      binding?: {
-        widgetId: string;
-        propPath: string;
-        field: string;
-        mode: "read" | "write" | "readwrite";
-      };
     };
   };
 };
 
-export type AssistantCustomScreenWidgetPatchAction = {
+export type AssistantCustomScreenSectionAddAction = {
   id: string;
-  type: "custom-screen.widget.patch";
+  type: "custom-screen.section.add";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    section: ScreenSectionV1;
+  };
+};
+
+export type AssistantCustomScreenBlockAddAction = {
+  id: string;
+  type: "custom-screen.block.add";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    sectionId?: string | null;
+    parentId?: string | null;
+    slotId?: string | null;
+    block: ScreenBlockV1;
+    bindings?: ScreenFieldBinding[];
+  };
+};
+
+export type AssistantCustomScreenBlockPatchAction = {
+  id: string;
+  type: "custom-screen.block.patch";
   title: string;
   description: string;
   input: {
@@ -447,6 +477,60 @@ export type AssistantCustomScreenWidgetPatchAction = {
     expectedBlockType?: string | null;
     dataPath: string[];
     value: string | number | boolean | null;
+  };
+};
+
+export type AssistantCustomScreenBlockMoveAction = {
+  id: string;
+  type: "custom-screen.block.move";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    blockId: string;
+    direction: "up" | "down";
+  };
+};
+
+export type AssistantCustomScreenBlockRemoveAction = {
+  id: string;
+  type: "custom-screen.block.remove";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    blockId: string;
+    expectedBlockType?: string | null;
+  };
+};
+
+export type AssistantCustomScreenBindingSetAction = {
+  id: string;
+  type: "custom-screen.binding.set";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    binding: ScreenFieldBinding;
+  };
+};
+
+export type AssistantCustomScreenListViewPatchAction = {
+  id: string;
+  type: "custom-screen.list-view.patch";
+  title: string;
+  description: string;
+  input: {
+    id: string;
+    name: string;
+    expectedStatus?: string | null;
+    listView: CustomScreenListViewDefinition;
   };
 };
 
@@ -1061,7 +1145,13 @@ export type AssistantPlannedAction =
   | AssistantCustomScreenUpsertAction
   | AssistantCustomScreenDeleteAction
   | AssistantCustomScreenUpdateAction
-  | AssistantCustomScreenWidgetPatchAction
+  | AssistantCustomScreenSectionAddAction
+  | AssistantCustomScreenBlockAddAction
+  | AssistantCustomScreenBlockPatchAction
+  | AssistantCustomScreenBlockMoveAction
+  | AssistantCustomScreenBlockRemoveAction
+  | AssistantCustomScreenBindingSetAction
+  | AssistantCustomScreenListViewPatchAction
   | AssistantListingQueryUpsertAction
   | AssistantListingQueryDeleteAction
   | AssistantListingQueryUpdateAction

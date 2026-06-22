@@ -23,7 +23,17 @@ import {
   contentTypeFieldAddTypes,
   normalizeContentTypeFieldAddSpec,
 } from "../content/contentTypeSchemaFields";
-import { customScreenCollectionRoleValues } from "../customScreens/customScreenSchemas";
+import {
+  customScreenCollectionRoleValues,
+  normalizeCustomScreenDefinitionForWrite,
+  normalizeCustomScreenListViewDefinition,
+  normalizeScreenDocumentV1,
+  normalizeScreenFieldBindings,
+  type CustomScreenDefinition,
+  type ScreenBlockV1,
+  type ScreenFieldBinding,
+  type ScreenSectionV1,
+} from "../customScreens/customScreenSchemas";
 import { normalizeOptionalDetailPageId } from "../settings/detailPageIdContract";
 import {
   assistantSiteBuilderAdvancedHeroVariantIds,
@@ -810,8 +820,7 @@ const normalizeCustomScreenInput = (input: JsonRecord) => {
       "compositionKey",
       "showInSidebar",
       "sidebarLabel",
-      "blocks",
-      "bindings",
+      "definition",
     ])
   );
   return {
@@ -831,8 +840,9 @@ const normalizeCustomScreenInput = (input: JsonRecord) => {
       : {}),
     showInSidebar: readBoolean(input.showInSidebar),
     sidebarLabel: readOptionalText(input.sidebarLabel),
-    blocks: readRecordArray(input.blocks),
-    bindings: readRecordArray(input.bindings),
+    definition: normalizeCustomScreenDefinitionForWrite({
+      definition: input.definition,
+    }) satisfies CustomScreenDefinition,
   };
 };
 
@@ -847,30 +857,11 @@ const normalizeCustomScreenDeleteInput = (input: JsonRecord) => {
   };
 };
 
-const normalizeCustomScreenBindingPatch = (value: unknown) => {
-  const input = assertRecord(value);
-  assertKeys(input, new Set(["widgetId", "propPath", "field", "mode"]));
-  return {
-    widgetId: readText(input.widgetId),
-    propPath: readText(input.propPath),
-    field: readText(input.field),
-    mode: readEnum(input.mode, new Set(["read", "write", "readwrite"])),
-  };
-};
-
 const normalizeCustomScreenUpdatePatch = (value: unknown) => {
   const input = assertRecord(value);
   assertKeys(
     input,
-    new Set([
-      "name",
-      "status",
-      "collectionRole",
-      "compositionKey",
-      "showInSidebar",
-      "sidebarLabel",
-      "binding",
-    ])
+    new Set(["name", "status", "collectionRole", "compositionKey", "showInSidebar", "sidebarLabel"])
   );
   return {
     ...(input.name !== undefined ? { name: readText(input.name) } : {}),
@@ -894,9 +885,6 @@ const normalizeCustomScreenUpdatePatch = (value: unknown) => {
     ...(input.sidebarLabel !== undefined
       ? { sidebarLabel: readOptionalText(input.sidebarLabel) }
       : {}),
-    ...(input.binding !== undefined
-      ? { binding: normalizeCustomScreenBindingPatch(input.binding) }
-      : {}),
   };
 };
 
@@ -915,23 +903,125 @@ const normalizeCustomScreenUpdateInput = (input: JsonRecord) => {
   };
 };
 
-const normalizeCustomScreenWidgetPatchInput = (input: JsonRecord) => {
+const normalizeScreenSectionInput = (value: unknown): ScreenSectionV1 => {
+  const document = normalizeScreenDocumentV1({
+    schemaVersion: 1,
+    sections: [assertRecord(value)],
+  });
+  const section = document.sections[0];
+  if (!section) fail();
+  return section;
+};
+
+const normalizeScreenBlockInput = (value: unknown): ScreenBlockV1 => {
+  const section = normalizeScreenSectionInput({
+    id: "assistant-input-section",
+    type: "section",
+    data: {},
+    blocks: [assertRecord(value)],
+  });
+  const block = section.blocks[0];
+  if (!block) fail();
+  return block;
+};
+
+const normalizeScreenBindingInput = (value: unknown): ScreenFieldBinding => {
+  const binding = normalizeScreenFieldBindings([assertRecord(value)])[0];
+  if (!binding) fail();
+  return binding;
+};
+
+const normalizeCustomScreenExpectedTarget = (input: JsonRecord) => ({
+  id: readText(input.id),
+  name: readText(input.name),
+  ...(input.expectedStatus !== undefined
+    ? { expectedStatus: readOptionalText(input.expectedStatus) }
+    : {}),
+});
+
+const normalizeCustomScreenSectionAddInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "expectedStatus", "section"]));
+  return {
+    ...normalizeCustomScreenExpectedTarget(input),
+    section: normalizeScreenSectionInput(input.section),
+  };
+};
+
+const normalizeCustomScreenBlockAddInput = (input: JsonRecord) => {
+  assertKeys(
+    input,
+    new Set([
+      "id",
+      "name",
+      "expectedStatus",
+      "sectionId",
+      "parentId",
+      "slotId",
+      "block",
+      "bindings",
+    ])
+  );
+  return {
+    ...normalizeCustomScreenExpectedTarget(input),
+    ...(input.sectionId !== undefined ? { sectionId: readOptionalText(input.sectionId) } : {}),
+    ...(input.parentId !== undefined ? { parentId: readOptionalText(input.parentId) } : {}),
+    ...(input.slotId !== undefined ? { slotId: readOptionalText(input.slotId) } : {}),
+    block: normalizeScreenBlockInput(input.block),
+    ...(input.bindings !== undefined
+      ? { bindings: normalizeScreenFieldBindings(readRecordArray(input.bindings)) }
+      : {}),
+  };
+};
+
+const normalizeCustomScreenBlockPatchInput = (input: JsonRecord) => {
   assertKeys(
     input,
     new Set(["id", "name", "expectedStatus", "blockId", "expectedBlockType", "dataPath", "value"])
   );
   return {
-    id: readText(input.id),
-    name: readText(input.name),
-    ...(input.expectedStatus !== undefined
-      ? { expectedStatus: readOptionalText(input.expectedStatus) }
-      : {}),
+    ...normalizeCustomScreenExpectedTarget(input),
     blockId: readText(input.blockId),
     ...(input.expectedBlockType !== undefined
       ? { expectedBlockType: readOptionalText(input.expectedBlockType) }
       : {}),
     dataPath: normalizeDataPath(input.dataPath),
     value: normalizePatchValue(input.value),
+  };
+};
+
+const normalizeCustomScreenBlockMoveInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "expectedStatus", "blockId", "direction"]));
+  return {
+    ...normalizeCustomScreenExpectedTarget(input),
+    blockId: readText(input.blockId),
+    direction: readEnum(input.direction, new Set(["up", "down"])),
+  };
+};
+
+const normalizeCustomScreenBlockRemoveInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "expectedStatus", "blockId", "expectedBlockType"]));
+  return {
+    ...normalizeCustomScreenExpectedTarget(input),
+    blockId: readText(input.blockId),
+    ...(input.expectedBlockType !== undefined
+      ? { expectedBlockType: readOptionalText(input.expectedBlockType) }
+      : {}),
+  };
+};
+
+const normalizeCustomScreenBindingSetInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "expectedStatus", "binding"]));
+  return {
+    ...normalizeCustomScreenExpectedTarget(input),
+    binding: normalizeScreenBindingInput(input.binding),
+  };
+};
+
+const normalizeCustomScreenListViewPatchInput = (input: JsonRecord) => {
+  assertKeys(input, new Set(["id", "name", "expectedStatus", "listView"]));
+  return {
+    ...normalizeCustomScreenExpectedTarget(input),
+    listView: normalizeCustomScreenListViewDefinition(input.listView),
   };
 };
 
@@ -2047,8 +2137,20 @@ const normalizeActionInput = (type: AssistantPlannedAction["type"], input: unkno
       return normalizeCustomScreenDeleteInput(record);
     case "custom-screen.update":
       return normalizeCustomScreenUpdateInput(record);
-    case "custom-screen.widget.patch":
-      return normalizeCustomScreenWidgetPatchInput(record);
+    case "custom-screen.section.add":
+      return normalizeCustomScreenSectionAddInput(record);
+    case "custom-screen.block.add":
+      return normalizeCustomScreenBlockAddInput(record);
+    case "custom-screen.block.patch":
+      return normalizeCustomScreenBlockPatchInput(record);
+    case "custom-screen.block.move":
+      return normalizeCustomScreenBlockMoveInput(record);
+    case "custom-screen.block.remove":
+      return normalizeCustomScreenBlockRemoveInput(record);
+    case "custom-screen.binding.set":
+      return normalizeCustomScreenBindingSetInput(record);
+    case "custom-screen.list-view.patch":
+      return normalizeCustomScreenListViewPatchInput(record);
     case "listing-query.upsert":
       return normalizeListingQueryInput(record);
     case "listing-query.delete":

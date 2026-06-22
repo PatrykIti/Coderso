@@ -143,8 +143,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `collectionRole` / `compositionKey` from the custom-screen owner seam for
     later workspace resolution; legacy cached rows normalize missing values to
     `null`
+  - Data shape: cached custom screen rows use `schemaVersion: 4` plus V4
+    `definition`; legacy `blocks` / `bindings` are read-migration inputs and
+    are not active browser write state.
   - Mutations: `createCustomScreen`, `updateCustomScreen`,
     `deleteCustomScreen`
+  - Assistant mutations: `custom-screen.upsert`, `custom-screen.update`,
+    `custom-screen.delete`, `custom-screen.section.add`,
+    `custom-screen.block.add`, `custom-screen.block.patch`,
+    `custom-screen.block.move`, `custom-screen.block.remove`,
+    `custom-screen.binding.set`, and `custom-screen.list-view.patch` invalidate
+    the same list/detail keys through lightweight cache helpers.
   - Cache bus: `customScreens:list`, `contentTypes:list` for label projection
   - Prefetch: `/advanced/custom-screens` warms both `customScreens:list` and
     `contentTypes:list`

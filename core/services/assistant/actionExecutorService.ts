@@ -21,11 +21,20 @@ import {
   updateCustomScreen,
 } from "../customScreens/customScreenService";
 import {
-  getCustomScreenEditorViewBindings,
-  getCustomScreenEditorViewBlocks,
   normalizeCustomScreenDefinitionForRead,
-  type CustomScreenBinding,
+  type CustomScreenDefinition,
+  type ScreenBlockV1,
+  type ScreenDocumentV1,
+  type ScreenFieldBinding,
 } from "../customScreens/customScreenSchemas";
+import {
+  addScreenBlock,
+  findScreenBlockById,
+  moveScreenBlock,
+  removeScreenBindingsForBlockTree,
+  removeScreenBlock,
+  updateScreenBlock,
+} from "../customScreens/screenDocumentOps";
 import {
   createListingQuery,
   deleteListingQuery,
@@ -121,7 +130,13 @@ import type {
   AssistantCustomScreenUpsertAction,
   AssistantCustomScreenDeleteAction,
   AssistantCustomScreenUpdateAction,
-  AssistantCustomScreenWidgetPatchAction,
+  AssistantCustomScreenSectionAddAction,
+  AssistantCustomScreenBlockAddAction,
+  AssistantCustomScreenBlockPatchAction,
+  AssistantCustomScreenBlockMoveAction,
+  AssistantCustomScreenBlockRemoveAction,
+  AssistantCustomScreenBindingSetAction,
+  AssistantCustomScreenListViewPatchAction,
   AssistantEntryUpsertDraftAction,
   AssistantEntryDeleteAction,
   AssistantEntrySampleCreateAction,
@@ -1169,12 +1184,7 @@ const buildCustomScreenPreview = async (
         compositionKey: existing.compositionKey ?? null,
         showInSidebar: existing.showInSidebar,
         sidebarLabel: existing.sidebarLabel,
-        blocks: existingDefinition
-          ? getCustomScreenEditorViewBlocks(existingDefinition)
-          : existing.blocks,
-        bindings: existingDefinition
-          ? getCustomScreenEditorViewBindings(existingDefinition)
-          : existing.bindings,
+        definition: existingDefinition,
       }
     : null;
   const nextValue = {
@@ -1195,6 +1205,256 @@ const buildCustomScreenPreview = async (
     beforeValue: comparableExisting,
     nextValue,
   });
+};
+
+const getExistingCustomScreenDefinition = (
+  existing: Awaited<ReturnType<typeof getCustomScreen>>
+): CustomScreenDefinition | null => {
+  if (!existing) return null;
+  return normalizeCustomScreenDefinitionForRead({
+    definition: existing.definition,
+    schemaVersion: existing.schemaVersion,
+    blocks: existing.blocks,
+    bindings: existing.bindings,
+  });
+};
+
+const customScreenTargetMatches = (
+  existing: Awaited<ReturnType<typeof getCustomScreen>>,
+  input: { name: string; expectedStatus?: string | null }
+) => {
+  const expectedStatus = input.expectedStatus?.trim() ?? "";
+  return Boolean(
+    existing &&
+    existing.name === input.name &&
+    (!expectedStatus || existing.status === expectedStatus)
+  );
+};
+
+const customScreenMissingConflict = (existing: unknown, message?: string) => ({
+  code: "assistant_action_dependency_missing",
+  severity: "error" as const,
+  message:
+    message ??
+    (existing
+      ? "Custom screen no longer matches the planned target."
+      : "Custom screen was not found."),
+});
+
+const withCustomScreenDefinition = (
+  definition: CustomScreenDefinition,
+  patch: Partial<CustomScreenDefinition>
+): CustomScreenDefinition => ({
+  ...definition,
+  ...patch,
+  editorView: patch.editorView ?? definition.editorView,
+  listView: patch.listView ?? definition.listView,
+});
+
+const addBlockToScreenSection = (
+  document: ScreenDocumentV1,
+  sectionId: string | null | undefined,
+  block: ScreenBlockV1
+): ScreenDocumentV1 => {
+  if (!sectionId) return addScreenBlock(document, block);
+  let inserted = false;
+  const sections = document.sections.map((section) => {
+    if (section.id !== sectionId) return section;
+    inserted = true;
+    return {
+      ...section,
+      blocks: [...section.blocks, block],
+    };
+  });
+  return inserted ? { ...document, sections } : document;
+};
+
+const setCustomScreenBinding = (
+  bindings: ScreenFieldBinding[],
+  binding: ScreenFieldBinding
+): ScreenFieldBinding[] => {
+  const index = bindings.findIndex(
+    (item) =>
+      item.id === binding.id ||
+      (item.blockId === binding.blockId &&
+        item.propPath === binding.propPath &&
+        item.field === binding.field)
+  );
+  if (index < 0) return [...bindings, binding];
+  const next = [...bindings];
+  next[index] = binding;
+  return next;
+};
+
+type ScreenBlockDataPatchResult = {
+  status: "ok" | "missing_block" | "type_mismatch" | "missing_path";
+  document: ScreenDocumentV1;
+  beforeValue: unknown;
+  nextValue: unknown;
+  block: ScreenBlockV1 | null;
+};
+
+const isRecordValue = (value: unknown): value is Record<string, unknown> =>
+  Boolean(value) && typeof value === "object" && !Array.isArray(value);
+
+const readScreenDataPath = (data: Record<string, unknown>, path: string[]) => {
+  let cursor: unknown = data;
+  for (const segment of path) {
+    if (!isRecordValue(cursor) || !Object.prototype.hasOwnProperty.call(cursor, segment)) {
+      return { found: false, value: undefined };
+    }
+    cursor = cursor[segment];
+  }
+  return { found: true, value: cursor };
+};
+
+const setScreenDataPath = (
+  data: Record<string, unknown>,
+  path: string[],
+  value: string | number | boolean | null
+): Record<string, unknown> | null => {
+  const [head, ...tail] = path;
+  if (!head || !Object.prototype.hasOwnProperty.call(data, head)) return null;
+  if (tail.length === 0) return { ...data, [head]: value };
+  const nested = data[head];
+  if (!isRecordValue(nested)) return null;
+  const nextNested = setScreenDataPath(nested, tail, value);
+  return nextNested ? { ...data, [head]: nextNested } : null;
+};
+
+const applyScreenBlockDataPatch = (
+  document: ScreenDocumentV1,
+  input: {
+    blockId: string;
+    expectedBlockType?: string | null;
+    dataPath: string[];
+    value: string | number | boolean | null;
+  }
+): ScreenBlockDataPatchResult => {
+  const block = findScreenBlockById(document, input.blockId);
+  if (!block) {
+    return {
+      status: "missing_block",
+      document,
+      beforeValue: undefined,
+      nextValue: undefined,
+      block: null,
+    };
+  }
+  if (input.expectedBlockType && block.type !== input.expectedBlockType) {
+    return {
+      status: "type_mismatch",
+      document,
+      beforeValue: undefined,
+      nextValue: undefined,
+      block,
+    };
+  }
+  const current = readScreenDataPath(block.data, input.dataPath);
+  if (!current.found) {
+    return {
+      status: "missing_path",
+      document,
+      beforeValue: undefined,
+      nextValue: undefined,
+      block,
+    };
+  }
+  const nextData = setScreenDataPath(block.data, input.dataPath, input.value);
+  if (!nextData) {
+    return {
+      status: "missing_path",
+      document,
+      beforeValue: current.value,
+      nextValue: undefined,
+      block,
+    };
+  }
+  const nextDocument = updateScreenBlock(document, input.blockId, { data: nextData });
+  return {
+    status: "ok",
+    document: nextDocument,
+    beforeValue: current.value,
+    nextValue: input.value,
+    block: findScreenBlockById(nextDocument, input.blockId),
+  };
+};
+
+const buildCustomScreenDefinitionActionPreview = async (
+  action:
+    | AssistantCustomScreenSectionAddAction
+    | AssistantCustomScreenBlockAddAction
+    | AssistantCustomScreenBlockPatchAction
+    | AssistantCustomScreenBlockMoveAction
+    | AssistantCustomScreenBlockRemoveAction
+    | AssistantCustomScreenBindingSetAction
+    | AssistantCustomScreenListViewPatchAction,
+  deps: ActionExecutorDeps,
+  resolveNext: (definition: CustomScreenDefinition) => {
+    definition: CustomScreenDefinition | null;
+    conflict?: string;
+    targetKey?: string;
+  }
+) => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  const matches = customScreenTargetMatches(existing, action.input);
+  const currentDefinition = matches ? getExistingCustomScreenDefinition(existing) : null;
+  const result = currentDefinition ? resolveNext(currentDefinition) : null;
+  return createPreviewChange({
+    action,
+    targetType: "custom-screen",
+    targetKey: result?.targetKey ?? action.input.name,
+    summary: action.title,
+    conflicts:
+      existing && matches && result?.definition
+        ? []
+        : [customScreenMissingConflict(existing, result?.conflict)],
+    beforeValue: currentDefinition,
+    nextValue: result?.definition ?? null,
+  });
+};
+
+const executeCustomScreenDefinitionAction = async (
+  action:
+    | AssistantCustomScreenSectionAddAction
+    | AssistantCustomScreenBlockAddAction
+    | AssistantCustomScreenBlockPatchAction
+    | AssistantCustomScreenBlockMoveAction
+    | AssistantCustomScreenBlockRemoveAction
+    | AssistantCustomScreenBindingSetAction
+    | AssistantCustomScreenListViewPatchAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps,
+  resolveNext: (definition: CustomScreenDefinition) => CustomScreenDefinition | null,
+  message: (updated: NonNullable<Awaited<ReturnType<typeof getCustomScreen>>>) => string
+): Promise<AssistantActionExecutionItem> => {
+  const existing = await deps.getCustomScreen(action.input.id);
+  if (!existing || !customScreenTargetMatches(existing, action.input)) {
+    throw new Error("assistant_action_dependency_missing");
+  }
+  const currentDefinition = getExistingCustomScreenDefinition(existing);
+  if (!currentDefinition) throw new Error("assistant_action_dependency_missing");
+  const nextDefinition = resolveNext(currentDefinition);
+  if (!nextDefinition) throw new Error("assistant_action_dependency_missing");
+  const updated =
+    preview.operation === "noop"
+      ? existing
+      : await deps.updateCustomScreen(existing.id, { definition: nextDefinition });
+  if (!updated) throw new Error("assistant_action_dependency_missing");
+
+  return {
+    actionId: action.id,
+    type: action.type,
+    targetType: "custom-screen",
+    targetKey: action.input.name,
+    operation: preview.operation,
+    status: "success" as const,
+    resourceId: updated.id,
+    adminHref: `/admin/advanced/custom-screens/${encodeURIComponent(updated.id)}/entries`,
+    publicHref: null,
+    message:
+      preview.operation === "noop" ? "Custom screen already matched the plan." : message(updated),
+  };
 };
 
 const buildCustomScreenDeletePreview = async (
@@ -1235,36 +1495,11 @@ const buildCustomScreenDeletePreview = async (
   });
 };
 
-const findCustomScreenBinding = (
-  bindings: CustomScreenBinding[],
-  target: NonNullable<AssistantCustomScreenUpdateAction["input"]["patch"]["binding"]>
-) =>
-  bindings.find(
-    (binding) =>
-      binding.widgetId === target.widgetId &&
-      binding.propPath === target.propPath &&
-      binding.field === target.field
-  ) ?? null;
-
 const applyCustomScreenUpdatePatch = (
   existing: Awaited<ReturnType<typeof getCustomScreen>>,
   patch: AssistantCustomScreenUpdateAction["input"]["patch"]
 ) => {
   if (!existing) return null;
-  const bindings = [...existing.bindings];
-  if (patch.binding) {
-    const index = bindings.findIndex(
-      (binding) =>
-        binding.widgetId === patch.binding?.widgetId &&
-        binding.propPath === patch.binding?.propPath &&
-        binding.field === patch.binding?.field
-    );
-    if (index < 0) return null;
-    bindings[index] = {
-      ...bindings[index]!,
-      mode: patch.binding.mode,
-    };
-  }
   return {
     name: patch.name ?? existing.name,
     status: patch.status ?? existing.status,
@@ -1274,7 +1509,6 @@ const applyCustomScreenUpdatePatch = (
       patch.compositionKey !== undefined ? patch.compositionKey : existing.compositionKey,
     showInSidebar: patch.showInSidebar !== undefined ? patch.showInSidebar : existing.showInSidebar,
     sidebarLabel: patch.sidebarLabel !== undefined ? patch.sidebarLabel : existing.sidebarLabel,
-    bindings,
   };
 };
 
@@ -1289,18 +1523,11 @@ const buildCustomScreenUpdatePreview = async (
     existing?.name === action.input.name &&
     (!expectedStatus || existing.status === expectedStatus) &&
     (!expectedContentTypeId || existing.contentTypeId === expectedContentTypeId);
-  const binding =
-    existing && action.input.patch.binding
-      ? findCustomScreenBinding(existing.bindings, action.input.patch.binding)
-      : null;
   const nextValue =
     existing && matches ? applyCustomScreenUpdatePatch(existing, action.input.patch) : null;
-  const conflictMessage =
-    existing && matches && action.input.patch.binding && !binding
-      ? "Custom screen binding target was not found."
-      : existing
-        ? "Custom screen no longer matches the planned update target."
-        : "Custom screen was not found.";
+  const conflictMessage = existing
+    ? "Custom screen no longer matches the planned update target."
+    : "Custom screen was not found.";
 
   return createPreviewChange({
     action,
@@ -1324,79 +1551,195 @@ const buildCustomScreenUpdatePreview = async (
           status: existing.status,
           showInSidebar: existing.showInSidebar,
           sidebarLabel: existing.sidebarLabel,
-          bindings: existing.bindings.map((item) => ({
-            widgetId: item.widgetId,
-            propPath: item.propPath,
-            field: item.field,
-            mode: item.mode,
-          })),
         }
       : null,
     nextValue,
   });
 };
 
-const buildCustomScreenWidgetPatchPreview = async (
-  action: AssistantCustomScreenWidgetPatchAction,
+const buildCustomScreenSectionAddPreview = (
+  action: AssistantCustomScreenSectionAddAction,
   deps: ActionExecutorDeps
-) => {
-  const existing = await deps.getCustomScreen(action.input.id);
-  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
-  const matches =
-    existing?.name === action.input.name && (!expectedStatus || existing.status === expectedStatus);
-  const patch =
-    existing && matches
-      ? applyPageWidgetDataPatch(existing.blocks, {
-          blockId: action.input.blockId,
-          expectedBlockType: action.input.expectedBlockType,
-          dataPath: action.input.dataPath,
-          value: action.input.value,
-        })
-      : null;
-  const conflictMessage =
-    patch?.status === "missing_block"
-      ? "Selected custom screen widget block was not found."
-      : patch?.status === "type_mismatch"
-        ? "Selected custom screen widget block type changed."
-        : patch?.status === "missing_path"
-          ? "Selected custom screen widget block data path does not exist."
-          : existing
-            ? "Custom screen no longer matches the planned widget patch target."
-            : "Custom screen was not found.";
-
-  return createPreviewChange({
-    action,
-    targetType: "custom-screen",
-    targetKey: `${action.input.name}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
-    summary: `Patch custom screen block "${action.input.blockId}"`,
-    conflicts:
-      existing && matches && patch?.status === "ok"
-        ? []
-        : [
-            {
-              code: "assistant_action_dependency_missing",
-              severity: "error",
-              message: conflictMessage,
-            },
-          ],
-    beforeValue:
-      existing && patch?.status === "ok"
-        ? {
-            blockId: action.input.blockId,
-            dataPath: action.input.dataPath,
-            value: patch.beforeValue,
-          }
-        : null,
-    nextValue:
-      existing && patch?.status === "ok"
-        ? {
-            blockId: action.input.blockId,
-            dataPath: action.input.dataPath,
-            value: patch.nextValue,
-          }
-        : null,
+) =>
+  buildCustomScreenDefinitionActionPreview(action, deps, (definition) => {
+    if (
+      definition.editorView.document.sections.some(
+        (section) => section.id === action.input.section.id
+      )
+    ) {
+      return {
+        definition: null,
+        conflict: "Custom screen section id already exists.",
+      };
+    }
+    return {
+      definition: withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document: {
+            ...definition.editorView.document,
+            sections: [...definition.editorView.document.sections, action.input.section],
+          },
+        },
+      }),
+      targetKey: `${action.input.name}/${action.input.section.id}`,
+    };
   });
-};
+
+const buildCustomScreenBlockAddPreview = (
+  action: AssistantCustomScreenBlockAddAction,
+  deps: ActionExecutorDeps
+) =>
+  buildCustomScreenDefinitionActionPreview(action, deps, (definition) => {
+    const document = action.input.parentId
+      ? addScreenBlock(definition.editorView.document, action.input.block, {
+          parentId: action.input.parentId,
+          slotId: action.input.slotId ?? "content",
+        })
+      : addBlockToScreenSection(
+          definition.editorView.document,
+          action.input.sectionId,
+          action.input.block
+        );
+    if (isDeepStrictEqual(document, definition.editorView.document)) {
+      return {
+        definition: null,
+        conflict: "Custom screen block target was not found.",
+      };
+    }
+    return {
+      definition: withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document,
+          bindings: [...definition.editorView.bindings, ...(action.input.bindings ?? [])],
+        },
+      }),
+      targetKey: `${action.input.name}/${action.input.block.id}`,
+    };
+  });
+
+const buildCustomScreenBlockPatchPreview = (
+  action: AssistantCustomScreenBlockPatchAction,
+  deps: ActionExecutorDeps
+) =>
+  buildCustomScreenDefinitionActionPreview(action, deps, (definition) => {
+    const patch = applyScreenBlockDataPatch(definition.editorView.document, action.input);
+    if (patch.status !== "ok") {
+      return {
+        definition: null,
+        conflict:
+          patch.status === "type_mismatch"
+            ? "Selected custom screen block type changed."
+            : patch.status === "missing_path"
+              ? "Selected custom screen block data path does not exist."
+              : "Selected custom screen block was not found.",
+      };
+    }
+    return {
+      definition: withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document: patch.document,
+        },
+      }),
+      targetKey: `${action.input.name}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
+    };
+  });
+
+const buildCustomScreenBlockMovePreview = (
+  action: AssistantCustomScreenBlockMoveAction,
+  deps: ActionExecutorDeps
+) =>
+  buildCustomScreenDefinitionActionPreview(action, deps, (definition) => {
+    const document = moveScreenBlock(
+      definition.editorView.document,
+      action.input.blockId,
+      action.input.direction
+    );
+    if (isDeepStrictEqual(document, definition.editorView.document)) {
+      return {
+        definition: null,
+        conflict: "Selected custom screen block could not be moved.",
+      };
+    }
+    return {
+      definition: withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document,
+        },
+      }),
+      targetKey: `${action.input.name}/${action.input.blockId}`,
+    };
+  });
+
+const buildCustomScreenBlockRemovePreview = (
+  action: AssistantCustomScreenBlockRemoveAction,
+  deps: ActionExecutorDeps
+) =>
+  buildCustomScreenDefinitionActionPreview(action, deps, (definition) => {
+    const current = findScreenBlockById(definition.editorView.document, action.input.blockId);
+    if (!current) {
+      return {
+        definition: null,
+        conflict: "Selected custom screen block was not found.",
+      };
+    }
+    if (action.input.expectedBlockType && current.type !== action.input.expectedBlockType) {
+      return {
+        definition: null,
+        conflict: "Selected custom screen block type changed.",
+      };
+    }
+    const removal = removeScreenBlock(definition.editorView.document, action.input.blockId);
+    return {
+      definition: withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document: removal.document,
+          bindings: removeScreenBindingsForBlockTree(
+            definition.editorView.bindings,
+            removal.removed
+          ),
+        },
+      }),
+      targetKey: `${action.input.name}/${action.input.blockId}`,
+    };
+  });
+
+const buildCustomScreenBindingSetPreview = (
+  action: AssistantCustomScreenBindingSetAction,
+  deps: ActionExecutorDeps
+) =>
+  buildCustomScreenDefinitionActionPreview(action, deps, (definition) => {
+    if (!findScreenBlockById(definition.editorView.document, action.input.binding.blockId)) {
+      return {
+        definition: null,
+        conflict: "Custom screen binding block was not found.",
+      };
+    }
+    return {
+      definition: withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          bindings: setCustomScreenBinding(definition.editorView.bindings, action.input.binding),
+        },
+      }),
+      targetKey: `${action.input.name}/${action.input.binding.blockId}/${action.input.binding.propPath}`,
+    };
+  });
+
+const buildCustomScreenListViewPatchPreview = (
+  action: AssistantCustomScreenListViewPatchAction,
+  deps: ActionExecutorDeps
+) =>
+  buildCustomScreenDefinitionActionPreview(action, deps, (definition) => ({
+    definition: withCustomScreenDefinition(definition, {
+      listView: action.input.listView,
+    }),
+    targetKey: `${action.input.name}/list-view`,
+  }));
 
 const buildListingQueryPreview = async (
   action: AssistantListingQueryUpsertAction,
@@ -3848,8 +4191,7 @@ const executeCustomScreenAction = async (
           compositionKey: action.input.compositionKey ?? null,
           showInSidebar: action.input.showInSidebar,
           sidebarLabel: action.input.sidebarLabel,
-          blocks: action.input.blocks as unknown as WidgetBlock[],
-          bindings: action.input.bindings as unknown as CustomScreenBinding[],
+          definition: action.input.definition,
         })
       : preview.operation === "update" && existing
         ? await deps.updateCustomScreen(existing.id, {
@@ -3860,8 +4202,7 @@ const executeCustomScreenAction = async (
             compositionKey: action.input.compositionKey ?? null,
             showInSidebar: action.input.showInSidebar,
             sidebarLabel: action.input.sidebarLabel,
-            blocks: action.input.blocks as unknown as WidgetBlock[],
-            bindings: action.input.bindings as unknown as CustomScreenBinding[],
+            definition: action.input.definition,
           })
         : existing;
 
@@ -3946,7 +4287,6 @@ const executeCustomScreenUpdateAction = async (
           compositionKey: nextValue.compositionKey,
           showInSidebar: nextValue.showInSidebar,
           sidebarLabel: nextValue.sidebarLabel,
-          bindings: nextValue.bindings,
         });
   if (!updated) throw new Error("assistant_action_dependency_missing");
 
@@ -3967,52 +4307,182 @@ const executeCustomScreenUpdateAction = async (
   };
 };
 
-const executeCustomScreenWidgetPatchAction = async (
-  action: AssistantCustomScreenWidgetPatchAction,
+const executeCustomScreenSectionAddAction = (
+  action: AssistantCustomScreenSectionAddAction,
   preview: AssistantActionPreviewChange,
   deps: ActionExecutorDeps
-): Promise<AssistantActionExecutionItem> => {
-  const existing = await deps.getCustomScreen(action.input.id);
-  const expectedStatus = action.input.expectedStatus?.trim() ?? "";
-  if (
-    !existing ||
-    existing.name !== action.input.name ||
-    (expectedStatus && existing.status !== expectedStatus)
-  ) {
-    throw new Error("assistant_action_dependency_missing");
-  }
-  const patch = applyPageWidgetDataPatch(existing.blocks, {
-    blockId: action.input.blockId,
-    expectedBlockType: action.input.expectedBlockType,
-    dataPath: action.input.dataPath,
-    value: action.input.value,
-  });
-  if (patch.status !== "ok") throw new Error("assistant_action_dependency_missing");
-  normalizeAssistantPagePatchBlock(patch.block!);
-  const updated =
-    preview.operation === "noop"
-      ? existing
-      : await deps.updateCustomScreen(existing.id, {
-          blocks: patch.blocks,
-        });
-  if (!updated) throw new Error("assistant_action_dependency_missing");
+) =>
+  executeCustomScreenDefinitionAction(
+    action,
+    preview,
+    deps,
+    (definition) =>
+      definition.editorView.document.sections.some(
+        (section) => section.id === action.input.section.id
+      )
+        ? null
+        : withCustomScreenDefinition(definition, {
+            editorView: {
+              ...definition.editorView,
+              document: {
+                ...definition.editorView.document,
+                sections: [...definition.editorView.document.sections, action.input.section],
+              },
+            },
+          }),
+    (updated) => `Added section to custom screen "${updated.name}".`
+  );
 
-  return {
-    actionId: action.id,
-    type: action.type,
-    targetType: "custom-screen",
-    targetKey: `${action.input.name}/${action.input.blockId}/${action.input.dataPath.join(".")}`,
-    operation: preview.operation,
-    status: "success" as const,
-    resourceId: updated.id,
-    adminHref: `/admin/advanced/custom-screens/${encodeURIComponent(updated.id)}/entries`,
-    publicHref: null,
-    message:
-      preview.operation === "noop"
-        ? "Custom screen widget block already matched the planned patch."
-        : `Patched custom screen widget block "${action.input.blockId}".`,
-  };
-};
+const executeCustomScreenBlockAddAction = (
+  action: AssistantCustomScreenBlockAddAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) =>
+  executeCustomScreenDefinitionAction(
+    action,
+    preview,
+    deps,
+    (definition) => {
+      const document = action.input.parentId
+        ? addScreenBlock(definition.editorView.document, action.input.block, {
+            parentId: action.input.parentId,
+            slotId: action.input.slotId ?? "content",
+          })
+        : addBlockToScreenSection(
+            definition.editorView.document,
+            action.input.sectionId,
+            action.input.block
+          );
+      if (isDeepStrictEqual(document, definition.editorView.document)) return null;
+      return withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document,
+          bindings: [...definition.editorView.bindings, ...(action.input.bindings ?? [])],
+        },
+      });
+    },
+    (updated) => `Added block to custom screen "${updated.name}".`
+  );
+
+const executeCustomScreenBlockPatchAction = (
+  action: AssistantCustomScreenBlockPatchAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) =>
+  executeCustomScreenDefinitionAction(
+    action,
+    preview,
+    deps,
+    (definition) => {
+      const patch = applyScreenBlockDataPatch(definition.editorView.document, action.input);
+      if (patch.status !== "ok") return null;
+      return withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document: patch.document,
+        },
+      });
+    },
+    (updated) => `Patched custom screen block in "${updated.name}".`
+  );
+
+const executeCustomScreenBlockMoveAction = (
+  action: AssistantCustomScreenBlockMoveAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) =>
+  executeCustomScreenDefinitionAction(
+    action,
+    preview,
+    deps,
+    (definition) => {
+      const document = moveScreenBlock(
+        definition.editorView.document,
+        action.input.blockId,
+        action.input.direction
+      );
+      return isDeepStrictEqual(document, definition.editorView.document)
+        ? null
+        : withCustomScreenDefinition(definition, {
+            editorView: {
+              ...definition.editorView,
+              document,
+            },
+          });
+    },
+    (updated) => `Moved custom screen block in "${updated.name}".`
+  );
+
+const executeCustomScreenBlockRemoveAction = (
+  action: AssistantCustomScreenBlockRemoveAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) =>
+  executeCustomScreenDefinitionAction(
+    action,
+    preview,
+    deps,
+    (definition) => {
+      const current = findScreenBlockById(definition.editorView.document, action.input.blockId);
+      if (!current) return null;
+      if (action.input.expectedBlockType && current.type !== action.input.expectedBlockType) {
+        return null;
+      }
+      const removal = removeScreenBlock(definition.editorView.document, action.input.blockId);
+      return withCustomScreenDefinition(definition, {
+        editorView: {
+          ...definition.editorView,
+          document: removal.document,
+          bindings: removeScreenBindingsForBlockTree(
+            definition.editorView.bindings,
+            removal.removed
+          ),
+        },
+      });
+    },
+    (updated) => `Removed custom screen block from "${updated.name}".`
+  );
+
+const executeCustomScreenBindingSetAction = (
+  action: AssistantCustomScreenBindingSetAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) =>
+  executeCustomScreenDefinitionAction(
+    action,
+    preview,
+    deps,
+    (definition) =>
+      findScreenBlockById(definition.editorView.document, action.input.binding.blockId)
+        ? withCustomScreenDefinition(definition, {
+            editorView: {
+              ...definition.editorView,
+              bindings: setCustomScreenBinding(
+                definition.editorView.bindings,
+                action.input.binding
+              ),
+            },
+          })
+        : null,
+    (updated) => `Updated custom screen binding in "${updated.name}".`
+  );
+
+const executeCustomScreenListViewPatchAction = (
+  action: AssistantCustomScreenListViewPatchAction,
+  preview: AssistantActionPreviewChange,
+  deps: ActionExecutorDeps
+) =>
+  executeCustomScreenDefinitionAction(
+    action,
+    preview,
+    deps,
+    (definition) =>
+      withCustomScreenDefinition(definition, {
+        listView: action.input.listView,
+      }),
+    (updated) => `Updated custom screen list view in "${updated.name}".`
+  );
 
 const executeListingQueryAction = async (
   action: AssistantListingQueryUpsertAction,
@@ -5701,14 +6171,74 @@ const actionHandlers = createAssistantActionRegistry<AssistantActionHandler>({
         ? executeCustomScreenUpdateAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
-  "custom-screen.widget.patch": {
+  "custom-screen.section.add": {
     preview: (action, ctx) =>
-      action.type === "custom-screen.widget.patch"
-        ? buildCustomScreenWidgetPatchPreview(action, ctx.deps)
+      action.type === "custom-screen.section.add"
+        ? buildCustomScreenSectionAddPreview(action, ctx.deps)
         : unexpectedAction(),
     execute: (action, preview, ctx) =>
-      action.type === "custom-screen.widget.patch"
-        ? executeCustomScreenWidgetPatchAction(action, preview, ctx.deps)
+      action.type === "custom-screen.section.add"
+        ? executeCustomScreenSectionAddAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.block.add": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.block.add"
+        ? buildCustomScreenBlockAddPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.block.add"
+        ? executeCustomScreenBlockAddAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.block.patch": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.block.patch"
+        ? buildCustomScreenBlockPatchPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.block.patch"
+        ? executeCustomScreenBlockPatchAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.block.move": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.block.move"
+        ? buildCustomScreenBlockMovePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.block.move"
+        ? executeCustomScreenBlockMoveAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.block.remove": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.block.remove"
+        ? buildCustomScreenBlockRemovePreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.block.remove"
+        ? executeCustomScreenBlockRemoveAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.binding.set": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.binding.set"
+        ? buildCustomScreenBindingSetPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.binding.set"
+        ? executeCustomScreenBindingSetAction(action, preview, ctx.deps)
+        : unexpectedAction(),
+  },
+  "custom-screen.list-view.patch": {
+    preview: (action, ctx) =>
+      action.type === "custom-screen.list-view.patch"
+        ? buildCustomScreenListViewPatchPreview(action, ctx.deps)
+        : unexpectedAction(),
+    execute: (action, preview, ctx) =>
+      action.type === "custom-screen.list-view.patch"
+        ? executeCustomScreenListViewPatchAction(action, preview, ctx.deps)
         : unexpectedAction(),
   },
   "listing-query.upsert": {

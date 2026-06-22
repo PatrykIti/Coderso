@@ -336,7 +336,7 @@ Clients update caches and broadcast events on:
 - Assistant execution cache event coverage:
   - `content-type.upsert`, `content-type.field.add`, `content-type.delete` -> `contentTypes:list`, touched `contentTypes:detail:<id>`
   - `entry.*` -> `entries:list:all`, `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
-  - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>`
+  - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>` through the lightweight `customScreensCache` helpers; assistant browser code must not import the full Custom Screens client only to invalidate caches
   - `page.*` -> `pages:list`, touched `pages:detail:<id>`
   - `detail-page.upsert` -> `detailPages:list`, `detailPages:list:contentType:<contentTypeId>`, touched `detailPages:detail:<id>`
   - `form.*` -> `forms:list`, touched `forms:detail:<id>`
@@ -509,6 +509,9 @@ Clients update caches and broadcast events on:
   `compositionKey` metadata from the persisted custom-screen owner seam. Cache
   readers must treat missing legacy values as `null` and must not synthesize
   alternate canonical-screen metadata in browser storage.
+- Cached Custom Screen definitions are V4 normalized payloads. Fresh admin
+  writes use `definition` only; legacy `blocks` / `bindings` are read-migration
+  inputs and are not stored in browser caches as active write state.
 - `useCustomScreens()` follows the shared mount policy:
   - cache present -> `{ force: false, background: true }`,
   - cache missing -> `{ force: true, background: false }`,

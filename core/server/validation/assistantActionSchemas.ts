@@ -725,10 +725,10 @@ const activeSurfaceSchema = {
           maxItems: 80,
           items: {
             type: "object",
-            required: ["widgetId", "field", "propPath", "mode"],
+            required: ["blockId", "field", "propPath", "mode"],
             additionalProperties: false,
             properties: {
-              widgetId: { type: "string", minLength: 1, maxLength: 120 },
+              blockId: { type: "string", minLength: 1, maxLength: 120 },
               field: { type: "string", minLength: 1, maxLength: 120 },
               propPath: { type: "string", minLength: 1, maxLength: 160 },
               mode: { type: "string", enum: ["read", "write", "readwrite"] },

@@ -6,7 +6,8 @@
 **Category:** Database / Custom Screens / Cleanup
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-07-L01, TASK-468-07-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,12 +19,12 @@ This is the destructive cleanup leaf and must include full migration artifacts.
 
 ## Sub-Tasks
 
-- [ ] Verify no service, route, admin, assistant, or test code reads/writes
+- [x] Verify no service, route, admin, assistant, or test code reads/writes
   `custom_screens.blocks` or `custom_screens.bindings`.
-- [ ] Add SQL migration to drop the legacy columns.
-- [ ] Update migration snapshot and journal artifacts.
-- [ ] Update data model docs and tests.
-- [ ] Run DB-backed migration tests when `DATABASE_URL` is available.
+- [x] Add SQL migration to drop the legacy columns.
+- [x] Update migration snapshot and journal artifacts.
+- [x] Update data model docs and tests.
+- [x] Run DB-backed migration tests when `DATABASE_URL` is available.
 
 ## Files To Change
 

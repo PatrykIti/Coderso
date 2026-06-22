@@ -1,6 +1,40 @@
 import { expect, test } from "vitest";
 
 import { resolveCustomScreenCapabilities } from "../../../core/services/customScreens/capabilities";
+import type {
+  CustomScreenDefinition,
+  ScreenBlockV1,
+  ScreenFieldBinding,
+} from "../../../core/services/customScreens/customScreenSchemas";
+
+const makeDefinition = (
+  block: ScreenBlockV1,
+  binding: ScreenFieldBinding
+): CustomScreenDefinition => ({
+  schemaVersion: 4,
+  listView: {
+    columns: [],
+    filters: [],
+    defaultSort: { field: "updatedAt", direction: "desc" },
+    bulkActions: { delete: true, publish: true, unpublish: true },
+  },
+  editorView: {
+    document: {
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "section-1",
+          type: "section",
+          data: { title: "Details" },
+          blocks: [block],
+        },
+      ],
+    },
+    bindings: [binding],
+    saveMode: "entry",
+    interactionMode: "inline",
+  },
+});
 
 test("resolveCustomScreenCapabilities returns collection-only for empty screens", () => {
   expect(
@@ -20,16 +54,21 @@ test("resolveCustomScreenCapabilities returns collection-only for empty screens"
 test("resolveCustomScreenCapabilities returns dashboard for readable bindings without write access", () => {
   expect(
     resolveCustomScreenCapabilities({
-      blocks: [{ id: "screen-header", type: "screen-record-header", data: {} }],
-      bindings: [
+      definition: makeDefinition(
+        {
+          id: "screen-header",
+          type: "record-header",
+          data: {},
+        },
         {
           id: "screen-header-title",
-          widgetId: "screen-header",
+          blockId: "screen-header",
           propPath: "title",
+          source: "entry",
           field: "headline",
           mode: "read",
-        },
-      ],
+        }
+      ),
     })
   ).toMatchObject({
     mode: "dashboard",
@@ -44,16 +83,21 @@ test("resolveCustomScreenCapabilities returns dashboard for readable bindings wi
 test("resolveCustomScreenCapabilities returns editor when writable bindings exist", () => {
   expect(
     resolveCustomScreenCapabilities({
-      blocks: [{ id: "field-1", type: "screen-field-value", data: {} }],
-      bindings: [
+      definition: makeDefinition(
+        {
+          id: "field-1",
+          type: "field",
+          data: {},
+        },
         {
           id: "field-1-value",
-          widgetId: "field-1",
+          blockId: "field-1",
           propPath: "value",
+          source: "entry",
           field: "headline",
           mode: "readwrite",
-        },
-      ],
+        }
+      ),
     })
   ).toMatchObject({
     mode: "editor",
@@ -68,16 +112,21 @@ test("resolveCustomScreenCapabilities returns editor when writable bindings exis
 test("resolveCustomScreenCapabilities treats writable header bindings as editor-capable", () => {
   expect(
     resolveCustomScreenCapabilities({
-      blocks: [{ id: "header-1", type: "screen-record-header", data: {} }],
-      bindings: [
+      definition: makeDefinition(
+        {
+          id: "header-1",
+          type: "record-header",
+          data: {},
+        },
         {
           id: "header-1-title",
-          widgetId: "header-1",
+          blockId: "header-1",
           propPath: "title",
+          source: "entry",
           field: "headline",
           mode: "readwrite",
-        },
-      ],
+        }
+      ),
     })
   ).toMatchObject({
     mode: "editor",

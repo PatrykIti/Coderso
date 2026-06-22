@@ -69,5 +69,8 @@ test("mapCustomScreenError maps domain errors to API errors", () => {
   expect(mapCustomScreenError(new Error("custom_screen_invalid"))?.status).toBe(400);
   expect(mapCustomScreenError(new Error("custom_screen_status_invalid"))?.status).toBe(400);
   expect(mapCustomScreenError(new Error("custom_screen_definition_invalid"))?.status).toBe(400);
+  expect(mapCustomScreenError(new Error("custom_screen_legacy_write_unsupported"))?.status).toBe(
+    400
+  );
   expect(mapCustomScreenError(new Error("other_error"))).toBeNull();
 });

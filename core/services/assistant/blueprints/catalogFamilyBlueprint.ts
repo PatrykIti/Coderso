@@ -1,5 +1,10 @@
-import type { WidgetBlock } from "../../../widgets/types";
 import type { DetailPageDocument } from "../../content/detailPageTypes";
+import {
+  normalizeCustomScreenDefinitionForWrite,
+  normalizeScreenFieldBindings,
+  type CustomScreenDefinition,
+  type ScreenBlockV1,
+} from "../../customScreens/customScreenSchemas";
 import type { ListingFacetConfig } from "../../search/filterContract";
 import type {
   AssistantActionPlan,
@@ -111,7 +116,7 @@ const toAdminSurfaceField = (
     : {}),
 });
 
-const buildScreenBlocks = (preset: CatalogFamilyPreset): WidgetBlock[] =>
+const buildScreenBlocks = (preset: CatalogFamilyPreset): ScreenBlockV1[] =>
   composeAdminSurface({
     key: preset.key,
     contentSchema: preset.contentSchema,
@@ -187,6 +192,30 @@ const buildScreenBindings = (preset: CatalogFamilyPreset) =>
         mode: "read" as const,
       })),
     ],
+  });
+
+const buildScreenDefinition = (preset: CatalogFamilyPreset): CustomScreenDefinition =>
+  normalizeCustomScreenDefinitionForWrite({
+    definition: {
+      schemaVersion: 4,
+      editorView: {
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: "section-default",
+              type: "section",
+              label: "Details",
+              data: { title: "Details" },
+              blocks: buildScreenBlocks(preset),
+            },
+          ],
+        },
+        bindings: normalizeScreenFieldBindings(buildScreenBindings(preset)),
+        saveMode: "entry",
+        interactionMode: "inline",
+      },
+    },
   });
 
 const buildDetailPageLayout = (): DetailPageDocument["settings"]["layout"] => ({
@@ -376,8 +405,7 @@ export const buildCatalogFamilyPlan = (
         sidebarLabel: preset.customScreenName,
         collectionRole: "canonical-admin-screen",
         compositionKey: preset.key,
-        blocks: buildScreenBlocks(preset) as unknown as Array<Record<string, unknown>>,
-        bindings: buildScreenBindings(preset) as unknown as Array<Record<string, unknown>>,
+        definition: buildScreenDefinition(preset),
       },
     },
     {

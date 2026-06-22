@@ -167,7 +167,7 @@ test("assistantOperationPolicy covers content entries screens widgets and media"
       "custom-screen.upsert",
       "custom-screen.update",
       "custom-screen.delete",
-      "custom-screen.widget.patch",
+      "custom-screen.block.patch",
     ])
   );
   expect(

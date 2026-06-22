@@ -6,7 +6,8 @@
 **Category:** Assistant / Custom Screens / Active Surface
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-06-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,13 +19,13 @@ fields, and current selection without exposing raw privileged record values.
 
 ## Sub-Tasks
 
-- [ ] Add V4 Custom Screen active-surface summary builder.
-- [ ] Include selected section/block, content type summary, writable field
+- [x] Add V4 Custom Screen active-surface summary builder.
+- [x] Include selected section/block, content type summary, writable field
   names, binding status, and list presentation summary.
-- [ ] Exclude raw entry values, protected fields, secrets, tokens, and full
+- [x] Exclude raw entry values, protected fields, secrets, tokens, and full
   browser cache contents.
-- [ ] Wire editor and record workspace active-surface providers to V4 summary.
-- [ ] Add tests for redaction, size limits, and selection hydration.
+- [x] Wire editor and record workspace active-surface providers to V4 summary.
+- [x] Add tests for redaction, size limits, and selection hydration.
 
 ## Files To Change
 

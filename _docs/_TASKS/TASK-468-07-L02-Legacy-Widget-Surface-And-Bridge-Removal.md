@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Legacy Removal
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-07-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,13 +19,13 @@ removes active code paths before database columns are dropped.
 
 ## Sub-Tasks
 
-- [ ] Remove `custom-screen-builder` editor usage and stale registration.
-- [ ] Remove `screen-field-value`, `screen-field-group`, `screen-two-column`,
+- [x] Remove `custom-screen-builder` editor usage and stale registration.
+- [x] Remove `screen-field-value`, `screen-field-group`, `screen-two-column`,
   and related bridge widgets from active Custom Screen paths.
-- [ ] Remove widget bridge adapters from Custom Screen record runtime.
-- [ ] Keep any reusable generic widgets that are still used by Page/Widget
+- [x] Remove widget bridge adapters from Custom Screen record runtime.
+- [x] Keep any reusable generic widgets that are still used by Page/Widget
   product surfaces.
-- [ ] Add import/bundle tests proving legacy screen widget surfaces are gone.
+- [x] Add import/bundle tests proving legacy screen widget surfaces are gone.
 
 ## Files To Change
 

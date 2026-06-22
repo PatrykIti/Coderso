@@ -10,7 +10,10 @@ import {
   clearContentTypeCollectionWorkspaceCache,
   clearContentTypesCache,
 } from "./contentTypesClient";
-import { clearCustomScreensCache } from "./customScreensClient";
+import {
+  clearCustomScreenDetailBrowserCache,
+  clearCustomScreensBrowserCache,
+} from "./customScreensCache";
 import { clearDetailPageListCache } from "./detailPagesClient";
 import { clearAllEntriesCache, clearEntriesCache } from "./entriesClient";
 import { clearFormsCache } from "./formsClient";
@@ -324,17 +327,40 @@ const notifyAssistantExecutionCacheEvent = (input: {
     case "custom-screen.upsert":
     case "custom-screen.delete":
     case "custom-screen.update":
-    case "custom-screen.widget.patch": {
+    case "custom-screen.section.add":
+    case "custom-screen.block.add":
+    case "custom-screen.block.patch":
+    case "custom-screen.block.move":
+    case "custom-screen.block.remove":
+    case "custom-screen.binding.set":
+    case "custom-screen.list-view.patch": {
       const plannedDelete = readActionId(action, "custom-screen.delete");
       const plannedUpdate = readActionId(action, "custom-screen.update");
-      const plannedPatch = readActionId(action, "custom-screen.widget.patch");
+      const plannedSectionAdd = readActionId(action, "custom-screen.section.add");
+      const plannedBlockAdd = readActionId(action, "custom-screen.block.add");
+      const plannedBlockPatch = readActionId(action, "custom-screen.block.patch");
+      const plannedBlockMove = readActionId(action, "custom-screen.block.move");
+      const plannedBlockRemove = readActionId(action, "custom-screen.block.remove");
+      const plannedBindingSet = readActionId(action, "custom-screen.binding.set");
+      const plannedListViewPatch = readActionId(action, "custom-screen.list-view.patch");
       const id = resourceId(
         item,
-        plannedDelete?.input.id ?? plannedUpdate?.input.id ?? plannedPatch?.input.id
+        plannedDelete?.input.id ??
+          plannedUpdate?.input.id ??
+          plannedSectionAdd?.input.id ??
+          plannedBlockAdd?.input.id ??
+          plannedBlockPatch?.input.id ??
+          plannedBlockMove?.input.id ??
+          plannedBlockRemove?.input.id ??
+          plannedBindingSet?.input.id ??
+          plannedListViewPatch?.input.id
       );
-      clearCustomScreensCache();
+      clearCustomScreensBrowserCache();
       emit(cacheKeys.customScreensList, cacheAction);
-      if (id) clearAndEmitDetail(cacheKeys.customScreenDetail(id), cacheAction, emit);
+      if (id) {
+        clearCustomScreenDetailBrowserCache(id);
+        clearAndEmitDetail(cacheKeys.customScreenDetail(id), cacheAction, emit);
+      }
       return;
     }
 

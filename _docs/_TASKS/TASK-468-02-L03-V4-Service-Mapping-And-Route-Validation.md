@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Service / API Routes
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-02-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,11 +19,11 @@ service, and map domain errors.
 
 ## Sub-Tasks
 
-- [ ] Update `CustomScreenRecord` and create/update inputs for V4.
-- [ ] Re-export strict route validation schemas.
-- [ ] Update route error mapping for any new machine-readable errors.
-- [ ] Keep list/get/create/update/delete route behavior compatible.
-- [ ] Add route registration and error-map tests.
+- [x] Update `CustomScreenRecord` and create/update inputs for V4.
+- [x] Re-export strict route validation schemas.
+- [x] Update route error mapping for any new machine-readable errors.
+- [x] Keep list/get/create/update/delete route behavior compatible.
+- [x] Add route registration and error-map tests.
 
 ## Files To Change
 

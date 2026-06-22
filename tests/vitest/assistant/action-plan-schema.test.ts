@@ -1809,7 +1809,7 @@ test("normalizeAssistantActionPlan accepts widget template update and block patc
   ]);
 });
 
-test("normalizeAssistantActionPlan accepts custom screen update and widget patch actions", () => {
+test("normalizeAssistantActionPlan accepts custom screen update and V4 edit actions", () => {
   const plan = buildCatalogFamilyPlan(PRODUCT_CATALOG_PRESET, {
     promptKind: "setup_request",
     intentFamily: "product_catalog",
@@ -1835,20 +1835,14 @@ test("normalizeAssistantActionPlan accepts custom screen update and widget patch
             compositionKey: "projects-secondary",
             showInSidebar: true,
             sidebarLabel: "Projects",
-            binding: {
-              widgetId: "hero-1",
-              propPath: "headline",
-              field: "title",
-              mode: "readwrite",
-            },
           },
         },
       },
       {
-        id: "screen-widget-patch",
-        type: "custom-screen.widget.patch",
-        title: "Patch screen widget",
-        description: "Patch custom screen widget block.",
+        id: "screen-block-patch",
+        type: "custom-screen.block.patch",
+        title: "Patch screen block",
+        description: "Patch custom screen block.",
         input: {
           id: "screen-1",
           name: "Project Screen",
@@ -1859,12 +1853,30 @@ test("normalizeAssistantActionPlan accepts custom screen update and widget patch
           value: "New headline",
         },
       },
+      {
+        id: "screen-binding-set",
+        type: "custom-screen.binding.set",
+        title: "Set screen binding",
+        description: "Set custom screen binding.",
+        input: {
+          id: "screen-1",
+          name: "Project Screen",
+          expectedStatus: "draft",
+          binding: {
+            blockId: "hero-1",
+            propPath: "headline",
+            field: "title",
+            mode: "readwrite",
+          },
+        },
+      },
     ],
   });
 
   expect(normalized.actions.map((action) => action.type)).toEqual([
     "custom-screen.update",
-    "custom-screen.widget.patch",
+    "custom-screen.block.patch",
+    "custom-screen.binding.set",
   ]);
   expect(normalized.actions[0]).toMatchObject({
     input: {
@@ -2187,7 +2199,7 @@ test("normalizeAssistantActionPlan rejects malformed custom screen edit actions"
             name: "Project Screen",
             patch: {
               binding: {
-                widgetId: "hero-1",
+                blockId: "hero-1",
                 propPath: "headline",
                 field: "title",
                 mode: "admin",
@@ -2204,10 +2216,10 @@ test("normalizeAssistantActionPlan rejects malformed custom screen edit actions"
       ...plan,
       actions: [
         {
-          id: "screen-widget-patch",
-          type: "custom-screen.widget.patch",
-          title: "Patch screen widget",
-          description: "Patch custom screen widget block.",
+          id: "screen-block-patch",
+          type: "custom-screen.block.patch",
+          title: "Patch screen block",
+          description: "Patch custom screen block.",
           input: {
             id: "screen-1",
             name: "Project Screen",

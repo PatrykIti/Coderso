@@ -326,13 +326,13 @@ test("buildAssistantAdminContext normalizes active custom screen surface context
       ],
       bindings: [
         {
-          widgetId: "header-1",
+          blockId: "header-1",
           field: "title",
           propPath: "token.secret",
           mode: "readwrite",
         },
         {
-          widgetId: "header-1",
+          blockId: "header-1",
           field: "summary",
           propPath: "subtitle",
           mode: "read",
@@ -355,7 +355,7 @@ test("buildAssistantAdminContext normalizes active custom screen surface context
     blocks: [{ id: "header-1", type: "screen-record-header" }],
     bindings: [
       {
-        widgetId: "header-1",
+        blockId: "header-1",
         field: "summary",
         propPath: "subtitle",
         mode: "read",

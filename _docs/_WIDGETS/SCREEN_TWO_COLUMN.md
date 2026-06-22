@@ -1,9 +1,13 @@
 # Screen Two Column Widget (v1)
 
+**Status:** Retired after TASK-468; kept only as legacy Custom Screens migration
+input for V4 `columns` blocks.
+
 ## Purpose
 
-Screen-builder layout primitive for placing primary record content beside a
-supporting admin panel.
+Legacy screen-builder layout primitive for placing primary record content beside
+a supporting admin panel. Active V4 Custom Screens use native `columns` blocks
+instead.
 
 ## Widget ID
 
@@ -11,7 +15,7 @@ supporting admin panel.
 
 ## Surfaces and Data Access
 
-- surfaces: `custom-screen-builder`, `admin-editor-view`
+- surfaces: retired `custom-screen-builder`, retired `admin-editor-view`
 - data access: `selected-content-type` (`read`)
 - selected-entry binding cards: not exposed; column labels stay layout-owned
   copy unless an old saved binding is being preserved only as compatibility

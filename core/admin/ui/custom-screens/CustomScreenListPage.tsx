@@ -194,8 +194,6 @@ export function CustomScreenListPage() {
       status: payload.status,
       showInSidebar: payload.showInSidebar,
       sidebarLabel: payload.sidebarLabel,
-      blocks: [],
-      bindings: [],
     };
     setIsSubmitting(true);
     setCreateError(null);

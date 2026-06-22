@@ -1,6 +1,6 @@
 import type { WidgetBlock } from "../../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
-import { normalizeWidgetBlocks } from "../../widgets/validator";
+import { normalizeWidgetBlock } from "../../widgets/validator";
 import {
   isBindingWriteModeSupported,
   resolveCustomScreenBindingContracts,
@@ -306,15 +306,6 @@ export function normalizeCustomScreenSchemaVersion(value: unknown): CustomScreen
   return value as CustomScreenDefinitionVersion;
 }
 
-export function normalizeCustomScreenBlocks(value: unknown): WidgetBlock[] {
-  if (value === undefined || value === null) return [];
-  if (!Array.isArray(value)) {
-    throw new Error("custom_screen_definition_invalid");
-  }
-  ensureRuntimeWidgetsRegistered();
-  return normalizeWidgetBlocks(value as WidgetBlock[]);
-}
-
 const normalizeJsonValue = (value: unknown): unknown => {
   if (
     value === null ||
@@ -333,6 +324,58 @@ const normalizeJsonValue = (value: unknown): unknown => {
     })
   );
 };
+
+const retiredScreenWidgetTypes = new Set([
+  "screen-record-header",
+  "screen-field-value",
+  "screen-field-group",
+  "screen-two-column",
+]);
+
+const normalizeLegacyScreenWidgetBlock = (value: unknown): WidgetBlock | null => {
+  if (!isRecord(value)) return null;
+  const type = normalizeText(value.type);
+  if (!type || !retiredScreenWidgetTypes.has(type)) return null;
+  const id = normalizeText(value.id);
+  if (!id) throw new Error("custom_screen_definition_invalid");
+  const data = normalizeJsonValue(value.data ?? {});
+  if (!isRecord(data)) throw new Error("custom_screen_definition_invalid");
+  const variant = normalizeText(value.variant);
+  const slots = isRecord(value.slots)
+    ? Object.fromEntries(
+        Object.entries(value.slots).map(([slotId, items]) => {
+          if (!Array.isArray(items)) return [slotId, []];
+          return [slotId, items.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? item)];
+        })
+      )
+    : undefined;
+  const children = Array.isArray(value.children)
+    ? value.children.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? item)
+    : undefined;
+
+  return {
+    id,
+    type,
+    ...(variant ? { variant } : {}),
+    data,
+    ...(isRecord(value.layout) ? { layout: value.layout as WidgetBlock["layout"] } : {}),
+    ...(isRecord(value.visibility)
+      ? { visibility: value.visibility as WidgetBlock["visibility"] }
+      : {}),
+    ...(isRecord(value.editor) ? { editor: value.editor as WidgetBlock["editor"] } : {}),
+    ...(children ? { children: children as WidgetBlock[] } : {}),
+    ...(slots ? { slots: slots as Record<string, WidgetBlock[]> } : {}),
+  };
+};
+
+export function normalizeCustomScreenBlocks(value: unknown): WidgetBlock[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  ensureRuntimeWidgetsRegistered();
+  return value.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? normalizeWidgetBlock(item));
+}
 
 const normalizeScreenData = (value: unknown): Record<string, unknown> => {
   if (value === undefined || value === null) return {};
@@ -1300,6 +1343,67 @@ export function normalizeCustomScreenDefinition(
   };
 }
 
+export function normalizeCustomScreenDefinitionForWrite(
+  input: {
+    schemaVersion?: unknown;
+    blocks?: unknown;
+    bindings?: unknown;
+    definition?: unknown;
+    listView?: unknown;
+    editorView?: unknown;
+  } = {},
+  context?: CustomScreenDefinitionContext
+): CustomScreenDefinition {
+  if (input.blocks !== undefined || input.bindings !== undefined) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+  if (
+    input.schemaVersion !== undefined &&
+    normalizeCustomScreenSchemaVersion(input.schemaVersion) !== 4
+  ) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+
+  const rawInput =
+    input.definition !== undefined
+      ? input.definition
+      : {
+          ...(input.schemaVersion !== undefined ? { schemaVersion: input.schemaVersion } : {}),
+          ...(input.listView !== undefined ? { listView: input.listView } : {}),
+          ...(input.editorView !== undefined ? { editorView: input.editorView } : {}),
+        };
+  if (!isRecord(rawInput)) throw new Error("custom_screen_definition_invalid");
+  if ("contentTypeId" in rawInput) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  if ("blocks" in rawInput || "bindings" in rawInput) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+
+  const hasV4EditorDocument = isRecord(rawInput.editorView) && "document" in rawInput.editorView;
+  const hasLegacyEditorView =
+    isRecord(rawInput.editorView) &&
+    ("blocks" in rawInput.editorView || !("document" in rawInput.editorView));
+  const hasV2ListViewKeys =
+    isRecord(rawInput.listView) &&
+    ("rowClick" in rawInput.listView || "createMode" in rawInput.listView);
+  const version =
+    rawInput.schemaVersion === undefined && !("listView" in rawInput) && !("editorView" in rawInput)
+      ? 4
+      : normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? (hasV4EditorDocument ? 4 : 3));
+
+  if (version !== 4 || hasLegacyEditorView || hasV2ListViewKeys) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+
+  rejectUnknownKeys(rawInput, ["schemaVersion", "listView", "editorView"]);
+  return {
+    schemaVersion: 4,
+    listView: normalizeCustomScreenListViewDefinition(rawInput.listView, context),
+    editorView: normalizeCustomScreenEditorViewDefinitionV4(rawInput.editorView, context),
+  };
+}
+
 export function normalizeCustomScreenDefinitionForRead(
   input: {
     schemaVersion?: unknown;
@@ -1821,7 +1925,7 @@ const customScreenV4DefinitionSchema = {
 } as const;
 
 export const customScreenDefinitionSchema = {
-  oneOf: [customScreenV4DefinitionSchema, customScreenV3DefinitionSchema],
+  ...customScreenV4DefinitionSchema,
 } as const;
 
 export const customScreenCreateSchema = {
@@ -1844,18 +1948,8 @@ export const customScreenCreateSchema = {
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
     },
-    schemaVersion: { enum: [1, 2, 3, 4] },
+    schemaVersion: { enum: [4] },
     definition: customScreenDefinitionSchema,
-    blocks: {
-      type: "array",
-      maxItems: 500,
-      items: { type: "object" },
-    },
-    bindings: {
-      type: "array",
-      maxItems: 200,
-      items: customScreenBindingSchema,
-    },
   },
   additionalProperties: false,
 } as const;
@@ -1880,18 +1974,8 @@ export const customScreenUpdateSchema = {
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
     },
-    schemaVersion: { enum: [1, 2, 3, 4] },
+    schemaVersion: { enum: [4] },
     definition: customScreenDefinitionSchema,
-    blocks: {
-      type: "array",
-      maxItems: 500,
-      items: { type: "object" },
-    },
-    bindings: {
-      type: "array",
-      maxItems: 200,
-      items: customScreenBindingSchema,
-    },
   },
   additionalProperties: false,
 } as const;

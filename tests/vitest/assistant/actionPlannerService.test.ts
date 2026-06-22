@@ -2755,7 +2755,7 @@ test("planAssistantActions builds custom screen update plan from active screen c
   });
 });
 
-test("planAssistantActions builds custom screen widget patch plan from selected block", () => {
+test("planAssistantActions builds custom screen block patch plan from selected block", () => {
   const plan = planAssistantActions({
     prompt: "zmien tytuł wybranego bloku custom screen na 'New headline'",
     context: {
@@ -2794,10 +2794,10 @@ test("planAssistantActions builds custom screen widget patch plan from selected 
   });
 
   expect(plan.status).toBe("ready");
-  expect(plan.intentId).toBe("custom-screen-widget-patch");
+  expect(plan.intentId).toBe("custom-screen-block-patch");
   expect(plan.actions[0]).toMatchObject({
-    id: "custom-screen-widget-patch-hero-1",
-    type: "custom-screen.widget.patch",
+    id: "custom-screen-block-patch-hero-1",
+    type: "custom-screen.block.patch",
     input: {
       id: "screen-1",
       name: "Projects Screen",

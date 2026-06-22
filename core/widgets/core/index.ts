@@ -48,18 +48,6 @@ import { createToggleBlockWidget, type ToggleBlockData } from "./toggleBlock";
 import { createTemplateSectionWidget, type TemplateSectionData } from "./templateSection";
 import { createTestimonialsWidget, type TestimonialsData } from "./testimonials";
 import { createTimelineWidget, type TimelineData } from "./timeline";
-import { createScreenFieldGroupWidget, type ScreenFieldGroupData } from "./screenFieldGroup";
-import {
-  createScreenFieldValueWidget,
-  screenFieldValueBindingTargets,
-  type ScreenFieldValueData,
-} from "./screenFieldValue";
-import {
-  createScreenRecordHeaderWidget,
-  screenRecordHeaderBindingTargets,
-  type ScreenRecordHeaderData,
-} from "./screenRecordHeader";
-import { createScreenTwoColumnWidget, type ScreenTwoColumnData } from "./screenTwoColumn";
 
 type EditorBundle<T> = {
   wizard: ComponentType<WidgetEditorProps<T>>;
@@ -282,36 +270,6 @@ const coreWidgetMetadata: Record<string, CoreWidgetMetadata> = {
     audience: "beginner",
     module: "navigation",
   },
-  "screen-record-header": {
-    complexity: "composite",
-    audience: "beginner",
-    module: "screens",
-    surfaces: ["custom-screen-builder", "admin-editor-view"],
-    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
-    bindingTargets: screenRecordHeaderBindingTargets,
-  },
-  "screen-field-value": {
-    complexity: "composite",
-    audience: "beginner",
-    module: "screens",
-    surfaces: ["custom-screen-builder", "admin-editor-view"],
-    dataAccess: { source: "selected-entry", modes: ["read", "write"] },
-    bindingTargets: screenFieldValueBindingTargets,
-  },
-  "screen-field-group": {
-    complexity: "atomic",
-    audience: "intermediate",
-    module: "screens",
-    surfaces: ["custom-screen-builder", "admin-editor-view"],
-    dataAccess: { source: "selected-content-type", modes: ["read"] },
-  },
-  "screen-two-column": {
-    complexity: "atomic",
-    audience: "intermediate",
-    module: "screens",
-    surfaces: ["custom-screen-builder", "admin-editor-view"],
-    dataAccess: { source: "selected-content-type", modes: ["read"] },
-  },
 };
 
 export type CoreWidgetEditors = {
@@ -353,10 +311,6 @@ export type CoreWidgetEditors = {
   contact: EditorBundle<ContactData>;
   navigation: EditorBundle<NavigationData>;
   footer: EditorBundle<FooterData>;
-  screenRecordHeader: EditorBundle<ScreenRecordHeaderData>;
-  screenFieldValue: EditorBundle<ScreenFieldValueData>;
-  screenFieldGroup: EditorBundle<ScreenFieldGroupData>;
-  screenTwoColumn: EditorBundle<ScreenTwoColumnData>;
 };
 
 export function createCoreWidgetDefinitions(
@@ -401,10 +355,6 @@ export function createCoreWidgetDefinitions(
     createContactWidget(editors.contact),
     createNavigationWidget(editors.navigation),
     createFooterWidget(editors.footer),
-    createScreenRecordHeaderWidget(editors.screenRecordHeader),
-    createScreenFieldValueWidget(editors.screenFieldValue),
-    createScreenFieldGroupWidget(editors.screenFieldGroup),
-    createScreenTwoColumnWidget(editors.screenTwoColumn),
   ];
 
   return definitions.map((definition) => {

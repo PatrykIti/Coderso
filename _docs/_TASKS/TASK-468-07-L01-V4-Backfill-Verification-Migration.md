@@ -6,7 +6,8 @@
 **Category:** Database / Custom Screens / Migration
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-06-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -19,17 +20,17 @@ or blocking migration errors.
 
 ## Sub-Tasks
 
-- [ ] Add a non-destructive migration/backfill step that verifies
+- [x] Add a non-destructive migration/backfill step that verifies
   `custom_screens.definition` rows normalize to schemaVersion 4.
-- [ ] Backfill and verify `custom_screens.schema_version = 4` in lockstep with
+- [x] Backfill and verify `custom_screens.schema_version = 4` in lockstep with
   `definition->>'schemaVersion' = '4'`.
-- [ ] Set the `custom_screens.schema_version` DB default to `4` before
+- [x] Set the `custom_screens.schema_version` DB default to `4` before
   destructive cleanup.
-- [ ] Record counts for migrated rows, already-V4 rows, unsupported placeholder
+- [x] Record counts for migrated rows, already-V4 rows, unsupported placeholder
   rows, and hard failures.
-- [ ] Add DB-backed tests for V1/V2/V3/V4 rows when `DATABASE_URL` is available.
-- [ ] Do not drop `blocks` or `bindings` columns in this leaf.
-- [ ] Document rollback/read compatibility assumptions before cleanup continues.
+- [x] Add DB-backed tests for V1/V2/V3/V4 rows when `DATABASE_URL` is available.
+- [x] Do not drop `blocks` or `bindings` columns in this leaf.
+- [x] Document rollback/read compatibility assumptions before cleanup continues.
 
 ## Files To Change
 

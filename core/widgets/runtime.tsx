@@ -15,12 +15,7 @@ const noopEditors = {
 let registered = false;
 
 export function ensureRuntimeWidgetsRegistered() {
-  if (
-    registered &&
-    getWidget("content-list") &&
-    getWidget("screen-record-header") &&
-    getWidget("screen-two-column")
-  ) {
+  if (registered && getWidget("content-list")) {
     return;
   }
 
@@ -63,10 +58,6 @@ export function ensureRuntimeWidgetsRegistered() {
     contact: noopEditors,
     navigation: noopEditors,
     footer: noopEditors,
-    screenRecordHeader: noopEditors,
-    screenFieldValue: noopEditors,
-    screenFieldGroup: noopEditors,
-    screenTwoColumn: noopEditors,
   });
   registered = true;
 }

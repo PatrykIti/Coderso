@@ -301,7 +301,7 @@ test("assistant surface uses editorView blocks and bindings even when legacy roo
           field: "headline",
           mode: "readwrite",
           propPath: "value",
-          widgetId: "field-1",
+          blockId: "field-1",
         },
       ],
       blocks: expect.arrayContaining([

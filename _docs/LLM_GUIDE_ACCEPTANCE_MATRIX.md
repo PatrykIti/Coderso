@@ -65,7 +65,13 @@ Rules:
 | `custom-screen.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `custom-screen.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes catalog-resolved custom screens after review |
 | `custom-screen.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Edits active custom screen metadata/sidebar/binding mode |
-| `custom-screen.widget.patch` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Patches selected custom screen widget block data paths |
+| `custom-screen.section.add` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Adds a V4 screen section to the active custom screen |
+| `custom-screen.block.add` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Adds a V4 screen block to a selected section |
+| `custom-screen.block.patch` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Patches selected V4 screen block data paths |
+| `custom-screen.block.move` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Moves a V4 screen block between section positions |
+| `custom-screen.block.remove` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Removes a selected V4 screen block and its owned bindings |
+| `custom-screen.binding.set` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Sets a V4 screen binding by `blockId + propPath` without raw entry values |
+| `custom-screen.list-view.patch` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Patches bounded V4 list-view columns, filters, sort, and bulk-action settings |
 | `listing-query.upsert` | Vitest `action-plan-schema` | Bun executor | Bun executor + DB smoke | `content:read/write` | Existing catalog action |
 | `listing-query.delete` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Deletes exact unreferenced listing queries after review |
 | `listing-query.update` | Vitest planner/schema | Bun executor | Bun executor | `content:read/write` | Updates listing query metadata and bounded runtime settings |

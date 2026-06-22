@@ -1,9 +1,13 @@
 # Screen Field Value Widget (v1)
 
+**Status:** Retired after TASK-468; kept only as legacy Custom Screens migration
+input for V4 `field` blocks.
+
 ## Purpose
 
-Record field row/card primitive for showing one mapped value inside the Custom
-Screens `Editor View` runtime.
+Legacy record field row/card primitive for older Custom Screens payloads. Active
+V4 Custom Screens read `ScreenFieldBinding` directly and do not register this
+widget.
 
 ## Widget ID
 
@@ -11,7 +15,7 @@ Screens `Editor View` runtime.
 
 ## Surfaces and Data Access
 
-- surfaces: `custom-screen-builder`, `admin-editor-view`
+- surfaces: retired `custom-screen-builder`, retired `admin-editor-view`
 - data access: `selected-entry` (`read`, `write`)
 
 ## Variants (v1)

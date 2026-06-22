@@ -6,8 +6,9 @@
 **Category:** Architecture / Custom Screens / Task Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-464, TASK-467
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-20
+**Completed:** 2026-06-22
 
 ---
 
@@ -36,8 +37,8 @@ Known drift to resolve:
 
 ## Sub-Tasks
 
-- [ ] TASK-468-01-L01: Current State Inventory And Drift Freeze.
-- [ ] TASK-468-01-L02: V4 Contract Decision Record And Validation Plan.
+- [x] TASK-468-01-L01: Current State Inventory And Drift Freeze.
+- [x] TASK-468-01-L02: V4 Contract Decision Record And Validation Plan.
 
 ## Files To Change
 

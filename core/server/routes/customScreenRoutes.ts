@@ -36,15 +36,17 @@ export const mapCustomScreenError = (error: unknown) => {
     case "custom_screen_invalid":
       return new ApiError("custom_screen_invalid", "Custom screen payload is invalid", 400);
     case "custom_screen_status_invalid":
-      return new ApiError(
-        "custom_screen_status_invalid",
-        "Custom screen status is invalid",
-        400
-      );
+      return new ApiError("custom_screen_status_invalid", "Custom screen status is invalid", 400);
     case "custom_screen_definition_invalid":
       return new ApiError(
         "custom_screen_definition_invalid",
         "Custom screen definition is invalid",
+        400
+      );
+    case "custom_screen_legacy_write_unsupported":
+      return new ApiError(
+        "custom_screen_legacy_write_unsupported",
+        "Custom screen writes must use the V4 definition contract",
         400
       );
     default:
@@ -63,71 +65,45 @@ const withCustomScreenErrors = async <T>(fn: () => Promise<T>) => {
   }
 };
 
-export function registerCustomScreenRoutes(
-  router: Router,
-  deps: CustomScreenRouteDeps
-) {
+export function registerCustomScreenRoutes(router: Router, deps: CustomScreenRouteDeps) {
   const { requirePermission, validate } = deps;
 
-  router.get(
-    "/custom-screens",
-    requirePermission("content:read"),
-    async () => {
-      return withCustomScreenErrors(async () => {
-        const items = await listCustomScreens();
-        return { items };
-      });
-    }
-  );
+  router.get("/custom-screens", requirePermission("content:read"), async () => {
+    return withCustomScreenErrors(async () => {
+      const items = await listCustomScreens();
+      return { items };
+    });
+  });
 
-  router.get(
-    "/custom-screens/:id",
-    requirePermission("content:read"),
-    async (ctx) => {
-      return withCustomScreenErrors(async () => {
-        const screen = await getCustomScreen(ctx.params.id);
-        if (!screen) throw new Error("custom_screen_not_found");
-        return screen;
-      });
-    }
-  );
+  router.get("/custom-screens/:id", requirePermission("content:read"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      const screen = await getCustomScreen(ctx.params.id);
+      if (!screen) throw new Error("custom_screen_not_found");
+      return screen;
+    });
+  });
 
-  router.post(
-    "/custom-screens",
-    requirePermission("content:write"),
-    async (ctx) => {
-      return withCustomScreenErrors(async () => {
-        validate(customScreenCreateSchema, ctx.body ?? {});
-        return createCustomScreen(ctx.body as CustomScreenCreateInput);
-      });
-    }
-  );
+  router.post("/custom-screens", requirePermission("content:write"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      validate(customScreenCreateSchema, ctx.body ?? {});
+      return createCustomScreen(ctx.body as CustomScreenCreateInput);
+    });
+  });
 
-  router.patch(
-    "/custom-screens/:id",
-    requirePermission("content:write"),
-    async (ctx) => {
-      return withCustomScreenErrors(async () => {
-        validate(customScreenUpdateSchema, ctx.body ?? {});
-        const updated = await updateCustomScreen(
-          ctx.params.id,
-          ctx.body as CustomScreenUpdateInput
-        );
-        if (!updated) throw new Error("custom_screen_not_found");
-        return updated;
-      });
-    }
-  );
+  router.patch("/custom-screens/:id", requirePermission("content:write"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      validate(customScreenUpdateSchema, ctx.body ?? {});
+      const updated = await updateCustomScreen(ctx.params.id, ctx.body as CustomScreenUpdateInput);
+      if (!updated) throw new Error("custom_screen_not_found");
+      return updated;
+    });
+  });
 
-  router.delete(
-    "/custom-screens/:id",
-    requirePermission("content:write"),
-    async (ctx) => {
-      return withCustomScreenErrors(async () => {
-        const deleted = await deleteCustomScreen(ctx.params.id);
-        if (!deleted) throw new Error("custom_screen_not_found");
-        return { ok: true };
-      });
-    }
-  );
+  router.delete("/custom-screens/:id", requirePermission("content:write"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      const deleted = await deleteCustomScreen(ctx.params.id);
+      if (!deleted) throw new Error("custom_screen_not_found");
+      return { ok: true };
+    });
+  });
 }

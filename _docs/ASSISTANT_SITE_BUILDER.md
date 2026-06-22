@@ -160,13 +160,14 @@ Current implemented guide blueprint:
     silently becoming partial plans
   - canonical collection pages now compose listing/filter/form sections through `blueprintPageSectionComposer.ts`, and `page.upsert` persists `PageData.settings.collectionLink` through the existing page owner seam so workspace/no-duplicate slices resolve canonical links from owner metadata instead of route heuristics; assistant transport locators resolve back into those persisted ids before page writes land
   - final TASK-190 closure is documented through `_docs/BLUEPRINT_COMPOSER.md`, the fixture/live matrices, redacted diagnostics helpers, task board, and changelog; future pack enrichment must extend those owner seams instead of adding a parallel composer path
-  - catalog admin review screens now compose their `screen-*` custom-screen
-    blocks through `blueprintAdminSurfaceComposer.ts`; the helper merges admin
-    groups deterministically, validates referenced content schema fields,
-    rejects secret-like field references, and keeps output on the existing
-    `custom-screen.upsert` `blocks` / `bindings` transport shape
+  - catalog admin review screens now compose native V4 `ScreenDocumentV1`
+    sections/blocks through `blueprintAdminSurfaceComposer.ts`; the helper
+    merges admin groups deterministically, validates referenced content schema
+    fields, rejects secret-like field references, and sends
+    `custom-screen.upsert` a V4 `definition` instead of legacy screen-widget
+    transports
   - catalog admin bindings now compose through `blueprintBindingComposer.ts`,
-    which keeps the existing `widgetId + propPath + field + mode` contract while
+    which keeps the V4 `blockId + propPath + field + mode` contract while
     rejecting unsafe or secret-like paths; generated canonical screens persist
     `collectionRole` / `compositionKey` through the current custom-screen schema,
     service, admin cache, and assistant action executor seams

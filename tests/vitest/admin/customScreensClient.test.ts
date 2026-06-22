@@ -198,8 +198,6 @@ test("custom screen mutations use CSRF and update cache", async () => {
     await createCustomScreen({
       name: "Catalog screen",
       contentTypeId: "ct-1",
-      blocks: [],
-      bindings: [],
     });
     await updateCustomScreen("created-screen", { status: "active" });
     expect(getCachedCustomScreens()?.[0]?.status).toBe("active");

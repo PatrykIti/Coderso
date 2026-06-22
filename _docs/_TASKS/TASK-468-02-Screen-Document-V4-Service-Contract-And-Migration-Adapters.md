@@ -6,8 +6,9 @@
 **Category:** Custom Screens / Services / Migration
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-20
+**Completed:** 2026-06-22
 
 ---
 
@@ -30,10 +31,10 @@ persistence schema.
 
 ## Sub-Tasks
 
-- [ ] TASK-468-02-L01: Screen Document Domain Owner.
-- [ ] TASK-468-02-L02: Legacy V1-V3 Read Migration Adapters.
-- [ ] TASK-468-02-L03: V4 Service Mapping And Route Validation.
-- [ ] TASK-468-02-L04: V4 Write Transition And Compatibility Guards.
+- [x] TASK-468-02-L01: Screen Document Domain Owner.
+- [x] TASK-468-02-L02: Legacy V1-V3 Read Migration Adapters.
+- [x] TASK-468-02-L03: V4 Service Mapping And Route Validation.
+- [x] TASK-468-02-L04: V4 Write Transition And Compatibility Guards.
 
 ## Files To Change
 

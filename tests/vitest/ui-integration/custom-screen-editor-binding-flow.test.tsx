@@ -123,24 +123,12 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("jump to binding switches into the Data tab and focuses the matching prop path", () => {
+test("retired screen widgets do not expose legacy binding jump controls", () => {
   const view = mount(<Harness />);
 
   try {
     const titleDataButton = view.container.querySelector('button[data-binding-prop-path="title"]');
-    expect(titleDataButton).not.toBeNull();
-
-    React.act(() => {
-      titleDataButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    const dataTabTrigger = Array.from(view.container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Data")
-    );
-    expect(dataTabTrigger?.getAttribute("data-state")).toBe("active");
-    expect(
-      view.container.querySelector('[data-prop-path="title"][data-focused="true"]')
-    ).not.toBeNull();
+    expect(titleDataButton).toBeNull();
   } finally {
     view.cleanup();
   }

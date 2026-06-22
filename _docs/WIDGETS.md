@@ -400,7 +400,7 @@ Kazdy widget powinien zdefiniowac:
 - `surfaces`: gdzie widget moze byc widoczny:
   - `page-builder`
   - `widget-library`
-  - `custom-screen-builder`
+  - `custom-screen-builder` (retired Custom Screens migration metadata only)
   - `admin-list-view`
   - `admin-editor-view`
 
@@ -410,13 +410,14 @@ Widget registry nie jest juz jedna plaska lista dla wszystkich surface'ow.
 
 Zasady:
 - public/page widgets domyslnie naleza do `page-builder` + `widget-library`,
-- screen-only widgets moga nalezec do `custom-screen-builder`,
-  `admin-list-view`, i `admin-editor-view` zalezne od realnej surface
-  odpowiedzialnosci,
+- screen-only widgets are retired from active registration after TASK-468; old
+  `custom-screen-builder`, `admin-list-view`, and `admin-editor-view` metadata
+  may appear only in migration docs or stored legacy payloads,
 - tylko jawnie dopuszczone prymitywy layoutowe moga byc wspoldzielone miedzy wszystkimi surface'ami,
 - `Advanced/Widgets` is hidden from default navigation as of TASK-461; the
   direct compatibility route still shows only surface `widget-library`,
-- `Coderso/Screens` pokazuje tylko surface `custom-screen-builder`.
+- `Coderso/Screens` builds active V4 editor blocks from the screen document
+  owner, not from a widget registry surface.
 
 Uwaga:
 - `Widget Library` nie sluzy do tworzenia nowych realnych widget types z admin UI.
@@ -445,16 +446,15 @@ TASK-461 and follows the shared Pages-style list contract when opened:
 - Template destructive actions continue through `ConfirmActionDialog`,
   `deleteWidgetTemplate`, partial-failure feedback, and cache refresh.
 
-Legacy screen widget pack dla Custom Screens compatibility:
+Retired screen widget pack dla Custom Screens migration compatibility:
 - `screen-record-header`
 - `screen-field-value`
 - `screen-field-group`
 - `screen-two-column`
 
 Current compatibility intent for that pack:
-- `screen-record-header` is a selected-entry summary surface with widget-owned
-  binding targets for `eyebrow`, `title`, `subtitle`, `description`, and
-  `badge`; those props can participate in write-capable record editing again.
+- `screen-record-header` is a legacy selected-entry summary input migrated to a
+  V4 `record-header` screen block. It is not registered for active authoring.
 - `screen-field-value` is the legacy migration input for a V4 `field` screen
   block. Active V4 entry editing now reads `ScreenFieldBinding` directly and
   does not rely on this widget at runtime.
@@ -657,12 +657,13 @@ Widget availability is surface-scoped:
 
 - `page-builder` - public page builder canvas.
 - `widget-library` - reusable widget/template catalog.
-- `custom-screen-builder` - legacy Custom Screens surface kept for V1/V2/V3
-  migration compatibility during TASK-468.
-- `admin-list-view` - Custom Screens `List View` configuration surface.
-- `admin-editor-view` - legacy screen-widget metadata surface retained until
-  TASK-468-07; active V4 Custom Screens authoring uses screen-owned blocks and
-  field bindings instead of widget registry insertion.
+- `custom-screen-builder` - retired Custom Screens surface; may appear in
+  historical metadata or migration docs only.
+- `admin-list-view` - retired Custom Screens widget metadata surface; V4 list
+  view is owned by `definition.listView`.
+- `admin-editor-view` - retired screen-widget metadata surface; active V4 Custom
+  Screens authoring uses screen-owned blocks and field bindings instead of
+  widget registry insertion.
 
 Admin-only widgets may declare `dataAccess` metadata:
 
@@ -675,32 +676,20 @@ Admin-only widgets may declare `dataAccess` metadata:
   Custom Screens `Data`; they define labels, descriptions, and per-prop read vs
   write capability instead of leaving the panel to infer paths from defaults.
 - Existing `screen-record-header`, `screen-field-value`, `screen-field-group`,
-  and `screen-two-column` widgets are TASK-468 compatibility/migration inputs.
-  V4 screen documents persist screen-owned blocks and project to these widgets
-  only while the legacy bridge remains in place.
+  and `screen-two-column` ids are TASK-468 compatibility/migration inputs only.
+  V4 screen documents persist screen-owned blocks and no longer project through
+  the legacy render bridge.
 
 `listWidgetsForSurfaceContext()` filters selected-entry and selected-content-type
 widgets until the current Custom Screen has a resolved content type. This keeps
 public widgets out of admin record editors and prevents schema-bound controls
 from rendering against missing context.
 
-### Screen widget editor parity
+### Retired Screen Widget Editor Parity
 
-The `screen-*` family now follows the same three-mode editor bundle contract as
-the mature public widgets:
-
-- `wizard` owns variant choice plus the primary structure/content fields.
-- `visual` owns the day-to-day content controls. For
-  `screen-record-header` and `screen-field-value`, Visual mode can use
-  `WidgetEditorContext` to show binding-state badges and jump directly into the
-  existing `Data` tab card for a specific `propPath`.
-- The `Data` tab renders prop-centric cards from widget-owned binding targets
-  instead of ordinal binding rows. Compatibility rows keep already-saved custom
-  prop paths visible, but only declared write-capable targets count toward
-  `supportsDedicatedEditor` and `writableBindingFields`.
-- `advanced` owns alignment, tone, spacing, and clearable chrome tokens. Clear
-  actions remove the nested style key instead of writing `transparent` or other
-  sentinel strings.
+The old `screen-*` family is retained only as documented migration input. It is
+not registered in active widget catalogs, and V4 Custom Screens do not expose
+the old widget Wizard/Visual/Advanced editor bundle.
 
 Custom Screens preview and the inline record editor now render
 `ScreenDocumentV1` through the screen runtime, not through `WidgetRenderer` or

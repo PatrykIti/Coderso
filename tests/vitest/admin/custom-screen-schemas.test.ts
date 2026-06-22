@@ -9,6 +9,7 @@ import {
   normalizeCustomScreenBindings,
   normalizeCustomScreenDefinition,
   normalizeCustomScreenDefinitionForRead,
+  normalizeCustomScreenDefinitionForWrite,
   normalizeCustomScreenSidebarConfig,
 } from "../../../core/services/customScreens/customScreenSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
@@ -40,6 +41,23 @@ test("custom screen schemas accept nullable sidebarLabel", () => {
       sidebarLabel: null,
     })
   ).not.toThrow();
+});
+
+test("custom screen write schemas reject legacy block projections", () => {
+  expect(() =>
+    validate(customScreenCreateSchema, {
+      name: "Catalog",
+      contentTypeId: "type-1",
+      blocks: [],
+      bindings: [],
+    })
+  ).toThrow("Invalid payload");
+
+  expect(() =>
+    validate(customScreenUpdateSchema, {
+      blocks: [],
+    })
+  ).toThrow("Invalid payload");
 });
 
 test("custom screen schemas accept canonical collection metadata", () => {
@@ -124,12 +142,80 @@ test("normalizeCustomScreenDefinition normalizes blocks", () => {
   expect(definition.editorView.interactionMode).toBe("inline");
 });
 
+test("normalizeCustomScreenDefinitionForWrite accepts V4 and rejects legacy V1/V3 writes", () => {
+  const v4Definition = {
+    schemaVersion: 4,
+    listView: buildDefaultListViewDefinition(),
+    editorView: {
+      document: {
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "section-1",
+            type: "section",
+            data: {},
+            blocks: [{ id: "field-1", type: "field", data: { label: "Name" } }],
+          },
+        ],
+      },
+      bindings: [
+        {
+          id: "field-1-value",
+          blockId: "field-1",
+          propPath: "value",
+          source: "entry",
+          field: "title",
+          mode: "readwrite",
+        },
+      ],
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+
+  expect(normalizeCustomScreenDefinitionForWrite({ definition: v4Definition })).toMatchObject({
+    schemaVersion: 4,
+    editorView: {
+      document: {
+        sections: [
+          expect.objectContaining({
+            blocks: [expect.objectContaining({ id: "field-1", type: "field" })],
+          }),
+        ],
+      },
+    },
+  });
+
+  expect(() =>
+    normalizeCustomScreenDefinitionForWrite({
+      schemaVersion: 1,
+      blocks: [],
+      bindings: [],
+    })
+  ).toThrow("custom_screen_legacy_write_unsupported");
+
+  expect(() =>
+    normalizeCustomScreenDefinitionForWrite({
+      definition: {
+        schemaVersion: 3,
+        listView: buildDefaultListViewDefinition(),
+        editorView: {
+          blocks: [],
+          bindings: [],
+          saveMode: "entry",
+          interactionMode: "inline",
+        },
+      },
+    })
+  ).toThrow("custom_screen_legacy_write_unsupported");
+});
+
 test("normalizeCustomScreenDefinition accepts writable header bindings", () => {
   expect(() =>
     normalizeCustomScreenDefinition(
       {
         definition: {
-          schemaVersion: 3,
+          schemaVersion: 4,
           listView: {
             columns: [],
             filters: [],
@@ -137,12 +223,23 @@ test("normalizeCustomScreenDefinition accepts writable header bindings", () => {
             bulkActions: { delete: true, publish: true, unpublish: true },
           },
           editorView: {
-            blocks: [{ id: "header-1", type: "screen-record-header", data: {} }],
+            document: {
+              schemaVersion: 1,
+              sections: [
+                {
+                  id: "section-1",
+                  type: "section",
+                  data: {},
+                  blocks: [{ id: "header-1", type: "record-header", data: {} }],
+                },
+              ],
+            },
             bindings: [
               {
                 id: "binding-1",
-                widgetId: "header-1",
+                blockId: "header-1",
                 propPath: "title",
+                source: "entry",
                 field: "projectStatus",
                 mode: "readwrite",
               },

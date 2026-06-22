@@ -6,7 +6,8 @@
 **Category:** Documentation / Validation / Task Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-07-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,15 +19,15 @@ descendant is done, superseded, or cancelled.
 
 ## Sub-Tasks
 
-- [ ] Update architecture, CMS, API, data model, widget, assistant, cache, and
+- [x] Update architecture, CMS, API, data model, widget, assistant, cache, and
   task docs touched by the family.
-- [ ] Add `_docs/_CHANGELOG/` entry listing TASK-468 and every closed child/leaf
+- [x] Add `_docs/_CHANGELOG/` entry listing TASK-468 and every closed child/leaf
   covered by the family changelog.
-- [ ] Update `_docs/_CHANGELOG/README.md` and `_docs/_TASKS/README.md` status
+- [x] Update `_docs/_CHANGELOG/README.md` and `_docs/_TASKS/README.md` status
   tables/statistics.
-- [ ] Run final validation commands and record any skipped lanes with reasons.
-- [ ] Run final drift pass on the committed HEAD when external audit was part of
-  the implementation workflow.
+- [x] Run final validation commands and record any skipped lanes with reasons.
+- [x] Run final drift pass against HEAD plus the validated working tree; no
+  manual commit was requested in this turn.
 
 ## Files To Change
 
@@ -120,3 +121,29 @@ test("task board statistics match table rows", () => {
 3. Final validation evidence and any skipped lanes are recorded.
 4. Final drift pass is clean or every remaining item is split into explicit
    non-blocking follow-up tasks with rationale.
+
+## Closeout Evidence - 2026-06-22
+
+- Closure state: all physical TASK-468 descendants are terminal and the
+  `_docs/_TASKS/README.md` task-board statistics were synchronized.
+- Targeted Vitest passed for Custom Screens schemas/service/backfill/document
+  ops/capabilities/binding resolver, admin clients, assistant action planning
+  and blueprints, widget retirement coverage, and Custom Screen UI flows.
+- Targeted Bun tests passed for assistant execution, widget runtime registry,
+  Custom Screen routes, and assistant routes.
+- DB migration smoke passed against `DATABASE_URL` by applying migrations
+  `0061_custom_screen_v4_backfill.sql` and
+  `0062_drop_custom_screen_legacy_columns.sql` inside a transaction and rolling
+  the transaction back.
+- Broad validation passed: `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun --cwd core build:admin`, `bun run check:admin-boundary`,
+  `bun run check:admin-bundle`, `bun run gates:coderso`, and
+  `git diff --check`.
+- Live smoke passed through `coderso-dev-core-host` and `playwright-cli` for
+  admin login, V4 Custom Screen creation/edit/reload, list/detail runtime,
+  assistant V4 dry-run and execute, legacy `custom-screen.widget.patch`
+  rejection, cache refresh, public runtime rendering, and cleanup. The expected
+  HTTP 400 legacy-action rejection was observed with no page errors.
+- Final local drift checks used HEAD
+  `de1ba93d1e7ca843a0d153c3d3c99c6f982feb1b` plus the validated working tree.
+  The untracked `_TMP-*` audit files were left untouched.

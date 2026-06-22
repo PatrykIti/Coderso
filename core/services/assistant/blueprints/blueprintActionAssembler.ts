@@ -40,7 +40,13 @@ const actionOrder: Record<AssistantPlannedAction["type"], number> = {
   "custom-screen.upsert": 30,
   "custom-screen.delete": 90,
   "custom-screen.update": 90,
-  "custom-screen.widget.patch": 90,
+  "custom-screen.section.add": 90,
+  "custom-screen.block.add": 90,
+  "custom-screen.block.patch": 90,
+  "custom-screen.block.move": 90,
+  "custom-screen.block.remove": 90,
+  "custom-screen.binding.set": 90,
+  "custom-screen.list-view.patch": 90,
   "listing-query.upsert": 40,
   "listing-query.delete": 90,
   "listing-query.update": 90,
@@ -562,15 +568,11 @@ export const mergeBlueprintActions = (
       ) {
         return null;
       }
-      const blocks = mergeBlocksById(left.input.blocks, other.input.blocks);
-      const bindings = mergeBlocksById(left.input.bindings, other.input.bindings);
-      if (blocks === null || bindings === null) return null;
+      if (!isDeepStrictEqual(left.input.definition, other.input.definition)) return null;
       return {
         ...left,
         input: {
           ...left.input,
-          blocks: blocks ?? [],
-          bindings: bindings ?? [],
         },
       };
     }

@@ -65,6 +65,60 @@ import {
   listCustomScreens,
   updateCustomScreen,
 } from "../../../core/services/customScreens/customScreenService";
+import type { CustomScreenDefinition } from "../../../core/services/customScreens/customScreenSchemas";
+
+function makeV4Definition(blockId = "field-1"): CustomScreenDefinition {
+  return {
+    schemaVersion: 4,
+    listView: {
+      columns: [
+        {
+          id: "system-title",
+          source: "system",
+          field: "title",
+          label: "Record",
+          formatter: "text",
+          visible: true,
+        },
+      ],
+      filters: [],
+      defaultSort: { field: "updatedAt", direction: "desc" },
+      bulkActions: { delete: true, publish: true, unpublish: true },
+    },
+    editorView: {
+      document: {
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "section-1",
+            type: "section",
+            label: "Details",
+            data: { title: "Details" },
+            blocks: [
+              {
+                id: blockId,
+                type: "field",
+                data: { label: "Name", value: "" },
+              },
+            ],
+          },
+        ],
+      },
+      bindings: [
+        {
+          id: `${blockId}-value`,
+          blockId,
+          propPath: "value",
+          source: "entry",
+          field: "name",
+          mode: "readwrite",
+        },
+      ],
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+}
 
 const createRow = (overrides: Record<string, unknown> = {}) => ({
   id: "screen-1",
@@ -75,16 +129,8 @@ const createRow = (overrides: Record<string, unknown> = {}) => ({
   compositionKey: null,
   showInSidebar: true,
   sidebarLabel: " Catalog ",
-  schemaVersion: 1,
-  blocks: [{ id: "field-1", type: "screen-field-value", data: {} }],
-  bindings: [
-    {
-      widgetId: "field-1",
-      propPath: "value",
-      field: "name",
-      mode: "readwrite",
-    },
-  ],
+  schemaVersion: 4,
+  definition: makeV4Definition(),
   createdAt: new Date("2026-03-06T10:00:00.000Z"),
   updatedAt: new Date("2026-03-06T11:00:00.000Z"),
   ...overrides,
@@ -106,20 +152,27 @@ test("listCustomScreens maps normalized custom screen records", async () => {
   expect(result[0]?.capabilities.mode).toBe("editor");
 });
 
-test("listCustomScreens falls back to legacy blocks and bindings when persisted definition is unreadable", async () => {
+test("listCustomScreens migrates legacy persisted definitions for reads", async () => {
   mockDb.state.selectRows = [
     createRow({
-      schemaVersion: 2,
-      definition: null,
-      blocks: [{ id: "section-1", type: "section", data: {} }],
-      bindings: [
-        {
-          widgetId: "section-1",
-          propPath: "title",
-          field: "name",
-          mode: "readwrite",
+      schemaVersion: 3,
+      definition: {
+        schemaVersion: 3,
+        listView: makeV4Definition().listView,
+        editorView: {
+          blocks: [{ id: "section-1", type: "section", data: {} }],
+          bindings: [
+            {
+              widgetId: "section-1",
+              propPath: "title",
+              field: "name",
+              mode: "readwrite",
+            },
+          ],
+          saveMode: "entry",
+          interactionMode: "inline",
         },
-      ],
+      },
     }),
   ];
 
@@ -147,6 +200,7 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
   mockDb.state.insertRows = [
     createRow({ status: "draft", showInSidebar: true, sidebarLabel: "Catalog Tools" }),
   ];
+  const definition = makeV4Definition("field-1");
 
   const result = await createCustomScreen({
     name: "  Catalog Tools  ",
@@ -155,16 +209,7 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
     sidebarLabel: "  Catalog Tools  ",
     collectionRole: "canonical-admin-screen",
     compositionKey: "catalog-tools",
-    blocks: [{ id: "section-1", type: "section", data: {} }],
-    bindings: [
-      {
-        id: "binding-1",
-        widgetId: "section-1",
-        propPath: "title",
-        field: "name",
-        mode: "read",
-      },
-    ],
+    definition,
   });
 
   expect(mockDb.state.lastInsertValues).toMatchObject({
@@ -183,13 +228,12 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
           schemaVersion: 1,
           sections: [
             expect.objectContaining({
-              id: "section-default",
+              id: "section-1",
               type: "section",
               blocks: [
                 expect.objectContaining({
-                  id: "section-1",
-                  type: "legacy-widget",
-                  legacyWidgetType: "section",
+                  id: "field-1",
+                  type: "field",
                 }),
               ],
             }),
@@ -197,12 +241,12 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
         },
         bindings: [
           {
-            id: "binding-1",
-            blockId: "section-1",
-            propPath: "title",
+            id: "field-1-value",
+            blockId: "field-1",
+            propPath: "value",
             source: "entry",
             field: "name",
-            mode: "read",
+            mode: "readwrite",
           },
         ],
         saveMode: "entry",
@@ -212,16 +256,6 @@ test("createCustomScreen normalizes defaults, sidebar config, and definitions", 
         defaultSort: { field: "updatedAt", direction: "desc" },
       }),
     },
-    blocks: [expect.objectContaining({ id: "section-1", type: "section" })],
-    bindings: [
-      {
-        id: "binding-1",
-        widgetId: "section-1",
-        propPath: "title",
-        field: "name",
-        mode: "read",
-      },
-    ],
   });
   expect(mockDb.state.lastInsertValues?.createdAt).toBeInstanceOf(Date);
   expect(mockDb.state.lastInsertValues?.updatedAt).toBeInstanceOf(Date);
@@ -255,6 +289,32 @@ test("createCustomScreen rejects invalid payloads", async () => {
       collectionRole: "unknown" as never,
     })
   ).rejects.toThrow("custom_screen_invalid");
+
+  await expect(
+    createCustomScreen({
+      name: "Catalog",
+      contentTypeId: "products",
+      blocks: [],
+      bindings: [],
+    } as never)
+  ).rejects.toThrow("custom_screen_legacy_write_unsupported");
+
+  await expect(
+    createCustomScreen({
+      name: "Catalog",
+      contentTypeId: "products",
+      definition: {
+        schemaVersion: 3,
+        listView: makeV4Definition().listView,
+        editorView: {
+          blocks: [],
+          bindings: [],
+          saveMode: "entry",
+          interactionMode: "inline",
+        },
+      } as never,
+    })
+  ).rejects.toThrow("custom_screen_legacy_write_unsupported");
 });
 
 test("updateCustomScreen returns null when the record is missing", async () => {
@@ -268,8 +328,7 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
       sidebarLabel: "Catalog",
       showInSidebar: false,
       status: "draft",
-      blocks: [{ id: "section-1", type: "section", data: {} }],
-      bindings: [],
+      definition: makeV4Definition("field-1"),
     }),
   ];
   mockDb.state.updateRows = [
@@ -278,7 +337,7 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
       sidebarLabel: null,
       showInSidebar: false,
       status: "active",
-      bindings: [],
+      definition: makeV4Definition("field-1"),
     }),
   ];
 
@@ -305,19 +364,13 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
         document: expect.objectContaining({
           sections: [
             expect.objectContaining({
-              id: "section-default",
+              id: "section-1",
               type: "section",
-              blocks: [
-                expect.objectContaining({
-                  id: "section-1",
-                  type: "legacy-widget",
-                  legacyWidgetType: "section",
-                }),
-              ],
+              blocks: [expect.objectContaining({ id: "field-1", type: "field" })],
             }),
           ],
         }),
-        bindings: [],
+        bindings: [expect.objectContaining({ id: "field-1-value", mode: "readwrite" })],
         saveMode: "entry",
         interactionMode: "inline",
       }),
@@ -327,101 +380,62 @@ test("updateCustomScreen preserves existing values and normalizes changed fields
   expect(result?.name).toBe("Updated catalog");
   expect(result?.collectionRole).toBeNull();
   expect(result?.sidebarLabel).toBeNull();
-  expect(result?.capabilities.mode).toBe("collection-only");
+  expect(result?.capabilities.mode).toBe("editor");
 });
 
-test("updateCustomScreen migrates v3 definition to v4 when blocks are patched", async () => {
-  const existingDefinition = {
-    schemaVersion: 3,
-    listView: {
-      columns: [
-        {
-          id: "title",
-          source: "system",
-          field: "title",
-          label: "Title",
-          formatter: "text",
-          visible: true,
-        },
-      ],
-      filters: [],
-      defaultSort: { field: "updatedAt", direction: "desc" },
-      bulkActions: {
-        delete: true,
-        publish: true,
-        unpublish: true,
-      },
-    },
-    editorView: {
-      blocks: [{ id: "section-1", type: "section", data: {} }],
-      bindings: [],
-      saveMode: "entry",
-      interactionMode: "inline",
-    },
-  };
+test("updateCustomScreen rejects legacy block patches on write", async () => {
+  mockDb.state.selectRows = [
+    createRow({
+      schemaVersion: 4,
+      definition: makeV4Definition("field-1"),
+    }),
+  ];
+
+  await expect(
+    updateCustomScreen("screen-1", {
+      blocks: [{ id: "section-2", type: "section", data: {} }],
+    } as never)
+  ).rejects.toThrow("custom_screen_legacy_write_unsupported");
+  expect(mockDb.state.lastUpdateValues).toBeNull();
+});
+
+test("updateCustomScreen accepts V4 definition writes", async () => {
+  const existingDefinition = makeV4Definition("field-1");
+  const nextDefinition = makeV4Definition("field-2");
 
   mockDb.state.selectRows = [
     createRow({
-      schemaVersion: 3,
+      schemaVersion: 4,
       definition: existingDefinition,
-      blocks: existingDefinition.editorView.blocks,
-      bindings: existingDefinition.editorView.bindings,
     }),
   ];
   mockDb.state.updateRows = [
     createRow({
-      schemaVersion: 3,
-      definition: {
-        ...existingDefinition,
-        editorView: {
-          ...existingDefinition.editorView,
-          blocks: [{ id: "section-2", type: "section", data: {} }],
-        },
-      },
-      blocks: [{ id: "section-2", type: "section", data: {} }],
-      bindings: [],
+      schemaVersion: 4,
+      definition: nextDefinition,
     }),
   ];
 
   const result = await updateCustomScreen("screen-1", {
-    blocks: [{ id: "section-2", type: "section", data: {} }],
+    definition: nextDefinition,
   });
 
   expect(mockDb.state.lastUpdateValues).toMatchObject({
     schemaVersion: 4,
-    definition: {
+    definition: expect.objectContaining({
       schemaVersion: 4,
-      listView: existingDefinition.listView,
-      editorView: {
-        document: {
-          schemaVersion: 1,
+      editorView: expect.objectContaining({
+        document: expect.objectContaining({
           sections: [
             expect.objectContaining({
-              id: "section-default",
-              type: "section",
-              blocks: [
-                expect.objectContaining({
-                  id: "section-2",
-                  type: "legacy-widget",
-                  legacyWidgetType: "section",
-                }),
-              ],
+              blocks: [expect.objectContaining({ id: "field-2", type: "field" })],
             }),
           ],
-        },
-        bindings: [],
-        saveMode: "entry",
-        interactionMode: "inline",
-      },
-    },
-    blocks: [{ id: "section-2", type: "section", data: {} }],
-    bindings: [],
+        }),
+      }),
+    }),
   });
-  expect(result?.definition.listView).toEqual(existingDefinition.listView);
-  expect(result?.blocks[0]).toMatchObject({
-    id: "section-2",
-    type: "section",
-  });
+  expect(result?.definition.editorView.document.sections[0]?.blocks[0]?.id).toBe("field-2");
 });
 
 test("deleteCustomScreen returns the normalized deleted record or null", async () => {

@@ -1,9 +1,12 @@
 # Screen Record Header Widget (v1)
 
+**Status:** Retired after TASK-468; kept only as legacy Custom Screens migration
+input for V4 `record-header` blocks.
+
 ## Purpose
 
-Selected-entry summary header for Custom Screens `Editor View` and the
-dedicated record editor.
+Legacy selected-entry summary header for older Custom Screens payloads. Active
+V4 Custom Screens use native screen blocks and do not register this widget.
 
 ## Widget ID
 
@@ -11,7 +14,7 @@ dedicated record editor.
 
 ## Surfaces and Data Access
 
-- surfaces: `custom-screen-builder`, `admin-editor-view`
+- surfaces: retired `custom-screen-builder`, retired `admin-editor-view`
 - data access: `selected-entry` (`read`, `write`)
 
 ## Variants (v1)

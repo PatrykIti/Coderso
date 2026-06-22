@@ -75,14 +75,14 @@ const bindingBlockId = (binding: AssistantSurfaceBinding) =>
 const normalizeBindings = (bindings: AssistantSurfaceBinding[]) =>
   bindings
     .map((binding) => ({
-      widgetId: bindingBlockId(binding),
+      blockId: bindingBlockId(binding),
       field: binding.field,
       propPath: binding.propPath,
       mode: binding.mode,
     }))
     .sort((left, right) =>
-      `${left.widgetId}:${left.field}:${left.propPath}`.localeCompare(
-        `${right.widgetId}:${right.field}:${right.propPath}`
+      `${left.blockId}:${left.field}:${left.propPath}`.localeCompare(
+        `${right.blockId}:${right.field}:${right.propPath}`
       )
     );
 
