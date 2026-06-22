@@ -45,14 +45,17 @@ override client.
 | File | Required change |
 |---|---|
 | `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Presentation panel read/save/clear/reload; merge overrides at render. |
-| `core/admin/services/customScreensClient.ts` | Cached override read/replace wrapper + invalidation, exporting `useCachedScreenEntryOverrides` / `replaceScreenEntryOverrides` / `invalidateScreenEntryOverrides`. |
+| `core/admin/services/cachePolicy.ts` | Add bounded override cache key + TTL for `(screenId, entryId)`. |
+| `core/admin/services/customScreensClient.ts` | Cached override read/replace wrapper + invalidation, following the current `getCached*` / `*Cached` service-client pattern: `getCachedScreenEntryOverrides`, `getScreenEntryOverridesCached`, `replaceScreenEntryOverrides`, `invalidateScreenEntryOverrides`. |
 | `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` | Apply merged presentation overrides at render (non-destructive). |
 | `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` | Override save/clear/reload + no-dirty-loss + no-builder-controls coverage. |
+| `tests/vitest/admin/customScreensClient.test.ts` | Override cache key/TTL, cached fetch, PATCH mutation, invalidation, and `cacheBus` coverage. |
 
 ## Implementation Pseudocode
 
 ```tsx
-const { data: overrides } = useCachedScreenEntryOverrides(screenId, entryId);
+const cached = getCachedScreenEntryOverrides(screenId, entryId);
+const overrides = cached ?? await getScreenEntryOverridesCached(screenId, entryId);
 const merged = applyPresentationOverrides(document, overrides); // render-only merge
 
 async function saveOverrides(next) {
@@ -66,6 +69,9 @@ async function saveOverrides(next) {
 Data flow:
 
 - Entry content data and presentation overrides load on separate cache keys.
+- Override cache keys/TTLs are owned by `cachePolicy.ts`; the client uses bounded
+  `(screenId, entryId)` segments and broadcasts invalidation through `cacheBus`
+  after replace/clear.
 - Override merge is render-only; `content_entries.data` is never mutated.
 - Content field values persist via the entry draft path (TASK-474-03); overrides
   persist via the override routes (TASK-473-02).
@@ -86,7 +92,7 @@ test("saving an override does not mutate entry data and survives reload", async 
   await user.click(screen.getByRole("button", { name: /text size/i }));
   await user.click(screen.getByRole("option", { name: "Small" }));
   await user.click(screen.getByRole("button", { name: "Save" }));
-  expect(overridesApi.lastPut.overrides[0].propPath).toBe("textSize");
+  expect(overridesApi.lastPatch.overrides[0].propPath).toBe("textSize");
   expect(entriesApi.lastPatch?.values).toBeUndefined(); // no content write for presentation
 });
 ```
@@ -108,6 +114,7 @@ test("saving an override does not mutate entry data and survives reload", async 
 ## Testing Requirements
 
 - `bun run test:vitest -- tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+- `bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts`
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - Live `playwright-cli`: save/clear/reload an override on a record; confirm no

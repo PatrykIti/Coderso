@@ -55,6 +55,7 @@ bun run test:vitest -- tests/vitest/ui-integration/custom-screen-record-interact
 bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts
 set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts
 bun run check:admin-boundary && bun --cwd core build:admin && bun run check:admin-bundle
+bun run gates:coderso
 ```
 
 Error handling:
@@ -86,6 +87,7 @@ Regression-test shape:
 - `bun run check:admin-boundary`
 - `bun --cwd core build:admin`
 - `bun run check:admin-bundle`
+- `bun run gates:coderso`
 - `git diff --check`
 
 ## Documentation Updates Required

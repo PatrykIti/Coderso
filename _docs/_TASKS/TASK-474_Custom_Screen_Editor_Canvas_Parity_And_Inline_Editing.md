@@ -129,10 +129,11 @@ Per-subtask Security Contracts live in the child files. Summary: no new public
 endpoints. TASK-474-01/02/04/05 are UI-only (no network surface); inline content
 edits (474-03) and list-row edits (474-06) persist through the existing internal
 admin content-entry routes (`content:read`/`content:write`, CSRF, admin buckets,
-reject-unknown via V4 normalizers). Inline editing must respect binding `mode`
+route schemas rejecting unknown top-level keys, and content-service validation
+against the content type schema). Inline editing must respect binding `mode`
 (read bindings expose no editable affordance — fail-closed). TASK-474-06 keeps
-additive, backward-compatible schema with `rejectUnknownKeys`. Per-record
-*presentation* persistence is owned by TASK-473.
+additive, backward-compatible custom-screen definition schema with
+`rejectUnknownKeys`. Per-record *presentation* persistence is owned by TASK-473.
 
 ## Risks
 

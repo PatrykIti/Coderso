@@ -75,10 +75,12 @@ Per-subtask Security Contracts live in the child files. Summary:
 Each child runs its own lane. Family gates:
 
 - `bun run test:vitest -- tests/vitest/customScreens`
+- `bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts`
 - `set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts`
 - DB migration tests when `DATABASE_URL` is available.
 - `bun --cwd core lint`, `bun --cwd core lint:types`, `bun --cwd core build:admin`,
-  `bun run check:admin-boundary`, `git diff --check`.
+  `bun run check:admin-boundary`, `bun run check:admin-bundle`,
+  `bun run gates:coderso`, `git diff --check`.
 
 ## Documentation Updates Required
 

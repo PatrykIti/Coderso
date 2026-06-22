@@ -42,7 +42,7 @@ service.
 | File | Required change |
 |---|---|
 | `core/server/routes/customScreenRoutes.ts` | Add/extend override read+write routes (use the already-typed `router.patch` for replace; the `Router` type at `:24-29` exposes get/post/patch/delete, no `put`), RBAC, error mapping. |
-| `core/services/customScreens/screenEntryPresentationOverrides.ts` | Consume service + error map (from TASK-473-01). |
+| `core/services/customScreens/screenEntryPresentationOverrides.ts` | Consume service + error map (from TASK-473-01); own the strict replace-envelope schema/normalizer exported for route validation. |
 | `tests/integration/routes/customScreensRoutes.test.ts` | Route registration, validation, RBAC, global CSRF/write-path coverage, `map*Error`. |
 
 ## Implementation Pseudocode
@@ -59,12 +59,15 @@ router.patch("/custom-screens/:screenId/entries/:entryId/overrides",
   requirePermission("content:write"),
   async (ctx) => {
     return withCustomScreenOverrideErrors(async () => {
-      // ctx.body is already parsed by the shared router; service normalizer rejects unknown keys.
+      // The service module owns this strict envelope schema:
+      // { overrides: [...] } with additionalProperties: false.
+      validate(screenEntryOverrideReplaceSchema, ctx.body ?? {});
+      const body = normalizeScreenEntryOverrideReplacePayload(ctx.body);
       const actorId = ctx.user?.id;
       if (!actorId) throw new Error("custom_screen_override_invalid");
       const saved = await saveScreenEntryPresentationOverrides({
         screenId: ctx.params.screenId, entryId: ctx.params.entryId,
-        overrides: (ctx.body as { overrides?: unknown }).overrides,
+        overrides: body.overrides,
         actorId,
       });
       return { overrides: saved };
@@ -76,6 +79,8 @@ Data flow:
 
 - Route validates auth/permission, does minimal coercion, delegates to the
   service, and maps known domain errors to `ApiError`.
+- Route validation rejects unknown top-level envelope keys before delegation; the
+  service normalizer rejects unknown nested override keys and unsafe paths/values.
 - Admin CSRF and read/write rate buckets remain enforced by the shared
   `httpServer.ts` middleware; do not add a one-off `requireCsrf()` route helper.
 - No business logic in the route; the service owns normalization and persistence.
@@ -83,12 +88,15 @@ Data flow:
 Error handling:
 
 - `custom_screen_override_invalid` → 400; `_not_found` → 404; `_conflict` → 409.
-- Unknown payload keys are rejected by the normalizer and surfaced as 400.
+- Unknown top-level payload keys are rejected by route validation; unknown nested
+  override keys are rejected by the service normalizer. Both surface as 400.
 
 Regression-test shape:
 
 ```ts
 test("PATCH overrides rejects unknown keys and requires content:write + CSRF", async () => {
+  const topLevel = await call("PATCH", overridesUrl, { overrides: [], bogus: true }, writerSession);
+  expect(topLevel.status).toBe(400);
   const res = await call("PATCH", overridesUrl, { overrides: [{ blockId: "b", propPath: "image", value: "m", bogus: 1 }] }, writerSession);
   expect(res.status).toBe(400);
   const denied = await call("PATCH", overridesUrl, validBody, readerSession);

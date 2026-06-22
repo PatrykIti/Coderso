@@ -27,7 +27,8 @@ type schema; overrides are a separate, validated, auditable layer.
   here from TASK-468-05.
 - Migrations live in `core/db/migrations/` with `meta/_journal.json` +
   `meta/*_snapshot.json`; allocate the next available migration number at
-  implementation time (`0061_*` at audit HEAD `aff5ca42`).
+  implementation time (currently `0061_*`; re-confirm immediately before
+  implementation because other migrations may land first).
 - Drizzle table exports live in `core/db/schema.ts` and must be updated for a new
   table-backed override store.
 - `rejectUnknownKeys` + `normalize*` discipline is established in
