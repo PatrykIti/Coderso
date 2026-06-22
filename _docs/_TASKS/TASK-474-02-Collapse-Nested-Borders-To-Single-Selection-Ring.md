@@ -99,8 +99,11 @@ test("a selected block renders exactly one border/ring ancestor", async () => {
 
 ## Security Contract
 
-- **Endpoint visibility:** no endpoints — presentation-only change.
-- **Auth / RBAC / CSRF / rate-limit:** unchanged.
+- **Endpoint visibility:** no endpoints — presentation-only DOM change.
+- **Auth model:** unchanged — no new endpoint or route.
+- **RBAC:** unchanged.
+- **CSRF expectations:** unchanged.
+- **Rate-limit bucket:** N/A — no network surface.
 - **Reject unknown validation:** N/A.
 - **Anti-abuse controls:** none required.
 - **Secret handling:** unchanged; no new data surfaces.

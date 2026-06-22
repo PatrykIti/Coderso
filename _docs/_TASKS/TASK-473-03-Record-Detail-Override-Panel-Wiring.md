@@ -45,7 +45,7 @@ override client.
 | File | Required change |
 |---|---|
 | `core/admin/ui/custom-screens/CustomScreenEntryEditor.tsx` | Presentation panel read/save/clear/reload; merge overrides at render. |
-| `core/admin/services/customScreensClient.ts` *(or the existing client module)* | Cached override read/replace wrapper + invalidation. |
+| `core/admin/services/customScreensClient.ts` | Cached override read/replace wrapper + invalidation, exporting `useCachedScreenEntryOverrides` / `replaceScreenEntryOverrides` / `invalidateScreenEntryOverrides`. |
 | `core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx` | Apply merged presentation overrides at render (non-destructive). |
 | `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` | Override save/clear/reload + no-dirty-loss + no-builder-controls coverage. |
 
@@ -56,7 +56,7 @@ const { data: overrides } = useCachedScreenEntryOverrides(screenId, entryId);
 const merged = applyPresentationOverrides(document, overrides); // render-only merge
 
 async function saveOverrides(next) {
-  await replaceScreenEntryOverrides(screenId, entryId, next); // PUT (473-02)
+  await replaceScreenEntryOverrides(screenId, entryId, next); // PATCH (473-02)
   invalidateScreenEntryOverrides(screenId, entryId);          // cacheBus broadcast
 }
 // record mode renders ScreenRuntimeRenderer mode="entry" with NO add/move/

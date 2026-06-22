@@ -1,4 +1,4 @@
-# TASK-474: Custom Screen Editor Canvas Parity & Inline Editing
+# TASK-474: Custom Screen Editor Canvas Parity And Inline Editing
 # FileName: TASK-474_Custom_Screen_Editor_Canvas_Parity_And_Inline_Editing.md
 
 **Priority:** High

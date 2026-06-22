@@ -66,6 +66,11 @@ type ScreenEntryPresentationOverride = {
   propPath: string; value: unknown; updatedBy: string;
 };
 
+// This module owns its OWN private helpers — `rejectUnknownKeys` and the
+// `normalize*` helpers in customScreenSchemas.ts are not exported.
+function rejectUnknownOverrideKeys(input: unknown, allowed: readonly string[]): asserts input is Record<string, unknown> { /* throw custom_screen_override_invalid on extra keys */ }
+function normalizeOverridePath(value: unknown): string { /* safe blockId/propPath: reject unsafe `__proto__`, `.`, `[]` segments */ }
+
 function normalizeScreenEntryPresentationOverride(input: unknown) {
   rejectUnknownOverrideKeys(input, ["blockId", "propPath", "value"]);
   return {

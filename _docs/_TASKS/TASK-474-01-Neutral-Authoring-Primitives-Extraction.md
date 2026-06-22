@@ -132,7 +132,10 @@ test("InlineEditWrapper commits on Enter and is read-only when disabled", async 
 ## Security Contract
 
 - **Endpoint visibility:** no endpoints — UI-only primitives.
-- **Auth model / RBAC / CSRF / rate-limit:** unchanged (no network surface).
+- **Auth model:** unchanged — no network surface.
+- **RBAC:** unchanged.
+- **CSRF expectations:** unchanged.
+- **Rate-limit bucket:** N/A — UI-only primitives, no endpoint.
 - **Reject unknown validation:** N/A at this layer; primitives do not persist.
 - **Anti-abuse controls:** none required.
 - **Secret handling:** primitives must not read settings, credentials, or

@@ -41,7 +41,7 @@ service.
 
 | File | Required change |
 |---|---|
-| `core/server/routes/customScreenRoutes.ts` | Add/extend override read+write routes, local Router `put` typing if needed, RBAC, error mapping. |
+| `core/server/routes/customScreenRoutes.ts` | Add/extend override read+write routes (use the already-typed `router.patch` for replace; the `Router` type at `:24-29` exposes get/post/patch/delete, no `put`), RBAC, error mapping. |
 | `core/services/customScreens/screenEntryPresentationOverrides.ts` | Consume service + error map (from TASK-473-01). |
 | `tests/integration/routes/customScreensRoutes.test.ts` | Route registration, validation, RBAC, global CSRF/write-path coverage, `map*Error`. |
 
@@ -55,7 +55,7 @@ router.get("/custom-screens/:screenId/entries/:entryId/overrides",
     overrides: await getScreenEntryPresentationOverrides(ctx.params.screenId, ctx.params.entryId),
   })));
 
-router.put("/custom-screens/:screenId/entries/:entryId/overrides",
+router.patch("/custom-screens/:screenId/entries/:entryId/overrides",
   requirePermission("content:write"),
   async (ctx) => {
     return withCustomScreenOverrideErrors(async () => {
@@ -88,10 +88,10 @@ Error handling:
 Regression-test shape:
 
 ```ts
-test("PUT overrides rejects unknown keys and requires content:write + CSRF", async () => {
-  const res = await call("PUT", overridesUrl, { overrides: [{ blockId: "b", propPath: "image", value: "m", bogus: 1 }] }, writerSession);
+test("PATCH overrides rejects unknown keys and requires content:write + CSRF", async () => {
+  const res = await call("PATCH", overridesUrl, { overrides: [{ blockId: "b", propPath: "image", value: "m", bogus: 1 }] }, writerSession);
   expect(res.status).toBe(400);
-  const denied = await call("PUT", overridesUrl, validBody, readerSession);
+  const denied = await call("PATCH", overridesUrl, validBody, readerSession);
   expect(denied.status).toBe(403);
 });
 ```
