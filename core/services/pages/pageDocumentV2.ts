@@ -50,6 +50,7 @@ export const pageSectionTypes = [
 export const pageBlockTypes = [
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -145,6 +146,12 @@ export const pageBackgroundTypes = ["none", "color", "gradient", "image", "video
 export const pageButtonTargets = ["self", "blank"] as const;
 export const pageButtonVariants = ["primary", "secondary", "ghost", "link"] as const;
 export const pageButtonSizes = ["sm", "md", "lg"] as const;
+export const pageBadgeVariants = ["solid", "soft", "outline"] as const;
+export const pageBadgeSizes = ["2xs", "xs", "sm", "md"] as const;
+export const pageBadgeShapes = ["pill", "rounded", "square"] as const;
+export const pageBadgeWeights = ["normal", "medium", "semibold", "bold"] as const;
+export const pageBadgeIconPositions = ["start", "end"] as const;
+export const pageBadgeIcons = ["check", "sparkles", "star", "zap", "shield", "heart"] as const;
 export const pageTextFormats = ["plain", "rich"] as const;
 export const pageTextAlignments = ["left", "center", "right"] as const;
 export const pageHeadingLevels = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
@@ -166,7 +173,7 @@ export const pageBlockSlotKeys = [
  * Token-backed typography contract (TASK-424). Option tokens reference the
  * theme token stack (`DesignTokens.typography` in `core/services/theme/
  * tokenTypes.ts`, emitted as `--font-sans`/`--font-display` and
- * `--text-sm`...`--text-5xl` by `core/ui/theme/tokenCss.ts`). All typography
+ * `--text-2xs`...`--text-5xl` by `core/ui/theme/tokenCss.ts`). All typography
  * style fields are nullable and default to unset, so documents saved before
  * this contract render exactly as before (the baked utility classes stay the
  * fallback). The scale tops out at `5xl` (3rem = 48px), matching the baked h1
@@ -174,6 +181,8 @@ export const pageBlockSlotKeys = [
  */
 export const pageTypographyFontFamilies = ["sans", "display"] as const;
 export const pageTypographyFontSizes = [
+  "2xs",
+  "xs",
   "sm",
   "md",
   "lg",
@@ -208,6 +217,8 @@ export const pageTypographyCapableBlockTypes = [
   "statistic",
   "quote",
 ] as const;
+export const pageTextColorMarkCapableBlockTypes = ["heading", "text", "quote"] as const;
+export const PAGE_TEXT_MARK_MAX = 24 as const;
 export const PAGE_BLOCK_MAX_TREE_DEPTH = 4 as const;
 export const PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24 as const;
 
@@ -220,6 +231,12 @@ export type PageSectionJustify = (typeof pageSectionJustify)[number];
 export type PageShadowToken = (typeof pageShadowTokens)[number];
 export type PageBackgroundType = (typeof pageBackgroundTypes)[number];
 export type PageBlockWidth = (typeof pageBlockWidths)[number];
+export type PageBadgeVariant = (typeof pageBadgeVariants)[number];
+export type PageBadgeSize = (typeof pageBadgeSizes)[number];
+export type PageBadgeShape = (typeof pageBadgeShapes)[number];
+export type PageBadgeWeight = (typeof pageBadgeWeights)[number];
+export type PageBadgeIconPosition = (typeof pageBadgeIconPositions)[number];
+export type PageBadgeIcon = (typeof pageBadgeIcons)[number];
 export type PageColumnDistribution = (typeof pageColumnDistributions)[number];
 export type PageGroupDirection = (typeof pageGroupDirections)[number];
 export type PageBlockSlotKey = (typeof pageBlockSlotKeys)[number];
@@ -227,11 +244,23 @@ export type PageTypographyFontFamily = (typeof pageTypographyFontFamilies)[numbe
 export type PageTypographyFontSize = (typeof pageTypographyFontSizes)[number];
 export type PageTypographyFontWeight = (typeof pageTypographyFontWeights)[number];
 export type PageTypographyCapableBlockType = (typeof pageTypographyCapableBlockTypes)[number];
+export type PageTextColorMarkCapableBlockType = (typeof pageTextColorMarkCapableBlockTypes)[number];
+export type PageTextColorMark = {
+  type: "color";
+  from: number;
+  to: number;
+  color: string;
+};
 
 export const isPageTypographyCapableBlockType = (
   type: PageBlockType
 ): type is PageTypographyCapableBlockType =>
   (pageTypographyCapableBlockTypes as readonly string[]).includes(type);
+
+export const isPageTextColorMarkCapableBlockType = (
+  type: PageBlockType
+): type is PageTextColorMarkCapableBlockType =>
+  (pageTextColorMarkCapableBlockTypes as readonly string[]).includes(type);
 
 /**
  * CSS values for typography tokens. Family and size tokens resolve through the
@@ -246,6 +275,8 @@ export const pageTypographyFontFamilyCssValues: Record<PageTypographyFontFamily,
 };
 
 export const pageTypographyFontSizeCssValues: Record<PageTypographyFontSize, string> = {
+  "2xs": `var(--text-2xs, ${DEFAULT_TOKENS.typography["2xs"]})`,
+  xs: `var(--text-xs, ${DEFAULT_TOKENS.typography.xs})`,
   sm: `var(--text-sm, ${DEFAULT_TOKENS.typography.sm})`,
   md: `var(--text-md, ${DEFAULT_TOKENS.typography.md})`,
   lg: `var(--text-lg, ${DEFAULT_TOKENS.typography.lg})`,
@@ -517,8 +548,19 @@ const pageLayoutBlockSlots: Partial<Record<PageBlockType, readonly PageBlockSlot
 };
 
 export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
-  heading: ["text", "level", "align"],
-  text: ["text", "format", "align"],
+  heading: ["text", "level", "align", "marks"],
+  text: ["text", "format", "align", "marks"],
+  badge: [
+    "text",
+    "variant",
+    "size",
+    "shape",
+    "weight",
+    "background",
+    "textColor",
+    "icon",
+    "iconPosition",
+  ],
   button: ["label", "href", "target", "variant", "size"],
   image: ["assetId", "src", "alt", "caption", "fit"],
   video: ["assetId", "src", "title", "autoplay", "muted"],
@@ -544,7 +586,7 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   spacer: ["size"],
   statistic: ["value", "label", "caption"],
   icon: ["name", "label"],
-  quote: ["text", "cite"],
+  quote: ["text", "cite", "marks"],
   container: [],
   columns: ["count", "gap", "distribution"],
   group: ["direction", "wrap", "gap"],
@@ -608,6 +650,7 @@ export const pageSectionCapabilities = pageSectionTypes.reduce(
 const realRuntimeBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -631,6 +674,7 @@ const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"
 const editorInsertableBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -670,6 +714,7 @@ const insertableBlockTypes = editorInsertableBlockTypes;
 const assistantEmittableBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -739,6 +784,17 @@ export const createPageListItem = (label: string, href: string): PageListItemV2 
 export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
   heading: { text: "Heading", level: "h2", align: "left" },
   text: { text: "Write the section copy here.", format: "plain", align: "left" },
+  badge: {
+    text: "Badge",
+    variant: "soft",
+    size: "sm",
+    shape: "pill",
+    weight: "semibold",
+    background: null,
+    textColor: null,
+    icon: null,
+    iconPosition: "start",
+  },
   button: { label: "Learn more", href: "/", target: "self", variant: "primary", size: "md" },
   image: { assetId: null, src: null, alt: "", caption: "", fit: "cover" },
   video: { assetId: null, src: null, title: "", autoplay: false, muted: true },
@@ -800,6 +856,21 @@ const stringSchema: RecordValue = { type: "string" };
 const nullableStringSchema: RecordValue = { type: ["string", "null"] };
 const booleanSchema: RecordValue = { type: "boolean" };
 const arraySchema: RecordValue = { type: "array" };
+const textColorMarksSchema: RecordValue = {
+  type: "array",
+  maxItems: PAGE_TEXT_MARK_MAX,
+  items: {
+    type: "object",
+    required: ["type", "from", "to", "color"],
+    additionalProperties: false,
+    properties: {
+      type: { const: "color" },
+      from: { type: "integer", minimum: 0 },
+      to: { type: "integer", minimum: 0 },
+      color: { type: "string" },
+    },
+  },
+};
 
 /** List block items: plain strings or `{ label, href }` link items. */
 const listItemsSchema: RecordValue = {
@@ -884,12 +955,26 @@ const pageFiltersAliasesJsonSchema: RecordValue = {
 };
 
 const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordValue => {
+  if (isPageTextColorMarkCapableBlockType(type) && key === "marks") return textColorMarksSchema;
   if (type === "heading" && key === "level")
     return { type: "string", enum: [...pageHeadingLevels] };
   if ((type === "heading" || type === "text") && key === "align") {
     return { type: "string", enum: [...pageTextAlignments] };
   }
   if (type === "text" && key === "format") return { type: "string", enum: [...pageTextFormats] };
+  if (type === "badge" && key === "variant")
+    return { type: "string", enum: [...pageBadgeVariants] };
+  if (type === "badge" && key === "size") return { type: "string", enum: [...pageBadgeSizes] };
+  if (type === "badge" && key === "shape") return { type: "string", enum: [...pageBadgeShapes] };
+  if (type === "badge" && key === "weight") return { type: "string", enum: [...pageBadgeWeights] };
+  if (type === "badge" && key === "iconPosition")
+    return { type: "string", enum: [...pageBadgeIconPositions] };
+  if (type === "badge" && (key === "background" || key === "textColor")) {
+    return nullableStringSchema;
+  }
+  if (type === "badge" && key === "icon") {
+    return { type: ["string", "null"], enum: [...pageBadgeIcons, null] };
+  }
   if (type === "button" && key === "target")
     return { type: "string", enum: [...pageButtonTargets] };
   if (type === "button" && key === "variant") {
@@ -1011,12 +1096,22 @@ const blockPropsJsonSchemaForType = (type: PageBlockType): RecordValue => ({
   ),
 });
 
+const blockResponsivePropsJsonSchemaForType = (type: PageBlockType): RecordValue => ({
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    pageBlockPropKeys[type]
+      .filter((key) => key !== "marks")
+      .map((key) => [key, blockPropJsonSchemaForType(type, key)])
+  ),
+});
+
 const blockResponsiveJsonSchemaForType = (type: PageBlockType): RecordValue => {
   const overrideSchema: RecordValue = {
     type: "object",
     additionalProperties: false,
     properties: {
-      props: blockPropsJsonSchemaForType(type),
+      props: blockResponsivePropsJsonSchemaForType(type),
       style: pageBlockStyleJsonSchema,
       visibility: {
         type: "object",
@@ -1457,6 +1552,85 @@ const requireArray = (value: unknown, path: string, mode: NormalizeMode): unknow
   return [];
 };
 
+const normalizeTextMarkIndex = (
+  value: unknown,
+  textLength: number,
+  path: string,
+  mode: NormalizeMode
+): number | null => {
+  if (!Number.isFinite(value)) {
+    if (mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+    }
+    return null;
+  }
+  const index = Math.trunc(value as number);
+  return Math.min(textLength, Math.max(0, index));
+};
+
+const normalizeBlockTextColorMarksForMode = (
+  text: string,
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageTextColorMark[] => {
+  const input = requireArray(value ?? [], path, mode);
+  const textLength = text.length;
+  const candidates: PageTextColorMark[] = [];
+
+  for (const [index, rawMark] of input.entries()) {
+    const markPath = `${path}.${index}`;
+    if (!isRecord(rawMark)) {
+      if (mode === "write") {
+        throw new PageDocumentError("page_document_invalid", `Invalid ${markPath}.`, markPath);
+      }
+      continue;
+    }
+    assertKnownKeys(rawMark, ["type", "from", "to", "color"], markPath, mode);
+    if (rawMark.type !== "color") {
+      if (mode === "write") {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Invalid ${markPath}.type.`,
+          `${markPath}.type`
+        );
+      }
+      continue;
+    }
+    const color = sanitizeAuthoringCssColor(rawMark.color);
+    if (!color) {
+      if (mode === "write") {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Invalid ${markPath}.color.`,
+          `${markPath}.color`
+        );
+      }
+      continue;
+    }
+    const from = normalizeTextMarkIndex(rawMark.from, textLength, `${markPath}.from`, mode);
+    const to = normalizeTextMarkIndex(rawMark.to, textLength, `${markPath}.to`, mode);
+    if (from === null || to === null || to <= from) continue;
+    candidates.push({ type: "color", from, to, color });
+  }
+
+  const result: PageTextColorMark[] = [];
+  let occupiedUntil = 0;
+  for (const mark of candidates.sort((left, right) =>
+    left.from === right.from ? left.to - right.to : left.from - right.from
+  )) {
+    if (mark.from < occupiedUntil) continue;
+    result.push(mark);
+    occupiedUntil = mark.to;
+    if (result.length >= PAGE_TEXT_MARK_MAX) break;
+  }
+  return result;
+};
+
+export function normalizeBlockTextColorMarks(text: string, value: unknown): PageTextColorMark[] {
+  return normalizeBlockTextColorMarksForMode(text, value, "stored-read", "props.marks");
+}
+
 const normalizeId = (value: unknown, prefix: string, index: number, mode: NormalizeMode) => {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
   if (mode === "write") {
@@ -1890,8 +2064,13 @@ const normalizeBlockProps = (
   const result: Record<string, unknown> = partial ? {} : { ...defaults };
 
   for (const key of pageBlockPropKeys[type]) {
+    if (key === "marks") continue;
     if (input[key] !== undefined)
       result[key] = normalizeBlockProp(type, key, input[key], mode, `${path}.${key}`);
+  }
+  if (isPageTextColorMarkCapableBlockType(type) && input.marks !== undefined) {
+    const text = typeof result.text === "string" ? result.text : "";
+    result.marks = normalizeBlockTextColorMarksForMode(text, input.marks, mode, `${path}.marks`);
   }
 
   return result;
@@ -2100,6 +2279,32 @@ const normalizeBlockProp = (
   if (type === "text" && key === "format") {
     return normalizeEnum(value, pageTextFormats, "plain", path, mode);
   }
+  if (type === "badge" && key === "variant") {
+    return normalizeEnum(value, pageBadgeVariants, "soft", path, mode);
+  }
+  if (type === "badge" && key === "size") {
+    return normalizeEnum(value, pageBadgeSizes, "sm", path, mode);
+  }
+  if (type === "badge" && key === "shape") {
+    return normalizeEnum(value, pageBadgeShapes, "pill", path, mode);
+  }
+  if (type === "badge" && key === "weight") {
+    return normalizeEnum(value, pageBadgeWeights, "semibold", path, mode);
+  }
+  if (type === "badge" && key === "iconPosition") {
+    return normalizeEnum(value, pageBadgeIconPositions, "start", path, mode);
+  }
+  if (type === "badge" && (key === "background" || key === "textColor")) {
+    const color = readOptionalSafeColor(value);
+    if (value !== undefined && value !== null && color == null && mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+    }
+    return color ?? null;
+  }
+  if (type === "badge" && key === "icon") {
+    const icon = readOptionalText(value);
+    return icon && pageBadgeIcons.includes(icon as PageBadgeIcon) ? icon : null;
+  }
   if (type === "button" && key === "target") {
     return normalizeEnum(value, pageButtonTargets, "self", path, mode);
   }
@@ -2201,10 +2406,23 @@ const normalizeBlockResponsive = (
     if (input[breakpoint] === undefined) continue;
     const overrideInput = requireRecord(input[breakpoint], `${path}.${breakpoint}`, mode);
     assertKnownKeys(overrideInput, ["props", "style", "visibility"], `${path}.${breakpoint}`, mode);
+    let overridePropsInput = overrideInput.props;
+    if (isRecord(overridePropsInput) && overridePropsInput.marks !== undefined) {
+      if (mode === "write") {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Text color marks are base-only at ${path}.${breakpoint}.props.marks.`,
+          `${path}.${breakpoint}.props.marks`
+        );
+      }
+      const propsWithoutMarks = { ...overridePropsInput };
+      delete propsWithoutMarks.marks;
+      overridePropsInput = propsWithoutMarks;
+    }
     const props =
-      overrideInput.props === undefined
+      overridePropsInput === undefined
         ? undefined
-        : normalizeBlockProps(type, overrideInput.props, mode, `${path}.${breakpoint}.props`, true);
+        : normalizeBlockProps(type, overridePropsInput, mode, `${path}.${breakpoint}.props`, true);
     const style = normalizeBlockStyle(
       overrideInput.style,
       mode,

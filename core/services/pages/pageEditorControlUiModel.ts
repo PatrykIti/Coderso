@@ -116,6 +116,19 @@ export const pageEditorOptionLabelCatalog: Readonly<Record<string, string>> = {
   secondary: "Secondary",
   ghost: "Ghost",
   link: "Link",
+  // Badge variants, shapes, and icons
+  solid: "Solid",
+  soft: "Soft",
+  outline: "Outline",
+  pill: "Pill",
+  rounded: "Rounded",
+  square: "Square",
+  check: "Check",
+  sparkles: "Sparkles",
+  star: "Star",
+  zap: "Zap",
+  shield: "Shield",
+  heart: "Heart",
   // Text formats and alignment
   plain: "Plain",
   rich: "Rich text",
@@ -124,6 +137,8 @@ export const pageEditorOptionLabelCatalog: Readonly<Record<string, string>> = {
   // Typography tokens
   sans: "Sans",
   display: "Display",
+  "2xs": "XX-small",
+  xs: "X-small",
   xl: "XL",
   "2xl": "2XL",
   "3xl": "3XL",

@@ -1,4 +1,5 @@
 import { createElement, type CSSProperties, type ReactNode } from "react";
+import { Check, Heart, Shield, Sparkles, Star, Zap, type LucideIcon } from "lucide-react";
 
 import { ContentListBlock } from "../../widgets/core/contentList";
 import { FormEmbedBlock, type FormEmbedData } from "../../widgets/core/formEmbed";
@@ -11,6 +12,14 @@ import {
 import {
   getPageBlockActiveSlotKeys,
   isPageTypographyCapableBlockType,
+  isPageTextColorMarkCapableBlockType,
+  normalizeBlockTextColorMarks,
+  pageBadgeIconPositions,
+  pageBadgeIcons,
+  pageBadgeShapes,
+  pageBadgeSizes,
+  pageBadgeVariants,
+  pageBadgeWeights,
   pageTypographyFontFamilyCssValues,
   pageTypographyFontSizeCssValues,
   pageTypographyFontWeightCssValues,
@@ -226,6 +235,74 @@ const pageButtonVariantClass = (variant: string) => {
   return "shadow-sm transition hover:opacity-90";
 };
 
+const pageBadgeIconMap: Record<(typeof pageBadgeIcons)[number], LucideIcon> = {
+  check: Check,
+  heart: Heart,
+  shield: Shield,
+  sparkles: Sparkles,
+  star: Star,
+  zap: Zap,
+};
+
+const readBadgeOption = <T extends string>(
+  value: unknown,
+  options: readonly T[],
+  fallback: T
+): T => (typeof value === "string" && options.includes(value as T) ? (value as T) : fallback);
+
+const readBadgeIcon = (value: unknown): (typeof pageBadgeIcons)[number] | null =>
+  typeof value === "string" && pageBadgeIcons.includes(value as (typeof pageBadgeIcons)[number])
+    ? (value as (typeof pageBadgeIcons)[number])
+    : null;
+
+const pageBadgeShapeClass = (shape: string) => {
+  if (shape === "square") return "rounded-none";
+  if (shape === "rounded") return "rounded-md";
+  return "rounded-full";
+};
+
+const pageBadgeSizeClass = (size: string) => {
+  if (size === "2xs") return "gap-1 px-1.5 py-0.5";
+  if (size === "xs") return "gap-1 px-2 py-0.5";
+  if (size === "md") return "gap-1.5 px-3 py-1";
+  return "gap-1.5 px-2.5 py-0.5";
+};
+
+const pageBadgeVariantClass = (variant: string) => {
+  if (variant === "outline") return "border bg-transparent";
+  if (variant === "solid") return "border border-transparent";
+  return "border border-transparent";
+};
+
+const pageBadgeVariantStyle = (
+  variant: string,
+  background: unknown,
+  textColor: unknown
+): PageBlockStyleProperties => {
+  const safeBackground = sanitizeAuthoringCssColor(background);
+  const safeTextColor = sanitizeAuthoringCssColor(textColor);
+  const accent = "var(--coderso-section-accent,#0d9488)";
+  if (variant === "solid") {
+    return {
+      backgroundColor: safeBackground ?? accent,
+      borderColor: safeBackground ?? accent,
+      color: safeTextColor ?? "#ffffff",
+    };
+  }
+  if (variant === "outline") {
+    return {
+      backgroundColor: safeBackground ?? "transparent",
+      borderColor: safeBackground ?? accent,
+      color: safeTextColor ?? accent,
+    };
+  }
+  return {
+    backgroundColor: safeBackground ?? "rgba(13, 148, 136, 0.12)",
+    borderColor: safeBackground ?? "rgba(13, 148, 136, 0.12)",
+    color: safeTextColor ?? accent,
+  };
+};
+
 const pageImageFitClass = (value: unknown) =>
   value === "contain" ? "object-contain" : "object-cover";
 
@@ -394,11 +471,44 @@ export const pageBlockWidthClass = (width: PageBlockStyle["width"] | undefined) 
   return undefined;
 };
 
+export const isPageBlockSelfAligned = (align: PageBlockStyle["align"] | undefined) =>
+  align === "center" || align === "right";
+
+export const pageBlockEffectiveWidthClass = (style: PageBlockStyle | undefined) =>
+  isPageBlockSelfAligned(style?.align) ? "w-fit" : pageBlockWidthClass(style?.width);
+
 export const pageBlockAlignmentClass = (align: PageBlockStyle["align"] | undefined) => {
-  if (align === "center") return "justify-self-center";
-  if (align === "right") return "justify-self-end";
+  if (align === "center") return "justify-self-center mx-auto";
+  if (align === "right") return "justify-self-end ml-auto";
   if (align === "left") return "justify-self-start";
   return undefined;
+};
+
+const toPageBlockSelfAlignmentStyle = (
+  align: PageBlockStyle["align"] | undefined
+): PageBlockStyleProperties => {
+  if (align === "center") {
+    return { marginLeft: "auto", marginRight: "auto" };
+  }
+  if (align === "right") {
+    return { marginLeft: "auto" };
+  }
+  return {};
+};
+
+const toPageBlockMarginStyle = (style: PageBlockStyle): PageBlockStyleProperties => {
+  const selfAlignment = toPageBlockSelfAlignmentStyle(style.align);
+  if (!style.margin) return selfAlignment;
+  if (Object.keys(selfAlignment).length === 0) {
+    return { margin: toBoxSpacingValue(style.margin) };
+  }
+  return {
+    marginTop: `${style.margin.top ?? 0}px`,
+    marginRight: `${style.margin.right ?? 0}px`,
+    marginBottom: `${style.margin.bottom ?? 0}px`,
+    marginLeft: `${style.margin.left ?? 0}px`,
+    ...selfAlignment,
+  };
 };
 
 export const toPageSectionRenderProps = (
@@ -505,10 +615,10 @@ export const pageBlockTextDataAttributes = {
 
 /** Layout-affecting style surface that always stays on the block frame. */
 const toPageBlockLayoutStyle = (block: PageBlockV2): PageBlockStyleProperties => {
-  const style = block.style ?? {};
+  const style: PageBlockStyle = block.style ?? {};
   return {
     padding: toBoxSpacingValue(style.padding),
-    margin: toBoxSpacingValue(style.margin),
+    ...toPageBlockMarginStyle(style),
     textAlign: style.align,
   };
 };
@@ -582,7 +692,7 @@ export const toPageBlockStyle = (block: PageBlockV2): PageBlockStyleProperties =
 export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => ({
   className: joinPageRenderClasses(
     "max-w-full",
-    pageBlockWidthClass(block.style?.width),
+    pageBlockEffectiveWidthClass(block.style),
     pageBlockAlignmentClass(block.style?.align)
   ),
   style: toPageBlockStyle(block),
@@ -600,9 +710,43 @@ const renderBlockText = (
   block: PageBlockV2,
   propPath: string,
   text: string,
-  context: PageBlockRenderContext
+  context: PageBlockRenderContext,
+  children?: ReactNode
 ): ReactNode =>
-  context.renderInlineText ? context.renderInlineText({ block, propPath, text }) : text;
+  context.renderInlineText
+    ? context.renderInlineText({ block, propPath, text, children })
+    : (children ?? text);
+
+const renderBlockTextColorMarks = (
+  block: PageBlockV2,
+  propPath: string,
+  text: string,
+  context: PageBlockRenderContext
+): ReactNode => {
+  if (propPath !== "text" || !isPageTextColorMarkCapableBlockType(block.type)) {
+    return renderBlockText(block, propPath, text, context);
+  }
+  const marks = normalizeBlockTextColorMarks(text, block.props.marks);
+  if (marks.length === 0) return renderBlockText(block, propPath, text, context);
+
+  const children: ReactNode[] = [];
+  let cursor = 0;
+  marks.forEach((mark, index) => {
+    if (mark.from > cursor) children.push(text.slice(cursor, mark.from));
+    children.push(
+      <span
+        key={`mark-${index}-${mark.from}-${mark.to}`}
+        data-page-text-mark="color"
+        style={{ color: mark.color }}
+      >
+        {text.slice(mark.from, mark.to)}
+      </span>
+    );
+    cursor = mark.to;
+  });
+  if (cursor < text.length) children.push(text.slice(cursor));
+  return renderBlockText(block, propPath, text, context, children);
+};
 
 const pageRichTextAllowedTags: ReadonlySet<string> = new Set([
   "a",
@@ -742,13 +886,18 @@ const renderTextBlock = (block: PageBlockV2, context: PageBlockRenderContext) =>
   }
   return (
     <p className={className} style={style} {...pageBlockTextDataAttributes}>
-      {renderBlockText(block, "text", readText(block.props.text), context)}
+      {renderBlockTextColorMarks(block, "text", readText(block.props.text), context)}
     </p>
   );
 };
 
 const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
-  const text = renderBlockText(block, "text", readText(block.props.text, "Heading"), context);
+  const text = renderBlockTextColorMarks(
+    block,
+    "text",
+    readText(block.props.text, "Heading"),
+    context
+  );
   const level = readText(block.props.level, "h2");
   // Typography contract: explicit tokens paint inline on the heading element
   // itself so they beat the baked level classes (text-5xl, font-semibold).
@@ -768,6 +917,43 @@ const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
   if (level === "h5") return <h5 {...textNodeProps}>{text}</h5>;
   if (level === "h6") return <h6 {...textNodeProps}>{text}</h6>;
   return <h2 {...textNodeProps}>{text}</h2>;
+};
+
+const renderBadgeBlock = (block: PageBlockV2) => {
+  const text = readText(block.props.text, "Badge");
+  const variant = readBadgeOption(block.props.variant, pageBadgeVariants, "soft");
+  const size = readBadgeOption(block.props.size, pageBadgeSizes, "sm");
+  const shape = readBadgeOption(block.props.shape, pageBadgeShapes, "pill");
+  const weight = readBadgeOption(block.props.weight, pageBadgeWeights, "semibold");
+  const iconPosition = readBadgeOption(block.props.iconPosition, pageBadgeIconPositions, "start");
+  const iconName = readBadgeIcon(block.props.icon);
+  const Icon = iconName ? pageBadgeIconMap[iconName] : null;
+  const style: PageBlockStyleProperties = {
+    ...pageBadgeVariantStyle(variant, block.props.background, block.props.textColor),
+    fontSize: pageTypographyFontSizeCssValues[size],
+    fontWeight: pageTypographyFontWeightCssValues[weight],
+  };
+  const icon = Icon ? <Icon className="h-[1em] w-[1em] shrink-0" aria-hidden="true" /> : null;
+
+  return (
+    <span
+      className={joinPageRenderClasses(
+        "inline-flex max-w-full items-center whitespace-nowrap leading-none",
+        pageBadgeVariantClass(variant),
+        pageBadgeShapeClass(shape),
+        pageBadgeSizeClass(size)
+      )}
+      data-page-badge="true"
+      data-page-badge-variant={variant}
+      data-page-badge-size={size}
+      data-page-badge-shape={shape}
+      style={style}
+    >
+      {icon && iconPosition === "start" ? icon : null}
+      <span className="min-w-0 truncate">{text}</span>
+      {icon && iconPosition === "end" ? icon : null}
+    </span>
+  );
 };
 
 const renderImage = (block: PageBlockV2) => {
@@ -1470,6 +1656,8 @@ export const renderPageBlockContent = (
       return renderHeading(block, context);
     case "text":
       return renderTextBlock(block, context);
+    case "badge":
+      return renderBadgeBlock(block);
     case "button": {
       const href = sanitizeAuthoringLinkHref(block.props.href) ?? "#";
       const variant = readButtonVariant(block.props.variant);
@@ -1602,7 +1790,7 @@ export const renderPageBlockContent = (
           style={toPageBlockTypographyStyle(block)}
           {...pageBlockTextDataAttributes}
         >
-          <p>{renderBlockText(block, "text", readText(block.props.text), context)}</p>
+          <p>{renderBlockTextColorMarks(block, "text", readText(block.props.text), context)}</p>
           {readText(block.props.cite) ? (
             <cite className="mt-3 block text-sm text-[var(--coderso-block-text,#64748b)]">
               {renderBlockText(block, "cite", readText(block.props.cite), context)}

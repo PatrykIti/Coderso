@@ -1,14 +1,22 @@
-import type { FocusEvent, KeyboardEvent, MouseEvent, ReactNode } from "react";
-import { Plus } from "lucide-react";
+import {
+  useState,
+  type FocusEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
+import { Palette, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
+  isPageTextColorMarkCapableBlockType,
   type PageBlockV2,
   type PageBreakpoint,
   type PageSectionV2,
 } from "../../../../services/pages/pageDocumentV2";
+import { getPageEditorColorPalette } from "../../../../services/pages/pageEditorControlUiModel";
 import {
   getPageBlockAtPath,
   isSamePageBlockPath,
@@ -50,6 +58,14 @@ export type PageEditorInlineEditCommit = {
   renderedText: string;
 };
 
+export type PageEditorTextColorMarkCommit = {
+  blockId: string;
+  propPath: string;
+  from: number;
+  to: number;
+  color: string;
+};
+
 /** Stable ref callback: focuses a freshly activated inline-edit region with the caret at the end. */
 const focusInlineEditableNode = (node: HTMLElement | null) => {
   if (!node || typeof document === "undefined" || document.activeElement === node) return;
@@ -68,6 +84,34 @@ const readInlineEditableElementText = (element: HTMLElement): string => {
   return typeof innerText === "string" ? innerText : (element.textContent ?? "");
 };
 
+type InlineTextSelectionRange = { from: number; to: number };
+
+const readRangeOffsetFromRoot = (
+  root: HTMLElement,
+  container: Node,
+  offset: number
+): number | null => {
+  if (container !== root && !root.contains(container)) return null;
+  const range = root.ownerDocument.createRange();
+  range.selectNodeContents(root);
+  range.setEnd(container, offset);
+  return range.toString().length;
+};
+
+const readInlineTextSelectionRange = (root: HTMLElement): InlineTextSelectionRange | null => {
+  const selection = root.ownerDocument.defaultView?.getSelection?.();
+  if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return null;
+  const range = selection.getRangeAt(0);
+  const from = readRangeOffsetFromRoot(root, range.startContainer, range.startOffset);
+  const to = readRangeOffsetFromRoot(root, range.endContainer, range.endOffset);
+  if (from === null || to === null) return null;
+  const start = Math.min(from, to);
+  const end = Math.max(from, to);
+  return end > start ? { from: start, to: end } : null;
+};
+
+const inlineTextColorPalette = getPageEditorColorPalette().slice(0, 6);
+
 const InlineEditableCanvasText = ({
   block,
   propPath,
@@ -76,8 +120,10 @@ const InlineEditableCanvasText = ({
   display = "inline",
   selected,
   editing,
+  device,
   onStartEdit,
   onCommit,
+  onApplyColorMark,
 }: {
   block: PageBlockV2;
   propPath: string;
@@ -86,13 +132,26 @@ const InlineEditableCanvasText = ({
   display?: "inline" | "block";
   selected: boolean;
   editing: boolean;
+  device: PageBreakpoint;
   onStartEdit: (target: PageEditorInlineEditTarget) => void;
   onCommit: (commit: PageEditorInlineEditCommit) => void;
+  onApplyColorMark: (commit: PageEditorTextColorMarkCommit) => void;
 }) => {
+  const [selectionRange, setSelectionRange] = useState<InlineTextSelectionRange | null>(null);
   const target = resolveInlineEditTarget(block, propPath);
   if (!target) return <>{children ?? text}</>;
   const { multiline } = target;
   const preserveMarkup = target.preserveMarkup === true;
+  const canApplyColorMarks =
+    editing &&
+    device === "desktop" &&
+    propPath === "text" &&
+    !preserveMarkup &&
+    isPageTextColorMarkCapableBlockType(block.type);
+  const updateSelectionRange = (element: HTMLElement) => {
+    if (!canApplyColorMarks) return;
+    setSelectionRange(readInlineTextSelectionRange(element));
+  };
   const wrapperKey = `${propPath}:${text}`;
   const wrapperProps = {
     ref: editing ? focusInlineEditableNode : undefined,
@@ -114,6 +173,16 @@ const InlineEditableCanvasText = ({
     onClick: editing
       ? (event: MouseEvent<HTMLElement>) => {
           event.stopPropagation();
+        }
+      : undefined,
+    onMouseUp: editing
+      ? (event: MouseEvent<HTMLElement>) => {
+          updateSelectionRange(event.currentTarget);
+        }
+      : undefined,
+    onKeyUp: editing
+      ? (event: KeyboardEvent<HTMLElement>) => {
+          updateSelectionRange(event.currentTarget);
         }
       : undefined,
     onKeyDown: editing
@@ -145,16 +214,59 @@ const InlineEditableCanvasText = ({
       : undefined,
   };
   const content = editing && !preserveMarkup ? text : (children ?? text);
+  const markToolbar =
+    canApplyColorMarks && inlineTextColorPalette.length > 0 ? (
+      <span
+        className="absolute -top-9 left-0 z-20 flex items-center gap-1 rounded border bg-background/95 px-1.5 py-1 shadow-sm"
+        data-page-editor-text-color-toolbar="true"
+        onMouseDown={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+        }}
+      >
+        <Palette className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+        {inlineTextColorPalette.map((swatch) => (
+          <button
+            key={swatch.id}
+            type="button"
+            aria-label={`Apply ${swatch.label} text color`}
+            disabled={!selectionRange}
+            title={swatch.label}
+            className="size-5 rounded-full border border-border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
+            data-page-editor-text-color-swatch={swatch.id}
+            style={{ backgroundColor: swatch.value }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (!selectionRange) return;
+              onApplyColorMark({
+                blockId: block.id,
+                propPath,
+                from: selectionRange.from,
+                to: selectionRange.to,
+                color: swatch.value,
+              });
+            }}
+          />
+        ))}
+      </span>
+    ) : null;
   if (display === "block") {
     return (
-      <div key={wrapperKey} {...wrapperProps}>
-        {content}
+      <div className="relative" data-page-editor-inline-edit-frame="true">
+        <div key={wrapperKey} {...wrapperProps}>
+          {content}
+        </div>
+        {markToolbar}
       </div>
     );
   }
   return (
-    <span key={wrapperKey} {...wrapperProps}>
-      {content}
+    <span className="relative inline-block" data-page-editor-inline-edit-frame="true">
+      <span key={wrapperKey} {...wrapperProps}>
+        {content}
+      </span>
+      {markToolbar}
     </span>
   );
 };
@@ -243,6 +355,7 @@ export const SectionCanvas = ({
   onAddBlockBeside,
   onStartInlineEdit,
   onCommitInlineEdit,
+  onApplyTextColorMark,
 }: {
   section: PageSectionV2;
   baseSection: PageSectionV2;
@@ -260,6 +373,7 @@ export const SectionCanvas = ({
   onAddBlockBeside: () => void;
   onStartInlineEdit: (target: PageEditorInlineEditTarget) => void;
   onCommitInlineEdit: (commit: PageEditorInlineEditCommit) => void;
+  onApplyTextColorMark: (commit: PageEditorTextColorMarkCommit) => void;
 }) => {
   const sectionHasOverride = hasAnyResponsiveOverride(
     device,
@@ -403,8 +517,10 @@ export const SectionCanvas = ({
               inlineEditTarget.blockId === block.id &&
               inlineEditTarget.propPath === propPath
             )}
+            device={device}
             onStartEdit={onStartInlineEdit}
             onCommit={onCommitInlineEdit}
+            onApplyColorMark={onApplyTextColorMark}
           >
             {children}
           </InlineEditableCanvasText>

@@ -878,8 +878,10 @@ test("block render props expose shared classes, styles, and data attributes", ()
   const renderProps = toPageBlockRenderProps(block);
 
   expect(renderProps.className).toContain("max-w-full");
-  expect(renderProps.className).toContain("w-full");
+  expect(renderProps.className).toContain("w-fit");
+  expect(renderProps.className.split(/\s+/)).not.toContain("w-full");
   expect(renderProps.className).toContain("justify-self-center");
+  expect(renderProps.className).toContain("mx-auto");
   expect(renderProps.style).toMatchObject({
     "--coderso-block-text": "#111827",
     "--coderso-block-surface": "#fef3c7",
@@ -892,7 +894,10 @@ test("block render props expose shared classes, styles, and data attributes", ()
     borderStyle: "solid",
     borderWidth: "1px",
     padding: "4px 8px 12px 16px",
-    margin: "1px 2px 3px 4px",
+    marginTop: "1px",
+    marginLeft: "auto",
+    marginBottom: "3px",
+    marginRight: "auto",
     textAlign: "center",
   });
   expect(renderProps.dataAttributes).toEqual({
@@ -908,6 +913,23 @@ test("block render props expose shared classes, styles, and data attributes", ()
   expect(html).toContain('data-page-block="heading"');
   expect(html).toContain('data-block-id="blk-styled-renderer"');
   expect(html).toContain("--coderso-block-text:#111827");
+});
+
+test("right-aligned media block boxes keep fit width and end alignment", () => {
+  const block = createPageBlockV2("image", {
+    id: "blk-right-image",
+    style: { width: "full", align: "right" },
+  });
+  const renderProps = toPageBlockRenderProps(block);
+
+  expect(renderProps.className).toContain("w-fit");
+  expect(renderProps.className.split(/\s+/)).not.toContain("w-full");
+  expect(renderProps.className).toContain("justify-self-end");
+  expect(renderProps.className).toContain("ml-auto");
+  expect(renderProps.style).toMatchObject({
+    marginLeft: "auto",
+    textAlign: "right",
+  });
 });
 
 test("button visual styles land on the anchor element, never the block frame", () => {
@@ -937,7 +959,10 @@ test("button visual styles land on the anchor element, never the block frame", (
   // Frame keeps ONLY layout-affecting style (spacing + text alignment).
   expect(toPageBlockRenderProps(block).style).toEqual({
     padding: "4px 0px 0px 0px",
-    margin: "0px 0px 6px 0px",
+    marginTop: "0px",
+    marginLeft: "auto",
+    marginBottom: "6px",
+    marginRight: "auto",
     textAlign: "center",
   });
 
@@ -960,7 +985,10 @@ test("button visual styles land on the anchor element, never the block frame", (
 
   // The frame keeps the layout surface and never paints the visual one.
   expect(frameTag).toContain("padding:4px 0px 0px 0px");
-  expect(frameTag).toContain("margin:0px 0px 6px 0px");
+  expect(frameTag).toContain("margin-top:0px");
+  expect(frameTag).toContain("margin-left:auto");
+  expect(frameTag).toContain("margin-bottom:6px");
+  expect(frameTag).toContain("margin-right:auto");
   expect(frameTag).toContain("text-align:center");
   expect(frameTag).not.toContain("background-color");
   expect(frameTag).not.toContain("border-radius");
@@ -1103,7 +1131,7 @@ test("typography style paints inline on the exact text node, not the block frame
         props: { text: "Typo headline", level: "h1", align: "left" },
         style: {
           fontFamily: "display",
-          fontSize: "2xl",
+          fontSize: "xs",
           fontWeight: "normal",
           lineHeight: 1.2,
           letterSpacing: 0.5,
@@ -1116,7 +1144,7 @@ test("typography style paints inline on the exact text node, not the block frame
   // Owner mapping: token values resolve through the theme CSS variables.
   expect(toPageBlockTypographyStyle(block)).toEqual({
     fontFamily: pageTypographyFontFamilyCssValues.display,
-    fontSize: pageTypographyFontSizeCssValues["2xl"],
+    fontSize: pageTypographyFontSizeCssValues.xs,
     fontWeight: pageTypographyFontWeightCssValues.normal,
     lineHeight: 1.2,
     letterSpacing: "0.5px",
@@ -1135,7 +1163,7 @@ test("typography style paints inline on the exact text node, not the block frame
   // font-semibold, leading-tight) which remain as fallbacks.
   expect(headingTag).toContain('data-page-block-text="true"');
   expect(headingTag).toContain("font-family:var(--font-display");
-  expect(headingTag).toContain("font-size:var(--text-2xl");
+  expect(headingTag).toContain("font-size:var(--text-xs");
   expect(headingTag).toContain("font-weight:400");
   expect(headingTag).toContain("line-height:1.2");
   expect(headingTag).toContain("letter-spacing:0.5px");
@@ -1143,6 +1171,70 @@ test("typography style paints inline on the exact text node, not the block frame
   expect(frameTag).not.toContain("font-family");
   expect(frameTag).not.toContain("font-size");
   expect(frameTag).not.toContain("letter-spacing");
+});
+
+test("text color marks render safe inline spans and drop unsafe colors", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-text-marks",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-marked-heading",
+        props: {
+          text: "Hello world",
+          level: "h2",
+          align: "left",
+          marks: [
+            { type: "color", from: 0, to: 5, color: "#ef4444" },
+            { type: "color", from: 6, to: 11, color: "url(javascript:alert(1))" },
+          ],
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-page-text-mark="color"');
+  expect(html).toContain('style="color:#ef4444"');
+  expect(html).toContain("<span");
+  expect(html).toContain(">Hello</span> world");
+  expect(html).not.toContain("javascript");
+  expect(html).not.toContain("url(");
+});
+
+test("badge blocks render native safe pills with token-backed sizing", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-badge",
+    blocks: [
+      createPageBlockV2("badge", {
+        id: "blk-badge",
+        props: {
+          text: "Beta",
+          variant: "outline",
+          size: "2xs",
+          shape: "rounded",
+          weight: "bold",
+          background: "#ef4444",
+          textColor: "#111827",
+          icon: "not-in-allowlist",
+          iconPosition: "start",
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-page-badge="true"');
+  expect(html).toContain('data-page-badge-variant="outline"');
+  expect(html).toContain('data-page-badge-size="2xs"');
+  expect(html).toContain('data-page-badge-shape="rounded"');
+  expect(html).toContain("font-size:var(--text-2xs");
+  expect(html).toContain("font-weight:700");
+  expect(html).toContain("background-color:#ef4444");
+  expect(html).toContain("color:#111827");
+  expect(html).toContain(">Beta</span>");
+  expect(html).not.toContain("not-in-allowlist");
 });
 
 test("button typography lands on the anchor element with the visual surface", () => {

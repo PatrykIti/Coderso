@@ -1,61 +1,62 @@
-# TASK-471-04-L01: Badge Widget Schema, Editors, Render
+# TASK-471-04-L01: Badge Block Schema, Controls, Render
 # FileName: TASK-471-04-L01-Badge-Widget-Schema-Editors-Render.md
 
 **Parent Subtask:** TASK-471-04
 **Priority:** Medium
-**Category:** Widgets / Core
+**Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
-**Dependencies:** TASK-471-01 (text-size `xs`/`2xs`), TASK-336 (widget editor
-contract V2)
-**Status:** ⏳ To Do
+**Dependencies:** TASK-471-01 (text-size `xs`/`2xs`)
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
 ## Overview
 
-Ship the `badge` dedicated core widget end-to-end following the atomic-widget
-contract (divider/spacer templates): schema/defaults/normalize, wizard/visual/
-advanced editors, render component, tests, pack-matrix entry, and docs.
+Ship the `badge` native Page V2 block end-to-end following the Page document
+contract: schema/defaults/normalize, Page Editor controls, shared renderer,
+tests, and docs. Pages use `sections[]` and native blocks only; do not add or
+reuse `WidgetBlock`, `WidgetRenderer`, core widget registry entries, widget
+editor contracts, or pack-matrix entries for this task.
 
-## Design decisions (defaults — confirm in TASK-471-05)
+## Design decisions (confirmed in TASK-471-05)
 
-- Atomic dedicated widget, audience intermediate, **module `content`** (no new
-  module unless the owner wants `ui-components`).
-- `BadgeData`: `text`, `variant` (solid|soft|outline), `color` (token-backed
-  background + text, clearable), `size` (`2xs`|`xs`|`sm`|`md` → `--text-*`),
-  `shape` (pill|rounded|square), `weight`, optional `icon` (validated lucide) +
-  `iconPosition`.
-- Token-backed colors (`var(--color-*)`), never hardcoded hex; honors 471-02
-  align on canvas; per-fragment color inside the label not required for v1.
+- Native Page V2 block, editor-insertable and assistant-emittable.
+- `badge` props: `text`, `variant` (solid|soft|outline), `size`
+  (`2xs`|`xs`|`sm`|`md`), `shape` (pill|rounded|square), `weight`,
+  `background`, `textColor`, optional `icon`, and `iconPosition`.
+- Colors use the existing Page safe-color normalizer and Page Editor color
+  swatches; token binding UI remains deferred to TASK-472-04.
+- Per-fragment color inside the badge label is out of scope for v1.
 
 ## Current State (verified)
 
-- Templates: `core/widgets/core/divider.tsx` (token enums, CSS maps,
-  `*EditorContract` v2, schema, defaults, normalizers, render), `spacer.tsx`.
-- Editor template: `core/admin/ui/widgets/editors/DividerEditors.tsx`
-  (Wizard/Visual/Advanced, swatch-only color, `data-widget-control-path`).
-- Registry: `core/widgets/core/index.ts`, `core/widgets/modulePackMatrix.ts`.
-- Color vocab + clearable color: `core/widgets/core/navigation.tsx`.
-- Tests: `tests/vitest/widgets/divider.test.tsx`,
-  `tests/vitest/ui/divider-editor-wave.test.tsx`. Docs: `_docs/_WIDGETS/DIVIDER.md`.
+- Page V2 block examples: `divider`, `spacer`, `statistic`, `quote` in
+  `pageDocumentV2.ts`, `pageRendererV2.tsx`, and `pageEditorControlRegistry.ts`.
+- Page editor palette labels live in `pageEditorOptions.ts`.
+- Existing color controls are `input: "color"` registry controls mapped to the
+  Page Editor swatch UI.
+- Tests: `tests/vitest/pages/page-document-v2*.test.ts`,
+  `tests/vitest/pages/page-renderer-v2.test.tsx`,
+  `tests/vitest/pages/page-editor-control-registry.test.ts`, and
+  `tests/vitest/ui/page-editor-v2-flow.test.tsx`.
 
 ## Sub-Tasks
 
-- [ ] `core/widgets/core/badge.tsx`: `BadgeData`, `badgeSchema` (reject unknown),
-      `badgeDefaults`, token enums + CSS maps, `normalizeBadge*` (color safety,
-      enum clamps, icon-name validation), `badgeEditorContract` v2, `BadgeBlock`.
-- [ ] `core/admin/ui/widgets/editors/BadgeEditors.tsx`: Wizard (variant/size),
-      Visual (text + icon picker + swatch colors + size/shape/weight + clear),
-      Advanced (read-only diagnostics).
-- [ ] Register in `core/widgets/core/index.ts` + `modulePackMatrix.ts`.
-- [ ] Tests: `tests/vitest/widgets/badge.test.tsx`,
-      `tests/vitest/ui/badge-editor-wave.test.tsx`.
-- [ ] Docs: `_docs/_WIDGETS/BADGE.md`, `WIDGETS.md`, `WIDGET_PACK_MATRIX.md`.
+- [ ] Add `badge` to Page V2 block type/defaults/props/schema/normalizer,
+      capability matrix, and assistant-emittable catalog.
+- [ ] Add Page Editor controls for label, variant, size, shape, weight, colors,
+      icon, and icon position using existing registry input kinds.
+- [ ] Render the badge in `pageRendererV2.tsx` with safe color/icon handling and
+      existing block frame alignment.
+- [ ] Add/update Page V2 document, renderer, control registry, UI flow, and
+      XSS/sanitizer tests.
+- [ ] Docs: `_docs/PAGE_MODEL.md`, `_docs/DESIGN_TOKENS.md`,
+      `_docs/SECURITY_SPEC.md`.
 
 ## Implementation Pseudocode
 
 ```ts
-// core/widgets/core/badge.tsx (modelled on divider.tsx)
 export const badgeVariants = ["solid", "soft", "outline"] as const;
 export const badgeShapes = ["pill", "rounded", "square"] as const;
 export const badgeSizes = ["2xs", "xs", "sm", "md"] as const;            // reuses 471-01
@@ -64,19 +65,19 @@ export const badgeSizeCssValues: Record<BadgeSize, string> = {
   sm: `var(--text-sm, 0.875rem)`, md: `var(--text-md, 1rem)`,
 };
 
-export type BadgeData = {
+export type PageBadgeProps = {
   text: string; variant: BadgeVariant; shape: BadgeShape; size: BadgeSize;
   weight: BadgeWeight; background?: string | null; textColor?: string | null;
   icon?: string | null; iconPosition: "start" | "end";
 };
 
-export function normalizeBadgeData(raw: unknown): BadgeData {
+export function normalizeBadgeProps(raw: unknown): PageBadgeProps {
   // clamp enums; sanitize colors via shared safe-color helper (fail-closed);
   // validate icon vs lucide allowlist (unknown→null); default text "Badge".
 }
 
-export function BadgeBlock({ data }: { data: BadgeData }) {
-  const d = normalizeBadgeData(data);
+export function renderBadgeBlock(block: PageBlockV2) {
+  const d = readPageBadgeProps(block.props);
   return (
     <span data-badge data-badge-variant={d.variant} data-badge-size={d.size}
       className={badgeShapeClass(d.shape)}
@@ -91,17 +92,17 @@ export function BadgeBlock({ data }: { data: BadgeData }) {
 ```
 
 Regression-test shape:
-- Defaults render a non-empty pill with `data-badge*`.
+- Defaults render a non-empty Page block pill with `data-page-badge*`.
 - Unsafe colors drop to default; valid token/hex/var preserved.
 - `size`→correct `--text-*`; `shape`→radius class; `variant` resolves; unknown
   icon falls back.
-- Editor: controls emit `data-widget-control-path`; swatch-only colors; clear
-  removes the color.
+- Editor: Page Editor controls emit existing page-control metadata; color
+  controls use swatches and clear to `null`.
 
 ## Security Contract
 
-- **No new endpoints.** Persists via the existing widget save path (admin session
-  + existing perms/CSRF).
+- **No new endpoints.** Persists via the existing Page save/draft path (admin
+  session + existing perms/CSRF).
 - **Color sink:** `background`/`textColor` via the shared safe-color normalizer
   (reuse navigation/divider); no `url()`/`calc()`/`expression()`/raw CSS;
   token-backed CSS vars, not interpolated raw hex.
@@ -110,13 +111,13 @@ Regression-test shape:
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/widgets/badge.test.tsx`
-- `bun run test:vitest -- tests/vitest/ui/badge-editor-wave.test.tsx`
-- `bun run test:vitest` (widget registry / pack-matrix validation)
+- `bun run test:vitest -- tests/vitest/pages/page-document-v2.test.ts`
+- `bun run test:vitest -- tests/vitest/pages/page-renderer-v2.test.tsx`
+- `bun run test:vitest -- tests/vitest/pages/page-editor-control-registry.test.ts`
+- `bun run test:vitest -- tests/vitest/ui/page-editor-v2-flow.test.tsx`
 - `bun --cwd core lint` / `bun --cwd core lint:types`
 
 ## Documentation Updates Required
 
-- `_docs/_WIDGETS/BADGE.md` (new), `_docs/WIDGETS.md`,
-  `_docs/WIDGET_PACK_MATRIX.md`, `core/widgets/modulePackMatrix.ts` ↔ docs sync.
+- `_docs/PAGE_MODEL.md`, `_docs/DESIGN_TOKENS.md`, `_docs/SECURITY_SPEC.md`.
 - `_docs/_TASKS/TASK-471-04*.md` status; changelog rolled up by TASK-471-05.

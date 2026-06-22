@@ -3,6 +3,12 @@ import {
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
+  pageBadgeIconPositions,
+  pageBadgeIcons,
+  pageBadgeShapes,
+  pageBadgeSizes,
+  pageBadgeVariants,
+  pageBadgeWeights,
   pageBlockCapabilities,
   pageColumnDistributions,
   pageBlockWidths,
@@ -648,6 +654,49 @@ export const pageBlockControlRegistry: Record<
       input: "segmented",
       panel: "typography",
       options: pageTextAlignments,
+    }),
+  ],
+  badge: [
+    blockPropControl("badge", "text", { label: "Text", input: "text" }),
+    blockPropControl("badge", "variant", {
+      label: "Variant",
+      input: "segmented",
+      options: pageBadgeVariants,
+    }),
+    blockPropControl("badge", "size", {
+      label: "Size",
+      input: "segmented",
+      options: pageBadgeSizes,
+    }),
+    blockPropControl("badge", "shape", {
+      label: "Shape",
+      input: "segmented",
+      options: pageBadgeShapes,
+    }),
+    blockPropControl("badge", "weight", {
+      label: "Weight",
+      input: "segmented",
+      options: pageBadgeWeights,
+    }),
+    blockPropControl("badge", "background", {
+      label: "Background",
+      input: "color",
+      panel: "background",
+    }),
+    blockPropControl("badge", "textColor", {
+      label: "Text color",
+      input: "color",
+      panel: "style",
+    }),
+    blockPropControl("badge", "icon", {
+      label: "Icon",
+      input: "select",
+      options: pageBadgeIcons,
+    }),
+    blockPropControl("badge", "iconPosition", {
+      label: "Icon position",
+      input: "segmented",
+      options: pageBadgeIconPositions,
     }),
   ],
   button: [

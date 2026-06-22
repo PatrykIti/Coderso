@@ -4,6 +4,7 @@ import Ajv from "ajv";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
+  PAGE_TEXT_MARK_MAX,
   clearResponsiveOverride,
   clearBlockResponsiveOverride,
   createPageDocumentId,
@@ -13,6 +14,7 @@ import {
   isPageDocumentError,
   isLegacyOrVersionlessPageDocument,
   normalizePageDocumentV2ForWrite,
+  normalizeBlockTextColorMarks,
   normalizeStoredPageDocumentV2ForRead,
   pageBlockCapabilities,
   pageBlockDefaultProps,
@@ -451,7 +453,7 @@ describe("PageDocumentV2", () => {
     const document = buildDocument();
     document.sections[0]!.blocks[0]!.style = {
       fontFamily: "display",
-      fontSize: "2xl",
+      fontSize: "xs",
       fontWeight: "bold",
       lineHeight: 99,
       letterSpacing: -99,
@@ -468,7 +470,7 @@ describe("PageDocumentV2", () => {
 
     expect(normalized.sections[0]?.blocks[0]?.style).toEqual({
       fontFamily: "display",
-      fontSize: "2xl",
+      fontSize: "xs",
       fontWeight: "bold",
       lineHeight: 2.5,
       letterSpacing: -2,
@@ -525,6 +527,74 @@ describe("PageDocumentV2", () => {
     }
   });
 
+  test("normalizes text color marks with clamped ranges, overlap removal, and caps", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.props = {
+      text: "Hello world",
+      level: "h1",
+      align: "left",
+      marks: [
+        { type: "color", from: 0, to: 5, color: "#ef4444" },
+        { type: "color", from: 3, to: 8, color: "#22c55e" },
+        { type: "color", from: 6, to: 99, color: "#0f172a" },
+      ],
+    };
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+
+    expect(normalized.sections[0]?.blocks[0]?.props.marks).toEqual([
+      { type: "color", from: 0, to: 5, color: "#ef4444" },
+      { type: "color", from: 6, to: 11, color: "#0f172a" },
+    ]);
+  });
+
+  test("text color marks fail closed for unsafe shapes and stay base-only", () => {
+    const badColor = buildDocument();
+    badColor.sections[0]!.blocks[0]!.props = {
+      text: "Hello world",
+      level: "h1",
+      align: "left",
+      marks: [{ type: "color", from: 0, to: 5, color: "url(javascript:alert(1))" }],
+    };
+    expect(() => normalizePageDocumentV2ForWrite(badColor)).toThrow(
+      "Invalid sections.0.blocks.0.props.marks.0.color."
+    );
+
+    const responsiveMarks = buildDocument();
+    responsiveMarks.sections[0]!.blocks[0]!.responsive = {
+      mobile: {
+        props: {
+          marks: [{ type: "color", from: 0, to: 5, color: "#ef4444" }],
+        },
+      },
+    };
+    expect(() => normalizePageDocumentV2ForWrite(responsiveMarks)).toThrow(
+      "Text color marks are base-only at sections.0.blocks.0.responsive.mobile.props.marks."
+    );
+
+    expect(
+      normalizeBlockTextColorMarks("Hello", [
+        { type: "color", from: 0, to: 2, color: "#ef4444" },
+        { type: "script", from: 2, to: 4, color: "#22c55e" },
+        { type: "color", from: 4, to: 5, color: "expression(alert(1))" },
+      ])
+    ).toEqual([{ type: "color", from: 0, to: 2, color: "#ef4444" }]);
+  });
+
+  test("text color marks are count bounded", () => {
+    const marks = normalizeBlockTextColorMarks(
+      "abcdefghijklmnopqrstuvwxyz",
+      Array.from({ length: PAGE_TEXT_MARK_MAX + 4 }, (_, index) => ({
+        type: "color",
+        from: index,
+        to: index + 1,
+        color: "#ef4444",
+      }))
+    );
+
+    expect(marks).toHaveLength(PAGE_TEXT_MARK_MAX);
+  });
+
   test(
     "JSON schema accepts typography tokens plus nulls and rejects unknown tokens",
     { timeout: AJV_COMPILE_TEST_TIMEOUT_MS },
@@ -535,10 +605,16 @@ describe("PageDocumentV2", () => {
       const valid = buildDocument();
       valid.sections[0]!.blocks[0]!.style = {
         fontFamily: "sans",
-        fontSize: "lg",
+        fontSize: "2xs",
         fontWeight: "semibold",
         lineHeight: 1.4,
         letterSpacing: 0.5,
+      };
+      valid.sections[0]!.blocks[0]!.props = {
+        text: "Schema marked",
+        level: "h2",
+        align: "left",
+        marks: [{ type: "color", from: 0, to: 6, color: "#ef4444" }],
       };
       expect(validate(valid)).toBe(true);
 
@@ -630,6 +706,20 @@ describe("PageDocumentV2", () => {
         id: "blk_group",
         props: { direction: "row", wrap: true, gap: -5 },
       }),
+      createPageBlockV2("badge", {
+        id: "blk_badge",
+        props: {
+          text: "  New  ",
+          variant: "solid",
+          size: "2xs",
+          shape: "rounded",
+          weight: "bold",
+          background: "#ef4444",
+          textColor: "#ffffff",
+          icon: "check",
+          iconPosition: "end",
+        },
+      }),
     ];
 
     const normalized = normalizePageDocumentV2ForWrite(document);
@@ -650,6 +740,63 @@ describe("PageDocumentV2", () => {
       direction: "row",
       wrap: true,
       gap: 0,
+    });
+    expect(normalized.sections[0]?.blocks[6]?.props).toEqual({
+      text: "New",
+      variant: "solid",
+      size: "2xs",
+      shape: "rounded",
+      weight: "bold",
+      background: "#ef4444",
+      textColor: "#ffffff",
+      icon: "check",
+      iconPosition: "end",
+    });
+  });
+
+  test("badge block defaults and fail-closed props are native Page V2 props", () => {
+    expect(pageBlockDefaultProps.badge).toEqual({
+      text: "Badge",
+      variant: "soft",
+      size: "sm",
+      shape: "pill",
+      weight: "semibold",
+      background: null,
+      textColor: null,
+      icon: null,
+      iconPosition: "start",
+    });
+    expect(createPageBlockV2("badge").props).toEqual(pageBlockDefaultProps.badge);
+
+    const document = buildDocument();
+    document.sections[0]!.blocks = [
+      {
+        id: "blk_badge_unsafe",
+        type: "badge",
+        props: {
+          text: "Unsafe",
+          variant: "soft",
+          size: "sm",
+          shape: "pill",
+          weight: "semibold",
+          background: "url(javascript:alert(1))",
+          textColor: "#ffffff",
+          icon: "not-in-allowlist",
+          iconPosition: "start",
+        },
+        visibility: { visible: true },
+      },
+    ];
+
+    expect(() => normalizePageDocumentV2ForWrite(document)).toThrow(
+      "Invalid sections.0.blocks.0.props.background."
+    );
+
+    const storedRead = normalizeStoredPageDocumentV2ForRead(document);
+    expect(storedRead.sections[0]?.blocks[0]?.props).toMatchObject({
+      background: null,
+      textColor: "#ffffff",
+      icon: null,
     });
   });
 

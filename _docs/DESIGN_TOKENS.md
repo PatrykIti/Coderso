@@ -20,10 +20,13 @@ niestandardowych klas Tailwind w runtime.
 - neutrals: `--color-bg`, `--color-surface`, `--color-text`
 - spacing: `--space-xs` ... `--space-2xl`
 - radius: `--radius-sm` ... `--radius-xl`
-- typography: `--font-sans`, `--font-display`, `--text-sm` ... `--text-5xl`
-  (`3xl`/`4xl`/`5xl` extend the heading scale: 1.875rem/2.25rem/3rem; `5xl`
+- typography: `--font-sans`, `--font-display`, `--text-2xs`, `--text-xs`,
+  `--text-sm` ... `--text-5xl` (`2xs` = 0.625rem/10px, `xs` = 0.75rem/12px;
+  `3xl`/`4xl`/`5xl` extend the heading scale: 1.875rem/2.25rem/3rem; `5xl`
   matches the baked h1 utility class so the largest explicit preset never
-  shrinks a default h1).
+  shrinks a default h1). `xs` is the practical small-text floor for readable
+  copy; `2xs` is opt-in for compact labels/badges and should keep a sane
+  line-height.
 
 ## Pages v2 typography consumption (TASK-424)
 
@@ -32,8 +35,8 @@ and references the typography group above:
 
 - `fontFamily: "sans" | "display"` renders as
   `var(--font-sans/--font-display, <DEFAULT_TOKENS stack>)`.
-- `fontSize: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl"`
-  renders as `var(--text-*, <DEFAULT_TOKENS size>)`.
+- `fontSize: "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" |
+  "4xl" | "5xl"` renders as `var(--text-*, <DEFAULT_TOKENS size>)`.
 - `fontWeight: "normal" | "medium" | "semibold" | "bold"` maps to
   400/500/600/700 (no CSS variable; weights are not part of the v1 token
   groups).

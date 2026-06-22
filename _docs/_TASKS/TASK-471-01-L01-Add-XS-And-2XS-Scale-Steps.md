@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Typography
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 

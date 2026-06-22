@@ -85,6 +85,7 @@ export const sectionOptions: SectionOption[] = pageSectionTypes.flatMap((type) =
 export const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> = {
   heading: { label: "Heading", description: "Section title or subheading." },
   text: { label: "Text", description: "Paragraph copy." },
+  badge: { label: "Badge", description: "Compact label or status pill." },
   button: { label: "Button", description: "Clickable call to action." },
   image: { label: "Image", description: "Image from media or URL." },
   video: { label: "Video", description: "Embedded video from media or URL." },

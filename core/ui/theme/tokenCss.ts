@@ -71,6 +71,8 @@ export function toPageTypographyCssVariableMap(tokens: DesignTokens): Record<str
   return {
     "--font-sans": tokens.typography.sans,
     "--font-display": tokens.typography.display,
+    "--text-2xs": tokens.typography["2xs"],
+    "--text-xs": tokens.typography.xs,
     "--text-sm": tokens.typography.sm,
     "--text-md": tokens.typography.md,
     "--text-lg": tokens.typography.lg,

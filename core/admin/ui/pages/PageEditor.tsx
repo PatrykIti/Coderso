@@ -78,6 +78,7 @@ import {
   createPageDocumentId,
   createPageSectionV2,
   isPageTypographyCapableBlockType,
+  normalizeBlockTextColorMarks,
   normalizeStoredPageDocumentV2ForRead,
   resolvePageSectionForBreakpoint,
   type PageBlockType,
@@ -87,6 +88,7 @@ import {
   type PageSectionVariant,
   type PageSectionType,
   type PageSectionV2,
+  type PageTextColorMark,
 } from "../../../services/pages/pageDocumentV2";
 import {
   getPageResponsiveEffectiveVisible,
@@ -207,6 +209,7 @@ import {
   SectionGapInsertZone,
   type PageEditorInlineEditCommit,
   type PageEditorInlineEditTarget,
+  type PageEditorTextColorMarkCommit,
 } from "./editor/PageAuthoringCanvas";
 import { LayerBlockRows } from "./editor/PageEditorLayers";
 import { PageEditorCommandPalette } from "./editor/PageEditorCommandPalette";
@@ -541,6 +544,20 @@ const patchInlineTextPropForDevice = (
   const nextItems = items.slice();
   nextItems[index] = nextText;
   return patchBlockPropsForDevice(block, device, { [rootKey]: nextItems });
+};
+
+const applyTextColorMark = (
+  text: string,
+  currentMarks: unknown,
+  mark: PageEditorTextColorMarkCommit
+): PageTextColorMark[] => {
+  const existing = normalizeBlockTextColorMarks(text, currentMarks).filter(
+    (entry) => entry.to <= mark.from || entry.from >= mark.to
+  );
+  return normalizeBlockTextColorMarks(text, [
+    ...existing,
+    { type: "color", from: mark.from, to: mark.to, color: mark.color },
+  ]);
 };
 
 const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: unknown) => {
@@ -1181,6 +1198,34 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         return;
       }
       // The edited block no longer exists (deleted while editing): never write.
+    },
+    [device, pageDocument, setDocumentDraft]
+  );
+
+  const applyInlineTextColorMark = useCallback(
+    (commit: PageEditorTextColorMarkCommit) => {
+      if (device !== "desktop" || commit.propPath !== "text") return;
+      for (const section of pageDocument.sections) {
+        const blockPath = findSectionBlockPathById(section.blocks, commit.blockId);
+        if (!blockPath) continue;
+        const block = getPageBlockAtPath(section, blockPath);
+        if (!block) return;
+        const previous = readInlineTextPropValue(block, commit.propPath);
+        if (previous === null) return;
+        const nextMarks = applyTextColorMark(previous, block.props.marks, commit);
+        if (nextMarks.length === 0) return;
+        setDocumentDraft((current) => ({
+          ...current,
+          sections: current.sections.map((entry) =>
+            entry.id === section.id
+              ? updatePageBlockAtPath(entry, blockPath, (currentBlock) =>
+                  patchBlockPropsForDevice(currentBlock, "desktop", { marks: nextMarks })
+                ).section
+              : entry
+          ),
+        }));
+        return;
+      }
     },
     [device, pageDocument, setDocumentDraft]
   );
@@ -2470,6 +2515,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       onAddBlockBeside={openCommandPaletteBesideSelected}
                       onStartInlineEdit={startInlineEdit}
                       onCommitInlineEdit={commitInlineEdit}
+                      onApplyTextColorMark={applyInlineTextColorMark}
                     />
                   </Fragment>
                 ))}

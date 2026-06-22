@@ -221,10 +221,30 @@ const blockJustifySelfValues: Record<string, string> = {
   right: "end",
 };
 
-/** Mirrors `pageBlockWidthClass` (Tailwind `w-full` / `w-fit`). */
+const isBlockSelfAligned = (align: unknown) => align === "center" || align === "right";
+
+const blockSelfAlignmentDeclarations = (align: unknown): CssDeclaration[] => {
+  if (align === "center") {
+    return [
+      { property: "margin-left", value: "auto" },
+      { property: "margin-right", value: "auto" },
+    ];
+  }
+  if (align === "right") {
+    return [{ property: "margin-left", value: "auto" }];
+  }
+  return [];
+};
+
+/** Mirrors `pageBlockWidthClass` / `pageBlockEffectiveWidthClass`. */
 const blockWidthValues: Record<string, string> = {
   full: "100%",
   auto: "fit-content",
+};
+
+const blockEffectiveWidthValue = (style: NonNullable<PageBlockV2["style"]>): string => {
+  if (isBlockSelfAligned(style.align)) return "fit-content";
+  return blockWidthValues[style.width ?? ""] ?? "auto";
 };
 
 /** Mirrors `toBoxSpacingValue` in `pageRendererV2.tsx`. */
@@ -464,10 +484,10 @@ const collectBlockDeclarations = (
     const justifySelf = blockJustifySelfValues[mergedStyle.align ?? ""];
     if (textAlign) frame.push({ property: "text-align", value: textAlign });
     if (justifySelf) frame.push({ property: "justify-self", value: justifySelf });
+    frame.push(...blockSelfAlignmentDeclarations(mergedStyle.align));
   }
-  if (styleOverride.width !== undefined) {
-    const value = blockWidthValues[mergedStyle.width ?? ""];
-    if (value) frame.push({ property: "width", value });
+  if (styleOverride.width !== undefined || styleOverride.align !== undefined) {
+    frame.push({ property: "width", value: blockEffectiveWidthValue(mergedStyle) });
   }
   if (styleOverride.textColor !== undefined) {
     if (mergedStyle.textColor === null) {

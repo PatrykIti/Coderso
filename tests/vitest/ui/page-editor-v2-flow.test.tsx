@@ -728,6 +728,7 @@ const clickSelector = (container: ParentNode, selector: string) => {
 const pageEditorBlockLabels: Record<PageBlockType, string> = {
   heading: "Heading",
   text: "Text",
+  badge: "Badge",
   button: "Button",
   image: "Image",
   video: "Video",
@@ -1543,8 +1544,10 @@ test("PageEditor block style controls update visible canvas style and saved data
     await flush();
 
     const block = findEditorBlock(view.container, "blk-copy");
-    expect(block.className).toContain("w-full");
+    expect(block.className).toContain("w-fit");
+    expect(block.classList.contains("w-full")).toBe(false);
     expect(block.className).toContain("justify-self-center");
+    expect(block.className).toContain("mx-auto");
     expect(block.style.getPropertyValue("--coderso-block-text")).toBe("#123456");
     expect(block.style.getPropertyValue("--coderso-block-surface")).toBe("#fef3c7");
     expect(block.style.opacity).toBe("0.5");
@@ -1552,6 +1555,8 @@ test("PageEditor block style controls update visible canvas style and saved data
     expect(block.style.boxShadow).toBe("0 14px 40px rgba(15, 23, 42, 0.12)");
     expect(block.style.padding).toBe("12px 14px 0px 0px");
     expect(block.style.marginBottom).toBe("10px");
+    expect(block.style.marginLeft).toBe("auto");
+    expect(block.style.marginRight).toBe("auto");
 
     clickButton(view.container, "Save");
     await flush();
@@ -2144,7 +2149,7 @@ test("PageEditor section inserter follows owner insertable section capabilities"
   }
 });
 
-test("PageEditor command palette catalog is frozen to 11 sections plus 17 blocks with gated titles absent", async () => {
+test("PageEditor command palette catalog is frozen to 11 sections plus 18 blocks with gated titles absent", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -2177,11 +2182,12 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 17 blocks
       "Custom",
     ]);
     // TASK-456 amendment: "Form" joined the block palette; TASK-457
-    // amendment: "Collection" joined it; TASK-459-02 amendment: "Filters"
-    // joined it (17 blocks, final frozen catalog).
+    // amendment: "Collection" joined it; TASK-459-02 amendment: "Filters";
+    // TASK-471-04 amendment: native "Badge" block (18 blocks).
     expect(blockPaletteTitles).toEqual([
       "Heading",
       "Text",
+      "Badge",
       "Button",
       "Image",
       "Video",
@@ -2198,7 +2204,7 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 17 blocks
       "Columns",
       "Group",
     ]);
-    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(28);
+    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(29);
 
     expect(sectionPaletteTitles).not.toContain("Template");
     expect(sectionPaletteTitles).not.toContain("Navigation");
@@ -2806,6 +2812,8 @@ test("PageEditor canvas frame anchors site typography token variables for WYSIWY
     )) {
       expect(frame.style.getPropertyValue(variable), variable).toBe(value);
     }
+    expect(frame.style.getPropertyValue("--text-2xs")).toBe("0.625rem");
+    expect(frame.style.getPropertyValue("--text-xs")).toBe("0.75rem");
     expect(frame.style.getPropertyValue("--text-sm")).toBe("0.875rem");
     expect(frame.style.getPropertyValue("--text-5xl")).toBe("3rem");
   } finally {
@@ -2816,7 +2824,7 @@ test("PageEditor canvas frame anchors site typography token variables for WYSIWY
 test("PageEditor canvas frame paints the resolved site design.tokens typography over the defaults", async () => {
   siteSettingsState.settings = {
     "design.tokens": {
-      typography: { sm: "1.125rem", "5xl": "3.5rem" },
+      typography: { xs: "0.8rem", sm: "1.125rem", "5xl": "3.5rem" },
     },
   };
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
@@ -2827,9 +2835,11 @@ test("PageEditor canvas frame paints the resolved site design.tokens typography 
     const frame = view.container.querySelector(
       '[data-page-editor-canvas-frame="true"]'
     ) as HTMLElement;
+    expect(frame.style.getPropertyValue("--text-xs")).toBe("0.8rem");
     expect(frame.style.getPropertyValue("--text-sm")).toBe("1.125rem");
     expect(frame.style.getPropertyValue("--text-5xl")).toBe("3.5rem");
     // Untouched tokens keep the DEFAULT_TOKENS anchor.
+    expect(frame.style.getPropertyValue("--text-2xs")).toBe("0.625rem");
     expect(frame.style.getPropertyValue("--text-md")).toBe("1rem");
     expect(frame.style.getPropertyValue("--font-sans")).toBe(DEFAULT_TOKENS.typography.sans);
   } finally {

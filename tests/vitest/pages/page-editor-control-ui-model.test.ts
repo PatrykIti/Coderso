@@ -117,13 +117,15 @@ describe("page editor control ui model adapter", () => {
       options: ["sans", "display"],
       labels: { sans: "Sans", display: "Display" },
     });
-    // The font-size scale tops out at 5xl (matching the baked h1 class) and
-    // STAYS segmented above the select-upgrade limit: declared segmented
-    // controls never degrade to a native select.
+    // The font-size scale spans compact badges/body copy through the baked h1
+    // class and STAYS segmented above the select-upgrade limit: declared
+    // segmented controls never degrade to a native select.
     expect(resolveById("block.style.fontSize")).toMatchObject({
       kind: "segmented",
-      options: ["sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
+      options: ["2xs", "xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
       labels: {
+        "2xs": "XX-small",
+        xs: "X-small",
         sm: "Small",
         md: "Medium",
         lg: "Large",

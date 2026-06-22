@@ -7,7 +7,8 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-464 (authoring sanitizers), TASK-469 (rich-text inline
 edit fidelity)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 

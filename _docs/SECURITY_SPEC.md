@@ -371,6 +371,16 @@ Rotacja klucza:
   and escaped before `url("...")` emission. `url(javascript:...)`,
   expression-like CSS, protocol-relative media, and event-handler payloads are
   fail-closed to `null` or the documented default.
+- Page text color marks (`heading`/plain `text`/`quote` `props.marks`) stay as
+  bounded JSON ranges, not raw HTML. Each mark color is normalized through the
+  CSS color sanitizer before store and re-normalized before render; the renderer
+  emits React spans only for validated ranges and does not broaden the rich-text
+  `span/style` allowlist.
+- Native Page badge block colors (`props.background`, `props.textColor`) reuse
+  the same CSS color sanitizer, and badge icons are fixed allowlist tokens
+  (`check`, `sparkles`, `star`, `zap`, `shield`, `heart`) mapped to local
+  components. Unknown icons normalize to `null`; no dynamic component lookup or
+  string-evaluated icon render is allowed.
 - Renderers keep defense-in-depth sanitization even when upstream
   normalization already ran. New Page v2 render sinks must add regression
   coverage in the Vitest sanitizer/XSS suites and keep local Semgrep/security

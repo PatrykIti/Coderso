@@ -6,7 +6,8 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-424 (typography inspector), TASK-449 (render defaults),
 TASK-464 (authoring sanitizers), TASK-469 (rich-text inline edit fidelity)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -28,8 +29,8 @@ implementation detail.
    header/heading/paragraph can carry 2–4 colors. → `TASK-471-03`.
 2. **Real block centering** — the Layout `center` option centers the block box in
    its space for *every* block type (today it left-aligns). → `TASK-471-02`.
-3. **Flexible badges** — a dedicated, fully configurable badge/pill (text, color,
-   size, shape, optional icon). → `TASK-471-04`.
+3. **Flexible badges** — a dedicated, fully configurable native Page V2
+   badge/pill block (text, color, size, shape, optional icon). → `TASK-471-04`.
 4. **Smaller text** — x-small / xx-small sizes for captions, eyebrows, fine
    print, and badge labels (today the floor is `sm`/14px). → `TASK-471-01`.
 
@@ -50,7 +51,7 @@ implementation detail.
 | TASK-471-01 | Extended Text Size Scale | High | Small | L01 |
 | TASK-471-02 | Block Center Self-Alignment Fix | High | Medium | L01 |
 | TASK-471-03 | Per-Fragment Rich-Text Color | High | Large | L01 |
-| TASK-471-04 | Flexible Badge Widget | Medium | Medium | L01 |
+| TASK-471-04 | Flexible Badge Block | Medium | Medium | L01 |
 | TASK-471-05 | Validation, Docs, And Closure | High | Small | L01 |
 
 ### Dependency order
@@ -66,8 +67,8 @@ implementation detail.
 
 ## Shared constraints (apply to every leaf)
 
-- **Schema-first / reject-unknown / normalize** — new fields owned by their
-  domain module, validated and normalized before persist/render. Backward
+- **Schema-first / reject-unknown / normalize** — new fields owned by the Page
+  V2 document module, validated and normalized before persist/render. Backward
   compatible via `pageBlockRenderDefaults` + nullable schema.
 - **Color safety** — all author colors pass `isSafeAuthoringCssColor` /
   `sanitizeAuthoringCssColor`; no `url()`/`calc()`/`expression()`/raw-HTML sinks;
@@ -80,7 +81,8 @@ implementation detail.
 ## Security Contract (umbrella)
 
 No new API endpoints; all changes ride the existing admin pages save/draft routes
-(`pages:write`, admin session, existing CSRF) and the widget persistence path.
+(`pages:write`, admin session, existing CSRF) and the Page V2 document persistence
+path.
 Per-leaf Security Contracts apply where new validated input is introduced
 (471-03 color marks, 471-04 badge colors/icon).
 
@@ -97,6 +99,13 @@ Per-leaf Security Contracts apply where new validated input is introduced
 
 ## Documentation Updates Required (rolled up by 471-05)
 
-`_docs/PAGE_MODEL.md`, `_docs/DESIGN_TOKENS.md`, `_docs/WIDGETS.md`,
-`_docs/WIDGET_PACK_MATRIX.md`, `_docs/_WIDGETS/BADGE.md`, `_docs/SECURITY_SPEC.md`,
+`_docs/PAGE_MODEL.md`, `_docs/DESIGN_TOKENS.md`, `_docs/SECURITY_SPEC.md`,
 `_docs/_TASKS/README.md`, `_docs/_CHANGELOG/`.
+
+## Completion Notes
+
+Completed on 2026-06-22. Page V2 now supports `2xs`/`xs` typography tokens,
+block-box self-alignment for centered/right-aligned blocks, safe text color
+marks for selected heading/text/quote fragments, and a native `badge` block with
+strict enum/color/icon normalization. No Page Editor widget surface was added.
+Validation and live smoke evidence are recorded in changelog 1190.

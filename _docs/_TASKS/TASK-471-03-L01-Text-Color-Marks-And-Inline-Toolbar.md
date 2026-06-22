@@ -7,7 +7,8 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-464 (authoring sanitizers), TASK-469 (rich-text inline
 edit fidelity)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,7 +19,7 @@ fragment-selection mini-toolbar with a color swatch, a sanitizer that permits
 only validated color spans, and a renderer that paints marked segments — reusing
 the Posts inline-marks pattern.
 
-## Design decisions (defaults — confirm in TASK-471-05)
+## Design decisions (confirmed in TASK-471-05)
 
 - **Mark type:** `color` only (others are TASK-472-05).
 - **Scope:** `heading`, `text`, `quote` (`pageTypographyCapableBlockTypes`);

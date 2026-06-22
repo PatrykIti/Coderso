@@ -27,6 +27,8 @@ export type DesignTokens = {
   typography: {
     sans: string;
     display: string;
+    "2xs": string;
+    xs: string;
     sm: string;
     md: string;
     lg: string;
@@ -75,6 +77,8 @@ export const DEFAULT_TOKENS: DesignTokens = {
   typography: {
     sans: '"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif',
     display: '"Space Grotesk", "Helvetica Neue", Arial, sans-serif',
+    "2xs": "0.625rem",
+    xs: "0.75rem",
     sm: "0.875rem",
     md: "1rem",
     lg: "1.125rem",

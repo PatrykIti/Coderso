@@ -23,6 +23,7 @@ const baseCanvasProps = {
   onAddBlockBeside: vi.fn(),
   onStartInlineEdit: vi.fn(),
   onCommitInlineEdit: vi.fn(),
+  onApplyTextColorMark: vi.fn(),
 };
 
 const mount = (node: ReactNode) => {
@@ -74,6 +75,7 @@ test("SectionCanvas renders existing canvas chrome and ghost add affordances", (
       onAddBlockBeside={vi.fn()}
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
+      onApplyTextColorMark={vi.fn()}
     />
   );
 
@@ -114,6 +116,7 @@ test("SectionCanvas renders hidden block ghost through the reusable label helper
       onAddBlockBeside={vi.fn()}
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
+      onApplyTextColorMark={vi.fn()}
     />
   );
 
@@ -155,6 +158,7 @@ test("SectionCanvas exposes sanitized rich text through the inline edit wrapper"
       onAddBlockBeside={vi.fn()}
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
+      onApplyTextColorMark={vi.fn()}
     />
   );
 
@@ -260,5 +264,75 @@ test("SectionCanvas rich inline edit commits innerHTML for the sanitizer owner",
     });
   } finally {
     mounted.cleanup();
+  }
+});
+
+test("SectionCanvas inline text color toolbar applies the selected text range", () => {
+  const onApplyTextColorMark = vi.fn();
+  const section = createPageSectionV2("content", {
+    id: "sec-mark-toolbar",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-mark-toolbar",
+        props: { text: "Canvas headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+  const mounted = mount(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected
+      selectedBlockPath={[{ index: 0 }]}
+      selectedBlockId="blk-mark-toolbar"
+      inlineEditTarget={{ blockId: "blk-mark-toolbar", propPath: "text" }}
+      {...baseCanvasProps}
+      onApplyTextColorMark={onApplyTextColorMark}
+    />
+  );
+
+  try {
+    const region = mounted.container.querySelector(
+      '[data-page-editor-inline-edit="active"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    expect(region).toBeTruthy();
+    const textNode = region?.firstChild;
+    expect(textNode?.nodeType).toBe(Node.TEXT_NODE);
+    flushSync(() => {
+      if (!region || !textNode) return;
+      const range = document.createRange();
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 6);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+      region.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+    });
+
+    const swatch = mounted.container.querySelector(
+      "[data-page-editor-text-color-swatch]"
+    ) as HTMLButtonElement | null;
+    expect(
+      mounted.container.querySelector('[data-page-editor-text-color-toolbar="true"]')
+    ).toBeTruthy();
+    expect(swatch).toBeTruthy();
+    expect(swatch?.disabled).toBe(false);
+    flushSync(() => {
+      swatch?.click();
+    });
+
+    expect(onApplyTextColorMark).toHaveBeenCalledWith(
+      expect.objectContaining({
+        blockId: "blk-mark-toolbar",
+        propPath: "text",
+        from: 0,
+        to: 6,
+        color: expect.stringMatching(/^#/),
+      })
+    );
+  } finally {
+    mounted.cleanup();
+    window.getSelection()?.removeAllRanges();
   }
 });

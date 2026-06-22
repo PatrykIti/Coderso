@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Renderer
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 

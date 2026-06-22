@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 56 tasks
+- **To Do:** 45 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2646 tasks
+- **Done:** 2657 tasks
 
 ---
 
@@ -96,17 +96,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Large | Replace the eager widget editor barrel with typed lazy editor component bundles. |
 | TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
 | TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
-| TASK-471 | Page Editor Inline Color, Align, Badge, And Text Size | High | Large | Business umbrella: 4 owner capabilities — multi-color headings, real block centering, flexible badges, smaller text. Topic subtasks 471-01..05 (each with executable leaves). |
-| TASK-471-01 | Extended Text Size Scale | High | Small | Topic: add `xs`/`2xs` to the Page V2 typography scale. → L01. |
-| TASK-471-01-L01 | Add XS And 2XS Scale Steps | High | Small | Leaf: enum + token defaults + CSS vars + labels + a11y floor; foundation for the badge. |
-| TASK-471-02 | Block Center Self-Alignment Fix | High | Medium | Topic: `align` center/right centers the block box for all block types. → L01. |
-| TASK-471-02-L01 | Decouple Self-Alignment From Content | High | Medium | Leaf: split block self-alignment from text alignment in `pageRendererV2.tsx`; center via a grid-safe mechanism; honor align on media blocks. |
-| TASK-471-03 | Per-Fragment Rich-Text Color | High | Large | Topic: recolor a selected text fragment on the canvas. → L01. |
-| TASK-471-03-L01 | Text Color Marks And Inline Toolbar | High | Large | Leaf: color marks model + inline swatch toolbar + safe segment render, reusing the Posts inline-marks pattern; coordinates with TASK-469. |
-| TASK-471-04 | Flexible Badge Widget | Medium | Medium | Topic: new dedicated core `badge` widget. → L01. |
-| TASK-471-04-L01 | Badge Widget Schema, Editors, Render | Medium | Medium | Leaf: schema/defaults/normalize, wizard/visual/advanced editors, render, tests, pack-matrix + docs; consumes the `xs`/`2xs` scale. |
-| TASK-471-05 | Validation, Docs, And Closure | High | Small | Topic: family closure. → L01. |
-| TASK-471-05-L01 | Live Smoke, Docs, And Board Closure | High | Small | Leaf: lanes + live `playwright-cli` smoke + docs/board/changelog + drift passes; closes TASK-471 when 01–04 Done. |
 | TASK-472 | Page Editor V2 Authoring Controls Backlog | Medium | Large | Business umbrella: power-user authoring backlog (style completeness, background authoring, undo/redo + clipboard, token color binding, inline formatting). Topic subtasks 472-01..06. Sibling of TASK-471. |
 | TASK-472-01 | Block Style Control Completeness | High | Small | Topic: surface margins + add border width/style. → L01, L02. |
 | TASK-472-01-L01 | Surface Block Margin Controls | High | Small | Leaf: margin controls registered (`:464-475`) + painted (`:511`) but missing from the Spacing panel; reproduce-first + surface. |
@@ -197,6 +186,17 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-468-07-L02 | Legacy Widget Surface And Bridge Removal | High | Large | Done (2026-06-22): Screen-only widget registrations and render bridge removed from active Custom Screen paths. |
 | TASK-468-07-L03 | Drop Legacy Blocks Bindings Columns | High | Large | Done (2026-06-22): `custom_screens.blocks` and `custom_screens.bindings` removed from schema, migrations, snapshots, and service row mapping. |
 | TASK-468-07-L04 | Docs Changelog Board And Final Validation | High | Medium | Done (2026-06-22): Source docs, task board, changelog, and final validation evidence synchronized. |
+| TASK-471 | Page Editor Inline Color, Align, Badge, And Text Size | High | Large | Done (2026-06-22): Page V2 authoring gained small text tokens, real block self-alignment, safe text color marks, and a native badge block; validation and live smoke recorded in changelog 1190. |
+| TASK-471-01 | Extended Text Size Scale | High | Small | Done (2026-06-22): `2xs` and `xs` typography tokens added end-to-end for Page V2. |
+| TASK-471-01-L01 | Add XS And 2XS Scale Steps | High | Small | Done (2026-06-22): Enum, token defaults, CSS vars, labels, renderer, and coverage landed. |
+| TASK-471-02 | Block Center Self-Alignment Fix | High | Medium | Done (2026-06-22): Center/right layout now self-aligns block boxes instead of only text content. |
+| TASK-471-02-L01 | Decouple Self-Alignment From Content | High | Medium | Done (2026-06-22): Renderer and responsive CSS split block self-alignment from content alignment for all block types. |
+| TASK-471-03 | Per-Fragment Rich-Text Color | High | Large | Done (2026-06-22): Heading/text/quote blocks now support bounded safe color marks. |
+| TASK-471-03-L01 | Text Color Marks And Inline Toolbar | High | Large | Done (2026-06-22): Desktop inline swatch toolbar, mark normalization, safe render, and editor-flow coverage landed. |
+| TASK-471-04 | Flexible Badge Block | Medium | Medium | Done (2026-06-22): Native Page V2 `badge` block added without widget surface changes. |
+| TASK-471-04-L01 | Badge Block Schema, Controls, Render | Medium | Medium | Done (2026-06-22): Badge schema/defaults, strict controls, icon/color normalization, renderer, and tests landed. |
+| TASK-471-05 | Validation, Docs, And Closure | High | Small | Done (2026-06-22): Family docs, board, changelog, gates, and smoke evidence synchronized. |
+| TASK-471-05-L01 | Live Smoke, Docs, And Board Closure | High | Small | Done (2026-06-22): `coderso-dev-core-host` + `playwright-cli` smoke passed on a throwaway published page and cleaned it up. |
 | TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Done (2026-06-20): Rich `text` blocks now inline-edit on canvas and round-trip allowlisted markup through the shared authoring sanitizer. |
 | TASK-469-01 | Inline-Edit Contract Rich-Aware Sanitization | Medium | Medium | Done (2026-06-20): `preserveMarkup` targets, rich sanitizer dispatch, and contract coverage landed. |
 | TASK-469-01-L01 | Rich Target Resolution And Shared-Sanitizer Commit | Medium | Medium | Done (2026-06-20): Rich string targets resolve, non-string values fail closed, and required empty commits retain previous markup. |

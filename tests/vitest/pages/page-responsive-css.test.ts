@@ -340,7 +340,9 @@ describe("buildPageResponsiveCss", () => {
     expect(css).toContain('[data-block-id="blk_text"]{');
     expect(css).toContain("text-align:center !important");
     expect(css).toContain("justify-self:center !important");
-    expect(css).toContain("width:100% !important");
+    expect(css).toContain("margin-left:auto !important");
+    expect(css).toContain("margin-right:auto !important");
+    expect(css).toContain("width:fit-content !important");
     expect(css).toContain("color:#222222 !important");
     expect(css).toContain("--coderso-block-text:#222222 !important");
     expect(css).toContain("background-color:#eeeeee !important");
@@ -413,8 +415,10 @@ describe("buildPageResponsiveCss", () => {
       '[data-block-id="blk_btn"]{' +
         "justify-self:center !important;" +
         "margin:0px 0px 6px 0px !important;" +
+        "margin-left:auto !important;" +
+        "margin-right:auto !important;" +
         "text-align:center !important;" +
-        "width:100% !important}"
+        "width:fit-content !important}"
     );
     // Visibility also stays a frame rule: hiding removes the whole block.
     expect(css).toContain('[data-block-id="blk_btn_hide"]{display:none !important}');

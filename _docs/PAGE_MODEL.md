@@ -210,8 +210,8 @@ Block style is bounded and optional. Supported style keys are:
   "keep the baked classes" so pre-existing documents render identically:
   - `fontFamily`: `sans` | `display` (theme token refs emitted as
     `var(--font-sans/--font-display, <default stack>)`),
-  - `fontSize`: `sm` | `md` | `lg` | `xl` | `2xl` (theme scale refs emitted as
-    `var(--text-*, <default size>)`),
+  - `fontSize`: `2xs` | `xs` | `sm` | `md` | `lg` | `xl` | `2xl` | `3xl` |
+    `4xl` | `5xl` (theme scale refs emitted as `var(--text-*, <default size>)`),
   - `fontWeight`: `normal` | `medium` | `semibold` | `bold` (400/500/600/700),
   - `lineHeight`: unitless number clamped to 1–2.5,
   - `letterSpacing`: px number clamped to -2–8.
@@ -228,6 +228,14 @@ baked utility classes (`text-5xl`, `font-semibold`) on the text node itself.
 Unknown typography tokens reject on fresh writes and normalize to `null` on
 stored reads.
 
+`style.align` is block-box self-alignment for every block type. `center` and
+`right` resolve the frame to fit-content width (`w-fit`) and use grid
+`justify-self` plus auto horizontal margins, so `width: "full"` does not force a
+centered/right-aligned block to stretch. Content/text alignment remains owned by
+the block's text props where they exist (`heading.props.align`, `text.props.align`)
+or by the relocated typography presentation of `style.align` for other
+text-capable blocks.
+
 The Pages owner clamps numeric style values and rejects unknown style keys on
 fresh writes. Block responsive overrides are sparse deltas: `responsive.mobile`
 or `responsive.tablet` may override only the changed `props`, `style`, or
@@ -237,6 +245,7 @@ overrides through `resolvePageDocumentForBreakpoint`.
 Core block types:
 - `heading`
 - `text`
+- `badge`
 - `button`
 - `image`
 - `video`
@@ -290,6 +299,16 @@ preservation:
 Each block type has a strict allowlist of props. Unknown props are rejected on
 fresh writes by both the imperative normalizer and `pageDocumentV2JsonSchema`.
 Examples:
+- `heading`/`text`/`quote`: optional `marks[]` for base-only fragment color
+  ranges. Each mark is `{ "type": "color", "from": number, "to": number,
+  "color": string }`, capped at 24, clamped to the plain text length, and
+  fail-closed through the Page CSS color sanitizer. Responsive overrides may
+  not carry `props.marks`.
+- `badge`: `text`, `variant` (`solid` | `soft` | `outline`), `size` (`2xs` |
+  `xs` | `sm` | `md`), `shape` (`pill` | `rounded` | `square`), `weight`
+  (`normal` | `medium` | `semibold` | `bold`), nullable `background`,
+  nullable `textColor`, nullable allowlisted `icon` (`check`, `sparkles`,
+  `star`, `zap`, `shield`, `heart`), and `iconPosition` (`start` | `end`).
 - `button`: `label`, `href`, `target`, `variant`, `size`
 - `image`: `assetId`, `src`, `alt`, `caption`, `fit`
 - `collection`: `contentTypeId`, `queryId`, `limit`, `templateId`,
@@ -332,6 +351,15 @@ truthful:
   `ghost`, `link`), `button.size` changes anchor spacing/type scale, and the
   primary/accent surfaces consume `--coderso-section-accent` through inline
   styles on the anchor, not through generated utility-class availability.
+- `badge` renders as a native Page V2 inline-flex pill with `data-page-badge`
+  attributes. Badge size resolves through the Page typography token variables
+  (`--text-2xs` through `--text-md`), colors are sanitized before store/render,
+  and icon tokens are fixed to a small lucide allowlist; no widget runtime,
+  widget registry, or widget editor participates.
+- `heading`/plain `text`/`quote` color marks render as React span segments with
+  sanitized inline `color`. The renderer re-normalizes stored marks before
+  painting and never opens a broad `span style` HTML allowlist or
+  `dangerouslySetInnerHTML` sink for marks.
 - `image.fit` changes the public image object-fit class (`cover` or
   `contain`).
 - `video.autoplay` emits `autoPlay` on the rendered `<video>` and forces the
