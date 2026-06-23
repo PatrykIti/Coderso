@@ -57,9 +57,15 @@ the leaves under each subtask. This file stays business-level.
 ## Shared constraints (apply to every leaf)
 
 Same as TASK-471: schema-first / reject-unknown / normalize; color & URL safety
-(`isSafeAuthoringCssColor`, `normalizeWidgetSafeHref`, media-URL policy); renderer
-parity; controls through the registry adapter; **untrusted input** (clipboard,
-pasted fragments) is fully re-normalized before use.
+(`isSafeAuthoringCssColor`, `sanitizeAuthoringLinkHref`, media-URL policy);
+renderer parity; controls through the registry adapter; **untrusted input**
+(clipboard, pasted fragments) is fully re-normalized before use.
+
+Implementation note: Page Editor V2 remains sections/blocks only. If the current
+link sanitizer still delegates to the historical `normalizeWidgetSafeHref`
+helper, TASK-472 must rename/extract that helper to a neutral Page/authoring
+name such as `normalizeAuthoringSafeHref` before adding link marks. Page code
+must not import widget-core modules for canvas behavior.
 
 ## Security Contract (umbrella)
 

@@ -23,8 +23,13 @@ inline-marks pattern; **must land after TASK-471-03**.
 - 471-03 adds a `marks` structure (color-only) + selection toolbar + safe segment
   renderer.
 - Sanitizer already permits `strong`/`em`/`i`/`a(href, rel)`
-  (`pageAuthoringSanitizers.ts:80-111`); safe href `normalizeWidgetSafeHref`;
+  (`pageAuthoringSanitizers.ts:80-111`); safe href `sanitizeAuthoringLinkHref`;
   safe color `isSafeAuthoringCssColor`.
+
+Helper naming note: the existing implementation may still delegate through the
+historically named `normalizeWidgetSafeHref`. This task must rename/extract that
+helper to a neutral Page/authoring helper, e.g. `normalizeAuthoringSafeHref`, and
+keep the Page Editor canvas contract sections/blocks-only.
 
 ## Executable Leaves
 
