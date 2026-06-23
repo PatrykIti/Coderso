@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Controls
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -27,18 +29,18 @@ Add a token-aware color control: the author picks a site design token (stored as
 
 ## Sub-Tasks
 
-- [ ] Extend the color swatch control with a token palette (name + live preview)
+- [x] Extend the color swatch control with a token palette (name + live preview)
       drawn from active site tokens, alongside the raw input ("token | custom").
-- [ ] Store `var(--color-<token>)` for token-bound colors; raw for custom;
+- [x] Store `var(--color-<token>)` for token-bound colors; raw for custom;
       normalize both through the color sink.
-- [ ] Confirm/extend `sanitizeAuthoringCssColor` to allow only
+- [x] Confirm/extend `sanitizeAuthoringCssColor` to allow only
       `var(--color-<knownToken>)` (allowlist of emitted token names) and still
       reject arbitrary `var()`/`url()`/`expression()`.
-- [ ] Resolve gracefully when a referenced token was removed (safe default; no
+- [x] Resolve gracefully when a referenced token was removed (safe default; no
       broken color).
-- [ ] Apply consistently across textColor/background/borderColor; coordinate with
+- [x] Apply consistently across textColor/background/borderColor; coordinate with
       TASK-471-03 marks + TASK-471-04 badge colors.
-- [ ] Coverage: token bind round-trips; unknown token rejected; removed token
+- [x] Coverage: token bind round-trips; unknown token rejected; removed token
       falls back; raw values still work.
 
 ## Implementation Pseudocode

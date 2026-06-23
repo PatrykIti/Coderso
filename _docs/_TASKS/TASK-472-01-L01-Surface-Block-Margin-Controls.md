@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Controls
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -28,13 +30,13 @@ TASK-470 — they may already render and this closes verify-only).
 
 ## Sub-Tasks
 
-- [ ] Reproduce: open a block → Spacing panel; do the four margin rows render
+- [x] Reproduce: open a block → Spacing panel; do the four margin rows render
       alongside padding? Record the result.
-- [ ] If padding renders but margin does not, fix the filter/composer so all four
+- [x] If padding renders but margin does not, fix the filter/composer so all four
       `block.style.margin.*` controls render with the same affordances (responsive
       override + reset).
-- [ ] If margins already render, close verify-only with evidence.
-- [ ] Confirm coverage that the Spacing panel exposes margin controls.
+- [x] If margins already render, close verify-only with evidence.
+- [x] Confirm coverage that the Spacing panel exposes margin controls.
 
 ## Implementation Pseudocode
 

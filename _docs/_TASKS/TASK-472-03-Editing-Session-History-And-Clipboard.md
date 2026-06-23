@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Editing UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454 (dirty/autosave guard — coordinate)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 

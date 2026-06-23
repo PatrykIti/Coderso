@@ -7,7 +7,9 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-471-03 (per-fragment color marks model + inline toolbar),
 TASK-464 (sanitizers), TASK-469 (inline edit fidelity)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -26,10 +28,9 @@ inline-marks pattern; **must land after TASK-471-03**.
   (`pageAuthoringSanitizers.ts:80-111`); safe href `sanitizeAuthoringLinkHref`;
   safe color `isSafeAuthoringCssColor`.
 
-Helper naming note: the existing implementation may still delegate through the
-historically named `normalizeWidgetSafeHref`. This task must rename/extract that
-helper to a neutral Page/authoring helper, e.g. `normalizeAuthoringSafeHref`, and
-keep the Page Editor canvas contract sections/blocks-only.
+Helper naming note: TASK-472 moved Page link normalization to the neutral
+Page/authoring `normalizeAuthoringSafeHref` helper and kept the Page Editor
+canvas contract sections/blocks-only.
 
 ## Executable Leaves
 

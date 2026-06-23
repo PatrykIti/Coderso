@@ -12,6 +12,8 @@ import {
   ArrowUp,
   Columns2,
   Copy,
+  Clipboard,
+  ClipboardPaste,
   Eye,
   GripVertical,
   History,
@@ -22,9 +24,11 @@ import {
   PanelTop,
   Plus,
   RotateCcw,
+  Redo2,
   Save,
   Settings2,
   Trash2,
+  Undo2,
   X,
 } from "lucide-react";
 
@@ -78,7 +82,7 @@ import {
   createPageDocumentId,
   createPageSectionV2,
   isPageTypographyCapableBlockType,
-  normalizeBlockTextColorMarks,
+  normalizeBlockTextMarks,
   normalizeStoredPageDocumentV2ForRead,
   resolvePageSectionForBreakpoint,
   type PageBlockType,
@@ -88,7 +92,7 @@ import {
   type PageSectionVariant,
   type PageSectionType,
   type PageSectionV2,
-  type PageTextColorMark,
+  type PageTextMark,
 } from "../../../services/pages/pageDocumentV2";
 import {
   getPageResponsiveEffectiveVisible,
@@ -103,6 +107,7 @@ import {
   type PageEditorControlOptionsSource,
 } from "../../../services/pages/pageEditorControlRegistry";
 import {
+  getPageEditorColorPalette,
   resolvePageEditorControlUiModel,
   type PageEditorControlUiModel,
 } from "../../../services/pages/pageEditorControlUiModel";
@@ -135,6 +140,7 @@ import {
   duplicatePageBlockAtPath,
   duplicatePageBlockTreeWithNewIds,
   getDefaultPageBlockInsertTarget,
+  getPageBlockAfterInsertTarget,
   getPageBlockAdjacentColumnMoveTarget,
   getPageBlockAtPath,
   getPageBlockBesideInsertStatus,
@@ -151,6 +157,15 @@ import {
   type PageBlockInsertTarget,
   type PageBlockPath,
 } from "../../../services/pages/pageBlockPaths";
+import {
+  insertSectionAfter,
+  parsePageEditorClipboardFragment,
+  serializePageEditorClipboardPayload,
+} from "../../../services/pages/pageEditorClipboard";
+import {
+  composeAuthoringGradientCss,
+  type AuthoringGradientModel,
+} from "../../../services/pages/pageAuthoringSanitizers";
 import { pinUnassignedPageSectionBlocksToColumn } from "../../../services/pages/pageSectionColumns";
 import {
   commitInlineText,
@@ -209,7 +224,7 @@ import {
   SectionGapInsertZone,
   type PageEditorInlineEditCommit,
   type PageEditorInlineEditTarget,
-  type PageEditorTextColorMarkCommit,
+  type PageEditorTextMarkCommit,
 } from "./editor/PageAuthoringCanvas";
 import { LayerBlockRows } from "./editor/PageEditorLayers";
 import { PageEditorCommandPalette } from "./editor/PageEditorCommandPalette";
@@ -389,6 +404,25 @@ const resolvePageId = (pathname: string) => {
 const cloneDocument = (document: PageDocumentV2): PageDocumentV2 =>
   JSON.parse(JSON.stringify(document)) as PageDocumentV2;
 
+const cloneBlockPath = (path: PageBlockPath | null): PageBlockPath | null => {
+  if (!path) return null;
+  const [first, ...rest] = path.map((segment) => ({ ...segment }));
+  if (!first) return null;
+  return [first, ...rest];
+};
+
+const documentsEqual = (left: PageDocumentV2, right: PageDocumentV2): boolean =>
+  JSON.stringify(left) === JSON.stringify(right);
+
+type PageEditorHistorySnapshot = {
+  document: PageDocumentV2;
+  selectedSectionId: string | null;
+  selectedBlockPath: PageBlockPath | null;
+};
+
+const PAGE_EDITOR_HISTORY_LIMIT = 50;
+const PAGE_EDITOR_CLIPBOARD_SESSION_KEY = "coderso.pageEditor.clipboard";
+
 const isPlainRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
 
@@ -546,18 +580,30 @@ const patchInlineTextPropForDevice = (
   return patchBlockPropsForDevice(block, device, { [rootKey]: nextItems });
 };
 
-const applyTextColorMark = (
+const applyTextMark = (
   text: string,
   currentMarks: unknown,
-  mark: PageEditorTextColorMarkCommit
-): PageTextColorMark[] => {
-  const existing = normalizeBlockTextColorMarks(text, currentMarks).filter(
-    (entry) => entry.to <= mark.from || entry.from >= mark.to
+  mark: PageEditorTextMarkCommit
+): PageTextMark[] => {
+  const existing = normalizeBlockTextMarks(text, currentMarks);
+  const exactMatch = existing.some(
+    (entry) => entry.type === mark.type && entry.from === mark.from && entry.to === mark.to
   );
-  return normalizeBlockTextColorMarks(text, [
-    ...existing,
-    { type: "color", from: mark.from, to: mark.to, color: mark.color },
-  ]);
+  const retained = existing.filter((entry) => {
+    if (entry.type !== mark.type) return true;
+    if (exactMatch && entry.from === mark.from && entry.to === mark.to) return false;
+    return entry.to <= mark.from || entry.from >= mark.to;
+  });
+  if (exactMatch) return normalizeBlockTextMarks(text, retained);
+
+  const nextMark =
+    mark.type === "color" || mark.type === "highlight"
+      ? { type: mark.type, from: mark.from, to: mark.to, color: mark.color }
+      : mark.type === "link"
+        ? { type: "link" as const, from: mark.from, to: mark.to, href: mark.href }
+        : { type: mark.type, from: mark.from, to: mark.to };
+
+  return normalizeBlockTextMarks(text, [...retained, nextMark]);
 };
 
 const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: unknown) => {
@@ -586,6 +632,28 @@ const resolveInlineError = (error: unknown, fallback: string) => {
 
 const normalizePageData = (data?: Record<string, unknown> | null): PageDocumentV2 =>
   normalizeStoredPageDocumentV2ForRead(data);
+
+const writeEditorClipboardText = async (text: string): Promise<void> => {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem(PAGE_EDITOR_CLIPBOARD_SESSION_KEY, text);
+  }
+  try {
+    await navigator.clipboard?.writeText(text);
+  } catch {
+    // The sessionStorage fallback above remains available for paste.
+  }
+};
+
+const readEditorClipboardText = async (): Promise<string | null> => {
+  try {
+    const text = await navigator.clipboard?.readText();
+    if (text) return text;
+  } catch {
+    // Fall through to the in-session fallback.
+  }
+  if (typeof window === "undefined") return null;
+  return window.sessionStorage.getItem(PAGE_EDITOR_CLIPBOARD_SESSION_KEY);
+};
 
 export function findRecoverableAutosaveRevision(
   revisions: PageEditorRevision[],
@@ -661,9 +729,13 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     [editorHost, initialPage, pageId]
   );
   const initialPageDetail = initialPage ?? initialCachedPage;
+  const initialDocument = useMemo(
+    () => normalizePageData(initialPageDetail?.currentData),
+    [initialPageDetail]
+  );
   const [page, setPage] = useState<PageDetail | null>(initialPageDetail ?? null);
   const [pageDocument, setPageDocument] = useState<PageDocumentV2>(() =>
-    normalizePageData(initialPageDetail?.currentData)
+    cloneDocument(initialDocument)
   );
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
     () => pageDocument.sections[0]?.id ?? null
@@ -748,6 +820,18 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     Record<string, PageEditorFormPreviewDetail | null>
   >({});
   const hasUnsavedChangesRef = useRef(hasUnsavedChanges);
+  const savedDocumentRef = useRef<PageDocumentV2>(cloneDocument(initialDocument));
+  const historyRef = useRef<{
+    past: PageEditorHistorySnapshot[];
+    future: PageEditorHistorySnapshot[];
+  }>({
+    past: [],
+    future: [],
+  });
+  const [historyAvailability, setHistoryAvailability] = useState({
+    canUndo: false,
+    canRedo: false,
+  });
   const latestLoadedPageRef = useRef<PageEditorResourceDetail | null>(initialPageDetail ?? null);
   const revalidatedResourceRef = useRef<string | null>(null);
   // FormIds already requested in this editor session; transient load failures
@@ -931,6 +1015,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     (activePanel === "host-appearance" && !hostAppearancePanel)
       ? null
       : activePanel;
+  const canUndoEditorChange = historyAvailability.canUndo;
+  const canRedoEditorChange = historyAvailability.canRedo;
 
   // Host palette scoping (TASK-458-03): intersect the global insertable
   // options with the host palette BEFORE query filtering, so every insert
@@ -1029,10 +1115,97 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     setCommandActiveIndex(0);
   }, [selectedBlockPath]);
 
-  const setDocumentDraft = useCallback((updater: (current: PageDocumentV2) => PageDocumentV2) => {
-    setPageDocument((current) => updater(cloneDocument(current)));
-    setHasUnsavedChanges(true);
+  const syncEditorHistoryAvailability = useCallback(
+    (history: { past: PageEditorHistorySnapshot[]; future: PageEditorHistorySnapshot[] }) => {
+      setHistoryAvailability({
+        canUndo: history.past.length > 0,
+        canRedo: history.future.length > 0,
+      });
+    },
+    []
+  );
+
+  const resetEditorHistory = useCallback(() => {
+    const history = { past: [], future: [] };
+    historyRef.current = history;
+    syncEditorHistoryAvailability(history);
+  }, [syncEditorHistoryAvailability]);
+
+  const snapshotCurrentEditorState = useCallback(
+    (document: PageDocumentV2): PageEditorHistorySnapshot => ({
+      document: cloneDocument(document),
+      selectedSectionId,
+      selectedBlockPath: cloneBlockPath(selectedBlockPath),
+    }),
+    [selectedBlockPath, selectedSectionId]
+  );
+
+  const restoreHistorySnapshot = useCallback((snapshot: PageEditorHistorySnapshot) => {
+    setPageDocument(cloneDocument(snapshot.document));
+    setSelectedSectionId(snapshot.selectedSectionId);
+    setSelectedBlockPath(cloneBlockPath(snapshot.selectedBlockPath));
+    setInlineEditTarget(null);
+    setHasUnsavedChanges(!documentsEqual(snapshot.document, savedDocumentRef.current));
   }, []);
+
+  const setDocumentDraft = useCallback(
+    (updater: (current: PageDocumentV2) => PageDocumentV2) => {
+      setPageDocument((current) => {
+        const next = updater(cloneDocument(current));
+        if (documentsEqual(current, next)) return current;
+        const history = {
+          past: [...historyRef.current.past, snapshotCurrentEditorState(current)].slice(
+            -PAGE_EDITOR_HISTORY_LIMIT
+          ),
+          future: [],
+        };
+        historyRef.current = history;
+        syncEditorHistoryAvailability(history);
+        return next;
+      });
+      setHasUnsavedChanges(true);
+    },
+    [snapshotCurrentEditorState, syncEditorHistoryAvailability]
+  );
+
+  const undoEditorChange = useCallback(() => {
+    const previous = historyRef.current.past.at(-1);
+    if (!previous) return;
+    const history = {
+      past: historyRef.current.past.slice(0, -1),
+      future: [snapshotCurrentEditorState(pageDocument), ...historyRef.current.future].slice(
+        0,
+        PAGE_EDITOR_HISTORY_LIMIT
+      ),
+    };
+    historyRef.current = history;
+    syncEditorHistoryAvailability(history);
+    restoreHistorySnapshot(previous);
+  }, [
+    pageDocument,
+    restoreHistorySnapshot,
+    snapshotCurrentEditorState,
+    syncEditorHistoryAvailability,
+  ]);
+
+  const redoEditorChange = useCallback(() => {
+    const next = historyRef.current.future[0];
+    if (!next) return;
+    const history = {
+      past: [...historyRef.current.past, snapshotCurrentEditorState(pageDocument)].slice(
+        -PAGE_EDITOR_HISTORY_LIMIT
+      ),
+      future: historyRef.current.future.slice(1),
+    };
+    historyRef.current = history;
+    syncEditorHistoryAvailability(history);
+    restoreHistorySnapshot(next);
+  }, [
+    pageDocument,
+    restoreHistorySnapshot,
+    snapshotCurrentEditorState,
+    syncEditorHistoryAvailability,
+  ]);
 
   const selectSection = useCallback((sectionId: string | null) => {
     setSelectedSectionId(sectionId);
@@ -1047,6 +1220,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       setPage(detail);
       const document = normalizePageData(detail?.currentData);
       setPageDocument(document);
+      savedDocumentRef.current = cloneDocument(document);
+      resetEditorHistory();
       if (options.selectFirst ?? true) {
         selectSection(document.sections[0]?.id ?? null);
       }
@@ -1058,7 +1233,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       );
       if (options.resetDirty) setHasUnsavedChanges(false);
     },
-    [selectSection]
+    [resetEditorHistory, selectSection]
   );
 
   const selectBlock = useCallback((sectionId: string, blockPath: PageBlockPath) => {
@@ -1202,8 +1377,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     [device, pageDocument, setDocumentDraft]
   );
 
-  const applyInlineTextColorMark = useCallback(
-    (commit: PageEditorTextColorMarkCommit) => {
+  const applyInlineTextMark = useCallback(
+    (commit: PageEditorTextMarkCommit) => {
       if (device !== "desktop" || commit.propPath !== "text") return;
       for (const section of pageDocument.sections) {
         const blockPath = findSectionBlockPathById(section.blocks, commit.blockId);
@@ -1212,8 +1387,9 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         if (!block) return;
         const previous = readInlineTextPropValue(block, commit.propPath);
         if (previous === null) return;
-        const nextMarks = applyTextColorMark(previous, block.props.marks, commit);
-        if (nextMarks.length === 0) return;
+        const currentMarks = normalizeBlockTextMarks(previous, block.props.marks);
+        const nextMarks = applyTextMark(previous, currentMarks, commit);
+        if (JSON.stringify(currentMarks) === JSON.stringify(nextMarks)) return;
         setDocumentDraft((current) => ({
           ...current,
           sections: current.sections.map((entry) =>
@@ -1711,6 +1887,55 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     setDeleteSelectionTarget(null);
   }, [deleteBlockByPath, deleteSectionById, deleteSelectionTarget]);
 
+  const copySelectedFragment = useCallback(async () => {
+    if (!selectedSection) return;
+    if (selectedBlock) {
+      await writeEditorClipboardText(serializePageEditorClipboardPayload("block", selectedBlock));
+      return;
+    }
+    await writeEditorClipboardText(serializePageEditorClipboardPayload("section", selectedSection));
+  }, [selectedBlock, selectedSection]);
+
+  const pasteClipboardFragment = useCallback(async () => {
+    const text = await readEditorClipboardText();
+    if (!text) return;
+    const fragment = parsePageEditorClipboardFragment(text);
+    if (!fragment) return;
+
+    if (fragment.kind === "section") {
+      setDocumentDraft((current) =>
+        insertSectionAfter(current, selectedSectionId, fragment.section)
+      );
+      selectSection(fragment.section.id);
+      return;
+    }
+
+    const targetSection = selectedSection ?? pageDocument.sections[0] ?? null;
+    if (!targetSection) return;
+    const target =
+      selectedBlockPath && selectedSection
+        ? getPageBlockAfterInsertTarget(selectedBlockPath)
+        : { listPath: {}, index: targetSection.blocks.length };
+    if (!target) return;
+    const result = insertPageBlockAtTarget(targetSection, target, fragment.block);
+    if (result.status !== "ok" || !result.path) return;
+    setDocumentDraft((current) => ({
+      ...current,
+      sections: current.sections.map((section) =>
+        section.id === targetSection.id ? result.section : section
+      ),
+    }));
+    selectBlock(targetSection.id, result.path);
+  }, [
+    pageDocument.sections,
+    selectBlock,
+    selectSection,
+    selectedBlockPath,
+    selectedSection,
+    selectedSectionId,
+    setDocumentDraft,
+  ]);
+
   const startToolbarDrag = useCallback(
     (event: ReactPointerEvent<HTMLButtonElement>) => {
       event.preventDefault();
@@ -1823,6 +2048,30 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         previewOpen ||
         Boolean(deleteSelectionTarget);
       if (hasBlockingOverlay) return;
+      if (hasModifier && key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          redoEditorChange();
+        } else {
+          undoEditorChange();
+        }
+        return;
+      }
+      if (hasModifier && key === "y") {
+        event.preventDefault();
+        redoEditorChange();
+        return;
+      }
+      if (hasModifier && key === "c" && selectedSection) {
+        event.preventDefault();
+        void copySelectedFragment();
+        return;
+      }
+      if (hasModifier && key === "v") {
+        event.preventDefault();
+        void pasteClipboardFragment();
+        return;
+      }
       if (hasModifier && key === "d" && selectedSection) {
         event.preventDefault();
         if (selectedBlock) {
@@ -1861,14 +2110,17 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [
     commandOpen,
+    copySelectedFragment,
     deleteSelectionTarget,
     device,
     duplicateSelectedBlock,
     duplicateSelectedSection,
     layersOpen,
     openCommandPalette,
+    pasteClipboardFragment,
     previewOpen,
     requestDeleteSelection,
+    redoEditorChange,
     revisionsOpen,
     selectSection,
     selectedBlock,
@@ -1876,6 +2128,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     selectedSection,
     selectedSectionId,
     settingsOpen,
+    undoEditorChange,
   ]);
 
   useEffect(() => {
@@ -2002,12 +2255,15 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const saveCurrentDraft = useCallback(async () => {
     if (!page) return null;
     const updated = await editorHost.saveDocument(page.id, pageDocument);
+    const document = normalizePageData(updated.currentData);
     setPage(updated);
-    setPageDocument(normalizePageData(updated.currentData));
+    setPageDocument(document);
+    savedDocumentRef.current = cloneDocument(document);
+    resetEditorHistory();
     setHasUnsavedChanges(false);
     setAutosaveError(null);
     return updated;
-  }, [editorHost, page, pageDocument]);
+  }, [editorHost, page, pageDocument, resetEditorHistory]);
 
   const handleSaveDraft = async () => {
     if (!page) return;
@@ -2056,7 +2312,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       // object; keep the fallback for hosts that do not return the detail.
       // The dirty flag is owned by saveCurrentDraft above, so edits made
       // while the publish request was in flight keep their unsaved state.
-      setPage(result?.page ?? { ...publishTarget, status: "published" });
+      const publishedPage = result?.page ?? { ...publishTarget, status: "published" };
+      setPage(publishedPage);
+      savedDocumentRef.current = cloneDocument(publishDocument);
+      resetEditorHistory();
       pageEditorActionToasts.success("publish");
     } catch (publishError) {
       // Failure ordering: the draft save above already committed; surface the
@@ -2085,8 +2344,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         slug: settingsSlug.startsWith("/") ? settingsSlug : `/${settingsSlug}`,
         data: nextDocument,
       });
+      const document = normalizePageData(updated.currentData);
       setPage(updated);
-      setPageDocument(normalizePageData(updated.currentData));
+      setPageDocument(document);
+      savedDocumentRef.current = cloneDocument(document);
+      resetEditorHistory();
       setHasUnsavedChanges(false);
       setSettingsOpen(false);
       pageEditorActionToasts.success("saveDraft");
@@ -2515,7 +2777,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       onAddBlockBeside={openCommandPaletteBesideSelected}
                       onStartInlineEdit={startInlineEdit}
                       onCommitInlineEdit={commitInlineEdit}
-                      onApplyTextColorMark={applyInlineTextColorMark}
+                      onApplyTextMark={applyInlineTextMark}
                     />
                   </Fragment>
                 ))}
@@ -2655,6 +2917,32 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                 </ToolbarIconButton>
                 {!toolbarCollapsed ? (
                   <>
+                    <ToolbarIconButton
+                      tooltip={toolbarActionTooltips.undo}
+                      disabled={!canUndoEditorChange}
+                      onClick={undoEditorChange}
+                    >
+                      <Undo2 className="h-4 w-4" />
+                    </ToolbarIconButton>
+                    <ToolbarIconButton
+                      tooltip={toolbarActionTooltips.redo}
+                      disabled={!canRedoEditorChange}
+                      onClick={redoEditorChange}
+                    >
+                      <Redo2 className="h-4 w-4" />
+                    </ToolbarIconButton>
+                    <ToolbarIconButton
+                      tooltip={toolbarActionTooltips.copySelection}
+                      onClick={() => void copySelectedFragment()}
+                    >
+                      <Clipboard className="h-4 w-4" />
+                    </ToolbarIconButton>
+                    <ToolbarIconButton
+                      tooltip={toolbarActionTooltips.pasteSelection}
+                      onClick={() => void pasteClipboardFragment()}
+                    >
+                      <ClipboardPaste className="h-4 w-4" />
+                    </ToolbarIconButton>
                     {verticalBlockMoveAvailable ? (
                       <>
                         <ToolbarIconButton
@@ -3010,7 +3298,10 @@ const ToolbarSubpanel = ({
   const primaryBaseBlock = baseBlock ?? (hasBlockSelection ? undefined : baseSection.blocks[0]);
   const blockPanelControls = primaryBlock
     ? getPageEditorControlsForTarget({ kind: "block", type: primaryBlock.type }).filter(
-        (control) => control.panel === panel
+        (control) =>
+          control.panel === panel &&
+          (control.id !== "block.style.backgroundImage" ||
+            primaryBlock.style?.backgroundType === "image")
       )
     : [];
   const sectionPanelControls = pageUniversalSectionControls.filter(
@@ -3188,7 +3479,7 @@ const ToolbarSubpanel = ({
  * toggles, the section vertical-layout toggle, and the explicit per-field
  * override list with reset-inheritance actions. The target is the selected
  * block when one is selected, otherwise the selected section. All metadata
- * comes from the registry-owned responsive panel contract; widgets render
+ * comes from the registry-owned responsive panel contract; controls render
  * through the shared editor control primitives.
  */
 const ResponsivePanelContent = ({
@@ -3387,7 +3678,7 @@ const SectionRegistryControlField = ({
       label={control.label}
       onReset={() => onReset(control.overridePath)}
     >
-      <RegistryControlWidget
+      <RegistryControlInput
         control={control}
         rawValue={value}
         commitActiveOption={device !== "desktop" && !override}
@@ -3560,10 +3851,11 @@ const RegistryControlField = ({
       label={control.label}
       onReset={() => onReset(control.overridePath)}
     >
-      <RegistryControlWidget
+      <RegistryControlInput
         control={control}
         rawValue={value}
         renderDefault={getPageBlockRenderDefault(block, control.path)}
+        blockBackgroundType={block.style?.backgroundType}
         commitActiveOption={device !== "desktop" && !override}
         comboboxFilterValue={comboboxFilterValue}
         onCommit={(nextValue) => onChange(control, nextValue)}
@@ -3574,6 +3866,7 @@ const RegistryControlField = ({
 
 /** Mime accept hints for registry media controls, keyed by control id. */
 const mediaControlAccept: Record<string, readonly string[]> = {
+  "block.style.backgroundImage": ["image/*"],
   "block.image.props.src": ["image/*"],
   "block.video.props.src": ["video/*"],
   "block.card.props.image": ["image/*"],
@@ -3745,6 +4038,225 @@ const ToolbarComboboxField = ({
   );
 };
 
+type ToolbarGradientStopDraft = {
+  id: string;
+  color: string;
+  position: number;
+};
+
+type ToolbarGradientDraft = {
+  kind: AuthoringGradientModel["kind"];
+  angle: number;
+  stops: ToolbarGradientStopDraft[];
+};
+
+let toolbarGradientStopId = 0;
+
+const createToolbarGradientStopDraft = (
+  color: string,
+  position: number
+): ToolbarGradientStopDraft => {
+  toolbarGradientStopId += 1;
+  return { id: `gradient-stop-${toolbarGradientStopId}`, color, position };
+};
+
+const clampToolbarGradientNumber = (value: number, min: number, max: number, fallback: number) => {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(value)));
+};
+
+const createDefaultToolbarGradientDraft = (): ToolbarGradientDraft => ({
+  kind: "linear",
+  angle: 135,
+  stops: [
+    createToolbarGradientStopDraft("var(--color-primary)", 0),
+    createToolbarGradientStopDraft("var(--color-accent)", 100),
+  ],
+});
+
+const splitTopLevelCssList = (value: string): string[] => {
+  const items: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of value) {
+    if (char === "(") depth += 1;
+    if (char === ")") depth = Math.max(0, depth - 1);
+    if (char === "," && depth === 0) {
+      items.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+  if (current.trim()) items.push(current.trim());
+  return items;
+};
+
+const parseToolbarGradientStop = (value: string): ToolbarGradientStopDraft | null => {
+  const match = /^(.*)\s+(-?\d+(?:\.\d+)?)%$/.exec(value.trim());
+  if (!match?.[1] || !match[2]) return null;
+  const position = Number(match[2]);
+  return createToolbarGradientStopDraft(
+    match[1].trim(),
+    clampToolbarGradientNumber(position, 0, 100, 0)
+  );
+};
+
+const parseToolbarGradientDraft = (value: string): ToolbarGradientDraft => {
+  const trimmed = value.trim();
+  const match = /^(linear|radial)-gradient\((.*)\)$/i.exec(trimmed);
+  if (!match?.[1] || !match[2]) return createDefaultToolbarGradientDraft();
+  const kind: AuthoringGradientModel["kind"] =
+    match[1].toLowerCase() === "radial" ? "radial" : "linear";
+  const parts = splitTopLevelCssList(match[2]);
+  const angleMatch = kind === "linear" ? /^(-?\d+(?:\.\d+)?)deg$/i.exec(parts[0] ?? "") : null;
+  const angle = angleMatch?.[1]
+    ? clampToolbarGradientNumber(Number(angleMatch[1]), 0, 360, 135)
+    : 135;
+  const stopParts = kind === "linear" && angleMatch ? parts.slice(1) : parts;
+  const stops = stopParts
+    .map(parseToolbarGradientStop)
+    .filter((stop): stop is ToolbarGradientStopDraft => Boolean(stop))
+    .sort((left, right) => left.position - right.position);
+  return stops.length >= 2 ? { kind, angle, stops } : createDefaultToolbarGradientDraft();
+};
+
+const normalizeToolbarGradientDraft = (draft: ToolbarGradientDraft): ToolbarGradientDraft => ({
+  kind: draft.kind === "radial" ? "radial" : "linear",
+  angle: clampToolbarGradientNumber(draft.angle, 0, 360, 135),
+  stops: draft.stops
+    .slice(0, 6)
+    .map((stop) => ({
+      ...stop,
+      position: clampToolbarGradientNumber(stop.position, 0, 100, 0),
+    }))
+    .sort((left, right) => left.position - right.position),
+});
+
+const ToolbarGradientField = ({
+  value,
+  onCommit,
+}: {
+  value: string;
+  onCommit: (value: string) => void;
+}) => {
+  const sourceValue = value.trim();
+  const [draftState, setDraftState] = useState(() => ({
+    source: sourceValue,
+    draft: parseToolbarGradientDraft(sourceValue),
+  }));
+  const draft =
+    draftState.source === sourceValue ? draftState.draft : parseToolbarGradientDraft(sourceValue);
+  const commitDraft = (nextDraft: ToolbarGradientDraft) => {
+    const normalized = normalizeToolbarGradientDraft(nextDraft);
+    setDraftState({ source: sourceValue, draft: normalized });
+    const css = composeAuthoringGradientCss(normalized);
+    if (css) onCommit(css);
+  };
+  const updateStop = (
+    stopId: string,
+    updater: (stop: ToolbarGradientStopDraft) => ToolbarGradientStopDraft
+  ) => {
+    commitDraft({
+      ...draft,
+      stops: draft.stops.map((stop) => (stop.id === stopId ? updater(stop) : stop)),
+    });
+  };
+  return (
+    <div className="grid gap-2" data-page-editor-control="gradient">
+      <SegmentedControl
+        label="Gradient type"
+        value={draft.kind}
+        options={["linear", "radial"]}
+        optionLabels={{ linear: "Linear", radial: "Radial" }}
+        onChange={(kind) =>
+          commitDraft({ ...draft, kind: kind === "radial" ? "radial" : "linear" })
+        }
+      />
+      {draft.kind === "linear" ? (
+        <SliderStepperControl
+          label="Angle"
+          value={draft.angle}
+          min={0}
+          max={360}
+          step={15}
+          unit="deg"
+          onChange={(angle) => commitDraft({ ...draft, angle })}
+        />
+      ) : null}
+      <div className="grid gap-2" data-page-editor-gradient-stops="true">
+        {draft.stops.map((stop, index) => (
+          <div
+            key={stop.id}
+            className="grid gap-2 rounded-md border border-white/10 bg-white/5 p-2"
+            data-page-editor-gradient-stop={index + 1}
+          >
+            <div className="flex items-start justify-between gap-2">
+              <ColorSwatchControl
+                label={`Stop ${index + 1}`}
+                value={stop.color}
+                palette={getPageEditorColorPalette()}
+                allowTransparent={false}
+                onChange={(color) => {
+                  if (color) updateStop(stop.id, (current) => ({ ...current, color }));
+                }}
+              />
+              {draft.stops.length > 2 ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={editorDarkGhostButtonClass}
+                  onClick={() =>
+                    commitDraft({
+                      ...draft,
+                      stops: draft.stops.filter((current) => current.id !== stop.id),
+                    })
+                  }
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+            <SliderControl
+              label={`Stop ${index + 1} position`}
+              value={stop.position}
+              min={0}
+              max={100}
+              step={1}
+              unit="%"
+              onChange={(position) => updateStop(stop.id, (current) => ({ ...current, position }))}
+            />
+          </div>
+        ))}
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className={editorDarkButtonClass}
+        disabled={draft.stops.length >= 6}
+        onClick={() => {
+          const lastPosition = draft.stops.at(-1)?.position ?? 100;
+          commitDraft({
+            ...draft,
+            stops: [
+              ...draft.stops,
+              createToolbarGradientStopDraft(
+                "var(--color-surface)",
+                clampToolbarGradientNumber(lastPosition + 10, 0, 100, 100)
+              ),
+            ],
+          });
+        }}
+      >
+        <Plus className="h-4 w-4" />
+        Add stop
+      </Button>
+    </div>
+  );
+};
+
 /**
  * Maps a registry control through the pure UI-model adapter onto the dedicated
  * floating-inspector primitives. Stored value shapes are preserved: segmented
@@ -3752,16 +4264,18 @@ const ToolbarComboboxField = ({
  * clamped numbers, swatches emit color strings, and media emits the resolved
  * library URL (or null). Raw text inputs remain only for free-form strings.
  */
-const RegistryControlWidget = ({
+const RegistryControlInput = ({
   control,
   rawValue,
   renderDefault,
+  blockBackgroundType,
   commitActiveOption = false,
   comboboxFilterValue = null,
   onCommit,
 }: {
   control: PageEditorControlDefinition;
   rawValue: unknown;
+  blockBackgroundType?: string | null;
   /**
    * Current value of the registry `filterBy` sibling prop for combobox
    * controls with a scoped source (TASK-457); `null` when unscoped or unset.
@@ -3770,7 +4284,7 @@ const RegistryControlWidget = ({
   /**
    * Effective render default for the field when the document stores no value
    * (`pageBlockRenderDefaults`, owner finding #9 round 3). Display-only: the
-   * widget presents it as the active value, but committing it writes the
+   * control presents it as the active value, but committing it writes the
    * explicit value through the normal path.
    */
   renderDefault?: string | number;
@@ -3786,6 +4300,14 @@ const RegistryControlWidget = ({
   const fieldValue = fieldValueFromControlValue(control, rawValue, renderDefault);
   const hasStoredValue =
     control.input === "number" ? typeof rawValue === "number" : typeof rawValue === "string";
+  if (control.id === "block.style.background" && blockBackgroundType === "gradient") {
+    return (
+      <ToolbarGradientField
+        value={typeof rawValue === "string" ? rawValue : ""}
+        onCommit={onCommit}
+      />
+    );
+  }
   switch (model.kind) {
     case "segmented":
       // When the active option is only the DISPLAYED default of an unset

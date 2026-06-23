@@ -421,6 +421,13 @@ describe("page editor control ui model adapter", () => {
       step: 0.05,
       unit: "",
     });
+    expect(resolveById("block.style.borderWidth")).toEqual({
+      kind: "slider",
+      min: 0,
+      max: 12,
+      step: 1,
+      unit: "px",
+    });
   });
 
   test("numbers without a valid clamp fail closed to unsupported", () => {
@@ -475,7 +482,12 @@ describe("page editor control ui model adapter", () => {
   });
 
   test("media inputs map to media models, never text", () => {
-    for (const id of ["block.image.props.src", "block.video.props.src", "block.card.props.image"]) {
+    for (const id of [
+      "block.style.backgroundImage",
+      "block.image.props.src",
+      "block.video.props.src",
+      "block.card.props.image",
+    ]) {
       expect(resolveById(id), id).toEqual({ kind: "media" });
     }
   });
@@ -516,14 +528,21 @@ describe("page editor control ui model adapter", () => {
     expect(palette[0]).toEqual({
       id: "primary",
       label: "Primary",
-      value: DEFAULT_TOKENS.colors.primary,
+      value: "var(--color-primary)",
+      previewValue: DEFAULT_TOKENS.colors.primary,
     });
-    expect(palette[6]!.value).toBe(DEFAULT_TOKENS.neutrals.text);
+    expect(palette[6]).toMatchObject({
+      value: "var(--color-text)",
+      previewValue: DEFAULT_TOKENS.neutrals.text,
+    });
     const custom = getPageEditorColorPalette({
       ...DEFAULT_TOKENS,
       colors: { ...DEFAULT_TOKENS.colors, primary: "#123456" },
     });
-    expect(custom[0]!.value).toBe("#123456");
+    expect(custom[0]).toMatchObject({
+      value: "var(--color-primary)",
+      previewValue: "#123456",
+    });
   });
 
   test("slider clamp helper bounds values and rejects non-finite input", () => {

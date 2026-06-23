@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Background
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -27,16 +29,16 @@ media-URL policy. `backgroundType: "video"` for blocks is out of scope here.
 
 ## Sub-Tasks
 
-- [ ] Add block `style.backgroundImage` (sanitized media URL) to schema +
+- [x] Add block `style.backgroundImage` (sanitized media URL) to schema +
       `normalizeBlockStyle` (add it to `pageBlockStyleKeys`; sanitize via
       `sanitizeAuthoringMediaUrl`, mirroring section `readOptionalMediaUrl`),
       gated to `backgroundType === "image"`.
-- [ ] Register `block.style.backgroundImage` control (`input:"media"`,
+- [x] Register `block.style.backgroundImage` control (`input:"media"`,
       `panel:"background"`), surfaced when `backgroundType === "image"` (reuse the
       section media picker + policy).
-- [ ] Paint `background-image: url(<safe>)` with `cover`/`center` defaults.
-- [ ] Reproduce the section media-URL policy first; reuse verbatim.
-- [ ] Render + sanitizer coverage.
+- [x] Paint `background-image: url(<safe>)` with `cover`/`center` defaults.
+- [x] Reproduce the section media-URL policy first; reuse verbatim.
+- [x] Render + sanitizer coverage.
 
 ## Implementation Pseudocode
 

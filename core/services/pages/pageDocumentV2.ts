@@ -143,6 +143,7 @@ export const pageSectionAlignments = ["start", "center", "end", "stretch"] as co
 export const pageSectionJustify = ["start", "center", "end", "between"] as const;
 export const pageShadowTokens = ["none", "sm", "md", "lg"] as const;
 export const pageBackgroundTypes = ["none", "color", "gradient", "image", "video"] as const;
+export const pageBlockBorderStyles = ["none", "solid", "dashed", "dotted"] as const;
 export const pageButtonTargets = ["self", "blank"] as const;
 export const pageButtonVariants = ["primary", "secondary", "ghost", "link"] as const;
 export const pageButtonSizes = ["sm", "md", "lg"] as const;
@@ -197,6 +198,10 @@ export const pageTypographyFontWeights = ["normal", "medium", "semibold", "bold"
 export const PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP = { min: 1, max: 2.5 } as const;
 /** `letter-spacing` bounds in px for block typography. */
 export const PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP = { min: -2, max: 8 } as const;
+/** Block frame padding/margin bounds in px. */
+export const PAGE_BLOCK_BOX_SPACING_CLAMP = { min: 0, max: 240 } as const;
+/** Block border-width bounds in px. */
+export const PAGE_BLOCK_BORDER_WIDTH_CLAMP = { min: 0, max: 12 } as const;
 /**
  * Bounds for the section-column placement field (`style.column`, owner
  * finding #5 round 3). Mirrors the `layout.columns` clamp: a section never
@@ -218,6 +223,7 @@ export const pageTypographyCapableBlockTypes = [
   "quote",
 ] as const;
 export const pageTextColorMarkCapableBlockTypes = ["heading", "text", "quote"] as const;
+export const pageTextMarkCapableBlockTypes = pageTextColorMarkCapableBlockTypes;
 export const PAGE_TEXT_MARK_MAX = 24 as const;
 export const PAGE_BLOCK_MAX_TREE_DEPTH = 4 as const;
 export const PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24 as const;
@@ -230,6 +236,7 @@ export type PageSectionAlignment = (typeof pageSectionAlignments)[number];
 export type PageSectionJustify = (typeof pageSectionJustify)[number];
 export type PageShadowToken = (typeof pageShadowTokens)[number];
 export type PageBackgroundType = (typeof pageBackgroundTypes)[number];
+export type PageBlockBorderStyle = (typeof pageBlockBorderStyles)[number];
 export type PageBlockWidth = (typeof pageBlockWidths)[number];
 export type PageBadgeVariant = (typeof pageBadgeVariants)[number];
 export type PageBadgeSize = (typeof pageBadgeSizes)[number];
@@ -245,12 +252,35 @@ export type PageTypographyFontSize = (typeof pageTypographyFontSizes)[number];
 export type PageTypographyFontWeight = (typeof pageTypographyFontWeights)[number];
 export type PageTypographyCapableBlockType = (typeof pageTypographyCapableBlockTypes)[number];
 export type PageTextColorMarkCapableBlockType = (typeof pageTextColorMarkCapableBlockTypes)[number];
+export type PageTextMarkCapableBlockType = PageTextColorMarkCapableBlockType;
 export type PageTextColorMark = {
   type: "color";
   from: number;
   to: number;
   color: string;
 };
+export type PageTextHighlightMark = {
+  type: "highlight";
+  from: number;
+  to: number;
+  color: string;
+};
+export type PageTextLinkMark = {
+  type: "link";
+  from: number;
+  to: number;
+  href: string;
+};
+export type PageTextStructuralMark = {
+  type: "bold" | "italic";
+  from: number;
+  to: number;
+};
+export type PageTextMark =
+  | PageTextColorMark
+  | PageTextHighlightMark
+  | PageTextLinkMark
+  | PageTextStructuralMark;
 
 export const isPageTypographyCapableBlockType = (
   type: PageBlockType
@@ -261,6 +291,11 @@ export const isPageTextColorMarkCapableBlockType = (
   type: PageBlockType
 ): type is PageTextColorMarkCapableBlockType =>
   (pageTextColorMarkCapableBlockTypes as readonly string[]).includes(type);
+
+export const isPageTextMarkCapableBlockType = (
+  type: PageBlockType
+): type is PageTextMarkCapableBlockType =>
+  (pageTextMarkCapableBlockTypes as readonly string[]).includes(type);
 
 /**
  * CSS values for typography tokens. Family and size tokens resolve through the
@@ -393,10 +428,13 @@ export type PageBlockStyleV2 = {
   textColor?: string | null;
   background?: string | null;
   backgroundType?: PageBackgroundType;
+  backgroundImage?: string | null;
   opacity?: number;
   radius?: number;
   shadow?: PageShadowToken;
   borderColor?: string | null;
+  borderWidth?: number;
+  borderStyle?: PageBlockBorderStyle;
   padding?: PageBoxSpacingV2;
   margin?: PageBoxSpacingV2;
   /** Token-backed typography (TASK-424); null/unset keeps the baked classes. */
@@ -488,10 +526,13 @@ const pageBlockStyleKeys = [
   "textColor",
   "background",
   "backgroundType",
+  "backgroundImage",
   "opacity",
   "radius",
   "shadow",
   "borderColor",
+  "borderWidth",
+  "borderStyle",
   "padding",
   "margin",
   "fontFamily",
@@ -856,19 +897,55 @@ const stringSchema: RecordValue = { type: "string" };
 const nullableStringSchema: RecordValue = { type: ["string", "null"] };
 const booleanSchema: RecordValue = { type: "boolean" };
 const arraySchema: RecordValue = { type: "array" };
-const textColorMarksSchema: RecordValue = {
+const textMarksSchema: RecordValue = {
   type: "array",
   maxItems: PAGE_TEXT_MARK_MAX,
   items: {
-    type: "object",
-    required: ["type", "from", "to", "color"],
-    additionalProperties: false,
-    properties: {
-      type: { const: "color" },
-      from: { type: "integer", minimum: 0 },
-      to: { type: "integer", minimum: 0 },
-      color: { type: "string" },
-    },
+    anyOf: [
+      {
+        type: "object",
+        required: ["type", "from", "to", "color"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "color" },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+          color: { type: "string" },
+        },
+      },
+      {
+        type: "object",
+        required: ["type", "from", "to", "color"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "highlight" },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+          color: { type: "string" },
+        },
+      },
+      {
+        type: "object",
+        required: ["type", "from", "to", "href"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "link" },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+          href: { type: "string" },
+        },
+      },
+      {
+        type: "object",
+        required: ["type", "from", "to"],
+        additionalProperties: false,
+        properties: {
+          type: { enum: ["bold", "italic"] },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+        },
+      },
+    ],
   },
 };
 
@@ -955,7 +1032,7 @@ const pageFiltersAliasesJsonSchema: RecordValue = {
 };
 
 const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordValue => {
-  if (isPageTextColorMarkCapableBlockType(type) && key === "marks") return textColorMarksSchema;
+  if (isPageTextMarkCapableBlockType(type) && key === "marks") return textMarksSchema;
   if (type === "heading" && key === "level")
     return { type: "string", enum: [...pageHeadingLevels] };
   if ((type === "heading" || type === "text") && key === "align") {
@@ -1045,7 +1122,12 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
 const pageBoxSpacingJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
-  properties: Object.fromEntries(pageBoxSpacingKeys.map((key) => [key, numericSchema(0, 160)])),
+  properties: Object.fromEntries(
+    pageBoxSpacingKeys.map((key) => [
+      key,
+      numericSchema(PAGE_BLOCK_BOX_SPACING_CLAMP.min, PAGE_BLOCK_BOX_SPACING_CLAMP.max),
+    ])
+  ),
 };
 
 const pageBlockStyleJsonSchema: RecordValue = {
@@ -1061,10 +1143,16 @@ const pageBlockStyleJsonSchema: RecordValue = {
     textColor: { type: ["string", "null"] },
     background: { type: ["string", "null"] },
     backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
+    backgroundImage: { type: ["string", "null"] },
     opacity: numericSchema(0, 1),
     radius: numericSchema(0, 64),
     shadow: { type: "string", enum: [...pageShadowTokens] },
     borderColor: { type: ["string", "null"] },
+    borderWidth: numericSchema(
+      PAGE_BLOCK_BORDER_WIDTH_CLAMP.min,
+      PAGE_BLOCK_BORDER_WIDTH_CLAMP.max
+    ),
+    borderStyle: { type: "string", enum: [...pageBlockBorderStyles] },
     padding: pageBoxSpacingJsonSchema,
     margin: pageBoxSpacingJsonSchema,
     fontFamily: nullableEnumSchema(pageTypographyFontFamilies),
@@ -1213,8 +1301,8 @@ const partialSectionSpacingJsonSchema: RecordValue = {
   properties: {
     paddingTop: numericSchema(0, 240),
     paddingBottom: numericSchema(0, 240),
-    paddingLeft: numericSchema(0, 160),
-    paddingRight: numericSchema(0, 160),
+    paddingLeft: numericSchema(0, 240),
+    paddingRight: numericSchema(0, 240),
     gap: numericSchema(0, 120),
   },
 };
@@ -1378,8 +1466,8 @@ export const pageDocumentV2JsonSchema: RecordValue = {
             properties: {
               paddingTop: { type: "number", minimum: 0, maximum: 240 },
               paddingBottom: { type: "number", minimum: 0, maximum: 240 },
-              paddingLeft: { type: "number", minimum: 0, maximum: 160 },
-              paddingRight: { type: "number", minimum: 0, maximum: 160 },
+              paddingLeft: { type: "number", minimum: 0, maximum: 240 },
+              paddingRight: { type: "number", minimum: 0, maximum: 240 },
               gap: { type: "number", minimum: 0, maximum: 120 },
             },
           },
@@ -1517,6 +1605,22 @@ const readNullableClampedNumber = (
   return Math.min(clamp.max, Math.max(clamp.min, value as number));
 };
 
+const readOptionalClampedNumber = (
+  value: unknown,
+  clamp: { readonly min: number; readonly max: number },
+  context: string,
+  mode: NormalizeMode
+): number | undefined => {
+  if (value === undefined) return undefined;
+  if (!Number.isFinite(value)) {
+    if (mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${context}.`, context);
+    }
+    return undefined;
+  }
+  return Math.min(clamp.max, Math.max(clamp.min, value as number));
+};
+
 const assertKnownKeys = (
   value: RecordValue,
   allowed: readonly string[],
@@ -1568,15 +1672,31 @@ const normalizeTextMarkIndex = (
   return Math.min(textLength, Math.max(0, index));
 };
 
-const normalizeBlockTextColorMarksForMode = (
+const textMarkAttributeKeys: Record<PageTextMark["type"], readonly string[]> = {
+  color: ["type", "from", "to", "color"],
+  highlight: ["type", "from", "to", "color"],
+  link: ["type", "from", "to", "href"],
+  bold: ["type", "from", "to"],
+  italic: ["type", "from", "to"],
+};
+
+const pageTextMarkTypeRank: Record<PageTextMark["type"], number> = {
+  bold: 0,
+  italic: 1,
+  link: 2,
+  color: 3,
+  highlight: 4,
+};
+
+const normalizeBlockTextMarksForMode = (
   text: string,
   value: unknown,
   mode: NormalizeMode,
   path: string
-): PageTextColorMark[] => {
+): PageTextMark[] => {
   const input = requireArray(value ?? [], path, mode);
   const textLength = text.length;
-  const candidates: PageTextColorMark[] = [];
+  const candidates: PageTextMark[] = [];
 
   for (const [index, rawMark] of input.entries()) {
     const markPath = `${path}.${index}`;
@@ -1586,8 +1706,14 @@ const normalizeBlockTextColorMarksForMode = (
       }
       continue;
     }
-    assertKnownKeys(rawMark, ["type", "from", "to", "color"], markPath, mode);
-    if (rawMark.type !== "color") {
+    const type = rawMark.type;
+    if (
+      type !== "color" &&
+      type !== "highlight" &&
+      type !== "link" &&
+      type !== "bold" &&
+      type !== "italic"
+    ) {
       if (mode === "write") {
         throw new PageDocumentError(
           "page_document_invalid",
@@ -1597,38 +1723,67 @@ const normalizeBlockTextColorMarksForMode = (
       }
       continue;
     }
-    const color = sanitizeAuthoringCssColor(rawMark.color);
-    if (!color) {
-      if (mode === "write") {
-        throw new PageDocumentError(
-          "page_document_invalid",
-          `Invalid ${markPath}.color.`,
-          `${markPath}.color`
-        );
-      }
-      continue;
-    }
+    assertKnownKeys(rawMark, textMarkAttributeKeys[type], markPath, mode);
     const from = normalizeTextMarkIndex(rawMark.from, textLength, `${markPath}.from`, mode);
     const to = normalizeTextMarkIndex(rawMark.to, textLength, `${markPath}.to`, mode);
     if (from === null || to === null || to <= from) continue;
-    candidates.push({ type: "color", from, to, color });
+    if (type === "color" || type === "highlight") {
+      const color = sanitizeAuthoringCssColor(rawMark.color);
+      if (!color) {
+        if (mode === "write") {
+          throw new PageDocumentError(
+            "page_document_invalid",
+            `Invalid ${markPath}.color.`,
+            `${markPath}.color`
+          );
+        }
+        continue;
+      }
+      candidates.push({ type, from, to, color });
+      continue;
+    }
+    if (type === "link") {
+      const href = sanitizeAuthoringLinkHref(rawMark.href);
+      if (!href) {
+        if (mode === "write") {
+          throw new PageDocumentError(
+            "page_document_invalid",
+            `Invalid ${markPath}.href.`,
+            `${markPath}.href`
+          );
+        }
+        continue;
+      }
+      candidates.push({ type, from, to, href });
+      continue;
+    }
+    candidates.push({ type, from, to });
   }
 
-  const result: PageTextColorMark[] = [];
-  let occupiedUntil = 0;
+  const result: PageTextMark[] = [];
+  const occupiedUntilByType = new Map<PageTextMark["type"], number>();
   for (const mark of candidates.sort((left, right) =>
-    left.from === right.from ? left.to - right.to : left.from - right.from
+    left.from === right.from
+      ? left.to === right.to
+        ? pageTextMarkTypeRank[left.type] - pageTextMarkTypeRank[right.type]
+        : left.to - right.to
+      : left.from - right.from
   )) {
+    const occupiedUntil = occupiedUntilByType.get(mark.type) ?? 0;
     if (mark.from < occupiedUntil) continue;
     result.push(mark);
-    occupiedUntil = mark.to;
+    occupiedUntilByType.set(mark.type, mark.to);
     if (result.length >= PAGE_TEXT_MARK_MAX) break;
   }
   return result;
 };
 
-export function normalizeBlockTextColorMarks(text: string, value: unknown): PageTextColorMark[] {
-  return normalizeBlockTextColorMarksForMode(text, value, "stored-read", "props.marks");
+export function normalizeBlockTextMarks(text: string, value: unknown): PageTextMark[] {
+  return normalizeBlockTextMarksForMode(text, value, "stored-read", "props.marks");
+}
+
+export function normalizeBlockTextColorMarks(text: string, value: unknown): PageTextMark[] {
+  return normalizeBlockTextMarks(text, value);
 }
 
 const normalizeId = (value: unknown, prefix: string, index: number, mode: NormalizeMode) => {
@@ -1870,10 +2025,10 @@ const normalizeSectionSpacing = (
     result.paddingBottom = readNumber(input.paddingBottom, defaultSpacing.paddingBottom, 0, 240);
   }
   if (!partial || input.paddingLeft !== undefined) {
-    result.paddingLeft = readNumber(input.paddingLeft, defaultSpacing.paddingLeft, 0, 160);
+    result.paddingLeft = readNumber(input.paddingLeft, defaultSpacing.paddingLeft, 0, 240);
   }
   if (!partial || input.paddingRight !== undefined) {
-    result.paddingRight = readNumber(input.paddingRight, defaultSpacing.paddingRight, 0, 160);
+    result.paddingRight = readNumber(input.paddingRight, defaultSpacing.paddingRight, 0, 240);
   }
   if (!partial || input.gap !== undefined) {
     result.gap = readNumber(input.gap, defaultSpacing.gap, 0, 120);
@@ -1955,6 +2110,9 @@ const normalizeBlockStyle = (
       mode
     );
   }
+  if (input.backgroundImage !== undefined) {
+    result.backgroundImage = readOptionalMediaUrl(input.backgroundImage) ?? null;
+  }
   if (input.opacity !== undefined) {
     result.opacity = readNumber(input.opacity, 1, 0, 1);
   }
@@ -1966,6 +2124,24 @@ const normalizeBlockStyle = (
   }
   if (input.borderColor !== undefined) {
     result.borderColor = readOptionalSafeColor(input.borderColor) ?? null;
+  }
+  if (input.borderWidth !== undefined) {
+    const width = readOptionalClampedNumber(
+      input.borderWidth,
+      PAGE_BLOCK_BORDER_WIDTH_CLAMP,
+      `${path}.borderWidth`,
+      mode
+    );
+    if (width !== undefined) result.borderWidth = width;
+  }
+  if (input.borderStyle !== undefined) {
+    result.borderStyle = normalizeEnum(
+      input.borderStyle,
+      pageBlockBorderStyles,
+      "none",
+      `${path}.borderStyle`,
+      mode
+    );
   }
   if (input.padding !== undefined) {
     const padding = normalizeBlockBoxSpacing(input.padding, mode, `${path}.padding`);
@@ -2028,7 +2204,12 @@ const normalizeBlockBoxSpacing = (
   const result: PageBoxSpacingV2 = {};
   for (const key of pageBoxSpacingKeys) {
     if (input[key] !== undefined) {
-      result[key] = readNumber(input[key], 0, 0, 160);
+      result[key] = readNumber(
+        input[key],
+        0,
+        PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+        PAGE_BLOCK_BOX_SPACING_CLAMP.max
+      );
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
@@ -2068,9 +2249,9 @@ const normalizeBlockProps = (
     if (input[key] !== undefined)
       result[key] = normalizeBlockProp(type, key, input[key], mode, `${path}.${key}`);
   }
-  if (isPageTextColorMarkCapableBlockType(type) && input.marks !== undefined) {
+  if (isPageTextMarkCapableBlockType(type) && input.marks !== undefined) {
     const text = typeof result.text === "string" ? result.text : "";
-    result.marks = normalizeBlockTextColorMarksForMode(text, input.marks, mode, `${path}.marks`);
+    result.marks = normalizeBlockTextMarksForMode(text, input.marks, mode, `${path}.marks`);
   }
 
   return result;
@@ -2411,7 +2592,7 @@ const normalizeBlockResponsive = (
       if (mode === "write") {
         throw new PageDocumentError(
           "page_document_invalid",
-          `Text color marks are base-only at ${path}.${breakpoint}.props.marks.`,
+          `Text marks are base-only at ${path}.${breakpoint}.props.marks.`,
           `${path}.${breakpoint}.props.marks`
         );
       }

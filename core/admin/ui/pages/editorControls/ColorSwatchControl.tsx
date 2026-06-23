@@ -115,7 +115,7 @@ export const ColorSwatchControl = ({
                   ? "border-white shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
                   : "border-white/15 hover:border-white/45"
               }`}
-              style={{ backgroundColor: swatch.value }}
+              style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
               onClick={() => {
                 if (!disabled && !active) onChange(swatch.value);
               }}

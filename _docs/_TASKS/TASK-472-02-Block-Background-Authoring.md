@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Background
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 

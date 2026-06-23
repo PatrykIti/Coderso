@@ -5,13 +5,13 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { Palette, Plus } from "lucide-react";
+import { Bold, Highlighter, Italic, Link as LinkIcon, Palette, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
-  isPageTextColorMarkCapableBlockType,
+  isPageTextMarkCapableBlockType,
   type PageBlockV2,
   type PageBreakpoint,
   type PageSectionV2,
@@ -58,13 +58,17 @@ export type PageEditorInlineEditCommit = {
   renderedText: string;
 };
 
-export type PageEditorTextColorMarkCommit = {
+export type PageEditorTextMarkCommit = {
   blockId: string;
   propPath: string;
+  type: "color" | "highlight" | "link" | "bold" | "italic";
   from: number;
   to: number;
-  color: string;
+  color?: string;
+  href?: string;
 };
+
+export type PageEditorTextColorMarkCommit = PageEditorTextMarkCommit;
 
 /** Stable ref callback: focuses a freshly activated inline-edit region with the caret at the end. */
 const focusInlineEditableNode = (node: HTMLElement | null) => {
@@ -110,7 +114,7 @@ const readInlineTextSelectionRange = (root: HTMLElement): InlineTextSelectionRan
   return end > start ? { from: start, to: end } : null;
 };
 
-const inlineTextColorPalette = getPageEditorColorPalette().slice(0, 6);
+const inlineTextMarkPalette = getPageEditorColorPalette().slice(0, 6);
 
 const InlineEditableCanvasText = ({
   block,
@@ -123,7 +127,7 @@ const InlineEditableCanvasText = ({
   device,
   onStartEdit,
   onCommit,
-  onApplyColorMark,
+  onApplyTextMark,
 }: {
   block: PageBlockV2;
   propPath: string;
@@ -135,21 +139,22 @@ const InlineEditableCanvasText = ({
   device: PageBreakpoint;
   onStartEdit: (target: PageEditorInlineEditTarget) => void;
   onCommit: (commit: PageEditorInlineEditCommit) => void;
-  onApplyColorMark: (commit: PageEditorTextColorMarkCommit) => void;
+  onApplyTextMark: (commit: PageEditorTextMarkCommit) => void;
 }) => {
   const [selectionRange, setSelectionRange] = useState<InlineTextSelectionRange | null>(null);
+  const [linkHref, setLinkHref] = useState("");
   const target = resolveInlineEditTarget(block, propPath);
   if (!target) return <>{children ?? text}</>;
   const { multiline } = target;
   const preserveMarkup = target.preserveMarkup === true;
-  const canApplyColorMarks =
+  const canApplyTextMarks =
     editing &&
     device === "desktop" &&
     propPath === "text" &&
     !preserveMarkup &&
-    isPageTextColorMarkCapableBlockType(block.type);
+    isPageTextMarkCapableBlockType(block.type);
   const updateSelectionRange = (element: HTMLElement) => {
-    if (!canApplyColorMarks) return;
+    if (!canApplyTextMarks) return;
     setSelectionRange(readInlineTextSelectionRange(element));
   };
   const wrapperKey = `${propPath}:${text}`;
@@ -215,9 +220,10 @@ const InlineEditableCanvasText = ({
   };
   const content = editing && !preserveMarkup ? text : (children ?? text);
   const markToolbar =
-    canApplyColorMarks && inlineTextColorPalette.length > 0 ? (
+    canApplyTextMarks && inlineTextMarkPalette.length > 0 ? (
       <span
         className="absolute -top-9 left-0 z-20 flex items-center gap-1 rounded border bg-background/95 px-1.5 py-1 shadow-sm"
+        data-page-editor-text-mark-toolbar="true"
         data-page-editor-text-color-toolbar="true"
         onMouseDown={(event) => {
           event.preventDefault();
@@ -225,7 +231,51 @@ const InlineEditableCanvasText = ({
         }}
       >
         <Palette className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-        {inlineTextColorPalette.map((swatch) => (
+        <button
+          type="button"
+          aria-label="Apply bold"
+          disabled={!selectionRange}
+          title="Bold"
+          className="inline-flex size-6 items-center justify-center rounded border border-border bg-background text-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
+          data-page-editor-text-mark-button="bold"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!selectionRange) return;
+            onApplyTextMark({
+              blockId: block.id,
+              propPath,
+              type: "bold",
+              from: selectionRange.from,
+              to: selectionRange.to,
+            });
+          }}
+        >
+          <Bold className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label="Apply italic"
+          disabled={!selectionRange}
+          title="Italic"
+          className="inline-flex size-6 items-center justify-center rounded border border-border bg-background text-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
+          data-page-editor-text-mark-button="italic"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!selectionRange) return;
+            onApplyTextMark({
+              blockId: block.id,
+              propPath,
+              type: "italic",
+              from: selectionRange.from,
+              to: selectionRange.to,
+            });
+          }}
+        >
+          <Italic className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+        {inlineTextMarkPalette.map((swatch) => (
           <button
             key={swatch.id}
             type="button"
@@ -234,14 +284,15 @@ const InlineEditableCanvasText = ({
             title={swatch.label}
             className="size-5 rounded-full border border-border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
             data-page-editor-text-color-swatch={swatch.id}
-            style={{ backgroundColor: swatch.value }}
+            style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
               if (!selectionRange) return;
-              onApplyColorMark({
+              onApplyTextMark({
                 blockId: block.id,
                 propPath,
+                type: "color",
                 from: selectionRange.from,
                 to: selectionRange.to,
                 color: swatch.value,
@@ -249,6 +300,66 @@ const InlineEditableCanvasText = ({
             }}
           />
         ))}
+        {inlineTextMarkPalette.slice(0, 4).map((swatch) => (
+          <button
+            key={`highlight-${swatch.id}`}
+            type="button"
+            aria-label={`Apply ${swatch.label} highlight`}
+            disabled={!selectionRange}
+            title={`${swatch.label} highlight`}
+            className="relative size-5 rounded border border-border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
+            data-page-editor-text-highlight-swatch={swatch.id}
+            style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (!selectionRange) return;
+              onApplyTextMark({
+                blockId: block.id,
+                propPath,
+                type: "highlight",
+                from: selectionRange.from,
+                to: selectionRange.to,
+                color: swatch.value,
+              });
+            }}
+          >
+            <Highlighter className="absolute -bottom-1 -right-1 h-3 w-3 rounded bg-background text-foreground" />
+          </button>
+        ))}
+        <span className="flex items-center gap-1 border-l border-border pl-1">
+          <input
+            aria-label="Inline link URL"
+            value={linkHref}
+            placeholder="https://"
+            disabled={!selectionRange}
+            className="h-6 w-28 rounded border border-border bg-background px-1.5 text-xs text-foreground placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-40"
+            onChange={(event) => setLinkHref(event.target.value)}
+          />
+          <button
+            type="button"
+            aria-label="Apply link"
+            disabled={!selectionRange || linkHref.trim().length === 0}
+            title="Link"
+            className="inline-flex size-6 items-center justify-center rounded border border-border bg-background text-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
+            data-page-editor-text-mark-button="link"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if (!selectionRange) return;
+              onApplyTextMark({
+                blockId: block.id,
+                propPath,
+                type: "link",
+                from: selectionRange.from,
+                to: selectionRange.to,
+                href: linkHref,
+              });
+            }}
+          >
+            <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+        </span>
       </span>
     ) : null;
   if (display === "block") {
@@ -355,7 +466,7 @@ export const SectionCanvas = ({
   onAddBlockBeside,
   onStartInlineEdit,
   onCommitInlineEdit,
-  onApplyTextColorMark,
+  onApplyTextMark,
 }: {
   section: PageSectionV2;
   baseSection: PageSectionV2;
@@ -373,7 +484,7 @@ export const SectionCanvas = ({
   onAddBlockBeside: () => void;
   onStartInlineEdit: (target: PageEditorInlineEditTarget) => void;
   onCommitInlineEdit: (commit: PageEditorInlineEditCommit) => void;
-  onApplyTextColorMark: (commit: PageEditorTextColorMarkCommit) => void;
+  onApplyTextMark: (commit: PageEditorTextMarkCommit) => void;
 }) => {
   const sectionHasOverride = hasAnyResponsiveOverride(
     device,
@@ -520,7 +631,7 @@ export const SectionCanvas = ({
             device={device}
             onStartEdit={onStartInlineEdit}
             onCommit={onCommitInlineEdit}
-            onApplyColorMark={onApplyTextColorMark}
+            onApplyTextMark={onApplyTextMark}
           >
             {children}
           </InlineEditableCanvasText>

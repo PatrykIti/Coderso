@@ -182,10 +182,13 @@ nesting is not part of the contract.
     "textColor": "#111827",
     "background": null,
     "backgroundType": "none",
+    "backgroundImage": null,
     "opacity": 1,
     "radius": 0,
     "shadow": "none",
     "borderColor": null,
+    "borderWidth": 0,
+    "borderStyle": "none",
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
     "margin": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   },
@@ -203,8 +206,8 @@ nesting is not part of the contract.
 Block style is bounded and optional. Supported style keys are:
 - `align`: `left`, `center`, `right`;
 - `width`: `auto`, `full`;
-- `textColor`, `background`, `backgroundType`, `opacity`, `radius`, `shadow`,
-  and `borderColor`;
+- `textColor`, `background`, `backgroundType`, `backgroundImage`, `opacity`,
+  `radius`, `shadow`, `borderColor`, `borderWidth`, and `borderStyle`;
 - `padding` and `margin` using `{ top, right, bottom, left }` spacing objects;
 - token-backed typography (TASK-424), nullable with unset/`null` meaning
   "keep the baked classes" so pre-existing documents render identically:
@@ -237,10 +240,19 @@ or by the relocated typography presentation of `style.align` for other
 text-capable blocks.
 
 The Pages owner clamps numeric style values and rejects unknown style keys on
-fresh writes. Block responsive overrides are sparse deltas: `responsive.mobile`
-or `responsive.tablet` may override only the changed `props`, `style`, or
-`visibility` fields. The resolver applies section overrides first and then block
-overrides through `resolvePageDocumentForBreakpoint`.
+fresh writes. Block padding/margin side values clamp to `0..240`; block border
+width clamps to `0..12`, and `borderStyle` is `none` | `solid` | `dashed` |
+`dotted`. `borderStyle: "none"` suppresses border paint even when
+`borderColor` is present; legacy color-only blocks keep the historical
+`1px solid` fallback. Block `backgroundImage` stores a sanitized Page media URL
+and only paints when `backgroundType === "image"`, with `cover`/`center`
+defaults. Gradient backgrounds remain the existing `style.background` string,
+but the editor composes it from a sanitized linear/radial gradient model rather
+than introducing a second data structure. Block responsive overrides are sparse
+deltas: `responsive.mobile` or `responsive.tablet` may override only the
+changed `props`, `style`, or `visibility` fields. The resolver applies section
+overrides first and then block overrides through
+`resolvePageDocumentForBreakpoint`.
 
 Core block types:
 - `heading`
@@ -299,11 +311,14 @@ preservation:
 Each block type has a strict allowlist of props. Unknown props are rejected on
 fresh writes by both the imperative normalizer and `pageDocumentV2JsonSchema`.
 Examples:
-- `heading`/`text`/`quote`: optional `marks[]` for base-only fragment color
-  ranges. Each mark is `{ "type": "color", "from": number, "to": number,
-  "color": string }`, capped at 24, clamped to the plain text length, and
-  fail-closed through the Page CSS color sanitizer. Responsive overrides may
-  not carry `props.marks`.
+- `heading`/`text`/`quote`: optional base-only `marks[]` for fragment
+  formatting ranges. Supported marks are `{ "type": "bold" | "italic",
+  "from": number, "to": number }`, `{ "type": "color" | "highlight", "from":
+  number, "to": number, "color": string }`, and `{ "type": "link", "from":
+  number, "to": number, "href": string }`. Marks are capped at 24, clamped to
+  the plain text length, fail closed through Page color/link sanitizers, and
+  normalize same-type conflicts deterministically while allowing cross-type
+  overlap. Responsive overrides may not carry `props.marks`.
 - `badge`: `text`, `variant` (`solid` | `soft` | `outline`), `size` (`2xs` |
   `xs` | `sm` | `md`), `shape` (`pill` | `rounded` | `square`), `weight`
   (`normal` | `medium` | `semibold` | `bold`), nullable `background`,
@@ -356,8 +371,10 @@ truthful:
   (`--text-2xs` through `--text-md`), colors are sanitized before store/render,
   and icon tokens are fixed to a small lucide allowlist; no widget runtime,
   widget registry, or widget editor participates.
-- `heading`/plain `text`/`quote` color marks render as React span segments with
-  sanitized inline `color`. The renderer re-normalizes stored marks before
+- `heading`/plain `text`/`quote` marks render as React segments:
+  `bold -> <strong>`, `italic -> <em>`, `link -> <a rel="nofollow noreferrer">`,
+  `color -> <span style.color>`, and `highlight ->
+  <span style.backgroundColor>`. The renderer re-normalizes stored marks before
   painting and never opens a broad `span style` HTML allowlist or
   `dangerouslySetInnerHTML` sink for marks.
 - `image.fit` changes the public image object-fit class (`cover` or
@@ -696,6 +713,20 @@ Pure editor derivation and mutation helpers live in
 `core/services/pages/pageEditorMutationActions.ts`. They patch only Page v2
 owner paths, keep sparse responsive overrides deterministic, and sanitize
 section style writes before draft mutation.
+
+Page Editor session controls are intentionally browser-local and Page-only:
+
+- In-session undo/redo wraps the central `setDocumentDraft` path with bounded
+  document+selection snapshots (cap 50). The stack resets after document load,
+  save, settings save, and publish so persisted drafts never replay stale local
+  mutations. Keyboard shortcuts (`Cmd/Ctrl+Z`, `Shift+Cmd/Ctrl+Z`,
+  `Cmd/Ctrl+Y`) ignore editable targets and inline editing surfaces.
+- Clipboard fragments use the `coderso/page-fragment@v1` payload with
+  `kind: "section" | "block"`. Clipboard API writes are mirrored to
+  `sessionStorage` as a same-session fallback. Paste always regenerates section
+  and block ids, re-normalizes the fragment through the Page document owner
+  before insertion, and inserts blocks after the selected block or at the end of
+  the selected section while sections paste after the selected section.
 
 ## Responsive Cascade
 

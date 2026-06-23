@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-471-03, TASK-464, TASK-469
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -24,27 +26,26 @@ toolbar + Posts inline-marks pattern. Must land after TASK-471-03.
   `pageAuthoringSanitizers.ts:80-111`.
 - Safe href owner: `sanitizeAuthoringLinkHref` (no `javascript:`/`data:`); safe
   color: `isSafeAuthoringCssColor`.
-- Helper naming: before link marks land, rename/extract the historical
-  `normalizeWidgetSafeHref` implementation to a neutral Page/authoring helper
-  such as `normalizeAuthoringSafeHref`; Page Editor canvas code must stay on
-  sections/blocks and must not import widget-core modules.
+- Helper naming: link marks use the neutral Page/authoring
+  `normalizeAuthoringSafeHref` helper; Page Editor canvas code stays on
+  sections/blocks and does not import widget-core modules.
 - Posts reference: `tests/vitest/ui/post-richtext-inline-*.test.ts`.
 
 ## Sub-Tasks
 
-- [ ] Extend the mark union with `bold`, `italic`, `link(href)`,
+- [x] Extend the mark union with `bold`, `italic`, `link(href)`,
       `highlight(color)`; update `normalizeBlockTextMarks` (href via
       `sanitizeAuthoringLinkHref`; highlight color via `isSafeAuthoringCssColor`;
       bold/italic carry no attributes).
-- [ ] Add B / I / link / highlight buttons to the 471-03 inline mini-toolbar.
-- [ ] Render: `bold→<strong>`, `italic→<em>`, `link→<a href rel="nofollow
+- [x] Add B / I / link / highlight buttons to the 471-03 inline mini-toolbar.
+- [x] Render: `bold→<strong>`, `italic→<em>`, `link→<a href rel="nofollow
       noreferrer">` (match the page rich-text sanitizer, `pageAuthoringSanitizers.ts:100`),
       `highlight→<span background-color>`; support stacked marks
       (e.g. bold+color) per the Posts rule.
-- [ ] Keep the sanitizer allowlist exact + no `dangerouslySetInnerHTML`; clamp
+- [x] Keep the sanitizer allowlist exact + no `dangerouslySetInnerHTML`; clamp
       total marks per block.
-- [ ] Reconcile with TASK-469 inline-edit round-trip.
-- [ ] XSS + render + round-trip coverage.
+- [x] Reconcile with TASK-469 inline-edit round-trip.
+- [x] XSS + render + round-trip coverage.
 
 ## Implementation Pseudocode
 

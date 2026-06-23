@@ -12,8 +12,8 @@ import {
 import {
   getPageBlockActiveSlotKeys,
   isPageTypographyCapableBlockType,
-  isPageTextColorMarkCapableBlockType,
-  normalizeBlockTextColorMarks,
+  isPageTextMarkCapableBlockType,
+  normalizeBlockTextMarks,
   pageBadgeIconPositions,
   pageBadgeIcons,
   pageBadgeShapes,
@@ -29,6 +29,7 @@ import {
   type PageBreakpoint,
   type PageDocumentV2,
   type PageSectionV2,
+  type PageTextMark,
 } from "./pageDocumentV2";
 import type { PageBlockPath } from "./pageBlockPaths";
 import {
@@ -559,21 +560,36 @@ const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties =>
     style.backgroundType === "color" && style.background
       ? sanitizeAuthoringCssColor(style.background)
       : undefined;
+  const backgroundImageUrl =
+    style.backgroundType === "image" ? sanitizeAuthoringMediaUrl(style.backgroundImage) : null;
   const textColor = sanitizeAuthoringCssColor(style.textColor);
   const borderColor = sanitizeAuthoringCssColor(style.borderColor);
+  const borderStyle = style.borderStyle ?? (borderColor ? "solid" : undefined);
+  const borderWidth =
+    typeof style.borderWidth === "number" && Number.isFinite(style.borderWidth)
+      ? style.borderWidth
+      : borderColor
+        ? 1
+        : 0;
+  const hasBorder = borderStyle !== "none" && (Boolean(borderColor) || borderWidth > 0);
   return {
     "--coderso-block-text": textColor ?? undefined,
     "--coderso-block-surface": backgroundColor ?? undefined,
     backgroundColor: backgroundColor ?? undefined,
-    backgroundImage:
-      style.backgroundType === "gradient" ? toGradientBackground(style.background) : undefined,
+    backgroundImage: backgroundImageUrl
+      ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
+      : style.backgroundType === "gradient"
+        ? toGradientBackground(style.background)
+        : undefined,
+    backgroundSize: backgroundImageUrl ? "cover" : undefined,
+    backgroundPosition: backgroundImageUrl ? "center" : undefined,
     color: textColor ?? undefined,
     opacity: style.opacity,
     borderRadius: style.radius !== undefined ? `${style.radius}px` : undefined,
     boxShadow: toPageShadowValue(style.shadow),
     borderColor: borderColor ?? undefined,
-    borderStyle: borderColor ? "solid" : undefined,
-    borderWidth: borderColor ? "1px" : undefined,
+    borderStyle: hasBorder ? borderStyle : undefined,
+    borderWidth: hasBorder ? `${borderWidth}px` : undefined,
   };
 };
 
@@ -717,34 +733,88 @@ const renderBlockText = (
     ? context.renderInlineText({ block, propPath, text, children })
     : (children ?? text);
 
-const renderBlockTextColorMarks = (
+const textMarkRenderRank: Record<PageTextMark["type"], number> = {
+  color: 0,
+  highlight: 1,
+  bold: 2,
+  italic: 3,
+  link: 4,
+};
+
+const renderMarkedTextSegment = (
+  text: string,
+  marks: readonly PageTextMark[],
+  key: string
+): ReactNode => {
+  const style: CSSProperties = {};
+  const link = marks.find(
+    (mark): mark is Extract<PageTextMark, { type: "link" }> => mark.type === "link"
+  );
+  const hasBold = marks.some((mark) => mark.type === "bold");
+  const hasItalic = marks.some((mark) => mark.type === "italic");
+  for (const mark of marks) {
+    if (mark.type === "color") style.color = mark.color;
+    if (mark.type === "highlight") style.backgroundColor = mark.color;
+  }
+
+  let node: ReactNode = text;
+  const styleTypes = marks
+    .filter((mark) => mark.type === "color" || mark.type === "highlight")
+    .map((mark) => mark.type)
+    .join(" ");
+  if (Object.keys(style).length > 0) {
+    node = (
+      <span key={`${key}-style`} data-page-text-mark={styleTypes} style={style}>
+        {node}
+      </span>
+    );
+  }
+  if (hasBold) {
+    node = <strong key={`${key}-bold`}>{node}</strong>;
+  }
+  if (hasItalic) {
+    node = <em key={`${key}-italic`}>{node}</em>;
+  }
+  if (link) {
+    node = (
+      <a key={`${key}-link`} href={link.href} rel="nofollow noreferrer">
+        {node}
+      </a>
+    );
+  }
+  return node;
+};
+
+const renderBlockTextMarks = (
   block: PageBlockV2,
   propPath: string,
   text: string,
   context: PageBlockRenderContext
 ): ReactNode => {
-  if (propPath !== "text" || !isPageTextColorMarkCapableBlockType(block.type)) {
+  if (propPath !== "text" || !isPageTextMarkCapableBlockType(block.type)) {
     return renderBlockText(block, propPath, text, context);
   }
-  const marks = normalizeBlockTextColorMarks(text, block.props.marks);
+  const marks = normalizeBlockTextMarks(text, block.props.marks);
   if (marks.length === 0) return renderBlockText(block, propPath, text, context);
 
+  const boundaries = Array.from(
+    new Set([0, text.length, ...marks.flatMap((mark) => [mark.from, mark.to])])
+  ).sort((left, right) => left - right);
   const children: ReactNode[] = [];
-  let cursor = 0;
-  marks.forEach((mark, index) => {
-    if (mark.from > cursor) children.push(text.slice(cursor, mark.from));
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    const from = boundaries[index]!;
+    const to = boundaries[index + 1]!;
+    if (to <= from) continue;
+    const segment = text.slice(from, to);
+    const activeMarks = marks
+      .filter((mark) => mark.from <= from && mark.to >= to)
+      .sort((left, right) => textMarkRenderRank[left.type] - textMarkRenderRank[right.type]);
     children.push(
-      <span
-        key={`mark-${index}-${mark.from}-${mark.to}`}
-        data-page-text-mark="color"
-        style={{ color: mark.color }}
-      >
-        {text.slice(mark.from, mark.to)}
-      </span>
+      activeMarks.length > 0
+        ? renderMarkedTextSegment(segment, activeMarks, `mark-${index}-${from}-${to}`)
+        : segment
     );
-    cursor = mark.to;
-  });
-  if (cursor < text.length) children.push(text.slice(cursor));
+  }
   return renderBlockText(block, propPath, text, context, children);
 };
 
@@ -886,18 +956,13 @@ const renderTextBlock = (block: PageBlockV2, context: PageBlockRenderContext) =>
   }
   return (
     <p className={className} style={style} {...pageBlockTextDataAttributes}>
-      {renderBlockTextColorMarks(block, "text", readText(block.props.text), context)}
+      {renderBlockTextMarks(block, "text", readText(block.props.text), context)}
     </p>
   );
 };
 
 const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
-  const text = renderBlockTextColorMarks(
-    block,
-    "text",
-    readText(block.props.text, "Heading"),
-    context
-  );
+  const text = renderBlockTextMarks(block, "text", readText(block.props.text, "Heading"), context);
   const level = readText(block.props.level, "h2");
   // Typography contract: explicit tokens paint inline on the heading element
   // itself so they beat the baked level classes (text-5xl, font-semibold).
@@ -1790,7 +1855,7 @@ export const renderPageBlockContent = (
           style={toPageBlockTypographyStyle(block)}
           {...pageBlockTextDataAttributes}
         >
-          <p>{renderBlockTextColorMarks(block, "text", readText(block.props.text), context)}</p>
+          <p>{renderBlockTextMarks(block, "text", readText(block.props.text), context)}</p>
           {readText(block.props.cite) ? (
             <cite className="mt-3 block text-sm text-[var(--coderso-block-text,#64748b)]">
               {renderBlockText(block, "cite", readText(block.props.cite), context)}

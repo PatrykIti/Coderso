@@ -1582,6 +1582,105 @@ test("PageEditor block style controls update visible canvas style and saved data
   }
 });
 
+test("PageEditor background panel edits block gradients and background images", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+
+    clickButtonByLabel(view.container, "Background panel");
+    clickSegmentedOption(view.container, "Background type", "gradient");
+    await flush();
+    setSliderField(view.container, "Angle", "90");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    let savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    let savedDocument = savedPayload?.data as PageDocumentV2;
+    let savedBlock = savedDocument.sections[0]?.blocks.find((block) => block.id === "blk-copy");
+    expect(savedBlock?.style?.backgroundType).toBe("gradient");
+    expect(savedBlock?.style?.background).toBe(
+      "linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%)"
+    );
+
+    if (
+      !view.container.querySelector(
+        '[data-page-editor-control="segmented"] [role="group"][aria-label="Background type"]'
+      )
+    ) {
+      clickButtonByLabel(view.container, "Background panel");
+    }
+    clickSegmentedOption(view.container, "Background type", "image");
+    await flush();
+    selectMediaAsset(view.container, "Background image", "asset-hero");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    savedDocument = savedPayload?.data as PageDocumentV2;
+    savedBlock = savedDocument.sections[0]?.blocks.find((block) => block.id === "blk-copy");
+    expect(savedBlock?.style).toMatchObject({
+      backgroundType: "image",
+      backgroundImage: "/hero.jpg",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor undo redo and session clipboard duplicate selected blocks", async () => {
+  window.sessionStorage.clear();
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+
+    clickButtonByLabel(view.container, "Style panel");
+    clickColorSwatch(view.container, "Text color", "primary");
+    await flush();
+
+    clickButtonByLabel(view.container, "Undo");
+    clickButtonByLabel(view.container, "Redo");
+    await flush();
+
+    clickButtonByLabel(view.container, "Copy selection");
+    await flush();
+    expect(window.sessionStorage.getItem("coderso.pageEditor.clipboard")).toContain(
+      "coderso/page-fragment@v1"
+    );
+
+    clickButtonByLabel(view.container, "Paste");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const blocks = savedDocument.sections[0]?.blocks ?? [];
+    expect(blocks).toHaveLength(3);
+    expect(blocks[1]?.id).toBe("blk-copy");
+    expect(blocks[1]?.style?.textColor).toBe("var(--color-primary)");
+    expect(blocks[2]?.id).not.toBe("blk-copy");
+    expect(blocks[2]?.type).toBe("text");
+    expect(blocks[2]?.props.text).toBe("Existing page copy.");
+    expect(blocks[2]?.style?.textColor).toBe("var(--color-primary)");
+  } finally {
+    view.cleanup();
+    window.sessionStorage.clear();
+  }
+});
+
 test("PageEditor wide segmented option sets scroll inside their panel cell", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
@@ -5408,7 +5507,13 @@ test("PageEditor floating-panel sweep: every rendered control presents the docum
     ) => {
       for (const panel of panels) {
         await openFloatingPanel(view.container, panel);
-        for (const control of controls.filter((entry) => entry.panel === panel)) {
+        const visibleControls = controls
+          .filter((entry) => entry.panel === panel)
+          .filter(
+            (entry) =>
+              entry.id !== "block.style.backgroundImage" || block?.style?.backgroundType === "image"
+          );
+        for (const control of visibleControls) {
           expect(readControlDisplayValue(view.container, control), control.id).toBe(
             expectedControlDisplayValue(
               target,

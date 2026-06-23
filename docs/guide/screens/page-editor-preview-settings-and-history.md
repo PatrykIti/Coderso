@@ -9,7 +9,7 @@ keywords:
   - page settings
   - page history
   - page revisions
-  - widgets
+  - blocks
 ---
 
 # Basic
@@ -20,12 +20,11 @@ page-wide settings, and revision/history controls.
 
 In the shipped UI, the editor is organized into three working zones:
 - left:
-  library tabs for `Widgets`, `Templates`, and `Forms`
+  page navigation and supporting admin navigation
 - center:
   editable page canvas
 - right:
-  details area for the currently selected block, or a placeholder when nothing
-  is selected
+  the canvas and floating toolbar for the selected section or block
 
 The editor toolbar also exposes the page-wide actions:
 - runtime preview device selection,
@@ -34,6 +33,8 @@ The editor toolbar also exposes the page-wide actions:
 - `Publish`,
 - `Page settings`,
 - `History`.
+Selected blocks also expose quick toolbar actions for undo, redo, copy, paste,
+move, duplicate, and delete.
 
 # Medium
 
@@ -49,6 +50,8 @@ Think of the editor as five connected workflows:
 - toolbar workflow:
   edit the selected section layout, content, style, spacing, visibility, and
   responsive overrides
+- session workflow:
+  undo/redo local draft edits and copy/paste selected sections or blocks
 - page-wide workflow:
   adjust title, slug, navigation, template, and revision policy in `Page
   settings`
@@ -96,6 +99,15 @@ The breadcrumb/status strip also matters:
      Display and the token size scale), not free-form values, so pages stay
      consistent with the site theme. The panel is per-block: sections and
      non-text blocks (image, divider, spacer) do not show it.
+   - Text selections inside heading, text, and quote blocks can use inline
+     marks for bold, italic, link, highlight, and text color. Link marks render
+     with safe public link attributes, and token color swatches store site
+     token references such as `var(--color-primary)`.
+   - Style color controls include site-token swatches for the public color
+     tokens (`Primary`, `Secondary`, `Accent`, `Background`, `Surface`, `Text`,
+     `Border`) plus the existing custom color entry. Block background controls
+     can author a sanitized gradient or pick a background image; block spacing
+     includes both padding and margin, and block borders include width and style.
    - Adding a form to a page: insert the `Form` block from the command
      palette, then open the `Content` panel and pick one of your saved forms
      in the searchable `Form` picker (forms are built in the Forms admin
@@ -177,30 +189,33 @@ The breadcrumb/status strip also matters:
        informational because desktop is the base.
 7. Save your work early with `Save draft`.
    Do this before opening preview if you want to validate the latest draft.
-8. Use the device control to choose desktop,
+8. Use undo/redo for local correction before saving, and use copy/paste when
+   you need another copy of the selected section or block. Pasted fragments get
+   fresh internal ids and are normalized before they are inserted.
+9. Use the device control to choose desktop,
    tablet, or mobile editing/preview mode. Each option shows its label and
    canvas width (`Desktop 1080`, `Tablet 744`, `Mobile 390`), and the floating
    toolbar shows an `Editing: …` pill so you always know which breakpoint your
    edits target. Edits made on Tablet or Mobile become overrides; Desktop edits
    change the base.
-9. Click `Runtime preview` to open the read-only runtime dialog.
+10. Click `Runtime preview` to open the read-only runtime dialog.
     Use it to verify site-theme rendering, not to edit content. The dialog
     renders the saved draft ("Runtime preview of the saved draft"); if the
     preview target is temporarily unreachable, the dialog shows a bounded
     diagnostic and a `Retry preview` button that regenerates the preview.
-10. Open `Page settings` when you need page-wide controls rather than one
+11. Open `Page settings` when you need page-wide controls rather than one
    section’s controls.
-11. In `Page settings`, work top to bottom:
+12. In `Page settings`, work top to bottom:
     - confirm `Page title`,
     - confirm `Slug`,
     - choose `Template`,
     - decide `Show in navigation`,
     - set `Revisions to keep`.
-12. Click `Save settings` when the drawer values are correct.
+13. Click `Save settings` when the drawer values are correct.
     If you close the drawer instead, the UI can keep one settings autosave
     snapshot, but that is not the same as a published revision.
-13. Open `History` when you need to inspect or restore revisions.
-14. Use `Publish` only after:
+14. Open `History` when you need to inspect or restore revisions.
+15. Use `Publish` only after:
     - the canvas is correct,
     - settings are correct,
     - runtime preview has been checked,

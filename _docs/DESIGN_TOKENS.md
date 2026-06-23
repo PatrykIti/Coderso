@@ -55,6 +55,24 @@ and references the typography group above:
 - Free-form font strings are not accepted: the Pages schema rejects unknown
   typography tokens on fresh writes.
 
+## Pages v2 color-token authoring
+
+Page Editor v2 color controls may store either a sanitized raw color or one of
+the allowlisted site color token references:
+
+- `var(--color-primary)`
+- `var(--color-secondary)`
+- `var(--color-accent)`
+- `var(--color-bg)`
+- `var(--color-surface)`
+- `var(--color-text)`
+- `var(--color-border)`
+
+The token swatches commit the `var(--color-*)` value while previewing the
+resolved site token in the admin canvas. Arbitrary `var()` expressions are not
+accepted by the Page authoring color sanitizer; only the names above are valid
+for Page block/section colors and inline text marks.
+
 ## Tailwind integration
 
 - Core build mapuje tokeny na utility classes.

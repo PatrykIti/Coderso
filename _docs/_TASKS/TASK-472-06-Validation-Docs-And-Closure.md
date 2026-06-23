@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Closure
 **Estimated Effort:** Small
 **Dependencies:** TASK-472-01, TASK-472-02, TASK-472-03, TASK-472-04, TASK-472-05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 

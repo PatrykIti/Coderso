@@ -421,6 +421,22 @@ const runtimeParityPageData = (token: string) => ({
           visibility: { visible: true },
         },
         {
+          id: `parity-badge-${token}`,
+          type: "badge",
+          props: {
+            text: `Runtime badge ${token}`,
+            variant: "soft",
+            size: "sm",
+            shape: "pill",
+            weight: "semibold",
+            background: null,
+            textColor: null,
+            icon: null,
+            iconPosition: "start",
+          },
+          visibility: { visible: true },
+        },
+        {
           id: `parity-button-${token}`,
           type: "button",
           props: { label: `Runtime CTA ${token}`, href: "/contact", target: "self" },
@@ -822,6 +838,7 @@ testIfDbWithOptions(
       expect(html).toContain(`data-page-block="${type}"`);
     }
     expect(html).toContain(`Runtime parity heading ${token}`);
+    expect(html).toContain(`Runtime badge ${token}`);
     expect(html).toContain(`Runtime CTA ${token}`);
     expect(html).toContain(`https://cdn.example.test/runtime-image-${token}.jpg`);
     expect(html).toContain(`https://cdn.example.test/runtime-video-${token}.mp4`);

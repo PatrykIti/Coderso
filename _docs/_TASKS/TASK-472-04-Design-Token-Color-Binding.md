@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Controls
 **Estimated Effort:** Medium
 **Dependencies:** None (complements TASK-471-03 / TASK-471-04 color sinks)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 

@@ -425,6 +425,39 @@ describe("buildPageResponsiveCss", () => {
     expect(css).not.toContain('[data-block-id="blk_btn_hide"] [data-page-block-element');
   });
 
+  test("emits safe block image backgrounds and border none clears", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_bg",
+            responsive: {
+              mobile: {
+                style: {
+                  backgroundType: "image",
+                  backgroundImage: '/uploads/hero "wide".jpg',
+                  borderColor: "#ff0000",
+                  borderWidth: 4,
+                  borderStyle: "none",
+                },
+              },
+            },
+          }),
+        ],
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+
+    expect(css).toContain(
+      '[data-block-id="blk_bg"]{' +
+        "--coderso-block-surface:initial !important;" +
+        'background-color:transparent !important;background-image:url("/uploads/hero \\"wide\\".jpg") !important;' +
+        "background-position:center !important;background-size:cover !important;" +
+        "border-style:none !important;border-width:0 !important}"
+    );
+    expect(css).not.toContain("javascript");
+  });
+
   test("scopes typography overrides to the painted text node of text-capable blocks", () => {
     const document = buildDocument([
       buildSection({

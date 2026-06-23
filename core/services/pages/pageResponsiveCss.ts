@@ -500,9 +500,14 @@ const collectBlockDeclarations = (
       diag("style.textColor", "unsafe_color_value");
     }
   }
-  if (styleOverride.background !== undefined || styleOverride.backgroundType !== undefined) {
+  if (
+    styleOverride.background !== undefined ||
+    styleOverride.backgroundType !== undefined ||
+    styleOverride.backgroundImage !== undefined
+  ) {
     // Mirror `toPageBlockStyle`: `color` paints background-color (+ surface
-    // variable), `gradient` paints background-image, everything else clears.
+    // variable), `gradient` paints background-image, `image` paints a safe
+    // media URL, everything else clears.
     if (mergedStyle.backgroundType === "color" && mergedStyle.background) {
       if (isSafeCssColor(mergedStyle.background)) {
         visual.push({ property: "background-color", value: mergedStyle.background });
@@ -518,6 +523,20 @@ const collectBlockDeclarations = (
         visual.push({ property: "--coderso-block-surface", value: "initial" });
       } else {
         diag("style.background", "unsafe_background_value");
+      }
+    } else if (mergedStyle.backgroundType === "image" && mergedStyle.backgroundImage) {
+      const safeBackgroundImage = sanitizeAuthoringMediaUrl(mergedStyle.backgroundImage);
+      if (safeBackgroundImage) {
+        visual.push({
+          property: "background-image",
+          value: `url("${escapeCssString(safeBackgroundImage)}")`,
+        });
+        visual.push({ property: "background-size", value: "cover" });
+        visual.push({ property: "background-position", value: "center" });
+        visual.push({ property: "background-color", value: "transparent" });
+        visual.push({ property: "--coderso-block-surface", value: "initial" });
+      } else {
+        diag("style.backgroundImage", "unsafe_background_value");
       }
     } else {
       visual.push({ property: "background-color", value: "transparent" });
@@ -536,8 +555,19 @@ const collectBlockDeclarations = (
     const value = shadowCssValues[mergedStyle.shadow ?? ""];
     if (value) visual.push({ property: "box-shadow", value });
   }
-  if (styleOverride.borderColor !== undefined) {
-    if (mergedStyle.borderColor === null) {
+  if (
+    styleOverride.borderColor !== undefined ||
+    styleOverride.borderWidth !== undefined ||
+    styleOverride.borderStyle !== undefined
+  ) {
+    const borderWidth = isFiniteNumber(mergedStyle.borderWidth)
+      ? Math.max(0, mergedStyle.borderWidth)
+      : mergedStyle.borderColor
+        ? 1
+        : 0;
+    const borderStyle =
+      mergedStyle.borderStyle ?? (mergedStyle.borderColor || borderWidth > 0 ? "solid" : "none");
+    if (borderStyle === "none" || borderWidth <= 0) {
       visual.push({ property: "border-style", value: "none" });
       visual.push({ property: "border-width", value: "0" });
     } else if (
@@ -545,8 +575,11 @@ const collectBlockDeclarations = (
       isSafeCssColor(mergedStyle.borderColor)
     ) {
       visual.push({ property: "border-color", value: mergedStyle.borderColor });
-      visual.push({ property: "border-style", value: "solid" });
-      visual.push({ property: "border-width", value: "1px" });
+      visual.push({ property: "border-style", value: borderStyle });
+      visual.push({ property: "border-width", value: `${borderWidth}px` });
+    } else if (mergedStyle.borderColor === null || mergedStyle.borderColor === undefined) {
+      visual.push({ property: "border-style", value: borderStyle });
+      visual.push({ property: "border-width", value: `${borderWidth}px` });
     } else {
       diag("style.borderColor", "unsafe_color_value");
     }

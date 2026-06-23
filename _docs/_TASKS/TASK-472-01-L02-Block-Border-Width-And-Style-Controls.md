@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Renderer
 **Estimated Effort:** Small
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -28,20 +30,20 @@ look for legacy color-only blocks.
 
 ## Sub-Tasks
 
-- [ ] Add `borderWidth?: number` (clamp 0–12) + `borderStyle?:
-      "solid"|"dashed"|"dotted"|"double"|"none"` to `PageBlockStyleV2`, JSON
+- [x] Add `borderWidth?: number` (clamp 0–12) + `borderStyle?:
+      "none"|"solid"|"dashed"|"dotted"` to `PageBlockStyleV2`, JSON
       schema (nullable + reject-unknown), and `normalizeBlockStyle`.
-- [ ] Add `block.style.borderWidth` (number, clamp 0–12) + `block.style.borderStyle`
+- [x] Add `block.style.borderWidth` (number, clamp 0–12) + `block.style.borderStyle`
       (segmented/select, `panel:"style"`) controls + render defaults.
-- [ ] Renderer reads stored values with legacy fallbacks (`1px`/`solid` when a
+- [x] Renderer reads stored values with legacy fallbacks (`1px`/`solid` when a
       color is set but width/style unset).
-- [ ] Renderer regression coverage for non-default + legacy fallback.
+- [x] Renderer regression coverage for non-default + legacy fallback.
 
 ## Implementation Pseudocode
 
 ```ts
 // pageDocumentV2.ts
-export const pageBorderStyles = ["solid","dashed","dotted","double","none"] as const;
+export const pageBorderStyles = ["none","solid","dashed","dotted"] as const;
 export const PAGE_BLOCK_BORDER_WIDTH_CLAMP = { min: 0, max: 12 } as const;
 // PageBlockStyleV2: borderWidth?: number; borderStyle?: PageBorderStyle;
 

@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Background
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -27,14 +29,14 @@ direction/angle) that produces a sanitized gradient, stored in the existing
 
 ## Sub-Tasks
 
-- [ ] Reproduce the `toGradientBackground` accepted-string contract first.
-- [ ] Add a gradient composer control (kind + angle + ordered stops); each stop
+- [x] Reproduce the `toGradientBackground` accepted-string contract first.
+- [x] Add a gradient composer control (kind + angle + ordered stops); each stop
       color via the safe-color helper.
-- [ ] Compose a sanitized `linear-gradient(...)`/`radial-gradient(...)` into
+- [x] Compose a sanitized `linear-gradient(...)`/`radial-gradient(...)` into
       `style.background` when `backgroundType === "gradient"` (no schema/renderer
       churn); offer a few preset gradients.
-- [ ] Keep a raw-CSS fallback only behind the existing gradient sanitizer.
-- [ ] Render + sanitizer coverage.
+- [x] Keep a raw-CSS fallback only behind the existing gradient sanitizer.
+- [x] Render + sanitizer coverage.
 
 ## Implementation Pseudocode
 

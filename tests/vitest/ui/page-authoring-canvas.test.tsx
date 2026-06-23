@@ -23,7 +23,7 @@ const baseCanvasProps = {
   onAddBlockBeside: vi.fn(),
   onStartInlineEdit: vi.fn(),
   onCommitInlineEdit: vi.fn(),
-  onApplyTextColorMark: vi.fn(),
+  onApplyTextMark: vi.fn(),
 };
 
 const mount = (node: ReactNode) => {
@@ -75,7 +75,7 @@ test("SectionCanvas renders existing canvas chrome and ghost add affordances", (
       onAddBlockBeside={vi.fn()}
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
-      onApplyTextColorMark={vi.fn()}
+      onApplyTextMark={vi.fn()}
     />
   );
 
@@ -116,7 +116,7 @@ test("SectionCanvas renders hidden block ghost through the reusable label helper
       onAddBlockBeside={vi.fn()}
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
-      onApplyTextColorMark={vi.fn()}
+      onApplyTextMark={vi.fn()}
     />
   );
 
@@ -158,7 +158,7 @@ test("SectionCanvas exposes sanitized rich text through the inline edit wrapper"
       onAddBlockBeside={vi.fn()}
       onStartInlineEdit={vi.fn()}
       onCommitInlineEdit={vi.fn()}
-      onApplyTextColorMark={vi.fn()}
+      onApplyTextMark={vi.fn()}
     />
   );
 
@@ -268,7 +268,7 @@ test("SectionCanvas rich inline edit commits innerHTML for the sanitizer owner",
 });
 
 test("SectionCanvas inline text color toolbar applies the selected text range", () => {
-  const onApplyTextColorMark = vi.fn();
+  const onApplyTextMark = vi.fn();
   const section = createPageSectionV2("content", {
     id: "sec-mark-toolbar",
     blocks: [
@@ -288,7 +288,7 @@ test("SectionCanvas inline text color toolbar applies the selected text range", 
       selectedBlockId="blk-mark-toolbar"
       inlineEditTarget={{ blockId: "blk-mark-toolbar", propPath: "text" }}
       {...baseCanvasProps}
-      onApplyTextColorMark={onApplyTextColorMark}
+      onApplyTextMark={onApplyTextMark}
     />
   );
 
@@ -322,13 +322,14 @@ test("SectionCanvas inline text color toolbar applies the selected text range", 
       swatch?.click();
     });
 
-    expect(onApplyTextColorMark).toHaveBeenCalledWith(
+    expect(onApplyTextMark).toHaveBeenCalledWith(
       expect.objectContaining({
         blockId: "blk-mark-toolbar",
         propPath: "text",
+        type: "color",
         from: 0,
         to: 6,
-        color: expect.stringMatching(/^#/),
+        color: expect.stringMatching(/^(#|var\(--color-)/),
       })
     );
   } finally {

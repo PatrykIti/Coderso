@@ -6,7 +6,9 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-471 (shares `pageRendererV2.tsx` + control registry +
 inline-marks model)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -61,11 +63,10 @@ Same as TASK-471: schema-first / reject-unknown / normalize; color & URL safety
 renderer parity; controls through the registry adapter; **untrusted input**
 (clipboard, pasted fragments) is fully re-normalized before use.
 
-Implementation note: Page Editor V2 remains sections/blocks only. If the current
-link sanitizer still delegates to the historical `normalizeWidgetSafeHref`
-helper, TASK-472 must rename/extract that helper to a neutral Page/authoring
-name such as `normalizeAuthoringSafeHref` before adding link marks. Page code
-must not import widget-core modules for canvas behavior.
+Implementation note: Page Editor V2 remains sections/blocks only. TASK-472
+renamed/extracted the historical link helper to the neutral Page/authoring
+`normalizeAuthoringSafeHref` owner before adding link marks. Page code must not
+import widget-core modules for canvas behavior.
 
 ## Security Contract (umbrella)
 

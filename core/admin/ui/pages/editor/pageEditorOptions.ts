@@ -183,6 +183,22 @@ export const toolbarActionTooltips = {
     label: "Close panel",
     description: "Close this panel; the toolbar stays open.",
   },
+  undo: {
+    label: "Undo",
+    description: "Restore the previous edit in this editor session.",
+  },
+  redo: {
+    label: "Redo",
+    description: "Reapply the next edit in this editor session.",
+  },
+  copySelection: {
+    label: "Copy selection",
+    description: "Copy the selected block or section for this editor session.",
+  },
+  pasteSelection: {
+    label: "Paste",
+    description: "Insert the copied block or section near the current selection.",
+  },
   moveSectionUp: {
     label: "Move section up",
     description: "Move the selected section one position earlier.",

@@ -549,8 +549,6 @@ test("CustomScreenListPage create drawer submits schema fields and navigates by 
     status: "draft",
     showInSidebar: false,
     sidebarLabel: null,
-    blocks: [],
-    bindings: [],
   });
   expect(customScreensState.toastSuccess).toHaveBeenCalledWith(
     'Custom screen "Inventory dashboard" created.'

@@ -1,5 +1,6 @@
 import {
   PAGE_COLLECTION_LIMIT_CLAMP,
+  PAGE_BLOCK_BORDER_WIDTH_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
@@ -10,6 +11,7 @@ import {
   pageBadgeVariants,
   pageBadgeWeights,
   pageBlockCapabilities,
+  pageBlockBorderStyles,
   pageColumnDistributions,
   pageBlockWidths,
   pageButtonSizes,
@@ -141,8 +143,8 @@ export type PageEditorControlDefinition = {
    * width/align, typography tokens) omit it here — their effective rendered
    * defaults are owned by `pageBlockRenderDefaults.ts` and resolved by the
    * display path per block type/heading level (owner finding #9 round 3).
-   * Nullable colors stay display-empty. Widgets must never show a zero-value
-   * lie (e.g. Opacity `0` for an unset value that renders as `1`).
+   * Nullable colors stay display-empty. Page block controls must never show a
+   * zero-value lie (e.g. Opacity `0` for an unset value that renders as `1`).
    */
   fallback?: string | number | boolean;
 };
@@ -409,6 +411,15 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     fallback: "none",
   }),
   control({
+    id: "block.style.backgroundImage",
+    panel: "background",
+    target: "block",
+    label: "Background image",
+    path: ["style", "backgroundImage"],
+    input: "media",
+    responsive: true,
+  }),
+  control({
     id: "block.style.opacity",
     panel: "style",
     target: "block",
@@ -453,6 +464,28 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     path: ["style", "borderColor"],
     input: "color",
     responsive: true,
+  }),
+  control({
+    id: "block.style.borderWidth",
+    panel: "style",
+    target: "block",
+    label: "Border width",
+    path: ["style", "borderWidth"],
+    input: "number",
+    responsive: true,
+    clamp: PAGE_BLOCK_BORDER_WIDTH_CLAMP,
+    fallback: 0,
+  }),
+  control({
+    id: "block.style.borderStyle",
+    panel: "style",
+    target: "block",
+    label: "Border style",
+    path: ["style", "borderStyle"],
+    input: "segmented",
+    responsive: true,
+    options: pageBlockBorderStyles,
+    fallback: "none",
   }),
   ...(["top", "right", "bottom", "left"] as const).flatMap((side) => [
     control({
@@ -946,7 +979,7 @@ export const getPageBlockCapability = (type: PageBlockType) => pageBlockCapabili
  * the Responsive panel's control metadata: the canonical editor device
  * metadata (labels + canvas widths), the per-breakpoint hide-on-screen
  * toggles, and the per-field override-state projection consumed by the
- * panel's override list. The widgets themselves render in `PageEditor.tsx`
+ * panel's override list. The controls themselves render in `PageEditor.tsx`
  * (TASK-425-02) through the shared editor control primitives.
  */
 

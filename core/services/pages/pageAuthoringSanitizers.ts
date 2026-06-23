@@ -1,4 +1,3 @@
-import { normalizeWidgetSafeHref } from "../../widgets/core/widgetSafeHref";
 import {
   dangerousHtmlContentTagSet,
   escapeHtml,
@@ -7,11 +6,29 @@ import {
 } from "../posts/editor/postRichTextHtmlUtils";
 
 export type AuthoringUrlKind = "link" | "media";
+export type AuthoringSafeHrefOptions = {
+  allowRelative?: boolean;
+  allowHash?: boolean;
+  allowHttp?: boolean;
+};
+
+export const authoringColorTokenNames = [
+  "primary",
+  "secondary",
+  "accent",
+  "bg",
+  "surface",
+  "text",
+  "border",
+] as const;
+export type AuthoringColorTokenName = (typeof authoringColorTokenNames)[number];
 
 const hexColorPattern = /^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
 const namedColorPattern = /^[a-z]+$/i;
 const functionalColorPattern = /^(?:rgb|rgba|hsl|hsla)\(\s*[0-9a-z .,%/-]*\)$/i;
 const gradientCharsetPattern = /^(?:linear|radial|conic)-gradient\([0-9a-z #%,.()/\s-]*\)$/i;
+const colorTokenPattern = /^var\(--color-([a-z]+(?:-[a-z]+)*)\)$/;
+const rejectedProtocolPattern = /^(?:javascript|data|vbscript):/i;
 const specialLinkProtocols = new Set(["mailto:", "tel:"]);
 
 const hasBalancedParens = (value: string): boolean => {
@@ -26,8 +43,16 @@ const hasBalancedParens = (value: string): boolean => {
   return depth === 0;
 };
 
+export const isAuthoringColorToken = (
+  value: string
+): value is `var(--color-${AuthoringColorTokenName})` => {
+  const match = colorTokenPattern.exec(value.trim());
+  return Boolean(match?.[1] && (authoringColorTokenNames as readonly string[]).includes(match[1]));
+};
+
 export const isSafeAuthoringCssColor = (value: string): boolean =>
   hexColorPattern.test(value) ||
+  isAuthoringColorToken(value) ||
   namedColorPattern.test(value) ||
   functionalColorPattern.test(value);
 
@@ -53,7 +78,7 @@ export const sanitizeAuthoringUrl = (
   value: unknown,
   kind: AuthoringUrlKind = "link"
 ): string | null => {
-  const safe = normalizeWidgetSafeHref(value, {
+  const safe = normalizeAuthoringSafeHref(value, {
     allowRelative: true,
     allowHash: kind === "link",
     allowHttp: true,
@@ -76,6 +101,67 @@ export const sanitizeAuthoringLinkHref = (value: unknown): string | null =>
 
 export const sanitizeAuthoringMediaUrl = (value: unknown): string | null =>
   sanitizeAuthoringUrl(value, "media");
+
+export function normalizeAuthoringSafeHref(
+  value: unknown,
+  options: AuthoringSafeHrefOptions = {}
+): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("//")) return undefined;
+  if (rejectedProtocolPattern.test(trimmed)) return undefined;
+  if (options.allowHash && trimmed.startsWith("#")) return trimmed;
+  if (options.allowRelative && trimmed.startsWith("/")) return trimmed;
+
+  try {
+    const parsed = new URL(trimmed);
+    if (!options.allowHttp) return undefined;
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? trimmed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export type AuthoringGradientStop = {
+  color: string;
+  position: number;
+};
+
+export type AuthoringGradientModel = {
+  kind: "linear" | "radial";
+  angle: number;
+  stops: readonly AuthoringGradientStop[];
+};
+
+const clampInteger = (value: unknown, min: number, max: number, fallback: number): number => {
+  const numeric = typeof value === "number" && Number.isFinite(value) ? value : fallback;
+  return Math.min(max, Math.max(min, Math.trunc(numeric)));
+};
+
+export const composeAuthoringGradientCss = (model: AuthoringGradientModel): string | null => {
+  const kind = model.kind === "radial" ? "radial" : "linear";
+  const stops = model.stops
+    .map((stop) => {
+      const color = sanitizeAuthoringCssColor(stop.color);
+      return color
+        ? {
+            color,
+            position: clampInteger(stop.position, 0, 100, 0),
+          }
+        : null;
+    })
+    .filter((stop): stop is { color: string; position: number } => Boolean(stop))
+    .sort((left, right) => left.position - right.position);
+
+  if (stops.length < 2) return null;
+  const stopCss = stops.map((stop) => `${stop.color} ${stop.position}%`).join(", ");
+  const css =
+    kind === "linear"
+      ? `linear-gradient(${clampInteger(model.angle, 0, 360, 180)}deg, ${stopCss})`
+      : `radial-gradient(${stopCss})`;
+  return isSafeAuthoringCssGradient(css) ? css : null;
+};
 
 const pageRichTextAllowedTags: ReadonlySet<string> = new Set([
   "a",

@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Editing UX
 **Estimated Effort:** Medium
 **Dependencies:** TASK-454 (dirty/autosave — coordinate)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -26,15 +28,15 @@ Add bounded in-session undo/redo: `Cmd+Z` reverts the last document mutation,
 
 ## Sub-Tasks
 
-- [ ] Bounded history (document + selection snapshots, cap ~50) captured at the
+- [x] Bounded history (document + selection snapshots, cap ~50) captured at the
       single mutation entry point.
-- [ ] Wire `Cmd+Z` / `Cmd+Shift+Z` (+ palette) guarded by
+- [x] Wire `Cmd+Z` / `Cmd+Shift+Z` (+ palette) guarded by
       `isEditableShortcutTarget`.
-- [ ] Reset on load/save/publish; keep dirty/autosave correct (undo-to-saved ⇒
+- [x] Reset on load/save/publish; keep dirty/autosave correct (undo-to-saved ⇒
       not dirty).
-- [ ] Respect React-Hooks rules (no sync `setState` in effects; reducer/event
+- [x] Respect React-Hooks rules (no sync `setState` in effects; reducer/event
       handlers/lazy init).
-- [ ] Coverage: mutate→undo restores doc+selection; redo re-applies; cap
+- [x] Coverage: mutate→undo restores doc+selection; redo re-applies; cap
       enforced; history clears on save; ignored while typing.
 
 ## Implementation Pseudocode

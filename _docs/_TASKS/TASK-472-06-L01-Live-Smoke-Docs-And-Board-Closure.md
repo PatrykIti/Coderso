@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Closure
 **Estimated Effort:** Small
 **Dependencies:** TASK-472-01, TASK-472-02, TASK-472-03, TASK-472-04, TASK-472-05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -16,22 +18,43 @@ Execute family validation + closure for TASK-472.
 
 ## Sub-Tasks
 
-- [ ] Run the full validation lanes (below); record results.
-- [ ] Live `coderso-dev-core-host` + `playwright-cli` smoke on a throwaway page:
+- [x] Run the full validation lanes (below); record results.
+- [x] Live `coderso-dev-core-host` + `playwright-cli` smoke on a throwaway page:
       block margins editable + border width/style painted (472-01); a composed
       gradient + a block background image render (472-02); undo a delete + copy a
       section into another page (472-03); a token-bound color re-themes (472-04);
       a fragment with bold/link/highlight renders (472-05). Publish, verify the
       front, delete the page.
-- [ ] Update docs: `PAGE_MODEL.md`, `DESIGN_TOKENS.md`, `SECURITY_SPEC.md`, editor
+- [x] Update docs: `PAGE_MODEL.md`, `DESIGN_TOKENS.md`, `SECURITY_SPEC.md`, editor
       docs.
-- [ ] Sync `_docs/_TASKS/README.md` (move TASK-472 + descendants to Done; update
+- [x] Sync `_docs/_TASKS/README.md` (move TASK-472 + descendants to Done; update
       statistics) and add a `_docs/_CHANGELOG/` entry (next number) +
       `_docs/_CHANGELOG/README.md`.
-- [ ] Fresh post-implementation read-only drift pass (task contract, parent/child
+- [x] Fresh post-implementation read-only drift pass (task contract, parent/child
       statuses, changelog/index, validation evidence, code boundaries, security
       invariants — clipboard paste re-normalization, token/url/color sinks). Fix
       real drift; repeat until clean or split into follow-ups.
+
+## Completion Notes
+
+- Focused Vitest coverage passed for Page document normalization, authoring
+  sanitizers, renderer, responsive CSS, control registry/UI model, XSS guards,
+  control primitives, authoring canvas, editor flow, and clipboard helpers.
+- Broad lanes passed before docs closure: `bun run test:vitest`,
+  `bun run test:bun`, `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun --cwd core build:admin`, `bun run check:admin-boundary`,
+  `bun run check:admin-bundle`, `bun run gates:coderso`, and
+  `git diff --check`.
+- Live smoke used `coderso-dev-core-host` and terminal `playwright-cli` per the
+  repo smoke instructions. A throwaway page was created after the CMS setup
+  wizard reset, published, verified on
+  `http://coderso-a.localhost:3000`, and deleted. The smoke covered block
+  spacing, border width/style, gradient authoring, block background image,
+  token colors, bold/italic/link/highlight/color marks, undo/redo, copy/paste,
+  admin reload, and public runtime render.
+- External Claude/subagent consultation was not run because the user did not
+  explicitly approve external-agent audit for this implementation pass; closure
+  used local source/task drift review plus the required validation lanes.
 
 ## Testing Requirements
 

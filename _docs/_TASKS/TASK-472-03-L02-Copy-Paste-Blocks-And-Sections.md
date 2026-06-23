@@ -6,7 +6,9 @@
 **Category:** Pages / Page Editor V2 / Editing UX
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-23
+**Completed:** 2026-06-23
 
 ---
 
@@ -28,19 +30,19 @@ clipboard as untrusted and re-normalizes before insertion.
 
 ## Sub-Tasks
 
-- [ ] `Cmd+C` (+ palette "Copy"): serialize selected block/section to a namespaced
+- [x] `Cmd+C` (+ palette "Copy"): serialize selected block/section to a namespaced
       clipboard payload (Clipboard API + `sessionStorage` fallback), tagged with
       kind + schema marker.
-- [ ] `Cmd+V` (+ "Paste"): parse → **re-normalize/sanitize** via the document
+- [x] `Cmd+V` (+ "Paste"): parse → **re-normalize/sanitize** via the document
       normalize path → regenerate ids (`duplicate*WithNewIds`) → insert at target.
       No exported per-node normalizer exists today: either re-normalize via a
       synthetic doc (`normalizePageDocumentV2({ sections: [wrap(p.data)] })` then
       extract) or export thin `normalizePageBlock`/`normalizePageSection` wrappers
       around the internal `normalizeBlock`/`normalizeSection`.
-- [ ] Guard both with `isEditableShortcutTarget` (native text copy/paste intact).
-- [ ] Reject foreign/malformed payloads gracefully; enforce nesting depth /
+- [x] Guard both with `isEditableShortcutTarget` (native text copy/paste intact).
+- [x] Reject foreign/malformed payloads gracefully; enforce nesting depth /
       children caps on paste.
-- [ ] Coverage: copy→paste round-trips block + section with new ids; cross-context
+- [x] Coverage: copy→paste round-trips block + section with new ids; cross-context
       re-normalizes; malformed/oversized rejected.
 
 ## Implementation Pseudocode

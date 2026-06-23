@@ -871,6 +871,8 @@ test("block render props expose shared classes, styles, and data attributes", ()
       radius: 18,
       shadow: "md",
       borderColor: "#334155",
+      borderWidth: 2,
+      borderStyle: "dotted",
       padding: { top: 4, right: 8, bottom: 12, left: 16 },
       margin: { top: 1, right: 2, bottom: 3, left: 4 },
     },
@@ -891,8 +893,8 @@ test("block render props expose shared classes, styles, and data attributes", ()
     borderRadius: "18px",
     boxShadow: "0 14px 40px rgba(15, 23, 42, 0.12)",
     borderColor: "#334155",
-    borderStyle: "solid",
-    borderWidth: "1px",
+    borderStyle: "dotted",
+    borderWidth: "2px",
     padding: "4px 8px 12px 16px",
     marginTop: "1px",
     marginLeft: "auto",
@@ -1013,7 +1015,6 @@ test("image visual styles land on the img element (or empty placeholder)", () =>
       }),
     ],
   });
-
   const html = renderToStaticMarkup(<PageSectionContent section={section} />);
   const imgTag = html.match(/<img[^>]*>/)?.[0] ?? "";
   const frameTag = html.match(/<div[^>]*data-block-id="blk-styled-image"[^>]*>/)?.[0] ?? "";
@@ -1051,6 +1052,33 @@ test("gradient button backgrounds clear the variant background color inline", ()
   // Inline transparent background-color keeps the variant accent fallback
   // from bleeding through translucent gradient stops.
   expect(anchorTag).toContain("background-color:transparent");
+});
+
+test("block image backgrounds render as escaped cover media and reject unsafe urls", () => {
+  const safeBlock = createPageBlockV2("heading", {
+    id: "blk-image-background",
+    props: { text: "Image background", level: "h2", align: "left" },
+    style: {
+      backgroundType: "image",
+      backgroundImage: '/uploads/hero "wide".jpg',
+      background: "#f8fafc",
+    },
+  });
+  expect(toPageBlockRenderProps(safeBlock).style).toMatchObject({
+    backgroundImage: 'url("/uploads/hero \\"wide\\".jpg")',
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  });
+
+  const unsafeBlock = createPageBlockV2("heading", {
+    id: "blk-unsafe-background",
+    props: { text: "Unsafe background", level: "h2", align: "left" },
+    style: {
+      backgroundType: "image",
+      backgroundImage: "javascript:alert(1)",
+    },
+  });
+  expect(toPageBlockRenderProps(unsafeBlock).style.backgroundImage).toBeUndefined();
 });
 
 test("primary button section accent lands inline instead of relying on generated CSS", () => {
@@ -1173,7 +1201,7 @@ test("typography style paints inline on the exact text node, not the block frame
   expect(frameTag).not.toContain("letter-spacing");
 });
 
-test("text color marks render safe inline spans and drop unsafe colors", () => {
+test("text marks render safe inline elements and drop unsafe values", () => {
   const section = createPageSectionV2("content", {
     id: "sec-text-marks",
     blocks: [
@@ -1185,19 +1213,29 @@ test("text color marks render safe inline spans and drop unsafe colors", () => {
           align: "left",
           marks: [
             { type: "color", from: 0, to: 5, color: "#ef4444" },
-            { type: "color", from: 6, to: 11, color: "url(javascript:alert(1))" },
+            { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+            { type: "bold", from: 0, to: 5 },
+            { type: "italic", from: 6, to: 11 },
+            { type: "link", from: 6, to: 11, href: "/world" },
           ],
         },
       }),
     ],
   });
+  (section.blocks[0]!.props.marks as unknown[]).push(
+    { type: "color", from: 6, to: 11, color: "url(javascript:alert(1))" },
+    { type: "link", from: 0, to: 5, href: "javascript:alert(1)" }
+  );
 
   const html = renderToStaticMarkup(<PageSectionContent section={section} />);
 
-  expect(html).toContain('data-page-text-mark="color"');
-  expect(html).toContain('style="color:#ef4444"');
+  expect(html).toContain('data-page-text-mark="color highlight"');
+  expect(html).toContain('style="color:#ef4444;background-color:var(--color-accent)"');
+  expect(html).toContain("<strong");
+  expect(html).toContain("<em");
+  expect(html).toContain('<a href="/world" rel="nofollow noreferrer">');
   expect(html).toContain("<span");
-  expect(html).toContain(">Hello</span> world");
+  expect(html).toContain(">Hello</span>");
   expect(html).not.toContain("javascript");
   expect(html).not.toContain("url(");
 });

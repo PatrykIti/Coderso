@@ -26,7 +26,6 @@ import { SliderControl } from "../../../core/admin/ui/pages/editorControls/Slide
 import { SliderStepperControl } from "../../../core/admin/ui/pages/editorControls/SliderStepperControl";
 import { ToggleSwitch } from "../../../core/admin/ui/pages/editorControls/ToggleSwitch";
 import { getPageEditorColorPalette } from "../../../core/services/pages/pageEditorControlUiModel";
-import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -343,7 +342,7 @@ test("SliderStepperControl disables steppers at the clamp edges", () => {
 test("ColorSwatchControl renders token swatches, native picker, and hex affordance", () => {
   const onChange = vi.fn();
   const container = render(
-    <ColorSwatchControl label="Accent" value={DEFAULT_TOKENS.colors.accent} onChange={onChange} />
+    <ColorSwatchControl label="Accent" value="var(--color-accent)" onChange={onChange} />
   );
 
   const swatches = Array.from(
@@ -360,7 +359,7 @@ test("ColorSwatchControl renders token swatches, native picker, and hex affordan
   expect(container.querySelector("[data-page-editor-color-hex]")).toBeTruthy();
 
   click(swatches.find((swatch) => swatch.dataset.pageEditorColorSwatch === "primary"));
-  expect(onChange).toHaveBeenCalledWith(DEFAULT_TOKENS.colors.primary);
+  expect(onChange).toHaveBeenCalledWith("var(--color-primary)");
 });
 
 test("ColorSwatchControl keeps unknown values as a non-mutating custom state", () => {
@@ -438,7 +437,7 @@ test("ColorSwatchControl hides the transparent swatch when allowTransparent is f
   const container = render(
     <ColorSwatchControl
       label="Accent"
-      value={DEFAULT_TOKENS.colors.accent}
+      value="var(--color-accent)"
       onChange={() => {}}
       allowTransparent={false}
     />
@@ -450,7 +449,7 @@ test("ColorSwatchControl without custom affordance renders preset swatches only"
   const container = render(
     <ColorSwatchControl
       label="Tone"
-      value={DEFAULT_TOKENS.neutrals.surface}
+      value="var(--color-surface)"
       onChange={() => {}}
       allowCustom={false}
     />

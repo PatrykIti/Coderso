@@ -29,6 +29,7 @@ import {
   pageBadgeVariants,
   pageBadgeWeights,
   pageBlockCapabilities,
+  pageBlockBorderStyles,
   pageBlockDefaultProps,
   pageBlockPropKeys,
   pageBlockTypes,
@@ -91,10 +92,13 @@ const validBlockPaths = new Set([
   "style.textColor",
   "style.background",
   "style.backgroundType",
+  "style.backgroundImage",
   "style.opacity",
   "style.radius",
   "style.shadow",
   "style.borderColor",
+  "style.borderWidth",
+  "style.borderStyle",
   "style.padding.top",
   "style.padding.right",
   "style.padding.bottom",
@@ -116,6 +120,7 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageBadgeSizes,
   pageBadgeVariants,
   pageBadgeWeights,
+  pageBlockBorderStyles,
   pageBlockWidths,
   pageButtonSizes,
   pageButtonTargets,
@@ -195,8 +200,14 @@ describe("page editor control registry", () => {
       pageUniversalBlockControls.find((control) => control.id === "block.style.backgroundType")
     ).toMatchObject({ input: "select", options: pageBackgroundTypes });
     expect(
+      pageUniversalBlockControls.find((control) => control.id === "block.style.backgroundImage")
+    ).toMatchObject({ input: "media" });
+    expect(
       pageUniversalBlockControls.find((control) => control.id === "block.style.shadow")
     ).toMatchObject({ input: "select", options: pageShadowTokens });
+    expect(
+      pageUniversalBlockControls.find((control) => control.id === "block.style.borderStyle")
+    ).toMatchObject({ input: "segmented", options: pageBlockBorderStyles });
   });
 
   test("section and block capability coverage is complete", () => {

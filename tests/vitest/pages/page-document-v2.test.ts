@@ -15,6 +15,7 @@ import {
   isLegacyOrVersionlessPageDocument,
   normalizePageDocumentV2ForWrite,
   normalizeBlockTextColorMarks,
+  normalizeBlockTextMarks,
   normalizeStoredPageDocumentV2ForRead,
   pageBlockCapabilities,
   pageBlockDefaultProps,
@@ -424,10 +425,13 @@ describe("PageDocumentV2", () => {
       textColor: " #111827 ",
       background: null,
       backgroundType: "color",
+      backgroundImage: " /media/hero.jpg ",
       opacity: 2,
       radius: 99,
       shadow: "lg",
       borderColor: " #e2e8f0 ",
+      borderWidth: 99,
+      borderStyle: "dashed",
       padding: { top: 12, right: 999, bottom: -5, left: 4 },
       margin: { top: 8 },
     };
@@ -440,11 +444,14 @@ describe("PageDocumentV2", () => {
       textColor: "#111827",
       background: null,
       backgroundType: "color",
+      backgroundImage: "/media/hero.jpg",
       opacity: 1,
       radius: 64,
       shadow: "lg",
       borderColor: "#e2e8f0",
-      padding: { top: 12, right: 160, bottom: 0, left: 4 },
+      borderWidth: 12,
+      borderStyle: "dashed",
+      padding: { top: 12, right: 240, bottom: 0, left: 4 },
       margin: { top: 8 },
     });
   });
@@ -527,7 +534,7 @@ describe("PageDocumentV2", () => {
     }
   });
 
-  test("normalizes text color marks with clamped ranges, overlap removal, and caps", () => {
+  test("normalizes text marks with clamped ranges and same-type conflict removal", () => {
     const document = buildDocument();
     document.sections[0]!.blocks[0]!.props = {
       text: "Hello world",
@@ -536,6 +543,10 @@ describe("PageDocumentV2", () => {
       marks: [
         { type: "color", from: 0, to: 5, color: "#ef4444" },
         { type: "color", from: 3, to: 8, color: "#22c55e" },
+        { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+        { type: "bold", from: 0, to: 5 },
+        { type: "italic", from: 1, to: 99 },
+        { type: "link", from: 6, to: 99, href: "/safe" },
         { type: "color", from: 6, to: 99, color: "#0f172a" },
       ],
     };
@@ -543,12 +554,16 @@ describe("PageDocumentV2", () => {
     const normalized = normalizePageDocumentV2ForWrite(document);
 
     expect(normalized.sections[0]?.blocks[0]?.props.marks).toEqual([
+      { type: "bold", from: 0, to: 5 },
       { type: "color", from: 0, to: 5, color: "#ef4444" },
+      { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+      { type: "italic", from: 1, to: 11 },
+      { type: "link", from: 6, to: 11, href: "/safe" },
       { type: "color", from: 6, to: 11, color: "#0f172a" },
     ]);
   });
 
-  test("text color marks fail closed for unsafe shapes and stay base-only", () => {
+  test("text marks fail closed for unsafe shapes and stay base-only", () => {
     const badColor = buildDocument();
     badColor.sections[0]!.blocks[0]!.props = {
       text: "Hello world",
@@ -560,6 +575,17 @@ describe("PageDocumentV2", () => {
       "Invalid sections.0.blocks.0.props.marks.0.color."
     );
 
+    const badLink = buildDocument();
+    badLink.sections[0]!.blocks[0]!.props = {
+      text: "Hello world",
+      level: "h1",
+      align: "left",
+      marks: [{ type: "link", from: 0, to: 5, href: "javascript:alert(1)" }],
+    };
+    expect(() => normalizePageDocumentV2ForWrite(badLink)).toThrow(
+      "Invalid sections.0.blocks.0.props.marks.0.href."
+    );
+
     const responsiveMarks = buildDocument();
     responsiveMarks.sections[0]!.blocks[0]!.responsive = {
       mobile: {
@@ -569,19 +595,34 @@ describe("PageDocumentV2", () => {
       },
     };
     expect(() => normalizePageDocumentV2ForWrite(responsiveMarks)).toThrow(
-      "Text color marks are base-only at sections.0.blocks.0.responsive.mobile.props.marks."
+      "Text marks are base-only at sections.0.blocks.0.responsive.mobile.props.marks."
     );
 
     expect(
-      normalizeBlockTextColorMarks("Hello", [
+      normalizeBlockTextMarks("Hello", [
         { type: "color", from: 0, to: 2, color: "#ef4444" },
         { type: "script", from: 2, to: 4, color: "#22c55e" },
+        { type: "link", from: 2, to: 4, href: "javascript:alert(1)" },
+        { type: "highlight", from: 2, to: 4, color: "var(--color-surface)" },
         { type: "color", from: 4, to: 5, color: "expression(alert(1))" },
       ])
-    ).toEqual([{ type: "color", from: 0, to: 2, color: "#ef4444" }]);
+    ).toEqual([
+      { type: "color", from: 0, to: 2, color: "#ef4444" },
+      { type: "highlight", from: 2, to: 4, color: "var(--color-surface)" },
+    ]);
   });
 
-  test("text color marks are count bounded", () => {
+  test("text mark compatibility helper and mark count stay bounded", () => {
+    expect(
+      normalizeBlockTextColorMarks("Hello", [
+        { type: "color", from: 0, to: 2, color: "#ef4444" },
+        { type: "bold", from: 0, to: 2 },
+      ])
+    ).toEqual([
+      { type: "bold", from: 0, to: 2 },
+      { type: "color", from: 0, to: 2, color: "#ef4444" },
+    ]);
+
     const marks = normalizeBlockTextColorMarks(
       "abcdefghijklmnopqrstuvwxyz",
       Array.from({ length: PAGE_TEXT_MARK_MAX + 4 }, (_, index) => ({
@@ -614,7 +655,13 @@ describe("PageDocumentV2", () => {
         text: "Schema marked",
         level: "h2",
         align: "left",
-        marks: [{ type: "color", from: 0, to: 6, color: "#ef4444" }],
+        marks: [
+          { type: "color", from: 0, to: 6, color: "var(--color-primary)" },
+          { type: "highlight", from: 0, to: 6, color: "#fef3c7" },
+          { type: "bold", from: 0, to: 6 },
+          { type: "italic", from: 1, to: 5 },
+          { type: "link", from: 0, to: 6, href: "/safe" },
+        ],
       };
       expect(validate(valid)).toBe(true);
 

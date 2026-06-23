@@ -360,6 +360,9 @@ Rotacja klucza:
   CSS string escaping. Admin authoring modules, Page document normalizers,
   responsive CSS emission, and Page renderer sinks must reuse these helpers
   instead of accepting raw strings at render or persistence boundaries.
+- Page authoring link normalization is Page-owned through
+  `normalizeAuthoringSafeHref`; Page Editor canvas code must not import
+  widget-core helpers for link sanitization.
 - Link sinks (`href`, list item hrefs, button hrefs) allow safe relative,
   hash, `http:`, `https:`, `mailto:`, and `tel:` values only. Media sinks
   (`src`, `image`, `url`, gallery item sources, iframe source output from
@@ -368,14 +371,27 @@ Rotacja klucza:
 - CSS sinks (`style.background`, `backgroundImage`, block `textColor`,
   block/section accent, block border colors, responsive CSS custom property
   values) are normalized through color/background policies before persistence
-  and escaped before `url("...")` emission. `url(javascript:...)`,
-  expression-like CSS, protocol-relative media, and event-handler payloads are
-  fail-closed to `null` or the documented default.
-- Page text color marks (`heading`/plain `text`/`quote` `props.marks`) stay as
-  bounded JSON ranges, not raw HTML. Each mark color is normalized through the
-  CSS color sanitizer before store and re-normalized before render; the renderer
-  emits React spans only for validated ranges and does not broaden the rich-text
-  `span/style` allowlist.
+  and escaped before `url("...")` emission. Gradient authoring composes
+  linear/radial CSS from ordered sanitized stops and re-validates the final
+  string; arbitrary `url()`/function escapes are not accepted. Block background
+  images use the same media URL policy as section background images and paint
+  only escaped `url("...")` values. `url(javascript:...)`, expression-like CSS,
+  protocol-relative media, and event-handler payloads fail closed to `null` or
+  the documented default.
+- CSS color values may be raw safe colors or the explicit allowlisted site
+  tokens `var(--color-primary|secondary|accent|bg|surface|text|border)`.
+  Arbitrary `var()` expressions remain rejected.
+- Page text marks (`heading`/plain `text`/`quote` `props.marks`) stay as
+  bounded JSON ranges, not raw HTML. Color/highlight mark colors normalize
+  through the CSS color sanitizer; link mark hrefs normalize through the Page
+  authoring link sanitizer. Stored marks are re-normalized before render, and
+  the renderer emits only React `<strong>`, `<em>`, safe `<a rel="nofollow
+  noreferrer">`, or validated `<span>` segments without broadening the
+  rich-text `span/style` allowlist.
+- Page Editor clipboard paste treats every fragment as untrusted input. The
+  `coderso/page-fragment@v1` payload is browser/session local, is never a
+  persistence format, regenerates ids on paste, and re-runs Page document
+  normalization before insertion.
 - Native Page badge block colors (`props.background`, `props.textColor`) reuse
   the same CSS color sanitizer, and badge icons are fixed allowlist tokens
   (`check`, `sparkles`, `star`, `zap`, `shield`, `heart`) mapped to local

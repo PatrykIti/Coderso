@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 45 tasks
+- **To Do:** 29 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2657 tasks
+- **Done:** 2673 tasks
 
 ---
 
@@ -96,22 +96,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Large | Replace the eager widget editor barrel with typed lazy editor component bundles. |
 | TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
 | TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
-| TASK-472 | Page Editor V2 Authoring Controls Backlog | Medium | Large | Business umbrella: power-user authoring backlog (style completeness, background authoring, undo/redo + clipboard, token color binding, inline formatting). Topic subtasks 472-01..06. Sibling of TASK-471. |
-| TASK-472-01 | Block Style Control Completeness | High | Small | Topic: surface margins + add border width/style. → L01, L02. |
-| TASK-472-01-L01 | Surface Block Margin Controls | High | Small | Leaf: margin controls registered (`:464-475`) + painted (`:511`) but missing from the Spacing panel; reproduce-first + surface. |
-| TASK-472-01-L02 | Block Border Width And Style Controls | High | Small | Leaf: add `borderWidth` (0–12) + `borderStyle` enum; renderer reads them with a `1px solid` legacy fallback. |
-| TASK-472-02 | Block Background Authoring | Medium | Medium | Topic: gradient editor + block bg image. → L01, L02. |
-| TASK-472-02-L01 | Visual Gradient Editor | Medium | Medium | Leaf: compose a sanitized gradient into `style.background` instead of raw CSS. |
-| TASK-472-02-L02 | Block Background Image Wiring | Medium | Medium | Leaf: add block `style.backgroundImage` media control + paint it (reuse section media-URL policy); video deferred. |
-| TASK-472-03 | Editing Session History And Clipboard | Medium | Medium | Topic: undo/redo + copy/paste. → L01, L02. Coordinate with TASK-454. |
-| TASK-472-03-L01 | Editor Session Undo/Redo | Medium | Medium | Leaf: bounded history + `Cmd+Z`/`Cmd+Shift+Z`, reset on save/publish; reducer-backed, hooks-safe. |
-| TASK-472-03-L02 | Copy/Paste Blocks And Sections | Medium | Medium | Leaf: `Cmd+C`/`Cmd+V` (+ palette); paste re-normalizes untrusted clipboard + regenerates ids. |
-| TASK-472-04 | Design-Token Color Binding | Medium | Medium | Topic: bind colors to site tokens. → L01. |
-| TASK-472-04-L01 | Token-Aware Color Control | Medium | Medium | Leaf: token palette + `var(--color-*)` allowlist sink; raw values still via `sanitizeAuthoringCssColor`. |
-| TASK-472-05 | Inline Rich-Text Formatting Marks | Medium | Medium | Topic: bold/italic/link/highlight marks. → L01. Depends on TASK-471-03. |
-| TASK-472-05-L01 | Bold / Italic / Link / Highlight Marks | Medium | Medium | Leaf: extend the 471-03 marks union; link via `normalizeWidgetSafeHref`, highlight via `isSafeAuthoringCssColor`. |
-| TASK-472-06 | Validation, Docs, And Closure | Medium | Small | Topic: family closure. → L01. |
-| TASK-472-06-L01 | Live Smoke, Docs, And Board Closure | Medium | Small | Leaf: lanes + live `playwright-cli` smoke + docs/board/changelog + drift; closes TASK-472 when 01–05 Done. |
 | TASK-473 | Custom Screen Per-Record Presentation Overrides | Medium | Large | Umbrella: storage/API contract for per-record image/text/style overrides outside validated `content_entries.data`. Subtasks 473-01..05. |
 | TASK-473-01 | Override Storage Domain Owner And Schemas | Medium | Large | Domain types, schemas/normalizers, override service, errors + DB migration (Bun-free). |
 | TASK-473-02 | Internal Admin Override Routes | Medium | Medium | Internal admin read/replace override routes; RBAC, CSRF, reject-unknown, `map*Error`. |
@@ -197,6 +181,22 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-471-04-L01 | Badge Block Schema, Controls, Render | Medium | Medium | Done (2026-06-22): Badge schema/defaults, strict controls, icon/color normalization, renderer, and tests landed. |
 | TASK-471-05 | Validation, Docs, And Closure | High | Small | Done (2026-06-22): Family docs, board, changelog, gates, and smoke evidence synchronized. |
 | TASK-471-05-L01 | Live Smoke, Docs, And Board Closure | High | Small | Done (2026-06-22): `coderso-dev-core-host` + `playwright-cli` smoke passed on a throwaway published page and cleaned it up. |
+| TASK-472 | Page Editor V2 Authoring Controls Backlog | Medium | Large | Done (2026-06-23): Page V2 authoring gained block margin/border controls, gradient and image backgrounds, history, clipboard, token colors, rich marks, docs, validation, and live smoke. |
+| TASK-472-01 | Block Style Control Completeness | High | Small | Done (2026-06-23): Block margins are surfaced and border width/style are schema-owned, controllable, and rendered with legacy color fallback. |
+| TASK-472-01-L01 | Surface Block Margin Controls | High | Small | Done (2026-06-23): Spacing panel exposes block margin controls alongside padding and renderer coverage confirms stored margins paint. |
+| TASK-472-01-L02 | Block Border Width And Style Controls | High | Small | Done (2026-06-23): Added clamped `borderWidth`, `borderStyle` (`none`/`solid`/`dashed`/`dotted`), controls, renderer, responsive CSS, and tests. |
+| TASK-472-02 | Block Background Authoring | Medium | Medium | Done (2026-06-23): Visual gradient composition and block background image authoring are wired through the existing Page style model. |
+| TASK-472-02-L01 | Visual Gradient Editor | Medium | Medium | Done (2026-06-23): Gradient composer writes sanitized linear/radial CSS to `style.background` with token/hex stops and presets. |
+| TASK-472-02-L02 | Block Background Image Wiring | Medium | Medium | Done (2026-06-23): Added sanitized block `style.backgroundImage` media control and cover/center renderer output; video remains out of scope. |
+| TASK-472-03 | Editing Session History And Clipboard | Medium | Medium | Done (2026-06-23): In-session undo/redo and copy/paste now ride the central draft mutation and normalization contracts. |
+| TASK-472-03-L01 | Editor Session Undo/Redo | Medium | Medium | Done (2026-06-23): Added bounded document+selection history, toolbar buttons, keyboard shortcuts, and reset on load/save/publish. |
+| TASK-472-03-L02 | Copy/Paste Blocks And Sections | Medium | Medium | Done (2026-06-23): Added `coderso/page-fragment@v1` clipboard payloads with Clipboard API/session fallback, fresh ids, and re-normalized paste. |
+| TASK-472-04 | Design-Token Color Binding | Medium | Medium | Done (2026-06-23): Page authoring color controls can commit allowlisted `var(--color-*)` tokens while preserving custom raw color UX. |
+| TASK-472-04-L01 | Token-Aware Color Control | Medium | Medium | Done (2026-06-23): Added token swatches and the Page CSS color allowlist for primary/secondary/accent/bg/surface/text/border tokens. |
+| TASK-472-05 | Inline Rich-Text Formatting Marks | Medium | Medium | Done (2026-06-23): TASK-471 color marks were extended to bold, italic, link, highlight, and color on Page text fragments. |
+| TASK-472-05-L01 | Bold / Italic / Link / Highlight Marks | Medium | Medium | Done (2026-06-23): Rich marks normalize deterministically, render safe React elements/attrs, and use neutral Page authoring href sanitization. |
+| TASK-472-06 | Validation, Docs, And Closure | Medium | Small | Done (2026-06-23): Family docs, board, changelog, validation lanes, and smoke evidence synchronized. |
+| TASK-472-06-L01 | Live Smoke, Docs, And Board Closure | Medium | Small | Done (2026-06-23): `coderso-dev-core-host` + `playwright-cli` smoke passed on a throwaway published page and cleaned it up. |
 | TASK-469 | Pages Editor Rich-Text Inline Canvas Edit Fidelity | Medium | Medium | Done (2026-06-20): Rich `text` blocks now inline-edit on canvas and round-trip allowlisted markup through the shared authoring sanitizer. |
 | TASK-469-01 | Inline-Edit Contract Rich-Aware Sanitization | Medium | Medium | Done (2026-06-20): `preserveMarkup` targets, rich sanitizer dispatch, and contract coverage landed. |
 | TASK-469-01-L01 | Rich Target Resolution And Shared-Sanitizer Commit | Medium | Medium | Done (2026-06-20): Rich string targets resolve, non-string values fail closed, and required empty commits retain previous markup. |
