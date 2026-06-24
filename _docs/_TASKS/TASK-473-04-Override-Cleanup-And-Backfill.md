@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Entry Presentation / Data Hygiene
 **Estimated Effort:** Medium
 **Dependencies:** TASK-473-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
 
 ---
 
@@ -30,14 +31,24 @@ rendering before cleanup runs.
 
 ## Sub-Tasks
 
-- [ ] On screen delete: remove all overrides scoped to that `screenId` through FK
+- [x] On screen delete: remove all overrides scoped to that `screenId` through FK
   cascade or the Custom Screen service cleanup hook.
-- [ ] On entry delete: remove all overrides scoped to that `entryId` through FK
+- [x] On entry delete: remove all overrides scoped to that `entryId` through FK
   cascade or the content entry service cleanup hook.
-- [ ] On field/block removal: drop overrides whose `blockId`/`propPath` no longer
+- [x] On field/block removal: drop overrides whose `blockId`/`propPath` no longer
   resolves (or ignore them at read time and reap lazily).
-- [ ] Make override reads defensively skip unresolved targets.
-- [ ] Add cleanup/backfill tests for each deletion path.
+- [x] Make override reads defensively skip unresolved targets.
+- [x] Add cleanup/backfill tests for each deletion path.
+
+## Completion Notes
+
+- Screen and entry deletion cleanup is enforced by FK cascade in migration
+  `0063_yummy_glorian.sql`; service helpers also exist for explicit scoped
+  cleanup.
+- Reads skip stale block, field, prop path, and value targets before returning
+  overrides.
+- Added `cleanupStaleScreenEntryPresentationOverrides` for block/field drift and
+  covered stale target cleanup in the Vitest override suite.
 
 ## Files To Change
 

@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Routes / Entry Presentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-473-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
 
 ---
 
@@ -28,14 +29,26 @@ service.
 
 ## Sub-Tasks
 
-- [ ] Add internal admin routes: read overrides + replace overrides for
+- [x] Add internal admin routes: read overrides + replace overrides for
   `(screenId, entryId)` (or extend the existing entry-screen route group).
-- [ ] Enforce RBAC (`content:read` / `content:write`); writes stay protected by
+- [x] Enforce RBAC (`content:read` / `content:write`); writes stay protected by
   the existing global admin CSRF and rate-limit middleware.
-- [ ] Validate payloads with reject-unknown; delegate to the service.
-- [ ] Map `custom_screen_override_*` domain errors to `ApiError` via a centralized
+- [x] Validate payloads with reject-unknown; delegate to the service.
+- [x] Map `custom_screen_override_*` domain errors to `ApiError` via a centralized
   `map*Error` helper.
-- [ ] Add route registration + `map*Error` + RBAC integration tests (Bun lane).
+- [x] Add route registration + `map*Error` + RBAC integration tests (Bun lane).
+
+## Completion Notes
+
+- Added `GET` and `PATCH`
+  `/admin/api/custom-screens/:screenId/entries/:entryId/overrides` through the
+  internal Custom Screen route group.
+- PATCH uses the strict `{ overrides: [...] }` envelope, maps
+  `custom_screen_override_*` errors, and relies on the existing global admin
+  CSRF/rate-limit middleware.
+- Extended `tests/integration/routes/customScreensRoutes.test.ts` for route
+  registration, permissions, error mapping, and reject-unknown envelope
+  validation.
 
 ## Files To Change
 

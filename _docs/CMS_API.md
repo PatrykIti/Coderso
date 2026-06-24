@@ -1306,9 +1306,10 @@ Notes:
   `Value` panel i zapisuje istniejace entry fields; nie pokazuje operacji
   dodawania/przenoszenia/usuwania sekcji lub blokow, block library, builder
   settings, ani right Sheet.
-- Persistent per-record presentation overrides are intentionally absent from
-  this payload. TASK-473 owns any future storage/API contract for record-specific
-  image/text-size/style overrides outside validated `content_entries.data`.
+- Persistent per-record presentation overrides are intentionally absent from the
+  Custom Screen definition payload and from `content_entries.data`. They are
+  stored in `custom_screen_entry_presentation_overrides` and accessed through
+  the internal override routes below.
 - `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `4`.
 - `showInSidebar=true` + `status=active` + `supportsDedicatedEditor=true`
   pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
@@ -1358,6 +1359,57 @@ Notes:
   pozwala aktywowac widgety na canvasie, a prawy panel `Selected Element`
   pokazuje bound field editors dla wybranego elementu.
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
+
+### Custom Screen entry presentation overrides
+
+Internal admin endpoints:
+
+- `GET /admin/api/custom-screens/:screenId/entries/:entryId/overrides`
+  - Permission: `content:read`
+  - Response: `{ "overrides": [...] }`
+- `PATCH /admin/api/custom-screens/:screenId/entries/:entryId/overrides`
+  - Permission: `content:write`
+  - CSRF: required through the global admin write middleware
+  - Request envelope:
+
+```json
+{
+  "overrides": [
+    {
+      "blockId": "field-image",
+      "propPath": "image",
+      "value": "55555555-5555-4555-8555-555555555555"
+    },
+    {
+      "blockId": "field-title",
+      "propPath": "textSize",
+      "value": "lg"
+    }
+  ]
+}
+```
+
+Override contract:
+
+- `blockId` must resolve to a block in the current V4
+  `definition.editorView.document`.
+- `propPath` is a bounded presentation target only:
+  `image`, `mediaAssetId`, `textSize`, `textEmphasis`, or `tone`.
+- `image` / `mediaAssetId` values must be media asset UUIDs and only apply to
+  field blocks bound to media fields.
+- `textSize`, `textEmphasis`, and `tone` use bounded enum values owned by the
+  Custom Screen override service.
+- Writes replace the full `(screenId, entryId)` override set atomically and
+  never mutate `content_entries.data`.
+- Reads defensively skip rows whose screen block, field binding, prop path, or
+  value no longer resolves; cleanup helpers can remove skipped rows after
+  screen definition or content type field drift.
+
+Errors:
+
+- `custom_screen_override_invalid` -> HTTP 400
+- `custom_screen_override_not_found` -> HTTP 404
+- `custom_screen_override_conflict` -> HTTP 409
 
 ## Coderso Filters & Search (v2 beta)
 

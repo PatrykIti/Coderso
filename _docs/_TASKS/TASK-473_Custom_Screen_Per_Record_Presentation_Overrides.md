@@ -5,7 +5,11 @@
 **Category:** Custom Screens / Entry Presentation / Storage Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-05, TASK-468-07-L01
-**Status:** ⏳ To Do
+**Status:** 🚧 In Progress
+**Started:** 2026-06-24
+**Progress Note:** Foundation slice completed in TASK-473-01, TASK-473-02,
+TASK-473-04. TASK-473-03 remains blocked by TASK-474-03; TASK-473-05 and parent
+closure remain open until the UI/cache slice lands.
 
 ---
 

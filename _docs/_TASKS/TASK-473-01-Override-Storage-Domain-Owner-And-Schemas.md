@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Entry Presentation / Storage Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-05, TASK-468-07-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
 
 ---
 
@@ -37,15 +38,25 @@ type schema; overrides are a separate, validated, auditable layer.
 
 ## Sub-Tasks
 
-- [ ] Define `ScreenEntryPresentationOverride` types + allowed override targets
+- [x] Define `ScreenEntryPresentationOverride` types + allowed override targets
   and value domains.
-- [ ] Add strict schema + `normalizeScreenEntryPresentationOverride`
+- [x] Add strict schema + `normalizeScreenEntryPresentationOverride`
   (reject-unknown, safe block id, safe prop path, allowed values).
-- [ ] Add the override service: `saveScreenEntryPresentationOverrides`,
+- [x] Add the override service: `saveScreenEntryPresentationOverrides`,
   `getScreenEntryPresentationOverrides`, `replaceScopedOverrides`.
-- [ ] Add machine-readable errors (`custom_screen_override_*`).
-- [ ] Add DB migration artifacts (SQL + snapshot + journal) for the override
+- [x] Add machine-readable errors (`custom_screen_override_*`).
+- [x] Add DB migration artifacts (SQL + snapshot + journal) for the override
   store, keeping the module Bun-free (lazy default deps for the repository).
+
+## Completion Notes
+
+- Added `core/services/customScreens/screenEntryPresentationOverrides.ts` as the
+  schema/service/error owner with injected repository support and lazy DB
+  defaults.
+- Added `custom_screen_entry_presentation_overrides` via migration
+  `0063_yummy_glorian.sql`, Drizzle snapshot, and journal update.
+- Added focused Vitest coverage in
+  `tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts`.
 
 ## Files To Change
 

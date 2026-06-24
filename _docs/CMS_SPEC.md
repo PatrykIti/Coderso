@@ -185,12 +185,19 @@ Storage:
 - `Editor View` uses a neutral authoring canvas shell through a screen adapter:
   insert, layers, content, binding, style, and screen settings are floating
   panels, not permanent Editor View rails.
-- Record detail mode reuses the same neutral canvas shell but exposes only a
-  floating `Value` panel for bound field values. It does not show builder add,
-  move, duplicate, delete, library, or settings controls.
-- Per-record presentation overrides are out of this contract until TASK-473;
-  do not store hidden style/image/text-size override fields in
-  `content_entries.data`.
+- Record detail mode reuses the same neutral canvas shell but exposes only
+  record-editing controls. It does not show builder add, move, duplicate,
+  delete, library, or settings controls.
+- Per-record presentation overrides for Custom Screen records are stored outside
+  `content_entries.data` in the dedicated
+  `custom_screen_entry_presentation_overrides` table. The foundation API
+  supports bounded presentation targets only: media asset id, text size, text
+  emphasis, and text/style tone. Content field values still persist through the
+  existing entry draft path; presentation overrides are loaded and saved through
+  the internal Custom Screen override API.
+- The first TASK-473 slice ships storage, service validation, routes, and stale
+  target cleanup. Record detail panel/cache wiring remains blocked by
+  TASK-474-03 and TASK-473-03.
 
 ### Posts admin authoring contract
 

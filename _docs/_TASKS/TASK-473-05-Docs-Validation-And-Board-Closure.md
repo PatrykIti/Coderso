@@ -7,6 +7,10 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-473-01, TASK-473-02, TASK-473-03, TASK-473-04
 **Status:** ⏳ To Do
+**Blocked By:** TASK-473-03
+**Blocker Note:** Foundation docs/changelog evidence was added with the
+TASK-473-01/02/04 slice. Full family closure remains open until the
+TASK-473-03 UI/cache/render wiring can land after TASK-474-03.
 
 ---
 

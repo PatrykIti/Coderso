@@ -3,8 +3,12 @@ import type { RouteContext } from "../router";
 import {
   createCustomScreen,
   deleteCustomScreen,
+  getScreenEntryPresentationOverrides,
   getCustomScreen,
   listCustomScreens,
+  normalizeScreenEntryPresentationOverrideReplacePayload,
+  saveScreenEntryPresentationOverrides,
+  screenEntryPresentationOverrideReplaceSchema,
   updateCustomScreen,
   type CustomScreenCreateInput,
   type CustomScreenUpdateInput,
@@ -48,6 +52,24 @@ export const mapCustomScreenError = (error: unknown) => {
         "custom_screen_legacy_write_unsupported",
         "Custom screen writes must use the V4 definition contract",
         400
+      );
+    case "custom_screen_override_invalid":
+      return new ApiError(
+        "custom_screen_override_invalid",
+        "Custom screen presentation override payload is invalid",
+        400
+      );
+    case "custom_screen_override_not_found":
+      return new ApiError(
+        "custom_screen_override_not_found",
+        "Custom screen presentation override target was not found",
+        404
+      );
+    case "custom_screen_override_conflict":
+      return new ApiError(
+        "custom_screen_override_conflict",
+        "Custom screen presentation override targets must be unique",
+        409
       );
     default:
       return null;
@@ -98,6 +120,40 @@ export function registerCustomScreenRoutes(router: Router, deps: CustomScreenRou
       return updated;
     });
   });
+
+  router.get(
+    "/custom-screens/:screenId/entries/:entryId/overrides",
+    requirePermission("content:read"),
+    async (ctx) => {
+      return withCustomScreenErrors(async () => ({
+        overrides: await getScreenEntryPresentationOverrides({
+          screenId: ctx.params.screenId,
+          entryId: ctx.params.entryId,
+        }),
+      }));
+    }
+  );
+
+  router.patch(
+    "/custom-screens/:screenId/entries/:entryId/overrides",
+    requirePermission("content:write"),
+    async (ctx) => {
+      return withCustomScreenErrors(async () => {
+        validate(screenEntryPresentationOverrideReplaceSchema, ctx.body ?? {});
+        const body = normalizeScreenEntryPresentationOverrideReplacePayload(ctx.body ?? {});
+        const actorId = ctx.user?.id;
+        if (!actorId) throw new Error("custom_screen_override_invalid");
+        return {
+          overrides: await saveScreenEntryPresentationOverrides({
+            screenId: ctx.params.screenId,
+            entryId: ctx.params.entryId,
+            overrides: body.overrides,
+            actorId,
+          }),
+        };
+      });
+    }
+  );
 
   router.delete("/custom-screens/:id", requirePermission("content:write"), async (ctx) => {
     return withCustomScreenErrors(async () => {
