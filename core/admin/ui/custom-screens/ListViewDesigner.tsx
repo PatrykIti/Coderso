@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/select";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
 import type {
-  CustomScreenListFormatter,
   CustomScreenListViewDefinition,
   CustomScreenSortDirection,
 } from "../../../services/customScreens/customScreenSchemas";
@@ -21,16 +20,6 @@ type ListViewDesignerProps = {
   value: CustomScreenListViewDefinition;
   onChange: (next: CustomScreenListViewDefinition) => void;
 };
-
-const formatterOptions: CustomScreenListFormatter[] = [
-  "text",
-  "number",
-  "boolean",
-  "date",
-  "select",
-  "media",
-  "relation",
-];
 
 export function ListViewDesigner({ contentType, value, onChange }: ListViewDesignerProps) {
   const fieldOptions = useMemo(
@@ -116,46 +105,6 @@ export function ListViewDesigner({ contentType, value, onChange }: ListViewDesig
               <SelectItem value="desc">Descending</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Column formatter defaults
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {value.columns.map((column) => (
-            <div key={column.id} className="rounded-lg border p-3">
-              <div className="mb-2">
-                <p className="text-sm font-medium">{column.label}</p>
-                <p className="text-xs text-muted-foreground">{column.field}</p>
-              </div>
-              <Select
-                value={column.formatter}
-                onValueChange={(next) =>
-                  onChange({
-                    ...value,
-                    columns: value.columns.map((item) =>
-                      item.id === column.id
-                        ? { ...item, formatter: next as CustomScreenListFormatter }
-                        : item
-                    ),
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {formatterOptions.map((formatter) => (
-                    <SelectItem key={formatter} value={formatter}>
-                      {formatter}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
         </div>
       </section>
 

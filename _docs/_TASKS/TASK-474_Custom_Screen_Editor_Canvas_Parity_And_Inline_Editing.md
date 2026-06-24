@@ -5,7 +5,9 @@
 **Category:** Admin UI / Custom Screens / Authoring UX
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-468-04 (Done), TASK-468-05 (Done); coordinates with TASK-473 (per-record presentation-override storage) for TASK-474-03 / TASK-474-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
+**Changelog:** `_docs/_CHANGELOG/1193-2026-06-24-task-474-custom-screen-authoring-parity.md`
 
 ---
 
@@ -204,3 +206,15 @@ plus live `playwright-cli` verification on screen `House Projects` / entry
    boundary test stays green; vitest, types, lint, and admin-boundary gates pass.
 6. All TASK-474-NN children are `✅ Done`/`⏭️ Superseded`/`❌ Cancelled` before the
    parent closes.
+
+## Completion Notes
+
+- Completed TASK-474-01..06 in one implementation pass: shared neutral
+  authoring primitives, single-ring Custom Screen chrome, inline record detail
+  editing, rail-free List View builder, Editor View toolbar/modal parity, and
+  additive V4 list-row `rowTemplate` inline editing.
+- No new public endpoints were added. Inline record and row edits reuse the
+  existing internal entry update path and fail closed for read-only/unbound
+  bindings.
+- TASK-473-03 is unblocked as the follow-up for presentation override panel and
+  cache wiring.

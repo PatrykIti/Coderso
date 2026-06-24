@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import { updateEntry } from "@/services/entriesClient";
 import { setActiveAssistantSurfaceContext } from "../../../core/admin/ui/assistant/activeSurfaceContext";
 import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
@@ -231,6 +232,7 @@ const flush = async () => {
 beforeEach(() => {
   cacheListener = null;
   currentScreenRecord = createScreenRecord();
+  vi.mocked(updateEntry).mockResolvedValue(entryDetail);
   window.history.replaceState({}, "", "/admin/advanced/custom-screens/screen-1/entries/entry-1");
 });
 
@@ -263,8 +265,8 @@ test("record editor keeps child selection scoped and preserves it across refresh
     expect(view.container.textContent).toContain("Headline");
 
     expect(child?.querySelector("button")).toBeNull();
-    expect(document.body.querySelector("[data-custom-screen-record-value-panel]")).not.toBeNull();
-    expect(document.body.textContent).toContain("Value");
+    expect(document.body.querySelector("[data-custom-screen-record-value-panel]")).toBeNull();
+    expect(child?.querySelector('[role="textbox"]')).not.toBeNull();
 
     await React.act(async () => {
       cacheListener?.({ key: cacheKeys.customScreenDetail("screen-1") });
@@ -277,6 +279,46 @@ test("record editor keeps child selection scoped and preserves it across refresh
         .querySelector('[data-screen-block-id="field-1"]')
         ?.getAttribute("data-selected")
     ).toBe("true");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("record editor commits writable field text inline through the existing entry update path", async () => {
+  vi.mocked(updateEntry).mockResolvedValue({
+    ...entryDetail,
+    data: { headline: "Inline Aurora" },
+  });
+  const view = mount("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+
+  try {
+    await flush();
+
+    const textbox = view.container.querySelector('[role="textbox"][aria-label="Headline"]');
+    expect(textbox).not.toBeNull();
+
+    React.act(() => {
+      (textbox as HTMLElement).textContent = "Inline Aurora";
+      textbox?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    await flush();
+
+    const save = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Save")
+    );
+    await React.act(async () => {
+      save?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(updateEntry).toHaveBeenCalledWith(
+      "projects",
+      "entry-1",
+      expect.objectContaining({
+        data: expect.objectContaining({ headline: "Inline Aurora" }),
+      })
+    );
   } finally {
     view.cleanup();
   }

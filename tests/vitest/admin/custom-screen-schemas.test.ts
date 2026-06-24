@@ -115,6 +115,12 @@ test("normalizeCustomScreenDefinition returns defaults", () => {
   expect(definition.listView).toMatchObject({
     defaultSort: { field: "updatedAt", direction: "desc" },
   });
+  expect(definition.listView.rowTemplate?.document.sections[0]?.id).toBe("row-template");
+  expect(definition.listView.rowTemplate?.bindings.map((binding) => binding.field)).toEqual(
+    definition.listView.columns
+      .filter((column) => column.visible !== false)
+      .map((column) => column.field)
+  );
 });
 
 test("normalizeCustomScreenBindings rejects unsafe paths", () => {
@@ -385,6 +391,11 @@ test("normalizeCustomScreenDefinitionForRead migrates strict v2 definitions to v
   });
   expect(definition.editorView.document).toEqual({ schemaVersion: 1, sections: [] });
   expect(definition.editorView.interactionMode).toBe("inline");
+  expect(definition.listView.rowTemplate?.bindings[0]).toMatchObject({
+    field: "projectStatus",
+    mode: "readwrite",
+    propPath: "value",
+  });
 });
 
 test("normalizeCustomScreenDefinitionForRead tolerates stale field references and falls back to a safe v4 shape", () => {
@@ -551,6 +562,88 @@ test("custom screen schemas accept v4 screen documents without definition-owned 
       definition: {
         ...definition,
         contentTypeId: "type-1",
+      },
+    })
+  ).toThrow("custom_screen_definition_invalid");
+});
+
+test("custom screen schemas accept strict v4 row templates and reject unknown rowTemplate keys", () => {
+  const definition = {
+    schemaVersion: 4,
+    listView: {
+      columns: [
+        {
+          id: "field-headline",
+          source: "field",
+          field: "headline",
+          label: "Headline",
+          formatter: "text",
+          visible: true,
+        },
+      ],
+      filters: [],
+      defaultSort: { field: "updatedAt", direction: "desc" },
+      bulkActions: { delete: true, publish: true, unpublish: true },
+      rowTemplate: {
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: "row-template",
+              type: "section",
+              data: { title: "Row" },
+              blocks: [{ id: "row-headline", type: "field", data: { label: "Headline" } }],
+            },
+          ],
+        },
+        bindings: [
+          {
+            id: "row-headline-value",
+            blockId: "row-headline",
+            propPath: "value",
+            source: "entry",
+            field: "headline",
+            mode: "readwrite",
+          },
+        ],
+      },
+    },
+    editorView: {
+      document: { schemaVersion: 1, sections: [] },
+      bindings: [],
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+
+  expect(() =>
+    validate(customScreenCreateSchema, {
+      name: "Catalog",
+      contentTypeId: "type-1",
+      schemaVersion: 4,
+      definition,
+    })
+  ).not.toThrow();
+
+  expect(normalizeCustomScreenDefinitionForWrite({ definition })).toMatchObject({
+    listView: {
+      rowTemplate: {
+        bindings: [expect.objectContaining({ field: "headline", mode: "readwrite" })],
+      },
+    },
+  });
+
+  expect(() =>
+    normalizeCustomScreenDefinitionForWrite({
+      definition: {
+        ...definition,
+        listView: {
+          ...definition.listView,
+          rowTemplate: {
+            ...definition.listView.rowTemplate,
+            unsafe: true,
+          },
+        },
       },
     })
   ).toThrow("custom_screen_definition_invalid");

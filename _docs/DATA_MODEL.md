@@ -149,8 +149,9 @@ Note (v2+):
 
 Rules:
 - `definition.schemaVersion=4` is the source of truth for Custom Screens.
-- `definition.listView` owns records-list columns, filters, default sort, and
-  bulk-action visibility.
+- `definition.listView` owns records-list columns, filters, default sort,
+  bulk-action visibility, and optional `rowTemplate` document + bindings for
+  inline row editing.
 - `definition.editorView.document` owns `ScreenDocumentV1.sections[]`; it is
   not a Page v2 document.
 - `definition.editorView.bindings` maps `blockId + propPath` to content entry

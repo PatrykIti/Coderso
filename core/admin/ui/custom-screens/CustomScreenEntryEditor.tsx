@@ -1,10 +1,9 @@
-import { Save, SlidersHorizontal } from "lucide-react";
+import { Save } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -31,8 +30,7 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
-import { AuthoringCanvasFrame, AuthoringFloatingToolbar } from "@/ui/authoring";
-import { FieldRenderer } from "@/ui/entries/FieldRenderer";
+import { AuthoringCanvasFrame } from "@/ui/authoring";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
@@ -166,7 +164,6 @@ export function CustomScreenEntryEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [valuePanelOpen, setValuePanelOpen] = useState(false);
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
   const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
     () =>
@@ -177,10 +174,6 @@ export function CustomScreenEntryEditor() {
   );
 
   const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
-  const readOnlyBindingCount = useMemo(
-    () => resolveRuntimeBindings(screen).filter((binding) => binding.mode === "read").length,
-    [screen]
-  );
   const screenCapabilities = useMemo(
     () =>
       screen?.capabilities ??
@@ -192,17 +185,6 @@ export function CustomScreenEntryEditor() {
   const canEditInScreen = screenCapabilities.supportsDedicatedEditor;
   const runtimeDocument = useMemo(() => resolveRuntimeDocument(screen), [screen]);
   const runtimeBindings = useMemo(() => resolveRuntimeBindings(screen), [screen]);
-  const selectedRuntimeBlock = useMemo(
-    () => findScreenBlockById(runtimeDocument, selectedRuntimeBlockId),
-    [runtimeDocument, selectedRuntimeBlockId]
-  );
-  const selectedRuntimeBindings = useMemo(
-    () =>
-      selectedRuntimeBlock
-        ? runtimeBindings.filter((binding) => binding.blockId === selectedRuntimeBlock.id)
-        : [],
-    [runtimeBindings, selectedRuntimeBlock]
-  );
 
   useEffect(() => {
     if (!screen || !screenId || !entryId) {
@@ -456,98 +438,6 @@ export function CustomScreenEntryEditor() {
     publishedAt: entry?.publishedAt ?? null,
   });
 
-  const renderSelectedBlockBindingEditor = () => {
-    if (!selectedRuntimeBlock) {
-      return (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          Click a field on the canvas to inspect and edit its bound content.
-        </div>
-      );
-    }
-
-    if (selectedRuntimeBindings.length === 0) {
-      return (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          This block has no field bindings yet. Add or repair the binding in the screen builder.
-        </div>
-      );
-    }
-
-    const systemFieldMap = new Map<string, { label: string; editable: boolean }>([
-      ["title", { label: "Title", editable: true }],
-      ["slug", { label: "Slug", editable: true }],
-      ["status", { label: "Status", editable: false }],
-      ["createdAt", { label: "Created", editable: false }],
-      ["updatedAt", { label: "Updated", editable: false }],
-      ["publishedAt", { label: "Published", editable: false }],
-    ]);
-
-    return (
-      <div className="space-y-3">
-        {selectedRuntimeBindings.map((binding) => {
-          const field = fields.find((item) => item.name === binding.field) ?? null;
-          const systemField = systemFieldMap.get(binding.field) ?? null;
-
-          if (field) {
-            return (
-              <div key={binding.id} className="rounded-lg border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {binding.propPath}
-                </p>
-                <p className="mb-3 text-sm font-medium">{field.label}</p>
-                <FieldRenderer
-                  field={field}
-                  value={values[binding.field]}
-                  onChange={(next: unknown) => handleFieldChange(binding.field, next)}
-                  relationTargets={relationTargets}
-                  display="compact"
-                />
-                {fieldErrors[binding.field] ? (
-                  <p className="mt-2 text-xs text-destructive">{fieldErrors[binding.field]}</p>
-                ) : null}
-              </div>
-            );
-          }
-
-          if (systemField?.editable) {
-            const value = binding.field === "title" ? title : slug;
-            const onChange = binding.field === "title" ? handleTitleChange : handleSlugChange;
-            return (
-              <div key={binding.id} className="rounded-lg border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {binding.propPath}
-                </p>
-                <p className="mb-3 text-sm font-medium">{systemField.label}</p>
-                <Input
-                  value={value}
-                  onChange={(event) => onChange(event.target.value)}
-                  className="h-9"
-                />
-                {fieldErrors[binding.field] ? (
-                  <p className="mt-2 text-xs text-destructive">{fieldErrors[binding.field]}</p>
-                ) : null}
-              </div>
-            );
-          }
-
-          return (
-            <div key={binding.id} className="rounded-lg border p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {binding.propPath}
-              </p>
-              <p className="mb-1 text-sm font-medium">{systemField?.label ?? binding.field}</p>
-              <p className="text-sm text-muted-foreground">
-                {String(
-                  (buildCanvasFieldValues() as Record<string, unknown>)[binding.field] ?? "—"
-                )}
-              </p>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
   const handleSave = async () => {
     if (!contentType || !entryId) return;
     const draft: CustomScreenEntryDraft = {
@@ -613,27 +503,6 @@ export function CustomScreenEntryEditor() {
       setIsSaving(false);
     }
   };
-
-  const valuePanel = (
-    <div className="space-y-4" data-custom-screen-record-value-panel="true">
-      <div className="space-y-1">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Value
-        </p>
-        <p className="text-sm font-medium">{selectedRuntimeBlock?.type ?? "Selected field"}</p>
-        <p className="text-xs text-muted-foreground">
-          Click a field on the canvas to focus and edit its bound content here.
-        </p>
-      </div>
-      {renderSelectedBlockBindingEditor()}
-      {readOnlyBindingCount > 0 ? (
-        <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-          {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are preview-only and
-          remain read-only in this screen workflow.
-        </div>
-      ) : null}
-    </div>
-  );
 
   const screenRecordsHref = screenId
     ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
@@ -735,27 +604,10 @@ export function CustomScreenEntryEditor() {
               </div>
             ) : screen && canEditInScreen ? (
               <AuthoringCanvasFrame
+                borderless
                 onClearSelection={() => {
                   setSelectedRuntimeBlockId(null);
-                  setValuePanelOpen(false);
                 }}
-                toolbar={
-                  <AuthoringFloatingToolbar
-                    label={selectedRuntimeBlock?.type ?? "Record"}
-                    panels={[
-                      {
-                        id: "value",
-                        label: "Value",
-                        description: "Edit the selected bound field value.",
-                        icon: SlidersHorizontal,
-                        active: valuePanelOpen,
-                        disabled: !selectedRuntimeBlock,
-                        onSelect: () => setValuePanelOpen((current) => !current),
-                      },
-                    ]}
-                  />
-                }
-                floatingPanel={valuePanelOpen ? valuePanel : null}
               >
                 <CustomScreenEntryCanvas
                   document={runtimeDocument}
@@ -768,10 +620,7 @@ export function CustomScreenEntryEditor() {
                   onTitleChange={handleTitleChange}
                   onSlugChange={handleSlugChange}
                   selectedBlockId={selectedRuntimeBlockId}
-                  onSelectBlock={(blockId) => {
-                    setSelectedRuntimeBlockId(blockId);
-                    setValuePanelOpen(true);
-                  }}
+                  onSelectBlock={setSelectedRuntimeBlockId}
                 />
               </AuthoringCanvasFrame>
             ) : screen ? (

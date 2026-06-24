@@ -80,6 +80,7 @@ type ListViewCanvasProps = {
   selectedColumnId: string | null;
   onSelectColumn: (columnId: string) => void;
   onMoveColumn: (columnId: string, direction: "left" | "right") => void;
+  showHiddenColumnsTray?: boolean;
 };
 
 export function ListViewCanvas({
@@ -88,6 +89,7 @@ export function ListViewCanvas({
   selectedColumnId,
   onSelectColumn,
   onMoveColumn,
+  showHiddenColumnsTray = false,
 }: ListViewCanvasProps) {
   if (!contentType) {
     return (
@@ -181,7 +183,7 @@ export function ListViewCanvas({
         </Table>
       </div>
 
-      {hiddenColumns.length > 0 ? (
+      {showHiddenColumnsTray && hiddenColumns.length > 0 ? (
         <div className="rounded-lg border border-dashed p-3" data-hidden-columns-tray="true">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Hidden columns

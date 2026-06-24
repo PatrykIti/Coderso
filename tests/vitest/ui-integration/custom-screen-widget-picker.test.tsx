@@ -173,6 +173,7 @@ test("Editor View library exposes screen blocks and content fields without page 
     await flush();
 
     expect(view.container.textContent).toContain("Screen Blocks");
+    expect(view.container.querySelector("[data-authoring-toolbar-subpanel]")).not.toBeNull();
     expect(view.container.textContent).toContain("Record header");
     expect(view.container.textContent).toContain("Field group");
     expect(view.container.textContent).toContain("Two columns");

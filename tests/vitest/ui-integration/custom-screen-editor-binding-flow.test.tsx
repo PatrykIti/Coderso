@@ -3,9 +3,10 @@
 import React, { useMemo, useState } from "react";
 
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
 import { FieldBindingPanel } from "../../../core/admin/ui/custom-screens/FieldBindingPanel";
+import { ScreenBlockInspector } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../core/admin/components/ui/tabs";
 import { getRegisteredWidget } from "../../../core/admin/ui/widgets/registry";
@@ -129,6 +130,46 @@ test("retired screen widgets do not expose legacy binding jump controls", () => 
   try {
     const titleDataButton = view.container.querySelector('button[data-binding-prop-path="title"]');
     expect(titleDataButton).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ScreenBlockInspector opens advanced style controls in a modal", () => {
+  const view = mount(
+    <ScreenBlockInspector
+      selectedBlock={{
+        id: "field-1",
+        type: "field",
+        variant: "compact",
+        data: { label: "Title" },
+      }}
+      bindings={[]}
+      fields={[]}
+      panel="style"
+      showBlockActions={false}
+      onPatchBlock={vi.fn()}
+      onPatchBlockData={vi.fn()}
+      onPatchBinding={vi.fn()}
+      onMove={vi.fn()}
+      onDuplicate={vi.fn()}
+      onDelete={vi.fn()}
+    />
+  );
+
+  try {
+    expect(view.container.textContent).toContain("Advanced style");
+    expect(view.container.textContent).toContain("Variant: compact");
+    expect(view.container.querySelector('input[placeholder="Default"]')).toBeNull();
+
+    React.act(() => {
+      Array.from(view.container.querySelectorAll("button"))
+        .find((button) => button.textContent === "Open style controls")
+        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+
+    expect(document.body.querySelector('[data-screen-style-dialog="true"]')).not.toBeNull();
+    expect(document.body.querySelector('input[placeholder="Default"]')).not.toBeNull();
   } finally {
     view.cleanup();
   }

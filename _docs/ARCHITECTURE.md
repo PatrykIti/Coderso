@@ -871,8 +871,8 @@ Zakres CMS, model danych, auth i security opisane sa w:
   zapisy musza przejsc strict sectioned shape.
 - Neutral authoring ownership:
   - `core/admin/ui/authoring/*` zawiera tylko UI shell: canvas frame,
-    selection helpers, insertion zones, floating toolbar, layers, and command
-    palette,
+    `InlineEditWrapper`, selection/canvas chrome tokens, insertion zones,
+    floating toolbar, attached toolbar subpanels, layers, and command palette,
   - neutral modules nie importuja Page services, Custom Screen services,
     widget runtime, DB, server adapters, ani clients,
   - Page Editor pozostaje Page-owned; Custom Screens uzywaja
@@ -885,8 +885,9 @@ Zakres CMS, model danych, auth i security opisane sa w:
   library w Editor View:
   - insert library pokazuje screen-owned blocks oraz pola wybranego content
     type,
-  - `Editor View` nie uzywa stalych lewych/prawych rails; insert, layers,
-    content, binding, style, and settings sa panelami floating canvas,
+  - `List View` i `Editor View` nie uzywaja stalych lewych/prawych rails;
+    list elements, columns, hidden columns, insert, layers, content, binding,
+    style, and settings sa panelami doczepionymi do floating toolbar,
   - active canvas renderuje `record-header`, `field`, `field-group`,
     `columns`, `rich-text`, oraz bounded legacy placeholders,
   - screen-only widgets (`screen-record-header`, `screen-field-value`,
@@ -902,17 +903,22 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - list route: `/admin/advanced/custom-screens/:screenId/entries`,
   - editor route: `/admin/advanced/custom-screens/:screenId/entries/:entryId`,
   - `contentTypeId` z `custom_screens` jest rozwiazywany do `content_types.slug`, a zapis/listowanie dalej ida przez `content_entries`.
-- Records list pozostaje istniejaca tabela. TASK-468 nie dodaje card/compact
-  list presentation modes.
+- Records list pozostaje tabela, ale `definition.listView.rowTemplate`
+  przechowuje additive V4 document + bindings for real-row cells. Older
+  definitions backfill row bindings from visible columns on read; builder
+  preview rows stay read-only.
 - Record workflow jest gate'owany przez capabilities:
   - `collection-only` prowadzi rekord bezposrednio do classic editor,
   - `dashboard` otwiera read-only screen z CTA do classic editor,
   - `editor` pokazuje tylko pola wynikajace z `write/readwrite` bindings i zapisuje standardowy `entry.data`;
-    entry canvas nie pokazuje builderowych operacji sekcji/blokow i edytuje
-    wartosci przez floating `Value` panel.
+    entry canvas nie pokazuje builderowych operacji sekcji/blokow, exposes one
+    selection ring, and edits writable bound text/field values inline without a
+    detached Value panel. Records-list row edits reuse the existing
+    `PATCH /content/:type/entries/:id` path and entries cache contract.
 - Trwale per-record presentation overrides (np. image/text-size/style per
-  rekord) nie sa zapisywane w `content_entries.data`; osobny storage/API
-  kontrakt jest deferowany do TASK-473.
+  rekord) nie sa zapisywane w `content_entries.data`; TASK-473 owns their
+  storage/API. TASK-474 unblocks TASK-473-03 for record-detail override panel
+  wiring as a follow-up.
 
 ## Coderso Filters & Search (v2 beta)
 

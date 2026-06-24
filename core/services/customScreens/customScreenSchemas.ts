@@ -77,6 +77,11 @@ export type CustomScreenListFilter = {
   enabled: boolean;
 };
 
+export type CustomScreenListRowTemplate = {
+  document: ScreenDocumentV1;
+  bindings: ScreenFieldBinding[];
+};
+
 export type CustomScreenListViewDefinition = {
   columns: CustomScreenListColumn[];
   filters: CustomScreenListFilter[];
@@ -89,6 +94,7 @@ export type CustomScreenListViewDefinition = {
     publish: boolean;
     unpublish: boolean;
   };
+  rowTemplate?: CustomScreenListRowTemplate;
 };
 
 export type CustomScreenListViewDefinitionV2 = CustomScreenListViewDefinition & {
@@ -847,6 +853,52 @@ const fieldFilter = (field: string, definition: unknown): CustomScreenListFilter
   enabled: true,
 });
 
+const rowTemplateBindingMode = (column: CustomScreenListColumn): CustomScreenBindingMode =>
+  column.source === "field" || column.field === "title" || column.field === "slug"
+    ? "readwrite"
+    : "read";
+
+export function buildDefaultListRowTemplate(
+  columns: readonly CustomScreenListColumn[]
+): CustomScreenListRowTemplate {
+  const visibleColumns = columns.filter((column) => column.visible !== false);
+  const blocks = visibleColumns.map((column) => ({
+    id: `row-cell-${slugify(column.id) || slugify(`${column.source}-${column.field}`)}`,
+    type: "field",
+    data: {
+      field: column.field,
+      label: column.label,
+      source: column.source,
+    },
+  }));
+
+  return {
+    document: {
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "row-template",
+          type: "section",
+          label: "Row",
+          data: { title: "Row" },
+          blocks,
+        },
+      ],
+    },
+    bindings: visibleColumns.map((column) => {
+      const blockId = `row-cell-${slugify(column.id) || slugify(`${column.source}-${column.field}`)}`;
+      return {
+        id: `${blockId}-value`,
+        blockId,
+        propPath: "value",
+        source: "entry" as const,
+        field: column.field,
+        mode: rowTemplateBindingMode(column),
+      };
+    }),
+  };
+}
+
 const pickSchemaField = (properties: Record<string, unknown>, preferred: string[]) => {
   const keys = Object.keys(properties);
   return (
@@ -887,6 +939,7 @@ export function buildDefaultListViewDefinition(
       publish: true,
       unpublish: true,
     },
+    rowTemplate: buildDefaultListRowTemplate(columns),
   };
 }
 
@@ -950,6 +1003,62 @@ const normalizeUniqueIds = <T extends { id: string }>(items: T[]) => {
   return items;
 };
 
+const collectScreenDocumentBlockIds = (document: ScreenDocumentV1) => {
+  const ids = new Set<string>();
+  const visit = (blocks: ScreenBlockV1[]) => {
+    blocks.forEach((block) => {
+      if (ids.has(block.id)) throw new Error("custom_screen_definition_invalid");
+      ids.add(block.id);
+      if (Array.isArray(block.children) && block.children.length > 0) {
+        visit(block.children);
+      }
+      if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+        Object.values(block.slots).forEach((items) => {
+          if (Array.isArray(items) && items.length > 0) {
+            visit(items);
+          }
+        });
+      }
+    });
+  };
+  document.sections.forEach((section) => visit(section.blocks));
+  return ids;
+};
+
+const assertScreenFieldBindingsTargetDocument = (
+  document: ScreenDocumentV1,
+  bindings: ScreenFieldBinding[]
+) => {
+  const blockIds = collectScreenDocumentBlockIds(document);
+  if (blockIds.size > 0 && bindings.some((binding) => !blockIds.has(binding.blockId))) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+};
+
+const normalizeCustomScreenListRowTemplate = (
+  input: unknown,
+  context?: CustomScreenDefinitionContext
+): CustomScreenListRowTemplate => {
+  if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(input, ["document", "bindings"]);
+  const document = normalizeScreenDocumentV1(input.document);
+  const bindings = normalizeScreenFieldBindings(input.bindings, context);
+  assertScreenFieldBindingsTargetDocument(document, bindings);
+  return { document, bindings };
+};
+
+const normalizeCustomScreenListRowTemplateForRead = (
+  input: unknown,
+  fallback: CustomScreenListRowTemplate,
+  context?: CustomScreenDefinitionContext
+): CustomScreenListRowTemplate => {
+  try {
+    return normalizeCustomScreenListRowTemplate(input, context);
+  } catch {
+    return fallback;
+  }
+};
+
 export function normalizeCustomScreenListViewDefinition(
   input: unknown,
   context?: CustomScreenDefinitionContext
@@ -958,7 +1067,7 @@ export function normalizeCustomScreenListViewDefinition(
     return buildDefaultListViewDefinition(context?.contentType);
   }
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
-  rejectUnknownKeys(input, ["columns", "filters", "defaultSort", "bulkActions"]);
+  rejectUnknownKeys(input, ["columns", "filters", "defaultSort", "bulkActions", "rowTemplate"]);
 
   const defaults = buildDefaultListViewDefinition(context?.contentType);
   const columns =
@@ -1008,12 +1117,18 @@ export function normalizeCustomScreenListViewDefinition(
         };
       })()
     : defaults.bulkActions;
+  const fallbackRowTemplate = buildDefaultListRowTemplate(columns);
+  const rowTemplate =
+    input.rowTemplate === undefined || input.rowTemplate === null
+      ? fallbackRowTemplate
+      : normalizeCustomScreenListRowTemplate(input.rowTemplate, context);
 
   return {
     columns,
     filters,
     defaultSort,
     bulkActions,
+    rowTemplate,
   };
 }
 
@@ -1208,12 +1323,23 @@ const normalizeCustomScreenListViewDefinitionForRead = (
         unpublish: normalizeBoolean(input.bulkActions.unpublish, true),
       }
     : defaults.bulkActions;
+  const resolvedColumns = columns.length > 0 ? columns : defaults.columns;
+  const fallbackRowTemplate = buildDefaultListRowTemplate(resolvedColumns);
+  const rowTemplate =
+    input.rowTemplate === undefined || input.rowTemplate === null
+      ? fallbackRowTemplate
+      : normalizeCustomScreenListRowTemplateForRead(
+          input.rowTemplate,
+          fallbackRowTemplate,
+          context
+        );
 
   return {
-    columns: columns.length > 0 ? columns : defaults.columns,
+    columns: resolvedColumns,
     filters,
     defaultSort,
     bulkActions,
+    rowTemplate,
   };
 };
 
@@ -1899,12 +2025,35 @@ const screenDocumentV1Schema = {
   additionalProperties: false,
 } as const;
 
+const customScreenListRowTemplateSchema = {
+  type: "object",
+  required: ["document", "bindings"],
+  properties: {
+    document: screenDocumentV1Schema,
+    bindings: {
+      type: "array",
+      maxItems: 200,
+      items: screenFieldBindingSchema,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+const customScreenV4ListViewSchema = {
+  ...customScreenV3DefinitionSchema.properties.listView,
+  properties: {
+    ...customScreenV3DefinitionSchema.properties.listView.properties,
+    rowTemplate: customScreenListRowTemplateSchema,
+  },
+  additionalProperties: false,
+} as const;
+
 const customScreenV4DefinitionSchema = {
   type: "object",
   required: ["schemaVersion", "listView", "editorView"],
   properties: {
     schemaVersion: { enum: [4] },
-    listView: customScreenV3DefinitionSchema.properties.listView,
+    listView: customScreenV4ListViewSchema,
     editorView: {
       type: "object",
       required: ["document", "bindings", "saveMode", "interactionMode"],

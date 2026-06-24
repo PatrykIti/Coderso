@@ -1218,6 +1218,57 @@ Custom screen payload (summary):
         "delete": true,
         "publish": true,
         "unpublish": true
+      },
+      "rowTemplate": {
+        "document": {
+          "schemaVersion": 1,
+          "sections": [
+            {
+              "id": "row-template",
+              "type": "section",
+              "label": "Row",
+              "data": { "title": "Row" },
+              "blocks": [
+                {
+                  "id": "row-cell-system-title",
+                  "type": "field",
+                  "data": {
+                    "field": "title",
+                    "label": "Record",
+                    "source": "system"
+                  }
+                },
+                {
+                  "id": "row-cell-field-projectstatus",
+                  "type": "field",
+                  "data": {
+                    "field": "projectStatus",
+                    "label": "Project status",
+                    "source": "field"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "bindings": [
+          {
+            "id": "row-cell-system-title-value",
+            "blockId": "row-cell-system-title",
+            "propPath": "value",
+            "source": "entry",
+            "field": "title",
+            "mode": "readwrite"
+          },
+          {
+            "id": "row-cell-field-projectstatus-value",
+            "blockId": "row-cell-field-projectstatus",
+            "propPath": "value",
+            "source": "entry",
+            "field": "projectStatus",
+            "mode": "readwrite"
+          }
+        ]
       }
     },
     "editorView": {
@@ -1271,9 +1322,11 @@ Notes:
   content type, a dawne `blocks`/`bindings` trafiaja do
   `editorView.document` + `editorView.bindings`.
 - `definition.listView` jest wlascicielem tabeli rekordow: system/field
-  columns, filters, `defaultSort`, i bulk action visibility. TASK-468 keeps
-  this existing tabular list UX; card/compact presentation modes are out of
-  scope.
+  columns, filters, `defaultSort`, bulk action visibility, and optional
+  `rowTemplate`. `rowTemplate` stores a row `ScreenDocumentV1` plus
+  `ScreenFieldBinding[]`; it is additive, rejects unknown keys, and is
+  backfilled from visible columns for legacy V1/V2/V3/V4 definitions that do
+  not carry it.
 - `definition.editorView` jest wlascicielem canvasa create/edit:
   `document`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
 - `document.sections[]` jest lista `ScreenSectionV1` containers:
@@ -1299,13 +1352,15 @@ Notes:
   surface registration.
 - builder preview i read-only fragmenty record editora renderuja
   `editorView.document` przez screen runtime.
-- `Editor View` uses the neutral authoring canvas shell: insert, layers,
-  content, binding, style, and screen settings open as floating panels rather
-  than permanent Editor View rails.
-- Entry detail mode jest field-editing-only: klikniecie pola otwiera floating
-  `Value` panel i zapisuje istniejace entry fields; nie pokazuje operacji
-  dodawania/przenoszenia/usuwania sekcji lub blokow, block library, builder
-  settings, ani right Sheet.
+- `List View` and `Editor View` use the neutral authoring canvas shell. List
+  elements, columns, hidden columns, insert, layers, content, binding, style,
+  and screen settings open as panels attached to the floating toolbar rather
+  than permanent rails or mobile Sheets.
+- Entry detail mode jest field-editing-only: writable bound record-header and
+  field values edit inline on the canvas and save existing entry fields; it does
+  not show a detached `Value` panel, add/move/delete operations, block library,
+  builder settings, ani right Sheet. Read-only/unbound bindings render no
+  editable affordance.
 - Persistent per-record presentation overrides are intentionally absent from the
   Custom Screen definition payload and from `content_entries.data`. They are
   stored in `custom_screen_entry_presentation_overrides` and accessed through
@@ -1348,6 +1403,9 @@ Notes:
   - `POST /content/:type/entries`
   - `GET /content/:type/entries/:id`
   - `PATCH /content/:type/entries/:id`
+- Records-list inline row edits also use `PATCH /content/:type/entries/:id`;
+  successful commits preserve the existing `entries:list:<typeSlug>` and
+  `entries:detail:<typeSlug>:<entryId>` admin cache behavior.
 - admin UI routes for the workflow:
   - `/admin/advanced/custom-screens/:screenId/entries`
   - `/admin/advanced/custom-screens/:screenId/entries/:entryId`
@@ -1355,9 +1413,8 @@ Notes:
 - `New record` z records workspace zawsze otwiera
   `/admin/advanced/custom-screens/:screenId/entries/new`; active V3 runtime nie
   otwiera juz shared `EntryCreateDrawer`.
-- screen-owned record editor renderuje widgetowy layout jako glowny surface i
-  pozwala aktywowac widgety na canvasie, a prawy panel `Selected Element`
-  pokazuje bound field editors dla wybranego elementu.
+- screen-owned record editor renders the `ScreenDocumentV1` layout as the main
+  surface and edits only writable bound entry values inline.
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
 
 ### Custom Screen entry presentation overrides

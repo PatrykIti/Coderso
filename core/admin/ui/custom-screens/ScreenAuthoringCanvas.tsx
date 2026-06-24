@@ -383,6 +383,7 @@ export function ScreenAuthoringCanvas({
         <AuthoringFloatingToolbar
           label={selectedBlock ? blockLabel(selectedBlock) : "Screen"}
           panels={toolbarPanels}
+          subpanel={floatingPanel}
           actions={
             selectedBlock ? (
               <>
@@ -442,7 +443,7 @@ export function ScreenAuthoringCanvas({
           }
         />
       }
-      floatingPanel={floatingPanel}
+      borderless
     >
       <div className="space-y-4" data-screen-authoring-canvas="true">
         {previewNotice}

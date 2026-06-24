@@ -6,7 +6,9 @@
 **Category:** Admin UI / Authoring / Shared Primitives
 **Estimated Effort:** Large
 **Dependencies:** none (foundation for TASK-474-02..06)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
+**Changelog:** `_docs/_CHANGELOG/1193-2026-06-24-task-474-custom-screen-authoring-parity.md`
 
 ---
 
@@ -42,16 +44,16 @@ ships no user-facing change on its own; it is the foundation 474-02..06 consume.
 
 ## Sub-Tasks
 
-- [ ] Add `InlineEditWrapper` (contentEditable + `onCommit` + Enter/Escape/blur),
+- [x] Add `InlineEditWrapper` (contentEditable + `onCommit` + Enter/Escape/blur),
   with **no** `PageBlockV2` / `services/pages` dependency.
-- [ ] Add `selectionChrome` token helper (level `container | item`, `selected`,
+- [x] Add `selectionChrome` token helper (level `container | item`, `selected`,
   `editing`) producing one ring, replacing hand-rolled ring classes.
-- [ ] Add neutral `canvasChrome` token module mirroring `controlChrome.ts`
+- [x] Add neutral `canvasChrome` token module mirroring `controlChrome.ts`
   (surface, dotted canvas, panel) without importing the Pages copy.
-- [ ] Add a `borderless` opt-out prop to `AuthoringCanvasFrame` (default keeps
+- [x] Add a `borderless` opt-out prop to `AuthoringCanvasFrame` (default keeps
   current behavior) and an attached/expandable subpanel slot on
   `AuthoringFloatingToolbar` / `AuthoringCanvasFrame`.
-- [ ] Extend the boundary test to also forbid the new modules importing `/pages`,
+- [x] Extend the boundary test to also forbid the new modules importing `/pages`,
   `services`, `customScreens`, widgets, db, server, or Bun.
 
 ## Files To Change

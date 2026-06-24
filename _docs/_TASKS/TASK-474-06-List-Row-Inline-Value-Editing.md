@@ -6,7 +6,9 @@
 **Category:** Custom Screens / List View / V4 Schema
 **Estimated Effort:** Large
 **Dependencies:** TASK-474-01, TASK-474-04; coordinates with TASK-473
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
+**Changelog:** `_docs/_CHANGELOG/1193-2026-06-24-task-474-custom-screen-authoring-parity.md`
 
 ---
 
@@ -42,20 +44,20 @@ configuration/preview and does not mutate preview rows.
 
 ## Sub-Tasks
 
-- [ ] Add an optional `rowTemplate` (document + `ScreenFieldBinding[]`) to the V4
+- [x] Add an optional `rowTemplate` (document + `ScreenFieldBinding[]`) to the V4
   list-view definition, schema-first with `rejectUnknownKeys`.
-- [ ] Add a normalizer + V1/V2/V3→V4 migration that backfills a default
+- [x] Add a normalizer + V1/V2/V3→V4 migration that backfills a default
   `rowTemplate` from the visible columns when none is stored (non-destructive).
-- [ ] Add a list-row binding resolver (reuse `bindingResolver` patterns).
-- [ ] Wire writable records-workspace row cells to `InlineEditWrapper`,
+- [x] Add a list-row binding resolver (reuse `bindingResolver` patterns).
+- [x] Wire writable records-workspace row cells to `InlineEditWrapper`,
   committing field values through the content-entry write path; fail-closed on
   read-only/unbound cells.
-- [ ] Keep builder `ListViewCanvas` as configuration/preview only; it may display
+- [x] Keep builder `ListViewCanvas` as configuration/preview only; it may display
   row-template affordances but must not call content-entry writes for generated
   preview rows.
-- [ ] Preserve entries cache behavior (`entries:list:<typeSlug>` and
+- [x] Preserve entries cache behavior (`entries:list:<typeSlug>` and
   `entries:detail:<typeSlug>:<entryId>`) after inline row commits.
-- [ ] Coordinate any presentation override persistence with TASK-473.
+- [x] Coordinate any presentation override persistence with TASK-473.
 
 ## Files To Change
 

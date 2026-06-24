@@ -46,6 +46,7 @@ export function CustomScreenEntryCanvas({
       onFieldChange={onFieldChange}
       onTitleChange={onTitleChange}
       onSlugChange={onSlugChange}
+      enableInlineFieldEditing
       emptyMessage="Add screen blocks in the builder to compose this record editor."
     />
   );

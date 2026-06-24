@@ -4,8 +4,10 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 
+import { CustomScreenEditorPage } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import { ListViewCanvas } from "../../../core/admin/ui/custom-screens/ListViewCanvas";
 import type { CustomScreenListViewDefinition } from "../../../core/services/customScreens/customScreenSchemas";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -109,6 +111,7 @@ function Harness() {
         ];
         setListView({ ...listView, columns: nextColumns });
       }}
+      showHiddenColumnsTray
     />
   );
 }
@@ -187,4 +190,17 @@ test("list view canvas reorders visible columns in the header and keeps hidden c
   } finally {
     view.cleanup();
   }
+});
+
+test("custom screen List View editor renders a canvas toolbar without editor rails", () => {
+  const html = renderAdminUi(<CustomScreenEditorPage />, {
+    path: "/admin/advanced/custom-screens/new",
+  });
+
+  expect(html).toContain('data-authoring-canvas-frame="true"');
+  expect(html).toContain('data-authoring-floating-toolbar="true"');
+  expect(html).not.toContain('data-editor-shell-left-panel="true"');
+  expect(html).not.toContain('data-editor-shell-right-panel="true"');
+  expect(html).not.toContain("Components");
+  expect(html).not.toContain("Selected Column");
 });

@@ -6,7 +6,9 @@
 **Category:** Admin UI / Custom Screens / Editor View
 **Estimated Effort:** Large
 **Dependencies:** TASK-474-01, TASK-474-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
+**Changelog:** `_docs/_CHANGELOG/1193-2026-06-24-task-474-custom-screen-authoring-parity.md`
 
 ---
 
@@ -37,16 +39,16 @@ persistence, and tests.
 
 ## Sub-Tasks
 
-- [ ] Switch `ScreenAuthoringCanvas` to the attached/expandable subpanel slot
+- [x] Switch `ScreenAuthoringCanvas` to the attached/expandable subpanel slot
   from TASK-474-01 (panels dock to the floating toolbar).
-- [ ] Apply the neutral `canvasChrome` tokens for visual parity (selection ring,
+- [x] Apply the neutral `canvasChrome` tokens for visual parity (selection ring,
   canvas surface) with the Pages editor.
-- [ ] Upgrade `AuthoringCommandPalette` to a real `Dialog`/`Sheet`
+- [x] Upgrade `AuthoringCommandPalette` to a real `Dialog`/`Sheet`
   (`@/components/ui/dialog`) with focus trap and Escape/outside-click close;
   preserve keyboard insert (Enter) semantics.
-- [ ] Wrap the existing advanced `ScreenBlockInspector` style controls in modal
+- [x] Wrap the existing advanced `ScreenBlockInspector` style controls in modal
   triggers; keep simple controls inline.
-- [ ] Do not add new typography controls unless the same change adds schema,
+- [x] Do not add new typography controls unless the same change adds schema,
   defaults, normalizer, persistence, and regression coverage.
 
 ## Files To Change

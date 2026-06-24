@@ -2,6 +2,14 @@ import { Copy, MoveDown, MoveUp, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -357,20 +365,45 @@ export function ScreenBlockInspector({
       ) : null}
 
       {showStyle ? (
-        <div className="space-y-2 rounded-lg border p-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Variant
-          </p>
-          <Input
-            value={selectedBlock.variant ?? ""}
-            onChange={(event) =>
-              onPatchBlock(selectedBlock.id, {
-                variant: event.target.value.trim() || undefined,
-              })
-            }
-            placeholder="Default"
-          />
-        </div>
+        <Dialog>
+          <div className="space-y-3 rounded-lg border p-3">
+            <div className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Advanced style
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Variant: {selectedBlock.variant?.trim() || "Default"}
+              </p>
+            </div>
+            <DialogTrigger asChild>
+              <Button type="button" variant="outline" size="sm">
+                Open style controls
+              </Button>
+            </DialogTrigger>
+          </div>
+          <DialogContent data-screen-style-dialog="true">
+            <DialogHeader>
+              <DialogTitle>Style controls</DialogTitle>
+              <DialogDescription>
+                Adjust advanced presentation metadata for the selected screen block.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Variant
+              </label>
+              <Input
+                value={selectedBlock.variant ?? ""}
+                onChange={(event) =>
+                  onPatchBlock(selectedBlock.id, {
+                    variant: event.target.value.trim() || undefined,
+                  })
+                }
+                placeholder="Default"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </div>
   );

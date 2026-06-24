@@ -5,3 +5,6 @@ export * from "./AuthoringInsertionZone";
 export * from "./AuthoringLayersPanel";
 export * from "./authoringCommands";
 export * from "./authoringSelection";
+export * from "./canvasChrome";
+export * from "./InlineEditWrapper";
+export * from "./selectionChrome";

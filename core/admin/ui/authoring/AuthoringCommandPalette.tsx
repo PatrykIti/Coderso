@@ -2,6 +2,13 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import { Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { AuthoringCommandGroup } from "./authoringCommands";
 import { runAuthoringCommand } from "./authoringCommands";
 
@@ -25,13 +32,20 @@ export function AuthoringCommandPalette({
   onClose,
 }: AuthoringCommandPaletteProps) {
   return (
-    <div
-      className="absolute inset-0 z-40 flex items-start justify-center overflow-hidden bg-background/50 p-4 backdrop-blur-sm sm:p-6"
-      role="dialog"
-      aria-label="Command palette"
-      data-authoring-command-palette="true"
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <div className="flex max-h-[calc(100dvh_-_8rem)] min-h-0 w-full max-w-xl flex-col overflow-hidden rounded-xl border bg-background p-4 shadow-2xl">
+      <DialogContent
+        className="flex max-h-[calc(100dvh_-_8rem)] min-h-0 w-full max-w-xl flex-col overflow-hidden p-4"
+        data-authoring-command-palette="true"
+      >
+        <DialogHeader className="sr-only">
+          <DialogTitle>Command palette</DialogTitle>
+          <DialogDescription>Search and insert screen blocks or fields.</DialogDescription>
+        </DialogHeader>
         <div className="flex shrink-0 items-center gap-2 rounded border px-3 py-2">
           <Search className="h-4 w-4 text-muted-foreground" />
           <input
@@ -98,7 +112,7 @@ export function AuthoringCommandPalette({
             Close
           </Button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

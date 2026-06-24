@@ -6,7 +6,9 @@
 **Category:** Admin UI / Custom Screens / List View Editor
 **Estimated Effort:** Large
 **Dependencies:** TASK-474-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
+**Changelog:** `_docs/_CHANGELOG/1193-2026-06-24-task-474-custom-screen-authoring-parity.md`
 
 ---
 
@@ -36,18 +38,18 @@ rows is the separate TASK-474-06.)
 
 ## Sub-Tasks
 
-- [ ] For `activeBuilderTab === "list-view"`, wrap `ListViewCanvas` in
+- [x] For `activeBuilderTab === "list-view"`, wrap `ListViewCanvas` in
   `AuthoringCanvasFrame` (`borderless`) with an `AuthoringFloatingToolbar`.
-- [ ] Add `activeListPanel` state; expose panels: **Elements**
+- [x] Add `activeListPanel` state; expose panels: **Elements**
   (`ListViewElementLibrary`), **Column** (`ListViewColumnInspector`), **List
   settings** (`ListViewDesigner` sort/filters/bulk only), **Hidden columns**.
-- [ ] Remove the `EditorShell` `leftPanel`/`rightPanel` and the mobile
+- [x] Remove the `EditorShell` `leftPanel`/`rightPanel` and the mobile
   library/details Sheets for list-view mode.
-- [ ] Relocate screen metadata (name, content type, status, sidebar shortcut) out
+- [x] Relocate screen metadata (name, content type, status, sidebar shortcut) out
   of the right rail into a **settings** affordance on the floating bar.
-- [ ] Keep the sticky topbar (Preview / List|Editor toggle / Save) outside the
+- [x] Keep the sticky topbar (Preview / List|Editor toggle / Save) outside the
   frame; keep all existing column handlers wired.
-- [ ] Delete `EditorViewDesigner.tsx` (dead code) and its import.
+- [x] Delete `EditorViewDesigner.tsx` (dead code) and its import.
 
 ## Files To Change
 

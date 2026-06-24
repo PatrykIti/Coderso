@@ -7,11 +7,11 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-473-02, TASK-474-03
 **Status:** ⏳ To Do
-**Blocked By:** TASK-474-03
-**Blocker Note:** Foundation storage/API/cleanup landed in TASK-473-01,
-TASK-473-02, and TASK-473-04. UI/cache/render merge remains deferred until
-TASK-474-03 removes the detached record Value panel and ships the inline
-record-editing canvas contract.
+**Unblocked By:** TASK-474-03
+**Follow-up Note:** Foundation storage/API/cleanup landed in TASK-473-01,
+TASK-473-02, and TASK-473-04. TASK-474-03 removed the detached record Value
+panel and shipped the inline record-editing canvas contract, so this task can
+wire presentation override panel/cache/render merge next.
 
 ---
 

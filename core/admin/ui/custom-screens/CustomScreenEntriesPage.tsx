@@ -17,6 +17,7 @@ import {
   listEntriesCached,
   publishEntry,
   unpublishEntry,
+  updateEntry,
   type EntrySummary,
 } from "@/services/entriesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -32,6 +33,7 @@ import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
+import type { CustomScreenListColumn } from "../../../services/customScreens/customScreenSchemas";
 
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
@@ -54,10 +56,27 @@ const fallbackListView = {
   bulkActions: { delete: true, publish: true, unpublish: true },
 };
 
-const customScreenRecordToasts = createListActionToastAdapter<"publish" | "unpublish" | "delete">({
+const normalizeInlineRowValue = (value: string, column: CustomScreenListColumn) => {
+  if (column.formatter === "number") {
+    if (!value.trim()) return "";
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : value;
+  }
+  if (column.formatter === "boolean") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "yes", "1"].includes(normalized)) return true;
+    if (["false", "no", "0"].includes(normalized)) return false;
+  }
+  return value;
+};
+
+const customScreenRecordToasts = createListActionToastAdapter<
+  "publish" | "unpublish" | "delete" | "update"
+>({
   labels: { singular: "record", plural: "records" },
   actions: {
     publish: { pastTense: "published", failureVerb: "publish" },
+    update: { pastTense: "updated", failureVerb: "update" },
     unpublish: {
       pastTense: "moved to draft",
       failureVerb: "move to draft",
@@ -95,12 +114,7 @@ export function CustomScreenEntriesPage() {
   const hasInitialCache = Boolean(initialScreen && initialContentType);
   const [screen, setScreen] = useState<CustomScreenRecord | null>(initialScreen);
   const [entries, setEntries] = useState<EntrySummary[]>(initialEntries);
-  const [contentTypeSlug, setContentTypeSlug] = useState<string | null>(
-    initialContentType?.slug ?? null
-  );
-  const [contentTypeName, setContentTypeName] = useState<string | null>(
-    initialContentType?.name ?? null
-  );
+  const [contentType, setContentType] = useState(initialContentType);
   const [isLoading, setIsLoading] = useState(() => !(initialScreen && initialContentType));
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -122,6 +136,8 @@ export function CustomScreenEntriesPage() {
     [screen]
   );
   const listView = screen?.definition?.listView ?? fallbackListView;
+  const contentTypeSlug = contentType?.slug ?? null;
+  const contentTypeName = contentType?.name ?? null;
   const hasBulkActions =
     listView.bulkActions.delete || listView.bulkActions.publish || listView.bulkActions.unpublish;
   const supportsWorkspaceEditor = screenCapabilities.supportsDedicatedEditor;
@@ -211,8 +227,7 @@ export function CustomScreenEntriesPage() {
           contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
         if (!contentType) {
           setScreen(nextScreen);
-          setContentTypeSlug(null);
-          setContentTypeName(null);
+          setContentType(null);
           setEntries([]);
           setError("Content type not found.");
           return;
@@ -220,8 +235,7 @@ export function CustomScreenEntriesPage() {
 
         const nextEntries = await listEntriesCached(contentType.slug, { force });
         setScreen(nextScreen);
-        setContentTypeSlug(contentType.slug);
-        setContentTypeName(contentType.name);
+        setContentType(contentType);
         setEntries(nextEntries);
         setError(null);
       } catch (err) {
@@ -256,8 +270,7 @@ export function CustomScreenEntriesPage() {
           contentTypes.find((item) => item.id === nextScreen.contentTypeId) ?? null;
         if (!contentType) {
           setScreen(nextScreen);
-          setContentTypeSlug(null);
-          setContentTypeName(null);
+          setContentType(null);
           setEntries([]);
           setError("Content type not found.");
           return;
@@ -265,8 +278,7 @@ export function CustomScreenEntriesPage() {
         const nextEntries = await listEntriesCached(contentType.slug, { force: !hasInitialCache });
         if (!active) return;
         setScreen(nextScreen);
-        setContentTypeSlug(contentType.slug);
-        setContentTypeName(contentType.name);
+        setContentType(contentType);
         setEntries(nextEntries);
         setError(null);
       })
@@ -359,7 +371,7 @@ export function CustomScreenEntriesPage() {
       await refresh(true, { background: true });
       customScreenRecordToasts.success("publish");
     } catch (err) {
-      setActionError(customScreenRecordToasts.error("publish", err));
+      setActionError(isApiClientError(err) ? err.message : "Failed to update record.");
     }
   };
 
@@ -372,6 +384,44 @@ export function CustomScreenEntriesPage() {
       customScreenRecordToasts.success("unpublish");
     } catch (err) {
       setActionError(customScreenRecordToasts.error("unpublish", err));
+    }
+  };
+
+  const handleCommitRowField = async (
+    entry: EntrySummary,
+    column: CustomScreenListColumn,
+    nextValue: string
+  ) => {
+    if (!contentTypeSlug) return;
+    setActionError(null);
+    try {
+      const payload =
+        column.source === "system"
+          ? column.field === "title"
+            ? { title: nextValue }
+            : column.field === "slug"
+              ? { slug: nextValue }
+              : null
+          : {
+              data: {
+                ...entry.data,
+                [column.field]: normalizeInlineRowValue(nextValue, column),
+              },
+            };
+      if (!payload) return;
+      const saved = await updateEntry(contentTypeSlug, entry.id, payload);
+      setEntries((current) =>
+        current.map((item) =>
+          item.id === saved.id
+            ? {
+                ...item,
+                ...saved,
+              }
+            : item
+        )
+      );
+    } catch (err) {
+      setActionError(customScreenRecordToasts.error("update", err));
     }
   };
 
@@ -526,6 +576,7 @@ export function CustomScreenEntriesPage() {
           onPublish={handlePublish}
           onUnpublish={handleUnpublish}
           onDelete={handleDeleteRequest}
+          onCommitRowField={supportsWorkspaceEditor ? handleCommitRowField : undefined}
           emptyMessage={
             isLoading
               ? "Loading records..."

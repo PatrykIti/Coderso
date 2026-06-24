@@ -6,7 +6,9 @@
 **Category:** Admin UI / Custom Screens / Entry Editing
 **Estimated Effort:** Large
 **Dependencies:** TASK-474-01, TASK-474-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
+**Changelog:** `_docs/_CHANGELOG/1193-2026-06-24-task-474-custom-screen-authoring-parity.md`
 
 ---
 
@@ -38,17 +40,17 @@ path.
 
 ## Sub-Tasks
 
-- [ ] Pass `enableInlineFieldEditing` from `CustomScreenEntryCanvas` into
+- [x] Pass `enableInlineFieldEditing` from `CustomScreenEntryCanvas` into
   `ScreenRuntimeRenderer`.
-- [ ] Wire `record-header` title/eyebrow/subtitle to `InlineEditWrapper`,
+- [x] Wire `record-header` title/eyebrow/subtitle to `InlineEditWrapper`,
   committing through `onTitleChange` / field handlers; fail-closed when the
   bound field is read-only or unbound.
-- [ ] Wire writable `field` blocks to inline edit on the displayed value (no card
+- [x] Wire writable `field` blocks to inline edit on the displayed value (no card
   `<Input>`), still routing rich/relation/media types through `FieldRenderer`.
-- [ ] Remove the detached `valuePanel` entirely and delete
+- [x] Remove the detached `valuePanel` entirely and delete
   `renderSelectedBlockBindingEditor`; read-only/unbound bindings render inline
   read-only states and never open an inspector.
-- [ ] Verify save still flows through `buildEditorViewUpdatePayload` /
+- [x] Verify save still flows through `buildEditorViewUpdatePayload` /
   `customScreenEntryDraft`.
 
 ## Files To Change

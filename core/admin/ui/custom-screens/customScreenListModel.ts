@@ -261,6 +261,16 @@ const readEntryFieldValue = (input: {
     ? readSystemEntryField(input.entry, input.field)
     : input.entry.data?.[input.field];
 
+export const resolveEntryColumnRawValue = (input: {
+  entry: EntrySummary;
+  column: CustomScreenListColumn;
+}) =>
+  readEntryFieldValue({
+    entry: input.entry,
+    source: input.column.source,
+    field: input.column.field,
+  });
+
 const normalizeFilterToken = (value: unknown): string | null => {
   if (value === undefined || value === null || value === "") return null;
   if (typeof value === "boolean") return value ? "true" : "false";

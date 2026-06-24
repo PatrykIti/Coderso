@@ -6,7 +6,9 @@
 **Category:** Admin UI / Custom Screens / Canvas Styling
 **Estimated Effort:** Medium
 **Dependencies:** TASK-474-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-24
+**Changelog:** `_docs/_CHANGELOG/1193-2026-06-24-task-474-custom-screen-authoring-parity.md`
 
 ---
 
@@ -35,16 +37,16 @@ workspace preview dialog, so changes must be mode-gated.
 
 ## Sub-Tasks
 
-- [ ] Set `AuthoringCanvasFrame` to `borderless` in `ScreenAuthoringCanvas` and
+- [x] Set `AuthoringCanvasFrame` to `borderless` in `ScreenAuthoringCanvas` and
   the entry frame inside `CustomScreenEntryEditor`.
-- [ ] Drop the block-wrapper border and the inner content-card border so each
+- [x] Drop the block-wrapper border and the inner content-card border so each
   block is one surface; keep at most one `selectionBorder({ level: "item" })`.
-- [ ] Replace the section border with a lightweight grouping (label/handle), not
+- [x] Replace the section border with a lightweight grouping (label/handle), not
   a second frame; keep one `selectionBorder({ level: "container" })` for the
   selected section in builder mode.
-- [ ] Restyle the builder header (`:179`) as a minimal drag handle, not a bordered
+- [x] Restyle the builder header (`:179`) as a minimal drag handle, not a bordered
   bar.
-- [ ] Mode-gate: `preview` mode keeps its current read-only look; verify
+- [x] Mode-gate: `preview` mode keeps its current read-only look; verify
   `CustomScreenPreview` and the workspace preview dialog are unchanged.
 
 ## Files To Change

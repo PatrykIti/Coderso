@@ -81,14 +81,14 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
   });
 
   expect(html).toContain("Save");
-  expect(html).toContain("Sidebar shortcut");
-  expect(html).toContain("Sidebar label");
-  expect(html).toContain("Screen name");
   expect(html).toContain("List View");
   expect(html).toContain("Editor View");
-  expect(html).toContain("Selected Column");
+  expect(html).toContain("data-authoring-floating-toolbar");
+  expect(html).toContain('aria-label="List settings"');
+  expect(html).toContain('aria-label="Screen settings"');
   expect(html).toContain("Select a content type before configuring List View.");
   expect(html).toContain("Preview");
+  expect(html).not.toContain("Selected Column");
 });
 
 test("CustomScreenListPage renders list shell", () => {
@@ -204,7 +204,9 @@ test("CustomScreenEditorPage tolerates cached stale screen bindings on read", ()
 
     expect(html).toContain("Legacy Header Screen");
     expect(html).toContain("Preview");
-    expect(html).toContain("Selected Column");
+    expect(html).toContain("List View");
+    expect(html).toContain("data-authoring-floating-toolbar");
+    expect(html).not.toContain("Selected Column");
     expect(html).not.toContain("custom_screen_definition_invalid");
   } finally {
     if (originalLocal === undefined) {

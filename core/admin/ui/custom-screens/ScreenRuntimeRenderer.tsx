@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { AlertTriangle, GripVertical } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { InlineEditWrapper, selectionBorder } from "@/ui/authoring";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import type {
   ScreenBlockV1,
@@ -81,6 +81,25 @@ const stringifyValue = (value: unknown) => {
   return String(value);
 };
 
+const editableTextValue = (value: unknown) => {
+  if (value === undefined || value === null) return "";
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+};
+
+const normalizeInlineFieldValue = (value: string, field: ContentField) => {
+  if (field.type === "number") {
+    if (!value.trim()) return "";
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : value;
+  }
+  return value;
+};
+
+const isInlineEditableField = (field: ContentField) =>
+  field.type === "text" || field.type === "number" || field.type === "select";
+
 const readText = (data: Record<string, unknown>, key: string, fallback = "") => {
   const value = data[key];
   return typeof value === "string" && value.trim() ? value.trim() : fallback;
@@ -91,6 +110,9 @@ const findField = (fields: ContentField[] | undefined, fieldName: string) =>
 
 const resolveBlockBinding = (bindings: ScreenFieldBinding[], blockId: string, propPath: string) =>
   bindings.find((binding) => binding.blockId === blockId && binding.propPath === propPath) ?? null;
+
+const bindingAllowsWrite = (binding: ScreenFieldBinding | null | undefined) =>
+  binding?.mode === "write" || binding?.mode === "readwrite";
 
 const renderSlots = (
   slots: Record<string, ScreenBlockV1[]> | undefined,
@@ -140,10 +162,17 @@ export function ScreenRuntimeRenderer({
     const selected = selectedBlockId === block.id;
     const isInteractive = mode !== "preview" && Boolean(onSelectBlock);
     const wrapperClass = cn(
-      "group relative rounded-xl transition",
-      mode === "builder" && "border bg-background shadow-sm",
-      mode === "entry" && "border border-transparent bg-background hover:border-primary/30",
-      selected && "ring-2 ring-primary/35"
+      "group relative transition",
+      mode === "preview"
+        ? "rounded-xl border bg-background shadow-sm"
+        : cn(
+            "bg-background/90",
+            selectionBorder({
+              level: "item",
+              selected,
+              interactive: isInteractive,
+            })
+          )
     );
 
     const wrap = (content: ReactNode) => (
@@ -176,7 +205,7 @@ export function ScreenRuntimeRenderer({
         }
       >
         {mode === "builder" ? (
-          <div className="flex items-center justify-between gap-3 border-b px-4 py-2 text-xs text-muted-foreground">
+          <div className="flex items-center justify-between gap-3 px-4 pt-3 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-2 font-semibold uppercase">
               <GripVertical className="h-3.5 w-3.5" />
               {block.type}
@@ -188,25 +217,100 @@ export function ScreenRuntimeRenderer({
       </div>
     );
 
+    const commitBindingValue = (
+      binding: ScreenFieldBinding,
+      field: ContentField,
+      nextValue: string
+    ) => {
+      if (field.name === "title") {
+        onTitleChange?.(nextValue);
+        return;
+      }
+      if (field.name === "slug") {
+        onSlugChange?.(nextValue);
+        return;
+      }
+      onFieldChange?.(binding.field, normalizeInlineFieldValue(nextValue, field));
+    };
+
+    const canWriteBinding = (binding: ScreenFieldBinding | null, field: ContentField | null) =>
+      mode === "entry" &&
+      enableInlineFieldEditing &&
+      Boolean(binding) &&
+      bindingAllowsWrite(binding) &&
+      Boolean(field) &&
+      Boolean(
+        field &&
+        (field.name === "title" ||
+          field.name === "slug" ||
+          fields?.some((item) => item.name === field.name))
+      );
+
+    const canEditBindingInline = (binding: ScreenFieldBinding | null, field: ContentField | null) =>
+      canWriteBinding(binding, field) &&
+      Boolean(
+        field && (field.name === "title" || field.name === "slug" || isInlineEditableField(field))
+      );
+
     if (block.type === "record-header") {
-      const readBoundText = (propPath: string, fallback = "") => {
+      const readBoundValue = (propPath: string) => {
         const binding = resolveBlockBinding(bindings, block.id, propPath);
-        return binding
-          ? stringifyValue(readBindingPathValue(values, binding.field))
-          : readText(block.data, propPath, fallback);
+        return {
+          binding,
+          value: binding ? readBindingPathValue(values, binding.field) : block.data[propPath],
+          field: binding ? findField(fields, binding.field) : null,
+        };
       };
-      const title = readBoundText("title", "Record");
-      const eyebrow = readBoundText("eyebrow");
-      const subtitle = readBoundText("subtitle");
+      const title = readBoundValue("title");
+      const eyebrow = readBoundValue("eyebrow");
+      const subtitle = readBoundValue("subtitle");
+      const renderHeaderText = (
+        propPath: "title" | "eyebrow" | "subtitle",
+        item: ReturnType<typeof readBoundValue>,
+        className: string,
+        as: "p" | "h2",
+        fallback = ""
+      ) => {
+        const text = item.binding
+          ? editableTextValue(item.value)
+          : readText(block.data, propPath, fallback);
+        const displayText = text || fallback;
+        const editable =
+          item.binding !== null &&
+          item.field !== null &&
+          canEditBindingInline(item.binding, item.field);
+        if (!displayText && !editable) return null;
+        return (
+          <InlineEditWrapper
+            as={as}
+            value={text}
+            placeholder={fallback}
+            editable={editable}
+            ariaLabel={item.field?.label ?? propPath}
+            className={className}
+            onCommit={(next) => {
+              if (!item.binding || !item.field) return;
+              commitBindingValue(item.binding, item.field, next);
+            }}
+          />
+        );
+      };
       return wrap(
-        <div className="rounded-xl bg-muted/20 px-5 py-4">
-          {eyebrow ? (
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              {eyebrow}
-            </p>
-          ) : null}
-          <h2 className="mt-1 text-2xl font-semibold text-foreground">{title}</h2>
-          {subtitle ? <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p> : null}
+        <div className={cn("px-5 py-4", mode === "preview" && "rounded-xl bg-muted/20")}>
+          {renderHeaderText(
+            "eyebrow",
+            eyebrow,
+            "text-xs font-semibold uppercase tracking-wider text-muted-foreground",
+            "p"
+          )}
+          {renderHeaderText(
+            "title",
+            title,
+            "mt-1 block text-2xl font-semibold text-foreground",
+            "h2",
+            "Record"
+          )}
+          {renderHeaderText("subtitle", subtitle, "mt-1 text-sm text-muted-foreground", "p")}
         </div>
       );
     }
@@ -221,48 +325,37 @@ export function ScreenRuntimeRenderer({
         field?.label ||
         (fieldName ? (systemFieldLabels.get(fieldName) ?? fieldName) : "Field");
       const value = binding ? readBindingPathValue(values, binding.field) : undefined;
-      const writable = binding?.mode === "write" || binding?.mode === "readwrite";
-      const canEdit =
-        mode === "entry" &&
-        enableInlineFieldEditing &&
-        writable &&
-        field &&
-        (field.name === "title" ||
-          field.name === "slug" ||
-          fields?.some((item) => item.name === field.name));
+      const writable = bindingAllowsWrite(binding);
+      const canEdit = canWriteBinding(binding, field);
       return wrap(
-        <div className="rounded-xl border bg-card px-4 py-3">
+        <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {label}
               </p>
               {canEdit ? (
-                <div className="mt-3">
-                  {field.name === "title" ? (
-                    <Input
-                      aria-label={label}
-                      value={String(values.title ?? "")}
-                      onChange={(event) => onTitleChange?.(event.target.value)}
-                      className="h-9"
-                    />
-                  ) : field.name === "slug" ? (
-                    <Input
-                      aria-label={label}
-                      value={String(values.slug ?? "")}
-                      onChange={(event) => onSlugChange?.(event.target.value)}
-                      className="h-9"
-                    />
-                  ) : (
+                field && binding && isInlineEditableField(field) ? (
+                  <InlineEditWrapper
+                    as="p"
+                    value={editableTextValue(value)}
+                    editable
+                    ariaLabel={label}
+                    placeholder="Empty"
+                    className="mt-2 break-words text-base text-foreground"
+                    onCommit={(next) => commitBindingValue(binding, field, next)}
+                  />
+                ) : (
+                  <div className="mt-3">
                     <FieldRenderer
-                      field={field}
-                      value={values[field.name]}
-                      onChange={(next) => onFieldChange?.(field.name, next)}
+                      field={field!}
+                      value={values[field!.name]}
+                      onChange={(next) => onFieldChange?.(field!.name, next)}
                       relationTargets={relationTargets}
                       display="compact"
                     />
-                  )}
-                </div>
+                  </div>
+                )
               ) : (
                 <p className="mt-2 break-words text-base text-foreground">
                   {stringifyValue(value)}
@@ -301,7 +394,7 @@ export function ScreenRuntimeRenderer({
 
     if (block.type === "field-group") {
       return wrap(
-        <section className="rounded-xl border bg-card p-4">
+        <section className={cn("p-4", mode === "preview" && "rounded-xl border bg-card")}>
           <div className="mb-4">
             <h3 className="text-base font-semibold">{readText(block.data, "title", "Group")}</h3>
             {readText(block.data, "description") ? (
@@ -315,7 +408,7 @@ export function ScreenRuntimeRenderer({
 
     if (block.type === "columns") {
       return wrap(
-        <div className="rounded-xl border bg-card p-4">
+        <div className={cn("p-4", mode === "preview" && "rounded-xl border bg-card")}>
           {renderSlots(block.slots, renderBlock, { columns: true })}
         </div>
       );
@@ -323,14 +416,24 @@ export function ScreenRuntimeRenderer({
 
     if (block.type === "rich-text") {
       return wrap(
-        <div className="rounded-xl border bg-card px-4 py-3 text-sm text-muted-foreground">
+        <div
+          className={cn(
+            "px-4 py-3 text-sm text-muted-foreground",
+            mode === "preview" && "rounded-xl border bg-card"
+          )}
+        >
           {readText(block.data, "content", "Add supporting text")}
         </div>
       );
     }
 
     return wrap(
-      <div className="flex items-start gap-3 rounded-xl border border-dashed bg-muted/20 px-4 py-4 text-sm text-muted-foreground">
+      <div
+        className={cn(
+          "flex items-start gap-3 px-4 py-4 text-sm text-muted-foreground",
+          mode === "preview" && "rounded-xl border border-dashed bg-muted/20"
+        )}
+      >
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
         <div>
           <p className="font-medium text-foreground">Legacy block placeholder</p>
@@ -362,9 +465,17 @@ export function ScreenRuntimeRenderer({
           <section
             key={section.id}
             className={cn(
-              "relative rounded-2xl border bg-background/80 p-4 transition",
-              mode === "builder" && "shadow-sm hover:border-primary/30",
-              selected && "ring-2 ring-primary/35"
+              "relative p-4 transition",
+              mode === "preview"
+                ? "rounded-2xl border bg-background/80"
+                : cn(
+                    "bg-background/60",
+                    selectionBorder({
+                      level: "container",
+                      selected,
+                      interactive: isInteractive,
+                    })
+                  )
             )}
             data-screen-section-id={section.id}
             data-screen-section-type={section.type}

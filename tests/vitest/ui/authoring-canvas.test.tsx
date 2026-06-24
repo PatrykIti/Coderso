@@ -42,7 +42,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("AuthoringCanvasFrame renders viewport, floating toolbar, and floating panel", () => {
+test("AuthoringCanvasFrame renders viewport, floating toolbar, and attached panel", () => {
   const clearSelection = vi.fn();
   const selectPanel = vi.fn();
   const view = mount(
@@ -72,6 +72,7 @@ test("AuthoringCanvasFrame renders viewport, floating toolbar, and floating pane
     expect(view.container.querySelector("[data-authoring-canvas-frame]")).not.toBeNull();
     expect(view.container.querySelector("[data-authoring-canvas-viewport]")).not.toBeNull();
     expect(view.container.querySelector("[data-authoring-floating-toolbar]")).not.toBeNull();
+    expect(view.container.querySelector("[data-authoring-toolbar-subpanel]")).not.toBeNull();
     expect(view.container.querySelector("[data-test-floating-panel]")).not.toBeNull();
 
     React.act(() => {
@@ -171,17 +172,17 @@ test("AuthoringCommandPalette filters input and runs enabled commands", () => {
     React.act(() => {
       input?.dispatchEvent(new Event("input", { bubbles: true }));
     });
-    expect(view.container.querySelector("[data-authoring-command-palette]")).not.toBeNull();
+    expect(document.body.querySelector("[data-authoring-command-palette]")).not.toBeNull();
 
     React.act(() => {
-      view.container
+      document.body
         .querySelector('[data-authoring-command-active="true"]')
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(run).toHaveBeenCalledTimes(1);
 
     React.act(() => {
-      Array.from(view.container.querySelectorAll("button"))
+      Array.from(document.body.querySelectorAll("button"))
         .find((button) => button.textContent === "Close")
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });

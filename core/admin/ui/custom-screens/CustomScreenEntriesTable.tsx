@@ -18,9 +18,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { EntrySummary } from "@/services/entriesClient";
+import { InlineEditWrapper } from "@/ui/authoring";
 import { AdminLink } from "@/ui/shared/AdminLink";
-import type { CustomScreenListViewDefinition } from "../../../services/customScreens/customScreenSchemas";
-import { getVisibleListColumns, resolveEntryColumnValue } from "./customScreenListModel";
+import type {
+  CustomScreenListColumn,
+  CustomScreenListViewDefinition,
+} from "../../../services/customScreens/customScreenSchemas";
+import {
+  isListRowFieldWritable,
+  resolveListRowFieldBinding,
+} from "../../../services/customScreens/bindingResolver";
+import {
+  getVisibleListColumns,
+  resolveEntryColumnRawValue,
+  resolveEntryColumnValue,
+} from "./customScreenListModel";
 
 type CustomScreenEntriesTableProps = {
   items: EntrySummary[];
@@ -36,6 +48,29 @@ type CustomScreenEntriesTableProps = {
   onPublish?: (id: string) => void;
   onUnpublish?: (id: string) => void;
   onDelete: (id: string) => void;
+  onCommitRowField?: (
+    entry: EntrySummary,
+    column: CustomScreenListColumn,
+    nextValue: string
+  ) => void | Promise<void>;
+};
+
+const isInlineEditableColumn = (column: CustomScreenListColumn) => {
+  if (column.source === "system") return column.field === "title" || column.field === "slug";
+  return (
+    column.formatter === "text" ||
+    column.formatter === "number" ||
+    column.formatter === "select" ||
+    column.formatter === "boolean"
+  );
+};
+
+const editableDisplayValue = (value: unknown) => {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "boolean") return value ? "true" : "false";
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
 };
 
 export function CustomScreenEntriesTable({
@@ -52,6 +87,7 @@ export function CustomScreenEntriesTable({
   onPublish,
   onUnpublish,
   onDelete,
+  onCommitRowField,
 }: CustomScreenEntriesTableProps) {
   const hasSelection =
     !preview &&
@@ -127,23 +163,47 @@ export function CustomScreenEntriesTable({
                     />
                   </TableCell>
                 ) : null}
-                {resolvedColumns.map((column, index) => (
-                  <TableCell key={column.id} className="px-4 py-5 text-sm first:pl-6">
-                    {index === 0 && !preview ? (
-                      <div className="flex flex-col gap-1">
-                        <AdminLink
-                          href={rowHref}
-                          className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                        >
-                          {resolveEntryColumnValue({ entry: item, column })}
-                        </AdminLink>
-                        <span className="text-xs text-muted-foreground">/{item.slug}</span>
-                      </div>
-                    ) : (
-                      <span>{resolveEntryColumnValue({ entry: item, column })}</span>
-                    )}
-                  </TableCell>
-                ))}
+                {resolvedColumns.map((column, index) => {
+                  const binding = resolveListRowFieldBinding({
+                    rowTemplate: listView.rowTemplate,
+                    column,
+                  });
+                  const editable =
+                    !preview &&
+                    Boolean(onCommitRowField) &&
+                    isInlineEditableColumn(column) &&
+                    isListRowFieldWritable(binding);
+                  const rawValue = resolveEntryColumnRawValue({ entry: item, column });
+                  const renderedValue = resolveEntryColumnValue({ entry: item, column });
+                  return (
+                    <TableCell key={column.id} className="px-4 py-5 text-sm first:pl-6">
+                      {editable ? (
+                        <InlineEditWrapper
+                          value={editableDisplayValue(rawValue)}
+                          editable
+                          ariaLabel={`${column.label} for ${item.title}`}
+                          placeholder="Empty"
+                          className="block break-words font-medium text-foreground"
+                          onCommit={(next) => {
+                            void onCommitRowField?.(item, column, next);
+                          }}
+                        />
+                      ) : index === 0 && !preview ? (
+                        <div className="flex flex-col gap-1">
+                          <AdminLink
+                            href={rowHref}
+                            className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                          >
+                            {renderedValue}
+                          </AdminLink>
+                          <span className="text-xs text-muted-foreground">/{item.slug}</span>
+                        </div>
+                      ) : (
+                        <span>{renderedValue}</span>
+                      )}
+                    </TableCell>
+                  );
+                })}
                 {hasActions ? (
                   <TableCell className="w-12 py-5 pr-6 text-right">
                     <DropdownMenu>

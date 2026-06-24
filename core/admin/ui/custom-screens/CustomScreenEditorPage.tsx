@@ -1,4 +1,4 @@
-import { Eye, Save } from "lucide-react";
+import { Columns3, Eye, EyeOff, ListPlus, Save, Settings2, SlidersHorizontal } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,9 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -52,6 +50,7 @@ import { ListViewColumnInspector } from "./ListViewColumnInspector";
 import { ListViewElementLibrary } from "./ListViewElementLibrary";
 import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
 import { resolveCustomScreenId } from "./routeParams";
+import { AuthoringCanvasFrame, AuthoringFloatingToolbar } from "@/ui/authoring";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
   addScreenBlock,
@@ -77,6 +76,8 @@ import {
 import { createScreenFieldBinding } from "./ScreenBlockInspector";
 import { ScreenAuthoringCanvas } from "./ScreenAuthoringCanvas";
 import type { ContentField } from "../content-types/SchemaBuilder";
+
+type ListViewAuthoringPanel = "elements" | "column" | "list" | "hidden" | "settings";
 
 const normalizeText = (value: string) => value.trim();
 
@@ -186,12 +187,11 @@ export function CustomScreenEditorPage() {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
-  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
     "list-view"
   );
+  const [activeListPanel, setActiveListPanel] = useState<ListViewAuthoringPanel | null>(null);
   const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
     () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
   );
@@ -744,31 +744,111 @@ export function CustomScreenEditorPage() {
     </div>
   );
 
-  const detailsPanel = (
-    <Tabs key="list-view-details" defaultValue="screen" className="flex h-full flex-col">
-      <TabsList variant="line" className="px-1">
-        <TabsTrigger value="screen">Screen</TabsTrigger>
-        <TabsTrigger value="column">Selected Column</TabsTrigger>
-      </TabsList>
-      <TabsContent value="screen" className="mt-4 space-y-6">
-        {screenSettingsPanel}
-        <div className="rounded-xl border p-4">
-          <ListViewDesigner
-            contentType={selectedContentType}
-            value={definition.listView}
-            onChange={updateListView}
-          />
+  const hiddenColumnsPanel = (
+    <div className="space-y-4">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Hidden columns</p>
+        <p className="text-xs text-muted-foreground">
+          Select a hidden column to restore it from the Column panel.
+        </p>
+      </div>
+      {definition.listView.columns.filter((column) => column.visible === false).length === 0 ? (
+        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+          No hidden columns in this list view.
         </div>
-      </TabsContent>
-      <TabsContent value="column" className="mt-4">
-        <ListViewColumnInspector
-          column={selectedListColumn}
-          onChange={handleChangeSelectedListColumn}
-          onRemove={handleRemoveSelectedListColumn}
-        />
-      </TabsContent>
-    </Tabs>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {definition.listView.columns
+            .filter((column) => column.visible === false)
+            .map((column) => (
+              <button
+                key={column.id}
+                type="button"
+                className="rounded-md border bg-background px-3 py-2 text-left hover:bg-muted/50"
+                data-hidden-column-id={column.id}
+                onClick={() => {
+                  setSelectedListColumnId(column.id);
+                  setActiveListPanel("column");
+                }}
+              >
+                <p className="text-sm font-medium">{column.label}</p>
+                <p className="text-xs text-muted-foreground">
+                  {column.field} · {column.formatter}
+                </p>
+              </button>
+            ))}
+        </div>
+      )}
+    </div>
   );
+
+  const listSettingsPanel = (
+    <ListViewDesigner
+      contentType={selectedContentType}
+      value={definition.listView}
+      onChange={updateListView}
+    />
+  );
+
+  const listColumnPanel = (
+    <ListViewColumnInspector
+      column={selectedListColumn}
+      onChange={handleChangeSelectedListColumn}
+      onRemove={handleRemoveSelectedListColumn}
+    />
+  );
+
+  const renderActiveListPanel = () => {
+    if (activeListPanel === "elements") return libraryPanel;
+    if (activeListPanel === "column") return listColumnPanel;
+    if (activeListPanel === "list") return listSettingsPanel;
+    if (activeListPanel === "hidden") return hiddenColumnsPanel;
+    if (activeListPanel === "settings") return screenSettingsPanel;
+    return null;
+  };
+
+  const listToolbarPanels = [
+    {
+      id: "elements",
+      label: "Elements",
+      description: "Add content and system fields as columns.",
+      icon: ListPlus,
+      active: activeListPanel === "elements",
+      onSelect: () => setActiveListPanel(activeListPanel === "elements" ? null : "elements"),
+    },
+    {
+      id: "column",
+      label: "Column",
+      description: "Edit the selected column.",
+      icon: Columns3,
+      active: activeListPanel === "column",
+      onSelect: () => setActiveListPanel(activeListPanel === "column" ? null : "column"),
+    },
+    {
+      id: "list",
+      label: "List settings",
+      description: "Configure sorting, filters, and bulk actions.",
+      icon: SlidersHorizontal,
+      active: activeListPanel === "list",
+      onSelect: () => setActiveListPanel(activeListPanel === "list" ? null : "list"),
+    },
+    {
+      id: "hidden",
+      label: "Hidden columns",
+      description: "Review columns hidden from records.",
+      icon: EyeOff,
+      active: activeListPanel === "hidden",
+      onSelect: () => setActiveListPanel(activeListPanel === "hidden" ? null : "hidden"),
+    },
+    {
+      id: "settings",
+      label: "Screen settings",
+      description: "Edit screen name, status, content type, and sidebar shortcut.",
+      icon: Settings2,
+      active: activeListPanel === "settings",
+      onSelect: () => setActiveListPanel(activeListPanel === "settings" ? null : "settings"),
+    },
+  ];
 
   const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 
@@ -781,9 +861,6 @@ export function CustomScreenEditorPage() {
             status={status}
             hasUnsavedChanges={hasUnsavedChanges}
             isCreateMode={isCreateMode}
-            leftPanel={activeBuilderTab === "list-view" ? libraryPanel : undefined}
-            rightPanel={activeBuilderTab === "list-view" ? detailsPanel : undefined}
-            rightPanelClassName="p-6"
           >
             <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
               <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
@@ -839,16 +916,6 @@ export function CustomScreenEditorPage() {
                     {isSaving ? "Saving..." : "Save"}
                   </Button>
                 </div>
-                {activeBuilderTab === "list-view" ? (
-                  <div className="flex flex-wrap items-center gap-2 lg:hidden">
-                    <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
-                      Components
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
-                      Details
-                    </Button>
-                  </div>
-                ) : null}
               </div>
             </div>
             <div
@@ -879,13 +946,27 @@ export function CustomScreenEditorPage() {
                   Loading custom screen...
                 </div>
               ) : activeBuilderTab === "list-view" ? (
-                <ListViewCanvas
-                  contentType={selectedContentType}
-                  listView={definition.listView}
-                  selectedColumnId={selectedListColumnId}
-                  onSelectColumn={setSelectedListColumnId}
-                  onMoveColumn={handleMoveListColumn}
-                />
+                <AuthoringCanvasFrame
+                  borderless
+                  toolbar={
+                    <AuthoringFloatingToolbar
+                      label={selectedListColumn?.label ?? "List view"}
+                      panels={listToolbarPanels}
+                      subpanel={renderActiveListPanel()}
+                    />
+                  }
+                >
+                  <ListViewCanvas
+                    contentType={selectedContentType}
+                    listView={definition.listView}
+                    selectedColumnId={selectedListColumnId}
+                    onSelectColumn={(columnId) => {
+                      setSelectedListColumnId(columnId);
+                      setActiveListPanel("column");
+                    }}
+                    onMoveColumn={handleMoveListColumn}
+                  />
+                </AuthoringCanvasFrame>
               ) : (
                 <ScreenAuthoringCanvas
                   document={screenDocument}
@@ -915,30 +996,6 @@ export function CustomScreenEditorPage() {
               )}
             </div>
           </CustomScreenShell>
-
-          {activeBuilderTab === "list-view" ? (
-            <>
-              <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
-                <SheetContent side="left" className="w-80 p-0">
-                  <SheetTitle className="sr-only">List view elements</SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Add columns to the custom screen list view.
-                  </SheetDescription>
-                  {libraryPanel}
-                </SheetContent>
-              </Sheet>
-
-              <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
-                <SheetContent side="right" className="w-96 p-6">
-                  <SheetTitle className="sr-only">Screen details</SheetTitle>
-                  <SheetDescription className="sr-only">
-                    Configure screen metadata and selected list column settings.
-                  </SheetDescription>
-                  {detailsPanel}
-                </SheetContent>
-              </Sheet>
-            </>
-          ) : null}
 
           <CustomScreenWorkspacePreviewDialog
             open={previewOpen}

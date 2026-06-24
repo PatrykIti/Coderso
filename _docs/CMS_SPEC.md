@@ -182,12 +182,26 @@ Storage:
   document and strict writes reject flat block arrays.
 - Read migration may wrap older flat V4 block arrays into a default section
   without destructive persistence.
+- `definition.listView.rowTemplate` is an additive V4 row document + bindings
+  contract for real records-list cells. Legacy list definitions are read with a
+  default row template derived from visible columns; generated builder preview
+  rows remain read-only.
+- The List View builder uses the neutral canvas shell with one floating bottom
+  toolbar. Elements, column controls, hidden columns, list settings, and screen
+  settings live in attached toolbar panels instead of permanent left/right rails
+  or mobile sheets.
 - `Editor View` uses a neutral authoring canvas shell through a screen adapter:
   insert, layers, content, binding, style, and screen settings are floating
-  panels, not permanent Editor View rails.
+  panels attached to the floating toolbar, not permanent Editor View rails. The
+  command palette is a focus-trapped dialog and advanced style controls open in
+  modals while simple controls stay inline.
 - Record detail mode reuses the same neutral canvas shell but exposes only
   record-editing controls. It does not show builder add, move, duplicate,
-  delete, library, or settings controls.
+  delete, library, settings controls, or a detached Value panel. Writable bound
+  record-header/field text edits inline on the canvas; read-only or unbound
+  values expose no editable affordance.
+- Records workspace row editing reuses existing internal entry update routes
+  and cache invalidation. No new public write endpoint is introduced.
 - Per-record presentation overrides for Custom Screen records are stored outside
   `content_entries.data` in the dedicated
   `custom_screen_entry_presentation_overrides` table. The foundation API
@@ -196,8 +210,8 @@ Storage:
   existing entry draft path; presentation overrides are loaded and saved through
   the internal Custom Screen override API.
 - The first TASK-473 slice ships storage, service validation, routes, and stale
-  target cleanup. Record detail panel/cache wiring remains blocked by
-  TASK-474-03 and TASK-473-03.
+  target cleanup. TASK-474-03 removes the blocking detached Value panel; record
+  detail override panel/cache wiring continues in TASK-473-03 as a follow-up.
 
 ### Posts admin authoring contract
 
