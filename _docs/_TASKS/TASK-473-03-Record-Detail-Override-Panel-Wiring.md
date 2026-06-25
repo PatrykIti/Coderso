@@ -6,12 +6,13 @@
 **Category:** Admin UI / Custom Screens / Entry Presentation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-473-02, TASK-474-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-25
 **Unblocked By:** TASK-474-03
-**Follow-up Note:** Foundation storage/API/cleanup landed in TASK-473-01,
-TASK-473-02, and TASK-473-04. TASK-474-03 removed the detached record Value
-panel and shipped the inline record-editing canvas contract, so this task can
-wire presentation override panel/cache/render merge next.
+**Completion Note:** TASK-474-03 removed the detached record Value panel and
+shipped the inline record-editing canvas contract. This task added the cached
+override client, record-detail presentation panel, render-only merge, dirty-state
+protection, and regression coverage for per-record presentation overrides.
 
 ---
 
@@ -37,13 +38,13 @@ override client.
 
 ## Sub-Tasks
 
-- [ ] Add a cached client wrapper for override read/replace (cache key + TTL +
+- [x] Add a cached client wrapper for override read/replace (cache key + TTL +
   invalidation + `cacheBus` broadcast).
-- [ ] Load overrides separately from entry data; merge after validation for
+- [x] Load overrides separately from entry data; merge after validation for
   canvas rendering.
-- [ ] Add presentation controls (allowed targets only) to save/clear/reload
+- [x] Add presentation controls (allowed targets only) to save/clear/reload
   overrides without dirty-state loss.
-- [ ] Keep record mode free of section/block builder controls.
+- [x] Keep record mode free of section/block builder controls.
 
 ## Files To Change
 
@@ -125,6 +126,25 @@ test("saving an override does not mutate entry data and survives reload", async 
 - Live `playwright-cli`: save/clear/reload an override on a record; confirm no
   builder controls in record mode.
 - `git diff --check`
+
+## Completion Validation
+
+- `bun run test:vitest -- tests/vitest/admin/customScreensClient.test.ts` passed.
+- `bun run test:vitest -- tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` passed.
+- `bun run test:vitest -- tests/vitest/customScreens` passed.
+- `set -a && source .env && set +a && bun test tests/integration/routes/customScreensRoutes.test.ts` passed.
+- `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun --cwd core build:admin`, `bun run check:admin-boundary`,
+  `bun run check:admin-bundle`, and `bun run gates:coderso` passed.
+- `set -a && source .env && set +a && bun run test:bun` passed: 1132 tests, 1
+  skipped live OpenAI route test.
+- `bun run test:vitest` passed: 4211 tests across 688 files.
+- `playwright-cli -s=task473-record-overrides-smoke-pass run-code --filename .tmp/task-473-record-detail-overrides-smoke.js`
+  passed against `coderso-dev-core-host`: create mode hid presentation controls;
+  record mode exposed no builder controls; text size/emphasis/tone overrides
+  saved through the override route, reloaded, rendered without mutating entry
+  data, cleared cleanly, and inline content editing saved through the entry
+  route.
 
 ## Documentation Updates Required
 

@@ -2,6 +2,7 @@ import type {
   ScreenDocumentV1,
   ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
+import type { ScreenEntryPresentationOverrideDraft } from "../../../services/customScreens/screenEntryPresentationOverrideContract";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
 
@@ -10,6 +11,7 @@ type CustomScreenEntryCanvasProps = {
   bindings: ScreenFieldBinding[];
   fieldValues: Record<string, unknown>;
   fieldErrors: Record<string, string>;
+  presentationOverrides?: ScreenEntryPresentationOverrideDraft[];
   fields: ContentField[];
   relationTargets: Array<{ slug: string; name: string }>;
   onFieldChange: (field: string, value: unknown) => void;
@@ -24,6 +26,7 @@ export function CustomScreenEntryCanvas({
   bindings,
   fieldValues,
   fieldErrors,
+  presentationOverrides,
   fields,
   relationTargets,
   onFieldChange,
@@ -39,6 +42,7 @@ export function CustomScreenEntryCanvas({
       values={fieldValues}
       fields={fields}
       fieldErrors={fieldErrors}
+      presentationOverrides={presentationOverrides}
       relationTargets={relationTargets}
       mode="entry"
       selectedBlockId={selectedBlockId}

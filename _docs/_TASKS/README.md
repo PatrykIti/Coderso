@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 18 tasks
-- **In Progress:** 6 tasks
-- **Done:** 2683 tasks
+- **To Do:** 16 tasks
+- **In Progress:** 5 tasks
+- **Done:** 2686 tasks
 
 ---
 
@@ -96,8 +96,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-467-03-L02 | Admin Widget Loader Map And Eager Barrel Removal | High | Large | Replace the eager widget editor barrel with typed lazy editor component bundles. |
 | TASK-467-03-L03 | Shared Widget Editor Outlet And Builder Surface Wiring | High | Large | Route wizard, visual, and advanced editor rendering through local Suspense/error handling. |
 | TASK-467-03-L04 | Bundle Evidence Docs And Closure Validation | High | Medium | Enforce fresh registry split evidence, dynamic raw chunk budgets, docs, and closure validation. |
-| TASK-473-03 | Record Detail Override Panel Wiring | Medium | Medium | Unblocked by TASK-474-03; cached read/save/clear/reload of overrides remains a follow-up with render-only merge and no dirty-state loss. |
-| TASK-473-05 | Docs, Validation, And Board Closure | Medium | Small | Full family docs/validation/closure remains blocked by TASK-473-03. |
 | TASK-406 | Assistant Cross-Industry Reset E2E | High | Large | Follow-up destructive/reset validation: start from clean site state, use a non-architecture prompt, and verify generic assistant behavior plus media-profile fail-closed policy. |
 | TASK-239 | Coderso Membership and Client Portal Umbrella | High | Very Large | Execution-ready portal/member auth/access-rule program superseding TASK-054-20 |
 | TASK-240 | Coderso Multilingual and i18n Umbrella | High | Very Large | Execution-ready locale/translation/runtime routing program superseding TASK-054-21 |
@@ -113,7 +111,6 @@ Task board for project work. Keep task files and this board in sync.
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
-| TASK-473 | Custom Screen Per-Record Presentation Overrides | Medium | Large | In progress (2026-06-24): foundation storage/API/cleanup landed; TASK-473-03 is unblocked by TASK-474-03 and remains the next follow-up. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
 | TASK-105-05 | Entries, Pages, and Posts Editor Wave | High | Large | In progress: `PageEditor` jumped above `82%` branches, and the next ROI is concentrated in smaller editor shell/media/async residue rather than broad component gaps |
@@ -126,7 +123,10 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-473-01 | Override Storage Domain Owner And Schemas | Medium | Large | Done (2026-06-24): Added override service owner, strict normalizers, lazy DB repository, migration `0063`, and Vitest coverage. |
 | TASK-473-02 | Internal Admin Override Routes | Medium | Medium | Done (2026-06-24): Added internal GET/PATCH override routes with RBAC, strict envelope validation, and route error coverage. |
+| TASK-473-03 | Record Detail Override Panel Wiring | Medium | Medium | Done (2026-06-25): Added cached read/save/reload/clear UI, render-only text/media override merge, dirty-state protection, and record-mode builder-control guards. |
 | TASK-473-04 | Override Cleanup And Backfill | Medium | Medium | Done (2026-06-24): FK cascades cover screen/entry deletes; reads skip stale targets and cleanup helpers reap block/field drift. |
+| TASK-473-05 | Docs, Validation, And Board Closure | Medium | Small | Done (2026-06-25): Synchronized cache/docs/task board/changelog evidence; full Bun/Vitest/precommit validation and live record-detail smoke passed. |
+| TASK-473 | Custom Screen Per-Record Presentation Overrides | Medium | Large | Done (2026-06-25): Per-record presentation overrides now have storage, internal API, cleanup, cached admin client, record-detail controls, render-only merge, docs, and closure evidence. |
 | TASK-474 | Custom Screen Editor Canvas Parity And Inline Editing | High | Very Large | Done (2026-06-24): Shared neutral authoring primitives, single-ring canvas chrome, List View floating toolbar, Editor View modal parity, per-record inline edit, and list-row inline editing completed. |
 | TASK-474-01 | Neutral Authoring Primitives Extraction | High | Large | Done (2026-06-24): Added `InlineEditWrapper`, shared selection/canvas chrome, borderless canvas frame, and attached toolbar subpanels. |
 | TASK-474-02 | Collapse Nested Borders To Single Selection Ring | High | Medium | Done (2026-06-24): Builder and entry render through one shared selection ring while preview mode keeps read-only chrome. |

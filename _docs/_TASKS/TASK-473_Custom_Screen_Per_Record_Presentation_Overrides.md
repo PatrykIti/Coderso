@@ -5,11 +5,14 @@
 **Category:** Custom Screens / Entry Presentation / Storage Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-05, TASK-468-07-L01
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-24
-**Progress Note:** Foundation slice completed in TASK-473-01, TASK-473-02,
-TASK-473-04. TASK-473-03 remains blocked by TASK-474-03; TASK-473-05 and parent
-closure remain open until the UI/cache slice lands.
+**Completed:** 2026-06-25
+**Completion Note:** Foundation storage/API/cleanup landed in TASK-473-01,
+TASK-473-02, and TASK-473-04. TASK-474-03 unblocked the record editor, then
+TASK-473-03 added the cached record-detail presentation panel and render-only
+override merge. TASK-473-05 synchronized docs, board state, and changelog
+closure.
 
 ---
 

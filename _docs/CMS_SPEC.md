@@ -207,11 +207,15 @@ Storage:
   `custom_screen_entry_presentation_overrides` table. The foundation API
   supports bounded presentation targets only: media asset id, text size, text
   emphasis, and text/style tone. Content field values still persist through the
-  existing entry draft path; presentation overrides are loaded and saved through
-  the internal Custom Screen override API.
-- The first TASK-473 slice ships storage, service validation, routes, and stale
-  target cleanup. TASK-474-03 removes the blocking detached Value panel; record
-  detail override panel/cache wiring continues in TASK-473-03 as a follow-up.
+  existing entry draft path; presentation overrides load, render, save, reload,
+  and clear through the internal Custom Screen override API. The record detail
+  presentation panel is selection-scoped, hidden for unsaved records, and keeps
+  presentation dirty/remote-update state separate from entry content dirty
+  state.
+- TASK-473 ships storage, service validation, routes, stale target cleanup, and
+  record detail panel/cache/render wiring. Text and media overrides merge at
+  render time only and never mutate `content_entries.data`, entry drafts, screen
+  definitions, or field bindings.
 
 ### Posts admin authoring contract
 

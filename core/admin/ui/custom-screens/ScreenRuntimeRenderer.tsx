@@ -10,6 +10,10 @@ import type {
   ScreenDocumentV1,
   ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
+import type {
+  ScreenEntryPresentationOverrideDraft,
+  ScreenEntryPresentationOverridePropPath,
+} from "../../../services/customScreens/screenEntryPresentationOverrideContract";
 import { readBindingPathValue } from "../../../services/utils/bindingPath";
 import type { ContentField } from "../content-types/SchemaBuilder";
 
@@ -19,6 +23,7 @@ type ScreenRuntimeRendererProps = {
   values: Record<string, unknown>;
   fields?: ContentField[];
   fieldErrors?: Record<string, string>;
+  presentationOverrides?: ScreenEntryPresentationOverrideDraft[];
   relationTargets?: Array<{ slug: string; name: string }>;
   mode: "builder" | "preview" | "entry";
   selectedSectionId?: string | null;
@@ -72,6 +77,40 @@ const fieldTypeLabels = {
   relation: "Relation",
   richtext: "Rich text",
 } as const;
+
+const presentationTextSizeClassMap: Record<string, string> = {
+  "2xs": "text-[0.625rem] leading-4",
+  xs: "text-xs",
+  sm: "text-sm",
+  md: "text-base",
+  lg: "text-lg",
+  xl: "text-xl",
+  "2xl": "text-2xl",
+  "3xl": "text-3xl",
+  "4xl": "text-4xl",
+  "5xl": "text-5xl",
+};
+
+const presentationTextEmphasisClassMap: Record<string, string> = {
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+};
+
+const presentationToneClassMap: Record<string, string> = {
+  default: "text-foreground",
+  muted: "text-muted-foreground",
+  strong: "text-foreground",
+  neutral: "text-neutral-700",
+  primary: "text-primary",
+  secondary: "text-secondary-foreground",
+  accent: "text-accent-foreground",
+  success: "text-emerald-700",
+  warning: "text-amber-700",
+  danger: "text-destructive",
+  info: "text-sky-700",
+};
 
 const stringifyValue = (value: unknown) => {
   if (value === undefined || value === null || value === "") return "Empty";
@@ -145,6 +184,7 @@ export function ScreenRuntimeRenderer({
   values,
   fields,
   fieldErrors = {},
+  presentationOverrides = [],
   relationTargets = [],
   mode,
   selectedSectionId,
@@ -158,6 +198,35 @@ export function ScreenRuntimeRenderer({
   enableInlineFieldEditing = false,
   emptyMessage,
 }: ScreenRuntimeRendererProps) {
+  const presentationOverrideMap = new Map<string, string>();
+  const blocksWithPresentationOverrides = new Set<string>();
+  for (const override of presentationOverrides) {
+    presentationOverrideMap.set(`${override.blockId}\u0000${override.propPath}`, override.value);
+    blocksWithPresentationOverrides.add(override.blockId);
+  }
+
+  const readPresentationOverride = (
+    blockId: string,
+    propPath: ScreenEntryPresentationOverridePropPath
+  ) => presentationOverrideMap.get(`${blockId}\u0000${propPath}`) ?? null;
+
+  const resolveTextPresentationClassName = (blockId: string) => {
+    const textSize = readPresentationOverride(blockId, "textSize");
+    const textEmphasis = readPresentationOverride(blockId, "textEmphasis");
+    const tone = readPresentationOverride(blockId, "tone");
+    return cn(
+      textSize ? presentationTextSizeClassMap[textSize] : undefined,
+      textEmphasis ? presentationTextEmphasisClassMap[textEmphasis] : undefined,
+      tone ? presentationToneClassMap[tone] : undefined
+    );
+  };
+
+  const withTextPresentation = (blockId: string, className: string) =>
+    cn(className, resolveTextPresentationClassName(blockId));
+
+  const readMediaPresentationValue = (blockId: string) =>
+    readPresentationOverride(blockId, "mediaAssetId") ?? readPresentationOverride(blockId, "image");
+
   const renderBlock = (block: ScreenBlockV1): ReactNode => {
     const selected = selectedBlockId === block.id;
     const isInteractive = mode !== "preview" && Boolean(onSelectBlock);
@@ -181,6 +250,9 @@ export function ScreenRuntimeRenderer({
         className={wrapperClass}
         data-screen-block-id={block.id}
         data-screen-block-type={block.type}
+        data-screen-presentation-override={
+          blocksWithPresentationOverrides.has(block.id) ? "true" : undefined
+        }
         data-selected={selected ? "true" : "false"}
         role={isInteractive ? "button" : undefined}
         tabIndex={isInteractive ? 0 : undefined}
@@ -287,7 +359,7 @@ export function ScreenRuntimeRenderer({
             placeholder={fallback}
             editable={editable}
             ariaLabel={item.field?.label ?? propPath}
-            className={className}
+            className={withTextPresentation(block.id, className)}
             onCommit={(next) => {
               if (!item.binding || !item.field) return;
               commitBindingValue(item.binding, item.field, next);
@@ -325,6 +397,9 @@ export function ScreenRuntimeRenderer({
         field?.label ||
         (fieldName ? (systemFieldLabels.get(fieldName) ?? fieldName) : "Field");
       const value = binding ? readBindingPathValue(values, binding.field) : undefined;
+      const presentationMediaValue =
+        field?.type === "media" ? readMediaPresentationValue(block.id) : null;
+      const displayValue = presentationMediaValue ?? value;
       const writable = bindingAllowsWrite(binding);
       const canEdit = canWriteBinding(binding, field);
       return wrap(
@@ -342,14 +417,17 @@ export function ScreenRuntimeRenderer({
                     editable
                     ariaLabel={label}
                     placeholder="Empty"
-                    className="mt-2 break-words text-base text-foreground"
+                    className={withTextPresentation(
+                      block.id,
+                      "mt-2 break-words text-base text-foreground"
+                    )}
                     onCommit={(next) => commitBindingValue(binding, field, next)}
                   />
                 ) : (
-                  <div className="mt-3">
+                  <div className={withTextPresentation(block.id, "mt-3")}>
                     <FieldRenderer
                       field={field!}
-                      value={values[field!.name]}
+                      value={displayValue}
                       onChange={(next) => onFieldChange?.(field!.name, next)}
                       relationTargets={relationTargets}
                       display="compact"
@@ -357,8 +435,13 @@ export function ScreenRuntimeRenderer({
                   </div>
                 )
               ) : (
-                <p className="mt-2 break-words text-base text-foreground">
-                  {stringifyValue(value)}
+                <p
+                  className={withTextPresentation(
+                    block.id,
+                    "mt-2 break-words text-base text-foreground"
+                  )}
+                >
+                  {stringifyValue(displayValue)}
                 </p>
               )}
             </div>
@@ -419,6 +502,7 @@ export function ScreenRuntimeRenderer({
         <div
           className={cn(
             "px-4 py-3 text-sm text-muted-foreground",
+            resolveTextPresentationClassName(block.id),
             mode === "preview" && "rounded-xl border bg-card"
           )}
         >

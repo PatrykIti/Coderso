@@ -33,6 +33,8 @@ export const cacheKeys = {
   entryDetail: (typeSlug: string, id: string) => `entries:detail:${typeSlug}:${id}`,
   customScreensList: "customScreens:list",
   customScreenDetail: (id: string) => `customScreens:detail:${id}`,
+  customScreenEntryOverrides: (screenId: string, entryId: string) =>
+    `customScreens:entryOverrides:${createBoundedCacheKeySegment(screenId)}:${createBoundedCacheKeySegment(entryId)}`,
   postsList: "posts:list",
   postDetail: (id: string) => `posts:detail:${id}`,
   postRevisions: (id: string) => `posts:revisions:${id}`,

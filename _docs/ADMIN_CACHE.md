@@ -554,6 +554,19 @@ Clients update caches and broadcast events on:
   `entriesClient`; no Custom Screens-specific entry cache is introduced, and the
   screen-owned records workspace no longer hydrates or opens `EntryCreateDrawer`
   as a parallel create path.
+- Per-record presentation overrides use the separate
+  `customScreens:entryOverrides:<screenId>:<entryId>` detail cache key, with
+  bounded dynamic key segments from `cacheKeys.customScreenEntryOverrides`.
+  `CustomScreenEntryEditor` hydrates this cache independently from entry content
+  data, revalidates the internal override route in the background, and passes
+  draft overrides to the renderer for render-only merge.
+- `replaceScreenEntryOverrides()` patches the local override cache from the
+  server response and broadcasts an `update` cache-bus event for the scoped
+  override key. `invalidateScreenEntryOverrides()` clears the scoped cache and
+  broadcasts `invalidate`.
+- Override cache-bus events refresh the presentation draft only when it is clean.
+  Dirty presentation drafts keep local edits, set a presentation-specific
+  remote-update warning, and do not overwrite unsaved entry content changes.
 
 ### Forms list/detail cache note
 

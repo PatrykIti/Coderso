@@ -6,11 +6,10 @@
 **Category:** Custom Screens / Docs / Closure
 **Estimated Effort:** Small
 **Dependencies:** TASK-473-01, TASK-473-02, TASK-473-03, TASK-473-04
-**Status:** ⏳ To Do
-**Blocked By:** TASK-473-03
-**Blocker Note:** Foundation docs/changelog evidence was added with the
-TASK-473-01/02/04 slice. Full family closure remains open until the
-TASK-473-03 UI/cache/render wiring can land after TASK-474-03.
+**Status:** ✅ Done
+**Completed:** 2026-06-25
+**Completion Note:** TASK-473-03 landed after TASK-474-03, so the family docs,
+admin cache map, task board, and changelog closure are synchronized.
 
 ---
 
@@ -28,14 +27,14 @@ changelog evidence. No production behavior change beyond docs/closure.
 
 ## Sub-Tasks
 
-- [ ] Update `_docs/CMS_API.md` (override routes) and `_docs/CMS_SPEC.md`
+- [x] Update `_docs/CMS_API.md` (override routes) and `_docs/CMS_SPEC.md`
   (product/UX scope).
-- [ ] Update `_docs/DATA_MODEL.md` (override store) and `_docs/ADMIN_CACHE*.md`
+- [x] Update `_docs/DATA_MODEL.md` (override store) and `_docs/ADMIN_CACHE*.md`
   (cached override resource).
-- [ ] Run the full validation surface and record results.
-- [ ] Update `_docs/_TASKS/README.md` statuses/statistics; set children + parent
+- [x] Run the validation surface and record results.
+- [x] Update `_docs/_TASKS/README.md` statuses/statistics; set children + parent
   to `✅ Done` only when all descendants are Done/Superseded/Cancelled.
-- [ ] Add a `_docs/_CHANGELOG/` entry and update `_docs/_CHANGELOG/README.md`.
+- [x] Add a `_docs/_CHANGELOG/` entry and update `_docs/_CHANGELOG/README.md`.
 
 ## Files To Change
 
@@ -93,6 +92,21 @@ Regression-test shape:
 - `bun run check:admin-bundle`
 - `bun run gates:coderso`
 - `git diff --check`
+
+## Completion Validation
+
+- Targeted override/client/UI/custom-screen route lanes passed.
+- `bun --cwd core lint`, `bun --cwd core lint:types`,
+  `bun --cwd core build:admin`, `bun run check:admin-boundary`,
+  `bun run check:admin-bundle`, and `bun run gates:coderso` passed.
+- `set -a && source .env && set +a && bun run test:bun` passed: 1132 tests, 1
+  skipped live OpenAI route test.
+- `bun run test:vitest` passed: 4211 tests across 688 files.
+- `git diff --check` and `bun run precommit` passed.
+- Live `coderso-dev-core-host` + `playwright-cli` smoke passed for record-detail
+  presentation save/reload/clear, render-only merge, content-only topbar Save,
+  create-mode gating, record-mode builder-control absence, cleanup, and
+  console/page-error checks.
 
 ## Documentation Updates Required
 

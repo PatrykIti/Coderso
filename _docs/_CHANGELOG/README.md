@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1194.
+Ordinary new entries continue at 1195.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,11 @@ Ordinary new entries continue at 1194.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1194 for the next changelog entry.
+assistant policy coverage fix. Use 1195 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1194 | 2026-06-25 | TASK-473 record detail overrides closure | Custom Screens/Admin UI/Cache/Docs/QA/Task Board |
 | 1193 | 2026-06-24 | TASK-474 Custom Screen authoring parity and inline editing | Custom Screens/Admin UI/Schema/Docs/QA/Task Board |
 | 1192 | 2026-06-24 | TASK-473 Custom Screen presentation overrides foundation | Custom Screens/API/DB/Docs/QA/Task Board |
 | 1191 | 2026-06-23 | TASK-472 Page Editor V2 authoring controls backlog | Pages/Admin UI/Renderer/Security/QA/Task Board |

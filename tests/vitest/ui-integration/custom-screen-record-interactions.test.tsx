@@ -6,6 +6,11 @@ import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import {
+  getScreenEntryOverridesCached,
+  replaceScreenEntryOverrides,
+  type CustomScreenEntryPresentationOverride,
+} from "@/services/customScreensClient";
 import { updateEntry } from "@/services/entriesClient";
 import { setActiveAssistantSurfaceContext } from "../../../core/admin/ui/assistant/activeSurfaceContext";
 import { CustomScreenEntryEditor } from "../../../core/admin/ui/custom-screens/CustomScreenEntryEditor";
@@ -24,6 +29,16 @@ const contentType = {
         type: "string" as const,
         title: "Headline",
         xFieldType: "text",
+      },
+      heroImage: {
+        type: "string" as const,
+        title: "Hero image",
+        xFieldType: "media",
+        xFieldConfig: {
+          media: {
+            accept: ["image/*"],
+          },
+        },
       },
     },
   },
@@ -77,6 +92,15 @@ const createScreenRecord = () => ({
                         value: "Fallback headline",
                       },
                     },
+                    {
+                      id: "field-image",
+                      type: "field",
+                      variant: "stacked",
+                      data: {
+                        label: "Hero image",
+                        field: "heroImage",
+                      },
+                    },
                   ],
                 },
               },
@@ -91,6 +115,14 @@ const createScreenRecord = () => ({
           propPath: "value",
           source: "entry" as const,
           field: "headline",
+          mode: "readwrite" as const,
+        },
+        {
+          id: "binding-image",
+          blockId: "field-image",
+          propPath: "value",
+          source: "entry" as const,
+          field: "heroImage",
           mode: "readwrite" as const,
         },
       ],
@@ -116,6 +148,15 @@ const createScreenRecord = () => ({
               value: "Fallback headline",
             },
           },
+          {
+            id: "field-image",
+            type: "screen-field-value",
+            variant: "stacked",
+            data: {
+              label: "Hero image",
+              field: "heroImage",
+            },
+          },
         ],
       },
     },
@@ -126,6 +167,13 @@ const createScreenRecord = () => ({
       widgetId: "field-1",
       propPath: "value",
       field: "headline",
+      mode: "readwrite" as const,
+    },
+    {
+      id: "binding-image",
+      widgetId: "field-image",
+      propPath: "value",
+      field: "heroImage",
       mode: "readwrite" as const,
     },
   ],
@@ -143,18 +191,33 @@ const entryDetail = {
   status: "draft" as const,
   data: {
     headline: "Project Aurora",
+    heroImage: "55555555-5555-4555-8555-555555555555",
   },
   createdAt: "2026-05-02T00:00:00.000Z",
   updatedAt: "2026-05-02T00:00:00.000Z",
 };
 
 let cacheListener: ((event: { key: string }) => void) | null = null;
+let currentOverrides: CustomScreenEntryPresentationOverride[] = [];
 
 vi.mock("@/services/customScreensClient", () => ({
   getCachedCustomScreens: vi.fn(() => [currentScreenRecord]),
   listCustomScreensCached: vi.fn(async () => [currentScreenRecord]),
   getCachedCustomScreen: vi.fn(() => currentScreenRecord),
   getCustomScreenCached: vi.fn(async () => currentScreenRecord),
+  getCachedScreenEntryOverrides: vi.fn(() => currentOverrides),
+  getScreenEntryOverridesCached: vi.fn(async () => currentOverrides),
+  replaceScreenEntryOverrides: vi.fn(
+    async (
+      _screenId: string,
+      _entryId: string,
+      overrides: CustomScreenEntryPresentationOverride[]
+    ) => {
+      currentOverrides = [...overrides];
+      return currentOverrides;
+    }
+  ),
+  invalidateScreenEntryOverrides: vi.fn(),
 }));
 
 vi.mock("@/services/contentTypesClient", () => ({
@@ -229,9 +292,15 @@ const flush = async () => {
   });
 };
 
+const findButton = (container: HTMLElement, label: string) =>
+  Array.from(container.querySelectorAll("button")).find((button) =>
+    button.textContent?.includes(label)
+  );
+
 beforeEach(() => {
   cacheListener = null;
   currentScreenRecord = createScreenRecord();
+  currentOverrides = [];
   vi.mocked(updateEntry).mockResolvedValue(entryDetail);
   window.history.replaceState({}, "", "/admin/advanced/custom-screens/screen-1/entries/entry-1");
 });
@@ -324,6 +393,185 @@ test("record editor commits writable field text inline through the existing entr
   }
 });
 
+test("presentation save clears only the selected block overrides without updating entry content", async () => {
+  currentOverrides = [
+    { blockId: "field-1", propPath: "textSize", value: "lg" },
+    {
+      blockId: "field-image",
+      propPath: "mediaAssetId",
+      value: "66666666-6666-4666-8666-666666666666",
+    },
+  ];
+  const view = mount("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+
+  try {
+    await flush();
+
+    const child = view.container.querySelector('[data-screen-block-id="field-1"]');
+    const textbox = view.container.querySelector('[role="textbox"][aria-label="Headline"]');
+    expect(textbox?.getAttribute("class")).toContain("text-lg");
+
+    React.act(() => {
+      child?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    expect(
+      view.container.querySelector("[data-custom-screen-entry-presentation-panel]")
+    ).not.toBeNull();
+
+    await React.act(async () => {
+      findButton(view.container, "Clear selected presentation")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+      await Promise.resolve();
+    });
+
+    await React.act(async () => {
+      findButton(view.container, "Save presentation")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(replaceScreenEntryOverrides).toHaveBeenCalledWith("screen-1", "entry-1", [
+      {
+        blockId: "field-image",
+        propPath: "mediaAssetId",
+        value: "66666666-6666-4666-8666-666666666666",
+      },
+    ]);
+    expect(updateEntry).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("dirty presentation draft is not overwritten by override cache events", async () => {
+  currentOverrides = [{ blockId: "field-1", propPath: "tone", value: "muted" }];
+  const view = mount("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+
+  try {
+    await flush();
+
+    const child = view.container.querySelector('[data-screen-block-id="field-1"]');
+    React.act(() => {
+      child?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    await React.act(async () => {
+      findButton(view.container, "Clear selected presentation")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+      await Promise.resolve();
+    });
+
+    currentOverrides = [{ blockId: "field-1", propPath: "tone", value: "strong" }];
+    await React.act(async () => {
+      cacheListener?.({ key: cacheKeys.customScreenEntryOverrides("screen-1", "entry-1") });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(view.container.textContent).toContain("Presentation updated elsewhere");
+
+    await React.act(async () => {
+      findButton(view.container, "Save presentation")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(replaceScreenEntryOverrides).toHaveBeenCalledWith("screen-1", "entry-1", []);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("reloading presentation preserves unsaved content edits", async () => {
+  currentOverrides = [{ blockId: "field-1", propPath: "tone", value: "muted" }];
+  const view = mount("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+
+  try {
+    await flush();
+
+    const child = view.container.querySelector('[data-screen-block-id="field-1"]');
+    React.act(() => {
+      child?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    const textbox = view.container.querySelector('[role="textbox"][aria-label="Headline"]');
+    React.act(() => {
+      (textbox as HTMLElement).textContent = "Unsaved content draft";
+      textbox?.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+    });
+    await flush();
+
+    currentOverrides = [{ blockId: "field-1", propPath: "tone", value: "strong" }];
+    await React.act(async () => {
+      findButton(view.container, "Reload presentation")?.dispatchEvent(
+        new MouseEvent("click", { bubbles: true })
+      );
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(
+      view.container.querySelector('[role="textbox"][aria-label="Headline"]')?.textContent
+    ).toBe("Unsaved content draft");
+    expect(getScreenEntryOverridesCached).toHaveBeenCalledWith("screen-1", "entry-1", {
+      force: true,
+    });
+    expect(updateEntry).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("presentation controls stay disabled in create mode and media controls are media-only", async () => {
+  const createView = mount("/admin/advanced/custom-screens/screen-1/entries/new");
+
+  try {
+    await flush();
+    expect(
+      createView.container.querySelector("[data-custom-screen-entry-presentation-panel]")
+    ).toBeNull();
+  } finally {
+    createView.cleanup();
+  }
+
+  const editView = mount("/admin/advanced/custom-screens/screen-1/entries/entry-1");
+
+  try {
+    await flush();
+    const textField = editView.container.querySelector('[data-screen-block-id="field-1"]');
+    React.act(() => {
+      textField?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(
+      editView.container.querySelector('[data-presentation-control="mediaAssetId"]')
+    ).toBeNull();
+
+    const mediaField = editView.container.querySelector('[data-screen-block-id="field-image"]');
+    React.act(() => {
+      mediaField?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    expect(
+      editView.container.querySelector('[data-presentation-control="mediaAssetId"]')
+    ).not.toBeNull();
+    expect(editView.container.textContent).toContain("Browse media");
+  } finally {
+    editView.cleanup();
+  }
+});
+
 test("assistant surface uses editorView blocks and bindings even when legacy root copies drift", async () => {
   currentScreenRecord = {
     ...createScreenRecord(),
@@ -338,14 +586,14 @@ test("assistant surface uses editorView blocks and bindings even when legacy roo
 
     expect(vi.mocked(setActiveAssistantSurfaceContext).mock.calls.at(-1)?.[0]).toMatchObject({
       selectedBlockId: "group-1",
-      bindings: [
+      bindings: expect.arrayContaining([
         {
           field: "headline",
           mode: "readwrite",
           propPath: "value",
           blockId: "field-1",
         },
-      ],
+      ]),
       blocks: expect.arrayContaining([
         expect.objectContaining({ id: "group-1", type: "field-group" }),
         expect.objectContaining({ id: "field-1", type: "field" }),
