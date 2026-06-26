@@ -188,7 +188,15 @@ const readInlineTextSelectionRange = (root: HTMLElement): InlineTextSelectionRan
   return end > start ? { from: start, to: end } : null;
 };
 
-const inlineTextMarkPalette = getPageEditorColorPalette().slice(0, 6);
+// Inline mark swatches expose only the design-token colors whose `var(--color-*)`
+// resolves consistently in the admin canvas AND on the front (brand + border).
+// The neutral `bg`/`surface`/`text` tokens use CSS variables the admin canvas does
+// not define (it carries `--color-background`/`-foreground`/`-muted` instead), so
+// they would render as an invalid color in-editor; authors reach those via the
+// custom color picker (a sanitized hex) instead. (TASK-477-01)
+const inlineTextMarkPalette = getPageEditorColorPalette().filter((swatch) =>
+  ["primary", "secondary", "accent", "border"].includes(swatch.id)
+);
 
 const InlineEditableCanvasText = ({
   block,
@@ -389,9 +397,18 @@ const InlineEditableCanvasText = ({
               setSelectionRange(liveRange);
             }
           }
-          // Let focusable fields (the link URL input) receive focus + typing;
-          // the blanket preventDefault used to steal their focus (bug #2).
-          if (event.target instanceof HTMLInputElement) return;
+          // Do NOT preventDefault for the link URL input or the custom color
+          // picker: preventDefault on a color input's mousedown blocks the native
+          // color dialog from opening, and steals the URL input's focus (bug #2 /
+          // TASK-477-01). The picker is a label-wrapped <input type="color">, so
+          // the click target can be the label or its icon, not the input.
+          const pickerTarget = event.target as Element | null;
+          if (
+            event.target instanceof HTMLInputElement ||
+            pickerTarget?.closest?.("[data-page-editor-text-color-picker-label]")
+          ) {
+            return;
+          }
           // Preserve the selection/focus for swatch/button activation.
           event.preventDefault();
         }}
@@ -452,7 +469,7 @@ const InlineEditableCanvasText = ({
             title={swatch.label}
             className="size-5 rounded-full border border-border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
             data-page-editor-text-color-swatch={swatch.id}
-            style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
+            style={{ backgroundColor: swatch.value }}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -469,6 +486,46 @@ const InlineEditableCanvasText = ({
             }}
           />
         ))}
+        <label
+          aria-label="Custom text color"
+          title="Custom color — pick any color"
+          data-page-editor-text-color-picker-label="true"
+          className={`relative inline-flex size-5 items-center justify-center overflow-hidden rounded-full border border-border shadow-sm ${
+            selectionRange ? "cursor-pointer" : "cursor-not-allowed opacity-40"
+          }`}
+          style={{
+            background:
+              "conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #ef4444)",
+          }}
+          // The native color dialog opens as the click's default action. Stop the
+          // click here so it never reaches the block-frame onClick, which calls
+          // preventDefault() and would cancel the picker (TASK-477-01). Do NOT
+          // preventDefault here — that would block the picker too.
+          onClick={(event) => event.stopPropagation()}
+        >
+          <Plus className="pointer-events-none h-3 w-3 text-white drop-shadow" aria-hidden="true" />
+          <input
+            type="color"
+            aria-label="Custom text color"
+            disabled={!selectionRange}
+            data-page-editor-text-color-picker="true"
+            defaultValue="#1d4ed8"
+            className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-not-allowed"
+            onChange={(event) => {
+              const range = resolveActiveMarkRange();
+              if (!range) return;
+              applyMark({
+                blockId: block.id,
+                propPath,
+                type: "color",
+                from: range.from,
+                to: range.to,
+                color: event.target.value,
+              });
+              editableRef.current?.focus();
+            }}
+          />
+        </label>
         {inlineTextMarkPalette.slice(0, 4).map((swatch) => (
           <button
             key={`highlight-${swatch.id}`}
@@ -478,7 +535,7 @@ const InlineEditableCanvasText = ({
             title={`${swatch.label} highlight`}
             className="relative size-5 rounded border border-border shadow-sm transition disabled:cursor-not-allowed disabled:opacity-40"
             data-page-editor-text-highlight-swatch={swatch.id}
-            style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
+            style={{ backgroundColor: swatch.value }}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();

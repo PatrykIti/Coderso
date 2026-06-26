@@ -714,7 +714,11 @@ site-token style bridging. Reusable authoring modules live under
   range so it is visible and can be re-colored in place. Commit still reads
   `innerText`, so `props.marks` remains the source of truth. Re-applying a
   different color/href over the same range replaces it in one click; the identical
-  value toggles it off.
+  value toggles it off. The toolbar offers the brand/border design-token swatches
+  (each previewing the exact `var(--color-*)` it applies) plus a native
+  `<input type="color">` for an arbitrary sanitized hex; neutral tokens whose CSS
+  variable differs between the admin canvas and the front are reached via the hex
+  picker.
 - `FloatingEditorToolbar.tsx` owns shared toolbar button chrome only. The
   full panel orchestration remains shell-owned until a future task extracts a
   generic non-Page-v2 panel engine.

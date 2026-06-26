@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 16 tasks
-- **In Progress:** 5 tasks
-- **Done:** 2693 tasks
+- **To Do:** 17 tasks
+- **In Progress:** 6 tasks
+- **Done:** 2694 tasks
 
 ---
 
@@ -88,6 +88,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-477-02 | Block-Level Panel Swatch Preview Accuracy | Medium | Small | Thread live site tokens into the block-level `ColorSwatchControl` palettes (Text color/Background/Border/gradient) so their swatches preview the applied color; decide the canonical neutral-token var-name contract (tokenCss/allowlist/palette) so `bg`/`surface`/`text` marks resolve in-editor and on the front. |
 | TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
 | TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
 | TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |
@@ -110,6 +111,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-477 | Page Editor Inline Color Swatch Accuracy And Picker | High | Small | In progress: TASK-477-01 (inline swatch accuracy + custom color picker) done; TASK-477-02 (block-level panel previews + neutral-token var contract) To Do. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -123,6 +125,7 @@ Task board for project work. Keep task files and this board in sync.
 |----|-------|----------|--------|-------|
 | TASK-476 | Page Editor Inline Mark UX Corrections | High | Small | Done (2026-06-26): Re-color replaces instead of resetting (476-01) and applied marks are painted live while editing with the selection restored for in-place re-color (476-02). Changelog 1196-1197. |
 | TASK-476-02 | Live In-Edit Mark Feedback | Medium | Medium | Done (2026-06-26): contentEditable paints marked children during edit (`content = children ?? text`); `applyMark` + post-render `useEffect` re-select the marked range via `selectInlineTextRange`. Changelog 1197. |
+| TASK-477-01 | Inline Swatch Preview Accuracy And Custom Color Picker | High | Small | Done (2026-06-26): inline toolbar gains a native `<input type="color">` for arbitrary colors; token swatches preview the exact `var(--color-*)` they apply and are curated to tokens that resolve in canvas+front. Changelog 1198. |
 | TASK-476-01 | Mark Re-Color Replacement Semantics | High | Small | Done (2026-06-26): `applyBlockTextMark` (extracted to pageDocumentV2) makes a different color/highlight/href over the same range replace in one click; identical value still toggles off. Changelog 1196. |
 | TASK-475 | Page Editor Inline Mark Toolbar Real-Input Fixes | High | Small | Done (2026-06-25): Inline mark toolbar works under real mouse/keyboard — live selection snapshot on toolbar mousedown, link URL input focus fix + blur guard, and single-click-to-edit. Changelog 1195. |
 | TASK-475-01 | Toolbar Selection Snapshot And Input Focus Fix | High | Small | Done (2026-06-25): Snapshot the live DOM selection on toolbar mousedown; controls read snapshot ?? state; URL input no longer loses focus to blanket preventDefault; blur guard + post-link refocus. |
