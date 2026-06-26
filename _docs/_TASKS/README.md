@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 16 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2686 tasks
+- **Done:** 2690 tasks
 
 ---
 
@@ -121,6 +121,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-475 | Page Editor Inline Mark Toolbar Real-Input Fixes | High | Small | Done (2026-06-25): Inline mark toolbar works under real mouse/keyboard — live selection snapshot on toolbar mousedown, link URL input focus fix + blur guard, and single-click-to-edit. Changelog 1195. |
+| TASK-475-01 | Toolbar Selection Snapshot And Input Focus Fix | High | Small | Done (2026-06-25): Snapshot the live DOM selection on toolbar mousedown; controls read snapshot ?? state; URL input no longer loses focus to blanket preventDefault; blur guard + post-link refocus. |
+| TASK-475-03 | Single-Click-To-Edit And Drag-Select Entry | Medium | Small | Done (2026-06-25): Second single click on a selected text block enters edit with caret at the click point; first click on an unselected block still only selects. |
+| TASK-475-02 | Validation, Docs, And Closure | High | Small | Done (2026-06-25): lint/types green, page-editor Vitest 146/146, gates baseline, real-input live smoke, changelog 1195, PAGE_MODEL docs, board synced. |
 | TASK-473-01 | Override Storage Domain Owner And Schemas | Medium | Large | Done (2026-06-24): Added override service owner, strict normalizers, lazy DB repository, migration `0063`, and Vitest coverage. |
 | TASK-473-02 | Internal Admin Override Routes | Medium | Medium | Done (2026-06-24): Added internal GET/PATCH override routes with RBAC, strict envelope validation, and route error coverage. |
 | TASK-473-03 | Record Detail Override Panel Wiring | Medium | Medium | Done (2026-06-25): Added cached read/save/reload/clear UI, render-only text/media override merge, dirty-state protection, and record-mode builder-control guards. |

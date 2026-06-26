@@ -1,4 +1,6 @@
 import {
+  useCallback,
+  useRef,
   useState,
   type FocusEvent,
   type KeyboardEvent,
@@ -83,6 +85,37 @@ const focusInlineEditableNode = (node: HTMLElement | null) => {
   selection.addRange(range);
 };
 
+/**
+ * Resolve a collapsed caret range from viewport coordinates, clamped to the
+ * given editable node. Used to place the caret where the author clicked when a
+ * single click activates inline edit (TASK-475-03). Returns null when the point
+ * is outside any text node so callers can fall back to caret-at-end.
+ */
+const caretRangeFromClientPoint = (node: HTMLElement, x: number, y: number): Range | null => {
+  const doc = node.ownerDocument;
+  const fromPoint = doc as Document & {
+    caretRangeFromPoint?: (cx: number, cy: number) => Range | null;
+    caretPositionFromPoint?: (
+      cx: number,
+      cy: number
+    ) => { offsetNode: Node; offset: number } | null;
+  };
+  if (typeof fromPoint.caretRangeFromPoint === "function") {
+    const range = fromPoint.caretRangeFromPoint(x, y);
+    if (!range) return null;
+    return node.contains(range.startContainer) ? range : null;
+  }
+  if (typeof fromPoint.caretPositionFromPoint === "function") {
+    const position = fromPoint.caretPositionFromPoint(x, y);
+    if (!position || !node.contains(position.offsetNode)) return null;
+    const range = doc.createRange();
+    range.setStart(position.offsetNode, position.offset);
+    range.collapse(true);
+    return range;
+  }
+  return null;
+};
+
 const readInlineEditableElementText = (element: HTMLElement): string => {
   const { innerText } = element as HTMLElement & { innerText?: unknown };
   return typeof innerText === "string" ? innerText : (element.textContent ?? "");
@@ -143,6 +176,36 @@ const InlineEditableCanvasText = ({
 }) => {
   const [selectionRange, setSelectionRange] = useState<InlineTextSelectionRange | null>(null);
   const [linkHref, setLinkHref] = useState("");
+  // Live editable node + a synchronous selection snapshot captured on toolbar
+  // mousedown (TASK-475-01): the mark toolbar is a sibling of the editable, so
+  // its mouse events never reach the editable's mouseup/keyup, leaving the
+  // `selectionRange` state stale at click time. The snapshot makes activation
+  // authoritative against the live DOM selection.
+  const editableRef = useRef<HTMLElement | null>(null);
+  const markToolbarRef = useRef<HTMLSpanElement | null>(null);
+  const selectionSnapshotRef = useRef<InlineTextSelectionRange | null>(null);
+  // Caret point remembered when a single click activates inline edit so the
+  // caret lands where the author clicked (TASK-475-03).
+  const pendingCaretPointRef = useRef<{ x: number; y: number } | null>(null);
+  const setEditableNode = useCallback((node: HTMLElement | null) => {
+    editableRef.current = node;
+    if (!node) return;
+    const point = pendingCaretPointRef.current;
+    pendingCaretPointRef.current = null;
+    if (point) {
+      node.focus();
+      const range = caretRangeFromClientPoint(node, point.x, point.y);
+      const selection = node.ownerDocument.defaultView?.getSelection?.();
+      if (range && selection) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+        return;
+      }
+    }
+    focusInlineEditableNode(node);
+  }, []);
+  const resolveActiveMarkRange = (): InlineTextSelectionRange | null =>
+    selectionSnapshotRef.current ?? selectionRange;
   const target = resolveInlineEditTarget(block, propPath);
   if (!target) return <>{children ?? text}</>;
   const { multiline } = target;
@@ -159,7 +222,7 @@ const InlineEditableCanvasText = ({
   };
   const wrapperKey = `${propPath}:${text}`;
   const wrapperProps = {
-    ref: editing ? focusInlineEditableNode : undefined,
+    ref: editing ? setEditableNode : undefined,
     contentEditable: editing ? true : undefined,
     suppressContentEditableWarning: true,
     "data-page-editor-inline-edit": editing ? "active" : "idle",
@@ -179,7 +242,18 @@ const InlineEditableCanvasText = ({
       ? (event: MouseEvent<HTMLElement>) => {
           event.stopPropagation();
         }
-      : undefined,
+      : selected
+        ? (event: MouseEvent<HTMLElement>) => {
+            // Second single click on an already-selected text block enters inline
+            // edit (TASK-475-03), placing the caret where the author clicked so a
+            // drag-select can follow without needing a double click. The first
+            // click (block not yet selected) falls through and bubbles to the
+            // block-select handler.
+            event.stopPropagation();
+            pendingCaretPointRef.current = { x: event.clientX, y: event.clientY };
+            onStartEdit({ blockId: block.id, propPath });
+          }
+        : undefined,
     onMouseUp: editing
       ? (event: MouseEvent<HTMLElement>) => {
           updateSelectionRange(event.currentTarget);
@@ -207,6 +281,13 @@ const InlineEditableCanvasText = ({
       : undefined,
     onBlur: editing
       ? (event: FocusEvent<HTMLElement>) => {
+          // Keep inline edit alive while focus moves into the mark toolbar (e.g.
+          // the link URL input); committing here would unmount the toolbar
+          // mid-interaction (TASK-475-01 bug #2).
+          const nextFocus = event.relatedTarget;
+          if (nextFocus instanceof Node && markToolbarRef.current?.contains(nextFocus)) {
+            return;
+          }
           onCommit({
             blockId: block.id,
             propPath,
@@ -222,12 +303,28 @@ const InlineEditableCanvasText = ({
   const markToolbar =
     canApplyTextMarks && inlineTextMarkPalette.length > 0 ? (
       <span
+        ref={markToolbarRef}
         className="absolute -top-9 left-0 z-20 flex items-center gap-1 rounded border bg-background/95 px-1.5 py-1 shadow-sm"
         data-page-editor-text-mark-toolbar="true"
         data-page-editor-text-color-toolbar="true"
         onMouseDown={(event) => {
-          event.preventDefault();
           event.stopPropagation();
+          // Snapshot the still-live DOM selection on every toolbar interaction,
+          // before either the URL input steals focus or preventDefault runs. The
+          // sibling toolbar never triggers the editable's mouseup/keyup, so the
+          // `selectionRange` state can be stale at click time (TASK-475-01 bug #1).
+          if (canApplyTextMarks && editableRef.current) {
+            const liveRange = readInlineTextSelectionRange(editableRef.current);
+            if (liveRange) {
+              selectionSnapshotRef.current = liveRange;
+              setSelectionRange(liveRange);
+            }
+          }
+          // Let focusable fields (the link URL input) receive focus + typing;
+          // the blanket preventDefault used to steal their focus (bug #2).
+          if (event.target instanceof HTMLInputElement) return;
+          // Preserve the selection/focus for swatch/button activation.
+          event.preventDefault();
         }}
       >
         <Palette className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
@@ -241,13 +338,14 @@ const InlineEditableCanvasText = ({
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            if (!selectionRange) return;
+            const range = resolveActiveMarkRange();
+            if (!range) return;
             onApplyTextMark({
               blockId: block.id,
               propPath,
               type: "bold",
-              from: selectionRange.from,
-              to: selectionRange.to,
+              from: range.from,
+              to: range.to,
             });
           }}
         >
@@ -263,13 +361,14 @@ const InlineEditableCanvasText = ({
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            if (!selectionRange) return;
+            const range = resolveActiveMarkRange();
+            if (!range) return;
             onApplyTextMark({
               blockId: block.id,
               propPath,
               type: "italic",
-              from: selectionRange.from,
-              to: selectionRange.to,
+              from: range.from,
+              to: range.to,
             });
           }}
         >
@@ -288,13 +387,14 @@ const InlineEditableCanvasText = ({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              if (!selectionRange) return;
+              const range = resolveActiveMarkRange();
+              if (!range) return;
               onApplyTextMark({
                 blockId: block.id,
                 propPath,
                 type: "color",
-                from: selectionRange.from,
-                to: selectionRange.to,
+                from: range.from,
+                to: range.to,
                 color: swatch.value,
               });
             }}
@@ -313,13 +413,14 @@ const InlineEditableCanvasText = ({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              if (!selectionRange) return;
+              const range = resolveActiveMarkRange();
+              if (!range) return;
               onApplyTextMark({
                 blockId: block.id,
                 propPath,
                 type: "highlight",
-                from: selectionRange.from,
-                to: selectionRange.to,
+                from: range.from,
+                to: range.to,
                 color: swatch.value,
               });
             }}
@@ -346,15 +447,19 @@ const InlineEditableCanvasText = ({
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
-              if (!selectionRange) return;
+              const range = resolveActiveMarkRange();
+              if (!range) return;
               onApplyTextMark({
                 blockId: block.id,
                 propPath,
                 type: "link",
-                from: selectionRange.from,
-                to: selectionRange.to,
+                from: range.from,
+                to: range.to,
                 href: linkHref,
               });
+              // Return focus to the editable so a later click-away commits and
+              // ends inline edit through the normal blur path (TASK-475-01).
+              editableRef.current?.focus();
             }}
           >
             <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />

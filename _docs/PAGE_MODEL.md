@@ -699,6 +699,17 @@ site-token style bridging. Reusable authoring modules live under
   edited inline, commit `innerHTML` through the shared rich-text sanitizer
   instead of the plain-text inline sanitizer. It receives resolved site-token
   style values from the shell instead of reading settings itself.
+- Canvas inline-mark interaction (plain text/heading/quote, desktop): a first
+  click selects the block; a second single click enters inline edit with the
+  caret at the click point (double-click also works). The floating mark toolbar
+  is a sibling of the editable, so it snapshots the live DOM selection on its
+  `mousedown` and each swatch/button applies against that snapshot rather than
+  the async `selectionRange` state. The toolbar's `mousedown` preserves the
+  selection for buttons (cancels the default) but allows the link URL `<input>`
+  to focus and type; an `onBlur` guard keeps inline edit alive while focus is
+  inside the toolbar. Applied color/highlight/link marks live on
+  `block.props.marks` and paint as `data-page-text-mark` segments after edit
+  exits (the editable shows plain text while editing).
 - `FloatingEditorToolbar.tsx` owns shared toolbar button chrome only. The
   full panel orchestration remains shell-owned until a future task extracts a
   generic non-Page-v2 panel engine.

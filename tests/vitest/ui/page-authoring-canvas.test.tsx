@@ -337,3 +337,194 @@ test("SectionCanvas inline text color toolbar applies the selected text range", 
     window.getSelection()?.removeAllRanges();
   }
 });
+
+test("inline color swatch applies via the live selection snapshot without a prior region mouseup (TASK-475-01)", () => {
+  // Regression for the real-input no-op: the mark toolbar is a sibling of the
+  // editable, so a swatch interaction never fires the editable mouseup/keyup that
+  // sets `selectionRange`. The toolbar mousedown must snapshot the live DOM
+  // selection so the swatch still applies. NOTE: deliberately no region mouseup.
+  const onApplyTextMark = vi.fn();
+  const section = createPageSectionV2("content", {
+    id: "sec-mark-snapshot",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-mark-snapshot",
+        props: { text: "Canvas headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+  const mounted = mount(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected
+      selectedBlockPath={[{ index: 0 }]}
+      selectedBlockId="blk-mark-snapshot"
+      inlineEditTarget={{ blockId: "blk-mark-snapshot", propPath: "text" }}
+      {...baseCanvasProps}
+      onApplyTextMark={onApplyTextMark}
+    />
+  );
+
+  try {
+    const region = mounted.container.querySelector(
+      '[data-page-editor-inline-edit="active"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    const textNode = region?.firstChild;
+    expect(textNode?.nodeType).toBe(Node.TEXT_NODE);
+    flushSync(() => {
+      if (!textNode) return;
+      const range = document.createRange();
+      range.setStart(textNode, 0);
+      range.setEnd(textNode, 6);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    });
+
+    const toolbar = mounted.container.querySelector(
+      '[data-page-editor-text-mark-toolbar="true"]'
+    ) as HTMLElement | null;
+    expect(toolbar).toBeTruthy();
+    // Snapshot the live selection on the toolbar mousedown (the fix), then activate.
+    flushSync(() => {
+      toolbar?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
+    });
+    const swatch = mounted.container.querySelector(
+      "[data-page-editor-text-color-swatch]"
+    ) as HTMLButtonElement | null;
+    expect(swatch?.disabled).toBe(false);
+    flushSync(() => {
+      swatch?.click();
+    });
+
+    expect(onApplyTextMark).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "color", from: 0, to: 6 })
+    );
+  } finally {
+    mounted.cleanup();
+    window.getSelection()?.removeAllRanges();
+  }
+});
+
+test("toolbar mousedown preserves focus for swatches but not for the link URL input (TASK-475-01)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-mark-focus",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-mark-focus",
+        props: { text: "Canvas headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+  const mounted = mount(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected
+      selectedBlockPath={[{ index: 0 }]}
+      selectedBlockId="blk-mark-focus"
+      inlineEditTarget={{ blockId: "blk-mark-focus", propPath: "text" }}
+      {...baseCanvasProps}
+    />
+  );
+
+  try {
+    const swatch = mounted.container.querySelector(
+      "[data-page-editor-text-color-swatch]"
+    ) as HTMLButtonElement | null;
+    const input = mounted.container.querySelector(
+      'input[aria-label="Inline link URL"]'
+    ) as HTMLInputElement | null;
+    expect(swatch).toBeTruthy();
+    expect(input).toBeTruthy();
+
+    const swatchDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    flushSync(() => {
+      swatch?.dispatchEvent(swatchDown);
+    });
+    // Swatches keep the selection by cancelling the default focus shift.
+    expect(swatchDown.defaultPrevented).toBe(true);
+
+    const inputDown = new MouseEvent("mousedown", { bubbles: true, cancelable: true });
+    flushSync(() => {
+      input?.dispatchEvent(inputDown);
+    });
+    // The URL input must be allowed to focus + type (bug #2).
+    expect(inputDown.defaultPrevented).toBe(false);
+  } finally {
+    mounted.cleanup();
+    window.getSelection()?.removeAllRanges();
+  }
+});
+
+test("single click on a selected text block enters inline edit; an unselected one does not (TASK-475-03)", () => {
+  const onStartInlineEdit = vi.fn();
+  const section = createPageSectionV2("content", {
+    id: "sec-click-edit",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-click-edit",
+        props: { text: "Canvas headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+  const selectedMount = mount(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected
+      selectedBlockPath={[{ index: 0 }]}
+      selectedBlockId="blk-click-edit"
+      inlineEditTarget={null}
+      {...baseCanvasProps}
+      onStartInlineEdit={onStartInlineEdit}
+    />
+  );
+
+  try {
+    const idle = selectedMount.container.querySelector(
+      '[data-page-editor-inline-edit="idle"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    expect(idle).toBeTruthy();
+    flushSync(() => {
+      idle?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(onStartInlineEdit).toHaveBeenCalledWith({
+      blockId: "blk-click-edit",
+      propPath: "text",
+    });
+  } finally {
+    selectedMount.cleanup();
+  }
+
+  const onStartInlineEditUnselected = vi.fn();
+  const unselectedMount = mount(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected={false}
+      selectedBlockPath={null}
+      selectedBlockId={null}
+      inlineEditTarget={null}
+      {...baseCanvasProps}
+      onStartInlineEdit={onStartInlineEditUnselected}
+    />
+  );
+
+  try {
+    const idle = unselectedMount.container.querySelector(
+      '[data-page-editor-inline-edit="idle"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    expect(idle).toBeTruthy();
+    flushSync(() => {
+      idle?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+    });
+    expect(onStartInlineEditUnselected).not.toHaveBeenCalled();
+  } finally {
+    unselectedMount.cleanup();
+  }
+});
