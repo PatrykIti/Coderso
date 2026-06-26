@@ -80,6 +80,7 @@ import {
   clearResponsiveOverride,
   createPageBlockV2,
   createPageDocumentId,
+  applyBlockTextMark,
   createPageSectionV2,
   isPageTypographyCapableBlockType,
   normalizeBlockTextMarks,
@@ -92,7 +93,6 @@ import {
   type PageSectionVariant,
   type PageSectionType,
   type PageSectionV2,
-  type PageTextMark,
 } from "../../../services/pages/pageDocumentV2";
 import {
   getPageResponsiveEffectiveVisible,
@@ -578,32 +578,6 @@ const patchInlineTextPropForDevice = (
   const nextItems = items.slice();
   nextItems[index] = nextText;
   return patchBlockPropsForDevice(block, device, { [rootKey]: nextItems });
-};
-
-const applyTextMark = (
-  text: string,
-  currentMarks: unknown,
-  mark: PageEditorTextMarkCommit
-): PageTextMark[] => {
-  const existing = normalizeBlockTextMarks(text, currentMarks);
-  const exactMatch = existing.some(
-    (entry) => entry.type === mark.type && entry.from === mark.from && entry.to === mark.to
-  );
-  const retained = existing.filter((entry) => {
-    if (entry.type !== mark.type) return true;
-    if (exactMatch && entry.from === mark.from && entry.to === mark.to) return false;
-    return entry.to <= mark.from || entry.from >= mark.to;
-  });
-  if (exactMatch) return normalizeBlockTextMarks(text, retained);
-
-  const nextMark =
-    mark.type === "color" || mark.type === "highlight"
-      ? { type: mark.type, from: mark.from, to: mark.to, color: mark.color }
-      : mark.type === "link"
-        ? { type: "link" as const, from: mark.from, to: mark.to, href: mark.href }
-        : { type: mark.type, from: mark.from, to: mark.to };
-
-  return normalizeBlockTextMarks(text, [...retained, nextMark]);
 };
 
 const resolvePageEditorMutationError = (action: "saveDraft" | "publish", error: unknown) => {
@@ -1388,7 +1362,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         const previous = readInlineTextPropValue(block, commit.propPath);
         if (previous === null) return;
         const currentMarks = normalizeBlockTextMarks(previous, block.props.marks);
-        const nextMarks = applyTextMark(previous, currentMarks, commit);
+        const nextMarks = applyBlockTextMark(previous, currentMarks, commit);
         if (JSON.stringify(currentMarks) === JSON.stringify(nextMarks)) return;
         setDocumentDraft((current) => ({
           ...current,

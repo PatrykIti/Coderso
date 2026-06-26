@@ -5,6 +5,7 @@ import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
   PAGE_TEXT_MARK_MAX,
+  applyBlockTextMark,
   clearResponsiveOverride,
   clearBlockResponsiveOverride,
   createPageDocumentId,
@@ -609,6 +610,59 @@ describe("PageDocumentV2", () => {
     ).toEqual([
       { type: "color", from: 0, to: 2, color: "#ef4444" },
       { type: "highlight", from: 2, to: 4, color: "var(--color-surface)" },
+    ]);
+  });
+
+  test("applyBlockTextMark replaces a different color over the same range and toggles an identical one (TASK-476-01)", () => {
+    const text = "Build with Coderso";
+    // Apply color A to a fragment.
+    const blue = applyBlockTextMark(text, [], {
+      type: "color",
+      from: 11,
+      to: 18,
+      color: "#2563eb",
+    });
+    expect(blue).toEqual([{ type: "color", from: 11, to: 18, color: "#2563eb" }]);
+
+    // Apply a DIFFERENT color over the same range -> replace in one call (not clear).
+    const orange = applyBlockTextMark(text, blue, {
+      type: "color",
+      from: 11,
+      to: 18,
+      color: "#ea580c",
+    });
+    expect(orange).toEqual([{ type: "color", from: 11, to: 18, color: "#ea580c" }]);
+
+    // Apply the SAME color over the same range -> toggle off.
+    const cleared = applyBlockTextMark(text, orange, {
+      type: "color",
+      from: 11,
+      to: 18,
+      color: "#ea580c",
+    });
+    expect(cleared).toEqual([]);
+
+    // Bold remains a pure toggle (value-less).
+    const bold = applyBlockTextMark(text, [], { type: "bold", from: 0, to: 5 });
+    expect(bold).toEqual([{ type: "bold", from: 0, to: 5 }]);
+    expect(applyBlockTextMark(text, bold, { type: "bold", from: 0, to: 5 })).toEqual([]);
+
+    // A different-type mark on the same range is retained alongside (no value-coupling).
+    const colored = applyBlockTextMark(text, [], {
+      type: "color",
+      from: 0,
+      to: 5,
+      color: "#2563eb",
+    });
+    const withHighlight = applyBlockTextMark(text, colored, {
+      type: "highlight",
+      from: 0,
+      to: 5,
+      color: "var(--color-accent)",
+    });
+    expect(withHighlight).toEqual([
+      { type: "color", from: 0, to: 5, color: "#2563eb" },
+      { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
     ]);
   });
 

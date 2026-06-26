@@ -1786,6 +1786,55 @@ export function normalizeBlockTextColorMarks(text: string, value: unknown): Page
   return normalizeBlockTextMarks(text, value);
 }
 
+export type PageBlockTextMarkInput = {
+  type: PageTextMark["type"];
+  from: number;
+  to: number;
+  color?: string;
+  href?: string;
+};
+
+/**
+ * Apply a single inline text mark to a block's mark set and return the
+ * normalized result. Re-applying the IDENTICAL mark (same type, range, AND value)
+ * toggles it off; applying a DIFFERENT value over the same range REPLACES it (the
+ * old overlapping same-type mark is dropped and the new one added); marks of
+ * other types or non-overlapping ranges are retained. Value-awareness is what
+ * makes recoloring a fragment a single-click replace instead of a toggle-off then
+ * re-apply (TASK-476-01).
+ */
+export function applyBlockTextMark(
+  text: string,
+  currentMarks: unknown,
+  mark: PageBlockTextMarkInput
+): PageTextMark[] {
+  const existing = normalizeBlockTextMarks(text, currentMarks);
+  const isSameMarkValue = (entry: PageTextMark): boolean => {
+    if (entry.type !== mark.type) return false;
+    if (entry.type === "color" || entry.type === "highlight") return entry.color === mark.color;
+    if (entry.type === "link") return entry.href === mark.href;
+    return true;
+  };
+  const exactMatch = existing.some(
+    (entry) => entry.from === mark.from && entry.to === mark.to && isSameMarkValue(entry)
+  );
+  const retained = existing.filter((entry) => {
+    if (entry.type !== mark.type) return true;
+    if (exactMatch && entry.from === mark.from && entry.to === mark.to) return false;
+    return entry.to <= mark.from || entry.from >= mark.to;
+  });
+  if (exactMatch) return normalizeBlockTextMarks(text, retained);
+
+  const nextMark: PageTextMark =
+    mark.type === "color" || mark.type === "highlight"
+      ? { type: mark.type, from: mark.from, to: mark.to, color: mark.color ?? "" }
+      : mark.type === "link"
+        ? { type: "link", from: mark.from, to: mark.to, href: mark.href ?? "" }
+        : { type: mark.type, from: mark.from, to: mark.to };
+
+  return normalizeBlockTextMarks(text, [...retained, nextMark]);
+}
+
 const normalizeId = (value: unknown, prefix: string, index: number, mode: NormalizeMode) => {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
   if (mode === "write") {
