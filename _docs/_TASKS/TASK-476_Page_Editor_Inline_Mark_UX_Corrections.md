@@ -5,8 +5,9 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Small
 **Dependencies:** TASK-471-03 (per-fragment color marks), TASK-472-05 (rich marks), TASK-475 (real-input toolbar fixes)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-26
+**Completed:** 2026-06-26
 
 ---
 
@@ -30,7 +31,7 @@ site owner after TASK-475 shipped. Two distinct issues remain:
 | Child | Title | Status |
 |-------|-------|--------|
 | TASK-476-01 | Mark Re-Color Replacement Semantics | ✅ Done |
-| TASK-476-02 | Live In-Edit Mark Feedback | ⏳ To Do |
+| TASK-476-02 | Live In-Edit Mark Feedback | ✅ Done |
 
 ## Success criteria
 

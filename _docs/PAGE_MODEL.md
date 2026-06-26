@@ -708,8 +708,13 @@ site-token style bridging. Reusable authoring modules live under
   selection for buttons (cancels the default) but allows the link URL `<input>`
   to focus and type; an `onBlur` guard keeps inline edit alive while focus is
   inside the toolbar. Applied color/highlight/link marks live on
-  `block.props.marks` and paint as `data-page-text-mark` segments after edit
-  exits (the editable shows plain text while editing).
+  `block.props.marks` and paint as `data-page-text-mark` segments **while
+  editing** (the contentEditable renders the marked children, mirroring the
+  rich-text path); after applying a mark the selection is restored over the marked
+  range so it is visible and can be re-colored in place. Commit still reads
+  `innerText`, so `props.marks` remains the source of truth. Re-applying a
+  different color/href over the same range replaces it in one click; the identical
+  value toggles it off.
 - `FloatingEditorToolbar.tsx` owns shared toolbar button chrome only. The
   full panel orchestration remains shell-owned until a future task extracts a
   generic non-Page-v2 panel engine.

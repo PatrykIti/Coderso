@@ -528,3 +528,46 @@ test("single click on a selected text block enters inline edit; an unselected on
     unselectedMount.cleanup();
   }
 });
+
+test("inline edit paints existing color marks in place instead of plain text (TASK-476-02)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-mark-paint",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-mark-paint",
+        props: {
+          text: "Canvas headline",
+          level: "h2",
+          align: "left",
+          marks: [{ type: "color", from: 0, to: 6, color: "#2563eb" }],
+        },
+      }),
+    ],
+  });
+
+  const mounted = mount(
+    <SectionCanvas
+      section={section}
+      baseSection={section}
+      selected
+      selectedBlockPath={[{ index: 0 }]}
+      selectedBlockId="blk-mark-paint"
+      inlineEditTarget={{ blockId: "blk-mark-paint", propPath: "text" }}
+      {...baseCanvasProps}
+    />
+  );
+
+  try {
+    const region = mounted.container.querySelector(
+      '[data-page-editor-inline-edit="active"][data-page-editor-inline-edit-prop="text"]'
+    ) as HTMLElement | null;
+    expect(region).toBeTruthy();
+    // The colored fragment is painted while editing (not flattened to plain text).
+    const colored = region?.querySelector('[data-page-text-mark="color"]') as HTMLElement | null;
+    expect(colored).toBeTruthy();
+    expect(colored?.textContent).toBe("Canvas");
+    expect(region?.textContent).toBe("Canvas headline");
+  } finally {
+    mounted.cleanup();
+  }
+});

@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useRef,
   useState,
   type FocusEvent,
@@ -121,6 +122,46 @@ const readInlineEditableElementText = (element: HTMLElement): string => {
   return typeof innerText === "string" ? innerText : (element.textContent ?? "");
 };
 
+/**
+ * Restore a DOM selection over `[from, to)` character offsets within an editable
+ * that may contain mark spans (the inverse of `readInlineTextSelectionRange`).
+ * Used after a mark apply re-renders the painted children so the selection (and
+ * thus the visible color) survives and the fragment can be re-colored in place
+ * (TASK-476-02). No-ops if the offsets fall outside the editable's text.
+ */
+const selectInlineTextRange = (root: HTMLElement, from: number, to: number): void => {
+  const doc = root.ownerDocument;
+  const selection = doc.defaultView?.getSelection?.();
+  if (!selection || typeof doc.createTreeWalker !== "function") return;
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+  let offset = 0;
+  let startNode: Node | null = null;
+  let startOffset = 0;
+  let endNode: Node | null = null;
+  let endOffset = 0;
+  let node = walker.nextNode();
+  while (node) {
+    const length = node.textContent?.length ?? 0;
+    if (startNode === null && from <= offset + length) {
+      startNode = node;
+      startOffset = from - offset;
+    }
+    if (to <= offset + length) {
+      endNode = node;
+      endOffset = to - offset;
+      break;
+    }
+    offset += length;
+    node = walker.nextNode();
+  }
+  if (!startNode || !endNode) return;
+  const range = doc.createRange();
+  range.setStart(startNode, startOffset);
+  range.setEnd(endNode, endOffset);
+  selection.removeAllRanges();
+  selection.addRange(range);
+};
+
 type InlineTextSelectionRange = { from: number; to: number };
 
 const readRangeOffsetFromRoot = (
@@ -187,6 +228,9 @@ const InlineEditableCanvasText = ({
   // Caret point remembered when a single click activates inline edit so the
   // caret lands where the author clicked (TASK-475-03).
   const pendingCaretPointRef = useRef<{ x: number; y: number } | null>(null);
+  // Range to re-select after a mark apply re-renders the painted children so the
+  // visible color survives and the fragment can be re-colored in place (TASK-476-02).
+  const pendingSelectionRestoreRef = useRef<InlineTextSelectionRange | null>(null);
   const setEditableNode = useCallback((node: HTMLElement | null) => {
     editableRef.current = node;
     if (!node) return;
@@ -206,6 +250,18 @@ const InlineEditableCanvasText = ({
   }, []);
   const resolveActiveMarkRange = (): InlineTextSelectionRange | null =>
     selectionSnapshotRef.current ?? selectionRange;
+  // After a mark apply re-renders the painted children (TASK-476-02), restore the
+  // author's selection over the marked range so the color is visible and stays
+  // selected for an immediate re-color. DOM-only side effect (no setState).
+  useEffect(() => {
+    if (!editing) return;
+    const restore = pendingSelectionRestoreRef.current;
+    pendingSelectionRestoreRef.current = null;
+    const node = editableRef.current;
+    if (!restore || !node) return;
+    if (node.ownerDocument.activeElement !== node) return;
+    selectInlineTextRange(node, restore.from, restore.to);
+  });
   const target = resolveInlineEditTarget(block, propPath);
   if (!target) return <>{children ?? text}</>;
   const { multiline } = target;
@@ -219,6 +275,14 @@ const InlineEditableCanvasText = ({
   const updateSelectionRange = (element: HTMLElement) => {
     if (!canApplyTextMarks) return;
     setSelectionRange(readInlineTextSelectionRange(element));
+  };
+  const applyMark = (commit: PageEditorTextMarkCommit) => {
+    onApplyTextMark(commit);
+    // Keep the marked range selected across the re-render so the applied color is
+    // visible immediately and can be re-colored in place (TASK-476-02).
+    if (canApplyTextMarks) {
+      pendingSelectionRestoreRef.current = { from: commit.from, to: commit.to };
+    }
   };
   const wrapperKey = `${propPath}:${text}`;
   const wrapperProps = {
@@ -299,7 +363,12 @@ const InlineEditableCanvasText = ({
         }
       : undefined,
   };
-  const content = editing && !preserveMarkup ? text : (children ?? text);
+  // Paint the marked children even while editing (TASK-476-02) so applied
+  // color/highlight/link marks are visible in place instead of only after the
+  // author leaves inline edit. Mirrors the rich-text (preserveMarkup) path, which
+  // already renders children into the contentEditable; the commit still reads
+  // innerText, and props.marks stays the source of truth.
+  const content = children ?? text;
   const markToolbar =
     canApplyTextMarks && inlineTextMarkPalette.length > 0 ? (
       <span
@@ -340,7 +409,7 @@ const InlineEditableCanvasText = ({
             event.stopPropagation();
             const range = resolveActiveMarkRange();
             if (!range) return;
-            onApplyTextMark({
+            applyMark({
               blockId: block.id,
               propPath,
               type: "bold",
@@ -363,7 +432,7 @@ const InlineEditableCanvasText = ({
             event.stopPropagation();
             const range = resolveActiveMarkRange();
             if (!range) return;
-            onApplyTextMark({
+            applyMark({
               blockId: block.id,
               propPath,
               type: "italic",
@@ -389,7 +458,7 @@ const InlineEditableCanvasText = ({
               event.stopPropagation();
               const range = resolveActiveMarkRange();
               if (!range) return;
-              onApplyTextMark({
+              applyMark({
                 blockId: block.id,
                 propPath,
                 type: "color",
@@ -415,7 +484,7 @@ const InlineEditableCanvasText = ({
               event.stopPropagation();
               const range = resolveActiveMarkRange();
               if (!range) return;
-              onApplyTextMark({
+              applyMark({
                 blockId: block.id,
                 propPath,
                 type: "highlight",
@@ -449,7 +518,7 @@ const InlineEditableCanvasText = ({
               event.stopPropagation();
               const range = resolveActiveMarkRange();
               if (!range) return;
-              onApplyTextMark({
+              applyMark({
                 blockId: block.id,
                 propPath,
                 type: "link",

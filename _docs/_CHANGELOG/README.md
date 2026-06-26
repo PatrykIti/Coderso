@@ -29,10 +29,11 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1197 for the next changelog entry.
+assistant policy coverage fix. Use 1198 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1197 | 2026-06-26 | TASK-476-02 Page Editor live in-edit mark feedback | Pages/Admin UI/QA/Docs/Task Board |
 | 1196 | 2026-06-26 | TASK-476-01 Page Editor mark re-color replacement | Pages/Admin UI/QA/Docs/Task Board |
 | 1195 | 2026-06-25 | TASK-475 Page Editor inline mark toolbar real-input fixes | Pages/Admin UI/QA/Docs/Task Board |
 | 1194 | 2026-06-25 | TASK-473 record detail overrides closure | Custom Screens/Admin UI/Cache/Docs/QA/Task Board |

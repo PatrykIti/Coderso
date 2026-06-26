@@ -6,7 +6,23 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
 **Dependencies:** TASK-475 (real-input toolbar), TASK-471-03 (color marks)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-26
+
+> **Completion note (2026-06-26):** Implemented candidate approach #1 in
+> `PageAuthoringCanvas.tsx`. The contentEditable now paints the marked `children`
+> while editing (`const content = children ?? text`), mirroring the existing
+> rich-text path; commit still reads `innerText` and `props.marks` stays the
+> source of truth. To keep the applied color visible and re-colorable in place,
+> `applyMark` records the applied range and a post-render `useEffect` restores the
+> DOM selection over it via the new `selectInlineTextRange` helper (inverse of
+> `readInlineTextSelectionRange`). Verified live: color is visible while still in
+> edit, the fragment stays selected, a different color replaces it in one click
+> without re-selecting, and typing still works. Vitest: a new
+> `page-authoring-canvas` case asserts the colored span paints inside the active
+> editable; lint/types/page suites green. Known limitation unchanged from the base
+> model: editing the underlying text can shift character-offset marks — out of
+> scope here.
 
 ---
 
