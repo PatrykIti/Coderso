@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 17 tasks
+- **To Do:** 21 tasks
 - **In Progress:** 6 tasks
 - **Done:** 2694 tasks
 
@@ -88,6 +88,10 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
+| TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
+| TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |
+| TASK-478-03 | Dockable Inline Mark Toolbar (Top/Left/Right) | Low | Small | Toolbar is pinned `-top-9` above the text; add a control to dock it left/right so neither it nor the native color picker covers the edited text. |
 | TASK-477-02 | Block-Level Panel Swatch Preview Accuracy | Medium | Small | Thread live site tokens into the block-level `ColorSwatchControl` palettes (Text color/Background/Border/gradient) so their swatches preview the applied color; decide the canonical neutral-token var-name contract (tokenCss/allowlist/palette) so `bg`/`surface`/`text` marks resolve in-editor and on the front. |
 | TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
 | TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
