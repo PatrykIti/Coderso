@@ -1,4 +1,13 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import type {
   CSSProperties,
   KeyboardEvent as ReactKeyboardEvent,
@@ -109,13 +118,18 @@ import {
 import {
   getPageEditorColorPalette,
   resolvePageEditorControlUiModel,
+  type PageEditorColorSwatch,
   type PageEditorControlUiModel,
 } from "../../../services/pages/pageEditorControlUiModel";
 import { getPageBlockRenderDefault } from "../../../services/pages/pageBlockRenderDefaults";
-import { DEFAULT_TOKENS, type DesignTokenOverrides } from "../../../services/theme/tokenTypes";
+import {
+  DEFAULT_TOKENS,
+  type DesignTokenOverrides,
+  type DesignTokens,
+} from "../../../services/theme/tokenTypes";
 import { mergeTokens } from "../../../services/theme/tokenUtils";
 import { assertTokenOverrides } from "../../../services/theme/tokenValidation";
-import { toPageTypographyCssVariableMap } from "../../../ui/theme/tokenCss";
+import { toPageCanvasColorCssVariableMap } from "../../../ui/theme/tokenCss";
 import {
   ColorSwatchControl,
   ComboboxControl,
@@ -356,7 +370,7 @@ const readSiteDesignTokenOverrides = (
  * cache-bus updates keep the frame in sync. With nothing cached the frame
  * carries the `DEFAULT_TOKENS` values — the documented `var()` fallbacks.
  */
-const useCanvasSiteTokenVariables = (): CSSProperties => {
+const useCanvasSiteTokens = (): DesignTokens => {
   const [settings, setSettings] = useState<Record<string, unknown> | null>(() =>
     getCachedSettings()
   );
@@ -386,13 +400,23 @@ const useCanvasSiteTokenVariables = (): CSSProperties => {
   );
 
   return useMemo(
-    () =>
-      toPageTypographyCssVariableMap(
-        mergeTokens(DEFAULT_TOKENS, readSiteDesignTokenOverrides(settings))
-      ) as CSSProperties,
+    () => mergeTokens(DEFAULT_TOKENS, readSiteDesignTokenOverrides(settings)),
     [settings]
   );
 };
+
+/**
+ * Live design-token swatch palette (used by the block/section color controls)
+ * threaded to the floating toolbar via context, so the swatch previews reflect
+ * the resolved SITE theme instead of `DEFAULT_TOKENS`. The default keeps the
+ * DEFAULT-token palette for any consumer rendered without a provider (and for
+ * the host-appearance/menu color controls, which are intentionally excluded).
+ */
+const PageEditorColorPaletteContext = createContext<readonly PageEditorColorSwatch[]>(
+  getPageEditorColorPalette()
+);
+const usePageEditorColorPalette = (): readonly PageEditorColorSwatch[] =>
+  useContext(PageEditorColorPaletteContext);
 
 const resolvePageId = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
@@ -717,7 +741,12 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [selectedBlockPath, setSelectedBlockPath] = useState<PageBlockPath | null>(null);
   const [inlineEditTarget, setInlineEditTarget] = useState<PageEditorInlineEditTarget | null>(null);
   const [device, setDevice] = useState<PageBreakpoint>("desktop");
-  const canvasSiteTokenVariables = useCanvasSiteTokenVariables();
+  const siteTokens = useCanvasSiteTokens();
+  const canvasSiteTokenVariables = useMemo(
+    () => toPageCanvasColorCssVariableMap(siteTokens) as CSSProperties,
+    [siteTokens]
+  );
+  const sitePalette = useMemo(() => getPageEditorColorPalette(siteTokens), [siteTokens]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoading, setIsLoading] = useState(!initialPageDetail && Boolean(pageId));
   const [isSaving, setIsSaving] = useState(false);
@@ -3092,31 +3121,33 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
               </div>
             ) : null}
             {!toolbarCollapsed && activeToolbarPanel && activeToolbarPanel !== "host-appearance" ? (
-              <ToolbarSubpanel
-                panel={activeToolbarPanel}
-                device={device}
-                section={resolvedSelectedSection}
-                baseSection={selectedSection}
-                block={toolbarBlockTarget}
-                baseBlock={selectedBlockId ? selectedBlock : (selectedSection.blocks[0] ?? null)}
-                hasBlockSelection={Boolean(selectedBlockId)}
-                onSectionControlChange={updateSelectedSectionControl}
-                onSectionVariantChange={updateSelectedSectionVariant}
-                onSectionStyle={(patch) => updateSectionGroup("style", patch)}
-                onSectionVisibility={(patch) => updateSectionGroup("visibility", patch)}
-                onBlockControlChange={updateSelectedBlockControl}
-                onClearOverride={(path) => {
-                  if (device === "desktop") return;
-                  updateSelectedSection((section) =>
-                    clearResponsiveOverride(section, device, path)
-                  );
-                }}
-                onClearBlockOverride={clearSelectedBlockOverride}
-                onResponsiveVisibleChange={setResponsiveTargetVisible}
-                onResponsiveOverrideReset={clearResponsiveTargetOverride}
-                onAddBlock={openCommandPalette}
-                onClose={() => setActivePanel(null)}
-              />
+              <PageEditorColorPaletteContext.Provider value={sitePalette}>
+                <ToolbarSubpanel
+                  panel={activeToolbarPanel}
+                  device={device}
+                  section={resolvedSelectedSection}
+                  baseSection={selectedSection}
+                  block={toolbarBlockTarget}
+                  baseBlock={selectedBlockId ? selectedBlock : (selectedSection.blocks[0] ?? null)}
+                  hasBlockSelection={Boolean(selectedBlockId)}
+                  onSectionControlChange={updateSelectedSectionControl}
+                  onSectionVariantChange={updateSelectedSectionVariant}
+                  onSectionStyle={(patch) => updateSectionGroup("style", patch)}
+                  onSectionVisibility={(patch) => updateSectionGroup("visibility", patch)}
+                  onBlockControlChange={updateSelectedBlockControl}
+                  onClearOverride={(path) => {
+                    if (device === "desktop") return;
+                    updateSelectedSection((section) =>
+                      clearResponsiveOverride(section, device, path)
+                    );
+                  }}
+                  onClearBlockOverride={clearSelectedBlockOverride}
+                  onResponsiveVisibleChange={setResponsiveTargetVisible}
+                  onResponsiveOverrideReset={clearResponsiveTargetOverride}
+                  onAddBlock={openCommandPalette}
+                  onClose={() => setActivePanel(null)}
+                />
+              </PageEditorColorPaletteContext.Provider>
             ) : null}
           </div>
         ) : null}
@@ -4114,6 +4145,7 @@ const ToolbarGradientField = ({
   value: string;
   onCommit: (value: string) => void;
 }) => {
+  const colorPalette = usePageEditorColorPalette();
   const sourceValue = value.trim();
   const [draftState, setDraftState] = useState(() => ({
     source: sourceValue,
@@ -4169,7 +4201,7 @@ const ToolbarGradientField = ({
               <ColorSwatchControl
                 label={`Stop ${index + 1}`}
                 value={stop.color}
-                palette={getPageEditorColorPalette()}
+                palette={colorPalette}
                 allowTransparent={false}
                 onChange={(color) => {
                   if (color) updateStop(stop.id, (current) => ({ ...current, color }));
@@ -4271,6 +4303,7 @@ const RegistryControlInput = ({
   onCommit: (value: unknown) => void;
 }) => {
   const model = resolvePageEditorControlUiModel(control);
+  const colorPalette = usePageEditorColorPalette();
   const fieldValue = fieldValueFromControlValue(control, rawValue, renderDefault);
   const hasStoredValue =
     control.input === "number" ? typeof rawValue === "number" : typeof rawValue === "string";
@@ -4360,6 +4393,7 @@ const RegistryControlInput = ({
         <ColorSwatchControl
           label={control.label}
           value={typeof rawValue === "string" ? rawValue : ""}
+          palette={colorPalette}
           allowCustom={model.allowCustom}
           allowTransparent={model.allowTransparent}
           // "Transparent" commits the explicit cleared value (null) that the

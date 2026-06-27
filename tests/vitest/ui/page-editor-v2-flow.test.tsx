@@ -2946,6 +2946,41 @@ test("PageEditor canvas frame paints the resolved site design.tokens typography 
   }
 });
 
+test("PageEditor canvas + block color swatches reflect the live site neutral tokens (TASK-477-02)", async () => {
+  siteSettingsState.settings = {
+    "design.tokens": {
+      neutrals: { bg: "#abcdef" },
+    },
+  };
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Part A: the canvas frame now carries the site neutral var so neutral block
+    // colors are WYSIWYG in-editor; brand vars are NOT re-emitted (chrome-safe).
+    const frame = view.container.querySelector(
+      '[data-page-editor-canvas-frame="true"]'
+    ) as HTMLElement;
+    expect(frame.style.getPropertyValue("--color-bg")).toBe("#abcdef");
+    expect(frame.style.getPropertyValue("--color-primary")).toBe("");
+
+    // Part B: the block color swatch previews the resolved site token (#abcdef),
+    // threaded from the hook through the palette context — not the DEFAULT token.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+    clickButtonByLabel(view.container, "Style panel");
+    const bgSwatch = findColorSwatchGroup(view.container, "Text color").querySelector(
+      '[data-page-editor-color-swatch="bg"]'
+    ) as HTMLElement | null;
+    expect(bgSwatch).toBeTruthy();
+    const style = bgSwatch?.getAttribute("style") ?? "";
+    expect(style.includes("#abcdef") || style.includes("rgb(171, 205, 239)")).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor floating toolbar labels selection, switches one panel, collapses, and tracks drag state", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 

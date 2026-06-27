@@ -7,7 +7,30 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-477-01
 
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-27
+
+> **Completion note (2026-06-27):** Two-part fix.
+> **(A) Canvas WYSIWYG:** added `toPageCanvasColorCssVariableMap` (tokenCss.ts) and
+> pointed the editor canvas hook at it, so the canvas frame now carries the site
+> neutral `--color-bg/-surface/-text` (previously only typography vars; the admin
+> `@theme` maps brand `--color-*` but not the neutrals, so a neutral block color
+> rendered nothing in-editor). Only the 3 neutrals are emitted — brand vars are NOT
+> re-emitted on the frame (would override editor chrome `ring-primary`/borders);
+> verified no `core/admin/ui/pages` chrome consumes them.
+> **(B) Live preview:** refactored the canvas hook to expose the resolved
+> `DesignTokens`, derived `sitePalette = getPageEditorColorPalette(siteTokens)`, and
+> threaded it via a `PageEditorColorPaletteContext` provided around `ToolbarSubpanel`
+> only (excludes host-appearance/menu controls) and consumed by `RegistryControlInput`
+> (every block/section/badge color swatch) + `ToolbarGradientField`. `ColorSwatchControl`
+> unchanged (keeps the DEFAULT-palette default). Now block-level swatches preview the
+> exact color they apply. Vitest: tokenCss canvas-map contract, ColorSwatchControl
+> preview = passed palette, and an e2e flow test (canvas frame `--color-bg` + bg swatch
+> preview reflect a site `design.tokens` override). Lint/types/suites green; live smoke
+> chrome non-regression confirmed.
+> **Out of scope (follow-up):** brand colors *applied* in-canvas still resolve
+> `--color-*` to the admin theme via the globals `@theme` (preview is fixed; full
+> brand in-canvas WYSIWYG needs a content-only wrapper — larger refactor).
 
 ---
 

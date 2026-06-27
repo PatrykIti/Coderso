@@ -716,9 +716,17 @@ site-token style bridging. Reusable authoring modules live under
   different color/href over the same range replaces it in one click; the identical
   value toggles it off. The toolbar offers the brand/border design-token swatches
   (each previewing the exact `var(--color-*)` it applies) plus a native
-  `<input type="color">` for an arbitrary sanitized hex; neutral tokens whose CSS
-  variable differs between the admin canvas and the front are reached via the hex
-  picker.
+  `<input type="color">` for an arbitrary sanitized hex.
+- Color swatch previews reflect the LIVE resolved site theme. The editor canvas
+  frame (`data-page-editor-canvas-frame`) carries the site **neutral**
+  `--color-bg/-surface/-text` (via `toPageCanvasColorCssVariableMap`) so neutral
+  block colors are WYSIWYG in-editor — the brand `--color-*` already resolve via
+  the admin `@theme` and are intentionally not re-emitted on the frame (would shift
+  editor chrome). The resolved site `getPageEditorColorPalette(siteTokens)` is
+  threaded to the block/section/badge `ColorSwatchControl`s via a palette context
+  around the floating panel, so their swatches preview the exact color they apply
+  (TASK-477-02). A brand color *applied* to a block still resolves to the admin
+  theme in-canvas (preview-only fix for brand; neutrals are fully WYSIWYG).
 - `FloatingEditorToolbar.tsx` owns shared toolbar button chrome only. The
   full panel orchestration remains shell-owned until a future task extracts a
   generic non-Page-v2 panel engine.

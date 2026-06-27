@@ -5,8 +5,9 @@
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Small
 **Dependencies:** TASK-471-03 (color marks), TASK-475/476 (inline mark toolbar)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-26
+**Completed:** 2026-06-27
 
 ---
 
@@ -35,7 +36,7 @@ separately in `TASK-477-02`.
 | Child | Title | Status |
 |-------|-------|--------|
 | TASK-477-01 | Inline Swatch Preview Accuracy And Custom Color Picker | ✅ Done |
-| TASK-477-02 | Block-Level Panel Swatch Preview Accuracy | ⏳ To Do |
+| TASK-477-02 | Block-Level Panel Swatch Preview Accuracy | ✅ Done |
 
 ## Success criteria
 

@@ -362,6 +362,33 @@ test("ColorSwatchControl renders token swatches, native picker, and hex affordan
   expect(onChange).toHaveBeenCalledWith("var(--color-primary)");
 });
 
+test("ColorSwatchControl previews the passed (live-token) palette, not the default (TASK-477-02)", () => {
+  // A custom palette stands in for the live site palette threaded from PageEditor;
+  // the swatch must preview the palette's previewValue, not a hardcoded default.
+  const palette = [
+    {
+      id: "accent",
+      label: "Accent",
+      value: "var(--color-accent)",
+      previewValue: "var(--test-accent)",
+    },
+  ];
+  const container = render(
+    <ColorSwatchControl
+      label="Text color"
+      value=""
+      palette={palette}
+      allowTransparent={false}
+      allowCustom={false}
+      onChange={vi.fn()}
+    />
+  );
+
+  const swatch = container.querySelector<HTMLElement>('[data-page-editor-color-swatch="accent"]');
+  expect(swatch).toBeTruthy();
+  expect(swatch?.getAttribute("style") ?? "").toContain("var(--test-accent)");
+});
+
 test("ColorSwatchControl keeps unknown values as a non-mutating custom state", () => {
   const onChange = vi.fn();
   const container = render(

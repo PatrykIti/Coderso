@@ -84,6 +84,32 @@ export function toPageTypographyCssVariableMap(tokens: DesignTokens): Record<str
   };
 }
 
+/**
+ * CSS variable map for the Page V2 editor canvas frame: the site typography vars
+ * PLUS the three NEUTRAL page-color vars (`--color-bg`/`-surface`/`-text`).
+ *
+ * The admin shell's Tailwind `@theme` (`core/admin/styles/globals.css`) already
+ * maps the BRAND `--color-primary`/`-secondary`/`-accent`/`-border` (from the
+ * admin theme) globally, so those resolve inside the canvas — but it does NOT
+ * define the site neutral `--color-bg`/`-surface`/`-text`, so a block color set
+ * to a neutral token would render nothing in-editor (it works on the front,
+ * which emits all seven on `:root` via {@link toCssVariableMap}). We emit only
+ * the three missing neutrals so neutral block colors are WYSIWYG in-editor.
+ *
+ * Brand `--color-*` are intentionally OMITTED: re-emitting them on the canvas
+ * frame would override editor chrome that consumes them (e.g. `ring-primary`,
+ * borders). No `core/admin/ui/pages` chrome consumes `--color-bg/-surface/-text`,
+ * so emitting these three is chrome-safe.
+ */
+export function toPageCanvasColorCssVariableMap(tokens: DesignTokens): Record<string, string> {
+  return {
+    ...toPageTypographyCssVariableMap(tokens),
+    "--color-bg": tokens.neutrals.bg,
+    "--color-surface": tokens.neutrals.surface,
+    "--color-text": tokens.neutrals.text,
+  };
+}
+
 export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
   return {
     "--color-primary": tokens.colors.primary,
