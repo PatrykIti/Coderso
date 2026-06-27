@@ -21,7 +21,8 @@ import { Select } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/cn";
-import { Link } from "@/lib/router";
+import { Link, usePath } from "@/lib/router";
+import { getScreen, parseScreenPath, type EntrySection } from "@/lib/screensMock";
 
 /** A selectable template section on the canvas, tagged with its block type. */
 function Section({
@@ -68,15 +69,6 @@ function Token({ children, className }: { children: ReactNode; className?: strin
   );
 }
 
-const FIELD_TILES = [
-  { label: "Budget", token: "{{ Budget }}" },
-  { label: "Progress", token: "{{ Progress }}" },
-  { label: "Phase", token: "{{ Phase }}" },
-  { label: "Due date", token: "{{ Due date }}" },
-];
-
-const BG_SWATCHES = ["#ffffff", "#f5f3ff", "#ecfdf5", "#fff7ed"];
-
 function InspectorRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -86,16 +78,120 @@ function InspectorRow({ label, children }: { label: string; children: ReactNode 
   );
 }
 
+const SECTION_TAG: Record<EntrySection["kind"], string> = {
+  header: "Header",
+  fields: "Fields",
+  richtext: "Rich text",
+  related: "Related list",
+};
+
+const BG_SWATCHES = ["#ffffff", "#f5f3ff", "#ecfdf5", "#fff7ed"];
+
 export function CustomScreenEditorPreview() {
+  const screen = getScreen(parseScreenPath(usePath()).id);
+  const col = (k?: string) => screen.columns.find((c) => c.key === k);
+
+  const titleCol = screen.columns.find((c) => c.type === "title");
+  const statusCol = screen.columns.find((c) => c.type === "status");
+  const ownerCol = screen.columns.find((c) => c.type === "person");
+  const badgeCol = screen.columns.find((c) => c.type === "badge");
+
+  const titleLabel = col(titleCol?.key)?.label ?? "Title";
+  const statusLabel = statusCol?.label ?? "Status";
+  const ownerLabel = ownerCol?.label ?? "Owner";
+
+  const renderSection = (section: EntrySection, index: number) => {
+    const tag = SECTION_TAG[section.kind];
+
+    if (section.kind === "header") {
+      return (
+        <Section key={index} tag={tag} selected>
+          <div className="font-display text-2xl font-semibold">
+            <Token>{`{{ ${titleLabel} }}`}</Token>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5">
+              <Token className="bg-transparent px-0 py-0">{`{{ ${statusLabel} }}`}</Token>
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-5 shrink-0 rounded-full bg-primary-soft" />
+              <Token>{`{{ ${ownerLabel} }}`}</Token>
+            </span>
+            {badgeCol ? (
+              <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5">
+                <Token className="bg-transparent px-0 py-0">{`{{ ${badgeCol.label} }}`}</Token>
+              </span>
+            ) : null}
+          </div>
+        </Section>
+      );
+    }
+
+    if (section.kind === "fields") {
+      return (
+        <Section key={index} tag={tag}>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {section.fieldKeys.map((key) => {
+              const label = col(key)?.label ?? key;
+              return (
+                <div key={key} className="rounded-xl bg-muted/50 p-3">
+                  <div className="text-[11px] text-muted-foreground">{label}</div>
+                  <div className="mt-1.5 text-xs">
+                    <Token>{`{{ ${label} }}`}</Token>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Section>
+      );
+    }
+
+    if (section.kind === "richtext") {
+      return (
+        <Section key={index} tag={tag}>
+          <div className="mb-3 text-sm font-medium">{section.label}</div>
+          <div className="flex flex-col gap-2">
+            <div className="h-2 w-full rounded bg-muted-foreground/15" />
+            <div className="h-2 w-11/12 rounded bg-muted-foreground/15" />
+            <div className="h-2 w-4/5 rounded bg-muted-foreground/15" />
+            <div className="h-2 w-2/3 rounded bg-muted-foreground/15" />
+          </div>
+        </Section>
+      );
+    }
+
+    // related
+    return (
+      <Section key={index} tag={tag}>
+        <div className="mb-3 text-sm font-medium">{section.label}</div>
+        <div className="flex flex-col gap-2.5">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="size-8 shrink-0 rounded-lg bg-muted" />
+              <div className="min-w-0 flex-1">
+                <div className="h-2.5 w-2/3 rounded bg-muted-foreground/20" />
+                <div className="mt-1.5 h-2 w-1/3 rounded bg-muted-foreground/10" />
+              </div>
+              <span className="inline-flex shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-xs text-primary-soft-foreground">
+                Chip
+              </span>
+            </div>
+          ))}
+        </div>
+      </Section>
+    );
+  };
+
   return (
     <div>
       <PageHeader
         breadcrumbs={[
           { label: "Screens", to: "/advanced/custom-screens" },
-          { label: "Projects" },
+          { label: screen.name },
         ]}
-        title="Projects"
-        description="Design the entry view — the layout shown when someone opens a Project."
+        title={screen.name}
+        description={`Design the entry view — the layout shown when someone opens a ${screen.singular}.`}
         actions={
           <>
             <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
@@ -122,73 +218,8 @@ export function CustomScreenEditorPreview() {
         panelPosition="right"
         canvas={
           <div className="mx-auto max-w-2xl">
-            {/* (1) Header — selected */}
-            <Section tag="Header" selected>
-              <div className="font-display text-2xl font-semibold">
-                <Token>{"{{ Project name }}"}</Token>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5">
-                  <Token className="bg-transparent px-0 py-0">{"{{ Status }}"}</Token>
-                </span>
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="size-5 shrink-0 rounded-full bg-primary-soft" />
-                  <Token>{"{{ Owner }}"}</Token>
-                </span>
-                <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5">
-                  <Token className="bg-transparent px-0 py-0">{"{{ Phase }}"}</Token>
-                </span>
-                <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5">
-                  <Token className="bg-transparent px-0 py-0">{"{{ Due date }}"}</Token>
-                </span>
-              </div>
-            </Section>
+            {screen.entry.sections.map((section, index) => renderSection(section, index))}
 
-            {/* (2) Fields */}
-            <Section tag="Fields">
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                {FIELD_TILES.map((tile) => (
-                  <div key={tile.label} className="rounded-xl bg-muted/50 p-3">
-                    <div className="text-[11px] text-muted-foreground">{tile.label}</div>
-                    <div className="mt-1.5 text-xs">
-                      <Token>{tile.token}</Token>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            {/* (3) Description — rich text */}
-            <Section tag="Rich text">
-              <div className="flex flex-col gap-2">
-                <div className="h-2.5 w-1/3 rounded bg-muted-foreground/25" />
-                <div className="h-2 w-full rounded bg-muted-foreground/15" />
-                <div className="h-2 w-11/12 rounded bg-muted-foreground/15" />
-                <div className="h-2 w-4/5 rounded bg-muted-foreground/15" />
-                <div className="h-2 w-2/3 rounded bg-muted-foreground/15" />
-              </div>
-            </Section>
-
-            {/* (4) Related list */}
-            <Section tag="Related list">
-              <div className="mb-3 text-sm font-medium">Milestones</div>
-              <div className="flex flex-col gap-2.5">
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="size-8 shrink-0 rounded-lg bg-muted" />
-                    <div className="min-w-0 flex-1">
-                      <div className="h-2.5 w-2/3 rounded bg-muted-foreground/20" />
-                      <div className="mt-1.5 h-2 w-1/3 rounded bg-muted-foreground/10" />
-                    </div>
-                    <span className="inline-flex shrink-0 rounded-full bg-primary-soft px-2 py-0.5 text-xs text-primary-soft-foreground">
-                      Chip
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </Section>
-
-            {/* (5) Add section */}
             <button
               type="button"
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-4 text-sm font-medium text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground"
@@ -225,10 +256,12 @@ export function CustomScreenEditorPreview() {
             </InspectorRow>
 
             <InspectorRow label="Bound field">
-              <Select defaultValue="name">
-                <option value="name">Project name</option>
-                <option value="title">Title</option>
-                <option value="status">Status</option>
+              <Select defaultValue={titleCol?.key ?? screen.columns[0]?.key}>
+                {screen.columns.map((c) => (
+                  <option key={c.key} value={c.key}>
+                    {c.label}
+                  </option>
+                ))}
               </Select>
             </InspectorRow>
 
@@ -236,6 +269,7 @@ export function CustomScreenEditorPreview() {
               <Select defaultValue="comfortable">
                 <option value="comfortable">Comfortable</option>
                 <option value="compact">Compact</option>
+                <option value="spacious">Spacious</option>
               </Select>
             </InspectorRow>
 
@@ -265,10 +299,9 @@ export function CustomScreenEditorPreview() {
       />
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Build the entry view from sections &amp; blocks — it renders in Published → Projects →
-        entry.{" "}
+        Build the entry view — it renders in Published → {screen.name} → entry.{" "}
         <Link
-          to="/advanced/custom-screens/project-catalog/entries"
+          to={`/advanced/custom-screens/${screen.id}/entries`}
           className="text-primary hover:underline"
         >
           See a published screen →

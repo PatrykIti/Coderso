@@ -30,6 +30,16 @@ export type ScreenColumn = {
 export type ScreenStat = { label: string; value: string; delta?: string; trend?: "up" | "down" | "flat" };
 export type ScreenRow = Record<string, unknown>;
 
+/** A section on the per-entry view. Each screen composes its OWN layout, so
+ *  different screens (Projects vs Clients) present an entry differently. */
+export type EntrySection =
+  | { kind: "header" }
+  | { kind: "fields"; label: string; fieldKeys: string[] }
+  | { kind: "richtext"; label: string; placeholder: string }
+  | { kind: "related"; label: string; variant: "checklist" | "activity" };
+
+export type EntryLayout = { sections: EntrySection[] };
+
 export type ScreenDef = {
   id: string;
   name: string;
@@ -41,6 +51,8 @@ export type ScreenDef = {
   columns: ScreenColumn[];
   stats: ScreenStat[];
   rows: ScreenRow[];
+  /** The screen-specific per-entry presentation (builder template + entry view). */
+  entry: EntryLayout;
 };
 
 const projectCatalog: ScreenDef = {
@@ -77,6 +89,14 @@ const projectCatalog: ScreenDef = {
     { name: "Design System", client: "Hooli", status: "active", owner: "Patryk Ciechański", phase: "Build", budget: "$54,000", progress: 71, due: "Jul 09, 2026", created: "Mar 02, 2026", tags: ["design", "system"] },
     { name: "Analytics Dashboard", client: "Stark Industries", status: "on hold", owner: "Sofia Rossi", phase: "Discovery", budget: "$40,000", progress: 12, due: "Oct 01, 2026", created: "May 22, 2026", tags: ["data"] },
   ],
+  entry: {
+    sections: [
+      { kind: "header" },
+      { kind: "fields", label: "Project details", fieldKeys: ["budget", "progress", "phase", "due"] },
+      { kind: "richtext", label: "Description", placeholder: "Scope, goals, and key context for this project." },
+      { kind: "related", label: "Milestones", variant: "checklist" },
+    ],
+  },
 };
 
 const clients: ScreenDef = {
@@ -111,6 +131,14 @@ const clients: ScreenDef = {
     { name: "Soylent", contact: "Kristin Watson", status: "churned", owner: "Liam O'Brien", plan: "Pro", mrr: "$0", health: 20, since: "Feb 18, 2024", tags: [] },
     { name: "Hooli", contact: "Robert Fox", status: "active", owner: "Patryk Ciechański", plan: "Pro", mrr: "$1,250/mo", health: 66, since: "Aug 30, 2025", tags: [] },
   ],
+  entry: {
+    sections: [
+      { kind: "header" },
+      { kind: "fields", label: "Account", fieldKeys: ["mrr", "health", "plan", "since"] },
+      { kind: "richtext", label: "Account notes", placeholder: "Relationship summary, goals, and key contacts." },
+      { kind: "related", label: "Recent activity", variant: "activity" },
+    ],
+  },
 };
 
 export const SCREENS: Record<string, ScreenDef> = {

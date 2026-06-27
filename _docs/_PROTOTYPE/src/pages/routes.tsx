@@ -43,6 +43,7 @@ import { PopupEditorPreview } from "@/pages/advanced/PopupEditorPreview";
 import { SolutionKitsPage } from "@/pages/advanced/SolutionKitsPage";
 import { WidgetLibraryPage } from "@/pages/advanced/WidgetLibraryPage";
 import { PageTemplatesPage } from "@/pages/advanced/PageTemplatesPage";
+import { PageTemplateEditorPreview } from "@/pages/advanced/PageTemplateEditorPreview";
 
 import { PluginStorePage } from "@/pages/store/PluginStorePage";
 import { PluginDetailsPage } from "@/pages/store/PluginDetailsPage";
@@ -128,6 +129,7 @@ export const routes: RouteDef[] = [
   { path: "/advanced/solution-kits", title: "Solution kits", group: "Advanced", Component: SolutionKitsPage },
   { path: "/advanced/widgets", title: "Widget library", group: "Advanced", Component: WidgetLibraryPage },
   { path: "/advanced/page-templates", title: "Page templates", group: "Advanced", Component: PageTemplatesPage },
+  { path: "/advanced/page-templates/:id", title: "Template editor", group: "Editors", Component: PageTemplateEditorPreview },
 
   // Store + visual
   { path: "/store", title: "Plugin store", group: "Store", Component: PluginStorePage },
