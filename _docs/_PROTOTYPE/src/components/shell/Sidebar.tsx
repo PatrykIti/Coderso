@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronsUpDown, Hexagon, Sparkles } from "lucide-react";
+import { ChevronDown, ExternalLink, Hexagon } from "lucide-react";
 import { useState } from "react";
 
 import { footerItems, navSections, type NavItem } from "@/nav/navConfig";
@@ -69,7 +69,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      {/* Workspace switcher */}
+      {/* Site identity */}
       <div className="px-3 pt-3.5">
         <button
           type="button"
@@ -80,11 +80,14 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate font-display text-sm font-semibold leading-tight">
-              Coderso
+              Acme Studio
             </span>
-            <span className="block truncate text-xs text-muted-foreground">Acme Studio</span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ExternalLink className="size-3 shrink-0" />
+              <span className="truncate">acmestudio.com</span>
+            </span>
           </span>
-          <ChevronsUpDown className="size-4 text-muted-foreground" />
+          <ChevronDown className="size-4 text-muted-foreground" />
         </button>
       </div>
 
@@ -183,12 +186,9 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
 
       {/* Footer */}
       <div className="border-t border-sidebar-border p-3">
-        <div className="mb-2 flex items-center gap-3 rounded-2xl bg-primary-soft/70 px-3 py-2.5">
-          <Sparkles className="size-4.5 shrink-0 text-primary" />
-          <div className="min-w-0 flex-1">
-            <div className="text-[13px] font-semibold text-foreground">Coderso Pro</div>
-            <div className="truncate text-xs text-muted-foreground">14 days left in trial</div>
-          </div>
+        <div className="mb-2 flex items-center gap-1.5 px-3 py-1 text-xs text-muted-foreground">
+          <Hexagon className="size-3.5 shrink-0" />
+          <span>Coderso 1.0</span>
         </div>
         <div className="flex items-center gap-1">
           {footerItems.map((item) => (
