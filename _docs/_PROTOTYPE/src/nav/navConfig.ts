@@ -31,6 +31,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
+import { PUBLISHED_SCREEN_IDS, SCREENS } from "@/lib/screensMock";
+
 export type NavItem = {
   label: string;
   to: string;
@@ -49,7 +51,19 @@ export type NavSection = {
   title: string;
   items?: NavItem[];
   group?: NavGroup;
+  /** Published custom screens — appended right after the Advanced group, like the real admin. */
+  itemsAfterGroup?: NavItem[];
 };
+
+/** Published custom screens that show up in the sidebar under their own name. */
+const publishedScreenNavItems: NavItem[] = PUBLISHED_SCREEN_IDS.map((id) => {
+  const screen = SCREENS[id];
+  return {
+    label: screen.name,
+    to: `/advanced/custom-screens/${screen.id}/entries`,
+    icon: screen.icon,
+  };
+});
 
 /** Mirrors core/admin/ui/navigation/sidebarConfig.ts + advancedModules.ts (prototype routes). */
 export const navSections: NavSection[] = [
@@ -83,6 +97,7 @@ export const navSections: NavSection[] = [
         { label: "Page Templates", to: "/advanced/page-templates", icon: LayoutTemplate },
       ],
     },
+    itemsAfterGroup: publishedScreenNavItems,
   },
   {
     title: "Store",

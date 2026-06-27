@@ -100,11 +100,17 @@ Admin). The route registry mirrors the `AdminApp.tsx` route patterns
 - **Auth (4):** Login, 2FA, Reset password, Set password.
 - **Main (8):** Dashboard, Pages list, Posts list, Menus, Media library, +3 editor
   previews (Page builder, Post editor, Menu editor).
-- **Advanced (≈25):** Engine/Content types, Content type editor, Schema builder,
-  Collection workspace, Entries, Entry editor, Custom screens (+ editor + entries),
-  Forms (+ builder + submissions), Listings (+ editor), Filters, Search modules,
-  Booking, Reviews, Commerce (+ product editor), Popups (+ editor), Solution kits,
-  Widget library, Page templates.
+- **Advanced (≈27):** Engine/Content types, Content type editor, Schema builder,
+  Collection workspace, Entries, Entry editor, Custom screens (management + builder
+  + **published-screen flow**), Forms (+ builder + submissions), Listings (+ editor),
+  Filters, Search modules, Booking, Reviews, Commerce (+ product editor), Popups
+  (+ editor), Solution kits, Widget library, Page templates.
+- **Published custom screens (added 2026-06-27):** a published screen (e.g.
+  *Projects*, *Clients*) appears in the left sidebar under its own name; opening it
+  shows the **List View** = the content type's entries in a **flexibly configurable
+  table** (toggle/reorder/rename columns, view types Table/Board/Gallery/Calendar,
+  group/sort/density); each row opens the **Entry edit view** composed by the screen.
+  Driven by `src/lib/screensMock.ts`; routes under `/advanced/custom-screens/:id/entries[/:entryId]`.
 - **Store (2):** Plugin store (gallery), Plugin details.
 - **Visual (1):** Admin UI theme editor.
 - **Tools (6):** Global search, SEO manager, Analytics, Backups, Import/Export,

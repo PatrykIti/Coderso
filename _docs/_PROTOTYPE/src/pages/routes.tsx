@@ -26,6 +26,7 @@ import { EntryEditorPreview } from "@/pages/advanced/EntryEditorPreview";
 import { CustomScreensPage } from "@/pages/advanced/CustomScreensPage";
 import { CustomScreenEditorPreview } from "@/pages/advanced/CustomScreenEditorPreview";
 import { CustomScreenEntriesPage } from "@/pages/advanced/CustomScreenEntriesPage";
+import { CustomScreenEntryEditorPreview } from "@/pages/advanced/CustomScreenEntryEditorPreview";
 import { FormsPage } from "@/pages/advanced/FormsPage";
 import { FormBuilderPreview } from "@/pages/advanced/FormBuilderPreview";
 import { FormSubmissionsPage } from "@/pages/advanced/FormSubmissionsPage";
@@ -108,7 +109,8 @@ export const routes: RouteDef[] = [
   { path: "/advanced/entries", title: "Entries", group: "Advanced", Component: EntriesPage },
   { path: "/advanced/entries/:type/:id", title: "Entry editor", group: "Editors", Component: EntryEditorPreview },
   { path: "/advanced/custom-screens", title: "Screens", group: "Advanced", Component: CustomScreensPage },
-  { path: "/advanced/custom-screens/:id/entries", title: "Screen entries", group: "Advanced", Component: CustomScreenEntriesPage },
+  { path: "/advanced/custom-screens/:id/entries/:entryId", title: "Screen entry (edit)", group: "Editors", Component: CustomScreenEntryEditorPreview },
+  { path: "/advanced/custom-screens/:id/entries", title: "Published screen (list)", group: "Advanced", Component: CustomScreenEntriesPage },
   { path: "/advanced/custom-screens/:id", title: "Screen editor", group: "Editors", Component: CustomScreenEditorPreview },
   { path: "/advanced/forms", title: "Forms", group: "Advanced", Component: FormsPage },
   { path: "/advanced/forms/:id/submissions", title: "Form submissions", group: "Advanced", Component: FormSubmissionsPage },

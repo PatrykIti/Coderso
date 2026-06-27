@@ -69,7 +69,19 @@ export function CustomScreenEditorPreview() {
 
       <EditorPreviewFrame
         title="Screen builder"
-        toolbar={<Badge variant="outline">Support tickets · draft</Badge>}
+        toolbar={
+          <div className="flex items-center gap-2">
+            <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
+              <span className="rounded-md bg-muted px-2.5 py-1 text-xs font-medium text-foreground">
+                List view
+              </span>
+              <span className="px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                Entry view
+              </span>
+            </div>
+            <Badge variant="outline">draft</Badge>
+          </div>
+        }
         left={
           <>
             <EditorRailGroup label="Widgets">
@@ -171,9 +183,11 @@ export function CustomScreenEditorPreview() {
       />
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Non-functional preview of the custom screen builder.{" "}
-        <Link to="/advanced/custom-screens" className="text-primary hover:underline">
-          Back to screens
+        Non-functional preview. Publishing adds this screen to the sidebar — the{" "}
+        <span className="font-medium text-foreground">List view</span> becomes its entries table and the{" "}
+        <span className="font-medium text-foreground">Entry view</span> renders each record.{" "}
+        <Link to="/advanced/custom-screens/project-catalog/entries" className="text-primary hover:underline">
+          See a published screen →
         </Link>
       </p>
     </div>

@@ -6,12 +6,34 @@ import { Link, usePath } from "@/lib/router";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 
-const isActive = (path: string, to: string) =>
-  to === "/" ? path === "/" : path === to || path.startsWith(`${to}/`);
+// Collect every internal nav target once, then resolve the active item by the
+// LONGEST matching prefix — so a published screen highlights its own item, not
+// the broader "Screens" entry whose path is also a prefix.
+const NAV_TOS: string[] = navSections.flatMap((section) => [
+  ...(section.items?.map((i) => i.to) ?? []),
+  ...(section.group?.items.map((i) => i.to) ?? []),
+  ...(section.itemsAfterGroup?.map((i) => i.to) ?? []),
+]);
 
-function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
-  const path = usePath();
-  const active = isActive(path, item.to);
+const resolveActiveTo = (path: string): string | null => {
+  let best: string | null = null;
+  for (const to of NAV_TOS) {
+    if (/^https?:/.test(to)) continue;
+    const match = to === "/" ? path === "/" : path === to || path.startsWith(`${to}/`);
+    if (match && (!best || to.length > best.length)) best = to;
+  }
+  return best;
+};
+
+function NavLink({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
   const Icon = item.icon;
   return (
     <Link
@@ -42,6 +64,7 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const path = usePath();
+  const activeTo = resolveActiveTo(path);
   const [advancedOpen, setAdvancedOpen] = useState(true);
 
   return (
@@ -74,7 +97,12 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             </div>
             <div className="flex flex-col gap-0.5">
               {section.items?.map((item) => (
-                <NavLink key={item.to} item={item} onNavigate={onNavigate} />
+                <NavLink
+                  key={item.to}
+                  item={item}
+                  active={item.to === activeTo}
+                  onNavigate={onNavigate}
+                />
               ))}
             </div>
 
@@ -97,7 +125,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                 {advancedOpen ? (
                   <div className="mt-0.5 ml-3.5 flex flex-col gap-0.5 border-l border-sidebar-border pl-2.5">
                     {section.group.items.map((item) => {
-                      const active = isActive(path, item.to);
+                      const active = item.to === activeTo;
                       const Icon = item.icon;
                       return (
                         <Link
@@ -128,6 +156,25 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
                     })}
                   </div>
                 ) : null}
+              </div>
+            ) : null}
+
+            {/* Published custom screens — first-class entries in the sidebar */}
+            {section.itemsAfterGroup && section.itemsAfterGroup.length > 0 ? (
+              <div className="mt-3">
+                <div className="mb-1 flex items-center gap-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+                  Published screens
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  {section.itemsAfterGroup.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      item={item}
+                      active={item.to === activeTo}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </div>
               </div>
             ) : null}
           </div>
