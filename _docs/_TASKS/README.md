@@ -78,8 +78,8 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 20 tasks
-- **In Progress:** 5 tasks
+- **To Do:** 23 tasks
+- **In Progress:** 6 tasks
 - **Done:** 2696 tasks
 
 ---
@@ -88,6 +88,9 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-479-05 | Port redesign tokens into core globals.css | Medium | Medium | Translate the prototype's soft/violet token values (light + dark) into `core/admin/styles/globals.css`; re-run admin theme tests. Depends on TASK-479 prototype. |
+| TASK-479-06 | Adopt shell/topbar/sidebar redesign in core | Medium | Large | Restyle `AdminShell`/`SidebarNav`/`TopBar` to the prototype shell (workspace switcher, rounded active pills, command search, theme toggle) keeping real gating/wiring. |
+| TASK-479-07 | Roll the new look across real admin pages | Medium | Very Large | Section-by-section restyle of real pages with the prototype PageHeader/SectionCard/DataTable/SettingsSection patterns; data/logic unchanged. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
 | TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |
@@ -114,6 +117,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-479 | Admin UI Visual Redesign — Prototype & Migration Plan | Medium | Very Large | In progress: runnable soft/violet redesign prototype delivered to `_docs/_PROTOTYPE/` (~60 screens, editors as previews; light+dark; ports to core via shared tokens/primitives). Children 01–04 done; 05–07 (port to core) To Do. Started 2026-06-27. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
