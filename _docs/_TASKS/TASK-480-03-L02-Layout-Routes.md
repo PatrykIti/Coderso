@@ -87,14 +87,16 @@ Add to the catalog so Roles UI + enforcement recognize it:
 ### Validation re-export (`core/server/validation/dashboardSchemas.ts`)
 
 ```ts
-// Route layer imports from the domain owner; it does NOT redefine the schema.
-import { dashboardLayoutWriteSchema } from "../../services/dashboard/dashboardLayout";
+// Route layer imports from the 480-02 schema owner; it does NOT redefine the schema.
+import { dashboardLayoutSchema as dashboardLayoutWriteSchema }
+  from "../../services/dashboard/dashboardWidgetContract";
 export { dashboardLayoutWriteSchema };
 ```
 
-> `dashboardLayoutWriteSchema` is the `layoutSchema` from L01 (the strict envelope)
-> exported under an explicit name so the generic `validate(schema, body)` dep can
-> consume it like other route schemas (e.g. `menuSchemas.ts`).
+> `dashboardLayoutWriteSchema` is the `dashboardLayoutSchema` owned by TASK-480-02
+> (`dashboardWidgetContract.ts`, the strict envelope), re-exported under an explicit
+> name so the generic `validate(schema, body)` dep can consume it like other route
+> schemas (e.g. `menuSchemas.ts`). The route never re-declares it.
 
 ### Error mapping (`core/server/routes/dashboardRoutes.ts`)
 
@@ -103,7 +105,7 @@ import { ApiError } from "../errorHandler";
 import {
   DASHBOARD_LAYOUT_INVALID,
   DashboardLayoutError,
-} from "../../services/dashboard/dashboardLayout";
+} from "../../services/dashboard/dashboardLayoutService"; // 480-03 error layer (schema stays in 480-02)
 
 const mapDashboardError = (error: unknown): ApiError | null => {
   if (error instanceof DashboardLayoutError) {

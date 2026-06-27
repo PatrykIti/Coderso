@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Widgets
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`
@@ -23,10 +23,16 @@ widget editor loading (TASK-467), catalog/pages cache contract, favorites
 persistence, insert-into-page flow, RBAC, and the details/insert drawers stay
 exactly as they are.
 
-- **Goal:** Make the real Widget Library look like the prototype — soft category
-  tabs over a responsive gallery of `rounded-2xl` widget cards, each with an
-  abstract block preview and Insert / Preview affordances — without changing any
-  data flow, registry, lazy editor loading, or endpoints.
+- **Goal:** Make the real Widget Library look like the prototype — a softly
+  restyled **section `Select`** (All Items / Favorites / All Widgets + the real
+  registry categories, with counts) and the conditionally-shown **Recommended /
+  All scope Tabs** over a responsive gallery of `rounded-2xl` widget cards, each
+  with an abstract block preview and the existing kebab **actions** menu
+  (Preview / Configure / Insert / Favorite) — without changing any control, data
+  flow, registry, lazy editor loading, or endpoints. (The real category control
+  is a `Select`, not tabs; the prototype's category-tab row has no 1:1 real
+  control and is NOT introduced. `shadow-soft` / `shadow-card` / `font-display`
+  and the `soft` Badge/Button variant are tokens/variants from 479-05.)
 - **Owning module/service:** `core/admin/ui/widgets/**`
   (`WidgetLibraryPage.tsx`, `WidgetCard.tsx`, `WidgetCatalogFilters.tsx`,
   `WidgetLibraryTable.tsx`, `WidgetDetailsDrawer.tsx`, `WidgetInsertDialog.tsx`,
@@ -45,8 +51,9 @@ exactly as they are.
   `userSettingsClient`), the insert-into-page mutation (`getPageCached` +
   `updatePage`), RBAC, or the section/tab/complexity/module filtering taxonomy.
   Do NOT introduce a "Marketing" category the real registry does not have — keep
-  the real `widgetCategoryOrder` / `widgetCategoryLabels` and section model. No
-  new routes; no editor functionality.
+  the real `widgetCategoryOrder` / `widgetCategoryLabels` and section model (the
+  categories render as `Select` options, not tabs). No new routes; no editor
+  functionality.
 
 ---
 

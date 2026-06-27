@@ -64,8 +64,10 @@ test("PageTemplatesPage renders restyled header + propagation note + entries", (
   // a seeded template renders with its real fields (name + section count):
   expect(html).toContain("Landing stack");
   expect(html).toMatch(/section/i);
-  // route hook present for Edit/open:
-  expect(html).toContain("/advanced/page-templates/tpl-1");
+  // Row/open affordance: navigation is `onClick={() => navigate(...)}`, so the route
+  // string is NOT emitted by SSR `renderToString` — assert the emitted DOM hook
+  // instead (do NOT `toContain("/advanced/page-templates/tpl-1")`, unsatisfiable here):
+  expect(html).toContain('data-page-template-row="tpl-1"');
 });
 
 test("PageTemplatesPage shows NO fabricated scope/usage", () => {
@@ -94,15 +96,30 @@ test("Template editor reuses the shared PageEditor via the page-template host", 
   expect(capturedHosts.at(-1)?.detailCacheKey("tpl-1")).toBe("pageTemplates:detail:tpl-1");
 });
 
-test("Template settings sheet renders restyled fields + status control + propagation note", () => {
+test("Template settings sheet renders restyled fields + status control", () => {
   // render the settings sheet via the host's renderSettings(props) with the inline
   // Sheet stand-in already used in this file; assert:
   //  - name/slug/description/category fields present
   //  - the status SegmentedControl (Draft | Published) + data-page-template-status-control
-  //  - the generic propagation note copy (NO fabricated page count)
+  //  (the propagation note is NOT here — it lives in the always-visible canvasChrome
+  //   banner asserted in the next test, mirroring the L02 placement decision)
   expect(html).toContain("Draft");
   expect(html).toContain("Published");
+  expect(html).toContain('data-page-template-status-control="true"');
+});
+
+test("Template editor surfaces an always-visible propagation note via canvasChrome", () => {
+  // The propagation note is rendered by the host `canvasChrome` seam (above the canvas
+  // sections), NOT buried in the settings sheet. The shared PageEditor is stubbed here,
+  // so verify the note through the seam directly (like renderSettings is exercised):
+  const host = capturedHosts.at(-1);
+  expect(host?.canvasChrome).toBeTypeOf("function");
+  const html = renderAdminUi(
+    <>{host?.canvasChrome?.({ document: { schemaVersion: 2, sections: [] }, device: "desktop" })}</>,
+    { path: "/admin/advanced/page-templates/tpl-1" }
+  );
   expect(html).toMatch(/every page (using|that uses) it/i);
+  // honesty guard: generic copy, never a fabricated page count:
   expect(html).not.toMatch(/updates \d+ pages/i);
 });
 ```
@@ -120,13 +137,15 @@ a flaky interaction test.
 
 **Regression-test shape:**
 - List: header + "New template" + propagation note; a seeded template's name + real
-  section count + `/advanced/page-templates/:id` route; honesty guards (no
+  section count + the `data-page-template-row={id}` open hook (SSR emits no `onClick`
+  route string — do not assert `/advanced/page-templates/:id`); honesty guards (no
   "Used on N pages", no fabricated "Site-wide"); cached-vs-loading branch.
 - Editor: shared `PageEditor` reused via `mode === "page-template"` host with
-  `assistantSurface === false` and the real `pageTemplateDetail` cache key; settings
-  sheet renders restyled fields + `SegmentedControl` status + the generic propagation
-  note; existing host-seam + shared `page-editor-v2-flow`/`page-authoring-canvas`
-  suites stay green.
+  `assistantSurface === false` and the real `pageTemplateDetail` cache key; the
+  always-visible propagation note is asserted by direct-rendering the host's
+  `canvasChrome` (not via the stubbed editor, not the settings sheet); the settings
+  sheet renders restyled fields + `SegmentedControl` status; existing host-seam +
+  shared `page-editor-v2-flow`/`page-authoring-canvas` suites stay green.
 
 ---
 

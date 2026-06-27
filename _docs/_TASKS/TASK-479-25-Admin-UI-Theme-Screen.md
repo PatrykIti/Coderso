@@ -26,7 +26,12 @@ and a stacked **control panel** column on the right.
 This subtask ports that *page chrome / preset row / preview / control-panel
 layout* onto the REAL screen
 (`core/admin/ui/themes/ThemesPage.tsx` + `ThemeTemplateCard` / `ThemeProfileCard`
-/ `ThemePreviewPanel`). It does **not** re-implement per-token color pickers: the
+plus a NEW `ThemeLivePreview` mini-admin). NOTE: `ThemesPage.tsx` does **not**
+import or render `ThemePreviewPanel.tsx` today — that component is only rendered
+by the unrouted `ThemeEditorPage` — so the live preview is a NEW dedicated
+component modeled on the working mini-admin in `ThemeTemplateDrawer.tsx`
+(lines 190-208); `ThemePreviewPanel.tsx` is left untouched and is NOT repurposed.
+It does **not** re-implement per-token color pickers: the
 new-token CONTROLS already land in `ThemeTemplateDrawer` via **TASK-479-05-L05**,
 and the dark-mode toggle in **TASK-479-05-L06**. The real model is
 template-then-profile CRUD (not the prototype's single "Save theme" mock), so the
@@ -41,18 +46,24 @@ flow, not to fabricated inline state.
 - **Owning module/service:** `core/admin/ui/themes/` —
   `ThemesPage.tsx` (page chrome + preset/profile grids + live-preview layout),
   `ThemeTemplateCard.tsx` + `ThemeProfileCard.tsx` (preset-card visual),
-  `ThemePreviewPanel.tsx` (mini-admin live preview). Shared shell/patterns from
-  TASK-479-06; token CSS + new-token pickers from TASK-479-05.
+  a NEW `ThemeLivePreview.tsx` (mini-admin live preview; modeled on the working
+  mini-admin in `ThemeTemplateDrawer.tsx`, NOT the unrouted-only
+  `ThemePreviewPanel.tsx`). Shared shell/patterns from TASK-479-06; token CSS +
+  new-token pickers from TASK-479-05.
 - **Source-of-truth docs:**
   - Prototype page: `_docs/_PROTOTYPE/src/pages/themes/ThemesPage.tsx`
   - Prototype primitives: `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,SectionCard,SettingsSection}.tsx`, `_docs/_PROTOTYPE/src/components/ui/{card,badge,button,select,switch}.tsx`
   - Tokens: `_docs/_PROTOTYPE/src/styles/theme.css`, `_docs/DESIGN_TOKENS.md`
-  - Data + persistence contract: `core/services/adminThemeClient.ts`
+  - Data + persistence contract: `core/admin/services/adminThemeClient.ts`
     (`AdminThemeTemplate`/`AdminThemeProfile`, `listAdmin*Cached`,
     `getCachedAdmin*`, `create/update*`, `activateAdminThemeProfile`),
-    `core/services/adminThemes/tokenTypes.ts` + `tokenUtils.ts`
-    (`DEFAULT_ADMIN_THEME_TOKENS`, `mergeAdminThemeTokens`,
-    `toAdminThemeCssVariableMap`)
+    `core/services/adminThemes/tokenTypes.ts` (`DEFAULT_ADMIN_THEME_TOKENS`) +
+    `core/services/adminThemes/tokenUtils.ts` (`mergeAdminThemeTokens`)
+  - Live-preview painting helper: `core/ui/theme/tokenCss.ts`
+    (`toAdminThemeCssVariableMap` — NOT in `tokenUtils.ts`; it emits ONLY
+    `--admin-*`/`--font-*`/`--text-*` vars, so the preview markup must consume
+    those via arbitrary-value utilities, e.g. `bg-[var(--admin-sidebar-bg)]`, and
+    NOT shadcn `bg-background`/`bg-card`/`border-border`)
   - Shell/patterns landed by parent: TASK-479-06 (`AdminShell`, `PageHeader`,
     `SectionCard`, restyled `Card`/`Badge`/`Button`); tokens + new-token pickers +
     dark toggle: TASK-479-05 (L02/L03/L05/L06)
@@ -66,7 +77,8 @@ flow, not to fabricated inline state.
   the prototype's single "Save theme" mock or fabricate inline accent/density
   state; `ThemeTemplateDrawer` / `ThemeProfileDrawer` / `ThemeExportDialog`
   internals are only touched insofar as the preset-card restyle requires
-  (their token editors belong to TASK-479-05).
+  (their token editors belong to TASK-479-05); `ThemePreviewPanel.tsx` (rendered
+  only by the unrouted `ThemeEditorPage`) is NOT repurposed or modified here.
 
 ---
 

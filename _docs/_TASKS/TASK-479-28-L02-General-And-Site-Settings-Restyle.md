@@ -154,8 +154,9 @@ onSave={spy} />`; assert SettingsSection group titles render, editing a field fl
 `isDirty` and enables Save, Save calls `onSave` with the edited values, and the
 dirty guard registers. Render `<SiteSettingsPage />` with mocked
 `getCachedSiteSettings`/`getCachedPages`/`getCachedContentTypes`; assert the
-homepage/posts selects are populated from the real caches (not mock literals) and
-that no raw `<a href>` is emitted.
+homepage/posts selects are populated from the real caches (not mock literals).
+(Interactive asserts — edit→Save, select population — use the happy-dom
+`createRoot`/`React.act` mount idiom; static structure uses `renderAdminUi`.)
 
 ---
 

@@ -15,17 +15,21 @@
 ## Overview
 
 Restyle the real Widget Library to match the prototype. Port the prototype's
-layout — soft **category tabs** over a responsive **widget card gallery** where
-each card shows an **abstract block preview** plus **Insert** / **Preview**
-actions — onto the existing `WidgetLibraryPage.tsx` and its child components,
+look — a softly-restyled **section `Select`** (categories live here as options,
+not tabs) plus the conditionally-shown **Recommended / All scope Tabs**, over a
+responsive **widget card gallery** where each card shows an **abstract block
+preview** and the existing kebab **actions** menu (Preview / Configure / Insert /
+Favorite) — onto the existing `WidgetLibraryPage.tsx` and its child components,
 preserving every behavior (catalog/pages cache-hydrate + background revalidation,
 favorites, selection, view switch, pagination, insert-into-page, details/insert
 drawers) and the lazily-split widget editor loading (TASK-467).
 
 - **Goal:** A Notion-like, violet-accented Widget Library: warm canvas, white
   `rounded-2xl` cards with soft shadow + subtle hover lift, abstract block
-  previews in a `rounded-xl` tinted frame, soft category tabs, and a comfortable
-  responsive grid — with zero behavior changes.
+  previews in a `rounded-xl` tinted frame, a softly-restyled section `Select` +
+  the Recommended/All scope Tabs, and a comfortable responsive grid — with zero
+  behavior changes. (`shadow-soft` / `shadow-card` / `font-display` and the
+  `soft` Button variant are tokens/variants from 479-05.)
 - **Owning module/service:** `core/admin/ui/widgets/WidgetLibraryPage.tsx` (+
   `WidgetCard.tsx`, `WidgetCatalogFilters.tsx`, the `renderPreview` /
   `PreviewFrame` helpers inside `WidgetLibraryPage.tsx`), reusing
@@ -69,21 +73,28 @@ change. The `WidgetLibraryPage` continues to render inside
 `<AdminShell activeHref="/admin/advanced/widgets" …>` (do NOT hand-build hrefs;
 nav stays on `AdminShell` + `useAdminRouter().navigate` + the canonical helpers).
 
-### 1) Category tabs (`WidgetCatalogFilters.tsx` + the section chips in `WidgetLibraryPage.tsx`)
+### 1) Section `Select` + Recommended/All scope Tabs (`WidgetLibraryPage.tsx` Select + `WidgetCatalogFilters.tsx`)
 
 ```tsx
-// PORT the prototype's soft Tabs look (rounded-xl pill row, violet active
-// segment, horizontal-scroll on overflow per the floating-panel UX memo) onto
-// the EXISTING controlled tab/section controls. Bind to REAL state — do NOT
-// introduce new categories:
+// The REAL section/category control is a `<Select>` in WidgetLibraryPage
+// (sectionOptions = All Items / Favorites / All Widgets + the real categories,
+// each shown with a sectionCounts count). It is NOT a tab row — softly restyle
+// the SelectTrigger (radii/shadow/accent) but KEEP it a Select; do NOT convert
+// it to tabs (that would add/remove a control — out of scope). The prototype's
+// category-tab row has no 1:1 real control; the categories are Select options.
+// Bind to REAL state — do NOT introduce new categories:
 //   - keep `section` (WidgetLibrarySection) + `widgetTab` (recommended|all)
 //   - keep `widgetCategoryOrder` / `widgetCategoryLabels` from widgetCategoryMeta
-//   - the prototype "Marketing" tab has NO registry equivalent → omit it; render
-//     exactly the real categories (Layout/Content/Forms/Navigation/Media).
-// WidgetCatalogFilters Tabs: restyle TabsList/TabsTrigger to the prototype tokens
-// (h-auto rounded-xl bg-muted p-1; active = bg-card text-primary shadow-soft).
-// Keep the Recommended/All count Badges, Advanced-mode Switch, and module/
-// complexity Selects wired exactly as today (advancedMode still gates them).
+//   - the prototype "Marketing" tab has NO registry equivalent → it never
+//     appears (sectionOptions derive from widgetCategoryOrder; categories are
+//     Layout/Content/Forms/Navigation/Media).
+// The ONLY real Tabs are WidgetCatalogFilters' Recommended / All-widgets SCOPE
+// tabs, conditionally rendered for the widgets-all/category sections. Restyle
+// their TabsList/TabsTrigger to the prototype pill tokens (h-auto rounded-xl
+// bg-muted p-1; active = bg-card text-primary shadow-soft [shadow token from
+// 479-05]; horizontal-scroll on overflow per the floating-panel UX memo). Keep
+// the Recommended/All count Badges, Advanced-mode Switch, and module/complexity
+// Selects wired exactly as today (advancedMode still gates complexity).
 ```
 
 ### 2) Page header + toolbar (`WidgetLibraryPage.tsx` — JSX only)
@@ -122,20 +133,26 @@ nav stays on `AdminShell` + `useAdminRouter().navigate` + the canonical helpers)
 //   "grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4".
 // WidgetCard (variant="default"): wrap in the prototype card chrome —
 //   <Card className="flex h-full flex-col rounded-2xl p-4 shadow-soft
-//     transition-all hover:-translate-y-0.5 hover:shadow-card">. Layout order
-//   from the prototype: preview frame (renderPreview) → row { name (font-display
-//   font-semibold) + category Badge } → action row { Insert (violet "soft"
-//   button, Plus icon) + Preview (ghost button, Eye icon) }.
+//     transition-all hover:-translate-y-0.5 hover:shadow-card"> (shadow-soft /
+//   shadow-card tokens from 479-05). REAL card composition (re-skin in place, do
+//   NOT restructure controls): preview frame (renderPreview) with the kebab
+//   `actions` slot pinned top-right → category Badge + metaBadges row → name
+//   (h3; may adopt font-display [token from 479-05]) beside the inline
+//   `Configure` button (the real resolvedAction/resolvedLabel outline button).
 // PRESERVE all existing props/wiring: onSelect (card click → handleOpenPrimary),
 //   onSelectionChange Checkbox (selectionMode), `actions` slot
 //   (WidgetLibraryRowActions: Preview/Configure/Insert/Favorite), isFavorite
 //   star, metaBadges (complexity + module), badge, and the
 //   event.stopPropagation() guards on inner controls. The "compact" variant
 //   (used elsewhere) stays as-is unless explicitly restyled.
-// NOTE: Insert/Preview affordances in the real card live in the `actions` slot
-//   (WidgetLibraryRowActions) and the primary onSelect → keep that contract;
-//   the prototype's standalone Insert/Preview buttons are the VISUAL target for
-//   those existing actions, not a new handler.
+// NOTE: the real card exposes Insert/Preview through the kebab
+//   `WidgetLibraryRowActions` DropdownMenu (a MoreHorizontal trigger →
+//   Preview/Configure/Insert/Favorite items, rendered only when OPEN) in the
+//   `actions` slot, plus the inline `Configure` button — NOT standalone
+//   Insert/Preview buttons. The prototype's standalone Insert/Preview buttons
+//   are only a VISUAL reference for re-skinning those existing kebab items /
+//   Configure button; do NOT add new standalone buttons or handlers (that would
+//   change controls/behavior).
 ```
 
 ### 5) Drawers + table (unchanged behavior, light restyle)
@@ -143,7 +160,7 @@ nav stays on `AdminShell` + `useAdminRouter().navigate` + the canonical helpers)
 ```tsx
 // WidgetDetailsDrawer.tsx + WidgetInsertDialog.tsx: restyle chrome to soft
 //   rounded-2xl panels + violet primary actions ONLY. Do NOT touch the insert
-//   payload flow (placement new|existing, getPageCached+updatePage, notify),
+//   payload flow (placement new|inside, getPageCached+updatePage, notify),
 //   page-target selection, or error surfaces. The lazy editor split (TASK-467)
 //   stays: the library page never statically imports editor bundles.
 // WidgetLibraryTable.tsx (table view, the DEFAULT view): may receive soft-token
@@ -172,9 +189,12 @@ import added to the page).
 
 **Regression-test shape (delivered in L02):** grid view renders one
 `rounded-2xl` card per visible widget with abstract preview + name + category
-Badge + Insert/Preview affordances; category tabs render only real registry
-categories (no "Marketing"); the sr-only section list, view toggle, status line,
-and empty state are preserved; favorites/selection/insert handlers still fire.
+Badge + the kebab `actions` trigger; the section `Select` (via the sr-only
+section list) renders only real registry categories (no "Marketing"); the view
+toggle, status line, and empty state are preserved; favorites/selection/insert
+handlers still fire. (Grid/preview/kebab assertions need the interactive
+`createRoot` + `React.act` lane — they are NOT reachable through the SSR
+`renderAdminUi` snapshot; see L02.)
 
 ---
 
@@ -184,9 +204,10 @@ and empty state are preserved; favorites/selection/insert handlers still fire.
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/widget-library.test.tsx tests/vitest/ui/widget-card.test.tsx tests/vitest/ui/widget-library-row-actions.test.tsx tests/vitest/ui/widget-library-preview-feedback.test.tsx`
 - The new restyle suite from L02 (`tests/vitest/ui/widget-library-restyle.test.tsx`).
-- Manual: light + dark toggle on `/admin/advanced/widgets`; confirm category tabs,
-  grid/table switch, abstract previews, Insert/Preview, favorites, selection, and
-  the insert dialog all behave as before.
+- Manual: light + dark toggle on `/admin/advanced/widgets`; confirm the section
+  Select + Recommended/All Tabs, grid/table switch, abstract previews, the kebab
+  actions menu (Preview/Configure/Insert/Favorite), favorites, selection, and the
+  insert dialog all behave as before.
 
 ---
 

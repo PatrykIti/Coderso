@@ -76,14 +76,18 @@ return (
           <KeyRound className="size-6" />
         </span>
         <h2 className="font-display text-xl font-semibold">Two-factor authentication</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Secure your account with an authenticator app.</p>
       </div>
       {error ? <Alert variant="destructive"><AlertCircle className="h-4 w-4" /><AlertDescription>{error}</AlertDescription></Alert> : null}
       {useRecovery
         ? <Input placeholder="Enter recovery code" value={recoveryCode} onChange={(e) => setRecoveryCode(e.target.value)} />
         : <OtpInput value={otp} onChange={setOtp} />}          {/* restyled segmented inputs */}
+      {/* KEEP the verbatim button copy — "Two-factor authentication" + "Verify & Enable" are
+          asserted by BOTH tests/vitest/authUi/twoFactorForm.test.tsx and tests/vitest/ui/two-factor.test.tsx;
+          this page is the real MFA *enable/setup* flow (QR + recovery codes), NOT a slim login challenge,
+          so do NOT rename to "Verify" (a copy change would break those green suites). */}
       <Button className="w-full" size="lg" onClick={handleVerify} disabled={loading}>
-        {loading ? "Verifying..." : useRecovery ? "Verify recovery code" : "Verify"}
+        {loading ? "Verifying..." : useRecovery ? "Verify recovery code" : "Verify & Enable"}
       </Button>
       <Button variant="ghost" onClick={() => setUseRecovery((v) => !v)}>
         {useRecovery ? "Use authenticator code instead" : "Use a recovery code"}
@@ -111,7 +115,7 @@ return (
   <AuthShell>
     <Card className="p-7 shadow-card">
       <div className="mb-6 text-center">
-        <h2 className="font-display text-xl font-semibold">Reset your password</h2>
+        <h2 className="font-display text-xl font-semibold">Reset password</h2>   {/* KEEP copy: "Reset password" + "Send reset link" + the /admin/login back-link are asserted by tests/vitest/ui/reset-password.test.tsx — do NOT rename to "Reset your password" */}
         <p className="mt-1 text-sm text-muted-foreground">Enter your email and we’ll send a reset link.</p>
       </div>
       {success
@@ -148,7 +152,7 @@ return (
   <AuthShell>
     <Card className="p-7 shadow-card">
       <div className="mb-6 text-center">
-        <h2 className="font-display text-xl font-semibold">Create a new password</h2>
+        <h2 className="font-display text-xl font-semibold">Set new password</h2>   {/* KEEP copy: "Set new password" + the "Password strength" header (from PasswordStrengthList) + the /admin/login back-link are asserted by tests/vitest/ui/set-password.test.tsx — do NOT rename to "Create a new password" */}
         <p className="mt-1 text-sm text-muted-foreground">Choose a strong password for your account.</p>
       </div>
       <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
@@ -163,7 +167,7 @@ return (
         <PasswordStrengthList rules={rules} />                   {/* restyled checklist: violet/success check chips */}
         <PasswordField id="confirm-password" label="Confirm password" value={confirm} onChange={setConfirm}
                        show={showConfirm} onToggle={() => setShowConfirm((p) => !p)} />
-        <Button className="w-full" size="lg" type="submit" disabled={loading}>{loading ? "Updating..." : "Set password"}</Button>
+        <Button className="w-full" size="lg" type="submit" disabled={loading}>{loading ? "Updating..." : "Update password"}</Button>   {/* keep verbatim button copy (visual restyle only) */}
       </form>
     </Card>
   </AuthShell>
@@ -181,9 +185,15 @@ passwords-do-not-match guard messages, the reCAPTCHA site-key guard, and the
 stable reset token-error copy. `PasswordStrengthList` keeps its `rules` prop shape.
 
 **Regression-test shape (delivered in L03):** render each page via `renderAdminUi`
-and assert the restyled headings/copy; assert `OtpInput` still renders 6
-`data-slot="input"` cells; assert the set-password checklist labels and the
-"Back to sign in"/"Back to login" link resolves through `withAdminBasePath`.
+and assert the **preserved** headings/copy ("Two-factor authentication" +
+"Verify &amp; Enable"; "Reset password" + "Send reset link"; "Set new password" +
+"Password strength" + "Update password"); assert `OtpInput` still renders 6
+`data-slot="input"` cells; assert the set-password checklist labels ("At least 8
+characters", "At least 1 number"); assert the "Back to login" link renders the
+canonical `/admin/login` that `withAdminBasePath` emits (assert the href is
+**present**, not absent — `resolveAdminBasePath()` resolves to `/admin` so a
+`not.toContain('/admin/login')` is unsatisfiable and contradicts the existing
+green `tests/vitest/ui/reset-password.test.tsx` / `set-password.test.tsx`).
 
 ---
 

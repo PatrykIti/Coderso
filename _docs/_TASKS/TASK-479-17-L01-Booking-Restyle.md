@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Booking
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-17
 
@@ -31,7 +31,16 @@ contract, and the `cacheBus` invalidation wiring.
 - **Source-of-truth docs:**
   - Prototype page: `_docs/_PROTOTYPE/src/pages/advanced/BookingPage.tsx`
   - Prototype patterns: `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,StatCard,SectionCard}.tsx`, `_docs/_PROTOTYPE/src/components/ui/{card,badge,button}.tsx`
-  - Shared shell/patterns: delivered by TASK-479-06 (consume `@/ui/shared/PageHeader`, `@/ui/shared/StatCard`, `@/ui/shared/SectionCard`; do not redefine)
+  - Shared shell/patterns & tokens (consume by exact name; do not redefine):
+    **TASK-479-05** owns the tokens/variants used here — `--primary-soft`/`--info`/
+    `--success`/`--warning` (+ each `-soft`), `shadow-card`, `font-display`, and
+    the Badge `soft` variant; **TASK-479-06-L02** creates/ports the shared
+    `PageHeader` **with the `icon` prop**, the shared `StatCard`, and `SectionCard`
+    (`@/ui/shared/PageHeader`, `@/ui/shared/StatCard`, `@/ui/shared/SectionCard`).
+    Today the real core `PageHeader` has only `title`/`description`/`actions`,
+    `Badge` has no `soft` variant, and the only `StatCard` is dashboard-local
+    (`@/ui/dashboard/StatCard`) — this leaf does NOT add the soft tokens, the
+    Badge `soft` variant, the `PageHeader.icon` prop, or a local StatCard/SectionCard.
   - Data contract: `core/admin/services/bookingClient.ts`
     (`BookingReservationRecord` = `{ id, serviceId, resourceId, status, startsAt,
     endsAt, timezone, customerName, ... }`, `BookingResourceRecord` =
@@ -60,10 +69,18 @@ routes, RBAC, cache, and adminPaths). Concretely:
   stat counts and week grid at render time via `useMemo` (lazy init / render-time
   derivation), not via an effect that writes state.
 - Any new action (the prototype's "New booking" button) must NOT hand-build an
-  href — it switches the active tab to Reservations and focuses the reservation
-  form via existing in-component state. The prototype's static mock arrays
-  (`DAYS`, `RESOURCES`, `BOOKINGS`) are illustrative only and MUST be replaced by
-  real derived data.
+  href. The real `BookingPage` renders the tab bar **uncontrolled**
+  (`<Tabs defaultValue="resources">`) with **no `activeTab` state today**, so
+  supporting the switch requires converting it to a **controlled**
+  `<Tabs value={activeTab} onValueChange={setActiveTab}>` backed by a NEW local
+  `const [activeTab, setActiveTab] = useState("resources")` — the initial value
+  keeps the real default landing tab (`resources`), so no landing/behavior change.
+  "New booking" is a `<button>` that calls `setActiveTab("reservations")`; it is
+  not a link, so it adds no href/route. **Preserve the existing "Refresh" action**
+  (`handleRefreshAll` + `RefreshCw`): add the Beta badge + New-booking button
+  *alongside* it, do not replace it — the existing green flow test clicks
+  "Refresh". The prototype's static mock arrays (`DAYS`, `RESOURCES`, `BOOKINGS`)
+  are illustrative only and MUST be replaced by real derived data.
 
 ---
 
@@ -73,7 +90,7 @@ routes, RBAC, cache, and adminPaths). Concretely:
 
 | Prototype element | Real source | Decision |
 |-------------------|-------------|----------|
-| `PageHeader` (title/desc/icon) + `Badge "Beta"` + `Button "New booking"` | n/a (chrome) | Port; New-booking switches `activeTab` → "reservations" (no fake route) |
+| `PageHeader` (title/desc + `icon` prop from 479-06-L02) + `Badge variant="soft" "Beta"` (variant from 479-05) + **kept** `Button "Refresh"` + new `Button "New booking"` | n/a (chrome) | Port; convert the uncontrolled `Tabs` → controlled `activeTab`; New-booking switches `activeTab` → "reservations" (button, no route); keep the existing Refresh action |
 | StatCard "Bookings today" | `reservations` filtered to today (`startsAt` local date === today) | Port with real count |
 | StatCard "Upcoming" | `reservations` with `startsAt > now` | Port with real count |
 | StatCard "Utilization 68%" | **none** | Replace with real-derived count (e.g. "Resources" = `resources.length`) OR clearly-labeled placeholder + follow-up note; never fake a % |
@@ -93,7 +110,7 @@ export type WeekColumn = {
   isoDate: string;          // "2026-06-22"
   blocks: Array<{
     id: string;
-    time: string;           // "09:00" from startsAt (resource/service timezone)
+    time: string;           // "09:00" — startsAt rendered in the reservation's OWN timezone
     name: string;           // reservation.customerName
     tone: string;           // resourceColor(resourceId) token classes
   }>;
@@ -124,11 +141,17 @@ export function groupReservationsByWeek(
       date: String(day.getDate()),
       isoDate,
       blocks: reservations
-        .filter((r) => toIsoDate(new Date(r.startsAt)) === isoDate)
+        // Bucket by the reservation's OWN timezone (`r.timezone`, fallback "UTC")
+        // via Intl — mirrors the existing `formatDateTime` helper — NOT the
+        // browser-local `new Date(startsAt)` day, so bucketing is deterministic
+        // and independent of the admin viewer's machine timezone. An unparseable
+        // `startsAt` yields "" from `isoDateInTimeZone`, so it matches no column
+        // (malformed records are skipped, never thrown).
+        .filter((r) => isoDateInTimeZone(r.startsAt, r.timezone) === isoDate)
         .sort((a, b) => a.startsAt.localeCompare(b.startsAt))
         .map((r) => ({
           id: r.id,
-          time: formatTime(r.startsAt),
+          time: formatTime(r.startsAt, r.timezone),   // reservation timezone
           name: r.customerName,
           tone: resourceTone(r.resourceId, resourceOrder),
         })),
@@ -144,9 +167,15 @@ export function groupReservationsByWeek(
 // UNCHANGED: all useState/useCallback/useEffect for resources/services/
 // reservations/blackouts/schedules/forms; the getCachedBooking* lazy seeds;
 // the list*Cached({ force }) revalidation effects; the subscribeCacheEvents
-// effect keyed on cacheKeys.booking*List; every mutation flow + feedback.
-// Only the returned JSX + a few render-time useMemos change.
+// effect keyed on cacheKeys.booking*List; every mutation flow + feedback;
+// the existing handleRefreshAll action. Only the returned JSX, ONE NEW local tab
+// state, and a few render-time useMemos change.
 
+// NEW: convert the previously-uncontrolled `<Tabs defaultValue="resources">` to a
+// controlled `<Tabs value={activeTab} onValueChange={setActiveTab}>` so "New
+// booking" can switch tabs. Event-driven setState (onClick) — never a setState in
+// an effect. Initial value preserves the real default landing tab.
+const [activeTab, setActiveTab] = useState("resources");
 const weekStart = useMemo(() => startOfWeek(new Date()), []);          // lazy, stable
 const resourceOrder = useMemo(() => resources.map((r) => r.id), [resources]);
 const weekColumns = useMemo(
@@ -154,8 +183,8 @@ const weekColumns = useMemo(
   [reservations, weekStart, resourceOrder],
 );
 const stats = useMemo(() => ({
-  today: reservations.filter((r) => isSameLocalDay(r.startsAt, new Date())).length,
-  upcoming: reservations.filter((r) => new Date(r.startsAt) > new Date()).length,
+  today: reservations.filter((r) => isReservationToday(r, new Date())).length,    // per-reservation-tz "today"
+  upcoming: reservations.filter((r) => new Date(r.startsAt) > new Date()).length, // instant cmp (tz-independent)
   resourceCount: resources.length,                                    // real, replaces "Utilization"
 }), [reservations, resources]);
 
@@ -168,7 +197,11 @@ return (
         icon={<CalendarDays />}
         actions={
           <>
-            <Badge variant="soft">Beta</Badge>
+            <Badge variant="soft">Beta</Badge>           {/* `soft` variant from 479-05 */}
+            {/* KEEP the existing Refresh action — the existing green flow test clicks it */}
+            <Button variant="outline" className="gap-2" onClick={handleRefreshAll}>
+              <RefreshCw className="h-4 w-4" /> Refresh
+            </Button>
             <Button className="gap-1.5" onClick={() => setActiveTab("reservations")}>
               <Plus className="size-4" /> New booking
             </Button>
@@ -176,7 +209,12 @@ return (
         }
       />
 
-      {feedback ? <Alert variant={feedback.tone}>{/* unchanged AlertTitle/Description */}</Alert> : null}
+      {/* feedback.tone is "error" | "success"; real Alert has only default/destructive */}
+      {feedback ? (
+        <Alert variant={feedback.tone === "error" ? "destructive" : "default"}>
+          {/* unchanged AlertTitle/AlertDescription */}
+        </Alert>
+      ) : null}
 
       {/* Stat row — REAL counts (no fabricated utilization) */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -193,7 +231,7 @@ return (
           <TabsTrigger value="resources">Resources</TabsTrigger>
           <TabsTrigger value="services">Services</TabsTrigger>
           <TabsTrigger value="availability">Availability</TabsTrigger>
-          <TabsTrigger value="slot-preview">Slot preview</TabsTrigger>
+          <TabsTrigger value="slot-preview">Slot Preview</TabsTrigger>
         </TabsList>
 
         <TabsContent value="reservations">
@@ -253,10 +291,26 @@ the new render-time `useMemo`s (`weekColumns`, `stats`) → calendar grid + stat
 + resources rail render from real data. No new fetches, no new mutations. The
 `cacheBus` effect still re-pulls each list on its `cacheKeys.*` event.
 
+**Timezone (explicit — no browser-local ambiguity):** all calendar-day bucketing
+is timezone-explicit. The week columns are the seven calendar dates (Mon–Sun) of
+the current week derived once from a single `weekStart`. A reservation is placed in
+the column whose `YYYY-MM-DD` equals the reservation's OWN-timezone
+(`reservation.timezone`, fallback `"UTC"`) calendar day, and its `time` is rendered
+in that same timezone — mirroring the existing `formatDateTime` helper (which uses
+`Intl.DateTimeFormat` with `timeZone`), never the browser-local `new Date(startsAt)`
+day. The "Bookings today" stat uses the same per-reservation-timezone day comparison
+(`isReservationToday`); "Upcoming" is a timezone-independent instant comparison
+(`new Date(startsAt) > new Date()`). `addDays`, `toIsoDate`, `formatTime`,
+`isoDateInTimeZone`, `isReservationToday`, `startOfWeek`, and `weekRangeLabel` are
+new pure helpers appended next to `groupReservationsByWeek` in `bookingHelpers.ts`;
+`formatTime`/`isoDateInTimeZone` reuse the `Intl.DateTimeFormat` pattern already in
+`formatDateTime`. (`WEEKDAY_LABELS` is a new local constant.)
+
 **Error handling:** preserve the existing `feedback` state + `Alert`; guard
-`groupReservationsByWeek` against malformed `startsAt` (skip blocks whose
-`new Date(startsAt)` is `NaN`) so a bad record never throws the render. With empty
-`reservations`/`resources` the rail and grid render empty columns (no crash).
+`groupReservationsByWeek` against malformed `startsAt` — an unparseable value makes
+`isoDateInTimeZone` return `""`, which matches no column, so the record is skipped
+and the render never throws. With empty `reservations`/`resources` the rail and
+grid render empty columns (no crash).
 
 **Regression-test shape (delivered in L02):**
 

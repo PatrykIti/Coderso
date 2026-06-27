@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Store
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-24
 **Started:** `<set when work begins>`
@@ -15,8 +15,9 @@
 ## Overview
 
 Restyle the real Plugin Details screen to match the prototype: a soft **hero header**
-(icon tile + name + status badge + rating/installs + Install / Visit-site actions),
-an **underline tab** row, and a two-column body with a `SectionCard` content stack
+(icon tile + name + status badge + version + author + auto-update/Uninstall controls),
+a `line`-variant **underline-style tab** row, and a two-column body with a
+`SectionCard` content stack
 and a `SectionCard` **info + permissions + support sidebar**. The install/auto-update/
 uninstall controls, the tabs data (Overview/Permissions/Changelog/Settings), and the
 `store:browse` RBAC + `/admin/store` breadcrumb are preserved exactly.
@@ -57,7 +58,9 @@ routes, RBAC, cache, and adminPaths).
 Restyle only. Keep the `AdminShell activeHref="/admin/store" breadcrumbs={["Store",
 "Plugins", "SEO Optimizer"]}` wrapper, the `pluginDetails` seed, and the controls'
 existing wiring. Reskin the hero card and convert the `PluginDetailsTabs` panels to
-the prototype `SectionCard` + underline-tab shape.
+the prototype `SectionCard` layout. The `TabsList` ALREADY uses the `line` variant
+(see real `PluginDetailsTabs.tsx`) — that IS the prototype's underline-style tab;
+there is NO `underline` variant in core (only `default`/`line`), so do not rename it.
 
 ```tsx
 // PluginDetailsPage.tsx — RENDER ONLY changes inside the existing return().
@@ -77,20 +80,16 @@ the prototype `SectionCard` + underline-tab shape.
         <Badge variant="success">Enabled</Badge>
       </div>
       <div className="text-sm text-muted-foreground">v2.4.1 by Digital Labs</div>
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <Star className="size-3.5 fill-warning text-warning" />
-          <span className="font-medium text-foreground">4.9</span>
-        </span>
-        <span className="size-1 rounded-full bg-border" />
-        <span>12k installs</span>
-      </div>
+      {/* NO rating / install-count row. The real `PluginDetailsData` has NO rating or
+          installs field and the real hero renders neither — do NOT fabricate "4.9" /
+          "12k installs". Show only real values (version + author from the seed). */}
     </div>
   </div>
   {/* PRESERVE install flow: keep the auto-update Switch + Uninstall button and any
-      handlers they already carry. Add an "Install/Update" primary + external
-      "Visit site" affordance per prototype. The destructive Uninstall keeps its
-      destructive styling/intent. */}
+      handlers they already carry (the seed plugin is INSTALLED, so the hero shows
+      Uninstall, not Install). Only add an external "Visit site" link if a REAL URL is
+      available — the seed carries none, so do NOT hand-build or fabricate one; omit it
+      otherwise. The destructive Uninstall keeps its destructive styling/intent. */}
   <div className="flex shrink-0 flex-wrap items-center gap-2">
     <div className="flex items-center gap-3 rounded-xl border bg-muted/40 px-4 py-2">
       <span className="text-sm font-medium text-muted-foreground">Auto-update</span>
@@ -108,13 +107,15 @@ the prototype `SectionCard` + underline-tab shape.
 ```
 
 ```tsx
-// PluginDetailsTabs.tsx — switch TabsList to the prototype UNDERLINE variant and
-// wrap each panel's content in the shared SectionCard (title + icon). Keep ALL data
+// PluginDetailsTabs.tsx — KEEP TabsList on the existing `line` variant (the real
+// component already uses it; there is NO `underline` variant in core — `line` IS the
+// prototype's underline-style tab) and wrap each panel's content in the shared
+// SectionCard (title + icon). Keep ALL data
 // (data.description/features/screenshots/info/permissions/changelog/settings) and
 // every control (Switch toggles, Save settings, support CTA) wired exactly as now.
 
 <Tabs defaultValue="overview" className="w-full">
-  <TabsList variant="underline">           {/* was variant="line"; match prototype */}
+  <TabsList variant="line" className="border-b border-border pb-2">  {/* real core variant; renders the prototype underline */}
     <TabsTrigger value="overview">Overview</TabsTrigger>
     <TabsTrigger value="permissions">Permissions</TabsTrigger>
     <TabsTrigger value="changelog">Changelog</TabsTrigger>
@@ -157,8 +158,8 @@ the prototype `SectionCard` + underline-tab shape.
 
 **Data flow:** `pluginDetails` seed → `PluginDetailsTabs` panels → controls
 (`Switch`, Save, support/info links). Hero install controls remain on
-`PluginDetailsPage`. The restyle only swaps chrome (Card→SectionCard, line→underline
-tabs, hex maps→token badges); no data edge or handler changes.
+`PluginDetailsPage`. The restyle only swaps chrome (Card→SectionCard, the `line`
+tab variant is KEPT as-is, hex maps→token badges); no data edge or handler changes.
 
 **Navigation/href constraint (preserve):** Breadcrumbs flow through the
 `AdminShell breadcrumbs` prop — do NOT hand-build the breadcrumb hrefs. The
@@ -179,10 +180,13 @@ loop). No synchronous `setState` in effects — toggles stay
 `defaultChecked`/locally-controlled exactly as today.
 
 **Regression-test shape:** see L03 — render `PluginDetailsPage` via `renderAdminUi`
-and assert: hero name + status badge + Install/Uninstall + auto-update present;
-underline tabs row renders Overview/Permissions/Changelog/Settings; SectionCard
-sections (Description, Information, Permissions) render with their seed content;
-permission scopes + changelog versions still render.
+and assert: hero name + status badge + Uninstall + auto-update present; the `line`
+(underline-style) tab TRIGGERS render Overview/Permissions/Changelog/Settings; the
+active Overview SectionCard sections (Description, Information, Permissions) render
+with their seed content (incl. a permission scope from the Overview Permissions
+SectionCard) and the hero version `v2.4.1` is present. Do NOT assert the INACTIVE
+Changelog/Settings tab bodies — `renderAdminUi` is a single SSR snapshot and Radix
+`TabsContent` unmounts inactive panels.
 
 ---
 

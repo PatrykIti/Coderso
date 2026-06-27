@@ -13,12 +13,14 @@
 ## Overview
 
 Restyle the content type editor to the prototype's editor preview: a tabbed
-layout (**Fields / Relations / Settings / Permissions**), a `SectionCard` of
-draggable, clickable fields with type badges, and a right-hand **type settings**
-card. Every schema operation, dirty-state guard, taxonomy toggle, and
-save/publish/duplicate/delete action is preserved — only chrome changes.
+layout (**Fields / Relations / Settings**), a `SectionCard` wrapping the
+draggable, clickable fields list with type badges, and a right-hand **type
+settings** inspector. Every schema operation, dirty-state guard, taxonomy toggle,
+and save/publish/duplicate/delete action is preserved — only chrome changes.
+(The prototype's "Permissions" tab is dropped: the content-type DTO exposes no
+per-type RBAC data, so there is nothing real to surface — see Out of scope.)
 
-- **Goal:** Apply the soft/violet card + underline-tab look to the content type
+- **Goal:** Apply the soft/violet card + line-variant tab look to the content type
   editor while keeping `fields` state, `hasUnsavedChanges`/`hasUnsavedChangesRef`
   protection, the field add/remove/undo flow, taxonomy toggles, and all
   save/publish/duplicate/delete server calls intact.
@@ -32,10 +34,18 @@ save/publish/duplicate/delete action is preserved — only chrome changes.
   `_docs/_PROTOTYPE/src/pages/advanced/ContentTypeEditorPreview.tsx` plus
   `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,SectionCard}.tsx` and
   `_docs/_PROTOTYPE/src/components/ui/{tabs,card,badge,input,switch,button}.tsx`.
+  In core, `SectionCard` and the extended `PageHeader` come from TASK-479-06-L02;
+  the real Tabs primitive is `core/admin/components/ui/tabs.tsx`
+  (`Tabs`/`TabsList`/`TabsTrigger`/`TabsContent`, Radix-based — there is **no**
+  `items` prop and the underline style is `<TabsList variant="line">`, not
+  `variant="underline"`). Soft tokens/variants come from TASK-479-05.
 - **Out of scope:** No change to schema validation
   (`validateFieldsForSave`/`validateFieldName`), the field model, the
   `updateContentType` payload, or `EditorShell` left/right panel contracts. The
-  "Relations/Permissions" tabs surface EXISTING data only — no new endpoints.
+  "Relations" tab surfaces EXISTING data only (fields of type `relation`) — no new
+  endpoints. There is **no per-content-type RBAC data** on the content-type DTO,
+  so no "Permissions" tab is added (re-add only when a real permissions surface
+  exists; do not fabricate one).
 
 ---
 
@@ -55,17 +65,21 @@ Target file: `core/admin/ui/content-types/ContentTypeEditor.tsx`. Keep ALL state
 `handleAddField`/`requestFieldRemoval`/`confirmFieldRemoval`/`undoFieldRemoval`,
 and `handleTaxonomyToggle`. Replace only JSX.
 
-Port from prototype `ContentTypeEditorPreview.tsx` (Tabs `underline` +
-`SectionCard` fields list + right settings `Card`).
+Port from prototype `ContentTypeEditorPreview.tsx` (line-variant Tabs +
+`SectionCard` wrapping the real `FieldsListPanel`/`FieldSettingsPanel` + type
+Badges).
 
 ```tsx
 // ContentTypeEditor.tsx — render layer.
-type EditorTab = "fields" | "relations" | "settings" | "permissions";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; // real Radix Tabs (no `items` prop)
+type EditorTab = "fields" | "relations" | "settings";
 const [tab, setTab] = useState<EditorTab>("fields"); // local UI state, lazy init, no effect
 
-// Fields tab body reuses the REAL panels (no reimplementation):
-//   <FieldsListPanel … />  drives selection; <FieldSettingsPanel … /> is the inspector.
-// Wrap them in the prototype's SectionCard chrome + type Badges.
+// The field LIST is owned by ONE component — `FieldsListPanel` — rendered as the
+// EditorShell `leftPanel` on desktop and as a `lg:hidden` inline copy on mobile
+// (the existing responsive pattern). The Fields tab does NOT render a second full
+// list of `fields` rows, or the list renders twice. `FieldSettingsPanel` is the
+// inspector. Both are the REAL panels (no reimplementation), wrapped in SectionCard.
 
 return (
   <EditorShell
@@ -84,34 +98,34 @@ return (
       {/* sticky action bar: keep Hide preview + Collection workspace + Duplicate + Save draft + Publish + Delete,
           restyled (rounded-2xl, soft). Collection workspace nav uses navigate(...) as today. */}
 
+      {/* Real Tabs API: <Tabs> controls trigger state; content is rendered below by `tab`.
+          Counts are inline children, not an `items` prop. Underline look = variant="line". */}
       <div className="px-6">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as EditorTab)} variant="underline"
-          items={[
-            { value: "fields", label: "Fields", count: fields.length },
-            { value: "relations", label: "Relations", count: fields.filter(f => f.type === "relation").length },
-            { value: "settings", label: "Settings" },
-            { value: "permissions", label: "Permissions" },
-          ]} />
+        <Tabs value={tab} onValueChange={(v) => setTab(v as EditorTab)}>
+          <TabsList variant="line">
+            <TabsTrigger value="fields">Fields <Badge variant="soft" className="ml-1.5">{fields.length}</Badge></TabsTrigger>
+            <TabsTrigger value="relations">Relations <Badge variant="soft" className="ml-1.5">{fields.filter(f => f.type === "relation").length}</Badge></TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       <div className="flex flex-col gap-6 px-6 py-6">
         {tab === "fields" && (
-          <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
-            <SectionCard title="Fields" description="Drag to reorder. Click a field to edit it."
-              action={<Button variant="soft" size="sm" className="gap-1.5" onClick={handleAddField}><Plus className="size-4" /> Add field</Button>} padded={false}>
-              {/* render `fields` rows: GripVertical + name + <Badge variant="soft">{typeLabel}</Badge> + actions;
-                  selecting a row sets selectedFieldId. Keep FieldSettingsPanel as the inspector below/right. */}
-            </SectionCard>
+          <SectionCard title="Fields" description="Drag to reorder. Click a field to edit it."
+            action={<Button variant="soft" size="sm" className="gap-1.5" onClick={handleAddField}><Plus className="size-4" /> Add field</Button>}>
+            {/* inline list = mobile only (lg:hidden); on desktop the list lives in EditorShell leftPanel */}
+            <FieldsListPanel className="lg:hidden" fields={fields} selectedId={activeSelectedFieldId}
+              onSelect={setSelectedFieldId} onAdd={handleAddField} />
             <FieldSettingsPanel field={selectedField} nameError={nameError} defaultError={defaultError}
               relationError={relationError} relationTargets={relationTargets}
               existingNames={fields.map(f => ({ id: f.id, name: f.name }))}
               onChange={(next) => handleFieldChange(fields.map(f => f.id === next.id ? next : f))}
               onRemove={requestFieldRemoval} className="h-fit" />
-          </div>
+          </SectionCard>
         )}
         {tab === "settings" && (/* Name/Slug Inputs (setUnsavedChanges(true) on change) + Taxonomies Switch card, restyled */)}
         {tab === "relations" && (/* read-only relation summary derived from existing `fields` of type "relation" */)}
-        {tab === "permissions" && (/* surface existing RBAC summary only — no new gating logic */)}
         {/* keep Danger Zone Card (Delete type) */}
       </div>
     </>
@@ -135,11 +149,16 @@ react-hooks).
 no new hand-built `<a>`. If any tab adds a link, use `AdminLink` +
 `resolveAdminRoutePath`.
 
-**Regression-test shape (see L05):** SSR render asserts the four tab labels with
-counts, the Fields `SectionCard` ("Add field"), the field rows with type badges,
-the settings tab Name/Slug inputs + Taxonomies switches, and that the sticky
-actions (Save draft / Publish / Duplicate / Delete / Collection workspace) and
-the unsaved-changes Alert markers are present.
+**Regression-test shape (see L05):** an SSR `renderAdminUi` render asserts the
+always-visible chrome: the three tab triggers (Fields / Relations / Settings) with
+the Fields/Relations counts, the active Fields-tab `SectionCard` ("Add field"),
+the `FieldsListPanel` field rows with their type labels (the editor seeds
+`defaultFields`, so rows render without cache seeding), the sticky actions (Save
+draft / Publish / Duplicate / Delete / Collection workspace), and the
+unsaved-changes Alert markers. Do NOT assert the Settings or Relations tab
+**bodies** under SSR — they are inactive when Fields is the default tab; cover
+tab-switch content with an interactive happy-dom + `createRoot`/`act` test (or
+rely on the existing `content-type-editor.test.tsx` behavioral assertions).
 
 ---
 

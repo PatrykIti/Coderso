@@ -30,6 +30,13 @@ pagination are preserved — only presentation changes.
   `_docs/_PROTOTYPE/src/pages/advanced/EnginePage.tsx` and shared primitives
   `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,StatCard,SectionCard}.tsx`,
   `_docs/_PROTOTYPE/src/components/ui/{card,button,badge,separator}.tsx`.
+- **Shared primitives.** Use the shared `PageHeader`, `StatCard`, `StatusBadge`,
+  and `EmptyState` from TASK-479-06-L02 (core `core/admin/ui/shared/*`) and the
+  `soft` Badge/Button variant + `--primary-soft`/`shadow-card`/`font-display`
+  tokens from TASK-479-05 — do not invent a divergent per-screen StatCard or
+  status badge. Content-type `status` is only `draft | published` (verified in
+  `contentTypesClient.ts`); bind the per-card `StatusBadge` to that real value and
+  do not invent extra statuses.
 - **Out of scope:** No change to `contentTypesClient` calls, `cacheKeys`, the bulk
   action semantics, or the create/delete/duplicate server flows. No new columns or
   data fields.
@@ -141,10 +148,19 @@ but those are REAL features. Preserve them: render a per-card selection
 `/advanced/engine/:id/collection` routes); `handleCreated`/`handleDuplicate` keep
 using `useAdminRouter().navigate`. No hand-built `<a href>`.
 
-**Regression-test shape (see L05):** SSR render asserts the summary band labels,
-one card per visible row with field/entry counts, "Edit schema"/"Entries"
-actions, that selection + bulk bar still render when an id is selected, and that
-no raw `<a href>` is emitted for card actions.
+**Regression-test shape (see L05):** an SSR `renderAdminUi` render asserts the
+always-visible chrome only — page title, the summary-band labels (Types / Entries
+/ Fields), and the empty state — because `renderAdminUi` is SSR-only and the list
+renders **no rows** without seeded content types. The card-dependent assertions
+(one card per visible row with field/entry counts, "Edit schema"/"Entries"
+actions, selection + bulk bar when an id is selected) run in a **seeded** test
+using the repo idiom — `// @vitest-environment happy-dom` + `createRoot` + a
+`vi.mock` of `contentTypesClient` (the same pattern as
+`tests/vitest/ui/content-type-list-parity.test.tsx`). In that seeded test, assert
+the card actions resolve through `AdminLink` to admin-prefixed canonical hrefs
+(e.g. `href="/admin/advanced/engine/<id>/schema"` — note `resolveAdminRoutePath`
+aliases `/content-types/*` → `/advanced/engine/*`), not hand-built unresolved
+hrefs.
 
 ---
 

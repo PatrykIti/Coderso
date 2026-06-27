@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Forms / Visual Refresh
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -33,7 +33,9 @@ accent, and a light default with a dark toggle.
   `FieldLibrary.tsx`, `FieldListPanel.tsx`, `FieldSettingsPanel.tsx`,
   `FormCanvas.tsx`, `FormActionsPanel.tsx`, `FormSettingsPanel.tsx`,
   `FormRuntimePreviewDialog.tsx`, `FormRowActions.tsx`) backed by
-  `core/admin/services/formsClient.ts`, `core/admin/services/forms/*`, and the
+  `core/admin/services/formsClient.ts`, the form domain helpers in
+  `core/services/forms/*` (`formSettings.ts`, `formPresets.ts`,
+  `formActionsContract.ts`, `formRuntimeResolver.ts`), and the
   `core/admin/ui/forms/hooks/useForms.ts` cache hook.
 - **Source-of-truth docs:** `_docs/FORMS_SPEC.md` (forms schema + automation +
   public-submit contract), `_docs/DESIGN_TOKENS.md`, `_docs/TESTING_STRATEGY.md`,

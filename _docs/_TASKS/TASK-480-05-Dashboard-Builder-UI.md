@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Dashboard / Configurable Widgets
 **Estimated Effort:** Large
-**Dependencies:** TASK-480-03 (cached dashboard-layout client + cache contract) · TASK-480-04 (widget product spec, `DashboardWidgetHost`, widget UI registry) — which transitively depend on TASK-480-01 (domain/service contract + schema) and TASK-480-02 (internal admin API routes)
+**Dependencies:** TASK-480-03 (layout routes + cached dashboard-layout client + cache contract) · TASK-480-04 (`DashboardWidgetHost`, widget UI registry) — which transitively depend on TASK-480-02 (domain/service contract + schema + data sources) and TASK-480-01 (widget product spec)
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
@@ -20,7 +20,7 @@ grid of widgets. The user toggles **Edit mode**, then **adds / removes / arrange
 / resizes** panels ("widgets"), each backed by a CMS **data source** (counters,
 charts, recent activity, storage, site-health, quick actions, custom content
 queries). Saving persists the layout through the cached client (`PUT` route from
-TASK-480-02). Until Edit mode is toggled, the Dashboard renders the saved layout
+TASK-480-03). Until Edit mode is toggled, the Dashboard renders the saved layout
 read-only.
 
 > **These are ADMIN DASHBOARD widgets** — instances of a saved dashboard layout
@@ -30,8 +30,8 @@ read-only.
 > system; it composes the dashboard widget UI registry from TASK-480-04.
 
 This subtask owns only the **builder/edit-mode UX and its client wiring**. It does
-NOT define the layout schema (TASK-480-01), the routes (TASK-480-02), the cached
-client (TASK-480-03), or the individual widget renderers / `DashboardWidgetHost`
+NOT define the layout schema (TASK-480-02), the routes + cached client (TASK-480-03),
+or the individual widget renderers / `DashboardWidgetHost`
 (TASK-480-04); it consumes those contracts and must not fork them.
 
 - **Goal:** A modern, accessible Dashboard builder hosted inside
@@ -44,10 +44,11 @@ client (TASK-480-03), or the individual widget renderers / `DashboardWidgetHost`
 - **Owning module/service:** `core/admin/ui/dashboard/builder/*` (new) +
   integration into `core/admin/ui/dashboard/DashboardPage.tsx`.
 - **Source-of-truth docs:**
-  - Product/widget spec: `_docs/DASHBOARD_WIDGETS_SPEC.md` (created in TASK-480-04)
-  - Layout contract: `core/services/dashboard/dashboardLayoutSchema.ts` +
-    `dashboardLayoutTypes.ts` (TASK-480-01)
-  - Cached client + keys: `core/admin/services/dashboardLayoutClient.ts`,
+  - Product/widget spec: `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by TASK-480-01-L02)
+  - Layout contract: `core/services/dashboard/dashboardWidgetContract.ts`
+    (widget + layout schema/types) + `dashboardTypes.ts` (types) — owned by
+    TASK-480-02; this subtask re-uses, never re-declares
+  - Cached client + keys: `core/admin/services/dashboardClient.ts`,
     `core/admin/services/cachePolicy.ts` (TASK-480-03); `_docs/ADMIN_CACHE.md`,
     `_docs/ADMIN_CACHE_MAP.md`
   - Widget host + UI registry: `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`,
@@ -55,14 +56,14 @@ client (TASK-480-03), or the individual widget renderers / `DashboardWidgetHost`
   - Floating-panel pattern: `_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx`,
     `_docs/PAGE_EDITOR_V2` floating-panel references; shared patterns from
     TASK-479-06 (`PageHeader`, `SectionCard`, `StatCard`, charts)
-  - Routes/API: `_docs/CMS_API.md` (Dashboard widgets section, TASK-480-02)
+  - Routes/API: `_docs/CMS_API.md` (Dashboard widgets section, TASK-480-03)
   - RBAC: `_docs/RBAC_SPEC.md` (`content:read` for widget data; the dashboard
     layout write permission `dashboard:write`)
   - Testing lanes: `_docs/TESTING_STRATEGY.md`
-- **Out of scope:** No schema/route/migration/cached-client definitions (owned by
-  480-01/02/03); no widget renderer internals or data-source aggregation (480-04);
-  no changes to `core/widgets` / Widget Library; no new analytics/metrics
-  endpoints beyond what 480-02 exposes.
+- **Out of scope:** No schema/route/migration/cached-client definitions (schema →
+  480-02; routes/migration/cached-client → 480-03); no widget renderer internals
+  (480-04) or data-source aggregation (480-02); no changes to `core/widgets` /
+  Widget Library; no new analytics/metrics endpoints beyond what 480-02/03 exposes.
 
 ---
 
@@ -78,14 +79,15 @@ contract:
   - Widget **data** reads require `content:read` (the existing Dashboard
     permission per `_docs/CMS_API.md`).
   - Layout **writes** (Save) require the dashboard layout write permission
-    (`dashboard:write`, defined by TASK-480-01/02 in `_docs/RBAC_SPEC.md`). The
+    (`dashboard:write`, decided in TASK-480-01-L02 and added by TASK-480-03 in
+    `_docs/RBAC_SPEC.md`). The
     builder must gate the Edit toggle and Save action client-side on that
     permission snapshot (hide/disable when absent) — defence-in-depth only; the
     route is the real boundary.
 - **CSRF:** required on the layout `PUT` write; carried automatically by the shared
   admin `apiClient`. The builder must not bypass it with a raw `fetch`.
-- **Rate-limit bucket:** `admin` (enforced at the route, TASK-480-02).
-- **Validation:** schema is owned by `dashboardLayoutSchema.ts` (reject-unknown);
+- **Rate-limit bucket:** `admin` (enforced at the route, TASK-480-03).
+- **Validation:** schema is owned by 480-02's `dashboardWidgetContract.ts` (reject-unknown);
   the builder serializes a layout that already conforms and lets the route
   re-validate. The builder never sends fields the schema rejects.
 - **Secret handling:** dashboard widget config/data carry no secrets; nothing
@@ -113,7 +115,7 @@ Per-leaf Security Contracts restate the slice each leaf relies on.
 - Vitest UI/ui-integration lane for the builder:
   `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/dashboard-builder.test.tsx`
 - Keep `tests/vitest/ui/dashboard.test.tsx` (TASK-479-07-L02) and
-  `tests/vitest/admin/dashboardLayoutClient.test.ts` (TASK-480-03) green —
+  `tests/vitest/admin/dashboardClient.test.ts` (TASK-480-03) green —
   the builder reuses, not forks, those contracts.
 - (Cross-subtask) the route/security Bun suites for the layout endpoints live in
   TASK-480-02; this subtask mocks them at the client boundary and does not

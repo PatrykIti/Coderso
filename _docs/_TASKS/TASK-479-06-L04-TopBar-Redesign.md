@@ -33,8 +33,14 @@
 No endpoint or permission model changes (visual restyle only; preserves existing
 routes, RBAC, cache, and adminPaths). The user menu's links route through
 `AdminLink` + adminPaths; Sign out reuses the existing logout action/route. No
-new notification or search endpoint is introduced — notifications render from
-whatever the existing source provides (or a static placeholder until wired).
+new notification or search endpoint is introduced, and **no fabricated data** is
+shipped (de-SaaS de-fabrication rule): the **⌘K** trigger only opens the existing
+`SearchBar`/search flow; **Notifications** render from whatever the existing
+source provides, else a calm empty state ("No notifications") — never invented
+items + unread counts; **Create** is a presentational slot that either routes via
+an existing create flow (`AdminLink`) or is host-provided through the `actions`
+prop — it introduces no new data or endpoint. These three are wired/empty, not
+mock-seeded.
 
 ## Implementation Pseudocode
 
@@ -47,10 +53,13 @@ nodes.
 ```tsx
 export function TopBar({ navToggle, breadcrumbs, search, actions, user, className }: TopBarProps) {
   // KEEP breadcrumb resolution (AdminBreadcrumbs / buildAdminBreadcrumbItemsFromNode).
+  // D1: TopBar is chrome — KEEP --admin-topbar-* (bg/border/text); do NOT move to shadcn
+  // bg-background/border-border. Dark recolor comes from the injected <style> :root.dark{--admin-topbar-*}.
   return (
     <header className={cn(
-      "sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border " +
-      "bg-background/80 px-4 backdrop-blur-md lg:px-6", className)}>
+      "sticky top-0 z-30 flex h-16 items-center gap-3 border-b " +
+      "border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] text-[var(--admin-topbar-text)] " +
+      "px-4 backdrop-blur-md lg:px-6", className)}>
       {navToggle /* mobile menu button, md:hidden */}
       <div className="min-w-0 truncate">{renderedBreadcrumbs}</div>
 
@@ -100,7 +109,7 @@ function CommandSearchTrigger() {
   <DropdownMenuTrigger> Avatar + name/role </DropdownMenuTrigger>
   <DropdownMenuContent align="end" className="w-56 rounded-2xl">
     <DropdownMenuLabel> name + email + role Badge(variant="soft") </DropdownMenuLabel>
-    <DropdownMenuItem asChild><AdminLink href="/profile">Profile</AdminLink></DropdownMenuItem>
+    <DropdownMenuItem>Profile</DropdownMenuItem>{/* non-navigating (matches proto): no /profile route exists */}
     <DropdownMenuItem asChild><AdminLink href="/settings">Settings</AdminLink></DropdownMenuItem>
     <DropdownMenuItem>Help &amp; support</DropdownMenuItem>
     <DropdownMenuSeparator />

@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Tools
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`
@@ -28,16 +28,33 @@ CRUD), and dirty-state protection are preserved exactly.
   `core/admin/ui/import-export/ImportExportPage.tsx`, and
   `core/admin/ui/redirects/RedirectsPage.tsx` (plus their child components) match the
   prototype look while keeping every behavior, so a user sees the redesigned Tools
-  screens (centered grouped search, stat rows + soft DataTables, area/donut/bar
-  charts, schedule + storage cards, import dropzone + export checklist, inline redirect
-  add row) with no functional regressions.
+  screens (centered grouped search, stat rows + soft DataTables, an **area** traffic +
+  **bar** top-pages analytics chart pair, an automatic-backups schedule card, the
+  per-target export cards + import dropzone, inline redirect add row) with no functional
+  regressions. **Data-backing reality:** several prototype surfaces have NO backing field
+  in the real client services and are therefore re-mapped to real data or dropped/flagged
+  feature-incomplete here — the Analytics **Sources donut** + **Devices** bars + the
+  Visitors/Pageviews/Bounce KPIs (real overview exposes only Published Pages / Content
+  Entries / Media Items totals + a single `trend` series + `topPages`), the Backups
+  **storage-usage quota** + **next-run** line (`BackupSchedule` has no `nextRunAt` and
+  `backupsClient` exposes no usage/quota), the Import/Export **Format select** + **import
+  checklist** (export is always JSON via per-target `include`; import takes a whole JSON
+  bundle), and redirect **hit counts** + **404s caught** (`RedirectItem` has no hit
+  metric). See the L02–L06 leaves for the exact per-field re-mapping.
 - **Owning module/service:** `core/admin/ui/search/**`, `core/admin/ui/seo/**`,
   `core/admin/ui/analytics/**`, `core/admin/ui/backups/**`,
-  `core/admin/ui/import-export/**`, `core/admin/ui/redirects/**`. All shared
-  primitives (`PageHeader`, `StatCard`, `SectionCard`, `DataTable`, `FilterBar`,
-  `EmptyState`, `StatusBadge`, `Charts`, `ListPaginationFooter`) are consumed from
-  `core/admin/ui/shared/**` as restyled in TASK-479-06 (L01 primitives, L02 pattern
-  library) — they are NOT re-implemented here.
+  `core/admin/ui/import-export/**`, `core/admin/ui/redirects/**`. Shared primitives are
+  consumed from `core/admin/ui/shared/**` by their exact names — but most do NOT exist
+  today and are **created/ported by TASK-479-06-L02**, not "restyled": `PageHeader`
+  (`core/admin/ui/shared/PageHeader.tsx`) + `ListPaginationFooter` already exist (06-L01
+  restyle; 06-L02 adds `PageHeader`'s `icon` + `breadcrumbs` props, which the current
+  three-prop `PageHeader` lacks), while `StatCard` (`core/admin/ui/shared/StatCard.tsx`
+  — distinct from the interim dashboard-local `core/admin/ui/dashboard/StatCard.tsx`),
+  `SectionCard`, `DataTable`, `FilterBar`, `EmptyState`, `StatusBadge`, and `Charts`
+  (`Charts.tsx`, PascalCase, case-sensitive host) are NET-NEW from 06-L02. Soft tokens
+  (`--primary-soft`, `--success`/`--warning`/`--info` + their `-soft`, `shadow-card`,
+  `font-display`) and the `soft`/`success`/`warning`/`info` Badge + Button variants come
+  from TASK-479-05. None of these are re-implemented in this group.
 - **Source-of-truth docs:** `_docs/_PROTOTYPE/README.md`, `_docs/DESIGN_TOKENS.md`,
   `_docs/TESTING_STRATEGY.md`, the parent
   `TASK-479_Admin_UI_Visual_Redesign_Prototype.md`. Prototype source screens under

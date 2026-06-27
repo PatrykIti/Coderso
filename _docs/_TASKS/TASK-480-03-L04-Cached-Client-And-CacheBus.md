@@ -71,7 +71,7 @@ export const dashboardWidgetDataTtlMs = 60 * 1000;     // 1 min background-reval
 import { apiRequest } from "./apiClient";
 import { cacheKeys, cacheTtlMs, dashboardWidgetDataTtlMs } from "@/services/cachePolicy";
 import { readLocalCache, writeLocalCache, clearLocalCache } from "@/utils/storageCache";
-import { publishCacheEvent, subscribeCacheEvent } from "@/utils/cacheBus";
+import { broadcastCacheEvent, subscribeCacheEvents } from "@/utils/cacheBus";
 
 type LoadOptions = { force?: boolean; background?: boolean };
 
@@ -101,7 +101,7 @@ async function revalidateLayout(): Promise<DashboardLayout> {
   const { layout } = await apiRequest<{ layout: DashboardLayout }>("/dashboard/layout",
     { method: "GET" });
   writeLocalCache(cacheKeys.dashboardLayout, layout);
-  publishCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
   return layout;
 }
 
@@ -109,10 +109,10 @@ export async function saveDashboardLayout(layout: DashboardLayout) {
   const res = await apiRequest<{ layout: DashboardLayout; updatedAt: string }>(
     "/dashboard/layout", { method: "PUT", body: layout });   // apiRequest attaches CSRF
   writeLocalCache(cacheKeys.dashboardLayout, res.layout);
-  publishCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
   // a saved layout can change which data is needed -> invalidate widget data
   clearLocalCache(cacheKeys.dashboardWidgetData);
-  publishCacheEvent({ key: cacheKeys.dashboardWidgetData, action: "invalidate" });
+  broadcastCacheEvent({ key: cacheKeys.dashboardWidgetData, action: "invalidate" });
   return res;
 }
 
@@ -120,9 +120,9 @@ export async function resetDashboardLayout() {
   const { layout } = await apiRequest<{ layout: DashboardLayout }>(
     "/dashboard/layout/reset", { method: "POST" });
   writeLocalCache(cacheKeys.dashboardLayout, layout);
-  publishCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
   clearLocalCache(cacheKeys.dashboardWidgetData);
-  publishCacheEvent({ key: cacheKeys.dashboardWidgetData, action: "invalidate" });
+  broadcastCacheEvent({ key: cacheKeys.dashboardWidgetData, action: "invalidate" });
   return layout;
 }
 
@@ -140,12 +140,12 @@ async function revalidateWidgetData(): Promise<DashboardWidgetDataResponse> {
   const res = await apiRequest<DashboardWidgetDataResponse>("/dashboard/widget-data",
     { method: "GET" });
   writeLocalCache(cacheKeys.dashboardWidgetData, res);
-  publishCacheEvent({ key: cacheKeys.dashboardWidgetData, action: "update" });
+  broadcastCacheEvent({ key: cacheKeys.dashboardWidgetData, action: "update" });
   return res;
 }
 
 export function subscribeDashboardCache(handler: (key: string) => void) {
-  return subscribeCacheEvent((evt) => {
+  return subscribeCacheEvents((evt) => {
     if (evt.key === cacheKeys.dashboardLayout || evt.key === cacheKeys.dashboardWidgetData) {
       handler(evt.key);
     }
@@ -168,7 +168,7 @@ export function subscribeDashboardCache(handler: (key: string) => void) {
   clean; dirty drafts defer.
 
 **Data flow:** UI → cached wrapper (hydrate from `localStorage`) → background
-`apiRequest` → `writeLocalCache` + `publishCacheEvent` → other tabs/components
+`apiRequest` → `writeLocalCache` + `broadcastCacheEvent` → other tabs/components
 revalidate. Saves invalidate dependent widget-data cache.
 
 **Error handling:** network failures keep the last good cache and surface bounded

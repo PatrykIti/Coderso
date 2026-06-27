@@ -5,9 +5,11 @@
 **Priority:** High
 **Category:** `dashboard` / `persistence`
 **Estimated Effort:** Medium
-**Dependencies:** TASK-480-01 (widget catalog: `DashboardWidgetType` enum +
-`normalizeDashboardWidgetConfig`). The layout envelope composes the catalog but
-does not redefine it.
+**Dependencies:** TASK-480-02 (widget/layout schema contract:
+`dashboardWidgetContract.ts` — the `DashboardWidgetType` enum,
+`normalizeDashboardLayout`, `adaptLegacyDashboardLayout`, `DEFAULT_DASHBOARD_LAYOUT`,
+`DASHBOARD_MAX_WIDGETS`, `normalizeDashboardWidgetConfig`). The storage layer
+imports + re-exports that contract; it does not redefine it.
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
@@ -21,13 +23,17 @@ does not redefine it.
   layout envelope, a dedicated storage table, and a repository with
   read/write/reset helpers. The stored value is **admin dashboard widgets** —
   explicitly NOT `core/widgets` page/content widgets.
-- **Owning module/service:** `core/services/dashboard/dashboardLayout.ts`
-  (schema/enums/defaults owner), `core/services/dashboard/dashboardLayoutRepository.ts`
-  (DB read/write), `core/db/schema.ts` (table), `core/db/migrations/*` (artifacts).
+- **Owning module/service:** `core/services/dashboard/dashboardLayoutRepository.ts`
+  (DB read/write), `core/services/dashboard/dashboardLayoutService.ts`
+  (read/write/reset + the route-facing `DashboardLayoutError` /
+  `dashboard_layout_invalid` code), `core/db/schema.ts` (table),
+  `core/db/migrations/*` (artifacts). The layout-envelope **schema/enums/defaults**
+  are owned by 480-02 (`dashboardWidgetContract.ts`) and are **imported/re-exported**
+  here, never re-declared.
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md`, `_docs/ORM_SPEC.md`,
   `_docs/SECURITY_SPEC.md`, `_docs/DASHBOARD_WIDGETS_SPEC.md`.
 - **Out of scope:** routes (L02), widget-data resolution (L03), caching (L04),
-  per-widget config schemas (480-01).
+  the layout/widget schema + per-widget config schemas themselves (480-02).
 
 ### Storage decision (justify)
 
@@ -57,10 +63,10 @@ Evaluated three options:
   resolved `userId` from a session-authenticated route (L02/L03).
 - **RBAC:** n/a here (enforced at routes).
 - **CSRF / Rate-limit:** n/a here.
-- **Validation:** schema-first. `normalizeDashboardLayout` parses with
-  reject-unknown, delegates per-widget `config` to the catalog, and is the **only**
-  write path into the column. Repository never persists raw input.
-- **Anti-abuse:** `MAX_WIDGETS_PER_LAYOUT` cap (recommend 24) enforced in
+- **Validation:** schema-first. `normalizeDashboardLayout` (owned by 480-02)
+  parses with reject-unknown, delegates per-widget `config` to the contract, and
+  is the **only** write path into the column. Repository never persists raw input.
+- **Anti-abuse:** `DASHBOARD_MAX_WIDGETS` cap (24, from 480-02) enforced in
   `normalizeDashboardLayout`; oversized payloads raise `dashboard_layout_invalid`.
 - **Secret handling:** layout stores presentation/config only (widget type, title,
   grid placement, bounded config). No credentials/tokens/PII are ever written; the
@@ -71,102 +77,48 @@ Evaluated three options:
 
 ## Implementation Pseudocode
 
-### 1) Layout envelope schema + normalizer (contract owner)
+### 1) Layout schema + normalizer — owned by 480-02, re-exported here (NOT re-declared)
 
-`core/services/dashboard/dashboardLayout.ts`
+The layout-envelope schema (`dashboardLayoutSchema`), `normalizeDashboardLayout()`,
+the non-destructive `adaptLegacyDashboardLayout()` legacy adapter,
+`DEFAULT_DASHBOARD_LAYOUT`, and all grid/limit constants
+(`DASHBOARD_GRID_COLUMNS`, `DASHBOARD_MAX_WIDGETS`, `DASHBOARD_LAYOUT_VERSION`) are
+**owned by TASK-480-02-L01** in `core/services/dashboard/dashboardWidgetContract.ts`.
+This storage leaf **imports** them and **never re-declares** the schema. The only
+storage-owned additions are the route-facing error class and a read-side tolerance
+wrapper (storage behaviour, not a second parser):
+
+`core/services/dashboard/dashboardLayoutService.ts`
 
 ```ts
 import {
-  dashboardWidgetTypeSchema,          // 480-01 catalog owns the enum
-  normalizeDashboardWidgetConfig,     // 480-01 catalog owns per-type config
-} from "./widgets/dashboardWidgetCatalog";
+  normalizeDashboardLayout,        // 480-02 owns the strict parse/normalize
+  adaptLegacyDashboardLayout,      // 480-02 owns the legacy/empty -> default adapter
+  DEFAULT_DASHBOARD_LAYOUT,        // 480-02 owns the default board
+  DASHBOARD_LAYOUT_VERSION,
+  type DashboardLayout,
+} from "./dashboardWidgetContract";
 
-export const DASHBOARD_LAYOUT_SCHEMA_VERSION = 1 as const;
-export const MAX_WIDGETS_PER_LAYOUT = 24;
-export const DASHBOARD_GRID_COLUMNS = 12;
+// Re-export the contract for in-package consumers; do not re-declare it.
+export { normalizeDashboardLayout, DEFAULT_DASHBOARD_LAYOUT, type DashboardLayout };
 
 export const DASHBOARD_LAYOUT_INVALID = "dashboard_layout_invalid";
 export class DashboardLayoutError extends Error {
   constructor(public field?: string) { super(DASHBOARD_LAYOUT_INVALID); }
 }
 
-// reject-unknown at every level (zod .strict() or equivalent)
-const gridCellSchema = z.object({
-  x: z.number().int().min(0).max(DASHBOARD_GRID_COLUMNS - 1),
-  y: z.number().int().min(0),
-  w: z.number().int().min(1).max(DASHBOARD_GRID_COLUMNS),
-  h: z.number().int().min(1).max(24),
-}).strict();
-
-const widgetInstanceSchema = z.object({
-  id: z.string().uuid(),
-  type: dashboardWidgetTypeSchema,         // unknown type -> reject
-  title: z.string().max(120).nullable().optional(),
-  grid: gridCellSchema,
-  config: z.unknown().optional(),          // delegated below
-}).strict();
-
-const layoutSchema = z.object({
-  schemaVersion: z.literal(DASHBOARD_LAYOUT_SCHEMA_VERSION).optional(),
-  columns: z.literal(DASHBOARD_GRID_COLUMNS).optional(),
-  widgets: z.array(widgetInstanceSchema).max(MAX_WIDGETS_PER_LAYOUT),
-}).strict();
-
-export type DashboardWidgetInstance = {
-  id: string;
-  type: DashboardWidgetType;
-  title: string | null;
-  grid: { x: number; y: number; w: number; h: number };
-  config: DashboardWidgetConfig;           // narrowed by catalog
-};
-export type DashboardLayout = {
-  schemaVersion: typeof DASHBOARD_LAYOUT_SCHEMA_VERSION;
-  columns: typeof DASHBOARD_GRID_COLUMNS;
-  widgets: DashboardWidgetInstance[];
-};
-
-export function normalizeDashboardLayout(input: unknown): DashboardLayout {
-  const parsed = layoutSchema.parse(input);              // throws ZodError on unknown
-  const seen = new Set<string>();
-  const widgets = parsed.widgets.map((w) => {
-    if (seen.has(w.id)) throw new DashboardLayoutError("widgets[].id");
-    seen.add(w.id);
-    return {
-      id: w.id,
-      type: w.type,
-      title: w.title?.trim() ? w.title.trim() : null,
-      grid: w.grid,
-      // catalog validates/normalizes config per type; unknown keys rejected there
-      config: normalizeDashboardWidgetConfig(w.type, w.config),
-    };
-  });
-  return { schemaVersion: DASHBOARD_LAYOUT_SCHEMA_VERSION, columns: DASHBOARD_GRID_COLUMNS, widgets };
-}
-
-// Read-side migration of legacy/empty/unknown stored rows -> never throws.
-export function migrateStoredLayout(raw: unknown): DashboardLayout {
+// Read-side tolerance: stored rows must NEVER throw on read. Wraps the 480-02
+// normalizer; on any failure falls back to the owned default layout.
+export function readStoredLayout(raw: unknown): DashboardLayout {
   try { return normalizeDashboardLayout(raw); }
-  catch { return getDefaultDashboardLayout(); }
-}
-
-export function getDefaultDashboardLayout(): DashboardLayout {
-  // Mirrors the current fixed dashboard so a brand-new user sees today's UX.
-  return normalizeDashboardLayout({
-    widgets: [
-      { id: crypto.randomUUID(), type: "stat.totals", grid: { x: 0, y: 0, w: 4, h: 2 } },
-      { id: crypto.randomUUID(), type: "storage.usage", grid: { x: 4, y: 0, w: 4, h: 2 } },
-      { id: crypto.randomUUID(), type: "site.health",  grid: { x: 8, y: 0, w: 4, h: 2 } },
-      { id: crypto.randomUUID(), type: "activity.recentEdits", grid: { x: 0, y: 2, w: 8, h: 4 } },
-      { id: crypto.randomUUID(), type: "security.summary", grid: { x: 8, y: 2, w: 4, h: 4 } },
-    ],
-  });
+  catch { return DEFAULT_DASHBOARD_LAYOUT; }
 }
 ```
 
-> Note: `crypto.randomUUID()` defaults must run server-side at read time only when
-> persisting a brand-new default; the normalizer itself must stay pure (no RNG) so
-> tests are deterministic — generate ids in `getDefaultDashboardLayout`, not in
-> `normalizeDashboardLayout`.
+> `DEFAULT_DASHBOARD_LAYOUT` (the seeded default board ≈ today's fixed dashboard) and
+> `normalizeDashboardLayout` are pure and deterministic in 480-02; this leaf adds no
+> RNG and no second schema. The stored widget instance shape is the canonical
+> 480-02 `DashboardWidget` (`{ id, type, title?, config, position }`).
 
 ### 2) Table (`core/db/schema.ts`)
 
@@ -190,28 +142,28 @@ One row per user; `user_id` PK doubles as the lookup index. No extra index neede
 export async function readDashboardLayout(userId: string): Promise<DashboardLayout> {
   const [row] = await db.select().from(dashboardLayouts)
     .where(eq(dashboardLayouts.userId, userId));
-  if (!row) return getDefaultDashboardLayout();    // unsaved user -> default (not persisted)
-  return migrateStoredLayout(row.layout);          // tolerate legacy/drift on read
+  if (!row) return DEFAULT_DASHBOARD_LAYOUT;        // unsaved user -> default (not persisted)
+  return readStoredLayout(row.layout);             // tolerate legacy/drift on read
 }
 
 export async function writeDashboardLayout(
   userId: string, input: unknown
 ): Promise<{ layout: DashboardLayout; updatedAt: string }> {
-  const layout = normalizeDashboardLayout(input);  // reject-unknown / cap / dup-id
+  const layout = normalizeDashboardLayout(input);  // reject-unknown / cap / dedupe-id
   const now = new Date();
   const [row] = await db.insert(dashboardLayouts)
-    .values({ userId, schemaVersion: layout.schemaVersion, layout, updatedAt: now, updatedBy: userId })
+    .values({ userId, schemaVersion: layout.version, layout, updatedAt: now, updatedBy: userId })
     .onConflictDoUpdate({
       target: dashboardLayouts.userId,
-      set: { layout, schemaVersion: layout.schemaVersion, updatedAt: now, updatedBy: userId },
+      set: { layout, schemaVersion: layout.version, updatedAt: now, updatedBy: userId },
     })
     .returning();
-  return { layout: migrateStoredLayout(row.layout), updatedAt: row.updatedAt.toISOString() };
+  return { layout: readStoredLayout(row.layout), updatedAt: row.updatedAt.toISOString() };
 }
 
 export async function resetDashboardLayout(userId: string) {
   await db.delete(dashboardLayouts).where(eq(dashboardLayouts.userId, userId));
-  return getDefaultDashboardLayout();
+  return DEFAULT_DASHBOARD_LAYOUT;
 }
 ```
 
@@ -251,8 +203,8 @@ next free index is **0064** (last shipped is `0063_yummy_glorian`):
   ```
 
 **Data flow:** route resolves `userId` → repository → `normalizeDashboardLayout`
-(write) / `migrateStoredLayout` (read) → JSONB column. Routes never touch the
-table directly.
+(write, owned by 480-02) / `readStoredLayout` (read tolerance) → JSONB column.
+Routes never touch the table directly.
 
 **Error handling:** `normalizeDashboardLayout` raises `DashboardLayoutError`
 (`dashboard_layout_invalid`) or a ZodError; both map at the route boundary (L02).
@@ -260,10 +212,10 @@ Read path never throws — it falls back to the default layout.
 
 **Regression-test shape:**
 
-- Domain (Vitest): reject-unknown at envelope/instance/grid/config levels;
-  duplicate id rejection; widget cap enforcement; unknown widget `type` rejection;
-  `migrateStoredLayout` returns default for `null`/garbage/legacy; default layout
-  is stable and re-normalizes idempotently.
+- Domain (Vitest): the 480-02 contract specs already cover reject-unknown / cap /
+  dedupe / clamp; this leaf adds `readStoredLayout` returns default for
+  `null`/garbage/legacy without throwing; default layout is stable and
+  re-normalizes idempotently.
 - Repository (Bun, DB): unsaved user → default (no row written); write→read
   round-trip; per-user isolation (user A's write does not affect user B);
   `onConflictDoUpdate` upsert overwrites; reset deletes row; cascade delete when

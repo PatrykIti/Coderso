@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Booking
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -50,8 +50,16 @@ existing tabbed CRUD or its flows.
     `getCachedBooking*` / `list*Cached`), `core/admin/ui/booking/bookingTypes.ts`
   - Cache: `core/services/cachePolicy.ts` (`cacheKeys.booking*List`),
     `core/admin/utils/cacheBus.ts` (`subscribeCacheEvents`)
-  - Shell/patterns landed by parent: TASK-479-05 (tokens), TASK-479-06 (shell +
-    shared `PageHeader`/`StatCard`/`SectionCard`)
+  - Shell/patterns landed by parent: **TASK-479-05** owns the tokens/variants
+    this screen consumes by exact name — `--primary-soft`/`--info`/`--success`/
+    `--warning` (+ each `-soft`), `shadow-card`, `font-display`, and the Badge
+    `soft` variant; **TASK-479-06-L02** creates/ports the shared `PageHeader`
+    **with the `icon` prop**, the shared `StatCard`, and `SectionCard`. This
+    screen does NOT define the soft tokens, the Badge `soft` variant, the
+    `PageHeader.icon` prop, or a local StatCard/SectionCard. (Today the real core
+    `PageHeader` has only `title`/`description`/`actions`, `Badge` has no `soft`
+    variant, and the only `StatCard` is dashboard-local — all gain their redesign
+    shape in 479-05 / 479-06-L02.)
   - `_docs/TESTING_STRATEGY.md` (Vitest = Bun-free admin/UI lane)
 - **Out of scope:** No new Booking endpoints, mutations, or `bookingClient`
   surface changes; no schedule/availability/slot-preview logic changes; no new
@@ -69,9 +77,11 @@ routes, RBAC, cache, and adminPaths). Concretely: the screen keeps the
 `booking:read` gate, `AdminShell activeHref="/admin/advanced/booking"` +
 breadcrumbs, the `getCachedBooking*` cache-hydrate seeds, the `list*Cached`
 background revalidation, and the `subscribeCacheEvents` → `cacheKeys.booking*List`
-invalidation wiring exactly as today. Any in-page navigation or new action (e.g.
-"New booking") must route through the shared canonical helpers / existing module
-href registry — never a hand-built href literal.
+invalidation wiring exactly as today. The "New booking" action does NOT navigate —
+it is a `<button>` that switches the (newly-controlled) active tab to Reservations
+via local state, so it adds no href/route. Any genuine in-page navigation must
+route through the shared canonical helpers / existing module href registry — never
+a hand-built href literal.
 
 ---
 

@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Large
-**Dependencies:** TASK-480-01 (widget schema + domain contract types) · TASK-480-02 (widget data service — supplies the per-widget `DashboardWidgetData`) · TASK-479-06-L02 (shared pattern library: `SectionCard`, `StatCard`, `charts`, `StatusBadge`, `EmptyState`, `DataTable`)
+**Dependencies:** TASK-480-02 (widget schema + domain contract types + the per-widget `DashboardWidgetData` union) · TASK-479-06-L02 (shared pattern library: `SectionCard`, `StatCard`, `charts`, `StatusBadge`, `EmptyState`, `DataTable`)
 **Status:** ⏳ To Do
 **Parent Task:** TASK-480
 
@@ -35,18 +35,18 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
 - **Owning module/service:** `core/admin/ui/dashboard/widgets/`
   (`registry.tsx`, `DashboardWidgetHost.tsx`, `renderers/*`).
 - **Source-of-truth docs:**
-  - `_docs/DASHBOARD_WIDGETS_SPEC.md` (created in TASK-480; this unit adds the
-    "Renderer catalog & states" section).
-  - Widget contract: `core/services/dashboard/dashboardWidgetTypes.ts` +
-    `dashboardWidgetSchema.ts` (owned by TASK-480-01; this unit imports, never
-    redefines, the type enum / config / data union).
+  - `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by TASK-480-01-L02; this unit
+    extends it with the "Renderer catalog & states" section).
+  - Widget contract: `core/services/dashboard/dashboardTypes.ts` (types) +
+    `dashboardWidgetContract.ts` (schema) — owned by TASK-480-02; this unit
+    imports, never redefines, the type enum / config / data union.
   - Shared patterns: `core/admin/ui/shared/{SectionCard,StatCard,Charts,StatusBadge,EmptyState,DataTable}.tsx` (TASK-479-06-L02).
   - Prototype reference: `_docs/_PROTOTYPE/src/pages/DashboardPage.tsx`,
     `_docs/_PROTOTYPE/src/components/patterns/{charts,SectionCard,StatCard}.tsx`.
   - Legacy cards being generalized: `core/admin/ui/dashboard/{StatCard,SiteHealthCard,SecurityStatusCard,RecentEditsTable}.tsx`.
   - `_docs/TESTING_STRATEGY.md` (Vitest UI lane).
-- **Out of scope:** Defining/validating the widget schema or data union (→ 480-01);
-  fetching widget data, cached client, cacheBus (→ 480-02 / 480-03); the
+- **Out of scope:** Defining/validating the widget schema or data union (→ 480-02);
+  fetching widget data, cached client, cacheBus (→ 480-03); the
   edit-mode builder, grid layout, drag/resize, add/remove (→ 480-05); the
   dashboard route/page that assembles hosts into a grid (→ 480-05). This unit
   only turns `{widget, data}` into pixels.
@@ -65,7 +65,7 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
   rate-limit bucket. Renderers MUST assume their `data` prop is already
   validated + redacted by that pipeline and add no trust of their own.
 - **Validation:** schema ownership stays in `core/services/dashboard/*`
-  (TASK-480-01). Renderers consume the **already-normalized** discriminated
+  (TASK-480-02). Renderers consume the **already-normalized** discriminated
   union; they never re-parse raw input and never accept unknown fields.
 - **Secret handling:** renderers MUST NOT render or log secrets/PII beyond what
   the redacted `DashboardWidgetData` already contains; any rich/HTML content
@@ -105,6 +105,4 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
 - `_docs/_CHANGELOG/` — entry on closure cross-linking `TASK-480` +
   `TASK-480-04` (and the specific leaf id).
 - No `_docs/CMS_API.md` / `_docs/ADMIN_CACHE*.md` / `_docs/DATA_MODEL.md` change
-  in this unit (no routes, cache, or DB) — those belong to TASK-480-01/02/03.
-</content>
-</invoke>
+  in this unit (no routes, cache, or DB) — those belong to TASK-480-02/03.

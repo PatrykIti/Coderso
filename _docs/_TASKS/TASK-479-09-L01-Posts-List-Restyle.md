@@ -63,9 +63,13 @@ the tab strip.
   actions={/* UNCHANGED: bulk Select/Apply/Clear cluster + New button */}
 />
 
-// 2) NEW status tab strip (port prototype Tabs variant="underline").
+// 2) NEW status tab strip — use the shared `StatusTabs` from 479-06-L02 (Tabs
+//    `line` variant from 479-05/06; the prototype's `underline` variant is named
+//    `line` in core — do NOT invent a divergent tab primitive here).
 //    DERIVE counts from already-loaded `items` (render-time derivation — NO new
 //    effect, NO sync setState). The tab simply sets the existing statusFilter.
+//    Only enumerate real `PostStatus` members ("draft" | "published" |
+//    "scheduled" | "archived"); never an invented "review"/"trash".
 const statusTabs = useMemo(() => {
   const by = (s: string) => items.filter((p) => p.status === s).length;
   return [
@@ -75,11 +79,11 @@ const statusTabs = useMemo(() => {
     { value: "scheduled", label: "Scheduled", count: by("scheduled") },
   ];
 }, [items]);
-// Render a soft underline tab row that calls setStatusFilter(tab.value);
-// active = statusFilter === tab.value. Reuse the prototype Tabs class shape
-// (underline, violet active text + bottom border, muted count pill). Keep it a
-// thin presentational addition layered over the EXISTING statusFilter state so
-// PageFilters' status Select and the tabs stay in sync (both write statusFilter).
+// Render the shared `StatusTabs` (line variant: violet active text + bottom
+// border, muted count pill) that calls setStatusFilter(tab.value);
+// active = statusFilter === tab.value. Keep it a thin presentational addition
+// layered over the EXISTING statusFilter state so PageFilters' status Select and
+// the tabs stay in sync (both write statusFilter).
 
 // 3) FilterBar look: PageFilters.tsx is the shared filter component. Restyle its
 //    container to the prototype FilterBar (rounded-2xl card, soft border, search
@@ -97,11 +101,14 @@ const statusTabs = useMemo(() => {
 //        prototype, kept decorative; AdminLink href + prefetch UNCHANGED.
 
 // 5) Status badges: replace the local statusStyles/ statusLabels hex maps in
-//    PostsTable.tsx with a shared StatusBadge helper ported from the prototype
-//    (_docs/_PROTOTYPE/.../StatusBadge.tsx) driven by design tokens, so violet/
-//    emerald/amber/slate read from the theme instead of hard-coded Tailwind
-//    color utilities. Map: published→success, draft→muted, scheduled→warning,
-//    review→info, archived→muted. Same label text.
+//    PostsTable.tsx with the shared `StatusBadge` from 479-06-L02 (token-driven,
+//    not a per-screen re-port), so the colors read from the theme instead of
+//    hard-coded Tailwind color utilities. Bind ONLY the real `PostStatus`
+//    members ("draft" | "published" | "scheduled" | "archived" — there is no
+//    "review" on the posts DTO; drop it). The shared StatusBadge maps these as:
+//    published→success, draft→secondary, scheduled→info, archived→secondary
+//    (matching the prototype StatusBadge — note scheduled is `info`, NOT
+//    `warning`). Same label text ("Published"/"Draft"/"Scheduled"/"Archived").
 ```
 
 **Data flow:** `getCachedPosts()` lazy init → `listPostsCached` hydrate +
@@ -129,11 +136,14 @@ subscription are the only data effects and must be left untouched (no dirty-stat
 overwrite, no refetch loop).
 
 **Regression-test shape:** see L03 — render PostsListPage with a seeded
-`getCachedPosts`, assert: header + New button present, tab strip renders with
-counts derived from items, clicking a tab updates the visible rows (drives
-statusFilter), the table wrapper carries the rounded-2xl/card classes, status
-badges render expected label text, and selecting rows still shows the bulk
-cluster.
+`getCachedPosts` via the SSR `renderAdminUi` helper and assert on the returned
+HTML string: header + New button present, the status tab strip renders with
+counts derived from items, the table wrapper carries the rounded-2xl/card classes,
+and status badges render expected label text. The tab→statusFilter wiring is
+asserted at the function level through the exported `filterPosts` (pure), since
+`renderAdminUi` is a single SSR snapshot and does not exercise click/selection
+interactions — those bulk/selection flows stay covered by the existing
+`tests/vitest/ui-integration/post-*.test.tsx` behavioral family.
 
 ---
 

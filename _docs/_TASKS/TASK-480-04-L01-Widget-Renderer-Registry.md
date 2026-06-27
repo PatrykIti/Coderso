@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Medium
-**Dependencies:** TASK-480-01 (widget type enum, `DashboardWidget`, `DashboardWidgetData` union) · TASK-479-06-L02 (`SectionCard`, `EmptyState`)
+**Dependencies:** TASK-480-02 (widget type enum, `DashboardWidget`, `DashboardWidgetData` union) · TASK-479-06-L02 (`SectionCard`, `EmptyState`)
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-480-04
 
@@ -27,9 +27,9 @@ consistent regardless of which renderer fills it.
 - **Owning module/service:** `core/admin/ui/dashboard/widgets/registry.tsx`,
   `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`.
 - **Source-of-truth docs:**
-  - Widget contract (import, do not redefine): `core/services/dashboard/dashboardWidgetTypes.ts`
-    (`DashboardWidgetType`, `DashboardWidget`, `DashboardWidgetData`) and the
-    `DASHBOARD_WIDGET_TYPES` const array from `dashboardWidgetSchema.ts` (TASK-480-01).
+  - Widget contract (import, do not redefine): `core/services/dashboard/dashboardTypes.ts`
+    (`DashboardWidgetType`, `DashboardWidget`, `DashboardWidgetData`, and the
+    `DASHBOARD_WIDGET_TYPES` const array) — owned by TASK-480-02.
   - Shared shell/empty: `core/admin/ui/shared/SectionCard.tsx`,
     `core/admin/ui/shared/EmptyState.tsx` (TASK-479-06-L02).
   - `_docs/DASHBOARD_WIDGETS_SPEC.md` (renderer catalog section).
@@ -70,8 +70,8 @@ import type {
   DashboardWidget,
   DashboardWidgetData,
   DashboardWidgetType,
-} from "@/services/dashboard/dashboardWidgetTypes";          // owned by 480-01
-import { DASHBOARD_WIDGET_TYPES } from "@/services/dashboard/dashboardWidgetSchema"; // owned by 480-01
+} from "@/services/dashboard/dashboardTypes";          // owned by 480-02
+import { DASHBOARD_WIDGET_TYPES } from "@/services/dashboard/dashboardTypes"; // owned by 480-02
 
 // Props every renderer receives. Narrowed per type so each renderer body sees
 // ONLY its own config + data variant (no per-renderer re-discrimination).
@@ -133,7 +133,7 @@ export { DASHBOARD_WIDGET_TYPES };
 import { SectionCard } from "@/ui/shared/SectionCard";
 import { EmptyState } from "@/ui/shared/EmptyState";
 import { getWidgetRenderer, isWidgetDataEmpty } from "./registry";
-import type { DashboardWidget, DashboardWidgetData } from "@/services/dashboard/dashboardWidgetTypes";
+import type { DashboardWidget, DashboardWidgetData } from "@/services/dashboard/dashboardTypes";
 
 // State is PASSED IN (no fetch here). 480-02/05 produce it via the cached client.
 export type WidgetDataState =
@@ -247,4 +247,3 @@ raw errors. The mismatch branch is a defensive invariant, not a user path.
   mismatch) as the canonical extension point for new widget types.
 - `_docs/_TASKS/README.md` — board bucket + statistics on status change.
 - `_docs/_CHANGELOG/` — entry on closure linking `TASK-480` + `TASK-480-04-L01`.
-</content>

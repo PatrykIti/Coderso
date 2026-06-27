@@ -20,8 +20,8 @@ the widget/layout types, the schema-first validation + normalization, the
 non-destructive legacy adapter, and the **data-source registry** that maps each
 widget type to a resolver reading real CMS data. No HTTP routes, no persistence
 table, and no React are introduced here — those are sibling subtasks
-(`TASK-480-01` storage/migration, `TASK-480-03` data + layout API,
-`TASK-480-04..05` admin builder UI). Everything authored here is the
+(`TASK-480-03` layout persistence + admin API, `TASK-480-04` widget renderers,
+`TASK-480-05` admin builder UI). Everything authored here is the
 single source of truth that those routes/components **re-export but never
 re-declare**.
 
@@ -31,13 +31,14 @@ re-declare**.
 - **Owning module/service:** `core/services/dashboard/*`
   (`dashboardTypes.ts`, new `dashboardWidgetContract.ts`,
   extended `dashboardService.ts`, new `dashboardDataSources.ts`).
-- **Source-of-truth docs:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (created by
-  `TASK-480-01`/this subtask), `_docs/DATA_MODEL.md`, `_docs/CMS_API.md`,
+- **Source-of-truth docs:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by
+  `TASK-480-01-L02`, extended by this subtask), `_docs/DATA_MODEL.md`, `_docs/CMS_API.md`,
   `_docs/RBAC_SPEC.md`, `_docs/TESTING_STRATEGY.md`.
-- **Out of scope:** persistence table + migration (`TASK-480-01`), the
+- **Out of scope:** persistence table + migration (`TASK-480-03`), the
   `/admin/api/dashboard/*` routes + cached client + cacheBus wiring
-  (`TASK-480-03`), the edit-mode builder / floating-panel UI
-  (`TASK-480-04..05`), and the TASK-479 visual re-skin of the dashboard shell.
+  (`TASK-480-03`), the widget renderers (`TASK-480-04`), the edit-mode builder /
+  floating-panel UI (`TASK-480-05`), and the TASK-479 visual re-skin of the
+  dashboard shell.
 
 > **Naming note:** these are **admin Dashboard widgets** — configurable panels on
 > the admin home surface. They are **DISTINCT from `core/widgets`** (the page /
@@ -57,7 +58,8 @@ permission model. It nonetheless encodes constraints the API subtask depends on:
   session-authenticated.
 - **RBAC:** n/a here. Document the intended split so the route subtask enforces
   it: **read/resolve widget data** → `content:read`; **persist layout** →
-  the dashboard-layout write permission defined by `TASK-480-01`.
+  the dedicated dashboard-layout write permission (`dashboard:write`) decided in
+  `TASK-480-01-L02` and added/enforced by `TASK-480-03`.
 - **CSRF / Rate-limit:** n/a (no writes here).
 - **Validation:** `dashboardWidgetContract.ts` is the schema owner. It
   **rejects unknown fields** (`.strict()` / `assertAllowedKeys`) and exposes
@@ -106,7 +108,7 @@ L02 (registry + resolvers consume the L01 types) → L03 (tests cover both).
   `DashboardWidget` / `DashboardLayout` shapes, per-type config, default widget
   set, grid constants/clamps, and the resolver registry contract.
 - `_docs/DATA_MODEL.md` — note the conceptual `DashboardLayout` document shape
-  (the physical table lands in `TASK-480-01`).
+  (the physical table lands in `TASK-480-03`).
 - Task board index (`_docs/_TASKS/README.md`) — register `TASK-480-02` + leaves.
 - Changelog — task-linked entry on closure.
 - (No `_docs/CMS_API.md` / `_docs/ADMIN_CACHE*.md` change in *this* subtask —

@@ -63,7 +63,9 @@ shapes -02/-03 will own in `core/services/dashboard/*`.
 ### 1. Widget catalog (types + data source + config)
 
 ```ts
-// core/services/dashboard/widgets/dashboardWidgetTypes.ts (owner; -02 builds)
+// core/services/dashboard/dashboardTypes.ts (owned by 480-02; this is the seed sketch —
+// 480-02-L01 is the canonical enum/contract owner). Widget-id naming below is a
+// product-spec sketch; the SHIPPED ids/grouping are whatever 480-02-L01 registers.
 export type DashboardWidgetType =
   | "stat.counter"        // single number (StatCard)
   | "chart.timeseries"    // content created/updated over time (AreaChart)
@@ -114,7 +116,8 @@ export const DASHBOARD_WIDGET_DEFAULT_CONFIG: Record<DashboardWidgetType, unknow
 ### 2. Layout / grid model
 
 ```ts
-// core/services/dashboard/widgets/dashboardLayoutTypes.ts (owner; -02/-03 build)
+// core/services/dashboard/dashboardTypes.ts + dashboardWidgetContract.ts
+// (owned by 480-02; layout envelope schema lives in dashboardWidgetContract.ts)
 export type DashboardWidgetPosition = {
   x: number; // grid col, 0-based
   y: number; // grid row, 0-based

@@ -16,11 +16,12 @@
 
 Add a Vitest render test that locks the restyled Solution Kits gallery's
 structure and proves the restyle preserved behavior: the **featured banner**
-renders with the AI-assembled badge and the reviewed-flow CTA, the **kit card
-grid** renders one card per cached kit (title + recommended-module badges), the
-**active/selected** kit shows the "Selected" badge and button label, and the page
-still exposes the **Reviewed Site Builder** handoff while never introducing an
-"Apply kit" install action.
+renders as a non-action hero (heading + AI-assembled badge) and the single
+reviewed-flow CTA ("Open LLM Guide") stays in the **Reviewed Site Builder** card
+(not duplicated in the banner), the **kit card grid** renders one card per cached
+kit (title + recommended-module badges), the **active/selected** kit shows the
+"Selected" badge and button label, and the page still exposes the **Reviewed Site
+Builder** handoff while never introducing an "Apply kit" install action.
 
 - **Goal:** Guard L01 against regressions with focused, deterministic render
   tests in the Bun-free admin Vitest lane.
@@ -72,13 +73,15 @@ const KITS = [
 
 afterEach(() => { /* restore globalThis.localStorage like the existing suite */ });
 
-test("featured banner renders with AI-assembled badge and reviewed-flow CTA", () => {
-  // seed cache so cards hydrate without a loading placeholder
+test("featured banner is a non-action hero; the reviewed CTA stays single", () => {
+  // banner renders regardless of kit hydration (no cache seed needed here)
   const html = renderAdminUi(<SolutionKitsPage />, { path: "/admin/advanced/solution-kits" });
-  expect(html).toContain("Launch a full site in minutes");
-  expect(html).toContain("AI assembled");
-  expect(html).toContain("Reviewed Site Builder");
-  expect(html).toContain("Open LLM Guide");
+  expect(html).toContain("Launch a full site in minutes"); // banner hero heading
+  expect(html).toContain("AI assembled");                  // banner badge
+  expect(html).toContain("Reviewed Site Builder");         // right-column card
+  expect(html).toContain("Open LLM Guide");                // the single reviewed-flow CTA
+  // guard the "duplicate banner CTA" fix: the CTA label appears exactly once
+  expect(html.split("Open LLM Guide").length - 1).toBe(1);
 });
 
 test("grid renders one card per cached kit with title + module badges", () => {
@@ -86,7 +89,7 @@ test("grid renders one card per cached kit with title + module badges", () => {
   const html = renderAdminUi(<SolutionKitsPage />, { path: "/admin/advanced/solution-kits" });
   expect(html).toContain("Automotive Workshop");
   expect(html).toContain("Small Ecommerce");
-  expect(html).toContain("booking");           // recommended-module badge (capitalized/spaced)
+  expect(html).toContain("booking");           // module badge text = de-hyphenated token; `capitalize` is CSS-only, so the HTML text stays lowercase "booking"
   expect(html).not.toContain("Loading solution kits");
 });
 
@@ -113,7 +116,9 @@ localStorage stub at the start of each test and restore the original in `afterEa
 network, or `openAssistantPanel` side effects are required (assert on rendered
 markup only).
 
-**Regression-test shape:** featured banner + AI-assembled badge + reviewed CTA;
+**Regression-test shape:** featured non-action banner hero + AI-assembled badge,
+with the single reviewed CTA ("Open LLM Guide") living in the Reviewed Site
+Builder card (asserted to appear exactly once — not duplicated in the banner);
 grid cardinality + title + module badges (no loading placeholder when cache is
 warm); active/selected state with the "Selected" label and the absence of "Apply
 kit". Do not assert on exact Tailwind class strings — assert on user-visible text

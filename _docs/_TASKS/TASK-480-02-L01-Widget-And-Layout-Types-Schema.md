@@ -31,8 +31,8 @@ security) reusing the data the current `DashboardPayload` already exposes.
 - **Source-of-truth docs:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (create/extend),
   `_docs/DATA_MODEL.md`, `_docs/RBAC_SPEC.md`.
 - **Out of scope:** the resolver registry / data reads (L02), persistence table
-  + migration (`TASK-480-01`), HTTP routes/cache (`TASK-480-03`), UI
-  (`TASK-480-04..05`).
+  + migration (`TASK-480-03`), HTTP routes/cache (`TASK-480-03`), UI
+  (`TASK-480-04` renderers / `TASK-480-05` builder).
 
 > These are **admin Dashboard widgets**, NOT `core/widgets` page/content widgets.
 > Do not import or alias the `core/widgets` catalog here.
@@ -45,7 +45,8 @@ security) reusing the data the current `DashboardPayload` already exposes.
   `/admin/api/*` routes later).
 - **Auth model / RBAC / CSRF / Rate-limit:** n/a in this leaf. Document for the
   route subtask: resolving widget data → `content:read`; persisting a layout →
-  the dashboard-layout write permission (`TASK-480-01`).
+  the dedicated dashboard-layout write permission (`dashboard:write`, added by
+  `TASK-480-03`).
 - **Validation (the core of this leaf):** `dashboardWidgetContract.ts` is the
   **only** module allowed to parse raw layout input. The schema is **strict**
   (reject unknown top-level and per-widget keys), enums are closed, and grid
@@ -69,7 +70,9 @@ security) reusing the data the current `DashboardPayload` already exposes.
       `DashboardLayout`.
 - [ ] Create `dashboardWidgetContract.ts`: schema (strict), grid constants,
       defaults, `normalizeDashboardLayout()`, `adaptLegacyDashboardLayout()`,
-      `DEFAULT_DASHBOARD_LAYOUT`.
+      `DEFAULT_DASHBOARD_LAYOUT`, and the public per-widget config validator
+      `normalizeDashboardWidgetConfig(type, config)` (consumed by the 480-03 data
+      route and the 480-05 configure panel; this module is the only owner).
 - [ ] Wire the contract to remain the owner (export enum + schema + helpers);
       add no parsing elsewhere.
 - [ ] Unit coverage handed to L03.
@@ -245,6 +248,17 @@ function normalizeWidgetConfig(type, cfg) {
   }
   return cfg;
 }
+
+// PUBLIC per-type config validator — the single owner of per-widget config
+// validation. Consumed by the 480-03 data route and the 480-05 configure panel
+// (both import this; neither re-declares a parser).
+export function normalizeDashboardWidgetConfig(
+  type: DashboardWidgetType,
+  config: unknown,
+): DashboardWidgetConfig {
+  const cfgSchema = configSchemas[type];
+  return normalizeWidgetConfig(type, cfgSchema.parse(withKind(type, config)));
+}
 ```
 
 ### 3. Defaults + non-destructive legacy adapter
@@ -309,7 +323,7 @@ a slightly-stale UI draft still saves.
   `DashboardLayout` shapes, per-type config table, grid constants/clamps,
   DEFAULT widget set, legacy-adapter behavior.
 - `_docs/DATA_MODEL.md` — document the `DashboardLayout` document shape
-  (physical table arrives in `TASK-480-01`).
+  (physical table arrives in `TASK-480-03`).
 - Board index + changelog on closure.
 
 ---

@@ -49,10 +49,13 @@ routes, RBAC, cache, and adminPaths). Concretely:
 - Keep `getDashboardData()` and the `DashboardPayload` shape exactly as today; do
   not add client calls.
 - Every in-page navigation (recently-edited rows, "All pages", "View all", etc.)
-  MUST route through the shared canonical helpers — `adminPaths` for hrefs and
-  `AdminLink`/`prefetchAdminRoute` for navigation/prefetch — never a hand-built
-  string. (The prototype's `<Link to="/pages">`/`/audit` literals are mock-only;
-  translate each to its `adminPaths.*` equivalent.)
+  MUST use the shared `AdminLink` — its `href` prop is canonicalized by
+  `resolveAdminHref` (from `@/utils/adminPaths`), and prefetch is the `AdminLink`
+  `prefetch` prop — never a hand-built string or a React-Router `<Link to=…>`.
+  (The prototype's `<Link to="/pages">`/`/audit` literals are mock-only; pass the
+  route to `AdminLink href` — e.g. `href="/pages"` — and `resolveAdminHref`
+  canonicalizes it to the real `/admin/pages`. Note `AdminLink` takes `href`, not
+  `to`, and there is no `adminPaths.pages()` builder.)
 - Preserve the existing data-hydration semantics: one fetch on mount via the
   `active`-flag effect plus the manual `refresh` button. Do NOT add a
   mount-force refetch loop, and do not overwrite in-flight/dirty state. If the
@@ -69,7 +72,7 @@ routes, RBAC, cache, and adminPaths). Concretely:
 |-------------------|-----------------------------------|----------|
 | Stat-card grid (4) | `totals.pages`, `totals.entries`, `totals.media`, `totals.users` + `storage` | Port with real values; sparkline optional (see below) |
 | Content breakdown Donut | `totals` (pages / entries / media / users) | Port with real totals as segments |
-| Recently edited list | `recentEdits[]` (title, path, status, author, updatedAt) | Restyle existing `RecentEditsTable` rows; reuse `StatusBadge` |
+| Recently edited list | `recentEdits[]` (title, path, status, author, updatedAt) | Restyle existing `RecentEditsTable` rows; map `status` (the real `DashboardRecentEditStatus`: `draft`/`published`/`scheduled`/`archived`/`active`) via the shared `StatusBadge` (479-06-L02), keeping the existing local status→class map for any value the shared badge doesn't cover (e.g. `active`) — invent no new statuses |
 | Site health card | `storage` | Restyle existing `SiteHealthCard` inside a `SectionCard` |
 | Security status card | `security` | Restyle existing `SecurityStatusCard` inside a `SectionCard` |
 | Traffic AreaChart (time-series) | none | Omit OR render a clearly-labeled static placeholder; add follow-up task for a metrics endpoint |
@@ -82,6 +85,13 @@ routes, RBAC, cache, and adminPaths). Concretely:
 
 ### `StatCard.tsx` — restyle, keep the existing prop API
 
+> **Interim component.** The dashboard-local `core/admin/ui/dashboard/StatCard.tsx`
+> is restyled in place here, but it is **interim**: the shared `StatCard.tsx` lands
+> in 479-06-L02 and TASK-480-04 later generalizes it. Keep this card's prop API
+> backward-compatible (and additive-only) so the swap to the shared `StatCard` is
+> non-breaking. Pull `Sparkline`/`Donut` from the shared `Charts.tsx`
+> (PascalCase) — not a divergent local chart.
+
 ```tsx
 // core/admin/ui/dashboard/StatCard.tsx
 // Port the prototype StatCard look (soft Card, muted icon chip, font-display
@@ -89,7 +99,7 @@ routes, RBAC, cache, and adminPaths). Concretely:
 // accent, className) so existing callers/tests don't break. Add OPTIONAL
 // `spark`/`trend` for forward-compat with the shared Sparkline from 06-L02.
 import { Card, CardContent } from "@/components/ui/card";
-import { Sparkline } from "@/ui/shared/charts"; // shared module created in TASK-479-06-L02
+import { Sparkline } from "@/ui/shared/Charts"; // shared module (PascalCase, case-sensitive) created in TASK-479-06-L02
 import { cn } from "@/lib/utils";
 
 type StatCardProps = {
@@ -132,7 +142,7 @@ export function StatCard({ label, value, delta, icon, accent = "primary", trend 
 // derivation (cards via useMemo) per ESLint 9 react-hooks rules.
 
 return (
-  <AdminShell activeHref={adminPaths.dashboard()}>{/* helper, not "/admin" literal */}
+  <AdminShell activeHref="/admin">{/* matches the real DashboardPage; "/admin" is the canonical dashboard href (no adminPaths.dashboard() builder exists) */}
     <div className="mx-auto flex max-w-6xl flex-col gap-4">
       <PageHeader                                   // from shared shell/patterns (479-06)
         title="Dashboard"
@@ -151,14 +161,14 @@ return (
         {/* Recently edited (real recentEdits) — spans 2 cols */}
         <SectionCard
           className="lg:col-span-2" title="Recent Edits" padded={false} bodyClassName="p-0"
-          action={<AdminLink to={adminPaths.pages()}>{/* ghost "All pages" */}</AdminLink>}
+          action={<AdminLink href="/pages">{/* ghost "All pages"; resolveAdminHref → /admin/pages */}</AdminLink>}
         >
           <RecentEditsTable items={data?.recentEdits ?? []} />{/* restyled rows + StatusBadge */}
         </SectionCard>
 
         {/* Content breakdown (real totals) */}
         <SectionCard title="Content breakdown" description="By type">
-          <Donut segments={donutSegments(data?.totals)} />{/* shared Donut from 06-L02 */}
+          <Donut segments={donutSegments(data?.totals)} />{/* shared Donut from 479-06-L02 Charts.tsx */}
           <DonutLegend totals={data?.totals} />
         </SectionCard>
       </div>
@@ -191,9 +201,13 @@ still assert a loading marker (keep a `Loading dashboard…`-equivalent node or 
 **Regression-test shape (delivered in L02):**
 
 - Render `DashboardPage` server-side via `renderAdminUi`; assert the loading
-  state and the restyled section headings render without throwing.
-- Assert links resolve to `adminPaths.*` targets (no raw `/pages`/`/audit`
-  literals leaking from the prototype).
+  state and the restyled **static** section headings render without throwing.
+  (Data-gated content — recently-edited rows, donut segments, live stat values —
+  does NOT render under the SSR helper because the mount fetch never resolves;
+  do not assert it there.)
+- Assert the always-rendered nav link emits its canonical resolved href
+  (`AdminLink href="/pages"` → `/admin/pages`), with no raw prototype `/pages`
+  literal leaking.
 
 ---
 

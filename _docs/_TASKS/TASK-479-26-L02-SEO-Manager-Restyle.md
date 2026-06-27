@@ -27,8 +27,12 @@ cache contract stay byte-for-byte the same.
   contract.
 - **Owning module/service:** `core/admin/ui/seo/SeoManagerPage.tsx`,
   `core/admin/ui/seo/SeoTable.tsx`, `core/admin/ui/seo/SeoDrawer.tsx`,
-  `core/admin/ui/seo/SeoAuditDialog.tsx`. Shared `PageHeader`/`StatCard`/`DataTable`/
-  `FilterBar`/`StatusBadge`/`Progress` primitives from TASK-479-06.
+  `core/admin/ui/seo/SeoAuditDialog.tsx`. `PageHeader` (with the `icon` prop added by
+  06-L02), `StatCard` (`core/admin/ui/shared/StatCard.tsx`), `DataTable`, and `FilterBar`
+  are **created/ported by TASK-479-06-L02**; `Progress` is the 06-L01
+  `@/components/ui/progress` restyle; the `success`/`warning`/`destructive` Badge variants
+  come from TASK-479-05. (This screen uses the meta/social Badge variants directly; there
+  is no per-page status pill that needs the shared `StatusBadge`.)
 - **Source-of-truth docs:** prototype screen
   `_docs/_PROTOTYPE/src/pages/tools/SeoManagerPage.tsx`; prototype patterns
   `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,StatCard,FilterBar,DataTable,Pagination}.tsx`
@@ -60,29 +64,43 @@ background revalidation, the search/filter state, and the drawer/audit open stat
 ```tsx
 // SeoManagerPage.tsx — RENDER ONLY changes inside the existing return().
 
-// 1) Replace the ad-hoc header with the shared restyled PageHeader (icon + action).
+// 1) Replace the ad-hoc header with the shared PageHeader (icon + action). The `icon`
+//    prop is the one TASK-479-06-L02 ADDS — today's shared PageHeader is
+//    title/description/actions only (no icon/breadcrumbs).
 <PageHeader
   title="SEO manager"
   description="Monitor search performance and fix on-page issues across your site."
   icon={<Gauge />}
   actions={<Button className="gap-1.5" onClick={openAudit}><ScanLine className="size-4" /> Run audit</Button>}
 />
-// `openAudit` = the EXISTING handler that opens SeoAuditDialog. Do not change it.
+// `openAudit` = the EXISTING audit-dialog opener (`setAuditDialogOpen(true)` in
+// SeoManagerPage). Do not change it.
 
-// 2) Stat row — DERIVE from the loaded `items` (render-time useMemo, NO new effect):
+// 2) Stat row — DERIVE from the loaded `items` (the render-time `SeoItem[]` that
+//    SeoManagerPage maps from `SeoDocumentItem` via `mapSeoItem`; NO new effect). The
+//    real `SeoItem` (core/admin/ui/seo/SeoTable.tsx) exposes ONLY: `score:number`,
+//    `metaStatus:"optimized"|"short"|"missing"`, `socialStatus:"ready"|"missing"`,
+//    `analysisStatus:"passed"|"attention"`, `analysisNotes:string[]` (+ title/path/...).
+//    There is NO `issues`/`indexed`/`titleLength`/`meta` field — bind to the real ones:
 const seoStats = useMemo(() => {
-  const scores = items.map((i) => i.score).filter((n) => typeof n === "number");
+  const scores = items.map((i) => i.score);
   const avg = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
   return {
-    avg,
-    issues: items.reduce((n, i) => n + (i.issues ?? 0), 0),
-    indexed: items.filter((i) => i.indexed).length,           // use the real field name
-    warnings: items.filter((i) => i.titleLength === "warning" || i.meta === "missing").length,
+    avg,                                                                  // real `score`
+    // real issue count = notes on pages flagged `attention` (a `passed` page carries the
+    // single "No issues found" placeholder note, which is NOT counted):
+    issues: items.reduce((n, i) => n + (i.analysisStatus === "attention" ? i.analysisNotes.length : 0), 0),
+    optimized: items.filter((i) => i.metaStatus === "optimized").length,  // real `metaStatus`
+    warnings: items.filter((i) => i.metaStatus === "short" || i.metaStatus === "missing").length,
   };
 }, [items]);
-// Render 4 shared <StatCard> (Avg score / Issues / Indexed pages / Warnings). The
-// delta/trend props are optional — only pass them if a real comparison value exists;
-// otherwise omit (do NOT fabricate the prototype's "+4 / -6" mock deltas).
+// Render 4 shared <StatCard> (from 479-06-L02): Avg score / Issues / Optimized pages /
+// Warnings — ALL derived from the real fields above. The prototype's "Indexed pages"
+// stat is DROPPED: no index-status field exists on `SeoItem` or the `SeoDocumentItem`
+// DTO — flag it feature-incomplete (needs a backend `indexed` field) rather than
+// fabricating a count. Pass delta/trend only if a real comparison exists; otherwise omit
+// (do NOT fabricate the prototype's "+4 / -6" mock deltas — the cache holds no
+// previous-period SEO snapshot).
 
 // 3) FilterBar — replace the bespoke search box with the shared FilterBar
 //    (searchPlaceholder="Search pages…", view="list"). Keep the existing query state +
@@ -90,16 +108,25 @@ const seoStats = useMemo(() => {
 
 // 4) SeoTable.tsx — restyle the wrapper to the prototype DataTable
 //    ("overflow-hidden rounded-2xl border bg-card shadow-card") and adopt the
-//    prototype columns over the EXISTING SeoItem rows:
-//      - Page: rounded-xl FileText tile + title + mono slug. Row click opens the
-//        existing SeoDrawer via onRowClick (keep the handler).
+//    prototype columns over the EXISTING `SeoItem` rows (real fields only):
+//      - Page: rounded-xl FileText tile + `title` + mono `path`. Open the existing
+//        SeoDrawer via the EXISTING per-row edit action `onEdit?.(item.id)` — the real
+//        SeoTable has an `onEdit` pencil action, there is NO `onRowClick` prop. The whole
+//        row MAY become clickable but must call the same `onEdit` handler.
 //      - Score: <span className={scoreTextTone(score)}>{score}</span> + shared
-//        <Progress value={score} tone={scoreTone(score)} className="w-20" />.
-//        Port scoreTextTone/scoreTone (>=85 success, >=65 warning, else destructive).
-//      - Title length: <Badge variant="success">Good</Badge> | variant="warning" "Too long".
-//      - Meta description: <Badge variant="success">Good</Badge> | variant="destructive" "Missing".
-//      - Issues: right-aligned tabular-nums count (muted when 0).
-//    Use the SAME column field names already present on SeoItem — do not rename data.
+//        <Progress value={score} className="w-20" /> (06-L01 `@/components/ui/progress`;
+//        tone via the className/variant 06 supplies — the base Progress takes only
+//        `value`). Use the real thresholds already in SeoTable's `getScoreTone`: >=80
+//        success, >=50 warning, else destructive.
+//      - Meta description: 3-state from the real `metaStatus` — <Badge variant="success">
+//        Optimized</Badge> | variant="warning" "Too short" | variant="destructive"
+//        "Missing". The prototype's separate "Title length" column is DROPPED (no
+//        `titleLength` field; the only meta signal is the 3-state `metaStatus`).
+//      - Social: from the real `socialStatus` — <Badge variant="success">Ready</Badge> |
+//        muted "Missing" (replaces the unbacked "title length" column).
+//      - Issues: right-aligned tabular-nums = `analysisStatus === "attention" ?
+//        analysisNotes.length : 0` (muted when 0).
+//    Use the SAME field names present on the real `SeoItem` — do not rename or invent data.
 
 // 5) Pagination — use the shared ListPaginationFooter / Pagination with the EXISTING
 //    page/total state. No page-size or paging logic changes.
@@ -111,9 +138,10 @@ const seoStats = useMemo(() => {
 `SeoAuditDialog` on action. The restyle changes none of these edges.
 
 **Navigation/href constraint (preserve):** SEO rows open the in-page `SeoDrawer` (not a
-route), so there is no href to hand-build; keep `onRowClick` wired to the existing
-drawer open. If any cell links to the live page or a page editor, keep it routed via
-the existing `AdminLink`/`adminPaths` wiring — do NOT string-concat URLs.
+route), so there is no href to hand-build; keep the existing `onEdit(id)` action wired to
+the drawer open (there is no `onRowClick` prop on the real SeoTable). If any cell links to
+the live page or a page editor, keep it routed via the existing `AdminLink`/`adminPaths`
+wiring — do NOT string-concat URLs.
 
 **Error handling:** Keep the destructive `Alert` ("SEO unavailable" / API error) with
 its existing condition; only its card styling inherits new tokens. Keep the loading and
@@ -129,9 +157,10 @@ overwrite, no refetch loop).
 **Regression-test shape:** see L07 — render `SeoManagerPage` with a seeded
 `getCachedSeo`; assert: header + "Run audit" button present (click opens
 `SeoAuditDialog`), the 4 StatCards render with values derived from the seeded items
-(avg/issues/indexed/warnings), the table renders score progress bars + title/meta
-badges + issue counts, the wrapper carries the rounded-2xl/card classes, and clicking a
-row opens the `SeoDrawer`.
+(avg/issues/optimized/warnings — NOT a fabricated "Indexed pages"), the table renders
+score progress bars + meta/social badges (from `metaStatus`/`socialStatus`) + issue
+counts (from `analysisNotes`), the wrapper carries the rounded-2xl/card classes, and
+triggering the row's `onEdit` action opens the `SeoDrawer`.
 
 ---
 

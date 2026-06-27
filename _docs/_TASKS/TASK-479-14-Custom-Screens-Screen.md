@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Custom Screens / Visual Refresh
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -60,8 +60,10 @@ authoring primitives as-is; it must not regress them.
   (`core/services/customScreens/screenEntryPresentationOverrides.ts`), or the
   field-binding model. No workspace switcher, plans, "Coderso Pro", or trial
   chrome — this is a self-hosted WordPress competitor; the shell shows site
-  identity only (owned by TASK-479-06). The `EditorViewDesigner.tsx`-style dead
-  code stays untouched (see TASK-474).
+  identity only (owned by TASK-479-06). Any authoring-side dead code flagged in
+  TASK-474 stays untouched — do not resurrect or restyle it (see
+  [[task-474-custom-screen-canvas-parity]]). (There is no `EditorViewDesigner.tsx`
+  in core today; do NOT reintroduce one.)
 
 ---
 
@@ -148,13 +150,17 @@ Lane = **Vitest** (Bun-free admin/UI) per `_docs/TESTING_STRATEGY.md`. Run:
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-list-restyle.test.tsx tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`
 
 New per-surface restyle suites land under `tests/vitest/ui-integration/`
-(see TASK-479-14-L05). The existing custom-screen suites under `tests/vitest/ui/`
-MUST stay green — at minimum re-run `custom-screens-page.test.tsx`,
-`custom-screens-list-wave.test.tsx`, `custom-screen-records.test.tsx`,
-`custom-screen-record-interactions.test.tsx`,
-`custom-screen-list-view-canvas.test.tsx`,
-`custom-screen-editor-binding-flow.test.tsx`,
-`custom-screen-entry-draft.test.ts`, and `custom-screen-route-params.test.ts`.
+(see TASK-479-14-L05). The existing custom-screen suites — split across
+`tests/vitest/ui/` and `tests/vitest/ui-integration/` (verify each path/extension
+on disk before citing) — MUST stay green; at minimum re-run
+`tests/vitest/ui/custom-screens-page.test.tsx`,
+`tests/vitest/ui/custom-screens-list-wave.test.tsx`,
+`tests/vitest/ui/custom-screen-records.test.tsx`,
+`tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`,
+`tests/vitest/ui/custom-screen-list-view-canvas.test.tsx`,
+`tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx`,
+`tests/vitest/ui/custom-screen-entry-draft.test.ts`, and
+`tests/vitest/ui/custom-screen-route-params.test.ts`.
 Update literal class/markup assertions where the restyle intentionally changes
 them, but do NOT delete behavioral assertions. Do NOT move runtime tests into
 Vitest for coverage.

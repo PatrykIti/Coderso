@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Store
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`
@@ -28,12 +28,16 @@ when a real `storeClient` is wired) are preserved exactly.
   `core/admin/ui/store/PluginDetailsPage.tsx` (and `PluginDetailsTabs.tsx`) match the
   prototype look while keeping every behavior, so a user sees a redesigned store
   gallery with a featured banner, category tabs, and soft plugin cards, and a calmer
-  details screen with a hero header, underline tabs, and a SectionCard info sidebar —
+  details screen with a hero header, `line`-variant tabs, and a SectionCard info sidebar —
   with no functional regressions.
 - **Owning module/service:** `core/admin/ui/store/**` (PluginStorePage, StoreList,
-  StoreDetail, PluginStore types; PluginDetailsPage, PluginDetailsTabs, PluginCard,
-  PluginFilters, PluginDetailsDialog) plus the installed-plugins children under
-  `core/admin/ui/plugins/**`. Shared primitives + shell from TASK-479-05/06
+  StoreDetail, PluginStore types; PluginDetailsPage, PluginDetailsTabs) plus the
+  installed-plugins children under `core/admin/ui/plugins/**` (PluginList,
+  PluginDetail). NOTE: `PluginCard.tsx`, `PluginFilters.tsx`, and
+  `PluginDetailsDialog.tsx` are DEAD CODE — no routed page imports them
+  (`PluginStorePage`/`PluginDetailsPage` never render them; `PluginDetailsDialog` is
+  referenced only by the already-dead `PluginCard`), so they are OUT OF SCOPE for this
+  restyle and must NOT be reskinned. Shared primitives + shell from TASK-479-05/06
   (`core/admin/styles/globals.css` tokens, `@/ui/layouts/AdminShell`,
   `@/ui/shared/PageHeader`, and the shared pattern library — e.g. `SectionCard`,
   `StatusBadge` — delivered by TASK-479-06-L02).

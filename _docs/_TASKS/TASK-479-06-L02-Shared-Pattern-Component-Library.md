@@ -17,10 +17,18 @@
   these structures while keeping each page's data/logic. Deliver: extend the
   existing `PageHeader` (icon + breadcrumbs + larger display title), and add
   `SectionCard`, `DataTable`, `StatCard`, `FilterBar`, `EmptyState`,
-  `StatusBadge`, `SettingsSection` (+`SettingsField`), `SectionHeader` retheme,
-  and pure-SVG `charts` (Area/Bar/Sparkline/Donut). `ListPaginationFooter`
+  `StatusBadge`, `StatusTabs`, list/table skeletons (`ListSkeleton` +
+  `FormTableSkeleton`), `SettingsSection` (+`SettingsField`), `SectionHeader`
+  retheme, and pure-SVG `Charts` (Area/Bar/Sparkline/Donut). `ListPaginationFooter`
   already exists — restyle it to the new look without changing its API.
-- **Owning module/service:** `core/admin/ui/shared/{PageHeader,SectionHeader,SectionCard,DataTable,StatCard,FilterBar,EmptyState,StatusBadge,SettingsSection,Charts,ListPaginationFooter}.tsx`.
+  **This leaf is the single owner of these shared names** — screen leaves
+  (479-07..29) and TASK-480 reference them by these **exact** PascalCase names
+  (`StatCard.tsx`, `Charts.tsx`, `StatusBadge`, `StatusTabs`, `EmptyState`,
+  `PageHeader`) and must NOT each invent a divergent local primitive.
+- **Owning module/service:** `core/admin/ui/shared/{PageHeader,SectionHeader,SectionCard,DataTable,StatCard,FilterBar,EmptyState,StatusBadge,StatusTabs,ListSkeleton,FormTableSkeleton,SettingsSection,Charts,ListPaginationFooter}.tsx`
+  (`PageHeader`/`SectionHeader`/`ListPaginationFooter` exist and are extended/
+  rethemed; the rest are new — `StatusTabs` and the skeletons have no prototype
+  source and are built fresh on the L01 `Tabs` `line` variant + base `Skeleton`).
 - **Source-of-truth docs:** `_docs/_PROTOTYPE/src/components/patterns/*` (port
   source); `_docs/_PROTOTYPE/README.md` §"Patterns/shell"; `_docs/DESIGN_TOKENS.md`.
 - **Out of scope:** Wiring these into real pages (→ TASK-479-07); editor preview
@@ -59,15 +67,18 @@ export function PageHeader({ title, description, actions, breadcrumbs, icon, cla
 ### New shared patterns (port from prototype)
 
 ```text
-SectionCard.tsx     <- patterns/SectionCard.tsx   (title/description/icon/action header + body, rounded-2xl)
-DataTable.tsx       <- patterns/DataTable.tsx      (Column<Row> config, selectable, onRowClick; uses ui/table + ui/checkbox)
-StatCard.tsx        <- patterns/StatCard.tsx       (label/value/delta/trend/icon/spark/hint; uses Sparkline)
-FilterBar.tsx       <- patterns/FilterBar.tsx      (search input + filters + grid/list view toggle)
-EmptyState.tsx      <- patterns/EmptyState.tsx     (icon tile + title + description + action, dashed card)
-StatusBadge.tsx     <- patterns/StatusBadge.tsx    (status->variant MAP using L01 badge soft/success/warning/info)
-SettingsSection.tsx <- patterns/SettingsSection.tsx(+ SettingsField; two-col sticky settings layout)
-Charts.tsx          <- patterns/charts.tsx         (AreaChart/BarChart/Sparkline/Donut, pure SVG, useId, tokens)
-SectionHeader.tsx   (RETHEME existing) -> match SectionCard header type scale + spacing
+SectionCard.tsx      <- patterns/SectionCard.tsx   (title/description/icon/action header + body, rounded-2xl)
+DataTable.tsx        <- patterns/DataTable.tsx      (Column<Row> config, selectable, onRowClick; uses ui/table + ui/checkbox)
+StatCard.tsx         <- patterns/StatCard.tsx       (label/value/delta/trend/icon/spark/hint; uses Sparkline). PascalCase, case-sensitive host: import as @/ui/shared/StatCard
+FilterBar.tsx        <- patterns/FilterBar.tsx      (search input + filters + grid/list view toggle)
+EmptyState.tsx       <- patterns/EmptyState.tsx     (icon tile + title + description + action, dashed card)
+StatusBadge.tsx      <- patterns/StatusBadge.tsx    (status->variant MAP using L01 badge soft/success/warning/info)
+StatusTabs.tsx       (NEW — no proto source)        -> shared status filter tabs on ui/tabs variant="line" (e.g. All/Published/Draft/Scheduled/Archived counts); used by 479-08 page list etc.
+ListSkeleton.tsx     (NEW — no proto source)        -> list/card loading rows from the base ui/skeleton (L01)
+FormTableSkeleton.tsx(NEW — no proto source)        -> table loading rows (header + N skeleton cells) from base ui/skeleton (L01)
+SettingsSection.tsx  <- patterns/SettingsSection.tsx(+ SettingsField; two-col sticky settings layout)
+Charts.tsx           <- patterns/charts.tsx         (AreaChart/BarChart/Sparkline/Donut, pure SVG, useId, tokens). PascalCase, case-sensitive host: import as @/ui/shared/Charts (NOT @/ui/shared/charts)
+SectionHeader.tsx    (RETHEME existing) -> match SectionCard header type scale + spacing
 ```
 
 ```tsx
@@ -81,8 +92,15 @@ export function DataTable<Row extends Record<string, unknown>>({
 }
 
 // StatusBadge: domain status string -> { variant, dot } map. capitalize label.
+// Keys MUST match the REAL core enums (D2) — do NOT invent `review`/`trash`:
+//   page/post/entry status = draft | published | scheduled | archived (pagesClient.ts, EntryMetadataPanel.tsx)
+//   review status          = pending | approved | rejected | spam      (reviewsClient.ts)
+//   commerce               = published | draft | archived (archived -> secondary)
 const MAP = { published:{variant:"success",dot:"bg-success"}, draft:{variant:"secondary",dot:"bg-muted-foreground"},
-              pending:{variant:"warning",dot:"bg-warning"}, scheduled:{variant:"info",dot:"bg-info"}, /* ...proto MAP */ };
+              scheduled:{variant:"info",dot:"bg-info"}, archived:{variant:"secondary",dot:"bg-muted-foreground"},
+              pending:{variant:"warning",dot:"bg-warning"}, approved:{variant:"success",dot:"bg-success"},
+              rejected:{variant:"destructive",dot:"bg-destructive"}, spam:{variant:"destructive",dot:"bg-destructive"},
+              /* ...other proto keys (active/live/paid/beta/preview/…) preserved */ };
 // fallback -> { variant: "outline", dot: "bg-muted-foreground" }.
 ```
 
@@ -100,7 +118,12 @@ divisors (`|| 1`) to avoid NaN paths.
   renders with only `title`.
 - `DataTable`: renders header + N rows; `selectable` adds checkboxes;
   `onRowClick` fires once and the checkbox cell does not trigger it.
-- `StatusBadge`: known status -> expected variant class; unknown -> `outline`.
+- `StatusBadge`: known status (incl. `archived`, `spam`) -> expected variant
+  class; unknown -> `outline`.
+- `StatusTabs`: renders one tab per provided status with its count; active tab
+  carries the `line` variant marker.
+- `ListSkeleton`/`FormTableSkeleton`: render the requested row count without
+  throwing.
 - `Charts`: render without throwing for empty/one-point/normal series.
 
 ## Testing Requirements

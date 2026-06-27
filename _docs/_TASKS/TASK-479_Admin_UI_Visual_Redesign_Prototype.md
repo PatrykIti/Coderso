@@ -95,7 +95,7 @@ Admin). The route registry mirrors the `AdminApp.tsx` route patterns
 `/search`, `/seo`, `/analytics`, `/backups`, `/tools/import-export`, `/redirects`,
 `/users`, `/roles`, `/audit`, `/access-logs`, `/settings/*`, auth).
 
-## Screen inventory (~60 screens)
+## Screen inventory (~66 routes / 67 page files)
 
 - **Auth (4):** Login, 2FA, Reset password, Set password.
 - **Main (8):** Dashboard, Pages list, Posts list, Menus, Media library, +3 editor
@@ -119,8 +119,20 @@ Admin). The route registry mirrors the `AdminApp.tsx` route patterns
 - **Settings (12):** General, Site, Assistant, Security, IP allowlist, Sessions,
   Login alerts, API keys, Webhooks, Email, Storage, Integrations.
 
-All **editor** routes are **non-functional preview chrome** (a "Preview only" pill
-+ realistic 3-pane layout), per scope.
+All **editor** routes are **non-functional preview chrome** (a "Preview only" pill),
+per scope. They are **not all 3-pane** — the prototype ships **two editor models**:
+a **floating-panel `CanvasEditor`** used by **4** editors (Page builder, Custom-Screen
+builder, Custom-Screen entry editor, Page-Template editor) and the **legacy 3-pane
+`EditorPreviewFrame`** used by **6** editors (Post, Menu, Form builder, Listing, Popup,
+Schema builder). The migration honors both: `CanvasEditor` ports via 479-06-L06; the
+3-pane editors keep their split frame.
+
+**Scoped out — `SetupWizard`:** the first-run onboarding full-screen flow
+(`core/admin/ui/setup/SetupWizard.tsx`, rendered by `AdminApp` via
+`shouldShowSetupWizard` when `settingsState.values.setupCompleted === false`) is **not** part of this
+re-skin. It is a deferred onboarding surface with its own flow, not an admin
+chrome/list/editor screen, so the prototype intentionally omits it; a future task
+(most naturally under 479-06 shell or 479-29 auth) can re-skin it separately.
 
 ## Sub-Tasks
 
@@ -164,7 +176,9 @@ token extension). Each subtask `NN` owns execution-ready **leaf files**
 ### TASK-479-01..04 — Prototype (Done 2026-06-27)
 
 Delivered in `_docs/_PROTOTYPE/`. Light + dark verified via Playwright; production
-build clean (`bun run build` → ~299 modules). Now includes the published
+build clean (`bun run build` → ~299 modules, 0 errors) — with one **non-blocking**
+warning: a single JS chunk of **~546 kB** (gzip ~139 kB) exceeds Vite's 500 kB
+advisory (no code-splitting yet); not a build failure. Now includes the published
 custom-screen flow, floating-panel canvas editors (page/screen/template), the
 panel show/hide toggle, and the de-SaaS shell.
 

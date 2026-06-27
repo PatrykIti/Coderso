@@ -5,10 +5,9 @@
 **Priority:** High
 **Category:** `dashboard` / `admin-api`
 **Estimated Effort:** Medium
-**Dependencies:** TASK-480-01 (widget catalog: `DashboardWidgetType`,
-`normalizeDashboardWidgetConfig`), TASK-480-02 (data-source resolvers:
-`resolveDashboardWidgetData(type, config)`), TASK-480-03-L01 (layout shapes),
-TASK-480-03-L02 (`mapDashboardError`).
+**Dependencies:** TASK-480-02 (widget/layout contract + data-source resolvers:
+`DASHBOARD_WIDGET_TYPES`, `normalizeDashboardWidgetConfig`, `resolveWidgetData`),
+TASK-480-03-L01 (layout repository), TASK-480-03-L02 (`mapDashboardError`).
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
@@ -27,7 +26,7 @@ TASK-480-03-L02 (`mapDashboardError`).
 - **Source-of-truth docs:** `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`,
   `_docs/DASHBOARD_WIDGETS_SPEC.md`.
 - **Out of scope:** the resolvers themselves (480-02 — each widget type's query
-  lives there), client caching (L04), persistence (L01).
+  lives there), client caching (L04), layout storage/migration (L01).
 
 ### Shape decision
 
@@ -54,10 +53,10 @@ layout for first-paint convenience.
   layout, no body) is a safe read and does not require CSRF.
 - **Rate-limit bucket:** `admin`.
 - **Validation:** `validate(dashboardWidgetDataRequestSchema, ctx.body)` —
-  reject-unknown; cap instance count at `MAX_WIDGETS_PER_LAYOUT`; each requested
-  instance is normalized through the catalog (`normalizeDashboardWidgetConfig`)
-  before resolution, so an unknown `type` or malformed `config` is rejected, not
-  resolved.
+  reject-unknown; cap instance count at `DASHBOARD_MAX_WIDGETS`; each requested
+  instance is normalized through the 480-02 contract
+  (`normalizeDashboardWidgetConfig`) before resolution, so an unknown `type` or
+  malformed `config` is rejected, not resolved.
 - **Anti-abuse:** instance-count cap + per-resolver internal bounds (e.g. recent
   activity limit, chart range clamp) owned by 480-02. Resolution failures are
   isolated per widget (one failing widget does not 500 the batch).
@@ -76,18 +75,18 @@ layout for first-paint convenience.
 
 ```ts
 import {
-  normalizeDashboardWidgetConfig,
-  dashboardWidgetTypeSchema,
-} from "./widgets/dashboardWidgetCatalog";
-import { resolveDashboardWidgetData } from "./widgets/dashboardWidgetResolvers"; // 480-02
-import { MAX_WIDGETS_PER_LAYOUT } from "./dashboardLayout";
+  normalizeDashboardWidgetConfig,            // 480-02 per-type config validator
+  DASHBOARD_MAX_WIDGETS,                      // 480-02 cap
+} from "./dashboardWidgetContract";
+import { DASHBOARD_WIDGET_TYPES } from "./dashboardTypes"; // 480-02 type enum
+import { resolveWidgetData } from "./dashboardDataSources"; // 480-02 resolver registry
 
 export const dashboardWidgetDataRequestSchema = z.object({
   widgets: z.array(z.object({
     id: z.string().uuid(),
-    type: dashboardWidgetTypeSchema,
+    type: z.enum(DASHBOARD_WIDGET_TYPES),
     config: z.unknown().optional(),
-  }).strict()).max(MAX_WIDGETS_PER_LAYOUT),
+  }).strict()).max(DASHBOARD_MAX_WIDGETS),
 }).strict();
 
 export type DashboardWidgetDataEntry =
@@ -105,11 +104,15 @@ export async function resolveWidgetDataBatch(
   const parsed = dashboardWidgetDataRequestSchema.parse(input); // reject-unknown
   const entries = await Promise.all(parsed.widgets.map(async (w) => {
     try {
-      const config = normalizeDashboardWidgetConfig(w.type, w.config); // validate per type
-      const data = await resolveDashboardWidgetData(w.type, config);    // 480-02
-      return { id: w.id, type: w.type, status: "ok" as const, data };
+      const config = normalizeDashboardWidgetConfig(w.type, w.config); // 480-02 per-type validate
+      // 480-02 registry resolves a single widget; it already isolates resolver
+      // failures into `{ error }` (never throws). position is unused by resolvers.
+      const resolved = await resolveWidgetData({ id: w.id, type: w.type, config, position: { x: 0, y: 0, w: 0, h: 0 } });
+      return "error" in resolved
+        ? { id: w.id, type: w.type, status: "error" as const, code: resolved.error }
+        : { id: w.id, type: w.type, status: "ok" as const, data: resolved.data };
     } catch (error) {
-      // isolate failure; never leak internals
+      // unknown type / bad config from the validator above; never leak internals
       return { id: w.id, type: w.type, status: "error" as const,
         code: error instanceof Error ? error.message : "widget_data_failed" };
     }

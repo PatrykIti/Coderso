@@ -38,8 +38,8 @@ content-over-time) plus a **safe, clamped content-query** resolver. Expose
 - **Source-of-truth docs:** `_docs/DASHBOARD_WIDGETS_SPEC.md`,
   `_docs/DATA_MODEL.md`, `_docs/CMS_API.md` (response shapes consumed by the
   later route).
-- **Out of scope:** HTTP routes, cached client, cacheBus (`TASK-480-03`);
-  persistence (`TASK-480-01`); UI (`TASK-480-04..05`).
+- **Out of scope:** HTTP routes, cached client, cacheBus, persistence
+  (`TASK-480-03`); UI (`TASK-480-04` renderers / `TASK-480-05` builder).
 
 > Admin Dashboard widgets — NOT `core/widgets`. Resolvers read CMS aggregates,
 > they do not render or resolve page/content widgets.

@@ -16,7 +16,10 @@
 
 Restyle the **functional** product editor to the prototype look: a calm two-column
 layout — a main column of soft `rounded-2xl` cards (Details / Media / Pricing /
-Inventory) beside a sticky sidebar (Status / Organization / Price summary). This is
+Inventory) beside a sticky settings sidebar (Status / Organization / Price summary)
+rendered as the EXISTING `EditorShell` right rail, with the left context rail kept
+(restyled). The editor STAYS on the `EditorShell` 3-pane — it does NOT fork a second
+inline sidebar that would duplicate the rail content. This is
 a real, working editor — NOT the non-functional preview — so the product schema
 (`commerceEditorModel` ↔ `CommerceProductInput`), the draft/snapshot dirty-state,
 the cache hydrate + `cacheBus` revalidation, and the create/update/publish flows are
@@ -76,17 +79,20 @@ mobile `Sheet` open/close props.
 //    (violet) button set; render an unsaved-changes soft Badge from the existing
 //    `hasUnsavedChanges` flag. No handler edits, no new state.
 
-// 2) Two-column body — replace the single max-w-5xl column with the prototype grid:
-//      <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-//        <div className="flex flex-col gap-6">{/* main: CommerceEditorSections */}</div>
-//        <div className="flex flex-col gap-6">{/* sidebar: status/org/summary */}</div>
-//      </div>
-//    On lg+ the sidebar shows inline; the existing mobile Sheets (mobileContextOpen
-//    / mobileDetailsOpen) remain the small-screen fallback — keep both Sheets and
-//    their triggers. The EditorShell left/right panel slots still receive
-//    CommerceContextPanel / CommerceCollectionsPanel (do not delete them); the new
-//    inline sidebar simply renders the same panel content in the lg layout. Reuse
-//    the SAME component instances — do NOT fork a second copy with divergent state.
+// 2) Keep the EditorShell 3-pane (main center column + left context rail + right
+//    settings rail) — do NOT add a parallel `lg:grid-cols-[1fr_320px]` inline
+//    sidebar inside the center column. EditorShell already renders leftPanel /
+//    rightPanel as `hidden ... lg:flex` rails, so a second inline column re-rendering
+//    the same panel content would DOUBLE it on lg+ (the collision to avoid). Instead:
+//      - restyle the center column (drop the max-w-5xl framing for the prototype
+//        card-stack spacing) to hold the main SectionCards (step 3);
+//      - restyle the EXISTING right rail (CommerceCollectionsPanel) to BE the
+//        prototype settings sidebar (Status / Organization / Price summary, step 4)
+//        — it renders exactly once via the EditorShell rightPanel slot.
+//    The existing mobile Sheets (mobileContextOpen / mobileDetailsOpen) stay the
+//    small-screen fallback for those SAME rails — keep both Sheets, their triggers,
+//    and the SAME leftPanel / rightPanel component instances (no forked copy, no
+//    divergent state).
 
 // 3) CommerceEditorSections.tsx — keep all controls + their bindings; reskin the
 //    three Cards to the prototype SectionCard (rounded-2xl border bg-card shadow-card,
@@ -107,8 +113,9 @@ mobile `Sheet` open/close props.
 //    as thumbnail tiles with a "+ Add" tile; keep a text Input/Textarea fallback for
 //    raw id entry so the field stays fully editable. onChange({ mediaIdsText }) only.
 
-// 4) Sidebar cards (right column) — port the prototype Status / Organization /
-//    Price summary stack:
+// 4) Settings sidebar = the EditorShell RIGHT RAIL (restyle CommerceCollectionsPanel
+//    into the prototype Status / Organization / Price summary stack; it renders once
+//    via the rightPanel slot + the mobile Sheet, NOT a duplicated inline column):
 //      - "Status": status Select (draft.status, onChange -> patchDraft) + a publish
 //        Button calling the existing handleSave(publishTargetStatus). Keep the
 //        publishButtonLabel ("Publish" / "Move to draft") logic.
@@ -121,7 +128,9 @@ mobile `Sheet` open/close props.
 
 // 5) CommerceContextPanel.tsx: restyle lifecycle/context rows (created/updated,
 //    unsaved indicator) to soft muted cards; keep the props (isCreateMode, draft,
-//    product, hasUnsavedChanges). Class swap only.
+//    product, hasUnsavedChanges). Replace its local amber statusStyles map with the
+//    same shared StatusBadge as L01 (archived→secondary, NOT amber/warning) so the
+//    status pill matches the list. Otherwise class swap only.
 ```
 
 **Data flow:** `CommerceEditorPage` resolves `productId`/`isCreateMode` →
@@ -161,9 +170,10 @@ existing `matchMedia`/Sheet logic in `EditorShell`; do not duplicate it.
 placeholder keep their current copy and conditions; they inherit the new card/token
 styling. No new error surfaces.
 
-**Regression-test shape:** see L03 — render `CommerceEditorPage` with a seeded
-cached product; assert the main column renders the Details/Pricing/Inventory section
-cards with `rounded-2xl`/`shadow-card`, the sidebar renders the Status Select still
+**Regression-test shape:** see L03 — render `CommerceEditorPage` in EDIT mode (push
+an edit route + seed the cached product before mount, else it resolves create mode);
+assert the main column renders the Details/Pricing/Inventory section cards with
+`rounded-2xl`/`shadow-card`, the right-rail sidebar renders the Status Select still
 bound to the draft, the header exposes Save + the publish toggle, editing the Title
 input flips `hasUnsavedChanges` (Save enabled / Discard enabled), and toggling the
 Inventory Switch flips `stockState` between `in_stock`/`out_of_stock` (behavioral

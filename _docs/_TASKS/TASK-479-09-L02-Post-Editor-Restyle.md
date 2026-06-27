@@ -81,15 +81,24 @@ fill them. Do NOT alter the `matchMedia` desktop logic, the `viewportMode`/
 //    Preserve selection rects, drag handles, block toolbars, and inserter logic.
 
 // 3) Inspector — inspector/{DocumentInspector,BlockInspector,InspectorSection}:
-//    restyle the details panel to the prototype "Post settings" inspector:
-//      - section header: "Post settings" + soft status Badge.
+//    restyle the details panel toward the prototype "Post settings" look while
+//    KEEPING the real DocumentInspector section structure and copy:
+//      - keep the existing section headers ("Publishing", "Categories and tags",
+//        "Featured image", the SEO/"Advanced" group, "Danger zone"); only their
+//        card/token styling changes. Do NOT rename them to a single invented
+//        "Post settings" header.
+//      - status stays a READ-ONLY Badge in the "Publishing" section (real
+//        DocumentInspector renders `statusClass[status]` via <Badge>, there is NO
+//        status Select here — status is changed through the header Publish/Save
+//        workflow). Restyle that Badge to the soft status variant.
 //      - InspectorRow look: xs muted label above each control (port the
 //        InspectorRow shape from PostEditorPreview).
-//      - controls keep their REAL bindings (status Select, slug Input mono,
-//        category Select, tags Badges + add input, featured image tile + Upload,
-//        SEO meta box). Only classes change; every onChange/value stays wired to
-//        the postEditorStore. The SEO group becomes a "rounded-xl border bg-muted/30
-//        p-3" card like the prototype.
+//      - the EDITABLE controls keep their REAL bindings — slug Input (mono),
+//        category Select, tags input + Badges, featured-image tile + Upload, and
+//        the SEO box (title/description, canonical URL, robots Select). Only
+//        classes change; every onChange/value stays wired to the postEditorStore.
+//        The SEO group becomes a "rounded-xl border bg-muted/30 p-3" card like the
+//        prototype.
 
 // 4) OPTIONAL (owner's V2 direction) — floating-panel inspector:
 //    Behind the existing details-sidebar slot, the inspector MAY adopt the
@@ -131,12 +140,22 @@ shape in `PostEditorLayout` (do not duplicate it).
 **Error handling:** Editor error/empty/loading states keep their current copy and
 conditions; they inherit the new card/token styling. No new error surfaces.
 
-**Regression-test shape:** see L03 — render the editor shell (block mode) with a
-seeded store; assert the document card wrapper carries the rounded-2xl/max-w-2xl/
-shadow-card classes, the inspector renders the "Post settings" section with the
-status Select still bound, the header exposes Save draft/Publish, and a basic
-block edit still flips the dirty/autosave indicator (behavioral guard that the
-restyle did not sever store wiring).
+**Regression-test shape:** see L03. Render the real `PostBlockEditorShell` (no
+props; it owns its store) via the SSR `renderAdminUi` helper. Because that harness
+seeds no cached post, `usePostEditorState` starts with `loading: true`, so the
+content region renders "Loading post editor..." instead of `PostEditorCanvas`
+(identical to the existing `post-editor-layout-shell.test.tsx`). The shell SSR
+snapshot therefore asserts only what renders OUTSIDE the loading gate: the
+inspector's real "Publishing" + "Featured image" sections (status shown as a
+read-only Badge) and the header's Save draft/Publish actions. Do NOT assert the
+document-card classes (rounded-2xl/max-w-2xl/shadow-card) on the shell SSR snapshot
+— the canvas is gated behind `loading` and never renders there. Guard those classes
+instead by rendering `PostEditorCanvas` directly with explicit props via
+`renderToString` (the same idiom `post-editor-canvas-shared.test.tsx` uses to assert
+canvas class tokens). The "an edit flips the dirty flag" wiring is asserted against
+the real store contract at the reducer level (`createInitialPostEditorState` +
+`postEditorReducer`, whose mutations set `dirty: true`) rather than by injecting a
+store into the shell, which takes no store prop.
 
 ---
 
@@ -146,8 +165,9 @@ restyle did not sever store wiring).
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/post-editor-shell-restyle.test.tsx`
   (new suite in L03)
-- The full existing editor suite MUST stay green — at minimum re-run:
-  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/admin/post-editor-layout-shell.test.tsx tests/vitest/admin/post-editor-layout-responsive.test.tsx tests/vitest/admin/post-document-inspector.test.tsx tests/vitest/admin/post-block-inspector.test.tsx tests/vitest/admin/post-autosave-flow.test.tsx tests/vitest/admin/post-editor-smoke-regression.test.tsx`
+- The full existing editor suite MUST stay green — at minimum re-run (these suites
+  live under `tests/vitest/ui-integration/`, not `tests/vitest/admin/`):
+  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/post-editor-layout-shell.test.tsx tests/vitest/ui-integration/post-editor-layout-responsive.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui-integration/post-block-inspector.test.tsx tests/vitest/ui-integration/post-autosave-flow.test.tsx tests/vitest/ui-integration/post-editor-smoke-regression.test.tsx`
 - State explicitly in the summary if any suite was skipped or could not run.
 
 ---

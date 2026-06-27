@@ -74,9 +74,20 @@ Port the prototype's **look**, not its demo affordances:
   state (`isActive`); keep the existing **"Selected" / "Select kit"** labels.
   Do NOT rename to "Apply kit"/"Re-apply kit" (the kits page test asserts the
   page does NOT contain "Apply kit").
-- Prototype "Browse all kits" banner button → wire to the **existing** reviewed
-  flow via `openAssistantPanel({ mode: "llm-guide", message: REVIEWED_SITE_BUILDER_PROMPT, reset: true })`,
-  OR keep it as a non-action visual heading. Never introduce a new install path.
+- Prototype "Browse all kits" banner button → the canonical reviewed-flow CTA
+  ALREADY exists in the right-column **Reviewed Site Builder** card (the existing
+  `openAssistantPanel({ mode: "llm-guide", message: REVIEWED_SITE_BUILDER_PROMPT, reset: true })`
+  "Open LLM Guide" button, which is out of scope to remove). To avoid a
+  **duplicate CTA**, keep the featured banner a **non-action visual hero**
+  (heading + "AI assembled" badge + copy) and do NOT add a second "Open LLM Guide"
+  button. Never introduce a new install path.
+
+**Shared-token/primitive provenance (do NOT redefine here):** every soft tone
+(`bg-primary-soft`/`bg-success-soft`/`bg-warning-soft`/`bg-info-soft` + `text-primary`/
+`text-success`/`text-warning`/`text-info`), `shadow-card`, `font-display`, and the
+`variant="soft"` / `variant="success"` Badge & Button options are **tokens/variants
+from TASK-479-05**. `Card`/`Badge`/`Button`/`Alert`, `PageHeader`, and `AdminShell`
+are the **TASK-479-06-L02** restyled shells. This leaf only consumes them.
 
 ### 1) Page layout (`SolutionKitsPage.tsx` — JSX only)
 
@@ -95,17 +106,15 @@ Port the prototype's **look**, not its demo affordances:
 
     {error ? <Alert variant="destructive">...</Alert> : null}
 
-    {/* Featured banner — port prototype banner chrome, keep CTA wired to reviewed flow */}
+    {/* Featured banner — port prototype banner chrome as a NON-ACTION visual hero.
+        The reviewed-flow CTA lives ONCE in the right-column Reviewed Site Builder
+        card (see §4) — do NOT add a second "Open LLM Guide" button here. */}
     <Card className="relative overflow-hidden border-0 bg-primary p-7 text-primary-foreground shadow-card">
       <div className="absolute -right-10 -top-10 size-48 rounded-full bg-white/10 blur-2xl" />
       <div className="relative max-w-lg">
         <Badge className="mb-3 border-white/20 bg-white/15 text-white"><Sparkles className="size-3" /> AI assembled</Badge>
         <h2 className="font-display text-2xl font-bold">Launch a full site in minutes</h2>
-        <p className="mt-1.5 text-sm text-white/80">Pick a kit and Coderso scaffolds pages, widgets, and content types — ready to customize.</p>
-        <Button variant="soft" className="mt-4 bg-white text-primary hover:bg-white/90"
-          onClick={() => openAssistantPanel({ mode: "llm-guide", message: REVIEWED_SITE_BUILDER_PROMPT, reset: true })}>
-          Open LLM Guide
-        </Button>
+        <p className="mt-1.5 text-sm text-white/80">Pick a kit and Coderso scaffolds pages, widgets, and content types — then open the Reviewed Site Builder to generate.</p>
       </div>
     </Card>
 
@@ -120,13 +129,17 @@ Port the prototype's **look**, not its demo affordances:
 ```tsx
 // The prototype hard-codes icon+tone per kit. The real catalog has 5 fixed ids.
 // Map deterministically by id (pure, render-time). Fallback handles unknown ids.
+// Tone tokens (`-soft` backgrounds + accent text) come from TASK-479-05; this
+// leaf only consumes them. The 5 keys are the EXACT `SolutionKitId` members in
+// core/admin/services/solutionKitsClient.ts (automotive-workshop, medical-clinic,
+// beauty-salon, services-directory, small-ecommerce) — do not invent ids.
 import { Car, Stethoscope, Scissors, ListChecks, ShoppingBag, Boxes } from "lucide-react";
 const KIT_VISUALS: Record<SolutionKitId, { icon: LucideIcon; tone: string }> = {
   "automotive-workshop": { icon: Car,        tone: "bg-warning-soft text-warning" },
   "medical-clinic":      { icon: Stethoscope, tone: "bg-info-soft text-info" },
-  "beauty-salon":        { icon: Scissors,    tone: "bg-primary-soft text-primary-soft-foreground" },
+  "beauty-salon":        { icon: Scissors,    tone: "bg-primary-soft text-primary" },
   "services-directory":  { icon: ListChecks,  tone: "bg-success-soft text-success" },
-  "small-ecommerce":     { icon: ShoppingBag, tone: "bg-primary-soft text-primary-soft-foreground" },
+  "small-ecommerce":     { icon: ShoppingBag, tone: "bg-primary-soft text-primary" },
 };
 const visualFor = (id: SolutionKitId) => KIT_VISUALS[id] ?? { icon: Boxes, tone: "bg-muted text-muted-foreground" };
 // Pass icon+tone down to SolutionKitCard (new optional props), OR derive inside
@@ -192,12 +205,14 @@ mount-force refetch added; no dirty-state overwrite; nav stays on `AdminShell` +
 `activeHref` / `breadcrumbs` — do not hand-build any href; route any nav through
 the canonical `adminPaths` / `AdminLink` helpers if links are added.
 
-**Regression-test shape (delivered in L02):** featured banner renders with the
-AI-assembled badge + reviewed-flow CTA; grid renders one card per cached kit with
-title + recommended-module badges; the active kit shows the "Selected" badge and
-"Selected" button label; clicking a non-active card's button calls `onSelect`
-(persists via `setActiveSolutionKitId`); the page still contains "Reviewed Site
-Builder" / "Open LLM Guide" and does NOT contain "Apply kit".
+**Regression-test shape (delivered in L02):** featured banner renders as a
+non-action hero (heading + AI-assembled badge); the single reviewed-flow CTA
+("Open LLM Guide") stays in the Reviewed Site Builder card and is NOT duplicated
+in the banner; grid renders one card per cached kit with title + recommended-
+module badges; the active kit shows the "Selected" badge and "Selected" button
+label; clicking a non-active card's button calls `onSelect` (persists via
+`setActiveSolutionKitId`); the page still contains "Reviewed Site Builder" /
+"Open LLM Guide" and does NOT contain "Apply kit".
 
 ---
 
@@ -219,4 +234,4 @@ Builder" / "Open LLM Guide" and does NOT contain "Apply kit".
 - `_docs/_TASKS/README.md` board + Statistics on status change.
 - `_docs/_CHANGELOG/` entry on closure, linking `TASK-479` + `TASK-479-21-L01`.
 - `_docs/SOLUTION_KITS.md` — only if a user-visible label changes (e.g. the banner
-  heading/CTA); document no behavior change.
+  hero heading or the reviewed-flow CTA label); document no behavior change.

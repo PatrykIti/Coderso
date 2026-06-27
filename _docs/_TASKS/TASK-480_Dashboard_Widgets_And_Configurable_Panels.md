@@ -38,8 +38,9 @@ prototype (`StatCard` with sparkline, `AreaChart`/`Donut`, `SectionCard`).
   schemas, data-source services), `core/server/routes/dashboardRoutes.ts`
   (orchestration-only routes), `core/admin/services/dashboardClient.ts` +
   cache wrappers, `core/admin/ui/dashboard/*` (renderers + builder UI).
-- **Source-of-truth docs:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (NEW — created by
-  this task), `_docs/CMS_API.md`, `_docs/DATA_MODEL.md`, `_docs/RBAC_SPEC.md`,
+- **Source-of-truth docs:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (NEW — seeded in
+  TASK-480-01-L02, extended by 02/03/04/05, finalized in TASK-480-06),
+  `_docs/CMS_API.md`, `_docs/DATA_MODEL.md`, `_docs/RBAC_SPEC.md`,
   `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md`, `_docs/TESTING_STRATEGY.md`,
   prototype: `_docs/_PROTOTYPE/src/pages/DashboardPage.tsx`.
 - **Out of scope:** Public-site widgets and the page/content widget system in
@@ -63,8 +64,8 @@ The "widgets" in this task are **admin Dashboard panels** — UI cards that
 visualize CMS data inside `/admin`. They are **distinct from `core/widgets/*`**,
 which are page-builder content blocks rendered on the public site. To avoid
 collision, all new types/files in this task are namespaced under
-`dashboard*` (e.g. `DashboardWidgetType`, `dashboardWidgetSchema`,
-`core/services/dashboard/widgets/*`), never under `core/widgets/*`.
+`dashboard*` (e.g. `DashboardWidgetType`, `dashboardWidgetContract`,
+`core/services/dashboard/*`), never under `core/widgets/*`.
 
 ---
 
@@ -119,7 +120,8 @@ Per-leaf Security Contracts are authoritative; this is the umbrella summary.
   edit-mode UX product spec.
 - **02 — Widget & Data-Source Contract:** Zod-or-equivalent schemas for widget
   types/config + layout, and the server data-source services (counters, charts,
-  activity, storage, security, content-query) with a single batch data route.
+  activity, storage, security, content-query) that the single batched data route
+  (TASK-480-03) consumes.
 - **03 — Layout Persistence & API:** storage for the per-user (and optional
   per-site default) layout, `GET`/`PUT` layout routes, end-to-end cache contract
   (key/TTL, cached client wrapper, cacheBus invalidation, hydrate +
@@ -153,7 +155,7 @@ Lanes per `_docs/TESTING_STRATEGY.md`. Load DB env before any DB-backed test:
   - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/services/dashboardWidgets*.test.ts`
     (schema normalization, defaults, limits, layout normalization, legacy
     adapters).
-  - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/dashboard*.test.tsx`
+  - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/dashboard*.test.tsx`
     (renderers, builder hydration, dirty-state protection, edit-mode flows).
   - The existing `tests/vitest/admin/dashboardClient.test.ts` must stay green
     until its contract is intentionally migrated.

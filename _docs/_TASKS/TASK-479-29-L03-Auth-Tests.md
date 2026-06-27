@@ -20,15 +20,21 @@ existing auth-flow suites under `tests/vitest/authUi/` (login/2FA behavior) stay
 green untouched.
 
 - **Goal:** Render-test coverage that fails if the auth restyle regresses
-  (missing centered chrome / lost copy / raw `/admin/...` hrefs / reintroduced
-  sign-up CTA) and that updates the one existing assumption that changes
-  (`auth-shell.test.tsx` no longer requires a `brand` split panel).
-- **Owning module/service:** `tests/vitest/ui/{auth-shell,login,login-alerts,reset-password,otp-input}.test.tsx`
-  plus a new `tests/vitest/ui/set-password.test.tsx` and
-  `tests/vitest/ui/two-factor.test.tsx`.
+  (missing centered chrome / lost or renamed copy / a back-link that no longer
+  resolves through `withAdminBasePath` / reintroduced sign-up CTA) and that updates
+  the one existing assumption that changes (`auth-shell.test.tsx` no longer requires
+  a `brand` split panel). Note: the canonical hrefs the helper emits ARE
+  `/admin/...` strings (`resolveAdminBasePath()` → `/admin`), so assert their
+  **presence**, never their absence.
+- **Owning module/service:** the existing suites
+  `tests/vitest/ui/{auth-shell,login,reset-password,otp-input,set-password,two-factor}.test.tsx`
+  — **all already exist on disk** (including `set-password.test.tsx` and
+  `two-factor.test.tsx`), so this leaf **extends/updates** them; it does NOT create
+  net-new files. (`login-alerts.test.tsx` is a Settings page — `LoginAlertsPage` —
+  not an auth screen; do NOT modify it here, it is owned by group 28.)
 - **Source-of-truth docs:**
-  - Render helper: `tests/utils/adminRouterRender.ts` (`renderAdminUi`)
-  - Existing patterns: `tests/vitest/ui/{login,auth-shell,otp-input,reset-password}.test.tsx`
+  - Render helper: `tests/utils/adminRouterRender.tsx` (`renderAdminUi`; `.tsx`, not `.ts`)
+  - Existing patterns: `tests/vitest/ui/{login,auth-shell,otp-input,reset-password,set-password,two-factor}.test.tsx`
   - Targets under test: `core/admin/ui/auth/*`, `core/admin/ui/layouts/AuthShell.tsx`
   - `_docs/TESTING_STRATEGY.md` (Vitest lane; do NOT move runtime tests here)
 - **Out of scope:** No new behavior tests for the auth flow itself (CSRF /
@@ -68,43 +74,51 @@ test("LoginPage renders restyled login card", () => {
   expect(html).toContain("Sign in");
   expect(html).toContain("or continue with email");      // new divider
   expect(html).not.toMatch(/Create one|Sign up/i);       // de-SaaS: no self-serve CTA
-  expect(html).not.toContain('href="/admin/reset"');     // forgot-password routed via withAdminBasePath
+  // withAdminBasePath emits the LITERAL "/admin/reset" (resolveAdminBasePath() → "/admin"
+  // under SSR); assert the canonical href is PRESENT — a not.toContain here is
+  // unsatisfiable and contradicts the green tests/vitest/authUi/loginForm.test.tsx.
+  expect(html).toContain('href="/admin/reset"');         // canonical forgot-password link
 });
 ```
 
-### New suites
+### Update the existing two-factor / set-password / reset suites
+
+> `two-factor.test.tsx` and `set-password.test.tsx` **already exist** on disk — these
+> are edits to the current assertions, not new files. Keep the **preserved** copy the
+> green suites assert (this is a visual restyle; copy is unchanged).
 
 ```tsx
-// tests/vitest/ui/two-factor.test.tsx
+// tests/vitest/ui/two-factor.test.tsx — already exists; extend assertions.
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { TwoFactorPage } from "../../../core/admin/ui/auth/TwoFactorPage";
 test("TwoFactorPage renders centered card + OTP cells", () => {
   const html = renderAdminUi(<TwoFactorPage />);
   expect(html).toContain("Two-factor authentication");
   expect((html.match(/data-slot="input"/g) ?? []).length).toBeGreaterThanOrEqual(6); // segmented OTP
-  expect(html).toMatch(/Verify/);
+  expect(html).toContain("Verify &amp; Enable");        // preserved button copy (also asserted by authUi/twoFactorForm.test.tsx)
 });
 ```
 
 ```tsx
-// tests/vitest/ui/set-password.test.tsx
+// tests/vitest/ui/set-password.test.tsx — already exists; extend assertions.
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { SetPasswordPage } from "../../../core/admin/ui/auth/SetPasswordPage";
 test("SetPasswordPage renders strength meter + checklist", () => {
   const html = renderAdminUi(<SetPasswordPage token="t" />);
-  expect(html).toContain("Create a new password");
+  expect(html).toContain("Set new password");           // preserved heading (NOT "Create a new password")
+  expect(html).toContain("Password strength");          // PasswordStrengthList header preserved
   expect(html).toContain("At least 8 characters");      // PasswordStrengthList rule labels preserved
   expect(html).toContain("At least 1 number");
-  expect(html).toMatch(/Set password/);
+  expect(html).toContain("Update password");            // preserved submit copy (NOT "Set password")
 });
 ```
 
 ```tsx
-// reset-password.test.tsx — keep existing assertions; add the back-link check.
-test("ResetPasswordPage routes back-to-sign-in via withAdminBasePath", () => {
+// reset-password.test.tsx — already exists; keep existing assertions, add the back-link check.
+test("ResetPasswordPage keeps copy and canonical back link", () => {
   const html = renderAdminUi(<ResetPasswordPage />);
-  expect(html).toContain("Reset your password");
-  expect(html).not.toContain('href="/admin/login"');    // resolved through basePath helper
+  expect(html).toContain("Reset password");             // preserved heading (NOT "Reset your password")
+  expect(html).toContain("/admin/login");               // canonical back link withAdminBasePath emits (present, NOT absent)
 });
 ```
 
@@ -118,8 +132,10 @@ a missing provider, wire the same provider setup the existing `tests/vitest/ui/*
 auth suites use (they already render these pages without extra context).
 
 **Regression-test shape:** snapshot-free string assertions targeting stable copy
-and the canonical-link/no-SaaS-CTA invariants, so a future prototype-literal
-regression (raw href, reintroduced sign-up) fails fast.
+and the canonical-link/no-SaaS-CTA invariants (assert the `/admin/...` hrefs are
+**present**, since `withAdminBasePath` emits those literal strings), so a future
+prototype-literal regression (lost/renamed copy, reintroduced sign-up CTA) fails
+fast.
 
 ---
 

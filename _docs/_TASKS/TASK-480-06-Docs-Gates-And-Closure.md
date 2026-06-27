@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Dashboard Widgets / Docs / Release Gates
 **Estimated Effort:** Medium
-**Dependencies:** TASK-480-01 (domain/schema + service contract), TASK-480-02 (DB persistence), TASK-480-03 (internal admin API routes), TASK-480-04 (admin cached client), TASK-480-05 (admin UI widget grid + edit-mode builder)
+**Dependencies:** TASK-480-01 (feature audit + widget product spec), TASK-480-02 (domain/schema + data-source service contract), TASK-480-03 (layout persistence + internal admin API routes + cached client), TASK-480-04 (widget renderer components), TASK-480-05 (admin UI widget grid + edit-mode builder)
 **Status:** ⏳ To Do
 
 ---
@@ -19,10 +19,10 @@ the umbrella task and all its children.
 
 This subtask owns **no product code**. It is the documentation + validation +
 board-hygiene wrapper that makes TASK-480 mergeable and auditable. The two leaves
-split cleanly: **L01** owns the docs (the new `DASHBOARD_WIDGETS_SPEC.md` plus
-updates to `CMS_API.md`, `ADMIN_CACHE*.md`, `DATA_MODEL.md`, and the `AGENTS.md`
-repo index); **L02** owns the gates, changelog, board/statistics sync, and the
-closure checklist.
+split cleanly: **L01** owns the docs (finalizing `DASHBOARD_WIDGETS_SPEC.md` —
+seeded by 480-01-L02 and extended by 02/03/04/05 — plus updates to `CMS_API.md`,
+`ADMIN_CACHE*.md`, `DATA_MODEL.md`, and the `AGENTS.md` repo index); **L02** owns
+the gates, changelog, board/statistics sync, and the closure checklist.
 
 > **Admin dashboard widgets vs. core widgets.** Throughout TASK-480 (and the docs
 > this subtask writes) the word "widget" means an **admin dashboard panel** bound
@@ -63,12 +63,12 @@ the API/UI leaves already implemented:
 - **Endpoint visibility:** internal admin (`/admin/api/*`) — documented, not changed.
 - **Auth model:** session — documented.
 - **RBAC:** widget **data** reads gate on `content:read`; dashboard **layout**
-  writes gate on `settings:write` (the layout-persistence permission chosen by
-  TASK-480-02/03) — documented, not changed.
+  writes gate on `dashboard:write` (the dedicated layout-persistence permission
+  added by TASK-480-03) — documented, not changed.
 - **CSRF:** required for all admin layout writes — documented.
 - **Rate-limit bucket:** `admin` — documented.
 - **Validation:** schema-owner reject-unknown behavior described, pointing at the
-  `core/services/dashboard/*` schema owner from TASK-480-01.
+  `core/services/dashboard/*` schema owner from TASK-480-02.
 - **Secret handling:** the spec must restate that no secrets/credentials reach the
   client, browser cache, or logs (security/site-health widgets surface boolean
   status flags only, never raw settings values).
@@ -97,7 +97,7 @@ validation run executed in L02 before closure. The exact commands live in
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - The TASK-480 Bun route + security suites (added by 480-03).
-- The TASK-480 Vitest domain + admin UI suites (added by 480-01/04/05).
+- The TASK-480 Vitest domain + admin UI suites (added by 480-02/04/05).
 - `bun run gates:coderso` as the baseline release-gate sweep (functional / ux /
   performance / security / reliability).
 - Load `.env` with `set -a && source .env && set +a` before any DB-backed suite.
@@ -107,12 +107,13 @@ validation run executed in L02 before closure. The exact commands live in
 
 ## Documentation Updates Required
 
-- **Create** `_docs/DASHBOARD_WIDGETS_SPEC.md` (owned by L01).
+- **Finalize** `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by 480-01-L02, extended
+  by 02/03/04/05; consolidated to final by L01).
 - **Update** `_docs/CMS_API.md` — new dashboard widget/layout routes (L01).
 - **Update** `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` — new cached
   dashboard-layout (and widget-data, if cached) resource (L01).
 - **Update** `_docs/DATA_MODEL.md` — new dashboard-layout persistence table (L01,
-  only if TASK-480-02 added a table).
+  only if TASK-480-03 added a table).
 - **Update** `AGENTS.md` repo doc index to list the new spec (L01).
 - **Update** `_docs/_TASKS/README.md` board buckets + Statistics, and add the
   `_docs/_CHANGELOG/` entry (L02).

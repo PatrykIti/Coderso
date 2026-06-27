@@ -20,7 +20,9 @@ as a soft `rounded-2xl` card showing its icon, name, status, block/binding
 counts, and (for published screens) an **"In sidebar"** badge, with Edit / Open
 actions. This is the entry point into the published-screen flow; published
 screens are the ones surfaced in the left sidebar, so the "In sidebar" affordance
-must be truthful to the real published flag.
+must be truthful to the real sidebar-shortcut state (`showInSidebar === true` +
+`status === "active"` + dedicated-editor support), NOT a fabricated `published`
+field (no such boolean exists on `CustomScreenRecord`).
 
 - **Goal:** `core/admin/ui/custom-screens/CustomScreenListPage.tsx` reads like
   `_docs/_PROTOTYPE/src/pages/advanced/CustomScreensPage.tsx` — a responsive card
@@ -79,24 +81,34 @@ body that renders `items`.
 //          <header>{iconTile(screen)}  <StatusBadge status={screen.status} /></header>
 //          <div className="mt-4 flex items-center gap-2">
 //            <span className="font-display text-[15px] font-semibold">{screen.name}</span>
-//            {screen.published ? (
+//            {inSidebar ? (
 //              <Badge variant="success" className="gap-1"><PanelLeft className="size-3" /> In sidebar</Badge>
 //            ) : null}
 //          </div>
-//          <Meta blocks={screen.blockCount} bindings={screen.bindingCount} />
+//          <Meta blocks={screen.blocks.length} bindings={screen.bindings.length} />
 //          <Separator className="my-4" />
 //          <footer className="mt-auto flex gap-2">
 //            <AdminLink to={editHref(screen)}><Button variant="outline" size="sm" className="w-full">Edit</Button></AdminLink>
-//            <AdminLink to={entriesHref(screen)}><Button variant="soft" size="sm" className="w-full">{screen.published ? "Open" : "Entries"}</Button></AdminLink>
+//            <AdminLink to={entriesHref(screen)}><Button variant="soft" size="sm" className="w-full">{inSidebar ? "Open" : "Entries"}</Button></AdminLink>
 //          </footer>
 //        </Card>
 //      ))}
 //    </div>
-//    NOTE: `published`, `status`, block/binding counts come from the REAL list
-//    model (customScreenListModel.ts / useCustomScreens), NOT the prototype's
-//    hardcoded SCREENS array. If the real model lacks a "published" boolean,
-//    derive it from the same source buildCustomScreenShortcutNavItems uses
-//    (the shortcut/published flag) — do not invent a new flag.
+//    NOTE: every card field comes from the REAL list model
+//    (customScreenListModel.ts / useCustomScreens / CustomScreenRecord), NOT the
+//    prototype's hardcoded SCREENS array. Real bindings:
+//      - status  -> `screen.status` (the real enum is "draft" | "active" — there is
+//        NO "published" status; render it via the shared StatusBadge from 479-06-L02).
+//      - inSidebar (the "In sidebar" badge + Open/Entries label) -> derive from the
+//        list model: `resolveCustomScreenSidebarShortcutState(screen) === "visible"`,
+//        which mirrors EXACTLY what `buildCustomScreenShortcutNavItems` filters on
+//        (`status === "active" && showInSidebar === true && supportsDedicatedEditor`).
+//        Do NOT invent a `screen.published` boolean.
+//      - block/binding counts -> `screen.blocks.length` / `screen.bindings.length`
+//        (there are no precomputed `blockCount`/`bindingCount` fields).
+//      - iconTile -> there is no per-screen icon field on the record; use a static/
+//        generic screen icon (e.g. LayoutGrid, as the sidebar shortcut already does),
+//        NOT a fabricated `screen.icon`.
 
 // 3) Hrefs — editHref/entriesHref resolve through adminPaths + the custom-screen
 //    route helpers (buildCustomScreenWorkspaceHref / resolveAdminHref), wrapped in
@@ -140,8 +152,9 @@ loading/empty branches; they inherit the new card/token styling. No new error
 surfaces.
 
 **Regression-test shape:** see L05 — render `CustomScreenListPage` with a seeded
-`useCustomScreens` (one published + one draft screen); assert a `rounded-2xl`
-card per screen, the "In sidebar" badge present ONLY on the published one, the
+`useCustomScreens` (one `active` + `showInSidebar` screen + one `draft` screen);
+assert a `rounded-2xl` card per screen, the "In sidebar" badge present ONLY on the
+in-sidebar (`resolveCustomScreenSidebarShortcutState === "visible"`) one, the
 "New screen" action present, Edit/Open links resolving to the canonical
 workspace/editor hrefs (via `AdminLink`), and that selecting a screen still
 surfaces the bulk-action cluster (if selection is retained).

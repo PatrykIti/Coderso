@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Dashboard / Configurable Widgets
 **Estimated Effort:** Large
-**Dependencies:** TASK-480-05-L01 (builder grid + reducer) · TASK-480-04 (widget UI registry + product spec)
+**Dependencies:** TASK-480-05-L01 (builder grid + reducer) · TASK-480-04 (widget UI registry) · TASK-480-02 (widget/config schema)
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
@@ -33,12 +33,12 @@ widget with the draft config before commit.
   - `core/admin/ui/dashboard/builder/widgetConfigForm.tsx` (new — schema → controls renderer)
 - **Source-of-truth docs:**
   - Product/widget spec: `_docs/DASHBOARD_WIDGETS_SPEC.md` (catalog entries, config
-    fields, defaults — TASK-480-04)
+    fields, defaults — seeded by TASK-480-01-L02)
   - UI registry: `core/admin/ui/dashboard/widgets/registry.tsx` — each entry exposes
     `{ type, label, description, icon, category, defaultConfig, defaultSize, minSize,
     configFields, Component }` (TASK-480-04)
-  - Config schema/types: `core/services/dashboard/dashboardLayoutSchema.ts`
-    (`DashboardWidgetConfig` discriminated union + `normalizeWidgetConfig`) — TASK-480-01
+  - Config schema/types: `core/services/dashboard/dashboardWidgetContract.ts`
+    (`DashboardWidgetConfig` discriminated union + `normalizeDashboardWidgetConfig`) — TASK-480-02
   - Widget host for preview: `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`
   - Floating-panel pattern: `_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx`
     (pinned popover card, `GripHorizontal` handle, close affordance); shared shell
@@ -46,8 +46,9 @@ widget with the draft config before commit.
   - Content-type / range source options: `core/admin/services/contentTypesClient.ts`
     (`contentTypes:list`) for the data-source selector
 - **Out of scope:** The grid/arrange/resize/Save lifecycle (L01); widget renderer
-  internals + data fetching (TASK-480-04); schema/route definitions (480-01/02);
-  tests (L03). No new content-type endpoints — reuse `contentTypes:list` cache.
+  internals (TASK-480-04) + data fetching (TASK-480-03); schema (480-02) / route
+  (480-03) definitions; tests (L03). No new content-type endpoints — reuse
+  `contentTypes:list` cache.
 
 ---
 
@@ -65,8 +66,8 @@ widget with the draft config before commit.
   widget without `users:read`) — a presentational guard; the data route is the boundary.
 - **CSRF / rate-limit:** n/a here (no direct writes; the `contentTypes` read is a
   cached `GET`). The eventual Save carries CSRF in L01.
-- **Validation:** config edits pass through `normalizeWidgetConfig` (the schema
-  owner, TASK-480-01) before entering the draft, so an out-of-range/unknown value
+- **Validation:** config edits pass through `normalizeDashboardWidgetConfig` (the
+  schema owner, TASK-480-02) before entering the draft, so an out-of-range/unknown value
   can never reach the layout. Reject-unknown is the schema's job; the form only
   emits known fields.
 - **Secret handling:** config values are ids/enums/ranges/labels only — no secrets;
@@ -160,7 +161,7 @@ export function WidgetConfigPanel({ widget, onClose, onApply }: WidgetConfigPane
   const [config, setConfig] = useState(widget.config);
 
   const setField = useCallback((key: string, value: unknown) => {
-    setConfig((prev) => normalizeWidgetConfig(widget.type, { ...prev, [key]: value })); // schema clamp
+    setConfig((prev) => normalizeDashboardWidgetConfig(widget.type, { ...prev, [key]: value })); // schema clamp
   }, [widget.type]);
 
   // push committed config into the L01 draft (dirty). No sync setState in effects.
@@ -214,11 +215,11 @@ export function WidgetConfigForm({ fields, config, onChange }: WidgetConfigFormP
 
 **Data flow:** Add → `instantiate(registry[type])` → reducer `addWidget` (dirty).
 Configure → open `WidgetConfigPanel` for the selected instance → each control calls
-`setField` → `normalizeWidgetConfig` clamps to schema → local `config` updates →
+`setField` → `normalizeDashboardWidgetConfig` clamps to schema → local `config` updates →
 `DashboardWidgetHost` re-renders the **live preview** → committed config flows to the
 L01 reducer via `configureWidget` (dirty). Persistence only on the L01 Save.
 
-**Error handling:** `normalizeWidgetConfig` guarantees a valid config at every
+**Error handling:** `normalizeDashboardWidgetConfig` guarantees a valid config at every
 keystroke, so the preview never receives an invalid shape; if a host preview throws
 on bad data, wrap it in the existing widget error boundary (TASK-480-04) so the panel
 stays usable. The content-type selector degrades to an empty/"no content types"
@@ -230,7 +231,7 @@ option when the cache read fails, without blocking other fields.
   `addWidget` with default config + size.
 - Configure panel renders the schema-driven controls for the selected type and a
   live `DashboardWidgetHost` preview.
-- Editing a control routes through `normalizeWidgetConfig` and updates the draft
+- Editing a control routes through `normalizeDashboardWidgetConfig` and updates the draft
   (dirty) — out-of-range input is clamped, unknown keys never appear.
 - Content-type select sources from the cached `contentTypes:list`.
 

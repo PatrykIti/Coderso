@@ -22,8 +22,9 @@ for it.
 
 - **Goal:** New Vitest suites that render the real `ListingListPage`,
   `ListingEditorPage`, `ListingFiltersPage`, and `ListingSearchPage` and assert the
-  prototype look is present (rounded-2xl cards, query summary + source/layout
-  badges, editor frame with left rail + canvas result grid + inspector, soft info/
+  prototype look is present (rounded-2xl cards, query summary + a source badge + a
+  real query-detail badge (result limit), editor frame with left rail + canvas
+  result grid + inspector, soft info/
   control cards) while the core behaviors (filtering/selection/delete, query-model
   mutation + preview, runtime-token + public-search preview) still work.
 - **Owning module/service:** new
@@ -48,111 +49,156 @@ routes, RBAC, cache, and adminPaths).
 
 ## Implementation Pseudocode
 
-Mock `listingsClient` (`previewListingQuery`, `previewListingFilters`,
-`previewPublicSearch`, `createListingQuery`/`updateListingQuery`/
-`getListingQueryCached`, `deleteListingQuery`), the `useListingQueries`/
-`useListingTemplates` hooks (or seed their cache), `cachePolicy`/`cacheBus`, and the
-`contentTypesClient`. Wrap in the `AdminRouter`/shell test providers used by the
-existing admin suites. Assert on stable, semantic signals — accessible roles/text
-and load-bearing class tokens — not brittle full-class snapshots.
+Use the repo's REAL UI-test idiom — this repo has **no** `@testing-library/react`,
+`jest-dom`, or `user-event`. Each suite starts with `// @vitest-environment
+happy-dom`, renders the real page with `createRoot` inside `React.act`, wraps it in
+`AdminRouterProvider` (`core/admin/ui/contexts/AdminRouterContext`, set
+`initialPath` for edit/route mode), and seeds data by stubbing `globalThis.fetch`
+(and/or priming the `listingsClient` cache + mocking the `useListingQueries`/
+`useListingTemplates` hooks). Drive interactions with
+`element.dispatchEvent(new MouseEvent("click", { bubbles: true }))` inside
+`React.act`; query with `container.querySelector(...)` / `container.textContent` and
+`aria-label`/`role` attributes. Do **NOT** use the SSR `renderAdminUi` helper
+(`tests/utils/adminRouterRender.tsx`, `renderToString`) for interactions or
+tab-switch assertions — it emits a single static snapshot. Pattern reference:
+`tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`. Avoid
+driving Radix **Select** dropdowns in happy-dom (they need pointer-capture); exercise
+wiring through plain `<button>`s ("Add filter", "Use example", "Run preview"),
+`role="checkbox"`/`role="switch"` buttons, and `<input>`s instead. Assert on stable
+signals (visible text, `aria-label`/role, load-bearing tokens like `rounded-2xl`),
+not brittle full-class snapshots.
 
 ```tsx
-// tests/vitest/ui-integration/listing-list-restyle.test.tsx
+// Shared helpers (per the repo idiom — see custom-screen-record-interactions.test.tsx):
+// const mount = (node, path = "/admin/advanced/listings") => {
+//   const container = document.createElement("div");
+//   document.body.appendChild(container);
+//   const root = createRoot(container);
+//   React.act(() => root.render(
+//     <AdminRouterProvider initialPath={path}>{node}</AdminRouterProvider>));
+//   return { container, root };
+// };
+// const click = (el) => React.act(() => {
+//   el?.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+// const findButton = (root, re) => Array.from(root.querySelectorAll("button")).find(
+//   (b) => re.test(b.textContent || "") || re.test(b.getAttribute("aria-label") || ""));
+// seedListingQueries(...) primes the listingsClient cache / mocks useListingQueries.
+
+// tests/vitest/ui-integration/listing-list-restyle.test.tsx — @vitest-environment happy-dom
 describe("Listings list restyle", () => {
   it("renders header, tabs, and query records as rounded-2xl cards", () => {
     seedListingQueries([lq("Latest articles", "entries"), lq("Events", "posts")]);
-    renderListingListPage();
-    expect(screen.getByRole("heading", { name: "Listings" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /new/i })).toBeInTheDocument();
-    const card = screen.getByText("Latest articles").closest("[class*='rounded-2xl']");
-    expect(card).toBeTruthy();
-    // derived summary + source/layout badges present
-    expect(within(card!).getByText(/entries|articles/i)).toBeInTheDocument();
+    const { container } = mount(<ListingListPage />);
+    expect(container.querySelector("h1")?.textContent).toContain("Listings");
+    expect(findButton(container, /new/i)).toBeTruthy();
+    expect(container.querySelector("[class*='rounded-2xl']")).toBeTruthy();
+    // derived summary (source label "Content entries") + the REAL result-limit badge
+    expect(container.textContent).toMatch(/content entries|entries/i);
+    expect(container.textContent).toMatch(/per page/i); // no invented layout badge
   });
 
   it("summarizeListingQuery derives a readable line from the query model", () => {
+    // pure helper exported by ListingListPage (L01); op "eq" is a real ListingFilterOperator
     expect(summarizeListingQuery(lq("X", "entries", { filters:[{field:"status",op:"eq",value:"published"}] })))
       .toMatch(/status.*eq.*published/i);
   });
 
-  it("selecting a query card still surfaces the bulk cluster", async () => {
+  it("selecting a query card still surfaces the bulk cluster", () => {
     seedListingQueries([lq("Latest articles", "entries")]);
-    renderListingListPage();
-    await userEvent.click(screen.getByRole("checkbox", { name: /select/i }));
-    expect(screen.getByText(/selected/i)).toBeInTheDocument();
+    const { container } = mount(<ListingListPage />);
+    // Radix Checkbox renders role=checkbox with aria-label "Select <name>"
+    click(container.querySelector('[aria-label^="Select "]'));
+    expect(container.textContent).toMatch(/selected/i); // ListingBulkActionsBar "Selected 1"
   });
 
-  it("delete control opens the confirm dialog (behavior preserved)", async () => {
+  it("delete control opens the confirm dialog (behavior preserved)", () => {
     seedListingQueries([lq("Latest articles", "entries")]);
-    renderListingListPage();
-    await userEvent.click(screen.getByRole("button", { name: /delete/i }));
-    expect(screen.getByText(/delete listing query/i)).toBeInTheDocument();
+    const { container } = mount(<ListingListPage />);
+    click(findButton(container, /delete/i));
+    // ConfirmActionDialog renders into a portal; real copy is "Delete listing query?"
+    expect(document.body.textContent).toMatch(/delete listing query/i);
   });
 });
 
-// tests/vitest/ui-integration/listing-editor-restyle.test.tsx
+// tests/vitest/ui-integration/listing-editor-restyle.test.tsx — @vitest-environment happy-dom
 describe("Listing editor restyle", () => {
-  it("renders the editor frame: left rail, canvas, inspector", async () => {
-    renderListingEditorPage({ mode: "create" });
-    expect(screen.getByText(/source/i)).toBeInTheDocument();        // left rail
-    expect(screen.getByText(/filters/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /run preview/i })).toBeInTheDocument();
-    const frame = screen.getByText(/run preview/i).closest("[class*='rounded-2xl']");
-    expect(frame).toBeTruthy();
+  it("renders the editor frame: left rail, canvas, inspector", () => {
+    const { container } = mount(<ListingEditorPage />, "/admin/advanced/listings/new"); // create mode
+    expect(container.textContent).toMatch(/source/i);   // left rail "Source"
+    expect(container.textContent).toMatch(/filters/i);
+    const runPreview = findButton(container, /run preview/i);
+    expect(runPreview).toBeTruthy();
+    expect(runPreview?.closest("[class*='rounded-2xl']")).toBeTruthy(); // editor frame
   });
 
-  it("changing source still mutates the query model + marks dirty", async () => {
-    renderListingEditorPage({ mode: "create" });
-    await userEvent.selectOptions(screen.getByLabelText(/source/i), "posts");
-    // Save becomes enabled (dirty) — wiring preserved
-    expect(screen.getByRole("button", { name: /save query/i })).toBeEnabled();
+  it("a model edit marks dirty — proven via the DISCARD button (Save is always enabled)", () => {
+    const { container } = mount(<ListingEditorPage />, "/admin/advanced/listings/new");
+    const discard = findButton(container, /discard/i);
+    expect(discard?.hasAttribute("disabled")).toBe(true); // not dirty yet (disabled={!hasUnsavedChanges})
+    // Use the plain "Add filter" button (setQuery + markDirty) — Radix Source <Select>
+    // can't be driven in happy-dom; "Add filter" proves the same mutate+dirty wiring.
+    click(findButton(container, /add filter/i));
+    expect(discard?.hasAttribute("disabled")).toBe(false); // dirty now
+    // Save query stays enabled regardless (disabled={isSaving}); it CANNOT prove dirty.
+    expect(findButton(container, /save query/i)?.hasAttribute("disabled")).toBe(false);
   });
 
-  it("Run preview calls previewListingQuery and renders the result grid", async () => {
-    previewListingQuery.mockResolvedValue({ rows: [{ id: "1", title: "A" }], total: 1 });
-    renderListingEditorPage({ mode: "create" });
-    await userEvent.click(screen.getByRole("button", { name: /run preview/i }));
-    expect(previewListingQuery).toHaveBeenCalled();
-    expect(await screen.findByText(/bound query/i)).toBeInTheDocument();
+  it("Run preview calls previewListingQuery and renders the bound-query canvas", async () => {
+    // stub globalThis.fetch so POST /listings/queries/preview returns a ListingPreviewResult
+    stubPreview({ source: "entries", total: 1, limit: 12, offset: 0, rows: [{ id: "1", title: "A" }] });
+    const { container } = mount(<ListingEditorPage />, "/admin/advanced/listings/new");
+    await React.act(async () => {
+      findButton(container, /run preview/i)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    // restyled canvas badge ("Bound query · N results", L02 step 4) / preview count
+    expect(container.textContent).toMatch(/bound query|matching row/i);
   });
 });
 
-// tests/vitest/ui-integration/listing-filters-restyle.test.tsx
+// tests/vitest/ui-integration/listing-filters-restyle.test.tsx — @vitest-environment happy-dom
 describe("Filters preview restyle", () => {
-  it("renders the restyled controls + toggles examples", async () => {
+  it("renders the restyled controls + toggles examples + Use example writes the token input", () => {
     seedListingQueries([lq("Latest articles", "entries")]);
-    renderListingFiltersPage();
-    expect(screen.getByRole("heading", { name: "Filters" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /run preview/i })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: /show examples/i }));
-    const useBtn = screen.getAllByRole("button", { name: /use example/i })[0];
-    await userEvent.click(useBtn);
-    expect((screen.getByPlaceholderText(/lq\./i) as HTMLInputElement).value).toMatch(/^lq\./);
+    const { container } = mount(<ListingFiltersPage />, "/admin/advanced/filters");
+    expect(container.querySelector("h1")?.textContent).toContain("Filters");
+    expect(findButton(container, /run preview/i)).toBeTruthy();
+    click(findButton(container, /show examples/i));
+    click(findButton(container, /use example/i)); // first match — plain button -> setQueryString
+    const tokenInput = container.querySelector('input[placeholder^="lq."]') as HTMLInputElement | null;
+    expect(tokenInput?.value).toMatch(/^lq\./);
   });
 });
 
-// tests/vitest/ui-integration/listing-search-restyle.test.tsx
+// tests/vitest/ui-integration/listing-search-restyle.test.tsx — @vitest-environment happy-dom
 describe("Search preview restyle", () => {
   it("renders query/limit inputs + source switches and runs preview", async () => {
-    previewPublicSearch.mockResolvedValue({ query: "a", sources: ["pages"], items: [] });
-    renderListingSearchPage();
-    expect(screen.getByRole("heading", { name: "Search" })).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("switch", { name: /posts/i })); // toggles source set
-    await userEvent.click(screen.getByRole("button", { name: /run preview/i }));
-    expect(previewPublicSearch).toHaveBeenCalled();
+    // stub globalThis.fetch so GET /search/public-preview returns a PublicSearchPreviewResult
+    const calls = stubSearch({ query: "a", sources: ["pages"], items: [] });
+    const { container } = mount(<ListingSearchPage />, "/admin/advanced/search");
+    expect(container.querySelector("h1")?.textContent).toContain("Search");
+    // Radix Switch renders role=switch buttons in Pages/Entries/Posts order; toggle Posts
+    const switches = container.querySelectorAll('[role="switch"]');
+    click(switches[2]); // Posts (positional — Radix Switch has no name binding)
+    await React.act(async () => {
+      findButton(container, /run preview/i)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(calls.length).toBeGreaterThan(0);        // previewPublicSearch hit
+    expect(calls[0]).toMatch(/\/search\/public-preview/);
   });
 });
 ```
 
-**Data flow:** tests seed cache/mocks → render the real component → assert DOM/role/
-text + load-bearing tokens (`rounded-2xl`, badges, frame regions) → drive one
-behavioral path per area (select→bulk, delete→confirm, source→dirty,
-run-preview→client call, use-example→input, switch→source set) to prove the restyle
-preserved wiring.
+**Data flow:** tests seed cache / `globalThis.fetch` stubs → render the real
+component via `createRoot`/`React.act` → assert `container` text + `aria-label`/role
+attributes + load-bearing tokens (`rounded-2xl`, badges, frame regions) → drive one
+behavioral path per area (select→bulk, delete→confirm, add-filter→dirty (observed on
+the **Discard** button enabling, since Save query is always enabled),
+run-preview→client call, use-example→input, switch→preview request) to prove the
+restyle preserved wiring.
 
-**Error handling:** keep assertions resilient — query by accessible role/name and
-`toMatch`/`class*=` token checks instead of exact className strings, so future token
-tweaks from TASK-479-05/06 do not falsely fail these suites.
+**Error handling:** keep assertions resilient — query by `aria-label`/role attribute
++ visible text and `toMatch`/`class*=` token checks instead of exact className
+strings, so future token tweaks from TASK-479-05/06 do not falsely fail these suites.
 
 **Regression-test shape:** the four new suites above PLUS a green run of the
 existing `tests/vitest/admin/listingsClient.test.ts` (no edits to that file unless a

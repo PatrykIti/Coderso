@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Dashboard
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06 · TASK-480 (Dashboard Widgets feature — provides the configurable panels this shell renders)
+**Dependencies:** TASK-479-05 (tokens) · TASK-479-06 (shell) · TASK-480 (forward / non-blocking — Dashboard Widgets feature provides the configurable panels this shell will later host; not required to ship this re-skin)
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -57,9 +57,12 @@ where no backing endpoint exists yet) — never fabricating metrics or API calls
 ## Security Contract
 
 No endpoint or permission model changes (visual restyle only; preserves existing
-routes, RBAC, cache, and adminPaths). The Dashboard keeps `getDashboardData()` /
+routes, RBAC, cache, and admin paths). The Dashboard keeps `getDashboardData()` /
 `DashboardPayload` exactly as-is; all in-page links continue to route through the
-shared canonical helpers (`adminPaths` + `AdminLink`), never hand-built hrefs.
+shared `AdminLink` (which canonicalizes its `href` via `resolveAdminHref` from
+`@/utils/adminPaths`), never hand-built hrefs. (`adminPaths.ts` exports helper
+functions like `resolveAdminHref`/`withAdminBasePath` — there is **no**
+`adminPaths.dashboard()`/`.pages()` path-builder object to call.)
 
 ---
 

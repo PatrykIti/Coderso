@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Settings / Visual Refresh
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -43,8 +43,9 @@ light default with a dark toggle.
   `IntegrationDrawer`/`IntegrationRequestDialog`) and
   `core/admin/ui/site/SiteSettingsPage.tsx`, backed by the settings clients
   (`settingsClient`, `siteSettingsClient`, `assistantClient`, `sessionsClient`,
-  `apiKeysClient`, `webhooksClient`, `emailClient`, `storageSettingsClient`,
-  `integrationsClient`) and the shared dirty-state + auto-save hooks
+  `apiKeysClient`, `webhooksClient`, `emailClient`, `integrationsClient`; storage
+  settings live in `settingsClient` — there is no separate `storageSettingsClient`)
+  and the shared dirty-state + auto-save hooks
   (`SettingsDirtyNavigation`, `useSettingsAutoSave`).
 - **Source-of-truth docs:** `_docs/SECURITY_SPEC.md` (secret handling — keys
   stay backend-only), `_docs/DESIGN_TOKENS.md`, `_docs/TESTING_STRATEGY.md`, and
@@ -68,9 +69,10 @@ No endpoint or permission model changes (visual restyle only; preserves existing
 routes, RBAC, cache, and adminPaths).
 
 **Secret handling is the hard constraint of this subtask.** Per
-`_docs/SECURITY_SPEC.md`, secrets (assistant API key, SMTP password, storage
-secret/access keys, integration credentials, API-key plaintext, webhook signing
-secret) stay **backend-only**. Leaves MUST NOT:
+`_docs/SECURITY_SPEC.md`, secrets (the assistant LLM-provider key — stored as an Integrations secret, not
+entered on the Assistant page — SMTP password, storage secret/access keys,
+integration credentials, API-key plaintext, webhook signing secret) stay
+**backend-only**. Leaves MUST NOT:
 - surface a stored secret into client state, the cache, logs, or a debug payload;
 - change the write-only / masked-input contract for any secret field (the real
   pages already send secrets opaquely and never read them back);

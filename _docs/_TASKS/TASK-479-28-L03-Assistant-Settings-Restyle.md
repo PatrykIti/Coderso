@@ -15,14 +15,18 @@
 Restyle the **Assistant** settings page
 (`core/admin/ui/settings/AssistantSettingsPage.tsx` + `AssistantSettingsCard.tsx`)
 to the prototype's `AssistantSettingsPage`: `SettingsSection` groups for
-**Provider** (provider / model / API key), **Behavior** (temperature / system
-prompt), **Features** (capability toggles), and **Usage** — over the real
-assistant settings + model-metadata flow. The assistant API key stays
-**backend-only** (write-only masked input, never read back to the client).
+**Provider** (provider / model + the existing Integrations-secret key delegation
+link), **Behavior** (default mode), **Features** (assistant / LLM-Guide / launcher
+toggles), and **Advanced & usage** (token limits, quotas, docs corpus) — over the
+real assistant settings + model-metadata flow. The LLM-provider API key is
+**backend-only**: it is stored as an Integrations secret and is NOT entered on
+this page — the Provider section links out to `/admin/settings/integrations` to
+manage it (the page already never reads any key back to the client).
 
 - **Goal:** Give Assistant settings the prototype's grouped, soft look while
-  preserving the real provider/model/key wiring, the LLM-enabled +
-  `assistantDefaultMode` validation (`resolveAssistantValidationError`), the
+  preserving the real provider/model wiring, the Integrations-secret key
+  delegation (the existing `AdminLink` to `/admin/settings/integrations`), the
+  LLM-enabled + `assistantDefaultMode` validation (`resolveAssistantValidationError`), the
   OpenRouter/provider model-metadata fetch (`getAssistantModelMetadata`), the docs
   reindex action (`reindexAssistantDocs` + its `ConfirmActionDialog`), the
   dirty-state guard, auto-save, and the sticky save bar. Default the model field
@@ -55,11 +59,12 @@ assistant settings + model-metadata flow. The assistant API key stays
 No endpoint or permission model changes (visual restyle only; preserves existing
 routes, RBAC, cache, and adminPaths).
 
-**Key handling:** the assistant API key field stays a write-only, masked input.
-The page already never reads the stored key back — keep it that way. Do NOT bind a
-fetched secret into client state, the cache, logs, or a debug payload. On save,
-send the key opaquely through the existing `onSave`/settings client; an empty
-field means "unchanged", never "clear".
+**Key handling:** the assistant page does NOT collect the LLM-provider API key.
+The key is stored as an encrypted Integrations secret; the Provider section only
+renders the existing `AdminLink` to `/admin/settings/integrations` ("Configure
+OpenRouter/OpenAI API key") shown when the provider is `openrouter`/`openai`. The
+restyle MUST keep that delegation link and MUST NOT add a key input or bind any
+fetched secret into client state, the cache, logs, or a debug payload.
 
 ---
 
@@ -77,12 +82,13 @@ Only the body JSX changes (group `AssistantSettingsCard` fields into
 Target file B: `core/admin/ui/settings/AssistantSettingsCard.tsx`. Re-lay-out the
 existing fields into `SettingsSection`/`SettingsField`. Keep every binding:
 `values.assistantLlmProvider`, `values.assistantLlmModel`,
-`values.assistantLlmEnabled`, `assistantDefaultMode`, the key input, the
+`values.assistantLlmEnabled`, `assistantDefaultMode`, the existing
+Integrations-secret key-delegation `AdminLink` (NOT a key input — there is none), the
 `modelMetadata`/`modelMetadataError`/`isModelMetadataLoading` badges, and the
 reindex trigger.
 
 Port from prototype `AssistantSettingsPage.tsx` (Provider / Behavior / Features /
-Usage sections).
+Advanced & usage sections — re-mapped to the real assistant fields).
 
 ```tsx
 // AssistantSettingsCard.tsx — RENDER ONLY. Bindings unchanged.
@@ -92,17 +98,31 @@ Usage sections).
       <SettingsField label="Provider">
         <Select value={values.assistantLlmProvider}
                 onChange={(e) => onChange?.({ assistantLlmProvider: e.target.value })}>
-          {/* keep the REAL provider option set (none / openrouter / anthropic / …) */}
+          {/* the REAL provider option set is exactly: none / openai / openrouter
+              (settingsValues.ts AssistantSettingsValues.assistantLlmProvider).
+              There is NO `anthropic` provider — do not add one. */}
         </Select>
+        {/* KEEP the existing key-delegation hint: when the provider is `openrouter`
+            or `openai`, the real card renders an AdminLink to
+            /admin/settings/integrations ("Configure OpenRouter/OpenAI API key")
+            because the key is stored as an Integrations secret. Preserve it. */}
+        {values.assistantLlmProvider === "openrouter" ? (
+          <AdminLink href="/admin/settings/integrations">Configure OpenRouter API key</AdminLink>
+        ) : null}
+        {values.assistantLlmProvider === "openai" ? (
+          <AdminLink href="/admin/settings/integrations">Configure OpenAI API key</AdminLink>
+        ) : null}
       </SettingsField>
 
       <SettingsField label="Model"
         hint="The latest Claude models offer the best quality for content work.">
-        {/* Real field is a FREE-FORM Input bound to values.assistantLlmModel.
-            KEEP it free-form (provider-resolved), but add Claude suggestions via a
-            <datalist> so the prototype's curated options are offered without
-            breaking the open binding. Do NOT replace the Input with a closed Select
-            that would reject a custom/provider-specific model id. */}
+        {/* Real field is a FREE-FORM Input bound to values.assistantLlmModel
+            (default `google/gemma-3n-e2b-it:free`). KEEP it free-form
+            (provider-resolved), but offer Claude suggestions via a <datalist> so the
+            curated options appear without breaking the open binding. Do NOT replace
+            the Input with a closed Select that would reject a custom/provider-specific
+            model id. NOTE: under the real providers a Claude model is reached through
+            OpenRouter as a namespaced id (e.g. `anthropic/claude-opus-4`). */}
         <Input list="assistant-model-suggestions"
                value={values.assistantLlmModel}
                onChange={(e) => onChange?.({ assistantLlmModel: e.target.value })}
@@ -115,27 +135,30 @@ Usage sections).
         {/* keep the existing modelMetadata / modelMetadataError / loading Badges */}
       </SettingsField>
 
-      <SettingsField label="API key" htmlFor="assistant-key"
-        hint="Stored encrypted; never exposed to the browser.">
-        <Input id="assistant-key" type="password" /* write-only, masked */
-               value={values.assistantApiKeyInput}  /* the EXISTING write-only input field */
-               onChange={(e) => onChange?.({ assistantApiKeyInput: e.target.value })}
-               placeholder="•••• unchanged" disabled={llmConfigDisabled} />
-      </SettingsField>
+      {/* NO API-key input on this page: there is no `values.assistantApiKeyInput`.
+          The provider key is an Integrations secret reached via the delegation link
+          above — do not fabricate a key field here. */}
     </div>
   </SettingsSection>
 
-  <SettingsSection title="Behavior" description="Tune tone and ground rules for the assistant.">
-    {/* temperature/default-mode Select + system-prompt Textarea — same bindings */}
+  <SettingsSection title="Behavior" description="Tune how the assistant operates.">
+    {/* default-mode Select (docs-only / llm-guide) bound to values.assistantDefaultMode.
+        The real card has NO temperature and NO system-prompt field — do not add
+        either; keep only the bindings the settings model persists. */}
   </SettingsSection>
 
   <SettingsSection title="Features" description="Enable specific assistant capabilities.">
-    {/* the REAL capability toggles as <Switch> rows bound to values.* —
-        only render toggles the settings model actually persists */}
+    {/* the REAL capability toggles as <Switch> rows, bound to the actual fields:
+        assistantEnabled, assistantLlmEnabled, assistantLauncherAvatarEnabled
+        (+ assistantLauncherAvatarAsset URL Input), assistantDocsReindexOnBoot.
+        Only render toggles the settings model actually persists. */}
   </SettingsSection>
 
-  <SettingsSection title="Corpus & usage" description="Docs index and assistant status.">
-    {/* keep the official docs-corpus panel + reindex trigger (ConfirmActionDialog).
+  <SettingsSection title="Advanced & usage" description="Token limits, quotas, and docs index.">
+    {/* keep the real Advanced controls — assistantLlmMaxInputTokens /
+        assistantLlmMaxOutputTokens / assistantLlmTimeoutMs /
+        assistantQuotaRequestsPerMinute / assistantQuotaRequestsPerDay — plus the
+        official docs-corpus panel + reindex trigger (ConfirmActionDialog).
         Render a usage meter ONLY if a real usage value exists; otherwise omit —
         do not port the mock "620K / 1M tokens" Progress bar. */}
   </SettingsSection>
@@ -164,9 +187,10 @@ the reindex error toast/alert, and the page Alerts.
 **Regression-test shape (see L07):** render `<AssistantSettingsPage values={seed}
 onSave={spy} />`; assert Provider/Behavior/Features sections render; assert the
 model Input offers the Claude suggestions (datalist options present) AND still
-accepts a custom value; assert the key field is `type="password"` and that NO
-fetched secret appears in the DOM/props; assert the LLM-Guide validation still
-blocks Save; assert reindex opens its confirm dialog.
+accepts a custom value; assert the page renders NO assistant key input and instead
+exposes the Integrations delegation link (`/admin/settings/integrations`) when the
+provider is `openai`/`openrouter`, with no fetched secret in the DOM; assert the
+LLM-Guide validation still blocks Save; assert reindex opens its confirm dialog.
 
 ---
 

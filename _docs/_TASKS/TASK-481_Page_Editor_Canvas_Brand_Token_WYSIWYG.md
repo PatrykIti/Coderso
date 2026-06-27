@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Pages / Page Editor V2 / Canvas
 **Estimated Effort:** Medium
-**Dependencies:** TASK-477-02 (canvas neutral tokens + live swatch palette)
+**Dependencies:** TASK-477-02 (canvas neutral tokens + live swatch palette); coordinate with TASK-479-05-L03 + TASK-479-08-L02 (shared `@theme` brand vars + `data-page-editor-canvas-frame` — non-blocking; see "Cross-task coordination")
 **Status:** ⏳ To Do
 **Created:** 2026-06-27
 
@@ -23,9 +23,9 @@ palette. Brand colors were explicitly left as a follow-up — this task.
 
 ## Problem (root cause)
 
-The admin shell's Tailwind `@theme` in `core/admin/styles/globals.css:7-22` maps
-the brand `--color-primary/-secondary/-accent/-border` from the **admin** shadcn
-theme globally. Those declarations win inside the canvas, so a block whose color
+The admin shell's Tailwind `@theme` block in `core/admin/styles/globals.css` (the
+brand `--color-primary/-secondary/-accent/-border` declarations inside `@theme {`)
+maps those brand colors from the **admin** shadcn theme globally. Those declarations win inside the canvas, so a block whose color
 token is e.g. `accent` resolves `var(--color-accent)` to the admin value
 (near-white) in the editor while the front resolves it to the **site** token
 (e.g. orange `#f59e0b`).
@@ -89,13 +89,41 @@ in 477-02), `mergeTokens`, `readSiteDesignTokenOverrides`.
 - Chrome-safety must be re-verified by grepping `core/admin/ui/pages` for
   `var(--color-primary|secondary|accent|border)` consumers before emitting brand.
 
+## Cross-task coordination (TASK-479)
+
+This task overlaps two TASK-479 admin-redesign leaves on the **same** files/regions,
+so the two programs must not double-edit those regions uncoordinated (each 479 leaf
+carries the reciprocal note):
+
+- **TASK-479-05-L03** (`_docs/_TASKS/TASK-479-05-L03-Globals-Css-Mapping-And-Dark-Mode.md`)
+  edits the **same `@theme {` block** in `core/admin/styles/globals.css` (wiring
+  `--admin-*`→shadcn vars + the dark layer). That leaf makes **no preview-token
+  semantics change** — it leaves the canvas brand/neutral emission in
+  `core/ui/theme/tokenCss.ts` (`toPageCanvasColorCssVariableMap`) untouched. TASK-481
+  owns the brand-emission change; the edits to the `@theme` brand `--color-*`
+  declarations must be a single coordinated change of that region, not two competing
+  rewrites.
+- **TASK-479-08-L02** (`_docs/_TASKS/TASK-479-08-L02-Page-Editor-Floating-Canvas.md`)
+  restyles the **same `data-page-editor-canvas-frame`** (canvas chrome / visual tokens
+  only) and explicitly keeps `canvasSiteTokenVariables` and the
+  `data-page-editor-canvas-*` contract intact so TASK-481 can layer its brand-token
+  WYSIWYG onto the same frame.
+
+**Sequencing:** let 479-08-L02 land the restyled `data-page-editor-canvas-*` shape
+first, then this task introduces the content-only scope + brand emission on that
+frame; align the `@theme` brand-`--color-*` edit with 479-05-L03. No `--admin-*` /
+dark-mode or `canvasSiteTokenVariables` semantics change on the 479 side — the only
+brand/WYSIWYG behavior change is owned here.
+
 ## References
 
 - TASK-477-02: `_docs/_TASKS/TASK-477-02-Block-Level-Panel-Swatch-Preview-Accuracy.md`
   (neutral fix + live palette threading; this task continues it for brand).
 - `core/ui/theme/tokenCss.ts` — `toPageCanvasColorCssVariableMap`, `toCssVariableMap`.
-- `core/admin/styles/globals.css:7-22` — admin `@theme` brand `--color-*` mapping
-  (the source of the in-canvas brand override).
+- `core/admin/styles/globals.css` — the `@theme {` block's brand `--color-*` mapping
+  (`--color-primary/-secondary/-accent/-border`; the source of the in-canvas brand
+  override). Cite by the `@theme {` anchor, **not** line numbers — TASK-479-05-L03
+  edits this same region (see "Cross-task coordination").
 - `core/admin/ui/pages/PageEditor.tsx` — canvas frame (`data-page-editor-canvas-frame`),
   `useCanvasSiteTokens`, `PageEditorColorPaletteContext`.
 - Live evidence (2026-06-27): in-canvas `var(--color-accent)` resolved to admin

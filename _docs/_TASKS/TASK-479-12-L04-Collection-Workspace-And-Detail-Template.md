@@ -13,11 +13,14 @@
 ## Overview
 
 Restyle the two collection surfaces to the prototype: the **collection
-workspace** gains the underline tab set (**Entries / Detail template / Settings**)
-and soft-card overview + readiness chrome, and the **detail-template editor**
-gets the soft/violet editor chrome (header, tabs, panels) over its existing
-page-builder. All data, the detail-template create/delete + site-route linking
-flow, autosave/publish, and the block-builder logic are preserved.
+workspace** gains the line-variant tab set (**Entries / Detail template /
+Settings**) and soft-card overview + readiness chrome, and the **detail-template
+editor** gets the soft/violet editor chrome (header, tabs, panels) over its
+existing page-builder. The detail-template editor intentionally keeps its existing
+3-pane `EditorShell` page-builder (no prototype canvas source) — it does NOT adopt
+the floating `CanvasEditor`; that decision is deliberate. All data, the
+detail-template create/delete + site-route linking flow, autosave/publish, and the
+block-builder logic are preserved.
 
 - **Goal:** Bring `CollectionWorkspacePage.tsx` and `DetailTemplateEditorPage.tsx`
   to the prototype look while keeping the workspace summary/readiness data, the
@@ -33,8 +36,15 @@ flow, autosave/publish, and the block-builder logic are preserved.
 - **Source-of-truth docs:** `_docs/CONTENT_TYPES_SPEC.md`,
   `_docs/DESIGN_TOKENS.md`; prototype source
   `_docs/_PROTOTYPE/src/pages/advanced/CollectionWorkspacePage.tsx` plus
-  `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,FilterBar,DataTable,Pagination,EditorPreviewFrame}.tsx`
-  and `_docs/_PROTOTYPE/src/components/ui/tabs.tsx`.
+  `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,FilterBar,DataTable}.tsx`
+  and `_docs/_PROTOTYPE/src/components/ui/tabs.tsx`. In core, `PageHeader`,
+  `SectionCard`, `FilterBar`, and `DataTable` come from TASK-479-06-L02; the real
+  Tabs primitive is `core/admin/components/ui/tabs.tsx`
+  (`Tabs`/`TabsList`/`TabsTrigger`/`TabsContent`, Radix — no `items` prop; the
+  underline style is `<TabsList variant="line">`). The prototype's
+  `EditorPreviewFrame` is **not** ported (06-L02 out of scope): the collection
+  workspace stays on `AdminShell` and the detail-template editor stays on the real
+  `EditorShell`.
 - **Out of scope:** No change to the page-builder block model, the
   detail-template document normalization (`detailTemplateEditorModel.ts`), the
   autosave/publish/restore endpoints, or the `contentRoutes` schema. The shared
@@ -64,6 +74,7 @@ revalidate, the `requestSeq` race guard, `subscribeCacheEvents`
 Port the tab set from prototype `CollectionWorkspacePage.tsx`.
 
 ```tsx
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"; // real Radix Tabs (no `items` prop)
 type WsTab = "entries" | "template" | "settings";
 const [tab, setTab] = useState<WsTab>("entries"); // local UI state, lazy init, no effect
 
@@ -72,12 +83,14 @@ return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
       <PageHeader title={headerTitle} description={headerDescription} actions={/* keep Ready/Open Badge + Refresh */} />
       {/* keep remoteUpdatePending / error / isLoading blocks verbatim */}
-      <Tabs value={tab} onValueChange={(v) => setTab(v as WsTab)} variant="underline"
-        items={[
-          { value: "entries", label: "Entries" },
-          { value: "template", label: "Detail template" },
-          { value: "settings", label: "Settings" },
-        ]} />
+      {/* Real Tabs API: <Tabs> controls trigger state; bodies render below by `tab`. Underline = variant="line". */}
+      <Tabs value={tab} onValueChange={(v) => setTab(v as WsTab)}>
+        <TabsList variant="line">
+          <TabsTrigger value="entries">Entries</TabsTrigger>
+          <TabsTrigger value="template">Detail template</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+      </Tabs>
       {summary && tab === "entries" && (
         <>
           {/* "Edit detail template" link → AdminLink to buildDetailTemplateEditorHref(...) via resolveAdminRoutePath */}
@@ -113,8 +126,9 @@ wiring, the assistant surface context, and the block utils. Restyle chrome only.
 // DetailTemplateEditorPage.tsx — chrome only.
 // 1) EditorShell header/toolbar → prototype editor look (soft/violet, rounded-2xl,
 //    "Preview"/"History"/"Save"/"Publish" buttons restyled; keep onClick handlers).
-// 2) Keep <Tabs> for the editor's existing sections; restyle TabsList to the
-//    underline variant tokens. Do NOT change tab values or TabsContent wiring.
+// 2) Keep <Tabs> for the editor's existing sections (real Template/Data/Widget
+//    TabsList/TabsTrigger/TabsContent); restyle TabsList with variant="line"
+//    (NOT "underline"). Do NOT change tab values or TabsContent wiring.
 // 3) BlockList / BlockSettings / LibraryPanel reused as-is (restyled by TASK-479-07).
 // 4) DetailTemplateBindingPanel restyled to a soft inspector card; binding data flow unchanged.
 ```
@@ -131,12 +145,19 @@ the editor's autosave/publish toast adapters. Preserve dirty-state — do not
 overwrite unsaved editor state on background revalidation. No sync `setState` in
 effects (ESLint 9 react-hooks).
 
-**Regression-test shape (see L05):** SSR render asserts the workspace's three tab
-labels + Refresh + Ready/Open badge; that `CollectionOverview`/
-`CollectionReadinessChecklist` still render under the tabs; and that the
-detail-template editor renders its `EditorShell` chrome, tabs, and
-BlockList/LibraryPanel/BindingPanel regions. Assert links use resolved hrefs (no
-raw `<a href>`).
+**Regression-test shape (see L05):** an SSR `renderAdminUi` render asserts the
+always-visible chrome — the workspace's three tab triggers (Entries / Detail
+template / Settings) + the Refresh button + header — and that the detail-template
+editor renders its `EditorShell` chrome, its Template/Data/Widget tab triggers,
+and the BlockList/LibraryPanel/BindingPanel region markers. Do NOT assert the
+Ready/Open badge (gated on `summary`), `CollectionOverview` (renders only when
+`summary` is present), or `CollectionReadinessChecklist` (lives in the inactive
+**Settings** tab) under SSR — exercise those in a **seeded** test with the repo
+idiom (`// @vitest-environment happy-dom` + `createRoot`/`act` + a `vi.mock` of the
+workspace clients, like the existing
+`tests/vitest/ui/collection-workspace.test.tsx`), where you can also assert the
+"Edit detail template" / "New entry" links resolve through `AdminLink` to
+admin-prefixed canonical hrefs (not hand-built unresolved hrefs).
 
 ---
 

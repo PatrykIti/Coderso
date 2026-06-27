@@ -71,15 +71,25 @@ the data/cache contract. Only the **returned JSX** and the entry presentation ch
 return (
   <AdminShell activeHref="/admin/pages" breadcrumbs={[{label:"Content"},{label:"Pages",href:"/pages"},{label:"Templates"}]}>
     <div className="mx-auto flex max-w-7xl flex-col gap-6">
-      <PageHeader
+      <PageHeader   /* shared PageHeader from TASK-479-06-L02 */
         title="Page Templates"
-        description="Reusable, configurable layouts — edit once, update everywhere they're used."
+        // KEEP the existing description copy verbatim — the green
+        // `page-templates-surface.test.tsx` asserts `toContain("Reusable Page v2
+        // section stacks")`; do NOT relabel it here (the "edit once, update
+        // everywhere" propagation message lives in the dedicated note card below,
+        // not the header). Relabel only if L03 simultaneously updates that assertion.
+        description="Reusable Page v2 section stacks"
         actions={/* keep existing: New template Button -> setCreateOpen(true) */}
       />
 
       {/* PROPAGATION NOTE — port the prototype's violet soft card + RefreshCw icon.
-          Use shared soft tokens (bg-primary-soft/50, text-primary, rounded-2xl).
-          Static, informational; no data binding required. */}
+          Use shared soft tokens (bg-primary-soft/50, text-primary, rounded-2xl) from
+          TASK-479-05. Static, informational; no data binding required. HONESTY /
+          OWNERSHIP: keep the copy page-scoped ("every page using it updates"). A Page
+          Template can be the site FOOTER (site.footerTemplateId); the header / main
+          menu is a published Menu (site.navigationMenuId, owned by TASK-479-10), NOT a
+          template — do not imply the main menu propagates from here (see the parent
+          23 propagation-ownership reconciliation note). */}
       <Card className="flex items-center gap-3 bg-primary-soft/50 p-4">
         <RefreshCw className="size-5 shrink-0 text-primary" />
         <p className="text-sm text-muted-foreground">
@@ -95,6 +105,9 @@ return (
           real counts from `counts`); restyle to soft tokens only. */}
       <FilterRow search/setSearch statusFilter/setStatusFilter counts={counts} />
 
+      {/* ListSkeleton + EmptyState are the shared primitives from TASK-479-06-L02
+          (do not invent local variants); soft/success Badge + soft Button variants
+          and font-display are TASK-479-05 tokens. */}
       {isLoading ? <ListSkeleton/> : filtered.length === 0 ? <EmptyState/> : (
         // ENTRY PRESENTATION — adopt the prototype's card-grid look (PageThumb +
         // name + scope Badge + "N sections" + Edit/Preview/Duplicate/Delete). A
@@ -162,9 +175,13 @@ react-hooks compliant).
 
 **Regression-test shape:** see TASK-479-23-L03 — assert the header + description, the
 propagation note, status tabs with real counts, a seeded template's name + section
-count, the scope/status badge from real fields (not a fabricated "Site-wide"/usage
-number), and that Edit/Duplicate/Delete + create dialog still render and route to
-`/advanced/page-templates/:id`.
+count, and the scope/status badge from real fields (not a fabricated "Site-wide"/usage
+number). Navigation is via `onClick={() => navigate("/advanced/page-templates/:id")}`,
+so the route string is **never** emitted in the SSR `renderToString` output — assert
+the row/action affordances via the SSR-emitted hooks instead: `data-page-template-row={id}`
+plus the `aria-label="Edit/Duplicate/Delete …"` buttons and that the create dialog still
+renders. (Do **not** assert `toContain("/advanced/page-templates/:id")` — unsatisfiable
+under `renderAdminUi`.)
 
 ---
 
@@ -173,10 +190,17 @@ number), and that Edit/Duplicate/Delete + create dialog still render and route t
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/page-templates-surface.test.tsx tests/vitest/ui/page-templates-list.test.tsx`
-- Any pre-existing assertions in `page-templates-surface.test.tsx` that target the
-  list (header "Page Templates", "New template", a seeded template name, the
-  `/advanced/page-templates/:id` route) must remain true; update them only if the
-  visual structure intentionally relabels, and add the new-structure assertions in L03.
+- The pre-existing assertions in `page-templates-surface.test.tsx` that target the
+  list must remain true (they are the real on-disk assertions): header `"Page Templates"`,
+  description `"Reusable Page v2 section stacks"`, `"New template"`, the breadcrumb
+  `href="/admin/pages"` + `aria-current="page">Templates`, the seeded
+  `data-page-template-row="tpl-1"` + `"Landing stack"` / `"landing-stack"` / `"marketing"`,
+  the status-tab counts (`"Published (1)"` / `"Draft (0)"` after stripping SSR
+  `<!-- -->` markers), and `aria-label="Duplicate/Delete Landing stack"`. There is **no**
+  `/advanced/page-templates/:id` route-string assertion (navigation is `onClick`, not an
+  `href`, so the SSR string never contains it). Update any of these only if the visual
+  structure intentionally relabels — and then update the assertion in the same change;
+  add the new-structure assertions in L03.
 
 ---
 

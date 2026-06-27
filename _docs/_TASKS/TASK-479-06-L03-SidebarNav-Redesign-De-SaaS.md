@@ -105,9 +105,14 @@ function resolveActiveHref(adminBasePath, sections, activeHref): string | null {
 ### 3. Section / group / shortcut styling (port `shell/Sidebar.tsx`)
 
 ```text
-section label  -> px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted
-nav item       -> rounded-xl px-3 py-2; active = bg-sidebar-accent text-sidebar-accent-foreground, icon text-primary
-Advanced group -> collapsible button (ChevronDown rotate); body has left border (border-sidebar-border pl-2.5)
+// D1: SidebarNav is chrome — KEEP the existing --admin-sidebar-* tokens (and --admin-base-border
+// for the right rail); do NOT move to shadcn sidebar-* vars. Dark recolor arrives from the
+// injected <style> :root.dark{--admin-sidebar-*} (05-L04/L06), source-order winner.
+sidebar shell  -> bg-[var(--admin-sidebar-bg)], right rail border-[var(--admin-base-border)]
+section label  -> px-3 text-[11px] font-semibold uppercase tracking-wider text-[var(--admin-sidebar-text)]/70
+nav item       -> rounded-xl px-3 py-2 text-[var(--admin-sidebar-text)] hover:bg-[var(--admin-sidebar-hover-bg)];
+                  active = bg-[var(--admin-sidebar-active-bg)] text-[var(--admin-sidebar-active-text)]; icon accent text-primary
+Advanced group -> collapsible button (ChevronDown rotate); body has left border (border-[var(--admin-base-border)] pl-2.5)
                   KEEP groupState/onGroupToggle + aria-expanded/aria-controls; default expanded from group.defaultExpanded
 shortcuts      -> render section.itemsAfterGroups under a "Published screens" sublabel (text-[10px] uppercase)
 badge          -> use <Badge variant="soft"> (L01) for item.badge (e.g. "Beta")
@@ -117,13 +122,16 @@ badge          -> use <Badge variant="soft"> (L01) for item.badge (e.g. "Beta")
 
 ```tsx
 // Replace any trial/Pro card with a plain version line + the Docs/Support footer links.
-<div className="border-t border-sidebar-border p-3">
+<div className="border-t border-[var(--admin-base-border)] p-3">
   <div className="mb-2 flex items-center gap-1.5 px-3 py-1 text-xs text-muted-foreground">
-    <Hexagon className="size-3.5 shrink-0" /> Coderso {APP_VERSION}
+    <Hexagon className="size-3.5 shrink-0" /> Coderso 1.0
   </div>
   {/* footerItems (Docs/Support) -> AdminLink for internal, plain <a> for external coderso.dev links */}
 </div>
-// APP_VERSION sourced from the existing build/version constant (no new endpoint).
+// NOTE: there is NO client-side version constant (only server-side env.APP_VERSION), so render the
+// owner's literal "Coderso 1.0" (matches the prototype footer). If a versioned label is wanted later,
+// add a concrete Vite `define`/exported constant (with the 1.0.0 -> 1.0 mapping) — do NOT reference a
+// non-existent APP_VERSION import.
 ```
 
 **Data flow:** `AdminShell` (L05) resolves `sections`/`footerItems` via

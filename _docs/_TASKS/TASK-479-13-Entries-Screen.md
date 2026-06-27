@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Content
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06, TASK-479-12
+**Dependencies:** TASK-479-05, TASK-479-06, TASK-479-12
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`

@@ -43,6 +43,13 @@ preview, history — is preserved exactly.
   **structure + floating-panel control model**, not its hardcoded "Hero section"
   mock content or `defaultValue`-only inputs.
 
+> **Coordinate with TASK-481** (page-editor canvas brand-token WYSIWYG): 481 and
+> this leaf both touch the `data-page-editor-canvas-frame`. This restyle changes
+> only the canvas chrome's visual tokens and makes **no preview-token semantics
+> change here** — keep `canvasSiteTokenVariables` and the `data-page-editor-canvas-*`
+> contract intact so TASK-481 can layer its brand-token WYSIWYG on the same frame.
+> Sequence: land this chrome restyle's `data-*` shape before 481 builds on it.
+
 ---
 
 ## Security Contract

@@ -169,7 +169,10 @@ is an event handler; `previewStyle` stays a `useMemo` over `tokens`.
 **Regression-test shape (L07 + here):**
 
 - Rendering the drawer shows the new pickers; changing the "Primary soft (bg)"
-  picker updates `tokens.primarySoft.bg` and the preview style var.
+  picker updates `tokens.primarySoft.bg` and the preview style var. (Radix `Tabs`
+  unmount inactive panels under happy-dom — activate the new "Accents" tab
+  trigger before asserting its pickers; the Navigation/States additions render
+  once those tabs are active.)
 - `onSave` payload contains the new groups and passes `assertAdminThemeTokens`.
 - `importTokens(oldExportWithoutNewGroups)` returns a complete object (no throw).
 
@@ -179,11 +182,14 @@ is an event handler; `previewStyle` stays a `useMemo` over `tokens`.
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/admin`
-  (extend the existing admin-theme editor coverage; add a
-  `tests/vitest/admin/theme-template-drawer-new-tokens.test.tsx` suite).
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui` if the
-  existing `theme-tokens-editor.test.tsx` asserts the drawer.
+- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui`
+  (the ThemeTemplateDrawer suites live HERE on disk — e.g.
+  `tests/vitest/ui/theme-template-drawer-wave.test.tsx`,
+  `tests/vitest/ui/theme-tokens-editor.test.tsx`; add a
+  `tests/vitest/ui/theme-template-drawer-new-tokens.test.tsx` suite using the
+  repo idiom: `// @vitest-environment happy-dom` + `createRoot`/`React.act`
+  with `vi.mock`ed primitives — NOT React Testing Library / jest-dom /
+  user-event, which this repo does not have).
 
 ---
 

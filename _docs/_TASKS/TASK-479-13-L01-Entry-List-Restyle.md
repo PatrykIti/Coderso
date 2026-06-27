@@ -26,8 +26,10 @@ byte-for-byte the same.
   list logic and cache contract.
 - **Owning module/service:** `core/admin/ui/entries/EntryList.tsx`,
   `core/admin/ui/entries/EntryFilters.tsx`, `core/admin/ui/entries/EntryTable.tsx`,
-  `core/admin/ui/entries/EntryBulkActionsBar.tsx`. Shared `StatusBadge`/`FilterBar`/
-  `DataTable` wrapper primitives restyled in TASK-479-06.
+  `core/admin/ui/entries/EntryBulkActionsBar.tsx`. Shared `StatusTabs`/`StatusBadge`/
+  `FilterBar`/`DataTable` wrapper primitives come from TASK-479-06-L02 (created/ported
+  there); the `soft` Badge variant + `shadow-card`/`font-display` tokens from
+  TASK-479-05.
 - **Source-of-truth docs:** prototype screen
   `_docs/_PROTOTYPE/src/pages/advanced/EntriesPage.tsx`; prototype patterns
   `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,FilterBar,DataTable,StatusBadge,Pagination}.tsx`
@@ -80,21 +82,24 @@ the render-tree behavior identical; swap classNames and add the tab strip.
   actions={/* UNCHANGED bulk cluster + type Select(setTypeFilter,typeOptions) + New */}
 />
 
-// 2) NEW status tab strip (port prototype Tabs variant="underline").
+// 2) NEW status tab strip — use the shared `StatusTabs` (Tabs `line` underline
+//    variant) from 479-06-L02; do NOT invent a divergent tab primitive.
 //    DERIVE counts from already-loaded `entries` (render-time derivation — NO new
 //    effect, NO sync setState). The tab simply sets the existing statusFilter.
+//    Statuses are the REAL `EntryStatus` enum from `@/services/entriesClient`
+//    (`draft | published | scheduled | archived`) — there is NO "review" status,
+//    so none is shown (drop the prototype's invented value).
 const statusTabs = useMemo(() => {
-  const by = (s: string) => entries.filter((e) => e.status === s).length;
+  const by = (s: EntryStatus) => entries.filter((e) => e.status === s).length;
   return [
     { value: "all",       label: "All",       count: entries.length },
     { value: "published", label: "Published", count: by("published") },
     { value: "draft",     label: "Drafts",    count: by("draft") },
-    { value: "review",    label: "In review", count: by("review") },   // only if status exists in model
     { value: "scheduled", label: "Scheduled", count: by("scheduled") },
     { value: "archived",  label: "Archived",  count: by("archived") },
-  ].filter((t) => t.value === "all" || t.count > 0 || KNOWN_STATUSES.has(t.value));
+  ];
 }, [entries]);
-// Render the soft underline tab row (violet active text + bottom border, muted
+// Render the soft `line` tab row (violet active text + bottom border, muted
 // count pill). active = statusFilter === tab.value; click calls setStatusFilter.
 // This is a thin presentational layer over EXISTING statusFilter state, so
 // EntryFilters' status control and the tabs stay in sync (both write statusFilter).
@@ -122,13 +127,13 @@ const statusTabs = useMemo(() => {
 //      - updated cell: right-aligned muted text.
 
 // 5) Status badges: replace the LOCAL hard-coded hex maps `statusStyles` /
-//    `statusLabels` in EntryTable.tsx with the shared StatusBadge helper ported from
-//    the prototype (_docs/_PROTOTYPE/.../StatusBadge.tsx), token-driven so
-//    violet/emerald/amber/slate read from theme.css instead of inline Tailwind color
-//    utilities. Map: published→success, draft→muted, scheduled→info,
-//    archived→warning, review→info (only the statuses that exist in the model). Same
-//    label text. Use the SAME StatusBadge introduced for Posts/Pages so all lists
-//    are consistent.
+//    `statusLabels` in EntryTable.tsx with the shared `StatusBadge` from 479-06-L02,
+//    token-driven so emerald/slate/blue/amber read from the 479-05 tokens instead of
+//    inline Tailwind color utilities. Map the REAL `EntryStatus` enum only
+//    (`draft | published | scheduled | archived` — NO "review"):
+//    published→success, draft→muted, scheduled→info, archived→warning. Same label
+//    text (Published/Draft/Scheduled/Archived). Use the SAME shared `StatusBadge` as
+//    Posts/Pages so all lists are consistent.
 ```
 
 **Data flow:** `getCachedAllEntries()` / `getCachedContentTypes()` lazy init →

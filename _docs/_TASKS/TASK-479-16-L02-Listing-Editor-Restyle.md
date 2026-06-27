@@ -15,7 +15,8 @@
 ## Overview
 
 Restyle the real Listing **query editor** to match the prototype's editor frame:
-a soft header with breadcrumbs + Save/Run-preview/Publish-style actions, a left
+a soft header with breadcrumbs + the real Back / Discard / Run-preview / Save-query
+actions (there is NO Publish action — Save query is the primary), a left
 **Data / Filters** rail, a center **result preview grid** canvas, and a right
 **inspector** holding layout/sort/pagination/fields controls — all on the warm
 `rounded-2xl` / soft-shadow language. This editor stays fully **functional** (it is
@@ -71,11 +72,16 @@ re-arrange the same controls into the prototype frame and swap classNames.
 //    to a centered soft skeleton if desired (no logic change).
 
 // 1) Header: replace the ad-hoc <div> heading block with the restyled
-//    @/ui/shared/PageHeader (breadcrumbs Listings → name). Keep the EXACT action
-//    buttons + handlers: Back (navigate "/advanced/listings"), Discard
-//    (handleDiscard, disabled={!hasUnsavedChanges}), Run preview (runPreview,
-//    disabled={isPreviewing}), Save query (handleSave, disabled={isSaving}). A
-//    small unsaved-changes Badge may reflect hasUnsavedChanges (derived, no state).
+//    @/ui/shared/PageHeader. Breadcrumbs (Listings → name) use the `breadcrumbs`
+//    prop ADDED to the shared PageHeader by 479-06-L02 — today's PageHeader exposes
+//    only title/description/actions/className, so do not assume it pre-exists; rely
+//    on the 06 extension. Keep the EXACT action buttons + handlers: Back (navigate
+//    "/advanced/listings"), Discard (handleDiscard, disabled={!hasUnsavedChanges}),
+//    Run preview (runPreview, disabled={isPreviewing}), Save query (handleSave,
+//    disabled={isSaving} — NOT gated on dirty, i.e. always enabled except while
+//    saving). The Discard button is the dirty indicator (it enables only when
+//    hasUnsavedChanges). A small unsaved-changes Badge may also reflect
+//    hasUnsavedChanges (derived, no state).
 
 // 2) Frame: port the EditorPreviewFrame *look* (NOT the non-functional component)
 //    — a rounded-2xl bordered card with a muted toolbar bar, then a 3-region body:
@@ -151,10 +157,11 @@ effect, no mount-force-refetch loop. Keep the single content-types effect + sing
 hydrate effect + single cacheBus subscription as the only data effects.
 
 **Regression-test shape:** see L04 — render `ListingEditorPage` in create mode and
-edit mode (seeded `getListingQueryCached`), assert: restyled header + Save/Run-
-preview/Publish-style actions present, left rail exposes the Source select + filter
-rows, changing the source <Select> still mutates the query model (and marks dirty),
-"Add filter"/updateFilter still mutate filters, "Run preview" calls
+edit mode (seeded `getListingQueryCached`), assert: restyled header + the real
+Discard / Run-preview / Save-query actions present (no Publish), left rail exposes
+the Source select + filter rows, a model-mutating edit still marks dirty — proven
+via the **Discard** button enabling (Save query is always enabled, so it cannot
+prove dirty); "Add filter"/updateFilter still mutate filters, "Run preview" calls
 `previewListingQuery` and the canvas renders the bound-query badge + result cards,
 and the inspector sort/limit/fields controls stay wired (dirty + payload preserved).
 

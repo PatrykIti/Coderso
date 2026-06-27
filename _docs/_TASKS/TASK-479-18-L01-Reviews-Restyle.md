@@ -15,25 +15,26 @@
 ## Overview
 
 Restyle the real Reviews moderation screen to match the prototype. Port the
-prototype's **stat row**, **underline status Tabs**, and soft **review cards**
+prototype's **stat row**, **`line`-variant status Tabs**, and soft **review cards**
 (avatar + star rating + status badge + body text + Approve/Reject actions) onto
 `ReviewsModerationPage.tsx` while preserving every behavior: cache-hydrated
 listing, background revalidation, moderation (`updateReviewStatus`), delete
 (`deleteReview`), search, status filter, and the four-status model.
 
 - **Goal:** A Notion-like, violet-accented Reviews screen — warm canvas, a
-  derived stat row, an underline Tabs filter, and white `rounded-2xl` review
+  derived stat row, a `line`-variant Tabs filter, and white `rounded-2xl` review
   cards with soft shadows and clear Approve/Reject affordances — with zero
   behavior changes.
 - **Owning module/service:** `core/admin/ui/reviews/ReviewsModerationPage.tsx`
   (+ `ReviewTable.tsx` if the table view is retained for the detail/list),
   reusing `core/admin/ui/shared/PageHeader.tsx`, the shared pattern components
-  from TASK-479-06 (StatCard / StatusBadge / Tabs), and
-  `core/admin/components/ui/{card,badge,button,avatar,tabs,input,textarea,alert}.tsx`.
+  from TASK-479-06-L02 (`StatCard`, the shared `StatusBadge` — must include the
+  `spam` mapping per D3) and the Tabs `line` variant, and
+  `core/admin/components/ui/{card,badge,button,avatar,tabs,input,textarea,alert,dropdown-menu}.tsx`.
 - **Source-of-truth docs:** `_docs/DESIGN_TOKENS.md`. **Ports from:**
   `_docs/_PROTOTYPE/src/pages/advanced/ReviewsPage.tsx`
-  (PageHeader + StatCard row + underline Tabs + review Card list + local `Stars`
-  helper), shared primitives in `_docs/_PROTOTYPE/src/components/{ui,patterns}`,
+  (PageHeader + StatCard row + `line`-variant Tabs + review Card list + local
+  `Stars` helper), shared primitives in `_docs/_PROTOTYPE/src/components/{ui,patterns}`,
   tokens in `_docs/_PROTOTYPE/src/styles/theme.css`.
 - **Out of scope:** No change to `reviewsClient`, `cachePolicy`/`cacheKeys`,
   `cacheBus`, or the `useReviews` hook flow. No change to the status set
@@ -96,15 +97,19 @@ const averageRating = useMemo(() => {
 // Keep the existing <Alert> error/actionError blocks exactly where they are.
 ```
 
-### 3) Status filter as underline Tabs
+### 3) Status filter as `line`-variant Tabs
 
 ```tsx
-// KEEP the real controlled statusFilter state + onValueChange. Restyle the
-// existing TabsList to the prototype underline variant, but preserve ALL five
-// options (all/pending/approved/rejected/spam) with their live counts. Use the
-// shared Tabs from TASK-479-06 (underline) or restyle components/ui/tabs.tsx.
-<Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ReviewStatusFilter)} ...>
-  // items: All ({counts.all}) · Pending · Approved · Rejected · Spam
+// KEEP the real controlled statusFilter state + onValueChange (already typed
+// `ReviewStatusFilter = "all" | ReviewRecord["status"]` in the page). Restyle the
+// existing TabsList to the soft underline look by setting variant="line" — that
+// variant ALREADY exists in components/ui/tabs.tsx (NO `underline` variant; do not
+// add one and do not wait on TASK-479-06 to create it). Preserve ALL five options
+// (all/pending/approved/rejected/spam) with their live counts.
+<Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as ReviewStatusFilter)}>
+  <TabsList variant="line">
+    {/* All ({counts.all}) · Pending · Approved · Rejected · Spam */}
+  </TabsList>
 </Tabs>
 // Search Input stays controlled (value=search, onChange=setSearch) — restyle to
 // the soft bordered input with a leading icon; do not remove it.
@@ -125,12 +130,19 @@ function Stars({ rating }: { rating: number }) {       // port from prototype
   <Card key={review.id} className="rounded-2xl p-5 shadow-soft">
     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="flex min-w-0 gap-3">
-        <Avatar name={review.authorName} size="md" />   {/* components/ui/avatar */}
+        {/* components/ui/avatar is Radix-based: there is NO `name` prop and size is
+            "default"|"sm"|"lg" (there is NO "md"). Compose AvatarFallback for the
+            initials (also import AvatarFallback from components/ui/avatar). */}
+        <Avatar size="default">
+          <AvatarFallback>{review.authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
+        </Avatar>
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-medium text-foreground">{review.authorName}</span>
             <Stars rating={review.rating} />
-            <StatusBadge status={review.status} />       {/* shared, TASK-479-06; keep 4 statuses */}
+            {/* shared StatusBadge from 479-06-L02 — must map all four review statuses
+                INCLUDING `spam` (D3); do not invent a local badge */}
+            <StatusBadge status={review.status} />
           </div>
           <div className="mt-0.5 text-xs text-muted-foreground">
             {review.entityType}:{review.entityId}
@@ -151,8 +163,33 @@ function Stars({ rating }: { rating: number }) {       // port from prototype
                   onClick={() => handleModerate(review.id, "rejected")}>
             <X className="size-4" /> Reject
           </Button>)}
-        {/* Keep access to Spam + Delete (e.g. an overflow menu) — do NOT drop the
-            existing reject/spam/pending/delete moderation paths from ReviewTable. */}
+        {/* Spam / reset-to-Pending / Delete via an overflow menu — use the existing
+            components/ui/dropdown-menu.tsx (DropdownMenu / DropdownMenuTrigger /
+            DropdownMenuContent / DropdownMenuItem). These four moderation paths
+            already exist on the page (handleModerate + handleDelete); do NOT drop
+            any of them when replacing ReviewTable with cards. Hide the option that
+            matches the review's current status (mirrors the Approve/Reject guards). */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" aria-label="More review actions">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {review.status !== "pending" && (
+              <DropdownMenuItem onClick={() => handleModerate(review.id, "pending")}>
+                Reset to pending
+              </DropdownMenuItem>)}
+            {review.status !== "spam" && (
+              <DropdownMenuItem onClick={() => handleModerate(review.id, "spam")}>
+                Mark as spam
+              </DropdownMenuItem>)}
+            <DropdownMenuItem className="text-destructive"
+                              onClick={() => handleDelete(review.id)}>
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   </Card>
@@ -178,8 +215,8 @@ mount-force refetch added; no dirty-state overwrite of in-flight edits; nav stay
 on `AdminShell` + canonical `adminPaths` — do not hand-build any href.
 
 **Regression-test shape (delivered in L02):** stat row shows derived average +
-real counts (no fabricated numbers); underline Tabs filter keeps all four statuses
-+ "all" with live counts; cards render one per filtered review with author, stars,
+real counts (no fabricated numbers); `line`-variant Tabs filter keeps all four
+statuses + "all" with live counts; cards render one per filtered review with author, stars,
 status badge, and body precedence (`title || body`); Approve/Reject buttons call
 `updateReviewStatus` with the correct status and are hidden for the current state.
 

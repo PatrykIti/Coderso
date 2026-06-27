@@ -45,90 +45,107 @@ routes, RBAC, cache, and adminPaths).
 
 ## Implementation Pseudocode
 
-Create six focused suites. Seed the cache/service modules the same way the existing
-Tools suites do (mock the `@/services/*Client` reads + `getCached*` helpers; stub
-`useAdminRouter` navigate/prefetch for Search). Render via the existing admin test
-harness/`renderWithProviders` used by the current Tools suites — do NOT hand-roll a new
-provider tree.
+Create six focused suites in the **repo test idiom** — NOT React Testing Library (this
+repo has no `@testing-library/react`, `jest-dom`, or `user-event`). Each file opens with
+`// @vitest-environment happy-dom`, imports `{ renderAdminUi }` from
+`tests/utils/adminRouterRender` for a single SSR snapshot (it returns an HTML string), and
+— for interaction — mounts with `createRoot` + `React.act` (set
+`IS_REACT_ACT_ENVIRONMENT = true`) then queries the real DOM via
+`container.querySelector`/`.textContent` and dispatches native events, exactly like
+`tests/vitest/ui/seo-manager.test.tsx` and
+`tests/vitest/ui-integration/admin-shell-request-budget.test.tsx`. There is NO `screen`,
+`render`, `getByRole`, `fireEvent`, or `toBeInTheDocument`. Seed the cache/service modules
+the same way the existing Tools suites do (`vi.mock` the `@/services/*Client` reads + prime
+the `getCached*` helpers to return the seed synchronously; stub `useAdminRouter`
+navigate/prefetch for Search). Do NOT hand-roll a new provider tree, and do NOT assert
+lazy/inactive/grid content the SSR `renderAdminUi` snapshot never emits.
 
 ```tsx
-// tests/vitest/ui-integration/tools-search-restyle.test.tsx
-// seed getCachedRecentSearches + stub useSearchResults + useAdminRouter
-it("renders centered grouped search and preserves navigation", () => {
-  render(<SearchPage />);
-  expect(screen.getByRole("heading", { name: /search/i })).toBeInTheDocument();
-  // hero input drives query
-  fireEvent.change(screen.getByPlaceholderText(/search pages/i), { target: { value: "pricing" } });
-  // recent chip sets query
-  fireEvent.click(screen.getByText("Pricing page"));
-  // grouped result -> navigate via resolveSearchDestination
-  fireEvent.click(screen.getByText(seededResultTitle));
-  expect(navigateSpy).toHaveBeenCalledWith(expectedDestination); // NOT a hand-built href
+// Shared shape for all six suites (repo idiom — no RTL):
+//   // @vitest-environment happy-dom
+//   import React from "react";
+//   import { createRoot } from "react-dom/client";
+//   import { expect, test, vi } from "vitest";
+//   import { renderAdminUi } from "../../utils/adminRouterRender";
+//   (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+//   const mount = (node: React.ReactNode) => { /* createRoot + React.act(render);
+//     return { container, cleanup } */ };
+// Use renderAdminUi(<Page/>) for static structure (HTML string); use mount(<Page/>) +
+// container.querySelector + node.dispatchEvent when an action must fire a real handler.
+
+// tools-search-restyle.test.tsx — seed getCachedRecentSearches (objects with `.query`) +
+// stub useSearchResults + useAdminRouter
+test("renders centered grouped search and preserves navigation", () => {
+  const { container, cleanup } = mount(<SearchPage />);
+  expect(container.querySelector("h1")?.textContent).toMatch(/search/i);       // centered heading
+  const input = container.querySelector<HTMLInputElement>('input[placeholder*="Search pages"]');
+  expect(input).not.toBeNull();                                                // hero input drives query
+  // clicking a recent chip calls the existing setQuery; clicking a grouped result calls
+  // navigateSpy with resolveSearchDestination(item) — NOT a hand-built href.
+  cleanup();
 });
 
-// tests/vitest/ui-integration/tools-seo-restyle.test.tsx
-// seed getCachedSeo with 3 rows of known scores/issues
-it("derives the stat row from seeded SEO data + opens audit", () => {
-  render(<SeoManagerPage />);
-  expect(screen.getByText("Avg. score")).toBeInTheDocument();         // value computed from seed
-  expect(screen.getAllByRole("progressbar").length).toBeGreaterThan(0); // per-row score bars
-  fireEvent.click(screen.getByRole("button", { name: /run audit/i }));
-  expect(screen.getByRole("dialog")).toBeInTheDocument();             // SeoAuditDialog
+// tools-seo-restyle.test.tsx — prime getCachedSeo with 3 SeoDocumentItems of known
+// score/status/issues
+test("derives the stat row from seeded SEO data + opens audit", () => {
+  const html = renderAdminUi(<SeoManagerPage />);
+  expect(html).toContain("Avg");          // avg computed from the seeded scores (no mock delta)
+  expect(html).not.toContain("Indexed pages");                       // dropped (no backing field)
+  // Issues/Optimized/Warnings reflect analysisStatus/metaStatus from the seed; mount(...) +
+  // dispatch click on the "Run audit" button -> SeoAuditDialog node appears.
 });
 
-// tests/vitest/ui-integration/tools-analytics-restyle.test.tsx
-// seed getCachedOverview + getCachedTopContent
-it("renders KPI cards + charts + top-pages from seeded analytics", () => {
-  render(<AnalyticsPage />);
-  expect(screen.getByText("Visitors")).toBeInTheDocument();           // from buildAnalyticsKpiCards
-  expect(screen.getByText(/traffic/i)).toBeInTheDocument();           // area SectionCard
-  expect(screen.getByText(/sources/i)).toBeInTheDocument();           // donut SectionCard
-  fireEvent.click(screen.getByText(seededTopPage));                   // opens TopContentDrawer
+// tools-analytics-restyle.test.tsx — prime getCachedOverview (totals/current/previous +
+// trend) + getCachedTopContent
+test("renders KPI cards + area/bar charts + top-content from seeded analytics", () => {
+  const html = renderAdminUi(<AnalyticsPage />);
+  expect(html).toContain("Published Pages");   // from buildAnalyticsKpiCards (NOT "Visitors")
+  expect(html).toMatch(/traffic/i);            // area SectionCard (overview.trend)
+  expect(html).not.toMatch(/\bsources\b/i);    // donut dropped (no overview.sources)
+  // top-content drawer opens via the onViewAll action (mount + dispatch click).
 });
 
-// tests/vitest/ui-integration/tools-backups-restyle.test.tsx
-// seed getCachedBackups + getCachedBackupSchedule
-it("renders schedule + storage + backups table with preserved actions", () => {
-  render(<BackupsPage />);
-  expect(screen.getByRole("switch")).toBeInTheDocument();             // enable auto backups
-  expect(screen.getByText(/storage usage/i)).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /restore/i })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /delete backup/i }));
-  expect(screen.getByRole("dialog")).toBeInTheDocument();             // ConfirmActionDialog
+// tools-backups-restyle.test.tsx — prime getCachedBackups (items incl. a `complete` + a
+// `failed`) + getCachedBackupSchedule
+test("renders schedule + status + backups table with preserved actions", () => {
+  const html = renderAdminUi(<BackupsPage />);
+  expect(html).toContain("Automatic backups");   // schedule SectionCard (real BackupSchedule)
+  expect(html).not.toMatch(/GB of/i);            // no used/total quota; no next-run line
+  // mount(...) + dispatch click on the "Delete backup" button -> ConfirmActionDialog node.
 });
 
-// tests/vitest/ui-integration/tools-import-export-restyle.test.tsx
-it("renders import dropzone + export checklist + format + recent jobs", () => {
-  render(<ImportExportPage />);
-  expect(screen.getByText(/drag a file or browse/i)).toBeInTheDocument();
-  expect(screen.getByText(/what to export/i)).toBeInTheDocument();
-  // toggling a checklist row updates target state; Export calls exportConfig
-  fireEvent.click(screen.getByRole("button", { name: /^export$/i }));
-  expect(exportConfigSpy).toHaveBeenCalled();
+// tools-import-export-restyle.test.tsx — prime getCachedImportHistory with known
+// ImportHistoryItems
+test("renders per-target export cards + import dropzone + recent imports", () => {
+  const html = renderAdminUi(<ImportExportPage />);
+  expect(html).toContain("Site Settings");       // one of the four per-target export cards
+  expect(html).toMatch(/browse files/i);         // import dropzone (no "what to import" checklist)
+  // mount(...) + dispatch click on a card Download -> exportConfigSpy({ target, include }).
 });
 
-// tests/vitest/ui-integration/tools-redirects-restyle.test.tsx
-// seed getCachedRedirects with known 301/302 mix
-it("derives stat row + inline add reuses createRedirect", () => {
-  render(<RedirectsPage />);
-  expect(screen.getByText("301 permanent")).toBeInTheDocument();      // count from seed
-  fireEvent.change(screen.getByPlaceholderText("/old-path"), { target: { value: "/a" } });
-  fireEvent.change(screen.getByPlaceholderText("/new-path"), { target: { value: "/b" } });
-  fireEvent.click(screen.getByRole("button", { name: /^add$/i }));
-  expect(createRedirectSpy).toHaveBeenCalled();                       // single create path
+// tools-redirects-restyle.test.tsx — prime getCachedRedirects with a 301/302/307/308 mix
+test("derives stat row + inline add reuses createRedirect", () => {
+  const { container, cleanup } = mount(<RedirectsPage />);
+  expect(container.textContent).toMatch(/permanent/i);   // count = 301 + 308 (NOT a "142" mock)
+  // set the /old-path + /new-path inputs, pick a status code, submit the inline add ->
+  // createRedirectSpy called once with a NUMERIC statusCode (single create path).
+  cleanup();
 });
 ```
 
 **Data flow:** each suite seeds the relevant `getCached*` helper (and mocks the
 `*Cached` hydrate fetch to resolve to the same seed) so the page renders from cache
 synchronously, then asserts structure + that a user action calls the preserved handler/
-client spy. No suite asserts a fabricated prototype value (e.g. "6.2 GB", "142", "+12.4%")
-— every numeric assertion is computed from the seed.
+client spy. No suite asserts a fabricated prototype value (e.g. "6.2 GB", "142", "+12.4%",
+an "Indexed pages"/"Visitors" KPI, a "Sources" donut, or a json/csv/zip format select) —
+every numeric assertion is computed from the seed, and the dropped/feature-incomplete
+surfaces are asserted ABSENT.
 
 **Error handling (test concerns):** add at least one assertion per screen that a seeded
 API error still renders the destructive `Alert` (not swallowed by the restyle), and that
 the empty/loading state renders the soft `EmptyState` card. Avoid asserting exact class
-strings; assert role/text/structure so the suites are not brittle to token tweaks.
+strings; assert text/attribute/DOM structure (no RTL roles) so the suites are not brittle
+to token tweaks.
 
 **Regression-test shape:** the six new suites are the structural lock; the existing
 Tools suites (search/seo/analytics/backups/import-export/redirects + client suites) are

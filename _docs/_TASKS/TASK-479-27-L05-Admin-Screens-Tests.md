@@ -35,8 +35,8 @@ surfaces.
   `tests/vitest/ui/users-roles.test.tsx`,
   `tests/vitest/ui/permissions-matrix.test.tsx`,
   `tests/vitest/ui/audit-list.test.tsx`,
-  `tests/vitest/ui/access-logs.test.tsx`, and the harnesses in
-  `tests/vitest/utils/adminRouterRender.tsx`.
+  `tests/vitest/ui/access-logs.test.tsx`, and the harness in
+  `tests/utils/adminRouterRender.tsx`.
 - **Out of scope:** No runtime/Bun coverage moves; no new product code (that is
   L01–L04); no API/contract tests beyond what the UI render already exercises.
 
@@ -54,7 +54,7 @@ suites do; no real network, secrets, or RBAC bypass.
 ## Implementation Pseudocode
 
 Reuse the established harness — `renderAdminUi` from
-`tests/vitest/utils/adminRouterRender.tsx` for SSR-string assertions (as in
+`tests/utils/adminRouterRender.tsx` for SSR-string assertions (as in
 `tests/vitest/ui/users-roles.test.tsx`), and the `createRoot` + `act` +
 `vi.hoisted` service mocks pattern (as in `tests/vitest/ui/access-logs.test.tsx`)
 where interaction/DOM assertions are needed. Do NOT invent a new render utility.
@@ -91,14 +91,16 @@ test("Roles matrix renders grouped permission sections + role member counts (rea
 });
 
 test("Roles matrix exposes editable cells + Save in roles:write mode", async () => {
-  // render with roles:write; toggle a cell -> diff/Save surfaces; Owner/* row stays full-access.
+  // render with roles:write via createRoot + act (renderAdminUi is SSR-only and
+  // cannot click); toggle a cell -> diff/Save surfaces; Owner/* row stays full-access.
 });
 
 // --- Audit (L03) ---
 test("Audit screen renders the timeline rows with category badges + Export", async () => {
-  // mock listAuditLogs -> a couple of real-shaped records.
-  // assert: actor/action/target text, a category Badge derived from
-  // resolveAuditCategory, the connector rail, and the Export button.
+  // mock listAuditLogs -> a couple of real-shaped AuditRecord rows.
+  // assert: actor (entry.actor.name) / event (entry.event) / target
+  // (entry.resourceLabel) text, a category Badge from the view-model entry.category
+  // (one of authentication|content|system), the connector rail, and the Export button.
 });
 
 // --- Access logs (L04) ---
@@ -113,7 +115,8 @@ test("Access logs renders the stat row + method/status tone table", async () => 
 real-shaped records / role+catalog payloads), render each page through
 `renderAdminUi` (SSR string) or `createRoot`+`act` (DOM/interaction), then assert
 structure + preserved gating. Seed permissions via the page's `permissions` prop
-where supported (Users) or via the mocked `useAdminAuth`/catalog where not.
+where supported (`UsersRolesPage` and `PermissionsMatrixPage` both accept it) or via
+the mocked `useAdminAuth`/catalog where not (Audit/Access read from context).
 
 **Error handling (test concerns):** stub `navigator.clipboard` where the audit
 copy action is asserted; stub the download path for Export; assert the loading/
@@ -122,8 +125,9 @@ empty/partial-read states render; ensure no test depends on real timers/network.
 **Regression-test shape:** Users (title, gated invite, stat/tab labels, partial-read
 role hiding, no fabricated deltas); Roles (grouped sections, sticky col, member
 counts, read-only glyphs vs editable cells + Save); Audit (timeline rows, category
-badge from `resolveAuditCategory`, Export); Access (method/status tone table,
-honest page-scoped stats, no fabricated 24h total). Keep each `test` independent
+badge from the view-model `entry.category`, Export); Access (method/status tone
+table from `AccessLogItem`, honest page-scoped stats, no fabricated 24h total, no
+invented Location column). Keep each `test` independent
 (restore mocks + reset localStorage in `afterEach`).
 
 ---

@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Advanced
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`
@@ -86,6 +86,9 @@ migrate runtime tests into Vitest for coverage.
 - `_docs/_TASKS/README.md` — update the board bucket + statistics whenever a leaf or
   this subtask changes status.
 - `_docs/_CHANGELOG/` — add an entry on closure, linking `TASK-479` + the leaf id.
-- If any shared restyle primitive (e.g. a token-driven `StatusBadge` or a stat-row
-  helper) is added/changed for Popups, note it alongside the TASK-479-06 shell notes
-  so other Advanced-module list screens reuse it consistently.
+- Reuse the shared `StatusBadge` and `StatCard` from TASK-479-06-L02 (with the
+  `soft`/`success`/`warning`/`info` Badge+Button variants and `--*-soft` / `shadow-card`
+  / `font-display` tokens from TASK-479-05) by their exact names — do NOT fork a
+  Popups-specific copy. If a Popups-only restyle helper is genuinely unavoidable, note
+  it alongside the TASK-479-06 shell notes so other Advanced-module list screens reuse
+  it consistently.

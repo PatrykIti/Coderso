@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Solution Kits
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`
@@ -31,7 +31,13 @@ they are.
   (`SolutionKitsPage.tsx`, `SolutionKitCard.tsx`,
   `hooks/useSolutionKits.ts`, `hooks/useSolutionKitRuns.ts`), reusing
   `core/admin/ui/shared/PageHeader.tsx`, `core/admin/ui/layouts/AdminShell.tsx`,
-  and `core/admin/components/ui/*` (restyled in TASK-479-06).
+  and `core/admin/components/ui/*` (restyled in TASK-479-06). The soft tones
+  (`--primary-soft` / `--success` / `--warning` / `--info` + their `-soft`),
+  `shadow-card`, `font-display`, and the `soft` / `success` Badge & Button variants
+  are the tokens/variants provided by **TASK-479-05**; the `PageHeader` / `Card` /
+  `Badge` / `Button` / `Alert` primitives are the **TASK-479-06-L02** restyled
+  shells. This leaf consumes them and does NOT redefine any token or primitive
+  (hence the `TASK-479-05` + `TASK-479-06` dependencies above).
 - **Source-of-truth docs:** `_docs/SOLUTION_KITS.md`,
   `_docs/ASSISTANT_SITE_BUILDER.md` (reviewed intake flow), `_docs/DESIGN_TOKENS.md`,
   `_docs/_PROTOTYPE/README.md`, `_docs/_PROTOTYPE/src/styles/theme.css`. Prototype

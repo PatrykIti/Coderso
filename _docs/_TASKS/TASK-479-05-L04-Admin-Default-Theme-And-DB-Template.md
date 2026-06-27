@@ -17,12 +17,16 @@ Make a **fresh install** ship the violet/soft theme, and seed a discoverable
 Visual → Admin UI Theme screen. Preserve backward compat for existing custom
 templates and profiles.
 
-- **Goal:** Update `themes/admin-default/theme.json` to the violet/warm palette
-  and add an **idempotent** default `admin_theme_templates` seed row, without
-  forcing any DB schema migration (tokens are `jsonb`).
+- **Goal:** Update `themes/admin-default/theme.json` to the violet/warm palette,
+  add an **idempotent** default `admin_theme_templates` seed row, and define the
+  shared **dark** token palette `DEFAULT_ADMIN_THEME_TOKENS_DARK` (per-token dark
+  values) that the injected style emits for every profile (D1) — all without
+  forcing any DB schema migration (tokens are `jsonb`; the dark palette is a
+  code-side constant, no DB row).
 - **Owning module/service:** `themes/admin-default/theme.json`,
   `core/db/seed.ts` (+ `core/services/adminThemes/adminThemeTemplateService.ts`
-  /`adminThemeProfileService.ts` if the seed reuses service create paths).
+  /`adminThemeProfileService.ts` if the seed reuses service create paths),
+  `core/services/adminThemes/tokenTypes.ts` (`DEFAULT_ADMIN_THEME_TOKENS_DARK`).
 - **Source-of-truth docs:** `_docs/THEMES_SPEC.md`, `_docs/DESIGN_TOKENS.md`,
   L01/L02 default values.
 - **Out of scope:** contract/emitter (L02), CSS mapping (L03), editor UI (L05),
@@ -148,6 +152,54 @@ predate L02's new groups resolve through `normalizeAdminThemeTokens`/
 `mergeAdminThemeTokens` (L02) — they keep working and gain violet defaults for
 the new fields.
 
+### 3) Dark token palette — `DEFAULT_ADMIN_THEME_TOKENS_DARK` (D1)
+
+Define a full-shape dark default next to the light `DEFAULT_ADMIN_THEME_TOKENS`
+(declared in L02 `tokenTypes.ts`; **values frozen here**). Per D1 the injected
+`<style>` emits this as the `:root.dark{--admin-*}` block for EVERY profile, so
+the real chrome (which reads `--admin-*` directly) recolors in dark with zero
+data migration. Values are the prototype `_PROTOTYPE/src/styles/theme.css`
+`.dark` hexes — **including the `topbar` values the inventory previously omitted**:
+
+```ts
+export const DEFAULT_ADMIN_THEME_TOKENS_DARK: AdminThemeTokens = {
+  base: { bg: "#18171a", surface: "#232128", text: "#ededec", border: "#2d2b32" },
+  buttons: {
+    primary: { bg: "#8b5cf6", text: "#ffffff", hoverBg: "#7c3aed", hoverText: "#ffffff" },
+    secondary: { bg: "#29272e", text: "#d8d4ce", hoverBg: "#34313a", hoverText: "#ededec" },
+    outline: { border: "#2d2b32", text: "#ededec", hoverBg: "#2b2930", hoverText: "#ededec" },
+    ghost: { hoverBg: "#2b2930", hoverText: "#ededec" },
+  },
+  primarySoft: { bg: "#2a2440", text: "#c4b5fd" },             // NEW (L02)
+  inputs: { bg: "#211f24", border: "#36333c", text: "#ededec",
+            placeholder: "#756f68", focusRing: "#8b5cf6" },
+  sidebar: {
+    bg: "#1c1b1f", text: "#a8a29a", activeBg: "#2c2542", activeText: "#c4b5fd",
+    hoverBg: "#2b2930",
+    muted: "#756f68", accent: "#2c2542", accentForeground: "#c4b5fd", border: "#2a282f", // NEW
+  },
+  topbar: { bg: "#18171a", text: "#a8a29a", border: "#2d2b32" }, // dark chrome path (was missing)
+  card: { bg: "#211f24", border: "#2d2b32" },
+  typography: { /* same fonts/sizes as light */ mutedText: "#a09a91" },
+  state: {
+    success: "#34d399", warning: "#fbbf24", danger: "#fb7185",
+    info: "#60a5fa", infoForeground: "#07203f",                 // NEW
+    successSoft: "#18342a", warningSoft: "#36290f", infoSoft: "#16263f", // NEW
+  },
+  effects: {                                                    // NEW (dark = slightly stronger)
+    shadowSoft: "0 1px 2px rgba(0,0,0,.30), 0 4px 12px -6px rgba(0,0,0,.45)",
+    shadowCard: "0 1px 3px rgba(0,0,0,.35), 0 12px 32px -16px rgba(0,0,0,.55)",
+    shadowPop: "0 10px 34px -10px rgba(0,0,0,.65)",
+  },
+};
+```
+
+- `assertAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS_DARK)` must pass (same
+  strict shape as light).
+- The seeded "Soft Violet" DB template stays **light-only**; dark is the SHARED
+  default constant above, not a separate template/profile (per-template dark is
+  the deferred L01 follow-up). No DB row, no migration for the dark palette.
+
 **Regression-test shape (L07 + here):**
 
 - Seed is idempotent: running twice yields exactly one "Soft Violet" template
@@ -157,6 +209,9 @@ the new fields.
   palette (snapshot or field assertions).
 - `assertAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS)` passes (guards the seed
   payload).
+- `assertAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS_DARK)` passes and carries the
+  dark chrome hexes (`base.bg === "#18171a"`, `topbar.bg === "#18171a"`,
+  `sidebar.bg === "#1c1b1f"`, `buttons.primary.bg === "#8b5cf6"`).
 
 ---
 

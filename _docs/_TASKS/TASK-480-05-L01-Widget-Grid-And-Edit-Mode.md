@@ -35,10 +35,10 @@ the Save round-trip.
   - `core/admin/ui/dashboard/builder/WidgetGrid.tsx` (new — grid + arrange/resize)
   - integration edit into `core/admin/ui/dashboard/DashboardPage.tsx`
 - **Source-of-truth docs:**
-  - Layout contract: `core/services/dashboard/dashboardLayoutTypes.ts`,
-    `dashboardLayoutSchema.ts` (`DashboardLayout`, `DashboardWidgetInstance`,
-    `normalizeDashboardLayout`, `DEFAULT_DASHBOARD_LAYOUT`) — TASK-480-01
-  - Cached client: `core/admin/services/dashboardLayoutClient.ts`
+  - Layout contract: `core/services/dashboard/dashboardWidgetContract.ts`
+    (`DashboardLayout`, `DashboardWidget`, `normalizeDashboardLayout`,
+    `DEFAULT_DASHBOARD_LAYOUT`) + `dashboardTypes.ts` (types) — owned by TASK-480-02
+  - Cached client: `core/admin/services/dashboardClient.ts`
     (`getDashboardLayoutCached`, `saveDashboardLayout`) — TASK-480-03
   - Widget host + registry: `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`,
     `core/admin/ui/dashboard/widgets/registry.tsx` — TASK-480-04
@@ -46,11 +46,11 @@ the Save round-trip.
     `core/admin/ui/dashboard/DashboardPage.tsx` (TASK-479-07 restyle)
   - Cache contract: `_docs/ADMIN_CACHE.md` (Editors section — dirty-guarded
     background revalidation), `core/admin/utils/cacheBus.ts`
-  - Permissions snapshot helper used by the shell (e.g. `usePermissions()` /
-    `hasPermission`) — `_docs/RBAC_SPEC.md`
+  - Permission accessor used by the shell: `useAdminCan()` →
+    `can(permission)` (`core/admin/ui/contexts/AdminAuthContext.tsx`) — `_docs/RBAC_SPEC.md`
 - **Out of scope:** Add-widget catalog + configure panel (L02); widget renderer
-  internals and data fetching inside each host (TASK-480-04); schema/route/cache-key
-  definitions (480-01/02/03); tests (L03).
+  internals (TASK-480-04) and data fetching inside each host (TASK-480-03);
+  schema (480-02) / route + cache-key (480-03) definitions; tests (L03).
 
 ---
 
@@ -79,7 +79,7 @@ the Save round-trip.
 ### Layout shape consumed (owned by TASK-480-01 — referenced, not redefined)
 
 ```ts
-// core/services/dashboard/dashboardLayoutTypes.ts (TASK-480-01)
+// core/services/dashboard/dashboardTypes.ts (owned by TASK-480-02; referenced, not redefined)
 type DashboardWidgetInstance = {
   id: string;                 // stable per-instance id (nanoid)
   type: DashboardWidgetType;  // "counter" | "chart" | "recentActivity" | "storage" | "siteHealth" | "quickActions" | "contentQuery"
@@ -165,9 +165,11 @@ export function useDashboardBuilder(canWrite: boolean) {
     return () => { active = false; };
   }, []); // deps empty: single hydrate; revalidation comes via cacheBus below, not a re-fetch loop
 
-  // SUBSCRIBE to cacheBus for cross-tab/background updates → remoteUpdate (dirty-guarded in reducer)
+  // SUBSCRIBE to cacheBus for cross-tab/background updates → remoteUpdate (dirty-guarded in reducer).
+  // Real primitive: subscribeCacheEvents(handler) (core/admin/utils/cacheBus.ts); filter by key.
   useEffect(() => {
-    const off = subscribeCacheBus(cacheKeys.dashboardLayout, async () => {
+    const off = subscribeCacheEvents(async (event) => {
+      if (event.key !== cacheKeys.dashboardLayout) return;
       const layout = await getDashboardLayoutCached({ force: false });
       dispatch({ type: "remoteUpdate", layout });
     });
@@ -245,7 +247,8 @@ export function WidgetGrid({ layout, editing, onMove, onResize, onRemove, onConf
 ```tsx
 // core/admin/ui/dashboard/DashboardPage.tsx (replace the fixed-card body with the builder)
 export function DashboardPage() {
-  const canWrite = useHasPermission("dashboard:write");   // shell permission snapshot
+  const can = useAdminCan();                               // real shell permission accessor (AdminAuthContext)
+  const canWrite = can("dashboard:write");
   const { state, dispatch, save } = useDashboardBuilder(canWrite);
 
   return (

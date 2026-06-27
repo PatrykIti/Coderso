@@ -22,7 +22,7 @@ existing store/plugin suites, not a replacement for them.
 - **Goal:** New Vitest suites that render the real `PluginStorePage` and
   `PluginDetailsPage` and assert the prototype look is present (featured banner,
   category tabs, `rounded-2xl` gallery cards with security score + installs +
-  install/view affordance; hero header, underline tabs, SectionCard sidebar) while
+  install/view affordance; hero header, `line`-variant tabs, SectionCard sidebar) while
   the core behaviors (search filter, master-detail selection, Store/Installed tabs,
   install flow, details tabs) still work.
 - **Owning module/service:** `tests/vitest/ui-integration/plugin-store-restyle.test.tsx`
@@ -50,15 +50,25 @@ routes, RBAC, cache, and adminPaths).
 
 Mirror the existing store tests' setup: import the real page, render through
 `renderAdminUi` (SSR `renderToString` wrapped in `AdminRouterProvider`, path
-`/admin/store`). The existing suites assert on the returned HTML string; new suites
-may use the same string assertions, or switch to `@testing-library/react` +
-`render`/`screen` if a click-interaction assertion is needed (match whichever the
-ui-integration lane already uses). Assert on stable, semantic signals — visible text
-and load-bearing class tokens — not brittle full-class snapshots.
+`/admin/store`) and assert on the returned HTML string. This repo has NO
+`@testing-library/react`, `@testing-library/jest-dom`, or `@testing-library/user-event`
+— the entire store family (`plugin-store.test.tsx`, `plugin-details.test.tsx`,
+`storeList.test.tsx`) is plain `vitest` + `renderAdminUi`/`renderToString` string
+assertions, so these new suites use the SAME idiom (no RTL, no `userEvent`, no
+`screen`/`getByRole`/`toBeInTheDocument`). `renderAdminUi` produces a SINGLE SSR
+snapshot: only the DEFAULT-active tab body is in the HTML (Radix `TabsContent`
+unmounts inactive panels), so assert ONLY on the active Overview/Store tab body, tab
+TRIGGER labels, and chrome OUTSIDE the tabs — never on inactive
+Changelog/Settings/Installed-tab bodies, and never on click-driven selection (the
+master-detail click interaction is NOT covered by an automated test in this pass — the
+existing store suites only snapshot the SSR markup with a no-op/absent `onSelect`).
+Assert
+on stable, semantic signals — visible text and load-bearing class tokens — not brittle
+full-class snapshots.
 
 ```tsx
 // tests/vitest/ui-integration/plugin-store-restyle.test.tsx
-import { renderAdminUi } from "../../../tests/utils/adminRouterRender";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 import { PluginStorePage } from "../../../core/admin/ui/store/PluginStorePage";
 
 describe("Plugin Store gallery restyle", () => {
@@ -81,13 +91,12 @@ describe("Plugin Store gallery restyle", () => {
     expect(html).toMatch(/Install|View|Manage/);     // per-card affordance
   });
 
-  // If switching to testing-library for interaction:
-  it("clicking a card selects it into the detail panel (no navigation)", async () => {
-    render(<AdminRouterProvider initialPath="/admin/store"><PluginStorePage /></AdminRouterProvider>);
-    await userEvent.click(screen.getByRole("button", { name: /Polyglot Localizer/i }));
-    // detail panel reflects selection; URL/path unchanged (master-detail preserved)
-    expect(screen.getByText(/Polyglot Localizer/i)).toBeInTheDocument();
-  });
+  // NO interaction test: master-detail click selection is NOT reachable through
+  // `renderAdminUi` (SSR single snapshot, no event loop) and the repo has no
+  // user-event/RTL. The click interaction is NOT covered by an automated test in this
+  // pass — the existing store suites (`storeList.test.tsx`, `ui-integration/plugins.test.tsx`)
+  // only render the SSR markup with a no-op/absent `onSelect` and never click — so do
+  // not re-create an interaction test here.
 });
 
 // tests/vitest/ui-integration/plugin-details-restyle.test.tsx
@@ -102,29 +111,33 @@ describe("Plugin Details restyle", () => {
     expect(html).toContain("Uninstall");
   });
 
-  it("renders underline tabs and SectionCard sidebar content", () => {
+  it("renders the line-variant tab triggers and active Overview content", () => {
     const html = renderAdminUi(<PluginDetailsPage />, { path: "/admin/store" });
+    // tab TRIGGER labels always render (the triggers, not the inactive bodies)
     expect(html).toMatch(/Overview/);
     expect(html).toMatch(/Permissions/);
     expect(html).toMatch(/Changelog/);
     expect(html).toMatch(/Settings/);
-    // sidebar SectionCards + seed content
-    expect(html).toContain("Information");
-    expect(html).toContain("content:read");          // permission scope from seed
-    expect(html).toMatch(/2\.4\.1/);                 // changelog version from seed
+    // active Overview tab body + its SectionCard sidebar (default tab = "overview")
+    expect(html).toContain("Information");           // Information SectionCard (Overview sidebar)
+    expect(html).toContain("content:read");          // scope in the Overview Permissions SectionCard (L02)
+    expect(html).toMatch(/2\.4\.1/);                 // hero version "v2.4.1" (chrome OUTSIDE the tabs)
+    // Do NOT assert the inactive Changelog/Settings tab BODIES — under SSR
+    // `renderAdminUi` only the default Overview panel is in the HTML.
   });
 });
 ```
 
 **Data flow:** render the real component through `renderAdminUi` → assert visible
-text + load-bearing tokens (`rounded-2xl`, "Featured", tab labels, badge text, seed
-content) → for one interaction, drive a click (select card) to prove the master-
-detail wiring survived the restyle.
+text + load-bearing tokens (`rounded-2xl`, "Featured", tab-TRIGGER labels, badge text,
+active-tab seed content) on the SSR HTML string. There is NO click/interaction step —
+master-detail selection is not exercised by any automated test in this pass (the
+existing store suites only snapshot the SSR markup), and these SSR snapshot guards do
+not cover it either.
 
 **Error handling:** keep assertions resilient — query by visible text / `toMatch`
-token checks (or accessible role/name when using testing-library) instead of exact
-className strings, so future token tweaks from TASK-479-05/06 do not falsely fail
-these suites.
+token checks instead of exact className strings, so future token tweaks from
+TASK-479-05/06 do not falsely fail these suites.
 
 **Regression-test shape:** the two new suites above PLUS a green run of the existing
 store family (`plugin-store.test.tsx`, `plugin-details.test.tsx`, `storeList.test.tsx`,

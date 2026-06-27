@@ -19,8 +19,8 @@ contract, normalize/validation, CSS-var emission, and the dark-class behavior.
 - **Goal:** Source-of-truth docs reflect the extended contract + dark mode; an
   automated test suite guards the new tokens against drift.
 - **Owning module/service:** `_docs/DESIGN_TOKENS.md`, `_docs/THEMES_SPEC.md`,
-  test suites under `tests/unit/adminThemes/`, `tests/vitest/admin/`,
-  `tests/vitest/ui-integration/`.
+  test suites under `tests/unit/adminThemes/`, `tests/vitest/ui/` (theme editor
+  drawer), `tests/vitest/ui-integration/` (dark toggle + injected dark block).
 - **Source-of-truth docs:** L01 frozen mapping table + dark decision; L02–L06
   implementations.
 - **Out of scope:** any new product behavior (this leaf only documents/tests
@@ -64,14 +64,22 @@ toAdminThemeCssVariableMap (core/ui/theme/tokenCss.ts); globals.css maps
 
 ### Admin UI dark mode (TASK-479-05)
 - Light = the canonical AdminThemeTokens DB set (single-mode contract).
-- Dark = a static `.dark { … }` layer in core/admin/styles/globals.css that
-  overrides the derived shadcn vars with the prototype dark palette; driven by
-  `<html class="dark">`.
+- Dark = a `:root.dark{--admin-*}` block emitted FROM the injected
+  `<style id="coderso-theme-tokens">` (AdminApp), alongside the light
+  `:root{--admin-*}`; values come from the shared default
+  `DEFAULT_ADMIN_THEME_TOKENS_DARK` (L02/L04). The admin chrome reads `--admin-*`
+  DIRECTLY, so flipping these recolors the WHOLE shell (button/sidebar/topbar/
+  input/alert); the derived shadcn vars in globals.css `:root` follow
+  automatically. It is NOT a static globals `.dark{--admin-*}` — that cannot win
+  source order against the injected style and would never reach the chrome.
 - Toggle: TopBar AdminColorModeToggle, persisted to
   `localStorage["coderso-admin-color-mode"]`, applied pre-paint in
-  core/admin/index.html (no flash).
-- Rationale: zero migration for existing templates; per-template dark is a
-  deferred optional follow-up.
+  core/admin/index.html (no flash). (Distinct from the admin-theme TOKENS cache
+  key `localStorage["coderso.adminThemeTokens"]`.)
+- Rationale: zero migration for existing templates (their dark comes from the
+  shared default palette emitted by the injected style); per-template dark
+  (`dark?: Partial<AdminThemeTokens>`) is a deferred optional follow-up — purely
+  additive since the injected style already owns the dark block.
 ```
 
 Also update the line "Admin UI mapuje tokeny na zmienne shadcn (`--background`,
@@ -102,15 +110,22 @@ tests/unit/adminThemes/tokenCss.test.ts           (new)
   - toAdminThemeCssVariableMap(defaults) has matching keys/values.
 
 tests/vitest/ui-integration/admin-dark-mode.test.tsx   (new)
-  - adding `dark` class to documentElement flips a probe element to the dark
-    --card/--background values (jsdom + the globals.css .dark block, or a parsed
-    assertion that globals.css .dark sets --background:#18171a).
-  - globals.css contains --color-primary-soft, --color-info, --color-success-soft,
-    --color-sidebar-accent, .shadow-card utility.
+  - toAdminThemeCssVariables(DEFAULT_ADMIN_THEME_TOKENS_DARK, ":root.dark") emits a
+    ":root.dark{…}" block whose REAL chrome colors are the dark hexes — assert
+    --admin-button-primary-bg:#8b5cf6, --admin-sidebar-bg:#1c1b1f,
+    --admin-topbar-bg:#18171a, --admin-base-bg:#18171a (button + sidebar + topbar
+    recolor in dark — NOT merely that the `.dark` class is present).
+  - globals.css `@theme`/`:root` contains --color-primary-soft, --color-info,
+    --color-success-soft, --color-sidebar-accent, the --popover→--admin-card-bg
+    re-map, and a .shadow-card utility; `:root` derives them from --admin-* (so
+    the dark --admin-* flip propagates).
+  - Parse the emitter output / globals.css as TEXT; do NOT rely on jsdom
+    getComputedStyle to resolve var() cascade (happy-dom/jsdom does not).
 
-tests/vitest/admin/theme-template-drawer-new-tokens.test.tsx   (from L05)
-  - new pickers render; updating primarySoft.bg updates state + preview var;
-    onSave payload passes assertAdminThemeTokens.
+tests/vitest/ui/theme-template-drawer-new-tokens.test.tsx   (from L05)
+  - new pickers render (activate the "Accents" tab first — Radix unmounts inactive
+    panels); updating primarySoft.bg updates state + preview var; onSave payload
+    passes assertAdminThemeTokens.
 
 tests/vitest/ui-integration/admin-color-mode-toggle.test.tsx    (from L06)
   - lazy init, class toggle, localStorage persistence.
@@ -140,7 +155,7 @@ inventory fails the build.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/unit/adminThemes`
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/admin`
+- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration`
 - Record pass counts in the closeout; note any skipped suite.
 

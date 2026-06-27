@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Engine / Visual Refresh
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -100,7 +100,23 @@ as-is.
 - **Design tokens.** Consume the new violet/soft tokens from
   `core/admin/styles/globals.css` (landed by TASK-479-05) via existing semantic
   classes (`bg-card`, `text-muted-foreground`, `border`, `bg-primary`, etc.) and
-  the restyled shell from TASK-479-06 — do not hardcode hex values.
+  the restyled shell from TASK-479-06 — do not hardcode hex values. The soft
+  tokens/variants these leaves consume (`--primary-soft`, `shadow-card`,
+  `font-display`, the `soft` Badge/Button variant) are owned by TASK-479-05.
+- **Shared primitives & shells (provided by TASK-479-06-L02).** Reference the
+  shared primitives by their exact 06-L02 names — `PageHeader` (with `icon` +
+  `breadcrumbs` props), `SectionCard`, `StatCard`, `StatusBadge`, `EmptyState`,
+  `DataTable`, `FilterBar` — instead of inventing per-screen equivalents. Do NOT
+  reference the prototype's `EditorPreviewFrame`/`EditorRailGroup`/`EditorRailItem`:
+  06-L02 lists `EditorPreviewFrame.tsx` as out of scope ("prototype-only chrome"),
+  so it will not exist in core. Compose any rail/canvas/inspector layout from the
+  real `SplitShell`/`EditorShell` shells plus `SectionCard`.
+- **Editor model.** These are non-visual engine editors and keep their existing
+  shells: the list and collection workspace on `AdminShell`, the content-type
+  editor and detail-template editor on the 3-pane `EditorShell`, and the schema
+  builder on `SplitShell` (right-panel preview) — they do NOT adopt the floating
+  `CanvasEditor` (06-L06). The detail-template editor staying on `EditorShell`
+  (no prototype canvas source) is a deliberate decision, not an omission.
 
 ---
 

@@ -18,8 +18,14 @@ shared `PageEditor` through the `PageEditorHost` seam (mode `page-template`,
 reusing the Page v2 / `PAGE_MODEL` document, the canvas renderer, inline-edit
 contract, and the floating control panel) — so the heavy editor restyle is delivered
 once by **TASK-479-08-L02** and **inherited** here. This leaf restyles only the
-**template-specific chrome** (the settings sheet, the site-wide vs page context, and
-the propagation/usage note) and **guarantees the editor is reused, not forked**.
+**template-specific chrome** (the settings sheet and the propagation/usage note) and
+**guarantees the editor is reused, not forked**. The prototype shows the propagation
+note **always visible** in the editor (not hidden behind a settings drawer), so this
+leaf surfaces it via the **existing** optional `canvasChrome` host seam (real
+`PageEditorHost` field — host-owned chrome rendered inside the canvas frame above the
+sections; the Menus editor already uses it for the live shell preview), keeping the
+note always visible without forking/wrapping the shared editor or adding a new host
+field.
 
 - **Goal:** `core/admin/ui/pages/templates/PageTemplateEditorPage.tsx` renders the
   redesigned floating-panel `CanvasEditor`/`PageEditor` for templates, surfaces the
@@ -51,7 +57,10 @@ the propagation/usage note) and **guarantees the editor is reused, not forked**.
   **structure + floating-panel model** via the shared editor, and treat the usage
   count with the same **honesty guard** as L01 (show it only from a real
   `PageTemplateDetail` field; the model has none today → render a generic propagation
-  note, never a fabricated number).
+  note, never a fabricated number). The prototype's "site-wide/page" `Badge` is likewise
+  a mock scope the real model does not carry — do not render a fabricated scope badge
+  (see the parent 23 footer-template vs navigation-menu reconciliation; main-menu scope
+  is owned by TASK-479-10, not a template).
 
 ---
 
@@ -94,29 +103,46 @@ const host = useMemo<PageEditorHost>(() => ({
   saveDocument: async (id, document) => { const u = await updatePageTemplate(id, { document }); if (!u) throw new Error(...); return toEditorDetail(u); },
   preview: async (id) => ({ previewUrl: (await previewPageTemplate(id, { ttlMinutes: 15 })).previewUrl }),
   renderSettings: (props) => <TemplateSettingsSheet {...props} />,
-  // PROPAGATION CONTEXT: surface "this template is reused by pages" through the
-  // host seam, NOT by wrapping/forking the editor shell. Prefer an OPTIONAL
-  // host-provided banner/sub-header slot if the PageEditorHost contract already
-  // exposes one (e.g. a `notice`/`subheaderRender` field added once in 08-L02);
-  // if it does not, surface the note inside TemplateSettingsSheet's description
-  // (it already states "settings/SEO never apply to target pages — only sections
-  // are inserted"). Do NOT add a new host field solely for this leaf.
+  // PROPAGATION CONTEXT (always-visible, like the prototype): surface "this template
+  // is reused by pages" through the EXISTING optional `canvasChrome` host field — a
+  // real `PageEditorHost` member (`canvasChrome?: ({ document, device }) => ReactNode`,
+  // rendered inside the canvas frame above the document sections; precedent:
+  // MenuDesignEditorPage's `canvasChrome` live shell). This keeps the note always
+  // visible WITHOUT wrapping/forking the editor shell and WITHOUT any contract change.
+  // Do NOT invent a `notice`/`subheaderRender` host field — none exists; reuse
+  // `canvasChrome`. The template's banner ignores the `document`/`device` props (it is
+  // a static propagation note). HONESTY GUARD: generic copy, never a fabricated count
+  // (PageTemplateDetail carries no usage field).
+  canvasChrome: () => <TemplatePropagationBanner />,
 }), []);
 
 return <PageEditor key={resolvedTemplateId ?? "missing"} pageId={resolvedTemplateId ?? undefined} host={host} />;
 ```
 
 ```tsx
+// TemplatePropagationBanner — the ALWAYS-VISIBLE violet soft note rendered by the
+// host `canvasChrome` seam (above the canvas sections), porting the prototype's
+// PageTemplateEditorPreview "Editing this template updates the pages that use it" cue.
+// HONESTY GUARD: generic copy only — include a page COUNT solely if PageTemplateDetail
+// gains a real usage field (it has none today), never "updates 24 pages". OWNERSHIP:
+// keep it page-scoped — a template can be the site footer (site.footerTemplateId); the
+// header/main menu is a Menu (site.navigationMenuId, owned by TASK-479-10), so do not
+// imply the main menu propagates from here (see parent 23 reconciliation note).
+const TemplatePropagationBanner = () => (
+  <Card className="mx-auto mb-3 flex max-w-3xl items-center gap-3 bg-primary-soft/50 p-3">
+    <RefreshCw className="size-5 shrink-0 text-primary" />
+    <p className="text-sm text-muted-foreground">Editing this template updates every page that uses it.</p>
+  </Card>
+);
+
 // TemplateSettingsForm / TemplateSettingsSheet — restyle to soft/violet tokens.
-// Port the prototype's PageTemplateEditorPreview chrome cues into the sheet:
-//  - a violet soft "propagation" Card (RefreshCw + "Editing this template updates
-//    the pages that use it"). HONESTY GUARD: include a page COUNT only if
-//    PageTemplateDetail carries a real usage field; today it does not, so phrase it
-//    generically ("updates every page that uses it"), never "updates 24 pages".
 //  - keep the EXISTING fields (name/slug/description/category) and the EXISTING
 //    SegmentedControl status (Draft | Published) — stored enum tokens stay
 //    lowercase; only display labels capitalize. Keep data-page-template-status-control.
 //  - keep handleSave -> updatePageTemplate(...) and onSaved(toEditorDetail(updated)).
+//  - the propagation note is NOT duplicated here as the primary surface (it lives in
+//    the always-visible canvasChrome banner); the sheet keeps its existing
+//    "settings/SEO never apply to target pages — only sections are inserted" description.
 // Restyle inputs to the shared redesigned Input/Textarea primitives (rounded-xl,
 // border-input, soft focus ring) instead of the ad-hoc inputClass strings.
 const TemplateSettingsForm = ({ templateId, onOpenChange, onSaved }) => {
@@ -125,10 +151,6 @@ const TemplateSettingsForm = ({ templateId, onOpenChange, onSaved }) => {
   // ... handleSave unchanged ...
   return (
     <div className="space-y-4">
-      <Card className="flex items-center gap-3 bg-primary-soft/50 p-4">
-        <RefreshCw className="size-5 shrink-0 text-primary" />
-        <p className="text-sm text-muted-foreground">Editing this template updates every page that uses it.</p>
-      </Card>
       {/* restyled name/slug/description/category fields + SegmentedControl status */}
     </div>
   );
@@ -164,9 +186,13 @@ states; restyle banners to soft destructive tokens only.
 
 **Regression-test shape:** see TASK-479-23-L03 — assert the editor mounts the shared
 `PageEditor` with a host whose `mode === "page-template"` and `assistantSurface ===
-false`, the settings sheet renders the restyled fields + `SegmentedControl` status +
-the generic (non-fabricated) propagation note, and the host cache/preview functions
-still resolve `cacheKeys.pageTemplateDetail` / `previewPageTemplate`.
+false`; the host exposes a `canvasChrome` function whose output renders the generic
+(non-fabricated) always-visible propagation note (assert by direct-rendering
+`host.canvasChrome?.({ document, device })`, mirroring the existing `renderSettings`
+direct-render pattern — the shared `PageEditor` is stubbed in this suite, so chrome is
+verified through the seam, not the stub); the settings sheet renders the restyled
+fields + `SegmentedControl` status; and the host cache/preview functions still resolve
+`cacheKeys.pageTemplateDetail` / `previewPageTemplate`.
 
 ---
 
@@ -191,6 +217,7 @@ still resolve `cacheKeys.pageTemplateDetail` / `previewPageTemplate`.
 - Update `_docs/_TASKS/README.md` board + **Statistics** when this leaf changes status.
 - Add a `_docs/_CHANGELOG/` entry on closure linking **TASK-479** + **TASK-479-23-L02**.
 - No contract-doc changes expected (visual-only, editor reused via the existing host
-  seam). If surfacing the propagation context required a new optional `PageEditorHost`
-  field (added in 08-L02), cross-link it from `_docs/PAGE_MODEL.md` and state it in
-  the changelog.
+  seam). The always-visible propagation note reuses the **existing** optional
+  `PageEditorHost.canvasChrome` field — **no new host field is introduced** — so no
+  `_docs/PAGE_MODEL.md` contract edit is required; if that assumption ever changes
+  (a dedicated host field is added in 08-L02), cross-link it and state it in the changelog.

@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Menus
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06 (shell + tokens adopted in `core/admin`)
+**Dependencies:** TASK-479-05 (tokens), TASK-479-06 (shell adopted in `core/admin`)
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 

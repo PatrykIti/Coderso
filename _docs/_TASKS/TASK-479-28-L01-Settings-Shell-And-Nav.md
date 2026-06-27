@@ -176,12 +176,14 @@ optional field), NOT by removing the existing `sessions` / `login-alerts` /
 save bar in `SettingsLayout` is NOT ported into the shell — the real pages own
 their own sticky save bar with live `isDirty`/saving state (L02+).
 
-**Regression-test shape (see L07):** render `<SettingsSidebar activeId="security" />`
-under the admin router provider; assert the Security children (IP allowlist /
-Sessions / Login alerts) appear when a security id is active and are collapsed for
-non-security ids; assert each item is an `AdminLink` (resolved `/admin/settings/...`
-href, no raw `<a href>`); assert a dirty form blocks navigation (mock
-`requestNavigation` → false ⇒ `preventDefault` called).
+**Regression-test shape (see L07):** snapshot `renderAdminUi(<SettingsSidebar
+activeId="security" />)` (SSR HTML string) and assert the Security children (IP
+allowlist / Sessions / Login alerts) appear when a security id is active and are
+absent for non-security ids; assert each item's resolved `/admin/settings/...`
+href is present in the markup (AdminLink-rendered — do NOT try to assert "no raw
+anchor", which is unsatisfiable since `AdminLink` itself renders an `<a>`); for the
+dirty-guard, mount under happy-dom (`createRoot` + `React.act`) with
+`requestNavigation` mocked → `false` and assert the click's `preventDefault` fires.
 
 ---
 

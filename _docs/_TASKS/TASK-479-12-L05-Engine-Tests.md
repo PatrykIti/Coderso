@@ -51,40 +51,51 @@ current `tests/vitest/ui/content-type-editor.test.tsx`.
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { ContentTypeList } from "../../../core/admin/ui/content-types/ContentTypeList";
 
-test("content type list shows summary band + card grid", () => {
+// (a) SSR chrome only — with an empty cache the list renders NO rows, so assert
+//     just the always-visible band/header/empty-state (renderAdminUi is SSR-only).
+test("content type list shows summary band chrome", () => {
   const html = renderAdminUi(<ContentTypeList />, { path: "/admin/content-types" });
   expect(html).toContain("Content Types");
-  expect(html).toMatch(/Types/);         // StatCard band labels
+  expect(html).toMatch(/Types/);    // StatCard band labels
   expect(html).toMatch(/Entries/);
   expect(html).toMatch(/Fields/);
-  expect(html).toContain("Edit schema"); // per-card actions (when rows present)
-  expect(html).toContain("Entries");
-  expect(html).not.toMatch(/<a [^>]*href="\/content-types/); // links resolved via AdminLink, not raw hrefs
 });
+
+// (b) Card grid needs SEEDED data → use the repo idiom (NOT renderAdminUi):
+//     `// @vitest-environment happy-dom` + createRoot + a vi.mock of
+//     contentTypesClient, mirroring tests/vitest/ui/content-type-list-parity.test.tsx.
+//     Then assert per-card actions + that links resolve via AdminLink to the
+//     admin-prefixed canonical route (resolveAdminRoutePath aliases
+//     /content-types/* → /advanced/engine/*):
+//       expect(container.textContent).toContain("Edit schema");
+//       expect(container.querySelector('a[href^="/admin/advanced/engine/"]')).not.toBeNull();
 
 // tests/vitest/ui-integration/engine-content-type-editor-restyle.test.tsx
 test("content type editor renders tabs + fields section + sticky actions", () => {
   const html = renderAdminUi(<ContentTypeEditor />, { path: "/admin/content-types/sample" });
-  for (const label of ["Fields", "Relations", "Settings", "Permissions"]) expect(html).toContain(label);
-  expect(html).toContain("Add field");
+  for (const label of ["Fields", "Relations", "Settings"]) expect(html).toContain(label); // 3 triggers (no Permissions)
+  expect(html).toContain("Add field");      // active Fields tab (editor seeds defaultFields)
   expect(html).toContain("Save draft");
   expect(html).toContain("Publish");
   expect(html).toContain("Collection workspace");
+  // Do NOT assert Settings/Relations tab BODIES here — they are inactive under SSR.
 });
 
 // tests/vitest/ui-integration/engine-schema-builder-restyle.test.tsx
-test("schema builder renders rail palette + canvas + inspector", () => {
+test("schema builder renders rail palette + inspector chrome", () => {
   const html = renderAdminUi(<SchemaBuilderPage />, { path: "/admin/content-types/sample/schema" });
-  expect(html).toContain("Field types");                 // rail group
+  expect(html).toContain("Field types");                 // palette SectionCard
   for (const t of ["Text", "Number", "Boolean", "Date", "Rich text", "Media", "Relation", "Select"]) expect(html).toContain(t);
   expect(html).toMatch(/fields/);                         // field-count badge
+  // Per-field canvas nodes need seeded fields → cover in a seeded createRoot test.
 });
 
 // tests/vitest/ui-integration/engine-collection-workspace-restyle.test.tsx
 test("collection workspace renders the three tabs + refresh", () => {
   const html = renderAdminUi(<CollectionWorkspacePage />, { path: "/admin/advanced/engine/sample/collection" });
-  for (const label of ["Entries", "Detail template", "Settings"]) expect(html).toContain(label);
+  for (const label of ["Entries", "Detail template", "Settings"]) expect(html).toContain(label); // tab triggers
   expect(html).toContain("Refresh");
+  // CollectionOverview (needs summary) + CollectionReadinessChecklist (Settings tab) → seeded test.
 });
 
 // tests/vitest/ui-integration/engine-detail-template-restyle.test.tsx
@@ -95,11 +106,17 @@ test("detail template editor renders restyled editor chrome", () => {
 });
 ```
 
-**Data flow:** these are pure SSR string assertions over the first render
-(cache-hydrate path with empty/seeded cache). They must NOT depend on network;
-where a screen needs cached data to render rows, seed via the existing client
-cache test seams used by the current `tests/vitest/ui/*` engine suites (e.g.
-`getCachedContentTypes` seeding helpers) rather than mocking `fetch`.
+**Data flow:** two lanes. (1) Chrome-only assertions are pure SSR string checks
+over the first render via `renderAdminUi` (SSR-only) with an empty cache — these
+must NOT depend on network. (2) Anything that needs seeded data to render (list
+cards, schema-builder canvas nodes, collection-workspace overview/readiness,
+inactive-tab bodies) uses the repo's real idiom — `// @vitest-environment
+happy-dom` + `createRoot`/`React.act` + a `vi.mock`/`vi.hoisted` of the relevant
+client module (`contentTypesClient` / `detailPagesClient` / `siteSettingsClient`),
+exactly as `tests/vitest/ui/content-type-list-parity.test.tsx`,
+`schema-builder.test.tsx`, and `collection-workspace.test.tsx` already do. There
+is **no** public `getCachedContentTypes` seeding helper and there is no RTL /
+jest-dom / user-event in this repo — do not introduce them.
 
 **Error handling (test design):** assert presence of the preserved Alert/dirty
 markers where feasible (e.g. the editor's unsaved-changes copy, the workspace's

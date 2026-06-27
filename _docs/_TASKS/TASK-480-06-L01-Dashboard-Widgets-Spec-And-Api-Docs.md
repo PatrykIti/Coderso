@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Dashboard Widgets / Docs
 **Estimated Effort:** Medium
-**Dependencies:** TASK-480-01 (schema/service contract), TASK-480-02 (DB), TASK-480-03 (routes), TASK-480-04 (cache), TASK-480-05 (UI) — all must be implemented (or frozen contracts) before the docs can describe them accurately
+**Dependencies:** TASK-480-01 (audit + product spec), TASK-480-02 (schema/service contract), TASK-480-03 (DB + routes + cache), TASK-480-04 (renderers), TASK-480-05 (UI) — all must be implemented (or frozen contracts) before the docs can describe them accurately
 **Status:** ⏳ To Do
 
 ---
@@ -23,19 +23,20 @@ discoverable and consistent with what TASK-480-01..05 shipped.
   Dashboard Widgets system from `_docs/` alone — the catalog, the layout schema,
   the API surface, the cache contract, the persistence model, and the RBAC gates
   are all written down and cross-linked, matching the code exactly.
-- **Owning module/service:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (new), with
+- **Owning module/service:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by
+  480-01-L02, extended by 02/03/04/05; finalized here), with
   synchronized edits to `_docs/CMS_API.md`, `_docs/ADMIN_CACHE.md`,
   `_docs/ADMIN_CACHE_MAP.md`, `_docs/DATA_MODEL.md`, and `AGENTS.md`.
 - **Source-of-truth docs (the code these docs must mirror):**
-  - Schema/service owner: `core/services/dashboard/*` (extended by TASK-480-01 —
-    `dashboardTypes.ts`, the new widget/layout schema + `normalize*` helpers,
-    `dashboardService.ts` data-source resolvers).
+  - Schema/service owner: `core/services/dashboard/*` (extended by TASK-480-02 —
+    `dashboardTypes.ts`, the new `dashboardWidgetContract.ts` schema + `normalize*`
+    helpers, `dashboardService.ts` + `dashboardDataSources.ts` data-source resolvers).
   - Existing baseline contract: `core/services/dashboard/dashboardTypes.ts`
     (`DashboardPayload`), `core/services/dashboard/dashboardService.ts`
     (`getDashboardData`), `core/admin/services/dashboardClient.ts`.
   - Routes: the internal admin routes registered by TASK-480-03.
-  - Cache: the cached client + keys/TTL added by TASK-480-04.
-  - DB: the layout table + migration artifacts added by TASK-480-02.
+  - Cache: the cached client + keys/TTL added by TASK-480-03.
+  - DB: the layout table + migration artifacts added by TASK-480-03.
   - UI: `core/admin/ui/dashboard/*` widget grid + edit-mode builder from
     TASK-480-05; visual language from `_docs/_PROTOTYPE/src/pages/DashboardPage.tsx`
     (`StatCard` / `AreaChart` / `Donut` / `SectionCard`) and the floating-panel
@@ -57,8 +58,9 @@ and must never weaken it in prose:
 - **Endpoint visibility:** internal admin (`/admin/api/*`).
 - **Auth model:** session.
 - **RBAC:** widget **data** reads require `content:read`; dashboard **layout**
-  reads/writes require `settings:read` / `settings:write` (the layout permission
-  chosen by 480-02/03 — confirm against the registered routes before writing).
+  reads require `content:read` and **writes** require the dedicated
+  `dashboard:write` permission (added by 480-03 — confirm against the registered
+  routes before writing; `settings:write` is explicitly NOT reused).
 - **CSRF:** required for every admin layout write.
 - **Rate-limit bucket:** `admin`.
 - **Validation:** schema owner in `core/services/dashboard/*` rejects unknown
@@ -76,7 +78,7 @@ and must never weaken it in prose:
 > exact edit per file**. Write prose, not code; keep every claim verifiable against
 > the cited source file.
 
-### 1) CREATE `_docs/DASHBOARD_WIDGETS_SPEC.md`
+### 1) FINALIZE `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by 480-01-L02, extended by 02/03/04/05)
 
 Outline (H2 sections, in order):
 
@@ -96,7 +98,7 @@ Outline (H2 sections, in order):
 
 ## Widget Catalog
 - Table of built-in widget types with: id, title, data source, default size,
-  required permission, config shape. Seed set (mirror what TASK-480-01 registered):
+  required permission, config shape. Seed set (mirror what TASK-480-02 registered):
   | Widget id | Purpose | Data source | RBAC | Config |
   |-----------|---------|-------------|------|--------|
   | `totals` | counters (pages/entries/media/users) | dashboard totals | content:read | — |
@@ -108,24 +110,25 @@ Outline (H2 sections, in order):
   | `quick-actions` | shortcut buttons | static / adminPaths | content:read | { actions[] } |
   | `content-query` | custom bounded content query | entries query | content:read | { typeSlug, filter, limit } |
 - State that the catalog is the schema-owned enum in `core/services/dashboard/*`
-  (TASK-480-01); adding a widget = extend that enum + its config schema + a resolver.
+  (TASK-480-02); adding a widget = extend that enum + its config schema + a resolver.
 
 ## Data Sources
 - Each widget declares a data-source id resolved server-side in
   `core/services/dashboard/dashboardService.ts` (extends `getDashboardData`).
 - Resolvers reuse existing read models (totals/storage/security/recentEdits today;
-  new bounded content-over-time + content-query resolvers from TASK-480-01/03).
+  new bounded content-over-time + content-query resolvers from TASK-480-02).
 - Hard limits: every query is bounded (limit caps, range caps) — document the caps.
 
 ## Layout Model
 - A dashboard layout = ordered list of placed widgets: { id, type, config, x, y, w,
   h } on a fixed column grid (document the column count + min/max w/h).
 - Schema-first: layout validated by the Zod-equivalent schema in
-  `core/services/dashboard/*`; unknown fields rejected; `normalizeDashboardLayout`
-  fills defaults and clamps geometry. Reference the helper name from TASK-480-01.
-- Versioning: `schemaVersion` on the stored layout; legacy/empty rows normalize to
-  a default layout (non-destructive read-migration), mirroring the Pages v2 doc
-  precedent in `ADMIN_CACHE.md`.
+  `core/services/dashboard/dashboardWidgetContract.ts`; unknown fields rejected;
+  `normalizeDashboardLayout` fills defaults and clamps geometry. Reference the
+  helper name from TASK-480-02.
+- Versioning: `version` on the stored layout (DB column `schema_version`);
+  legacy/empty rows normalize to a default layout (non-destructive read-migration),
+  mirroring the Pages v2 doc precedent in `ADMIN_CACHE.md`.
 
 ## Edit-Mode UX
 - View mode = render the grid read-only. Edit mode = floating-panel builder:
@@ -136,7 +139,7 @@ Outline (H2 sections, in order):
 - Reference the prototype floating-panel pattern + TASK-479 StatCard/SectionCard.
 
 ## Persistence
-- Layout persisted per (scope) via TASK-480-02. Document the table
+- Layout persisted per (scope) via TASK-480-03. Document the table
   (`dashboard_layouts` or the actual name), its owner, and the read/write path.
 - Default layout served when no row exists (the current fixed cards become the
   seeded default so existing installs see no regression).
@@ -145,13 +148,13 @@ Outline (H2 sections, in order):
 - Internal admin routes (point at the `## Dashboard` section of CMS_API.md):
   - `GET /dashboard` — resolved widget payload (back-compat: still returns the
     legacy totals/storage/security/recentEdits shape plus the widget data map).
-  - `GET /dashboard/layout` — current layout (settings:read).
-  - `PUT /dashboard/layout` — persist layout (settings:write, CSRF, schema reject-unknown).
+  - `GET /dashboard/layout` — current layout (content:read).
+  - `PUT /dashboard/layout` — persist layout (dashboard:write, CSRF, schema reject-unknown).
   - `GET /dashboard/widgets` — catalog/metadata (content:read), if exposed.
   - (Match the EXACT routes TASK-480-03 registered; do not invent.)
 
 ## RBAC
-- Data reads: content:read. Layout read/write: settings:read / settings:write.
+- Data reads: content:read. Layout read: content:read; layout write: dashboard:write.
 - Restate the secret-handling rule (status booleans only; no raw settings).
 
 ## Cache
@@ -160,7 +163,8 @@ Outline (H2 sections, in order):
   no mount-force refetch. Point at `ADMIN_CACHE.md` for the full contract.
 
 ## Testing
-- Point at the Bun route/security suites + Vitest domain/UI suites (480-03/05).
+- Point at the Bun route/security suites (480-03) + Vitest domain (480-02) /
+  UI (480-04/05) suites.
 
 ## Open Questions / Follow-ups
 - Per-user vs per-site layouts; export/import of layouts; custom widget plugins.
@@ -185,7 +189,7 @@ In `ADMIN_CACHE.md`:
 - Add `dashboard:layout` to the **Cache keys** list (under `core/admin/services/cachePolicy.ts`).
 - Add a "### Dashboard widgets cache note" subsection under the per-resource notes,
   describing: owner client (`core/admin/services/dashboardClient.ts` extended by
-  TASK-480-04), TTL (`cacheTtlMs.detail`), hydrate-then-revalidate on mount,
+  TASK-480-03), TTL (`cacheTtlMs.detail`), hydrate-then-revalidate on mount,
   cache-bus `dashboard:layout` `update`/`invalidate` on save, dirty-draft
   protection (background revalidation never overwrites an unsaved builder draft),
   and that **no secrets** enter the cache (security widget = booleans only, same
@@ -199,15 +203,15 @@ In `ADMIN_CACHE_MAP.md`:
   `getDashboardLayoutCached` / `getCachedDashboardLayout` / `saveDashboardLayout`,
   cache bus `dashboard:layout`.
 
-### 4) UPDATE `_docs/DATA_MODEL.md` — new layout table (ONLY if TASK-480-02 added a table)
+### 4) UPDATE `_docs/DATA_MODEL.md` — new layout table (ONLY if TASK-480-03 added a table)
 
 - Add a `## Dashboard layouts` section after `## Settings` describing the table
-  added by 480-02: columns (id, scope/owner, definition jsonb, schema_version,
+  added by 480-03: columns (id, scope/owner, definition jsonb, schema_version,
   created_at, updated_at), the jsonb layout contract, and the non-destructive
   read-normalization note. Cite the migration artifacts (SQL + `meta/*_snapshot.json`
-  + `meta/_journal.json`) produced by 480-02 — this leaf documents them, 480-02
+  + `meta/_journal.json`) produced by 480-03 — this leaf documents them, 480-03
   creates them.
-- If 480-02 stored the layout inside an existing settings/jsonb column instead of a
+- If 480-03 stored the layout inside an existing settings/jsonb column instead of a
   new table, document THAT instead and skip the new-table section.
 
 ### 5) UPDATE `AGENTS.md` repo doc index
@@ -242,8 +246,8 @@ Docs-only; no code tests. Validation steps:
 - Confirm every route documented in `CMS_API.md` exists in the 480-03 route module
   (grep the route registration); confirm permissions match the route guards.
 - Confirm every cache key documented in `ADMIN_CACHE.md` exists in
-  `core/admin/services/cachePolicy.ts` (from 480-04).
-- Confirm the DATA_MODEL table/columns match the 480-02 migration + snapshot.
+  `core/admin/services/cachePolicy.ts` (from 480-03).
+- Confirm the DATA_MODEL table/columns match the 480-03 migration + snapshot.
 - Markdown sanity: links resolve, tables render, headings nest correctly.
 - `bun --cwd core lint` / `bun --cwd core lint:types` are not required for a
   docs-only change but MUST still be green at closure (run in L02); note here that
@@ -255,10 +259,10 @@ Docs-only; no code tests. Validation steps:
 
 ## Documentation Updates Required
 
-- **Create:** `_docs/DASHBOARD_WIDGETS_SPEC.md`.
+- **Finalize:** `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by 480-01-L02, extended by 02/03/04/05).
 - **Update:** `_docs/CMS_API.md` (Dashboard section + new routes).
 - **Update:** `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` (dashboard:layout
   cached resource).
-- **Update:** `_docs/DATA_MODEL.md` (dashboard layout table — if 480-02 added one).
+- **Update:** `_docs/DATA_MODEL.md` (dashboard layout table — if 480-03 added one).
 - **Update:** `AGENTS.md` repo doc index (new spec line).
 - Board + changelog are handled by **TASK-480-06-L02**, not this leaf.

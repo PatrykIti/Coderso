@@ -19,10 +19,15 @@
   input/textarea/select/switch/checkbox/table/tabs/avatar/separator/progress/
   skeleton/dropdown/tooltip styling. Keep the Radix internals and the existing
   `data-slot` / `asChild` / `VariantProps` API so it is a drop-in.
-- **Owning module/service:** `core/admin/components/ui/{button,card,badge,input,textarea,select,switch,checkbox,table,tabs,avatar,separator,progress,skeleton,dropdown-menu,tooltip}.tsx`.
+- **Owning module/service:** `core/admin/components/ui/{button,card,badge,input,textarea,select,switch,checkbox,table,tabs,avatar,separator,progress,dropdown-menu,tooltip}.tsx`
+  (all exist today) **plus a new `skeleton.tsx`** — core has **no** `skeleton.tsx`,
+  so this leaf **creates** it by porting `_docs/_PROTOTYPE/src/components/ui/skeleton.tsx`
+  (the only new file; it is the base primitive that L02's `ListSkeleton`/
+  `FormTableSkeleton` compose).
 - **Source-of-truth docs:** `_docs/_PROTOTYPE/src/components/ui/*` (port source);
   `_docs/DESIGN_TOKENS.md`; `_docs/_PROTOTYPE/README.md` §"Primitives".
-- **Out of scope:** New primitive components, behavior changes, removing any
+- **Out of scope:** New primitive components **(except the base `skeleton.tsx`,
+  which does not yet exist and is created here)**, behavior changes, removing any
   existing variant/size that real code already imports (additive only), and
   `accordion/alert/collapsible/dialog/scroll-area/sheet/slider/sonner` retheme
   beyond token inheritance (they restyle via tokens from TASK-479-05).
@@ -122,15 +127,18 @@ function CardAction(props) { // NEW slot (top-right actions) — proto card.tsx
 export { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter };
 ```
 
-### Remaining primitives (token + radius pass only)
+### Remaining primitives (token + radius pass; skeleton.tsx is NEW)
 
 ```text
-input.tsx / textarea.tsx / select.tsx  -> rounded-xl, border-input, focus ring, shadow-soft on triggers
+input.tsx / textarea.tsx               -> rounded-xl, KEEP --admin-input-* (bg/border/placeholder/ring/text), shadow-soft
+select.tsx                             -> rounded-xl trigger, KEEP --admin-input-* (bg/border/text), focus ring, shadow-soft
 switch.tsx / checkbox.tsx              -> checked uses --primary; rounded; ring tokens
 table.tsx                              -> header text muted-foreground, row hover bg-muted/40, soft borders
-tabs.tsx                               -> pill/underline active in --primary; rounded triggers
+tabs.tsx                               -> default(pill)/`line`-underline active in --primary; rounded triggers
+                                          (real tabs.tsx already exposes variant `line`, data-variant=line — NOT `underline`)
 avatar.tsx                             -> rounded-xl fallback bg-muted (proto Avatar shape)
-separator.tsx / progress.tsx / skeleton.tsx -> token colors, progress fill --primary, skeleton bg-muted
+separator.tsx / progress.tsx          -> token colors, progress fill --primary
+skeleton.tsx (NEW — create)           -> port proto ui/skeleton.tsx: bg-muted shimmer, rounded
 dropdown-menu.tsx / tooltip.tsx        -> rounded-2xl content, shadow-pop, bg-popover, soft item rounding
 // Each keeps its Radix root/portal/trigger structure unchanged.
 ```
@@ -139,6 +147,16 @@ dropdown-menu.tsx / tooltip.tsx        -> rounded-2xl content, shadow-pop, bg-po
 change. No prop renames, no removed exports, no Radix structural edits. Token
 names (`primary-soft`, `success-soft`, `shadow-soft`, `shadow-pop`) are the ones
 TASK-479-05 introduces into `core/admin/styles/globals.css`; do not inline hexes.
+
+**Dark-mode tokens (D1):** the chrome primitives keep reading their existing
+`--admin-*` variables **directly** — `button` stays on `--admin-button-*`,
+`input`/`textarea`/`select` on `--admin-input-*`; do NOT re-route them to derived
+shadcn vars (e.g. `border-input`). Their dark values arrive from the per-profile injected
+`<style id="coderso-theme-tokens">` `:root.dark{--admin-*}` block (TASK-479-05-L04/
+L06), which wins source order, so dark recolors chrome without a static
+`globals.css .dark{--admin-*}` rule. The additive `soft`/`success`/`warning`/`info`
+variants use derived `--primary-soft`/`--*-soft` tokens whose dark values come from
+`globals.css .dark` (05) — those are not chrome the injected style overrides.
 
 **Error handling:** N/A (no runtime branches). Guard against breaking callers:
 grep usages of each variant/size before merge; additive-only.

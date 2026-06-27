@@ -86,7 +86,8 @@ section wrappers/classNames.
 // 4) previewError <Alert> + the preview result <section>: keep both. Re-skin the
 //    4 metric tiles (Total / Applied filters / Rejected tokens / Runtime search)
 //    to soft rounded-xl stat cards; keep the rejected-tokens warning strip (move
-//    amber-50/amber-200 hard colors to warning tokens) and the rows <pre> snapshot.
+//    amber-50/amber-200 hard colors to the `--warning`/`--warning-soft` tokens +
+//    `warning` Badge variant from 479-05) and the rows <pre> snapshot.
 
 // ListingSearchPage.tsx — RENDER ONLY changes inside the existing return().
 // 1) PageHeader: restyled @/ui/shared/PageHeader (title "Search", same description).

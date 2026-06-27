@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** `dashboard` / `persistence-api`
 **Estimated Effort:** Large
-**Dependencies:** TASK-480-01 (widget catalog/registry contract), TASK-480-02 (widget data-source resolvers). This subtask owns the **layout envelope** and the **internal admin API + cache**; it composes — does not redefine — the per-widget schemas/resolvers owned by 480-01/02.
+**Dependencies:** TASK-480-02 (widget/layout schema contract + data-source resolvers). This subtask owns the **layout repository, the internal admin API + cache**; it composes — does not redefine — the widget/layout schema + per-widget resolvers owned by 480-02. The layout-envelope schema itself is owned by 480-02 (`dashboardWidgetContract.ts`) and re-exported here, never re-declared.
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
@@ -25,18 +25,22 @@ reads through.
   widgets), serve it and its resolved widget data over internal admin routes, and
   cache it end-to-end so the builder hydrates instantly and revalidates in the
   background without mount-force refetch loops or dirty-state overwrites.
-- **Owning module/service:** `core/services/dashboard/*` (domain contract owner:
-  `dashboardLayout.ts`, `dashboardLayoutRepository.ts`, `dashboardLayoutService.ts`),
-  `core/server/routes/dashboardRoutes.ts` (orchestration-only),
+- **Owning module/service:** `core/services/dashboard/*`
+  (`dashboardLayoutRepository.ts` — DB read/write, `dashboardLayoutService.ts` —
+  read/write/reset orchestration + the route-facing `DashboardLayoutError` /
+  `dashboard_layout_invalid` code; the layout-envelope **schema/normalize/defaults**
+  are owned by 480-02 in `dashboardWidgetContract.ts` and re-exported, never
+  re-declared), `core/server/routes/dashboardRoutes.ts` (orchestration-only),
   `core/admin/services/dashboardClient.ts` (cached client).
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md`, `_docs/CMS_API.md`,
   `_docs/RBAC_SPEC.md`, `_docs/SECURITY_SPEC.md`, `_docs/ADMIN_CACHE.md`,
-  `_docs/ADMIN_CACHE_MAP.md`, `_docs/DASHBOARD_WIDGETS_SPEC.md` (created by
-  TASK-480-01), `_docs/TESTING_STRATEGY.md`.
-- **Out of scope:** widget catalog/registry definition and per-widget config
-  schemas (480-01); widget data-source resolvers themselves (480-02); the
-  edit-mode builder UI and floating-panel interactions (480-04/05); the dashboard
-  shell re-skin (TASK-479-07). This subtask only **stores, serves, and caches**.
+  `_docs/ADMIN_CACHE_MAP.md`, `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by
+  TASK-480-01-L02), `_docs/TESTING_STRATEGY.md`.
+- **Out of scope:** widget/layout schema + per-widget config schemas and the
+  widget data-source resolvers themselves (480-02); the widget renderers
+  (480-04); the edit-mode builder UI and floating-panel interactions (480-05);
+  the dashboard shell re-skin (TASK-479-07). This subtask only **stores, serves,
+  and caches**.
 
 ---
 
@@ -60,13 +64,14 @@ new DB table, so a real contract is required (per-leaf contracts refine this).
   `core/server/middleware/csrf.ts`; routes must not bypass it.
 - **Rate-limit bucket:** `admin` (`core/server/middleware/rateLimit.ts`).
 - **Validation:** schema-first, **reject unknown fields**. The layout envelope
-  schema is owned by `core/services/dashboard/dashboardLayout.ts`; route-side
-  validation schemas in `core/server/validation/dashboardSchemas.ts` re-export the
-  owner. Per-widget `config` validation is delegated to the 480-01 catalog
+  schema is owned by 480-02 (`core/services/dashboard/dashboardWidgetContract.ts`)
+  and re-exported here; route-side validation schemas in
+  `core/server/validation/dashboardSchemas.ts` re-export that owner (never
+  re-declare). Per-widget `config` validation is delegated to the 480-02 contract
   (`normalizeDashboardWidgetConfig(type, config)`); unknown widget `type` is
   rejected. Domain errors are mapped to transport errors only at the route
   boundary via `mapDashboardError` (`ApiError` from `../errorHandler`).
-- **Anti-abuse:** widget-instance count is capped (`MAX_WIDGETS_PER_LAYOUT`), and
+- **Anti-abuse:** widget-instance count is capped (`DASHBOARD_MAX_WIDGETS`), and
   the batched widget-data request caps the number of resolved instances; data
   resolvers run under the caller's `content:read` scope only.
 - **Secret handling:** the layout stores presentation/config only — never
@@ -130,8 +135,8 @@ available) and why.
   (L02).
 - `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` — dashboard layout +
   widget-data cache keys, TTL, cacheBus, hydration policy (L04).
-- `_docs/DASHBOARD_WIDGETS_SPEC.md` — persistence + API section (cross-link the
-  catalog contract owned by 480-01).
+- `_docs/DASHBOARD_WIDGETS_SPEC.md` — extend with the persistence + API section
+  (cross-link the widget/layout schema contract owned by 480-02).
 - Task board index + statistics; changelog entry on closure.
 
 ---

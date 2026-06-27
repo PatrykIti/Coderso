@@ -188,8 +188,10 @@ export function normalizeAdminThemeTokens(input: unknown): AdminThemeTokens {
 - `assertKnownAdminThemeTokenShape` (lenient: reject unknown keys + non-string
   leaves, but allow MISSING groups) is the read-time guard used by
   `getResolvedAdminThemeTokens`/`readStoredAdminThemeTokens` so a pre-existing
-  row or a stale `localStorage` cache (`coderso-theme-tokens`) normalizes instead
-  of falling back to `DEFAULT_ADMIN_THEME_TOKENS` wholesale.
+  row or a stale `localStorage` cache (key `coderso.adminThemeTokens`, legacy
+  `nextless.adminThemeTokens` — both read in `AdminApp.tsx`; NOT the
+  `coderso-theme-tokens` style-element id) normalizes instead of falling back to
+  `DEFAULT_ADMIN_THEME_TOKENS` wholesale.
 
 > Confirm whether `adminThemeTemplateService.ts` read path should switch from
 > raw cast to `normalizeAdminThemeTokens(row.tokens)` — recommended, so legacy
@@ -219,9 +221,43 @@ editor live preview). Add, keeping the existing entries:
 `--admin-shadow-pop:${tokens.effects.shadowPop}`,
 ```
 
+**Dark emission (D1 — the dark `--admin-*` block):** because the chrome reads
+`--admin-*` DIRECTLY and the injected `<style id="coderso-theme-tokens">` wins
+source order, dark must be emitted as a `:root.dark{--admin-*}` block FROM that
+same injected style (NOT a static `globals.css .dark`, per L01). Give the array
+emitter an optional selector so it can target light or dark — backward compatible
+(default `:root`, so existing `toAdminThemeCssVariables(tokens)` calls are
+unchanged):
+
+```ts
+export function toAdminThemeCssVariables(
+  tokens: AdminThemeTokens,
+  selector: string = ":root",          // pass ":root.dark" for the dark block
+): string {
+  // …same entries[] (incl. the NEW vars above)…
+  return `${selector}{${entries.join(";")};}`;
+}
+```
+
+The dark VALUES are a parallel default constant — single source, full
+`AdminThemeTokens` shape, per-token dark hexes frozen in L01's dark column and
+owned/seeded by L04 (incl. the dark `topbar` values the previous draft omitted):
+
+```ts
+export const DEFAULT_ADMIN_THEME_TOKENS_DARK: AdminThemeTokens = { /* L04 dark palette */ };
+```
+
+`AdminApp` then injects BOTH blocks into the one `<style>` (wired in L06):
+`toAdminThemeCssVariables(activeLightTokens) +
+toAdminThemeCssVariables(DEFAULT_ADMIN_THEME_TOKENS_DARK, ":root.dark")`. The
+contract TYPE stays single-mode (no per-template `dark?`); per-template dark is
+the deferred follow-up from L01. `toAdminThemeCssVariableMap` (editor preview)
+needs no selector — it stays a `Record` for inline styles.
+
 **Data flow:** write → `assertAdminThemeTokens` (strict) → persist jsonb. Read →
-`normalizeAdminThemeTokens`/`mergeAdminThemeTokens` → emitter → injected `:root`
-→ globals.css map (L03).
+`normalizeAdminThemeTokens`/`mergeAdminThemeTokens` → emitter → injected
+`:root{--admin-*}` (+ `:root.dark{--admin-*}` from the dark default) → globals.css
+map (L03).
 
 **Error handling:** keep machine-readable `admin_theme_tokens_invalid` on
 unknown keys / non-string leaves; never silently drop fields. Read path must
@@ -236,7 +272,12 @@ never throw on a legacy-but-known shape — it normalizes.
   numeric leaf; accepts the full default object.
 - `normalizeAdminThemeTokens(legacyRow)` fills `primarySoft`/`effects`/new
   sidebar+state keys from defaults (no throw).
-- `toAdminThemeCssVariables(defaults)` string contains all NEW `--admin-*` names.
+- `toAdminThemeCssVariables(defaults)` string contains all NEW `--admin-*` names
+  and is wrapped in `:root{…}`.
+- `toAdminThemeCssVariables(DEFAULT_ADMIN_THEME_TOKENS_DARK, ":root.dark")` is
+  wrapped in `:root.dark{…}` and carries the dark chrome hexes
+  (`--admin-base-bg:#18171a`, `--admin-button-primary-bg:#8b5cf6`,
+  `--admin-sidebar-bg:#1c1b1f`, `--admin-topbar-bg:#18171a`).
 
 ---
 

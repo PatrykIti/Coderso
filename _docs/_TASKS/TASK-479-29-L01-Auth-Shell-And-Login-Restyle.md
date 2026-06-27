@@ -110,9 +110,12 @@ export function AuthShell({ brand, mobileBrand, children, footer, className, con
 > AuthShell disposition: the gradient `AuthBrandPanel` split column is no longer
 > used by the auth pages. Leave `AuthBrandPanel.tsx` in place but unreferenced
 > (or delete it if no other importer — grep first); the centered layout replaces
-> it. `APP_VERSION` comes from the existing build/version constant the admin
-> already exposes (do not invent a new endpoint; if none exists, render a static
-> "Coderso CMS" label and file a tiny follow-up for the version wire-up).
+> it. There is **no** client-side version constant today (only the server's
+> `env.APP_VERSION`), so `APP_VERSION` here is a placeholder: render a static
+> product label (e.g. "Coderso CMS", or the owner's literal "Coderso 1.0") and, if
+> a real version string is wanted, wire a Vite `define`/exported constant using the
+> **same** resolution that 06-L03's SidebarNav footer adopts (do not invent a new
+> endpoint or diverge from it).
 
 ### `LoginPage.tsx` — restyle the card body, keep state + handlers verbatim
 
@@ -173,9 +176,13 @@ success; `isApiClientError` → general `error` + per-field `fieldErrors`.
 "reCAPTCHA enabled but missing site key" guard and the disabled/loading button copy.
 
 **Regression-test shape (delivered in L03):** render `LoginPage` via `renderAdminUi`
-and assert "Welcome back" + "Sign in" copy and the SSO/divider markup; assert the
-"Forgot password?" href resolves through `withAdminBasePath` (no raw `/admin/reset`);
-assert no "Create one"/"Sign up" copy is present.
+and assert "Welcome back" + "Sign in" copy and the SSO/"or continue with email"
+divider markup; assert the "Forgot password?" href renders the canonical
+`/admin/reset` via `withAdminBasePath` (the helper resolves `resolveAdminBasePath()`
+to `/admin` in the SSR test env and emits the literal `/admin/reset` — the existing
+`tests/vitest/authUi/loginForm.test.tsx` already asserts this, so a `not.toContain`
+on `/admin/reset` is **unsatisfiable** — assert the canonical href is present, not
+absent); assert no "Create one"/"Sign up" copy is present (de-SaaS, invite-only).
 
 ---
 

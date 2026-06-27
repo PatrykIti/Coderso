@@ -89,9 +89,10 @@ body.
 //    tab state; only restyle to the rounded segmented control.
 
 // 2) Entry-view builder body — wrap ScreenAuthoringCanvas in the CanvasEditor
-//    floating-panel pattern (port _docs/_PROTOTYPE/.../CanvasEditor.tsx into a
-//    real shared primitive if not already landed by TASK-479-06-L02; otherwise
-//    reuse it):
+//    floating-panel pattern. The shared `CanvasEditor` primitive (with its
+//    `panelPosition` + show/hide toggle) is created/ported by TASK-479-06-L06 —
+//    reuse it as-is here; do NOT fork a second copy. (06-L02 owns the static
+//    pattern library — StatusBadge/PageHeader/etc. — NOT CanvasEditor.)
 //      <CanvasEditor
 //        title="Entry-view builder"
 //        toolbar={<Badge variant="outline">Entry view</Badge>}
@@ -169,8 +170,10 @@ columns, the floating inspector exposes the block library + Bound-field Select
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx`
   (new suite in L05)
-- Existing editor/authoring suites MUST stay green:
-  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-editor-binding-flow.test.tsx tests/vitest/ui/custom-screen-authoring-boundary.test.tsx tests/vitest/ui/screen-widgets-editor-wave.test.tsx`
+- Existing editor/authoring suites MUST stay green (paths verified on disk —
+  `editor-binding-flow` lives under `ui-integration`, `authoring-boundary` is a
+  `.ts` file):
+  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx tests/vitest/ui/custom-screen-authoring-boundary.test.ts tests/vitest/ui/screen-widgets-editor-wave.test.tsx`
 - State explicitly in the summary if any suite was skipped or could not run.
 
 ---

@@ -84,10 +84,12 @@ return (
         actions={/* keep Back to form + Refresh buttons; see Export decision below */}
       />
       {/* keep error <Alert> verbatim */}
+      {/* uses the SHARED StatCard from 479-06-L02; its `value` prop is a string,
+          so stringify the derived counts (no `hint`/spark prop). */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Total" value={stats.total} icon={<Inbox />} />
-        <StatCard label="This week" value={stats.thisWeek} icon={<CalendarDays />} />
-        <StatCard label="Spam" value={stats.spam} icon={<ShieldAlert />} />
+        <StatCard label="Total" value={String(stats.total)} icon={<Inbox />} />
+        <StatCard label="This week" value={String(stats.thisWeek)} icon={<CalendarDays />} />
+        <StatCard label="Spam" value={String(stats.spam)} icon={<ShieldAlert />} />
       </div>
       {/* restyle the existing <table> wrapper to rounded-2xl + soft shadow; keep
           the Received / Submission(dl of payload via formatPayloadValue) / Status
@@ -117,11 +119,13 @@ the fetch-on-open effect, `subscribeCacheEvents(cacheKeys…)` invalidation, the
 ```tsx
 // FormActionLogsPage.tsx — RENDER ONLY changes.
 
-// Stat band derived from `runs` already in state (no fetch).
+// Stat band derived from `runs` already in state (no fetch). The real
+// FormActionRunStatus enum is "success" | "failed" | "skipped" (NO "succeeded",
+// NO "queued"/"running") — match it exactly.
 const stats = useMemo(() => ({
   total: runs.length,
   failed: runs.filter((r) => r.status === "failed").length,
-  succeeded: runs.filter((r) => r.status === "succeeded").length,
+  succeeded: runs.filter((r) => r.status === "success").length,
 }), [runs]);
 
 return (
@@ -130,12 +134,13 @@ return (
       <PageHeader title="Form action logs" description="Automation runs triggered by this form's submissions." actions={/* keep Back + Refresh */} />
       {/* keep error <Alert> */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <StatCard label="Runs" value={stats.total} />
-        <StatCard label="Succeeded" value={stats.succeeded} />
-        <StatCard label="Failed" value={stats.failed} />
+        <StatCard label="Runs" value={String(stats.total)} />
+        <StatCard label="Succeeded" value={String(stats.succeeded)} />
+        <StatCard label="Failed" value={String(stats.failed)} />
       </div>
-      {/* keep the existing status-filter <Select> (all/queued/running/succeeded/failed),
-          restyled into a rounded-2xl filter card; same statusFilter state */}
+      {/* keep the existing status-filter <Select> — the REAL options are
+          all/success/failed/skipped (FormActionRunStatus | "all"); restyle into a
+          rounded-2xl filter card; same statusFilter state */}
       {/* restyle the runs table wrapper to rounded-2xl + soft shadow; keep the
           run columns, StatusBadge, and the per-row Retry button wired to
           retryFormActionRun + isRetrying */}
@@ -158,13 +163,16 @@ disabling. Pagination stays client-side (`PAGE_SIZE`/`currentPage`).
 `/advanced/forms/:id`; any new link goes through `AdminLink`. No hand-built
 `<a href>`.
 
-**Regression-test shape (see L04):** submissions render asserts the stat band
-(Total/This week/Spam from a seeded `submissions` fixture), a row per visible
-submission with the payload `dl` + `fieldLabels`, the empty + loading states, and
-that no submissions cache key is introduced (the page still calls
-`listFormSubmissions` directly). Action-logs render asserts the stat band, the
-status filter, a row per run with `StatusBadge`, and that the Retry button calls
-`retryFormActionRun` (mocked).
+**Regression-test shape (see L04):** SSR snapshots (`renderToString` under
+`AdminRouterProvider`). Submissions asserts the stat band (Total/This week/Spam
+from a seeded `submissions` fixture), a row per visible submission with the
+payload `dl` + `fieldLabels`, and the empty state; "no submissions cache key is
+introduced" is a static check (the page still calls `listFormSubmissions`
+directly — assert no `cacheKeys.formSubmissions`-style key exists, not via render).
+Action-logs asserts the stat band, the status filter (default `all`), and a row
+per run with `StatusBadge`. The Retry click → `retryFormActionRun` is
+interaction-dependent (an explicit `createRoot`+`act` test or the existing
+behavioral suite), not the single SSR snapshot.
 
 ---
 

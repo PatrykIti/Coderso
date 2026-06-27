@@ -51,9 +51,16 @@ secrets, or RBAC bypass.
 Reuse the established harness from `tests/vitest/ui/reviews-page.test.tsx`
 (`renderAdminUi` from `tests/utils/adminRouterRender`, the `createLocalStorage`
 helper, and the `cacheKeys.reviewsList` `{ value, savedAt }` seed shape). Do NOT
-invent a new render utility. `renderAdminUi` returns server-rendered HTML in this
-lane, so assert on rendered output (and, where a click is needed, mount with the
-DOM-render variant used by other `ui-integration` suites).
+invent a new render utility. `renderAdminUi` returns a server-rendered HTML
+**string** (`renderToString`) — there is NO RTL / `@testing-library`, `jest-dom`, or
+`user-event` in this repo. Assert on the rendered string for structure. Where a real
+click is needed, use the repo's DOM idiom (NOT `renderAdminUi`): add a
+`// @vitest-environment happy-dom` pragma, set
+`IS_REACT_ACT_ENVIRONMENT = true`, mount with `createRoot` from `react-dom/client`
+inside `React.act`, and dispatch `element.click()` inside `React.act` — the pattern in
+`tests/vitest/ui-integration/tabs-preview-activation.test.tsx`. Do NOT assert
+inactive-tab panel content under the SSR string (only always-rendered trigger labels
+and card content).
 
 ```tsx
 // tests/vitest/ui-integration/reviews-restyle.test.tsx
@@ -62,6 +69,7 @@ import { afterEach, expect, test, vi } from "vitest";
 
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import { ReviewsModerationPage } from "../../../core/admin/ui/reviews/ReviewsModerationPage";
+import type { ReviewRecord } from "../../../core/admin/services/reviewsClient";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
 // reuse createLocalStorage() + seedReviews() copied from reviews-page.test.tsx
@@ -113,9 +121,14 @@ test("renders empty/loading state without crashing when cache is absent", () => 
   expect(html).toContain("Loading reviews");
 });
 
-// Optional interaction test (DOM-render variant): seed one pending review, click
-// "Approve", assert updateReviewStatus was called with (id, "approved"). Mock
-// `@/services/reviewsClient`.updateReviewStatus via vi.mock; do NOT hit network.
+// Optional interaction test (repo DOM idiom — NOT renderAdminUi, which is SSR-only):
+// add `// @vitest-environment happy-dom`, set IS_REACT_ACT_ENVIRONMENT = true, then
+// createRoot(container).render(<ReviewsModerationPage />) inside React.act and call
+// el.click() inside React.act (pattern: tabs-preview-activation.test.tsx). Seed one
+// pending review, click "Approve", assert updateReviewStatus was called with
+// (id, "approved"). Mock the module the page imports via
+// vi.mock("@/services/reviewsClient", ...) (the vitest `@`→core/admin alias resolves
+// it); do NOT hit network.
 ```
 
 **Data flow:** seed `cacheKeys.reviewsList` via `localStorage` so the page

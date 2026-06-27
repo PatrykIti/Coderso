@@ -19,7 +19,8 @@ new soft/violet chrome is present AND that all preserved data/logic/secret-handl
 wiring still works. No runtime tests move into Vitest for coverage.
 
 - **Goal:** Prove the restyle is presentation-only: the settings shell + sub-nav
-  route canonically (no raw `<a href>`) and keep the dirty-navigation guard;
+  route canonically through `AdminLink`/`adminPaths` (resolved `/admin/settings/...`
+  hrefs present in the markup) and keep the dirty-navigation guard;
   every page keeps its save/dirty-state, validation, create/revoke/test/connect
   flows; secrets stay masked/backend-only (no plaintext key/credential in the DOM);
   and no cache/dirty-state regression is introduced.
@@ -40,77 +41,109 @@ wiring still works. No runtime tests move into Vitest for coverage.
 No endpoint or permission model changes (visual restyle only; preserves existing
 routes, RBAC, cache, and adminPaths).
 
-Each secret-bearing suite (assistant / api-keys / webhooks / email / storage /
-integrations) MUST include at least one assertion that **no stored secret leaks**:
-secret inputs are `type="password"`/masked, and no full key/credential/plaintext
-string appears in the rendered DOM — guarding against the restyle silently
-exposing a secret. The api-keys suite asserts the one-time reveal shows the
-plaintext exactly once (on create) and never on reload.
+Each secret-bearing suite (api-keys / webhooks / email / storage / integrations)
+MUST include at least one assertion that **no stored secret leaks**: secret inputs
+are `type="password"`/masked, and no full key/credential/plaintext string appears
+in the rendered DOM — guarding against the restyle silently exposing a secret. The
+**assistant** suite is different: there is NO key input on that page, so it asserts
+the page renders no key field and instead exposes the Integrations delegation link
+(`/admin/settings/integrations`). The api-keys suite asserts the one-time reveal
+shows the plaintext exactly once (on create) and never on reload.
 
 ---
 
 ## Implementation Pseudocode
 
-New suites mirror the existing settings test setup: render under the admin router
-provider with the relevant settings client mocked; assert on roles/text, not
-implementation detail.
+New suites mirror the **existing settings test setup** (see
+`tests/vitest/ui/assistant-settings.test.tsx`, `.../api-keys.test.tsx`): this repo
+has **no** `@testing-library/react` / `jest-dom` / `user-event`. Use the repo idiom:
+`renderAdminUi(...)` from `../../utils/adminRouterRender` returns an **SSR HTML
+string** (`renderToString`) for static structure — assert with
+`expect(html).toContain(...)`; for interaction, mount under `happy-dom` with
+`createRoot` + `React.act` and query the DOM via `document.body.querySelectorAll`,
+clicking real elements inside `React.act`. Do NOT use `screen`/`getByRole`/
+`toBeInTheDocument`. Do NOT assert "no raw anchor" (`AdminLink` renders an `<a>`, so
+it is unsatisfiable) — assert the resolved `/admin/settings/...` href is present
+instead. Mock the relevant settings client with `vi.spyOn`/`vi.mock`.
 
 ```tsx
+// Shared idiom (top of each restyle suite):
+// @vitest-environment happy-dom
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { afterEach, expect, test, vi } from "vitest";
+import { renderAdminUi } from "../../utils/adminRouterRender"; // == tests/utils/adminRouterRender
+import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
+
+(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+const mount = (node: React.ReactNode) => {
+  const container = document.createElement("div");
+  document.body.appendChild(container);
+  const root = createRoot(container);
+  React.act(() => root.render(node));
+  return { container, cleanup: () => { React.act(() => root.unmount()); container.remove(); } };
+};
+afterEach(() => { document.body.innerHTML = ""; vi.restoreAllMocks(); });
+
 // tests/vitest/ui-integration/settings-shell-restyle.test.tsx
-describe("Settings shell + sub-nav restyle", () => {
-  it("reveals Security children when a security id is active", () => {
-    renderWithAdminRouter(<SettingsSidebar activeId="sessions" />);
-    expect(screen.getByRole("link", { name: /IP allowlist/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Login alerts/i })).toBeInTheDocument();
-  });
-  it("collapses Security children for non-security ids", () => { /* activeId="general" → children absent */ });
-  it("routes every item through AdminLink (resolved /admin/settings/... href, no raw anchor)", () => { /* … */ });
-  it("blocks navigation when the form is dirty", async () => {
-    // mock useSettingsDirtyNavigation → requestNavigation returns false ⇒ preventDefault called
-  });
+test("reveals Security children when a security id is active", () => {
+  const html = renderAdminUi(<SettingsSidebar activeId="sessions" />);
+  expect(html).toContain("/admin/settings/security/ip-allowlist"); // AdminLink-rendered href
+  expect(html).toContain("/admin/settings/security/login-alerts");
+});
+test("collapses Security children for non-security ids", () => {
+  const html = renderAdminUi(<SettingsSidebar activeId="general" />);
+  expect(html).not.toContain("/admin/settings/security/ip-allowlist");
+});
+test("blocks navigation when the form is dirty", () => {
+  // mount(<AdminRouterProvider>…<SettingsSidebar/></AdminRouterProvider>) with
+  // useSettingsDirtyNavigation mocked so requestNavigation() returns false; click a
+  // nav <a> (querySelector) inside React.act and assert the event's preventDefault fired.
 });
 
 // tests/vitest/ui-integration/settings-general-site-restyle.test.tsx
-describe("General + Site restyle", () => {
-  it("renders SettingsSection groups and saves edited values", async () => {
-    renderWithAdminRouter(<GeneralSettingsPage values={seed} onSave={onSave} />);
-    // edit a field → Save enabled → onSave called with edited values
-  });
-  it("Site homepage/posts selects populate from the real caches (not mock literals)", () => { /* mocked getCachedPages/getCachedContentTypes */ });
+test("renders SettingsSection groups and saves edited values", () => {
+  const onSave = vi.fn();
+  const { container } = mount(<GeneralSettingsPage values={seed} onSave={onSave} />);
+  // edit an <input> (set value + dispatch input event in React.act) → click Save → onSave called
+});
+test("Site homepage/posts selects populate from the real caches", () => {
+  // vi.spyOn(pagesClient,"getCachedPages") / contentTypesClient.getCachedContentTypes;
+  // assert the rendered options reflect the cache values, not mock literals.
 });
 
 // tests/vitest/ui-integration/settings-assistant-restyle.test.tsx
-describe("Assistant restyle", () => {
-  it("offers latest-Claude model suggestions and accepts a custom value", () => {
-    // datalist options claude-opus-4-8 / claude-sonnet-4-6 / claude-haiku-4-5 present;
-    // typing a custom id keeps the free-form binding
-  });
-  it("keeps the API key masked and never renders a fetched secret", () => { /* type=password, no plaintext in DOM */ });
-  it("blocks Save on LLM-Guide validation and opens the reindex confirm", async () => { /* … */ });
+test("offers latest-Claude model suggestions and accepts a custom value", () => {
+  const html = renderAdminUi(<AssistantSettingsPage values={seed} onSave={vi.fn()} />);
+  expect(html).toContain("claude-opus-4-8"); // datalist <option> present; field stays free-form
 });
+test("renders no assistant key input and delegates to Integrations", () => {
+  const html = renderAdminUi(<AssistantSettingsPage values={{ ...seed, assistantLlmProvider: "openrouter" }} onSave={vi.fn()} />);
+  expect(html).toContain("/admin/settings/integrations"); // delegation link; no key field, no secret
+});
+test("blocks Save on LLM-Guide validation and opens the reindex confirm", () => { /* happy-dom mount */ });
 
 // tests/vitest/ui-integration/settings-security-restyle.test.tsx
-describe("Security cluster restyle", () => {
-  it("renders Authentication/Login-protection sections + 3 quick-link cards (AdminLink)", () => { /* … */ });
-  it("IP allowlist: warning banner + add(addEntry) + remove(removeEntry)", async () => { /* mocked useIpAllowlist */ });
-  it("Sessions: current device has no Revoke; non-current revokes via confirm", async () => { /* mocked listSessions */ });
-  it("Login alerts: toggles bind and Save calls updateSecuritySettings", async () => { /* … */ });
+test("renders Authentication/Login-protection sections + 3 quick-link hrefs", () => {
+  const html = renderAdminUi(<SecuritySettingsPage />);
+  expect(html).toContain("/admin/settings/security/ip-allowlist");
+  expect(html).toContain("/admin/settings/security/sessions");
+  expect(html).toContain("/admin/settings/security/login-alerts");
 });
+test("IP allowlist: warning banner + add(addEntry) + remove(removeEntry)", () => { /* mock useIpAllowlist; happy-dom mount */ });
+test("Sessions: current device has no Revoke; non-current revokes via confirm", () => { /* spyOn sessionsClient.listSessions; mount */ });
+test("Login alerts: toggles bind and Save calls updateSecuritySettings", () => { /* spyOn settingsClient; mount */ });
 
 // tests/vitest/ui-integration/settings-keys-webhooks-restyle.test.tsx
-describe("API keys + Webhooks restyle", () => {
-  it("API keys: masked prefix chip per key, no full secret in DOM", () => { /* … */ });
-  it("API keys: create surfaces one-time secret once via ApiKeySecretDialog", async () => { /* … */ });
-  it("Webhooks: endpoint card per webhook with StatusBadge + event badges", () => { /* … */ });
-  it("Webhooks: enable Switch calls updateWebhook; delete is confirmed", async () => { /* … */ });
-});
+test("API keys: masked prefix chip per key, no full secret in DOM", () => { /* spyOn apiKeysClient.listApiKeys; mount; assert prefix present, no sk_live_… */ });
+test("API keys: create surfaces one-time secret once via ApiKeySecretDialog", () => { /* mount; click Create; assert plaintext shown once, absent on reload */ });
+test("Webhooks: endpoint card per webhook with StatusBadge + event badges", () => { /* spyOn webhooksClient.listWebhooks; mount */ });
+test("Webhooks: enable Switch calls updateWebhook; delete is confirmed", () => { /* mount; toggle Switch; confirm delete */ });
 
 // tests/vitest/ui-integration/settings-email-storage-integrations-restyle.test.tsx
-describe("Email + Storage + Integrations restyle", () => {
-  it("Email: SMTP password masked; Send test calls sendTestEmail", async () => { /* … */ });
-  it("Storage: 3 provider cards (local/s3/azure); selecting updates the form; secret masked", async () => { /* … */ });
-  it("Integrations: card per real integration; search filters; toggle calls updateIntegration; no credential in DOM", async () => { /* … */ });
-});
+test("Email: provider selector (smtp/resend); SMTP password masked; Send test calls sendTestEmail", () => { /* spyOn emailClient; mount */ });
+test("Storage: 3 provider cards (local/s3/azure); selecting updates the form; secret masked", () => { /* spyOn settingsClient.getStorageSettings; mount */ });
+test("Integrations: card per real integration; search filters; toggle calls updateIntegration; no credential in DOM", () => { /* spyOn integrationsClient.listIntegrations; mount */ });
 ```
 
 **Existing suites to keep green (update only intentional class/markup

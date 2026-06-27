@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Dashboard / Widgets / Tests
 **Estimated Effort:** Medium
-**Dependencies:** TASK-480-04-L01 (registry + host) · TASK-480-04-L02 (renderers) · TASK-480-01 (fixtures: type enum + data union shapes)
+**Dependencies:** TASK-480-04-L01 (registry + host) · TASK-480-04-L02 (renderers) · TASK-480-02 (fixtures: type enum + data union shapes)
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-480-04
 
@@ -28,8 +28,8 @@ by `tests/vitest/ui/dashboard.test.tsx` and `stat-card.test.tsx`.
   `tests/vitest/ui-integration/dashboard-widget-renderers.test.tsx` (host states +
   per-renderer render tests).
 - **Source-of-truth docs:** `_docs/TESTING_STRATEGY.md` (Vitest UI/domain lane);
-  harness `tests/vitest/utils/adminRouterRender.ts` (`renderAdminUi`);
-  fixtures from `core/services/dashboard/dashboardWidgetTypes.ts` (480-01).
+  harness `tests/utils/adminRouterRender.tsx` (`renderAdminUi`);
+  fixtures from `core/services/dashboard/dashboardTypes.ts` (480-02).
 - **Out of scope:** Route/integration tests for the widget-data endpoints (→
   TASK-480-03 Bun suites under `tests/integration/routes` + `tests/security`);
   builder/grid interaction tests (→ 480-05); DB/perf gates (no DB here).
@@ -56,7 +56,7 @@ live arbitrary URL.
 
 ```ts
 // tests/vitest/utils/dashboardWidgetFixtures.ts (new helper, or inline)
-import type { DashboardWidget, DashboardWidgetData } from "../../../core/services/dashboard/dashboardWidgetTypes";
+import type { DashboardWidget, DashboardWidgetData } from "../../../core/services/dashboard/dashboardTypes";
 
 export const widget = <T extends DashboardWidget["type"]>(type: T, config: object = {}): DashboardWidget =>
   ({ id: `w-${type}`, type, title: `${type} panel`, config, layout: { x: 0, y: 0, w: 4, h: 2 } } as DashboardWidget);
@@ -88,7 +88,7 @@ export const emptyData = {
 ```ts
 import { describe, expect, it } from "vitest";
 import { DASHBOARD_WIDGET_RENDERERS, isWidgetDataEmpty } from "../../../core/admin/ui/dashboard/widgets/registry";
-import { DASHBOARD_WIDGET_TYPES } from "../../../core/services/dashboard/dashboardWidgetSchema";
+import { DASHBOARD_WIDGET_TYPES } from "../../../core/services/dashboard/dashboardTypes";
 import { data, emptyData } from "../utils/dashboardWidgetFixtures";
 
 describe("dashboard widget registry", () => {
@@ -214,4 +214,3 @@ escaped content-query cell).
 - `_docs/_CHANGELOG/` — entry on closure linking `TASK-480` + `TASK-480-04-L03`.
 - `_docs/DASHBOARD_WIDGETS_SPEC.md` — note the renderer test coverage matrix
   (states × renderers) so future widget types add a fixture + a row.
-</content>

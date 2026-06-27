@@ -70,12 +70,16 @@ const stats = useMemo(() => {
   return { total, active, drafts };
 }, [items]);
 
-// 2) Stat band markup (ports FormsPage StatCard row; uses the real StatCard from
-//    core/admin/ui/shared, NOT the prototype's mock-spark StatCard).
+// 2) Stat band markup (ports FormsPage StatCard row; uses the SHARED StatCard
+//    from 479-06-L02, NOT the prototype's mock-spark StatCard). The shared
+//    StatCard contract is { label, value (string), icon?, accent?, delta? } —
+//    there is NO `hint`/spark prop, so stringify the derived counts and drop the
+//    mock subline (the legacy dashboard-local StatCard at
+//    core/admin/ui/dashboard/StatCard.tsx has the same prop shape).
 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-  <StatCard label="Total forms" value={stats.total} icon={<ClipboardList />} hint={`${stats.active} active`} />
-  <StatCard label="Active" value={stats.active} icon={<CheckCircle2 />} />
-  <StatCard label="Drafts" value={stats.drafts} icon={<FileEdit />} />
+  <StatCard label="Total forms" value={String(stats.total)} icon={<ClipboardList />} accent="primary" />
+  <StatCard label="Active" value={String(stats.active)} icon={<CheckCircle2 />} accent="success" />
+  <StatCard label="Drafts" value={String(stats.drafts)} icon={<FileEdit />} />
 </div>
 
 return (
@@ -119,6 +123,11 @@ prototype's `size-9 rounded-xl bg-primary-soft` icon chip, and swap the local
 `statusStyles`/`accessStyles` literals for the shared semantic `StatusBadge`
 tokens where they map cleanly. Keep all `onToggle*`/`on*` callbacks.
 
+The loading state replaces the current inline `Loading forms…` text with
+`FormTableSkeleton` — the shared table/list skeleton **created by 479-06-L02**
+(`FormTableSkeleton`/`ListSkeleton`, or the generic `TableSkeleton`); it does NOT
+exist in core today, so do not invent a divergent local skeleton here.
+
 **Data flow:** `useForms()` hydrates from cache + background-revalidates →
 `filterForms(items, …)` (memo) → `useListPagination` → `FormTable`. Stat band is
 pure render-time derivation from `items` (no new state, no effect).
@@ -143,12 +152,16 @@ calling `navigate(...)` via the existing `handleEdit`/`handleSubmissions`/
 (the list has many forms, not one) — do not port a hand-built href. No
 hand-built `<a href>`.
 
-**Regression-test shape (see L04):** SSR render asserts the stat band labels
-(`Total forms`/`Active`/`Drafts`) with values derived from a seeded `items`
-fixture, one table row per visible form with the name `AdminLink` and
-Status/Access badges, that selecting a row renders `FormBulkActionsBar`, that the
-New button opens the drawer, and that no raw `<a href>` is emitted for the name
-link or row actions.
+**Regression-test shape (see L04):** an SSR snapshot (`renderToString` under
+`AdminRouterProvider`, the existing forms-suite idiom) asserts the stat-band
+labels (`Total forms`/`Active`/`Drafts`) with values derived from a seeded
+`items` fixture, one table row per visible form with Status/Access badges, the
+name link rendered via `AdminLink` whose **resolved** `href` is the path-helper
+admin path (e.g. `/admin/advanced/forms/<id>`) — not a hand-built/unresolved
+anchor (`AdminLink` itself emits an `<a>`, so do NOT assert "no `<a href>`").
+Selection→`FormBulkActionsBar` and New→drawer are interaction-dependent and stay
+covered by the existing behavioral suites (or an explicit `createRoot`+`act`
+test), not by the single SSR snapshot.
 
 ---
 

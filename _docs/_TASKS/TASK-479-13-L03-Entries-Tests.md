@@ -51,86 +51,118 @@ existing entries suites do; no real network, secrets, or RBAC bypass.
 
 ## Implementation Pseudocode
 
-Reuse the established harness from the existing entries suites (the `renderAdminUi` /
-`AdminRouterProvider` wrapper, the cache seeders for `getCachedAllEntries` /
-`getCachedContentTypes` / `getEntryCached`, mocked `fetch`, and `flushEffects`). Do
-NOT build a new render utility.
+Reuse the established **interactive** harness from the existing entries suites — the
+`createRoot` + `React.act` `mount()` / `flushAsync()` pattern in
+`tests/vitest/ui/entry-list-wave.test.tsx` and
+`tests/vitest/ui/entry-editor-shell-wave.test.tsx` — with the same `vi.mock` /
+`cacheKeys` cache seeding, `globalThis.fetch` stub, and `window.history.replaceState`
+path seeding (editor). This repo has **no** `@testing-library/react` / `jest-dom` /
+`user-event`, so assert with plain DOM (`container.querySelectorAll`,
+`container.textContent`, `.click()`, dispatched `input` events under `React.act`) —
+NOT `getByRole` / `queryByText` / `fireEvent`. The SSR `renderAdminUi`
+(`tests/utils/adminRouterRender.tsx`, `renderToString`) returns a one-shot HTML
+**string** and is non-interactive — use it only for static markup snapshots (as
+`tests/vitest/ui/content-entry-editor.test.tsx` does), never for click/typing flows or
+post-interaction state. Do NOT build a new render utility.
 
 ```tsx
 // tests/vitest/ui-integration/entry-list-restyle.test.tsx
 // @vitest-environment happy-dom
+import React from "react";
+import { createRoot } from "react-dom/client";
 import { EntryList } from "../../../core/admin/ui/entries/EntryList";
-// + cacheKeys, broadcastCacheEvent, renderAdminUi, seedEntriesCache(),
-//   seedContentTypesCache(), entryListItem(), flushEffects — copy shapes from
-//   tests/vitest/ui/entry-list-wave.test.tsx.
+// Copy the hoisted `vi.mock` cache state + `mount()` / `flushAsync()` helpers and the
+// EntryFilters / PageHeader host-component mocks VERBATIM from
+// tests/vitest/ui/entry-list-wave.test.tsx (it mocks the `EntryFilters` and `PageHeader`
+// host components — it does NOT `vi.mock('@/components/ui/select')` the Radix Select
+// primitive — so the type/status filter options render as plain queryable DOM instead
+// of a portal-only Radix Select). Do NOT import a new utility. Statuses use the real
+// EntryStatus enum (draft|published|scheduled|archived).
 
-afterEach(() => { clearEntriesCache(); clearContentTypesCache(); vi.restoreAllMocks(); });
+afterEach(() => { document.body.innerHTML = ""; vi.restoreAllMocks(); });
 
 test("list renders the type filter with per-type counts from cache", async () => {
-  seedContentTypesCache([ct({ slug: "article", name: "Article" }), ct({ slug: "event", name: "Event" })]);
-  seedEntriesCache([
-    entryListItem({ id: "e1", status: "published", contentType: { slug: "article", name: "Article" } }),
-    entryListItem({ id: "e2", status: "draft",     contentType: { slug: "event",   name: "Event" } }),
-  ]);
-  const { getByRole } = await renderAdminUi(<EntryList />);
-  await flushEffects();
-  // type Select option text includes "Article (1)" / "Event (1)" (typeOptions counts)
+  // seed the hoisted cache state with two types + one entry each (article/event)
+  const view = mount(<EntryList />);
+  await flushAsync();
+  // via the mocked EntryFilters host (NOT a live portal-rendered Radix Select),
+  // view.container.textContent includes the typeOptions counts, e.g. "Article (1)" /
+  // "Event (1)" — keep the type filter inside the mocked EntryFilters host so the
+  // per-type counts stay assertable as plain DOM.
+  view.cleanup();
 });
 
 test("status tab strip shows counts derived from cached entries and drives statusFilter", async () => {
-  seedEntriesCache([
-    entryListItem({ id: "e1", status: "published" }),
-    entryListItem({ id: "e2", status: "draft" }),
-    entryListItem({ id: "e3", status: "published" }),
-  ]);
-  // render + flush; assert "All 3", "Published 2", "Drafts 1" tabs;
-  // click the "Drafts" tab -> only the draft row remains visible.
+  // seed 3 entries: 2 published, 1 draft
+  const view = mount(<EntryList />);
+  await flushAsync();
+  // tab count pills render inline (not in a portal): assert textContent contains
+  // "All 3", "Published 2", "Drafts 1". Then click the "Drafts" StatusTabs button
+  // (find via container.querySelectorAll + textContent) inside React.act and assert
+  // only the draft row remains in view.container.textContent.
+  view.cleanup();
 });
 
 test("table wrapper carries the rounded-2xl card classes and renders StatusBadge labels", async () => {
-  seedEntriesCache([entryListItem({ id: "e1", status: "scheduled", title: "Launch" })]);
-  // render + flush; assert table container className contains "rounded-2xl";
-  // assert the status cell renders the "Scheduled" label (shared StatusBadge).
+  // seed one scheduled entry titled "Launch"
+  const view = mount(<EntryList />);
+  await flushAsync();
+  // assert view.container.querySelector('[data-slot="data-table"]')?.className (or the
+  // table wrapper) contains "rounded-2xl"; assert the status cell textContent contains
+  // "Scheduled" (shared StatusBadge label).
+  view.cleanup();
 });
 
 test("selecting a row surfaces the bulk actions cluster", async () => {
-  seedEntriesCache([entryListItem({ id: "e1" }), entryListItem({ id: "e2" })]);
-  // render + flush; toggle a row checkbox -> EntryBulkActionsBar visible
-  // (selectedCount text / Apply control), behavior untouched by restyle.
+  // seed two entries
+  const view = mount(<EntryList />);
+  await flushAsync();
+  // React.act(() => container.querySelector("input[type='checkbox']")?.click());
+  // assert EntryBulkActionsBar visible (selectedCount text / Apply control) — behavior
+  // untouched by restyle (mirror entry-list-wave's bulk-action interaction).
+  view.cleanup();
 });
 ```
 
 ```tsx
 // tests/vitest/ui-integration/entry-editor-restyle.test.tsx
 // @vitest-environment happy-dom
-import { EntryEditor } from "../../../core/admin/ui/entries/EntryEditor";
-// seed window.location.pathname = "/entries/article/e1" (resolveEntryParams),
-// seed getEntryCached(article,e1) + a content type whose schema has >=1 field;
-// mock fetch for taxonomy/site-settings as the existing editor suite does.
+import React from "react";
+import { createRoot } from "react-dom/client";
+// Seed the path BEFORE importing EntryEditor (resolveEntryParams reads
+// window.location.pathname for the "entries" segment), exactly like
+// tests/vitest/ui/entry-editor-shell-wave.test.tsx:
+//   window.history.replaceState({}, "", "/admin/entries/articles/e1");
+//   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+// Seed getEntryCached(articles,e1) + a content type whose schema has >=1 field via the
+// same hoisted vi.mock cache state; stub globalThis.fetch for taxonomy/site-settings
+// as the existing editor suite does; mount() + flushAsync() (createRoot + React.act).
 
 test("editor renders the two-column content + Publish/Taxonomy/Metadata sidebar", async () => {
-  // render + flush; assert content column has a rounded-2xl surface,
-  // the right sidebar shows the Publish status Select + Save metadata/Delete,
-  // and the header exposes Runtime preview / Save draft / Publish.
+  // mount + flushAsync; assert the content column carries a "rounded-2xl" surface,
+  // view.container.textContent shows the Publish status Select + Save metadata/Delete,
+  // and the header exposes "Runtime preview" / "Save draft" / "Publish".
 });
 
 test("title/slug stay bound: typing flips the Unsaved changes badge", async () => {
-  // render + flush; type into the Title textarea ->
-  // queryByText(/unsaved changes/i) becomes truthy (setUnsavedChanges wiring intact).
+  // mount + flushAsync; set the Title textarea value + dispatch an "input" event under
+  // React.act -> view.container.textContent now contains "Unsaved changes"
+  // (setUnsavedChanges wiring intact). No queryByText/user-event.
 });
 
 test("schema-driven field cards still render via FieldRenderer", async () => {
-  // seed a content type with a text field "summary"; render + flush;
-  // assert the field Card with its Label renders and its input is editable
-  // (handleFieldChange wiring intact).
+  // seed a content type with a text field "summary"; mount + flushAsync;
+  // assert the field Card with its Label renders (container.textContent) and its input
+  // is editable (handleFieldChange wiring intact).
 });
 ```
 
 **Data flow:** seed `cacheKeys.entriesAllList` / `cacheKeys.contentTypesList` (and
 `cacheKeys.entryDetail(type,id)` for the editor) so the pages hydrate from cache (the
 lazy `useMemo` initial-cache path) → mock `fetch` for the background refresh +
-taxonomy + site settings → `flushEffects` → assert DOM. Keep each `test`
-independent (clear caches + restore mocks in `afterEach`).
+taxonomy + site settings → `flushAsync()` (await `React.act`) → assert DOM. Keep each
+`test` independent (reset the hoisted cache state, `document.body.innerHTML = ""`, and
+restore mocks in `afterEach`).
 
 **Error handling (test concerns):** stub any `navigator`/timer dependency the
 existing suites stub; assert the soft dashed empty-state renders when the cache +

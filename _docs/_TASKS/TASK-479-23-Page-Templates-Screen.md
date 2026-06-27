@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Advanced (Page Templates)
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06, TASK-479-08
+**Dependencies:** TASK-479-05, TASK-479-06, TASK-479-08
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -51,11 +51,27 @@ second editor.
   carry (see each leaf's honesty guard). Do not migrate other Advanced screens
   (Redirects, Backups, etc.) — those are separate TASK-479 subtasks.
 
-> Depends on **TASK-479-06** (shell/topbar/sidebar + shared primitives) because both
-> screens render inside `AdminShell`/`EditorShell`, and on **TASK-479-08** (Pages
-> screen) because the template editor reuses the **same** restyled floating-panel
-> `PageEditor`/`CanvasEditor` delivered there — restyle those first so this subtask
-> composes against the final chrome, tokens, and editor surface.
+> Depends on **TASK-479-05** (design tokens/variants — both screens consume the soft
+> tokens `bg-primary-soft`, `variant="soft"`/`variant="success"`, `shadow-card`,
+> `font-display`), on **TASK-479-06** (shell/topbar/sidebar + shared primitives —
+> `PageHeader`, `ListSkeleton`, `EmptyState`) because both screens render inside
+> `AdminShell`/`EditorShell`, and on **TASK-479-08** (Pages screen) because the
+> template editor reuses the **same** restyled floating-panel `PageEditor`/`CanvasEditor`
+> delivered there — restyle those first so this subtask composes against the final
+> chrome, tokens, and editor surface.
+
+> **Propagation-ownership reconciliation (cross-ref TASK-479-10 / Menus).** "Edit once,
+> propagate everywhere" must stay honest about what a Page Template actually owns. In
+> core the site-shell split is real: the **footer** is a Page Template wired via the
+> `site.footerTemplateId` setting, while the **header / main menu** is a published
+> **Menu** wired via `site.navigationMenuId` (see
+> `core/services/pages/publicSiteShell.ts` + `core/services/settings/settingsService.ts`).
+> A Page Template is therefore NOT the main menu. The propagation note copy on both
+> leaves stays page-scoped ("every page that uses this template updates") and must not
+> imply the header/main menu propagates from here — main-menu propagation is owned by
+> **TASK-479-10** (Menus). This subtask changes no wiring; it only keeps the redesign's
+> propagation messaging consistent with the real footer-template vs navigation-menu
+> ownership.
 
 ---
 

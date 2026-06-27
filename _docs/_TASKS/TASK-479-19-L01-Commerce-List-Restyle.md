@@ -81,10 +81,11 @@ const catalogStats = useMemo(() => {
     { label: "Out of stock", value: String(outOfStock), icon: <PackageX /> },
   ];
 }, [products]);
-// Render the StatCard row (grid sm:grid-cols-3, gap-4) using the prototype
-// StatCard visual (rounded-2xl border bg-card shadow-card, icon tile, muted
-// label, large value). DROP the prototype's delta/trend/spark props — there is
-// no real time-series data; pass only label/value/icon so nothing is fabricated.
+// Render the row with the shared StatCard from 479-06-L02 (grid sm:grid-cols-3,
+// gap-4; its rounded-2xl/border/bg-card/shadow-card look + icon tile come from the
+// 479-05 tokens — do NOT re-invent a divergent local card). DROP any delta/trend/
+// spark props — there is no real time-series data; pass only label/value/icon so
+// nothing is fabricated.
 
 // 3) CommerceFilters.tsx: restyle its container to the prototype FilterBar
 //    (rounded-2xl card, soft border, search Input with leading icon, right-aligned
@@ -106,14 +107,18 @@ const catalogStats = useMemo(() => {
 //      - PRICE cell: right-aligned, tabular-nums; keep formatMoney(amount,currency)
 //        (amount is minor units / 100 — DO NOT change the math).
 //      - STOCK cell: replace the inline stockLabels string with a token-driven
-//        stock Badge (in_stock→success "In stock", out_of_stock→destructive
-//        "Out of stock", backorder→warning "Backorder"); keep the quantity suffix.
+//        stock Badge over the real `CommerceStockState` enum (in_stock→success
+//        "In stock", out_of_stock→destructive "Out of stock", backorder→warning
+//        "Backorder"; the success/warning Badge variants are provided by 479-05);
+//        keep the quantity suffix.
 
 // 5) Status badges: replace the local statusStyles hex map in CommerceTable.tsx
-//    with the shared token-driven StatusBadge helper ported from the prototype
-//    (_docs/_PROTOTYPE/.../StatusBadge.tsx). Map: published→success, draft→muted,
-//    archived→warning. Same label text (statusLabels). Apply to BOTH the desktop
-//    Status cell and the md:hidden inline summary so they stay consistent.
+//    with the shared StatusBadge from 479-06-L02 (do NOT re-port a divergent copy).
+//    Use its content-status mapping over the real `CommerceProductStatus` enum
+//    (draft|published|archived — no invented `trash`/`review`): published→success,
+//    draft→secondary, archived→secondary. Same label text (statusLabels). Apply to
+//    BOTH the desktop Status cell and the md:hidden inline summary so they stay
+//    consistent. (CommerceContextPanel's status badge in L02 uses the same map.)
 
 // 6) CommerceBulkActionsBar.tsx / CommerceRowActions.tsx: restyle to the soft
 //    button/menu set (ghost + outline + primary violet). Keep the action values,
@@ -148,8 +153,10 @@ dirty-state overwrite, no refetch loop).
 `useCommerceCatalog` mock, assert: header + New button present, the stat row shows
 catalog-derived counts (total/published/out-of-stock), the table wrapper carries the
 `rounded-2xl`/card classes, stock + status badges render expected label text, the
-product cell still links via AdminLink to the editor, and selecting rows still shows
-the bulk-actions cluster.
+product cell still links via AdminLink to the editor, and the per-row + select-all
+checkboxes render (the selection→bulk-actions behavior stays locked by the existing
+`commerce-list-page-wave` suite, so the restyle suite does not re-drive Radix
+Checkbox interaction under happy-dom).
 
 ---
 

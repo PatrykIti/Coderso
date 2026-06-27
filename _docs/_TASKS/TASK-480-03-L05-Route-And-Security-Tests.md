@@ -103,7 +103,7 @@ DB-available helper (skip pattern used by other DB route tests) and load env.
 test("layout persists per user and isolates", async () => {
   const a = await writeDashboardLayout(userA, validLayout);
   const b = await readDashboardLayout(userB);     // userB unsaved -> default
-  expect(b).toEqual(getDefaultDashboardLayout());
+  expect(b).toEqual(DEFAULT_DASHBOARD_LAYOUT);    // 480-02 owns DEFAULT_DASHBOARD_LAYOUT
   const a2 = await readDashboardLayout(userA);
   expect(a2.widgets.map(w => w.type)).toEqual(validLayout.widgets.map(w => w.type));
 });
@@ -115,7 +115,7 @@ test("write rejects unknown widget type / oversize", async () => {
 
 test("reset deletes the row -> default", async () => {
   await writeDashboardLayout(userA, validLayout);
-  expect(await resetDashboardLayout(userA)).toEqual(getDefaultDashboardLayout());
+  expect(await resetDashboardLayout(userA)).toEqual(DEFAULT_DASHBOARD_LAYOUT);
 });
 ```
 

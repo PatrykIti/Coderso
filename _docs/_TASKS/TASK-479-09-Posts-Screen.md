@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Content
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`
@@ -67,13 +67,16 @@ leaf must run and pass:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/admin/<relevant post-*.test.tsx suites>`
-  and the new `tests/vitest/ui-integration/post-list-restyle.test.tsx` /
+- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/<relevant post-*.test.tsx suites>`
+  (the existing Posts editor suites live in `tests/vitest/ui-integration/`; only
+  `postsClient.test.ts` is under `tests/vitest/admin/`) and the new
+  `tests/vitest/ui-integration/post-list-restyle.test.tsx` /
   `post-editor-shell-restyle.test.tsx` suites added in L03.
 
-The full pre-existing Posts editor suite (the `tests/vitest/admin/post-*.test.tsx`
-family) must stay green — the restyle must not break a single behavioral test. Do
-NOT migrate runtime tests into Vitest for coverage.
+The full pre-existing Posts editor suite (the
+`tests/vitest/ui-integration/post-*.test.tsx` family) must stay green — the restyle
+must not break a single behavioral test. Do NOT migrate runtime tests into Vitest
+for coverage.
 
 ---
 
@@ -82,6 +85,8 @@ NOT migrate runtime tests into Vitest for coverage.
 - `_docs/_TASKS/README.md` — update the board bucket + statistics whenever a leaf or
   this subtask changes status.
 - `_docs/_CHANGELOG/` — add an entry on closure, linking `TASK-479` + the leaf id.
-- If any shared restyle primitive (e.g. a status-badge helper or PageHeader prop)
-  is added/changed for Posts, note it in the shell/design notes touched by
-  TASK-479-06 so other list screens reuse it consistently.
+- The shared `StatusBadge` / `StatusTabs` and the `PageHeader` `icon`/breadcrumbs
+  props are CREATED by TASK-479-06-L02 and the tokens by TASK-479-05 — Posts
+  consumes them by exact name, it does not re-invent them. If a Posts-specific
+  prop is added to one of these shared primitives, note it alongside the
+  TASK-479-06 shell/design notes so other list screens reuse it consistently.

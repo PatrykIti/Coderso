@@ -176,8 +176,9 @@ did not sever the draft/override wiring).
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx`
   (new suite in L05)
-- Existing entry-editor/draft suites MUST stay green:
-  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts tests/vitest/ui/custom-screen-record-interactions.test.tsx tests/vitest/ui/custom-screen-preview-owner.test.tsx`
+- Existing entry-editor/draft suites MUST stay green (paths verified on disk —
+  `record-interactions` and `preview-owner` live under `ui-integration`):
+  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/custom-screen-entry-draft.test.ts tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx tests/vitest/ui-integration/custom-screen-preview-owner.test.tsx`
 - State explicitly in the summary if any suite was skipped or could not run.
 
 ---

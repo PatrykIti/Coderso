@@ -36,9 +36,9 @@ locks in the L01 restyle without changing any data contract.
 ## Security Contract
 
 No endpoint or permission model changes (visual restyle only; preserves existing
-routes, RBAC, cache, and adminPaths). The test asserts in-page links resolve to
-`adminPaths.*` targets (guarding the "no hand-built hrefs" rule) but does not
-touch auth, RBAC, or network behavior.
+routes, RBAC, cache, and admin paths). The test asserts the always-rendered nav
+link emits its canonical resolved href (`/admin/pages`), guarding the "no
+hand-built hrefs" rule, but does not touch auth, RBAC, or network behavior.
 
 ---
 
@@ -50,7 +50,10 @@ import React from "react";
 import { expect, test } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { DashboardPage } from "../../../core/admin/ui/dashboard/DashboardPage";
-import { adminPaths } from "../../../core/admin/ui/navigation/adminPaths"; // canonical helper
+// No `adminPaths` object exists: link helpers live in
+// core/admin/utils/adminPaths.ts (resolveAdminHref/withAdminBasePath…). The SSR
+// helper renders at base "/admin", so AdminLink href="/pages" → "/admin/pages";
+// assert that literal directly rather than calling a non-existent builder.
 
 // 1) LOADING STATE — initial server render (fetch not yet resolved under renderToString)
 test("DashboardPage renders header + loading affordance", () => {
@@ -69,17 +72,21 @@ test("DashboardPage renders restyled sections", () => {
   expect(html).toContain("Security Status");
 });
 
-// 3) LINK CANONICALIZATION — no raw prototype hrefs leak; pages link uses adminPaths
-test("DashboardPage links route through adminPaths", () => {
-  const html = renderAdminUi(<DashboardPage />);
-  expect(html).toContain(adminPaths.pages());          // e.g. real "/admin/pages"
-  expect(html).not.toMatch(/href="\/pages"|href="\/audit"/); // prototype mock literals gone
+// 3) LINK CANONICALIZATION — the always-rendered "All pages" link is canonicalized
+test("DashboardPage canonicalizes its nav links", () => {
+  const html = renderAdminUi(<DashboardPage />);          // base path "/admin"
+  expect(html).toContain("/admin/pages");                 // AdminLink href="/pages" → resolveAdminHref
+  expect(html).not.toContain('href="/pages"');            // raw prototype literal gone
 });
 
-// NOTE: if L01 wires the stat grid/donut from injected props rather than only the
-// live fetch, add a LOADED-STATE test that passes a fixture DashboardPayload and
-// asserts real totals render (e.g. totals.pages -> stat value, donut legend).
-// Keep the fixture aligned to dashboardTypes.ts (reject drift).
+// NOTE: DashboardPage always fetches on mount (no initial-data prop) and the SSR
+// `renderAdminUi` helper runs no effects, so a LOADED-STATE assertion is NOT
+// achievable here (single snapshot = loading/empty state). If real totals/donut
+// coverage is wanted, add a SEPARATE test under `tests/vitest/ui-integration/`
+// using happy-dom + `createRoot`/`React.act` with a `globalThis.fetch` stub
+// returning a fixture `DashboardPayload` (pattern:
+// tests/vitest/ui-integration/admin-shell-request-budget.test.tsx). Keep the
+// fixture aligned to dashboardTypes.ts (reject drift).
 ```
 
 **Data flow:** `renderAdminUi(<DashboardPage />)` server-renders the page through
@@ -96,9 +103,15 @@ copy tweaks by matching headings, not full sentences.
 **Regression-test shape:**
 
 - Loading state: header + loading affordance render without throwing.
-- Restyled sections: the real-data section headings are present.
-- Link canonicalization: `adminPaths.*` targets present, prototype literals absent.
-- (Optional) Loaded state: fixture `DashboardPayload` → real totals/donut render.
+- Restyled sections: the real-data **static** section headings are present
+  (donut segments / stat values / recently-edited rows are data-gated and do NOT
+  render under the SSR helper — don't assert them here).
+- Link canonicalization: the canonical resolved href (`/admin/pages`) is present
+  and the raw prototype literal (`href="/pages"`) is absent.
+- (Optional, ui-integration lane) Loaded state: a `globalThis.fetch` stub +
+  `createRoot`/`React.act` drives a fixture `DashboardPayload` → real
+  totals/donut render — placed under `tests/vitest/ui-integration/`, NOT under
+  the SSR `renderAdminUi` helper.
 
 ---
 

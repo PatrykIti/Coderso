@@ -21,16 +21,20 @@ behavioral `post-*` suites, not a replacement for them.
 
 - **Goal:** New Vitest suites that render the real `PostsListPage` and the real
   Post editor shell (block mode) and assert the prototype look is present
-  (rounded-2xl cards, status tabs, violet status badges, document canvas, "Post
-  settings" inspector) while the core behaviors (filtering, selection/bulk
-  cluster, AdminLink prefetch, store binding, dirty/autosave) still work.
+  (rounded-2xl cards, status tabs, status badges, document canvas, the restyled
+  `DocumentInspector` "Publishing"/"Featured image" sections) while the core
+  behaviors (filtering, store/reducer wiring, dirty/autosave) still hold — proven
+  through the real exported contracts (`filterPosts`, `postEditorReducer`), since
+  the SSR snapshot does not exercise click/selection/typing interactions.
 - **Owning module/service:** `tests/vitest/ui-integration/post-list-restyle.test.tsx`
   and `tests/vitest/ui-integration/post-editor-shell-restyle.test.tsx` (new),
   exercising `core/admin/ui/posts/PostsListPage.tsx` and
   `core/admin/ui/posts/editor/PostBlockEditorShell.tsx`.
 - **Source-of-truth docs:** `_docs/TESTING_STRATEGY.md` (Vitest lane), the
   prototype screens under `_docs/_PROTOTYPE/src/pages/content/`, and the existing
-  `tests/vitest/admin/post-*.test.tsx` suites used as fixtures/setup references.
+  `tests/vitest/ui-integration/post-*.test.tsx` suites (e.g. `post-editor-layout-shell`,
+  `post-document-inspector`, `post-autosave-flow`) used as fixtures/setup
+  references. Note: only `postsClient.test.ts` lives under `tests/vitest/admin/`.
 - **Out of scope:** No runtime (browser) tests; no new product code (L01/L02 own
   the components). Do not move existing runtime tests into Vitest for coverage.
 
@@ -45,91 +49,175 @@ routes, RBAC, cache, and adminPaths).
 
 ## Implementation Pseudocode
 
-Mirror the setup of the existing Posts suites (mock `postsClient`/`cachePolicy`/
-`settingsClient`, seed `getCachedPosts`, wrap in the `AdminRouter`/shell test
-providers already used by `tests/vitest/admin/post-*.test.tsx`). Assert on
-stable, semantic signals — accessible roles/text and load-bearing class tokens —
-not brittle full-class snapshots.
+Use the repo's real Vitest idiom — this repo has NO `@testing-library/react`,
+`jest-dom`, or `user-event`. Render through the SSR helpers the existing Posts
+suites use and assert on the returned HTML STRING (`html.toContain(...)`):
+`renderAdminUi` from `tests/utils/adminRouterRender` for whole pages/shells, and
+`renderToString` for context-free leaf components driven by explicit props. Note
+the router-context caveat: a leaf that renders `AdminLink` / consumes
+`useAdminRouter` (e.g. `PostsTable`, which renders `AdminLink` + `PageRowActions`)
+must ALSO go through `renderAdminUi` — a bare `renderToString(<PostsTable .../>)`
+THROWS "AdminRouterContext is missing" (see `AdminRouterContext.useAdminRouter`),
+whereas `renderAdminUi` supplies the `AdminRouterProvider`, exactly as
+`media.test.tsx` renders the leaf `MediaDetailsDrawer`. Reserve plain
+`renderToString` for genuinely context-free leaves (e.g. `PostEditorCanvas`,
+`DocumentInspector`, which take no router context). There is no
+`screen`/`getByRole`/`userEvent`/`toBeInTheDocument`, no injectable store, and no
+`store.getState()` — `renderAdminUi` is a single SSR snapshot, so click/selection/
+typing flows are NOT exercised here (they remain covered by the existing
+`tests/vitest/ui-integration/post-*.test.tsx` behavioral family). Behavioral
+wiring that the restyle must not sever is asserted through the REAL exported
+contracts: the pure exported `filterPosts` (list) and the reducer pair
+`createInitialPostEditorState` + `postEditorReducer` (editor store; the dirty flag
+is `dirty`, not `isDirty`).
 
 ```tsx
 // tests/vitest/ui-integration/post-list-restyle.test.tsx
-describe("Posts list restyle", () => {
-  it("renders header, status tabs, and a rounded-2xl table", async () => {
-    seedCachedPosts([post("published"), post("draft"), post("scheduled")]);
-    renderPostsListPage();
-    expect(screen.getByRole("heading", { name: "Posts" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /new/i })).toBeInTheDocument();
-    // status tabs with derived counts
-    const all = screen.getByRole("tab", { name: /all/i }); // or button if not role=tab
-    expect(all).toBeInTheDocument();
-    // table wrapper adopts the prototype card tokens
-    const table = screen.getByRole("table");
-    expect(table.closest("[class*='rounded-2xl']")).toBeTruthy();
-  });
+import { renderAdminUi } from "../../utils/adminRouterRender";
+import { PostsListPage, filterPosts } from "../../../core/admin/ui/posts/PostsListPage";
+import { PostsTable } from "../../../core/admin/ui/posts/PostsTable";
 
-  it("tab click drives statusFilter without breaking the list", async () => {
-    seedCachedPosts([post("published"), post("draft")]);
-    renderPostsListPage();
-    await userEvent.click(screen.getByRole("tab", { name: /drafts/i }));
-    // only draft rows visible; behavior preserved (filterPosts path)
-    expect(screen.queryByText(/published-title/i)).not.toBeInTheDocument();
-  });
+// Page chrome is static (no public synchronous cache seeder exists — the page
+// hydrates async via listPostsCached, which SSR does not await). So assert the
+// page chrome via the page SSR snapshot, and assert row/badge rendering by
+// rendering the exported PostsTable directly with seeded `items`. PostsTable
+// renders AdminLink + PageRowActions, which call useAdminRouter() and THROW
+// "AdminRouterContext is missing" under a bare renderToString — so it must go
+// through renderAdminUi (which supplies AdminRouterProvider), the same wrapper
+// media.test.tsx uses to render the leaf MediaDetailsDrawer with seeded props.
+test("renders header, status tabs, and the restyled table shell", () => {
+  const html = renderAdminUi(<PostsListPage />, { path: "/admin/posts" });
+  expect(html).toContain("Posts"); // PageHeader title
+  expect(html).toContain("New"); // create action
+  // shared StatusTabs strip renders the static tab labels
+  expect(html).toContain("Published");
+  expect(html).toContain("Drafts");
+  expect(html).toContain("Scheduled");
+  // table shell adopts the prototype card tokens
+  expect(html).toContain("rounded-2xl");
+  expect(html).toContain("shadow-card");
+});
 
-  it("status badges render expected labels (token-driven StatusBadge)", () => {
-    seedCachedPosts([post("scheduled")]);
-    renderPostsListPage();
-    expect(screen.getByText("Scheduled")).toBeInTheDocument();
-  });
+test("status badges render expected labels (token-driven StatusBadge)", () => {
+  const noop = () => undefined;
+  // renderAdminUi (NOT bare renderToString) — PostsTable renders AdminLink, which
+  // needs the AdminRouterProvider that renderAdminUi supplies.
+  const html = renderAdminUi(
+    <PostsTable
+      items={[post("scheduled", "scheduled-title")]}
+      onEdit={noop}
+      onPreview={noop}
+      onPublish={noop}
+      onUnpublish={noop}
+      onDuplicate={noop}
+    />
+  );
+  expect(html).toContain("Scheduled"); // shared StatusBadge label for scheduled
+  expect(html).toContain("rounded-2xl"); // restyled wrapper (was rounded-xl)
+});
 
-  it("selecting rows still surfaces the bulk-action cluster", async () => {
-    seedCachedPosts([post("published")]);
-    renderPostsListPage();
-    await userEvent.click(screen.getByRole("checkbox", { name: /select .*post/i }));
-    expect(screen.getByText(/post.* selected/i)).toBeInTheDocument();
-  });
+test("tab selection drives statusFilter (exported filterPosts wiring)", () => {
+  const items = [post("published", "published-title"), post("draft", "draft-title")];
+  // the tab strip writes statusFilter; filterPosts is the real filter edge
+  const drafts = filterPosts(items, "", "draft", "");
+  expect(drafts.map((p) => p.title)).toEqual(["draft-title"]);
+  expect(filterPosts(items, "", "all", "")).toHaveLength(2);
 });
 
 // tests/vitest/ui-integration/post-editor-shell-restyle.test.tsx
-describe("Post editor shell restyle", () => {
-  it("renders the document canvas card + Post settings inspector", () => {
-    renderPostBlockEditorShell(seededStore());
-    const canvas = screen.getByRole("article"); // restyled document card
-    expect(canvas.className).toMatch(/rounded-2xl/);
-    expect(canvas.className).toMatch(/max-w-2xl/);
-    expect(screen.getByText(/post settings/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /publish/i })).toBeInTheDocument();
-  });
+import { renderToString } from "react-dom/server";
+import { renderAdminUi } from "../../utils/adminRouterRender";
+import { PostBlockEditorShell } from "../../../core/admin/ui/posts/editor/PostBlockEditorShell";
+import { PostEditorCanvas } from "../../../core/admin/ui/posts/editor/PostEditorCanvas";
+import {
+  createInitialPostEditorState,
+  postEditorReducer,
+} from "../../../core/admin/ui/posts/editor/postEditorStore";
 
-  it("inspector status control stays bound to the store", async () => {
-    const store = seededStore();
-    renderPostBlockEditorShell(store);
-    // changing the status Select dispatches the real store action (no severed wiring)
-    await userEvent.selectOptions(screen.getByLabelText(/status/i), "published");
-    expect(store.getState().document.status).toBe("published");
-  });
+test("shell renders the restyled inspector sections + Publish action", () => {
+  // renderAdminUi seeds NO cached post, so usePostEditorState starts loading=true
+  // and the content region renders "Loading post editor..." instead of
+  // PostEditorCanvas (exactly like the existing post-editor-layout-shell.test.tsx).
+  // The document-card classes therefore live BEHIND the loading gate and are
+  // asserted via the direct PostEditorCanvas render below — NOT on this shell SSR
+  // snapshot. Here assert only chrome that renders regardless of the loading gate:
+  // the details sidebar (DocumentInspector) and the header actions.
+  const html = renderAdminUi(<PostBlockEditorShell />, { path: "/admin/posts/post-1" });
+  // real DocumentInspector sections render in the (ungated) details sidebar
+  // (NOT an invented "Post settings" header)
+  expect(html).toContain("Publishing");
+  expect(html).toContain("Featured image");
+  // header workflow actions still present
+  expect(html).toContain("Publish");
+});
 
-  it("editing a block still flips the dirty/autosave indicator", async () => {
-    const store = seededStore();
-    renderPostBlockEditorShell(store);
-    await typeIntoFirstBlock("hello");
-    expect(store.getState().isDirty).toBe(true);
+test("the restyled document canvas card carries the prototype card tokens", () => {
+  // PostEditorCanvas is a context-free leaf (no useAdminRouter) — render it directly
+  // with explicit props via renderToString, the same idiom
+  // post-editor-canvas-shared.test.tsx uses to assert canvas class tokens on the
+  // SSR string. This guards the restyled "document card" wrapper without the shell's
+  // loading gate.
+  const html = renderToString(
+    <PostEditorCanvas
+      document={{
+        version: 1,
+        meta: {},
+        blocks: [
+          {
+            id: "block-1",
+            type: "writing-canvas",
+            attrs: {},
+            content: {
+              version: 1,
+              nodes: [{ id: "node-1", type: "paragraph", text: "<p>Intro</p>" }],
+            },
+          },
+        ],
+      }}
+      title="Hello"
+      onTitleChange={() => undefined}
+      selectedBlockId={null}
+      insertFocusToken={0}
+      onSelectBlock={() => undefined}
+      onUpdateBlockContent={() => undefined}
+      onInsertBlock={() => undefined}
+    />
+  );
+  // restyled document card wrapper (was max-w-[720px]; now the prototype card)
+  expect(html).toContain("rounded-2xl");
+  expect(html).toContain("max-w-2xl");
+  expect(html).toContain("shadow-card");
+});
+
+test("an edit marks the store dirty (real reducer contract, no severed wiring)", () => {
+  const initial = createInitialPostEditorState();
+  expect(initial.dirty).toBe(false);
+  // any content mutation flips dirty; the restyle must keep these dispatches wired
+  const next = postEditorReducer(initial, {
+    type: "update_meta",
+    patch: { title: "Hello" },
   });
+  expect(next.dirty).toBe(true);
 });
 ```
 
-**Data flow:** tests seed cache/store → render the real component → assert
-DOM/role/text + load-bearing tokens (`rounded-2xl`, `max-w-2xl`, badge labels) →
-drive one behavioral path per area (tab→filter, select→bulk, select→store action,
-type→dirty) to prove the restyle preserved wiring.
+**Data flow:** tests seed the posts cache → SSR-render the real component →
+assert the load-bearing tokens/text in the returned HTML string (`rounded-2xl`,
+`max-w-2xl`, `shadow-card`, badge labels, real inspector section headers) → prove
+wiring through the real exported contracts (`filterPosts` for the list filter;
+`createInitialPostEditorState` + `postEditorReducer` for the editor dirty flag).
 
-**Error handling:** keep assertions resilient — query by accessible role/name and
-`toMatch`/`class*=` token checks instead of exact className strings, so future
-token tweaks from TASK-479-05/06 do not falsely fail these suites.
+**Error handling:** keep assertions resilient — match on stable text and
+load-bearing class tokens via `html.toContain(...)` rather than exact full-class
+strings, so future token tweaks from TASK-479-05/06 do not falsely fail these
+suites. Do NOT assert interactive/inactive states (tab-click filtering, row
+selection, typing) under the SSR `renderAdminUi` snapshot — those flows stay in
+the existing behavioral family.
 
-**Regression-test shape:** the two new suites above PLUS a green run of the
-existing `post-*` behavioral family (no edits to those files unless a selector
-genuinely moved; if a selector moved due to the restyle, update the minimal
-query rather than the assertion intent).
+**Regression-test shape:** the two new SSR/contract suites above PLUS a green run
+of the existing `tests/vitest/ui-integration/post-*.test.tsx` behavioral family
+(no edits to those files unless a selector genuinely moved; if a selector moved
+due to the restyle, update the minimal query rather than the assertion intent).
 
 ---
 
@@ -138,8 +226,9 @@ query rather than the assertion intent).
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/post-list-restyle.test.tsx tests/vitest/ui-integration/post-editor-shell-restyle.test.tsx`
-- Full Posts regression sweep (must stay green):
-  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/admin/post-editor-layout-shell.test.tsx tests/vitest/admin/post-document-inspector.test.tsx tests/vitest/admin/post-autosave-flow.test.tsx tests/vitest/admin/postsClient.test.ts`
+- Full Posts regression sweep (must stay green) — the editor suites live under
+  `tests/vitest/ui-integration/`; `postsClient.test.ts` is under `tests/vitest/admin/`:
+  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/post-editor-layout-shell.test.tsx tests/vitest/ui-integration/post-document-inspector.test.tsx tests/vitest/ui-integration/post-autosave-flow.test.tsx tests/vitest/admin/postsClient.test.ts`
 - State explicitly in the summary if any suite was skipped or could not run.
 
 ---

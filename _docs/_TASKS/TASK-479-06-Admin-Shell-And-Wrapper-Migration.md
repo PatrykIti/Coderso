@@ -43,6 +43,9 @@ roll out section-by-section in **TASK-479-07**).
   - Any change to editor *behavior*, payload schemas, routes, or permissions.
   - Rewiring real editors onto `CanvasEditor` (L06 ships the shared pattern only;
     adopting it per-editor is TASK-479-07 / dedicated editor tasks).
+  - The inline state screens `NotFound` / `AccessDenied` / `Loading` get no
+    dedicated leaf — they inherit the new semantic tokens automatically
+    (token-only, no structural change here).
 
 ## Owned files (frame layer)
 
@@ -78,7 +81,10 @@ L01 (primitives) → L02 (patterns, depends on L01) and L03 (sidebar, depends on
 L01) in parallel → L04 (top bar, depends on L01 + the 05-L06 light/dark toggle)
 → L05 (layouts, depends on L03 + L04) → L06 (canvas-editor, depends on L01/L02/L05)
 → L07 (tests, depends on all). Land behind the same component names so pages keep
-importing the same modules.
+importing the same modules. The light/dark **"dark actually recolors chrome"**
+gate (L07) runs only **after** L01/L03/L04 land — see the Dark-mode tokens hard
+constraint below; until the chrome migration completes, the dark toggle would
+recolor only part of the shell.
 
 ## Hard constraints (apply to every leaf)
 
@@ -97,6 +103,22 @@ importing the same modules.
 - **Schema-first:** any payload/settings read stays schema-validated at its
   existing client boundary; the visual layer never introduces an unvalidated read.
 - **Keep Radix internals** in `components/ui/*`; only merge styling/variants.
+- **Dark-mode tokens (canonical strategy):** the real chrome primitives
+  (`button` `--admin-button-*`, `input`/`textarea` `--admin-input-*`, `alert`
+  `--admin-state-*`, `SidebarNav` `--admin-sidebar-*`, `TopBar` `--admin-topbar-*`)
+  read the existing `--admin-*` CSS variables **directly** and MUST stay on them —
+  do NOT re-route chrome through derived shadcn vars (`bg-sidebar-accent`,
+  `bg-background`, `border-input`, `border-border`, …). Dark recolor comes from
+  the per-profile injected `<style id="coderso-theme-tokens">`, which (per
+  TASK-479-05-L04/L06) emits BOTH a light `:root{--admin-*}` and a dark
+  `:root.dark{--admin-*}` block and wins source order over `globals.css`; a static
+  `globals.css .dark{--admin-*}` would lose source order, so it is NOT the
+  mechanism. Additive shadcn-derived variants (`soft`/`success`/`warning`/`info`
+  on Badge/Button, the new `CanvasEditor` surface) may use derived vars
+  (`--primary-soft`, `--card`, …) whose dark values come from `globals.css .dark`
+  (05) — those are not chrome the injected style overrides. L07 asserts a real
+  computed token/background flip in dark for button + sidebar + topbar, not merely
+  that the `.dark` class is present.
 
 ## Testing Requirements
 

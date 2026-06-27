@@ -17,8 +17,9 @@
 Restyle the real Listings **list** screen to match the prototype: redesigned
 `PageHeader`, a soft tab strip (Queries / Templates), and a `rounded-2xl` **card
 grid** for the query records — each card showing a query summary, the bound source/
-content-type, and the layout, with a violet-toned icon tile and a soft "Edit"
-action. All data loading, filtering, selection, bulk actions, the template manager,
+content-type, and one real query-payload detail (result limit / fields count), with
+a violet-toned icon tile and a soft "Edit" action. All data loading, filtering,
+selection, bulk actions, the template manager,
 the delete dialogs, and caching stay byte-for-byte the same.
 
 - **Goal:** `core/admin/ui/listings/ListingListPage.tsx` (+ its `ListingQueryFilters`
@@ -78,8 +79,10 @@ the query rows as cards.
 
 // 2) Tabs strip: keep the EXISTING <Tabs value={activeTab} onValueChange={handleTabChange}>
 //    (it owns the ?tab= sync). Restyle TabsList/TabsTrigger to the prototype soft
-//    underline look (violet active text + bottom border) via the centrally
-//    restyled tabs primitive — no new state, handleTabChange untouched.
+//    underline look (violet active text + bottom border) using the Tabs `line`
+//    variant (NOT a fabricated `underline` variant) from the centrally restyled
+//    tabs primitive (479-06-L02 / tokens from 479-05) — no new state,
+//    handleTabChange untouched.
 
 // 3) Queries tab — card grid (ports prototype ListingsPage card):
 //    Replace <ListingQueryTable> presentation with a responsive grid of cards
@@ -95,7 +98,9 @@ the query rows as cards.
 //            </p>
 //            <div className="mt-3 flex flex-wrap gap-2">
 //              <Badge variant="soft">{sourceLabel(q.query.source)}</Badge>
-//              <Badge variant="outline">{layoutLabel(q)}</Badge>
+//              {/* NO layout/template field exists on ListingQueryRecord — second
+//                  badge shows a REAL query-payload value, never an invented layout */}
+//              <Badge variant="outline">{`${q.query.pagination.limit} per page`}</Badge>
 //            </div>
 //            <Separator className="my-4" />
 //            <div className="mt-auto flex gap-2">
@@ -123,11 +128,14 @@ the query rows as cards.
 //    Pure, defensive (handle empty filters/sort), no side effects. Export it for
 //    L04 unit assertions.
 
-// 5) sourceLabel/layoutLabel: map q.query.source (entries/posts/taxonomies/users)
-//    to the listingSourceOptions labels from listings/defaults.ts (reuse, do not
-//    re-hardcode); layout badge reads the bound template/layout if present else a
-//    neutral "Grid" default. Tones read from theme tokens (bg-primary-soft etc.),
-//    NOT hard-coded hex.
+// 5) sourceLabel: map q.query.source (entries/posts/users/taxonomies) to the
+//    listingSourceOptions labels from listings/defaults.ts (reuse, do not
+//    re-hardcode). DO NOT add a layout badge: the real ListingQueryRecord /
+//    ListingQueryPayload has NO template or layout binding (layout lives only on
+//    ListingTemplateRecord, and queries are not bound to a template). The second
+//    badge must read a REAL query-payload value (e.g. `pagination.limit` "per page"
+//    or `fields.length` fields) — never an invented "Grid"/layout default. Tones
+//    read from theme tokens (bg-primary-soft etc.), NOT hard-coded hex.
 
 // 6) Empty / loading: keep the EXISTING emptyMessage strings (loading vs
 //    "No listing queries match your current filters"); render them through the
@@ -161,7 +169,7 @@ queries`, `Unable to load listing templates`, `Listing action failed`) and the f
 `ConfirmActionDialog`s keep their existing copy and conditions; only their
 surrounding card styling inherits the new tokens. No new error surfaces.
 
-**React-hooks/cache rules:** `summarizeListingQuery`/`sourceLabel`/`layoutLabel` are
+**React-hooks/cache rules:** `summarizeListingQuery`/`sourceLabel` are
 pure render-time derivations (or `useMemo` over `visibleRows`) — no effect, no
 synchronous `setState` in an effect. Do not add any mount effect that
 force-refetches; the hooks own the single hydrate + cacheBus subscription and must
@@ -169,7 +177,8 @@ be left untouched (no dirty-state overwrite, no refetch loop).
 
 **Regression-test shape:** see L04 — render `ListingListPage` with seeded
 `useListingQueries`, assert: header + New button present, tab strip renders, query
-records render as `rounded-2xl` cards with summary + source/layout badges, the
+records render as `rounded-2xl` cards with summary + a source badge + a real
+query-detail badge (result limit), the
 selection Checkbox still calls the toggle path (bulk cluster appears), tab switch to
 Templates renders the templates surface, and the delete control still opens the
 confirm dialog.
@@ -193,6 +202,6 @@ confirm dialog.
 - `_docs/_TASKS/README.md` — update status bucket + statistics on status change.
 - `_docs/_CHANGELOG/` — add an entry on closure, linking `TASK-479` +
   `TASK-479-16-L01`.
-- If a shared `summarizeListingQuery` / source-layout badge helper is introduced,
+- If a shared `summarizeListingQuery` / source-badge helper is introduced,
   note it alongside the TASK-479-06 shell notes so the editor (L02) and other
   Advanced lists reuse the same presentation.

@@ -115,6 +115,10 @@ function PopupPreview({ draft }: { draft: PopupEditorDraft }) {
 //    (time_delay/scroll_depth/exit_intent/cta_click, all/logged_in/logged_out,
 //    always/session_once/daily_once, center/bottom_right/top_banner) — those map
 //    1:1 to toPopupInput()/draftFromPopup() and the wire schema.
+//    NOTE: triggerType/audience/frequencyStrategy/placement/status are the shadcn
+//    Radix `Select` (`@/components/ui/select`), driven by `onValueChange` — NOT a
+//    native `<select>`. Tests must seed `draft` or drive the Radix trigger+item, not
+//    `selectOptions` (see L03).
 ```
 
 **Data flow:** `getCachedPopup` lazy init → `getPopupCached({force:true})` hydrate →
@@ -143,9 +147,11 @@ and must stay intact (no refetch loop, no dirty-state overwrite).
 **Regression-test shape:** see L03 — render `PopupEditorPage` (create + edit modes)
 with a seeded `getCachedPopup`, assert: header actions present, the three-region
 frame + live preview reflect `draft.title`/`draft.body`/`draft.ctaLabel`, typing a
-title flips the dirty indicator and updates the preview, changing the trigger Select
-swaps the conditional field, toggling `showOverlay` updates the backdrop, and Save
-calls `updatePopup` with a payload equal to `toPopupInput(draft)`.
+title flips the dirty indicator and updates the preview, the conditional trigger field
+matches the seeded `triggerType` (the trigger control is a Radix `Select` driven by
+`onValueChange`, so prove the swap by seeding two `triggerType` states — NOT
+`selectOptions`), toggling `showOverlay` updates the backdrop, and Save calls
+`updatePopup` with a payload equal to `toPopupInput(draft)`.
 
 ---
 

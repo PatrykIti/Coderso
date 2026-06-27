@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Content (Pages)
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 
@@ -41,10 +41,15 @@ and canonical admin routing**.
   `CanvasEditor` is a non-functional preview; we adopt its **visual structure and
   the floating-panel control model**, not its mock content. Do not migrate other
   content screens (Posts, Menus, Media) — those are separate TASK-479 subtasks.
+  The `/preview` route (`PagePreview`, which renders front-end page content, not
+  admin chrome) is **out of scope** here — this group restyles only the admin Pages
+  list and the in-admin Page editor.
 
 > Depends on **TASK-479-06** (shell/topbar/sidebar adoption) because both Pages
 > screens render inside `AdminShell`/`EditorShell`; restyle the shell first so the
-> page-level restyle composes against the final chrome and tokens.
+> page-level restyle composes against the final chrome and tokens. Also depends on
+> **TASK-479-05** (design tokens) — the soft/violet tokens and the `soft`/`success`
+> Badge variants these screens consume are defined there.
 
 ---
 

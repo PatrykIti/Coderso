@@ -79,17 +79,22 @@ untouched**; only the returned JSX + child class names change.
     : null}
 />
 
-// Tabs port the prototype underline variant. Drive REAL state — DO NOT add a new
-// fetch. If a members/invitations split is desired, derive it render-time from
-// the loaded users (e.g. status === "pending" === invited); otherwise keep the
-// single members view and only restyle. Counts come from real arrays:
+// Tabs use the REAL core Tabs API (core/admin/components/ui/tabs.tsx): the
+// composed `Tabs`/`TabsList`/`TabsTrigger` shadcn shape, NOT the prototype's
+// `items`/`variant="underline"` props. The underline look is the `line` variant
+// on `TabsList` (the real component names it `line`, not `underline`). Drive REAL
+// state — DO NOT add a new fetch. If a members/invitations split is desired,
+// derive it render-time from the loaded users (status === "pending" === invited);
+// otherwise keep the single members view and only restyle. Counts come from real
+// arrays (UserStatus is "active" | "inactive" | "pending"):
 const memberCount  = users.filter((u) => u.status !== "pending").length;
 const inviteCount  = users.filter((u) => u.status === "pending").length;
-<Tabs variant="underline" value={tab} onValueChange={setTab}
-  items={[
-    { value: "members", label: "Members", count: memberCount },
-    { value: "invitations", label: "Invitations", count: inviteCount },
-  ]} />
+<Tabs value={tab} onValueChange={setTab}>
+  <TabsList variant="line">
+    <TabsTrigger value="members">Members <Badge variant="soft">{memberCount}</Badge></TabsTrigger>
+    <TabsTrigger value="invitations">Invitations <Badge variant="soft">{inviteCount}</Badge></TabsTrigger>
+  </TabsList>
+</Tabs>
 // `tab` is a new useState (lazy init "members") — render-time filtering only,
 // NO setState-in-effect (obey eslint react-hooks rules).
 ```
@@ -115,12 +120,19 @@ const userStats = useMemo(() => ({
 ### 3) DataTable columns (avatar / role / status / 2FA)
 
 ```tsx
-// Restyle UsersTable.tsx (or render via the shared DataTable) using the REAL
-// UserSummary fields. Column renderers map prototype look onto real data:
+// Restyle the list the page ACTUALLY renders — `UserList.tsx` (UsersRolesPage
+// imports `UserList`, not the unmounted/legacy `UsersTable.tsx`) — or render via
+// the shared DataTable, using the REAL UserSummary fields. Real UserSummary is
+// { id, name, email, roleIds: string[], status: "active"|"inactive"|"pending",
+//   lastActive, mfaEnabled? } — there is NO `roleName` / `twoFactorEnabled`.
+// Build a role-name lookup from the loaded `roles` (exactly as UserList.tsx does):
+const roleMap = new Map(roles.map((r) => [r.id, r.name]));
 const columns: Column<UserSummary>[] = [
   { key: "user", header: "User", render: (u) => (
       <span className="flex items-center gap-3">
-        <Avatar name={u.name} size="md" />               // components/ui/avatar
+        <Avatar size="sm">                               {/* components/ui/avatar: size is "default"|"sm"|"lg" — no `name`/`md` prop */}
+          <AvatarFallback>{getInitials(u.name)}</AvatarFallback>
+        </Avatar>
         <span className="min-w-0">
           <span className="block truncate font-medium text-foreground">{u.name}</span>
           <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
@@ -128,13 +140,14 @@ const columns: Column<UserSummary>[] = [
       </span>) },
   // Role badge respects partial-read: when roles:read is denied, render the
   // existing "role hidden" affordance (roleDetailsUnavailableReason) — do NOT
-  // expose role names the user can't read.
+  // expose role names the user can't read. Names derive from u.roleIds via roleMap.
   { key: "role", header: "Role", render: (u) =>
-      canPermission("roles:read") ? <Badge variant="soft">{u.roleName ?? "—"}</Badge>
-                                  : <span className="text-xs text-muted-foreground" title={roleDetailsUnavailableReason}>Hidden</span> },
+      canPermission("roles:read")
+        ? <Badge variant="soft">{u.roleIds.map((id) => roleMap.get(id) ?? id).join(", ") || "—"}</Badge>
+        : <span className="text-xs text-muted-foreground" title={roleDetailsUnavailableReason}>Hidden</span> },
   { key: "status", header: "Status", render: (u) => <StatusBadge status={u.status} /> },
   { key: "twoFactor", header: "2FA", render: (u) =>
-      u.twoFactorEnabled
+      u.mfaEnabled
         ? <Badge variant="success" className="gap-1"><ShieldCheck className="size-3" /> Enabled</Badge>
         : <Badge variant="secondary">Off</Badge> },
   { key: "actions", header: "", align: "right", render: (u) =>
@@ -143,9 +156,11 @@ const columns: Column<UserSummary>[] = [
         : null },
 ];
 // Row click keeps the existing UserDetailsDrawer open behavior (selectedUserId).
-// NOTE: confirm UserSummary actually carries `twoFactorEnabled` / `roleName`; if
-// not, read from the real source already mapped in mapUserSummary — do not add a
-// new fetch or fabricate the field.
+// NOTE: `mfaEnabled` exists on UserSummary but `mapUserSummary` currently hard-codes
+// it to `false`, so the "Enabled" badge will not appear until that mapper is wired to
+// a real source — bind to the real field, do not fabricate an "Enabled" state. Role
+// names come from `u.roleIds` resolved against the loaded `roles` — never invent a
+// `roleName` field; do not add a new fetch.
 ```
 
 ### 4) FilterBar + drawer chrome

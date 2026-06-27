@@ -81,7 +81,7 @@ bun --cwd core lint:types
 bun test tests/integration/routes/dashboardWidgets.test.ts
 bun test tests/security/dashboardWidgets.test.ts
 
-# TASK-480 Vitest lanes (pure domain/service + admin UI) — own to 480-01/04/05; e.g.:
+# TASK-480 Vitest lanes (pure domain/service + admin UI) — own to 480-02/04/05; e.g.:
 NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/services/dashboardWidgets.test.ts
 NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/dashboardWidgets.test.tsx
 
@@ -166,7 +166,7 @@ sweep. Any gate extension added in step 2 carries its own budget assertion.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - TASK-480 Bun route + security suites (480-03 — real paths).
-- TASK-480 Vitest domain + admin UI suites (480-01/04/05 — real paths).
+- TASK-480 Vitest domain + admin UI suites (480-02/04/05 — real paths).
 - `bun run gates:coderso` (baseline); `bun run gates:coderso:performance` /
   `bun run gates:coderso:security` if a gate was extended.
 - Record all pass counts and any skips/`skipReason` in the closeout; state clearly

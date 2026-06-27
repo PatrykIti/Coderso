@@ -58,8 +58,9 @@ exposes is surfaced.
 ## Implementation Pseudocode
 
 Concrete shapes — port the prototype's timeline but bind it to REAL records in
-`AuditList.tsx` (`items: AuditLog[]`, `query: AuditLogQuery`, `pageState`,
-`isLoading`, `error`, export handlers). **Keep all existing hooks, the cursor
+`AuditList.tsx` (`logs: AuditLog[]`, the derived `AuditLogQuery`, the cursor state
+`pageRequest`/`loadedPage`/`nextCursor`, `isLoading`, `error`, export handlers).
+**Keep all existing hooks, the cursor
 pagination, the filters, the export flow, and the details drawer untouched**;
 only the list rendering + chrome change. Decide whether the timeline replaces or
 augments `AuditTable.tsx` — prefer a restyled list view that REUSES the same row
@@ -70,70 +71,81 @@ data + row-click → `AuditDetailsDrawer`.
 ```tsx
 // PORT layout from prototype pages/admin/AuditLogsPage.tsx:
 //   PageHeader(Export action) -> FilterBar(category + date-range) -> SectionCard(timeline) -> Pagination.
-<PageHeader title="Audit logs"
+<PageHeader title="Audit Logs"
   actions={<Button variant="outline" onClick={openExport} className="gap-1.5"><Download className="size-4" /> Export</Button>} />
 
 // AuditFilters.tsx -> restyle to the prototype FilterBar look (search + Selects in
-// rounded-xl pills). KEEP controlled props bound to the REAL AuditLogQuery
-// (category, dateRange, status, severity, search) + onChange — do NOT add filters
-// the query does not support.
+// rounded-xl pills). KEEP the REAL controlled AuditFilters props + onChange —
+// `query` (search), `dateRange`, `eventType` ("all" | AuditCategory), and
+// `severity` ("all" | AuditSeverity). There is NO standalone `status` filter
+// (status is derived from severity); do NOT add filters the query does not support.
 ```
 
 ### 2) Timeline list (REAL records → prototype rail)
 
 ```tsx
-// Render real `items`; the connector rail + avatar + category badge port the
-// prototype. Category tone maps from the REAL resolveAuditCategory(record), NOT a
-// local CATEGORY map. Relative time uses the REAL record timestamp formatter
-// already in this module (do not use prototype `pick(RELATIVE_TIMES)`).
+// Render the real `logs` state (AuditList holds `logs: AuditLog[]`). The connector
+// rail + avatar + category badge port the prototype. The view-model `AuditLog`
+// ALREADY carries a resolved `category` (computed by mapAuditRecord via
+// resolveAuditCategory on the raw AuditRecord) — read `entry.category` directly; do
+// NOT call resolveAuditCategory(entry) (that helper takes the raw {action,targetType}
+// shape, not the view model). Time is pre-formatted on the view model
+// (`entry.timestamp` relative, `entry.timestampLabel` absolute) — there is no
+// `formatTime` here and no prototype `pick(RELATIVE_TIMES)`.
 <SectionCard title="Activity" description="Most recent events first">
   <div className="relative">
-    {items.map((entry, index) => (
+    {logs.map((entry, index) => (
       <button key={entry.id} type="button" onClick={() => openDetails(entry)}
         className="relative flex w-full items-start gap-4 pb-6 text-left last:pb-0">
-        {index < items.length - 1
+        {index < logs.length - 1
           ? <span className="absolute bottom-1 left-[13px] top-9 w-px bg-border" aria-hidden /> : null}
-        <Avatar name={entry.actorName ?? entry.actorId} size="sm" className="relative z-10" />
+        <Avatar size="sm" className="relative z-10">                 {/* no `name` prop — compose AvatarFallback */}
+          <AvatarFallback>{getInitials(entry.actor.name)}</AvatarFallback>
+        </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
-            <span className="text-sm font-medium text-foreground">{entry.actorName ?? entry.actorId}</span>
-            <span className="text-sm text-muted-foreground">{entry.action}</span>
-            <span className="text-sm font-medium text-primary">{entry.targetLabel}</span>
-            <Badge variant={categoryVariant(resolveAuditCategory(entry))}>{resolveAuditCategory(entry)}</Badge>
+            <span className="text-sm font-medium text-foreground">{entry.actor.name}</span>
+            <span className="text-sm text-muted-foreground">{entry.event}</span>
+            <span className="text-sm font-medium text-primary">{entry.resourceLabel}</span>
+            <Badge variant={categoryVariant(entry.category)}>{entry.category}</Badge>
           </div>
           <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground sm:hidden">
-            <span className="font-mono">{entry.ip}</span><span>·</span><span>{formatTime(entry.createdAt)}</span>
+            <span className="font-mono">{entry.ipAddress}</span><span>·</span><span>{entry.timestamp}</span>
           </div>
         </div>
         <div className="hidden shrink-0 flex-col items-end gap-0.5 text-xs sm:flex">
-          <span className="font-mono text-muted-foreground">{entry.ip}</span>
-          <span className="text-muted-foreground">{formatTime(entry.createdAt)}</span>
+          <span className="font-mono text-muted-foreground">{entry.ipAddress}</span>
+          <span className="text-muted-foreground" title={entry.timestampLabel}>{entry.timestamp}</span>
         </div>
       </button>
     ))}
   </div>
 </SectionCard>
-// categoryVariant() maps AuditCategory -> Badge variant (created=success,
-// updated=info, deleted=destructive, login/auth=secondary). Confirm real field
-// names (actorName/targetLabel/ip/createdAt) against AuditLog/AuditRecord; use the
-// real fields, do not invent.
+// categoryVariant() maps the REAL AuditCategory ("authentication" | "content" |
+// "system") -> Badge variant (e.g. authentication=info, content=success,
+// system=secondary). Use the real view-model fields (entry.actor.name, entry.event,
+// entry.resourceLabel, entry.ipAddress, entry.category, entry.timestamp /
+// entry.timestampLabel) — NOT raw AuditRecord names (actorId/action/targetType);
+// do not invent actorName/targetLabel/ip.
 ```
 
 ### 3) Pagination (preserve cursor semantics)
 
 ```tsx
-// Restyle to the prototype Pagination look but DRIVE the existing cursor state
-// (pageState.cursor / previousCursors). Keep resolveTruthfulCountCopy for the
-// total/label — never show a fabricated exact total when the API returns a
-// cursor-bounded/approximate count.
-<Pagination ... onNext={goNextCursor} onPrev={goPrevCursor} total={truthfulCount} />
+// Restyle to the prototype Pagination look but DRIVE the audit page's EXISTING
+// cursor state (`pageRequest` / `loadedPage` / `nextCursor`) and its existing
+// next/prev handlers. The honest label is the real `countCopy` state — produced by
+// resolveTruthfulCountCopy — never show a fabricated exact total when the API
+// returns a cursor-bounded/approximate count.
+<Pagination ... onNext={goNextCursor} onPrev={goPrevCursor} countCopy={countCopy} />
 ```
 
-**Data flow:** unchanged. `listAuditLogs(query)` → `items` + `nextCursor` →
-timeline; FilterBar mutates `query` → reload; Export opens `ExportDialog` →
-`exportAuditLogs`; row click → `AuditDetailsDrawer`. Category tone + relative time
-are render-time derivations of each real record (no new fetch, no
-setState-in-effect).
+**Data flow:** unchanged. `listAuditLogs(query)` → `logs` + `nextCursor` →
+timeline; FilterBar mutates the filters (`query`/`dateRange`/`eventType`/`severity`)
+→ reload; Export opens `ExportDialog` → `exportAuditLogs`; row click →
+`AuditDetailsDrawer`. Category tone (from the pre-resolved `entry.category`) +
+relative time (`entry.timestamp`) are render-time reads of each real record (no new
+fetch, no setState-in-effect).
 
 **Error handling:** unchanged — keep the existing error surface, the loading/empty
 states, and the truthful-count copy. Keep `copyAuditEntryJson` available from the
@@ -144,9 +156,11 @@ are pure render-time (no sync setState in effects); cursor pagination state mach
 is untouched; no mount-force refetch added.
 
 **Regression-test shape (delivered in L05):** timeline renders one row per real
-record with actor/action/target/category badge/ip/time; category tone derives from
-`resolveAuditCategory`; row click opens the details drawer; Export opens the
-existing dialog; pagination drives cursor state with truthful-count copy.
+record with actor (`entry.actor.name`) / event (`entry.event`) / target
+(`entry.resourceLabel`) / category badge / ip (`entry.ipAddress`) / time
+(`entry.timestamp`); category tone derives from the view-model `entry.category`;
+row click opens the details drawer; Export opens the existing dialog; pagination
+drives cursor state with truthful-count copy (`countCopy`).
 
 ---
 

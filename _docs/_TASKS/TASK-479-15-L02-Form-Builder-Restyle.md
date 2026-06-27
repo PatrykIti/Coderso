@@ -28,8 +28,8 @@ only presentation changes.
   (plus its panes `FieldLibrary.tsx`, `FieldListPanel.tsx`, `FormCanvas.tsx`,
   `FieldSettingsPanel.tsx`, `FormActionsPanel.tsx`, `FormSettingsPanel.tsx`,
   `FormRuntimePreviewDialog.tsx`), backed by
-  `core/admin/services/formsClient.ts` and `core/admin/services/forms/*`
-  (`formSettings.ts`, `formPresets.ts`).
+  `core/admin/services/formsClient.ts` and the form domain helpers in
+  `core/services/forms/*` (`formSettings.ts`, `formPresets.ts`).
 - **Source-of-truth docs:** `_docs/FORMS_SPEC.md`, `_docs/DESIGN_TOKENS.md`;
   prototype source `_docs/_PROTOTYPE/src/pages/advanced/FormBuilderPreview.tsx`
   and shared primitives
@@ -70,53 +70,72 @@ and the unsaved-changes ref/guard). Only pane chrome + the canvas/inspector JSX
 change.
 
 Port from prototype `FormBuilderPreview.tsx`: map the prototype
-`EditorPreviewFrame` regions onto the existing real panes —
-`left` (Fields rail) → `FieldLibrary` + `FieldListPanel`, `canvas` (live form
-preview) → `FormCanvas`, `right` (inspector) → `FieldSettingsPanel`. The
-prototype `EditorRailGroup`/`EditorRailItem` look is the styling target for
-`FieldLibrary`.
+`EditorPreviewFrame` regions onto the **existing `EditorShell` props** (the real
+`EditorShell` exposes `leftPanel` / `rightPanel` asides + a center `children`
+slot — there is NO `header` prop on `EditorShell` or `AdminShell`) —
+`left` (Fields rail) → `EditorShell.leftPanel` (the existing Fields/Library
+`Tabs` over `FieldListPanel` + `FieldLibrary`), `canvas` (live form preview) →
+`EditorShell` center `children` (`FormCanvas`), `right` (inspector) →
+`EditorShell.rightPanel` (`FieldSettingsPanel` when a field is selected, else
+`renderFormInspector()` — the Settings/Automation `Tabs` over `FormSettingsPanel`
++ `FormActionsPanel`). The prototype `EditorRailGroup`/`EditorRailItem` look is
+the styling target for `FieldLibrary`. `EditorPreviewFrame` is a visual reference
+only and is NOT ported to core (per 06-L02) — do not import it.
 
 ```tsx
 // FormBuilderPage.tsx — RENDER ONLY changes inside the existing EditorShell.
 // hasUnsavedChangesRef, save/publish handlers, cache subscribe, tab state, and
 // every formsClient write stay byte-for-byte.
+//
+// IMPORTANT — match the REAL EditorShell API: it already renders the 3-pane
+// frame via `leftPanel` / `rightPanel` asides + a center `children` slot. It has
+// NO `header` prop (neither does AdminShell). The builder has no PageHeader —
+// Save / Submissions / Action logs / Runtime-preview live in the center sticky
+// toolbar, and status + "Unsaved changes" pills go through `topbarActions`. So
+// RESTYLE the existing panes — do NOT add a `header` prop and do NOT rebuild a
+// custom `<div className="grid grid-cols-[…]">` inside children.
 
 return (
   <EditorShell
     activeHref="/admin/advanced/forms"
-    breadcrumbs={["Content", "Forms", form?.name ?? "Form"]}
-    header={
-      <PageHeader
-        title={form?.name ?? "Form"}
-        description="Drag fields onto the canvas and configure them on the right."
-        actions={/* keep existing Save (Save icon) + Publish + Preview buttons + their handlers */}
-      />
+    breadcrumbs={["Content", "Forms", formTitle]}
+    topbarActions={/* keep the existing status + "Unsaved changes" pills */}
+    rightPanelClassName="p-0"
+    leftPanel={
+      // Fields rail — restyle the EXISTING Fields/Library Tabs (variant="line")
+      // over FieldListPanel + FieldLibrary; port the EditorRailGroup/
+      // EditorRailItem look (icon chip + label rows, active = bg-primary-soft
+      // text-primary). Keep the SAME wiring:
+      //   <FieldListPanel fields={fieldListItems} selectedId={selectedFieldId}
+      //     onSelect={(id) => setSelectedTarget({ type: "field", id })} onAdd={…} />
+      //   <FieldLibrary items={fieldLibraryItems} onAddField={handleAddField} />
+    }
+    rightPanel={
+      // Inspector — keep the existing selection split:
+      //   field selected → <FieldSettingsPanel field={selectedField}
+      //     allFields={fields} onChange={handleFieldChange}
+      //     onSettingsChange={handleFieldSettingsChange} onDuplicate={handleDuplicate} />
+      //   form selected  → renderFormInspector() (Settings/Automation Tabs over
+      //     FormSettingsPanel + FormActionsPanel). Restyle chrome only.
     }
   >
-    {/* 3-pane layout styled like EditorPreviewFrame: rounded-2xl panes, soft shadow */}
-    <div className="grid gap-4 lg:grid-cols-[16rem_minmax(0,1fr)_20rem]">
-      <aside className="rounded-2xl border bg-card p-3 shadow-card">
-        {/* FieldLibrary palette — port EditorRailGroup/EditorRailItem styling:
-            icon chip + label rows, active row = bg-primary-soft text-primary.
-            Keep the SAME fieldLibraryItems + onAddField handlers. */}
-        <FieldLibrary items={fieldLibraryItems} onAdd={handleAddField} />
-        <FieldListPanel fields={fieldListItems} selectedId={selectedFieldId} onSelect={setSelectedFieldId} onReorder={handleReorder} onRemove={handleRemoveField} />
-      </aside>
-      <section className="rounded-2xl border bg-muted/30 p-6">
-        {/* FormCanvas — live preview. The selected field gets the prototype
-            highlight: rounded-xl bg-primary-soft/40 ring-2 ring-primary. Keep
-            the real field renderers + selection wiring. */}
-        <FormCanvas fields={fields} selectedId={selectedFieldId} onSelectField={setSelectedFieldId} />
-      </section>
-      <aside className="rounded-2xl border bg-card p-4 shadow-card">
-        <Tabs value={inspectorTab} onValueChange={setInspectorTab}>
-          {/* keep TabsList: Field / Actions / Settings */}
-          <TabsContent value="field"><FieldSettingsPanel settings={selectedFieldSettings} onChange={handleFieldSettingsChange} /></TabsContent>
-          <TabsContent value="actions"><FormActionsPanel actions={actions} onChange={handleActionsChange} contentTypes={contentTypes} /></TabsContent>
-          <TabsContent value="settings"><FormSettingsPanel settings={settings} onChange={handleSettingsChange} /></TabsContent>
-        </Tabs>
-      </aside>
-    </div>
+    {/* center children = restyled sticky toolbar (Submissions / Action logs /
+        Runtime preview / Save — same handlers) over the live canvas. The selected
+        field gets the prototype highlight (rounded-xl bg-primary-soft/40 ring-2
+        ring-primary) applied INSIDE FormCanvas; keep the real field renderers +
+        selection wiring. */}
+    <FormCanvas
+      formTitle={formTitle}
+      formDescription={formDescription}
+      layoutMode={meta.settings.layoutMode}
+      stepTitles={meta.settings.stepTitles}
+      formSelected={selectedTarget?.type === "form"}
+      selectedFieldId={selectedFieldId}
+      fields={fields}
+      onSelectField={(id) => setSelectedTarget({ type: "field", id })}
+      onSelectForm={() => setSelectedTarget({ type: "form" })}
+      onRemoveField={handleRemoveField}
+    />
     <FormRuntimePreviewDialog open={previewOpen} onOpenChange={setPreviewOpen} {...previewProps} />
   </EditorShell>
 );
@@ -125,7 +144,8 @@ return (
 Inspector field rows (`FieldSettingsPanel`) adopt the prototype `InspectorRow`
 shape: `mb-1.5 text-xs font-medium text-muted-foreground` label over the control,
 and the Required toggle as a `rounded-xl border px-3 py-2.5` row with a `Switch`.
-Keep every control bound to its existing `FieldSettings` field and `onChange`.
+Keep every control bound to its existing `FieldSettings` field via the real
+`onChange`/`onSettingsChange` callbacks.
 
 **Optional (defer-able) enhancement:** a floating CanvasEditor-style panel for
 field settings (as in the Pages editor) MAY replace the right rail later. It is
@@ -150,12 +170,20 @@ new effect and no synchronous `setState` in effects.
 `/advanced/forms/:id` routes; the prototype's bottom `<Link to="/advanced/forms">`
 becomes an `AdminLink`. No hand-built `<a href>`.
 
-**Regression-test shape (see L04):** render asserts the three panes (palette
-rail with the field-type items, canvas preview, inspector tabs), that clicking a
-palette item still calls the add-field handler, that selecting a field shows its
-settings with the Required `Switch` bound, that the Settings tab still renders
-the runtime/anti-abuse controls (presence only — value contract untouched), and
-that Save/Publish still call the existing client writes (mocked).
+**Regression-test shape (see L04):** an SSR snapshot (`renderToString` under
+`AdminRouterProvider`) of `FormBuilderPage` asserts the three regions are present
+(the Fields/Library rail with field-type items, the canvas preview, and the
+inspector). The `submissionAccess` control is asserted by rendering
+`FormSettingsPanel` **directly** with seeded props (the existing forms-suite
+idiom — `forms.test.tsx` renders `FieldSettingsPanel` directly) and checking the
+`submissionAccess` (public|internal) Select is present (presence only — value
+contract untouched). Note: honeypot / CAPTCHA are NOT controls in
+`FormSettingsPanel` (it only renders `submissionAccess`); they are enforced
+server-side (bot protection + global security settings), so do not assert them on
+this panel. Add-field, field selection, the Required
+`Switch` binding, and Save/Publish writes are interaction-dependent — keep them in
+the existing behavioral suites (or an explicit `createRoot`+`act` test), not in
+the single SSR snapshot.
 
 ---
 

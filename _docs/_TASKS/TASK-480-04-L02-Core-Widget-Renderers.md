@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Large
-**Dependencies:** TASK-480-04-L01 (registry + host) · TASK-480-01 (config + data union) · TASK-479-06-L02 (`StatCard`, `Charts`, `StatusBadge`, `DataTable`, `EmptyState`, `SectionCard`)
+**Dependencies:** TASK-480-04-L01 (registry + host) · TASK-480-02 (config + data union) · TASK-479-06-L02 (`StatCard`, `Charts`, `StatusBadge`, `DataTable`, `EmptyState`, `SectionCard`)
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-480-04
 
@@ -33,13 +33,13 @@ into these renderers (config-driven), not duplicated.
   `ContentTypeCountWidget.tsx`, `StorageWidget.tsx`, `SiteHealthWidget.tsx`,
   `QuickActionsWidget.tsx`, `ContentQueryWidget.tsx`).
 - **Source-of-truth docs:**
-  - Config + data union (import only): `core/services/dashboard/dashboardWidgetTypes.ts` (TASK-480-01).
+  - Config + data union (import only): `core/services/dashboard/dashboardTypes.ts` (TASK-480-02).
   - Shared patterns: `core/admin/ui/shared/{StatCard,Charts,StatusBadge,DataTable,EmptyState}.tsx` (TASK-479-06-L02).
   - Prototype reference: `_docs/_PROTOTYPE/src/pages/DashboardPage.tsx` (Stat grid, AreaChart/Donut, activity feed, tasks/links).
   - Cards being generalized: `core/admin/ui/dashboard/{SiteHealthCard,SecurityStatusCard,RecentEditsTable,StatCard}.tsx`.
-  - Canonical nav: `core/admin/services/adminPaths.ts` + `core/admin/ui/shared/AdminLink.tsx` (QuickActions/ContentQuery row links).
-- **Out of scope:** Defining/normalizing config or data (→ 480-01); fetching the
-  data (→ 480-02); the host chrome (→ L01); the builder’s per-widget config
+  - Canonical nav: `core/admin/utils/adminPaths.ts` + `core/admin/ui/shared/AdminLink.tsx` (QuickActions/ContentQuery row links).
+- **Out of scope:** Defining/normalizing config or data (→ 480-02); fetching the
+  data (→ 480-03); the host chrome (→ L01); the builder’s per-widget config
   editors (→ 480-05). Renderers never re-validate or re-fetch.
 
 > **Distinct from `core/widgets/*`:** these render **admin Dashboard panels** from
@@ -52,12 +52,12 @@ into these renderers (config-driven), not duplicated.
 - **Endpoint visibility / Auth / RBAC / CSRF / Rate-limit:** n/a — presentational
   only. (Data is gated upstream by TASK-480-03: session + `content:read`.)
 - **Validation:** renderers consume the **normalized** discriminated union from
-  480-01; they never parse raw input and reject nothing themselves (the schema
+  480-02; they never parse raw input and reject nothing themselves (the schema
   already did). They tolerate the documented edges (0 rows, `usedPercent: null`,
   `limitBytes: null`, missing `delta`) without throwing.
 - **Navigation safety:** `QuickActionsWidget` and `ContentQueryWidget` row links
   route **only** through `adminPaths.*` + `AdminLink`; action targets are an
-  **allow-listed** set resolved by 480-01 (no raw/user-supplied hrefs rendered as
+  **allow-listed** set resolved by 480-02 (no raw/user-supplied hrefs rendered as
   links — an unknown target renders disabled/as text, never a live arbitrary URL).
 - **Secret handling:** render only the redacted fields present in
   `DashboardWidgetData` (e.g. `RecentActivity` uses `author.name ?? author.email`
@@ -237,7 +237,7 @@ export function SiteHealthWidget({ data }: DashboardWidgetRendererProps<"siteHea
 ```tsx
 // renderers/QuickActionsWidget.tsx — config + data: { type:"quickActions";
 //   actions: { id: QuickActionId; label:string; target: AdminPathKey; icon?:string }[] }
-// `target` is an ALLOW-LISTED adminPaths key resolved in 480-01 — never a raw URL.
+// `target` is an ALLOW-LISTED adminPaths key resolved in 480-02 — never a raw URL.
 export function QuickActionsWidget({ data }: DashboardWidgetRendererProps<"quickActions">) {
   return (
     <div className="grid grid-cols-2 gap-2">
@@ -291,4 +291,3 @@ quick-action target → disabled button, content-query cell renders as text).
 - `_docs/_CHANGELOG/` — entry on closure linking `TASK-480` + `TASK-480-04-L02`;
   note the generalization of `SiteHealthCard`/`SecurityStatusCard`/`RecentEditsTable`
   into config-driven renderers.
-</content>

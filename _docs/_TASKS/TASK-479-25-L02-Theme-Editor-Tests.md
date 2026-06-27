@@ -25,14 +25,14 @@ persistence contract.
   pass unchanged.
 - **Owning module/service:** `tests/vitest/ui/themes.test.tsx` (+ optional
   `tests/vitest/ui/theme-leaf-components.test.tsx`), exercising
-  `core/admin/ui/themes/ThemesPage.tsx` / `ThemePreviewPanel.tsx` /
+  `core/admin/ui/themes/ThemesPage.tsx` / the NEW `ThemeLivePreview.tsx` /
   `ThemeTemplateCard.tsx` / `ThemeProfileCard.tsx`.
 - **Source-of-truth docs:**
   - Existing suites: `tests/vitest/ui/themes.test.tsx`,
     `tests/vitest/ui/theme-leaf-components.test.tsx`
   - Component under test + L01 mapping: `TASK-479-25-L01-Theme-Editor-Page-Restyle.md`
-  - Persistence contract: `core/services/adminThemeClient.ts`,
-    `core/services/adminThemes/tokenUtils.ts` (`toAdminThemeCssVariableMap`)
+  - Persistence contract: `core/admin/services/adminThemeClient.ts`,
+    `core/ui/theme/tokenCss.ts` (`toAdminThemeCssVariableMap` — NOT `tokenUtils.ts`)
   - `_docs/TESTING_STRATEGY.md` (Vitest = Bun-free admin/UI lane)
 - **Out of scope:** No runtime/E2E tests; no data-layer test changes
   (`adminThemeClient` coverage stays in
@@ -58,8 +58,8 @@ drawer mocks and asserts the CRUD + cache-bus + export flows. **Keep that suite'
 behavior assertions intact** (search → "No templates match your search.", New
 Template/Profile save payloads, activate, cache-bus refresh, empty/error states,
 auto-activate). Add restyle assertions; only adjust the card/PageHeader mocks if
-the restyle changes their prop API (e.g. `PageHeader` now takes an `icon`,
-`ThemePreviewPanel` now takes `tokens`).
+the restyle changes their prop API (e.g. `PageHeader` now takes an `icon`, and the
+NEW `ThemeLivePreview` takes `tokens`).
 
 ```tsx
 // tests/vitest/ui/themes.test.tsx  (additions — same happy-dom mount/flush harness)
@@ -85,15 +85,16 @@ test("ThemesPage renders restyled chrome (preset row + live preview)", async () 
   } finally { view.cleanup(); }
 });
 
-// 2) LIVE PREVIEW reflects the ACTIVE profile's tokens
-// Either (a) keep the ThemePreviewPanel mock and assert it received `tokens`
-// derived from the active template, or (b) render the REAL ThemePreviewPanel and
-// assert a --admin-* CSS var from the active template paints the preview root.
+// 2) LIVE PREVIEW reflects the ACTIVE profile's tokens (assert REAL reflection)
+// Either (a) capture the tokens the NEW ThemeLivePreview receives and assert a
+// concrete value from the active template, or (b) render the REAL ThemeLivePreview
+// and assert a --admin-* CSS var (e.g. --admin-base-bg) from the active template
+// paints the preview root via toAdminThemeCssVariableMap.
 test("ThemesPage live preview reflects the active profile tokens", async () => {
-  // option (a): a capturing mock
-  let received: unknown = null;
-  vi.doMock("../../../core/admin/ui/themes/ThemePreviewPanel", () => ({
-    ThemePreviewPanel: ({ tokens }: { tokens: unknown }) => {
+  // option (a): a capturing mock — assert the active template's value, not just truthy
+  let received: { base?: { bg?: string } } | null = null;
+  vi.doMock("../../../core/admin/ui/themes/ThemeLivePreview", () => ({
+    ThemeLivePreview: ({ tokens }: { tokens: { base?: { bg?: string } } }) => {
       received = tokens; return <div>preview</div>;
     },
   }));
@@ -101,9 +102,12 @@ test("ThemesPage live preview reflects the active profile tokens", async () => {
   const view = mount(<ThemesPage />);
   try {
     await flush();
-    expect(received).toBeTruthy();                 // active template tokens passed (e.g. base.bg "#101010")
-  } finally { view.cleanup(); vi.doUnmock("../../../core/admin/ui/themes/ThemePreviewPanel"); }
+    expect(received?.base?.bg).toBe("#101010"); // active template's resolved base.bg (hoisted mock)
+  } finally { view.cleanup(); vi.doUnmock("../../../core/admin/ui/themes/ThemeLivePreview"); }
 });
+// option (b) alternative: render REAL ThemeLivePreview, then
+//   const root = view.container.querySelector('[style*="--admin-base-bg"]') as HTMLElement;
+//   expect(root.style.getPropertyValue("--admin-base-bg")).toBe("#101010");
 ```
 
 ```tsx
@@ -120,7 +124,7 @@ test("ThemeTemplateCard renders the palette swatches", () => {
 **Data flow:** the happy-dom `mount` + `flush` harness already in
 `themes.test.tsx` renders `ThemesPage` against the hoisted `themesState` mock
 (templates/profiles, cache, subscribers). The added tests read
-`container.textContent` / a capturing `ThemePreviewPanel` mock. No real network;
+`container.textContent` / a capturing `ThemeLivePreview` mock. No real network;
 the mount hydrate resolves via the mocked `listAdmin*Cached`.
 
 **Error handling:** keep the existing empty-state and error-state tests verbatim
@@ -133,8 +137,9 @@ pass.
 
 - Restyled chrome: PageHeader title + "Live preview" + "Profiles" headings + a
   real template name render without throwing.
-- Live preview: the active profile's resolved tokens reach `ThemePreviewPanel`
-  (or a `--admin-*` var paints the real preview root).
+- Live preview: the active profile's resolved tokens reach `ThemeLivePreview`
+  (assert a concrete value, e.g. `base.bg === "#101010"`), or a `--admin-*` var
+  (e.g. `--admin-base-bg`) paints the real preview root.
 - Kept flows: the existing search / New Template / New Profile / activate /
   cache-bus / export / empty / error / auto-activate assertions all still pass.
 - (If cards moved visuals) leaf-component tests: active-profile affordance +

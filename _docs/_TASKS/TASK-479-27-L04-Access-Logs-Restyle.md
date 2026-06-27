@@ -15,11 +15,12 @@
 ## Overview
 
 Restyle the real Access Logs screen to match the prototype: a **stat row**
-(requests / blocked / unique IPs / failed logins), a restyled **FilterBar**, and
-a soft `rounded-2xl` **DataTable** with time / ip / location / method+path /
-status columns (method + status tone badges). Bind every visual to REAL access-log
-records; preserve filtering, cursor pagination, the export contract, the
-revoke-access action, the details drawer, and `adminPaths` navigation.
+(page-scoped loaded / blocked / unique IPs / failed logins), a restyled
+**FilterBar**, and a soft `rounded-2xl` **DataTable** with time / ip / device /
+method+path / status columns (method + status tone badges). Bind every visual to
+REAL access-log records (the `AccessLogItem` view model); preserve filtering, cursor
+pagination, the export contract, the revoke-access action, the details drawer, and
+`adminPaths` navigation.
 
 - **Goal:** A monitoring-grade, violet-accented Access Logs table with method and
   status-code tone badges and a real derived stat row — without changing data,
@@ -59,59 +60,74 @@ hand-built href); no new fields enter client cache, logs, or debug payloads.
 ## Implementation Pseudocode
 
 Concrete shapes — port the prototype's stat row + table but bind it to REAL data
-in `AccessLogsPage.tsx` (`items: AccessLogRecord[]`, `query: AccessLogQuery`,
-`pageState`, `isLoading`, `error`, export/revoke handlers, the details drawer
-state). **Keep all existing hooks, filters, cursor pagination, export, revoke, and
-the `useOptionalAdminRouter` wiring untouched**; only the stat row, FilterBar, and
-table visuals change.
+in `AccessLogsPage.tsx`. The page renders the VIEW-MODEL list `logs: AccessLogItem[]`
+(mapped from the raw `AccessLogRecord` by `mapAccessLog`); the table, drawer, and
+revoke all operate on `AccessLogItem`, so bind every cell to `AccessLogItem` fields
+— NOT the raw `AccessLogRecord`. Other real state: the search/filter inputs that
+build an `AccessLogQuery`, the cursor `pageState`, `isLoading`, `error`,
+export/revoke handlers, and the details-drawer state. **Keep all existing hooks,
+filters, cursor pagination, export, revoke, and the `useOptionalAdminRouter` wiring
+untouched**; only the stat row, FilterBar, and table visuals change.
 
 ### 1) Header + stat row (derived from REAL data — never fabricated)
 
 ```tsx
 // PORT layout from prototype pages/admin/AccessLogsPage.tsx:
 //   PageHeader -> StatCard row -> FilterBar -> DataTable -> Pagination.
-// Derive stats ONLY from real data. The list is cursor-paged, so a precise
-// "24h requests" total may not be available client-side. PREFER a real summary
-// field if the API returns one; otherwise OMIT the stat or label it from
-// resolveTruthfulCountCopy. NEVER fabricate "38,420 / +6.2%".
+// Derive stats ONLY from real data. The numeric HTTP code on AccessLogItem is
+// `statusCode` (the `status` field is the "success"|"failed" enum). `AccessLogItem`
+// carries NO 24h aggregate; `AccessLogListResponse` exposes only totalCount /
+// totalApprox (surfaced as the pagination `countCopy` via resolveTruthfulCountCopy).
+// So every stat below is PAGE-scoped — NEVER fabricate "38,420 / +6.2%".
 const stats = useMemo(() => ({
-  blocked:   items.filter((r) => r.status === 401 || r.status === 403).length,
-  failed:    items.filter((r) => r.path.includes("login") && r.status >= 400).length,
-  uniqueIps: new Set(items.map((r) => r.ip)).size,
-}), [items]);
+  blocked:   logs.filter((r) => r.statusCode === 401 || r.statusCode === 403).length,
+  failed:    logs.filter((r) => r.path.includes("login") && r.statusCode >= 400).length,
+  uniqueIps: new Set(logs.map((r) => r.ipAddress)).size,
+}), [logs]);
 <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-  {summary?.requests24h != null ? <StatCard label="Requests · 24h" value={fmt(summary.requests24h)} icon={<Activity />} /> : null}
-  <StatCard label="Blocked (page)"      value={String(stats.blocked)}   icon={<ShieldAlert />} />
-  <StatCard label="Unique IPs (page)"   value={String(stats.uniqueIps)} icon={<Globe />} />
-  <StatCard label="Failed logins (page)" value={String(stats.failed)}   icon={<KeyRound />} />
+  <StatCard label="Loaded (page)"         value={String(logs.length)}     icon={<Activity />} />
+  <StatCard label="Blocked (page)"        value={String(stats.blocked)}   icon={<ShieldAlert />} />
+  <StatCard label="Unique IPs (page)"     value={String(stats.uniqueIps)} icon={<Globe />} />
+  <StatCard label="Failed logins (page)"  value={String(stats.failed)}    icon={<KeyRound />} />
 </div>
-// Label page-scoped stats honestly ("(page)") when they are not a real 24h
-// aggregate. No spark/delta unless a real trend source exists.
+// Label page-scoped stats honestly ("(page)") — they are NOT a real 24h aggregate.
+// No spark/delta unless a real trend source exists.
 ```
 
 ### 2) DataTable columns (time / ip / location / request / status)
 
 ```tsx
 // Restyle AccessLogsTable.tsx (or render via the shared DataTable) using REAL
-// AccessLogRecord fields. Method + status tone badges port the prototype helpers:
+// AccessLogItem fields. Method + status tone badges port the prototype helpers.
+// NOTE: `statusCode` is the numeric HTTP code; `status` is the "success"|"failed"
+// enum. There is NO `location` field on AccessLogItem (the prototype's "Location"
+// is invented) — the real screen's location-equivalent column is Device / Browser
+// (`device.label` + `device.icon`), so port THAT, not a fabricated location.
 const methodVariant = (m: string) => m === "GET" ? "info" : m === "POST" ? "soft" : m === "DELETE" ? "destructive" : "warning";
 const statusTone   = (c: number) => c < 300 ? "text-success" : c < 400 ? "text-info" : c < 500 ? "text-warning" : "text-destructive";
-const columns: Column<AccessLogRecord>[] = [
-  { key: "time",     header: "Time",     render: (r) => <span className="text-sm text-muted-foreground">{formatTime(r.createdAt)}</span> },
-  { key: "ip",       header: "IP",       render: (r) => <span className="font-mono text-sm">{r.ip}</span> },
-  { key: "location", header: "Location", render: (r) => <span className="text-sm">{r.location ?? "Unknown"}</span> },
+const columns: Column<AccessLogItem>[] = [
+  { key: "time",     header: "Time",     render: (r) => (
+      <span className="text-sm text-muted-foreground">
+        <span className="block text-foreground">{r.timestamp.date}</span>{r.timestamp.time}
+      </span>) },
+  { key: "ip",       header: "IP",       render: (r) => <span className="font-mono text-sm">{r.ipAddress}</span> },
+  { key: "device",   header: "Device / Browser", render: (r) => {
+      const Icon = r.device.icon;
+      return <span className="flex items-center gap-2 text-sm text-muted-foreground"><Icon className="size-4" />{r.device.label}</span>;
+    } },
   { key: "request",  header: "Request",  render: (r) => (
       <span className="flex items-center gap-2">
         <Badge variant={methodVariant(r.method)} className="font-mono">{r.method}</Badge>
         <span className="font-mono text-sm text-muted-foreground">{r.path}</span>
       </span>) },
   { key: "status",   header: "Status", align: "right", render: (r) =>
-      <span className={`font-mono text-sm font-semibold tabular-nums ${statusTone(r.status)}`}>{r.status}</span> },
+      <span className={`font-mono text-sm font-semibold tabular-nums ${statusTone(r.statusCode)}`}>{r.statusCode}</span> },
 ];
 // Row click keeps the existing AccessLogDetailsDrawer open behavior; the revoke
 // action inside the drawer stays on revokeAccessFromLog + ConfirmActionDialog.
-// Confirm real field names (createdAt/location/method/path/status/ip) against
-// AccessLogRecord; use the real fields, do not invent.
+// Use the real AccessLogItem fields (timestamp.date/time, ipAddress, device.label/
+// icon, method, path, statusCode, status, user.name/detail) — there is NO
+// createdAt/location/ip/(numeric)status on the view model; do not invent.
 ```
 
 ### 3) FilterBar + pagination (preserve)
@@ -123,10 +139,11 @@ const columns: Column<AccessLogRecord>[] = [
 // existing cursor state + resolveTruthfulCountCopy total.
 ```
 
-**Data flow:** unchanged. `listAccessLogs(query)` → `items` + `nextCursor` →
-table; FilterBar mutates `query` → reload; stat row + method/status tone are
-render-time derivations of `items` (no new fetch, no setState-in-effect); revoke
-stays behind the confirm dialog; navigation stays on `resolveAdminHref`.
+**Data flow:** unchanged. `listAccessLogs(query)` → raw records → `mapAccessLog` →
+`logs: AccessLogItem[]` + `nextCursor` → table; FilterBar mutates the query →
+reload; stat row + method/status tone are render-time derivations of `logs` (no new
+fetch, no setState-in-effect); revoke stays behind the confirm dialog; navigation
+stays on `resolveAdminHref`.
 
 **Error handling:** unchanged — keep the existing error surface, loading/empty
 states, the revoke confirm, and the truthful-count copy. The restyle must not
@@ -138,9 +155,11 @@ state machine is untouched; no mount-force refetch added; nav stays on
 `resolveAdminHref`/`AdminLink` — do not hand-build any href.
 
 **Regression-test shape (delivered in L05):** table renders one row per real record
-with time/ip/location/method+path/status and method+status tone badges; stat row
-reflects derived page-scoped counts (no fabricated 24h totals); row click opens the
-details drawer; revoke stays behind confirm; pagination drives cursor state.
+with time (`timestamp.date/time`) / ip (`ipAddress`) / device (`device.label`) /
+method+path / status (`statusCode`) and method + status-tone badges (no invented
+Location column); stat row reflects derived page-scoped counts (no fabricated 24h
+totals); row click opens the details drawer; revoke stays behind confirm; pagination
+drives cursor state.
 
 ---
 
@@ -150,9 +169,10 @@ details drawer; revoke stays behind confirm; pagination drives cursor state.
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/admin/accessLogsClient.test.ts`
 - The new restyle suite from L05 (`tests/vitest/ui-integration/admin-screens-restyle.test.tsx`).
-- Manual: light + dark toggle on `/admin/security/access-logs`; confirm filtering,
-  the stat row, table rows, method/status badges, cursor pagination, the details
-  drawer, revoke, and Export all behave as before.
+- Manual: light + dark toggle on `/admin/access-logs` (the real route is
+  `/access-logs`; `security` is only the source folder, not a URL segment); confirm
+  filtering, the stat row, table rows, method/status badges, cursor pagination, the
+  details drawer, revoke, and Export all behave as before.
 
 ---
 

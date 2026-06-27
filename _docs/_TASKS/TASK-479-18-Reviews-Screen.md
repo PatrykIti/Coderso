@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Reviews
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Task:** TASK-479
 **Started:** `<set when work begins>`
@@ -22,14 +22,17 @@ moderation surface while the real reviews data, moderation actions, cache
 contract, RBAC, and `adminPaths` routing stay exactly as they are.
 
 - **Goal:** Make the real Reviews screen look like the prototype — a derived
-  **stat row** (average rating + pending/this-period counts), an **underline
-  Tabs** status filter, and soft **review cards** (avatar, star rating, status
-  badge, body text, Approve/Reject actions) — without changing data flow,
-  moderation behavior, status set, or endpoints.
+  **stat row** (average rating + pending/this-period counts), a **`line`-variant
+  Tabs** status filter (the shared Tabs `line` variant — `components/ui/tabs.tsx`
+  already exposes `TabsList variant="line"`; there is NO `underline` variant), and
+  soft **review cards** (avatar, star rating, status badge, body text,
+  Approve/Reject actions) — without changing data flow, moderation behavior,
+  status set, or endpoints.
 - **Owning module/service:** `core/admin/ui/reviews/**`
   (`ReviewsModerationPage.tsx`, `ReviewTable.tsx`, `hooks/useReviews.ts`),
   reusing `core/admin/ui/shared/PageHeader.tsx`, the shared pattern components
-  delivered by TASK-479-06 (StatCard / StatusBadge / Tabs), and
+  from TASK-479-06-L02 (`StatCard`, the shared `StatusBadge` — which must map all
+  four review statuses **including `spam`** per D3), the Tabs `line` variant, and
   `core/admin/components/ui/{card,badge,button,avatar,tabs,input,textarea,alert}.tsx`.
 - **Source-of-truth docs:** `_docs/DESIGN_TOKENS.md`,
   `_docs/_PROTOTYPE/README.md`, `_docs/_PROTOTYPE/src/styles/theme.css`,

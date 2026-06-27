@@ -48,8 +48,10 @@ no data/cache contract moved.
 No endpoint or permission model changes (visual restyle only; preserves existing
 routes, RBAC, cache, and adminPaths). The tests assert real-data rendering and the
 unchanged `AdminShell activeHref`/cache wiring; they do not touch auth, RBAC, or
-network behavior. The New-booking action is asserted to switch tabs (no hand-built
-href appears in the DOM).
+network behavior. The New-booking action is asserted to switch the **controlled**
+active tab to Reservations (observed via the Tabs mock's `data-active-tab`); it is
+a `<button>` that calls `setActiveTab`, not a link, so there is no navigation/href
+to assert.
 
 ---
 
@@ -60,13 +62,16 @@ href appears in the DOM).
 import { groupReservationsByWeek, resourceTone } from "../../../core/admin/ui/booking/bookingHelpers";
 
 test("groupReservationsByWeek buckets real reservations by weekday, sorted, tone stable", () => {
-  const weekStart = new Date("2026-06-22T00:00:00.000Z"); // Monday
+  const weekStart = new Date("2026-06-22T00:00:00.000Z"); // Monday (UTC)
   const order = ["resource-1", "resource-2"];
+  // Each reservation carries its own `timezone` (here "UTC"); bucketing resolves
+  // the calendar day in that timezone (mirrors formatDateTime), so a UTC weekStart
+  // + UTC reservations match deterministically regardless of the test host's TZ.
   const cols = groupReservationsByWeek(
     [
-      { id: "r2", resourceId: "resource-1", customerName: "Bob", startsAt: "2026-06-22T11:00:00.000Z", endsAt: "..." } as never,
-      { id: "r1", resourceId: "resource-1", customerName: "Ann", startsAt: "2026-06-22T09:00:00.000Z", endsAt: "..." } as never,
-      { id: "rx", resourceId: "resource-2", customerName: "Bad",  startsAt: "not-a-date",              endsAt: "..." } as never,
+      { id: "r2", resourceId: "resource-1", customerName: "Bob", startsAt: "2026-06-22T11:00:00.000Z", endsAt: "...", timezone: "UTC" } as never,
+      { id: "r1", resourceId: "resource-1", customerName: "Ann", startsAt: "2026-06-22T09:00:00.000Z", endsAt: "...", timezone: "UTC" } as never,
+      { id: "rx", resourceId: "resource-2", customerName: "Bad",  startsAt: "not-a-date",              endsAt: "...", timezone: "UTC" } as never,
     ],
     weekStart,
     order,
@@ -96,12 +101,20 @@ expect(view.container.textContent).toContain("New booking");      // action pres
 expect(view.container.textContent).toContain("Room A");           // resources rail (real resource)
 expect(view.container.textContent).toContain("Ada Lovelace");     // calendar block (real reservation)
 
-// New-booking action switches tab (no hand-built href in DOM):
-expect(view.container.querySelector('a[href="/booking"]')).toBeNull();
+// New-booking switches the CONTROLLED active tab. The existing
+// `@/components/ui/tabs` mock renders every TabsContent unconditionally, so a
+// post-click `reservations:1` check is VACUOUS (it is always present), and a
+// `a[href="/booking"]` null check is vacuous too (New-booking is a <button>, not
+// a link). Instead extend that mock to surface the controlled `value` as
+// `data-active-tab` — keeping it rendering all children so the existing flow
+// tests are unaffected — and assert the value flips resources → reservations:
+//   Tabs: ({ value, children }) => <div data-active-tab={value}>{children}</div>
+const activeTab = () =>
+  view.container.querySelector("[data-active-tab]")?.getAttribute("data-active-tab");
+expect(activeTab()).toBe("resources");            // real default landing tab
 clickByText(view.container, "New booking");
 await flush();
-// reservation form/tab content still rendered (existing mock emits reservations:N):
-expect(view.container.textContent).toContain("reservations:1");
+expect(activeTab()).toBe("reservations");          // switch observed via controlled value
 ```
 
 > NOTE: the existing `booking-page.test.tsx` mocks `@/ui/shared/PageHeader`,
@@ -110,7 +123,15 @@ expect(view.container.textContent).toContain("reservations:1");
 > BookingPage-owned JSX (not inside a fully-stubbed child) so the real-data
 > assertions above resolve. Keep the tab/PageHeader mocks but ensure the new
 > calendar/rail JSX lives in `BookingPage.tsx` (or pass the derived `weekColumns`/
-> `resources` into a thinly-mocked child whose stub echoes the names).
+> `resources` into a thinly-mocked child whose stub echoes the names). The new
+> calendar grid + resources rail are `BookingPage`-owned JSX inside the (mocked)
+> `TabsContent`, so `"Ada Lovelace"`/`"Room A"` resolve from BookingPage — not the
+> stubbed `BookingReservationsTab`/`BookingResourcesTab`, whose stubs only echo
+> `reservations:N`/`resources:N`. **Extend the `@/components/ui/tabs` `Tabs` mock**
+> to pass the controlled `value` through as `data-active-tab`
+> (`Tabs: ({ value, children }) => <div data-active-tab={value}>{children}</div>`):
+> it must keep rendering ALL children, so the existing flow tests that drive
+> buttons across every tab stay green — this is additive, not a rewrite.
 
 **Data flow:** the existing `vi.hoisted` `bookingPageState` seeds
 `getCachedBooking*` + `list*Cached` with one resource ("Room A") and one
@@ -129,7 +150,9 @@ labels + real names rather than exact counts that depend on `new Date()`.
 - Helper unit: weekday bucketing, time sort, stable tone, malformed-date skip.
 - Render: stat-row labels present, no fabricated `Utilization`, Beta + New-booking
   chrome present, real resource name in rail, real customer name in calendar grid.
-- Tab switch: New-booking switches to Reservations; no hand-built href in DOM.
+- Tab switch: New-booking flips the controlled active tab `resources` →
+  `reservations` (observed via the Tabs mock's `data-active-tab`; the existing
+  all-tabs-rendered flow tests stay unchanged).
 - Existing flow + validation tests in `booking-page.test.tsx` remain unchanged and
   green.
 

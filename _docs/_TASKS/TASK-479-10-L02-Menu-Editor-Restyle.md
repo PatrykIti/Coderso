@@ -17,8 +17,11 @@ Restyle the two menu editing surfaces to the prototype look:
 1. **Menu structure editor** (`MenuEditorPage.tsx`) — the nested, draggable item
    list + item-settings inspector. Port the prototype's rounded item rows
    (grip handle, nested `CornerDownRight` indent, mono URL line, active
-   highlight), the soft inspector rows (`Label` / `URL` / `Open in new tab`
-   switch / `Visibility` select), and the dashed "Add menu item" affordance.
+   highlight), the soft inspector rows wrapping the EXISTING `MenuItemForm`
+   fields (`Navigation Label` / `Link Type` / `Page`|`URL` / `Parent` /
+   `Visibility` / `Badge` / `Description` / `Icon`), and the dashed "Add menu
+   item" affordance. (The prototype's "Open in new tab" switch is dropped — the
+   real menu item schema has no such field; see Out of scope.)
 2. **Menu design editor** (`MenuDesignEditorPage.tsx`) — the shared `PageEditor`
    host bound to a menu. This file is mostly host wiring; the restyle here is
    limited to the small bits of chrome it owns directly (the settings sheet form,
@@ -49,7 +52,10 @@ preserved exactly.
     `replaceMenuItems` / `updateMenu` services in `menusClient.ts`.
 - **Out of scope:** No change to drag/order math (`menuDnD.ts`, `MenuDropIntent`,
   `flattenMenuItems`/`buildDisplayTree`), to the menu item schema /
-  `normalizeMenuItemSettings`, to `replaceMenuItems`/`updateMenu`, to publish or
+  `normalizeMenuItemSettings` (which exposes only `visibility` /`badge` /
+  `description` /`icon` on `MenuItemSettings`, plus `label`/`href`/`pageId`/
+  `parentId` on `MenuItemRecord` — there is **no** `openInNewTab`/link-target
+  field; do not introduce one), to `replaceMenuItems`/`updateMenu`, to publish or
   cache keys, or to the shared `PageEditor` internals. Do not alter the
   `PageEditorHost` object returned by `MenuDesignEditorPage` (only restyle the
   JSX it renders: settings form, canvas-chrome fallback, copy).
@@ -105,12 +111,20 @@ function InspectorRow({ label, children }: { label: string; children: React.Reac
     </div>
   );
 }
-// Wrap the EXISTING fields (controlled inputs bound to MenuItemDraft) in InspectorRow:
-//   Label  -> <Input value={draft.label} … />
-//   URL    -> <Input value={draft.href} className="font-mono text-xs" … />
-//   Open in new tab -> bordered rounded-xl row with <Switch checked={draft.openInNewTab} … />
-//   Visibility -> <Select value={draft.visibility} …> (Everyone/Members/Guests/Hidden)
-// All onChange handlers, validation, and dirty tracking stay as-is.
+// Wrap the EXISTING `MenuItemForm` fields (controlled inputs bound to the
+// `MenuItemFormValue` the drawer derives from `MenuItemDraft`) in InspectorRow —
+// re-skin only; bind to REAL fields, invent none:
+//   Navigation Label -> <Input value={value.label} … />
+//   Link Type        -> existing Page|URL segmented toggle (value.linkType)
+//   Page / URL       -> <Select value={value.pageId} …> / <Input value={value.href} className="font-mono text-xs" … />
+//   Parent Item      -> <Select value={value.parentId ?? "root"} …>
+//   Visibility       -> <Select value={value.visibility} …> with the REAL enum
+//                       (`menuVisibilityOptions` = all | logged_in | logged_out →
+//                        "Show to everyone" / "Only logged-in users" / "Only logged-out users")
+//   Badge Label / Badge Tone / Description / Icon Name -> existing Inputs/Selects
+// There is NO "open in new tab"/link-target field on the menu item schema
+// (`MenuItemRecord` / `MenuItemSettings`) — do NOT add a Switch for one (forbidden
+// schema change). All onChange handlers, validation, and dirty tracking stay as-is.
 ```
 
 ### C. Dashed add-item affordance + page chrome
@@ -152,8 +166,10 @@ Do not add mount-force refetch loops; do not overwrite dirty drafts on
 background revalidation.
 
 **Regression-test shape:** see TASK-479-10-L03 — assert a nested item renders the
-indent affordance, the inspector renders Label/URL/Switch/Visibility bound to the
-draft, the add-item button calls the real add handler, dirty-state save still
+indent affordance, the inspector renders Navigation Label / URL / Visibility (real
+`all`/`logged_in`/`logged_out` enum) plus the other existing `MenuItemForm` fields
+bound to the form value (no fabricated open-in-new-tab Switch), the add-item button
+calls the real add handler, dirty-state save still
 fires `replaceMenuItems`/`updateMenu`, and the design page still mounts the
 shared `PageEditor` with the menu host.
 

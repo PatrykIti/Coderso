@@ -170,8 +170,10 @@ never a hand-built `<a href>`. Keep the existing `/admin/settings/security/...`
 targets.
 
 **Regression-test shape (see L07):** render `<SecuritySettingsPage />`; assert the
-Authentication/Login-protection sections + three quick-link cards (resolved
-`/admin/settings/security/...` AdminLinks, no raw anchors). Render
+Authentication/Login-protection sections + three quick-link cards whose resolved
+`/admin/settings/security/...` hrefs are present in the markup (AdminLink-rendered;
+do NOT assert "no raw anchor" — `AdminLink` renders an `<a>`, so it is
+unsatisfiable). Render
 `<IpAllowlistPage />` with mocked `useIpAllowlist`; assert the warning banner, the
 add form wired to `addEntry`, and a row per entry with Remove → `removeEntry`.
 Render `<SessionsPage />` with mocked `listSessions`; assert the current session has

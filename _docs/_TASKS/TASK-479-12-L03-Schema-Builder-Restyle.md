@@ -12,24 +12,30 @@
 
 ## Overview
 
-Restyle the schema builder to the prototype's floating-panel canvas: a left
-**field-type palette** rail, a center **canvas of field nodes** connected
-vertically with an "Add field" affordance, and a right **field inspector**
-(validation/settings). The real schema model, field cards, content-type sidebar
-navigation, and live JSON preview are preserved — only the layout/chrome changes.
+Restyle the schema builder to a **three-zone editor layout** (NOT the floating
+`CanvasEditor`): a left **field-type palette** rail, a center **canvas of field
+nodes** connected vertically with an "Add field" affordance, and a right **field
+inspector** (validation/settings). The real schema model, field cards,
+content-type sidebar navigation, and live JSON preview are preserved — only the
+layout/chrome changes.
 
 - **Goal:** Move `SchemaBuilderPage.tsx` from the current sidebar + stacked
-  `FieldCard` list to the prototype's three-zone editor frame (rail / canvas /
-  inspector) using the soft/violet language, without changing how fields map to
-  the schema or how the preview is computed.
+  `FieldCard` list to a three-zone layout (palette rail / field-node canvas /
+  inspector) using the soft/violet language, **composed from the existing
+  `SplitShell` (right-panel preview) + the shared `SectionCard` from
+  TASK-479-06-L02** — NOT the prototype's `EditorPreviewFrame` (06-L02 lists it as
+  out of scope / "prototype-only chrome", so it will not exist in core). Do not
+  change how fields map to the schema or how the preview is computed.
 - **Owning module/service:** `core/admin/ui/content-types/SchemaBuilderPage.tsx`
   (with `FieldCard.tsx`, `ContentTypeSidebar.tsx`, `SchemaPreviewPanel.tsx`,
   `schemaMapping.ts`), backed by `core/admin/services/contentTypesClient.ts`.
 - **Source-of-truth docs:** `_docs/CONTENT_TYPES_SPEC.md`,
   `_docs/DESIGN_TOKENS.md`; prototype source
-  `_docs/_PROTOTYPE/src/pages/advanced/SchemaBuilderPreview.tsx` plus
-  `_docs/_PROTOTYPE/src/components/patterns/EditorPreviewFrame.tsx`
-  (`EditorPreviewFrame`, `EditorRailGroup`, `EditorRailItem`) and
+  `_docs/_PROTOTYPE/src/pages/advanced/SchemaBuilderPreview.tsx` (visual reference
+  only — its `EditorPreviewFrame`/`EditorRailGroup`/`EditorRailItem` are
+  prototype-only and are **not** ported). In core, build the three zones from the
+  real `SplitShell` (`@/ui/layouts/SplitShell`, already used by this page) plus the
+  shared `SectionCard` (TASK-479-06-L02) and
   `_docs/_PROTOTYPE/src/components/ui/{card,badge,input,select,switch,button}.tsx`.
 - **Out of scope:** No change to `buildSchemaFromFields`/`fieldsFromSchema`, the
   `ContentSchema` shape, the `SplitShell` right-panel preview contract, or the
@@ -52,11 +58,14 @@ resolution (`resolveContentTypeIdFromPath`), the cached-list/detail effects,
 `fields`/`schema`/`list` state, `buildSchemaFromFields`, and the
 `ContentTypeSidebar` `navigate('/content-types/:id/schema')` wiring. Replace JSX.
 
-Port from prototype `SchemaBuilderPreview.tsx` (EditorPreviewFrame: left rail =
-field types, canvas = `FieldNode` chain, right = field inspector).
+Compose the three zones (field-types palette / field-node canvas / field
+inspector) from `SplitShell` + the shared `SectionCard` (06-L02). The prototype's
+`SchemaBuilderPreview.tsx` is the visual reference; its `EditorPreviewFrame` /
+`EditorRailGroup` / `EditorRailItem` are NOT ported (prototype-only).
 
 ```tsx
 // SchemaBuilderPage.tsx — render layer over the SAME fields/schema state.
+import { SectionCard } from "@/ui/shared/SectionCard"; // shared primitive from TASK-479-06-L02
 const [selectedFieldId, setSelectedFieldId] = useState<string | null>(() => fields[0]?.id ?? null);
 const selectedField = fields.find(f => f.id === selectedFieldId) ?? fields[0] ?? null;
 
@@ -72,25 +81,35 @@ return (
     breadcrumbs={["Content", "Schema Builder", contentType?.name ?? "Content Type"]}
     topbarActions={/* keep Discard + (disabled) Save schema */}>
     <div className="flex flex-col gap-6">
-      <PageHeader title={contentType?.name ?? "Schema Builder"} description="Compose your content model visually." actions={…} />
+      <PageHeader title={contentType?.name ?? "Schema Builder"} description="Compose your content model visually."
+        actions={<Badge variant="outline">{fields.length} fields</Badge>} />
       {/* keep error Alert */}
-      <EditorPreviewFrame
-        title="Schema builder"
-        toolbar={<Badge variant="outline">{fields.length} fields</Badge>}
-        device={false}
-        left={<EditorRailGroup label="Field types">
-          {FIELD_TYPES.map(ft => <EditorRailItem key={ft.type} icon={ft.icon}>{ft.label}</EditorRailItem>)}
-        </EditorRailGroup>}
-        canvas={<div className="mx-auto flex max-w-xl flex-col items-stretch gap-3">
-          {fields.map((field, i) => <FieldNode key={field.id}
-            icon={iconForType(field.type)} name={field.label}
-            type={`${typeLabel(field.type)}${field.required ? " · required" : ""}`}
-            selected={field.id === selectedField?.id}
-            onSelect={() => setSelectedFieldId(field.id)} />)}
-          {/* keep the disabled "Add new field" affordance until a real schema-save is wired (out of scope) */}
-        </div>}
-        right={<FieldInspector field={selectedField} />}  // ports InspectorRow/ToggleRow markup, bound to selectedField (read-only/preview parity with current page)
-      />
+      {/* three zones built from SectionCard inside SplitShell — NOT EditorPreviewFrame (not ported) */}
+      <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)_300px]">
+        <SectionCard title="Field types">
+          <div className="flex flex-col gap-1">
+            {FIELD_TYPES.map(ft => (
+              <button key={ft.type} type="button"
+                className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm hover:bg-primary-soft">
+                {ft.icon}{ft.label}
+              </button>
+            ))}
+          </div>
+        </SectionCard>
+        <SectionCard title="Schema builder">
+          <div className="mx-auto flex max-w-xl flex-col items-stretch gap-3">
+            {fields.map((field) => <FieldNode key={field.id}
+              icon={iconForType(field.type)} name={field.label}
+              type={`${typeLabel(field.type)}${field.required ? " · required" : ""}`}
+              selected={field.id === selectedField?.id}
+              onSelect={() => setSelectedFieldId(field.id)} />)}
+            {/* keep the disabled "Add new field" affordance until a real schema-save is wired (out of scope) */}
+          </div>
+        </SectionCard>
+        <SectionCard title="Field settings">
+          <FieldInspector field={selectedField} /> {/* InspectorRow/ToggleRow markup, bound to selectedField (read-only/preview parity with current page) */}
+        </SectionCard>
+      </div>
     </div>
   </SplitShell>
 );
@@ -115,10 +134,15 @@ save/PATCH here; field editing with persistence lives in the Content Type Editor
 **Routing:** `ContentTypeSidebar.onSelect` keeps `navigate('/content-types/:id/schema')`;
 any new link uses `AdminLink` + `resolveAdminRoutePath`. No hand-built `<a href>`.
 
-**Regression-test shape (see L05):** SSR render asserts the rail "Field types"
-group with the 8 type labels, the canvas field nodes (one per real field, label +
-type text, required marker), the field count Badge, the inspector header, and that
-`SchemaPreviewPanel` still receives the schema.
+**Regression-test shape (see L05):** an SSR `renderAdminUi` render asserts the
+always-visible chrome — the "Field types" `SectionCard` with the 8 type labels,
+the field-count Badge, the "Field settings" inspector header, and the
+`SchemaPreviewPanel` zone — because `renderAdminUi` is SSR-only and this page
+maps an **empty** field set without seeded cache (so the canvas renders no
+nodes). Assert the per-field canvas nodes (one per real field, label + type text,
+required marker) in a **seeded** test using the repo idiom (`// @vitest-environment
+happy-dom` + `createRoot` + a `vi.mock` of `contentTypesClient`, like the existing
+`tests/vitest/ui/schema-builder.test.tsx`).
 
 ---
 

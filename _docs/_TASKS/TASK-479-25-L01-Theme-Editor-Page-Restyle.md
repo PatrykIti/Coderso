@@ -21,7 +21,7 @@ re-implement per-token color pickers — those land in `ThemeTemplateDrawer` via
 TASK-479-05-L05, and the dark-mode toggle in TASK-479-05-L06.
 
 - **Goal:** `core/admin/ui/themes/ThemesPage.tsx` (plus `ThemeTemplateCard`,
-  `ThemeProfileCard`, `ThemePreviewPanel`) visually match
+  `ThemeProfileCard`, and a NEW `ThemeLivePreview`) visually match
   `_docs/_PROTOTYPE/src/pages/themes/ThemesPage.tsx` while keeping the real
   template/profile CRUD, cache hydration + background revalidation, RBAC, and
   canonical `activeHref`/breadcrumbs wiring.
@@ -29,23 +29,28 @@ TASK-479-05-L05, and the dark-mode toggle in TASK-479-05-L06.
   `core/admin/ui/themes/ThemesPage.tsx`,
   `core/admin/ui/themes/ThemeTemplateCard.tsx`,
   `core/admin/ui/themes/ThemeProfileCard.tsx`,
-  `core/admin/ui/themes/ThemePreviewPanel.tsx`.
+  a NEW `core/admin/ui/themes/ThemeLivePreview.tsx` (mini-admin; the existing
+  `ThemePreviewPanel.tsx` is only rendered by the unrouted `ThemeEditorPage` and
+  is NOT touched here).
 - **Source-of-truth docs:**
   - Prototype page: `_docs/_PROTOTYPE/src/pages/themes/ThemesPage.tsx`
   - Prototype patterns: `_docs/_PROTOTYPE/src/components/patterns/{PageHeader,SectionCard,SettingsSection}.tsx`, `_docs/_PROTOTYPE/src/components/ui/{card,badge,button}.tsx`
   - Shared shell/patterns: delivered by TASK-479-06 (consume `AdminShell`,
     `PageHeader`, `SectionCard`, restyled `Card`/`Badge`/`Button`; do not redefine)
-  - Persistence + tokens: `core/services/adminThemeClient.ts`,
+  - Persistence + tokens: `core/admin/services/adminThemeClient.ts`,
     `core/services/adminThemes/tokenTypes.ts` (`DEFAULT_ADMIN_THEME_TOKENS`),
-    `core/services/adminThemes/tokenUtils.ts` (`mergeAdminThemeTokens`,
-    `toAdminThemeCssVariableMap`)
+    `core/services/adminThemes/tokenUtils.ts` (`mergeAdminThemeTokens`),
+    `core/ui/theme/tokenCss.ts` (`toAdminThemeCssVariableMap` — emits only
+    `--admin-*`/`--font-*`/`--text-*`; imported relatively as
+    `../../../ui/theme/tokenCss`, same as `ThemeTemplateDrawer.tsx`)
   - Tokens: `_docs/_PROTOTYPE/src/styles/theme.css`, `_docs/DESIGN_TOKENS.md`
 - **Out of scope:** No `adminThemeClient` / token-contract / route changes; no new
   endpoints; per-token pickers (TASK-479-05-L05) and dark-mode toggle
   (TASK-479-05-L06) are NOT built here; do not replace template/profile CRUD with
   the prototype's single "Save theme" mock or fabricate inline accent/radius/font/
   density state; `ThemeTemplateDrawer`/`ThemeProfileDrawer`/`ThemeExportDialog`
-  internals stay as-is.
+  internals stay as-is; `ThemePreviewPanel.tsx` (unrouted `ThemeEditorPage` only)
+  is NOT repurposed — the live preview is the NEW `ThemeLivePreview.tsx`.
 
 ---
 
@@ -85,7 +90,7 @@ routes, RBAC, cache, and adminPaths). Concretely:
 |-------------------|-------------|----------|
 | `PageHeader` (icon `Palette`, "Admin UI theme", "Customize the look of your admin", `Save theme` action) | `ThemesPage` `PageHeader` | Restyle to prototype look + add `Palette` icon; KEEP real actions (`Export JSON`, `New Template`) — do NOT swap to single "Save theme" mock |
 | Preset row (5 swatch cards, active = `ring-2 ring-ring` + "Active" badge, hover lift) | `ThemeTemplateCard` / `ThemeProfileCard` grids | Port preset-card visual onto the real cards (swatch row from `template.palette`, soft `rounded-2xl` card, hover `-translate-y-0.5`, active ring/badge on profiles) |
-| Live preview mini-admin (sidebar + topbar + stat cards + button, painted by theme vars) | `ThemePreviewPanel` (restyle from static typography demo → mini-admin) | Port the mini-admin markup; paint it LIVE from the **active profile's** tokens via `toAdminThemeCssVariableMap` |
+| Live preview mini-admin (sidebar + topbar + stat cards + button, painted by theme vars) | NEW `ThemeLivePreview` (dedicated mini-admin; `ThemePreviewPanel` is unrouted, left alone) | Build the mini-admin from the drawer's working markup (`ThemeTemplateDrawer.tsx` lines 190-208), consuming `--admin-*` via arbitrary-value utilities (`bg-[var(--admin-sidebar-bg)]`, `text-[var(--admin-topbar-text)]`, `bg-[var(--admin-card-bg)]`, …) — NOT shadcn `bg-background`/`bg-card`/`border-border`; paint LIVE from the **active profile's** tokens via `toAdminThemeCssVariableMap` |
 | Controls column — Accent / Theme options / Appearance (`Select`/`Switch`) | `ThemeTemplateDrawer` per-token pickers (TASK-479-05-L05) + dark toggle (TASK-479-05-L06) | Out of scope here; the right column keeps the real search/filter + Profiles section wrapped in `SectionCard`. Do NOT inline-fabricate accent/radius/font/density widgets |
 | Active swatch / "Active" badge | `profile.isActive` | Drive ring/badge from real `isActive`, not a prototype constant |
 
@@ -130,14 +135,24 @@ return (
           description="A snapshot of how your admin will look."
         >
           {/* paints from the ACTIVE profile's resolved tokens (see below) */}
-          <ThemePreviewPanel tokens={activePreviewTokens} />
+          <ThemeLivePreview tokens={activePreviewTokens} />
         </SectionCard>
 
         {/* Right column keeps the REAL controls: search/filter + Profiles */}
         <div className="flex flex-col gap-6">
           <SectionCard title="Templates" description="Reusable token sets.">
-            <ThemeSearchRow value={templateQuery} onChange={setTemplateQuery}
-              count={templateCards.length} filtered={filteredTemplateCards.length} />
+            {/* EXISTING inline search markup (Input + Search icon + count line);
+                ThemesPage has NO `ThemeSearchRow` component — keep it inline */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input className="pl-9" placeholder="Search templates..."
+                value={templateQuery} onChange={(e) => setTemplateQuery(e.target.value)} />
+            </div>
+            {templateQuery.trim() ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {filteredTemplateCards.length} of {templateCards.length} templates
+              </p>
+            ) : null}
           </SectionCard>
           {activeProfile ? (
             <p className="text-xs text-muted-foreground">
@@ -203,32 +218,65 @@ const activePreviewTokens = useMemo(() => {
     templates.find((t) => t.id === activeProfile?.templateId) ?? null;
   return mergeAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS, activeTemplate?.tokens ?? null);
 }, [templates, activeProfile]);
-// ThemePreviewPanel applies style={toAdminThemeCssVariableMap(tokens)} on its root.
+// ThemeLivePreview applies style={toAdminThemeCssVariableMap(tokens)} on its root
+// (import: `../../../ui/theme/tokenCss`, the same helper ThemeTemplateDrawer uses).
 ```
 
-### `ThemePreviewPanel.tsx` — restyle into the live mini-admin
+### `ThemeLivePreview.tsx` — NEW live mini-admin (leave `ThemePreviewPanel.tsx` alone)
 
 ```tsx
-// core/admin/ui/themes/ThemePreviewPanel.tsx
-// Replace the static typography/buttons demo with the prototype mini-admin
-// (sidebar + topbar + stat cards + button), painted by the passed tokens.
-export function ThemePreviewPanel({ tokens }: { tokens: AdminThemeTokens }) {
-  const style = toAdminThemeCssVariableMap(tokens); // existing helper
+// core/admin/ui/themes/ThemeLivePreview.tsx  (NEW component)
+// A dedicated live mini-admin for ThemesPage, modeled on the WORKING mini-admin in
+// ThemeTemplateDrawer.tsx (lines 190-208). It consumes the --admin-* vars that
+// toAdminThemeCssVariableMap actually emits via arbitrary-value utilities
+// (bg-[var(--admin-...)]) — NOT shadcn bg-background/bg-card/border-border, which
+// that map never sets. Do NOT reuse/restyle ThemePreviewPanel (unrouted-only).
+import { toAdminThemeCssVariableMap } from "../../../ui/theme/tokenCss";
+import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../services/adminThemes/tokenTypes";
+import type { AdminThemeTokens } from "../../../services/adminThemes/tokenTypes";
+
+export function ThemeLivePreview({
+  tokens = DEFAULT_ADMIN_THEME_TOKENS,
+}: {
+  tokens?: AdminThemeTokens;
+}) {
+  const style = toAdminThemeCssVariableMap(tokens); // Record<string,string> of --admin-*/--font-*/--text-*, applied as style={style} like the drawer
   return (
-    <div className="overflow-hidden rounded-xl border border-border bg-background" style={style}>
+    <div
+      style={style}
+      className="overflow-hidden rounded-xl border border-[var(--admin-base-border)] bg-[var(--admin-base-bg)] text-[var(--admin-base-text)]"
+    >
       <div className="flex">
-        <div className="flex w-28 flex-col gap-2 border-r border-border bg-muted/40 p-3">{/* mini sidebar */}</div>
+        {/* mini sidebar */}
+        <div className="w-28 shrink-0 space-y-3 bg-[var(--admin-sidebar-bg)] px-3 py-4 text-[var(--admin-sidebar-text)]">
+          <div className="h-2 w-12 rounded-full bg-[var(--admin-sidebar-text)]/40" />
+          <div className="rounded-md bg-[var(--admin-sidebar-active-bg)] px-2 py-1 text-[10px] font-medium text-[var(--admin-sidebar-active-text)]">
+            Dashboard
+          </div>
+        </div>
         <div className="flex-1 p-3">
-          <div className="mb-3 flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">{/* topbar */}</div>
-          <div className="grid grid-cols-2 gap-3">{/* 2 mini stat cards w/ shadow-soft */}</div>
-          <div className="mt-3 flex justify-end">{/* primary button bar */}</div>
+          {/* topbar */}
+          <div className="mb-3 flex items-center justify-between rounded-md border border-[var(--admin-topbar-border)] bg-[var(--admin-topbar-bg)] px-3 py-2 text-[10px] text-[var(--admin-topbar-text)]">
+            <span>Admin</span>
+          </div>
+          {/* 2 mini stat cards */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-lg border border-[var(--admin-card-border)] bg-[var(--admin-card-bg)] p-3" />
+            <div className="rounded-lg border border-[var(--admin-card-border)] bg-[var(--admin-card-bg)] p-3" />
+          </div>
+          {/* primary button bar */}
+          <div className="mt-3 flex justify-end">
+            <div className="rounded-md bg-[var(--admin-button-primary-bg)] px-3 py-1.5 text-[10px] text-[var(--admin-button-primary-text)]">
+              Save
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
-// NOTE: ThemePreviewPanel currently takes no props; adding `tokens` is additive.
-// If a caller still renders it prop-less, default `tokens = DEFAULT_ADMIN_THEME_TOKENS`.
+// NOTE: the `tokens` default (DEFAULT_ADMIN_THEME_TOKENS) + the caller's `?? null`
+// mergeAdminThemeTokens fallback means the preview never throws with no active profile.
 ```
 
 ### `ThemeTemplateCard.tsx` / `ThemeProfileCard.tsx` — preset-card visual
@@ -244,7 +292,7 @@ export function ThemePreviewPanel({ tokens }: { tokens: AdminThemeTokens }) {
 **Data flow:** mount effect hydrates `templates`/`profiles` (unchanged) →
 `templateCards`/`filteredTemplateCards`/`profileCards`/`activeProfile` useMemos
 derive card view-models from real data → `activePreviewTokens` useMemo resolves
-the active profile's template tokens → `ThemePreviewPanel` paints the mini-admin
+the active profile's template tokens → `ThemeLivePreview` paints the mini-admin
 via `toAdminThemeCssVariableMap`. Edits/saves/activations go through the existing
 drawer + `adminThemeClient` handlers + `refresh({force,background})` +
 `dispatchThemeUpdated`. No new fetches.

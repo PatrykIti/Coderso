@@ -63,6 +63,12 @@ tree from the table card to a stat row + card grid.
 > fields, and the stat row MUST be derived from real counts. If/when a real
 > analytics source lands, wire it in a separate task — not here.
 
+**Shared primitives (consume by exact name; do NOT fork).** `StatCard`, `StatusBadge`
+(content-status mapping incl. `archived`), and `EmptyState` come from TASK-479-06-L02;
+the `soft` Badge+Button variant plus the `shadow-card` / `font-display` /
+`--*-soft` tokens come from TASK-479-05. This screen consumes them; it does not declare
+a divergent local copy.
+
 ```tsx
 // PopupsListPage.tsx — RENDER ONLY changes inside the existing return().
 
@@ -76,16 +82,17 @@ tree from the table card to a stat row + card grid.
 />
 
 // 2) STAT ROW — derive from real `items`/`counts` (render-time derivation; NO new
-//    effect, NO sync setState). Reuse the prototype StatCard shape but feed it the
-//    already-computed `counts` from usePopups-adjacent useMemo. NO spark/mock deltas
-//    unless they read from real data — prefer plain count cards (label + value).
+//    effect, NO sync setState). Reuse the shared `StatCard` from 479-06-L02 (do NOT
+//    fork a local copy) and feed it the already-computed `counts` from the
+//    usePopups-adjacent useMemo. NO spark/mock deltas unless they read from real data
+//    — prefer plain count cards (label + value).
 const statCards = useMemo(() => ([
   { label: "Total",     value: counts.all },
   { label: "Published", value: counts.published },
   { label: "Drafts",    value: counts.draft },
   // optionally "Archived": counts.archived
 ]), [counts]);
-// Render: <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3"> {statCards.map(StatCard-ish soft card)} </div>
+// Render: <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3"> {statCards.map(card => <StatCard {...card} /> /* shared, from 479-06-L02 */)} </div>
 
 // 3) SEARCH + STATUS FILTER: keep the existing search Input + status Tabs
 //    (all/published/draft/archived with live counts) — restyle the wrapper to the
@@ -113,11 +120,11 @@ const statCards = useMemo(() => ([
 
       <div className="mt-4 font-display text-[15px] font-semibold">{popup.name}</div>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-        <Badge variant="soft">{triggerLabel(popup.trigger)}</Badge>      {/* REAL trigger.type */}
-        <StatusBadge status={popup.status} />                            {/* token-driven */}
+        <Badge variant="soft">{triggerLabel(popup.trigger)}</Badge>      {/* REAL trigger.type; `soft` variant from 479-05 */}
+        <StatusBadge status={popup.status} />                            {/* shared StatusBadge from 479-06-L02 (content-status set incl. `archived`); tokens from 479-05 */}
       </div>
 
-      {/* Metadata row — REAL fields only (slug + audience + frequency). NO impressions/conversion. */}
+      {/* Metadata row — REAL fields only (audience + frequency; both exist on PopupRecord). NO impressions/conversion. */}
       <div className="mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 text-sm">
         <div>
           <div className="text-xs text-muted-foreground">Audience</div>
@@ -200,6 +207,7 @@ the grid, and delete still routes through `deletePopup`.
 - `_docs/_TASKS/README.md` — update status bucket + statistics on status change.
 - `_docs/_CHANGELOG/` — add an entry on closure, linking `TASK-479` +
   `TASK-479-20-L01`.
-- If a token-driven `StatusBadge` or a reusable stat-row helper is introduced,
-  note it alongside the TASK-479-06 shell notes so other Advanced list screens
-  reuse the same restyled primitives.
+- Reuse the shared `StatusBadge` / `StatCard` from TASK-479-06-L02 (tokens/variants
+  from TASK-479-05) rather than introducing a Popups-local copy. If a Popups-only
+  restyle helper is genuinely unavoidable, note it alongside the TASK-479-06 shell
+  notes so other Advanced list screens reuse the same restyled primitives.

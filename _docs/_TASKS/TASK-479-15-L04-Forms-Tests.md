@@ -38,57 +38,86 @@ No endpoint or permission model changes (visual restyle only; preserves existing
 routes, RBAC, cache, and adminPaths).
 
 Tests must include at least one assertion per builder/settings suite that the
-public-submit anti-abuse controls (honeypot / CAPTCHA toggle / `submissionAccess`)
-still render and stay bound — guarding against the restyle silently dropping a
-control.
+public-submit `submissionAccess` (public|internal) control still renders —
+asserted by rendering `FormSettingsPanel` directly (presence guard against the
+restyle silently dropping it; its value/binding contract is covered by the
+existing builder/settings behavioral suites under `tests/vitest/ui/` and
+`tests/vitest/forms/`, which stay untouched). Note: honeypot / CAPTCHA are NOT
+rendered by `FormSettingsPanel` (it only renders `submissionAccess`) — they are
+enforced server-side (bot protection + global security settings), so do not
+assert them on this panel.
 
 ---
 
 ## Implementation Pseudocode
 
-New suites (mirror the existing forms test setup: render under the admin router
-provider with `formsClient` mocked; assert on roles/text, not implementation
-detail).
+New suites mirror the EXISTING forms test setup. **This repo has NO
+`@testing-library/react` / `jest-dom` / `user-event`** — do NOT use
+`render`/`screen`/`getByText`/`getByRole`/`within`/`userEvent`/`toBeInTheDocument`.
+There are two real idioms:
+
+- **Static presence** → SSR `renderToString` under `AdminRouterProvider`, assert
+  with `expect(html).toContain(...)` (see
+  `tests/vitest/ui-integration/forms.test.tsx`).
+- **Interaction / seeded data** → `// @vitest-environment happy-dom`,
+  `vi.hoisted(...)` + `vi.mock(...)` to seed `formsClient` + the cache helpers +
+  router `navigate`, then `createRoot` + `React.act`, asserting on
+  `container.textContent` / `querySelector` (see
+  `tests/vitest/ui/forms-pages-wave.test.tsx`'s `formsPageState`).
+
+The SSR snapshot renders ONE static pass, so do not assert anything behind a
+click or tab-switch under `renderToString` — route those to the happy-dom +
+`createRoot`/`act` lane.
 
 ```tsx
 // tests/vitest/ui-integration/forms-list-restyle.test.tsx
-describe("FormListPage restyle", () => {
-  it("renders the stat band derived from items", () => {
-    renderWithAdminRouter(<FormListPage />, { forms: seedForms(/* 3 published, 2 draft */) });
-    expect(screen.getByText("Total forms")).toBeInTheDocument();
-    expect(within(statCard("Active")).getByText("3")).toBeInTheDocument();
-  });
-  it("keeps selection + bulk bar", async () => { /* select a row → FormBulkActionsBar appears */ });
-  it("opens the create drawer from New", async () => { /* click New → FormCreateDrawer */ });
-  it("uses AdminLink for the form name (no raw <a href>)", () => {
-    const { container } = renderWithAdminRouter(<FormListPage />, { forms: seedForms() });
-    // assert resolved admin href, not a hand-built "/advanced/forms/..." anchor
-  });
-  it("does NOT render fabricated field/submission count columns", () => { /* assert absence */ });
+// happy-dom + vi.mock(formsClient) seeded with e.g. 3 published + 2 draft forms.
+test("renders the stat band derived from items (Total/Active/Drafts)", () => {
+  // createRoot render; container.textContent contains "Total forms"/"Active"/
+  // "Drafts" with the derived counts (Active === "3").
+});
+test("renders one row per form with Status/Access badges + resolved name link", () => {
+  // each name is an <a> whose href === resolveAdminHref(base, `/advanced/forms/${id}`).
+  // Assert the RESOLVED admin href — AdminLink emits an <a>, so do NOT assert
+  // "no <a href>"; assert it is the path-helper href, not a hand-built one.
+});
+test("does NOT render fabricated field/submission count columns", () => {
+  // assert absence of "Fields"/"Submissions"/"Last submission" headers.
+});
+test("selection shows FormBulkActionsBar; New opens FormCreateDrawer", () => {
+  // happy-dom: dispatch click on a row checkbox / the New button inside act();
+  // assert FormBulkActionsBar / FormCreateDrawer appear in the DOM.
 });
 
 // tests/vitest/ui-integration/forms-builder-restyle.test.tsx
-describe("FormBuilderPage restyle", () => {
-  it("renders palette rail + canvas preview + inspector tabs", () => { /* … */ });
-  it("adds a field from the palette", async () => { /* click palette item → onAddField */ });
-  it("shows selected-field settings with Required switch bound", async () => { /* … */ });
-  it("keeps anti-abuse controls on the Settings tab", async () => {
-    // switch to Settings tab → honeypot/CAPTCHA/submissionAccess controls present
-  });
-  it("Save/Publish still call the client writes", async () => { /* mocked updateFormFields/updateForm */ });
+test("renders the Fields/Library rail + canvas preview + inspector", () => {
+  // SSR renderToString of FormBuilderPage → html.toContain the rail + canvas + inspector.
+});
+test("submissionAccess control renders (FormSettingsPanel direct)", () => {
+  // render FormSettingsPanel DIRECTLY with seeded props (NO tab-switch under SSR);
+  // assert the submissionAccess (public|internal) Select is present (presence only).
+  // NB: honeypot/CAPTCHA are server-side (bot protection + global security
+  // settings), not FormSettingsPanel controls — do not assert them here.
+});
+test("add-field + Save/Publish call the client writes", () => {
+  // happy-dom + createRoot/act: click a Library item → handleAddField; Save →
+  // updateFormFields/updateForm (mocked recorders).
 });
 
 // tests/vitest/ui-integration/forms-submissions-restyle.test.tsx
-describe("FormSubmissionsPage restyle", () => {
-  it("renders stat band from submissions fixture", () => { /* Total/This week/Spam */ });
-  it("renders a row per submission with payload labels", () => { /* fieldLabels lookup */ });
-  it("keeps the read-only contract (calls listFormSubmissions, no submissions cache key)", () => { /* … */ });
+test("renders stat band from submissions fixture (Total/This week/Spam)", () => { /* SSR */ });
+test("renders a row per submission with payload labels", () => { /* fieldLabels lookup */ });
+test("keeps the read-only contract", () => {
+  // calls listFormSubmissions directly; assert NO submissions cache key exists
+  // (static: cacheKeys exposes formsList/formDetail/formActionRuns only).
 });
 
 // tests/vitest/ui-integration/forms-action-logs-restyle.test.tsx
-describe("FormActionLogsPage restyle", () => {
-  it("renders stat band + status filter", () => { /* … */ });
-  it("retries a run via retryFormActionRun", async () => { /* mocked */ });
+test("renders stat band + status filter (all/success/failed/skipped)", () => {
+  // SSR snapshot; FormActionRunStatus = "success" | "failed" | "skipped".
+});
+test("retries a run via retryFormActionRun", () => {
+  // happy-dom + createRoot/act: click Retry → retryFormActionRun (mocked).
 });
 ```
 

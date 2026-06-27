@@ -22,15 +22,27 @@ shadows, light default + dark toggle.
   lacks (primary-soft + foreground; `state.info` + soft variants
   `success-soft`/`warning-soft`/`info-soft`; `sidebar.muted`/`accent`/
   `accentForeground`/`border`; effects shadows `soft`/`card`/`pop`; warm-neutral
-  base + violet primary + Inter fonts), and add a **dark mode** layer. A fresh
+  base + violet primary + Inter fonts), and add a **dark mode** layer (emitted as
+  a `:root.dark{--admin-*}` block FROM the injected per-profile style so the real
+  chrome — which reads `--admin-*` directly — recolors; see L01 decision). A fresh
   install must boot the violet/soft theme; existing custom templates must keep
   working unchanged.
+- **Shared-token ownership (D3):** group 05 OWNS the token VALUES the shared
+  primitives consume — `--primary-soft`, `--success`/`--warning`/`--info` (+ their
+  `-soft`), `shadow-card`, `font-display`. The matching `soft`/`success`/
+  `warning`/`info` Badge & Button variants that READ these are wired by the
+  TASK-479-06-L02 shared pattern library (the Tabs underline variant is named
+  `line`, not `underline`). Screen leaves reference these EXACT names ("token from
+  479-05" / "variant from 479-06-L02") and must not re-invent divergent tokens.
 - **Owning module/service:**
   - Contract + logic: `core/services/adminThemes/{tokenTypes.ts,tokenUtils.ts,tokenValidation.ts,adminThemeTemplateService.ts}`
-  - CSS-var emitter: `core/ui/theme/tokenCss.ts` (`toAdminThemeCssVariables`,
-    `toAdminThemeCssVariableMap`)
-  - Stylesheet mapping: `core/admin/styles/globals.css` (`@theme` + `:root` + new `.dark`)
-  - Runtime injection + toggle: `core/admin/app/AdminApp.tsx`,
+  - CSS-var emitter: `core/ui/theme/tokenCss.ts` (`toAdminThemeCssVariables`
+    incl. a dark `:root.dark` selector pass, `toAdminThemeCssVariableMap`)
+  - Stylesheet mapping: `core/admin/styles/globals.css` (`@theme` + `:root`
+    derivations from `--admin-*`; the dark `:root.dark{--admin-*}` is emitted by
+    the injected style, NOT a static globals `.dark` — see L01/L03)
+  - Runtime injection + toggle: `core/admin/app/AdminApp.tsx` (injects BOTH the
+    light `:root{--admin-*}` and the dark `:root.dark{--admin-*}` blocks),
     `core/admin/ui/shared/TopBar.tsx`
   - Editor UI: `core/admin/ui/themes/ThemeTemplateDrawer.tsx` (real per-token
     pickers + live preview), `core/admin/ui/themes/ThemeTokensEditor.tsx`,
@@ -83,13 +95,16 @@ Every leaf runs the standard admin/UI lane (Bun-free Vitest per
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/unit/adminThemes`
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/admin`
+- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration`
 
 New suites land under `tests/unit/adminThemes/` (contract/normalize/validation/
-CSS-emission) and `tests/vitest/admin` + `tests/vitest/ui-integration`
-(editor controls, dark toggle). Do NOT move runtime tests into Vitest for
-coverage.
+CSS-emission), `tests/vitest/ui/` (theme editor controls — the ThemeTemplateDrawer
+suites live here on disk) and `tests/vitest/ui-integration/` (dark toggle +
+injected dark block). The AdminApp dual-block injection is asserted via the
+existing `tests/vitest/admin/adminApp.test.tsx`. Use the repo idiom (happy-dom +
+`createRoot`/`React.act`); the repo has no React-Testing-Library/jest-dom/
+user-event. Do NOT move runtime tests into Vitest for coverage.
 
 ---
 
@@ -110,7 +125,9 @@ coverage.
 
 - [ ] All seven leaves `✅ Done`.
 - [ ] Fresh install renders violet/soft light theme; dark toggle works and
-      persists with no SSR flash.
+      persists with no SSR flash, and dark RECOLORS the real chrome (button +
+      sidebar + topbar resolve dark `--admin-*`, not just the `.dark` class).
+      Sequence the "dark works" gate AFTER the TASK-479-06 chrome migration.
 - [ ] Pre-existing custom templates (without the new tokens) still load + render
       via defaults.
 - [ ] `_docs/DESIGN_TOKENS.md` + board + changelog synced.
