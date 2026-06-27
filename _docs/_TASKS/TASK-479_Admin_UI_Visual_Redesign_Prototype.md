@@ -124,54 +124,92 @@ All **editor** routes are **non-functional preview chrome** (a "Preview only" pi
 
 ## Sub-Tasks
 
+01–04 delivered the prototype. 05–29 port it into `core/admin` (UI re-wiring +
+token extension). Each subtask `NN` owns execution-ready **leaf files**
+`TASK-479-NN-LNN-*.md` (listed in that subtask's own Sub-Tasks table). Screens
+07–29 depend on **05** (tokens) and **06** (shell/wrapper).
+
 | Child | Title | Status |
 |-------|-------|--------|
 | TASK-479-01 | Design language + token system (soft/violet, light+dark) | ✅ Done |
 | TASK-479-02 | Runnable prototype harness (Vite/React/Tailwind v4, hash router, shell) | ✅ Done |
 | TASK-479-03 | Primitive + pattern + chart component library (shadcn-shaped) | ✅ Done |
 | TASK-479-04 | All prototype screens (lists/settings/tools/admin/galleries + editor previews) | ✅ Done |
-| TASK-479-05 | Port tokens into `core/admin/styles/globals.css` (violet/soft, dark) | ⏳ To Do |
-| TASK-479-06 | Adopt shell/topbar/sidebar redesign in `core/admin/ui/layouts` + `shared` | ⏳ To Do |
-| TASK-479-07 | Roll the new look across real pages (per nav section, behind the existing components) | ⏳ To Do |
+| TASK-479-05 | Design Tokens & Theming Alignment (extend `AdminThemeTokens` + globals.css + dark) — 7 leaves | ⏳ To Do |
+| TASK-479-06 | Admin Shell & Wrapper Migration (primitives, patterns, sidebar/topbar de-SaaS, CanvasEditor) — 7 leaves | ⏳ To Do |
+| TASK-479-07 | Dashboard Screen (UI shell only — widget feature = TASK-480) — 2 leaves | ⏳ To Do |
+| TASK-479-08 | Pages Screen (list + page-editor floating canvas) — 3 leaves | ⏳ To Do |
+| TASK-479-09 | Posts Screen (list + editor) — 3 leaves | ⏳ To Do |
+| TASK-479-10 | Menus Screen (list + editor + design) — 3 leaves | ⏳ To Do |
+| TASK-479-11 | Media Library Screen — 2 leaves | ⏳ To Do |
+| TASK-479-12 | Engine / Content Types (list + editor + schema + collection) — 5 leaves | ⏳ To Do |
+| TASK-479-13 | Entries Screen (list + editor) — 3 leaves | ⏳ To Do |
+| TASK-479-14 | Custom Screens (published-screen flow: builder + list view + entry editor) — 5 leaves | ⏳ To Do |
+| TASK-479-15 | Forms Screen (list + builder + submissions) — 4 leaves | ⏳ To Do |
+| TASK-479-16 | Listings, Filters & Search Modules — 4 leaves | ⏳ To Do |
+| TASK-479-17 | Booking Screen — 2 leaves | ⏳ To Do |
+| TASK-479-18 | Reviews Screen — 2 leaves | ⏳ To Do |
+| TASK-479-19 | Commerce Screen (list + product editor) — 3 leaves | ⏳ To Do |
+| TASK-479-20 | Popups Screen (list + editor) — 3 leaves | ⏳ To Do |
+| TASK-479-21 | Solution Kits Screen — 2 leaves | ⏳ To Do |
+| TASK-479-22 | Widget Library Screen — 2 leaves | ⏳ To Do |
+| TASK-479-23 | Page Templates Screen (list + template editor) — 3 leaves | ⏳ To Do |
+| TASK-479-24 | Plugin Store Screen (store + details) — 3 leaves | ⏳ To Do |
+| TASK-479-25 | Admin UI Theme Screen — 2 leaves | ⏳ To Do |
+| TASK-479-26 | Tools Screens (Search/SEO/Analytics/Backups/Import-Export/Redirects) — 7 leaves | ⏳ To Do |
+| TASK-479-27 | Admin Screens (Users/Roles/Audit/Access logs) — 5 leaves | ⏳ To Do |
+| TASK-479-28 | Settings Screens (shell + 12 pages) — 7 leaves | ⏳ To Do |
+| TASK-479-29 | Auth Screens (login/2FA/reset/set-password) — 3 leaves | ⏳ To Do |
 
 ### TASK-479-01..04 — Prototype (Done 2026-06-27)
 
-Delivered in `_docs/_PROTOTYPE/`. Light + dark verified via Playwright on the
-Dashboard, Pages list, Page editor preview, Settings, and the Screens index.
-Production build is clean (`bun run build` → ~205 modules, CSS compiles).
+Delivered in `_docs/_PROTOTYPE/`. Light + dark verified via Playwright; production
+build clean (`bun run build` → ~299 modules). Now includes the published
+custom-screen flow, floating-panel canvas editors (page/screen/template), the
+panel show/hide toggle, and the de-SaaS shell.
 
-### TASK-479-05 — Port design tokens (To Do)
+### Scope: UI re-wiring vs full feature implementation
 
-- Translate `_docs/_PROTOTYPE/src/styles/theme.css` token values into
-  `core/admin/styles/globals.css` `:root` (and add a `.dark` block + dark toggle
-  if the owner wants dark in the real admin).
-- Keep the existing `--admin-*` variable indirection; only change the resolved
-  hexes (violet primary, warm neutrals, soft radii/shadows). Re-run the admin
-  theme tests and `themes/admin-default` snapshots.
+TASK-479 is the **visual re-wiring + global token extension** layer only — its
+per-screen subtasks (07–29) restyle existing screens and keep their data/logic.
 
-### TASK-479-06 — Adopt the shell (To Do)
+**Some CMS screens are functionally incomplete and need real feature work, not a
+re-skin.** Those are tracked as **dedicated sibling implementation tasks**, and
+the matching 479 subtask is limited to the UI shell + integrating the feature:
 
-- Update `AdminShell` / `SidebarNav` / `TopBar` to the prototype's structure:
-  workspace switcher, collapsible Advanced group styling, rounded active pills,
-  command-style search button, top-bar theme toggle, footer trial card.
-- Reuse the real permission gating + custom-screen/solution-kit wiring already in
-  `AdminShell.tsx`; only the visual layer changes.
-
-### TASK-479-07 — Roll out per section (To Do)
-
-- Section-by-section, restyle real pages using the prototype's
-  PageHeader/SectionCard/DataTable/SettingsSection/StatCard patterns. Each real
-  page keeps its data/logic; only presentation changes. Suggested order: Dashboard
-  → Settings → list pages (Pages/Posts/Users/etc.) → galleries (Store/Media/
-  Widgets/Themes) → editor chrome polish.
+- **Dashboard** → needs a modern, configurable **widget/panel system** (build
+  dashboard panels from CMS data sources; the current `DashboardPayload` is a
+  fixed totals/storage/security/recentEdits blob with no widgets). Full
+  implementation = **TASK-480 (Dashboard Widgets & Configurable Panels)**.
+  `TASK-479-07` covers only the dashboard UI shell + rendering TASK-480 widgets.
+- A **feature-completeness audit** (which other screens are stubs vs real) is
+  owned by `TASK-480-01` and may spawn further sibling implementation tasks.
 
 ## Testing Requirements
 
 - Prototype: `bun run build` (graph + Tailwind compile) and a Playwright
   click-through of `#/screens` + light/dark toggle. (Done for the exemplar set.)
-- Migration children (05–07): existing Vitest admin suites must stay green; add/adjust
-  `themes/admin-default` + admin theme token tests when 479-05 lands; visual diff a
-  representative page set before/after per section in 479-07.
+- Migration children (05–29): per leaf run `bun --cwd core lint`,
+  `bun --cwd core lint:types`, and the relevant Vitest suite
+  (`NODE_ENV=test vitest run --config vitest.config.ts <tests/vitest/admin|ui-integration>`);
+  existing admin/page-editor/themes Vitest suites must stay green. Token work
+  (479-05) adds/adjusts `themes/admin-default` + admin-theme token tests.
+
+### Local environment & runtime smoke-test (real CMS)
+
+For browser smoke-tests of the migrated UI against the real CMS:
+
+- Start the core dev server with the helper command **`coderso-dev-core-host`**.
+- Admin: **http://coderso-a.localhost:5173/admin/** (tenant `coderso-a.localhost`,
+  Vite :5173). A **white page** there means the server is **not running** —
+  re-run `coderso-dev-core-host`.
+- Front end: **http://coderso-a.localhost:3000**.
+- Running the full suite (`bun run test` / `bun test`) **resets the CMS setup
+  wizard** — it must be clicked through on the next first launch before the
+  site/admin behaves normally.
+- Admin credentials are in **`.env`**.
+- Verify with the installed **`playwright-cli`** terminal command (open the
+  default chromium; the `chrome` channel isn't installed).
 
 ## Documentation Updates Required
 

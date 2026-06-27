@@ -78,9 +78,13 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 23 tasks
+- **To Do:** 163 tasks
 - **In Progress:** 6 tasks
 - **Done:** 2696 tasks
+
+> TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
+> 18 leaves) were broken down 2026-06-27. The table below lists the
+> subtasks/umbrellas; each subtask's leaves live in its own file's Sub-Tasks table.
 
 ---
 
@@ -88,13 +92,43 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-479-05 | Port redesign tokens into core globals.css | Medium | Medium | Translate the prototype's soft/violet token values (light + dark) into `core/admin/styles/globals.css`; re-run admin theme tests. Depends on TASK-479 prototype. |
-| TASK-479-06 | Adopt shell/topbar/sidebar redesign in core | Medium | Large | Restyle `AdminShell`/`SidebarNav`/`TopBar` to the prototype shell (workspace switcher, rounded active pills, command search, theme toggle) keeping real gating/wiring. |
-| TASK-479-07 | Roll the new look across real admin pages | Medium | Very Large | Section-by-section restyle of real pages with the prototype PageHeader/SectionCard/DataTable/SettingsSection patterns; data/logic unchanged. |
+| TASK-480 | Dashboard Widgets & Configurable Panels | High | Very Large | FULL feature (sibling to TASK-479-07): configurable dashboard panels built from CMS data sources. 6 subtasks (01–06) + 18 leaves. |
+| TASK-480-01 | Feature-Completeness Audit & Widget Product Spec | High | Medium | Audit which admin screens are stub/partial vs complete + the dashboard-widget product spec. 2 leaves. |
+| TASK-480-02 | Widget & Data-Source Contract | High | Large | Schema-first widget/layout types + data-source registry over `dashboardService`. 3 leaves. |
+| TASK-480-03 | Layout Persistence & API | High | Large | Per-user `dashboard_layouts` table + internal admin routes (RBAC `dashboard:write`/CSRF) + cache. 5 leaves. |
+| TASK-480-04 | Widget Renderer Components | High | Medium | 8 token-styled widget renderers + registry/host. 3 leaves. |
+| TASK-480-05 | Dashboard Builder UI (edit mode) | High | Large | Grid + add/arrange/resize + floating configure panel; dirty-state + cache. 3 leaves. |
+| TASK-480-06 | Docs, Gates & Closure | Medium | Medium | `DASHBOARD_WIDGETS_SPEC.md` + API/cache/data-model docs + gate sweep. 2 leaves. |
+| TASK-479-05 | Design Tokens & Theming Alignment | High | Large | Extend `AdminThemeTokens` (primary-soft, info, *-soft, sidebar accents, shadows) + globals.css + dark mode. 7 leaves. |
+| TASK-479-06 | Admin Shell & Wrapper Migration | High | Large | Primitives, patterns, sidebar/topbar de-SaaS, AdminShell, CanvasEditor. 7 leaves. |
+| TASK-479-07 | Dashboard Screen (UI shell only) | Medium | Medium | UI restyle only; the widget feature is TASK-480. 2 leaves. |
+| TASK-479-08 | Pages Screen | Medium | Large | List + page-editor floating-panel canvas (keeps PAGE_MODEL). 3 leaves. |
+| TASK-479-09 | Posts Screen | Medium | Large | List + post editor. 3 leaves. |
+| TASK-479-10 | Menus Screen | Medium | Medium | List + menu editor + design editor. 3 leaves. |
+| TASK-479-11 | Media Library Screen | Medium | Medium | Gallery + folders + details. 2 leaves. |
+| TASK-479-12 | Engine / Content Types | Medium | Large | List + type editor + schema builder + collection workspace. 5 leaves. |
+| TASK-479-13 | Entries Screen | Medium | Medium | List + entry editor. 3 leaves. |
+| TASK-479-14 | Custom Screens (published-screen flow) | Medium | Large | Builder + configurable list view + per-screen entry editor. 5 leaves. |
+| TASK-479-15 | Forms Screen | Medium | Large | List + builder + submissions/logs. 4 leaves. |
+| TASK-479-16 | Listings, Filters & Search Modules | Medium | Large | List + editor + filters/search. 4 leaves. |
+| TASK-479-17 | Booking Screen | Medium | Medium | Calendar restyle. 2 leaves. |
+| TASK-479-18 | Reviews Screen | Medium | Medium | Moderation restyle. 2 leaves. |
+| TASK-479-19 | Commerce Screen | Medium | Medium | Products list + product editor. 3 leaves. |
+| TASK-479-20 | Popups Screen | Medium | Medium | List + popup editor. 3 leaves. |
+| TASK-479-21 | Solution Kits Screen | Medium | Medium | Kits gallery. 2 leaves. |
+| TASK-479-22 | Widget Library Screen | Medium | Medium | Widget gallery (lazy registry preserved). 2 leaves. |
+| TASK-479-23 | Page Templates Screen | Medium | Medium | List + template editor (shared CanvasEditor). 3 leaves. |
+| TASK-479-24 | Plugin Store Screen | Medium | Medium | Store gallery + plugin details. 3 leaves. |
+| TASK-479-25 | Admin UI Theme Screen | Medium | Medium | Theme editor page restyle. 2 leaves. |
+| TASK-479-26 | Tools Screens | Medium | Large | Search/SEO/Analytics/Backups/Import-Export/Redirects. 7 leaves. |
+| TASK-479-27 | Admin Screens | Medium | Large | Users & Roles / Roles Matrix / Audit / Access logs. 5 leaves. |
+| TASK-479-28 | Settings Screens | Medium | Large | Settings shell + 12 pages. 7 leaves. |
+| TASK-479-29 | Auth Screens | Medium | Medium | Login / 2FA / reset / set password. 3 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
 | TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |
 | TASK-478-03 | Dockable Inline Mark Toolbar (Top/Left/Right) | Low | Small | Toolbar is pinned `-top-9` above the text; add a control to dock it left/right so neither it nor the native color picker covers the edited text. |
+| TASK-481 | Page Editor Canvas Brand-Token WYSIWYG | Medium | Medium | Brand colors (primary/secondary/accent/border) applied to a block render admin-themed in the canvas (admin `@theme` wins) while previews/front show the site token. Emit site brand `--color-*` on a content-only scope that excludes editor chrome (rings/outlines/tiles), then unify inline+block-level brand previews. Follow-up to TASK-477-02 (neutrals done). |
 | TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
 | TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
 | TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |
