@@ -95,18 +95,21 @@ content-over-time) plus a **safe, clamped content-query** resolver. Expose
 export type DashboardContentTypeCount = { id: string; slug: string; label: string; count: number };
 export type DashboardTimeBucket = { bucket: string; created: number; updated: number };
 
-// Discriminated by widget type so the UI can switch on `type`.
+// Discriminated by widget type; **display-ready** — the resolver does the formatting,
+// matching the 480-04 renderer contract (renderers just display). The widget `id` lives
+// on DashboardWidget, NOT on the data payload. These variants MUST match the data shapes
+// consumed in TASK-480-04-L02 and the fixtures in TASK-480-04-L03.
 export type DashboardWidgetData =
-  | { id: string; type: "totals-counters";     data: DashboardTotals }
-  | { id: string; type: "content-type-counts"; data: DashboardContentTypeCount[] }
-  | { id: string; type: "content-over-time";   data: DashboardTimeBucket[] }
-  | { id: string; type: "recent-activity";     data: DashboardRecentEdit[] }
-  | { id: string; type: "storage-usage";       data: DashboardStorageSummary }
-  | { id: string; type: "site-health";         data: { storage: DashboardStorageSummary; security: DashboardSecuritySummary } }
-  | { id: string; type: "security-summary";    data: DashboardSecuritySummary }
-  | { id: string; type: "quick-actions";       data: Array<{ label: string; href: string }> }
-  | { id: string; type: "content-query";       data: DashboardRecentEdit[] }
-  | { id: string; type: DashboardWidgetType;   error: "widget_data_unavailable" }; // resolver-failure fallback
+  | { type: "totals-counters";     counters: { key: "pages" | "entries" | "media" | "users"; label: string; formatted: string; value: number; delta?: { value: number; trend: "up" | "down" | "flat"; label?: string }; spark?: number[] }[] }
+  | { type: "content-type-counts"; counts: { slug: string; label: string; count: number; href?: string }[]; segments?: { label: string; value: number; color: string }[] }
+  | { type: "content-over-time";   variant: "area" | "bar"; series: { id: string; label: string; color?: string; points: number[] }[]; categories?: string[] }
+  | { type: "recent-activity";     items: DashboardRecentEdit[] }
+  | { type: "storage-usage";       usedBytes: number; limitBytes: number | null; usedPercent: number | null; breakdown?: { label: string; bytes: number }[] }
+  | { type: "site-health";         security: DashboardSecuritySummary; storage?: { usedPercent: number | null } }
+  | { type: "security-summary";    security: DashboardSecuritySummary }
+  | { type: "quick-actions";       actions: { id: string; label: string; target: string; icon?: string }[] }
+  | { type: "content-query";       columns: { key: string; label: string }[]; rows: Record<string, string | number>[] }
+  | { type: DashboardWidgetType;   error: "widget_data_unavailable" }; // resolver-failure fallback
 ```
 
 ### 2. New bounded readers — `dashboardService.ts`
@@ -204,18 +207,33 @@ export type DashboardDataReaders = {
 type Resolver = (
   widget: DashboardWidget,
   readers: DashboardDataReaders,
-) => Promise<Omit<DashboardWidgetData, "id">>;
+) => Promise<DashboardWidgetData>;
+
+// Display mappers — the "formatting in 480-02" the 480-04 renderers rely on. Each maps the
+// raw reader output to the display-ready DashboardWidgetData variant (see the union above):
+//   toTotalsCounters(totals)     -> { type:"totals-counters", counters:[{key,label,formatted,value,delta?,spark?}] } (one per metric; formatted via formatBytes/number)
+//   toContentTypeCounts(rows,w)  -> { type:"content-type-counts", counts: rows.map(...), segments?: built when w.config.display === "donut" }
+//   toContentOverTime(buckets,w) -> { type:"content-over-time", variant: w.config.variant ?? "area",
+//                                      series:[{id:"created",label:"Created",points:buckets.map(b=>b.created)},{id:"updated",label:"Updated",points:buckets.map(b=>b.updated)}], categories: buckets.map(b=>b.bucket) }
+//   toStorageUsage(s)            -> { type:"storage-usage", usedBytes:s.usedBytes, limitBytes:s.limitBytes, usedPercent:s.usedPercent, breakdown:s.breakdown }
+//   toContentQuery(rows,w)       -> { type:"content-query", columns:[{key,label}], rows: rows.map(toDisplayRow) }
+// DEFAULT_QUICK_ACTIONS — static {id,label,target,icon?} list (no DB), used when config.actions is unset.
+export const DEFAULT_QUICK_ACTIONS = [
+  { id: "new-page",  label: "New page",  target: "pages" },
+  { id: "new-entry", label: "New entry", target: "entries" },
+  { id: "media",     label: "Media",     target: "media" },
+] as const;
 
 export const dashboardWidgetResolvers: Record<DashboardWidgetType, Resolver> = {
-  "totals-counters":     async (_w, r) => ({ type: "totals-counters",     data: await r.totals() }),
-  "content-type-counts": async (w,  r) => ({ type: "content-type-counts", data: await r.contentTypeCounts(w.config.kind === "content-type-counts" ? w.config.limit : undefined) }),
-  "content-over-time":   async (w,  r) => ({ type: "content-over-time",   data: await r.contentOverTime(/* rangeDays, bucket from w.config */) }),
-  "recent-activity":     async (w,  r) => ({ type: "recent-activity",     data: await r.recentEdits(/* clamped limit */) }),
-  "storage-usage":       async (_w, r) => ({ type: "storage-usage",       data: await r.storage() }),
-  "site-health":         async (_w, r) => ({ type: "site-health",         data: { storage: await r.storage(), security: await r.securitySummary() } }),
-  "security-summary":    async (_w, r) => ({ type: "security-summary",    data: await r.securitySummary() }),
-  "quick-actions":       async (w,  _r) => ({ type: "quick-actions",      data: w.config.kind === "quick-actions" ? (w.config.actions ?? DEFAULT_QUICK_ACTIONS) : DEFAULT_QUICK_ACTIONS }),
-  "content-query":       async (w,  r) => ({ type: "content-query",       data: w.config.kind === "content-query" ? await r.contentQuery(w.config) : [] }),
+  "totals-counters":     async (_w, r) => toTotalsCounters(await r.totals()),
+  "content-type-counts": async (w,  r) => toContentTypeCounts(await r.contentTypeCounts(w.config.kind === "content-type-counts" ? w.config.limit : undefined), w),
+  "content-over-time":   async (w,  r) => toContentOverTime(await r.contentOverTime(/* rangeDays, bucket from w.config */), w),
+  "recent-activity":     async (w,  r) => ({ type: "recent-activity", items: await r.recentEdits(/* clamped limit */) }),
+  "storage-usage":       async (_w, r) => toStorageUsage(await r.storage()),
+  "site-health":         async (_w, r) => ({ type: "site-health", security: await r.securitySummary(), storage: { usedPercent: (await r.storage()).usedPercent } }),
+  "security-summary":    async (_w, r) => ({ type: "security-summary", security: await r.securitySummary() }),
+  "quick-actions":       async (w,  _r) => ({ type: "quick-actions", actions: w.config.kind === "quick-actions" ? (w.config.actions ?? DEFAULT_QUICK_ACTIONS) : DEFAULT_QUICK_ACTIONS }),
+  "content-query":       async (w,  r) => toContentQuery(w.config.kind === "content-query" ? await r.contentQuery(w.config) : [], w),
 };
 
 const defaultReaders: DashboardDataReaders = {

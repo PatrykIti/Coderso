@@ -149,10 +149,11 @@ test("host: ready+valid → renderer output, with title", () => {
 const ready = (w: Parameters<typeof widget>[0], d: any) =>
   renderAdminUi(<DashboardWidgetHost widget={widget(w)} state={{ status: "ready", data: d }} />);
 
-test("ContentOverTimeWidget: area renders; donut renders legend", () => {
+test("ContentOverTimeWidget: area + bar variants render (content-over-time is never a donut)", () => {
   expect(() => ready("content-over-time", data.overTimeArea)).not.toThrow();
-  expect(ready("content-over-time", data.overTimeDonut)).toContain("Pages");
+  expect(() => ready("content-over-time", data.overTimeBar)).not.toThrow();
 });
+// Donut/breakdown is owned by content-type-counts (config.display === "donut", via `segments`).
 test("ContentTypeCountsWidget: list shows counts", () => {
   expect(ready("content-type-counts", data.typeCounts)).toContain("Posts");
 });

@@ -68,7 +68,7 @@ export function TopBar({ navToggle, breadcrumbs, search, actions, user, classNam
 
       <div className="ml-auto flex items-center gap-2">
         <CreateButton />                 {/* Button variant="default" size="sm" + Plus */}
-        <ThemeToggle />                  {/* light/dark, from TASK-479-05-L06 */}
+        <AdminColorModeToggle />                  {/* light/dark, from TASK-479-05-L06 */}
         <AdminThemeSwitcher />           {/* KEEP existing admin theme-PROFILE dropdown */}
         {actions}
         <NotificationsMenu />            {/* dropdown-menu primitive, bell + unread dot */}
@@ -133,7 +133,7 @@ no-ops safely if the provider is absent (SSR/test guard).
 - Theme toggle flips `document.documentElement` `dark` class and persists.
 - User menu renders `AdminLink` items with resolved hrefs; Sign out calls logout.
 - Search trigger renders kbd hint; passing a real `search` node renders it instead.
-- `AdminThemeSwitcher` (profile) and `ThemeToggle` (light/dark) coexist (two
+- `AdminThemeSwitcher` (profile) and `AdminColorModeToggle` (light/dark) coexist (two
   distinct controls).
 
 ## Testing Requirements

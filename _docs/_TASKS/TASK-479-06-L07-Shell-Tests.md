@@ -136,7 +136,7 @@ test("dark mode recolors button + sidebar + topbar chrome", () => {
 
 test("renders the profile switcher AND the light/dark toggle as two distinct controls", () => {
   const html = renderAdminUi(<TopBar />);
-  // AdminThemeSwitcher (profile) and ThemeToggle (light/dark) both present, separate controls.
+  // AdminThemeSwitcher (profile) and AdminColorModeToggle (light/dark) both present, separate controls.
 });
 
 // §6: cover the user menu + search trigger (previously omitted).

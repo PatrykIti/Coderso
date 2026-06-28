@@ -20,7 +20,7 @@ uses the soft & friendly (Notion-like) language: a single **centered** card on a
 warm-neutral canvas with a soft violet glow backdrop and a dotted texture, a small
 `rounded-2xl` violet logo chip above the card, `rounded-2xl` cards with `shadow-card`,
 violet accent links/buttons, light default with a dark toggle (top-right
-`ThemeToggle`), and a quiet product/version footer label. This subtask ports that
+`AdminColorModeToggle`), and a quiet product/version footer label. This subtask ports that
 look onto the real auth pages **without touching the auth flow** — credential submit,
 CSRF, reCAPTCHA/bot-protection, rate-limit, redirect, token-error mapping, and
 field-error rendering all stay exactly as today; only markup/classes change.
@@ -32,14 +32,14 @@ field-error rendering all stay exactly as today; only markup/classes change.
 - **Owning module/service:** `core/admin/ui/auth/` (pages + `OtpInput`,
   `PasswordStrengthList`, `SsoButtons`, `InfoBanner`, `RecoveryCodesPanel`,
   `AuthBrandPanel`) and `core/admin/ui/layouts/AuthShell.tsx`; shared restyled
-  shadcn primitives + `ThemeToggle` from TASK-479-06.
+  shadcn primitives + `AdminColorModeToggle` from TASK-479-06.
 - **Source-of-truth docs:**
   - Prototype pages: `_docs/_PROTOTYPE/src/pages/auth/{LoginPage,TwoFactorPage,ResetPasswordPage,SetPasswordPage}.tsx`
   - Prototype shell: `_docs/_PROTOTYPE/src/components/shell/AuthShell.tsx` (+ `ThemeToggle.tsx`)
   - Prototype primitives: `_docs/_PROTOTYPE/src/components/ui/{card,input,label,button,checkbox,progress}.tsx`
   - Auth contract: `_docs/AUTH_SPEC.md` (login, sessions, CSRF, password reset, OTP/recovery wiring)
   - Tokens: `_docs/_PROTOTYPE/src/styles/theme.css`, `_docs/DESIGN_TOKENS.md`
-  - Shell/primitives/`ThemeToggle` landed by parent: TASK-479-06 (consume; do not redefine)
+  - Shell/primitives/`AdminColorModeToggle` landed by parent: TASK-479-06 (consume; do not redefine)
   - `_docs/TESTING_STRATEGY.md` (Vitest lane)
 - **Out of scope:** No changes to `authClient` (`login`, `verifyOtp`,
   `requestPasswordReset`, `confirmPasswordReset`, `getAuthBotProtection`,
@@ -49,7 +49,7 @@ field-error rendering all stay exactly as today; only markup/classes change.
   `AUTH_SPEC.md` — the prototype's mock "Create one" link is dropped). No SaaS
   chrome (no workspace switcher, no plans/trial). SSO/social buttons keep their
   existing presentational behavior — do NOT wire fake OAuth. Theme tokens
-  (TASK-479-05) and the shared `ThemeToggle` / restyled primitives (TASK-479-06)
+  (TASK-479-05) and the shared `AdminColorModeToggle` / restyled primitives (TASK-479-06)
   are delivered by those subtasks, not here.
 
 ---

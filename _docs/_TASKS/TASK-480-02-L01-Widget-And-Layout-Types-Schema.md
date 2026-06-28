@@ -110,14 +110,14 @@ export type DashboardWidgetPosition = {
 
 // Per-type config; unknown keys rejected by the schema. Keep each variant small.
 export type DashboardWidgetConfig =
-  | { kind: "totals-counters"; metrics?: Array<"pages" | "entries" | "media" | "users"> }
-  | { kind: "content-type-counts"; contentTypeIds?: string[]; limit?: number }
-  | { kind: "content-over-time"; rangeDays?: number; bucket?: "day" | "week" }
+  | { kind: "totals-counters"; metrics?: Array<"pages" | "entries" | "media" | "users">; accent?: "primary" | "success" | "warning"; format?: "number" | "bytes" | "percent" }
+  | { kind: "content-type-counts"; contentTypeIds?: string[]; limit?: number; display?: "bars" | "list" | "donut" }
+  | { kind: "content-over-time"; rangeDays?: number; bucket?: "day" | "week"; variant?: "area" | "bar" }
   | { kind: "recent-activity"; limit?: number; types?: Array<"page" | "entry" | "media"> }
   | { kind: "storage-usage" }
   | { kind: "site-health" }
   | { kind: "security-summary" }
-  | { kind: "quick-actions"; actions?: Array<{ label: string; href: string }> }
+  | { kind: "quick-actions"; actions?: Array<{ id: string; label: string; target: string; icon?: string }> }
   | {
       kind: "content-query";
       contentTypeId: string | null;       // null = all entries
@@ -166,6 +166,12 @@ export const DASHBOARD_CONTENT_QUERY_DEFAULT_LIMIT = 10;
 
 const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, Math.trunc(Number.isFinite(n) ? n : lo)));
+
+// withKind: stamp the discriminant onto raw config so `config.kind` always matches the widget
+// `type` before the per-type schema validates it. Used by normalizeDashboardLayout (below) and
+// normalizeDashboardWidgetConfig.
+const withKind = (type: DashboardWidgetType, cfg: unknown) =>
+  ({ ...(cfg as Record<string, unknown>), kind: type });
 
 const positionSchema = z
   .object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })

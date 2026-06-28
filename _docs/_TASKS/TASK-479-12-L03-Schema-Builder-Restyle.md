@@ -139,7 +139,7 @@ save/PATCH here; field editing with persistence lives in the Content Type Editor
 any new link uses `AdminLink` + `resolveAdminRoutePath`. No hand-built `<a href>`.
 
 **Regression-test shape (see L05):** an SSR `renderAdminUi` render asserts the
-always-visible chrome — the "Field types" `SectionCard` with the 8 type labels,
+always-visible chrome — the "Field types" `SectionCard` with the 7 type labels,
 the field-count Badge, the "Field settings" inspector header, and the
 `SchemaPreviewPanel` zone — because `renderAdminUi` is SSR-only and this page
 maps an **empty** field set without seeded cache (so the canvas renders no

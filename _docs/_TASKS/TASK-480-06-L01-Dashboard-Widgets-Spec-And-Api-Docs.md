@@ -139,8 +139,8 @@ Outline (H2 sections, in order):
 - Reference the prototype floating-panel pattern + TASK-479 StatCard/SectionCard.
 
 ## Persistence
-- Layout persisted per (scope) via TASK-480-03. Document the table
-  (`dashboard_layouts` or the actual name), its owner, and the read/write path.
+- Layout persisted **per user** via TASK-480-03 (the `dashboard_layouts` table,
+  decided in TASK-480-03-L01). Document the table, its owner, and the read/write path.
 - Default layout served when no row exists (the current fixed cards become the
   seeded default so existing installs see no regression).
 
@@ -170,7 +170,8 @@ Outline (H2 sections, in order):
   UI (480-04/05) suites.
 
 ## Open Questions / Follow-ups
-- Per-user vs per-site layouts; export/import of layouts; custom widget plugins.
+- Per-site (shared) default layouts (per-user is already decided in 480-03-L01);
+  export/import of layouts; custom widget plugins.
 ```
 
 ### 2) UPDATE `_docs/CMS_API.md` — extend the `## Dashboard (v1)` section (currently at the Dashboard heading near line 2844)

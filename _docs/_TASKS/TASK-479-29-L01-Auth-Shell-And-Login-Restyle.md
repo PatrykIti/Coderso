@@ -22,13 +22,13 @@ error rendering, and the remember toggle.
 
 - **Goal:** `core/admin/ui/layouts/AuthShell.tsx` renders the prototype centered
   chrome (warm canvas, violet glow backdrop, dotted texture, top-right
-  `ThemeToggle`, `rounded-2xl` logo chip, product heading, quiet version footer),
+  `AdminColorModeToggle`, `rounded-2xl` logo chip, product heading, quiet version footer),
   and `core/admin/ui/auth/LoginPage.tsx` matches
   `_docs/_PROTOTYPE/src/pages/auth/LoginPage.tsx` while preserving submit + CSRF +
   error states + canonical redirects.
 - **Owning module/service:** `core/admin/ui/layouts/AuthShell.tsx`,
   `core/admin/ui/auth/LoginPage.tsx`, `core/admin/ui/auth/SsoButtons.tsx`;
-  shared `ThemeToggle` + restyled shadcn `Card`/`Input`/`Button`/`Checkbox` from
+  shared `AdminColorModeToggle` + restyled shadcn `Card`/`Input`/`Button`/`Checkbox` from
   TASK-479-06.
 - **Source-of-truth docs:**
   - Prototype shell: `_docs/_PROTOTYPE/src/components/shell/AuthShell.tsx`,
@@ -73,7 +73,7 @@ routes, RBAC, cache, and adminPaths). Specifically:
 // (no brand) now renders the prototype centered layout instead of the split panel.
 import type { ReactNode } from "react";
 import { Hexagon } from "lucide-react";
-import { ThemeToggle } from "@/ui/shell/ThemeToggle"; // shared from TASK-479-06
+import { AdminColorModeToggle } from "@/ui/shared/AdminColorModeToggle"; // shared from TASK-479-06
 import { cn } from "@/lib/utils";
 
 export function AuthShell({ brand, mobileBrand, children, footer, className, contentClassName }: AuthShellProps) {
@@ -86,7 +86,7 @@ export function AuthShell({ brand, mobileBrand, children, footer, className, con
     <div className={cn("relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10", className)}>
       <div className="pointer-events-none absolute inset-0 bg-dotted opacity-60" />               {/* dotted texture token */}
       <div className="pointer-events-none absolute -top-40 left-1/2 size-[520px] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" /> {/* violet glow */}
-      <div className="absolute right-5 top-5"><ThemeToggle /></div>                                 {/* dark toggle (479-06) */}
+      <div className="absolute right-5 top-5"><AdminColorModeToggle /></div>                                 {/* dark toggle (479-06) */}
       <div className="relative w-full max-w-md">
         <div className="mb-6 flex flex-col items-center text-center">
           {mobileBrand ?? (
