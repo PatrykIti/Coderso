@@ -78,13 +78,22 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 163 tasks
+- **To Do:** 360 tasks
 - **In Progress:** 6 tasks
 - **Done:** 2696 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
 > subtasks/umbrellas; each subtask's leaves live in its own file's Sub-Tasks table.
+>
+> 2026-06-28: TASK-481 was broken down (4 subtasks + 9 leaves) and 12 sibling
+> FEATURE tasks were authored — TASK-482 (Setup Wizard) + 483–493 (Analytics,
+> Backups, Plugin Store, Popups runtime, Entries revisions, Commerce variants,
+> Solution Kits runs, Forms export, Integrations runtime, Login-alert delivery,
+> SEO indexing). These implement the functionally-incomplete surfaces the TASK-479
+> re-skin does not (mirroring the dashboard=TASK-480 pattern); 58 subtasks + 127
+> leaves total. The table lists the umbrellas; subtasks/leaves live in each tree's
+> own files.
 
 ---
 
@@ -128,7 +137,19 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
 | TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |
 | TASK-478-03 | Dockable Inline Mark Toolbar (Top/Left/Right) | Low | Small | Toolbar is pinned `-top-9` above the text; add a control to dock it left/right so neither it nor the native color picker covers the edited text. |
-| TASK-481 | Page Editor Canvas Brand-Token WYSIWYG | Medium | Medium | Brand colors (primary/secondary/accent/border) applied to a block render admin-themed in the canvas (admin `@theme` wins) while previews/front show the site token. Emit site brand `--color-*` on a content-only scope that excludes editor chrome (rings/outlines/tiles), then unify inline+block-level brand previews. Follow-up to TASK-477-02 (neutrals done). |
+| TASK-481 | Page Editor Canvas Brand-Token WYSIWYG | Medium | Medium | Brand colors (primary/secondary/accent/border) applied to a block render admin-themed in the canvas (admin `@theme` wins) while previews/front show the site token. Emit site brand `--color-*` on a content-only scope that excludes editor chrome (rings/outlines/tiles), then unify inline+block-level brand previews. Follow-up to TASK-477-02 (neutrals done). 4 subtasks (01–04) + 9 leaves. |
+| TASK-482 | Setup & Onboarding Wizard (Two-Phase Installer + Configuration) | High | Very Large | FEATURE (TASK-479-29 only reskins it): pre-auth installer creates the first admin (no-users gate), then post-login config (branding/locale/timezone/URLs) + starter content via kits + optional Advanced track (email/storage/security/assistant). 9 subtasks (01–09) + 18 leaves. |
+| TASK-483 | Real Web Analytics Pipeline | High | Very Large | FEATURE (sibling to TASK-479-26 Analytics reskin): genuine visitor-traffic ingestion + sources/devices/sessions/bounce/top-pages, replacing the content-inventory service. 6 subtasks (01–06) + 15 leaves. |
+| TASK-484 | Backups: Scheduler, Retention, Restore & Remote Storage | High | Large | FEATURE: schedules never run today (no cron), retention never pruned, restore is a stub, artifacts always local. Adds scheduler/worker + nextRunAt + prune + restore + S3/Azure + usage/quota. 6 subtasks (01–06) + 12 leaves. |
+| TASK-485 | Plugin Store: Real Registry & Install Pipeline | High | Large | FEATURE: the store UI is 100% mock; wire it to the real `core/store` + `installService` + `/plugins` pipeline (browse/install/update/uninstall). 5 subtasks (01–05) + 15 leaves. |
+| TASK-486 | Popups: Public Runtime Delivery & Trigger/Targeting Engine | High | Large | FEATURE: admin CRUD exists but popups never render on the site. Adds a public read endpoint + client trigger/targeting/frequency runtime + render injection. 4 subtasks (01–04) + 11 leaves. |
+| TASK-487 | Entries: Revision History & Restore | Medium | Medium | FEATURE: entry revisions are written but unviewable/unrestorable. Adds revisions/restore route+service + editor drawer (parity with Posts/Pages). 3 subtasks (01–03) + 6 leaves. |
+| TASK-488 | Commerce: Variant Editor & Collections CRUD UI | Medium | Medium | FEATURE (frontend-only; backend complete): variant add/edit/remove card + collections create/edit/delete UI. NOT orders (out of v1 scope). 3 subtasks (01–03) + 6 leaves. |
+| TASK-489 | Solution Kits: Install-Run History & Rollback UI | Medium | Medium | FEATURE (frontend wiring): mount the dead `useSolutionKitRuns` hook for install-run history + run detail + dry-run/apply + rollback. 3 subtasks (01–03) + 6 leaves. |
+| TASK-490 | Forms: Submissions Export (CSV/JSON) | Medium | Small | FEATURE: submissions viewer is read-only; add an export route + client + download button (analytics CSV pattern). 2 subtasks (01–02) + 5 leaves. |
+| TASK-491 | Integrations Runtime Wiring (GA / Slack / Zapier / Sentry) | Medium | Medium | FEATURE: 4 of 7 integrations are decorative credential stores. Inject the GA tag, dispatch Slack/Zapier, init Sentry, real health checks. 4 subtasks (01–04) + 7 leaves. |
+| TASK-492 | Login Alert Delivery (Email + Webhook) & Recipient Settings | Medium | Small | FEATURE: new-device/location login alerts only write an audit row; add email/webhook delivery + recipient/webhook settings. 3 subtasks (01–03) + 6 leaves. |
+| TASK-493 | SEO: Indexing & Search-Performance Pipeline | Medium | Large | FEATURE: no indexed-pages/search-performance data today. Full pipeline: sitemap submission/status + Google Search Console integration (indexed-pages/impressions/queries). 6 subtasks (01–06) + 11 leaves. |
 | TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
 | TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
 | TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |
