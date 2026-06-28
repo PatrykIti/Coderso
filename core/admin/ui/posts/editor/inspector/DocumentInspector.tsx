@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { MediaPicker } from "@/ui/media/MediaPicker";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import type { PostSlugDisplay } from "@/services/siteSettingsClient";
 import type { PostStatus } from "@/services/postsClient";
 import { BLOG_SEO_ROBOTS_OPTIONS } from "./inspectorSchemas";
@@ -50,20 +51,6 @@ export type DocumentInspectorProps = {
   onTagsInputChange: (value: string) => void;
   onCategoryIdChange: (value: string) => void;
   onSeoChange: (patch: Partial<DocumentInspectorProps["seo"]>) => void;
-};
-
-const statusLabel: Record<PostStatus, string> = {
-  draft: "Draft",
-  published: "Published",
-  scheduled: "Scheduled",
-  archived: "Archived",
-};
-
-const statusClass: Record<PostStatus, string> = {
-  draft: "border-slate-500/30 bg-slate-500/10 text-slate-600",
-  published: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700",
-  scheduled: "border-amber-500/30 bg-amber-500/10 text-amber-700",
-  archived: "border-zinc-500/30 bg-zinc-500/10 text-zinc-700",
 };
 
 const formatTimestamp = (value?: string | null) => {
@@ -129,9 +116,7 @@ export function DocumentInspector({
         info="Current post lifecycle status and publishing timestamps."
         tone="muted"
       >
-        <Badge variant="outline" className={statusClass[status]}>
-          {statusLabel[status]}
-        </Badge>
+        <StatusBadge status={status} />
         <dl className="grid gap-2 text-xs text-muted-foreground">
           <div className="flex items-center justify-between gap-3">
             <dt>Last updated</dt>
@@ -223,11 +208,7 @@ export function DocumentInspector({
         action={<Badge variant="outline">SEO {seoCompleteCount}/3</Badge>}
       >
         <div className="space-y-3 border-t pt-3">
-          <InspectorSection
-            title="Title, URL and excerpt"
-            tone="muted"
-            className="rounded-lg"
-          >
+          <InspectorSection title="Title, URL and excerpt" tone="muted" className="rounded-lg">
             <div className="space-y-2">
               <label className="text-xs text-muted-foreground">Post title</label>
               <Input value={title} onChange={(event) => onTitleChange(event.target.value)} />

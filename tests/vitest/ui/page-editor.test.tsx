@@ -21,3 +21,18 @@ test("PageEditorPage renders key panels", () => {
   expect(html).not.toContain("Runtime preview device");
   expect(html).toContain("History");
 });
+
+test("PageEditorPage renders restyled chrome with status badge and panel toggle", () => {
+  // TASK-479-08-L02/L03: the editor chrome adopts the shared StatusBadge and a
+  // floating-panel show/hide toggle (panelOpen lazy-init true → "Hide panel").
+  const html = renderAdminUi(<PageEditorPage />);
+
+  // Shared StatusBadge chrome (data-slot is stable; Tailwind classes are not).
+  expect(html).toContain('data-slot="badge"');
+  // The sole-control-surface show/hide toggle, open by default.
+  expect(html).toContain('aria-label="Hide panel"');
+  expect(html).toContain('aria-pressed="true"');
+  // Canvas data-* hooks remain intact after the restyle.
+  expect(html).toContain('data-page-editor-canvas-frame="true"');
+  expect(html).toContain('data-page-editor-canvas-scroller="true"');
+});

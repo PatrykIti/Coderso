@@ -10,12 +10,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import type { MediaItem } from "@/ui/media/types";
@@ -79,12 +74,7 @@ type PostEditorCanvasProps = {
   onOpenBlockDetails?: (blockId: string) => void;
 };
 
-const richTextBlockTypes = new Set<PostBlockType>([
-  "paragraph",
-  "heading",
-  "quote",
-  "callout",
-]);
+const richTextBlockTypes = new Set<PostBlockType>(["paragraph", "heading", "quote", "callout"]);
 
 const asString = (value: unknown) => (typeof value === "string" ? value : "");
 const readBoolean = (value: unknown, fallback = false) =>
@@ -113,9 +103,9 @@ const resolveTypography = (meta: PostBlockDocument["meta"]) => {
         ? typography.fontFamily
         : "sans",
     baseTextScale:
-      typography?.baseTextScale === "sm"
-      || typography?.baseTextScale === "lg"
-      || typography?.baseTextScale === "xl"
+      typography?.baseTextScale === "sm" ||
+      typography?.baseTextScale === "lg" ||
+      typography?.baseTextScale === "xl"
         ? typography.baseTextScale
         : "md",
   } as const;
@@ -200,9 +190,7 @@ const renderHtmlPreview = (value: unknown, emptyLabel: string) => {
     return <p className="text-sm text-muted-foreground">{emptyLabel}</p>;
   }
   return (
-    <div
-      className="post-editor-richtext prose prose-slate max-w-none text-lg leading-relaxed text-slate-700"
-    >
+    <div className="post-editor-richtext prose prose-slate max-w-none text-lg leading-relaxed text-slate-700">
       {renderPostRichTextHtml(html)}
     </div>
   );
@@ -282,17 +270,12 @@ const readMediaIds = (attrs: Record<string, unknown>) =>
         .filter(Boolean)
     : [];
 
-const resolveMediaSource = (
-  attrs: Record<string, unknown>,
-  mediaById: Map<string, MediaItem>
-) => {
+const resolveMediaSource = (attrs: Record<string, unknown>, mediaById: Map<string, MediaItem>) => {
   const mediaId = readMediaId(attrs);
   const selectedMedia = mediaId ? mediaById.get(mediaId) : undefined;
   const url =
     selectedMedia?.url ??
-    (typeof attrs.url === "string" && attrs.url.trim().length > 0
-      ? attrs.url.trim()
-      : null);
+    (typeof attrs.url === "string" && attrs.url.trim().length > 0 ? attrs.url.trim() : null);
   return { mediaId, selectedMedia, url };
 };
 
@@ -345,8 +328,9 @@ function PostCanvasBlockItem({
 }) {
   const attrs = (block.attrs ?? {}) as Record<string, unknown>;
   const isWritingCanvas = block.type === "writing-canvas";
-  const writingCanvasHtml =
-    isWritingCanvas ? serializeWritingCanvasContentToHtml(block.content) : "";
+  const writingCanvasHtml = isWritingCanvas
+    ? serializeWritingCanvasContentToHtml(block.content)
+    : "";
   const [writingCanvasDraftHtml, setWritingCanvasDraftHtml] = useState<string | null>(null);
   const [listDraft, setListDraft] = useState<string | null>(null);
   const listDraftValue = listDraft ?? normalizeListForEdit(block.content);
@@ -370,7 +354,9 @@ function PostCanvasBlockItem({
             variant="ghost"
             size="icon"
             className={`h-7 w-7 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive ${
-              selected ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
+              selected
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100 focus-visible:opacity-100"
             }`}
             aria-label={`Delete block: ${resolveBlockActionLabel(block)}`}
             title="Delete selected block"
@@ -399,7 +385,8 @@ function PostCanvasBlockItem({
           </Button>
           <Select
             value={
-              typeof attrs.wrap === "string" && POST_IMAGE_WRAP_VALUES.includes(attrs.wrap as (typeof POST_IMAGE_WRAP_VALUES)[number])
+              typeof attrs.wrap === "string" &&
+              POST_IMAGE_WRAP_VALUES.includes(attrs.wrap as (typeof POST_IMAGE_WRAP_VALUES)[number])
                 ? (attrs.wrap as string)
                 : "none"
             }
@@ -418,7 +405,10 @@ function PostCanvasBlockItem({
           </Select>
           <Select
             value={
-              typeof attrs.widthPercent === "number" && POST_IMAGE_WIDTH_VALUES.includes(attrs.widthPercent as (typeof POST_IMAGE_WIDTH_VALUES)[number])
+              typeof attrs.widthPercent === "number" &&
+              POST_IMAGE_WIDTH_VALUES.includes(
+                attrs.widthPercent as (typeof POST_IMAGE_WIDTH_VALUES)[number]
+              )
                 ? String(attrs.widthPercent)
                 : "50"
             }
@@ -752,10 +742,10 @@ function PostCanvasBlockItem({
             toolbarProfile={resolveToolbarProfileForBlockType(block.type) ?? "paragraph"}
             onBlockTypeChange={
               onTransformBlock &&
-              (block.type === "paragraph"
-                || block.type === "heading"
-                || block.type === "quote"
-                || block.type === "callout")
+              (block.type === "paragraph" ||
+                block.type === "heading" ||
+                block.type === "quote" ||
+                block.type === "callout")
                 ? (targetType, attrs) => {
                     onTransformBlock(block.id, targetType);
                     if (attrs && onUpdateBlockAttrs) {
@@ -837,330 +827,331 @@ function PostCanvasBlockItem({
         </div>
       ) : null}
 
-      {block.type === "image" ? (
-        (() => {
-          const imageLayout = resolvePostImageLayoutFromAttrs(attrs);
-          const mediaId =
-            typeof attrs.mediaId === "string" && attrs.mediaId.trim().length > 0
-              ? attrs.mediaId.trim()
-              : null;
-          const selectedMedia = mediaId ? mediaById.get(mediaId) : undefined;
-          const src =
-            selectedMedia?.url
-            ?? (mediaId && (mediaId.startsWith("/") || mediaId.startsWith("http"))
-              ? mediaId
-              : null);
-          const alt =
-            typeof attrs.alt === "string" && attrs.alt.trim().length > 0
-              ? attrs.alt
-              : typeof selectedMedia?.alt === "string" && selectedMedia.alt.trim().length > 0
-                ? selectedMedia.alt
-              : "Selected image";
-          if (!src) {
+      {block.type === "image"
+        ? (() => {
+            const imageLayout = resolvePostImageLayoutFromAttrs(attrs);
+            const mediaId =
+              typeof attrs.mediaId === "string" && attrs.mediaId.trim().length > 0
+                ? attrs.mediaId.trim()
+                : null;
+            const selectedMedia = mediaId ? mediaById.get(mediaId) : undefined;
+            const src =
+              selectedMedia?.url ??
+              (mediaId && (mediaId.startsWith("/") || mediaId.startsWith("http")) ? mediaId : null);
+            const alt =
+              typeof attrs.alt === "string" && attrs.alt.trim().length > 0
+                ? attrs.alt
+                : typeof selectedMedia?.alt === "string" && selectedMedia.alt.trim().length > 0
+                  ? selectedMedia.alt
+                  : "Selected image";
+            if (!src) {
+              return (
+                <button
+                  type="button"
+                  className={mediaPlaceholderClassName}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect();
+                    onOpenMediaPicker?.(block.id, "image");
+                  }}
+                  data-post-editor-media-placeholder="image"
+                >
+                  <ImageIcon className="mb-2 h-8 w-8" />
+                  <p className="text-sm font-medium">Click to choose image from media library</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Advanced URL/media overrides stay in Block settings.
+                  </p>
+                </button>
+              );
+            }
             return (
-              <button
-                type="button"
-                className={mediaPlaceholderClassName}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect();
-                  onOpenMediaPicker?.(block.id, "image");
-                }}
-                data-post-editor-media-placeholder="image"
+              <figure
+                className={cn("post-editor-richtext", buildPostImageLayoutClasses(imageLayout))}
               >
-                <ImageIcon className="mb-2 h-8 w-8" />
-                <p className="text-sm font-medium">Click to choose image from media library</p>
-                <p className="mt-1 text-xs text-slate-500">Advanced URL/media overrides stay in Block settings.</p>
-              </button>
-            );
-          }
-          return (
-            <figure
-              className={cn("post-editor-richtext", buildPostImageLayoutClasses(imageLayout))}
-            >
-              <img
-                src={src}
-                alt={alt}
-                className="h-auto w-full rounded-lg border object-cover"
-                loading="lazy"
-              />
-              {typeof attrs.caption === "string" && attrs.caption.trim().length > 0 ? (
-                <figcaption className="pt-2 text-xs text-slate-600">{attrs.caption}</figcaption>
-              ) : null}
-            </figure>
-          );
-        })()
-      ) : null}
-
-      {block.type === "video" ? (
-        (() => {
-          const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
-          const caption =
-            typeof attrs.caption === "string" && attrs.caption.trim().length > 0
-              ? attrs.caption.trim()
-              : selectedMedia?.caption?.trim();
-          if (!url) {
-            return (
-              <button
-                type="button"
-                className={mediaPlaceholderClassName}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect();
-                  onOpenMediaPicker?.(block.id, "video");
-                }}
-                data-post-editor-media-placeholder="video"
-              >
-                <Video className="mb-2 h-8 w-8" />
-                <p className="text-sm font-medium">Click to choose video from media library</p>
-                <p className="mt-1 text-xs text-slate-500">Supports uploaded video assets.</p>
-              </button>
-            );
-          }
-          return (
-            <figure className="space-y-2 rounded-lg border bg-black/5 p-2">
-              <video
-                src={url}
-                controls={attrs.controls !== false}
-                preload="metadata"
-                className="aspect-video w-full rounded-md bg-black"
-              />
-              {caption ? (
-                <figcaption className="px-1 text-xs text-slate-600">{caption}</figcaption>
-              ) : null}
-            </figure>
-          );
-        })()
-      ) : null}
-
-      {block.type === "gallery" ? (
-        (() => {
-          const mediaIds = readMediaIds(attrs).slice(0, 12);
-          const columns =
-            typeof attrs.columns === "number" && [2, 3, 4].includes(attrs.columns)
-              ? attrs.columns
-              : 3;
-          const images = mediaIds
-            .map((id) => mediaById.get(id))
-            .filter((item): item is MediaItem => Boolean(item?.url));
-          if (images.length === 0) {
-            return (
-              <button
-                type="button"
-                className={mediaPlaceholderClassName}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect();
-                  onOpenMediaPicker?.(block.id, "gallery");
-                }}
-                data-post-editor-media-placeholder="gallery"
-              >
-                <Images className="mb-2 h-8 w-8" />
-                <p className="text-sm font-medium">Click to choose gallery images</p>
-                <p className="mt-1 text-xs text-slate-500">Select up to 12 image assets.</p>
-              </button>
-            );
-          }
-          return (
-            <div
-              className={cn(
-                "grid gap-3",
-                columns === 2 ? "grid-cols-2" : columns === 4 ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"
-              )}
-              data-post-editor-gallery-grid="true"
-            >
-              {images.map((item) => (
-                <figure key={item.id} className="space-y-1">
-                  <img
-                    src={item.url}
-                    alt={item.alt ?? getMediaDisplayName(item, "Gallery image")}
-                    className="aspect-square w-full rounded-lg border object-cover"
-                    loading="lazy"
-                  />
-                  {attrs.captions !== false && item.caption ? (
-                    <figcaption className="text-xs text-slate-600">{item.caption}</figcaption>
-                  ) : null}
-                </figure>
-              ))}
-            </div>
-          );
-        })()
-      ) : null}
-
-      {block.type === "audio" ? (
-        (() => {
-          const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
-          const caption =
-            typeof attrs.caption === "string" && attrs.caption.trim().length > 0
-              ? attrs.caption.trim()
-              : selectedMedia?.caption?.trim();
-          if (!url) {
-            return (
-              <button
-                type="button"
-                className={mediaPlaceholderClassName}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect();
-                  onOpenMediaPicker?.(block.id, "audio");
-                }}
-                data-post-editor-media-placeholder="audio"
-              >
-                <FileAudio className="mb-2 h-8 w-8" />
-                <p className="text-sm font-medium">Click to choose audio from media library</p>
-                <p className="mt-1 text-xs text-slate-500">Supports uploaded audio assets.</p>
-              </button>
-            );
-          }
-          return (
-            <figure className="space-y-2 rounded-lg border bg-slate-50 p-3">
-              <audio src={url} controls className="w-full" preload="metadata" />
-              {caption ? (
-                <figcaption className="text-xs text-slate-600">{caption}</figcaption>
-              ) : null}
-            </figure>
-          );
-        })()
-      ) : null}
-
-      {block.type === "file" ? (
-        (() => {
-          const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
-          const label =
-            typeof attrs.label === "string" && attrs.label.trim().length > 0
-              ? attrs.label.trim()
-              : getMediaDisplayName(selectedMedia, "Download file");
-          const sizeLabel = formatMediaSize(selectedMedia?.sizeBytes);
-          if (!url) {
-            return (
-              <button
-                type="button"
-                className={mediaPlaceholderClassName}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect();
-                  onOpenMediaPicker?.(block.id, "file");
-                }}
-                data-post-editor-media-placeholder="file"
-              >
-                <FileText className="mb-2 h-8 w-8" />
-                <p className="text-sm font-medium">Click to choose file from media library</p>
-                <p className="mt-1 text-xs text-slate-500">Renders as a safe download link.</p>
-              </button>
-            );
-          }
-          return (
-            <a
-              href={url}
-              target={attrs.newTab === true ? "_blank" : undefined}
-              rel={attrs.newTab === true ? "noopener noreferrer" : undefined}
-              className="flex items-center justify-between gap-3 rounded-lg border bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-100"
-              onClick={(event) => event.preventDefault()}
-            >
-              <span className="min-w-0 truncate">{label}</span>
-              {attrs.showSize !== false && sizeLabel ? (
-                <span className="shrink-0 text-xs text-slate-500">
-                  {sizeLabel}
-                </span>
-              ) : null}
-            </a>
-          );
-        })()
-      ) : null}
-
-      {block.type === "button" ? (
-        (() => {
-          const label =
-            typeof attrs.label === "string" && attrs.label.trim().length > 0
-              ? attrs.label
-              : "Button";
-          const href =
-            typeof attrs.url === "string" && attrs.url.trim().length > 0
-              ? attrs.url.trim()
-              : "#";
-          const variant =
-            typeof attrs.variant === "string" && buttonVariantClass[attrs.variant]
-              ? attrs.variant
-              : "primary";
-          const size =
-            typeof attrs.size === "string" && buttonSizeClass[attrs.size]
-              ? attrs.size
-              : "md";
-
-          return (
-            <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
-              <button
-                type="button"
-                className={cn(
-                  "inline-flex items-center justify-center rounded-md font-medium transition",
-                  buttonVariantClass[variant],
-                  buttonSizeClass[size]
-                )}
-                onClick={(event) => {
-                  event.preventDefault();
-                  event.stopPropagation();
-                  onSelect();
-                  onOpenBlockDetails?.(block.id);
-                }}
-                data-post-editor-media-placeholder="button"
-              >
-                {label}
-              </button>
-              <p className="mt-2 text-xs text-slate-500">Target: {href}</p>
-            </div>
-          );
-        })()
-      ) : null}
-
-      {block.type === "embed" ? (
-        (() => {
-          const provider =
-            typeof attrs.provider === "string" ? attrs.provider : "custom";
-          const aspect =
-            typeof attrs.aspect === "string" && embedAspectPaddingTop[attrs.aspect]
-              ? attrs.aspect
-              : "16:9";
-          const src = resolveEmbedSrc(provider, attrs.url);
-
-          if (!src) {
-            return (
-              <button
-                type="button"
-                className={mediaPlaceholderClassName}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect();
-                  onOpenBlockDetails?.(block.id);
-                }}
-                data-post-editor-media-placeholder="embed"
-              >
-                <PlayCircle className="mb-2 h-8 w-8" />
-                <p className="text-sm font-medium">Click to configure embed URL</p>
-                <p className="mt-1 text-xs text-slate-500">Supports YouTube, Vimeo, Loom, or custom URL.</p>
-              </button>
-            );
-          }
-
-          return (
-            <div className="overflow-hidden rounded-lg border bg-black/5">
-              <div
-                className="relative w-full"
-                style={{ paddingTop: embedAspectPaddingTop[aspect] ?? embedAspectPaddingTop["16:9"] }}
-              >
-                <iframe
+                <img
                   src={src}
-                  loading={attrs.lazy === false ? "eager" : "lazy"}
-                  title="Embed preview"
-                  className="absolute inset-0 h-full w-full border-0"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowFullScreen
+                  alt={alt}
+                  className="h-auto w-full rounded-lg border object-cover"
+                  loading="lazy"
                 />
+                {typeof attrs.caption === "string" && attrs.caption.trim().length > 0 ? (
+                  <figcaption className="pt-2 text-xs text-slate-600">{attrs.caption}</figcaption>
+                ) : null}
+              </figure>
+            );
+          })()
+        : null}
+
+      {block.type === "video"
+        ? (() => {
+            const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+            const caption =
+              typeof attrs.caption === "string" && attrs.caption.trim().length > 0
+                ? attrs.caption.trim()
+                : selectedMedia?.caption?.trim();
+            if (!url) {
+              return (
+                <button
+                  type="button"
+                  className={mediaPlaceholderClassName}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect();
+                    onOpenMediaPicker?.(block.id, "video");
+                  }}
+                  data-post-editor-media-placeholder="video"
+                >
+                  <Video className="mb-2 h-8 w-8" />
+                  <p className="text-sm font-medium">Click to choose video from media library</p>
+                  <p className="mt-1 text-xs text-slate-500">Supports uploaded video assets.</p>
+                </button>
+              );
+            }
+            return (
+              <figure className="space-y-2 rounded-lg border bg-black/5 p-2">
+                <video
+                  src={url}
+                  controls={attrs.controls !== false}
+                  preload="metadata"
+                  className="aspect-video w-full rounded-md bg-black"
+                />
+                {caption ? (
+                  <figcaption className="px-1 text-xs text-slate-600">{caption}</figcaption>
+                ) : null}
+              </figure>
+            );
+          })()
+        : null}
+
+      {block.type === "gallery"
+        ? (() => {
+            const mediaIds = readMediaIds(attrs).slice(0, 12);
+            const columns =
+              typeof attrs.columns === "number" && [2, 3, 4].includes(attrs.columns)
+                ? attrs.columns
+                : 3;
+            const images = mediaIds
+              .map((id) => mediaById.get(id))
+              .filter((item): item is MediaItem => Boolean(item?.url));
+            if (images.length === 0) {
+              return (
+                <button
+                  type="button"
+                  className={mediaPlaceholderClassName}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect();
+                    onOpenMediaPicker?.(block.id, "gallery");
+                  }}
+                  data-post-editor-media-placeholder="gallery"
+                >
+                  <Images className="mb-2 h-8 w-8" />
+                  <p className="text-sm font-medium">Click to choose gallery images</p>
+                  <p className="mt-1 text-xs text-slate-500">Select up to 12 image assets.</p>
+                </button>
+              );
+            }
+            return (
+              <div
+                className={cn(
+                  "grid gap-3",
+                  columns === 2
+                    ? "grid-cols-2"
+                    : columns === 4
+                      ? "grid-cols-2 sm:grid-cols-4"
+                      : "grid-cols-3"
+                )}
+                data-post-editor-gallery-grid="true"
+              >
+                {images.map((item) => (
+                  <figure key={item.id} className="space-y-1">
+                    <img
+                      src={item.url}
+                      alt={item.alt ?? getMediaDisplayName(item, "Gallery image")}
+                      className="aspect-square w-full rounded-lg border object-cover"
+                      loading="lazy"
+                    />
+                    {attrs.captions !== false && item.caption ? (
+                      <figcaption className="text-xs text-slate-600">{item.caption}</figcaption>
+                    ) : null}
+                  </figure>
+                ))}
               </div>
-            </div>
-          );
-        })()
-      ) : null}
+            );
+          })()
+        : null}
+
+      {block.type === "audio"
+        ? (() => {
+            const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+            const caption =
+              typeof attrs.caption === "string" && attrs.caption.trim().length > 0
+                ? attrs.caption.trim()
+                : selectedMedia?.caption?.trim();
+            if (!url) {
+              return (
+                <button
+                  type="button"
+                  className={mediaPlaceholderClassName}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect();
+                    onOpenMediaPicker?.(block.id, "audio");
+                  }}
+                  data-post-editor-media-placeholder="audio"
+                >
+                  <FileAudio className="mb-2 h-8 w-8" />
+                  <p className="text-sm font-medium">Click to choose audio from media library</p>
+                  <p className="mt-1 text-xs text-slate-500">Supports uploaded audio assets.</p>
+                </button>
+              );
+            }
+            return (
+              <figure className="space-y-2 rounded-lg border bg-slate-50 p-3">
+                <audio src={url} controls className="w-full" preload="metadata" />
+                {caption ? (
+                  <figcaption className="text-xs text-slate-600">{caption}</figcaption>
+                ) : null}
+              </figure>
+            );
+          })()
+        : null}
+
+      {block.type === "file"
+        ? (() => {
+            const { selectedMedia, url } = resolveMediaSource(attrs, mediaById);
+            const label =
+              typeof attrs.label === "string" && attrs.label.trim().length > 0
+                ? attrs.label.trim()
+                : getMediaDisplayName(selectedMedia, "Download file");
+            const sizeLabel = formatMediaSize(selectedMedia?.sizeBytes);
+            if (!url) {
+              return (
+                <button
+                  type="button"
+                  className={mediaPlaceholderClassName}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect();
+                    onOpenMediaPicker?.(block.id, "file");
+                  }}
+                  data-post-editor-media-placeholder="file"
+                >
+                  <FileText className="mb-2 h-8 w-8" />
+                  <p className="text-sm font-medium">Click to choose file from media library</p>
+                  <p className="mt-1 text-xs text-slate-500">Renders as a safe download link.</p>
+                </button>
+              );
+            }
+            return (
+              <a
+                href={url}
+                target={attrs.newTab === true ? "_blank" : undefined}
+                rel={attrs.newTab === true ? "noopener noreferrer" : undefined}
+                className="flex items-center justify-between gap-3 rounded-lg border bg-slate-50 px-4 py-3 text-sm font-medium text-slate-800 hover:bg-slate-100"
+                onClick={(event) => event.preventDefault()}
+              >
+                <span className="min-w-0 truncate">{label}</span>
+                {attrs.showSize !== false && sizeLabel ? (
+                  <span className="shrink-0 text-xs text-slate-500">{sizeLabel}</span>
+                ) : null}
+              </a>
+            );
+          })()
+        : null}
+
+      {block.type === "button"
+        ? (() => {
+            const label =
+              typeof attrs.label === "string" && attrs.label.trim().length > 0
+                ? attrs.label
+                : "Button";
+            const href =
+              typeof attrs.url === "string" && attrs.url.trim().length > 0 ? attrs.url.trim() : "#";
+            const variant =
+              typeof attrs.variant === "string" && buttonVariantClass[attrs.variant]
+                ? attrs.variant
+                : "primary";
+            const size =
+              typeof attrs.size === "string" && buttonSizeClass[attrs.size] ? attrs.size : "md";
+
+            return (
+              <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center justify-center rounded-md font-medium transition",
+                    buttonVariantClass[variant],
+                    buttonSizeClass[size]
+                  )}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onSelect();
+                    onOpenBlockDetails?.(block.id);
+                  }}
+                  data-post-editor-media-placeholder="button"
+                >
+                  {label}
+                </button>
+                <p className="mt-2 text-xs text-slate-500">Target: {href}</p>
+              </div>
+            );
+          })()
+        : null}
+
+      {block.type === "embed"
+        ? (() => {
+            const provider = typeof attrs.provider === "string" ? attrs.provider : "custom";
+            const aspect =
+              typeof attrs.aspect === "string" && embedAspectPaddingTop[attrs.aspect]
+                ? attrs.aspect
+                : "16:9";
+            const src = resolveEmbedSrc(provider, attrs.url);
+
+            if (!src) {
+              return (
+                <button
+                  type="button"
+                  className={mediaPlaceholderClassName}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect();
+                    onOpenBlockDetails?.(block.id);
+                  }}
+                  data-post-editor-media-placeholder="embed"
+                >
+                  <PlayCircle className="mb-2 h-8 w-8" />
+                  <p className="text-sm font-medium">Click to configure embed URL</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Supports YouTube, Vimeo, Loom, or custom URL.
+                  </p>
+                </button>
+              );
+            }
+
+            return (
+              <div className="overflow-hidden rounded-lg border bg-black/5">
+                <div
+                  className="relative w-full"
+                  style={{
+                    paddingTop: embedAspectPaddingTop[aspect] ?? embedAspectPaddingTop["16:9"],
+                  }}
+                >
+                  <iframe
+                    src={src}
+                    loading={attrs.lazy === false ? "eager" : "lazy"}
+                    title="Embed preview"
+                    className="absolute inset-0 h-full w-full border-0"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+              </div>
+            );
+          })()
+        : null}
     </section>
   );
 }
@@ -1191,10 +1182,7 @@ export function PostEditorCanvas({
   const [mediaQuery, setMediaQuery] = useState("");
 
   const typography = useMemo(() => resolveTypography(document.meta), [document.meta]);
-  const mediaById = useMemo(
-    () => new Map(mediaItems.map((item) => [item.id, item])),
-    [mediaItems]
-  );
+  const mediaById = useMemo(() => new Map(mediaItems.map((item) => [item.id, item])), [mediaItems]);
 
   const filteredMediaItems = useMemo(() => {
     const normalizedQuery = mediaQuery.trim().toLowerCase();
@@ -1203,9 +1191,9 @@ export function PostEditorCanvas({
       if (!copy.accept(item)) return false;
       if (!normalizedQuery) return true;
       return (
-        item.name.toLowerCase().includes(normalizedQuery)
-        || (item.originalName ?? "").toLowerCase().includes(normalizedQuery)
-        || (item.title ?? "").toLowerCase().includes(normalizedQuery)
+        item.name.toLowerCase().includes(normalizedQuery) ||
+        (item.originalName ?? "").toLowerCase().includes(normalizedQuery) ||
+        (item.title ?? "").toLowerCase().includes(normalizedQuery)
       );
     });
   }, [mediaItems, mediaPicker, mediaQuery]);
@@ -1244,7 +1232,11 @@ export function PostEditorCanvas({
       const patch: Record<string, unknown> = {
         mediaId: id,
       };
-      if (mediaPicker.kind === "image" && typeof media?.alt === "string" && media.alt.trim().length > 0) {
+      if (
+        mediaPicker.kind === "image" &&
+        typeof media?.alt === "string" &&
+        media.alt.trim().length > 0
+      ) {
         patch.alt = media.alt;
       }
       if (typeof media?.caption === "string" && media.caption.trim().length > 0) {
@@ -1359,12 +1351,12 @@ export function PostEditorCanvas({
 
   return (
     <div
-      className="flex min-h-0 flex-1 bg-background"
+      className="flex min-h-0 flex-1 bg-dotted px-4 py-8 sm:px-8 sm:py-12"
       onClick={() => onSelectBlock(null)}
       data-post-editor-canvas="article"
     >
       <div
-        className="mx-auto flex min-h-full w-full max-w-[720px] flex-col px-4 py-10 sm:px-8 sm:py-20"
+        className="mx-auto flex w-full max-w-2xl flex-col rounded-2xl border border-border bg-card p-6 shadow-card sm:p-10"
         data-post-editor-canvas-shell="true"
       >
         <div className="space-y-10">
@@ -1377,14 +1369,14 @@ export function PostEditorCanvas({
                 onSelectBlock(null);
               }}
               placeholder="Enter post title..."
-              className="min-h-0 resize-none border-0 p-0 text-5xl font-display font-bold leading-tight tracking-tight text-slate-900 shadow-none placeholder:text-slate-200 focus-visible:ring-0"
+              className="min-h-0 resize-none border-0 p-0 text-5xl font-display font-bold leading-tight tracking-tight text-foreground shadow-none placeholder:text-muted-foreground/30 focus-visible:ring-0"
               rows={1}
               data-post-editor-title-input="true"
             />
           </div>
 
           {document.blocks.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
+            <div className="rounded-xl border border-dashed border-border bg-muted/40 p-8 text-center">
               <p className="text-sm text-muted-foreground">No blocks yet.</p>
               <Button
                 type="button"
@@ -1483,7 +1475,9 @@ export function PostEditorCanvas({
               <div className="max-h-[58vh] overflow-y-auto pr-1">
                 <MediaGrid
                   items={filteredMediaItems}
-                  selectedId={mediaPicker?.kind === "gallery" ? undefined : selectedPickerMediaIds[0]}
+                  selectedId={
+                    mediaPicker?.kind === "gallery" ? undefined : selectedPickerMediaIds[0]
+                  }
                   selectedIds={mediaPicker?.kind === "gallery" ? selectedPickerMediaIds : undefined}
                   onSelect={handleMediaSelect}
                 />

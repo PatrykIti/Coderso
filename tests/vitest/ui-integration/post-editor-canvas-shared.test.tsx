@@ -34,10 +34,10 @@ test("PostEditorCanvas renders unified document canvas", () => {
     />
   );
 
-  expect(html).toContain("data-post-editor-flow=\"unified\"");
-  expect(html).toContain("data-post-editor-canvas-shell=\"true\"");
-  expect(html).toContain("data-post-editor-title-input=\"true\"");
-  expect(html).toContain("max-w-[720px]");
+  expect(html).toContain('data-post-editor-flow="unified"');
+  expect(html).toContain('data-post-editor-canvas-shell="true"');
+  expect(html).toContain('data-post-editor-title-input="true"');
+  expect(html).toContain("max-w-2xl");
   expect(html).toContain("text-5xl");
   expect(html).toContain("Heading");
 });
@@ -177,7 +177,7 @@ test("PostEditorCanvas renders media placeholder when image is not configured", 
     />
   );
 
-  expect(html).toContain("data-post-editor-media-placeholder=\"image\"");
+  expect(html).toContain('data-post-editor-media-placeholder="image"');
   expect(html).toContain("Click to choose image from media library");
 });
 
@@ -242,7 +242,7 @@ test("PostEditorCanvas renders embed previews for supported providers and falls 
   expect(html).toContain("https://www.loom.com/embed/demo-id");
   expect(html).toContain("https://example.com/embed/demo");
   expect(html).not.toContain("https://www.youtube.com/embed/bad");
-  expect(html).toContain("data-post-editor-media-placeholder=\"embed\"");
+  expect(html).toContain('data-post-editor-media-placeholder="embed"');
   expect(html).toContain("Click to configure embed URL");
 });
 
@@ -265,7 +265,7 @@ test("PostEditorCanvas renders delete control for selected block", () => {
     />
   );
 
-  expect(html).toContain("aria-label=\"Delete block: Heading\"");
+  expect(html).toContain('aria-label="Delete block: Heading"');
 });
 
 test("PostEditorCanvas keeps delete control discoverable on hover for non-selected blocks", () => {
@@ -287,6 +287,6 @@ test("PostEditorCanvas keeps delete control discoverable on hover for non-select
     />
   );
 
-  expect(html).toContain("aria-label=\"Delete block: Heading\"");
+  expect(html).toContain('aria-label="Delete block: Heading"');
   expect(html).toContain("opacity-0 group-hover:opacity-100 focus-visible:opacity-100");
 });

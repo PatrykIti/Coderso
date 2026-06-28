@@ -30,18 +30,21 @@ import {
   Maximize2,
   Minimize2,
   Palette,
+  PanelRight,
   PanelTop,
   Plus,
   RotateCcw,
   Redo2,
   Save,
   Settings2,
+  SlidersHorizontal,
   Trash2,
   Undo2,
   X,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -79,6 +82,7 @@ import { EditorShell } from "@/ui/layouts/EditorShell";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
 import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import {
   clearActiveAssistantSurfaceContext,
   setActiveAssistantSurfaceContext,
@@ -225,7 +229,6 @@ import {
   blockOptions,
   canvasDeviceFrameClassMap,
   deviceScopeReadout,
-  pageEditorStatusBadgeClassName,
   resolveToolbarTargetLabel,
   sectionOptions,
   toolbarActionTooltips,
@@ -743,6 +746,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [selectedBlockPath, setSelectedBlockPath] = useState<PageBlockPath | null>(null);
   const [inlineEditTarget, setInlineEditTarget] = useState<PageEditorInlineEditTarget | null>(null);
   const [device, setDevice] = useState<PageBreakpoint>("desktop");
+  // TASK-479-08-L02: the floating control panel is the sole control surface; a
+  // single lazy-init open flag drives the chrome show/hide toggle. Toggled only
+  // by the user (never derived from props in an effect), so a page-data
+  // re-render never re-homes the controls or clears dirty state.
+  const [panelOpen, setPanelOpen] = useState(true);
   // Session UI pref (not the page document): which side the inline mark toolbar
   // docks to so the color picker stops covering the edited text (TASK-478-03).
   // Persists across subsequent block edits in the session, mirroring `device`.
@@ -932,9 +940,12 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const resolvedSelectedSection = selectedSection
     ? resolvePageSectionForBreakpoint(selectedSection, device)
     : null;
+  // A section/block selection exists, so the floating control panel has content
+  // to host; the chrome panel toggle (panelOpen) decides whether it is shown.
+  const hasFloatingPanelSelection = Boolean(selectedSection && resolvedSelectedSection);
   // Mirrors the floating toolbar render condition; drives the canvas scroll
   // clearance that keeps canvas targets reachable under the toolbar.
-  const floatingToolbarVisible = Boolean(selectedSection && resolvedSelectedSection);
+  const floatingToolbarVisible = hasFloatingPanelSelection && panelOpen;
   const selectedBlock =
     selectedBlockPath && selectedSection
       ? getPageBlockAtPath(selectedSection, selectedBlockPath)
@@ -2547,6 +2558,17 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       <DeviceSwitcher value={device} onChange={setDevice} />
       <Button
         type="button"
+        variant={panelOpen ? "soft" : "ghost"}
+        size="sm"
+        onClick={() => setPanelOpen((open) => !open)}
+        aria-label={panelOpen ? "Hide panel" : "Show panel"}
+        aria-pressed={panelOpen}
+      >
+        <PanelRight className="h-4 w-4" />
+        Panel
+      </Button>
+      <Button
+        type="button"
         variant="ghost"
         size="sm"
         onClick={() => setLayersOpen((open) => !open)}
@@ -2600,13 +2622,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">{editorHost.resourceLabel}</span>
           <span className="text-sm font-semibold">{page?.title ?? settingsTitle}</span>
-          <span className={pageEditorStatusBadgeClassName(page?.status ?? "draft")}>
-            {page?.status ?? "draft"}
-          </span>
+          <StatusBadge status={page?.status ?? "draft"} />
           {hasUnsavedChanges ? (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+            <Badge variant="warning" className="text-[10px] font-semibold uppercase">
               Unsaved
-            </span>
+            </Badge>
           ) : null}
         </div>
       }
@@ -2614,7 +2634,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
       centerScroll={false}
       contentClassName="h-full"
     >
-      <div className="relative flex h-full min-h-0 flex-col bg-[radial-gradient(circle_at_1px_1px,rgba(15,23,42,0.12)_1px,transparent_0)] [background-size:24px_24px]">
+      <div className="relative flex h-full min-h-0 flex-col bg-dotted">
         {error ? (
           <Alert variant="destructive" className="m-4">
             <AlertTitle>Page editor error</AlertTitle>
@@ -2698,7 +2718,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         ) : null}
 
         <div
-          className="flex items-center justify-center border-b bg-background/80 px-4 py-2 text-[11px] font-semibold uppercase text-muted-foreground"
+          className="flex items-center justify-center border-b border-border bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase text-muted-foreground"
           data-page-editor-canvas-context={device}
         >
           {device === "desktop"
@@ -2724,7 +2744,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           onClick={() => selectSection(null)}
         >
           <div
-            className={`mx-auto min-h-full w-full rounded bg-white p-4 shadow-sm transition-all ${canvasDeviceFrameClassMap[device]}`}
+            className={`mx-auto min-h-full w-full rounded-2xl bg-white p-4 shadow-soft transition-all ${canvasDeviceFrameClassMap[device]}`}
             // Site typography token variables (not the admin-theme ones) so
             // canvas `var(--text-*)`/`var(--font-*)` paints match the front.
             style={canvasSiteTokenVariables}
@@ -2809,7 +2829,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         </div>
 
         {layersOpen ? (
-          <div className="absolute left-4 top-16 z-20 w-72 rounded border bg-background p-3 shadow-lg">
+          <div className="absolute left-4 top-16 z-20 w-72 rounded-2xl border border-border bg-popover p-3 shadow-pop">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-sm font-semibold">Layers</p>
               <Button
@@ -2875,10 +2895,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           </div>
         ) : null}
 
-        {selectedSection && resolvedSelectedSection ? (
+        {panelOpen && selectedSection && resolvedSelectedSection ? (
           <div
             ref={toolbarElementRef}
-            className="absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] rounded-xl bg-slate-950 p-2 text-white shadow-2xl"
+            className="absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] rounded-2xl bg-slate-950 p-2 text-white shadow-2xl"
             style={{
               transform: `translateX(calc(-50% + ${toolbarOffset.x}px)) translateY(${toolbarOffset.y}px)`,
             }}
@@ -3163,6 +3183,19 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
               </PageEditorColorPaletteContext.Provider>
             ) : null}
           </div>
+        ) : null}
+
+        {!panelOpen && hasFloatingPanelSelection ? (
+          // Reopen affordance when the sole control panel is hidden (mirrors the
+          // shared CanvasEditor "Show panel" button). Restores panelOpen only.
+          <button
+            type="button"
+            onClick={() => setPanelOpen(true)}
+            className="absolute bottom-6 right-6 z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary"
+            aria-label="Show panel"
+          >
+            <SlidersHorizontal className="size-3.5" /> Show panel
+          </button>
         ) : null}
 
         {commandOpen ? (

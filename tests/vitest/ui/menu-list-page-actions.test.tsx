@@ -363,6 +363,55 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
+test("renders one card per menu with Edit/Design hrefs and the unassigned fallback (TASK-479-10-L01)", async () => {
+  const view = mount();
+  try {
+    await flush();
+
+    const html = view.host.innerHTML;
+    // Card grid, not a data table.
+    expect(view.host.querySelector("table")).toBeNull();
+    // Per-card Edit + Design AdminLinks (mock prefixes /admin), route shapes
+    // unchanged.
+    expect(html).toContain("/admin/menus/menu-1");
+    expect(html).toContain("/admin/menus/menu-1/design");
+    expect(html).toContain("/admin/menus/menu-2/design");
+    // Real location chip + the unassigned fallback for the location-less menu.
+    expect(view.host.textContent).toContain("primary");
+    expect(view.host.textContent).toContain("Not assigned");
+    // Status labels: published + draft only.
+    expect(view.host.textContent).toContain("Published");
+    expect(view.host.textContent).toContain("Draft");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("per-card selection still surfaces the bulk actions bar after the card restyle (TASK-479-10-L01)", async () => {
+  const view = mount();
+  try {
+    await flush();
+
+    // Each card exposes its own selection checkbox; the bulk bar is hidden
+    // until something is selected.
+    expect(view.host.textContent).not.toContain("Selected 1");
+    const select = view.host.querySelector(
+      'button[aria-label="Select Primary"]'
+    ) as HTMLButtonElement;
+    expect(select).toBeTruthy();
+
+    await React.act(async () => {
+      select.click();
+      await Promise.resolve();
+    });
+
+    expect(view.host.textContent).toContain("Selected 1");
+    expect(view.host.textContent).toContain("Apply");
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("MenuListPage filters rows and bulk publishes only selected visible menus", async () => {
   const view = mount();
   try {

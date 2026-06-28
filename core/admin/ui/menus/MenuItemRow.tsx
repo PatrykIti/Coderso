@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowDown,
   ArrowUp,
+  CornerDownRight,
   GripVertical,
   IndentDecrease,
   IndentIncrease,
@@ -97,9 +98,9 @@ export function MenuItemRow({
   const nestedHint = depth > 0 && item.parentLabel ? `Sub-item of ${item.parentLabel}` : null;
   const toneClass =
     settings.badge?.tone === "accent"
-      ? "border-sky-200 bg-sky-500/10 text-sky-700"
+      ? "border-info/30 bg-info-soft text-info"
       : settings.badge?.tone === "success"
-        ? "border-emerald-200 bg-emerald-500/10 text-emerald-700"
+        ? "border-success/30 bg-success-soft text-success"
         : settings.badge?.tone === "warning"
           ? "border-[var(--admin-state-warning)] bg-card text-[var(--admin-state-warning)]"
           : settings.badge?.tone === "danger"
@@ -108,13 +109,14 @@ export function MenuItemRow({
   return (
     <div
       className={cn(
-        "group relative flex items-stretch gap-3 rounded-xl border bg-background px-3 shadow-sm transition select-none",
-        active && "border-primary/60 ring-1 ring-primary/20",
+        "group relative flex items-stretch gap-3 rounded-xl border bg-card px-3 shadow-sm transition-colors select-none hover:bg-accent",
+        active && "border-primary bg-primary-soft/40 ring-1 ring-primary/20",
         isDragTarget && dropIntent === "child"
           ? "border-primary bg-primary/5 ring-2 ring-primary/40"
           : isDragTarget && "border-primary/50 ring-2 ring-primary/10"
       )}
       data-menu-depth={depth}
+      data-menu-row-active={active ? "true" : undefined}
       data-menu-row-id={item.id}
       onDragOver={(event) => {
         event.preventDefault();
@@ -157,6 +159,14 @@ export function MenuItemRow({
           className="h-4 w-4 pointer-events-none"
         />
       </button>
+      {depth > 0 ? (
+        <CornerDownRight
+          aria-hidden="true"
+          focusable="false"
+          data-menu-nested-indent=""
+          className="size-4 shrink-0 self-center text-muted-foreground"
+        />
+      ) : null}
       <button
         type="button"
         className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"

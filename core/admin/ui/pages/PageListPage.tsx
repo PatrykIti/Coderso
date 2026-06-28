@@ -23,6 +23,7 @@ import { AdminLink } from "@/ui/shared/AdminLink";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatusTabs } from "@/ui/shared/StatusTabs";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -169,6 +170,24 @@ export function PageListPage() {
     return Array.from(map.entries())
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
+  }, [items]);
+
+  // Status tabs are derived from the already-loaded items (no extra fetch); a
+  // tab click only flips the existing statusFilter that filterPages() consumes.
+  // The tab values are exactly the real PageStatus enum + "all" — there is no
+  // "trash"/"review" status in core, so the prototype's trash tab is dropped.
+  const statusTabItems = useMemo(() => {
+    const counts = items.reduce<Record<string, number>>((acc, page) => {
+      acc[page.status] = (acc[page.status] ?? 0) + 1;
+      return acc;
+    }, {});
+    return [
+      { value: "all", label: "All", count: items.length },
+      { value: "published", label: "Published", count: counts.published ?? 0 },
+      { value: "draft", label: "Drafts", count: counts.draft ?? 0 },
+      { value: "scheduled", label: "Scheduled", count: counts.scheduled ?? 0 },
+      { value: "archived", label: "Archived", count: counts.archived ?? 0 },
+    ];
   }, [items]);
 
   const filteredItems = useMemo(
@@ -375,7 +394,7 @@ export function PageListPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Pages"
-          description="Manage your content and page structures."
+          description="Create, organize, and publish the pages of your site."
           actions={
             <>
               {selectedCount > 0 ? (
@@ -408,6 +427,7 @@ export function PageListPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+        <StatusTabs tabs={statusTabItems} value={statusFilter} onValueChange={setStatusFilter} />
         <PageFilters
           search={searchQuery}
           status={statusFilter}
@@ -418,7 +438,7 @@ export function PageListPage() {
           onAuthorChange={setAuthorFilter}
         />
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-soft">
             Loading pages...
           </div>
         ) : (

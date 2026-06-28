@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -139,7 +140,7 @@ function MenuDesignCanvasChrome({
       {navigationState.kind === "ready" ? (
         <SiteHeaderNav navigation={navigationState.navigation} extras={extras} />
       ) : (
-        <div className="rounded border border-dashed p-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-dashed bg-card/60 p-6 text-center text-sm text-muted-foreground">
           {navigationState.kind === "loading"
             ? "Loading menu preview..."
             : "Failed to load the menu preview."}
@@ -192,14 +193,14 @@ function MenuDesignSettingsForm({
   return (
     <div className="space-y-4">
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <label className="grid gap-1 text-xs font-semibold uppercase text-muted-foreground">
-        Name
-        <input
-          className="rounded border px-2 py-2 text-sm font-normal normal-case text-foreground"
+      <div className="space-y-1.5">
+        <div className="text-xs font-medium text-muted-foreground">Name</div>
+        <Input
+          aria-label="Menu name"
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
-      </label>
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="button" disabled={isSaving || !name.trim()} onClick={handleSave}>
           {isSaving ? "Saving..." : "Save settings"}
