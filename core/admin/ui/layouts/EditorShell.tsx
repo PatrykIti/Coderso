@@ -9,6 +9,11 @@ type EditorShellProps = {
   rightPanelClassName?: string;
   centerScroll?: boolean;
   centerPanelClassName?: string;
+  // TASK-479-06-L05: "panels" (default) keeps the existing 3-pane side-rail
+  // layout; "canvas" hosts the L06 floating-panel CanvasEditor as a single
+  // full-height surface that fills the center region. Additive, backward
+  // compatible — existing editors stay on "panels".
+  variant?: "panels" | "canvas";
 } & React.ComponentProps<typeof AdminShell>;
 
 export function EditorShell({
@@ -19,16 +24,30 @@ export function EditorShell({
   rightPanelClassName,
   centerScroll = true,
   centerPanelClassName,
+  variant = "panels",
   contentClassName,
   ...props
 }: EditorShellProps) {
+  if (variant === "canvas") {
+    return (
+      <AdminShell contentClassName={cn("p-0 overflow-hidden", contentClassName)} {...props}>
+        <div
+          className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-[var(--admin-base-surface)]"
+          data-editor-shell-canvas="true"
+        >
+          {children}
+        </div>
+      </AdminShell>
+    );
+  }
+
   return (
     <AdminShell contentClassName={cn("p-0 overflow-hidden", contentClassName)} {...props}>
       <div className="flex h-full min-h-0 overflow-hidden">
         {leftPanel ? (
           <aside
             className={cn(
-              "hidden h-full min-h-0 w-72 shrink-0 border-r bg-background lg:flex",
+              "hidden h-full min-h-0 w-72 shrink-0 border-r border-[var(--admin-base-border)] bg-[var(--admin-card-bg)] lg:flex",
               leftPanelClassName
             )}
             data-editor-shell-left-panel="true"
@@ -36,7 +55,10 @@ export function EditorShell({
             <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto">{leftPanel}</div>
           </aside>
         ) : null}
-        <section className="min-h-0 min-w-0 flex-1 bg-muted/20" data-editor-shell-center="true">
+        <section
+          className="min-h-0 min-w-0 flex-1 bg-[var(--admin-base-surface)]"
+          data-editor-shell-center="true"
+        >
           <div
             className={cn(
               "flex h-full min-h-0 flex-col",
@@ -50,7 +72,7 @@ export function EditorShell({
         {rightPanel ? (
           <aside
             className={cn(
-              "hidden h-full min-h-0 w-80 shrink-0 border-l bg-background lg:flex",
+              "hidden h-full min-h-0 w-80 shrink-0 border-l border-[var(--admin-base-border)] bg-[var(--admin-card-bg)] lg:flex",
               rightPanelClassName
             )}
             data-editor-shell-right-panel="true"

@@ -20,7 +20,7 @@ export function SplitShell({
         {rightPanel ? (
           <aside
             className={cn(
-              "hidden min-h-0 w-90 shrink-0 border-l bg-background px-6 py-4 lg:block",
+              "hidden min-h-0 w-90 shrink-0 border-l border-[var(--admin-base-border)] bg-[var(--admin-card-bg)] px-6 py-4 lg:block",
               rightPanelClassName
             )}
           >

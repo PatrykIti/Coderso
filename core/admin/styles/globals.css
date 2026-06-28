@@ -816,6 +816,46 @@
     background-size: 18px 18px;
   }
 
+  /* TASK-479-05-L03: display-type utility (prototype parity). `--font-display`
+     is NOT registered under `@theme` (it is a runtime-overridable admin-theme
+     token defined on :root above, re-emitted by the injected per-profile
+     <style>), so Tailwind v4 does NOT auto-generate a `font-display` utility
+     from the `--font-*` namespace. Author it explicitly here — mirroring the
+     prototype `theme.css` `.font-display` (font-family + display tracking) — so
+     the `font-display` class used across the restyled chrome (CardTitle,
+     PageHeader, StatCard, SectionCard, SidebarNav, SettingsSection, EmptyState)
+     actually applies the Inter Tight display face instead of being a no-op. */
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.012em;
+  }
+
+  /* TASK-479-06-L05: soft route-change transition for the centered content
+     column (prototype `animate-in-soft`). CSS-only — a keyed re-render on the
+     active route fades/translates the new content in without remounting in a
+     way that refetches. Respects reduced-motion. */
+  @keyframes admin-fade-in-soft {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-in-soft {
+    animation: admin-fade-in-soft 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-in-soft {
+      animation: none;
+    }
+  }
+
   @keyframes logo-cloud-marquee {
     from {
       transform: translate3d(0, 0, 0);

@@ -10,10 +10,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-import {
-  ADMIN_LIST_PAGE_SIZE_OPTIONS,
-  type ListPaginationState,
-} from "./useListPagination";
+import { ADMIN_LIST_PAGE_SIZE_OPTIONS, type ListPaginationState } from "./useListPagination";
 
 type ListPaginationFooterProps<T> = {
   pagination: ListPaginationState<T>;
@@ -36,15 +33,18 @@ export function ListPaginationFooter<T>({
       : `Showing ${pagination.rangeStart}-${pagination.rangeEnd} of ${pagination.totalItems} ${resourceLabel}`;
 
   return (
+    // TASK-479-06-L02: rethemed onto the soft/violet tokens (explicit
+    // `border-border`). API + range-copy text node unchanged — the new
+    // rounded/soft controls come from the L01 Button/Select restyle.
     <div
       className={cn(
-        "flex flex-col items-start gap-3 border-t pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between",
+        "flex flex-col items-start gap-3 border-t border-border pt-4 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between",
         className
       )}
     >
       <span>{rangeCopy}</span>
       <div className="flex flex-wrap items-center gap-2">
-        <span id={pageSizeLabelId} className="text-xs font-medium">
+        <span id={pageSizeLabelId} className="text-xs font-medium text-muted-foreground">
           Rows
         </span>
         <Select
@@ -52,11 +52,7 @@ export function ListPaginationFooter<T>({
           onValueChange={pagination.setPageSize}
           disabled={isLoading}
         >
-          <SelectTrigger
-            size="sm"
-            className="h-8 w-[92px]"
-            aria-labelledby={pageSizeLabelId}
-          >
+          <SelectTrigger size="sm" className="h-8 w-[92px]" aria-labelledby={pageSizeLabelId}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

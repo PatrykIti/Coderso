@@ -22,7 +22,7 @@ test("WidgetLibraryPage renders a Pages-style table shell by default", () => {
   expect(html).toContain("Actions");
   expect(html).toContain("Showing 0 of 0 items");
   expect(html).toContain("No items match your search.");
-  const mainClass = html.match(/<main class="([^"]+)"/)?.[1] ?? "";
+  const mainClass = html.match(/<main[^>]*\sclass="([^"]+)"/)?.[1] ?? "";
   expect(mainClass).toContain("overflow-y-auto");
   expect(mainClass).not.toContain("overflow-hidden");
   expect(html).toContain("mx-auto flex max-w-6xl flex-col gap-6");
