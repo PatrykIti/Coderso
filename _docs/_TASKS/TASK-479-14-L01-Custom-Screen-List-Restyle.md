@@ -88,8 +88,8 @@ body that renders `items`.
 //          <Meta blocks={screen.blocks.length} bindings={screen.bindings.length} />
 //          <Separator className="my-4" />
 //          <footer className="mt-auto flex gap-2">
-//            <AdminLink to={editHref(screen)}><Button variant="outline" size="sm" className="w-full">Edit</Button></AdminLink>
-//            <AdminLink to={entriesHref(screen)}><Button variant="soft" size="sm" className="w-full">{inSidebar ? "Open" : "Entries"}</Button></AdminLink>
+//            <AdminLink href={editHref(screen)}><Button variant="outline" size="sm" className="w-full">Edit</Button></AdminLink>
+//            <AdminLink href={entriesHref(screen)}><Button variant="soft" size="sm" className="w-full">{inSidebar ? "Open" : "Entries"}</Button></AdminLink>
 //          </footer>
 //        </Card>
 //      ))}
@@ -126,8 +126,9 @@ body that renders `items`.
 ```
 
 **Data flow:** `useCustomScreens()` hydrates from cache + background-revalidates →
-`customScreenListModel` derives the per-card view model (name, status, published,
-counts) → the grid renders cards → Edit/Open route through `AdminLink` +
+`customScreenListModel` derives the per-card view model (name, status, the
+**in-sidebar shortcut state** derived from `status === "active"` — NOT a fabricated
+`published` boolean, counts) → the grid renders cards → Edit/Open route through `AdminLink` +
 `adminPaths`/route helpers → create/duplicate/delete/publish keep their existing
 handlers and toasts (`customScreenListToasts`). The restyle touches only
 JSX/classNames.

@@ -136,10 +136,14 @@ chrome/list/editor screen, so the prototype intentionally omits it; a future tas
 
 ## Sub-Tasks
 
-01–04 delivered the prototype. 05–29 port it into `core/admin` (UI re-wiring +
-token extension). Each subtask `NN` owns execution-ready **leaf files**
-`TASK-479-NN-LNN-*.md` (listed in that subtask's own Sub-Tasks table). Screens
-07–29 depend on **05** (tokens) and **06** (shell/wrapper).
+**Rows 01–04 are prototype PHASES, not physical child tasks.** They were delivered
+as the runnable prototype in `_docs/_PROTOTYPE/` (the app is written and works) and
+intentionally have **no** `TASK-479-0N-*.md` files — they describe what shipped in
+the prototype app, not core code. **05–29 are the physical migration children**
+(each a real `TASK-479-NN-*.md` + its `TASK-479-NN-LNN-*.md` leaves) that port the
+prototype look into `core/admin` (UI re-wiring + token extension). Each subtask `NN`
+owns execution-ready **leaf files** listed in that subtask's own Sub-Tasks table.
+Screens 07–29 depend on **05** (tokens) and **06** (shell/wrapper).
 
 | Child | Title | Status |
 |-------|-------|--------|

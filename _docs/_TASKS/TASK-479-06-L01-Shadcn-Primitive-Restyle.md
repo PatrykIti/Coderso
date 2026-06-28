@@ -111,7 +111,8 @@ variant: {
 ### `core/admin/components/ui/card.tsx`
 
 ```ts
-// rounded-xl -> rounded-2xl, add shadow-soft; font-display title; add CardAction slot.
+// rounded-xl -> rounded-2xl, add shadow-soft; font-display title. NOTE: CardAction
+// ALREADY EXISTS in core (card.tsx:51, already exported) — preserve/verify it; do NOT re-add.
 function Card(props) {
   return <div data-slot="card"
     className={cn("rounded-2xl border border-border bg-card text-card-foreground shadow-soft", className)} {...props} />;
@@ -120,9 +121,9 @@ function CardTitle(props) {  // was text-lg/leading-none — match proto display
   return <div data-slot="card-title"
     className={cn("font-display text-[15px] font-semibold leading-none", className)} {...props} />;
 }
-function CardAction(props) { // NEW slot (top-right actions) — proto card.tsx
-  return <div data-slot="card-action" className={cn("absolute right-5 top-5 flex items-center gap-2", className)} {...props} />;
-}
+// CardAction already exists (card.tsx:51) — keep/verify, do NOT redefine. Shown for reference:
+//   <div data-slot="card-action" className={cn("absolute right-5 top-5 flex items-center gap-2", className)} {...props} />
+// If its styling needs a soft-token nudge, restyle the EXISTING component in place.
 // Keep CardHeader/CardDescription/CardContent/CardFooter; nudge padding to px-5.
 export { Card, CardHeader, CardTitle, CardDescription, CardAction, CardContent, CardFooter };
 ```

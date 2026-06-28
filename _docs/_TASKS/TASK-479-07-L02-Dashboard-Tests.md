@@ -13,13 +13,18 @@
 ## Overview
 
 Update/extend the Vitest render test for the restyled Dashboard so it asserts the
-new section structure (post-restyle headings + states) instead of the old labels,
-covering both the loading and the loaded render. This is the regression net that
-locks in the L01 restyle without changing any data contract.
+new section structure (post-restyle headings + states) instead of the old labels.
+The render is split into two contracts: an **SSR smoke** (via `renderAdminUi`) that
+covers the loading/static structure, and an **optional fixture-driven UI-integration
+test** (`createRoot`/`React.act`) for the loaded render — because `DashboardPage`
+fetches on mount, the SSR snapshot only yields the loading/empty state (see the test
+split below). This is the regression net that locks in the L01 restyle without
+changing any data contract.
 
 - **Goal:** `tests/vitest/ui/dashboard.test.tsx` reflects the restyled
-  `DashboardPage` — it asserts loading and loaded states render the expected
-  sections and that no raw prototype hrefs leak.
+  `DashboardPage` — it asserts the loading/static render via SSR, and (optionally,
+  via an explicit fixture-driven UI-integration test) the loaded render of the
+  expected sections, and that no raw prototype hrefs leak.
 - **Owning module/service:** `tests/vitest/ui/dashboard.test.tsx` (Vitest UI lane),
   exercising `core/admin/ui/dashboard/DashboardPage.tsx`.
 - **Source-of-truth docs:**

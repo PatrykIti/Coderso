@@ -159,12 +159,12 @@ test("a host-provided search node renders instead of the trigger", () => {
 
 ```ts
 // Static SSR markers via renderAdminUi -> expect(html).toContain(...). vitest test.each is fine (not RTL).
-test.each(["default","soft","secondary","outline","ghost","destructive","link"])("Button variant %s renders", (v) => {
-  const html = renderAdminUi(<Button variant={v as any}>x</Button>);
+test.each(["default","soft","secondary","outline","ghost","destructive","link"] as const)("Button variant %s renders", (v) => {
+  const html = renderAdminUi(<Button variant={v}>x</Button>); // `as const` => v is the variant union, no `as any`
   expect(html).toContain(`data-variant="${v}"`);
 });
-test.each(["soft","success","warning","info"])("Badge adds %s variant", (v) => {
-  const html = renderAdminUi(<Badge variant={v as any}>x</Badge>);
+test.each(["soft","success","warning","info"] as const)("Badge adds %s variant", (v) => {
+  const html = renderAdminUi(<Badge variant={v}>x</Badge>);
   expect(html).toContain(v === "soft" ? "bg-primary-soft" : `bg-${v}-soft`);
 });
 test("Card is rounded-2xl with soft shadow and supports CardAction", () => {
