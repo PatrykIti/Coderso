@@ -59,11 +59,12 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
   components only**; it registers no routes and performs no network I/O.
 - **Auth model / RBAC / CSRF / Rate-limit:** n/a in this unit, but the data these
   renderers display **originates** from the internal admin widget-data endpoints
-  added in TASK-480-03 (`/admin/api/dashboard/widgets*`), which require a
-  **session**, RBAC `content:read` for widget data (and a dashboard/settings
-  write permission for layout), **CSRF** on layout writes, and the **admin**
-  rate-limit bucket. Renderers MUST assume their `data` prop is already
-  validated + redacted by that pipeline and add no trust of their own.
+  added in TASK-480-03 (`/admin/api/dashboard/widget-data`), which require a
+  **session**, RBAC `content:read` for widget data (and `dashboard:write` for
+  layout writes), **CSRF** on layout writes/body POSTs, `admin_read` for GET
+  reads, and `admin_write` for writes/body POSTs. Renderers MUST assume their
+  `data` prop is already validated + redacted by that pipeline and add no trust
+  of their own.
 - **Validation:** schema ownership stays in `core/services/dashboard/*`
   (TASK-480-02). Renderers consume the **already-normalized** discriminated
   union; they never re-parse raw input and never accept unknown fields.

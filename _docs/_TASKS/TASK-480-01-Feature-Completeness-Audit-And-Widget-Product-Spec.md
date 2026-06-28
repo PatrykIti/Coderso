@@ -21,7 +21,8 @@ needed and they are the deliverable of this subtask:
    feature-complete) vs which need a **sibling feature task** like TASK-480.
 2. A **Dashboard widget product spec** — the authoritative catalog of widget
    types (each with its CMS data source + config), the layout/grid model, the
-   edit-mode UX, and the **per-user vs per-site** layout decision. This spec is
+   edit-mode UX, and the final **dashboard_layouts + dashboard:write**
+   persistence/RBAC decision. This spec is
    the contract that TASK-480-02 (schemas/data sources), -03 (layout/API), -04
    (renderers), and -05 (builder UI) implement against.
 
@@ -65,8 +66,8 @@ Documentation/discovery only — no automated test lane. Validation = review:
   carries a Complete/Partial/Stub verdict with evidence (file paths) and, for
   Partial/Stub, a concrete "what's missing" note.
 - Widget spec (L02) enumerates the full catalog with data source + config per
-  widget, the layout model, the edit-mode UX, and a justified per-user vs
-  per-site recommendation.
+  widget, the layout model, the edit-mode UX, and the justified
+  `dashboard_layouts` + `dashboard:write` persistence/RBAC decision.
 - No production source files changed (`git status` shows only `_docs/` edits).
 
 ---

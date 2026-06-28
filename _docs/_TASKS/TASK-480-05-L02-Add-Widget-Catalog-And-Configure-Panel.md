@@ -34,9 +34,10 @@ widget with the draft config before commit.
 - **Source-of-truth docs:**
   - Product/widget spec: `_docs/DASHBOARD_WIDGETS_SPEC.md` (catalog entries, config
     fields, defaults — seeded by TASK-480-01-L02)
-  - UI registry: `core/admin/ui/dashboard/widgets/registry.tsx` — each entry exposes
-    `{ type, label, description, icon, category, defaultConfig, defaultSize, minSize,
-    configFields, Component }` (TASK-480-04)
+  - UI registry/catalog: `core/admin/ui/dashboard/widgets/registry.tsx` — exposes
+    `DASHBOARD_WIDGET_CATALOG`, where each entry includes `{ type, label,
+    description, icon, category, defaultConfig, defaultSize, minSize,
+    configFields }` (TASK-480-04)
   - Config schema/types: `core/services/dashboard/dashboardWidgetContract.ts`
     (`DashboardWidgetConfig` discriminated union + `normalizeDashboardWidgetConfig`) — TASK-480-02
   - Widget host for preview: `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`
@@ -81,7 +82,7 @@ widget with the draft config before commit.
 ### Registry entry shape consumed (owned by TASK-480-04 — referenced)
 
 ```ts
-// core/admin/ui/dashboard/widgets/registry.tsx (TASK-480-04)
+// core/admin/ui/dashboard/widgets/registry.tsx (TASK-480-04-L01 owns this)
 type WidgetConfigField =
   | { key: string; kind: "text"; label: string }
   | { key: string; kind: "select"; label: string; options: { value: string; label: string }[] | "contentTypes" }
@@ -89,18 +90,17 @@ type WidgetConfigField =
   | { key: string; kind: "number"; label: string; min: number; max: number }   // e.g. columns / limit
   | { key: string; kind: "toggle"; label: string };
 
-type WidgetRegistryEntry = {
+type DashboardWidgetCatalogEntry = {
   type: DashboardWidgetType;
   label: string; description: string; icon: ReactNode; category: "metrics" | "content" | "system" | "actions";
   defaultConfig: DashboardWidgetConfig;
   defaultSize: { w: number; h: number }; minSize: { w: number; h: number }; maxSize?: { w: number; h: number };
   configFields: WidgetConfigField[];      // drives the schema-driven form below
-  Component: WidgetComponent;             // rendered by DashboardWidgetHost (also used for preview)
 };
 // keyed over the canonical 9 `DashboardWidgetType` values; each entry's
 // `defaultConfig` is the `kind`-discriminated `DashboardWidgetConfig` from the
 // TASK-480-02 owner (`core/services/dashboard`) — imported, never re-declared here.
-export const widgetRegistry: Record<DashboardWidgetType, WidgetRegistryEntry>;
+export const DASHBOARD_WIDGET_CATALOG: Record<DashboardWidgetType, DashboardWidgetCatalogEntry>;
 ```
 
 ### Add-widget catalog
@@ -109,7 +109,7 @@ export const widgetRegistry: Record<DashboardWidgetType, WidgetRegistryEntry>;
 // core/admin/ui/dashboard/builder/AddWidgetCatalog.tsx
 export function AddWidgetCatalog({ open, onOpenChange, existing, onAdd }: AddWidgetCatalogProps) {
   const entries = useMemo(
-    () => Object.values(widgetRegistry).filter((e) => canRenderForPermissions(e.type)),
+    () => Object.values(DASHBOARD_WIDGET_CATALOG).filter((e) => canRenderForPermissions(e.type)),
     [],
   );
   const grouped = useMemo(() => groupBy(entries, (e) => e.category), [entries]);
@@ -142,7 +142,7 @@ export function AddWidgetCatalog({ open, onOpenChange, existing, onAdd }: AddWid
 }
 
 // instantiate: new instance with default config + default size, placed at the next free slot
-function instantiate(e: WidgetRegistryEntry): DashboardWidgetInstance {
+function instantiate(e: DashboardWidgetCatalogEntry): DashboardWidgetInstance {
   return {
     id: nanoid(),
     type: e.type,
@@ -159,8 +159,8 @@ function instantiate(e: WidgetRegistryEntry): DashboardWidgetInstance {
 // core/admin/ui/dashboard/builder/WidgetConfigPanel.tsx
 // Pinned popover card mirroring _docs/_PROTOTYPE CanvasEditor floating panel:
 // GripHorizontal title bar, scrollable body, close button. NOT a full-screen modal.
-export function WidgetConfigPanel({ widget, onClose, onApply }: WidgetConfigPanelProps) {
-  const entry = widgetRegistry[widget.type];
+export function WidgetConfigPanel({ widget, previewState, onClose, onApply }: WidgetConfigPanelProps) {
+  const entry = DASHBOARD_WIDGET_CATALOG[widget.type];
   // local draft config so typing doesn't thrash the global reducer; commit on change (debounced) or on "Apply"
   const [config, setConfig] = useState(widget.config);
 
@@ -181,7 +181,10 @@ export function WidgetConfigPanel({ widget, onClose, onApply }: WidgetConfigPane
       <div className="max-h-[58vh] space-y-3 overflow-y-auto p-3">
         {/* LIVE PREVIEW with the draft config */}
         <div className="rounded-xl border border-dashed border-border p-2">
-          <DashboardWidgetHost widget={{ ...widget, config }} editing preview />
+          <DashboardWidgetHost
+            widget={{ ...widget, config }}
+            state={previewState ?? { status: "loading" }}
+          />
         </div>
         {/* SCHEMA-DRIVEN CONTROLS */}
         <WidgetConfigForm fields={entry.configFields} config={config} onChange={setField} />
@@ -220,8 +223,10 @@ export function WidgetConfigForm({ fields, config, onChange }: WidgetConfigFormP
 **Data flow:** Add → `instantiate(registry[type])` → reducer `addWidget` (dirty).
 Configure → open `WidgetConfigPanel` for the selected instance → each control calls
 `setField` → `normalizeDashboardWidgetConfig` clamps to schema → local `config` updates →
-`DashboardWidgetHost` re-renders the **live preview** → committed config flows to the
-L01 reducer via `configureWidget` (dirty). Persistence only on the L01 Save.
+`DashboardWidgetHost` re-renders the **live preview** with an explicit
+`WidgetDataState` (`previewState` from the current widget-data cache, or loading
+while data revalidates) → committed config flows to the L01 reducer via
+`configureWidget` (dirty). Persistence only on the L01 Save.
 
 **Error handling:** `normalizeDashboardWidgetConfig` guarantees a valid config at every
 keystroke, so the preview never receives an invalid shape; if a host preview throws

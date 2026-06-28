@@ -40,8 +40,10 @@ the Save round-trip.
     `DEFAULT_DASHBOARD_LAYOUT`) + `dashboardTypes.ts` (types) — owned by TASK-480-02
   - Cached client: `core/admin/services/dashboardClient.ts`
     (`getDashboardLayoutCached`, `saveDashboardLayout`) — TASK-480-03
-  - Widget host + registry: `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`,
-    `core/admin/ui/dashboard/widgets/registry.tsx` — TASK-480-04
+  - Widget host + registry/catalog:
+    `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`,
+    `core/admin/ui/dashboard/widgets/registry.tsx` (`DASHBOARD_WIDGET_RENDERERS`
+    + `DASHBOARD_WIDGET_CATALOG`) — TASK-480-04
   - Shell/patterns: TASK-479-06 (`PageHeader`, `SectionCard`, `Button`),
     `core/admin/ui/dashboard/DashboardPage.tsx` (TASK-479-07 restyle)
   - Cache contract: `_docs/ADMIN_CACHE.md` (Editors section — dirty-guarded
@@ -49,7 +51,8 @@ the Save round-trip.
   - Permission accessor used by the shell: `useAdminCan()` →
     `can(permission)` (`core/admin/ui/contexts/AdminAuthContext.tsx`) — `_docs/RBAC_SPEC.md`
 - **Out of scope:** Add-widget catalog + configure panel (L02); widget renderer
-  internals (TASK-480-04) and data fetching inside each host (TASK-480-03);
+  internals (TASK-480-04) and route/cache implementation for widget data
+  (TASK-480-03; this leaf only consumes `WidgetDataState`);
   schema (480-02) / route + cache-key (480-03) definitions; tests (L03).
 
 ---
@@ -64,7 +67,8 @@ the Save round-trip.
   hide Edit/Save. Widget data reads remain `content:read` (enforced inside the
   hosts / route). Client gating is defence-in-depth; the `PUT` route is the boundary.
 - **CSRF:** the layout `PUT` carries the CSRF token via `apiClient` — do not bypass.
-- **Rate-limit bucket:** `admin` (route-enforced).
+- **Rate-limit buckets:** `admin_read` for layout/widget-data GET reads and
+  `admin_write` for layout writes/body POSTs (route-enforced).
 - **Validation:** the builder emits a `DashboardLayout` already shaped to
   `dashboardLayoutSchema`; the route re-validates and rejects unknown fields. The
   builder must not introduce fields outside the schema (e.g. transient UI flags
@@ -111,6 +115,7 @@ type BuilderState = {
   editing: boolean;
   saved: DashboardLayout;   // last persisted (server truth)
   draft: DashboardLayout;   // working copy while editing
+  widgetData: Record<string, WidgetDataState>; // keyed by widget instance id
   dirty: boolean;
   remoteUpdate: boolean;    // background cache update arrived while dirty
   error: string | null;
@@ -128,6 +133,7 @@ type BuilderAction =
   | { type: "saveStart" }
   | { type: "saveOk"; layout: DashboardLayout }          // server echo becomes new `saved`
   | { type: "saveError"; message: string }
+  | { type: "widgetDataLoaded"; states: Record<string, WidgetDataState> }
   | { type: "remoteUpdate"; layout: DashboardLayout };   // cacheBus while editing/clean
 
 function reducer(state: BuilderState, action: BuilderAction): BuilderState {
@@ -149,6 +155,8 @@ function reducer(state: BuilderState, action: BuilderAction): BuilderState {
     case "saveStart":  return { ...state, status: "saving", error: null };
     case "saveOk":     return { ...state, status: "ready", editing: false, saved: action.layout, draft: action.layout, dirty: false, remoteUpdate: false };
     case "saveError":  return { ...state, status: "error", error: action.message };
+    case "widgetDataLoaded":
+      return { ...state, widgetData: action.states };
     case "remoteUpdate":
       return state.dirty
         ? { ...state, saved: action.layout, remoteUpdate: true }   // keep draft, warn
@@ -161,6 +169,7 @@ export function useDashboardBuilder(canWrite: boolean) {
   const [state, dispatch] = useReducer(reducer, undefined, () => ({
     status: "hydrating", editing: false,
     saved: EMPTY_LAYOUT, draft: EMPTY_LAYOUT,   // EMPTY_LAYOUT = DEFAULT_DASHBOARD_LAYOUT shape, 0 widgets
+    widgetData: {},
     dirty: false, remoteUpdate: false, error: null,
   }));
 
@@ -168,7 +177,12 @@ export function useDashboardBuilder(canWrite: boolean) {
   useEffect(() => {
     let active = true;
     getDashboardLayoutCached({ force: false }) // returns cached immediately when present, revalidates in bg
-      .then((layout) => { if (active) dispatch({ type: "hydrated", layout }); })
+      .then(async (layout) => {
+        if (!active) return;
+        dispatch({ type: "hydrated", layout });
+        const data = await getWidgetDataCached({ force: false, background: true });
+        if (active) dispatch({ type: "widgetDataLoaded", states: toWidgetDataStates(data) });
+      })
       .catch((err) => { if (active) dispatch({ type: "saveError", message: toMessage(err) }); });
     return () => { active = false; };
   }, []); // deps empty: single hydrate; revalidation comes via cacheBus below, not a re-fetch loop
@@ -210,7 +224,7 @@ export function useDashboardBuilder(canWrite: boolean) {
 // Read mode: plain responsive CSS grid of hosts.
 // Edit mode: each cell wraps the host with a drag handle + resize handle + remove,
 // PLUS keyboard controls so arrange/resize work without a pointer (a11y baseline).
-export function WidgetGrid({ layout, editing, onMove, onResize, onRemove, onConfigure }: WidgetGridProps) {
+export function WidgetGrid({ layout, dataStates, editing, onMove, onResize, onRemove, onConfigure }: WidgetGridProps) {
   return (
     <div
       role={editing ? "application" : undefined}
@@ -235,7 +249,11 @@ export function WidgetGrid({ layout, editing, onMove, onResize, onRemove, onConf
               dragHandleProps={dndHandle(w.id)}
             />
           ) : null}
-          <DashboardWidgetHost widget={w} editing={editing} />{/* TASK-480-04 */}
+          <DashboardWidgetHost
+            widget={w}
+            state={dataStates[w.id] ?? { status: "loading" }}
+            action={editing ? <WidgetActions widget={w} onRemove={onRemove} onConfigure={onConfigure} /> : undefined}
+          />{/* TASK-480-04 */}
         </div>
       ))}
     </div>
@@ -260,7 +278,7 @@ export function DashboardPage() {
   const { state, dispatch, save } = useDashboardBuilder(canWrite);
 
   return (
-    <AdminShell activeHref={adminPaths.dashboard()}>
+    <AdminShell activeHref="/admin">
       <div className="mx-auto flex max-w-7xl flex-col gap-4">
         <PageHeader
           title="Dashboard"
@@ -283,6 +301,7 @@ export function DashboardPage() {
         {state.status === "hydrating" ? <DashboardSkeleton /> : (
           <WidgetGrid
             layout={state.editing ? state.draft : state.saved}
+            dataStates={state.widgetData}
             editing={state.editing}
             onMove={(id, to) => dispatch({ type: "moveWidget", id, to })}
             onResize={(id, size) => dispatch({ type: "resizeWidget", id, size })}
@@ -297,8 +316,10 @@ export function DashboardPage() {
 ```
 
 **Data flow:** mount → `getDashboardLayoutCached({force:false})` (cache-first,
-bg revalidate) → `hydrated` → render hosts. Edit → `enterEdit` clones `saved`
-into `draft`. Each arrange/resize/remove → pure `applyDraftEdit` → `dirty=true`.
+bg revalidate) + `getWidgetDataCached({force:false, background:true})` →
+`hydrated` + `widgetDataLoaded` → render hosts with explicit `WidgetDataState`.
+Edit → `enterEdit` clones `saved` into `draft`. Each arrange/resize/remove →
+pure `applyDraftEdit` → `dirty=true`.
 Save → `saveDashboardLayout(draft)` (PUT; client patches `dashboard:layout` cache
 + broadcasts `update`) → `saveOk` adopts the server echo as new `saved`. CacheBus
 events → `remoteUpdate` (adopted only when clean; otherwise kept as a hint).

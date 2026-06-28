@@ -171,10 +171,13 @@ export async function resetDashboardLayout(userId: string) {
 
 Generate via the project's drizzle-kit flow, then verify the three artifacts
 exist (`bun --cwd core db:generate` or the repo's documented generate script —
-confirm the exact script in `core/db/drizzle.config.ts` / `package.json`). The
-next free index is **0064** (last shipped is `0063_yummy_glorian`):
+confirm the exact script in `core/db/drizzle.config.ts` / `package.json`). Use
+the **next free migration index at implementation time**. On the HEAD audited for
+this task contract the next free index is currently **0064** (last shipped is
+`0063_yummy_glorian`), but concurrent work may claim it first:
 
-- **SQL** — `core/db/migrations/0064_dashboard_layouts.sql`:
+- **SQL** — `core/db/migrations/<next>_dashboard_layouts.sql`
+  (currently `0064_dashboard_layouts.sql` on the audited HEAD):
   ```sql
   CREATE TABLE "dashboard_layouts" (
     "user_id" uuid PRIMARY KEY NOT NULL,
@@ -194,12 +197,14 @@ next free index is **0064** (last shipped is `0063_yummy_glorian`):
     FOREIGN KEY ("updated_by") REFERENCES "public"."users"("id")
     ON DELETE set null ON UPDATE no action;
   ```
-- **Snapshot** — `core/db/migrations/meta/0064_snapshot.json`: full drizzle
+- **Snapshot** — `core/db/migrations/meta/<next>_snapshot.json`
+  (currently `0064_snapshot.json` on the audited HEAD): full drizzle
   snapshot regenerated for the new table (do not hand-edit beyond what the
   generator emits; it must include `dashboard_layouts` columns, PK, and both FKs).
-- **Journal** — append to `core/db/migrations/meta/_journal.json`:
+- **Journal** — append to `core/db/migrations/meta/_journal.json` using the same
+  `<next>` index/tag:
   ```json
-  { "idx": 64, "version": "7", "when": <epoch-ms>, "tag": "0064_dashboard_layouts", "breakpoints": true }
+  { "idx": <next>, "version": "7", "when": <epoch-ms>, "tag": "<next>_dashboard_layouts", "breakpoints": true }
   ```
 
 **Data flow:** route resolves `userId` → repository → `normalizeDashboardLayout`
@@ -234,7 +239,7 @@ Read path never throws — it falls back to the default layout.
     live in `tests/integration/dashboard/` if added).
 - Verify migration applies cleanly: `set -a && source .env && set +a` then the
   repo's migrate script (e.g. `bun --cwd core db:migrate`), and confirm
-  `0064_snapshot.json` + the `_journal.json` entry exist.
+  `<next>_snapshot.json` + the `_journal.json` entry exist.
 
 ---
 

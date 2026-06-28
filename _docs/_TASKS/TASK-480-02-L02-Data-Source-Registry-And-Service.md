@@ -49,12 +49,13 @@ content-over-time) plus a **safe, clamped content-query** resolver. Expose
 ## Security Contract
 
 - **Endpoint visibility:** n/a here (resolvers are called by the `internal`
-  `/admin/api/dashboard/widgets` route in `TASK-480-03`).
+  `/admin/api/dashboard/widget-data` route in `TASK-480-03`).
 - **Auth model / RBAC:** n/a in this leaf; document for the route: data resolve
   requires `content:read` (same gate as today's `GET /dashboard`,
   `core/server/routes/dashboardRoutes.ts:23`).
-- **CSRF / Rate-limit:** n/a (read-only resolvers; the route applies the `admin`
-  read rate-limit bucket).
+- **CSRF / Rate-limit:** n/a (read-only resolvers; the route applies
+  `admin_read` for the saved-layout GET and `admin_write` for the body-carrying
+  POST widget-data query).
 - **Validation:** resolvers receive an **already-normalized** `DashboardWidget`
   from L01's `normalizeDashboardLayout()`. They additionally **re-clamp** any
   query bound at the data boundary (defense-in-depth) and **reject unknown
@@ -108,8 +109,14 @@ export type DashboardWidgetData =
   | { type: "site-health";         security: DashboardSecuritySummary; storage?: { usedPercent: number | null } }
   | { type: "security-summary";    security: DashboardSecuritySummary }
   | { type: "quick-actions";       actions: { id: string; label: string; target: string; icon?: string }[] }
-  | { type: "content-query";       columns: { key: string; label: string }[]; rows: Record<string, string | number>[] }
-  | { type: DashboardWidgetType;   error: "widget_data_unavailable" }; // resolver-failure fallback
+  | { type: "content-query";       columns: { key: string; label: string }[]; rows: Record<string, string | number>[] };
+
+// Route/client wrappers own widget instance ids and status. The data-source
+// service returns display-ready data or this bounded failure variant; it never
+// returns `{ id, data }`.
+export type DashboardWidgetResolution =
+  | DashboardWidgetData
+  | { type: DashboardWidgetType; error: "widget_data_unavailable" };
 ```
 
 ### 2. New bounded readers — `dashboardService.ts`
@@ -249,19 +256,18 @@ const defaultReaders: DashboardDataReaders = {
 export async function resolveWidgetData(
   widget: DashboardWidget,
   readers: DashboardDataReaders = defaultReaders,
-): Promise<DashboardWidgetData> {
+): Promise<DashboardWidgetResolution> {
   try {
-    const resolved = await dashboardWidgetResolvers[widget.type](widget, readers);
-    return { id: widget.id, ...resolved };
+    return await dashboardWidgetResolvers[widget.type](widget, readers);
   } catch {
-    return { id: widget.id, type: widget.type, error: "widget_data_unavailable" }; // one widget failing never blanks the board
+    return { type: widget.type, error: "widget_data_unavailable" }; // one widget failing never blanks the board
   }
 }
 
 export async function resolveDashboardWidgets(
   layout: DashboardLayout,
   readers: DashboardDataReaders = defaultReaders,
-): Promise<DashboardWidgetData[]> {
+): Promise<DashboardWidgetResolution[]> {
   // Resolve concurrently; per-widget try/catch isolates failures.
   return Promise.all(layout.widgets.map((w) => resolveWidgetData(w, readers)));
   // (Optional optimization: memoize shared source reads — e.g. one totals()/
@@ -270,10 +276,12 @@ export async function resolveDashboardWidgets(
 ```
 
 **Data flow:** route validates body via L01 `normalizeDashboardLayout()` →
-`resolveDashboardWidgets(layout)` → array of typed `DashboardWidgetData`. Route
-stays orchestration-only and maps any thrown domain error at its boundary
-(`mapDashboardError`); a single resolver failure is contained as a per-widget
-`{ error: "widget_data_unavailable" }` entry rather than failing the whole call.
+`resolveDashboardWidgets(layout)` → array of typed `DashboardWidgetResolution`
+in layout order. The route layer owns the per-instance wrapper
+`{ id, type, status, data | code }`, so widget ids do not leak into the raw
+display-data union. A single resolver failure is contained as a per-widget
+`{ error: "widget_data_unavailable" }` resolution rather than failing the whole
+call.
 
 **Error handling:** unknown `contentTypeId` → empty result (not error); resolver
 exceptions → per-widget `error` fallback; the registry is exhaustive over
@@ -293,10 +301,11 @@ readers**; only the actual drizzle reads run under Bun in the route subtask.
 - Vitest (handed to L03,
   `tests/vitest/services/dashboardDataSourceRegistry.test.ts`):
   - registry has exactly one resolver per `DashboardWidgetType` (exhaustive),
-  - each resolver returns the documented `{ id, type, data }` shape using
-    **injected fake readers** (no DB),
+  - each resolver returns the documented display-ready `DashboardWidgetData`
+    variant using **injected fake readers** (no DB),
   - `resolveWidgetData` wraps a throwing reader as
-    `{ error: "widget_data_unavailable" }` and keeps the widget `id`,
+    `{ type, error: "widget_data_unavailable" }` (the route later adds the
+    widget `id` wrapper),
   - `resolveDashboardWidgets` preserves widget order and isolates one failure,
   - content-query clamp: `limit` over cap is clamped; unknown `contentTypeId`
     yields empty data; deterministic sort/order applied.

@@ -62,7 +62,8 @@ and must never weaken it in prose:
   `dashboard:write` permission (added by 480-03 — confirm against the registered
   routes before writing; `settings:write` is explicitly NOT reused).
 - **CSRF:** required for every admin layout write.
-- **Rate-limit bucket:** `admin`.
+- **Rate-limit buckets:** `admin_read` for admin GET reads; `admin_write` for
+  layout writes and body-carrying admin POSTs.
 - **Validation:** schema owner in `core/services/dashboard/*` rejects unknown
   fields; document the `normalize*` boundary.
 - **Secret handling:** document explicitly that security / site-health widgets emit
@@ -101,14 +102,15 @@ Outline (H2 sections, in order):
   required permission, config shape. Seed set (mirror what TASK-480-02 registered):
   | Widget id | Purpose | Data source | RBAC | Config |
   |-----------|---------|-------------|------|--------|
-  | `totals` | counters (pages/entries/media/users) | dashboard totals | content:read | — |
-  | `content-type-counts` | per-content-type counts | content types + entries | content:read | { contentTypeIds[] } |
-  | `content-over-time` | chart of content created/updated | time-bucketed query | content:read | { range, metric } |
+  | `totals-counters` | counters (pages/entries/media/users) | dashboard totals | content:read | { metrics[], accent?, format? } |
+  | `content-type-counts` | per-content-type counts | content types + entries | content:read | { contentTypeIds[], limit?, display? } |
+  | `content-over-time` | chart of content created/updated | time-bucketed query | content:read | { rangeDays?, bucket?, variant? } |
   | `recent-activity` | recent edits feed | recentEdits | content:read | { limit, types[] } |
   | `storage-usage` | storage used/quota | storage summary | content:read | — |
   | `site-health` | security/site-health status | security summary | content:read | — |
-  | `quick-actions` | shortcut buttons | static / adminPaths | content:read | { actions[] } |
-  | `content-query` | custom bounded content query | entries query | content:read | { typeSlug, filter, limit } |
+  | `security-summary` | security checks | security summary | content:read | — |
+  | `quick-actions` | shortcut buttons | static safe relative admin hrefs | content:read | { actions[] } |
+  | `content-query` | custom bounded content query | entries query | content:read | { contentTypeId, status?, limit?, sort?, order? } |
 - State that the catalog is the schema-owned enum in `core/services/dashboard/*`
   (TASK-480-02); adding a widget = extend that enum + its config schema + a resolver.
 
@@ -181,7 +183,8 @@ Outline (H2 sections, in order):
   is served separately by the `/dashboard/widget-data` routes, NOT folded into
   `GET /dashboard`.
 - Add the new endpoints with permissions, request/response shapes, CSRF note, and
-  the `admin` rate-limit bucket. Match exactly the routes registered by 480-03:
+  the `admin_read` / `admin_write` rate-limit buckets. Match exactly the routes
+  registered by 480-03:
   `GET /dashboard/layout`, `PUT /dashboard/layout`, `POST /dashboard/layout/reset`,
   and `GET`/`POST /dashboard/widget-data`. Use the existing house style (Permissions
   line, Note, endpoint list, fenced JSON example).
@@ -210,11 +213,11 @@ In `ADMIN_CACHE_MAP.md`:
 ### 4) UPDATE `_docs/DATA_MODEL.md` — new layout table (ONLY if TASK-480-03 added a table)
 
 - Add a `## Dashboard layouts` section after `## Settings` describing the table
-  added by 480-03: columns (id, scope/owner, definition jsonb, schema_version,
-  created_at, updated_at), the jsonb layout contract, and the non-destructive
-  read-normalization note. Cite the migration artifacts (SQL + `meta/*_snapshot.json`
-  + `meta/_journal.json`) produced by 480-03 — this leaf documents them, 480-03
-  creates them.
+  added by 480-03: columns (`user_id` PK/FK, `schema_version`, `layout` jsonb,
+  `updated_at`, `updated_by` FK), the jsonb layout contract, one-row-per-user
+  ownership, and the non-destructive read-normalization note. Cite the migration
+  artifacts (SQL + `meta/*_snapshot.json` + `meta/_journal.json`) produced by
+  480-03 — this leaf documents them, 480-03 creates them.
 - If 480-03 stored the layout inside an existing settings/jsonb column instead of a
   new table, document THAT instead and skip the new-table section.
 

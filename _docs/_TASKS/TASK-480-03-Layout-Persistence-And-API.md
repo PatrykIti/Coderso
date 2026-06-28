@@ -62,7 +62,11 @@ new DB table, so a real contract is required (per-leaf contracts refine this).
     per-user personalization, not a system/security setting.
 - **CSRF:** required for every admin write (`PUT`, reset). Enforced centrally by
   `core/server/middleware/csrf.ts`; routes must not bypass it.
-- **Rate-limit bucket:** `admin` (`core/server/middleware/rateLimit.ts`).
+- **Rate-limit buckets:** `admin_read` for admin GET reads
+  (`/dashboard`, `/dashboard/layout`, `/dashboard/widget-data`) and
+  `admin_write` for admin writes/body POSTs (`PUT /dashboard/layout`,
+  `POST /dashboard/layout/reset`, `POST /dashboard/widget-data`), matching
+  `core/server/httpServer.ts`.
 - **Validation:** schema-first, **reject unknown fields**. The layout envelope
   schema is owned by 480-02 (`core/services/dashboard/dashboardWidgetContract.ts`)
   and re-exported here; route-side validation schemas in

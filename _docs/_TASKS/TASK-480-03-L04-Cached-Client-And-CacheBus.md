@@ -107,18 +107,18 @@ async function revalidateLayout(): Promise<DashboardLayout> {
 
 export async function saveDashboardLayout(layout: DashboardLayout) {
   const res = await apiRequest<{ layout: DashboardLayout; updatedAt: string }>(
-    "/dashboard/layout", { method: "PUT", body: layout });   // apiRequest attaches CSRF
+    "/dashboard/layout", { method: "PUT", body: layout, withCsrf: true });
   writeLocalCache(cacheKeys.dashboardLayout, res.layout);
   broadcastCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
   // a saved layout can change which data is needed -> invalidate widget data
   clearLocalCache(cacheKeys.dashboardWidgetData);
   broadcastCacheEvent({ key: cacheKeys.dashboardWidgetData, action: "invalidate" });
-  return res;
+  return res.layout;
 }
 
 export async function resetDashboardLayout() {
   const { layout } = await apiRequest<{ layout: DashboardLayout }>(
-    "/dashboard/layout/reset", { method: "POST" });
+    "/dashboard/layout/reset", { method: "POST", withCsrf: true });
   writeLocalCache(cacheKeys.dashboardLayout, layout);
   broadcastCacheEvent({ key: cacheKeys.dashboardLayout, action: "update" });
   clearLocalCache(cacheKeys.dashboardWidgetData);

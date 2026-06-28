@@ -44,7 +44,9 @@
     `requirePermission("dashboard:write")` (NEW permission).
 - **CSRF:** required on `PUT` and `POST /reset` (admin writes). Enforced centrally
   by `core/server/middleware/csrf.ts`; the route must not opt out.
-- **Rate-limit bucket:** `admin` (`core/server/middleware/rateLimit.ts`).
+- **Rate-limit buckets:** `GET /dashboard/layout` uses `admin_read`; `PUT
+  /dashboard/layout` and `POST /dashboard/layout/reset` use `admin_write`
+  (method-based admin buckets in `core/server/httpServer.ts`).
 - **Validation:** `validate(dashboardLayoutWriteSchema, ctx.body)` then
   `writeDashboardLayout` re-normalizes (defense in depth). The schema rejects
   unknown fields. `mapDashboardError` converts domain/Zod errors to `ApiError`
@@ -106,6 +108,9 @@ import {
   DASHBOARD_LAYOUT_INVALID,
   DashboardLayoutError,
 } from "../../services/dashboard/dashboardLayoutService"; // 480-03 error layer (schema stays in 480-02)
+import {
+  DASHBOARD_WIDGET_CONFIG_KIND_MISMATCH,
+} from "../../services/dashboard/dashboardWidgetContract";
 
 const mapDashboardError = (error: unknown): ApiError | null => {
   if (error instanceof DashboardLayoutError) {
@@ -120,6 +125,8 @@ const mapDashboardError = (error: unknown): ApiError | null => {
   if (!(error instanceof Error)) return null;
   switch (error.message) {
     case "auth_required": return new ApiError("auth_required", "Authentication required", 401);
+    case DASHBOARD_WIDGET_CONFIG_KIND_MISMATCH:
+      return new ApiError(DASHBOARD_LAYOUT_INVALID, "Dashboard layout invalid", 400);
     default: return null;
   }
 };

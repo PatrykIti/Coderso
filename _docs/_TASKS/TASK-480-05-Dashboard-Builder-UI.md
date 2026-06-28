@@ -51,8 +51,10 @@ or the individual widget renderers / `DashboardWidgetHost`
   - Cached client + keys: `core/admin/services/dashboardClient.ts`,
     `core/admin/services/cachePolicy.ts` (TASK-480-03); `_docs/ADMIN_CACHE.md`,
     `_docs/ADMIN_CACHE_MAP.md`
-  - Widget host + UI registry: `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`,
-    `core/admin/ui/dashboard/widgets/registry.tsx` (TASK-480-04)
+  - Widget host + UI registry/catalog:
+    `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`,
+    `core/admin/ui/dashboard/widgets/registry.tsx` (`DASHBOARD_WIDGET_RENDERERS`
+    + `DASHBOARD_WIDGET_CATALOG`, TASK-480-04)
   - Floating-panel pattern: `_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx`,
     `_docs/PAGE_EDITOR_V2` floating-panel references; shared patterns from
     TASK-479-06 (`PageHeader`, `SectionCard`, `StatCard`, charts)
@@ -86,7 +88,8 @@ contract:
     route is the real boundary.
 - **CSRF:** required on the layout `PUT` write; carried automatically by the shared
   admin `apiClient`. The builder must not bypass it with a raw `fetch`.
-- **Rate-limit bucket:** `admin` (enforced at the route, TASK-480-03).
+- **Rate-limit buckets:** `admin_read` for layout/widget-data GET reads and
+  `admin_write` for layout writes/body POSTs (enforced at the route, TASK-480-03).
 - **Validation:** schema is owned by 480-02's `dashboardWidgetContract.ts` (reject-unknown);
   the builder serializes a layout that already conforms and lets the route
   re-validate. The builder never sends fields the schema rejects.

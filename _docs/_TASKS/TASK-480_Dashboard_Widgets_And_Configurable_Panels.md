@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Dashboard / Feature
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-479-05 (admin tokens) + TASK-479-06 (admin shell + shared `StatCard`/`SectionCard`/charts) — recommended so the widgets inherit the redesigned visual language, but the feature can land independently against the current primitives.
+**Dependencies:** TASK-479-05 (admin tokens) + TASK-479-06 (admin shell + shared `StatCard`/`SectionCard`/charts) — required for the final TASK-480 renderer/builder UI. If TASK-480 implementation starts before TASK-479-06 is merged, the implementer must either use the current dashboard primitives as an explicit fallback or split renderer styling until TASK-479-06 is available.
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD, set when work begins>`
 **Completed:** `<YYYY-MM-DD, set at closure>`
@@ -83,15 +83,16 @@ Per-leaf Security Contracts are authoritative; this is the umbrella summary.
     other domains (e.g. media/storage, security settings) must NOT leak data the
     caller cannot already read via that permission; sensitive reads gate on the
     domain permission they belong to.
-  - **Layout reads/writes:** the **per-user** layout is a personal preference
-    (session-scoped, no extra RBAC — mirrors `/admin/api/user-settings`). The
-    optional **per-site default** layout is admin-managed and requires
-    `settings:write` (a new `dashboard:write` permission MAY be introduced in
-    `_docs/RBAC_SPEC.md` if the team prefers a dedicated scope — decided in
-    TASK-480-01-L02 / TASK-480-03).
+  - **Layout reads/writes:** the layout is persisted per user in the dedicated
+    `dashboard_layouts` table. Layout reads require `content:read`; layout writes
+    (`PUT /dashboard/layout`, reset) require the dedicated `dashboard:write`
+    permission introduced by TASK-480-03. `settings:write` is not reused.
 - **CSRF:** required for every admin write (layout PUT/PATCH, reset) via
   `X-CSRF-Token` (`apiRequest(..., { withCsrf: true })`).
-- **Rate-limit bucket:** `admin`.
+- **Rate-limit buckets:** admin reads (`GET /dashboard`, `GET /dashboard/layout`,
+  `GET /dashboard/widget-data`) use `admin_read`; admin writes/body POSTs
+  (`PUT /dashboard/layout`, `POST /dashboard/layout/reset`,
+  `POST /dashboard/widget-data`) use `admin_write`.
 - **Validation:** schema-first, reject-unknown-fields. All widget/layout schemas
   + enums + defaults are owned in `core/services/dashboard/*`; routes re-export
   but never re-declare them. Normalization via explicit `normalize*` helpers.
@@ -122,8 +123,9 @@ Per-leaf Security Contracts are authoritative; this is the umbrella summary.
   types/config + layout, and the server data-source services (counters, charts,
   activity, storage, security, content-query) that the single batched data route
   (TASK-480-03) consumes.
-- **03 — Layout Persistence & API:** storage for the per-user (and optional
-  per-site default) layout, `GET`/`PUT` layout routes, end-to-end cache contract
+- **03 — Layout Persistence & API:** dedicated storage for the per-user
+  `dashboard_layouts` layout, `GET`/`PUT` layout routes, reset + widget-data
+  routes, end-to-end cache contract
   (key/TTL, cached client wrapper, cacheBus invalidation, hydrate +
   background revalidate, no mount-force loops, no dirty-state overwrite).
 - **04 — Widget Renderer Components:** one admin renderer per widget type built
@@ -166,7 +168,8 @@ Lanes per `_docs/TESTING_STRATEGY.md`. Load DB env before any DB-backed test:
 ## Documentation Updates Required
 
 - `_docs/DASHBOARD_WIDGETS_SPEC.md` — **create** (catalog, data sources, layout
-  model, edit-mode UX, per-user vs per-site decision).
+  model, edit-mode UX, `dashboard_layouts` persistence, and `dashboard:write`
+  RBAC decision).
 - `_docs/CMS_API.md` — document new `/admin/api/dashboard/*` routes (widget data
   + layout).
 - `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` — new cache keys/TTL,
@@ -174,8 +177,8 @@ Lanes per `_docs/TESTING_STRATEGY.md`. Load DB env before any DB-backed test:
   APIs entry.
 - `_docs/DATA_MODEL.md` — if a layout table/column is added (DB artifacts:
   SQL migration + `meta/<idx>_snapshot.json` + `meta/_journal.json`).
-- `_docs/RBAC_SPEC.md` — only if a dedicated `dashboard:write` permission is
-  introduced.
+- `_docs/RBAC_SPEC.md` — document the dedicated `dashboard:write` permission
+  introduced by TASK-480-03.
 - `_docs/_TASKS/README.md` — board bucket + statistics on every status change.
 - `_docs/_CHANGELOG/` — task-linked entry on closure (cross-link `TASK-480` +
   the leaf id).

@@ -35,7 +35,8 @@ cached client).
 
 - **Endpoint visibility:** n/a (test-only). Tests **assert** the contract:
   `internal` routes, `content:read` reads, `dashboard:write` writes, CSRF on
-  writes, `admin` rate-limit bucket, reject-unknown, no-secret responses.
+  writes, `admin_read` for GET reads, `admin_write` for writes/body POSTs,
+  reject-unknown, no-secret responses.
 - **Validation:** the security lane confirms reject-unknown and that the
   security-summary widget response contains no raw settings keys
   (`password`/`secret`/`token`/`apiKey`/`connectionString`).
@@ -123,9 +124,10 @@ test("reset deletes the row -> default", async () => {
 
 Extend `tests/security/codersoSecurityGate.test.ts`:
 
-- The three write paths (`PUT /dashboard/layout`, `POST /dashboard/layout/reset`,
-  `POST /dashboard/widget-data`) appear in the CSRF-required / `admin`
-  rate-limit-bucket buckets.
+- `GET /dashboard/layout` and `GET /dashboard/widget-data` appear in the
+  `admin_read` visibility bucket; `PUT /dashboard/layout`,
+  `POST /dashboard/layout/reset`, and `POST /dashboard/widget-data` appear in
+  the CSRF-required / `admin_write` visibility bucket.
 - `dashboard:write` exists in `listPermissionIds()` and is **not** in the public
   permission surface.
 - No-secret assertion: serialize a sample widget-data response and assert it has

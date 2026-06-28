@@ -14,7 +14,8 @@
 
 Define the authoritative **Dashboard widget product spec**: the widget catalog
 (each type's CMS data source + config), the layout/grid model, the edit-mode UX,
-and the **per-user vs per-site** layout decision. This spec is the contract that
+and the final **dashboard_layouts + dashboard:write** persistence/RBAC decision.
+This spec is the contract that
 TASK-480-02 (schemas + data-source services), -03 (layout persistence + API),
 -04 (renderers), and -05 (builder UI) implement against. It is drafted into
 `_docs/DASHBOARD_WIDGETS_SPEC.md` (finalized in TASK-480-06).
@@ -25,15 +26,15 @@ These are **admin Dashboard widgets** (panels visualizing CMS data inside
 collision.
 
 - **Goal:** A complete, implementable widget catalog + layout model + edit-mode
-  UX + per-user/per-site decision, expressed as concrete schema/type shapes.
+  UX + persistence/RBAC decision, expressed as concrete schema/type shapes.
 - **Owning module/service:** the spec doc seed for `_docs/DASHBOARD_WIDGETS_SPEC.md`;
   defines (but does not yet build) the contracts for
-  `core/services/dashboard/widgets/*` and `core/admin/ui/dashboard/*`.
+  `core/services/dashboard/*` and `core/admin/ui/dashboard/*`.
 - **Source-of-truth docs:** `core/services/dashboard/dashboardTypes.ts` +
   `dashboardService.ts` (existing data we can already source), the prototype
   `_docs/_PROTOTYPE/src/pages/DashboardPage.tsx` (visual catalog), `_docs/RBAC_SPEC.md`,
-  `_docs/ADMIN_CACHE.md`, `core/admin/services/userSettingsClient.ts` +
-  `core/services/settings/userSettingsService.ts` (per-user preference pattern).
+  `_docs/ADMIN_CACHE.md`, `_docs/DATA_MODEL.md`, and the TASK-480-03
+  `dashboard_layouts` storage/API contract.
 - **Out of scope:** Writing the schemas/services/routes/UI (that is -02..-05).
   New analytics ingestion. Public-site widgets.
 
@@ -45,9 +46,11 @@ No runtime change in this leaf (spec only). The spec MUST, however, **specify**
 the security posture each later leaf inherits:
 
 - Widget data reads: `internal` `/admin/api/*`, session auth, `content:read`,
-  schema reject-unknown, `admin` rate-limit bucket, no PII/secret in payloads.
-- Layout writes: CSRF-required admin writes; per-user layout = session-only,
-  per-site default = `settings:write` (or a new `dashboard:write`).
+  schema reject-unknown, `admin_read` for GET and `admin_write` for the
+  body-carrying POST widget-data query, no PII/secret in payloads.
+- Layout reads/writes: per-user layout persisted in `dashboard_layouts`; reads
+  require `content:read`, writes/reset require `dashboard:write` + CSRF and use
+  `admin_write`. `settings:write` is not reused.
 - The spec must call out that any widget sourcing from a permissioned domain
   (media/storage, security settings, users) gates on that domain's read
   permission, never widening access.
@@ -85,15 +88,15 @@ never fabricated):
 
 | Type | Visual (prototype) | Data source (server) | Config (schema-first) |
 |------|--------------------|----------------------|------------------------|
-| `totals-counters` | `StatCard` + optional spark | `getDashboardTotals()` (existing) | `metrics: ("pages"\|"entries"\|"media"\|"users")[]` (which counters to show), `accent`, `showSparkline:boolean` |
-| `content-type-counts` | list rows OR `Donut` (breakdown) | `countRows` per content type (from `contentTypes`) OR counts grouped by content type/status | `contentTypeSlugs: string[]` (empty = all), `contentTypeSlug?` (single-type counter card), `dimension:"contentType"\|"status"`, `sort:"name"\|"count"`, `top?: number`, `display:"list"\|"donut"` |
-| `content-over-time` | `AreaChart` | NEW aggregation: count of pages/entries grouped by day over range (created_at/updated_at) | `metric: "pages"\|"entries"\|"media"`, `field:"created"\|"updated"`, `rangeDays: 7\|30\|90`, `contentTypeSlug?` |
+| `totals-counters` | `StatCard` + optional spark | `getDashboardTotals()` (existing) | `metrics?: ("pages"\|"entries"\|"media"\|"users")[]`, `accent?: "primary"\|"success"\|"warning"`, `format?: "number"\|"bytes"\|"percent"` |
+| `content-type-counts` | list rows OR `Donut` (breakdown) | content types + entries counts | `contentTypeIds?: string[]`, `limit?: number`, `display?: "bars"\|"list"\|"donut"` |
+| `content-over-time` | `AreaChart` / bar chart | NEW aggregation: count of content created/updated over range | `rangeDays?: number`, `bucket?: "day"\|"week"`, `variant?: "area"\|"bar"` |
 | `recent-activity` | `RecentEditsTable` | `getRecentEdits(limit)` (existing) | `types: ("page"\|"entry"\|"media")[]`, `limit: 1..25` |
 | `storage-usage` | storage summary card | `getStorageSummary()` (existing) | none (display-only) |
 | `site-health` | `SiteHealthCard` | `getStorageSummary()` + `buildSecuritySummary(getSecuritySettings())` (existing) rollup | none (display-only) |
 | `security-summary` | `SecurityStatusCard` | `buildSecuritySummary(getSecuritySettings())` (existing) | none |
-| `quick-actions` | button group | static link descriptors resolved via `adminPaths` | `actions: QuickActionKey[]` (e.g. `createPage`,`createEntry`,`uploadMedia`) |
-| `content-query` | `SectionCard` table/list | NEW: filtered query over a content type (reuse listings/entries read path; READ-ONLY) | `contentTypeSlug`, `filter?`, `sort?`, `limit:1..25`, `columns: string[]`, `display:"table"\|"list"` |
+| `quick-actions` | button group | static link descriptors resolved via admin route helpers | `actions?: { id, label, target, icon? }[]` |
+| `content-query` | `SectionCard` table/list | NEW: filtered query over entries (READ-ONLY) | `contentTypeId: string \| null`, `status?`, `limit?`, `sort?`, `order?` |
 
 Per-type config schemas live in the owner module and are validated
 reject-unknown:
@@ -104,13 +107,13 @@ const totalsCountersConfigSchema = z.object({
   kind: z.literal("totals-counters"),
   metrics: z.array(z.enum(["pages", "entries", "media", "users"]))
     .default(["pages", "entries", "media", "users"]),
-  accent: z.enum(["primary", "success", "warning", "info"]).default("primary"),
-  showSparkline: z.boolean().default(false),
+  accent: z.enum(["primary", "success", "warning"]).default("primary"),
+  format: z.enum(["number", "bytes", "percent"]).default("number"),
 }).strict();
-// The single per-content-type counter AND the by-type/status breakdown both FOLD INTO the
-// content-type-counts variant (its config carries contentTypeSlug(s)/dimension/top/display —
-// see the catalog table); nothing is dropped. One strict() schema per DashboardWidgetType
-// (config.kind === type), keyed in a registry covering all 9 canonical types:
+// The single per-content-type counter and the breakdown both fold into the
+// content-type-counts variant (`contentTypeIds`, `limit`, `display`). One
+// strict() schema per DashboardWidgetType (config.kind === type), keyed in a
+// registry covering all 9 canonical types:
 export const DASHBOARD_WIDGET_CONFIG_SCHEMAS: Record<DashboardWidgetType, ZodTypeAny>;
 export const DASHBOARD_WIDGET_DEFAULT_CONFIG: Record<DashboardWidgetType, unknown>;
 ```
@@ -130,7 +133,7 @@ export type DashboardWidgetPosition = {
 
 // Canonical per-instance widget (480-02-L01 names it `DashboardWidget`).
 export type DashboardWidget = {
-  id: string;                       // uuid (per instance, not per type)
+  id: string;                       // stable instance id (default-* or nanoid)
   type: DashboardWidgetType;        // one of the 9 canonical kebab types
   title?: string;                   // optional title override
   config: DashboardWidgetConfig;    // discriminated union; config.kind MUST equal type
@@ -138,8 +141,7 @@ export type DashboardWidget = {
 };
 
 export type DashboardLayout = {
-  schemaVersion: 1;           // bump + migrate on shape change
-  scope: "user" | "site";
+  version: 1;                 // bump + migrate on shape change
   widgets: DashboardWidget[]; // max e.g. 24
 };
 
@@ -153,8 +155,7 @@ Normalization (the explicit `normalize*` helper -02 owns):
 export function normalizeDashboardLayout(input: unknown): DashboardLayout {
   const parsed = dashboardLayoutSchema.parse(input);   // reject unknown fields
   return {
-    schemaVersion: 1,
-    scope: parsed.scope,
+    version: 1,
     widgets: parsed.widgets
       .slice(0, DASHBOARD_MAX_WIDGETS)
       .map((w) => ({
@@ -165,7 +166,7 @@ export function normalizeDashboardLayout(input: unknown): DashboardLayout {
       })),
   };
 }
-export function defaultDashboardLayout(scope: "user" | "site"): DashboardLayout;
+export function defaultDashboardLayout(): DashboardLayout;
 ```
 
 A **default layout** reproduces today's fixed dashboard (`totals-counters` +
@@ -203,38 +204,32 @@ Data:
     widget, not the page.
 ```
 
-### 4. Per-user vs per-site decision (RECOMMEND + JUSTIFY)
+### 4. Persistence/RBAC decision (FINAL for TASK-480)
 
-**Recommendation: per-USER layout as the default surface, with an OPTIONAL
-per-site DEFAULT template (admin-managed) as the seed for new users.**
+**Decision: per-user dashboard layout in a dedicated `dashboard_layouts` table,
+with layout writes gated by `dashboard:write`.**
 
 Justification:
 
-- **Personalization fits the product.** A dashboard is a personal landing page;
-  different roles care about different metrics. The codebase already has a clean,
-  proven **per-user preference** mechanism — `user_settings` table +
-  `userSettingsService.ts` (`validateUserSettingValue`, reject-unknown
-  `ALLOWED_KEYS`, `onConflictDoUpdate` upsert) + `userSettingsClient.ts`
-  (`createReadThroughCache`, `withCsrf` PATCH). Per-user layout maps directly
-  onto it (auth-only, no extra RBAC), minimizing new surface.
-- **Least privilege.** A per-user layout edit only mutates the caller's own row,
-  so it needs **session auth only** — no broad `settings:write`. A per-site
-  default is a shared resource, so it correctly requires `settings:write`
-  (or a new `dashboard:write`) and is edited by admins only.
-- **Migration parity.** The per-site default is seeded from
-  `defaultDashboardLayout("site")` (≈ today's fixed dashboard), so existing
-  users keep the current view until they customize — zero regression.
-- **Storage choice (hand to -03):** EITHER add a `"dashboard.layout"` key to the
-  existing `user_settings`/`UserSettingValueMap` (cheapest; reuses the whole
-  validate/cache/CSRF stack) OR a dedicated `dashboard_layouts` table
-  (`user_id` nullable for the site default, `scope`, `layout jsonb`,
-  `updated_at`). **Spec recommends the `user_settings` key for per-user** (lowest
-  risk) and a **small `dashboard_layouts` table only for the per-site default**
-  (so it is not tied to any user). -03 makes the final call + DB artifacts.
+- **Domain ownership.** A dashboard layout is a versioned widget document, not a
+  small UI preference. Keeping it in `dashboard_layouts` gives the dashboard
+  feature its own migration, snapshot, validation, and future read-migration path.
+- **Least privilege with explicit intent.** Layout reads reuse `content:read`
+  because the saved layout only determines which already-authorized dashboard data
+  will be displayed. Layout writes require `dashboard:write`, a narrow permission
+  that is clearer than overloading `settings:write`.
+- **Migration parity.** An unsaved user resolves to `defaultDashboardLayout()`,
+  seeded from today's fixed dashboard (`totals-counters`, `recent-activity`,
+  `storage-usage`, `security-summary`), so existing installs see no blank
+  dashboard regression.
+- **Future per-site default.** Shared site/role default dashboards are explicitly
+  out of the TASK-480 storage surface. If added later, they should be a follow-up
+  task that extends the same domain table or introduces a separate default table
+  with its own RBAC decision.
 
-**Data flow:** view loads per-user layout → fall back to per-site default → fall
-back to `defaultDashboardLayout("user")`. Resolution order is documented so an
-absent/invalid stored layout always degrades to a valid default.
+**Data flow:** view loads the caller's `dashboard_layouts` row → absent/invalid
+row falls back to `defaultDashboardLayout()`. Resolution order is documented so
+stored drift always degrades to a valid default.
 
 **Error handling:** invalid stored layout → log + serve default (mirrors
 `listUserSettings` try/catch-to-default), never crash the dashboard. Unknown
@@ -246,8 +241,9 @@ of legacy/corrupt data, drop the offending widget and keep the rest.
 - Domain/Vitest: `normalizeDashboardLayout` rejects unknown fields, clamps
   position, drops over-limit widgets, per-type config validation, default layout
   parity with today's payload, resolution-order fallbacks.
-- Route/Bun: layout GET/PUT auth + CSRF + reject-unknown; per-site default gated
-  on `settings:write`; widget data gated on `content:read`; no PII/secret leak.
+- Route/Bun: layout GET requires `content:read`; layout PUT/reset require
+  `dashboard:write` + CSRF + reject-unknown; widget data gated on `content:read`;
+  no PII/secret leak; rate-limit buckets are `admin_read`/`admin_write`.
 
 ---
 
@@ -262,8 +258,8 @@ Spec leaf — no automated lane. Validation = review:
   as concrete shapes (not prose).
 - Edit-mode UX covers add/arrange/resize/configure/save/discard/reset + dirty
   guard + cache-first load.
-- Per-user vs per-site decision is stated AND justified, with a storage
-  recommendation handed to TASK-480-03.
+- Persistence/RBAC decision is stated and justified, matching TASK-480-03's
+  dedicated `dashboard_layouts` + `dashboard:write` contract.
 - Output drafted into `_docs/DASHBOARD_WIDGETS_SPEC.md`.
 
 ---
@@ -271,9 +267,9 @@ Spec leaf — no automated lane. Validation = review:
 ## Documentation Updates Required
 
 - `_docs/DASHBOARD_WIDGETS_SPEC.md` — create/seed with this spec (catalog,
-  layout, edit-mode UX, per-user/per-site decision). Finalized in TASK-480-06.
+  layout, edit-mode UX, persistence/RBAC decision). Finalized in TASK-480-06.
 - `_docs/_TASKS/README.md` — status/statistics on completion.
-- Note forward references for `_docs/RBAC_SPEC.md` (possible `dashboard:write`),
+- Note forward references for `_docs/RBAC_SPEC.md` (`dashboard:write`),
   `_docs/CMS_API.md`, `_docs/ADMIN_CACHE*.md`, `_docs/DATA_MODEL.md` so -02/-03
   pick them up.
 
@@ -282,7 +278,7 @@ Spec leaf — no automated lane. Validation = review:
 ## Closure Checklist
 
 - [ ] Status `✅ Done`.
-- [ ] Full catalog + layout + edit-mode + per-user/per-site decision specified
+- [ ] Full catalog + layout + edit-mode + persistence/RBAC decision specified
       as concrete shapes.
 - [ ] `_docs/DASHBOARD_WIDGETS_SPEC.md` seeded.
 - [ ] Forward contracts (RBAC/CSRF/cache/storage) handed to -02/-03.

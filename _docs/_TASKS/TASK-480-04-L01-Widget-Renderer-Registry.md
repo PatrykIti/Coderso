@@ -20,10 +20,10 @@ the renderer for `widget.type` and owns the four cross-cutting states —
 rendered with the prototype's `SectionCard` shell so every panel is visually
 consistent regardless of which renderer fills it.
 
-- **Goal:** A single, exhaustive, type-safe seam (`DASHBOARD_WIDGET_RENDERERS`
-  + `DashboardWidgetHost`) so the builder/grid (TASK-480-05) places hosts and
-  passes each a `widget` + a per-widget data **state**, never branching on type
-  itself.
+- **Goal:** A single, exhaustive, type-safe seam (`DASHBOARD_WIDGET_RENDERERS`,
+  `DASHBOARD_WIDGET_CATALOG`, and `DashboardWidgetHost`) so the builder/grid
+  (TASK-480-05) places hosts, lists catalog metadata, and passes each host a
+  `widget` + a per-widget data **state**, never branching on type itself.
 - **Owning module/service:** `core/admin/ui/dashboard/widgets/registry.tsx`,
   `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`.
 - **Source-of-truth docs:**
@@ -48,8 +48,9 @@ consistent regardless of which renderer fills it.
 
 - **Endpoint visibility / Auth / RBAC / CSRF / Rate-limit:** n/a — presentational
   dispatch only; no routes, no fetch. (Upstream data is gated by the TASK-480-03
-  internal admin endpoints: session + `content:read` for data, dashboard-write
-  permission + CSRF + `admin` bucket for layout writes.)
+  internal admin endpoints: session + `content:read` for data, `dashboard:write`
+  + CSRF for layout writes, `admin_read` for GET reads, and `admin_write` for
+  writes/body POSTs.)
 - **Validation:** the host treats `data` as the **already-normalized** union from
   TASK-480-01; it performs a **defensive discriminant check** (`data.type ===
   widget.type`) and renders a safe invariant fallback on mismatch rather than
@@ -69,9 +70,10 @@ consistent regardless of which renderer fills it.
 import type {
   DashboardWidget,
   DashboardWidgetData,
+  DashboardWidgetConfig,
   DashboardWidgetType,
-} from "@/services/dashboard/dashboardTypes";          // owned by 480-02
-import { DASHBOARD_WIDGET_TYPES } from "@/services/dashboard/dashboardTypes"; // owned by 480-02
+} from "../../../../services/dashboard/dashboardTypes";          // owned by 480-02
+import { DASHBOARD_WIDGET_TYPES } from "../../../../services/dashboard/dashboardTypes"; // owned by 480-02
 
 // Props every renderer receives. Narrowed per type so each renderer body sees
 // ONLY its own config + data variant (no per-renderer re-discrimination).
@@ -98,6 +100,41 @@ export const DASHBOARD_WIDGET_RENDERERS: DashboardWidgetRendererRegistry = {
   "security-summary":    SecuritySummaryWidget,    // ← L02
   "quick-actions":       QuickActionsWidget,       // ← L02
   "content-query":       ContentQueryWidget,       // ← L02
+};
+
+export type WidgetConfigField =
+  | { key: string; kind: "text"; label: string }
+  | { key: string; kind: "select"; label: string; options: { value: string; label: string }[] | "contentTypes" }
+  | { key: string; kind: "range"; label: string; options: { value: "24h" | "7d" | "30d" | "90d"; label: string }[] }
+  | { key: string; kind: "number"; label: string; min: number; max: number }
+  | { key: string; kind: "toggle"; label: string };
+
+export type DashboardWidgetCatalogEntry = {
+  type: DashboardWidgetType;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  category: "metrics" | "content" | "system" | "actions";
+  defaultConfig: DashboardWidgetConfig;
+  defaultSize: { w: number; h: number };
+  minSize: { w: number; h: number };
+  maxSize?: { w: number; h: number };
+  configFields: WidgetConfigField[];
+};
+
+// Metadata used by the TASK-480-05 add-widget/configure UI. This module owns
+// catalog completeness; the builder consumes it and does not redeclare labels,
+// defaults, sizing, or config fields.
+export const DASHBOARD_WIDGET_CATALOG: Record<DashboardWidgetType, DashboardWidgetCatalogEntry> = {
+  "totals-counters":     { /* label/icon/defaultConfig/defaultSize/configFields */ },
+  "content-type-counts": { /* ... */ },
+  "content-over-time":   { /* ... */ },
+  "recent-activity":     { /* ... */ },
+  "storage-usage":       { /* ... */ },
+  "site-health":         { /* ... */ },
+  "security-summary":    { /* ... */ },
+  "quick-actions":       { /* ... */ },
+  "content-query":       { /* ... */ },
 };
 
 export function getWidgetRenderer<T extends DashboardWidgetType>(
@@ -135,7 +172,7 @@ export { DASHBOARD_WIDGET_TYPES };
 import { SectionCard } from "@/ui/shared/SectionCard";
 import { EmptyState } from "@/ui/shared/EmptyState";
 import { getWidgetRenderer, isWidgetDataEmpty } from "./registry";
-import type { DashboardWidget, DashboardWidgetData } from "@/services/dashboard/dashboardTypes";
+import type { DashboardWidget, DashboardWidgetData } from "../../../../services/dashboard/dashboardTypes";
 
 // State is PASSED IN (no fetch here). 480-02/05 produce it via the cached client.
 export type WidgetDataState =
@@ -220,8 +257,9 @@ raw errors. The mismatch branch is a defensive invariant, not a user path.
 
 **Regression-test shape (delivered in L03):**
 
-- Registry exhaustiveness: `Object.keys(DASHBOARD_WIDGET_RENDERERS)` equals
-  `DASHBOARD_WIDGET_TYPES` (sorted) — every type has a renderer, no extras.
+- Registry exhaustiveness: `Object.keys(DASHBOARD_WIDGET_RENDERERS)` and
+  `Object.keys(DASHBOARD_WIDGET_CATALOG)` both equal `DASHBOARD_WIDGET_TYPES`
+  (sorted) — every type has a renderer and metadata entry, no extras.
 - Host states: `loading` → `widget-skeleton`; `error` → `widget-error` + message;
   `ready` + empty data → `widget-empty`; `ready` + mismatched `data.type` →
   `widget-error` (no throw); `ready` + valid data → the renderer's output.

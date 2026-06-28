@@ -64,9 +64,10 @@ into these renderers (config-driven), not duplicated.
   already did). They tolerate the documented edges (0 rows, `usedPercent: null`,
   `limitBytes: null`, missing `delta`) without throwing.
 - **Navigation safety:** `QuickActionsWidget` and `ContentQueryWidget` row links
-  route **only** through `adminPaths.*` + `AdminLink`; action targets are an
-  **allow-listed** set resolved by 480-02 (no raw/user-supplied hrefs rendered as
-  links — an unknown target renders disabled/as text, never a live arbitrary URL).
+  route **only** through local allow-list helpers that return safe relative admin
+  paths consumed by `AdminLink href` (which resolves via `resolveAdminHref`).
+  There is no `adminPaths.*` builder object for these routes. Unknown targets
+  render disabled/as text, never as arbitrary live URLs.
 - **Secret handling:** render only the redacted fields present in
   `DashboardWidgetData` (e.g. `RecentActivity` uses `author.name ?? author.email`
   exactly as the existing `RecentEditsTable` does — no extra PII). Untrusted
@@ -193,8 +194,10 @@ export function RecentActivityWidget({ data }: DashboardWidgetRendererProps<"rec
       ))}
     </ul>
   );
-  // hrefForEdit(item): switch(item.type) → adminPaths.pageEditor/entryEditor/mediaDetail(item.id);
-  //   unknown → undefined → render title as plain <span> (never a raw href).
+  // hrefForEdit(item): switch(item.type) -> safe relative hrefs such as
+  // `/pages/${id}`, `/content/${contentTypeId}/entries/${id}`, `/media/${id}`;
+  // pass through AdminLink href so resolveAdminHref canonicalizes under /admin.
+  // unknown -> undefined -> render title as plain <span> (never a raw href).
 }
 
 // renderers/ContentQueryWidget.tsx — config (kind:"content-query"):
@@ -283,12 +286,13 @@ export function SecuritySummaryWidget({ data }: DashboardWidgetRendererProps<"se
 ```tsx
 // renderers/QuickActionsWidget.tsx — config (kind:"quick-actions") + data: { type:"quick-actions";
 //   actions: { id: QuickActionId; label:string; target: AdminPathKey; icon?:string }[] }
-// `target` is an ALLOW-LISTED adminPaths key resolved in 480-02 — never a raw URL.
+// `target` is an ALLOW-LISTED key resolved locally to a safe relative admin href
+// such as "/pages/new", "/content", or "/media"; never a raw URL.
 export function QuickActionsWidget({ data }: DashboardWidgetRendererProps<"quick-actions">) {
   return (
     <div className="grid grid-cols-2 gap-2">
       {data.actions.map((a) => {
-        const href = resolveAdminPath(a.target);          // returns undefined for unknown key
+        const href = resolveQuickActionHref(a.target);    // returns undefined for unknown key
         const inner = (<><Icon name={a.icon} className="size-4" /> <span>{a.label}</span></>);
         return href
           ? <AdminLink key={a.id} href={href} prefetch><Button variant="soft" className="w-full justify-start gap-2">{inner}</Button></AdminLink>

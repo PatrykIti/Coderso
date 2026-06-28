@@ -51,7 +51,9 @@ layout for first-paint convenience.
   never expose data the caller could not already read.
 - **CSRF:** required on the `POST` form (admin POST). The `GET` form (saved
   layout, no body) is a safe read and does not require CSRF.
-- **Rate-limit bucket:** `admin`.
+- **Rate-limit buckets:** `GET /dashboard/widget-data` uses `admin_read`;
+  `POST /dashboard/widget-data` uses `admin_write` because it is a
+  body-carrying admin POST, even though the domain operation is read-only.
 - **Validation:** `validate(dashboardWidgetDataRequestSchema, ctx.body)` —
   reject-unknown; cap instance count at `DASHBOARD_MAX_WIDGETS`; each requested
   instance is normalized through the 480-02 contract
@@ -78,19 +80,23 @@ import {
   normalizeDashboardWidgetConfig,            // 480-02 per-type config validator
   DASHBOARD_MAX_WIDGETS,                      // 480-02 cap
 } from "./dashboardWidgetContract";
-import { DASHBOARD_WIDGET_TYPES } from "./dashboardTypes"; // 480-02 type enum
+import {
+  DASHBOARD_WIDGET_TYPES,
+  type DashboardWidgetData,
+  type DashboardWidgetType,
+} from "./dashboardTypes"; // 480-02 type/data owner
 import { resolveWidgetData } from "./dashboardDataSources"; // 480-02 resolver registry
 
 export const dashboardWidgetDataRequestSchema = z.object({
   widgets: z.array(z.object({
-    id: z.string().uuid(),
+    id: z.string().min(1),
     type: z.enum(DASHBOARD_WIDGET_TYPES),
     config: z.unknown().optional(),
   }).strict()).max(DASHBOARD_MAX_WIDGETS),
 }).strict();
 
 export type DashboardWidgetDataEntry =
-  | { id: string; type: DashboardWidgetType; status: "ok"; data: unknown }
+  | { id: string; type: DashboardWidgetType; status: "ok"; data: DashboardWidgetData }
   | { id: string; type: DashboardWidgetType; status: "error"; code: string };
 
 export type DashboardWidgetDataResponse = {
@@ -102,20 +108,19 @@ export async function resolveWidgetDataBatch(
   input: unknown
 ): Promise<DashboardWidgetDataResponse> {
   const parsed = dashboardWidgetDataRequestSchema.parse(input); // reject-unknown
-  const entries = await Promise.all(parsed.widgets.map(async (w) => {
-    try {
-      const config = normalizeDashboardWidgetConfig(w.type, w.config); // 480-02 per-type validate
-      // 480-02 registry resolves a single widget; it already isolates resolver
-      // failures into `{ error }` (never throws). position is unused by resolvers.
-      const resolved = await resolveWidgetData({ id: w.id, type: w.type, config, position: { x: 0, y: 0, w: 0, h: 0 } });
-      return "error" in resolved
-        ? { id: w.id, type: w.type, status: "error" as const, code: resolved.error }
-        : { id: w.id, type: w.type, status: "ok" as const, data: resolved.data };
-    } catch (error) {
-      // unknown type / bad config from the validator above; never leak internals
-      return { id: w.id, type: w.type, status: "error" as const,
-        code: error instanceof Error ? error.message : "widget_data_failed" };
-    }
+  const widgets = parsed.widgets.map((w) => ({
+    id: w.id,
+    type: w.type,
+    config: normalizeDashboardWidgetConfig(w.type, w.config), // 480-02 per-type validate
+    position: { x: 0, y: 0, w: 0, h: 0 },
+  }));
+  const entries = await Promise.all(widgets.map(async (w) => {
+    // 480-02 registry resolves a single widget and converts resolver failures to
+    // `{ type, error }`; request-level schema/config errors already threw above.
+    const resolved = await resolveWidgetData(w);
+    return "error" in resolved
+      ? { id: w.id, type: w.type, status: "error" as const, code: resolved.error }
+      : { id: w.id, type: w.type, status: "ok" as const, data: resolved };
   }));
   return { generatedAt: new Date().toISOString(), entries };
 }
@@ -144,10 +149,10 @@ router.post("/dashboard/widget-data", requirePermission("content:read"), async (
 ```
 
 > Reuse the same `withDashboardErrors` / `mapDashboardError` from L02. Unknown
-> widget `type` or bad `config` surfaces as a ZodError → `dashboard_layout_invalid`
-> 400 at the boundary for the **whole-request** schema; **per-widget** resolver
-> failures are returned inline as `status:"error"` so a single broken widget never
-> fails the batch.
+> widget `type` or bad `config` surfaces as a ZodError →
+> `dashboard_layout_invalid` 400 at the boundary for the **whole-request**
+> schema; **per-widget** resolver failures are returned inline as
+> `status:"error"` so a single broken data source never fails the batch.
 
 **Data flow:** request → permission/CSRF(POST)/rate-limit → validate body →
 `resolveWidgetDataBatch` fans out to 480-02 resolvers under `content:read` →

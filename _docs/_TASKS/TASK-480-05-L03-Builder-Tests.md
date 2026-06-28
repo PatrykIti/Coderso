@@ -85,9 +85,11 @@ import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouter
 // 1) MOCK THE CLIENT BOUNDARY (not production fallbacks, not the network)
 const saveDashboardLayout = vi.fn();
 const getDashboardLayoutCached = vi.fn();
+const getWidgetDataCached = vi.fn();
 vi.mock("@/services/dashboardClient", () => ({
   getDashboardData: vi.fn(async () => ({})),
   getDashboardLayoutCached: (...a: unknown[]) => getDashboardLayoutCached(...a),
+  getWidgetDataCached: (...a: unknown[]) => getWidgetDataCached(...a),
   saveDashboardLayout: (...a: unknown[]) => saveDashboardLayout(...a),
 }));
 // content-type options for the configure panel selector
@@ -117,6 +119,13 @@ const SAVED_LAYOUT = {
   widgets: [
     { id: "w1", type: "totals-counters", title: "Pages", config: { kind: "totals-counters" }, position: { x: 0, y: 0, w: 3, h: 1 } },
     { id: "w2", type: "content-over-time", title: "Trend", config: { kind: "content-over-time" }, position: { x: 3, y: 0, w: 6, h: 2 } },
+  ],
+};
+const SAVED_WIDGET_DATA = {
+  generatedAt: "2026-06-28T00:00:00.000Z",
+  entries: [
+    { id: "w1", type: "totals-counters", status: "ok", data: { type: "totals-counters", counters: [{ key: "pages", label: "Pages", formatted: "1", value: 1 }] } },
+    { id: "w2", type: "content-over-time", status: "ok", data: { type: "content-over-time", variant: "area", series: [], categories: [] } },
   ],
 };
 
@@ -157,6 +166,7 @@ beforeEach(() => {
   cacheListener = null;
   can.mockImplementation(() => true);
   getDashboardLayoutCached.mockResolvedValue(SAVED_LAYOUT);
+  getWidgetDataCached.mockResolvedValue(SAVED_WIDGET_DATA);
   saveDashboardLayout.mockImplementation(async (layout) => layout); // echo
 });
 afterEach(() => { document.body.innerHTML = ""; });
@@ -169,6 +179,7 @@ test("renders saved layout from cache without forcing refetch", async () => {
     expect(view.container.textContent).toContain("Pages");
     expect(getDashboardLayoutCached).toHaveBeenCalledTimes(1);
     expect(getDashboardLayoutCached).toHaveBeenCalledWith(expect.objectContaining({ force: false }));
+    expect(getWidgetDataCached).toHaveBeenCalledWith(expect.objectContaining({ force: false }));
     expect(button(view.container, /save/i)).toBeUndefined(); // not editing yet
   } finally { view.cleanup(); }
 });

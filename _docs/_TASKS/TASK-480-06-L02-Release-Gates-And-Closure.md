@@ -51,7 +51,8 @@ security work is **verifying** that the security gate still passes with the new
 internal admin dashboard routes present:
 
 - `tests/security/codersoSecurityGate.test.ts` baseline still green (internal mode
-  requires session/API-key scope; CSRF + admin rate-limit on the new layout write).
+  requires session/API-key scope; CSRF + `admin_write` bucket on the new layout
+  writes/body POSTs, `admin_read` on GET reads).
 - The 480-03 route/security suites (auth/RBAC/CSRF/reject-unknown for
   `GET/PUT /dashboard/layout`) pass.
 - Confirm no secret-handling regression: the security/site-health widget payload

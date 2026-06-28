@@ -163,15 +163,25 @@ export const DASHBOARD_WIDGET_MAX_H = 12;
 export const DASHBOARD_MAX_WIDGETS = 24;
 export const DASHBOARD_CONTENT_QUERY_MAX_LIMIT = 50;
 export const DASHBOARD_CONTENT_QUERY_DEFAULT_LIMIT = 10;
+export const DASHBOARD_WIDGET_CONFIG_KIND_MISMATCH =
+  "dashboard_widget_config_kind_mismatch";
 
 const clamp = (n: number, lo: number, hi: number) =>
   Math.min(hi, Math.max(lo, Math.trunc(Number.isFinite(n) ? n : lo)));
 
-// withKind: stamp the discriminant onto raw config so `config.kind` always matches the widget
-// `type` before the per-type schema validates it. Used by normalizeDashboardLayout (below) and
-// normalizeDashboardWidgetConfig.
-const withKind = (type: DashboardWidgetType, cfg: unknown) =>
-  ({ ...(cfg as Record<string, unknown>), kind: type });
+// normalizeRawConfigForType: default a missing `kind`, but reject a provided
+// mismatched `config.kind` before the per-type schema sees it. This keeps the
+// public contract true: `config.kind !== type` is invalid, not silently repaired.
+const normalizeRawConfigForType = (type: DashboardWidgetType, cfg: unknown) => {
+  const record =
+    cfg && typeof cfg === "object" && !Array.isArray(cfg)
+      ? (cfg as Record<string, unknown>)
+      : {};
+  if (record.kind !== undefined && record.kind !== type) {
+    throw new Error(DASHBOARD_WIDGET_CONFIG_KIND_MISMATCH);
+  }
+  return { ...record, kind: type };
+};
 
 const positionSchema = z
   .object({ x: z.number(), y: z.number(), w: z.number(), h: z.number() })
@@ -220,7 +230,7 @@ export function normalizeDashboardLayout(input: unknown): DashboardLayout {
     // config.kind MUST match type; parse against the per-type strict schema.
     const cfgSchema = configSchemas[raw.type];
     const config = normalizeWidgetConfig(raw.type, cfgSchema.parse(
-      withKind(raw.type, raw.config)
+      normalizeRawConfigForType(raw.type, raw.config)
     ));
 
     widgets.push({
@@ -263,7 +273,7 @@ export function normalizeDashboardWidgetConfig(
   config: unknown,
 ): DashboardWidgetConfig {
   const cfgSchema = configSchemas[type];
-  return normalizeWidgetConfig(type, cfgSchema.parse(withKind(type, config)));
+  return normalizeWidgetConfig(type, cfgSchema.parse(normalizeRawConfigForType(type, config)));
 }
 ```
 

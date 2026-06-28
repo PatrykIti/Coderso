@@ -170,12 +170,17 @@ describe("registry", () => {
 });
 
 describe("resolveWidgetData shaping", () => {
-  it("totals-counters returns DashboardTotals", async () => {
+  it("totals-counters returns display-ready DashboardWidgetData", async () => {
     const out = await resolveWidgetData(
       { id: "a", type: "totals-counters", config: { kind: "totals-counters" }, position: { x: 0, y: 0, w: 12, h: 1 } },
       fakeReaders(),
     );
-    expect(out).toMatchObject({ id: "a", type: "totals-counters", data: { pages: 1 } });
+    expect(out).toMatchObject({
+      type: "totals-counters",
+      counters: [expect.objectContaining({ key: "pages", value: 1 })],
+    });
+    expect(out).not.toHaveProperty("id");
+    expect(out).not.toHaveProperty("data");
   });
 
   it("site-health bundles storage + security", async () => {
@@ -183,8 +188,9 @@ describe("resolveWidgetData shaping", () => {
       { id: "h", type: "site-health", config: { kind: "site-health" }, position: { x: 0, y: 0, w: 4, h: 2 } },
       fakeReaders(),
     );
-    expect(out.data).toHaveProperty("storage");
-    expect(out.data).toHaveProperty("security");
+    if ("error" in out) throw new Error("expected data");
+    expect(out).toHaveProperty("storage");
+    expect(out).toHaveProperty("security");
   });
 
   it("wraps a throwing reader as a per-widget error (keeps id, no throw)", async () => {
@@ -192,7 +198,7 @@ describe("resolveWidgetData shaping", () => {
       { id: "x", type: "storage-usage", config: { kind: "storage-usage" }, position: { x: 0, y: 0, w: 4, h: 1 } },
       fakeReaders({ storage: vi.fn(async () => { throw new Error("db down"); }) }),
     );
-    expect(out).toEqual({ id: "x", type: "storage-usage", error: "widget_data_unavailable" });
+    expect(out).toEqual({ type: "storage-usage", error: "widget_data_unavailable" });
   });
 
   it("content-query passes clamped config to the reader", async () => {
@@ -213,7 +219,7 @@ describe("resolveDashboardWidgets", () => {
     ] } as const;
     const out = await resolveDashboardWidgets(layout as any,
       fakeReaders({ storage: vi.fn(async () => { throw new Error("x"); }) }));
-    expect(out.map((w) => w.id)).toEqual(["ok", "bad"]);
+    expect(out.map((w) => w.type)).toEqual(["totals-counters", "storage-usage"]);
     expect(out[0]).not.toHaveProperty("error");
     expect(out[1]).toHaveProperty("error", "widget_data_unavailable");
   });

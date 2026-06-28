@@ -66,7 +66,8 @@ the API/UI leaves already implemented:
   writes gate on `dashboard:write` (the dedicated layout-persistence permission
   added by TASK-480-03) — documented, not changed.
 - **CSRF:** required for all admin layout writes — documented.
-- **Rate-limit bucket:** `admin` — documented.
+- **Rate-limit buckets:** `admin_read` for admin GET reads and `admin_write` for
+  layout writes/body POSTs — documented.
 - **Validation:** schema-owner reject-unknown behavior described, pointing at the
   `core/services/dashboard/*` schema owner from TASK-480-02.
 - **Secret handling:** the spec must restate that no secrets/credentials reach the

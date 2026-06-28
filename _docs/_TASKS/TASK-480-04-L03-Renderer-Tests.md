@@ -44,9 +44,9 @@ No endpoint or permission model changes — test-only. The registry test does
 assert one security-relevant invariant: every renderer key resolves to a defined
 component (no `undefined` dispatch), and the host’s mismatch branch renders the
 safe error fallback (never throws, never renders foreign data). The
-`QuickActions`/`ContentQuery` renderer tests assert links resolve via
-`adminPaths` and that an unknown action target renders **disabled/text**, not a
-live arbitrary URL.
+`QuickActions`/`ContentQuery` renderer tests assert links resolve to safe
+relative admin hrefs accepted by `AdminLink` and that an unknown action target
+renders **disabled/text**, not a live arbitrary URL.
 
 ---
 
@@ -92,13 +92,20 @@ export const emptyData = {
 
 ```ts
 import { describe, expect, it } from "vitest";
-import { DASHBOARD_WIDGET_RENDERERS, isWidgetDataEmpty } from "../../../core/admin/ui/dashboard/widgets/registry";
+import { DASHBOARD_WIDGET_CATALOG, DASHBOARD_WIDGET_RENDERERS, isWidgetDataEmpty } from "../../../core/admin/ui/dashboard/widgets/registry";
 import { DASHBOARD_WIDGET_TYPES } from "../../../core/services/dashboard/dashboardTypes";
 import { data, emptyData } from "../utils/dashboardWidgetFixtures";
 
 describe("dashboard widget registry", () => {
   it("has exactly one renderer per widget type (exhaustive, no extras)", () => {
     expect(Object.keys(DASHBOARD_WIDGET_RENDERERS).sort()).toEqual([...DASHBOARD_WIDGET_TYPES].sort());
+  });
+  it("has exactly one catalog metadata entry per widget type", () => {
+    expect(Object.keys(DASHBOARD_WIDGET_CATALOG).sort()).toEqual([...DASHBOARD_WIDGET_TYPES].sort());
+    for (const type of DASHBOARD_WIDGET_TYPES) {
+      expect(DASHBOARD_WIDGET_CATALOG[type]).toMatchObject({ type });
+      expect(DASHBOARD_WIDGET_CATALOG[type].defaultConfig.kind).toBe(type);
+    }
   });
   it("every renderer entry is a defined component", () => {
     for (const type of DASHBOARD_WIDGET_TYPES) expect(DASHBOARD_WIDGET_RENDERERS[type]).toBeTypeOf("function");
@@ -157,11 +164,11 @@ test("ContentOverTimeWidget: area + bar variants render (content-over-time is ne
 test("ContentTypeCountsWidget: list shows counts", () => {
   expect(ready("content-type-counts", data.typeCounts)).toContain("Posts");
 });
-test("RecentActivityWidget: title + author + adminPaths link", () => {
+test("RecentActivityWidget: title + author + safe admin href", () => {
   const html = ready("recent-activity", data.recentEdits);
   expect(html).toContain("Pricing");
   expect(html).toContain("Maria");
-  expect(html).toContain("/admin");                // AdminLink resolved via adminPaths (no raw /pricing literal as the editor href)
+  expect(html).toContain("/admin");                // AdminLink receives a safe admin href, not the raw /pricing literal.
 });
 test("StorageUsageWidget: null limit renders '(no limit)', no throw", () => {
   expect(ready("storage-usage", data.storageNoLimit)).toContain("no limit");
