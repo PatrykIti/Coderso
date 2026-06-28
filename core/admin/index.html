@@ -1,9 +1,22 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Coderso Admin</title>
+    <script>
+      // Apply the saved admin color mode before paint to avoid a flash (light
+      // default). Mirrors applyStoredColorMode() in ui/shared/AdminColorModeToggle.
+      (function () {
+        try {
+          var m = localStorage.getItem("coderso-admin-color-mode");
+          var dark = m === "dark";
+          var el = document.documentElement;
+          el.classList.toggle("dark", dark);
+          el.classList.toggle("light", !dark);
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="min-h-screen bg-background">
     <div id="root"></div>

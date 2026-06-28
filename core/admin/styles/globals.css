@@ -24,55 +24,116 @@
   --color-ring: var(--ring);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+
+  /* TASK-479-05-L03: new "Soft & Friendly" shadcn color tokens. Each maps to a
+     --admin-* (via the :root derivations below) so the injected dark
+     :root.dark{--admin-*} flip (L06) recolors them automatically. */
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  /* Soft elevation shadows. The `-token` indirection (resolved in :root below)
+     avoids a self-referential `--shadow-soft: var(--shadow-soft)` cycle while
+     still letting Tailwind v4 generate `shadow-soft`/`shadow-card`/`shadow-pop`
+     utilities from these @theme entries. */
+  --shadow-soft: var(--shadow-soft-token);
+  --shadow-card: var(--shadow-card-token);
+  --shadow-pop: var(--shadow-pop-token);
+
   --radius: var(--radius-md);
 }
 
 @layer base {
   :root {
-    --admin-base-bg: #ffffff;
-    --admin-base-surface: #f8fafc;
-    --admin-base-text: #0f172a;
-    --admin-base-border: #e2e8f0;
+    /* TASK-479-05-L03: --admin-* are the FIRST-PAINT fallbacks. The injected
+       <style id="coderso-theme-tokens"> (DB template, L04) overrides them at
+       runtime and wins source order. Re-valued here to the "Soft & Friendly"
+       violet/warm DEFAULT_ADMIN_THEME_TOKENS so the very first paint (before the
+       injected style applies) is already on-brand instead of the old blue. */
+    --admin-base-bg: #f6f5f2;
+    --admin-base-surface: #f3f1ed;
+    --admin-base-text: #1c1a17;
+    --admin-base-border: #eae7e0;
 
-    --admin-button-primary-bg: #1d4ed8;
+    --admin-button-primary-bg: #7c3aed;
     --admin-button-primary-text: #ffffff;
-    --admin-button-primary-hover-bg: #1e40af;
+    --admin-button-primary-hover-bg: #6d28d9;
     --admin-button-primary-hover-text: #ffffff;
-    --admin-button-secondary-bg: #0f766e;
-    --admin-button-secondary-text: #ffffff;
-    --admin-button-secondary-hover-bg: #115e59;
-    --admin-button-secondary-hover-text: #ffffff;
-    --admin-button-outline-border: #e2e8f0;
-    --admin-button-outline-text: #0f172a;
-    --admin-button-outline-hover-bg: #f1f5f9;
-    --admin-button-outline-hover-text: #0f172a;
-    --admin-button-ghost-hover-bg: #f1f5f9;
-    --admin-button-ghost-hover-text: #0f172a;
+    --admin-button-secondary-bg: #f1efeb;
+    --admin-button-secondary-text: #44403c;
+    --admin-button-secondary-hover-bg: #e7e3db;
+    --admin-button-secondary-hover-text: #1c1a17;
+    --admin-button-outline-border: #eae7e0;
+    --admin-button-outline-text: #1c1a17;
+    --admin-button-outline-hover-bg: #efece6;
+    --admin-button-outline-hover-text: #1c1a17;
+    --admin-button-ghost-hover-bg: #efece6;
+    --admin-button-ghost-hover-text: #1c1a17;
+
+    /* NEW (TASK-479-05): soft/tinted violet primary surface. */
+    --admin-primary-soft: #f1ecfe;
+    --admin-primary-soft-text: #6d28d9;
 
     --admin-input-bg: #ffffff;
-    --admin-input-border: #e2e8f0;
-    --admin-input-text: #0f172a;
-    --admin-input-placeholder: #94a3b8;
-    --admin-input-ring: #1d4ed8;
+    --admin-input-border: #e5e1d9;
+    --admin-input-text: #1c1a17;
+    --admin-input-placeholder: #a8a29a;
+    --admin-input-ring: #a78bfa;
 
-    --admin-sidebar-bg: #ffffff;
-    --admin-sidebar-text: #64748b;
-    --admin-sidebar-active-bg: #e0f2fe;
-    --admin-sidebar-active-text: #1d4ed8;
-    --admin-sidebar-hover-bg: #f1f5f9;
+    --admin-sidebar-bg: #f1efea;
+    --admin-sidebar-text: #57534e;
+    --admin-sidebar-active-bg: #ece6fb;
+    --admin-sidebar-active-text: #6d28d9;
+    --admin-sidebar-hover-bg: #efece6;
+    /* NEW (TASK-479-05): muted label, accent wash (+ its foreground), border. */
+    --admin-sidebar-muted: #a8a29a;
+    --admin-sidebar-accent: #ece6fb;
+    --admin-sidebar-accent-foreground: #6d28d9;
+    --admin-sidebar-border: #e7e3db;
 
-    --admin-topbar-bg: #ffffff;
-    --admin-topbar-text: #64748b;
-    --admin-topbar-border: #e2e8f0;
+    --admin-topbar-bg: #f6f5f2;
+    --admin-topbar-text: #57534e;
+    --admin-topbar-border: #eae7e0;
 
     --admin-card-bg: #ffffff;
-    --admin-card-border: #e2e8f0;
+    --admin-card-border: #eae7e0;
 
-    --admin-text-muted: #64748b;
+    --admin-text-muted: #79716b;
 
     --admin-state-success: #16a34a;
-    --admin-state-warning: #f59e0b;
-    --admin-state-danger: #ef4444;
+    --admin-state-warning: #d97706;
+    --admin-state-danger: #e11d48;
+    /* NEW (TASK-479-05): info status + readable foregrounds for the solid status
+       surfaces + soft/tinted status backgrounds used by badges/alerts. The
+       foregrounds default to #ffffff in light; the injected dark block (L04)
+       supplies the dark-readable values. */
+    --admin-state-info: #2563eb;
+    --admin-state-success-foreground: #ffffff;
+    --admin-state-warning-foreground: #ffffff;
+    --admin-state-danger-foreground: #ffffff;
+    --admin-state-info-foreground: #ffffff;
+    --admin-state-success-soft: #e7f6ec;
+    --admin-state-warning-soft: #fdf0db;
+    --admin-state-info-soft: #e7eefe;
+
+    /* NEW (TASK-479-05): soft elevation shadows for the rounded-card aesthetic. */
+    --admin-shadow-soft: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 12px -6px rgba(28, 25, 23, 0.08);
+    --admin-shadow-card: 0 1px 3px rgba(28, 25, 23, 0.05), 0 12px 32px -16px rgba(28, 25, 23, 0.14);
+    --admin-shadow-pop: 0 10px 34px -10px rgba(28, 25, 23, 0.24);
 
     --space-xs: 0.25rem;
     --space-sm: 0.5rem;
@@ -86,25 +147,37 @@
     --radius-lg: 12px;
     --radius-xl: 16px;
 
-    --font-sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
-    --font-display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+    --font-sans:
+      "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+      sans-serif;
+    --font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
     --text-sm: 0.875rem;
     --text-md: 1rem;
     --text-lg: 1.125rem;
     --text-xl: 1.25rem;
     --text-2xl: 1.5rem;
 
+    /* shadcn vars derived FROM --admin-*. Because they read var(--admin-*), the
+       injected dark :root.dark{--admin-*} flip (L06) propagates to every derived
+       surface automatically — no per-var .dark override is needed (and one would
+       not reach the chrome, which reads --admin-* directly). */
     --background: var(--admin-base-bg);
     --foreground: var(--admin-base-text);
     --primary: var(--admin-button-primary-bg);
     --primary-foreground: var(--admin-button-primary-text);
+    /* NEW (TASK-479-05): soft violet primary surface. */
+    --primary-soft: var(--admin-primary-soft);
+    --primary-soft-foreground: var(--admin-primary-soft-text);
     --secondary: var(--admin-button-secondary-bg);
     --secondary-foreground: var(--admin-button-secondary-text);
     --accent: var(--admin-button-outline-hover-bg);
     --accent-foreground: var(--admin-button-outline-hover-text);
     --muted: var(--admin-base-surface);
     --muted-foreground: var(--admin-text-muted);
-    --popover: var(--admin-base-surface);
+    /* Popover tracks the CARD surface (white), not base.surface — fixes the
+       prototype --muted/--popover conflation (L01). --muted stays on
+       base.surface; there is no separate popover token. */
+    --popover: var(--admin-card-bg);
     --popover-foreground: var(--admin-base-text);
     --card: var(--admin-card-bg);
     --card-foreground: var(--admin-base-text);
@@ -112,7 +185,108 @@
     --input: var(--admin-input-border);
     --ring: var(--admin-input-ring);
     --destructive: var(--admin-state-danger);
-    --destructive-foreground: #ffffff;
+    /* Derived from --admin-state-danger-foreground (was hard-coded #ffffff) so
+       the injected dark block can recolor the solid destructive foreground
+       (L01 verification pass, §B). */
+    --destructive-foreground: var(--admin-state-danger-foreground);
+    /* NEW (TASK-479-05): success / warning / info status surfaces + soft tints. */
+    --success: var(--admin-state-success);
+    --success-foreground: var(--admin-state-success-foreground);
+    --success-soft: var(--admin-state-success-soft);
+    --warning: var(--admin-state-warning);
+    --warning-foreground: var(--admin-state-warning-foreground);
+    --warning-soft: var(--admin-state-warning-soft);
+    --info: var(--admin-state-info);
+    --info-foreground: var(--admin-state-info-foreground);
+    --info-soft: var(--admin-state-info-soft);
+    /* NEW (TASK-479-05): sidebar accent surfaces consumed by the shared shell. */
+    --sidebar: var(--admin-sidebar-bg);
+    --sidebar-foreground: var(--admin-sidebar-text);
+    --sidebar-muted: var(--admin-sidebar-muted);
+    --sidebar-accent: var(--admin-sidebar-accent);
+    --sidebar-accent-foreground: var(--admin-sidebar-accent-foreground);
+    --sidebar-border: var(--admin-sidebar-border);
+    /* Shadow indirection (-token suffix) keeps @theme's `--shadow-*: var(--*-token)`
+       free of a self-referential cycle while resolving to the --admin-* shadows. */
+    --shadow-soft-token: var(--admin-shadow-soft);
+    --shadow-card-token: var(--admin-shadow-card);
+    --shadow-pop-token: var(--admin-shadow-pop);
+  }
+
+  /* TASK-479-05-L03 — PRE-PAINT FALLBACK ONLY (NOT the dark mechanism).
+     Per the L01 dark-mode decision, the canonical dark layer is the injected
+     <style id="coderso-theme-tokens"> emitting :root.dark{--admin-*} from
+     DEFAULT_ADMIN_THEME_TOKENS_DARK (AdminApp wiring, L06); that block wins
+     source order and supersedes this one. This static fallback exists only to
+     avoid a one-frame light flash before AdminApp mounts. It sets --admin-*
+     (what the chrome reads directly) — NOT the derived shadcn vars — so the
+     chrome AND the derived surfaces both go dark from it. Values mirror
+     DEFAULT_ADMIN_THEME_TOKENS_DARK (core/services/adminThemes/tokenTypes.ts),
+     which remains the single source of truth. */
+  :root.dark {
+    --admin-base-bg: #18171a;
+    --admin-base-surface: #232128;
+    --admin-base-text: #ededec;
+    --admin-base-border: #2d2b32;
+
+    --admin-button-primary-bg: #8b5cf6;
+    --admin-button-primary-text: #ffffff;
+    --admin-button-primary-hover-bg: #7c3aed;
+    --admin-button-primary-hover-text: #ffffff;
+    --admin-button-secondary-bg: #29272e;
+    --admin-button-secondary-text: #d8d4ce;
+    --admin-button-secondary-hover-bg: #34313a;
+    --admin-button-secondary-hover-text: #ededec;
+    --admin-button-outline-border: #2d2b32;
+    --admin-button-outline-text: #ededec;
+    --admin-button-outline-hover-bg: #2b2930;
+    --admin-button-outline-hover-text: #ededec;
+    --admin-button-ghost-hover-bg: #2b2930;
+    --admin-button-ghost-hover-text: #ededec;
+
+    --admin-primary-soft: #2a2440;
+    --admin-primary-soft-text: #c4b5fd;
+
+    --admin-input-bg: #211f24;
+    --admin-input-border: #36333c;
+    --admin-input-text: #ededec;
+    --admin-input-placeholder: #756f68;
+    --admin-input-ring: #8b5cf6;
+
+    --admin-sidebar-bg: #1c1b1f;
+    --admin-sidebar-text: #a8a29a;
+    --admin-sidebar-active-bg: #2c2542;
+    --admin-sidebar-active-text: #c4b5fd;
+    --admin-sidebar-hover-bg: #2b2930;
+    --admin-sidebar-muted: #756f68;
+    --admin-sidebar-accent: #2c2542;
+    --admin-sidebar-accent-foreground: #c4b5fd;
+    --admin-sidebar-border: #2a282f;
+
+    --admin-topbar-bg: #18171a;
+    --admin-topbar-text: #a8a29a;
+    --admin-topbar-border: #2d2b32;
+
+    --admin-card-bg: #211f24;
+    --admin-card-border: #2d2b32;
+
+    --admin-text-muted: #a09a91;
+
+    --admin-state-success: #34d399;
+    --admin-state-warning: #fbbf24;
+    --admin-state-danger: #fb7185;
+    --admin-state-info: #60a5fa;
+    --admin-state-success-foreground: #06281c;
+    --admin-state-warning-foreground: #2a1c05;
+    --admin-state-danger-foreground: #1c1a17;
+    --admin-state-info-foreground: #07203f;
+    --admin-state-success-soft: #18342a;
+    --admin-state-warning-soft: #36290f;
+    --admin-state-info-soft: #16263f;
+
+    --admin-shadow-soft: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 12px -6px rgba(28, 25, 23, 0.08);
+    --admin-shadow-card: 0 1px 3px rgba(28, 25, 23, 0.05), 0 12px 32px -16px rgba(28, 25, 23, 0.14);
+    --admin-shadow-pop: 0 10px 34px -10px rgba(28, 25, 23, 0.24);
   }
 
   body {
@@ -630,6 +804,18 @@
 }
 
 @layer utilities {
+  /* TASK-479-05-L03: subtle dotted texture for hero/empty surfaces (prototype
+     parity). `shadow-soft`/`shadow-card`/`shadow-pop` are generated by Tailwind
+     v4 from the @theme `--shadow-*` entries above, so they are not re-authored
+     here. */
+  .bg-dotted {
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--foreground) 8%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 18px 18px;
+  }
+
   @keyframes logo-cloud-marquee {
     from {
       transform: translate3d(0, 0, 0);

@@ -9,6 +9,7 @@ import {
   isAdminBreadcrumbItems,
   type AdminBreadcrumbInput,
 } from "@/ui/shared/AdminBreadcrumbs";
+import { AdminColorModeToggle } from "@/ui/shared/AdminColorModeToggle";
 import { AdminThemeSwitcher } from "@/ui/shared/AdminThemeSwitcher";
 
 type TopBarProps = {
@@ -47,6 +48,7 @@ export function TopBar({ navToggle, breadcrumbs, search, actions, user, classNam
       <div className="order-3 w-full lg:order-none lg:flex-1 lg:px-6">{search}</div>
       <div className="ml-auto flex flex-wrap items-center gap-2 lg:ml-0 lg:flex-nowrap">
         <AdminThemeSwitcher />
+        <AdminColorModeToggle />
         {actions}
         <Button variant="ghost" size="icon">
           <Bell className="h-4 w-4" />

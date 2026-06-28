@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 360 tasks
+- **To Do:** 359 tasks
 - **In Progress:** 6 tasks
-- **Done:** 2696 tasks
+- **Done:** 2704 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -108,7 +108,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-480-04 | Widget Renderer Components | High | Medium | 9 token-styled widget renderers + registry/host. 3 leaves. |
 | TASK-480-05 | Dashboard Builder UI (edit mode) | High | Large | Grid + add/arrange/resize + floating configure panel; dirty-state + cache. 3 leaves. |
 | TASK-480-06 | Docs, Gates & Closure | Medium | Medium | `DASHBOARD_WIDGETS_SPEC.md` + API/cache/data-model docs + gate sweep. 2 leaves. |
-| TASK-479-05 | Design Tokens & Theming Alignment | High | Large | Extend `AdminThemeTokens` (primary-soft, info, *-soft, sidebar accents, shadows) + globals.css + dark mode. 7 leaves. |
 | TASK-479-06 | Admin Shell & Wrapper Migration | High | Large | Primitives, patterns, sidebar/topbar de-SaaS, AdminShell, CanvasEditor. 7 leaves. |
 | TASK-479-07 | Dashboard Screen (UI shell only) | Medium | Medium | UI restyle only; the widget feature is TASK-480. 2 leaves. |
 | TASK-479-08 | Pages Screen | Medium | Large | List + page-editor floating-panel canvas (keeps PAGE_MODEL). 3 leaves. |
@@ -184,6 +183,14 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-479-05 | Design Tokens & Theming Alignment | High | Large | Done (2026-06-28): `AdminThemeTokens` extended (primary-soft, info + `*Foreground`/`*Soft`, sidebar accents, effects shadows) + emitter + globals.css mapping + seeded "Soft Violet" default + editor controls + no-flash dark toggle + docs/tests. 7 leaves. Changelog 1200-1202. |
+| TASK-479-05-L01 | Token Gap Analysis & Inventory | Medium | Small | Done (2026-06-28): frozen prototype→`--admin-*`→shadcn mapping table + dark-mode decision (inventory verified exhaustive vs live code). |
+| TASK-479-05-L02 | Extend AdminThemeTokens Type, Defaults, Normalize & Validation | Medium | Medium | Done (2026-06-28): contract + `DEFAULT_ADMIN_THEME_TOKENS`/`_DARK` defaults + merge/normalize/validation + emitter dark pass. |
+| TASK-479-05-L03 | globals.css Mapping + :root + Dark Block | Medium | Medium | Done (2026-06-28): `@theme` + `:root` derive new shadcn vars FROM `--admin-*`; `--popover` re-map; pre-paint `:root.dark` anti-flash fallback. |
+| TASK-479-05-L04 | admin-default Theme + DB Default Template | Medium | Medium | Done (2026-06-28): seeded idempotent "Soft Violet" template/profile + re-paletted front `theme.json`; no migration (jsonb). |
+| TASK-479-05-L05 | Admin UI Theme Editor Controls for New Tokens | Medium | Medium | Done (2026-06-28): drawer pickers for primary-soft/sidebar accents/states/shadows with live preview; legacy templates back-fill. |
+| TASK-479-05-L06 | Dark-Mode Toggle & Persistence in Admin Shell | Medium | Medium | Done (2026-06-28): TopBar `AdminColorModeToggle` + `localStorage` + pre-paint `index.html` script; AdminApp dual light/dark block injection. |
+| TASK-479-05-L07 | Token Docs & Tests | Medium | Medium | Done (2026-06-28): `DESIGN_TOKENS.md` groups + dark-mode section + mapping table; consolidated token/dark/CSS test matrix; repo type-gate reconciled. Changelog 1202. |
 | TASK-476 | Page Editor Inline Mark UX Corrections | High | Small | Done (2026-06-26): Re-color replaces instead of resetting (476-01) and applied marks are painted live while editing with the selection restored for in-place re-color (476-02). Changelog 1196-1197. |
 | TASK-476-02 | Live In-Edit Mark Feedback | Medium | Medium | Done (2026-06-26): contentEditable paints marked children during edit (`content = children ?? text`); `applyMark` + post-render `useEffect` re-select the marked range via `selectInlineTextRange`. Changelog 1197. |
 | TASK-477 | Page Editor Inline Color Swatch Accuracy And Picker | High | Small | Done (2026-06-27): inline (477-01) + block-level (477-02) color swatches preview the exact color they apply; inline custom picker works; canvas frame carries site neutral `--color-*` for WYSIWYG. Changelog 1198-1199. |

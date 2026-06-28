@@ -6,7 +6,14 @@ export function toCssVariables(tokens: DesignTokens) {
   return `:root{${entries.join(";")};}`;
 }
 
-export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
+/**
+ * Emit the admin-theme `--admin-*` (+ `--font-*`/`--text-*`) variables as a CSS
+ * block. The `selector` defaults to `:root` (the light block); pass `:root.dark`
+ * to emit the parallel DARK block from the SAME injected style so the chrome —
+ * which reads `--admin-*` directly — recolors in dark and wins source order over
+ * `globals.css` (see TASK-479-05-L01 dark-mode decision).
+ */
+export function toAdminThemeCssVariables(tokens: AdminThemeTokens, selector: string = ":root") {
   const entries = [
     `--admin-base-bg:${tokens.base.bg}`,
     `--admin-base-surface:${tokens.base.surface}`,
@@ -26,6 +33,8 @@ export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
     `--admin-button-outline-hover-text:${tokens.buttons.outline.hoverText}`,
     `--admin-button-ghost-hover-bg:${tokens.buttons.ghost.hoverBg}`,
     `--admin-button-ghost-hover-text:${tokens.buttons.ghost.hoverText}`,
+    `--admin-primary-soft:${tokens.primarySoft.bg}`,
+    `--admin-primary-soft-text:${tokens.primarySoft.text}`,
     `--admin-input-bg:${tokens.inputs.bg}`,
     `--admin-input-border:${tokens.inputs.border}`,
     `--admin-input-text:${tokens.inputs.text}`,
@@ -36,6 +45,10 @@ export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
     `--admin-sidebar-active-bg:${tokens.sidebar.activeBg}`,
     `--admin-sidebar-active-text:${tokens.sidebar.activeText}`,
     `--admin-sidebar-hover-bg:${tokens.sidebar.hoverBg}`,
+    `--admin-sidebar-muted:${tokens.sidebar.muted}`,
+    `--admin-sidebar-accent:${tokens.sidebar.accent}`,
+    `--admin-sidebar-accent-foreground:${tokens.sidebar.accentForeground}`,
+    `--admin-sidebar-border:${tokens.sidebar.border}`,
     `--admin-topbar-bg:${tokens.topbar.bg}`,
     `--admin-topbar-text:${tokens.topbar.text}`,
     `--admin-topbar-border:${tokens.topbar.border}`,
@@ -52,9 +65,20 @@ export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
     `--admin-state-success:${tokens.state.success}`,
     `--admin-state-warning:${tokens.state.warning}`,
     `--admin-state-danger:${tokens.state.danger}`,
+    `--admin-state-info:${tokens.state.info}`,
+    `--admin-state-success-foreground:${tokens.state.successForeground}`,
+    `--admin-state-warning-foreground:${tokens.state.warningForeground}`,
+    `--admin-state-danger-foreground:${tokens.state.dangerForeground}`,
+    `--admin-state-info-foreground:${tokens.state.infoForeground}`,
+    `--admin-state-success-soft:${tokens.state.successSoft}`,
+    `--admin-state-warning-soft:${tokens.state.warningSoft}`,
+    `--admin-state-info-soft:${tokens.state.infoSoft}`,
+    `--admin-shadow-soft:${tokens.effects.shadowSoft}`,
+    `--admin-shadow-card:${tokens.effects.shadowCard}`,
+    `--admin-shadow-pop:${tokens.effects.shadowPop}`,
   ];
 
-  return `:root{${entries.join(";")};}`;
+  return `${selector}{${entries.join(";")};}`;
 }
 
 /**
@@ -172,6 +196,8 @@ export function toAdminThemeCssVariableMap(tokens: AdminThemeTokens): Record<str
     "--admin-button-outline-hover-text": tokens.buttons.outline.hoverText,
     "--admin-button-ghost-hover-bg": tokens.buttons.ghost.hoverBg,
     "--admin-button-ghost-hover-text": tokens.buttons.ghost.hoverText,
+    "--admin-primary-soft": tokens.primarySoft.bg,
+    "--admin-primary-soft-text": tokens.primarySoft.text,
     "--admin-input-bg": tokens.inputs.bg,
     "--admin-input-border": tokens.inputs.border,
     "--admin-input-text": tokens.inputs.text,
@@ -182,6 +208,10 @@ export function toAdminThemeCssVariableMap(tokens: AdminThemeTokens): Record<str
     "--admin-sidebar-active-bg": tokens.sidebar.activeBg,
     "--admin-sidebar-active-text": tokens.sidebar.activeText,
     "--admin-sidebar-hover-bg": tokens.sidebar.hoverBg,
+    "--admin-sidebar-muted": tokens.sidebar.muted,
+    "--admin-sidebar-accent": tokens.sidebar.accent,
+    "--admin-sidebar-accent-foreground": tokens.sidebar.accentForeground,
+    "--admin-sidebar-border": tokens.sidebar.border,
     "--admin-topbar-bg": tokens.topbar.bg,
     "--admin-topbar-text": tokens.topbar.text,
     "--admin-topbar-border": tokens.topbar.border,
@@ -198,5 +228,16 @@ export function toAdminThemeCssVariableMap(tokens: AdminThemeTokens): Record<str
     "--admin-state-success": tokens.state.success,
     "--admin-state-warning": tokens.state.warning,
     "--admin-state-danger": tokens.state.danger,
+    "--admin-state-info": tokens.state.info,
+    "--admin-state-success-foreground": tokens.state.successForeground,
+    "--admin-state-warning-foreground": tokens.state.warningForeground,
+    "--admin-state-danger-foreground": tokens.state.dangerForeground,
+    "--admin-state-info-foreground": tokens.state.infoForeground,
+    "--admin-state-success-soft": tokens.state.successSoft,
+    "--admin-state-warning-soft": tokens.state.warningSoft,
+    "--admin-state-info-soft": tokens.state.infoSoft,
+    "--admin-shadow-soft": tokens.effects.shadowSoft,
+    "--admin-shadow-card": tokens.effects.shadowCard,
+    "--admin-shadow-pop": tokens.effects.shadowPop,
   };
 }

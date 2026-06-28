@@ -6,7 +6,7 @@
 **Category:** Admin UI / Design System / Theming / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05-L02, TASK-479-05-L03, TASK-479-05-L04, TASK-479-05-L05, TASK-479-05-L06
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-28; see "Closeout" below)
 
 ---
 
@@ -170,3 +170,54 @@ inventory fails the build.
   statistics.
 - `_docs/_CHANGELOG/` — add a closure entry linking **TASK-479** + TASK-479-05
   (and enumerate L01–L07) on subtask completion.
+
+---
+
+## Closeout (2026-06-28)
+
+**Docs**
+
+- `_docs/DESIGN_TOKENS.md` — replaced the "Admin UI Theme Tokens (granular)"
+  block with the full TASK-479-05 group shape, pasted the L01 frozen prototype →
+  `--admin-*` → shadcn mapping table, added the "Admin UI dark mode" section, and
+  extended the shadcn-var mapping line with the new `--color-*`/`--shadow-*`
+  names. (L07 owns this edit.)
+- `_docs/THEMES_SPEC.md` — seeded "Soft Violet" default + jsonb-no-migration note
+  were already added by L04; left intact (no duplication).
+
+**Tests (all green)**
+
+- `tests/vitest/ui-integration/admin-dark-mode.test.tsx` (NEW, 5 tests) — the
+  injected `:root.dark` block carries the real dark chrome hexes
+  (`--admin-button-primary-bg:#8b5cf6`, `--admin-sidebar-bg:#1c1b1f`,
+  `--admin-topbar-bg:#18171a`, `--admin-base-bg:#18171a`); globals.css `@theme`
+  exposes the new `--color-*`, `:root` derives them FROM `--admin-*`, the
+  `--popover`→`--admin-card-bg` re-map and the `shadow-card` wiring are present,
+  and the pre-paint `:root.dark` fallback mirrors `DEFAULT_ADMIN_THEME_TOKENS_DARK`.
+  globals.css is parsed as TEXT (no jsdom `var()` resolution).
+- `tests/unit/adminThemes/tokenValidation.test.ts` — extended with an
+  unknown-key-in-`sidebar`/`state` rejection case (now 10 tests in the file).
+- Existing suites consumed as the consolidated matrix:
+  `tests/unit/adminThemes/{tokenTypes,tokenCss,tokenValidation}.test.ts` (bun),
+  `tests/vitest/ui/theme-template-drawer-new-tokens.test.tsx` (L05),
+  `tests/vitest/ui-integration/admin-color-mode-toggle.test.tsx` (L06).
+
+**Drift fix (closure)** — L02's contract extension (`primarySoft`/`effects`) had
+left several pre-existing admin-theme test fixtures missing the new groups, so
+the repo-level `tsc -p tsconfig.json` gate was red. Reconciled with type-only
+assertions that preserve the intentional partial-legacy runtime shapes
+(`tests/vitest/ui/{theme-editor,drawers,theme-profile-drawer,theme-template-drawer-wave,theme-template-drawer-new-tokens}.test.tsx`,
+`tests/vitest/admin/adminThemeClient.test.ts`). No product code touched.
+
+**Validation**
+
+- `bun --cwd core lint` — clean.
+- `bun --cwd core lint:types` — clean; repo-level `tsc -p tsconfig.json` — 0 errors.
+- `bun test tests/unit/adminThemes` — 27/27 pass (5 files).
+- `NODE_ENV=test vitest run tests/vitest/ui tests/vitest/ui-integration tests/vitest/admin`
+  — 432 files / 2002 tests pass.
+
+**Deferred (not this subtask):** the LIVE single-window "dark recolors the real
+chrome" verification is sequenced AFTER the TASK-479-06 chrome migration; the
+optional per-template `dark?: Partial<AdminThemeTokens>` remains a purely-additive
+follow-up.

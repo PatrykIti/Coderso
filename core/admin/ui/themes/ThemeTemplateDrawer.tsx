@@ -71,11 +71,7 @@ function invertHex(value: string) {
   const r = 255 - ((int >> 16) & 0xff);
   const g = 255 - ((int >> 8) & 0xff);
   const b = 255 - (int & 0xff);
-  const result =
-    "#" +
-    [r, g, b]
-      .map((part) => part.toString(16).padStart(2, "0"))
-      .join("");
+  const result = "#" + [r, g, b].map((part) => part.toString(16).padStart(2, "0")).join("");
   return result;
 }
 
@@ -83,9 +79,7 @@ function ColorField({ label, value, onChange, hint }: ColorFieldProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          {label}
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">{label}</label>
         {hint ? <span className="text-[10px] text-muted-foreground">{hint}</span> : null}
       </div>
       <div className="flex items-center gap-3">
@@ -105,19 +99,11 @@ function ColorField({ label, value, onChange, hint }: ColorFieldProps) {
   );
 }
 
-function TextField({
-  label,
-  value,
-  onChange,
-  hint,
-  placeholder,
-}: TextFieldProps) {
+function TextField({ label, value, onChange, hint, placeholder }: TextFieldProps) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          {label}
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">{label}</label>
         {hint ? <span className="text-[10px] text-muted-foreground">{hint}</span> : null}
       </div>
       <Input
@@ -134,9 +120,7 @@ function PreviewPanel({ title, description, style, children }: PreviewPanelProps
   return (
     <div className="rounded-xl border bg-muted/30 p-4">
       <p className="text-xs font-semibold uppercase text-muted-foreground">{title}</p>
-      {description ? (
-        <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-      ) : null}
+      {description ? <p className="mt-1 text-xs text-muted-foreground">{description}</p> : null}
       <div style={style} className="mt-4 rounded-lg border bg-background p-4">
         {children}
       </div>
@@ -232,21 +216,14 @@ function TypographyPreview() {
   return (
     <div className="space-y-3">
       <div className="space-y-1">
-        <p
-          className="text-lg font-semibold"
-          style={{ fontFamily: "var(--font-display)" }}
-        >
+        <p className="text-lg font-semibold" style={{ fontFamily: "var(--font-display)" }}>
           Admin UI typography
         </p>
-        <p className="text-sm text-muted-foreground">
-          This is muted supporting copy.
-        </p>
+        <p className="text-sm text-muted-foreground">This is muted supporting copy.</p>
       </div>
       <div className="space-y-1">
         <p className="text-base">Body text sample for general UI copy.</p>
-        <p className="text-sm text-muted-foreground">
-          Smaller meta label text (text-sm).
-        </p>
+        <p className="text-sm text-muted-foreground">Smaller meta label text (text-sm).</p>
       </div>
     </div>
   );
@@ -269,12 +246,70 @@ function StateSample({ label, color }: StateSampleProps) {
   );
 }
 
+type SoftStateChipProps = {
+  label: string;
+  bg: string;
+  text: string;
+};
+
+function SoftStateChip({ label, bg, text }: SoftStateChipProps) {
+  return (
+    <span
+      className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+      style={{ background: bg, color: text }}
+    >
+      {label}
+    </span>
+  );
+}
+
 function StatesPreview() {
   return (
     <div className="space-y-2">
       <StateSample label="Success" color="var(--admin-state-success)" />
       <StateSample label="Warning" color="var(--admin-state-warning)" />
       <StateSample label="Danger" color="var(--admin-state-danger)" />
+      <StateSample label="Info" color="var(--admin-state-info)" />
+      <div className="flex flex-wrap gap-2 pt-1">
+        <SoftStateChip
+          label="Success"
+          bg="var(--admin-state-success-soft)"
+          text="var(--admin-state-success)"
+        />
+        <SoftStateChip
+          label="Warning"
+          bg="var(--admin-state-warning-soft)"
+          text="var(--admin-state-warning)"
+        />
+        <SoftStateChip
+          label="Info"
+          bg="var(--admin-state-info-soft)"
+          text="var(--admin-state-info)"
+        />
+      </div>
+    </div>
+  );
+}
+
+function SoftAccentPreview() {
+  return (
+    <div className="space-y-3">
+      <span
+        className="inline-flex rounded-full px-3 py-1 text-xs font-medium"
+        style={{
+          background: "var(--admin-primary-soft)",
+          color: "var(--admin-primary-soft-text)",
+        }}
+      >
+        Soft badge
+      </span>
+      <div
+        className="rounded-xl border bg-card p-4 text-sm"
+        style={{ boxShadow: "var(--admin-shadow-card)" }}
+      >
+        <div className="font-semibold">Card shadow</div>
+        <p className="text-xs text-muted-foreground">Soft elevation preview</p>
+      </div>
     </div>
   );
 }
@@ -286,12 +321,7 @@ type ThemeTemplateFormProps = {
   onClose: () => void;
 };
 
-function ThemeTemplateForm({
-  template,
-  isSaving,
-  onSave,
-  onClose,
-}: ThemeTemplateFormProps) {
+function ThemeTemplateForm({ template, isSaving, onSave, onClose }: ThemeTemplateFormProps) {
   const [name, setName] = useState(template?.name ?? "");
   const [description, setDescription] = useState(template?.description ?? "");
   const [tokens, setTokens] = useState<AdminThemeTokens>(() =>
@@ -430,9 +460,18 @@ function ThemeTemplateForm({
       ["sidebar", "activeBg"],
       ["sidebar", "activeText"],
       ["sidebar", "hoverBg"],
+      ["sidebar", "muted"],
+      ["sidebar", "accent"],
+      ["sidebar", "accentForeground"],
+      ["sidebar", "border"],
       ["topbar", "bg"],
       ["topbar", "text"],
       ["topbar", "border"],
+    ]);
+  const invertAccents = () =>
+    invertSection([
+      ["primarySoft", "bg"],
+      ["primarySoft", "text"],
     ]);
   const invertCards = () =>
     invertSection([
@@ -444,6 +483,14 @@ function ThemeTemplateForm({
       ["state", "success"],
       ["state", "warning"],
       ["state", "danger"],
+      ["state", "info"],
+      ["state", "successForeground"],
+      ["state", "warningForeground"],
+      ["state", "dangerForeground"],
+      ["state", "infoForeground"],
+      ["state", "successSoft"],
+      ["state", "warningSoft"],
+      ["state", "infoSoft"],
     ]);
 
   const handleSave = async () => {
@@ -505,6 +552,7 @@ function ThemeTemplateForm({
                 <TabsTrigger value="navigation">Navigation</TabsTrigger>
                 <TabsTrigger value="cards">Cards</TabsTrigger>
                 <TabsTrigger value="states">States</TabsTrigger>
+                <TabsTrigger value="accents">Accents</TabsTrigger>
               </TabsList>
 
               <TabsContent value="base">
@@ -512,12 +560,7 @@ function ThemeTemplateForm({
                   <div className="space-y-4">
                     <div className="flex items-center justify-between text-sm font-semibold text-foreground">
                       <span>Base colors</span>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        type="button"
-                        onClick={invertBase}
-                      >
+                      <Button variant="outline" size="xs" type="button" onClick={invertBase}>
                         Invert section
                       </Button>
                     </div>
@@ -554,12 +597,7 @@ function ThemeTemplateForm({
                   <div className="space-y-6">
                     <div className="flex items-center justify-between text-sm font-semibold text-foreground">
                       <span>Typography</span>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        type="button"
-                        onClick={invertTypography}
-                      >
+                      <Button variant="outline" size="xs" type="button" onClick={invertTypography}>
                         Invert section
                       </Button>
                     </div>
@@ -573,9 +611,7 @@ function ThemeTemplateForm({
                       <ColorField
                         label="Muted Text"
                         value={tokens.typography.mutedText}
-                        onChange={(value) =>
-                          updateToken(["typography", "mutedText"], value)
-                        }
+                        onChange={(value) => updateToken(["typography", "mutedText"], value)}
                       />
                     </div>
 
@@ -589,17 +625,13 @@ function ThemeTemplateForm({
                         <TextField
                           label="Sans"
                           value={tokens.typography.sans}
-                          onChange={(value) =>
-                            updateToken(["typography", "sans"], value)
-                          }
+                          onChange={(value) => updateToken(["typography", "sans"], value)}
                           placeholder='"IBM Plex Sans", Arial, sans-serif'
                         />
                         <TextField
                           label="Display"
                           value={tokens.typography.display}
-                          onChange={(value) =>
-                            updateToken(["typography", "display"], value)
-                          }
+                          onChange={(value) => updateToken(["typography", "display"], value)}
                           placeholder='"Space Grotesk", Arial, sans-serif'
                         />
                       </div>
@@ -615,41 +647,31 @@ function ThemeTemplateForm({
                         <TextField
                           label="Text SM"
                           value={tokens.typography.sm}
-                          onChange={(value) =>
-                            updateToken(["typography", "sm"], value)
-                          }
+                          onChange={(value) => updateToken(["typography", "sm"], value)}
                           placeholder="0.875rem"
                         />
                         <TextField
                           label="Text MD"
                           value={tokens.typography.md}
-                          onChange={(value) =>
-                            updateToken(["typography", "md"], value)
-                          }
+                          onChange={(value) => updateToken(["typography", "md"], value)}
                           placeholder="1rem"
                         />
                         <TextField
                           label="Text LG"
                           value={tokens.typography.lg}
-                          onChange={(value) =>
-                            updateToken(["typography", "lg"], value)
-                          }
+                          onChange={(value) => updateToken(["typography", "lg"], value)}
                           placeholder="1.125rem"
                         />
                         <TextField
                           label="Text XL"
                           value={tokens.typography.xl}
-                          onChange={(value) =>
-                            updateToken(["typography", "xl"], value)
-                          }
+                          onChange={(value) => updateToken(["typography", "xl"], value)}
                           placeholder="1.25rem"
                         />
                         <TextField
                           label="Text 2XL"
                           value={tokens.typography["2xl"]}
-                          onChange={(value) =>
-                            updateToken(["typography", "2xl"], value)
-                          }
+                          onChange={(value) => updateToken(["typography", "2xl"], value)}
                           placeholder="1.5rem"
                         />
                       </div>
@@ -671,12 +693,7 @@ function ThemeTemplateForm({
                     <div className="space-y-3">
                       <div className="flex items-center justify-between text-xs font-semibold uppercase text-muted-foreground">
                         <span>Primary</span>
-                        <Button
-                          variant="outline"
-                          size="xs"
-                          type="button"
-                          onClick={invertButtons}
-                        >
+                        <Button variant="outline" size="xs" type="button" onClick={invertButtons}>
                           Invert section
                         </Button>
                       </div>
@@ -684,16 +701,12 @@ function ThemeTemplateForm({
                         <ColorField
                           label="Background"
                           value={tokens.buttons.primary.bg}
-                          onChange={(value) =>
-                            updateToken(["buttons", "primary", "bg"], value)
-                          }
+                          onChange={(value) => updateToken(["buttons", "primary", "bg"], value)}
                         />
                         <ColorField
                           label="Text"
                           value={tokens.buttons.primary.text}
-                          onChange={(value) =>
-                            updateToken(["buttons", "primary", "text"], value)
-                          }
+                          onChange={(value) => updateToken(["buttons", "primary", "text"], value)}
                         />
                         <ColorField
                           label="Hover BG"
@@ -722,16 +735,12 @@ function ThemeTemplateForm({
                         <ColorField
                           label="Background"
                           value={tokens.buttons.secondary.bg}
-                          onChange={(value) =>
-                            updateToken(["buttons", "secondary", "bg"], value)
-                          }
+                          onChange={(value) => updateToken(["buttons", "secondary", "bg"], value)}
                         />
                         <ColorField
                           label="Text"
                           value={tokens.buttons.secondary.text}
-                          onChange={(value) =>
-                            updateToken(["buttons", "secondary", "text"], value)
-                          }
+                          onChange={(value) => updateToken(["buttons", "secondary", "text"], value)}
                         />
                         <ColorField
                           label="Hover BG"
@@ -760,16 +769,12 @@ function ThemeTemplateForm({
                         <ColorField
                           label="Border"
                           value={tokens.buttons.outline.border}
-                          onChange={(value) =>
-                            updateToken(["buttons", "outline", "border"], value)
-                          }
+                          onChange={(value) => updateToken(["buttons", "outline", "border"], value)}
                         />
                         <ColorField
                           label="Text"
                           value={tokens.buttons.outline.text}
-                          onChange={(value) =>
-                            updateToken(["buttons", "outline", "text"], value)
-                          }
+                          onChange={(value) => updateToken(["buttons", "outline", "text"], value)}
                         />
                         <ColorField
                           label="Hover BG"
@@ -798,9 +803,7 @@ function ThemeTemplateForm({
                         <ColorField
                           label="Hover BG"
                           value={tokens.buttons.ghost.hoverBg}
-                          onChange={(value) =>
-                            updateToken(["buttons", "ghost", "hoverBg"], value)
-                          }
+                          onChange={(value) => updateToken(["buttons", "ghost", "hoverBg"], value)}
                         />
                         <ColorField
                           label="Hover Text"
@@ -827,12 +830,7 @@ function ThemeTemplateForm({
                   <div className="space-y-4">
                     <div className="flex items-center justify-between text-sm font-semibold text-foreground">
                       <span>Inputs</span>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        type="button"
-                        onClick={invertInputs}
-                      >
+                      <Button variant="outline" size="xs" type="button" onClick={invertInputs}>
                         Invert section
                       </Button>
                     </div>
@@ -855,16 +853,12 @@ function ThemeTemplateForm({
                       <ColorField
                         label="Placeholder"
                         value={tokens.inputs.placeholder}
-                        onChange={(value) =>
-                          updateToken(["inputs", "placeholder"], value)
-                        }
+                        onChange={(value) => updateToken(["inputs", "placeholder"], value)}
                       />
                       <ColorField
                         label="Focus Ring"
                         value={tokens.inputs.focusRing}
-                        onChange={(value) =>
-                          updateToken(["inputs", "focusRing"], value)
-                        }
+                        onChange={(value) => updateToken(["inputs", "focusRing"], value)}
                       />
                     </div>
                   </div>
@@ -907,23 +901,37 @@ function ThemeTemplateForm({
                         <ColorField
                           label="Active Background"
                           value={tokens.sidebar.activeBg}
-                          onChange={(value) =>
-                            updateToken(["sidebar", "activeBg"], value)
-                          }
+                          onChange={(value) => updateToken(["sidebar", "activeBg"], value)}
                         />
                         <ColorField
                           label="Active Text"
                           value={tokens.sidebar.activeText}
-                          onChange={(value) =>
-                            updateToken(["sidebar", "activeText"], value)
-                          }
+                          onChange={(value) => updateToken(["sidebar", "activeText"], value)}
                         />
                         <ColorField
                           label="Hover Background"
                           value={tokens.sidebar.hoverBg}
-                          onChange={(value) =>
-                            updateToken(["sidebar", "hoverBg"], value)
-                          }
+                          onChange={(value) => updateToken(["sidebar", "hoverBg"], value)}
+                        />
+                        <ColorField
+                          label="Sidebar muted"
+                          value={tokens.sidebar.muted}
+                          onChange={(value) => updateToken(["sidebar", "muted"], value)}
+                        />
+                        <ColorField
+                          label="Sidebar accent"
+                          value={tokens.sidebar.accent}
+                          onChange={(value) => updateToken(["sidebar", "accent"], value)}
+                        />
+                        <ColorField
+                          label="Sidebar accent text"
+                          value={tokens.sidebar.accentForeground}
+                          onChange={(value) => updateToken(["sidebar", "accentForeground"], value)}
+                        />
+                        <ColorField
+                          label="Sidebar border"
+                          value={tokens.sidebar.border}
+                          onChange={(value) => updateToken(["sidebar", "border"], value)}
                         />
                       </div>
                     </div>
@@ -948,9 +956,7 @@ function ThemeTemplateForm({
                         <ColorField
                           label="Top Bar Border"
                           value={tokens.topbar.border}
-                          onChange={(value) =>
-                            updateToken(["topbar", "border"], value)
-                          }
+                          onChange={(value) => updateToken(["topbar", "border"], value)}
                         />
                       </div>
                     </div>
@@ -970,12 +976,7 @@ function ThemeTemplateForm({
                   <div className="space-y-4">
                     <div className="flex items-center justify-between text-sm font-semibold text-foreground">
                       <span>Cards</span>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        type="button"
-                        onClick={invertCards}
-                      >
+                      <Button variant="outline" size="xs" type="button" onClick={invertCards}>
                         Invert section
                       </Button>
                     </div>
@@ -1004,42 +1005,161 @@ function ThemeTemplateForm({
 
               <TabsContent value="states">
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between text-sm font-semibold text-foreground">
-                      <span>States</span>
-                      <Button
-                        variant="outline"
-                        size="xs"
-                        type="button"
-                        onClick={invertStates}
-                      >
-                        Invert section
-                      </Button>
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                        <span>States</span>
+                        <Button variant="outline" size="xs" type="button" onClick={invertStates}>
+                          Invert section
+                        </Button>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <ColorField
+                          label="Success"
+                          value={tokens.state.success}
+                          onChange={(value) => updateToken(["state", "success"], value)}
+                        />
+                        <ColorField
+                          label="Warning"
+                          value={tokens.state.warning}
+                          onChange={(value) => updateToken(["state", "warning"], value)}
+                        />
+                        <ColorField
+                          label="Danger"
+                          value={tokens.state.danger}
+                          onChange={(value) => updateToken(["state", "danger"], value)}
+                        />
+                        <ColorField
+                          label="Info"
+                          value={tokens.state.info}
+                          onChange={(value) => updateToken(["state", "info"], value)}
+                        />
+                      </div>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <ColorField
-                        label="Success"
-                        value={tokens.state.success}
-                        onChange={(value) => updateToken(["state", "success"], value)}
-                      />
-                      <ColorField
-                        label="Warning"
-                        value={tokens.state.warning}
-                        onChange={(value) => updateToken(["state", "warning"], value)}
-                      />
-                      <ColorField
-                        label="Danger"
-                        value={tokens.state.danger}
-                        onChange={(value) => updateToken(["state", "danger"], value)}
-                      />
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <div className="text-xs font-semibold uppercase text-muted-foreground">
+                        Foregrounds
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <ColorField
+                          label="Success text"
+                          value={tokens.state.successForeground}
+                          onChange={(value) => updateToken(["state", "successForeground"], value)}
+                        />
+                        <ColorField
+                          label="Warning text"
+                          value={tokens.state.warningForeground}
+                          onChange={(value) => updateToken(["state", "warningForeground"], value)}
+                        />
+                        <ColorField
+                          label="Danger text"
+                          value={tokens.state.dangerForeground}
+                          onChange={(value) => updateToken(["state", "dangerForeground"], value)}
+                        />
+                        <ColorField
+                          label="Info text"
+                          value={tokens.state.infoForeground}
+                          onChange={(value) => updateToken(["state", "infoForeground"], value)}
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <div className="text-xs font-semibold uppercase text-muted-foreground">
+                        Soft backgrounds
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <ColorField
+                          label="Success soft"
+                          value={tokens.state.successSoft}
+                          onChange={(value) => updateToken(["state", "successSoft"], value)}
+                        />
+                        <ColorField
+                          label="Warning soft"
+                          value={tokens.state.warningSoft}
+                          onChange={(value) => updateToken(["state", "warningSoft"], value)}
+                        />
+                        <ColorField
+                          label="Info soft"
+                          value={tokens.state.infoSoft}
+                          onChange={(value) => updateToken(["state", "infoSoft"], value)}
+                        />
+                      </div>
                     </div>
                   </div>
                   <PreviewPanel
                     title="Status preview"
-                    description="Success, warning, and danger accents."
+                    description="Solid, foreground, and soft status accents."
                     style={previewStyle}
                   >
                     <StatesPreview />
+                  </PreviewPanel>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="accents">
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                  <div className="space-y-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm font-semibold text-foreground">
+                        <span>Soft primary</span>
+                        <Button variant="outline" size="xs" type="button" onClick={invertAccents}>
+                          Invert section
+                        </Button>
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <ColorField
+                          label="Primary soft (bg)"
+                          value={tokens.primarySoft.bg}
+                          onChange={(value) => updateToken(["primarySoft", "bg"], value)}
+                        />
+                        <ColorField
+                          label="Primary soft (text)"
+                          value={tokens.primarySoft.text}
+                          onChange={(value) => updateToken(["primarySoft", "text"], value)}
+                        />
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <div className="text-xs font-semibold uppercase text-muted-foreground">
+                        Shadows
+                      </div>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <TextField
+                          label="Shadow · soft"
+                          value={tokens.effects.shadowSoft}
+                          onChange={(value) => updateToken(["effects", "shadowSoft"], value)}
+                          placeholder="0 1px 2px rgba(28, 25, 23, 0.04)"
+                        />
+                        <TextField
+                          label="Shadow · card"
+                          value={tokens.effects.shadowCard}
+                          onChange={(value) => updateToken(["effects", "shadowCard"], value)}
+                          placeholder="0 1px 3px rgba(28, 25, 23, 0.05)"
+                        />
+                        <TextField
+                          label="Shadow · pop"
+                          value={tokens.effects.shadowPop}
+                          onChange={(value) => updateToken(["effects", "shadowPop"], value)}
+                          placeholder="0 10px 34px rgba(28, 25, 23, 0.24)"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <PreviewPanel
+                    title="Soft primary &amp; shadows"
+                    description="Soft accent surfaces and elevation shadows."
+                    style={previewStyle}
+                  >
+                    <SoftAccentPreview />
                   </PreviewPanel>
                 </div>
               </TabsContent>

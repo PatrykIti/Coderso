@@ -111,6 +111,30 @@ DB tables:
 - `admin_theme_templates` (name, description, tokens)
 - `admin_theme_profiles` (name, description, template_id, is_active)
 
+`admin_theme_templates.tokens` is a **`jsonb`** column; the token SHAPE is
+enforced in the application layer (`assertAdminThemeTokens`), not by DB columns —
+so the TASK-479-05 token additions (`primarySoft`, `state.info`/`*Foreground`/
+`*Soft`, `sidebar.muted`/`accent`/`accentForeground`/`border`, `effects` shadows)
+need **no schema migration**.
+
+### Default seed (TASK-479-05-L04)
+
+`core/db/seed.ts` seeds an idempotent **"Soft Violet"** admin theme template (the
+violet/soft "Soft & Friendly" default) so the look is discoverable and editable
+from **Visual → Admin UI Theme** on a fresh install. The seed:
+- inserts the template only when missing (upsert by unique `name`) and never
+  overwrites an operator-edited template of the same name;
+- activates a `"Default"` profile **only** when no active profile exists, so an
+  operator's chosen active profile is never deactivated.
+
+The seeded token VALUES are the single source of truth
+`DEFAULT_ADMIN_THEME_TOKENS`; when no profile is active the resolver falls back
+to the same constant, so the DB row and the code default agree. Dark mode is a
+shared code-side constant `DEFAULT_ADMIN_THEME_TOKENS_DARK` (no DB row,
+per-template dark is a deferred follow-up). The front `themes/admin-default/
+theme.json` (a separate site/front `DesignTokens` template) is independently
+re-paletted to the same violet/warm palette for brand consistency.
+
 ### UI
 
 Sekcja: **Visual → Admin UI Theme**

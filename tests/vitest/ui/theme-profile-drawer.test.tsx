@@ -4,6 +4,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { AdminThemeTemplate } from "../../../core/admin/services/adminThemeClient";
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/button", () => ({
@@ -298,7 +300,12 @@ test("ThemeProfileDrawer create mode supports template selection, palette copy, 
   ];
 
   const view = mount(
-    <ThemeProfileDrawer open onOpenChange={onOpenChange} templates={templates} onSave={onSave} />
+    <ThemeProfileDrawer
+      open
+      onOpenChange={onOpenChange}
+      templates={templates as AdminThemeTemplate[]}
+      onSave={onSave}
+    />
   );
 
   try {
@@ -423,7 +430,7 @@ test("ThemeProfileDrawer edit mode disables save while saving and handles no-tem
       open
       onOpenChange={onOpenChange}
       profile={profile}
-      templates={templates}
+      templates={templates as AdminThemeTemplate[]}
       onSave={onSave}
     />
   );

@@ -16,6 +16,7 @@ import {
 } from "../../../core/admin/services/adminThemeClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
+import type { AdminThemeTokens } from "../../../core/services/adminThemes/tokenTypes";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -64,7 +65,11 @@ const sampleTokens = {
   topbar: { bg: "#fff", text: "#666", border: "#ddd" },
   card: { bg: "#fff", border: "#ddd" },
   state: { success: "#0f0", warning: "#ff0", danger: "#f00" },
-};
+  // Intentionally a pre-TASK-479-05 (legacy) token shape — missing primarySoft/
+  // effects/new sidebar+state keys. The client request mechanics under test do
+  // not depend on the token contents; cast keeps the legacy fixture without
+  // re-asserting the full contract.
+} as AdminThemeTokens;
 
 test("listAdminThemeTemplates hits GET /admin-theme-templates", async () => {
   const originalFetch = globalThis.fetch;
@@ -350,7 +355,9 @@ test("listAdminThemeProfiles uses read-through cache", async () => {
     await listAdminThemeProfiles({ force: true });
     await listAdminThemeProfiles();
 
-    const profileCalls = calls.filter((call) => String(call.input).endsWith("/admin-theme-profiles"));
+    const profileCalls = calls.filter((call) =>
+      String(call.input).endsWith("/admin-theme-profiles")
+    );
     expect(profileCalls).toHaveLength(1);
   } finally {
     globalThis.fetch = originalFetch;
@@ -397,7 +404,9 @@ test("activateAdminThemeProfile invalidates read-through cache", async () => {
     await activateAdminThemeProfile("profile-1");
     await listAdminThemeProfiles();
 
-    const profileCalls = calls.filter((call) => String(call.input).endsWith("/admin-theme-profiles") && call.init?.method === "GET");
+    const profileCalls = calls.filter(
+      (call) => String(call.input).endsWith("/admin-theme-profiles") && call.init?.method === "GET"
+    );
     expect(profileCalls).toHaveLength(2);
   } finally {
     globalThis.fetch = originalFetch;

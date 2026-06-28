@@ -6,7 +6,10 @@
 **Category:** Admin UI / Design System / Theming
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05-L01, TASK-479-05-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done (globals.css @theme/:root mapping + pre-paint dark fallback
+shipped 2026-06-28; `bun --cwd core lint`, `lint:types`, `build:admin`, theme/
+adminThemes vitest + Bun unit suites all green. README board + changelog +
+DESIGN_TOKENS cross-link deferred to subtask closure / L07.)
 
 ---
 

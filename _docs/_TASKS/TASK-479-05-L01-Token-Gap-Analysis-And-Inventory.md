@@ -6,7 +6,7 @@
 **Category:** Admin UI / Design System / Theming
 **Estimated Effort:** Small
 **Dependencies:** TASK-479 prototype (01–04)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (inventory verified exhaustive against live code 2026-06-28; see "L01 verification pass")
 
 ---
 
@@ -133,10 +133,20 @@ chrome path the previous draft omitted — it is supplied by the dark
 1. `primarySoft: { bg, text }`
 2. `state.info`, `state.infoForeground`, `state.successSoft`,
    `state.warningSoft`, `state.infoSoft`
-3. `sidebar.muted`, `sidebar.accent`, `sidebar.accentForeground`,
+3. `state.successForeground`, `state.warningForeground`,
+   `state.dangerForeground` — **ADDED by the L01 verification pass** (see
+   below). The prototype defines `--success-foreground` /
+   `--warning-foreground` / `--destructive-foreground` with NON-white DARK
+   values (`#06281c` / `#2a1c05` / `#1c1a17`), so — exactly like the already
+   listed `state.infoForeground` — they need an `--admin-*` owner for the
+   injected dark block to recolor SOLID `success`/`warning`/`danger`
+   Badge/Button variants (the 479-06-L02 variants that READ these). Without
+   them, `--destructive-foreground` stays hard-coded `#ffffff` in dark and
+   `--success-foreground` / `--warning-foreground` resolve to nothing.
+4. `sidebar.muted`, `sidebar.accent`, `sidebar.accentForeground`,
    `sidebar.border`
-4. `effects: { shadowSoft, shadowCard, shadowPop }`
-5. Re-valued defaults (not new keys): warm-neutral base, violet primary,
+5. `effects: { shadowSoft, shadowCard, shadowPop }`
+6. Re-valued defaults (not new keys): warm-neutral base, violet primary,
    Inter fonts (L02 default values; L04 seed/theme.json).
 
 ## Dark-mode strategy decision (DECIDE HERE — downstream binds to this)
@@ -192,6 +202,75 @@ Justification for the chosen injected-dark approach (record in DESIGN_TOKENS.md)
 Because the injected `<style>` already OWNS the dark block, adding this later is
 purely additive — no `globals.css` change. Tracked as a future follow-up, NOT
 this subtask.
+
+---
+
+## L01 verification pass (2026-06-28)
+
+Mechanical cross-check of the inventory against the LIVE worktree code
+(`grep -nE '^\s*--' _docs/_PROTOTYPE/src/styles/theme.css` ⇒ 41 distinct VALUE
+custom-properties, plus 40 `--color-*` Tailwind `@theme` aliases that merely
+re-expose those values and need no owner). Result: the mapping table is correct
+where it maps, the dark decision's load-bearing claims hold against real code,
+and the inventory had **two completeness gaps** now closed below.
+
+### A. Prototype VALUE vars the table did not enumerate but that ARE owned
+
+These resolve today via `globals.css :root` derivations from an EXISTING
+`--admin-*` token (so they are EXISTS, no new token — re-coloring the upstream
+`--admin-*` carries the prototype value automatically). Listed here only to make
+the inventory provably exhaustive:
+
+| Prototype var | Light / Dark | Current `globals.css :root` owner | `AdminThemeTokens` path | Status |
+|---|---|---|---|---|
+| `--card-foreground` | `#1c1a17` / `#ededec` | `var(--admin-base-text)` | `base.text` (shared) | EXISTS (derived) |
+| `--popover-foreground` | `#1c1a17` / `#ededec` | `var(--admin-base-text)` | `base.text` (shared) | EXISTS (derived) |
+| `--secondary-foreground` | `#44403c` / `#d8d4ce` | `var(--admin-button-secondary-text)` | `buttons.secondary.text` | EXISTS (re-value) |
+| `--muted-foreground` | `#79716b` / `#a09a91` | `var(--admin-text-muted)` | `typography.mutedText` | EXISTS (re-value) |
+| `--accent` | `#efece6` / `#2b2930` | `var(--admin-button-outline-hover-bg)` | `buttons.outline.hoverBg` | EXISTS (re-value) |
+| `--accent-foreground` | `#1c1a17` / `#ededec` | `var(--admin-button-outline-hover-text)` | `buttons.outline.hoverText` | EXISTS (re-value) |
+
+### B. Foreground gap (FINDING — drove the new rows in §"Net NEW additions" 3)
+
+Three solid-element foregrounds have NON-white DARK values in the prototype yet
+have **no `--admin-*` owner**, so the injected dark block cannot express them:
+
+| Prototype var | Light / Dark | Today in `globals.css` | New owner (added) | shadcn var |
+|---|---|---|---|---|
+| `--destructive-foreground` | `#ffffff` / `#1c1a17` | hard-coded `#ffffff` (line 115) — wrong in dark | `state.dangerForeground` → `--admin-state-danger-foreground` | `--destructive-foreground` |
+| `--success-foreground` | `#ffffff` / `#06281c` | not mapped at all (`--success` itself is NEW in L03) | `state.successForeground` → `--admin-state-success-foreground` | `--success-foreground` |
+| `--warning-foreground` | `#ffffff` / `#2a1c05` | not mapped at all | `state.warningForeground` → `--admin-state-warning-foreground` | `--warning-foreground` |
+
+This is the SAME class of gap the original table already fixed for
+`state.infoForeground` (dark `#07203f`); the verification pass extends that fix
+to the other three state colors for internal consistency. L02 adds the three
+fields (light default `#ffffff` each); L04 supplies the dark values above; L03
+derives `--destructive-foreground`/`--success-foreground`/`--warning-foreground`
+from these `--admin-*` (replacing the hard-coded `#ffffff`).
+
+### C. Dark-decision claims re-verified against live code (file:line)
+
+- Chrome reads `--admin-*` DIRECTLY (not derived shadcn vars), so flipping
+  `--admin-*` in `:root.dark` recolors the WHOLE shell:
+  `components/ui/button.tsx:13/17/19/21` (`--admin-button-*`),
+  `components/ui/input.tsx:11–12` + `components/ui/textarea.tsx:10`
+  (`--admin-input-*`), `components/ui/alert.tsx:15` (`--admin-state-warning`),
+  `ui/shared/SidebarNav.tsx` (`--admin-sidebar-*` / `--admin-base-border`),
+  `ui/shared/TopBar.tsx:39/43` (`--admin-topbar-*`).
+- The injected style WINS source order: `AdminApp.tsx:208` renders
+  `<style id="coderso-theme-tokens">{css}</style>` in the app BODY (mounted at
+  1079/1089/1115), later than the head-loaded `globals.css`, so its
+  `:root{--admin-*}` overrides the static `globals.css :root{--admin-*}`.
+  ⇒ a static `globals.css .dark{--admin-*}` would lose, confirming the REJECTED
+  approach; the dark block must be emitted from the injected style. **Decision
+  stands, unchanged.**
+
+### D. Notes confirmed accurate
+
+The `--popover` conflation note (real `globals.css` maps BOTH `--muted` and
+`--popover` to `--admin-base-surface`, lines 105/107) and the "topbar has no
+shadcn var" note (`TopBar.tsx` reads `--admin-topbar-*` directly) are both
+correct as written.
 
 ---
 

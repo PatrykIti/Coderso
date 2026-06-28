@@ -6,7 +6,11 @@
 **Category:** Admin UI / Design System / Theming
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done (no-flash pre-paint script + `AdminColorModeToggle`/`useColorMode`
++ TopBar mount + AdminApp dual `:root` / `:root.dark` `--admin-*` injection shipped
+2026-06-28; `bun --cwd core lint`, `lint:types`, and the admin + ui-integration
+vitest lanes — 120 files / 569 tests — all green. README board + DESIGN_TOKENS
+dark-mode section deferred to subtask closure / L07 per the L03 pattern.)
 
 ---
 

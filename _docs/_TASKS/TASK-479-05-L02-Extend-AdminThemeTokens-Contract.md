@@ -6,7 +6,11 @@
 **Category:** Admin UI / Design System / Theming
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (contract extension shipped: `AdminThemeTokens` gains
+`primarySoft`/`effects` + new `state.info`/`*Foreground`/`*Soft` +
+`sidebar.muted`/`accent`/`accentForeground`/`border`;
+`DEFAULT_ADMIN_THEME_TOKENS`/`DEFAULT_ADMIN_THEME_TOKENS_DARK` defaults; emitter
++ merge/normalize/validation updated. Status reconciled at L07 closure 2026-06-28.)
 
 ---
 

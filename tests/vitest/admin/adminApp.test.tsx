@@ -207,6 +207,28 @@ test("AdminApp renders theme tokens during loading state", () => {
   expect(html).toContain("Loading...");
 });
 
+test("AdminApp injects both the light :root and the dark :root.dark --admin-* blocks", () => {
+  const html = renderToString(
+    <AdminRouterProvider initialPath="/admin/pages">
+      <AdminApp path="/admin/pages" />
+    </AdminRouterProvider>
+  );
+
+  // The injected style carries the dark mechanism block alongside the light one.
+  expect(html).toContain(":root{");
+  expect(html).toContain(":root.dark{");
+
+  // Dark RECOLORS the real chrome (not merely the .dark class): the dark block's
+  // chrome tokens resolve to the dark hexes for button + sidebar + topbar + base.
+  expect(html).toContain("--admin-button-primary-bg:#8b5cf6");
+  expect(html).toContain("--admin-sidebar-bg:#1c1b1f");
+  expect(html).toContain("--admin-topbar-bg:#18171a");
+  expect(html).toContain("--admin-base-bg:#18171a");
+
+  // The light block keeps the default light primary (proves it is a SECOND block).
+  expect(html).toContain("--admin-button-primary-bg:#7c3aed");
+});
+
 test("AdminApp denies guarded routes when the permission snapshot is missing the route permission", async () => {
   adminAuthState.bootstrap = {
     state: "authenticated",
