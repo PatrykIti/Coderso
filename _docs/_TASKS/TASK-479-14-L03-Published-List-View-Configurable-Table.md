@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Custom Screens / Visual Refresh
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06, TASK-479-14-L01
+**Dependencies:** TASK-479-05, TASK-479-06, TASK-479-14-L01
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-14
 **Started:** `<set when work begins>`

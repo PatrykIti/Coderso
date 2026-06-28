@@ -69,7 +69,7 @@ or the individual widget renderers / `DashboardWidgetHost`
 
 ## Security Contract
 
-The builder is admin UI that consumes the internal admin Dashboard API (TASK-480-02).
+The builder is admin UI that consumes the internal admin Dashboard API (TASK-480-03; the domain contract/types it relies on are owned by TASK-480-02).
 It introduces no new endpoints, but its client wiring MUST preserve the upstream
 contract:
 
@@ -118,8 +118,8 @@ Per-leaf Security Contracts restate the slice each leaf relies on.
   `tests/vitest/admin/dashboardClient.test.ts` (TASK-480-03) green —
   the builder reuses, not forks, those contracts.
 - (Cross-subtask) the route/security Bun suites for the layout endpoints live in
-  TASK-480-02; this subtask mocks them at the client boundary and does not
-  re-run them, but must not regress them.
+  TASK-480-03 (480-03-L05); this subtask mocks them at the client boundary and does
+  not re-run them, but must not regress them.
 - State clearly in the summary if any command was skipped or could not run.
 
 ---

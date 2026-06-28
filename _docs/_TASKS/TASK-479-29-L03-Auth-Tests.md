@@ -145,6 +145,8 @@ fast.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/auth-shell.test.tsx tests/vitest/ui/login.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/reset-password.test.tsx tests/vitest/ui/otp-input.test.tsx tests/vitest/ui/two-factor.test.tsx tests/vitest/ui/set-password.test.tsx`
+  (`login-alerts.test.tsx` is run **defensively** as a regression guard — it is a
+  Settings page owned by group 28 and is NOT modified by this leaf.)
 - Keep `tests/vitest/authUi/loginForm.test.tsx` and
   `tests/vitest/authUi/twoFactorForm.test.tsx` green (auth flow unchanged).
 - State clearly in the summary if any command was skipped or could not run.

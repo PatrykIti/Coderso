@@ -45,7 +45,10 @@ are preserved exactly — only the presentation changes.
   interaction — clicking a card selects into the existing `StoreDetail`/`PluginDetail`
   panel (it does NOT navigate away). No change to install/update/policy semantics,
   `store:browse` RBAC, the search filter algorithm, or any future `storeClient`/cache
-  keys. The plugin **details** route is restyled in L02.
+  keys. The plugin **details** route is restyled in L02. Per the parent task,
+`PluginCard.tsx`, `PluginFilters.tsx`, and `PluginDetailsDialog.tsx` are **dead
+code** (no routed page imports them) and are explicitly OUT OF SCOPE — do not
+reskin them.
 
 ---
 

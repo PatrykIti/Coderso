@@ -85,7 +85,7 @@ test("content type editor renders tabs + fields section + sticky actions", () =>
 test("schema builder renders rail palette + inspector chrome", () => {
   const html = renderAdminUi(<SchemaBuilderPage />, { path: "/admin/content-types/sample/schema" });
   expect(html).toContain("Field types");                 // palette SectionCard
-  for (const t of ["Text", "Number", "Boolean", "Date", "Rich text", "Media", "Relation", "Select"]) expect(html).toContain(t);
+  for (const t of ["Text", "Number", "Boolean", "Rich text", "Media", "Relation", "Select"]) expect(html).toContain(t);
   expect(html).toMatch(/fields/);                         // field-count badge
   // Per-field canvas nodes need seeded fields → cover in a seeded createRoot test.
 });

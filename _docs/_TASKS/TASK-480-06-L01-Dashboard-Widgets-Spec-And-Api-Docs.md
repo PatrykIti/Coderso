@@ -145,12 +145,15 @@ Outline (H2 sections, in order):
   seeded default so existing installs see no regression).
 
 ## API
-- Internal admin routes (point at the `## Dashboard` section of CMS_API.md):
-  - `GET /dashboard` — resolved widget payload (back-compat: still returns the
-    legacy totals/storage/security/recentEdits shape plus the widget data map).
+- Internal admin routes (point at the `## Dashboard` section of CMS_API.md) —
+  these are EXACTLY the routes TASK-480-03 registers (480-03-L02 + 480-03-L03):
+  - `GET /dashboard` — unchanged back-compat payload (legacy
+    totals/storage/security/recentEdits shape; does NOT carry a widget data map).
   - `GET /dashboard/layout` — current layout (content:read).
   - `PUT /dashboard/layout` — persist layout (dashboard:write, CSRF, schema reject-unknown).
-  - `GET /dashboard/widgets` — catalog/metadata (content:read), if exposed.
+  - `POST /dashboard/layout/reset` — reset to the default layout (dashboard:write, CSRF).
+  - `GET /dashboard/widget-data` — resolve data for the saved layout's widgets (content:read).
+  - `POST /dashboard/widget-data` — resolve data for an ad-hoc widget set (content:read; body required).
   - (Match the EXACT routes TASK-480-03 registered; do not invent.)
 
 ## RBAC
@@ -172,15 +175,15 @@ Outline (H2 sections, in order):
 
 ### 2) UPDATE `_docs/CMS_API.md` — extend the `## Dashboard (v1)` section (currently at the Dashboard heading near line 2844)
 
-- Keep the existing `GET /dashboard` response block; **add** a note that the
-  payload now also carries the resolved widget data map and a `layout` reference,
-  while preserving the legacy `totals`/`storage`/`security`/`recentEdits` keys for
-  back-compat (cite `DashboardPayload` evolution from TASK-480-01).
+- Keep the existing `GET /dashboard` response block unchanged — it stays the
+  legacy `totals`/`storage`/`security`/`recentEdits` back-compat shape. Widget data
+  is served separately by the `/dashboard/widget-data` routes, NOT folded into
+  `GET /dashboard`.
 - Add the new endpoints with permissions, request/response shapes, CSRF note, and
   the `admin` rate-limit bucket. Match exactly the routes registered by 480-03:
-  `GET /dashboard/layout`, `PUT /dashboard/layout`, and (if present)
-  `GET /dashboard/widgets`. Use the existing house style (Permissions line, Note,
-  endpoint list, fenced JSON example).
+  `GET /dashboard/layout`, `PUT /dashboard/layout`, `POST /dashboard/layout/reset`,
+  and `GET`/`POST /dashboard/widget-data`. Use the existing house style (Permissions
+  line, Note, endpoint list, fenced JSON example).
 - Cross-link to `_docs/DASHBOARD_WIDGETS_SPEC.md`.
 
 ### 3) UPDATE `_docs/ADMIN_CACHE.md` + `_docs/ADMIN_CACHE_MAP.md` — new cached resource

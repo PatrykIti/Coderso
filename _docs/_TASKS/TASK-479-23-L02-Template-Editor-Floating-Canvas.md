@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Advanced (Page Templates) / Page Builder
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06, TASK-479-08, TASK-479-23-L01
+**Dependencies:** TASK-479-05, TASK-479-06, TASK-479-08, TASK-479-23-L01
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-23
 

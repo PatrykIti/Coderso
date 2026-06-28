@@ -62,14 +62,18 @@ export const widget = <T extends DashboardWidget["type"]>(type: T, config: objec
   ({ id: `w-${type}`, type, title: `${type} panel`, config, position: { x: 0, y: 0, w: 4, h: 2 } } as DashboardWidget);
 
 export const data = {
-  totals:           { type: "totals-counters", value: 86, formatted: "86", delta: { value: 3, trend: "up", label: "+3" }, spark: [1,2,3,4] },
-  overTimeArea:     { type: "content-over-time", kind: "area", series: [{ id: "v", label: "Visitors", points: [4,8,6,10] }] },
-  overTimeDonut:    { type: "content-over-time", kind: "donut", series: [], segments: [{ label: "Pages", value: 48, color: "var(--primary)" }] },
+  // totals-counters data = { counters: [...] } per 480-04-L02; one StatCard per counter.
+  totals:           { type: "totals-counters", counters: [{ key: "pages", label: "Pages", formatted: "86", value: 86, delta: { value: 3, trend: "up", label: "+3" }, spark: [1,2,3,4] }] },
+  // content-over-time uses `variant` (area|bar) — NEVER a donut (donut belongs to content-type-counts).
+  overTimeArea:     { type: "content-over-time", variant: "area", series: [{ id: "v", label: "Visitors", points: [4,8,6,10] }] },
+  overTimeBar:      { type: "content-over-time", variant: "bar", series: [{ id: "v", label: "Visitors", points: [4,8,6,10] }], categories: ["Mon","Tue","Wed","Thu"] },
   recentEdits:      { type: "recent-activity", items: [{ id: "p1", type: "page", title: "Pricing", path: "/pricing", status: "published", updatedAt: new Date().toISOString(), author: { id: null, name: "Maria", email: null } }] },
-  typeCounts:       { type: "content-type-counts", counts: [{ slug: "post", label: "Posts", count: 26 }, { slug: "page", label: "Pages", count: 48 }] },
+  // content-type-counts owns the donut breakdown via optional `segments` (folded from old chart.breakdown).
+  typeCounts:       { type: "content-type-counts", counts: [{ slug: "post", label: "Posts", count: 26 }, { slug: "page", label: "Pages", count: 48 }], segments: [{ label: "Pages", value: 48, color: "var(--primary)" }] },
   storageNoLimit:   { type: "storage-usage", usedBytes: 1024 * 1024, limitBytes: null, usedPercent: null },
   health:           { type: "site-health", security: { status: "warning", issues: 1, checks: [{ id: "csrf", label: "CSRF", status: "ok", detail: "Enabled." }, { id: "headers", label: "Headers", status: "warning", detail: "Incomplete." }] } },
-  security:         { type: "security-summary", status: "warning", issues: 1, checks: [{ id: "csrf", label: "CSRF", status: "ok", detail: "Enabled." }, { id: "headers", label: "Headers", status: "warning", detail: "Incomplete." }] },
+  // security-summary data wraps the summary under `security` (DashboardSecuritySummary) per 480-04-L02.
+  security:         { type: "security-summary", security: { status: "warning", issues: 1, checks: [{ id: "csrf", label: "CSRF", status: "ok", detail: "Enabled." }, { id: "headers", label: "Headers", status: "warning", detail: "Incomplete." }] } },
   actions:          { type: "quick-actions", actions: [{ id: "new-page", label: "New page", target: "pages" }, { id: "bogus", label: "Broken", target: "__unknown__" }] },
   query:            { type: "content-query", columns: [{ key: "title", label: "Title" }], rows: [{ title: "Hello <b>World</b>" }] },
 } satisfies Record<string, DashboardWidgetData>;
@@ -80,7 +84,7 @@ export const emptyData = {
   typeCounts:       { type: "content-type-counts", counts: [] },
   query:            { type: "content-query", columns: [{ key: "title", label: "Title" }], rows: [] },
   actions:          { type: "quick-actions", actions: [] },
-  overTimeEmpty:    { type: "content-over-time", kind: "area", series: [{ id: "v", label: "v", points: [] }] },
+  overTimeEmpty:    { type: "content-over-time", variant: "area", series: [{ id: "v", label: "v", points: [] }] },
 } satisfies Record<string, DashboardWidgetData>;
 ```
 
