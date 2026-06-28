@@ -20,7 +20,9 @@
 - **Owning module(s) to extend:**
   - `core/server/routes/analyticsRoutes.ts` — add `GET /analytics/traffic/overview`,
     `GET /analytics/traffic/top-pages`, `GET /analytics/traffic/top-pages/export`;
-    add/own `mapAnalyticsError` (also used by the public route).
+    **EXTEND** the shared `mapAnalyticsError` that TASK-483-02-L02 lands first in
+    this module — add the read-side `analytics_query_failed` case (→ 500); import
+    and reuse the existing function, do **not** redeclare it.
   - `core/server/validation/analyticsSchemas.ts` — add and re-export
     `trafficOverviewQuerySchema`, `topPagesQuerySchema`, `topPagesExportQuerySchema`.
   - `core/services/analytics/trafficAggregationService.ts` — add
@@ -91,6 +93,10 @@ router.get("/analytics/traffic/top-pages/export", requirePermission("content:rea
   return exportTopPagesCsv({ limit, rangeDays });
 });
 
+// Extend (do NOT redeclare) the mapAnalyticsError landed by TASK-483-02-L02:
+// add `case "analytics_query_failed": return new ApiError(code, "Analytics query failed", 500);`
+// to that same switch; this leaf imports/reuses the function.
+
 // service: reuse escapeCsvCell/serializeCsvRow from analyticsService.ts (export+import) — DRY
 export function serializeTopPagesCsv(rows: TopPageRow[]) {
   const headers = ["path", "views", "visitors"] as const;
@@ -108,8 +114,10 @@ export async function exportTopPagesCsv(input: TopPagesQuery): Promise<TopConten
 
 Data flow: admin client (TASK-483-05) calls these GETs; the export returns the
 same `TopContentExport` shape the existing UI download path already consumes.
-Errors map through `mapAnalyticsError` (owned in this module, reused by the
-public route).
+Errors map through the shared `mapAnalyticsError` — **landed first by
+TASK-483-02-L02**; this leaf **EXTENDS** it with the read-side
+`analytics_query_failed` case (→ 500) and imports/reuses it (never redeclares the
+function).
 
 Error handling: invalid query → existing validation error; service failure →
 `analytics_query_failed` → `mapAnalyticsError` → `ApiError`. Add route

@@ -52,13 +52,15 @@
   later enforced on the public site, thread the existing page nonce through
   `injectPopupRuntime` (call out in ARCHITECTURE).
 
+> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
+
 ---
 
 ## Implementation Pseudocode
 
 ```ts
 // core/server/popupRuntimeScript.ts
-import { watchTrigger } from "../services/popups/runtime/triggerWatchers";
+import { watchTrigger, scrollDepthPercent } from "../services/popups/runtime/triggerWatchers";
 import { shouldShowPopup, recordPopupShown } from "../services/popups/runtime/frequencyGate";
 import { createPopupRuntime } from "../services/popups/runtime/popupRuntime";
 import { renderPopup, isSafeHref } from "../services/popups/runtime/renderPopup";

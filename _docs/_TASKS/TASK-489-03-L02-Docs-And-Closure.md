@@ -32,6 +32,20 @@
 
 ---
 
+## Implementation Pseudocode
+
+This is a docs + test-reconciliation + closure leaf — it ships **no new code** and
+introduces no helper/function shape, route, or data flow. The concrete "pseudocode"
+is the exact change recipe spelled out in the two sections below:
+**Legacy-test reconciliation** (the precise edits to
+`tests/vitest/ui/solution-kits-page.test.tsx`) and **Documentation Updates** (the
+verbatim `CMS_API.md` / `ASSISTANT_SITE_BUILDER.md` / changelog bullets). New-surface
+behavior is covered by 03-L01, not this file. (Same convention as
+`TASK-490-02-L03-Docs-And-Closure.md`, whose Implementation Pseudocode is likewise
+the doc content to add.)
+
+---
+
 ## Legacy-test reconciliation (load-bearing)
 
 `tests/vitest/ui/solution-kits-page.test.tsx` currently asserts the page does

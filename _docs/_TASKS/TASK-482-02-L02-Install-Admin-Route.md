@@ -42,13 +42,16 @@
   in `SECURITY_SPEC.md`.
 - **RBAC permission(s):** none applicable (no session). The no-users invariant
   is the authorization.
-- **CSRF on internal writes:** **exempt by necessity** — `enforceCsrf`
-  (`httpServer.ts` line 358) must skip this route (session-bound CSRF cannot
-  apply to a session-less request). Add it to the CSRF exemption list the same
-  way `/auth/login` and `/auth/reset` are exempt, and assert the exemption is
-  scoped to exactly this path.
+- **CSRF on internal writes:** **exempt by absence, with no code change** —
+  `enforceCsrf` (`core/server/middleware/csrf.ts`, called from `httpServer.ts`
+  line 358) auto-skips any request without a session: `if (!ctx.sessionId)
+  return;`. There is **no CSRF path/exemption list** to edit; the session-less
+  install POST inherits this absence-based skip exactly as the session-less
+  `/auth/login` and `/auth/reset` POSTs do. Do **not** add a path entry — assert
+  in tests that the session-less POST is accepted without a CSRF token (the skip
+  applies precisely because there is no `ctx.sessionId`).
 - **Rate-limit bucket:** `auth` — inherited via the `/auth*` prefix
-  (`httpServer.ts` line 331). The bucket identifier should fall back to IP (no
+  (`httpServer.ts:328` `isAuthRoute`, `:332` selects the `auth` bucket). The bucket identifier should fall back to IP (no
   trustworthy email identity pre-install). Confirm a burst is throttled.
 - **Validation schema-owner module:** `installSchemas.ts` →
   `installAdminSchema` with `required: ["name","email","password"]`,
@@ -111,9 +114,10 @@ router.post("/auth/install/admin", async (ctx) => {
 - Route cases: create succeeds, created admin can log in, returned shape has no
   secrets, optional session cookie (if enabled) is httpOnly/secure.
 - Security cases: second create ⇒ 409 (fail-closed); weak/short password ⇒ 400;
-  strict-schema rejects extra keys; `auth` bucket throttles a burst; CSRF
-  exemption is scoped to this path only (other `/admin/api` writes still require
-  CSRF); audit `auth.install.admin.created` emitted.
+  strict-schema rejects extra keys; `auth` bucket throttles a burst; the
+  session-less POST is accepted with no CSRF token (absence-based skip), while a
+  session-bound `/admin/api` write still requires CSRF; audit
+  `auth.install.admin.created` emitted.
 - Update `tests/security/codersoSecurityGate.test.ts` to register this as an
   intentional public, CSRF-exempt, rate-limited write.
 - No migration artifacts.

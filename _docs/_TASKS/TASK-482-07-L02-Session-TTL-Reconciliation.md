@@ -18,8 +18,9 @@
   write two conflicting values. Today the TTL exists in **two** places:
   `auth.sessionTtlDays` (`settingsService.ts`, default 14) and
   `security.session.ttlDays` (`securitySettings.ts`, default 7), reconciled at
-  session-create time by `resolveSessionTtlDaysFromSources` in
-  `core/services/auth/sessionService.ts` (lines 179-186). This leaf makes
+  session-create time by `resolveSessionTtlDaysFromSources` (defined in
+  `core/services/auth/sessionService.ts:114`; called from the `createSession`
+  resolution at `:182`). This leaf makes
   `auth.sessionTtlDays` the **single canonical value the wizard writes**, makes
   the precedence explicit and documented, and surfaces the effective TTL in the
   Security step read-only so operators understand which wins.

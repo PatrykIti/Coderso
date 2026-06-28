@@ -6,8 +6,11 @@
 **Category:** `backups` / `restore-service`
 **Estimated Effort:** Large
 **Dependencies:** TASK-484-01 (`artifact_key` for remote reads, optional).
-Reuses `importConfig` (`core/services/tools/importExportService.ts` 395-470) and
-`resolveBackupDownload` (`backupService.ts` 375-397) as the artifact read seam.
+Extends `importConfig` (`core/services/tools/importExportService.ts` 395-652,
+which today opens its **own** `db.transaction` at :401) by extracting a
+transaction-aware `importConfigTx(tx, bundle)` that reuses `setSettingsTx`, so the
+restore can share one outer `tx`. Reuses `resolveBackupDownload`
+(`backupService.ts` 375-397) as the artifact read seam.
 **Status:** ⏳ To Do
 **Started:**
 **Completed:**
@@ -20,14 +23,21 @@ Reuses `importConfig` (`core/services/tools/importExportService.ts` 395-470) and
   throws `backup_restore_unsupported`) with a real, **transactional,
   confirmation-gated** restore from the `version: 1` JSON artifact. Read the
   artifact (local file or remote URL), strict-parse it, and restore inside a
-  single `db.transaction`: settings via the existing `importConfig`, and the
-  database snapshot tables via guarded delete+insert. Restore restores
+  single `db.transaction`: settings via a transaction-aware `importConfigTx(tx, …)`
+  (extracted from the existing `importConfig`, which today opens its own
+  `db.transaction` — see Dependencies), and the database snapshot tables via
+  guarded delete+insert. Because the importer shares the **outer** `tx`, the whole
+  restore is genuinely one transaction (all-or-nothing). Restore restores
   **metadata + settings only** — not media file bytes (the artifact stores media
   rows + URLs only).
 - **Owning module(s) to create-or-extend:**
   `core/services/backups/backupService.ts` (`restoreBackup` rewrite + new
   `parseBackupArtifact` strict parser + `readBackupArtifactContent` read seam),
   `backupTypes.ts` (`BackupArtifact` type + `BackupRestoreInput`),
+  `core/services/tools/importExportService.ts` (extract a transaction-aware
+  `importConfigTx(tx, bundle)` from `importConfig`; the public `importConfig`
+  becomes a thin `db.transaction((tx) => importConfigTx(tx, bundle))` wrapper —
+  no behaviour change for existing callers),
   `core/server/routes/backupRoutes.ts` (`mapBackupError` — new codes).
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md`, `_docs/CMS_API.md`,
   `_docs/SECURITY_SPEC.md`, `_docs/MEDIA_SPEC.md`.
@@ -49,12 +59,13 @@ guards here):
 - **CSRF / Rate-limit:** at the L02 route.
 - **Validation:** the artifact is **strict-parsed** by `parseBackupArtifact`
   (reject unknown top-level keys, require `version === 1`, validate each table is
-  an array). Restore reuses `importConfig`, which itself runs `validateBundle` on
-  the settings portion. No raw artifact data is written un-validated.
+  an array). Restore reuses `importConfigTx`, which itself runs `validateBundle`
+  on the settings portion. No raw artifact data is written un-validated.
 - **Anti-abuse:** restore requires `confirm === true`; refuses when the backup is
-  not `complete` or has no artifact (`backup_not_ready`); the whole restore is one
-  transaction (all-or-nothing) so a malformed artifact cannot leave partial state.
-- **Secret/PII handling:** the settings restore goes through `importConfig` →
+  not `complete` or has no artifact (`backup_not_ready`); the whole restore runs in
+  one transaction (the outer `tx`, threaded through `importConfigTx`), so a
+  malformed artifact cannot leave partial state (all-or-nothing rollback).
+- **Secret/PII handling:** the settings restore goes through `importConfigTx` →
   `setSettingsTx`, which preserves the encrypted-secret seam (secrets stay
   encrypted; nothing is decrypted to logs). The artifact is read into memory and
   not logged; errors use `sanitizeBackupError`. Restoring author emails etc. flows
@@ -116,7 +127,11 @@ export async function restoreBackup(id: string, input: BackupRestoreInput = {}):
       await replaceSnapshotTables(tx, artifact.database);
     }
     if (artifact.settings) {
-      await importConfig(artifact.settings);   // settings bundle restore (its own validateBundle)
+      // share the OUTER tx: importConfigTx is the transaction-aware body of
+      // importConfig (still runs validateBundle + setSettingsTx). Do NOT call the
+      // public importConfig() here — it opens its own db.transaction, which would
+      // commit/rollback independently of this tx and break all-or-nothing.
+      await importConfigTx(tx, artifact.settings);   // artifact.settings is an ExportBundle (target:"settings")
     }
   });
   // restore does not change the backup row's own status; return it unchanged
@@ -136,7 +151,8 @@ export async function restoreBackup(id: string, input: BackupRestoreInput = {}):
 branch (no longer thrown) or keep it mapped for back-compat with a comment.
 
 **Data flow:** route (L02) → `restoreBackup(id, { confirm })` → read artifact →
-strict-parse → transactional replace + `importConfig` → return.
+strict-parse → single outer `tx`: transactional replace + `importConfigTx(tx, …)`
+→ return.
 
 **Error handling:** all failures throw machine-readable codes mapped at the route
 boundary; the transaction rolls back on any error (no partial restore).

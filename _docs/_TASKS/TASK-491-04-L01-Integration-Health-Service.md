@@ -5,7 +5,7 @@
 **Priority:** Medium
 **Category:** Settings / Integrations
 **Estimated Effort:** Medium
-**Dependencies:** TASK-491-02-L02
+**Dependencies:** TASK-491-01-L01, TASK-491-02-L02, TASK-491-03-L01
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
@@ -24,7 +24,13 @@
     `runIntegrationHealthCheck(id)` that resolves runtime config, evaluates,
     calls `recordIntegrationHealth` (from 02-L02), and returns the updated
     summary. Change `toSummary` so `healthStatus` comes straight from the stored
-    row (default `"unknown"`), NOT auto-`"healthy"` for connected rows.
+    row (default `"unknown"`), NOT auto-`"healthy"` for connected rows. The
+    GA/Sentry branches **reuse** the existing format validators rather than
+    redefining them: `isValidGaMeasurementId` is owned by
+    `core/services/integrations/analyticsRuntime.ts` (TASK-491-01-L01) and
+    `isParseableSentryDsn` by the Sentry wiring module
+    `core/services/integrations/errorMonitoring.ts` (TASK-491-03-L01) — import
+    both; do not add a second copy.
   - `core/server/routes/integrationsRoutes.ts` — add
     `POST /settings/integrations/:id/check` (orchestration-only: RBAC →
     delegate → `logAudit` → map domain errors). Re-export any schema; do not
@@ -72,6 +78,10 @@
 
 ```ts
 // integrationsService.ts
+// Reuse the existing validators (no duplicate copies):
+import { isValidGaMeasurementId } from "./analyticsRuntime"; // TASK-491-01-L01
+import { isParseableSentryDsn } from "./errorMonitoring"; // TASK-491-03-L01
+
 export function evaluateIntegrationHealth(
   definition: IntegrationDefinition,
   config: IntegrationRuntimeConfig,

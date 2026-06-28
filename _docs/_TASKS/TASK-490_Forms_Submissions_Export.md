@@ -95,10 +95,13 @@ no extra layout work.
 
 Lanes follow `_docs/TESTING_STRATEGY.md`, chosen by dependency shape:
 
-- **Bun (route-integration / security):** the new route registration, RBAC arg,
-  strict-query reject-unknown, `format` handling, `form_not_found` mapping, and
-  the security gate — `tests/integration/routes/forms.test.ts`,
-  `tests/security/codersoSecurityGate.test.ts`.
+- **Bun (route-integration):** the new route registration, RBAC arg
+  (`requirePermission("forms:read")`, proving the export is gated and has no public
+  surface), strict-query reject-unknown, `format` handling, and `form_not_found`
+  mapping — all in `tests/integration/routes/forms.test.ts`. (Not
+  `tests/security/codersoSecurityGate.test.ts`: that file is a pure service-level
+  gate over submission/booking access + nonce + rate-limit defaults and registers
+  no routes, so it cannot host a route-permission/bucket assertion.)
 - **Vitest (pure domain + admin client + UI):** the CSV/JSON builder
   (`tests/vitest/forms/*`), the client method (`tests/vitest/admin/formsClient.test.ts`),
   and the page actions (`tests/vitest/ui/form-submissions-page.test.tsx`).

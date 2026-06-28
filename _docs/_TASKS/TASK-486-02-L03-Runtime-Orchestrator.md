@@ -16,10 +16,12 @@
 
 - **Goal:** Implement `createPopupRuntime(deps)` — the engine that, given a
   `fetchPopups()` source (the L03 endpoint) and the env adapters from L01/L02,
-  resolves the popups for the current location, applies a client-side path guard
-  (defence-in-depth + SPA navigation), arms each popup's trigger through the
-  frequency gate, and calls `deps.render(popup)` exactly once per popup, then
-  records the show and disposes that popup's watcher.
+  resolves the popups for the current location, arms each popup's trigger through
+  the frequency gate, and calls `deps.render(popup)` exactly once per popup, then
+  records the show and disposes that popup's watcher. Targeting/audience is
+  server-authoritative (the `PublicPopup` DTO omits `targeting`, so the client
+  cannot and does not re-filter); on SPA navigation the host calls `stop()` then
+  `start()`, which re-fetches `/api/popups?path=<new path>` for the new location.
 - **Owning module(s) to create-or-extend:** create
   `core/services/popups/runtime/popupRuntime.ts` (self-contained, imports only
   the sibling runtime modules + types — serializable into the IIFE).
@@ -36,8 +38,10 @@ No endpoint or permission model changes. Client-only orchestration.
 
 - **Audience is server-authoritative:** the runtime does NOT send an audience
   claim to the endpoint; it only sends `path`. The server already filtered by
-  session-derived audience. The client path guard is a refinement only (it can
-  hide, never reveal, a popup).
+  session-derived audience AND path targeting, and the `PublicPopup` DTO omits
+  `targeting`, so there is no client-side path/audience guard to re-filter with.
+  Path changes are handled by re-fetching: on SPA navigation the host calls
+  `stop()` then `start()`, which re-fetches `/api/popups` for the new path.
 - **Single fetch, no credentials leakage:** `fetch("/api/popups?path=" +
   encodeURIComponent(location.pathname))` — same-origin, no auth header; the
   endpoint is anonymous-read. Never log the response.
@@ -50,7 +54,6 @@ No endpoint or permission model changes. Client-only orchestration.
 ```ts
 // core/services/popups/runtime/popupRuntime.ts
 import type { PublicPopup } from "../popupPublicContract";
-import { matchPopupTargeting } from "../popupPublicContract"; // client path refine
 import { watchTrigger, type TriggerEnv } from "./triggerWatchers";
 import { shouldShowPopup, recordPopupShown, type FrequencyEnv } from "./frequencyGate";
 
@@ -74,8 +77,9 @@ export function createPopupRuntime(deps: PopupRuntimeDeps) {
     try { popups = await deps.fetchPopups(deps.currentPath()); } catch { return; }
 
     for (const popup of popups) {
-      // server already targeted; client path guard is a no-reveal refinement
-      // (server omitted `targeting`, so guard only when present — here always true)
+      // server already targeted by path + audience; the DTO carries no
+      // `targeting`, so there is nothing to re-filter here. SPA nav re-fetches
+      // `/api/popups` (via stop()/start()) to re-target for the new path.
       if (!shouldShowPopup(popup.id, popup.frequency, deps.frequencyEnv)) continue;
       const dispose = watchTrigger(popup.trigger, deps.triggerEnv, () => {
         // re-check at fire time (cooldown may have elapsed/another popup shown)

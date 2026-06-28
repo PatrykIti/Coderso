@@ -46,6 +46,8 @@ No endpoint or permission model changes. Client render only — but it is the
   `href` (or omit the CTA). Add `rel="noopener noreferrer"` for external links.
 - **No PII / no secrets** rendered; nothing logged.
 
+> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
+
 ---
 
 ## Implementation Pseudocode

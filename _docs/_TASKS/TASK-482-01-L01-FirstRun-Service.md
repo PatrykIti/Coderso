@@ -51,7 +51,9 @@ length:
 import { sql } from "drizzle-orm";
 import { db } from "../../db/client";
 import { users } from "../../db/schema";
-import type { DbTransaction } from "../../db/client"; // same type used by setSettingsTx
+// db/client exports ONLY `db`; there is no `DbTransaction` export. Mirror the
+// local alias from settingsService.ts:11 instead of importing it.
+type DbTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 async function countUsersOn(exec: typeof db | DbTransaction): Promise<number> {
   const [row] = await exec

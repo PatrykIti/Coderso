@@ -100,13 +100,15 @@ export class PluginLifecycleError extends Error {
 }
 
 // Translate the pipeline's thrown messages (store_signature_invalid,
-// store_checksum_mismatch, plugin_manifest_mismatch, compat errors, ...) into
+// store_checksum_mismatch, plugin_manifest_mismatch, and the compat errors
+// plugin_api_version_incompatible / plugin_core_version_invalid /
+// plugin_core_version_incompatible from core/plugins/compat.ts, ...) into
 // stable lifecycle codes. Unknown -> plugin_install_failed.
 function mapPipelineError(err: unknown): never {
   const m = err instanceof Error ? err.message : "";
   if (m === "store_signature_invalid") throw new PluginLifecycleError(PLUGIN_SIGNATURE_INVALID, 400);
   if (m === "store_checksum_mismatch") throw new PluginLifecycleError(PLUGIN_CHECKSUM_MISMATCH, 400);
-  if (/compat|coreVersion|apiVersion/i.test(m)) throw new PluginLifecycleError(PLUGIN_INCOMPATIBLE, 409, { reason: m });
+  if (/^plugin_(api|core)_version_/.test(m)) throw new PluginLifecycleError(PLUGIN_INCOMPATIBLE, 409, { reason: m });
   throw new PluginLifecycleError(PLUGIN_INSTALL_FAILED, 502, { reason: m });
 }
 

@@ -51,7 +51,7 @@ memory) — no new credential path.
 ```tsx
 // tests/vitest/ui/page-authoring-canvas.test.tsx — end-to-end brand WYSIWYG
 it("renders a brand block color as the SITE value on the content scope, admin on chrome", () => {
-  const site = makeTokens({ colors: { accent: "#f59e0b" } });
+  const site = mergeTokens(DEFAULT_TOKENS, { colors: { accent: "#f59e0b" } });
   // render editor/SectionCanvas with site tokens + a block colored var(--color-accent)
   const contentScope = container.querySelector("[data-page-editor-content]");
   expect(contentScope!.getAttribute("style")).toContain("--color-accent: #f59e0b"); // (1)

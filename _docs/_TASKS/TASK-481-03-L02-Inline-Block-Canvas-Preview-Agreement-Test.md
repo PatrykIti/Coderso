@@ -40,7 +40,7 @@ surface; no validation-owner change; no secrets/PII.
 ```tsx
 // tests/vitest/ui/shared-color-control.test.tsx
 describe("brand swatch preview agreement (TASK-481-03)", () => {
-  const site = makeTokens({ colors: { accent: "#f59e0b" }, neutrals: { border: "#e5e7eb" } });
+  const site = mergeTokens(DEFAULT_TOKENS, { colors: { accent: "#f59e0b" }, neutrals: { border: "#e5e7eb" } });
   const palette = getPageEditorColorPalette(site);
 
   it("inline toolbar and block control preview the SAME site value for a brand token", () => {

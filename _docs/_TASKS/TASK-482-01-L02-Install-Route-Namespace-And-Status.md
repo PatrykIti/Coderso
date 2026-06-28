@@ -47,8 +47,8 @@
 - **CSRF:** N/A — read-only `GET`; `enforceCsrf` in `httpServer.ts` (line 358)
   only guards unsafe methods. Confirm `GET` is exempt.
 - **Rate-limit bucket:** `auth` — inherited because the path starts with
-  `/auth` (`httpServer.ts` line 331-339 selects the `auth` bucket for any
-  `/auth*` route). No new bucket.
+  `/auth` (`httpServer.ts:328` sets `isAuthRoute = pathname.startsWith("/auth")`
+  and `:332` selects the `auth` bucket for any `/auth*` route). No new bucket.
 - **Validation:** none (no body/params). Reject any query params with a 400
   using the same `assertNo*Query` pattern as `authRoutes.ts`
   (`assertNoAuthMeQuery`) to keep the surface tight (`.strict`-equivalent).

@@ -84,7 +84,10 @@ const escapeCsvCell = (v: string) => {
 };
 const serializeCsvRow = (values: readonly string[]) => values.map(escapeCsvCell).join(",");
 
-// Mirror FormSubmissionsPage.formatPayloadValue so CSV cells match the on-screen view.
+// Mirrors FormSubmissionsPage.formatPayloadValue for string/number/boolean/object
+// EXCEPT the empty case: that page renders null/undefined as the placeholder "-",
+// while the CSV builder emits "" (a genuinely empty cell is the CSV-correct
+// representation of a missing answer; "-" would be a fake value in the data file).
 const formatCell = (value: unknown): string => {
   if (value === null || value === undefined) return "";
   if (typeof value === "string") return value;

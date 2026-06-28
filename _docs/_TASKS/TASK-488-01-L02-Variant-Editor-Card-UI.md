@@ -74,6 +74,9 @@
 import {
   addVariant, removeVariantAt, updateVariantAt, setDefaultVariantAt,
   setVariantAttribute, removeVariantAttribute, renameVariantAttributeKey,
+  parseIntegerOrNull, // existing module helper (commerceEditorModel.ts:27);
+                      // currently a module-local `const` — export it for reuse here
+                      // rather than reinventing a local int parser.
 } from "../commerceEditorModel";
 
 function VariantsCard({ draft, onChange }: Props) {
@@ -116,10 +119,15 @@ function VariantsCard({ draft, onChange }: Props) {
             <Input value={variant.sku ?? ""} placeholder="SKU (optional)"
               onChange={(e) => emit(updateVariantAt(variants, index, { sku: e.target.value || null }))} />
 
-            {/* pricing: amount / currency / compareAt — numeric inputmode */}
+            {/* pricing: amount / currency / compareAt — numeric inputmode.
+                Reuse the existing module helper parseIntegerOrNull
+                (commerceEditorModel.ts:27; returns number|null, floors, rejects
+                negatives) with `?? 0`, mirroring the base-product amount mapping
+                (commerceEditorModel.ts:94 `parseIntegerOrNull(...) ?? 0`);
+                compareAtAmount keeps the nullable result (no `?? 0`). */}
             <Input value={String(variant.pricing.amount)} inputMode="numeric"
               onChange={(e) => emit(updateVariantAt(variants, index, {
-                pricing: { ...variant.pricing, amount: toIntOrZero(e.target.value) } }))} />
+                pricing: { ...variant.pricing, amount: parseIntegerOrNull(e.target.value) ?? 0 } }))} />
             {/* currency + compareAtAmount inputs analogous */}
 
             {/* stock: state Select + quantity Input */}

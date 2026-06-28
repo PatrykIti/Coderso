@@ -25,7 +25,9 @@
     email shape, confirm match) so the rules live in one place.
   - A thin client in `core/admin/.../adminApiClient` (reuse the existing api
     client used by login) for `getInstallStatus()` and `createInstallAdmin()`.
-  - Reuse `core/admin/ui/auth/AuthBrandPanel.tsx` (exported `AuthBrandPanel`) and
+  - Reuse the centered `core/admin/ui/layouts/AuthShell.tsx` (exported `AuthShell`)
+    — after 479-29 its default (no `brand` prop) is the centered layout that
+    replaces the removed `AuthBrandPanel` split column — and
     `core/admin/ui/auth/PasswordStrengthList.tsx` (exported `PasswordStrengthList`).
 - **Source-of-truth docs:** `_docs/AUTH_SPEC.md`, `_docs/UI/` admin UI guides,
   `_docs/SECURITY_SPEC.md` (password guidance).
@@ -76,11 +78,11 @@ export function InstallerWizard({ onInstalled }: { onInstalled: (user: Installed
   };
 
   return (
-    <AuthShellLayout brand={<AuthBrandPanel ... />}>
+    <AuthShell> {/* centered default after 479-29; compose inline like LoginPage.tsx */}
       {/* name, email, password, confirm inputs */}
       <PasswordStrengthList rules={strengthRules} />
       {/* submit button disabled while saving / invalid */}
-    </AuthShellLayout>
+    </AuthShell>
   );
 }
 ```

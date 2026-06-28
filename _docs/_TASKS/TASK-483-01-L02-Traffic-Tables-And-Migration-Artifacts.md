@@ -33,6 +33,8 @@ This leaf changes the database. It **requires the full migration artifact set**:
 - An appended entry in `core/db/migrations/meta/_journal.json` (next `idx` after
   `63`, version `"7"`, with a new `when` epoch and a `tag` matching the SQL file).
 
+> **Migration index is provisional.** Re-derive as last-shipped+1 via `drizzle-kit generate` at implementation time. TASK-483/484/493 each add a migration — only one can be 0064; whichever lands later renumbers (0065/0066). Allocate in dependency order at merge.
+
 Generate via the repo's Drizzle generate flow rather than hand-editing snapshots;
 verify the SQL matches the `pgTable` definitions before committing.
 

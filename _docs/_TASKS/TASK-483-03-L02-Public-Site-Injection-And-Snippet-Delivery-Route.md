@@ -27,6 +27,8 @@
 - **Source-of-truth docs:** `_docs/SECURITY_SPEC.md`, `_docs/CMS_API.md`.
 - **Out-of-scope:** the snippet/payload builder (L01), the collector (TASK-483-02).
 
+> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
+
 ## Security Contract
 
 - **Endpoint visibility:** the inline snippet is part of the public HTML. If a

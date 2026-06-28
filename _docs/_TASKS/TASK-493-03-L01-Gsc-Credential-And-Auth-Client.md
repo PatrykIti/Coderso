@@ -58,7 +58,7 @@ endpoint for an access token scoped to
 - **RBAC:** `settings:write` to set the credential, `settings:read` to view
   status (both inherited from `integrationsRoutes.ts`). The encrypted secret is
   never returned (`toFieldSummary` already returns `value: null` for `secret`
-  fields — verified in `integrationsService.ts:94`).
+  fields — verified in `integrationsService.ts:101`).
 - **CSRF:** inherited from the integrations write route.
 - **Rate-limit bucket:** `admin_write` (inherited) for credential writes; the
   outbound token mint is server-to-Google (not rate-limit-bucketed).

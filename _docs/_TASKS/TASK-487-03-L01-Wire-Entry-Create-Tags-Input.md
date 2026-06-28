@@ -42,7 +42,7 @@
 - **Rate-limit bucket:** `admin` (server-side).
 - **Validation:** server owns it via `contentEntryMetadataSchema`
   (`core/server/validation/contentSchemas.ts`) and `normalizeTags`
-  (`entryService.ts:893`). Client only trims/splits.
+  (`entryService.ts:411`). Client only trims/splits.
 - **Anti-abuse:** n/a (internal).
 - **Secret/PII handling:** none — tags are non-sensitive free text.
 

@@ -23,7 +23,7 @@ admin brand from 481-01-L02) stays admin-themed.
 Two pieces:
 1. A new pure owner helper `toPageCanvasBrandColorCssVariableMap(tokens)` in
    `core/ui/theme/tokenCss.ts` that returns the four brand vars from the resolved
-   site `DesignTokens` (mirroring the brand half of `toCssVariableMap`:703 lines
+   site `DesignTokens` (mirroring the brand half of `toCssVariableMap`:113 lines
    115–121 of that file).
 2. Wiring that map onto the `data-page-editor-content` scope from
    `core/admin/ui/pages/PageEditor.tsx` → `SectionCanvas`/`renderBlockFrame`,

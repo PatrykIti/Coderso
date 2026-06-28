@@ -19,9 +19,11 @@
   `normalize*` helpers. This is the schema foundation for the whole pipeline.
 - **Owning module(s) to create-or-extend:**
   - `core/db/schema.ts` (extend — add tables immediately after `seoDocuments`
-    at `:988`; column helpers `uuid/text/integer/numeric/boolean/timestamp/jsonb/
-    index/uniqueIndex` are already imported at `:1-13`, `numeric` is already used
-    elsewhere in the file).
+    at `:988`; the column helpers `uuid/text/integer/boolean/timestamp/jsonb/
+    index/uniqueIndex` are already imported at `:1-13`, but **`numeric` is NOT
+    currently imported** — **ADD `numeric` to the `drizzle-orm/pg-core` import**
+    in `schema.ts` (the only pre-existing "numeric" token is a comment at
+    `:783`, not an import or usage)).
   - `core/services/seo/seoSearchPerformanceTypes.ts` (**create** — types, enums,
     `normalize*`; sibling to the existing `seoTypes.ts`).
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md` (table catalogue),

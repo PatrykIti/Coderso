@@ -15,7 +15,8 @@
 ## Overview
 
 The client side of Phase 1. A new `InstallerWizard.tsx` renders the
-create-first-admin form (reusing `AuthBrandPanel.tsx` and `PasswordStrengthList.tsx`),
+create-first-admin form (reusing the centered `AuthShell` from 479-29 — which
+removes `AuthBrandPanel` — and `PasswordStrengthList.tsx`),
 and `AdminApp.tsx` is taught to render it **before** the existing
 unauthenticated → `/login` redirect and the loading branch. The gate ordering is
 the security-sensitive part: if the installer check runs *after* the redirect,

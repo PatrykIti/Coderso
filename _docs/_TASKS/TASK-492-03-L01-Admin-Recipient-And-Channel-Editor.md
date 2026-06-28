@@ -28,6 +28,12 @@ error" status — all flowing through the existing admin settings client.
   `settings-login-alerts-webhook-channel` (line 381). Render `deliveryError`
   read-only. Remove the "recipients ... not wired yet" disclaimer (line 36) for the
   wired controls (leave the brute-force placeholder untouched — out of scope).
+  - **Supersedes TASK-359-07 (Done):** the line-36 disclaimer currently reads
+    "...not wired yet. TASK-359-07 owns persistence", but 359-07 left that persist
+    path unimplemented; this task finishes it with a **different payload**
+    (`recipients` + `webhookUrl`/`webhookSecret`/`deliveryError`, not 359-07's
+    `channels`/`bruteForceThreshold`), so update/remove that attribution rather than
+    deferring to 359-07. Do not edit the 359-07 task file.
 - `core/admin/services/settingsClient.ts` — extend the `SecuritySettingsResponse`
   and `SecuritySettingsUpdate` `loginAlerts` shapes (lines ~143, ~184) to carry
   `recipients`, `webhookUrl`, `webhookSecret` (response: `{ configured }`),

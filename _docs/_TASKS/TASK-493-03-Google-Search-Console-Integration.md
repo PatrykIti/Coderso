@@ -2,7 +2,7 @@
 # FileName: TASK-493-03-Google-Search-Console-Integration.md
 
 **Parent Task:** TASK-493
-**Priority:** Large
+**Priority:** High
 **Category:** Tools / SEO
 **Estimated Effort:** Large
 **Dependencies:** TASK-493-01, Integrations registry + secret store

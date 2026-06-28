@@ -31,6 +31,8 @@
 - **Out of scope:** any TS schema edit (that is L01); data-access helpers; any
   destructive change to existing tables.
 
+> **Migration index is provisional.** Re-derive as last-shipped+1 via `drizzle-kit generate` at implementation time. TASK-483/484/493 each add a migration — only one can be 0064; whichever lands later renumbers (0065/0066). Allocate in dependency order at merge.
+
 > **Generate, don't hand-write where possible:** prefer the repo's Drizzle
 > generate command (e.g. `bun run db:generate` / `drizzle-kit generate`) so the
 > SQL **and** snapshot **and** journal entry are produced consistently from the

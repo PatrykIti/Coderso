@@ -23,12 +23,16 @@
     calling the subtask 02/03/04 endpoints; reuse the existing apiClient + cache
     helpers used by `listSeoCached`/`updateSeo`).
   - `core/admin/ui/seo/SeoManagerPage.tsx` (**extend** — fetch the overview
-    alongside the list; feed the **stat row** (Avg score / Issues / **Indexed
-    pages** / Warnings — the same 4-up the TASK-479-26-L02 reskin defines) from
-    real `SeoOverview`; add "Sync performance" + "Submit sitemap" actions). The
-    current `averageScore`/`scanLabel` derivation at `:160-177` and `getHealth`
-    at `:35` stay; the **Indexed pages** value switches from placeholder to
-    `overview.indexedPages`.
+    alongside the list; feed the **stat row** from real `SeoOverview` and
+    **ADD/relabel an "Indexed pages" `StatCard` backed by `overview.indexedPages`**.
+    NOTE: the TASK-479-26-L02 reskin's 4-up is Avg score / Issues / **Optimized
+    pages** / Warnings — it deliberately does **not** render an "Indexed pages"
+    card (it drops the prototype's fabricated one), so this leaf **adds or
+    relabels** an "Indexed pages" card rather than flipping a pre-existing
+    placeholder. Add "Sync performance" + "Submit sitemap" actions). The current
+    `averageScore`/`scanLabel` derivation at `:160-177` and `getHealth` at `:35`
+    stay; the "Indexed pages" value is sourced from `overview.indexedPages` (no
+    existing "Indexed pages" placeholder to flip).
   - Optionally a small `SeoPerformancePanel.tsx` for the top-queries/series view
     (kept additive; the table/drawer stay as-is).
 - **Source-of-truth docs:** `_docs/CMS_API.md` (endpoints consumed),
@@ -77,7 +81,7 @@ export const submitSitemap = (b?: { sitemapPath?: string }) =>
 // core/admin/ui/seo/SeoManagerPage.tsx (extend)
 const [overview, setOverview] = useState<SeoOverview | null>(getCachedSeoOverview());
 useEffect(() => { void getSeoOverview().then(setOverview).catch(noop); }, []);
-// stat row "Indexed pages" -> overview?.indexedPages ?? 0 (was placeholder)
+// stat row: add/relabel an "Indexed pages" StatCard -> overview?.indexedPages ?? 0
 // new actions:
 const onSync = async () => { await syncSearchPerformance(); await refresh({ force: true });
                              setOverview(await getSeoOverview()); };

@@ -22,8 +22,26 @@ record — without ever blocking or failing the login response.
 ### Owning module(s) to create-or-extend
 - `core/server/routes/authRoutes.ts` — extend `AuthRouteDeps` (lines 40-53) with
   `deliverLoginAlert?: typeof deliverLoginAlert` (default = the real service from
-  TASK-492-02-L01); resolve it in `registerAuthRoutes` (lines 161-173); call it in
-  the `shouldAlert` branch (lines 232-252) after writing the audit record.
+  TASK-492-02-L01); resolve it in `registerAuthRoutes` (lines 161-173, e.g.
+  `const sendLoginAlert = deps.deliverLoginAlert ?? deliverLoginAlert`); call it in
+  the `shouldAlert` branch (the `if (shouldAlert)` block, lines 237-252) after
+  writing the `auth.login.alert` audit record.
+- **Test-harness reality (read before writing the route test):** the existing
+  `tests/integration/routes/auth.test.ts` harness injects only
+  `validate`/`logAudit`/`requireAuth`/`resolvePermissionSnapshot`/
+  `consumeResetTokenWithStatus` and exercises `GET /auth/me` and
+  `POST /auth/reset/confirm` — there is **no `POST /auth/login` happy-path test**,
+  and the login handler reaches the `shouldAlert` branch only after
+  `getSecuritySettings`, `enforceBotProtection`, `getUserByEmail`, `verifyPassword`,
+  `getLastSessionFingerprint`, `evaluateLoginAlert`, `createSession` and
+  `updateLastLogin` — all **module-level imports, not in `AuthRouteDeps`**
+  (lines 40-53). To assert delivery fires iff `shouldAlert`, this leaf must **also
+  widen `AuthRouteDeps`** with the login-gate prerequisites needed to drive a
+  successful login in the route lane (at minimum injectable `getSecuritySettings`,
+  `getUserByEmail`, `verifyPassword`, `getLastSessionFingerprint` +
+  `evaluateLoginAlert`, and `createSession`, each defaulting to the real import) —
+  **or** move the behavioral assertion to a service-level test (see Testing
+  Requirements). Pick one and keep the pseudocode + test sections consistent with it.
 
 ### Source-of-truth docs
 - `_docs/AUTH_SPEC.md` (login flow; session cookie; alert behavior)
@@ -109,21 +127,36 @@ return { user: toPublicUser(user), session: { expiresAt: session.expiresAt } };
 - **No DB migration.**
 
 ### Regression-test shape (Bun, route integration)
-Extend `tests/integration/routes/auth.test.ts` (existing dependency-injection
-harness via `AuthRouteDeps`):
+Extend `tests/integration/routes/auth.test.ts`. The existing harness injects only
+`validate`/`logAudit`/`requireAuth` and drives **no** successful login, so first
+widen `AuthRouteDeps` (see Owning module(s)) and inject stubs for the login-gate
+prerequisites — `getSecuritySettings` → `loginAlerts` enabled + a flag;
+`getUserByEmail` → an active user; `verifyPassword` → `true`;
+`getLastSessionFingerprint` + `evaluateLoginAlert` → a `newDevice`/`newLocation`
+flag; `createSession` → a fake session — plus a spy `deliverLoginAlert` and a stub
+`logAudit`:
 ```ts
 test("login invokes deliverLoginAlert when shouldAlert is true", ...);  // spy dep
 test("login does NOT invoke deliverLoginAlert when settings disabled / no flag", ...);
 test("login still returns 200 when deliverLoginAlert rejects", ...);    // reject dep
 test("deliverLoginAlert receives PII-resolved email + alert flags", ...);
 ```
-(Provide `deps.deliverLoginAlert`, a stub `logAudit`, and stubbed
-`getSecuritySettings`/session helpers as the existing tests already do.)
+If widening `AuthRouteDeps` with the login-gate prerequisites is judged too broad,
+move the "invoked-iff-`shouldAlert` / payload / swallows-rejection" behavioral
+assertions to a service-level test around `deliverLoginAlert` (TASK-492-02-L01's
+lane) and keep only a route-registration assertion here. State which path was taken.
 
 ## Testing Requirements
 - **Lane:** Bun (`tests/integration/routes/auth.test.ts`) — route-integration /
-  runtime flow; reuse the file's existing `makeRouter` + `AuthRouteDeps` injection
-  pattern (no real db/SMTP).
+  runtime flow using the file's `makeRouter` + `AuthRouteDeps` injection (no real
+  db/SMTP). Caveat: the existing file has **no login happy-path test** and the login
+  handler's prerequisites (`getSecuritySettings`/`getUserByEmail`/`verifyPassword`/
+  `getLastSessionFingerprint`/`evaluateLoginAlert`/`createSession`) are module-level,
+  not injectable — so this leaf must **widen `AuthRouteDeps`** with those login-gate
+  prerequisites (see Owning module(s)) before the `shouldAlert` branch is reachable,
+  **or** relocate the behavioral assertion to a service-level test around
+  `deliverLoginAlert` and keep only a route-registration check here. Say which in the
+  implementation.
 - Assert: delivery invoked iff `shouldAlert`; login response unaffected by
   delivery rejection; correct payload (PII-resolved email, flags) handed to the
   dep.

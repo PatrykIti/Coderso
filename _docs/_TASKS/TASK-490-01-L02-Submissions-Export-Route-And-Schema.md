@@ -139,10 +139,17 @@ returns `contentType: "text/csv"` + header row; `?format=json` returns
 
 ## Testing Requirements
 
-Lane: **Bun (route-integration + security)** — runtime route wiring + RBAC.
+Lane: **Bun (route-integration)** — runtime route wiring + RBAC. The route's
+permission/no-public-exposure posture is asserted here (route registration +
+`requirePermission("forms:read")`), NOT in `tests/security/codersoSecurityGate.test.ts`
+— that file is a pure service-level gate (submission/booking access, nonce,
+rate-limit defaults) and imports no route registration, so it cannot host a
+route-permission/bucket assertion.
 
 - Extend `tests/integration/routes/forms.test.ts`:
-  - route registered under `forms:read`;
+  - route registered with `requirePermission("forms:read")` (gated, not anonymous
+    — proves there is no public export surface), exactly like the sibling
+    `GET /forms/:id/submissions`;
   - CSV path → `text/csv` envelope with the `Submission ID,Received At,Status,...`
     header;
   - JSON path → `application/json` envelope, `JSON.parse(content)` is an array
@@ -150,8 +157,6 @@ Lane: **Bun (route-integration + security)** — runtime route wiring + RBAC.
   - strict query: unknown param → 400 `validation_error`/`additionalProperties`;
     `format` not in enum → 400; missing `format` defaults to `csv`;
   - `form_not_found` → 404.
-- `tests/security/codersoSecurityGate.test.ts`: the new route appears under the
-  internal `forms:read` bucket (no public exposure).
 - DB-backed route tests load env first: `set -a && source .env && set +a`.
 - Gates: `bun --cwd core lint`, `bun --cwd core lint:types`.
 - **No DB schema change → no migration artifacts** (`*.sql` / `meta/*_snapshot.json`

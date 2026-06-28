@@ -24,9 +24,11 @@ the injected runtime IIFE by TASK-486-03). Three concerns:
 - **L02 Frequency/cooldown store** — `always` / `session_once` / `daily_once`
   plus `cooldownMinutes`, persisted in `sessionStorage`/`localStorage` via an
   injectable storage adapter.
-- **L03 Runtime orchestrator** — fetches the endpoint DTO, applies a client-side
-  path/audience guard (defence-in-depth + SPA nav), wires each popup's trigger
-  through the frequency gate, and calls a `render` callback once.
+- **L03 Runtime orchestrator** — fetches the endpoint DTO (targeting/audience is
+  server-authoritative; the DTO omits `targeting`, so there is no client-side
+  re-filter), wires each popup's trigger through the frequency gate, and calls a
+  `render` callback once. On SPA nav it re-fetches `/api/popups` for the new path
+  via `stop()`/`start()`.
 
 No DOM rendering happens here (that is TASK-486-03); this subtask emits decisions
 ("show popup X now") only.

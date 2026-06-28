@@ -66,9 +66,11 @@ Lanes per `_docs/TESTING_STRATEGY.md`:
   (CSV header = field labels in `orderIndex` order, escaping, formula-injection
   guard, JSON shape, `totalRows`, empty-submissions case, extra/unknown payload
   keys appended, `ip`/`userAgent` omitted).
-- **Bun (route-integration / security):**
-  `tests/integration/routes/forms.test.ts` (registration, `forms:read` arg,
-  strict-query reject-unknown, `format` csv/json, `form_not_found` → 404),
-  `tests/security/codersoSecurityGate.test.ts` (route visibility/permission
-  bucket).
+- **Bun (route-integration):**
+  `tests/integration/routes/forms.test.ts` (registration, `requirePermission("forms:read")`
+  arg — gated, no public surface — strict-query reject-unknown, `format` csv/json,
+  `form_not_found` → 404). Not `tests/security/codersoSecurityGate.test.ts`: that
+  file is a pure service-level gate (submission/booking access, nonce, rate-limit
+  defaults) and registers no routes, so it cannot host a route-permission/bucket
+  assertion.
 - `bun --cwd core lint`, `bun --cwd core lint:types`.

@@ -60,6 +60,8 @@
   logged. The visitor-supplied `path` is never reflected unescaped into HTML
   (JSON only).
 
+> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
+
 ---
 
 ## Implementation Pseudocode
@@ -78,6 +80,21 @@ import type { SecuritySettings } from "../services/settings/securitySettings";
 const json = (p: unknown, status = 200) =>
   new Response(JSON.stringify(p), { status, headers: { "Content-Type": "application/json" } });
 
+// Parse the Cookie header into a record so attachUserFromSession can read the
+// session token. Mirror the existing `parseCookies` in publicBookingApi.ts:239 /
+// publicFormsApi.ts:36 (do not invent a new one).
+const parseCookies = (header: string | null): Record<string, string> => {
+  if (!header) return {};
+  const cookies: Record<string, string> = {};
+  for (const entry of header.split(";")) {
+    const chunk = entry.trim();
+    const i = chunk.indexOf("=");
+    if (i <= 0) continue;
+    cookies[chunk.slice(0, i).trim()] = decodeURIComponent(chunk.slice(i + 1).trim());
+  }
+  return cookies;
+};
+
 export type PublicPopupsApiContext = {
   url: URL; ip?: string; userAgent?: string; security: SecuritySettings;
 };
@@ -94,8 +111,16 @@ export async function handlePublicPopupsApi(
     const query = { path: ctx.url.searchParams.get("path") ?? "" };
     validate(popupPublicQuerySchema, query);   // reject-unknown, bounded
 
-    // audience resolved server-side; client cannot assert it
-    const routeCtx: any = { headers: {}, cookies: {} };
+    // audience resolved server-side; client cannot assert it.
+    // Parse the Cookie header into routeCtx.cookies BEFORE attaching the
+    // session: attachUserFromSession reads `ctx.cookies?.[SESSION_COOKIE_NAME]`
+    // (core/server/middleware/auth.ts:19). Without populated cookies the token
+    // is undefined, `user` stays unset, and `isLoggedIn` silently collapses to
+    // false — breaking the logged_in/logged_out audience. Mirror booking/forms.
+    const routeCtx: any = {
+      headers: {},
+      cookies: parseCookies(req.headers.get("cookie")),
+    };
     req.headers.forEach((v, k) => (routeCtx.headers[k] = v));
     await attachUserFromSession(routeCtx);
     const isLoggedIn = Boolean(routeCtx.user);

@@ -73,7 +73,7 @@ inlineSwatches.map((swatch) => (
     key={swatch.id}
     title={swatch.label}
     aria-label={`Text color ${swatch.label}`}
-    data-page-editor-text-mark-color={swatch.id}
+    data-page-editor-text-color-swatch={swatch.id}
     style={{ backgroundColor: swatch.previewValue ?? swatch.value }}   // live site value
     onClick={(event) => {
       event.preventDefault(); event.stopPropagation();                 // per-button only

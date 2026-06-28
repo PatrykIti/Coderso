@@ -26,14 +26,19 @@
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md`, `_docs/CMS_API.md`,
   `_docs/SECURITY_SPEC.md`.
 - **Out-of-scope:** DB tables (L02), the public route (TASK-483-02), any
-  `db/client` import (keep this module Bun-free and runtime-free).
+  `db/client` import (keep this module Bun-free and runtime-free), and
+  **campaign/UTM attribution** — `sourceKind` classifies
+  direct/internal/referral/search/social only. The client sends no query string
+  and `normalizeTrafficPath` strips any query/hash, so there is no campaign
+  signal to classify; a future, privacy-reviewed task may add a UTM field, kept
+  aligned across TASK-483-01-L01 / 02-L02 / 03-L01.
 
 ## Implementation Pseudocode
 
 ```ts
 // trafficTypes.ts
 export type TrafficDeviceClass = "desktop" | "mobile" | "tablet" | "bot" | "unknown";
-export type TrafficSourceKind = "direct" | "internal" | "referral" | "search" | "social" | "campaign";
+export type TrafficSourceKind = "direct" | "internal" | "referral" | "search" | "social";
 
 export type RawTrafficEvent = {
   type: "pageview";
@@ -90,13 +95,13 @@ export function classifySource(referrerHost: string | null, selfHosts: Set<strin
 
 export function normalizeTrafficEvent(
   input: unknown,
-  ctx: { uaDeviceClass: TrafficDeviceClass; selfHosts: Set<string>; campaignHit: boolean }
+  ctx: { uaDeviceClass: TrafficDeviceClass; selfHosts: Set<string> }
 ): NormalizedTrafficEvent {
   const record = assertRecord(input, "analytics_beacon_invalid");
   rejectUnknownKeys(record, Object.keys(trafficEventSchema.properties), "analytics_beacon_invalid");
   const path = normalizeTrafficPath(asString(record.path, "analytics_beacon_invalid"));
   const referrerHost = safeHost(record.referrer);
-  const sourceKind = ctx.campaignHit ? "campaign" : classifySource(referrerHost, ctx.selfHosts);
+  const sourceKind = classifySource(referrerHost, ctx.selfHosts);
   return {
     type: "pageview",
     path,
@@ -110,8 +115,8 @@ export function normalizeTrafficEvent(
 ```
 
 Data flow: route (TASK-483-02) validates against `trafficEventSchema`, then calls
-`normalizeTrafficEvent` with server-derived context (UA device class, self hosts,
-campaign detection). The normalizer never trusts client-supplied device/source.
+`normalizeTrafficEvent` with server-derived context (UA device class, self
+hosts). The normalizer never trusts client-supplied device/source.
 
 Error handling: all rejections throw machine-readable `analytics_beacon_invalid`;
 the route boundary maps it through `mapAnalyticsError` (TASK-483-02) to a 400

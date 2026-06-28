@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin / Onboarding / Auth
 **Estimated Effort:** Very Large
-**Dependencies:** TASK-479-29 (Auth screen restyle — shares `AuthBrandPanel.tsx` + auth primitives; reskin only, this task is the feature)
+**Dependencies:** TASK-479-29 (Auth screen restyle — reuses the new centered `AuthShell` + restyled auth primitives from 479-29, which **removes** `AuthBrandPanel`; reskin only, this task is the feature)
 **Status:** ⏳ To Do
 **Started:** `<YYYY-MM-DD>`
 **Completed:** `<YYYY-MM-DD>`
@@ -74,7 +74,7 @@ content-seeded site without touching env vars or the seed script.
 
 | Concern | TASK-479-29 (reskin) | TASK-482 (this feature) |
 | --- | --- | --- |
-| Auth shell / brand panel | Owns `AuthBrandPanel.tsx` restyle | **Reuses** it for the installer |
+| Auth shell | Replaces the split `AuthBrandPanel` column with a centered `AuthShell` default (removes `AuthBrandPanel`) | **Reuses** the new centered `AuthShell` + restyled auth primitives for the installer |
 | Login / 2FA / reset visuals | Restyled | Unchanged; installer hands off to it |
 | Setup wizard look | N/A (post-login wizard untouched by 479-29) | Adds two-phase behaviour + restyle to 479 primitives |
 | First-admin creation | — | **New** pre-auth flow |

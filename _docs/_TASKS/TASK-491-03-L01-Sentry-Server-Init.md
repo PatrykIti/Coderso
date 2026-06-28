@@ -22,8 +22,11 @@
   - Create `core/services/integrations/errorMonitoring.ts` —
     `initializeErrorMonitoringOnBoot()` (reads `getIntegrationRuntimeConfig("sentry")`,
     inits the SDK once if a non-empty `dsn` is present, idempotent via a module
-    flag), `captureServerError(error, context?)` (no-op when uninitialized), and
-    `isErrorMonitoringEnabled()`.
+    flag), `captureServerError(error, context?)` (no-op when uninitialized),
+    `isErrorMonitoringEnabled()`, and the pure exported
+    `isParseableSentryDsn(dsn)` (parses the DSN URL shape; gates the fallback
+    sender path and is **reused** by TASK-491-04-L01's health evaluator so there
+    is a single DSN parser, never a competing copy).
   - `core/server/httpServer.ts` — add `void initializeErrorMonitoringOnBoot()`
     next to the existing boot tasks in `startHttpServer`, and wrap the `fetch`
     handler body so a thrown/unhandled error calls `captureServerError` before
@@ -69,6 +72,20 @@
 // core/services/integrations/errorMonitoring.ts
 let initialized = false;
 let enabled = false;
+
+// Pure DSN-shape check. Single source of truth: gates the fallback sender path
+// (which parses the DSN itself) and is reused by TASK-491-04-L01's health
+// evaluator, so there is never a second/competing DSN parser. The primary
+// `@sentry/node` path treats the dsn as opaque (the SDK validates it).
+export function isParseableSentryDsn(dsn: unknown): boolean {
+  if (typeof dsn !== "string" || !dsn.trim()) return false;
+  try {
+    const url = new URL(dsn.trim());
+    return Boolean(url.protocol.startsWith("http") && url.username && url.pathname.length > 1);
+  } catch {
+    return false;
+  }
+}
 
 export async function initializeErrorMonitoringOnBoot(): Promise<void> {
   if (initialized) return;
@@ -132,6 +149,8 @@ disabled, server still boots). `captureServerError` never throws.
   enabled true, init called once (idempotent on second call).
 - `captureServerError` is a no-op when disabled; calls `captureException` when
   enabled; never throws on SDK error.
+- `isParseableSentryDsn`: a well-formed `https://public@o0.ingest.sentry.io/0`
+  DSN → `true`; empty/non-string/garbage/`"not-a-url"`/no-public-key → `false`.
 - Security: capture an init failure and assert the dsn string never appears in
   `console` output.
 

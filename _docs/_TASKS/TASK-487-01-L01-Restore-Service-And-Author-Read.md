@@ -131,7 +131,8 @@ export async function restoreEntryRevision(
   const targetData = revision.data;
 
   // No-op when current data already equals the snapshot (stable JSON compare).
-  if (areEntrySnapshotsEqual(currentData, targetData)) {
+  // Reuse the shared helper restorePostRevision uses (postsService.ts:988).
+  if (areRevisionSnapshotsEqual(currentData, targetData)) {
     return { restored: false, revision, entry };
   }
 
@@ -161,10 +162,14 @@ surface as the existing `ContentValidationError` from `validateEntryData`. All
 mapped at the route boundary in L02 (`mapContentEntryError`). No transport
 errors thrown in the service.
 
-**Helpers:** add a small `areEntrySnapshotsEqual(a, b)` (stable-key JSON compare,
-KISS) co-located in the service; do not pull in a new dependency. `resolveEmailValue`,
-`desc`, `max`, `users`, `contentRevisions` are already imported in this module
-(verify the `users` import — add if missing).
+**Helpers:** reuse the existing `areRevisionSnapshotsEqual` (stable-key JSON
+compare) from `core/services/content/revisionSnapshot.ts:25` — the same helper
+`restorePostRevision` uses (`postsService.ts:988`); do **not** reinvent a
+per-entry snapshot comparator. Add `import { areRevisionSnapshotsEqual } from
+"./revisionSnapshot";` (not yet imported in `entryService.ts`; mirror
+`postsService.ts:15`). `resolveEmailValue`, `desc`, `max`, `users`,
+`contentRevisions` are already imported in this module (verify the `users`
+import — add if missing).
 
 **Regression-test shape:**
 

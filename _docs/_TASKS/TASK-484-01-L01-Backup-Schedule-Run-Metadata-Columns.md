@@ -147,6 +147,11 @@ free index is **0064** (last shipped `0063_yummy_glorian`; journal version `"7"`
   { "idx": 64, "version": "7", "when": <epoch-ms>, "tag": "0064_backup_run_metadata", "breakpoints": true }
   ```
 
+> **Migration index is provisional.** Re-derive as last-shipped+1 via
+> `drizzle-kit generate` at implementation time. TASK-483/484/493 each add a
+> migration — only one can be 0064; whichever lands later renumbers (0065/0066).
+> Allocate in dependency order at merge.
+
 **Data flow:** existing routes/services read the new columns via the mappers; no
 write path changes in this leaf.
 

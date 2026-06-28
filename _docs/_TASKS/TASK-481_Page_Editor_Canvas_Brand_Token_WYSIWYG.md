@@ -7,7 +7,8 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-477-02 (canvas neutral tokens + live swatch palette); coordinate with TASK-479-05-L03 + TASK-479-08-L02 (shared `@theme` brand vars + `data-page-editor-canvas-frame` — non-blocking; see "Cross-task coordination")
 **Status:** ⏳ To Do
-**Created:** 2026-06-27
+**Started:** `<YYYY-MM-DD>`
+**Completed:** `<YYYY-MM-DD>`
 
 ---
 

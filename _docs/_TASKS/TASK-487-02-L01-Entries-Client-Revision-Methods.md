@@ -149,7 +149,8 @@ them); no swallowing.
 ## Testing Requirements
 
 - Lane: **Vitest** (admin client is Bun-free).
-- Add `tests/vitest/admin/entriesClient.test.ts` modeled on
+- Extend the existing `tests/vitest/admin/entriesClient.test.ts` (already
+  covers the entry client cache contract), modeled on the revision cases in
   `tests/vitest/admin/postsClient.test.ts` (mock `apiRequest`/`cacheBus`,
   assert cache + broadcast contract).
 - `bun --cwd core lint`, `bun --cwd core lint:types`.

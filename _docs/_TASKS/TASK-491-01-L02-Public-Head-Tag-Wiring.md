@@ -40,6 +40,8 @@
   Invalidation on integration change is out of scope (next admin edit + normal
   TTL expiry is acceptable; note this in the closeout).
 
+> **Shared boundary `core/server/publicSite.tsx`** is also extended by TASK-483/486/491/493 — additive injection only; reuse the existing forms/booking public-write nonce evaluator, do not invent a competing one-off nonce.
+
 ---
 
 ## Security Contract

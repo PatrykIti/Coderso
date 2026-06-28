@@ -19,7 +19,8 @@
   orchestration-only and re-use the L01 schemas + error mapping.
 - **Owning module(s) to create-or-extend:**
   - **Extend** `core/server/routes/pluginsRoutes.ts` — add the write routes, add
-    a `validate` dep, and extend the local `Router` type with `put`/`delete` (it
+    a `validate` dep, and extend the local `Router` type with `put` (uninstall is
+    modeled as `POST /plugins/:name/uninstall`, so no `delete` verb is needed; it
     currently exposes only `get`/`post`).
   - **Create** `core/server/validation/pluginSchemas.ts` — **re-export** the L01
     schemas (`installPluginSchema`, `updatePolicySchema`) for the `validate` dep.

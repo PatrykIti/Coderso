@@ -21,7 +21,19 @@ delivered login alert and its recipient/webhook settings.
 ### Owning module(s) to create-or-extend
 - `tests/security/codersoSecurityGate.test.ts` — extend with assertions that the
   public security-settings projection and the admin redacted cache never expose a
-  raw `loginAlerts.webhookSecret`.
+  raw `loginAlerts.webhookSecret`. **This file is fully static today** (it imports
+  only pure functions + `SECURITY_SETTINGS_DEFAULTS`; no db). Because
+  `getSecuritySettingsPublic` / `setSecuritySettings`
+  (`core/services/settings/securitySettings.ts:693,698`) are **db-backed**, any
+  round-trip added here MUST self-gate with the repo `testIfDb` pattern — replicate
+  `const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());`
+  `const testIfDb = hasDb ? test : test.skip;` from
+  `tests/unit/security/securitySettings.test.ts` so the block `test.skip`s without a
+  DB and does not break the static gate. Note the canonical encrypted-storage
+  round-trip ("webhookSecret stored encrypted; public exposes only `{configured}`")
+  is already owned, `testIfDb`-gated, by **TASK-492-01-L01** in that same
+  `securitySettings.test.ts`; keep this gate-file assertion a focused leak guard,
+  not a duplicate of the contract test.
 - `_docs/SECURITY_SPEC.md`, `_docs/AUTH_SPEC.md`, `_docs/CMS_API.md` — doc updates.
 
 ### Source-of-truth docs
@@ -54,7 +66,11 @@ delivered login alert and its recipient/webhook settings.
 
 ```ts
 // tests/security/codersoSecurityGate.test.ts (bun:test) — add
-test("login alert webhookSecret never leaves backend in cleartext", async () => {
+// The gate file is static today; this round-trip is db-backed, so self-gate it with
+// the repo testIfDb pattern (mirror tests/unit/security/securitySettings.test.ts):
+//   const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
+//   const testIfDb = hasDb ? test : test.skip;   // + a local canConnect() helper
+testIfDb("login alert webhookSecret never leaves backend in cleartext", async () => {
   await setSecuritySettings({
     loginAlerts: { webhookUrl: "https://example.com/hook", webhookSecret: "s3cr3t-value" },
   });
@@ -95,16 +111,21 @@ test("login alert webhookSecret never leaves backend in cleartext", async () => 
 
 ### Regression-test shape (Bun)
 ```ts
-// tests/security/codersoSecurityGate.test.ts
-test("public loginAlerts.webhookSecret is {configured} only", ...);
-test("webhookSecret cleartext absent from public projection JSON", ...);
-test("deliveryError is null or sanitized string", ...);
+// tests/security/codersoSecurityGate.test.ts (testIfDb = hasDb ? test : test.skip)
+testIfDb("public loginAlerts.webhookSecret is {configured} only", ...);     // db round-trip
+testIfDb("webhookSecret cleartext absent from public projection JSON", ...); // db round-trip
+test("deliveryError is null or sanitized string", ...);                     // static fixture, no db
 ```
 
 ## Testing Requirements
-- **Lane:** Bun — `tests/security/codersoSecurityGate.test.ts` (security gate;
-  db-backed via `setSecuritySettings` / `getSecuritySettingsPublic`, gated like
-  the existing security/settings tests).
+- **Lane:** Bun — `tests/security/codersoSecurityGate.test.ts` (security gate). The
+  file is **fully static today** (no db); the new cleartext round-trip is db-backed
+  via `setSecuritySettings` / `getSecuritySettingsPublic`, so gate it with the repo
+  `testIfDb` pattern (`const testIfDb = hasDb ? test : test.skip;` + a local
+  `canConnect()`, mirroring `tests/unit/security/securitySettings.test.ts`) so it
+  `test.skip`s without a DB. The canonical encrypted-storage round-trip already
+  lives (testIfDb-gated) in TASK-492-01-L01's `securitySettings.test.ts`; keep this
+  a focused leak guard rather than a duplicate of the contract test.
 - Docs: update `_docs/SECURITY_SPEC.md`, `_docs/AUTH_SPEC.md`, `_docs/CMS_API.md`
   as above. Do **not** edit `_docs/_TASKS/README.md` or add changelog entries.
 - No DB migration artifacts.
