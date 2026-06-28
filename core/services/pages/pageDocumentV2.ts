@@ -1835,6 +1835,49 @@ export function applyBlockTextMark(
   return normalizeBlockTextMarks(text, [...retained, nextMark]);
 }
 
+export type PageBlockTextMarkRemoveInput = {
+  type: PageTextMark["type"];
+  from: number;
+  to: number;
+};
+
+/**
+ * Explicitly strip a single inline mark of `mark.type` over `[from, to)` and
+ * return the normalized result (audit M7 / TASK-478-02). Unlike
+ * {@link applyBlockTextMark} this never toggles or re-applies — it only removes.
+ * Behaviour over overlapping marks is precise:
+ *  - marks of a DIFFERENT type are untouched (an unlink keeps color/highlight/bold);
+ *  - a same-type mark fully inside `[from, to)` is dropped;
+ *  - a same-type mark that PARTIALLY overlaps is split so only the covered slice is
+ *    removed and the outside slices are preserved (with their value, e.g. the link
+ *    href), so unlinking the middle of a long link leaves the two ends linked.
+ */
+export function removeBlockTextMark(
+  text: string,
+  currentMarks: unknown,
+  mark: PageBlockTextMarkRemoveInput
+): PageTextMark[] {
+  const existing = normalizeBlockTextMarks(text, currentMarks);
+  const next: PageTextMark[] = [];
+  for (const entry of existing) {
+    // Different type, or no overlap with the removed range: keep as-is.
+    if (entry.type !== mark.type || entry.to <= mark.from || entry.from >= mark.to) {
+      next.push(entry);
+      continue;
+    }
+    // Preserve the slice before the removed range (carries the entry's value).
+    if (entry.from < mark.from) {
+      next.push({ ...entry, to: mark.from });
+    }
+    // Preserve the slice after the removed range.
+    if (entry.to > mark.to) {
+      next.push({ ...entry, from: mark.to });
+    }
+    // The slice inside `[from, to)` is dropped.
+  }
+  return normalizeBlockTextMarks(text, next);
+}
+
 const normalizeId = (value: unknown, prefix: string, index: number, mode: NormalizeMode) => {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
   if (mode === "write") {

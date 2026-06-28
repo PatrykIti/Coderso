@@ -90,6 +90,7 @@ import {
   createPageBlockV2,
   createPageDocumentId,
   applyBlockTextMark,
+  removeBlockTextMark,
   createPageSectionV2,
   isPageTypographyCapableBlockType,
   normalizeBlockTextMarks,
@@ -238,6 +239,7 @@ import {
   SectionGapInsertZone,
   type PageEditorInlineEditCommit,
   type PageEditorInlineEditTarget,
+  type PageEditorMarkToolbarDock,
   type PageEditorTextMarkCommit,
 } from "./editor/PageAuthoringCanvas";
 import { LayerBlockRows } from "./editor/PageEditorLayers";
@@ -741,6 +743,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   const [selectedBlockPath, setSelectedBlockPath] = useState<PageBlockPath | null>(null);
   const [inlineEditTarget, setInlineEditTarget] = useState<PageEditorInlineEditTarget | null>(null);
   const [device, setDevice] = useState<PageBreakpoint>("desktop");
+  // Session UI pref (not the page document): which side the inline mark toolbar
+  // docks to so the color picker stops covering the edited text (TASK-478-03).
+  // Persists across subsequent block edits in the session, mirroring `device`.
+  const [markToolbarDock, setMarkToolbarDock] = useState<PageEditorMarkToolbarDock>("top");
   const siteTokens = useCanvasSiteTokens();
   const canvasSiteTokenVariables = useMemo(
     () => toPageCanvasColorCssVariableMap(siteTokens) as CSSProperties,
@@ -1391,7 +1397,12 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         const previous = readInlineTextPropValue(block, commit.propPath);
         if (previous === null) return;
         const currentMarks = normalizeBlockTextMarks(previous, block.props.marks);
-        const nextMarks = applyBlockTextMark(previous, currentMarks, commit);
+        // `action: "remove"` is an explicit unlink/strip over the range (audit M7 /
+        // TASK-478-02); everything else is the value-aware apply/replace/toggle.
+        const nextMarks =
+          commit.action === "remove"
+            ? removeBlockTextMark(previous, currentMarks, commit)
+            : applyBlockTextMark(previous, currentMarks, commit);
         if (JSON.stringify(currentMarks) === JSON.stringify(nextMarks)) return;
         setDocumentDraft((current) => ({
           ...current,
@@ -2773,6 +2784,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       device={device}
                       canAddBlockBeside={canAddBlockBeside}
                       canvasDataByBlockId={canvasDataByBlockId}
+                      markToolbarDock={markToolbarDock}
+                      onMarkToolbarDockChange={setMarkToolbarDock}
                       onSelect={() => selectSection(section.id)}
                       onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
                       onAddBlock={openCommandPalette}

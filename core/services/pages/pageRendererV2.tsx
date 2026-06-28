@@ -741,10 +741,22 @@ const textMarkRenderRank: Record<PageTextMark["type"], number> = {
   link: 4,
 };
 
+/**
+ * Deterministic, token-driven styling for an inline `link` mark so a linked run
+ * is visually obvious (underline + link color) on BOTH the front and the canvas.
+ * Renderer-applied only — the style is not stored in the mark, so it needs no
+ * schema/sanitizer change. The `--coderso-link` token follows the renderer's
+ * `--coderso-*` namespace and carries a hard fallback so the affordance is
+ * visible even where the var is undefined.
+ */
+const PAGE_TEXT_LINK_MARK_CLASS =
+  "underline underline-offset-2 text-[var(--coderso-link,#2563eb)] hover:opacity-80";
+
 const renderMarkedTextSegment = (
   text: string,
   marks: readonly PageTextMark[],
-  key: string
+  key: string,
+  isCanvas: boolean
 ): ReactNode => {
   const style: CSSProperties = {};
   const link = marks.find(
@@ -776,8 +788,30 @@ const renderMarkedTextSegment = (
     node = <em key={`${key}-italic`}>{node}</em>;
   }
   if (link) {
-    node = (
-      <a key={`${key}-link`} href={link.href} rel="nofollow noreferrer">
+    // In the editor canvas a linked run is painted as a NON-navigating span so a
+    // click selects the fragment / sets the caret instead of opening the URL (and
+    // never fires the beforeunload navigation), letting the author click-to-edit a
+    // link (TASK-478-02). It keeps the same link affordance (underline + link
+    // color + `data-page-text-mark="link"`) so linked runs stay visually obvious
+    // and distinctly outlined. The front + preview (runtime mode) still render a
+    // real, navigable `<a href>` with the security `rel`.
+    node = isCanvas ? (
+      <span
+        key={`${key}-link`}
+        className={PAGE_TEXT_LINK_MARK_CLASS}
+        data-page-text-mark="link"
+        data-page-editor-link-noop="true"
+      >
+        {node}
+      </span>
+    ) : (
+      <a
+        key={`${key}-link`}
+        href={link.href}
+        className={PAGE_TEXT_LINK_MARK_CLASS}
+        data-page-text-mark="link"
+        rel="nofollow noreferrer"
+      >
         {node}
       </a>
     );
@@ -797,6 +831,7 @@ const renderBlockTextMarks = (
   const marks = normalizeBlockTextMarks(text, block.props.marks);
   if (marks.length === 0) return renderBlockText(block, propPath, text, context);
 
+  const isCanvas = context.layoutMode === "canvas-device";
   const boundaries = Array.from(
     new Set([0, text.length, ...marks.flatMap((mark) => [mark.from, mark.to])])
   ).sort((left, right) => left - right);
@@ -811,7 +846,7 @@ const renderBlockTextMarks = (
       .sort((left, right) => textMarkRenderRank[left.type] - textMarkRenderRank[right.type]);
     children.push(
       activeMarks.length > 0
-        ? renderMarkedTextSegment(segment, activeMarks, `mark-${index}-${from}-${to}`)
+        ? renderMarkedTextSegment(segment, activeMarks, `mark-${index}-${from}-${to}`, isCanvas)
         : segment
     );
   }
