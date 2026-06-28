@@ -21,7 +21,7 @@ linked fragment on the canvas navigates (beforeunload) instead of selecting it.
 
 - `core/admin/ui/pages/editor/PageAuthoringCanvas.tsx`: the mark toolbar has bold,
   italic, color/highlight swatches, and a single **"Apply link"** button
-  (`data-page-editor-text-mark-button="link"`, `:568-572`) with a URL `<input>`
+  (`data-page-editor-text-mark-button="link"`, `:566-572`) with a URL `<input>`
   (`:557-565`). The Apply button is `disabled={!selectionRange ||
   linkHref.trim().length === 0}` — so an empty URL cannot be applied to clear a
   link, and there is **no remove/unlink button**.

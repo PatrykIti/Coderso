@@ -71,9 +71,11 @@ The editor already renders a floating bottom toolbar; the real change is **visua
 (adopt soft/violet tokens) + **structural** (consolidate the section/block controls
 into one dockable floating panel as the sole control surface, with a chrome
 show/hide toggle modeled on `CanvasEditor`). Keep the entire `PageEditor` hook block
-(state/effects/handlers, ~lines 718–2533) intact — that is the `PAGE_MODEL` + cache
-+ dirty-state contract. Only the returned `EditorShell` JSX (~2586–3258) and the
-panel/toolbar presentation change.
+(state/effects/handlers — the large block near the top of the component) intact —
+that is the `PAGE_MODEL` + cache + dirty-state contract. Only the returned
+`EditorShell` JSX (the component's `return (...)`) and the panel/toolbar presentation
+change. (Re-anchor by structure, not line numbers: `PageEditor.tsx` is ~4891 lines
+and shifts often.)
 
 ```tsx
 // core/admin/ui/pages/PageEditor.tsx — render restyle (logic unchanged)

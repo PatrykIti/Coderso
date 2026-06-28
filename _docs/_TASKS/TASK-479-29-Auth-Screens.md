@@ -88,7 +88,7 @@ routes, RBAC, cache, and adminPaths). Concretely for the auth surface:
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/auth-shell.test.tsx tests/vitest/ui/login.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/reset-password.test.tsx tests/vitest/ui/otp-input.test.tsx`
+- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/auth-shell.test.tsx tests/vitest/ui/login.test.tsx tests/vitest/ui/login-alerts.test.tsx tests/vitest/ui/reset-password.test.tsx tests/vitest/ui/otp-input.test.tsx tests/vitest/ui/two-factor.test.tsx tests/vitest/ui/set-password.test.tsx`
 - The existing auth render/behavior suites under `tests/vitest/ui/` and
   `tests/vitest/authUi/` must stay green (auth flow unchanged).
 - State clearly in the closeout if any command was skipped or could not run.

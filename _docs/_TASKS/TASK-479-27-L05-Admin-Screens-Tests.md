@@ -137,8 +137,9 @@ invented Location column). Keep each `test` independent
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/admin-screens-restyle.test.tsx`
-- Regression sweep (must stay green):
-  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/users-roles.test.tsx tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/audit-list.test.tsx tests/vitest/ui/access-logs.test.tsx tests/vitest/ui-integration/users.test.tsx tests/vitest/ui-integration/roles.test.tsx`
+- Regression sweep (must stay green) — the **union of every suite declared by
+  L01–L04** for this screen family:
+  `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/users-roles.test.tsx tests/vitest/ui/users-table.test.tsx tests/vitest/ui-integration/users.test.tsx tests/vitest/authUi/usersUi.test.tsx tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/permissions-matrix-leaf.test.tsx tests/vitest/ui/permissions-matrix-page-wave.test.tsx tests/vitest/ui-integration/roles.test.tsx tests/vitest/authUi/rolesUi.test.tsx tests/vitest/ui/audit-list.test.tsx tests/vitest/ui/audit-list-wave.test.tsx tests/vitest/ui/audit-table-wave.test.tsx tests/vitest/ui/audit-details.test.tsx tests/vitest/ui/audit-entry-actions.test.ts tests/vitest/ui/access-logs.test.tsx tests/vitest/ui/access-logs-table.test.tsx tests/vitest/admin/accessLogsClient.test.ts`
 - State explicitly in the closeout if any suite was skipped or could not run.
 
 ---

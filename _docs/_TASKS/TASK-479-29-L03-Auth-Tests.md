@@ -6,6 +6,7 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-479-29-L01, TASK-479-29-L02
 **Status:** ⏳ To Do
+**Parent Subtask:** TASK-479-29
 
 ---
 

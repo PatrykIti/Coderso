@@ -105,7 +105,7 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-480-01 | Feature-Completeness Audit & Widget Product Spec | High | Medium | Audit which admin screens are stub/partial vs complete + the dashboard-widget product spec. 2 leaves. |
 | TASK-480-02 | Widget & Data-Source Contract | High | Large | Schema-first widget/layout types + data-source registry over `dashboardService`. 3 leaves. |
 | TASK-480-03 | Layout Persistence & API | High | Large | Per-user `dashboard_layouts` table + internal admin routes (RBAC `dashboard:write`/CSRF) + cache. 5 leaves. |
-| TASK-480-04 | Widget Renderer Components | High | Medium | 8 token-styled widget renderers + registry/host. 3 leaves. |
+| TASK-480-04 | Widget Renderer Components | High | Medium | 9 token-styled widget renderers + registry/host. 3 leaves. |
 | TASK-480-05 | Dashboard Builder UI (edit mode) | High | Large | Grid + add/arrange/resize + floating configure panel; dirty-state + cache. 3 leaves. |
 | TASK-480-06 | Docs, Gates & Closure | Medium | Medium | `DASHBOARD_WIDGETS_SPEC.md` + API/cache/data-model docs + gate sweep. 2 leaves. |
 | TASK-479-05 | Design Tokens & Theming Alignment | High | Large | Extend `AdminThemeTokens` (primary-soft, info, *-soft, sidebar accents, shadows) + globals.css + dark mode. 7 leaves. |
@@ -172,7 +172,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-479 | Admin UI Visual Redesign — Prototype & Migration Plan | Medium | Very Large | In progress: runnable soft/violet redesign prototype delivered to `_docs/_PROTOTYPE/` (~60 screens, editors as previews; light+dark; ports to core via shared tokens/primitives). Children 01–04 done; 05–07 (port to core) To Do. Started 2026-06-27. |
+| TASK-479 | Admin UI Visual Redesign — Prototype & Migration Plan | Medium | Very Large | In progress: runnable soft/violet redesign prototype delivered to `_docs/_PROTOTYPE/` (~60 screens, editors as previews; light+dark; ports to core via shared tokens/primitives). Children 01–04 done; 05–29 (port to core) To Do. Started 2026-06-27. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |

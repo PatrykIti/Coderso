@@ -29,7 +29,10 @@ are preserved exactly — only the presentation changes.
   `handleToggleEnabled`, `handlePolicyChange`, `handleUpdateCheck`) intact.
 - **Owning module/service:** `core/admin/ui/store/PluginStorePage.tsx`,
   `core/admin/ui/store/StoreList.tsx`, `core/admin/ui/store/StoreDetail.tsx` (light
-  touch only), and `core/admin/ui/store/types.ts`. Consumes shell + patterns from
+  touch only), `core/admin/ui/store/types.ts`, and the **Installed-tab children**
+  `core/admin/ui/plugins/PluginList.tsx` + `core/admin/ui/plugins/PluginDetail.tsx`
+  (rendered by `PluginStorePage`'s Installed tab — the parent declares them in scope;
+  restyle them to match the Store tab). Consumes shell + patterns from
   TASK-479-06 (`@/ui/layouts/AdminShell`, `@/ui/shared/PageHeader`, shared
   `StatusBadge`/icon-tile helpers).
 - **Source-of-truth docs:** prototype screen
@@ -159,6 +162,19 @@ const [category, setCategory] = useState<string>("all"); // lazy init, UI-only
 </div>
 ```
 
+### Installed tab — `PluginList.tsx` + `PluginDetail.tsx` (`core/admin/ui/plugins/`)
+
+```tsx
+// PluginStorePage's "Installed" tab renders PluginList (master) + PluginDetail
+// (detail). Restyle ONLY — keep installedPlugins/selectedInstalled state, the
+// onSelect selection, and handleToggleEnabled/handlePolicyChange/handleUpdateCheck.
+// PluginList: reskin the installed rows into soft rounded-2xl cards (icon tile +
+//   name + version + StatusBadge for enabled/disabled/update-available) matching the
+//   Store-tab card look; keep the existing "No plugins installed" empty state.
+// PluginDetail: reskin the detail panel into a SectionCard stack (header + enable
+//   Switch + policy Select + update check) WITHOUT changing controls/handlers.
+```
+
 **Data flow:** `catalog`/`installedSeed` seeds → `useState` store/installed lists →
 `StoreList` filter (`query` + optional `category`) → `onSelect` sets
 `selectedStoreId` → `storeSelection` `useMemo` → `StoreDetail` Install/Update calls
@@ -187,7 +203,9 @@ must be left untouched if present, with no dirty-state overwrite and no refetch 
 **Regression-test shape:** see L03 — render `PluginStorePage` via `renderAdminUi` and
 assert: PageHeader title, featured banner present, category tab strip renders, the
 gallery renders one card per catalog item with security score + downloads + an
-Install/View affordance, and the Store/Installed tabs + "Search plugins" still exist.
+Install/View affordance, and the Store/Installed tabs + "Search plugins" still exist;
+switching to the **Installed** tab renders the restyled `PluginList` cards and, on
+select, the restyled `PluginDetail` panel (enable Switch + policy controls intact).
 
 ---
 

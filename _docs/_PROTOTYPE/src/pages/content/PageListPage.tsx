@@ -56,8 +56,17 @@ const columns: Column<Row>[] = [
       </span>
     ),
   },
-  { key: "updated", header: "Updated", render: (row) => <span className="text-sm text-muted-foreground">{row.updated}</span> },
-  { key: "views", header: "Views", align: "right", render: (row) => <span className="text-sm tabular-nums">{row.views}</span> },
+  {
+    key: "updated",
+    header: "Updated",
+    render: (row) => <span className="text-sm text-muted-foreground">{row.updated}</span>,
+  },
+  {
+    key: "views",
+    header: "Views",
+    align: "right",
+    render: (row) => <span className="text-sm tabular-nums">{row.views}</span>,
+  },
   {
     key: "actions",
     header: "",
@@ -98,7 +107,7 @@ export function PageListPage() {
             { value: "published", label: "Published", count: 71 },
             { value: "draft", label: "Drafts", count: 9 },
             { value: "scheduled", label: "Scheduled", count: 4 },
-            { value: "trash", label: "Trash", count: 2 },
+            { value: "archived", label: "Archived", count: 2 },
           ]}
         />
       </div>

@@ -127,6 +127,21 @@ return (
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
+      {/* Preset row = template cards (swatch cards, hover lift) — FIRST, matching the
+          prototype order (PageHeader → Presets → two-column body) */}
+      <section className="space-y-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {filteredTemplateCards.map((t) => (
+            <ThemeTemplateCard key={t.id} template={t} onEdit={() => openEditTemplate(rawTemplateById(t.id))} />
+          ))}
+          {!isLoading && filteredTemplateCards.length === 0 ? (
+            <EmptyState>{templateQuery.trim()
+              ? "No templates match your search."
+              : "No theme templates yet. Create your first template to unlock profiles."}</EmptyState>
+          ) : null}
+        </div>
+      </section>
+
       {/* Two-column body: live preview (left) + sections (right) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
         <SectionCard
@@ -161,20 +176,6 @@ return (
           ) : null}
         </div>
       </div>
-
-      {/* Preset row = template cards (swatch cards, hover lift) */}
-      <section className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {filteredTemplateCards.map((t) => (
-            <ThemeTemplateCard key={t.id} template={t} onEdit={() => openEditTemplate(rawTemplateById(t.id))} />
-          ))}
-          {!isLoading && filteredTemplateCards.length === 0 ? (
-            <EmptyState>{templateQuery.trim()
-              ? "No templates match your search."
-              : "No theme templates yet. Create your first template to unlock profiles."}</EmptyState>
-          ) : null}
-        </div>
-      </section>
 
       {/* Profiles section — preset cards w/ active ring + Activate (unchanged logic) */}
       <section className="space-y-4">

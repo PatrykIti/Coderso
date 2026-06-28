@@ -6,6 +6,7 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-29-L01
 **Status:** ⏳ To Do
+**Parent Subtask:** TASK-479-29
 
 ---
 

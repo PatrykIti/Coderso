@@ -48,7 +48,7 @@ existing tabbed CRUD or its flows.
   - Tokens: `_docs/_PROTOTYPE/src/styles/theme.css`, `_docs/DESIGN_TOKENS.md`
   - Data contract: `core/admin/services/bookingClient.ts` (record types +
     `getCachedBooking*` / `list*Cached`), `core/admin/ui/booking/bookingTypes.ts`
-  - Cache: `core/services/cachePolicy.ts` (`cacheKeys.booking*List`),
+  - Cache: `core/admin/services/cachePolicy.ts` (`cacheKeys.booking*List`),
     `core/admin/utils/cacheBus.ts` (`subscribeCacheEvents`)
   - Shell/patterns landed by parent: **TASK-479-05** owns the tokens/variants
     this screen consumes by exact name — `--primary-soft`/`--info`/`--success`/

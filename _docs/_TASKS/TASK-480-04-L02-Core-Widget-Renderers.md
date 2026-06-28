@@ -12,7 +12,7 @@
 
 ## Overview
 
-Implement the eight core renderer components registered in L01. Each is a thin,
+Implement the nine core renderer components registered in L01. Each is a thin,
 **schema-driven**, presentational component that reads its already-validated
 `widget.config` and its narrowed `DashboardWidgetData` variant and renders with
 the TASK-479 shared pattern library (`StatCard`, pure-SVG `charts`,
@@ -23,17 +23,25 @@ callbacks where needed), and run **no effects** — they are total functions of
 (`SiteHealthCard`, `SecurityStatusCard`, `RecentEditsTable`) are **generalized**
 into these renderers (config-driven), not duplicated.
 
-- **Goal:** Eight token-styled renderers — `StatWidget`, `ChartWidget`,
-  `RecentActivityWidget`, `ContentTypeCountWidget`, `StorageWidget`,
-  `SiteHealthWidget`, `QuickActionsWidget`, `ContentQueryWidget` — that the host
-  dispatches to, each covering its normal render plus graceful per-renderer
-  degenerate cases (the host already covers top-level loading/empty/error).
+- **Goal:** Nine token-styled renderers — `TotalsCountersWidget`,
+  `ContentTypeCountsWidget`, `ContentOverTimeWidget`, `RecentActivityWidget`,
+  `StorageUsageWidget`, `SiteHealthWidget`, `SecuritySummaryWidget`,
+  `QuickActionsWidget`, `ContentQueryWidget` — one per canonical
+  `DashboardWidgetType` (480-02), that the host dispatches to, each covering its
+  normal render plus graceful per-renderer degenerate cases (the host already
+  covers top-level loading/empty/error).
 - **Owning module/service:** `core/admin/ui/dashboard/widgets/renderers/*`
-  (`StatWidget.tsx`, `ChartWidget.tsx`, `RecentActivityWidget.tsx`,
-  `ContentTypeCountWidget.tsx`, `StorageWidget.tsx`, `SiteHealthWidget.tsx`,
+  (`TotalsCountersWidget.tsx`, `ContentTypeCountsWidget.tsx`,
+  `ContentOverTimeWidget.tsx`, `RecentActivityWidget.tsx`,
+  `StorageUsageWidget.tsx`, `SiteHealthWidget.tsx`, `SecuritySummaryWidget.tsx`,
   `QuickActionsWidget.tsx`, `ContentQueryWidget.tsx`).
 - **Source-of-truth docs:**
   - Config + data union (import only): `core/services/dashboard/dashboardTypes.ts` (TASK-480-02).
+    Renderers are keyed on the canonical kebab `DashboardWidgetType`
+    (`totals-counters`, `content-type-counts`, `content-over-time`,
+    `recent-activity`, `storage-usage`, `site-health`, `security-summary`,
+    `quick-actions`, `content-query`) imported from this owner — they never
+    re-declare the type, its `config.kind`, or the data discriminant.
   - Shared patterns: `core/admin/ui/shared/{StatCard,Charts,StatusBadge,DataTable,EmptyState}.tsx` (TASK-479-06-L02).
   - Prototype reference: `_docs/_PROTOTYPE/src/pages/DashboardPage.tsx` (Stat grid, AreaChart/Donut, activity feed, tasks/links).
   - Cards being generalized: `core/admin/ui/dashboard/{SiteHealthCard,SecurityStatusCard,RecentEditsTable,StatCard}.tsx`.
@@ -62,7 +70,7 @@ into these renderers (config-driven), not duplicated.
 - **Secret handling:** render only the redacted fields present in
   `DashboardWidgetData` (e.g. `RecentActivity` uses `author.name ?? author.email`
   exactly as the existing `RecentEditsTable` does — no extra PII). Untrusted
-  text (e.g. a `contentQuery` cell value) is rendered as **text**; never
+  text (e.g. a `content-query` cell value) is rendered as **text**; never
   `dangerouslySetInnerHTML`.
 
 ---
@@ -70,33 +78,51 @@ into these renderers (config-driven), not duplicated.
 ## Implementation Pseudocode
 
 All renderers use the L01 prop shape
-`DashboardWidgetRendererProps<"<type>"> = { widget, data }` (already narrowed).
-Group by family.
+`DashboardWidgetRendererProps<"<type>"> = { widget, data }` (already narrowed),
+where `<type>` is a canonical kebab `DashboardWidgetType` from 480-02. Group by
+family.
 
-### Family A — Counters: `StatWidget`, `ContentTypeCountWidget`
+### Family A — Counters: `TotalsCountersWidget`, `ContentTypeCountsWidget`
 
 ```tsx
-// renderers/StatWidget.tsx — data: { type:"stat"; value:number; formatted:string;
-//   delta?: { value:number; trend:"up"|"down"|"flat"; label?:string }; spark?: number[] }
-// config: { metric: StatMetricId; accent?: "primary"|"success"|"warning"; format?: "number"|"bytes"|"percent" }
-export function StatWidget({ widget, data }: DashboardWidgetRendererProps<"stat">) {
+// renderers/TotalsCountersWidget.tsx — data: { type:"totals-counters";
+//   counters: { key:"pages"|"entries"|"media"|"users"; label:string; formatted:string; value:number;
+//     delta?: { value:number; trend:"up"|"down"|"flat"; label?:string }; spark?: number[] }[] }
+// config (kind:"totals-counters"): { metrics?: Array<"pages"|"entries"|"media"|"users">;  // selection applied upstream
+//   accent?: "primary"|"success"|"warning"; format?: "number"|"bytes"|"percent" }          // presentation hints, kept
+export function TotalsCountersWidget({ widget, data }: DashboardWidgetRendererProps<"totals-counters">) {
   return (
-    <StatCard                                   // shared StatCard (479-06-L02)
-      label={widget.title}
-      value={data.formatted}                    // formatting done in 480-02; renderer just displays
-      delta={data.delta?.label ?? formatDelta(data.delta)}
-      trend={data.delta?.trend ?? "flat"}
-      accent={widget.config.accent ?? "primary"}
-      spark={data.spark}                         // omit prop when no real series → no sparkline (never faked)
-    />
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {data.counters.map((c) => (
+        <StatCard                                 // shared StatCard (479-06-L02), one per selected metric
+          key={c.key}
+          label={c.label}
+          value={c.formatted}                     // formatting done in 480-02; renderer just displays
+          delta={c.delta?.label ?? formatDelta(c.delta)}
+          trend={c.delta?.trend ?? "flat"}
+          accent={widget.config.accent ?? "primary"}
+          spark={c.spark}                          // omit prop when no real series → no sparkline (never faked)
+        />
+      ))}
+    </div>
   );
 }
 
-// renderers/ContentTypeCountWidget.tsx — data: { type:"contentTypeCount";
-//   counts: { slug:string; label:string; count:number; href?:string }[] }
-// config: { display:"bars"|"list"; limit?:number }   (limit already applied upstream)
-export function ContentTypeCountWidget({ widget, data }: DashboardWidgetRendererProps<"contentTypeCount">) {
+// renderers/ContentTypeCountsWidget.tsx — data: { type:"content-type-counts";
+//   counts: { slug:string; label:string; count:number; href?:string }[];
+//   segments?: { label:string; value:number; color:string }[] }  // donut breakdown (folded from old chart.breakdown)
+// config (kind:"content-type-counts"): { contentTypeIds?: string[]; limit?:number;  // limit/selection applied upstream
+//   display?:"bars"|"list"|"donut" }
+export function ContentTypeCountsWidget({ widget, data }: DashboardWidgetRendererProps<"content-type-counts">) {
   const max = Math.max(...data.counts.map((c) => c.count), 1);
+  if (widget.config.display === "donut") {        // counts grouped by type/status, rendered as Donut
+    return (
+      <div className="flex flex-col items-center gap-4">
+        <Donut segments={(data.segments ?? []).map((s) => ({ value: s.value, color: s.color, label: s.label }))} />
+        <DonutLegend segments={data.segments ?? []} />
+      </div>
+    );
+  }
   if (widget.config.display === "bars") {
     return <BarChart data={data.counts.map((c) => c.count)} labels={data.counts.map((c) => c.label)} />;
   }
@@ -116,40 +142,36 @@ export function ContentTypeCountWidget({ widget, data }: DashboardWidgetRenderer
 }
 ```
 
-### Family B — Charts: `ChartWidget`
+### Family B — Timeseries: `ContentOverTimeWidget`
 
 ```tsx
-// renderers/ChartWidget.tsx — config: { kind:"area"|"bar"|"donut"; range?:"24h"|"7d"|"30d" }
-// data: { type:"chart"; kind:"area"|"bar"|"donut";
+// renderers/ContentOverTimeWidget.tsx — config (kind:"content-over-time"):
+//   { rangeDays?:number; bucket?:"day"|"week"; variant?:"area"|"bar" }  // "variant" = SVG shape, NOT the type discriminant
+// data: { type:"content-over-time"; variant:"area"|"bar";
 //         series: { id:string; label:string; color?:string; points:number[] }[];
-//         categories?: string[]; segments?: { label:string; value:number; color:string }[] }
-export function ChartWidget({ widget, data }: DashboardWidgetRendererProps<"chart">) {
-  switch (data.kind) {                          // trust data.kind (host already matched type)
+//         categories?: string[] }
+export function ContentOverTimeWidget({ widget, data }: DashboardWidgetRendererProps<"content-over-time">) {
+  switch (data.variant) {                        // trust data.variant (host already matched type)
     case "area":
       return <AreaChart data={data.series[0]?.points ?? []} />;        // shared pure-SVG AreaChart
     case "bar":
       return <BarChart data={data.series[0]?.points ?? []} labels={data.categories} />;
-    case "donut":
-      return (
-        <div className="flex flex-col items-center gap-4">
-          <Donut segments={(data.segments ?? []).map((s) => ({ value: s.value, color: s.color, label: s.label }))} />
-          <DonutLegend segments={data.segments ?? []} />
-        </div>
-      );
-    default: { const _never: never = data.kind; return null; }
+    default: { const _never: never = data.variant; return null; }
   }
 }
-// NOTE: charts are decorative SVG (role="img" aria-hidden); pair with a visually-hidden
-// data summary <ul> for a11y so screen readers get the numbers (chart itself is hidden).
+// NOTE: the donut/breakdown shape is owned by ContentTypeCountsWidget (canonical
+// content-type-counts) — content-over-time is timeseries only, never a donut.
+// NOTE: the graphic is decorative SVG (role="img" aria-hidden); pair with a
+// visually-hidden data summary <ul> so screen readers still get the numbers.
 ```
 
 ### Family C — Lists / Tables: `RecentActivityWidget`, `ContentQueryWidget`
 
 ```tsx
-// renderers/RecentActivityWidget.tsx — data: { type:"recentActivity";
+// renderers/RecentActivityWidget.tsx — data: { type:"recent-activity";
 //   items: DashboardRecentEdit[] }  (reuses the existing recent-edit shape)
-// config: { limit?:number; types?: ("page"|"entry"|"media")[] }  (applied upstream)
-export function RecentActivityWidget({ data }: DashboardWidgetRendererProps<"recentActivity">) {
+// config (kind:"recent-activity"): { limit?:number; types?: ("page"|"entry"|"media")[] }  (applied upstream)
+export function RecentActivityWidget({ data }: DashboardWidgetRendererProps<"recent-activity">) {
   return (
     <ul className="divide-y divide-border">
       {data.items.map((item) => (
@@ -175,10 +197,11 @@ export function RecentActivityWidget({ data }: DashboardWidgetRendererProps<"rec
   //   unknown → undefined → render title as plain <span> (never a raw href).
 }
 
-// renderers/ContentQueryWidget.tsx — config: { typeSlug:string; columns: ColumnDef[];
-//   limit?:number; sort?:{ field:string; dir:"asc"|"desc" } }  (query resolved upstream)
-// data: { type:"contentQuery"; columns: { key:string; label:string }[]; rows: Record<string,string|number>[] }
-export function ContentQueryWidget({ data }: DashboardWidgetRendererProps<"contentQuery">) {
+// renderers/ContentQueryWidget.tsx — config (kind:"content-query"):
+//   { contentTypeId: string|null; status?:"draft"|"published"|"scheduled"|"archived"|"active";
+//     limit?:number; sort?:"updatedAt"|"createdAt"|"title"; order?:"asc"|"desc" }  (query resolved + clamped upstream)
+// data: { type:"content-query"; columns: { key:string; label:string }[]; rows: Record<string,string|number>[] }
+export function ContentQueryWidget({ data }: DashboardWidgetRendererProps<"content-query">) {
   return (
     <DataTable                                         // shared generic DataTable (479-06-L02)
       columns={data.columns.map((c) => ({ key: c.key, header: c.label, cell: (row) => String(row[c.key] ?? "") }))}
@@ -189,12 +212,12 @@ export function ContentQueryWidget({ data }: DashboardWidgetRendererProps<"conte
 }
 ```
 
-### Family D — Health / Usage: `StorageWidget`, `SiteHealthWidget`
+### Family D — Health / Usage: `StorageUsageWidget`, `SiteHealthWidget`, `SecuritySummaryWidget`
 
 ```tsx
-// renderers/StorageWidget.tsx — data: { type:"storage"; usedBytes:number;
+// renderers/StorageUsageWidget.tsx — data: { type:"storage-usage"; usedBytes:number;
 //   limitBytes:number|null; usedPercent:number|null; breakdown?: { label:string; bytes:number }[] }
-export function StorageWidget({ data }: DashboardWidgetRendererProps<"storage">) {
+export function StorageUsageWidget({ data }: DashboardWidgetRendererProps<"storage-usage">) {
   const display = data.usedPercent === null ? `${formatBytes(data.usedBytes)} (no limit)` : `${data.usedPercent}%`;
   return (
     <div className="space-y-3">
@@ -208,9 +231,32 @@ export function StorageWidget({ data }: DashboardWidgetRendererProps<"storage">)
   );
 }
 
-// renderers/SiteHealthWidget.tsx — data: { type:"siteHealth"; security: DashboardSecuritySummary }
-// Generalizes SecurityStatusCard/SiteHealthCard into a panel body.
-export function SiteHealthWidget({ data }: DashboardWidgetRendererProps<"siteHealth">) {
+// renderers/SiteHealthWidget.tsx — data: { type:"site-health";
+//   security: DashboardSecuritySummary; storage?: { usedPercent:number|null } }
+// Storage + security ROLLUP (compact). Generalizes SiteHealthCard into a panel body.
+export function SiteHealthWidget({ data }: DashboardWidgetRendererProps<"site-health">) {
+  const { security } = data;
+  const passing = security.checks.length - security.issues;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">{passing}/{security.checks.length} checks passing</span>
+        <StatusBadge status={security.status === "ok" ? "published" : security.status === "warning" ? "pending" : "draft"} />
+      </div>
+      {data.storage ? (
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Storage used</span>
+          <span className="font-medium">{data.storage.usedPercent === null ? "—" : `${data.storage.usedPercent}%`}</span>
+        </div>
+      ) : null}
+      <Progress value={data.storage?.usedPercent ?? 0} className="h-2" />   {/* reuse ui/progress */}
+    </div>
+  );
+}
+
+// renderers/SecuritySummaryWidget.tsx — data: { type:"security-summary"; security: DashboardSecuritySummary }
+// Detailed security-checks list. Generalizes SecurityStatusCard into a panel body.
+export function SecuritySummaryWidget({ data }: DashboardWidgetRendererProps<"security-summary">) {
   const { security } = data;
   const passing = security.checks.length - security.issues;
   return (
@@ -235,10 +281,10 @@ export function SiteHealthWidget({ data }: DashboardWidgetRendererProps<"siteHea
 ### Family E — Actions: `QuickActionsWidget`
 
 ```tsx
-// renderers/QuickActionsWidget.tsx — config + data: { type:"quickActions";
+// renderers/QuickActionsWidget.tsx — config (kind:"quick-actions") + data: { type:"quick-actions";
 //   actions: { id: QuickActionId; label:string; target: AdminPathKey; icon?:string }[] }
 // `target` is an ALLOW-LISTED adminPaths key resolved in 480-02 — never a raw URL.
-export function QuickActionsWidget({ data }: DashboardWidgetRendererProps<"quickActions">) {
+export function QuickActionsWidget({ data }: DashboardWidgetRendererProps<"quick-actions">) {
   return (
     <div className="grid grid-cols-2 gap-2">
       {data.actions.map((a) => {
@@ -254,7 +300,7 @@ export function QuickActionsWidget({ data }: DashboardWidgetRendererProps<"quick
 ```
 
 **Data flow:** host hands `{widget, data}` (narrowed) → renderer reads
-`widget.config` for presentation choices (display mode, accent, chart kind) and
+`widget.config` for presentation choices (display mode, accent, timeseries variant) and
 `data` for values → composes shared patterns. **No fetch, no effect**; formatting
 (`formatted`, `usedPercent`, relative times where centralized) is done upstream in
 480-02 — renderers only display, and use small local pure formatters
@@ -266,8 +312,8 @@ text/disabled). True loading/empty/error are the host’s job (L01).
 
 **Regression-test shape (delivered in L03):** one render test per renderer
 asserting (a) normal data renders the expected marker/value, (b) the degenerate
-edge renders without throwing (null storage limit, empty chart series, unknown
-quick-action target → disabled button, content-query cell renders as text).
+edge renders without throwing (null storage limit, empty content-over-time series,
+unknown quick-action target → disabled button, content-query cell renders as text).
 
 ---
 

@@ -59,27 +59,28 @@ live arbitrary URL.
 import type { DashboardWidget, DashboardWidgetData } from "../../../core/services/dashboard/dashboardTypes";
 
 export const widget = <T extends DashboardWidget["type"]>(type: T, config: object = {}): DashboardWidget =>
-  ({ id: `w-${type}`, type, title: `${type} panel`, config, layout: { x: 0, y: 0, w: 4, h: 2 } } as DashboardWidget);
+  ({ id: `w-${type}`, type, title: `${type} panel`, config, position: { x: 0, y: 0, w: 4, h: 2 } } as DashboardWidget);
 
 export const data = {
-  stat:             { type: "stat", value: 86, formatted: "86", delta: { value: 3, trend: "up", label: "+3" }, spark: [1,2,3,4] },
-  chartArea:        { type: "chart", kind: "area", series: [{ id: "v", label: "Visitors", points: [4,8,6,10] }] },
-  chartDonut:       { type: "chart", kind: "donut", series: [], segments: [{ label: "Pages", value: 48, color: "var(--primary)" }] },
-  recentActivity:   { type: "recentActivity", items: [{ id: "p1", type: "page", title: "Pricing", path: "/pricing", status: "published", updatedAt: new Date().toISOString(), author: { id: null, name: "Maria", email: null } }] },
-  contentTypeCount: { type: "contentTypeCount", counts: [{ slug: "post", label: "Posts", count: 26 }, { slug: "page", label: "Pages", count: 48 }] },
-  storageNoLimit:   { type: "storage", usedBytes: 1024 * 1024, limitBytes: null, usedPercent: null },
-  siteHealth:       { type: "siteHealth", security: { status: "warning", issues: 1, checks: [{ id: "csrf", label: "CSRF", status: "ok", detail: "Enabled." }, { id: "headers", label: "Headers", status: "warning", detail: "Incomplete." }] } },
-  quickActions:     { type: "quickActions", actions: [{ id: "new-page", label: "New page", target: "pages" }, { id: "bogus", label: "Broken", target: "__unknown__" }] },
-  contentQuery:     { type: "contentQuery", columns: [{ key: "title", label: "Title" }], rows: [{ title: "Hello <b>World</b>" }] },
+  totals:           { type: "totals-counters", value: 86, formatted: "86", delta: { value: 3, trend: "up", label: "+3" }, spark: [1,2,3,4] },
+  overTimeArea:     { type: "content-over-time", kind: "area", series: [{ id: "v", label: "Visitors", points: [4,8,6,10] }] },
+  overTimeDonut:    { type: "content-over-time", kind: "donut", series: [], segments: [{ label: "Pages", value: 48, color: "var(--primary)" }] },
+  recentEdits:      { type: "recent-activity", items: [{ id: "p1", type: "page", title: "Pricing", path: "/pricing", status: "published", updatedAt: new Date().toISOString(), author: { id: null, name: "Maria", email: null } }] },
+  typeCounts:       { type: "content-type-counts", counts: [{ slug: "post", label: "Posts", count: 26 }, { slug: "page", label: "Pages", count: 48 }] },
+  storageNoLimit:   { type: "storage-usage", usedBytes: 1024 * 1024, limitBytes: null, usedPercent: null },
+  health:           { type: "site-health", security: { status: "warning", issues: 1, checks: [{ id: "csrf", label: "CSRF", status: "ok", detail: "Enabled." }, { id: "headers", label: "Headers", status: "warning", detail: "Incomplete." }] } },
+  security:         { type: "security-summary", status: "warning", issues: 1, checks: [{ id: "csrf", label: "CSRF", status: "ok", detail: "Enabled." }, { id: "headers", label: "Headers", status: "warning", detail: "Incomplete." }] },
+  actions:          { type: "quick-actions", actions: [{ id: "new-page", label: "New page", target: "pages" }, { id: "bogus", label: "Broken", target: "__unknown__" }] },
+  query:            { type: "content-query", columns: [{ key: "title", label: "Title" }], rows: [{ title: "Hello <b>World</b>" }] },
 } satisfies Record<string, DashboardWidgetData>;
 
 // degenerate/empty variants for the host empty-state + edge tests
 export const emptyData = {
-  recentActivity:   { type: "recentActivity", items: [] },
-  contentTypeCount: { type: "contentTypeCount", counts: [] },
-  contentQuery:     { type: "contentQuery", columns: [{ key: "title", label: "Title" }], rows: [] },
-  quickActions:     { type: "quickActions", actions: [] },
-  chartEmpty:       { type: "chart", kind: "area", series: [{ id: "v", label: "v", points: [] }] },
+  recentEdits:      { type: "recent-activity", items: [] },
+  typeCounts:       { type: "content-type-counts", counts: [] },
+  query:            { type: "content-query", columns: [{ key: "title", label: "Title" }], rows: [] },
+  actions:          { type: "quick-actions", actions: [] },
+  overTimeEmpty:    { type: "content-over-time", kind: "area", series: [{ id: "v", label: "v", points: [] }] },
 } satisfies Record<string, DashboardWidgetData>;
 ```
 
@@ -99,10 +100,10 @@ describe("dashboard widget registry", () => {
     for (const type of DASHBOARD_WIDGET_TYPES) expect(DASHBOARD_WIDGET_RENDERERS[type]).toBeTypeOf("function");
   });
   it("isWidgetDataEmpty: true for empty lists/series, false for counters/health", () => {
-    expect(isWidgetDataEmpty(emptyData.recentActivity)).toBe(true);
-    expect(isWidgetDataEmpty(emptyData.chartEmpty)).toBe(true);
-    expect(isWidgetDataEmpty(data.stat)).toBe(false);
-    expect(isWidgetDataEmpty(data.siteHealth)).toBe(false);
+    expect(isWidgetDataEmpty(emptyData.recentEdits)).toBe(true);
+    expect(isWidgetDataEmpty(emptyData.overTimeEmpty)).toBe(true);
+    expect(isWidgetDataEmpty(data.totals)).toBe(false);
+    expect(isWidgetDataEmpty(data.health)).toBe(false);
   });
 });
 ```
@@ -117,66 +118,70 @@ import { widget, data, emptyData } from "../utils/dashboardWidgetFixtures";
 
 // ── Host states ──────────────────────────────────────────────────────────────
 test("host: loading → skeleton", () => {
-  const html = renderAdminUi(<DashboardWidgetHost widget={widget("stat")} state={{ status: "loading" }} />);
+  const html = renderAdminUi(<DashboardWidgetHost widget={widget("totals-counters")} state={{ status: "loading" }} />);
   expect(html).toContain("widget-skeleton");
   expect(html).toContain("aria-busy");
 });
 test("host: error → message, no throw", () => {
-  const html = renderAdminUi(<DashboardWidgetHost widget={widget("stat")} state={{ status: "error", message: "Could not load." }} />);
+  const html = renderAdminUi(<DashboardWidgetHost widget={widget("totals-counters")} state={{ status: "error", message: "Could not load." }} />);
   expect(html).toContain("widget-error");
   expect(html).toContain("Could not load.");
 });
 test("host: ready+empty → empty state", () => {
-  const html = renderAdminUi(<DashboardWidgetHost widget={widget("recentActivity")} state={{ status: "ready", data: emptyData.recentActivity }} />);
+  const html = renderAdminUi(<DashboardWidgetHost widget={widget("recent-activity")} state={{ status: "ready", data: emptyData.recentEdits }} />);
   expect(html).toContain("widget-empty");
 });
 test("host: data/type mismatch → safe error fallback (no throw)", () => {
-  const html = renderAdminUi(<DashboardWidgetHost widget={widget("stat")} state={{ status: "ready", data: data.recentActivity }} />);
+  const html = renderAdminUi(<DashboardWidgetHost widget={widget("totals-counters")} state={{ status: "ready", data: data.recentEdits }} />);
   expect(html).toContain("widget-error");          // does not render foreign data, does not throw
 });
 test("host: ready+valid → renderer output, with title", () => {
-  const html = renderAdminUi(<DashboardWidgetHost widget={widget("stat")} state={{ status: "ready", data: data.stat }} />);
-  expect(html).toContain("stat panel");            // SectionCard title
-  expect(html).toContain("86");                    // StatWidget value
+  const html = renderAdminUi(<DashboardWidgetHost widget={widget("totals-counters")} state={{ status: "ready", data: data.totals }} />);
+  expect(html).toContain("totals-counters panel"); // SectionCard title
+  expect(html).toContain("86");                    // TotalsCounters value
 });
 
 // ── Per-renderer (normal + degenerate) ───────────────────────────────────────
 const ready = (w: Parameters<typeof widget>[0], d: any) =>
   renderAdminUi(<DashboardWidgetHost widget={widget(w)} state={{ status: "ready", data: d }} />);
 
-test("ChartWidget: area renders; donut renders legend", () => {
-  expect(() => ready("chart", data.chartArea)).not.toThrow();
-  expect(ready("chart", data.chartDonut)).toContain("Pages");
+test("ContentOverTimeWidget: area renders; donut renders legend", () => {
+  expect(() => ready("content-over-time", data.overTimeArea)).not.toThrow();
+  expect(ready("content-over-time", data.overTimeDonut)).toContain("Pages");
 });
-test("ContentTypeCountWidget: list shows counts", () => {
-  expect(ready("contentTypeCount", data.contentTypeCount)).toContain("Posts");
+test("ContentTypeCountsWidget: list shows counts", () => {
+  expect(ready("content-type-counts", data.typeCounts)).toContain("Posts");
 });
 test("RecentActivityWidget: title + author + adminPaths link", () => {
-  const html = ready("recentActivity", data.recentActivity);
+  const html = ready("recent-activity", data.recentEdits);
   expect(html).toContain("Pricing");
   expect(html).toContain("Maria");
   expect(html).toContain("/admin");                // AdminLink resolved via adminPaths (no raw /pricing literal as the editor href)
 });
-test("StorageWidget: null limit renders '(no limit)', no throw", () => {
-  expect(ready("storage", data.storageNoLimit)).toContain("no limit");
+test("StorageUsageWidget: null limit renders '(no limit)', no throw", () => {
+  expect(ready("storage-usage", data.storageNoLimit)).toContain("no limit");
 });
 test("SiteHealthWidget: shows passing ratio + check labels", () => {
-  const html = ready("siteHealth", data.siteHealth);
+  const html = ready("site-health", data.health);
   expect(html).toContain("1/2");
   expect(html).toContain("CSRF");
 });
+test("SecuritySummaryWidget: shows issue count + check labels", () => {
+  const html = ready("security-summary", data.security);
+  expect(html).toContain("CSRF");
+});
 test("QuickActionsWidget: known target links, unknown target disabled", () => {
-  const html = ready("quickActions", data.quickActions);
+  const html = ready("quick-actions", data.actions);
   expect(html).toContain("New page");
   expect(html).toContain("disabled");              // the "__unknown__" target renders disabled, not a live URL
 });
 test("ContentQueryWidget: cell value rendered as TEXT (no HTML injection)", () => {
-  const html = ready("contentQuery", data.contentQuery);
+  const html = ready("content-query", data.query);
   expect(html).toContain("Hello &lt;b&gt;World&lt;/b&gt;"); // escaped — never injected as markup
   expect(html).not.toContain("<b>World</b>");
 });
 test("ContentQueryWidget: empty rows → host empty state", () => {
-  expect(ready("contentQuery", emptyData.contentQuery)).toContain("widget-empty");
+  expect(ready("content-query", emptyData.query)).toContain("widget-empty");
 });
 ```
 

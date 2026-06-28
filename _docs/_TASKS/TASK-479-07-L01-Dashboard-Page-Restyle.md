@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Dashboard
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-07
 
@@ -70,7 +70,7 @@ routes, RBAC, cache, and adminPaths). Concretely:
 
 | Prototype section | Real source in `DashboardPayload` | Decision |
 |-------------------|-----------------------------------|----------|
-| Stat-card grid (4) | `totals.pages`, `totals.entries`, `totals.media`, `totals.users` + `storage` | Port with real values; sparkline optional (see below) |
+| Stat-card grid (4) | `totals.pages`, `totals.entries`, `totals.media`, `totals.users` | Port with real values; the 4 cards map 1:1 to the four `totals` fields — `storage` is its own Site-health card (row below), not a stat card; sparkline optional (see below) |
 | Content breakdown Donut | `totals` (pages / entries / media / users) | Port with real totals as segments |
 | Recently edited list | `recentEdits[]` (title, path, status, author, updatedAt) | Restyle existing `RecentEditsTable` rows; map `status` (the real `DashboardRecentEditStatus`: `draft`/`published`/`scheduled`/`archived`/`active`) via the shared `StatusBadge` (479-06-L02), keeping the existing local status→class map for any value the shared badge doesn't cover (e.g. `active`) — invent no new statuses |
 | Site health card | `storage` | Restyle existing `SiteHealthCard` inside a `SectionCard` |
@@ -136,8 +136,11 @@ export function StatCard({ label, value, delta, icon, accent = "primary", trend 
 
 ```tsx
 // core/admin/ui/dashboard/DashboardPage.tsx
-// UNCHANGED: state (data/isLoading/error), the `refresh` useCallback, the
-// `active`-flag mount effect, and the `cards` useMemo derived from totals/storage.
+// UNCHANGED: state (data/isLoading/error), the `refresh` useCallback, and the
+// `active`-flag mount effect. The `cards` useMemo builds 4 stat cards — one per
+// `totals` field (pages/entries/media/users) — from the SAME `getDashboardData()`
+// payload (data source unchanged); `storage` renders in the SiteHealthCard below,
+// not as a stat card.
 // Only the returned JSX changes. No sync setState in effects; keep render-time
 // derivation (cards via useMemo) per ESLint 9 react-hooks rules.
 
@@ -188,8 +191,8 @@ return (
 ```
 
 **Data flow:** mount effect calls `getDashboardData()` (unchanged) → resolves into
-`data` → `cards` useMemo derives real stat values from `totals`/`storage` →
-`donutSegments(totals)` derives donut from real counts → `RecentEditsTable`,
+`data` → `cards` useMemo derives the 4 stat values from `totals` (pages/entries/media/users) →
+`donutSegments(totals)` (`[{label:"Pages",value:totals?.pages??0}, …one per totals field]`) derives the donut from real counts → `RecentEditsTable`,
 `SiteHealthCard`, `SecurityStatusCard` consume their real slices. No new fetches.
 
 **Error handling:** preserve the existing `error` string state and the

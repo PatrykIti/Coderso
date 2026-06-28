@@ -32,7 +32,7 @@ content-over-time) plus a **safe, clamped content-query** resolver. Expose
   - Existing readers reused/exported from
     `core/services/dashboard/dashboardService.ts`
     (`getDashboardTotals`, `getRecentEdits`, `getStorageSummary`,
-    `buildSecuritySummary`, `calculateUsedPercent`).
+    `buildSecuritySummary`).
   - Widget-data result types → extend
     `core/services/dashboard/dashboardTypes.ts`.
 - **Source-of-truth docs:** `_docs/DASHBOARD_WIDGETS_SPEC.md`,

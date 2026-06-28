@@ -41,7 +41,7 @@ color); it is indistinguishable from normal text.
 
 ## Regression-test shape
 
-- `tests/vitest/services/page-renderer-v2.test.ts`: a `link` mark renders an `<a>`
+- `tests/vitest/pages/page-renderer-v2.test.tsx`: a `link` mark renders an `<a>`
   with the link `className`/decoration (assert the class/`data-page-text-mark` is
   present) and still carries `rel="nofollow noreferrer"` + the sanitized href.
 

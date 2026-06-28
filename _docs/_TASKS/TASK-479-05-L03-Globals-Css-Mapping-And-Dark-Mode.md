@@ -277,6 +277,6 @@ output / `globals.css` as TEXT — do NOT use jsdom `getComputedStyle`
 ## Documentation Updates Required
 
 - Update `_docs/_TASKS/README.md` board + statistics on status change.
-- `_docs/DESIGN_TOKENS.md` "Admin UI mapuje tokeny na zmienne shadcn …" line and
-  the new dark-mode section are updated by L07; cross-link this leaf.
+- `_docs/DESIGN_TOKENS.md`: the "Admin UI maps tokens to shadcn variables" section
+  (currently ~line 100) and the new dark-mode section are updated by L07; cross-link this leaf.
 - Changelog entry on closure linking **TASK-479** + this leaf.

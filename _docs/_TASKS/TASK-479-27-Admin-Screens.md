@@ -88,8 +88,10 @@ fields enter client cache, logs, or debug payloads.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui/users-roles.test.tsx tests/vitest/ui/permissions-matrix.test.tsx tests/vitest/ui/audit-list.test.tsx tests/vitest/ui/access-logs.test.tsx tests/vitest/ui-integration/users.test.tsx tests/vitest/ui-integration/roles.test.tsx`
-- New restyle suite added in L05 (see that leaf for the exact path), run with the
-  same `NODE_ENV=test vitest run --config vitest.config.ts <suite>` form.
+- The list above is **representative**; `TASK-479-27-L05` owns the comprehensive
+  per-screen regression sweep (the union of the L01–L04 suites) plus the new restyle
+  suite — see that leaf for the exact paths, run with the same
+  `NODE_ENV=test vitest run --config vitest.config.ts <suites>` form.
 - All pre-existing Admin-screen Vitest suites must stay green (the restyle must
   not alter observable hydration, partial-read modes, dirty-state protection,
   permission diff/save, export, revoke, or pagination behavior).

@@ -62,8 +62,9 @@ widget with the draft config before commit.
   on `dashboard:write`.
 - **RBAC:** `dashboard:write` to author (gated upstream in L01); `content:read` for
   the cached content-type list used by selectors. The catalog must only list widget
-  types the current permission set can render data for (e.g. hide a users-counter
-  widget without `users:read`) — a presentational guard; the data route is the boundary.
+  types the current permission set can render data for (e.g. hide a
+  `totals-counters` widget surfacing user counts without `users:read`) — a
+  presentational guard; the data route is the boundary.
 - **CSRF / rate-limit:** n/a here (no direct writes; the `contentTypes` read is a
   cached `GET`). The eventual Save carries CSRF in L01.
 - **Validation:** config edits pass through `normalizeDashboardWidgetConfig` (the
@@ -96,6 +97,9 @@ type WidgetRegistryEntry = {
   configFields: WidgetConfigField[];      // drives the schema-driven form below
   Component: WidgetComponent;             // rendered by DashboardWidgetHost (also used for preview)
 };
+// keyed over the canonical 9 `DashboardWidgetType` values; each entry's
+// `defaultConfig` is the `kind`-discriminated `DashboardWidgetConfig` from the
+// TASK-480-02 owner (`core/services/dashboard`) — imported, never re-declared here.
 export const widgetRegistry: Record<DashboardWidgetType, WidgetRegistryEntry>;
 ```
 
@@ -142,8 +146,8 @@ function instantiate(e: WidgetRegistryEntry): DashboardWidgetInstance {
   return {
     id: nanoid(),
     type: e.type,
-    config: e.defaultConfig,                 // already schema-valid
-    layout: { x: 0, y: nextFreeRow(), w: e.defaultSize.w, h: e.defaultSize.h },
+    config: e.defaultConfig,                 // already schema-valid (kind === type)
+    position: { x: 0, y: nextFreeRow(), w: e.defaultSize.w, h: e.defaultSize.h },
   };
 }
 // onAdd → parent dispatches { type: "addWidget", widget } into the L01 reducer (dirty=true)

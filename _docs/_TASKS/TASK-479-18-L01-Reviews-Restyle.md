@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Reviews
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-18
 **Started:** `<set when work begins>`

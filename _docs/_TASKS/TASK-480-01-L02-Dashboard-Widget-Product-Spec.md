@@ -63,19 +63,21 @@ shapes -02/-03 will own in `core/services/dashboard/*`.
 ### 1. Widget catalog (types + data source + config)
 
 ```ts
-// core/services/dashboard/dashboardTypes.ts (owned by 480-02; this is the seed sketch —
-// 480-02-L01 is the canonical enum/contract owner). Widget-id naming below is a
+// core/services/dashboard/dashboardTypes.ts — DashboardWidgetType is OWNED by
+// TASK-480-02-L01 (the canonical enum/contract owner). This product spec is a
+// CONSUMER: it IMPORTS the enum and never re-declares it. Widget-id naming below is a
 // product-spec sketch; the SHIPPED ids/grouping are whatever 480-02-L01 registers.
-export type DashboardWidgetType =
-  | "stat.counter"        // single number (StatCard)
-  | "chart.timeseries"    // content created/updated over time (AreaChart)
-  | "chart.breakdown"     // content by type/status (Donut)
-  | "activity.recent"     // recent edits feed (RecentEditsTable)
-  | "contentType.count"   // per content-type counts list
-  | "storage.usage"       // storage summary (SiteHealthCard)
-  | "siteHealth.security" // security checks (SecurityStatusCard)
-  | "quickActions"        // create/link shortcuts
-  | "content.query";      // custom content query (table/list)
+import type { DashboardWidgetType } from "core/services/dashboard/dashboardTypes";
+// The canonical 9 kebab widget types (defined by 480-02-L01, shown here for the catalog):
+//   "totals-counters"      pages/entries/media/users counters (StatCard)
+//   "content-type-counts"  per-content-type entry counts (list rows OR Donut breakdown)
+//   "content-over-time"    content created/updated over a range (AreaChart)
+//   "recent-activity"      recent edits feed (RecentEditsTable)
+//   "storage-usage"        media storage summary
+//   "site-health"          storage + security rollup (SiteHealthCard)
+//   "security-summary"     security checks (SecurityStatusCard)
+//   "quick-actions"        create/link shortcuts (no DB)
+//   "content-query"        custom content query (table/list)
 ```
 
 Catalog (data SOURCE + config per type; all metrics come from REAL CMS data —
@@ -83,32 +85,32 @@ never fabricated):
 
 | Type | Visual (prototype) | Data source (server) | Config (schema-first) |
 |------|--------------------|----------------------|------------------------|
-| `stat.counter` | `StatCard` + optional spark | `getDashboardTotals()` (existing) OR per-content-type `countRows(contentEntries, eq(typeId,…))` | `metric: "pages"\|"entries"\|"media"\|"users"\|"contentType"`, `contentTypeSlug?` (required when `metric==="contentType"`), `accent`, `showSparkline:boolean` |
-| `chart.timeseries` | `AreaChart` | NEW aggregation: count of pages/entries grouped by day over range (created_at/updated_at) | `metric: "pages"\|"entries"\|"media"`, `field:"created"\|"updated"`, `rangeDays: 7\|30\|90`, `contentTypeSlug?` |
-| `chart.breakdown` | `Donut` | NEW aggregation: counts grouped by content type OR status | `dimension:"contentType"\|"status"`, `top?: number` |
-| `activity.recent` | `RecentEditsTable` | `getRecentEdits(limit)` (existing) | `types: ("page"\|"entry"\|"media")[]`, `limit: 1..25` |
-| `contentType.count` | list rows | `countRows` per content type (from `contentTypes`) | `contentTypeSlugs: string[]` (empty = all), `sort:"name"\|"count"` |
-| `storage.usage` | `SiteHealthCard` | `getStorageSummary()` (existing) | none (display-only) |
-| `siteHealth.security` | `SecurityStatusCard` | `buildSecuritySummary(getSecuritySettings())` (existing) | none |
-| `quickActions` | button group | static link descriptors resolved via `adminPaths` | `actions: QuickActionKey[]` (e.g. `createPage`,`createEntry`,`uploadMedia`) |
-| `content.query` | `SectionCard` table/list | NEW: filtered query over a content type (reuse listings/entries read path; READ-ONLY) | `contentTypeSlug`, `filter?`, `sort?`, `limit:1..25`, `columns: string[]`, `display:"table"\|"list"` |
+| `totals-counters` | `StatCard` + optional spark | `getDashboardTotals()` (existing) | `metrics: ("pages"\|"entries"\|"media"\|"users")[]` (which counters to show), `accent`, `showSparkline:boolean` |
+| `content-type-counts` | list rows OR `Donut` (breakdown) | `countRows` per content type (from `contentTypes`) OR counts grouped by content type/status | `contentTypeSlugs: string[]` (empty = all), `contentTypeSlug?` (single-type counter card), `dimension:"contentType"\|"status"`, `sort:"name"\|"count"`, `top?: number`, `display:"list"\|"donut"` |
+| `content-over-time` | `AreaChart` | NEW aggregation: count of pages/entries grouped by day over range (created_at/updated_at) | `metric: "pages"\|"entries"\|"media"`, `field:"created"\|"updated"`, `rangeDays: 7\|30\|90`, `contentTypeSlug?` |
+| `recent-activity` | `RecentEditsTable` | `getRecentEdits(limit)` (existing) | `types: ("page"\|"entry"\|"media")[]`, `limit: 1..25` |
+| `storage-usage` | storage summary card | `getStorageSummary()` (existing) | none (display-only) |
+| `site-health` | `SiteHealthCard` | `getStorageSummary()` + `buildSecuritySummary(getSecuritySettings())` (existing) rollup | none (display-only) |
+| `security-summary` | `SecurityStatusCard` | `buildSecuritySummary(getSecuritySettings())` (existing) | none |
+| `quick-actions` | button group | static link descriptors resolved via `adminPaths` | `actions: QuickActionKey[]` (e.g. `createPage`,`createEntry`,`uploadMedia`) |
+| `content-query` | `SectionCard` table/list | NEW: filtered query over a content type (reuse listings/entries read path; READ-ONLY) | `contentTypeSlug`, `filter?`, `sort?`, `limit:1..25`, `columns: string[]`, `display:"table"\|"list"` |
 
 Per-type config schemas live in the owner module and are validated
 reject-unknown:
 
 ```ts
-// schema-first per type; reject unknown fields
-const statCounterConfigSchema = z.object({
-  metric: z.enum(["pages", "entries", "media", "users", "contentType"]),
-  contentTypeSlug: z.string().min(1).optional(),
+// schema-first per type; reject unknown fields. config.kind MUST equal the widget type.
+const totalsCountersConfigSchema = z.object({
+  kind: z.literal("totals-counters"),
+  metrics: z.array(z.enum(["pages", "entries", "media", "users"]))
+    .default(["pages", "entries", "media", "users"]),
   accent: z.enum(["primary", "success", "warning", "info"]).default("primary"),
   showSparkline: z.boolean().default(false),
-}).strict().superRefine((cfg, ctx) => {
-  if (cfg.metric === "contentType" && !cfg.contentTypeSlug) {
-    ctx.addIssue({ code: "custom", message: "contentTypeSlug required" });
-  }
-});
-// …one strict() schema per DashboardWidgetType, keyed in a registry:
+}).strict();
+// The single per-content-type counter AND the by-type/status breakdown both FOLD INTO the
+// content-type-counts variant (its config carries contentTypeSlug(s)/dimension/top/display —
+// see the catalog table); nothing is dropped. One strict() schema per DashboardWidgetType
+// (config.kind === type), keyed in a registry covering all 9 canonical types:
 export const DASHBOARD_WIDGET_CONFIG_SCHEMAS: Record<DashboardWidgetType, ZodTypeAny>;
 export const DASHBOARD_WIDGET_DEFAULT_CONFIG: Record<DashboardWidgetType, unknown>;
 ```
@@ -116,8 +118,9 @@ export const DASHBOARD_WIDGET_DEFAULT_CONFIG: Record<DashboardWidgetType, unknow
 ### 2. Layout / grid model
 
 ```ts
-// core/services/dashboard/dashboardTypes.ts + dashboardWidgetContract.ts
-// (owned by 480-02; layout envelope schema lives in dashboardWidgetContract.ts)
+// core/services/dashboard/dashboardTypes.ts + dashboardWidgetContract.ts — these types are
+// OWNED by TASK-480-02-L01; this spec IMPORTS them and does NOT re-declare. (Layout envelope
+// schema lives in dashboardWidgetContract.ts.) Shapes shown for reference:
 export type DashboardWidgetPosition = {
   x: number; // grid col, 0-based
   y: number; // grid row, 0-based
@@ -125,17 +128,19 @@ export type DashboardWidgetPosition = {
   h: number; // height in grid rows (clamped 1..MAX_H)
 };
 
-export type DashboardWidgetInstance = {
-  id: string;                 // uuid (per instance, not per type)
-  type: DashboardWidgetType;
-  config: unknown;            // validated against the per-type schema
+// Canonical per-instance widget (480-02-L01 names it `DashboardWidget`).
+export type DashboardWidget = {
+  id: string;                       // uuid (per instance, not per type)
+  type: DashboardWidgetType;        // one of the 9 canonical kebab types
+  title?: string;                   // optional title override
+  config: DashboardWidgetConfig;    // discriminated union; config.kind MUST equal type
   position: DashboardWidgetPosition;
 };
 
 export type DashboardLayout = {
   schemaVersion: 1;           // bump + migrate on shape change
   scope: "user" | "site";
-  widgets: DashboardWidgetInstance[]; // max e.g. 24
+  widgets: DashboardWidget[]; // max e.g. 24
 };
 
 export const DASHBOARD_GRID_COLS = 12;     // 12-col responsive grid
@@ -163,9 +168,9 @@ export function normalizeDashboardLayout(input: unknown): DashboardLayout {
 export function defaultDashboardLayout(scope: "user" | "site"): DashboardLayout;
 ```
 
-A **default layout** reproduces today's fixed dashboard (3 stat counters +
-recent activity + storage + security) so a brand-new user sees parity, then can
-customize.
+A **default layout** reproduces today's fixed dashboard (`totals-counters` +
+`recent-activity` + `storage-usage` + `security-summary`) so a brand-new user sees
+parity, then can customize.
 
 ### 3. Edit-mode UX (floating-panel builder)
 

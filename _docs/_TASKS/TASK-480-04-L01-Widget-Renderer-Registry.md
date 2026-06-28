@@ -89,14 +89,15 @@ export type DashboardWidgetRendererRegistry = {
 };
 
 export const DASHBOARD_WIDGET_RENDERERS: DashboardWidgetRendererRegistry = {
-  stat:             StatWidget,            // ← L02
-  chart:            ChartWidget,           // ← L02
-  recentActivity:   RecentActivityWidget,  // ← L02
-  contentTypeCount: ContentTypeCountWidget,// ← L02
-  storage:          StorageWidget,         // ← L02
-  siteHealth:       SiteHealthWidget,      // ← L02
-  quickActions:     QuickActionsWidget,    // ← L02
-  contentQuery:     ContentQueryWidget,    // ← L02
+  "totals-counters":     TotalsCountersWidget,    // ← L02
+  "content-type-counts": ContentTypeCountsWidget,  // ← L02
+  "content-over-time":   ContentOverTimeWidget,    // ← L02
+  "recent-activity":     RecentActivityWidget,     // ← L02
+  "storage-usage":       StorageUsageWidget,       // ← L02
+  "site-health":         SiteHealthWidget,         // ← L02
+  "security-summary":    SecuritySummaryWidget,    // ← L02
+  "quick-actions":       QuickActionsWidget,       // ← L02
+  "content-query":       ContentQueryWidget,       // ← L02
 };
 
 export function getWidgetRenderer<T extends DashboardWidgetType>(
@@ -109,14 +110,15 @@ export function getWidgetRenderer<T extends DashboardWidgetType>(
 // Keep pure + exhaustive (switch over data.type; default → false).
 export function isWidgetDataEmpty(data: DashboardWidgetData): boolean {
   switch (data.type) {
-    case "recentActivity": return data.items.length === 0;
-    case "contentTypeCount": return data.counts.length === 0;
-    case "contentQuery": return data.rows.length === 0;
-    case "quickActions": return data.actions.length === 0;
-    case "chart": return data.series.every((s) => s.points.length === 0);
-    case "stat":
-    case "storage":
-    case "siteHealth":
+    case "recent-activity": return data.items.length === 0;
+    case "content-type-counts": return data.counts.length === 0;
+    case "content-query": return data.rows.length === 0;
+    case "quick-actions": return data.actions.length === 0;
+    case "content-over-time": return data.series.every((s) => s.points.length === 0);
+    case "totals-counters":
+    case "storage-usage":
+    case "site-health":
+    case "security-summary":
       return false;                          // counters/health always render
     default: { const _never: never = data; return false; }
   }
@@ -177,9 +179,9 @@ function renderBody(widget: DashboardWidget, state: WidgetDataState): React.Reac
 ### The three chrome states (token-styled, no fetch, no effects)
 
 ```tsx
-// WidgetSkeleton: shimmer blocks sized loosely by type (chart → tall, stat → short).
+// WidgetSkeleton: shimmer blocks sized loosely by type (content-over-time → tall, totals-counters → short).
 function WidgetSkeleton({ type }: { type: DashboardWidgetType }) {
-  const tall = type === "chart" || type === "contentQuery" || type === "recentActivity";
+  const tall = type === "content-over-time" || type === "content-query" || type === "recent-activity";
   return (
     <div data-testid="widget-skeleton" className="animate-pulse space-y-3">
       <div className="h-7 w-24 rounded-md bg-muted" />
@@ -223,8 +225,9 @@ raw errors. The mismatch branch is a defensive invariant, not a user path.
 - Host states: `loading` → `widget-skeleton`; `error` → `widget-error` + message;
   `ready` + empty data → `widget-empty`; `ready` + mismatched `data.type` →
   `widget-error` (no throw); `ready` + valid data → the renderer's output.
-- `isWidgetDataEmpty`: true for 0-item list/query/actions and all-empty chart
-  series; false for stat/storage/siteHealth.
+- `isWidgetDataEmpty`: true for 0-item recent-activity/content-query/quick-actions
+  and all-empty content-over-time series; false for
+  totals-counters/storage-usage/site-health/security-summary.
 
 ---
 

@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Content (Pages)
 **Estimated Effort:** Medium
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-08
 
@@ -19,8 +19,10 @@ Archived) rendered via the shared `StatusTabs` from **TASK-479-06-L02** (core Ta
 **Title · Status · Author · Updated · Views**, a violet-aware `StatusBadge`, and
 pagination. The status set is the **real `PageStatus` enum**
 (`draft | published | scheduled | archived` — there is no `trash`/`review`). The
-list keeps its real data source, filtering, selection, bulk actions, and cache
-wiring untouched.
+prototype's `PageListPage.tsx` renders a `trash` status tab that does NOT exist in
+core — when porting, map it to the real `archived` status; do not copy the
+prototype's `trash` tab. The list keeps its real data source, filtering, selection,
+bulk actions, and cache wiring untouched.
 
 - **Goal:** `core/admin/ui/pages/PageListPage.tsx` and its row/filter children
   render in the new design language without changing data flow, selection, bulk

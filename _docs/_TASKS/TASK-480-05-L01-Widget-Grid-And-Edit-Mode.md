@@ -76,21 +76,29 @@ the Save round-trip.
 
 ## Implementation Pseudocode
 
-### Layout shape consumed (owned by TASK-480-01 — referenced, not redefined)
+### Layout shape consumed (owned by TASK-480-02 — imported, not redefined)
 
 ```ts
-// core/services/dashboard/dashboardTypes.ts (owned by TASK-480-02; referenced, not redefined)
-type DashboardWidgetInstance = {
-  id: string;                 // stable per-instance id (nanoid)
-  type: DashboardWidgetType;  // "counter" | "chart" | "recentActivity" | "storage" | "siteHealth" | "quickActions" | "contentQuery"
-  config: DashboardWidgetConfig; // discriminated by type; schema-validated (L02 edits it)
-  layout: { x: number; y: number; w: number; h: number }; // grid cells (12-col)
-};
-type DashboardLayout = {
-  version: 1;
-  columns: 12;
-  widgets: DashboardWidgetInstance[];
-};
+// Canonical types live in the TASK-480-02 owner (core/services/dashboard).
+// Consumers IMPORT them; this leaf never re-declares the widget/layout types.
+import type {
+  DashboardWidget,
+  DashboardWidgetType,     // 9 kebab values (see below)
+  DashboardWidgetConfig,
+  DashboardLayout,
+} from "../../../../services/dashboard/dashboardTypes";
+
+// Shape shown for reference only (owned by TASK-480-02; do NOT redefine here):
+//   DashboardWidget = {
+//     id: string;                    // stable per-instance id (nanoid/uuid)
+//     type: DashboardWidgetType;     // "totals-counters" | "content-type-counts" | "content-over-time"
+//                                    //   | "recent-activity" | "storage-usage" | "site-health"
+//                                    //   | "security-summary" | "quick-actions" | "content-query"
+//     title?: string;                // optional title override
+//     config: DashboardWidgetConfig; // discriminated by `kind` (=== type); schema-validated (L02 edits it)
+//     position: { x: number; y: number; w: number; h: number }; // per-widget grid geometry (12-col)
+//   };
+//   DashboardLayout = { version: number; widgets: DashboardWidget[] };
 ```
 
 ### Reducer hook (react-hooks-safe: lazy init, no sync setState in effects)
@@ -115,7 +123,7 @@ type BuilderAction =
   | { type: "moveWidget"; id: string; to: GridPos }      // arrange
   | { type: "resizeWidget"; id: string; size: GridSize } // resize (clamped to min/max from registry)
   | { type: "removeWidget"; id: string }
-  | { type: "addWidget"; widget: DashboardWidgetInstance }     // dispatched by L02
+  | { type: "addWidget"; widget: DashboardWidget }            // dispatched by L02
   | { type: "configureWidget"; id: string; config: DashboardWidgetConfig } // L02
   | { type: "saveStart" }
   | { type: "saveOk"; layout: DashboardLayout }          // server echo becomes new `saved`
@@ -212,7 +220,7 @@ export function WidgetGrid({ layout, editing, onMove, onResize, onRemove, onConf
       {layout.widgets.map((w) => (
         <div
           key={w.id}
-          style={{ gridColumn: `span ${w.layout.w}`, gridRow: `span ${w.layout.h}` }}
+          style={{ gridColumn: `span ${w.position.w}`, gridRow: `span ${w.position.h}` }}
           className={cn("relative", editing && "rounded-2xl outline-dashed outline-1 outline-border/60")}
         >
           {editing ? (

@@ -4,7 +4,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Engine / Visual Refresh
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06
+**Dependencies:** TASK-479-05, TASK-479-06
 **Status:** ⏳ To Do
 **Parent Subtask:** TASK-479-12
 
@@ -69,11 +69,15 @@ import { SectionCard } from "@/ui/shared/SectionCard"; // shared primitive from 
 const [selectedFieldId, setSelectedFieldId] = useState<string | null>(() => fields[0]?.id ?? null);
 const selectedField = fields.find(f => f.id === selectedFieldId) ?? fields[0] ?? null;
 
+// Core FieldType has EXACTLY these 7 values (core/admin/ui/content-types/SchemaBuilder.tsx):
+// text, richtext, number, boolean, select, media, relation. The prototype shows a
+// `date` type that does NOT exist in core — this restyle must NOT add it (a new field
+// type is a separate feature, out of restyle scope).
 const FIELD_TYPES = [ // palette mirrors typeLabel()/iconForType() already in this file
   { type: "text", label: "Text", icon: <Type /> }, { type: "number", label: "Number", icon: <Hash /> },
-  { type: "boolean", label: "Boolean", icon: <Binary /> }, { type: "date", label: "Date", icon: <CalendarDays /> },
-  { type: "richtext", label: "Rich text", icon: <WholeWord /> }, { type: "media", label: "Media", icon: <ImageIcon /> },
-  { type: "relation", label: "Relation", icon: <GitBranch /> }, { type: "select", label: "Select", icon: <ListChecks /> },
+  { type: "boolean", label: "Boolean", icon: <Binary /> }, { type: "richtext", label: "Rich text", icon: <WholeWord /> },
+  { type: "media", label: "Media", icon: <ImageIcon /> }, { type: "relation", label: "Relation", icon: <GitBranch /> },
+  { type: "select", label: "Select", icon: <ListChecks /> },
 ];
 
 return (
