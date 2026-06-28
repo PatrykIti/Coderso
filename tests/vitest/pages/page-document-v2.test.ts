@@ -6,6 +6,7 @@ import {
   PAGE_BLOCK_MAX_TREE_DEPTH,
   PAGE_TEXT_MARK_MAX,
   applyBlockTextMark,
+  removeBlockTextMark,
   clearResponsiveOverride,
   clearBlockResponsiveOverride,
   createPageDocumentId,
@@ -663,6 +664,57 @@ describe("PageDocumentV2", () => {
     expect(withHighlight).toEqual([
       { type: "color", from: 0, to: 5, color: "#2563eb" },
       { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+    ]);
+  });
+
+  test("removeBlockTextMark strips only the link mark over the range and keeps other marks (TASK-478-02)", () => {
+    const text = "Build with Coderso";
+    // A linked + colored + bold fragment over the SAME range.
+    const marks = [
+      { type: "link" as const, from: 11, to: 18, href: "/old" },
+      { type: "color" as const, from: 11, to: 18, color: "#2563eb" },
+      { type: "bold" as const, from: 11, to: 18 },
+    ];
+
+    const unlinked = removeBlockTextMark(text, marks, { type: "link", from: 11, to: 18 });
+
+    // The link mark is gone; color + bold are untouched (normalized order: bold,
+    // then color).
+    expect(unlinked).toEqual([
+      { type: "bold", from: 11, to: 18 },
+      { type: "color", from: 11, to: 18, color: "#2563eb" },
+    ]);
+    expect(unlinked.some((mark) => mark.type === "link")).toBe(false);
+  });
+
+  test("removeBlockTextMark splits a partially overlapping link and preserves the outside slices (TASK-478-02)", () => {
+    const text = "abcdefghij"; // length 10
+    const marks = [{ type: "link" as const, from: 0, to: 10, href: "/whole" }];
+
+    // Remove the MIDDLE [3, 6): the two ends stay linked with the same href.
+    const split = removeBlockTextMark(text, marks, { type: "link", from: 3, to: 6 });
+    expect(split).toEqual([
+      { type: "link", from: 0, to: 3, href: "/whole" },
+      { type: "link", from: 6, to: 10, href: "/whole" },
+    ]);
+
+    // Removing a prefix slice [0, 4) keeps only the tail.
+    expect(removeBlockTextMark(text, marks, { type: "link", from: 0, to: 4 })).toEqual([
+      { type: "link", from: 4, to: 10, href: "/whole" },
+    ]);
+  });
+
+  test("removeBlockTextMark is a no-op for a non-overlapping range or absent mark type (TASK-478-02)", () => {
+    const text = "Build with Coderso";
+    const marks = [{ type: "link" as const, from: 0, to: 5, href: "/x" }];
+
+    // No overlap -> unchanged.
+    expect(removeBlockTextMark(text, marks, { type: "link", from: 11, to: 18 })).toEqual([
+      { type: "link", from: 0, to: 5, href: "/x" },
+    ]);
+    // Removing a type that is not present -> unchanged.
+    expect(removeBlockTextMark(text, marks, { type: "bold", from: 0, to: 5 })).toEqual([
+      { type: "link", from: 0, to: 5, href: "/x" },
     ]);
   });
 

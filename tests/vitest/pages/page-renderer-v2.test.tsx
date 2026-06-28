@@ -1233,11 +1233,105 @@ test("text marks render safe inline elements and drop unsafe values", () => {
   expect(html).toContain('style="color:#ef4444;background-color:var(--color-accent)"');
   expect(html).toContain("<strong");
   expect(html).toContain("<em");
-  expect(html).toContain('<a href="/world" rel="nofollow noreferrer">');
+  // The link mark renders a styled anchor (underline + link color token) while
+  // still carrying rel + the sanitized href.
+  expect(html).toMatch(
+    /<a href="\/world" class="[^"]*underline[^"]*" data-page-text-mark="link" rel="nofollow noreferrer">/
+  );
   expect(html).toContain("<span");
   expect(html).toContain(">Hello</span>");
   expect(html).not.toContain("javascript");
   expect(html).not.toContain("url(");
+});
+
+test("link mark renders a token-styled anchor with rel and sanitized href", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-link-mark",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-link-mark",
+        props: {
+          text: "Visit page now",
+          format: "plain",
+          align: "left",
+          marks: [{ type: "link", from: 6, to: 10, href: "/page" }],
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const anchor = /<a [^>]*href="\/page"[^>]*>/.exec(html)?.[0] ?? "";
+
+  // Visual affordance: a deterministic link class with an underline + link color
+  // token, applied on both front and canvas (renderer-applied, not stored).
+  expect(anchor).toContain("underline");
+  expect(anchor).toContain("var(--coderso-link,#2563eb)");
+  // Editor-only marker so linked runs can be outlined distinctly.
+  expect(anchor).toContain('data-page-text-mark="link"');
+  // Security contract is preserved: rel + the sanitized href.
+  expect(anchor).toContain('rel="nofollow noreferrer"');
+  expect(anchor).toContain('href="/page"');
+  expect(html).toContain(">page</a>");
+});
+
+test("link mark drops an unsafe href and renders no anchor", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-link-mark-unsafe",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-link-mark-unsafe",
+        props: {
+          text: "Click here",
+          format: "plain",
+          align: "left",
+          marks: [{ type: "link", from: 0, to: 5, href: "javascript:alert(1)" }],
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).not.toContain("<a");
+  expect(html).not.toContain("javascript");
+  expect(html).toContain("Click here");
+});
+
+test("link mark paints a non-navigating span in the canvas but a real anchor on the front (TASK-478-02)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-link-canvas",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-link-canvas",
+        props: {
+          text: "Visit page now",
+          format: "plain",
+          align: "left",
+          marks: [{ type: "link", from: 6, to: 10, href: "/page" }],
+        },
+      }),
+    ],
+  });
+
+  // Front / preview (runtime layout): a real, navigable anchor with the security rel.
+  const frontHtml = renderToStaticMarkup(<PageSectionContent section={section} />);
+  expect(frontHtml).toMatch(/<a [^>]*href="\/page"[^>]*rel="nofollow noreferrer"[^>]*>/);
+
+  // Editor canvas: the linked run is a NON-navigating span (no <a>, no href) so a
+  // click selects the fragment instead of opening the URL / firing beforeunload.
+  // The link affordance (underline + link-color token + the mark marker) is kept.
+  const canvasHtml = renderToStaticMarkup(
+    <PageSectionContent section={section} layoutMode="canvas-device" />
+  );
+  expect(canvasHtml).not.toContain("<a");
+  expect(canvasHtml).not.toContain('href="/page"');
+  expect(canvasHtml).toContain('data-page-editor-link-noop="true"');
+  const noopSpan = /<span [^>]*data-page-editor-link-noop="true"[^>]*>/.exec(canvasHtml)?.[0] ?? "";
+  expect(noopSpan).toContain('data-page-text-mark="link"');
+  expect(noopSpan).toContain("underline");
+  expect(noopSpan).toContain("var(--coderso-link,#2563eb)");
+  expect(canvasHtml).toContain(">page</span>");
 });
 
 test("badge blocks render native safe pills with token-backed sizing", () => {

@@ -8,13 +8,25 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
-import { Bold, Highlighter, Italic, Link as LinkIcon, Palette, Plus } from "lucide-react";
+import {
+  Bold,
+  Highlighter,
+  Italic,
+  Link as LinkIcon,
+  Palette,
+  PanelLeft,
+  PanelRight,
+  PanelTop,
+  Plus,
+  Unlink,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
   isPageTextMarkCapableBlockType,
+  normalizeBlockTextMarks,
   type PageBlockV2,
   type PageBreakpoint,
   type PageSectionV2,
@@ -69,6 +81,11 @@ export type PageEditorTextMarkCommit = {
   to: number;
   color?: string;
   href?: string;
+  /**
+   * "apply" (default) runs the value-aware apply/replace/toggle; "remove"
+   * explicitly strips the mark over `[from, to)` (unlink). (TASK-478-02)
+   */
+  action?: "apply" | "remove";
 };
 
 export type PageEditorTextColorMarkCommit = PageEditorTextMarkCommit;
@@ -198,6 +215,43 @@ const inlineTextMarkPalette = getPageEditorColorPalette().filter((swatch) =>
   ["primary", "secondary", "accent", "border"].includes(swatch.id)
 );
 
+/**
+ * Side the inline mark toolbar (and the native color picker it spawns) docks to,
+ * relative to the edited block. Docking left/right keeps neither the toolbar nor
+ * the picker over the text being colored (TASK-478-03). Session-level UI pref
+ * (never the page document), mirroring how `device` is plain editor state.
+ */
+export type PageEditorMarkToolbarDock = "top" | "right" | "left";
+
+// Cycle order for the single dock toggle: Top → Right → Left → Top.
+const MARK_TOOLBAR_DOCK_CYCLE: Record<PageEditorMarkToolbarDock, PageEditorMarkToolbarDock> = {
+  top: "right",
+  right: "left",
+  left: "top",
+};
+
+// Absolute-placement + flow classes per dock. `top` keeps the original single
+// row pinned above the text; `left`/`right` lift the bar beside the block and
+// wrap its controls into a compact, width-clamped panel so it stays on-screen
+// next to narrow columns and never occludes the edited text.
+const markToolbarDockPlacementClass: Record<PageEditorMarkToolbarDock, string> = {
+  top: "-top-9 left-0 flex-row items-center",
+  right: "left-full top-0 ml-2 max-w-56 flex-row flex-wrap items-center",
+  left: "right-full top-0 mr-2 max-w-56 flex-row flex-wrap items-center",
+};
+
+const markToolbarDockLabel: Record<PageEditorMarkToolbarDock, string> = {
+  top: "docked top",
+  right: "docked right",
+  left: "docked left",
+};
+
+const markToolbarDockIcon: Record<PageEditorMarkToolbarDock, typeof PanelTop> = {
+  top: PanelTop,
+  right: PanelRight,
+  left: PanelLeft,
+};
+
 const InlineEditableCanvasText = ({
   block,
   propPath,
@@ -207,6 +261,8 @@ const InlineEditableCanvasText = ({
   selected,
   editing,
   device,
+  markToolbarDock,
+  onMarkToolbarDockChange,
   onStartEdit,
   onCommit,
   onApplyTextMark,
@@ -219,10 +275,26 @@ const InlineEditableCanvasText = ({
   selected: boolean;
   editing: boolean;
   device: PageBreakpoint;
+  /** Session dock pref. When provided the toolbar side is owner-controlled; when omitted it falls back to local state so the bar is still self-contained (e.g. in isolation tests). */
+  markToolbarDock?: PageEditorMarkToolbarDock;
+  onMarkToolbarDockChange?: (dock: PageEditorMarkToolbarDock) => void;
   onStartEdit: (target: PageEditorInlineEditTarget) => void;
   onCommit: (commit: PageEditorInlineEditCommit) => void;
   onApplyTextMark: (commit: PageEditorTextMarkCommit) => void;
 }) => {
+  // Controlled-with-fallback: the owner threads `markToolbarDock` so the chosen
+  // side persists across subsequent block edits in the session; without it the
+  // bar drives its own dock so it stays usable in isolation (TASK-478-03).
+  const [internalMarkToolbarDock, setInternalMarkToolbarDock] = useState<PageEditorMarkToolbarDock>(
+    markToolbarDock ?? "top"
+  );
+  const activeMarkToolbarDock = markToolbarDock ?? internalMarkToolbarDock;
+  const cycleMarkToolbarDock = () => {
+    const next = MARK_TOOLBAR_DOCK_CYCLE[activeMarkToolbarDock];
+    if (onMarkToolbarDockChange) onMarkToolbarDockChange(next);
+    else setInternalMarkToolbarDock(next);
+  };
+  const MarkToolbarDockIcon = markToolbarDockIcon[activeMarkToolbarDock];
   const [selectionRange, setSelectionRange] = useState<InlineTextSelectionRange | null>(null);
   const [linkHref, setLinkHref] = useState("");
   // Live editable node + a synchronous selection snapshot captured on toolbar
@@ -280,9 +352,34 @@ const InlineEditableCanvasText = ({
     propPath === "text" &&
     !preserveMarkup &&
     isPageTextMarkCapableBlockType(block.type);
+  // href of a link mark overlapping `range` (null when none). Derived from the
+  // normalized marks the renderer paints from, so it always agrees with the
+  // canvas. Lets the URL field be SEEDED with an existing link and lights up the
+  // clear-to-unlink / remove controls (TASK-478-02).
+  const findLinkHrefForRange = (range: InlineTextSelectionRange | null): string | null => {
+    if (!range) return null;
+    for (const mark of normalizeBlockTextMarks(text, block.props.marks)) {
+      if (mark.type === "link" && mark.from < range.to && range.from < mark.to) {
+        return mark.href;
+      }
+    }
+    return null;
+  };
+  const activeLinkHref = canApplyTextMarks ? findLinkHrefForRange(selectionRange) : null;
+  // Commit the active selection AND, only when the range actually changes, seed the
+  // URL field from the link under it (or clear it for an unlinked range). Seeding on
+  // change avoids clobbering a URL the author is mid-typing when a later toolbar
+  // interaction re-snapshots the same selection.
+  const commitSelectionRange = (range: InlineTextSelectionRange | null) => {
+    const changed =
+      (selectionRange?.from ?? null) !== (range?.from ?? null) ||
+      (selectionRange?.to ?? null) !== (range?.to ?? null);
+    setSelectionRange(range);
+    if (changed) setLinkHref(findLinkHrefForRange(range) ?? "");
+  };
   const updateSelectionRange = (element: HTMLElement) => {
     if (!canApplyTextMarks) return;
-    setSelectionRange(readInlineTextSelectionRange(element));
+    commitSelectionRange(readInlineTextSelectionRange(element));
   };
   const applyMark = (commit: PageEditorTextMarkCommit) => {
     onApplyTextMark(commit);
@@ -381,9 +478,13 @@ const InlineEditableCanvasText = ({
     canApplyTextMarks && inlineTextMarkPalette.length > 0 ? (
       <span
         ref={markToolbarRef}
-        className="absolute -top-9 left-0 z-20 flex items-center gap-1 rounded border bg-background/95 px-1.5 py-1 shadow-sm"
+        className={joinPageRenderClasses(
+          "absolute z-20 flex gap-1 rounded border bg-background/95 px-1.5 py-1 shadow-sm",
+          markToolbarDockPlacementClass[activeMarkToolbarDock]
+        )}
         data-page-editor-text-mark-toolbar="true"
         data-page-editor-text-color-toolbar="true"
+        data-page-editor-text-mark-toolbar-dock={activeMarkToolbarDock}
         onMouseDown={(event) => {
           event.stopPropagation();
           // Snapshot the still-live DOM selection on every toolbar interaction,
@@ -394,7 +495,7 @@ const InlineEditableCanvasText = ({
             const liveRange = readInlineTextSelectionRange(editableRef.current);
             if (liveRange) {
               selectionSnapshotRef.current = liveRange;
-              setSelectionRange(liveRange);
+              commitSelectionRange(liveRange);
             }
           }
           // Do NOT preventDefault for the link URL input or the custom color
@@ -414,6 +515,24 @@ const InlineEditableCanvasText = ({
         }}
       >
         <Palette className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+        <button
+          type="button"
+          // Always enabled (independent of a text selection): docking is a UI
+          // pref, so the author can move the bar off the text before selecting a
+          // fragment to color. Cycles Top → Right → Left (TASK-478-03).
+          aria-label={`Move mark toolbar (currently ${markToolbarDockLabel[activeMarkToolbarDock]})`}
+          aria-pressed={activeMarkToolbarDock !== "top"}
+          title={`Dock toolbar — ${markToolbarDockLabel[activeMarkToolbarDock]}`}
+          className="inline-flex size-6 items-center justify-center rounded border border-border bg-background text-muted-foreground transition hover:text-foreground"
+          data-page-editor-text-mark-toolbar-dock-toggle={activeMarkToolbarDock}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            cycleMarkToolbarDock();
+          }}
+        >
+          <MarkToolbarDockIcon className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
         <button
           type="button"
           aria-label="Apply bold"
@@ -566,7 +685,9 @@ const InlineEditableCanvasText = ({
           <button
             type="button"
             aria-label="Apply link"
-            disabled={!selectionRange || linkHref.trim().length === 0}
+            // Stays enabled with an empty field WHEN the selection already has a
+            // link, so clearing the field can unlink it (TASK-478-02).
+            disabled={!selectionRange || (linkHref.trim().length === 0 && activeLinkHref === null)}
             title="Link"
             className="inline-flex size-6 items-center justify-center rounded border border-border bg-background text-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
             data-page-editor-text-mark-button="link"
@@ -575,20 +696,61 @@ const InlineEditableCanvasText = ({
               event.stopPropagation();
               const range = resolveActiveMarkRange();
               if (!range) return;
-              applyMark({
-                blockId: block.id,
-                propPath,
-                type: "link",
-                from: range.from,
-                to: range.to,
-                href: linkHref,
-              });
+              if (linkHref.trim().length === 0) {
+                // Empty field over an existing link = unlink (drop the link mark).
+                if (findLinkHrefForRange(range) === null) return;
+                applyMark({
+                  blockId: block.id,
+                  propPath,
+                  type: "link",
+                  from: range.from,
+                  to: range.to,
+                  action: "remove",
+                });
+              } else {
+                applyMark({
+                  blockId: block.id,
+                  propPath,
+                  type: "link",
+                  from: range.from,
+                  to: range.to,
+                  href: linkHref,
+                });
+              }
               // Return focus to the editable so a later click-away commits and
               // ends inline edit through the normal blur path (TASK-475-01).
               editableRef.current?.focus();
             }}
           >
             <LinkIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label="Remove link"
+            // Explicit unlink: enabled only when the selection overlaps a link
+            // (audit M7 / TASK-478-02). Distinct from the same-href toggle.
+            disabled={activeLinkHref === null}
+            title="Remove link"
+            className="inline-flex size-6 items-center justify-center rounded border border-border bg-background text-foreground transition disabled:cursor-not-allowed disabled:opacity-40"
+            data-page-editor-text-mark-button="unlink"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const range = resolveActiveMarkRange();
+              if (!range || findLinkHrefForRange(range) === null) return;
+              applyMark({
+                blockId: block.id,
+                propPath,
+                type: "link",
+                from: range.from,
+                to: range.to,
+                action: "remove",
+              });
+              setLinkHref("");
+              editableRef.current?.focus();
+            }}
+          >
+            <Unlink className="h-3.5 w-3.5" aria-hidden="true" />
           </button>
         </span>
       </span>
@@ -690,6 +852,8 @@ export const SectionCanvas = ({
   device,
   canAddBlockBeside,
   canvasDataByBlockId,
+  markToolbarDock,
+  onMarkToolbarDockChange,
   onSelect,
   onSelectBlock,
   onAddBlock,
@@ -708,6 +872,8 @@ export const SectionCanvas = ({
   device: PageBreakpoint;
   canAddBlockBeside: boolean;
   canvasDataByBlockId: PageRuntimeDataByBlockId;
+  markToolbarDock?: PageEditorMarkToolbarDock;
+  onMarkToolbarDockChange?: (dock: PageEditorMarkToolbarDock) => void;
   onSelect: () => void;
   onSelectBlock: (blockPath: PageBlockPath) => void;
   onAddBlock: () => void;
@@ -860,6 +1026,8 @@ export const SectionCanvas = ({
               inlineEditTarget.propPath === propPath
             )}
             device={device}
+            markToolbarDock={markToolbarDock}
+            onMarkToolbarDockChange={onMarkToolbarDockChange}
             onStartEdit={onStartInlineEdit}
             onCommit={onCommitInlineEdit}
             onApplyTextMark={onApplyTextMark}
