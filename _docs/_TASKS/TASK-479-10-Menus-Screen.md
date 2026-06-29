@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Menus
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05 (tokens), TASK-479-06 (shell adopted in `core/admin`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Task:** TASK-479
 
 ---

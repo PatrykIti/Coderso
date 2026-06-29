@@ -5,10 +5,10 @@
 **Category:** Admin UI / Custom Screens / Visual Refresh / Testing
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-14-L01, TASK-479-14-L02, TASK-479-14-L03, TASK-479-14-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-14
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-28
+**Completed:** 2026-06-29
 
 ---
 

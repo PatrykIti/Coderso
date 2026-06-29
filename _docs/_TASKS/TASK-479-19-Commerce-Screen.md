@@ -5,10 +5,10 @@
 **Category:** Admin UI / Visual Refresh / Commerce
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05, TASK-479-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Task:** TASK-479
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-28
+**Completed:** 2026-06-29
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Admin UI Theme / Testing
 **Estimated Effort:** Small
 **Dependencies:** TASK-479-25-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-25
 
 ---

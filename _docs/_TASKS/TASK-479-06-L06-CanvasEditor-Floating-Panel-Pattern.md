@@ -5,7 +5,7 @@
 **Category:** Admin UI / Shell / Editor Surface
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-06-L01 (Button soft/ghost + sizes), TASK-479-06-L02 (patterns), TASK-479-06-L05 (EditorShell canvas host)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-06
 
 ---

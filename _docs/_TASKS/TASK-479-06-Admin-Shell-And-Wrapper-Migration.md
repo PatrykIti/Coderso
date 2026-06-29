@@ -5,10 +5,10 @@
 **Category:** Admin UI / Design System / Shell & Layout
 **Estimated Effort:** Large
 **Dependencies:** TASK-479-05 (token port into `core/admin/styles/globals.css` must land first)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Task:** TASK-479
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-28
+**Completed:** 2026-06-29
 
 ---
 

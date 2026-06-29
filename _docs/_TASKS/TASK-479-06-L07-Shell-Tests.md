@@ -5,7 +5,7 @@
 **Category:** Admin UI / Testing / Shell
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-06-L01, L02, L03, L04, L05, L06
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-06
 
 ---

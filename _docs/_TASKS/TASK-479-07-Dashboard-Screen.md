@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Dashboard
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05 (tokens) · TASK-479-06 (shell) · TASK-480 (forward / non-blocking — Dashboard Widgets feature provides the configurable panels this shell will later host; not required to ship this re-skin)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Task:** TASK-479
 
 ---

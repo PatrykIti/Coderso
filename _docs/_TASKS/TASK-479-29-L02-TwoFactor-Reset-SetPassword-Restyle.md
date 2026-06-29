@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Auth
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-29-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-29
 
 ---

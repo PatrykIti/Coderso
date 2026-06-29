@@ -5,10 +5,10 @@
 **Category:** Admin UI / Visual Refresh / Store / Testing
 **Estimated Effort:** Small
 **Dependencies:** TASK-479-24-L01, TASK-479-24-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-24
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-28
+**Completed:** 2026-06-29
 
 ---
 

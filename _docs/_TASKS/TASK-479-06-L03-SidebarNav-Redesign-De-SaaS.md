@@ -5,7 +5,7 @@
 **Category:** Admin UI / Shell / Navigation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-06-L01 (Badge soft variant for shortcut/badge styling)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-06
 
 ---

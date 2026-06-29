@@ -5,7 +5,7 @@
 **Category:** Admin UI / Design System / Patterns
 **Estimated Effort:** Large
 **Dependencies:** TASK-479-06-L01 (primitives provide the variants these patterns compose)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-06
 
 ---

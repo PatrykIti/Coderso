@@ -5,10 +5,10 @@
 **Category:** Admin UI / Visual Refresh / Admin Screens / Testing
 **Estimated Effort:** Small
 **Dependencies:** TASK-479-27-L01, TASK-479-27-L02, TASK-479-27-L03, TASK-479-27-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-27
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-28
+**Completed:** 2026-06-29
 
 ---
 

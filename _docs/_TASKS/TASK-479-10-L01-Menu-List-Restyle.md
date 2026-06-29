@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Menus
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05 (soft Badge/Button variants + `--primary-soft`/`shadow-card`/`font-display` tokens), TASK-479-06 (shell)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-10
 
 ---

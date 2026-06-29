@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Content (Pages) / Page Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-479-05, TASK-479-06, TASK-479-08-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-08
 
 ---

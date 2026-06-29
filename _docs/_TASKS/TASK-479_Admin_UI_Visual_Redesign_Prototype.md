@@ -5,11 +5,31 @@
 **Category:** Admin UI / Design System / Visual Refresh
 **Estimated Effort:** Very Large
 **Dependencies:** None (greenfield prototype; migration children depend on it)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done (2026-06-29)
 **Started:** 2026-06-27
-**Completed:** `<set when the migration children close>`
+**Completed:** 2026-06-29
 
 ---
+
+## Closeout (2026-06-29)
+
+All 25 migration subtasks (05/06 + screens 07–29) and their 117 leaves are **Done** and merged
+to `feature/visual` (HEAD `abb64b6e`). Delivered in six waves (05 tokens → 06 shell → S1 07–10 →
+S2 11–14 → S3 15–18 → S4 19–22 → S5 23–26 → S6 27–29), each built by a fresh agent in an isolated
+worktree and **drift-verified by ≥5 sequential fresh agents** (every wave converged dry). All
+re-skins are presentation-only — data/cache/RBAC/routes/dirty-state/registries/schema unchanged.
+
+**Gates:** `bun --cwd core lint` + `lint:types` + root `tsc` green; **vitest 744 files / 4464 tests**
+pass; `bun run gates:coderso` PASS on all five dimensions (functional/ux/performance/security/
+reliability). Runtime-smoked from the real CMS (Dashboard, Plugin Store, Settings, Auth render the
+soft/violet redesign + permanent dark toggle). A real pre-existing bug was fixed in passing
+(`SetPasswordPage` digit-regex).
+
+**Known residuals / additive follow-ups (non-blocking):** extend the shared `StatusBadge` MAP
+(plugin enabled/disabled + backup/import enums) and add a `tone` prop to `Progress` so a few screens
+can drop their token-`Badge` workarounds; analytics "Top pages" uses horizontal bars vs the
+prototype's vertical `BarChart`. Profile-layer simplification of the admin theme is tracked
+separately by **TASK-494**.
 
 ## Business Goal
 

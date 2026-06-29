@@ -5,7 +5,7 @@
 **Category:** Admin UI / Shell / Layout
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-06-L03 (SidebarNav), TASK-479-06-L04 (TopBar)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-06
 
 ---

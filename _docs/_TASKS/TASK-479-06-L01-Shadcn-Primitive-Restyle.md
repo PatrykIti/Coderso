@@ -5,7 +5,7 @@
 **Category:** Admin UI / Design System / Primitives
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05 (tokens: `--primary-soft`, `--success-soft`, `--warning-soft`, `--info-soft`, soft shadows, radii)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-06
 
 ---

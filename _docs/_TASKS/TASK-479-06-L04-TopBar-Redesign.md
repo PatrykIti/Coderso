@@ -5,7 +5,7 @@
 **Category:** Admin UI / Shell / Top Bar
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-06-L01 (primitives); TASK-479-05-L06 (light/dark theme toggle control)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-29)
 **Parent Subtask:** TASK-479-06
 
 ---

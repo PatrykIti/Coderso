@@ -78,9 +78,9 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 359 tasks
-- **In Progress:** 6 tasks
-- **Done:** 2704 tasks
+- **To Do:** 335 tasks
+- **In Progress:** 5 tasks
+- **Done:** 2729 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -108,30 +108,6 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-480-04 | Widget Renderer Components | High | Medium | 9 token-styled widget renderers + registry/host. 3 leaves. |
 | TASK-480-05 | Dashboard Builder UI (edit mode) | High | Large | Grid + add/arrange/resize + floating configure panel; dirty-state + cache. 3 leaves. |
 | TASK-480-06 | Docs, Gates & Closure | Medium | Medium | `DASHBOARD_WIDGETS_SPEC.md` + API/cache/data-model docs + gate sweep. 2 leaves. |
-| TASK-479-06 | Admin Shell & Wrapper Migration | High | Large | Primitives, patterns, sidebar/topbar de-SaaS, AdminShell, CanvasEditor. 7 leaves. |
-| TASK-479-07 | Dashboard Screen (UI shell only) | Medium | Medium | UI restyle only; the widget feature is TASK-480. 2 leaves. |
-| TASK-479-08 | Pages Screen | Medium | Large | List + page-editor floating-panel canvas (keeps PAGE_MODEL). 3 leaves. |
-| TASK-479-09 | Posts Screen | Medium | Large | List + post editor. 3 leaves. |
-| TASK-479-10 | Menus Screen | Medium | Medium | List + menu editor + design editor. 3 leaves. |
-| TASK-479-11 | Media Library Screen | Medium | Medium | Gallery + folders + details. 2 leaves. |
-| TASK-479-12 | Engine / Content Types | Medium | Large | List + type editor + schema builder + collection workspace. 5 leaves. |
-| TASK-479-13 | Entries Screen | Medium | Medium | List + entry editor. 3 leaves. |
-| TASK-479-14 | Custom Screens (published-screen flow) | Medium | Large | Builder + configurable list view + per-screen entry editor. 5 leaves. |
-| TASK-479-15 | Forms Screen | Medium | Large | List + builder + submissions/logs. 4 leaves. |
-| TASK-479-16 | Listings, Filters & Search Modules | Medium | Large | List + editor + filters/search. 4 leaves. |
-| TASK-479-17 | Booking Screen | Medium | Medium | Calendar restyle. 2 leaves. |
-| TASK-479-18 | Reviews Screen | Medium | Medium | Moderation restyle. 2 leaves. |
-| TASK-479-19 | Commerce Screen | Medium | Medium | Products list + product editor. 3 leaves. |
-| TASK-479-20 | Popups Screen | Medium | Medium | List + popup editor. 3 leaves. |
-| TASK-479-21 | Solution Kits Screen | Medium | Medium | Kits gallery. 2 leaves. |
-| TASK-479-22 | Widget Library Screen | Medium | Medium | Widget gallery (lazy registry preserved). 2 leaves. |
-| TASK-479-23 | Page Templates Screen | Medium | Medium | List + template editor (shared CanvasEditor). 3 leaves. |
-| TASK-479-24 | Plugin Store Screen | Medium | Medium | Store gallery + plugin details. 3 leaves. |
-| TASK-479-25 | Admin UI Theme Screen | Medium | Medium | Theme editor page restyle. 2 leaves. |
-| TASK-479-26 | Tools Screens | Medium | Large | Search/SEO/Analytics/Backups/Import-Export/Redirects. 7 leaves. |
-| TASK-479-27 | Admin Screens | Medium | Large | Users & Roles / Roles Matrix / Audit / Access logs. 5 leaves. |
-| TASK-479-28 | Settings Screens | Medium | Large | Settings shell + 12 pages. 7 leaves. |
-| TASK-479-29 | Auth Screens | Medium | Medium | Login / 2FA / reset / set password. 3 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
 | TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |
@@ -171,7 +147,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-479 | Admin UI Visual Redesign — Prototype & Migration Plan | Medium | Very Large | In progress: runnable soft/violet redesign prototype delivered to `_docs/_PROTOTYPE/` (~60 screens, editors as previews; light+dark; ports to core via shared tokens/primitives). Children 01–04 done; 05–29 (port to core) To Do. Started 2026-06-27. |
 | TASK-414 | Generic CMS Site Assistant Product Completion | High | Very Large | In progress: TASK-414-01 is done; remaining children track broader generic assistant product gaps such as media/theme breadth, installed-site refinement, helper mode, and capability drift automation. |
 | TASK-105 | Real Vitest 100% Coverage Program | High | Large | In progress: fresh 2026-03-15 baseline is `74.04%` lines with `61.35%` branches; `ThemeTemplateDrawer` and `UserList` are now line-closed, `UsersRolesPage` jumped into the high 80s, and the remaining backlog is increasingly broader low-line admin page/drawer tail |
 | TASK-105-04 | Themes, Booking, Listings, and Forms Wave | High | Large | In progress: booking leaf tabs, `ListingListPage`, `FormCanvas`, and `ThemeTemplateDrawer` are now line-closed; the wave tail is mostly branch-only theme/page-shell cleanup |
@@ -183,6 +158,31 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-479 | Admin UI Visual Redesign — Prototype & Migration Plan | Medium | Very Large | Done (2026-06-29): all 25 subtasks (05/06 + 07–29) and 117 leaves merged to `feature/visual` (`abb64b6e`); 6 waves, each ≥5 sequential drift-verify (converged). vitest 744 files/4464 tests + gates:coderso all-green; runtime-smoked. Residual additive follow-ups: StatusBadge/Progress contract extensions; TASK-494 (theme profile simplification). |
+| TASK-479-06 | Admin Shell & Wrapper Migration | High | Large | Primitives, patterns, sidebar/topbar de-SaaS, AdminShell, CanvasEditor. 7 leaves. — Done 2026-06-29. |
+| TASK-479-07 | Dashboard Screen (UI shell only) | Medium | Medium | UI restyle only; the widget feature is TASK-480. 2 leaves. — Done 2026-06-29. |
+| TASK-479-08 | Pages Screen | Medium | Large | List + page-editor floating-panel canvas (keeps PAGE_MODEL). 3 leaves. — Done 2026-06-29. |
+| TASK-479-09 | Posts Screen | Medium | Large | List + post editor. 3 leaves. — Done 2026-06-29. |
+| TASK-479-10 | Menus Screen | Medium | Medium | List + menu editor + design editor. 3 leaves. — Done 2026-06-29. |
+| TASK-479-11 | Media Library Screen | Medium | Medium | Gallery + folders + details. 2 leaves. — Done 2026-06-29. |
+| TASK-479-12 | Engine / Content Types | Medium | Large | List + type editor + schema builder + collection workspace. 5 leaves. — Done 2026-06-29. |
+| TASK-479-13 | Entries Screen | Medium | Medium | List + entry editor. 3 leaves. — Done 2026-06-29. |
+| TASK-479-14 | Custom Screens (published-screen flow) | Medium | Large | Builder + configurable list view + per-screen entry editor. 5 leaves. — Done 2026-06-29. |
+| TASK-479-15 | Forms Screen | Medium | Large | List + builder + submissions/logs. 4 leaves. — Done 2026-06-29. |
+| TASK-479-16 | Listings, Filters & Search Modules | Medium | Large | List + editor + filters/search. 4 leaves. — Done 2026-06-29. |
+| TASK-479-17 | Booking Screen | Medium | Medium | Calendar restyle. 2 leaves. — Done 2026-06-29. |
+| TASK-479-18 | Reviews Screen | Medium | Medium | Moderation restyle. 2 leaves. — Done 2026-06-29. |
+| TASK-479-19 | Commerce Screen | Medium | Medium | Products list + product editor. 3 leaves. — Done 2026-06-29. |
+| TASK-479-20 | Popups Screen | Medium | Medium | List + popup editor. 3 leaves. — Done 2026-06-29. |
+| TASK-479-21 | Solution Kits Screen | Medium | Medium | Kits gallery. 2 leaves. — Done 2026-06-29. |
+| TASK-479-22 | Widget Library Screen | Medium | Medium | Widget gallery (lazy registry preserved). 2 leaves. — Done 2026-06-29. |
+| TASK-479-23 | Page Templates Screen | Medium | Medium | List + template editor (shared CanvasEditor). 3 leaves. — Done 2026-06-29. |
+| TASK-479-24 | Plugin Store Screen | Medium | Medium | Store gallery + plugin details. 3 leaves. — Done 2026-06-29. |
+| TASK-479-25 | Admin UI Theme Screen | Medium | Medium | Theme editor page restyle. 2 leaves. — Done 2026-06-29. |
+| TASK-479-26 | Tools Screens | Medium | Large | Search/SEO/Analytics/Backups/Import-Export/Redirects. 7 leaves. — Done 2026-06-29. |
+| TASK-479-27 | Admin Screens | Medium | Large | Users & Roles / Roles Matrix / Audit / Access logs. 5 leaves. — Done 2026-06-29. |
+| TASK-479-28 | Settings Screens | Medium | Large | Settings shell + 12 pages. 7 leaves. — Done 2026-06-29. |
+| TASK-479-29 | Auth Screens | Medium | Medium | Login / 2FA / reset / set password. 3 leaves. — Done 2026-06-29. |
 | TASK-479-05 | Design Tokens & Theming Alignment | High | Large | Done (2026-06-28): `AdminThemeTokens` extended (primary-soft, info + `*Foreground`/`*Soft`, sidebar accents, effects shadows) + emitter + globals.css mapping + seeded "Soft Violet" default + editor controls + no-flash dark toggle + docs/tests. 7 leaves. Changelog 1200-1202. |
 | TASK-479-05-L01 | Token Gap Analysis & Inventory | Medium | Small | Done (2026-06-28): frozen prototype→`--admin-*`→shadcn mapping table + dark-mode decision (inventory verified exhaustive vs live code). |
 | TASK-479-05-L02 | Extend AdminThemeTokens Type, Defaults, Normalize & Validation | Medium | Medium | Done (2026-06-28): contract + `DEFAULT_ADMIN_THEME_TOKENS`/`_DARK` defaults + merge/normalize/validation + emitter dark pass. |
