@@ -50,7 +50,7 @@ test("SearchPage renders empty state", () => {
 test("SearchPage renders fallback Try chips without recent searches", () => {
   const html = renderAdminUi(<SearchPage />);
 
-  expect(html).toContain("Try:");
+  expect(html).toContain("Recent");
   expect(html).toContain("pages");
   expect(html).toContain("content");
   expect(html).toContain("media");

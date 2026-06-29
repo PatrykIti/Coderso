@@ -1,8 +1,9 @@
-import { CloudUpload, Info } from "lucide-react";
+import { CloudUpload, Database, HardDrive, Server } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
@@ -24,6 +25,7 @@ import { cacheKeys } from "@/services/cachePolicy";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { BackupNowDialog } from "./BackupNowDialog";
@@ -420,7 +422,8 @@ export function BackupsPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Backups"
-          description="Create, download, and manage CMS backup artifacts."
+          description="Keep automatic snapshots of your content and restore in one click."
+          icon={<Database />}
           actions={
             <div className="flex flex-wrap justify-end gap-2">
               {selectedCount > 0 ? (
@@ -454,13 +457,45 @@ export function BackupsPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        <BackupScheduleCard
-          key={schedule?.id ?? "backup-schedule"}
-          schedule={schedule}
-          isLoading={isLoading}
-          isSaving={isSaving}
-          onSave={handleScheduleUpdate}
-        />
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="lg:col-span-2">
+            <BackupScheduleCard
+              key={schedule?.id ?? "backup-schedule"}
+              schedule={schedule}
+              isLoading={isLoading}
+              isSaving={isSaving}
+              onSave={handleScheduleUpdate}
+            />
+          </div>
+          {/* Status card — REAL fields only (no storage-usage quota: backupsClient
+              exposes none). */}
+          <SectionCard title="Storage" icon={<HardDrive />}>
+            <div className="flex items-end justify-between">
+              <div className="font-display text-3xl font-semibold tabular-nums tracking-tight">
+                {backupList.total}
+              </div>
+              <span className="text-sm text-muted-foreground">backups stored</span>
+            </div>
+            <div className="mt-4 space-y-2 border-t border-border pt-3 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Server className="size-4" /> Storage driver
+                </span>
+                <span className="font-medium capitalize">{schedule?.storageDriver ?? "—"}</span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-muted-foreground">Worker</span>
+                <Badge variant={backupList.worker.healthy ? "success" : "warning"}>
+                  {backupList.worker.healthy ? "Healthy" : "Degraded"}
+                  {backupList.worker.queuedCount > 0
+                    ? ` · ${backupList.worker.queuedCount} queued`
+                    : ""}
+                </Badge>
+              </div>
+            </div>
+            <p className="mt-3 text-xs text-muted-foreground">{backupList.worker.message}</p>
+          </SectionCard>
+        </div>
         <BackupsTable
           result={backupList}
           query={query}
@@ -478,19 +513,15 @@ export function BackupsPage() {
           onPageChange={handlePageChange}
           onQueryChange={handleQueryChange}
         />
-        <div className="rounded-xl border border-blue-200/60 bg-blue-50/60 p-4 text-blue-900 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200">
-              <Info className="h-5 w-5" />
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm font-semibold">Storage Information</p>
-              <p className="text-xs text-blue-700/90 dark:text-blue-200/80">
-                Backup jobs run inside the CMS. Completed local backups download through the
-                authenticated admin API; remote artifacts open only when a configured storage URL is
-                available.
-              </p>
-            </div>
+        <div className="flex items-start gap-3 rounded-2xl border border-info/20 bg-info-soft p-4 text-info">
+          <HardDrive className="mt-0.5 size-5 shrink-0" />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold">Storage information</p>
+            <p className="text-xs text-info/80">
+              Backup jobs run inside the CMS. Completed local backups download through the
+              authenticated admin API; remote artifacts open only when a configured storage URL is
+              available.
+            </p>
           </div>
         </div>
       </div>

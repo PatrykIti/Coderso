@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -88,6 +91,7 @@ const installedSeed: InstalledPlugin[] = [
 
 export function PluginStorePage() {
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
   const [storeItems, setStoreItems] = useState(catalog);
   const [selectedStoreId, setSelectedStoreId] = useState(storeItems[0]?.id ?? "");
   const [selectedVersion, setSelectedVersion] = useState(storeItems[0]?.versions[0]?.version ?? "");
@@ -97,6 +101,13 @@ export function PluginStorePage() {
   const selectedStore = storeItems.find((item) => item.id === selectedStoreId);
   const selectedInstalledPlugin = installedPlugins.find(
     (plugin) => plugin.name === selectedInstalled
+  );
+
+  // TASK-479-24-L01: presentational featured banner — render-time derivation over
+  // existing catalog state (no new effect, no fetch, no sync setState).
+  const featured = useMemo(
+    () => storeItems.find((item) => item.status === "official") ?? storeItems[0],
+    [storeItems]
   );
 
   const storeSelection = useMemo(() => {
@@ -210,11 +221,41 @@ export function PluginStorePage() {
             <TabsTrigger value="installed">Installed</TabsTrigger>
           </TabsList>
           <TabsContent value="store" className="mt-6">
-            <div className="grid gap-6 lg:grid-cols-[360px_1fr]">
+            <Card className="relative mb-6 gap-0 overflow-hidden border-0 bg-primary p-7 text-primary-foreground shadow-card">
+              <div className="absolute -right-10 -top-10 size-48 rounded-full bg-white/10 blur-2xl" />
+              <div className="relative max-w-lg">
+                <Badge className="mb-3 border-white/20 bg-white/15 text-white">Featured</Badge>
+                <h2 className="font-display text-2xl font-bold">{featured?.name}</h2>
+                <p className="mt-1.5 text-sm text-white/80">{featured?.description}</p>
+                <Button
+                  variant="soft"
+                  className="mt-4 bg-white text-primary hover:bg-white/90"
+                  onClick={() => {
+                    if (featured) handleSelectStore(featured.id);
+                  }}
+                >
+                  View plugin
+                </Button>
+              </div>
+            </Card>
+
+            <Tabs value={category} onValueChange={setCategory} className="mb-5 w-full">
+              <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="marketing">Marketing</TabsTrigger>
+                <TabsTrigger value="commerce">Commerce</TabsTrigger>
+                <TabsTrigger value="ai">AI</TabsTrigger>
+                <TabsTrigger value="themes">Themes</TabsTrigger>
+              </TabsList>
+            </Tabs>
+
+            <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
               <StoreList
                 items={storeItems}
                 selectedId={selectedStoreId}
                 query={query}
+                category={category}
                 onQueryChange={setQuery}
                 onSelect={handleSelectStore}
               />
