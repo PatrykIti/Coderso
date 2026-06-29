@@ -1,6 +1,4 @@
-import { Globe2 } from "lucide-react";
-
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsField } from "@/ui/shared/SettingsSection";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,8 +24,6 @@ const timezoneOptions = [
   { value: "utc+09", label: "(UTC+09:00) Tokyo" },
 ];
 
-const labelClassName = "text-xs font-semibold uppercase tracking-wider text-muted-foreground";
-
 const timezoneUnavailableReason =
   "Timezone is not wired into the settings save payload yet. TASK-359-04 owns persistence.";
 
@@ -43,6 +39,12 @@ const defaultValues = {
   siteLocale: "en",
 };
 
+/**
+ * TASK-479-28-L02: Site Identity fields re-expressed as the prototype's
+ * `SettingsField` rows (Notion-like, no inner card). Bindings unchanged — the
+ * name/locale still write through `onChange`; the timezone select stays the
+ * disabled "not wired yet" no-op control owned by TASK-359-04.
+ */
 export function BrandingCard({
   siteName = defaultValues.siteName,
   siteLocale = defaultValues.siteLocale,
@@ -58,74 +60,51 @@ export function BrandingCard({
   };
 
   return (
-    <Card className="border-border/60">
-      <CardHeader className="border-b">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Globe2 className="h-5 w-5" />
-          </div>
-          <div>
-            <CardTitle>Site Identity</CardTitle>
-            <CardDescription>Update the name and locale defaults for your site.</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6 pt-6">
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <label className={labelClassName} htmlFor="site-name">
-              Site name
-            </label>
-            <Input
-              id="site-name"
-              value={siteName}
-              placeholder="e.g. My Awesome Site"
-              onChange={(event) => handleNameChange(event.target.value)}
-              disabled={disabled}
-            />
-          </div>
-          <div className="space-y-2">
-            <label className={labelClassName} htmlFor="site-locale">
-              Primary locale
-            </label>
-            <Select value={siteLocale} onValueChange={handleLocaleChange} disabled={disabled}>
-              <SelectTrigger id="site-locale" className="w-full">
-                <SelectValue placeholder="Select locale" />
-              </SelectTrigger>
-              <SelectContent>
-                {localeOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <label className={labelClassName} htmlFor="site-timezone">
-              Timezone
-            </label>
-            <Select defaultValue="utc-08" disabled>
-              <SelectTrigger
-                id="site-timezone"
-                className="w-full"
-                title={timezoneUnavailableReason}
-                data-no-op-control="settings-timezone"
-              >
-                <SelectValue placeholder="Select timezone" />
-              </SelectTrigger>
-              <SelectContent>
-                {timezoneOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">{timezoneUnavailableReason}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SettingsField label="Site name" htmlFor="site-name">
+          <Input
+            id="site-name"
+            value={siteName}
+            placeholder="e.g. My Awesome Site"
+            onChange={(event) => handleNameChange(event.target.value)}
+            disabled={disabled}
+          />
+        </SettingsField>
+        <SettingsField label="Primary locale" htmlFor="site-locale">
+          <Select value={siteLocale} onValueChange={handleLocaleChange} disabled={disabled}>
+            <SelectTrigger id="site-locale" className="w-full">
+              <SelectValue placeholder="Select locale" />
+            </SelectTrigger>
+            <SelectContent>
+              {localeOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </SettingsField>
+      </div>
+      <SettingsField label="Timezone" htmlFor="site-timezone" hint={timezoneUnavailableReason}>
+        <Select defaultValue="utc-08" disabled>
+          <SelectTrigger
+            id="site-timezone"
+            className="w-full"
+            title={timezoneUnavailableReason}
+            data-no-op-control="settings-timezone"
+          >
+            <SelectValue placeholder="Select timezone" />
+          </SelectTrigger>
+          <SelectContent>
+            {timezoneOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </SettingsField>
+    </div>
   );
 }

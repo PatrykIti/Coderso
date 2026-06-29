@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { isApiClientError } from "@/services/apiClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { SettingsSection } from "@/ui/shared/SettingsSection";
 import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 import { BrandingCard } from "./BrandingCard";
@@ -139,22 +140,34 @@ export function GeneralSettingsPage({
                 <AlertDescription>{saveSuccess}</AlertDescription>
               </Alert>
             ) : null}
-            <BrandingCard
-              siteName={form.siteName}
-              siteLocale={form.siteLocale}
-              onChange={(next) =>
-                setForm((prev) => ({
-                  ...prev,
-                  siteName: next.siteName,
-                  siteLocale: next.siteLocale,
-                }))
-              }
-              disabled={busy}
-            />
-            <LogoUploadCard />
+            <div className="divide-y divide-border">
+              <SettingsSection
+                title="Site Identity"
+                description="How your site is named and localized across the admin."
+              >
+                <BrandingCard
+                  siteName={form.siteName}
+                  siteLocale={form.siteLocale}
+                  onChange={(next) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      siteName: next.siteName,
+                      siteLocale: next.siteLocale,
+                    }))
+                  }
+                  disabled={busy}
+                />
+              </SettingsSection>
+              <SettingsSection
+                title="Branding"
+                description="Upload a logo and favicon for the admin experience."
+              >
+                <LogoUploadCard />
+              </SettingsSection>
+            </div>
           </div>
         </div>
-        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 z-10 border-t border-border bg-card/90 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Checkbox

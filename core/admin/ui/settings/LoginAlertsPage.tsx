@@ -153,7 +153,7 @@ export function LoginAlertsPage() {
       }
     >
       <div className="flex min-h-full flex-col">
-        <div className="border-b bg-background px-6 py-5">
+        <div className="border-b border-border bg-card px-6 py-5">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold text-foreground">Login Alerts</h1>
@@ -168,7 +168,7 @@ export function LoginAlertsPage() {
         </div>
 
         <Tabs defaultValue="login-alerts" className="flex flex-1 flex-col">
-          <div className="border-b bg-background px-6">
+          <div className="border-b border-border bg-card px-6">
             <TabsList variant="line" className="h-12 gap-6">
               <TabsTrigger
                 value="general"
@@ -230,7 +230,7 @@ export function LoginAlertsPage() {
                 title="Suspicious Login Alerts"
                 description="Get notified whenever someone logs in from a new device, browser, or location."
                 icon={<BellRing className="h-5 w-5" />}
-                iconWrapperClassName="bg-primary/10 text-primary"
+                iconWrapperClassName="bg-primary-soft text-primary"
                 checked={form.enabled}
                 onCheckedChange={(value) => handleFieldChange("enabled", value)}
                 disabled={busy}
@@ -258,7 +258,7 @@ export function LoginAlertsPage() {
               <Card className="border-border/60 shadow-sm">
                 <CardContent className="space-y-6">
                   <div className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-warning-soft text-warning">
                       <ShieldAlert className="h-5 w-5" />
                     </div>
                     <div className="flex-1">
@@ -354,7 +354,7 @@ export function LoginAlertsPage() {
                     </div>
                   </div>
                   <div className="grid gap-4 pl-14 md:grid-cols-2">
-                    <div className="flex items-center justify-between rounded-lg border bg-background px-4 py-3">
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Mail className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Email</span>
@@ -368,7 +368,7 @@ export function LoginAlertsPage() {
                         data-no-op-control="settings-login-alerts-email-channel"
                       />
                     </div>
-                    <div className="flex items-center justify-between rounded-lg border bg-background px-4 py-3">
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3">
                       <div className="flex items-center gap-3">
                         <Webhook className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm font-medium">Webhook</span>
@@ -388,7 +388,7 @@ export function LoginAlertsPage() {
           </TabsContent>
         </Tabs>
 
-        <div className="sticky bottom-0 mt-auto border-t bg-background/80 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 mt-auto border-t border-border bg-card/80 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">{loginAlertAdvancedUnavailableReason}</p>
             <div className="flex items-center gap-2">

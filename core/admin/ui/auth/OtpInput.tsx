@@ -29,22 +29,19 @@ export function OtpInput({
   return (
     <div className={cn("flex items-center justify-center gap-2", className)}>
       {inputs.map((index) => {
-        const showDivider =
-          groupSize > 0 && (index + 1) % groupSize === 0 && index < length - 1;
+        const showDivider = groupSize > 0 && (index + 1) % groupSize === 0 && index < length - 1;
         return (
           <div key={index} className="flex items-center gap-2">
             <Input
               inputMode="numeric"
               maxLength={1}
               pattern="[0-9]*"
-              className="h-12 w-10 text-center text-lg font-semibold"
+              className="h-14 w-12 rounded-xl text-center text-lg font-semibold"
               aria-label={`Digit ${index + 1}`}
               value={padded[index] === " " ? "" : padded[index]}
               onChange={(event) => handleChange(index, event.target.value)}
             />
-            {showDivider ? (
-              <span className="text-muted-foreground">-</span>
-            ) : null}
+            {showDivider ? <span className="text-muted-foreground">-</span> : null}
           </div>
         );
       })}

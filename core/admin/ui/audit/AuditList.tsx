@@ -1,4 +1,4 @@
-import { Download } from "lucide-react";
+import { Download, ScrollText } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -343,6 +343,7 @@ export function AuditList() {
         <PageHeader
           title="Audit Logs"
           description="Detailed trail of all actions and security events within the platform."
+          icon={<ScrollText />}
           actions={
             <Button variant="outline" className="gap-2" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" />
@@ -361,25 +362,25 @@ export function AuditList() {
           onSeverityChange={handleSeverityChange}
         />
         {error ? (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
             {error}
           </div>
         ) : null}
         {notice ? (
-          <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
             {notice}
           </div>
         ) : null}
         {isLoading && logs.length === 0 ? (
-          <div className="rounded-xl border bg-muted/20 p-6 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-border bg-muted/20 p-6 text-sm text-muted-foreground">
             Loading audit logs...
           </div>
         ) : logs.length === 0 && error ? (
-          <div className="rounded-xl border border-dashed bg-muted/10 p-6 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/10 p-6 text-sm text-muted-foreground">
             Audit logs could not be loaded.
           </div>
         ) : logs.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-muted/10 p-6 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/10 p-6 text-sm text-muted-foreground">
             No audit logs match the current filters.
           </div>
         ) : (

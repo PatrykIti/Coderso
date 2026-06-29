@@ -32,9 +32,9 @@ export function AuditFilters({
   onSeverityChange,
 }: AuditFiltersProps) {
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <div className="flex flex-col gap-2.5 rounded-2xl border border-border bg-card p-3 shadow-soft lg:flex-row lg:items-center">
+      <div className="relative min-w-56 flex-1">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           placeholder="Search events, resources or users..."
           className="h-10 pl-9"
@@ -46,7 +46,7 @@ export function AuditFilters({
         value={dateRange}
         onValueChange={(value) => onDateRangeChange(value as AuditDateRange)}
       >
-        <SelectTrigger className="h-10 w-full" aria-label="Audit date range">
+        <SelectTrigger className="h-10 w-full lg:w-[170px]" aria-label="Audit date range">
           <CalendarDays className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Date range" />
         </SelectTrigger>
@@ -60,7 +60,7 @@ export function AuditFilters({
         value={eventType}
         onValueChange={(value) => onEventTypeChange(value as "all" | AuditCategory)}
       >
-        <SelectTrigger className="h-10 w-full">
+        <SelectTrigger className="h-10 w-full lg:w-[170px]">
           <Layers className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Event type" />
         </SelectTrigger>
@@ -75,7 +75,7 @@ export function AuditFilters({
         value={severity}
         onValueChange={(value) => onSeverityChange(value as "all" | AuditSeverity)}
       >
-        <SelectTrigger className="h-10 w-full">
+        <SelectTrigger className="h-10 w-full lg:w-[170px]">
           <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           <SelectValue placeholder="Severity" />
         </SelectTrigger>

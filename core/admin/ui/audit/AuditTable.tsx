@@ -59,7 +59,7 @@ export function AuditTable({ logs, selectedId, onSelect, onCopyJson, pageInfo }:
     });
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <div className="overflow-x-auto">
         <Table className="min-w-[1000px]">
           <TableHeader className="bg-muted/40">
@@ -99,18 +99,18 @@ export function AuditTable({ logs, selectedId, onSelect, onCopyJson, pageInfo }:
                       >
                         <Icon className="h-4 w-4" />
                       </div>
-                      <div className="flex flex-col">
+                      <div className="flex flex-col gap-1">
                         <span className="text-sm font-semibold text-foreground">{log.event}</span>
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                        <Badge variant={category.badgeVariant} className="w-fit">
                           {category.label}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {log.actor.type === "system" ? (
-                        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-indigo-500/10 text-indigo-600">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary-soft text-primary-soft-foreground">
                           <Cpu className="h-3.5 w-3.5" />
                         </div>
                       ) : (

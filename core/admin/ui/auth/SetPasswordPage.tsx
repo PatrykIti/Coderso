@@ -3,16 +3,31 @@ import { AlertCircle, Eye, EyeOff, LockKeyhole } from "lucide-react";
 
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { AuthShell } from "@/ui/layouts/AuthShell";
 import { PasswordStrengthList } from "@/ui/auth/PasswordStrengthList";
 import { isApiClientError } from "@/services/apiClient";
 import { confirmPasswordReset } from "@/services/authClient";
 import { resolveAdminBasePath, withAdminBasePath } from "@/utils/adminPaths";
+import { cn } from "@/lib/utils";
 
-const hasNumber = (value: string) => /\\d/.test(value);
+const hasNumber = (value: string) => /\d/.test(value);
 const hasSpecial = (value: string) => /[^a-zA-Z0-9]/.test(value);
+
+// TASK-479-29-L02: the frozen 06 `Progress` primitive has no `tone`/`variant`
+// prop (its indicator is hardcoded `bg-primary`). Per the shared-contract limit
+// rule, do NOT edit the frozen primitive — recolor the indicator from the
+// caller via a token-driven descendant utility, giving the prototype's
+// weak/medium/strong meter tones without a new primitive prop.
+type StrengthTone = "destructive" | "warning" | "success";
+
+const STRENGTH_INDICATOR: Record<StrengthTone, string> = {
+  destructive: "[&_[data-slot=progress-indicator]]:bg-destructive",
+  warning: "[&_[data-slot=progress-indicator]]:bg-warning",
+  success: "[&_[data-slot=progress-indicator]]:bg-success",
+};
 
 const resolveToken = (token?: string) => {
   if (token) return token;
@@ -45,6 +60,15 @@ export function SetPasswordPage({ token, initialError = "" }: SetPasswordPagePro
     ],
     [password]
   );
+
+  // Derived render-time from the EXISTING rules — no new logic, no extra state.
+  const score = rules.filter((rule) => rule.met).length;
+  const strength: { value: number; tone: StrengthTone; label: string } =
+    score >= 3
+      ? { value: 100, tone: "success", label: "Strong" }
+      : score === 2
+        ? { value: 66, tone: "warning", label: "Medium" }
+        : { value: 33, tone: "destructive", label: "Weak" };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,109 +105,93 @@ export function SetPasswordPage({ token, initialError = "" }: SetPasswordPagePro
   };
 
   return (
-    <AuthShell
-      mobileBrand={
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <LockKeyhole className="h-5 w-5" />
-            </span>
-            <span className="text-xl font-semibold">Coderso CMS</span>
-          </div>
-          <a className="text-sm text-muted-foreground" href="#">
-            Need help?
-          </a>
+    <AuthShell>
+      <Card className="p-7 shadow-card">
+        <div className="mb-6 text-center">
+          <span className="mx-auto mb-3 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <LockKeyhole className="size-6" />
+          </span>
+          <h2 className="font-display text-xl font-semibold">Set new password</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Choose a strong password for your account.
+          </p>
         </div>
-      }
-      footer={<p className="text-xs text-muted-foreground">© 2024 Coderso CMS.</p>}
-    >
-      <Card className="border-border/60 shadow-lg">
-        <CardContent className="space-y-6 p-8">
-          <div className="space-y-2 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <LockKeyhole className="h-5 w-5" />
+        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
+          {error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+          {success ? (
+            <Alert>
+              <AlertDescription>Password updated successfully.</AlertDescription>
+            </Alert>
+          ) : null}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" htmlFor="new-password">
+              New password
+            </label>
+            <div className="relative">
+              <Input
+                id="new-password"
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
             </div>
-            <h1 className="text-2xl font-semibold">Set new password</h1>
-            <p className="text-sm text-muted-foreground">
-              Your new password must be different from previous passwords.
-            </p>
           </div>
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {error ? (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            ) : null}
-            {success ? (
-              <Alert>
-                <AlertDescription>Password updated successfully.</AlertDescription>
-              </Alert>
-            ) : null}
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="new-password">
-                New password
-              </label>
-              <div className="relative">
-                <Input
-                  id="new-password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter new password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-            <PasswordStrengthList rules={rules} />
-            <div className="space-y-2">
-              <label className="text-sm font-medium" htmlFor="confirm-password">
-                Confirm password
-              </label>
-              <div className="relative">
-                <Input
-                  id="confirm-password"
-                  type={showConfirm ? "text" : "password"}
-                  placeholder="Confirm new password"
-                  value={confirm}
-                  onChange={(event) => setConfirm(event.target.value)}
-                />
-                <button
-                  type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-                  onClick={() => setShowConfirm((prev) => !prev)}
-                >
-                  {showConfirm ? (
-                    <Eye className="h-4 w-4" />
-                  ) : (
-                    <EyeOff className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-            <Button className="w-full" type="submit" disabled={loading}>
-              {loading ? "Updating..." : "Update password"}
-            </Button>
-          </form>
-          <div className="text-center">
-            <a
-              className="text-sm text-muted-foreground hover:text-foreground"
-              href={withAdminBasePath(basePath, "/login")}
-            >
-              Back to login
-            </a>
+          <div className="flex items-center gap-3">
+            <Progress
+              value={strength.value}
+              className={cn("flex-1", STRENGTH_INDICATOR[strength.tone])}
+            />
+            <span className="text-sm text-muted-foreground">{strength.label}</span>
           </div>
-        </CardContent>
+          <PasswordStrengthList rules={rules} />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium" htmlFor="confirm-password">
+              Confirm password
+            </label>
+            <div className="relative">
+              <Input
+                id="confirm-password"
+                type={showConfirm ? "text" : "password"}
+                placeholder="••••••••"
+                value={confirm}
+                onChange={(event) => setConfirm(event.target.value)}
+              />
+              <button
+                type="button"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                onClick={() => setShowConfirm((prev) => !prev)}
+                aria-label={showConfirm ? "Hide password" : "Show password"}
+              >
+                {showConfirm ? <Eye className="size-4" /> : <EyeOff className="size-4" />}
+              </button>
+            </div>
+          </div>
+          <Button className="w-full" size="lg" type="submit" disabled={loading}>
+            {loading ? "Updating..." : "Update password"}
+          </Button>
+        </form>
+        <p className="mt-5 text-center">
+          <a
+            className="text-sm font-medium text-primary hover:underline"
+            href={withAdminBasePath(basePath, "/login")}
+          >
+            Back to login
+          </a>
+        </p>
       </Card>
     </AuthShell>
   );

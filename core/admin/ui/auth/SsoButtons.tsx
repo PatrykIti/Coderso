@@ -9,7 +9,7 @@ type SsoButtonsProps = {
 
 export function SsoButtons({ className }: SsoButtonsProps) {
   return (
-    <div className={cn("grid grid-cols-2 gap-4", className)}>
+    <div className={cn("grid grid-cols-2 gap-2", className)}>
       <Button variant="outline" className="gap-2">
         <span aria-hidden="true">
           <svg viewBox="0 0 24 24" className="h-4 w-4" role="presentation">

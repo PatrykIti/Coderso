@@ -30,7 +30,7 @@ export function PasswordStrengthList({ rules }: PasswordStrengthListProps) {
               className={cn(
                 "flex h-4 w-4 items-center justify-center rounded-full border",
                 rule.met
-                  ? "border-emerald-400 bg-emerald-500/15 text-emerald-600"
+                  ? "border-success bg-success-soft text-success"
                   : "border-muted-foreground/30 text-transparent"
               )}
             >

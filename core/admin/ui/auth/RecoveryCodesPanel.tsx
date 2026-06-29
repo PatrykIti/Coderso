@@ -21,13 +21,13 @@ type RecoveryCodesPanelProps = {
 
 export function RecoveryCodesPanel({ codes = defaultCodes }: RecoveryCodesPanelProps) {
   return (
-    <Card className="border-border/60 bg-muted/30">
+    <Card className="bg-muted/30">
       <CardContent className="space-y-6 p-6">
-        <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-700">
+        <Alert variant="warning">
           <AlertTitle>Save your recovery codes</AlertTitle>
-          <AlertDescription className="text-amber-700/80">
-            If you lose access to your device, use these backup codes to access
-            your account. Store them safely.
+          <AlertDescription>
+            If you lose access to your device, use these backup codes to access your account. Store
+            them safely.
           </AlertDescription>
         </Alert>
         <div className="flex items-center justify-between">

@@ -166,7 +166,7 @@ export function IntegrationsPage() {
       search={<IntegrationsSearch value={query} onChange={setQuery} />}
     >
       <div className="flex h-full flex-col">
-        <div className="border-b bg-background/70 px-6 py-5">
+        <div className="border-b border-border bg-card/70 px-6 py-5">
           <div className="mx-auto flex max-w-6xl flex-col gap-4">
             <PageHeader
               title="Integrations"
