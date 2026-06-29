@@ -60,7 +60,7 @@ export function ListingTemplateTable({
   onDelete,
 }: ListingTemplateTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-card">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
@@ -91,10 +91,7 @@ export function ListingTemplateTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={6}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
+              <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                 {emptyMessage ?? "No listing templates yet."}
               </TableCell>
             </TableRow>
@@ -103,10 +100,7 @@ export function ListingTemplateTable({
             const isSelected = selectedIds.includes(template.id);
             const bindingCount = template.config.fields.length;
             return (
-              <TableRow
-                key={template.id}
-                className={isSelected ? "bg-muted/30" : undefined}
-              >
+              <TableRow key={template.id} className={isSelected ? "bg-muted/30" : undefined}>
                 <TableCell className="pl-4">
                   <Checkbox
                     aria-label={`Select ${template.name}`}
@@ -116,21 +110,15 @@ export function ListingTemplateTable({
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
-                    <span className="break-words font-semibold">
-                      {template.name}
-                    </span>
+                    <span className="break-words font-semibold">{template.name}</span>
                     <span className="break-all text-xs text-muted-foreground">
                       /{template.slug}
                     </span>
                     {template.description ? (
-                      <span className="text-xs text-muted-foreground">
-                        {template.description}
-                      </span>
+                      <span className="text-xs text-muted-foreground">{template.description}</span>
                     ) : null}
                     <div className="mt-2 flex flex-wrap items-center gap-2 text-xs md:hidden">
-                      <Badge variant="outline">
-                        {layoutLabel(template.layout)}
-                      </Badge>
+                      <Badge variant="outline">{layoutLabel(template.layout)}</Badge>
                       <span className="text-muted-foreground/60">•</span>
                       <span className="text-muted-foreground">
                         {bindingCount} binding{bindingCount === 1 ? "" : "s"}
@@ -163,10 +151,7 @@ export function ListingTemplateTable({
                         <Pencil className="h-4 w-4" />
                         Edit
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onClick={() => onDelete(template.id)}
-                      >
+                      <DropdownMenuItem variant="destructive" onClick={() => onDelete(template.id)}>
                         <Trash2 className="h-4 w-4" />
                         Delete
                       </DropdownMenuItem>

@@ -1,5 +1,11 @@
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -36,16 +42,22 @@ export function WidgetCatalogFilters({
     <div className="flex flex-wrap items-center gap-3">
       <Tabs
         value={tab}
-        onValueChange={(value) =>
-          onTabChange(value === "all" ? "all" : "recommended")
-        }
-        >
-        <TabsList className="h-9">
-          <TabsTrigger value="recommended" className="text-xs">
-            Recommended <Badge variant="outline" className="ml-2 text-[10px]">{recommendedCount}</Badge>
+        onValueChange={(value) => onTabChange(value === "all" ? "all" : "recommended")}
+      >
+        {/* TASK-479-22-L01: prototype pill scope tabs — rounded-xl muted track,
+            active pill = bg-card text-primary shadow-soft; scrolls on overflow. */}
+        <TabsList className="h-auto max-w-full overflow-x-auto rounded-xl bg-muted p-1">
+          <TabsTrigger value="recommended" className="text-xs data-[state=active]:text-primary">
+            Recommended{" "}
+            <Badge variant="outline" className="ml-2 text-[10px]">
+              {recommendedCount}
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value="all" className="text-xs">
-            All widgets <Badge variant="outline" className="ml-2 text-[10px]">{allCount}</Badge>
+          <TabsTrigger value="all" className="text-xs data-[state=active]:text-primary">
+            All widgets{" "}
+            <Badge variant="outline" className="ml-2 text-[10px]">
+              {allCount}
+            </Badge>
           </TabsTrigger>
         </TabsList>
       </Tabs>
@@ -53,9 +65,7 @@ export function WidgetCatalogFilters({
         className="flex items-center gap-2 rounded-lg border bg-background px-3 py-1.5"
         title="Advanced mode unlocks module and complexity filters for detailed widget discovery."
       >
-        <span className="text-xs text-muted-foreground">
-          Advanced mode
-        </span>
+        <span className="text-xs text-muted-foreground">Advanced mode</span>
         <Switch
           id="widgets-advanced-mode"
           checked={advancedMode}
@@ -79,9 +89,7 @@ export function WidgetCatalogFilters({
       <Select
         value={complexityFilter}
         onValueChange={(value) =>
-          onComplexityFilterChange(
-            value === "composite" || value === "atomic" ? value : "all"
-          )
+          onComplexityFilterChange(value === "composite" || value === "atomic" ? value : "all")
         }
         disabled={!advancedMode}
       >

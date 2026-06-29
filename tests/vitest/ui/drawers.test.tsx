@@ -1,5 +1,6 @@
 import React from "react";
 import { expect, test } from "vitest";
+import type { AdminThemeTemplate } from "../../../core/admin/services/adminThemeClient";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { Monitor } from "lucide-react";
 
@@ -172,7 +173,7 @@ test("ThemeProfileDrawer renders profile name", () => {
       open
       onOpenChange={() => undefined}
       profile={themeProfile}
-      templates={templates}
+      templates={templates as AdminThemeTemplate[]}
     />
   );
 

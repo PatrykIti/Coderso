@@ -24,9 +24,9 @@ test("CustomScreenListPage renders shell and loading state", () => {
     path: "/admin/advanced/custom-screens",
   });
 
-  expect(html).toContain("Custom Screens");
-  expect(html).toContain("New");
-  expect(html).toContain("Loading custom screens");
+  expect(html).toContain("Screens");
+  expect(html).toContain("New screen");
+  expect(html).toContain("Loading screens");
   expect(html).toContain("Search custom screens");
 });
 
@@ -65,7 +65,7 @@ test("CustomScreenListPage renders cached screens without loading placeholder", 
     expect(html).toContain("Cached screen");
     expect(html).toContain("Sidebar label:");
     expect(html).toContain("Catalog");
-    expect(html).not.toContain("Loading custom screens");
+    expect(html).not.toContain("Loading screens");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;
@@ -96,8 +96,8 @@ test("CustomScreenListPage renders list shell", () => {
     path: "/admin/advanced/custom-screens",
   });
 
-  expect(html).toContain("Custom Screens");
-  expect(html).toContain("New");
+  expect(html).toContain("Screens");
+  expect(html).toContain("New screen");
 });
 
 test("CustomScreenEditorPage renders builder canvas and save action", () => {

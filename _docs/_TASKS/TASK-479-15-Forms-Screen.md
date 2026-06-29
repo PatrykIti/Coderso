@@ -5,7 +5,7 @@
 **Category:** Admin UI / Forms / Visual Refresh
 **Estimated Effort:** Large
 **Dependencies:** TASK-479-05, TASK-479-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Parent Task:** TASK-479
 
 ---
@@ -76,10 +76,10 @@ already gate behind the Forms module's existing permission wiring
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-479-15-L01 | Form List Restyle | ⏳ To Do |
-| TASK-479-15-L02 | Form Builder Restyle | ⏳ To Do |
-| TASK-479-15-L03 | Form Submissions & Action Logs Restyle | ⏳ To Do |
-| TASK-479-15-L04 | Forms Tests | ⏳ To Do |
+| TASK-479-15-L01 | Form List Restyle | ✅ Done |
+| TASK-479-15-L02 | Form Builder Restyle | ✅ Done |
+| TASK-479-15-L03 | Form Submissions & Action Logs Restyle | ✅ Done |
+| TASK-479-15-L04 | Forms Tests | ✅ Done |
 
 ---
 

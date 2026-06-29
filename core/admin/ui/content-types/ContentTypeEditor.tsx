@@ -1,4 +1,4 @@
-import { Copy, PanelsTopLeft, Save, Send, Trash2 } from "lucide-react";
+import { Copy, GitBranch, PanelsTopLeft, Plus, Save, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -25,6 +26,7 @@ import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
 import { ContentTypePreviewPanel } from "./ContentTypePreviewPanel";
@@ -36,6 +38,8 @@ import {
 } from "./SchemaBuilder";
 import { buildSchemaFromFields, fieldsFromSchema } from "./schemaMapping";
 import { resolveContentTypeIdFromPath } from "./pathResolvers";
+
+type EditorTab = "fields" | "relations" | "settings";
 
 const defaultFields: ContentField[] = [
   {
@@ -98,6 +102,7 @@ export function ContentTypeEditor() {
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
     () => initialFields[0]?.id ?? null
   );
+  const [tab, setTab] = useState<EditorTab>("fields");
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [previewHidden, setPreviewHidden] = useState(false);
   const [previewSheetOpen, setPreviewSheetOpen] = useState(false);
@@ -423,6 +428,10 @@ export function ContentTypeEditor() {
     selectedField?.type === "relation" && !selectedField.relation?.target
       ? "Select a related content type."
       : null;
+  const relationFields = useMemo(
+    () => fields.filter((field) => field.type === "relation"),
+    [fields]
+  );
 
   return (
     <EditorShell
@@ -450,7 +459,11 @@ export function ContentTypeEditor() {
           <PageHeader
             title="Content Type Editor"
             description="Define schema fields and validation rules."
-            actions={<Badge variant="outline">{status}</Badge>}
+            actions={
+              <Badge variant="soft" className="capitalize">
+                {status}
+              </Badge>
+            }
           />
           {error ? (
             <Alert variant="destructive" className="mt-4">
@@ -574,95 +587,167 @@ export function ContentTypeEditor() {
             </Button>
           </div>
         </div>
+        <div className="px-6 pt-4">
+          <Tabs value={tab} onValueChange={(value) => setTab(value as EditorTab)}>
+            <TabsList variant="line">
+              <TabsTrigger value="fields">
+                Fields
+                <Badge variant="soft" className="ml-1.5">
+                  {fields.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="relations">
+                Relations
+                <Badge variant="soft" className="ml-1.5">
+                  {relationFields.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
         <div className="flex flex-col gap-6 px-6 py-6">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div>
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Name</label>
-              <Input
-                value={name}
-                onChange={(event) => {
-                  setName(event.target.value);
-                  setUnsavedChanges(true);
-                }}
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-muted-foreground">Slug</label>
-              <Input
-                value={slug}
-                onChange={(event) => {
-                  setSlug(event.target.value);
-                  setUnsavedChanges(true);
-                }}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-base">Taxonomies</CardTitle>
-              <CardDescription>
-                Enable categories and tags for entries of this content type.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">Categories</p>
-                  <p className="text-xs text-muted-foreground">
-                    Single category selector per entry.
-                  </p>
-                </div>
-                <Switch
-                  checked={taxonomyConfig.categories}
-                  onCheckedChange={(checked) =>
-                    void handleTaxonomyToggle("categories", checked === true)
-                  }
-                  disabled={isLoading || isTaxonomySaving}
+          {tab === "fields" ? (
+            <SectionCard
+              title="Fields"
+              description="Drag to reorder. Click a field to edit it."
+              action={
+                <Button variant="soft" size="sm" className="gap-1.5" onClick={handleAddField}>
+                  <Plus className="size-4" /> Add field
+                </Button>
+              }
+            >
+              <div className="flex flex-col gap-6">
+                <FieldsListPanel
+                  className="lg:hidden"
+                  fields={fields}
+                  selectedId={activeSelectedFieldId}
+                  onSelect={(id) => setSelectedFieldId(id)}
+                  onAdd={handleAddField}
+                />
+                <FieldSettingsPanel
+                  field={selectedField}
+                  nameError={nameError}
+                  defaultError={defaultError}
+                  relationError={relationError}
+                  relationTargets={relationTargets}
+                  existingNames={fields.map((field) => ({ id: field.id, name: field.name }))}
+                  onChange={(next) => {
+                    handleFieldChange(fields.map((field) => (field.id === next.id ? next : field)));
+                  }}
+                  onRemove={requestFieldRemoval}
+                  className="hidden lg:flex h-auto overflow-visible"
                 />
               </div>
-              <div className="flex items-center justify-between gap-4 rounded-lg border bg-muted/30 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">Tags</p>
-                  <p className="text-xs text-muted-foreground">
-                    Multi-tag selector with quick add.
-                  </p>
+            </SectionCard>
+          ) : null}
+
+          {tab === "relations" ? (
+            <SectionCard
+              title="Relations"
+              description="Fields that link this type to other content types."
+            >
+              {relationFields.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No relation fields yet. Add a field of type &ldquo;Relation&rdquo; to link this
+                  type to another content type.
+                </p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {relationFields.map((field) => {
+                    const target = relationTargets.find(
+                      (item) => item.slug === field.relation?.target
+                    );
+                    return (
+                      <div key={field.id} className="flex items-center gap-3 py-3">
+                        <span className="flex size-9 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                          <GitBranch className="size-4" />
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-medium">{field.label}</div>
+                          <div className="truncate text-xs text-muted-foreground">
+                            {target?.name ?? field.relation?.target ?? "Not linked"}
+                            {field.relation?.multiple ? " · many" : " · one"}
+                          </div>
+                        </div>
+                        <Badge variant="soft">Relation</Badge>
+                      </div>
+                    );
+                  })}
                 </div>
-                <Switch
-                  checked={taxonomyConfig.tags}
-                  onCheckedChange={(checked) => void handleTaxonomyToggle("tags", checked === true)}
-                  disabled={isLoading || isTaxonomySaving}
-                />
-              </div>
-            </CardContent>
-          </Card>
-          {isLoading ? (
-            <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-              Loading schema builder...
-            </div>
-          ) : (
+              )}
+            </SectionCard>
+          ) : null}
+
+          {tab === "settings" ? (
             <div className="flex flex-col gap-6">
-              <FieldsListPanel
-                className="lg:hidden"
-                fields={fields}
-                selectedId={activeSelectedFieldId}
-                onSelect={(id) => setSelectedFieldId(id)}
-                onAdd={handleAddField}
-              />
-              <FieldSettingsPanel
-                field={selectedField}
-                nameError={nameError}
-                defaultError={defaultError}
-                relationError={relationError}
-                relationTargets={relationTargets}
-                existingNames={fields.map((field) => ({ id: field.id, name: field.name }))}
-                onChange={(next) => {
-                  handleFieldChange(fields.map((field) => (field.id === next.id ? next : field)));
-                }}
-                onRemove={requestFieldRemoval}
-                className="hidden lg:flex h-auto overflow-visible"
-              />
+              <SectionCard title="Details" description="Identify this content type.">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground">
+                      Name
+                    </label>
+                    <Input
+                      value={name}
+                      onChange={(event) => {
+                        setName(event.target.value);
+                        setUnsavedChanges(true);
+                      }}
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase text-muted-foreground">
+                      Slug
+                    </label>
+                    <Input
+                      value={slug}
+                      onChange={(event) => {
+                        setSlug(event.target.value);
+                        setUnsavedChanges(true);
+                      }}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              </SectionCard>
+              <SectionCard
+                title="Taxonomies"
+                description="Enable categories and tags for entries of this content type."
+              >
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between gap-4 rounded-xl border bg-muted/30 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">Categories</p>
+                      <p className="text-xs text-muted-foreground">
+                        Single category selector per entry.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={taxonomyConfig.categories}
+                      onCheckedChange={(checked) =>
+                        void handleTaxonomyToggle("categories", checked === true)
+                      }
+                      disabled={isLoading || isTaxonomySaving}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-xl border bg-muted/30 px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">Tags</p>
+                      <p className="text-xs text-muted-foreground">
+                        Multi-tag selector with quick add.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={taxonomyConfig.tags}
+                      onCheckedChange={(checked) =>
+                        void handleTaxonomyToggle("tags", checked === true)
+                      }
+                      disabled={isLoading || isTaxonomySaving}
+                    />
+                  </div>
+                </div>
+              </SectionCard>
               <Card className="border-destructive/30">
                 <CardHeader className="space-y-1">
                   <CardTitle className="text-base text-destructive">Danger Zone</CardTitle>
@@ -686,7 +771,7 @@ export function ContentTypeEditor() {
                 </CardContent>
               </Card>
             </div>
-          )}
+          ) : null}
         </div>
       </>
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>

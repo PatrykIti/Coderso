@@ -4,6 +4,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { AdminThemeTemplate } from "../../../core/admin/services/adminThemeClient";
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/button", () => ({
@@ -242,7 +244,12 @@ test("ThemeTemplateDrawer saves focus ring and navigation token text-input updat
 
   const onSave = vi.fn(async () => undefined);
   const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={() => undefined}
+      template={template as AdminThemeTemplate}
+      onSave={onSave}
+    />
   );
 
   try {

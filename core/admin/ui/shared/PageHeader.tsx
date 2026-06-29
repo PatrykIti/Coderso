@@ -1,36 +1,74 @@
+import { ChevronRight } from "lucide-react";
+import { type ReactNode } from "react";
+
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { cn } from "@/lib/utils";
 
-type PageHeaderProps = {
-  title: string;
-  description?: string;
-  actions?: React.ReactNode;
-  className?: string;
-};
+/**
+ * TASK-479-06-L02: page header extended from the prototype
+ * (`patterns/PageHeader.tsx`). Adds an optional icon tile + breadcrumb trail on
+ * top of the existing title/description/actions API. Breadcrumb links route
+ * through `AdminLink` (adminPaths-resolved, prefetch on hover/focus) — never the
+ * prototype `<Link>`. Backward-compatible: callers passing only
+ * `title` (+ optional `description`/`actions`/`className`) still render.
+ */
+export type Crumb = { label: string; href?: string };
 
 export function PageHeader({
   title,
   description,
   actions,
+  breadcrumbs,
+  icon,
   className,
-}: PageHeaderProps) {
+}: {
+  title: ReactNode;
+  description?: ReactNode;
+  actions?: ReactNode;
+  breadcrumbs?: Crumb[];
+  icon?: ReactNode;
+  className?: string;
+}) {
   return (
-    <div
-      className={cn(
-        "flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
-        className
-      )}
-    >
-      <div className="space-y-1">
-        <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-        {description ? (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
-      {actions ? (
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-          {actions}
-        </div>
+    <div className={cn("mb-6 flex flex-col gap-4", className)}>
+      {breadcrumbs && breadcrumbs.length > 0 ? (
+        <nav className="flex items-center gap-1 text-sm text-muted-foreground">
+          {breadcrumbs.map((crumb, index) => (
+            <span key={index} className="flex items-center gap-1">
+              {index > 0 ? <ChevronRight className="size-3.5 opacity-60" /> : null}
+              {crumb.href ? (
+                <AdminLink
+                  href={crumb.href}
+                  prefetch
+                  className="rounded px-1 hover:text-foreground"
+                >
+                  {crumb.label}
+                </AdminLink>
+              ) : (
+                <span className="px-1 text-foreground">{crumb.label}</span>
+              )}
+            </span>
+          ))}
+        </nav>
       ) : null}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          {icon ? (
+            <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary-soft-foreground [&_svg]:size-5.5">
+              {icon}
+            </div>
+          ) : null}
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+              {title}
+            </h1>
+            {description ? (
+              <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            ) : null}
+          </div>
+        </div>
+        {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      </div>
     </div>
   );
 }

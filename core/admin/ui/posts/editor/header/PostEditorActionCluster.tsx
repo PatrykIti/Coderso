@@ -42,7 +42,7 @@ export function PostEditorActionCluster({
       data-post-editor-header-cluster="primary-actions"
     >
       <span
-        className="hidden text-xs text-muted-foreground md:inline"
+        className="hidden items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground md:inline-flex"
         data-post-editor-sync-state="true"
       >
         {syncLabel}

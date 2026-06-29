@@ -296,20 +296,22 @@ test("PluginList renders rows, links, and selection callbacks", () => {
   }
 });
 
-test("MediaToolbar forwards search, filters, upload preference, and view actions", () => {
+// TASK-479-11-L01: the restyled MediaToolbar no longer owns the filter pills
+// (those moved into the folder rail on MediaLibraryPage; that behaviour is now
+// covered by tests/vitest/ui-integration/media-restyle.test.tsx). The toolbar
+// keeps the search input, the optional open-after-upload checkbox, and the
+// grid/list view switch (now the only two buttons it renders).
+test("MediaToolbar forwards search, upload preference, and view actions", () => {
   const onSearchChange = vi.fn();
-  const onFilterChange = vi.fn();
   const onViewChange = vi.fn();
   const onOpenAfterUploadChange = vi.fn();
   const view = mount(
     <MediaToolbar
       search="hero"
-      filter="image"
       view="grid"
       openAfterUpload
       onOpenAfterUploadChange={onOpenAfterUploadChange}
       onSearchChange={onSearchChange}
-      onFilterChange={onFilterChange}
       onViewChange={onViewChange}
     />
   );
@@ -321,18 +323,12 @@ test("MediaToolbar forwards search, filters, upload preference, and view actions
     React.act(() => {
       setInputValue(inputs[0], "gallery");
       (inputs[1] as HTMLInputElement | null | undefined)?.click();
-      buttons.find((button) => button.textContent?.includes("All Files"))?.click();
-      buttons.find((button) => button.textContent?.includes("Documents"))?.click();
-      buttons.find((button) => button.textContent?.includes("Audio"))?.click();
-      buttons[4]?.click();
-      buttons[5]?.click();
+      buttons[0]?.click();
+      buttons[1]?.click();
     });
 
     expect(onSearchChange).toHaveBeenCalledWith("gallery");
     expect(onOpenAfterUploadChange).toHaveBeenCalledWith(false);
-    expect(onFilterChange).toHaveBeenCalledWith("all");
-    expect(onFilterChange).toHaveBeenCalledWith("document");
-    expect(onFilterChange).toHaveBeenCalledWith("audio");
     expect(onViewChange).toHaveBeenCalledWith("grid");
     expect(onViewChange).toHaveBeenCalledWith("list");
   } finally {

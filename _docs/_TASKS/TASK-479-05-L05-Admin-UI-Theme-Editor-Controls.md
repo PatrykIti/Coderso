@@ -6,7 +6,57 @@
 **Category:** Admin UI / Design System / Theming
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05-L02, TASK-479-05-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-28; see "Closeout" below)
+
+---
+
+## Closeout (2026-06-28)
+
+Implemented entirely in `core/admin/ui/themes/ThemeTemplateDrawer.tsx` (the REAL
+per-token Admin-UI-Theme editor). `ThemeTokensEditor.tsx` (the SITE `DesignTokens`
+JSON editor) and `ThemePreviewPanel.tsx` (a static surface) were confirmed to NOT
+edit `AdminThemeTokens`, so neither was touched — exactly as the leaf's verified
+note predicted.
+
+What shipped:
+
+- **New "Accents" tab** (`TabsTrigger value="accents"` + `TabsContent`): `ColorField`
+  pickers for `primarySoft.bg` / `primarySoft.text`, three `TextField`s for the
+  CSS-string shadows (`effects.shadowSoft`/`shadowCard`/`shadowPop`), and a
+  `SoftAccentPreview` reading `var(--admin-primary-soft)` / `-soft-text` /
+  `var(--admin-shadow-card)`.
+- **Navigation tab** extended with `sidebar.muted` / `accent` / `accentForeground`
+  / `border` pickers.
+- **States tab** extended to surface EVERY new state field from L01/L02:
+  `state.info` + the four solid foregrounds (`success`/`warning`/`danger`/`info`
+  Foreground) + the three softs (`successSoft`/`warningSoft`/`infoSoft`), grouped
+  Solid / Foregrounds / Soft. `StatesPreview` gained an Info `StateSample` and a
+  soft-chip row (`SoftStateChip`).
+- **Live preview:** no extra wiring — `previewStyle` already spreads
+  `toAdminThemeCssVariableMap(tokens)`, which (post-L02) emits all the new
+  `--admin-*` vars, so the preview surfaces inherit them and the new sample blocks
+  read them directly.
+- **Invert helpers:** `invertNavigation` (+ new sidebar color paths) and
+  `invertStates` (+ info / *Foreground / *Soft) extended; new `invertAccents`
+  (primarySoft only — shadows are strings, excluded).
+- **Legacy/import safety:** the form already inits via
+  `mergeAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS, template?.tokens ?? null)`,
+  so an old export missing the new groups back-fills and the saved object passes
+  the strict `assertAdminThemeTokens` — covered by the new test.
+
+Tests: added `tests/vitest/ui/theme-template-drawer-new-tokens.test.tsx`
+(repo idiom: happy-dom + `createRoot`/`React.act` + `vi.mock`ed primitives) with
+two specs — (1) every new picker + the "Accents" trigger render; (2) editing the
+new pickers updates the live `--admin-*` preview var AND the `onSave` payload,
+which then passes `assertAdminThemeTokens`.
+
+Gates (worktree `/home/coder/project/Coderso-task-479`): `bun --cwd core lint`
+clean, `bun --cwd core lint:types` clean, and the touched UI suites green
+(new-tokens 2 + wave 2 + tokens-editor 1; plus theme-editor / -page-leaf /
+-leaf-components / themes 18 — no regressions).
+
+README/parent Sub-Tasks board left to the subtask integrator (matches L03/L04,
+which flipped only their own leaf Status while L02/L06 are still in flight).
 
 ---
 

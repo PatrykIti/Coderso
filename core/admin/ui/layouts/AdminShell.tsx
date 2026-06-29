@@ -13,7 +13,7 @@ import {
   type NavItem,
 } from "@/ui/navigation/sidebarConfig";
 import { SearchBar } from "@/ui/search/SearchBar";
-import { SidebarNav } from "@/ui/shared/SidebarNav";
+import { SidebarNav, SiteIdentity } from "@/ui/shared/SidebarNav";
 import { TopBar } from "@/ui/shared/TopBar";
 import { AssistantPanel } from "@/ui/assistant/AssistantPanel";
 import type { AdminBreadcrumbInput } from "@/ui/shared/AdminBreadcrumbs";
@@ -36,6 +36,7 @@ import {
   type SolutionKitSummary,
 } from "@/services/solutionKitsClient";
 import { cacheKeys } from "@/services/cachePolicy";
+import { getCachedRedactedSettings } from "@/services/settingsCache";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { useAdminCan } from "@/ui/contexts/AdminAuthContext";
 
@@ -76,6 +77,55 @@ const readStoredNavGroupState = () => {
   }
 };
 
+type SiteIdentityValue = {
+  siteName: string;
+  siteDomain?: string;
+  siteUrl?: string;
+};
+
+// TASK-479-06-L05: de-SaaS site identity. Render-time derivation from the
+// already-cached redacted settings — NO new fetch. Falls back to the neutral
+// "Coderso" brand (SidebarNav default) when settings are not cached yet.
+const deriveSiteIdentityFromCache = (): SiteIdentityValue => {
+  const cached = getCachedRedactedSettings();
+  const siteName = cached?.general.siteName?.trim() || "Coderso";
+  const siteUrl =
+    cached?.site.publicBaseUrl?.trim() || cached?.general.publicBaseUrl?.trim() || undefined;
+  let siteDomain: string | undefined;
+  if (siteUrl) {
+    try {
+      siteDomain = new URL(siteUrl).host;
+    } catch {
+      siteDomain = undefined;
+    }
+  }
+  return {
+    siteName,
+    ...(siteDomain ? { siteDomain } : {}),
+    ...(siteUrl ? { siteUrl } : {}),
+  };
+};
+
+const useSiteIdentityFromCache = (): SiteIdentityValue => {
+  const [identity, setIdentity] = useState<SiteIdentityValue>(deriveSiteIdentityFromCache);
+  useEffect(
+    () =>
+      subscribeCacheEvents((event) => {
+        if (event.key !== cacheKeys.settingsRedacted) return;
+        const next = deriveSiteIdentityFromCache();
+        setIdentity((prev) =>
+          prev.siteName === next.siteName &&
+          prev.siteDomain === next.siteDomain &&
+          prev.siteUrl === next.siteUrl
+            ? prev
+            : next
+        );
+      }),
+    []
+  );
+  return identity;
+};
+
 type AdminShellProps = {
   children: React.ReactNode;
   navSections?: NavSection[];
@@ -105,6 +155,7 @@ export function AdminShell({
 }: AdminShellProps) {
   const [navOpen, setNavOpen] = useState(false);
   const canAccess = useAdminCan();
+  const siteIdentity = useSiteIdentityFromCache();
   const canReadCustomScreens = canAccess("content:read");
   const canReadSolutionKits = canAccess("solution-kits:read");
   const [customScreens, setCustomScreens] = useState<CustomScreenShortcutRecord[]>(() =>
@@ -202,6 +253,10 @@ export function AdminShell({
     [adminBasePath, footerItems]
   );
   const resolvedActiveHref = activeHref ? resolveAdminHref(adminBasePath, activeHref) : activeHref;
+  // Stable key for the soft route transition. Uses a value already available
+  // (the resolved active href) — no new router coupling — and guards undefined
+  // so the keyed wrapper never forces a data-bearing remount/refetch.
+  const routeKey = resolvedActiveHref ?? "admin-root";
   const contentOwnsOverflow = contentClassName?.includes("overflow-") ?? false;
   const resolvedNavGroupState = useMemo(
     () => ({
@@ -229,6 +284,7 @@ export function AdminShell({
         activeHref={resolvedActiveHref}
         canAccess={canAccess}
         groupState={resolvedNavGroupState}
+        brand={<SiteIdentity {...siteIdentity} />}
         onGroupToggle={(groupId, nextExpanded) =>
           setNavGroupState((prev) => ({
             ...prev,
@@ -255,13 +311,25 @@ export function AdminShell({
           }
         />
         <main
+          data-app-scroll
           className={cn(
-            "min-h-0 flex-1 px-6 py-8",
+            "min-h-0 flex-1",
             !contentOwnsOverflow && "overflow-y-auto",
             contentClassName
           )}
         >
-          {children}
+          {/* Editor / full-bleed routes own their overflow and skip the centered
+              max-width column; everything else gets the comfortable centered
+              column with a CSS-only soft route transition. */}
+          {contentOwnsOverflow ? (
+            children
+          ) : (
+            <div className="mx-auto w-full max-w-[1280px] px-4 py-6 lg:px-8 lg:py-8">
+              <div key={routeKey} className="animate-in-soft">
+                {children}
+              </div>
+            </div>
+          )}
         </main>
       </div>
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
@@ -276,6 +344,7 @@ export function AdminShell({
             activeHref={resolvedActiveHref}
             canAccess={canAccess}
             variant="mobile"
+            brand={<SiteIdentity {...siteIdentity} />}
             groupState={resolvedNavGroupState}
             onGroupToggle={(groupId, nextExpanded) =>
               setNavGroupState((prev) => ({

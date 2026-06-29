@@ -180,11 +180,17 @@ test("MenuEditorPage renders editor-side location guidance", async () => {
     expect(view.container.textContent).toContain("Theme location");
     expect(view.container.textContent).toContain("Slot key used by the theme or Navigation widget");
     expect(view.container.textContent).toContain("Assigned to the primary theme slot.");
-    expect(view.container.textContent).toContain("Published");
+    // TASK-479-10-L02: the header live-status badge is now the shared
+    // token-driven StatusBadge (published -> success soft variant), which emits
+    // lowercase status text styled with a `capitalize` CSS class (visually
+    // "Published") instead of the old hardcoded emerald pill.
+    expect(view.container.textContent?.toLowerCase()).toContain("published");
     expect(view.container.textContent).toContain("Move to Draft");
     expect(view.container.textContent).toContain("Save changes");
-    expect(view.container.querySelector("header")?.textContent).toContain("Published");
-    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-emerald-500/10");
+    expect(view.container.querySelector("header")?.textContent?.toLowerCase()).toContain(
+      "published"
+    );
+    expect(view.container.querySelector("header")?.innerHTML).toContain('data-variant="success"');
     expect(view.container.textContent).not.toContain("All changes saved");
     expect(view.container.textContent).not.toContain("Back to menus");
   } finally {
@@ -222,8 +228,10 @@ test("MenuEditorPage clears foreground loading when pages cache exists without m
     expect(view.container.textContent).toContain("test2");
     expect(view.container.textContent).toContain("Theme location");
     expect(view.container.textContent).toContain("Not assigned to a theme slot.");
-    expect(view.container.textContent).toContain("Draft");
-    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-amber-100");
+    // TASK-479-10-L02: draft status now renders via the shared StatusBadge
+    // (draft -> secondary soft variant; lowercase text + `capitalize` CSS).
+    expect(view.container.textContent?.toLowerCase()).toContain("draft");
+    expect(view.container.querySelector("header")?.innerHTML).toContain('data-variant="secondary"');
     expect(view.container.textContent).toContain("Publish");
     expect(view.container.textContent).toContain("Menu Structure");
     expect(view.container.textContent).toContain("No items yet. Add your first link.");
@@ -244,8 +252,10 @@ test("MenuEditorPage shows success feedback after saving metadata", async () => 
       setInputValue(nameInput, "Primary Nav");
     });
 
+    // TASK-479-10-L02: the "Unsaved changes" pill is now the token-driven
+    // warning Badge variant (soft) instead of the old hardcoded rose pill.
     expect(view.container.querySelector("header")?.textContent).toContain("Unsaved changes");
-    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-rose-100");
+    expect(view.container.querySelector("header")?.innerHTML).toContain('data-variant="warning"');
 
     await React.act(async () => {
       Array.from(view.container.querySelectorAll("button"))

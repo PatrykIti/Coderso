@@ -16,6 +16,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,6 +44,7 @@ import {
 } from "@/services/formsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
   getDefaultFormSettings,
@@ -773,13 +775,11 @@ export function FormBuilderPage() {
       breadcrumbs={["Content", "Forms", formTitle]}
       topbarActions={
         <div className="flex items-center gap-2">
-          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
-            {meta.status}
-          </span>
+          <StatusBadge status={meta.status} />
           {hasUnsavedChanges ? (
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
+            <Badge variant="warning" className="uppercase tracking-wide">
               Unsaved changes
-            </span>
+            </Badge>
           ) : null}
         </div>
       }
@@ -848,7 +848,7 @@ export function FormBuilderPage() {
           </Alert>
         ) : null}
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground shadow-soft">
             Loading form builder...
           </div>
         ) : (

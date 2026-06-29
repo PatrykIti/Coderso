@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Booking / Testing
 **Estimated Effort:** Small
 **Dependencies:** TASK-479-17-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Parent Subtask:** TASK-479-17
 
 ---

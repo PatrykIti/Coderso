@@ -44,7 +44,7 @@ export function CommerceFilters({
   onStockChange,
 }: CommerceFiltersProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 rounded-2xl border bg-card p-3 shadow-card lg:flex-row lg:items-center lg:justify-between">
       <div className="relative w-full lg:max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -73,9 +73,7 @@ export function CommerceFilters({
         </Select>
         <Select
           value={collection}
-          onValueChange={(value) =>
-            onCollectionChange(value as CommerceCollectionFilter)
-          }
+          onValueChange={(value) => onCollectionChange(value as CommerceCollectionFilter)}
         >
           <SelectTrigger className="h-8 w-full sm:w-[180px]">
             <Boxes className="h-3 w-3 text-muted-foreground" />

@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,8 +11,9 @@ import { deletePopup, updatePopupStatus, type PopupRecord } from "@/services/pop
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
 
-import { PopupTable } from "./PopupTable";
+import { PopupCardGrid } from "./PopupCardGrid";
 import { usePopups } from "./hooks/usePopups";
 
 type PopupStatusFilter = "all" | PopupRecord["status"];
@@ -41,6 +43,16 @@ export function PopupsListPage() {
       archived: items.filter((item) => item.status === "archived").length,
     }),
     [items]
+  );
+
+  // Stat row — derived from REAL counts (no fabricated analytics).
+  const statCards = useMemo(
+    () => [
+      { label: "Total", value: counts.all },
+      { label: "Published", value: counts.published },
+      { label: "Drafts", value: counts.draft },
+    ],
+    [counts]
   );
 
   const handleDelete = async (id: string) => {
@@ -75,11 +87,16 @@ export function PopupsListPage() {
     <AdminShell activeHref="/admin/advanced/popups" breadcrumbs={["Coderso", "Popups"]}>
       <div className="mx-auto flex max-w-7xl flex-col gap-6">
         <PageHeader
-          title="Popups"
-          description="Manage popup campaigns with triggers, targeting rules, and lifecycle states."
+          title={
+            <span className="flex items-center gap-2">
+              Popups
+              <Badge variant="soft">Beta</Badge>
+            </span>
+          }
+          description="Capture attention with timed, scroll, and exit-intent overlays."
           actions={
-            <Button className="gap-2" onClick={() => navigate("/advanced/popups/new")}>
-              <Plus className="h-4 w-4" />
+            <Button className="gap-1.5" onClick={() => navigate("/advanced/popups/new")}>
+              <Plus className="size-4" />
               New popup
             </Button>
           }
@@ -98,7 +115,13 @@ export function PopupsListPage() {
           </Alert>
         ) : null}
 
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {statCards.map((card) => (
+            <StatCard key={card.label} label={card.label} value={card.value} />
+          ))}
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-4 shadow-card">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
             <Input
               value={search}
@@ -120,11 +143,11 @@ export function PopupsListPage() {
           </div>
         </div>
 
-        <PopupTable
+        <PopupCardGrid
           items={filtered}
+          isLoading={isLoading}
           onStatusChange={handleStatusChange}
           onDelete={handleDelete}
-          emptyMessage={isLoading ? "Loading popups..." : undefined}
         />
       </div>
     </AdminShell>

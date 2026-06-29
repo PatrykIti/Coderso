@@ -52,6 +52,9 @@ test("MenuEditorPage renders route-selected editor shell without cross-menu swit
     expect(html).toContain("Move to Draft");
     expect(html).not.toContain("Active menu");
     expect(html).not.toContain("New Menu");
+    // TASK-479-10-L02: dashed add-item affordance ported from the prototype.
+    expect(html).toContain('data-menu-add-item="dashed"');
+    expect(html).toContain("Add menu item");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

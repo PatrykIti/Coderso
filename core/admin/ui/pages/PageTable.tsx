@@ -1,3 +1,5 @@
+import { FileText } from "lucide-react";
+
 import {
   Table,
   TableBody,
@@ -6,27 +8,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import { PageRowActions } from "./PageRowActions";
 import type { PageSummary } from "@/services/pagesClient";
-
-const statusStyles: Record<string, string> = {
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  scheduled: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  archived: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-};
-
-const statusLabels: Record<string, string> = {
-  published: "Published",
-  draft: "Draft",
-  scheduled: "Scheduled",
-  archived: "Archived",
-};
 
 const formatDate = (value: string) => {
   try {
@@ -48,6 +36,8 @@ const toInitials = (value: string) =>
     .join("")
     .slice(0, 2)
     .toUpperCase();
+
+const firstNameOf = (value: string) => value.split(" ")[0] || value;
 
 export type PageTableProps = {
   items: PageSummary[];
@@ -87,10 +77,10 @@ export function PageTable({
   onDelete,
 }: PageTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
             <TableHead className="w-10 pl-4">
               <Checkbox
                 aria-label="Select all pages"
@@ -98,30 +88,20 @@ export function PageTable({
                 onCheckedChange={() => onToggleAll?.()}
               />
             </TableHead>
-            <TableHead className="min-w-[12rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Page title
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
-              Status
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
-              Author
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
-              Last updated
-            </TableHead>
-            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
+            <TableHead className="min-w-[12rem]">Title</TableHead>
+            <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead className="hidden lg:table-cell">Author</TableHead>
+            <TableHead className="hidden xl:table-cell">Updated</TableHead>
+            <TableHead className="hidden text-right sm:table-cell">Views</TableHead>
+            <TableHead className="w-12 pr-4 text-right">
+              <span className="sr-only">Actions</span>
             </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={6}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
+            <TableRow className="hover:bg-transparent">
+              <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
                 {emptyMessage ?? "No pages yet. Create your first page to get started."}
               </TableCell>
             </TableRow>
@@ -131,79 +111,75 @@ export function PageTable({
             const authorLabel = resolveAuthorLabel(page.author);
             const authorHint = page.author ? undefined : missingAuthorHint;
             return (
-            <TableRow key={page.id} className={isSelected ? "bg-muted/30" : undefined}>
-              <TableCell className="pl-4">
-                <Checkbox
-                  aria-label={`Select ${page.title}`}
-                  checked={isSelected}
-                  onCheckedChange={() => onTogglePage?.(page.id)}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col">
-                  <AdminLink
-                    href={`/pages/${encodeURIComponent(page.id)}`}
-                    prefetch
-                    className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                    aria-label={`Edit page: ${page.title}`}
-                  >
-                    {page.title}
-                  </AdminLink>
-                  <span className="text-xs text-muted-foreground break-all">
-                    {page.slug}
-                  </span>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                    <Badge
-                      variant="outline"
-                      className={statusStyles[page.status] ?? statusStyles.draft}
-                    >
-                      {statusLabels[page.status] ?? page.status}
-                    </Badge>
-                    <span className="text-muted-foreground/60">•</span>
-                    <span title={authorHint}>
-                      {authorLabel}
+              <TableRow key={page.id} className={isSelected ? "bg-primary-soft/40" : undefined}>
+                <TableCell className="pl-4">
+                  <Checkbox
+                    aria-label={`Select ${page.title}`}
+                    checked={isSelected}
+                    onCheckedChange={() => onTogglePage?.(page.id)}
+                  />
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      <FileText className="size-4" />
                     </span>
-                    <span className="text-muted-foreground/60">•</span>
-                    <span>{formatDate(page.updatedAt)}</span>
+                    <span className="flex min-w-0 flex-col">
+                      <AdminLink
+                        href={`/pages/${encodeURIComponent(page.id)}`}
+                        prefetch
+                        className="truncate font-medium text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                        aria-label={`Edit page: ${page.title}`}
+                      >
+                        {page.title}
+                      </AdminLink>
+                      <span className="truncate font-mono text-xs text-muted-foreground">
+                        {page.slug}
+                      </span>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                        <StatusBadge status={page.status} />
+                        <span className="text-muted-foreground/60">•</span>
+                        <span title={authorHint}>{authorLabel}</span>
+                        <span className="text-muted-foreground/60">•</span>
+                        <span>{formatDate(page.updatedAt)}</span>
+                      </div>
+                    </span>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                <Badge
-                  variant="outline"
-                  className={statusStyles[page.status] ?? statusStyles.draft}
-                >
-                  {statusLabels[page.status] ?? page.status}
-                </Badge>
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <div className="flex items-center gap-2">
-                  <Avatar size="sm">
-                    <AvatarFallback>
-                      {toInitials(authorLabel)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-muted-foreground" title={authorHint}>
-                    {authorLabel}
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                {formatDate(page.updatedAt)}
-              </TableCell>
-              <TableCell className="w-12 pr-4 text-right">
-                <PageRowActions
-                  status={page.status}
-                  onEdit={() => onEdit(page.id)}
-                  onPreview={() => onPreview(page.id)}
-                  onPublish={() => onPublish(page.id)}
-                  onUnpublish={() => onUnpublish(page.id)}
-                  onDuplicate={() => onDuplicate(page.id)}
-                  onDelete={onDelete ? () => onDelete(page.id) : undefined}
-                />
-              </TableCell>
-            </TableRow>
-          );
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <StatusBadge status={page.status} />
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <div className="flex items-center gap-2">
+                    <Avatar size="sm">
+                      <AvatarFallback>{toInitials(authorLabel)}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-sm text-muted-foreground" title={authorHint}>
+                      {firstNameOf(authorLabel)}
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
+                  {formatDate(page.updatedAt)}
+                </TableCell>
+                <TableCell className="hidden text-right text-sm tabular-nums text-muted-foreground sm:table-cell">
+                  {/* PageSummary exposes no view count — de-fabricate per the
+                      owner's rule (em-dash, never a mock number). */}
+                  —
+                </TableCell>
+                <TableCell className="w-12 pr-4 text-right">
+                  <PageRowActions
+                    status={page.status}
+                    onEdit={() => onEdit(page.id)}
+                    onPreview={() => onPreview(page.id)}
+                    onPublish={() => onPublish(page.id)}
+                    onUnpublish={() => onUnpublish(page.id)}
+                    onDuplicate={() => onDuplicate(page.id)}
+                    onDelete={onDelete ? () => onDelete(page.id) : undefined}
+                  />
+                </TableCell>
+              </TableRow>
+            );
           })}
         </TableBody>
       </Table>

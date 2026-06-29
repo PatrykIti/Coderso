@@ -1,7 +1,8 @@
-import { Plus } from "lucide-react";
+import { LayoutGrid, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -311,8 +312,9 @@ export function CustomScreenListPage() {
     <AdminShell activeHref="/admin/advanced/custom-screens" breadcrumbs={["Coderso", "Screens"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
-          title="Custom Screens"
-          description="Compose admin data screens from widgets tied to content types."
+          icon={<LayoutGrid />}
+          title="Screens"
+          description="Build bespoke admin surfaces from blocks bound to your data, then publish them to the sidebar."
           actions={
             <>
               {selectedCount > 0 ? (
@@ -326,9 +328,10 @@ export function CustomScreenListPage() {
                   variant="inline"
                 />
               ) : null}
-              <Button className="gap-2" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4" />
-                New
+              <Badge variant="soft">Beta</Badge>
+              <Button className="gap-1.5" onClick={() => setCreateOpen(true)}>
+                <Plus className="size-4" />
+                New screen
               </Button>
             </>
           }
@@ -357,8 +360,14 @@ export function CustomScreenListPage() {
           onContentTypeChange={setContentTypeFilter}
         />
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-            Loading custom screens...
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-busy="true">
+            <span className="sr-only">Loading screens…</span>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-48 animate-pulse rounded-2xl border border-border bg-card shadow-soft"
+              />
+            ))}
           </div>
         ) : (
           <CustomScreenTable
@@ -375,6 +384,7 @@ export function CustomScreenListPage() {
             onActivate={(id) => handleSetStatus(id, "active")}
             onMoveToDraft={(id) => handleSetStatus(id, "draft")}
             onDelete={setPendingDeleteId}
+            onCreate={() => setCreateOpen(true)}
           />
         )}
         <ListPaginationFooter

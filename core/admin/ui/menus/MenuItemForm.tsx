@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +47,20 @@ type MenuItemFormProps = {
   onChange: (next: MenuItemFormValue) => void;
 };
 
+/**
+ * Soft inspector row (TASK-479-10-L02): ports the prototype's quiet label +
+ * control stack so each field reads in the redesign language. Presentation
+ * only — the wrapped controls keep their existing bindings and handlers.
+ */
+function InspectorRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+      {children}
+    </div>
+  );
+}
+
 export function MenuItemForm({
   value,
   pages,
@@ -65,9 +81,8 @@ export function MenuItemForm({
   };
 
   return (
-    <form className="space-y-6">
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Navigation Label</label>
+    <form className="space-y-4">
+      <InspectorRow label="Navigation Label">
         <Input
           value={value.label}
           onChange={(event) => onChange({ ...value, label: event.target.value })}
@@ -76,15 +91,12 @@ export function MenuItemForm({
         {errors?.label ? (
           <p className="text-xs text-destructive">{errors.label}</p>
         ) : (
-          <p className="text-xs text-muted-foreground">
-            Text displayed in the menu.
-          </p>
+          <p className="text-xs text-muted-foreground">Text displayed in the menu.</p>
         )}
-      </div>
+      </InspectorRow>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Link Type</label>
-        <div className="flex gap-2 rounded-lg bg-muted p-1">
+      <InspectorRow label="Link Type">
+        <div className="flex gap-2 rounded-xl bg-muted p-1">
           <Button
             type="button"
             variant={value.linkType === "page" ? "secondary" : "ghost"}
@@ -102,11 +114,10 @@ export function MenuItemForm({
             Custom URL
           </Button>
         </div>
-      </div>
+      </InspectorRow>
 
       {value.linkType === "page" ? (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">Page</label>
+        <InspectorRow label="Page">
           <Select
             value={value.pageId || ""}
             onValueChange={(next) => onChange({ ...value, pageId: next })}
@@ -130,31 +141,26 @@ export function MenuItemForm({
           {errors?.link ? (
             <p className="text-xs text-destructive">{errors.link}</p>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Choose an existing page to link.
-            </p>
+            <p className="text-xs text-muted-foreground">Choose an existing page to link.</p>
           )}
-        </div>
+        </InspectorRow>
       ) : (
-        <div className="space-y-2">
-          <label className="text-sm font-medium">URL Path</label>
+        <InspectorRow label="URL Path">
           <Input
             value={value.href}
             onChange={(event) => onChange({ ...value, href: event.target.value })}
             placeholder="https://"
+            className="font-mono text-xs"
           />
           {errors?.link ? (
             <p className="text-xs text-destructive">{errors.link}</p>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Use a full URL for external links.
-            </p>
+            <p className="text-xs text-muted-foreground">Use a full URL for external links.</p>
           )}
-        </div>
+        </InspectorRow>
       )}
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Parent Item</label>
+      <InspectorRow label="Parent Item">
         <Select
           value={value.parentId ?? "root"}
           onValueChange={(next) =>
@@ -180,10 +186,9 @@ export function MenuItemForm({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </InspectorRow>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Visibility</label>
+      <InspectorRow label="Visibility">
         <Select
           value={value.visibility}
           onValueChange={(next) =>
@@ -211,10 +216,9 @@ export function MenuItemForm({
         <p className="text-xs text-muted-foreground">
           Controls when this link should appear in navigation.
         </p>
-      </div>
+      </InspectorRow>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Badge Label</label>
+      <InspectorRow label="Badge Label">
         <Input
           value={value.badgeLabel}
           onChange={(event) =>
@@ -225,13 +229,10 @@ export function MenuItemForm({
           }
           placeholder="New"
         />
-        <p className="text-xs text-muted-foreground">
-          Optional pill shown next to the menu label.
-        </p>
-      </div>
+        <p className="text-xs text-muted-foreground">Optional pill shown next to the menu label.</p>
+      </InspectorRow>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Badge Tone</label>
+      <InspectorRow label="Badge Tone">
         <Select
           value={value.badgeTone}
           onValueChange={(next) =>
@@ -252,10 +253,9 @@ export function MenuItemForm({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </InspectorRow>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Description</label>
+      <InspectorRow label="Description">
         <Input
           value={value.description}
           onChange={(event) =>
@@ -266,10 +266,9 @@ export function MenuItemForm({
           }
           placeholder="Optional helper text"
         />
-      </div>
+      </InspectorRow>
 
-      <div className="space-y-2">
-        <label className="text-sm font-medium">Icon Name</label>
+      <InspectorRow label="Icon Name">
         <Input
           value={value.icon}
           onChange={(event) =>
@@ -281,16 +280,15 @@ export function MenuItemForm({
           placeholder="e.g. sparkles"
         />
         <p className="text-xs text-muted-foreground">
-          Optional runtime icon token such as <code>sparkles</code>. Keep the
-          token simple and lowercase; the active menu presenter decides which
-          icon names it can render.
+          Optional runtime icon token such as <code>sparkles</code>. Keep the token simple and
+          lowercase; the active menu presenter decides which icon names it can render.
         </p>
         {normalizedIcon ? (
           <p className="text-xs text-muted-foreground">
             Current token: <code>{normalizedIcon}</code>
           </p>
         ) : null}
-      </div>
+      </InspectorRow>
     </form>
   );
 }

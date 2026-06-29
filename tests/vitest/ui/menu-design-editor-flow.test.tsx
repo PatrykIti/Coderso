@@ -586,6 +586,35 @@ test("appearance floating panel writes through the shared primitives into the me
   cleanup();
 });
 
+test("the restyled settings sheet saves the menu name through updateMenu (TASK-479-10-L02)", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  // The restyled canvas chrome still renders the live preview surface.
+  expect(container.querySelector('[data-menu-design-canvas-chrome="true"]')).toBeTruthy();
+
+  // Open the menu settings sheet from the editor topbar.
+  clickButton(container, "Menu settings");
+
+  const nameInput = container.querySelector(
+    'input[aria-label="Menu name"]'
+  ) as HTMLInputElement | null;
+  expect(nameInput).toBeTruthy();
+
+  React.act(() => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+    setter?.call(nameInput, "Renamed menu");
+    nameInput?.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+
+  clickButton(container, "Save settings");
+  await flush();
+
+  expect(menusClientState.updateMenu).toHaveBeenCalledWith("menu-1", { name: "Renamed menu" });
+
+  cleanup();
+});
+
 test("a host palette can only narrow the global catalog: gated sections stay gated", async () => {
   const detail = createPageHostDetail();
   // A palette that LISTS the gated navigation section plus hero: only hero

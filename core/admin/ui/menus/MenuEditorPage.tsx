@@ -1,8 +1,17 @@
-import { Layers, Paintbrush, PlusCircle, Save, SlidersHorizontal, Upload } from "lucide-react";
+import {
+  Layers,
+  Link as LinkIcon,
+  Paintbrush,
+  PlusCircle,
+  Save,
+  SlidersHorizontal,
+  Upload,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -32,6 +41,7 @@ import { MenuTree } from "@/ui/menus/MenuTree";
 import type { MenuDropIntent } from "@/ui/menus/menuDnD";
 import type { MenuItemDisplay } from "@/ui/menus/types";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { normalizeMenuItemSettings } from "../../../services/menus/menuItemSettings";
 
@@ -41,11 +51,6 @@ const createTempId = () => {
   }
   return `menu_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 };
-
-const menuEditorStatusBadgeClassName = (status: MenuSummary["status"]) =>
-  status === "published"
-    ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
-    : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
 
 const flattenMenuItems = (items: MenuItemNode[]) => {
   const result: MenuItemRecord[] = [];
@@ -757,15 +762,11 @@ export function MenuEditorPage() {
       topbarActions={
         originalMenu || canSave ? (
           <div className="flex items-center gap-2">
-            {originalMenu ? (
-              <span className={menuEditorStatusBadgeClassName(menuStatus)}>
-                {isPublished ? "Published" : "Draft"}
-              </span>
-            ) : null}
+            {originalMenu ? <StatusBadge status={menuStatus} /> : null}
             {canSave ? (
-              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
+              <Badge variant="warning" className="uppercase">
                 Unsaved changes
-              </span>
+              </Badge>
             ) : null}
           </div>
         ) : null
@@ -964,6 +965,17 @@ export function MenuEditorPage() {
                     onMove={handleMove}
                   />
                 )}
+                {/* Dashed add-item affordance ported from the prototype menu
+                    editor canvas. Wired to the same real add handler as the
+                    header "Add Item" button — presentation only. */}
+                <button
+                  type="button"
+                  onClick={handleAddItem}
+                  data-menu-add-item="dashed"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                >
+                  <LinkIcon className="size-4" /> Add menu item
+                </button>
               </CardContent>
             </Card>
           </div>

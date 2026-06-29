@@ -4,6 +4,8 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
+import type { AdminThemeTemplate } from "../../../core/admin/services/adminThemeClient";
+
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/components/ui/button", () => ({
@@ -299,7 +301,7 @@ test("ThemeTemplateDrawer edit mode renders template values and respects saving 
     <ThemeTemplateDrawer
       open
       onOpenChange={onOpenChange}
-      template={template}
+      template={template as AdminThemeTemplate}
       isSaving
       onSave={vi.fn()}
     />
@@ -389,7 +391,12 @@ test("ThemeTemplateDrawer edit mode updates tokens across typography, buttons, i
   };
 
   const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={onOpenChange} template={template} onSave={onSave} />
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={onOpenChange}
+      template={template as AdminThemeTemplate}
+      onSave={onSave}
+    />
   );
 
   try {
@@ -512,7 +519,12 @@ test("ThemeTemplateDrawer updates top bar, card, and state color tokens", async 
   };
 
   const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={() => undefined}
+      template={template as AdminThemeTemplate}
+      onSave={onSave}
+    />
   );
 
   try {
@@ -607,7 +619,12 @@ test("ThemeTemplateDrawer normalizes text-entered color values without hash pref
   };
 
   const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={() => undefined}
+      template={template as AdminThemeTemplate}
+      onSave={onSave}
+    />
   );
 
   try {
@@ -710,7 +727,12 @@ test("ThemeTemplateDrawer normalizes blank and invalid color text inputs while p
   };
 
   const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={() => undefined}
+      template={template as AdminThemeTemplate}
+      onSave={onSave}
+    />
   );
 
   try {
@@ -798,7 +820,12 @@ test("ThemeTemplateDrawer updates remaining typography, button, and input token 
   };
 
   const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={() => undefined}
+      template={template as AdminThemeTemplate}
+      onSave={onSave}
+    />
   );
 
   try {
@@ -990,7 +1017,12 @@ test("ThemeTemplateDrawer updates remaining input and navigation fields from tex
   };
 
   const view = mount(
-    <ThemeTemplateDrawer open onOpenChange={() => undefined} template={template} onSave={onSave} />
+    <ThemeTemplateDrawer
+      open
+      onOpenChange={() => undefined}
+      template={template as AdminThemeTemplate}
+      onSave={onSave}
+    />
   );
 
   try {

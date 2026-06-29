@@ -34,14 +34,12 @@ export function ListingBulkActionsBar({
   return (
     <div
       data-listing-bulk-actions="inline"
-      className="flex min-w-0 flex-wrap items-center justify-end gap-2"
+      className="flex min-w-0 flex-wrap items-center justify-end gap-2 rounded-2xl border border-border bg-card px-2.5 py-1.5 shadow-soft"
     >
-      <Badge variant="secondary" className="text-[10px] uppercase tracking-widest">
+      <Badge variant="soft" className="text-[10px] uppercase tracking-widest">
         Selected {selectedCount}
       </Badge>
-      <span className="sr-only">
-        Apply a bulk action to the selected {resourceLabel}.
-      </span>
+      <span className="sr-only">Apply a bulk action to the selected {resourceLabel}.</span>
       <Select
         value={action}
         onValueChange={(value) => onActionChange(value as ListingBulkActionValue)}
@@ -59,12 +57,7 @@ export function ListingBulkActionsBar({
       <Button size="sm" onClick={onApply} disabled={!action || isApplying}>
         {isApplying ? "Applying..." : "Apply"}
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={onClear}
-        aria-label="Clear listing selection"
-      >
+      <Button variant="ghost" size="sm" onClick={onClear} aria-label="Clear listing selection">
         Clear
       </Button>
     </div>

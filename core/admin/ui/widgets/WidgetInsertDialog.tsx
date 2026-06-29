@@ -186,7 +186,7 @@ export function WidgetInsertDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-h-[90vh] gap-0 p-0 sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] gap-0 rounded-2xl p-0 sm:max-w-lg">
         <DialogHeader className="flex flex-row items-start justify-between gap-4 border-b px-6 py-4 text-left">
           <div>
             <DialogTitle>Insert Widget</DialogTitle>

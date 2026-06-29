@@ -1,26 +1,16 @@
-import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { LayoutGrid, Pencil, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import type { ListingQueryRecord } from "@/services/listingsClient";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { EmptyState } from "@/ui/shared/EmptyState";
 
-import { listingSourceOptions } from "./defaults";
+import { sourceLabel, summarizeListingQuery } from "./listingQuerySummary";
 
 const formatDate = (value: string) => {
   try {
@@ -34,9 +24,6 @@ const formatDate = (value: string) => {
   }
 };
 
-const sourceLabel = (value: string) =>
-  listingSourceOptions.find((option) => option.value === value)?.label ?? value;
-
 type ListingQueryTableProps = {
   items: ListingQueryRecord[];
   emptyMessage?: string;
@@ -48,6 +35,13 @@ type ListingQueryTableProps = {
   onDelete: (id: string) => void;
 };
 
+/**
+ * TASK-479-16-L01: the Listings query records are now presented as a soft
+ * `rounded-2xl` card grid (ported from the prototype `ListingsPage`) instead of
+ * a table. The component keeps its exact prop contract (items, selection state,
+ * toggle/delete handlers, emptyMessage) so the list page wiring + cache contract
+ * are untouched — only the presentation changed.
+ */
 export function ListingQueryTable({
   items,
   emptyMessage,
@@ -58,120 +52,103 @@ export function ListingQueryTable({
   onToggleItem,
   onDelete,
 }: ListingQueryTableProps) {
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={<LayoutGrid />}
+        title={emptyMessage ?? "No listing queries yet."}
+        description={
+          emptyMessage
+            ? undefined
+            : "Create a dynamic query preset to render your content anywhere."
+        }
+      />
+    );
+  }
+
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
-            <TableHead className="w-10 pl-4">
-              <Checkbox
-                aria-label="Select all listing queries"
-                checked={isIndeterminate ? "indeterminate" : isAllSelected}
-                onCheckedChange={() => onToggleAll?.()}
-              />
-            </TableHead>
-            <TableHead className="min-w-[16rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Query
-            </TableHead>
-            <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
-              Source
-            </TableHead>
-            <TableHead className="hidden px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
-              Updated
-            </TableHead>
-            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={5}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
-                {emptyMessage ?? "No listing queries yet."}
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {items.map((item) => {
-            const isSelected = selectedIds.includes(item.id);
-            return (
-            <TableRow
+    <div className="space-y-3">
+      <label className="flex w-fit items-center gap-2 px-1">
+        <Checkbox
+          aria-label="Select all listing queries"
+          checked={isIndeterminate ? "indeterminate" : isAllSelected}
+          onCheckedChange={() => onToggleAll?.()}
+        />
+        <span className="text-xs font-medium text-muted-foreground">Select all (visible)</span>
+      </label>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => {
+          const isSelected = selectedIds.includes(item.id);
+          const editHref = `/advanced/listings/${encodeURIComponent(item.id)}`;
+          return (
+            <Card
               key={item.id}
-              className={isSelected ? "bg-muted/30" : undefined}
+              className={cn(
+                "flex h-full flex-col rounded-2xl p-5 shadow-card transition-all hover:-translate-y-0.5",
+                isSelected && "ring-2 ring-primary/40"
+              )}
             >
-              <TableCell className="pl-4">
-                <Checkbox
-                  aria-label={`Select ${item.name}`}
-                  checked={isSelected}
-                  onCheckedChange={() => onToggleItem?.(item.id)}
-                />
-              </TableCell>
-              <TableCell>
-                <div className="flex flex-col gap-1">
-                  <AdminLink
-                    href={`/advanced/listings/${encodeURIComponent(item.id)}`}
-                    prefetch
-                    className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                    aria-label={`Edit listing query: ${item.name}`}
-                  >
-                    {item.name}
-                  </AdminLink>
+              <div className="flex items-start justify-between gap-2">
+                <span className="flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                  <LayoutGrid className="size-6" />
+                </span>
+                <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    {item.description ?? "No description"}
+                    {formatDate(item.updatedAt)}
                   </span>
-                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs md:hidden">
-                    <Badge variant="outline" className="capitalize">
-                      {sourceLabel(item.query.source)}
-                    </Badge>
-                    <span className="text-muted-foreground/60">•</span>
-                    <span className="text-muted-foreground">
-                      {formatDate(item.updatedAt)}
-                    </span>
-                  </div>
+                  <Checkbox
+                    aria-label={`Select ${item.name}`}
+                    checked={isSelected}
+                    onCheckedChange={() => onToggleItem?.(item.id)}
+                  />
                 </div>
-              </TableCell>
-              <TableCell className="hidden px-4 py-6 md:table-cell">
-                <Badge variant="outline">{sourceLabel(item.query.source)}</Badge>
-              </TableCell>
-              <TableCell className="hidden px-4 py-6 text-sm text-muted-foreground lg:table-cell">
-                {formatDate(item.updatedAt)}
-              </TableCell>
-              <TableCell className="w-12 py-6 pr-4 text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-36">
-                    <DropdownMenuItem asChild>
-                      <AdminLink
-                        href={`/advanced/listings/${encodeURIComponent(item.id)}`}
-                        className="w-full"
-                        prefetch
-                      >
-                        <Pencil className="h-4 w-4" />
-                        Edit
-                      </AdminLink>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      variant="destructive"
-                      onClick={() => onDelete(item.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
+              </div>
+
+              <AdminLink
+                href={editHref}
+                prefetch
+                aria-label={`Edit listing query: ${item.name}`}
+                className="mt-4 break-words font-display text-[15px] font-semibold text-foreground underline-offset-4 hover:underline focus-visible:underline"
+              >
+                {item.name}
+              </AdminLink>
+              <p className="mt-1 line-clamp-2 font-mono text-xs text-muted-foreground">
+                {summarizeListingQuery(item)}
+              </p>
+              {item.description ? (
+                <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                  {item.description}
+                </p>
+              ) : null}
+
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge variant="soft">{sourceLabel(item.query.source)}</Badge>
+                <Badge variant="outline">{item.query.pagination.limit} per page</Badge>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div className="mt-auto flex items-center gap-2">
+                <Button asChild variant="soft" size="sm" className="flex-1 gap-1.5">
+                  <AdminLink href={editHref} prefetch>
+                    <Pencil className="size-4" />
+                    Edit
+                  </AdminLink>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Delete listing query: ${item.name}`}
+                  onClick={() => onDelete(item.id)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            </Card>
           );
-          })}
-        </TableBody>
-      </Table>
+        })}
+      </div>
     </div>
   );
 }

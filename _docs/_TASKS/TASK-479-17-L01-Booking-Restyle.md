@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Booking
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05, TASK-479-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Parent Subtask:** TASK-479-17
 
 ---

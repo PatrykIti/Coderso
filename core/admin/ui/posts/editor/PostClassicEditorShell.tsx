@@ -398,11 +398,7 @@ export function PostClassicEditorShell() {
           <Badge variant="outline" className="text-[10px] uppercase">
             {status}
           </Badge>
-          {hasUnsavedChanges ? (
-            <Badge variant="outline" className="border-rose-500/30 bg-rose-500/10 text-rose-600">
-              Unsaved changes
-            </Badge>
-          ) : null}
+          {hasUnsavedChanges ? <Badge variant="warning">Unsaved changes</Badge> : null}
         </div>
       }
     >

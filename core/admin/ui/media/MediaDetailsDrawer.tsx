@@ -88,7 +88,9 @@ export function MediaDetailsDrawer({
   const [caption, setCaption] = useState(item?.caption ?? "");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
-  const [replaceStatus, setReplaceStatus] = useState<"idle" | "replacing" | "replaced" | "error">("idle");
+  const [replaceStatus, setReplaceStatus] = useState<"idle" | "replacing" | "replaced" | "error">(
+    "idle"
+  );
 
   useEffect(() => {
     const frameId = window.requestAnimationFrame(() => {
@@ -188,7 +190,7 @@ export function MediaDetailsDrawer({
             <ScrollArea className="min-h-0 flex-1">
               <div className="space-y-8 px-6 pb-8 pt-6">
                 <div className="space-y-4">
-                  <div className="group relative overflow-hidden rounded-lg border bg-muted/20 shadow-sm">
+                  <div className="group relative overflow-hidden rounded-2xl border border-border bg-muted/20 shadow-soft">
                     <div className="aspect-video w-full">
                       {item.type === "image" ? (
                         <img
@@ -230,10 +232,7 @@ export function MediaDetailsDrawer({
                       <div className="flex min-w-0 items-center gap-2">
                         <p className="truncate text-sm font-semibold">{displayName}</p>
                         {missingAlt ? (
-                          <Badge
-                            variant="outline"
-                            className="shrink-0 border-amber-300 text-[10px] text-amber-700"
-                          >
+                          <Badge variant="warning" className="shrink-0 text-[10px]">
                             Missing alt
                           </Badge>
                         ) : null}
@@ -258,7 +257,7 @@ export function MediaDetailsDrawer({
                     <div className="text-xs text-muted-foreground" aria-live="polite">
                       {saveStatus === "saving" ? "Saving..." : null}
                       {saveStatus === "saved" ? (
-                        <span className="inline-flex items-center gap-1 text-emerald-600">
+                        <span className="inline-flex items-center gap-1 text-success">
                           <Check className="h-3 w-3" />
                           Saved
                         </span>
@@ -323,9 +322,7 @@ export function MediaDetailsDrawer({
                       className="bg-muted/30"
                     />
                     {missingAlt ? (
-                      <p className="text-xs text-amber-700">
-                        Image alt text is missing.
-                      </p>
+                      <p className="text-xs text-warning">Image alt text is missing.</p>
                     ) : null}
                   </div>
                   <div className="space-y-2">
@@ -352,13 +349,13 @@ export function MediaDetailsDrawer({
                     File Information
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="rounded-xl border border-border bg-muted/30 p-3">
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Size
                       </p>
                       <p className="text-sm font-medium">{formatBytes(item.sizeBytes)}</p>
                     </div>
-                    <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="rounded-xl border border-border bg-muted/30 p-3">
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Dimensions
                       </p>
@@ -371,20 +368,20 @@ export function MediaDetailsDrawer({
                           className={
                             dimensionState === "error"
                               ? "mt-1 text-[11px] text-destructive"
-                              : "mt-1 text-[11px] text-emerald-600"
+                              : "mt-1 text-[11px] text-success"
                           }
                         >
                           {dimensionMessage}
                         </p>
                       ) : null}
                     </div>
-                    <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="rounded-xl border border-border bg-muted/30 p-3">
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Type
                       </p>
                       <p className="break-all text-sm font-medium">{item.mimeType}</p>
                     </div>
-                    <div className="rounded-lg border bg-muted/30 p-3">
+                    <div className="rounded-xl border border-border bg-muted/30 p-3">
                       <p className="text-[10px] font-semibold uppercase text-muted-foreground">
                         Uploaded
                       </p>
@@ -399,17 +396,17 @@ export function MediaDetailsDrawer({
                     Usage ({usageCount} locations)
                   </div>
                   {usageState === "loading" ? (
-                    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
                       Loading usage...
                     </div>
                   ) : null}
                   {usageState === "error" ? (
-                    <div className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive">
+                    <div className="rounded-2xl border border-destructive/40 p-4 text-sm text-destructive">
                       {usageError ?? "Failed to load usage."}
                     </div>
                   ) : null}
                   {usageState === "loaded" && usageItems.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
+                    <div className="rounded-2xl border border-dashed border-border p-4 text-sm text-muted-foreground">
                       This asset is not used by tracked admin content.
                     </div>
                   ) : null}
@@ -422,7 +419,7 @@ export function MediaDetailsDrawer({
                             key={usage.id}
                             href={usage.adminHref}
                             prefetch
-                            className="flex w-full items-center justify-between gap-3 rounded-lg border bg-background/80 p-3 text-left transition hover:bg-muted/40"
+                            className="flex w-full items-center justify-between gap-3 rounded-xl border border-border bg-card p-3 text-left transition hover:bg-muted/40"
                           >
                             <div className="flex min-w-0 items-center gap-3">
                               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-muted/40">
@@ -463,11 +460,7 @@ export function MediaDetailsDrawer({
                   <UploadCloud className="h-4 w-4" />
                   {replaceStatus === "replacing" ? "Replacing..." : "Replace"}
                 </Button>
-                <Button
-                  variant="outline"
-                  className="w-full gap-2"
-                  onClick={handleCopyUrl}
-                >
+                <Button variant="outline" className="w-full gap-2" onClick={handleCopyUrl}>
                   <Copy className="h-4 w-4" />
                   {copyStatus === "copied" ? "Copied" : "Copy URL"}
                 </Button>
@@ -476,7 +469,7 @@ export function MediaDetailsDrawer({
                 <p className="mt-2 text-xs text-destructive">Copy failed.</p>
               ) : null}
               {replaceStatus === "replaced" ? (
-                <p className="mt-2 text-xs text-emerald-600">Asset replaced.</p>
+                <p className="mt-2 text-xs text-success">Asset replaced.</p>
               ) : null}
               {replaceStatus === "error" ? (
                 <p className="mt-2 text-xs text-destructive">Replace failed.</p>
@@ -486,11 +479,7 @@ export function MediaDetailsDrawer({
                   <ExternalLink className="h-4 w-4" />
                   Open
                 </Button>
-                <Button
-                  variant="destructive"
-                  className="w-full gap-2"
-                  onClick={handleDeleteAsset}
-                >
+                <Button variant="destructive" className="w-full gap-2" onClick={handleDeleteAsset}>
                   <Trash2 className="h-4 w-4" />
                   Delete
                 </Button>

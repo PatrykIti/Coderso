@@ -1,8 +1,22 @@
-import { Plus } from "lucide-react";
+import {
+  Columns3,
+  GripVertical,
+  LayoutGrid,
+  Pencil,
+  Plus,
+  Rows3,
+  SlidersHorizontal,
+  Table as TableIcon,
+  type LucideIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { getCachedContentTypes, listContentTypesCached } from "@/services/contentTypesClient";
@@ -26,6 +40,7 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -45,9 +60,31 @@ import { CustomScreenEntriesTable } from "./CustomScreenEntriesTable";
 import {
   buildCustomScreenEntriesFilterOptions,
   filterCustomScreenEntries,
+  getVisibleListColumns,
+  resolveCustomScreenSidebarShortcutState,
   sortCustomScreenEntries,
 } from "./customScreenListModel";
 import { buildCustomScreenWorkspacePath, resolveCustomScreenId } from "./routeParams";
+
+const ENTRIES_VIEW_TYPES = ["Table", "Board", "Gallery", "Calendar"] as const;
+type EntriesViewType = (typeof ENTRIES_VIEW_TYPES)[number];
+
+const ENTRIES_VIEW_ICONS: Record<EntriesViewType, LucideIcon> = {
+  Table: TableIcon,
+  Board: Columns3,
+  Gallery: LayoutGrid,
+  Calendar: Rows3,
+};
+
+const listColumnTypeLabel = (formatter: string) => {
+  if (formatter === "number") return "Number";
+  if (formatter === "boolean") return "Boolean";
+  if (formatter === "date") return "Date";
+  if (formatter === "select") return "Select";
+  if (formatter === "media") return "Media";
+  if (formatter === "relation") return "Relation";
+  return "Text";
+};
 
 const fallbackListView = {
   columns: [],
@@ -125,6 +162,12 @@ export function CustomScreenEntriesPage() {
   const [isBulkWorking, setIsBulkWorking] = useState(false);
   const [deleteRequest, setDeleteRequest] = useState<DeleteRequest | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  // TASK-479-14-L03: runtime "Customize view" is LOCAL/session view state only —
+  // it never writes the screen definition (durable column config lives in the
+  // editor's List-view designer). `null` means "use the definition defaults".
+  const [showConfig, setShowConfig] = useState(false);
+  const [activeView, setActiveView] = useState<EntriesViewType>("Table");
+  const [visibleColumnIds, setVisibleColumnIds] = useState<string[] | null>(null);
   const screenCapabilities = useMemo(
     () =>
       screen?.capabilities ??
@@ -136,6 +179,48 @@ export function CustomScreenEntriesPage() {
     [screen]
   );
   const listView = screen?.definition?.listView ?? fallbackListView;
+  const effectiveListView = useMemo(() => {
+    if (!visibleColumnIds) return listView;
+    const shown = new Set(visibleColumnIds);
+    return {
+      ...listView,
+      columns: listView.columns.map((column) => ({
+        ...column,
+        visible: shown.has(column.id),
+      })),
+    };
+  }, [listView, visibleColumnIds]);
+  const isColumnShown = useCallback(
+    (columnId: string) =>
+      visibleColumnIds
+        ? visibleColumnIds.includes(columnId)
+        : listView.columns.find((column) => column.id === columnId)?.visible !== false,
+    [listView.columns, visibleColumnIds]
+  );
+  const toggleColumnVisibility = useCallback(
+    (columnId: string) => {
+      setVisibleColumnIds((current) => {
+        const base = current ?? getVisibleListColumns(listView).map((column) => column.id);
+        return base.includes(columnId) ? base.filter((id) => id !== columnId) : [...base, columnId];
+      });
+    },
+    [listView]
+  );
+  const sidebarShortcutState = useMemo(
+    () => (screen ? resolveCustomScreenSidebarShortcutState(screen) : "hidden"),
+    [screen]
+  );
+  const isSidebarPublished = sidebarShortcutState === "visible";
+  const entryStats = useMemo(() => {
+    const total = entries.length;
+    const published = entries.filter((entry) => entry.status === "published").length;
+    const drafts = entries.filter((entry) => entry.status === "draft").length;
+    return [
+      { label: "Total records", value: total },
+      { label: "Published", value: published },
+      { label: "Drafts", value: drafts },
+    ];
+  }, [entries]);
   const contentTypeSlug = contentType?.slug ?? null;
   const contentTypeName = contentType?.name ?? null;
   const hasBulkActions =
@@ -495,7 +580,8 @@ export function CustomScreenEntriesPage() {
     >
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
-          title={screen?.name ? `${screen.name} Records` : "Custom Screen Records"}
+          icon={<LayoutGrid />}
+          title={screen?.name ?? "Custom screen"}
           description={
             contentTypeName
               ? supportsWorkspaceEditor
@@ -519,6 +605,25 @@ export function CustomScreenEntriesPage() {
                   variant="inline"
                 />
               ) : null}
+              {screenId ? (
+                <AdminLink
+                  href={`/advanced/custom-screens/${encodeURIComponent(screenId)}`}
+                  prefetch
+                >
+                  <Button variant="ghost" size="sm" className="gap-1.5">
+                    <Pencil className="size-4" /> Edit screen
+                  </Button>
+                </AdminLink>
+              ) : null}
+              <Button
+                variant={showConfig ? "soft" : "outline"}
+                size="sm"
+                className="gap-1.5"
+                aria-pressed={showConfig}
+                onClick={() => setShowConfig((value) => !value)}
+              >
+                <SlidersHorizontal className="size-4" /> Customize view
+              </Button>
               <Button
                 className="gap-2"
                 disabled={!contentTypeSlug || !supportsWorkspaceEditor}
@@ -530,6 +635,60 @@ export function CustomScreenEntriesPage() {
             </div>
           }
         />
+
+        {screen ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {isSidebarPublished ? (
+              <Badge variant="success">
+                <span className="size-1.5 rounded-full bg-success" /> Published
+              </Badge>
+            ) : (
+              <Badge variant="secondary">
+                <span className="size-1.5 rounded-full bg-muted-foreground" /> Not in sidebar
+              </Badge>
+            )}
+            <span className="text-xs text-muted-foreground">
+              {isSidebarPublished ? "In sidebar · " : ""}
+              {contentTypeName ? `${contentTypeName} entries` : "Bound content type"}
+            </span>
+          </div>
+        ) : null}
+
+        {screen ? (
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+            {entryStats.map((stat) => (
+              <Card key={stat.label} className="gap-0 p-4 py-4">
+                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <div className="mt-1 font-display text-2xl font-semibold tabular-nums">
+                  {stat.value}
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : null}
+
+        <div className="inline-flex w-fit items-center gap-1 rounded-xl border border-border bg-muted/60 p-1">
+          {ENTRIES_VIEW_TYPES.map((view) => {
+            const Icon = ENTRIES_VIEW_ICONS[view];
+            const active = view === activeView;
+            return (
+              <button
+                key={view}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setActiveView(view)}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-all",
+                  active
+                    ? "bg-card text-foreground shadow-soft"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <Icon className="size-4" /> {view}
+              </button>
+            );
+          })}
+        </div>
 
         {error ? (
           <Alert variant="destructive">
@@ -554,42 +713,115 @@ export function CustomScreenEntriesPage() {
           </Alert>
         ) : null}
 
-        <CustomScreenEntriesFilters
-          query={searchQuery}
-          filters={activeFilterValues}
-          filterOptions={filterOptions}
-          onQueryChange={setSearchQuery}
-          onFilterChange={handleFilterChange}
-        />
-        <CustomScreenEntriesTable
-          items={pagination.visibleRows}
-          listView={listView}
-          buildRowHref={(entry) => {
-            if (!screenId || !contentTypeSlug) return "/advanced/custom-screens";
-            return buildCustomScreenWorkspacePath({ screenId, entryId: entry.id });
-          }}
-          selectedIds={visibleSelectedIds}
-          isAllSelected={isAllSelected}
-          isIndeterminate={isIndeterminate}
-          onToggleAll={hasBulkActions ? handleToggleAll : undefined}
-          onToggleEntry={hasBulkActions ? handleToggleEntry : undefined}
-          onPublish={handlePublish}
-          onUnpublish={handleUnpublish}
-          onDelete={handleDeleteRequest}
-          onCommitRowField={supportsWorkspaceEditor ? handleCommitRowField : undefined}
-          emptyMessage={
-            isLoading
-              ? "Loading records..."
-              : entries.length > 0
-                ? "No records match your current view."
-                : undefined
-          }
-        />
-        <ListPaginationFooter
-          resourceLabel="records"
-          pagination={pagination}
-          isLoading={isLoading}
-        />
+        <div className={cn("grid gap-5", showConfig && "lg:grid-cols-[1fr_320px]")}>
+          <div className="flex min-w-0 flex-col gap-5">
+            <CustomScreenEntriesFilters
+              query={searchQuery}
+              filters={activeFilterValues}
+              filterOptions={filterOptions}
+              onQueryChange={setSearchQuery}
+              onFilterChange={handleFilterChange}
+            />
+            {activeView === "Table" ? (
+              <CustomScreenEntriesTable
+                items={pagination.visibleRows}
+                listView={effectiveListView}
+                buildRowHref={(entry) => {
+                  if (!screenId || !contentTypeSlug) return "/advanced/custom-screens";
+                  return buildCustomScreenWorkspacePath({ screenId, entryId: entry.id });
+                }}
+                selectedIds={visibleSelectedIds}
+                isAllSelected={isAllSelected}
+                isIndeterminate={isIndeterminate}
+                onToggleAll={hasBulkActions ? handleToggleAll : undefined}
+                onToggleEntry={hasBulkActions ? handleToggleEntry : undefined}
+                onPublish={handlePublish}
+                onUnpublish={handleUnpublish}
+                onDelete={handleDeleteRequest}
+                onCommitRowField={supportsWorkspaceEditor ? handleCommitRowField : undefined}
+                emptyMessage={
+                  isLoading
+                    ? "Loading records..."
+                    : entries.length > 0
+                      ? "No records match your current view."
+                      : undefined
+                }
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border bg-card/60 px-6 py-16 text-center">
+                <p className="font-display text-sm font-semibold">{activeView} view</p>
+                <p className="max-w-sm text-sm text-muted-foreground">
+                  The {activeView.toLowerCase()} layout is on the roadmap. Switch back to Table to
+                  manage records.
+                </p>
+              </div>
+            )}
+            <ListPaginationFooter
+              resourceLabel="records"
+              pagination={pagination}
+              isLoading={isLoading}
+            />
+          </div>
+
+          {showConfig ? (
+            <Card
+              className="h-fit gap-0 p-0 py-0 lg:sticky lg:top-2"
+              data-custom-screen-view-config="true"
+            >
+              <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                <span className="font-display text-sm font-semibold">View settings</span>
+                <Badge variant="outline">{activeView}</Badge>
+              </div>
+              <div className="p-4">
+                <div className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Columns
+                </div>
+                <p className="mb-2.5 text-xs text-muted-foreground">
+                  Toggle columns for your current view. Saved per-screen defaults are edited in the
+                  builder.
+                </p>
+                <div className="flex flex-col gap-0.5 rounded-xl border border-border p-1.5">
+                  {listView.columns.length === 0 ? (
+                    <p className="px-1.5 py-2 text-xs text-muted-foreground">
+                      This screen has no configured columns yet.
+                    </p>
+                  ) : (
+                    listView.columns.map((column) => (
+                      <div
+                        key={column.id}
+                        className="flex items-center gap-2 rounded-lg px-1.5 py-1.5 hover:bg-muted/60"
+                      >
+                        <GripVertical className="size-4 shrink-0 text-muted-foreground/60" />
+                        <Checkbox
+                          aria-label={`Show ${column.label} column`}
+                          checked={isColumnShown(column.id)}
+                          onCheckedChange={() => toggleColumnVisibility(column.id)}
+                        />
+                        <span className="flex-1 truncate text-sm">{column.label}</span>
+                        <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+                          {listColumnTypeLabel(column.formatter)}
+                        </Badge>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3">
+                <span className="text-xs text-muted-foreground">Applied to this view</span>
+                {screenId ? (
+                  <AdminLink
+                    href={`/advanced/custom-screens/${encodeURIComponent(screenId)}`}
+                    prefetch
+                  >
+                    <Button variant="ghost" size="sm">
+                      Edit in builder
+                    </Button>
+                  </AdminLink>
+                ) : null}
+              </div>
+            </Card>
+          ) : null}
+        </div>
       </div>
       <ConfirmActionDialog
         open={Boolean(deleteRequest)}

@@ -1,4 +1,4 @@
-import { MessageSquareText, ShieldCheck } from "lucide-react";
+import { MessageSquareText, ShieldCheck, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -93,6 +93,26 @@ export function SolutionKitsPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+
+        {/*
+          TASK-479-21-L01: featured violet hero ported from the prototype. This is a
+          NON-ACTION visual banner — the single reviewed-flow CTA ("Open LLM Guide")
+          lives once in the right-column Reviewed Site Builder card below, so no
+          second CTA is added here.
+        */}
+        <Card className="relative overflow-hidden border-0 bg-primary p-7 text-primary-foreground shadow-card">
+          <div className="absolute -right-10 -top-10 size-48 rounded-full bg-white/10 blur-2xl" />
+          <div className="relative max-w-lg">
+            <Badge className="mb-3 border-white/20 bg-white/15 text-white">
+              <Sparkles className="size-3" /> AI assembled
+            </Badge>
+            <h2 className="font-display text-2xl font-bold">Launch a full site in minutes</h2>
+            <p className="mt-1.5 text-sm text-white/80">
+              Pick a kit and Coderso scaffolds pages, widgets, and content types — then open the
+              Reviewed Site Builder to generate.
+            </p>
+          </div>
+        </Card>
 
         <div className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(24rem,1fr)]">
           <div className="space-y-4">

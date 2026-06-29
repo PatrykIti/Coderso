@@ -6,7 +6,9 @@
 **Category:** Admin UI / Design System / Theming
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 prototype (01–04)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-06-28; all seven leaves shipped — contract + emitter +
+globals.css mapping + seeded "Soft Violet" default + editor controls + no-flash
+dark toggle + docs/tests. Closure validation in the L07 changelog 1202.)
 
 ---
 
@@ -73,13 +75,13 @@ non-destructively default old templates that predate the new groups.
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-479-05-L01 | Token Gap Analysis & Inventory | ⏳ To Do |
-| TASK-479-05-L02 | Extend AdminThemeTokens Type, Defaults, Normalize & Validation | ⏳ To Do |
-| TASK-479-05-L03 | globals.css Mapping + :root + Dark Block | ⏳ To Do |
-| TASK-479-05-L04 | admin-default Theme + DB Default Template | ⏳ To Do |
-| TASK-479-05-L05 | Admin UI Theme Editor Controls for New Tokens | ⏳ To Do |
-| TASK-479-05-L06 | Dark-Mode Toggle & Persistence in Admin Shell | ⏳ To Do |
-| TASK-479-05-L07 | Token Docs & Tests | ⏳ To Do |
+| TASK-479-05-L01 | Token Gap Analysis & Inventory | ✅ Done |
+| TASK-479-05-L02 | Extend AdminThemeTokens Type, Defaults, Normalize & Validation | ✅ Done |
+| TASK-479-05-L03 | globals.css Mapping + :root + Dark Block | ✅ Done |
+| TASK-479-05-L04 | admin-default Theme + DB Default Template | ✅ Done |
+| TASK-479-05-L05 | Admin UI Theme Editor Controls for New Tokens | ✅ Done |
+| TASK-479-05-L06 | Dark-Mode Toggle & Persistence in Admin Shell | ✅ Done |
+| TASK-479-05-L07 | Token Docs & Tests | ✅ Done |
 
 Implementation order: **L01 → L02 → L03 → (L04, L05, L06 in parallel) → L07**.
 L01 is a read-only decision gate; nothing downstream may diverge from the
@@ -123,12 +125,19 @@ user-event. Do NOT move runtime tests into Vitest for coverage.
 
 ## Closure Checklist
 
-- [ ] All seven leaves `✅ Done`.
-- [ ] Fresh install renders violet/soft light theme; dark toggle works and
+- [x] All seven leaves `✅ Done`.
+- [~] Fresh install renders violet/soft light theme; dark toggle works and
       persists with no SSR flash, and dark RECOLORS the real chrome (button +
       sidebar + topbar resolve dark `--admin-*`, not just the `.dark` class).
       Sequence the "dark works" gate AFTER the TASK-479-06 chrome migration.
-- [ ] Pre-existing custom templates (without the new tokens) still load + render
-      via defaults.
-- [ ] `_docs/DESIGN_TOKENS.md` + board + changelog synced.
-- [ ] Validation evidence (lint, types, vitest) recorded in the closeout.
+      **Automated proxy in place** (`tests/vitest/ui-integration/admin-dark-mode.test.tsx`
+      asserts the injected `:root.dark` block carries the real dark chrome hexes
+      and that globals.css derives the shadcn vars FROM `--admin-*`); the LIVE
+      single-window verification stays deferred to the post-TASK-479-06 gate (dev
+      server not run in this leaf).
+- [x] Pre-existing custom templates (without the new tokens) still load + render
+      via defaults (covered by `mergeAdminThemeTokens`/`normalizeAdminThemeTokens`
+      back-fill tests + the drawer legacy-template suite).
+- [x] `_docs/DESIGN_TOKENS.md` + board + changelog synced.
+- [x] Validation evidence (lint, types, vitest) recorded in the closeout (see
+      changelog 1202).

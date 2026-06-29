@@ -284,11 +284,6 @@ export const canvasDeviceFrameClassMap: Record<PageBreakpoint, string> = {
 export const deviceScopeReadout = (device: PageBreakpoint) =>
   `${pageEditorDeviceMetadata[device].label} · ${pageEditorDeviceMetadata[device].width}px`;
 
-export const pageEditorStatusBadgeClassName = (status: string) =>
-  status === "published"
-    ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
-    : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
-
 export type ToolbarLabelTarget =
   | { kind: "section"; type: PageSectionType }
   | { kind: "block"; type: PageBlockType }

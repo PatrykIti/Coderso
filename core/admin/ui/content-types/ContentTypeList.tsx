@@ -1,10 +1,30 @@
-import { Plus, Search } from "lucide-react";
+import {
+  Copy,
+  Database,
+  LayoutGrid,
+  Layers,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Search,
+  Table as TableIcon,
+  Trash2,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,6 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -26,12 +48,17 @@ import {
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { EmptyState } from "@/ui/shared/EmptyState";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
+import { ListSkeleton } from "@/ui/shared/ListSkeleton";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { useListPagination } from "@/ui/shared/useListPagination";
-import { resolveAdminBasePath } from "@/utils/adminPaths";
+import { resolveAdminBasePath, resolveAdminRoutePath } from "@/utils/adminPaths";
 
 import { ContentTypeCreateDrawer } from "./ContentTypeCreateDrawer";
 import { ContentTypeTable, type ContentTypeRow } from "./ContentTypeTable";
@@ -122,6 +149,7 @@ function ContentTypeBulkActionsBar({
 export function ContentTypeList() {
   const { navigate } = useAdminRouter();
   const basePath = resolveAdminBasePath();
+  const [view, setView] = useState<"grid" | "table">("grid");
   const initialCached = getCachedContentTypes();
   const [types, setTypes] = useState<ContentTypeSummary[]>(() => initialCached ?? []);
   const [isLoading, setIsLoading] = useState(() => !initialCached);
@@ -179,6 +207,11 @@ export function ContentTypeList() {
     });
     return mapped;
   }, [duplicateNameCounts, query, sortDirection, sortKey, statusFilter, types]);
+  const summary = useMemo(() => {
+    const totalEntries = types.reduce((total, type) => total + (type.entryCount ?? 0), 0);
+    const totalFields = rows.reduce((total, row) => total + row.fieldCount, 0);
+    return { typeCount: types.length, totalEntries, totalFields };
+  }, [rows, types]);
   const pagination = useListPagination(rows, {
     resetKey: JSON.stringify({
       query,
@@ -378,8 +411,13 @@ export function ContentTypeList() {
             <AlertDescription>{bulkFeedback.message}</AlertDescription>
           </Alert>
         ) : null}
-        <div className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-[minmax(0,1fr)_180px]">
-          <div className="relative">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Types" value={summary.typeCount} icon={<Database />} />
+          <StatCard label="Entries" value={summary.totalEntries} icon={<Layers />} />
+          <StatCard label="Fields" value={summary.totalFields} icon={<Layers />} />
+        </div>
+        <div className="flex flex-col gap-3 rounded-2xl border bg-card p-3 shadow-soft sm:flex-row sm:items-center">
+          <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={query}
@@ -392,7 +430,7 @@ export function ContentTypeList() {
             value={statusFilter}
             onValueChange={(value) => setStatusFilter(value as "all" | "draft" | "published")}
           >
-            <SelectTrigger>
+            <SelectTrigger className="sm:w-44">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -401,27 +439,181 @@ export function ContentTypeList() {
               <SelectItem value="published">Published</SelectItem>
             </SelectContent>
           </Select>
+          <div className="inline-flex shrink-0 items-center gap-1 rounded-xl border bg-background p-1">
+            <Button
+              type="button"
+              variant={view === "grid" ? "soft" : "ghost"}
+              size="icon-sm"
+              aria-label="Grid view"
+              aria-pressed={view === "grid"}
+              onClick={() => setView("grid")}
+            >
+              <LayoutGrid className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant={view === "table" ? "soft" : "ghost"}
+              size="icon-sm"
+              aria-label="Table view"
+              aria-pressed={view === "table"}
+              onClick={() => setView("table")}
+            >
+              <TableIcon className="size-4" />
+            </Button>
+          </div>
         </div>
-        <ContentTypeTable
-          rows={pagination.visibleRows}
-          basePath={basePath}
-          isLoading={isLoading}
-          emptyMessage={
-            query || statusFilter !== "all"
-              ? "No content types match the current filters."
-              : undefined
-          }
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          selectedIds={visibleSelectedIds}
-          isAllSelected={isAllSelected}
-          isIndeterminate={isIndeterminate}
-          onToggleAll={handleToggleAll}
-          onToggleRow={handleToggleRow}
-          onSort={handleSortChange}
-          onDuplicate={handleDuplicate}
-          onDelete={(row) => setPendingDelete(row)}
-        />
+        {isLoading ? (
+          <ListSkeleton rows={6} />
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon={<Database />}
+            title={
+              query || statusFilter !== "all" ? "No matching content types" : "No content types yet"
+            }
+            description={
+              query || statusFilter !== "all"
+                ? "No content types match the current filters. Adjust your search or status filter."
+                : "Create your first content type to start modeling structured content."
+            }
+            action={
+              <Button className="gap-2" onClick={() => setCreateOpen(true)}>
+                <Plus className="h-4 w-4" />
+                New type
+              </Button>
+            }
+          />
+        ) : view === "table" ? (
+          <ContentTypeTable
+            rows={pagination.visibleRows}
+            basePath={basePath}
+            isLoading={isLoading}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            selectedIds={visibleSelectedIds}
+            isAllSelected={isAllSelected}
+            isIndeterminate={isIndeterminate}
+            onToggleAll={handleToggleAll}
+            onToggleRow={handleToggleRow}
+            onSort={handleSortChange}
+            onDuplicate={handleDuplicate}
+            onDelete={(row) => setPendingDelete(row)}
+          />
+        ) : (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-3 px-1">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Checkbox
+                  aria-label="Select all content types"
+                  checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                  onCheckedChange={() => handleToggleAll()}
+                />
+                Select all
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {rows.length} {rows.length === 1 ? "type" : "types"}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {pagination.visibleRows.map((row) => {
+                const editHref = resolveAdminRoutePath(
+                  `/content-types/${encodeURIComponent(row.id)}`
+                );
+                const schemaHref = resolveAdminRoutePath(
+                  `/content-types/${encodeURIComponent(row.id)}/schema`
+                );
+                const entriesHref = resolveAdminRoutePath(
+                  `/advanced/engine/${encodeURIComponent(row.id)}/collection`
+                );
+                const isSelected = selectedIds.includes(row.id);
+                return (
+                  <Card
+                    key={row.id}
+                    className={cn(
+                      "flex h-full flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-card",
+                      isSelected && "ring-2 ring-primary/40"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                        <Database className="size-6" />
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleToggleRow(row.id)}
+                          aria-label={`Select ${row.name}`}
+                        />
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Open actions for ${row.name}`}
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44">
+                            <DropdownMenuItem asChild>
+                              <AdminLink href={editHref} prefetch>
+                                <Pencil className="h-4 w-4" />
+                                Edit
+                              </AdminLink>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleDuplicate(row)}>
+                              <Copy className="h-4 w-4" />
+                              Duplicate
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              variant="destructive"
+                              onClick={() => setPendingDelete(row)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <AdminLink
+                      href={editHref}
+                      prefetch
+                      className="mt-4 font-display text-[15px] font-semibold text-foreground transition hover:text-primary"
+                      aria-label={`Edit content type: ${row.name}`}
+                    >
+                      {row.name}
+                    </AdminLink>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                      <span>{row.fieldCount} fields</span>
+                      <span className="size-1 rounded-full bg-border" />
+                      <span>{row.entryCount ?? 0} entries</span>
+                      <StatusBadge status={row.status} />
+                    </div>
+                    {row.duplicateNameCount && row.duplicateNameCount > 1 ? (
+                      <Badge variant="secondary" className="mt-2 w-fit text-[10px] uppercase">
+                        Duplicate name
+                      </Badge>
+                    ) : null}
+                    <Separator className="my-4" />
+                    <div className="mt-auto flex items-center gap-2">
+                      <AdminLink href={schemaHref} prefetch className="flex-1">
+                        <Button variant="soft" size="sm" className="w-full">
+                          Edit schema
+                        </Button>
+                      </AdminLink>
+                      <AdminLink href={entriesHref} prefetch className="flex-1">
+                        <Button variant="outline" size="sm" className="w-full">
+                          Entries
+                        </Button>
+                      </AdminLink>
+                    </div>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
         <ListPaginationFooter
           resourceLabel="content types"
           pagination={pagination}

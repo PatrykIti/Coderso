@@ -2,7 +2,6 @@ import { ArrowLeft, Save, Send, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
@@ -16,6 +15,7 @@ import {
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { PopupEditorForm } from "./components/PopupEditorForm";
@@ -159,14 +159,7 @@ export function PopupEditorPage() {
           description="Configure trigger, targeting, content, and display behavior."
           actions={
             <div className="flex flex-wrap items-center gap-2">
-              {popup ? (
-                <Badge
-                  variant={popup.status === "published" ? "default" : "outline"}
-                  className="capitalize"
-                >
-                  {popup.status}
-                </Badge>
-              ) : null}
+              {popup ? <StatusBadge status={popup.status} /> : null}
               <Button
                 variant="outline"
                 className="gap-2"
@@ -202,7 +195,7 @@ export function PopupEditorPage() {
         />
 
         {isLoading ? (
-          <div className="rounded-xl border bg-card p-12 text-center text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-12 text-center text-sm text-muted-foreground shadow-card">
             Loading popup editor...
           </div>
         ) : null}
