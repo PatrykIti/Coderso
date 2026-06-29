@@ -1,3 +1,4 @@
+import { CalendarDays, Inbox, ShieldAlert } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -10,6 +11,8 @@ import {
 } from "@/services/formsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
 const PAGE_SIZE = 20;
@@ -19,6 +22,16 @@ const resolveFormId = (pathname: string) => {
   const formsIndex = parts.findIndex((segment) => segment === "forms");
   if (formsIndex === -1) return null;
   return parts[formsIndex + 1] ?? null;
+};
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+// Module-level helper so the (impure) `Date.now()` read stays out of the render
+// body — the stat band recomputes only when `submissions` changes.
+const countSubmissionsThisWeek = (submissions: FormSubmission[]) => {
+  const since = Date.now() - WEEK_MS;
+  return submissions.filter((submission) => new Date(submission.createdAt).getTime() >= since)
+    .length;
 };
 
 const formatPayloadValue = (value: unknown) => {
@@ -122,6 +135,15 @@ export function FormSubmissionsPage() {
     [currentPage, submissions]
   );
 
+  // Stat band — pure render-time derivation from the already-loaded
+  // `submissions` (no fetch, no caching of submission payloads).
+  const stats = useMemo(() => {
+    const total = submissions.length;
+    const thisWeek = countSubmissionsThisWeek(submissions);
+    const spam = submissions.filter((submission) => submission.status === "spam").length;
+    return { total, thisWeek, spam };
+  }, [submissions]);
+
   return (
     <AdminShell
       activeHref="/admin/advanced/forms"
@@ -156,7 +178,13 @@ export function FormSubmissionsPage() {
           </Alert>
         ) : null}
 
-        <div className="overflow-hidden rounded-xl border bg-card">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Total" value={String(stats.total)} icon={<Inbox />} />
+          <StatCard label="This week" value={String(stats.thisWeek)} icon={<CalendarDays />} />
+          <StatCard label="Spam" value={String(stats.spam)} icon={<ShieldAlert />} />
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -199,7 +227,9 @@ export function FormSubmissionsPage() {
                         ))}
                       </dl>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{submission.status}</td>
+                    <td className="px-4 py-3">
+                      <StatusBadge status={submission.status} />
+                    </td>
                   </tr>
                 ))
               )}

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { CheckCircle2, ClipboardList, FileEdit, Plus } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -13,9 +13,11 @@ import {
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { FormTableSkeleton } from "@/ui/shared/FormTableSkeleton";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 
@@ -114,6 +116,16 @@ export function FormListPage() {
   const selectedCount = visibleSelectedIds.length;
   const isAllSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
   const isIndeterminate = selectedCount > 0 && !isAllSelected;
+
+  // Stat band — pure render-time derivation from the already-loaded `items`
+  // (no fetch, no effect, no extra state). FormRecord carries no field /
+  // submission counts, so only real, derivable counts are shown.
+  const stats = useMemo(() => {
+    const total = items.length;
+    const active = items.filter((form) => form.status === "published").length;
+    const drafts = items.filter((form) => form.status === "draft").length;
+    return { total, active, drafts };
+  }, [items]);
 
   const handleCreate = async (payload: {
     name: string;
@@ -264,7 +276,8 @@ export function FormListPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Forms"
-          description="Build custom forms and embed them across pages."
+          description="Collect submissions and route them anywhere."
+          icon={<ClipboardList />}
           actions={
             <>
               {selectedCount > 0 ? (
@@ -297,6 +310,11 @@ export function FormListPage() {
             <AlertDescription>{submitError}</AlertDescription>
           </Alert>
         ) : null}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Total forms" value={String(stats.total)} icon={<ClipboardList />} />
+          <StatCard label="Active" value={String(stats.active)} icon={<CheckCircle2 />} />
+          <StatCard label="Drafts" value={String(stats.drafts)} icon={<FileEdit />} />
+        </div>
         <FormFilters
           search={searchQuery}
           status={statusFilter}
@@ -306,9 +324,7 @@ export function FormListPage() {
           onAccessChange={setAccessFilter}
         />
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-            Loading forms...
-          </div>
+          <FormTableSkeleton rows={6} columns={5} />
         ) : (
           <FormTable
             items={pagination.visibleRows}

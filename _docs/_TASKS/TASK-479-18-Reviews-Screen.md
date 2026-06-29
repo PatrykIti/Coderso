@@ -5,10 +5,10 @@
 **Category:** Admin UI / Visual Refresh / Reviews
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05, TASK-479-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Parent Task:** TASK-479
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-29
+**Completed:** 2026-06-29
 
 ---
 
@@ -63,8 +63,8 @@ cache, log, or debug payload gains new fields.
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-479-18-L01 | Reviews Moderation Restyle | ⏳ To Do |
-| TASK-479-18-L02 | Reviews Tests | ⏳ To Do |
+| TASK-479-18-L01 | Reviews Moderation Restyle | ✅ Done |
+| TASK-479-18-L02 | Reviews Tests | ✅ Done |
 
 ---
 

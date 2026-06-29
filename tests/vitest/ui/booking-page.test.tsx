@@ -210,7 +210,12 @@ vi.mock("@/components/ui/button", () => ({
 }));
 
 vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  // TASK-479-17-L02: surface the controlled `value` as `data-active-tab` while
+  // still rendering ALL children, so the existing all-tabs-rendered flow tests
+  // stay unaffected and the New-booking tab switch is observable.
+  Tabs: ({ value, children }: { value?: string; children: React.ReactNode }) => (
+    <div data-active-tab={value}>{children}</div>
+  ),
   TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
   TabsTrigger: ({ children }: { children: React.ReactNode }) => (
@@ -952,6 +957,23 @@ test("BookingPage drives booking flows across resources, services, availability,
     expect(bookingPageState.scheduleCalls).toContain("resource-1");
     expect(bookingPageState.serviceResourceCalls).toContain("service-1");
 
+    // TASK-479-17-L01: restyled chrome + stat row fed by REAL state.
+    expect(view.container.textContent).toContain("Bookings today"); // stat row label
+    expect(view.container.textContent).toContain("Upcoming");
+    expect(view.container.textContent).toContain("Resources"); // real-count stat (replaces Utilization)
+    expect(view.container.textContent).not.toContain("Utilization"); // no fabricated %
+    expect(view.container.textContent).toContain("Beta"); // PageHeader badge
+    expect(view.container.textContent).toContain("New booking"); // action present
+    expect(view.container.textContent).toContain("Room A"); // resources rail (real resource)
+
+    // New-booking flips the CONTROLLED active tab resources -> reservations.
+    const activeTab = () =>
+      view.container.querySelector("[data-active-tab]")?.getAttribute("data-active-tab");
+    expect(activeTab()).toBe("resources"); // real default landing tab
+    clickByText(view.container, "New booking");
+    await flush();
+    expect(activeTab()).toBe("reservations"); // switch observed via controlled value
+
     clickByText(view.container, "Refresh");
     await flush();
     expect(view.container.textContent).toContain("Booking data refreshed");
@@ -1105,6 +1127,32 @@ test("BookingPage drives booking flows across resources, services, availability,
     expect(bookingPageState.listBlackoutCalls.length).toBeGreaterThan(1);
   } finally {
     view.cleanup();
+  }
+});
+
+test("BookingPage renders the weekly calendar block + resources rail from real in-week reservation data", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/booking");
+  // Fixed "today" inside the fixture reservation's week (Mon 2026-03-02 .. Sun
+  // 2026-03-08) so the current-week grid deterministically contains the real
+  // reservation. Only Date is faked — timers/microtasks stay real so the async
+  // flush machinery is unaffected.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-03-04T12:00:00.000Z"));
+  const { BookingPage } = await import("../../../core/admin/ui/booking/BookingPage");
+  const view = mount(<BookingPage />);
+
+  try {
+    await flush();
+
+    // Calendar + rail are BookingPage-owned JSX inside the (mocked) TabsContent,
+    // so these resolve from real fixture state — not the stubbed tab components.
+    expect(view.container.textContent).toContain("This week"); // calendar section header
+    expect(view.container.textContent).toContain("Ada Lovelace"); // calendar block (real reservation)
+    expect(view.container.textContent).toContain("Room A"); // resources rail (real resource)
+    expect(view.container.textContent).toContain("13:00"); // startsAt in the reservation's own timezone
+  } finally {
+    view.cleanup();
+    vi.useRealTimers();
   }
 });
 

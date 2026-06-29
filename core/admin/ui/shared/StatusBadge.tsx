@@ -24,9 +24,12 @@ const MAP: Record<string, { variant: BadgeVariant; dot: string; label?: string }
   paid: { variant: "success", dot: "bg-success" },
   online: { variant: "success", dot: "bg-success" },
   completed: { variant: "success", dot: "bg-success" },
+  // forms action-run enum (FormActionRunStatus): success | failed | skipped
+  success: { variant: "success", dot: "bg-success" },
   draft: { variant: "secondary", dot: "bg-muted-foreground" },
   inactive: { variant: "secondary", dot: "bg-muted-foreground" },
   archived: { variant: "secondary", dot: "bg-muted-foreground" },
+  skipped: { variant: "secondary", dot: "bg-muted-foreground" },
   scheduled: { variant: "info", dot: "bg-info" },
   planned: { variant: "info", dot: "bg-info" },
   lead: { variant: "info", dot: "bg-info" },

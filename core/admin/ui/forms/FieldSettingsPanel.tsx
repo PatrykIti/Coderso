@@ -178,7 +178,7 @@ export function FieldSettingsPanel({
           <TabsContent value="general" className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Label
                 </label>
                 <Input
@@ -188,7 +188,7 @@ export function FieldSettingsPanel({
               </div>
               {supportsPlaceholder.has(field.type) ? (
                 <div className="space-y-2">
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     Placeholder
                   </label>
                   <Input
@@ -202,7 +202,7 @@ export function FieldSettingsPanel({
                 </div>
               ) : null}
               <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Helper Text
                 </label>
                 <Textarea
@@ -216,7 +216,7 @@ export function FieldSettingsPanel({
               <>
                 <Separator />
                 <div className="space-y-3">
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     Options
                   </label>
                   <Textarea
@@ -238,7 +238,7 @@ export function FieldSettingsPanel({
             {supportsDefault.has(field.type) ? (
               <>
                 <Separator />
-                <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
+                <div className="flex items-center justify-between rounded-xl border px-3 py-2.5">
                   <div>
                     <p className="text-sm font-medium text-foreground">Default state</p>
                     <p className="text-xs text-muted-foreground">
@@ -256,7 +256,7 @@ export function FieldSettingsPanel({
               <>
                 <Separator />
                 <div className="space-y-3">
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     Default option
                   </label>
                   {field.settings.options && field.settings.options.length > 0 ? (
@@ -296,7 +296,7 @@ export function FieldSettingsPanel({
               <>
                 <Separator />
                 <div className="space-y-2">
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     Trusted default value
                   </label>
                   <Input
@@ -320,7 +320,7 @@ export function FieldSettingsPanel({
                 <Separator />
                 <div className="grid gap-3 md:grid-cols-2">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                       Minimum
                     </label>
                     <Input
@@ -337,7 +337,7 @@ export function FieldSettingsPanel({
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                    <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                       Maximum
                     </label>
                     <Input
@@ -360,7 +360,7 @@ export function FieldSettingsPanel({
               <>
                 <Separator />
                 <div className="space-y-2">
-                  <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                     Input increment
                   </label>
                   <Input
@@ -380,7 +380,7 @@ export function FieldSettingsPanel({
             ) : null}
             <Separator />
             <div className="space-y-4">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Validation Rules
               </label>
               <div className="space-y-2">
@@ -398,7 +398,7 @@ export function FieldSettingsPanel({
                   Use this to group fields in multi-step forms.
                 </p>
               </div>
-              <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3">
+              <div className="flex items-center justify-between rounded-xl border px-3 py-2.5">
                 <div>
                   <p className="text-sm font-medium text-foreground">Required Field</p>
                   <p className="text-xs text-muted-foreground">Prevent empty submissions.</p>
@@ -429,7 +429,7 @@ export function FieldSettingsPanel({
           </TabsContent>
           <TabsContent value="logic" className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Visibility rule
               </label>
               <Select
@@ -451,7 +451,7 @@ export function FieldSettingsPanel({
 
             {needsField ? (
               <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Dependent field
                 </label>
                 {dependentFieldOptions.length === 0 ? (
@@ -480,7 +480,7 @@ export function FieldSettingsPanel({
 
             {needsValue ? (
               <div className="space-y-2">
-                <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                   Match value
                 </label>
                 <Input
@@ -497,7 +497,7 @@ export function FieldSettingsPanel({
           </TabsContent>
           <TabsContent value="style" className="space-y-4">
             <div className="space-y-2">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Field width
               </label>
               <Select
@@ -518,7 +518,7 @@ export function FieldSettingsPanel({
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Label position
               </label>
               <Select

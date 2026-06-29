@@ -1,7 +1,8 @@
-import { Plus } from "lucide-react";
+import { LayoutGrid, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -26,6 +27,8 @@ import { ListingTemplateTable } from "./ListingTemplateTable";
 import { useListingQueries } from "./hooks/useListingQueries";
 import { useListingTemplates } from "./hooks/useListingTemplates";
 import { listingQueryToasts, listingTemplateToasts } from "./listingActionToasts";
+
+export { sourceLabel, summarizeListingQuery } from "./listingQuerySummary";
 
 type ListingsTab = "queries" | "templates";
 
@@ -325,9 +328,11 @@ export function ListingListPage() {
         <PageHeader
           title="Listings"
           description="Create dynamic query presets and reusable list templates."
+          icon={<LayoutGrid />}
           actions={
             <>
               {activeSelectedCount > 0 ? activeBulkBar : null}
+              <Badge variant="soft">Beta</Badge>
               <Button className="gap-2" onClick={handleNew}>
                 <Plus className="h-4 w-4" />
                 New
@@ -356,7 +361,7 @@ export function ListingListPage() {
         ) : null}
 
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-          <TabsList>
+          <TabsList variant="line">
             <TabsTrigger value="queries">Queries</TabsTrigger>
             <TabsTrigger value="templates">Templates</TabsTrigger>
           </TabsList>

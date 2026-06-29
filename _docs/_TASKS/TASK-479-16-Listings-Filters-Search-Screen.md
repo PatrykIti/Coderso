@@ -5,10 +5,10 @@
 **Category:** Admin UI / Visual Refresh / Advanced
 **Estimated Effort:** Large
 **Dependencies:** TASK-479-05, TASK-479-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Parent Task:** TASK-479
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-29
+**Completed:** 2026-06-29
 
 ---
 
@@ -65,10 +65,10 @@ routes, RBAC, cache, and adminPaths).
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-479-16-L01 | Listings List Restyle | ⏳ To Do |
-| TASK-479-16-L02 | Listing Editor Restyle | ⏳ To Do |
-| TASK-479-16-L03 | Filters & Search Modules Restyle | ⏳ To Do |
-| TASK-479-16-L04 | Listings Tests | ⏳ To Do |
+| TASK-479-16-L01 | Listings List Restyle | ✅ Done |
+| TASK-479-16-L02 | Listing Editor Restyle | ✅ Done |
+| TASK-479-16-L03 | Filters & Search Modules Restyle | ✅ Done |
+| TASK-479-16-L04 | Listings Tests | ✅ Done |
 
 ---
 

@@ -5,7 +5,7 @@
 **Category:** Admin UI / Visual Refresh / Booking
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05, TASK-479-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Parent Task:** TASK-479
 
 ---
@@ -89,8 +89,8 @@ a hand-built href literal.
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-479-17-L01 | Booking Calendar Restyle | ⏳ To Do |
-| TASK-479-17-L02 | Booking Tests | ⏳ To Do |
+| TASK-479-17-L01 | Booking Calendar Restyle | ✅ Done |
+| TASK-479-17-L02 | Booking Tests | ✅ Done |
 
 ---
 

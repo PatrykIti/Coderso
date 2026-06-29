@@ -24,7 +24,7 @@ test("ReviewsModerationPage renders shell and loading state", () => {
   });
 
   expect(html).toContain("Reviews");
-  expect(html).toContain("Review details");
+  expect(html).toContain("Average rating");
   expect(html).toContain("Loading reviews");
 });
 
