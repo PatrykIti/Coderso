@@ -1,14 +1,19 @@
+import {
+  Boxes,
+  Car,
+  Check,
+  ListChecks,
+  type LucideIcon,
+  Scissors,
+  ShoppingBag,
+  Stethoscope,
+} from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import type { SolutionKitSummary } from "@/services/solutionKitsClient";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import type { SolutionKitId, SolutionKitSummary } from "@/services/solutionKitsClient";
 
 type SolutionKitCardProps = {
   kit: SolutionKitSummary;
@@ -16,50 +21,63 @@ type SolutionKitCardProps = {
   onSelect: (id: SolutionKitSummary["id"]) => void;
 };
 
-export function SolutionKitCard({ kit, isActive, onSelect }: SolutionKitCardProps) {
-  return (
-    <Card className={isActive ? "border-primary/70 ring-1 ring-primary/30" : undefined}>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-3">
-          <CardTitle className="text-base">{kit.title}</CardTitle>
-          <Badge variant="outline">Beta</Badge>
-        </div>
-        <CardDescription>{kit.shortDescription}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Recommended modules
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {kit.recommendedModules.map((module) => (
-              <Badge key={module} variant="secondary" className="capitalize">
-                {module.replaceAll("-", " ")}
-              </Badge>
-            ))}
-          </div>
-        </div>
+type KitVisual = { icon: LucideIcon; tone: string };
 
-        <div className="space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Highlights
-          </p>
-          <ul className="space-y-1 text-sm text-muted-foreground">
-            {kit.features.slice(0, 3).map((feature) => (
-              <li key={feature}>- {feature}</li>
-            ))}
-          </ul>
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button
-          variant={isActive ? "default" : "outline"}
-          className="w-full"
-          onClick={() => onSelect(kit.id)}
-        >
-          {isActive ? "Selected" : "Select kit"}
-        </Button>
-      </CardFooter>
+// TASK-479-21-L01: per-kit icon + soft tone, derived deterministically at render
+// time from the real `SolutionKitId` catalog (no new API). Tone tokens (`-soft`
+// backgrounds + accent text) come from TASK-479-05; consumed only here.
+const KIT_VISUALS: Record<SolutionKitId, KitVisual> = {
+  "automotive-workshop": { icon: Car, tone: "bg-warning-soft text-warning" },
+  "medical-clinic": { icon: Stethoscope, tone: "bg-info-soft text-info" },
+  "beauty-salon": { icon: Scissors, tone: "bg-primary-soft text-primary" },
+  "services-directory": { icon: ListChecks, tone: "bg-success-soft text-success" },
+  "small-ecommerce": { icon: ShoppingBag, tone: "bg-primary-soft text-primary" },
+};
+
+const FALLBACK_VISUAL: KitVisual = { icon: Boxes, tone: "bg-muted text-muted-foreground" };
+
+const visualFor = (id: SolutionKitId): KitVisual => KIT_VISUALS[id] ?? FALLBACK_VISUAL;
+
+export function SolutionKitCard({ kit, isActive, onSelect }: SolutionKitCardProps) {
+  const { icon: Icon, tone } = visualFor(kit.id);
+
+  return (
+    <Card
+      className={cn(
+        "flex h-full flex-col gap-0 rounded-2xl p-5 transition-all hover:-translate-y-0.5 hover:shadow-card",
+        isActive && "border-primary/70 ring-1 ring-primary/30"
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <span className={cn("flex size-12 items-center justify-center rounded-2xl", tone)}>
+          <Icon className="size-6" />
+        </span>
+        {isActive ? (
+          <Badge variant="success">
+            <Check className="size-3" /> Selected
+          </Badge>
+        ) : null}
+      </div>
+
+      <div className="mt-4 font-display text-[15px] font-semibold">{kit.title}</div>
+      <p className="mt-1 text-sm text-muted-foreground">{kit.shortDescription}</p>
+
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {kit.recommendedModules.slice(0, 4).map((module) => (
+          <Badge key={module} variant="outline" className="capitalize">
+            {module.replaceAll("-", " ")}
+          </Badge>
+        ))}
+      </div>
+
+      <Button
+        variant={isActive ? "soft" : "outline"}
+        size="sm"
+        className="mt-auto w-full"
+        onClick={() => onSelect(kit.id)}
+      >
+        {isActive ? "Selected" : "Select kit"}
+      </Button>
     </Card>
   );
 }

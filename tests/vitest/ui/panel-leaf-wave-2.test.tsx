@@ -453,16 +453,28 @@ test("BookingResourcesTab forwards resource list and form actions", () => {
 });
 
 test("commerce leaf panels render states and forward changes", () => {
+  // TASK-479-19-L02: the editor was restructured — the settings sidebar
+  // (CommerceCollectionsPanel) now owns Status + Organization + Price summary, and
+  // Media moved into CommerceEditorSections (Details/Media/Pricing/Inventory). This
+  // updates the queries to the new control placement; the intent (every control
+  // forwards its change) is unchanged.
   const onToggleCollection = vi.fn();
-  const onMediaIdsChange = vi.fn();
+  const onStatusChange = vi.fn();
+  const onPublish = vi.fn();
   const onChange = vi.fn();
   const html = renderToString(
     <CommerceCollectionsPanel
       collections={[]}
       selectedIds={[]}
-      mediaIdsText=""
+      status="draft"
+      pricingAmount="0"
+      pricingCompareAtAmount=""
+      pricingCurrency="USD"
+      publishButtonLabel="Publish"
+      isSaving={false}
       onToggleCollection={onToggleCollection}
-      onMediaIdsChange={onMediaIdsChange}
+      onStatusChange={onStatusChange}
+      onPublish={onPublish}
     />
   );
 
@@ -482,9 +494,15 @@ test("commerce leaf panels render states and forward changes", () => {
           },
         ]}
         selectedIds={["collection-1"]}
-        mediaIdsText="media-1"
+        status="draft"
+        pricingAmount="450000"
+        pricingCompareAtAmount="470000"
+        pricingCurrency="USD"
+        publishButtonLabel="Publish"
+        isSaving={false}
         onToggleCollection={onToggleCollection}
-        onMediaIdsChange={onMediaIdsChange}
+        onStatusChange={onStatusChange}
+        onPublish={onPublish}
       />
       <CommerceEditorSections
         draft={{
@@ -511,35 +529,40 @@ test("commerce leaf panels render states and forward changes", () => {
 
   try {
     expect(view.container.textContent).toContain("Featured");
-    expect(view.container.textContent).toContain("Identity");
+    expect(view.container.textContent).toContain("Details"); // was "Identity"
+    expect(view.container.textContent).toContain("Price summary"); // sidebar
+    expect(view.container.textContent).toContain("Inventory"); // was "Stock"
 
-    const inputs = Array.from(view.container.querySelectorAll("input"));
     const selects = Array.from(view.container.querySelectorAll("select"));
-    const textareas = Array.from(view.container.querySelectorAll("textarea"));
-    const checkbox = view.container.querySelector("input[type='checkbox']");
+    const checkboxes = Array.from(view.container.querySelectorAll("input[type='checkbox']"));
+    const collectionCheckbox = checkboxes[0]; // Organization checkbox row
+    const trackInventorySwitch = checkboxes[1]; // Inventory "Track inventory" switch
 
     React.act(() => {
-      (checkbox as HTMLInputElement | null)?.click();
-      setInputValue(inputs[1], "media-1, media-2");
-      setInputValue(inputs[2], "Villa Nova");
-      setInputValue(inputs[3], "villa-nova");
-      setSelectValue(selects[0], "published");
-      setTextareaValue(textareas[0], "Short summary");
-      setTextareaValue(textareas[1], "Long description");
-      setInputValue(inputs[4], "520000");
-      setInputValue(inputs[5], "EUR");
-      setInputValue(inputs[6], "540000");
-      setSelectValue(selects[1], "backorder");
-      setInputValue(inputs[7], "3");
+      (collectionCheckbox as HTMLInputElement | null)?.click();
+      setSelectValue(selects[0], "published"); // sidebar Status select
+      setInputValue(view.container.querySelector("#commerce-title"), "Villa Nova");
+      setInputValue(view.container.querySelector("#commerce-slug"), "villa-nova");
+      setTextareaValue(view.container.querySelector("#commerce-excerpt"), "Short summary");
+      setTextareaValue(view.container.querySelector("#commerce-description"), "Long description");
+      setInputValue(view.container.querySelector("#commerce-media-ids"), "media-1, media-2");
+      setInputValue(view.container.querySelector("#commerce-pricing-amount"), "520000");
+      setInputValue(view.container.querySelector("#commerce-pricing-currency"), "EUR");
+      setInputValue(view.container.querySelector("#commerce-pricing-compare"), "540000");
+      setSelectValue(selects[1], "backorder"); // Inventory state select
+      setInputValue(view.container.querySelector("#commerce-stock-quantity"), "3");
+      (trackInventorySwitch as HTMLInputElement | null)?.click();
+      view.container.querySelector("button")?.click(); // sidebar Publish button
     });
 
     expect(onToggleCollection).toHaveBeenCalledWith("collection-1", false);
-    expect(onMediaIdsChange).toHaveBeenCalledWith("media-1, media-2");
+    expect(onStatusChange).toHaveBeenCalledWith("published");
+    expect(onPublish).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith({ title: "Villa Nova" });
     expect(onChange).toHaveBeenCalledWith({ slug: "villa-nova" });
-    expect(onChange).toHaveBeenCalledWith({ status: "published" });
     expect(onChange).toHaveBeenCalledWith({ excerpt: "Short summary" });
     expect(onChange).toHaveBeenCalledWith({ description: "Long description" });
+    expect(onChange).toHaveBeenCalledWith({ mediaIdsText: "media-1, media-2" });
     expect(onChange).toHaveBeenCalledWith({ pricingAmount: "520000" });
     expect(onChange).toHaveBeenCalledWith({ pricingCurrency: "EUR" });
     expect(onChange).toHaveBeenCalledWith({
@@ -547,6 +570,8 @@ test("commerce leaf panels render states and forward changes", () => {
     });
     expect(onChange).toHaveBeenCalledWith({ stockState: "backorder" });
     expect(onChange).toHaveBeenCalledWith({ stockQuantity: "3" });
+    // derived "Track inventory" switch toggles the SAME stockState field
+    expect(onChange).toHaveBeenCalledWith({ stockState: "out_of_stock" });
   } finally {
     view.cleanup();
   }

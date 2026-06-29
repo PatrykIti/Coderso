@@ -101,9 +101,9 @@ test("CommerceEditorPage renders product editor controls in create mode", () => 
   });
 
   expect(html).toContain("New product");
-  expect(html).toContain("Identity");
+  expect(html).toContain("Details");
   expect(html).toContain("Pricing");
-  expect(html).toContain("Stock");
+  expect(html).toContain("Inventory");
   expect(html).toContain("Save changes");
   expect(html).toContain("Publish");
 });

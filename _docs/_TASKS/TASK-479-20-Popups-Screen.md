@@ -5,10 +5,10 @@
 **Category:** Admin UI / Visual Refresh / Advanced
 **Estimated Effort:** Medium
 **Dependencies:** TASK-479-05, TASK-479-06
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Parent Task:** TASK-479
-**Started:** `<set when work begins>`
-**Completed:** `<set at closure>`
+**Started:** 2026-06-29
+**Completed:** 2026-06-29
 
 ---
 
@@ -58,9 +58,9 @@ routes, RBAC, cache, and adminPaths).
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-479-20-L01 | Popups List Restyle | ⏳ To Do |
-| TASK-479-20-L02 | Popup Editor Restyle | ⏳ To Do |
-| TASK-479-20-L03 | Popups Tests | ⏳ To Do |
+| TASK-479-20-L01 | Popups List Restyle | ✅ Done |
+| TASK-479-20-L02 | Popup Editor Restyle | ✅ Done |
+| TASK-479-20-L03 | Popups Tests | ✅ Done |
 
 ---
 

@@ -11,11 +11,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
-export type CommerceBulkActionValue =
-  | "publish"
-  | "draft"
-  | "archive"
-  | "delete";
+export type CommerceBulkActionValue = "publish" | "draft" | "archive" | "delete";
 
 type CommerceBulkActionsBarProps = {
   selectedCount: number;
@@ -43,32 +39,23 @@ export function CommerceBulkActionsBar({
       className={cn(
         isInline
           ? "flex min-w-0 flex-wrap items-center justify-end gap-2"
-          : "flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+          : "flex flex-col gap-3 rounded-2xl border bg-card p-3 shadow-card sm:flex-row sm:items-center sm:justify-between"
       )}
     >
       <div className="flex shrink-0 items-center gap-2">
         <Badge variant="secondary" className="text-[10px] uppercase tracking-widest">
           Selected {selectedCount}
         </Badge>
-        <span
-          className={cn(
-            "text-xs text-muted-foreground",
-            isInline ? "sr-only" : undefined
-          )}
-        >
+        <span className={cn("text-xs text-muted-foreground", isInline ? "sr-only" : undefined)}>
           Apply a bulk action to the selected products.
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={action}
-          onValueChange={(value) =>
-            onActionChange(value as CommerceBulkActionValue)
-          }
+          onValueChange={(value) => onActionChange(value as CommerceBulkActionValue)}
         >
-          <SelectTrigger
-            className={cn("h-8", isInline ? "w-[150px]" : "w-full sm:w-[200px]")}
-          >
+          <SelectTrigger className={cn("h-8", isInline ? "w-[150px]" : "w-full sm:w-[200px]")}>
             <SelectValue placeholder="Bulk actions" />
           </SelectTrigger>
           <SelectContent>
@@ -93,12 +80,7 @@ export function CommerceBulkActionsBar({
         <Button size="sm" onClick={onApply} disabled={!action || isApplying}>
           {isApplying ? "Applying..." : "Apply"}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onClear}
-          aria-label="Clear selection"
-        >
+        <Button variant="ghost" size="sm" onClick={onClear} aria-label="Clear selection">
           {isInline ? "Clear" : "Clear selection"}
         </Button>
       </div>
