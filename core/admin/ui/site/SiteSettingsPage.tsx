@@ -516,18 +516,18 @@ export function SiteSettingsPage() {
                       type="button"
                       onClick={() => setActiveSection(section.id)}
                       className={cn(
-                        "flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition",
+                        "flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition",
                         isActive
-                          ? "border-primary/40 bg-primary/5 text-foreground"
-                          : "border-border/60 bg-background text-muted-foreground hover:bg-muted/50"
+                          ? "border-transparent bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
                       )}
                     >
                       <div
                         className={cn(
-                          "mt-0.5 flex h-8 w-8 items-center justify-center rounded-md",
+                          "mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl",
                           isActive
-                            ? "bg-primary/15 text-primary"
-                            : "bg-muted/60 text-muted-foreground"
+                            ? "bg-primary-soft text-primary"
+                            : "bg-muted text-muted-foreground"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -591,7 +591,7 @@ export function SiteSettingsPage() {
                   <Card className="border-border/60">
                     <CardHeader className="border-b">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
                           <Home className="h-5 w-5" />
                         </div>
                         <div>
@@ -682,7 +682,7 @@ export function SiteSettingsPage() {
                   <Card className="border-border/60">
                     <CardHeader className="border-b">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
                           <Eye className="h-5 w-5" />
                         </div>
                         <div>
@@ -728,7 +728,7 @@ export function SiteSettingsPage() {
                   <Card className="border-border/60">
                     <CardHeader className="border-b">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
                           <LayoutList className="h-5 w-5" />
                         </div>
                         <div>
@@ -812,7 +812,7 @@ export function SiteSettingsPage() {
                   <Card className="border-border/60">
                     <CardHeader className="border-b">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
                           <Timer className="h-5 w-5" />
                         </div>
                         <div>
@@ -857,7 +857,7 @@ export function SiteSettingsPage() {
                   <Card className="border-border/60">
                     <CardHeader className="border-b">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary-soft text-primary">
                           <Gauge className="h-5 w-5" />
                         </div>
                         <div>
@@ -881,7 +881,7 @@ export function SiteSettingsPage() {
           </div>
         </div>
 
-        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 z-10 border-t border-border bg-card/90 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Checkbox

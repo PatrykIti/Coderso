@@ -171,7 +171,7 @@ export function AuditDetailsDrawer({
                     readOnly
                     spellCheck={false}
                     value={payload}
-                    className="min-h-[220px] resize-none border-slate-800 bg-slate-900 font-mono text-xs leading-relaxed text-slate-100 focus-visible:ring-slate-700"
+                    className="min-h-[220px] resize-none rounded-xl border-border bg-muted/60 font-mono text-xs leading-relaxed text-foreground"
                   />
                 </div>
               </div>

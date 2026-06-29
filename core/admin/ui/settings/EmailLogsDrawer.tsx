@@ -29,10 +29,11 @@ type EmailLogsDrawerProps = {
   error?: string | null;
 };
 
+// TASK-479-28-L06: token-driven delivery-status tints (no raw palette colors).
 const statusStyles: Record<string, string> = {
-  delivered: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
-  queued: "border-amber-500/20 bg-amber-500/10 text-amber-600",
-  failed: "border-rose-500/20 bg-rose-500/10 text-rose-600",
+  delivered: "border-transparent bg-success-soft text-success",
+  queued: "border-transparent bg-warning-soft text-warning",
+  failed: "border-transparent bg-destructive/12 text-destructive",
 };
 
 const emailLogsExportUnavailableReason =

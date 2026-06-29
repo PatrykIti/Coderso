@@ -41,16 +41,19 @@ export function StorageProviderCard({
       tabIndex={0}
       className={cn(
         "cursor-pointer border-border/60 bg-card/80 p-0 transition-all",
-        isActive
-          ? "border-primary/50 shadow-sm ring-2 ring-primary/15"
-          : "hover:border-border"
+        isActive ? "border-primary/50 shadow-sm ring-2 ring-primary/15" : "hover:border-border"
       )}
       onClick={() => onSelect?.(id)}
       onKeyDown={handleKeyDown}
     >
       <CardContent className="flex h-full flex-col gap-4 p-5">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+          <div
+            className={cn(
+              "flex h-11 w-11 items-center justify-center rounded-xl",
+              isActive ? "bg-primary-soft text-primary" : "bg-muted text-muted-foreground"
+            )}
+          >
             <Icon className="h-5 w-5" />
           </div>
           {badge ? (

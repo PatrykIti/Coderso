@@ -47,6 +47,24 @@ export const settingsSidebarItems = [
   { id: "integrations", label: "Integrations", icon: Plug, href: "/admin/settings/integrations" },
 ];
 
+type SettingsSidebarItem = (typeof settingsSidebarItems)[number];
+
+// TASK-479-28-L01: the flat `settingsSidebarItems` export stays stable (callers +
+// tests read it as an id→href map). The Security branch is rendered as a nested
+// group derived from the SAME flat entries — no new routes, no removed hrefs.
+const TOP_LEVEL_ORDER = [
+  "general",
+  "site",
+  "assistant",
+  "security",
+  "api-keys",
+  "webhooks",
+  "email",
+  "storage",
+  "integrations",
+];
+const SECURITY_CHILD_IDS = ["ip-allowlist", "sessions", "login-alerts"];
+
 type SettingsSidebarProps = {
   activeId?: string;
 };
@@ -61,36 +79,64 @@ const shouldGuardSettingsNavigation = (event: MouseEvent<HTMLAnchorElement>) => 
 export function SettingsSidebar({ activeId = "general" }: SettingsSidebarProps) {
   const { requestNavigation } = useSettingsDirtyNavigation();
 
+  const byId = new Map<string, SettingsSidebarItem>(
+    settingsSidebarItems.map((item) => [item.id, item] as [string, SettingsSidebarItem])
+  );
+  const pick = (ids: string[]) =>
+    ids.map((id) => byId.get(id)).filter((item): item is SettingsSidebarItem => Boolean(item));
+  const topLevelItems = pick(TOP_LEVEL_ORDER);
+  const securityChildren = pick(SECURITY_CHILD_IDS);
+  const securityActive = activeId === "security" || SECURITY_CHILD_IDS.includes(activeId);
+
+  const renderLink = (item: SettingsSidebarItem, child = false) => {
+    const isActive = item.id === activeId;
+    const Icon = item.icon;
+    return (
+      <AdminLink
+        key={item.id}
+        href={item.href}
+        prefetch
+        aria-current={isActive ? "page" : undefined}
+        onClick={(event) => {
+          if (!shouldGuardSettingsNavigation(event)) return;
+          if (!requestNavigation(item.href)) event.preventDefault();
+        }}
+        className={cn(
+          child
+            ? "block rounded-lg px-2.5 py-1.5 text-[13px] transition-colors"
+            : "flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition-colors [&_svg]:size-4",
+          isActive
+            ? child
+              ? "font-medium text-primary"
+              : "bg-sidebar-accent text-sidebar-accent-foreground [&_svg]:text-primary"
+            : child
+              ? "text-muted-foreground hover:text-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground [&_svg]:text-muted-foreground"
+        )}
+      >
+        {!child && Icon ? <Icon /> : null}
+        {item.label}
+      </AdminLink>
+    );
+  };
+
   return (
-    <div className="flex h-full flex-col gap-4 p-4">
-      <p className="px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="flex h-full flex-col gap-3 p-3">
+      <p className="px-2 pt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         Settings
       </p>
-      <div className="space-y-1">
-        {settingsSidebarItems.map((item) => {
-          const isActive = item.id === activeId;
-          const Icon = item.icon;
-          return (
-            <AdminLink
-              key={item.id}
-              href={item.href}
-              prefetch
-              aria-current={isActive ? "page" : undefined}
-              onClick={(event) => {
-                if (!shouldGuardSettingsNavigation(event)) return;
-                if (!requestNavigation(item.href)) event.preventDefault();
-              }}
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium",
-                isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-            </AdminLink>
-          );
-        })}
-      </div>
+      <nav className="flex flex-col gap-0.5">
+        {topLevelItems.map((item) => (
+          <div key={item.id}>
+            {renderLink(item)}
+            {item.id === "security" && securityActive && securityChildren.length > 0 ? (
+              <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-border pl-3">
+                {securityChildren.map((child) => renderLink(child, true))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </nav>
     </div>
   );
 }

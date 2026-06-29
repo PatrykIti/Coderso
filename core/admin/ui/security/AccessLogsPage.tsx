@@ -1,10 +1,15 @@
 import {
+  Activity,
   CalendarDays,
   Download,
   Filter,
+  Globe,
+  KeyRound,
   Laptop,
   Monitor,
+  Network,
   Search,
+  ShieldAlert,
   SlidersHorizontal,
   Smartphone,
   Terminal,
@@ -38,6 +43,7 @@ import {
 } from "@/services/accessLogsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
 import { ExportDialog, type ExportDialogPayload, type ExportField } from "@/ui/shared/ExportDialog";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { useOptionalAdminRouter } from "@/ui/contexts/AdminRouterContext";
@@ -574,6 +580,18 @@ export function AccessLogsPage() {
     });
   }, [loadedPage]);
 
+  // TASK-479-27-L04: page-scoped stat row derived ONLY from the loaded
+  // AccessLogItem view models. There is no 24h aggregate on the response, so
+  // every metric is honestly labelled "(page)" — never a fabricated total.
+  const stats = useMemo(
+    () => ({
+      blocked: logs.filter((log) => log.statusCode === 401 || log.statusCode === 403).length,
+      failed: logs.filter((log) => log.path.includes("login") && log.statusCode >= 400).length,
+      uniqueIps: new Set(logs.map((log) => log.ipAddress)).size,
+    }),
+    [logs]
+  );
+
   const visibleError = validationError ?? error;
   const tableIsLoading = validationError ? false : isLoading;
   const activeFilterChips = [
@@ -624,6 +642,7 @@ export function AccessLogsPage() {
         <PageHeader
           title="Access Logs"
           description="Monitor user authentication and security events."
+          icon={<Network />}
           actions={
             <Button variant="outline" className="gap-2" onClick={() => setExportOpen(true)}>
               <Download className="h-4 w-4" />
@@ -632,7 +651,14 @@ export function AccessLogsPage() {
           }
         />
 
-        <div className="flex flex-col gap-4 rounded-xl border bg-card/60 p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Loaded (page)" value={String(logs.length)} icon={<Activity />} />
+          <StatCard label="Blocked (page)" value={String(stats.blocked)} icon={<ShieldAlert />} />
+          <StatCard label="Unique IPs (page)" value={String(stats.uniqueIps)} icon={<Globe />} />
+          <StatCard label="Failed logins (page)" value={String(stats.failed)} icon={<KeyRound />} />
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-soft lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-md">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -729,12 +755,12 @@ export function AccessLogsPage() {
         ) : null}
 
         {visibleError ? (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
             {visibleError}
           </div>
         ) : null}
         {notice ? (
-          <div className="rounded-xl border bg-muted/20 p-4 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-border bg-muted/20 p-4 text-sm text-muted-foreground">
             {notice}
           </div>
         ) : null}

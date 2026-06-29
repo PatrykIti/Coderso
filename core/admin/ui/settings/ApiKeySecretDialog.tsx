@@ -18,12 +18,7 @@ type ApiKeySecretDialogProps = {
   secret: string;
 };
 
-export function ApiKeySecretDialog({
-  open,
-  onOpenChange,
-  name,
-  secret,
-}: ApiKeySecretDialogProps) {
+export function ApiKeySecretDialog({ open, onOpenChange, name, secret }: ApiKeySecretDialogProps) {
   const handleCopy = () => {
     if (typeof navigator === "undefined") return;
     void navigator.clipboard.writeText(secret);
@@ -39,8 +34,8 @@ export function ApiKeySecretDialog({
           <div>
             <DialogTitle>API Key created</DialogTitle>
             <DialogDescription>
-              Copy the key for <span className="font-medium text-foreground">{name}</span>.
-              You won&apos;t be able to view it again.
+              Copy the key for <span className="font-medium text-foreground">{name}</span>. You
+              won&apos;t be able to view it again.
             </DialogDescription>
           </div>
           <Button
@@ -54,29 +49,18 @@ export function ApiKeySecretDialog({
         </DialogHeader>
         <div className="space-y-4 px-6 py-6">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-foreground">
-              API Key
-            </label>
+            <label className="text-sm font-semibold text-foreground">API Key</label>
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Input
-                value={secret}
-                readOnly
-                className="font-mono text-xs"
-              />
-              <Button
-                variant="outline"
-                className="gap-2"
-                type="button"
-                onClick={handleCopy}
-              >
+              <Input value={secret} readOnly className="font-mono text-xs" />
+              <Button variant="outline" className="gap-2" type="button" onClick={handleCopy}>
                 <Copy className="h-4 w-4" />
                 Copy
               </Button>
             </div>
           </div>
-          <div className="rounded-lg border border-amber-200/60 bg-amber-50/60 p-3 text-xs text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200">
-            Store this key securely. If you lose it, you will need to rotate
-            the key to generate a new one.
+          <div className="rounded-xl border border-transparent bg-warning-soft p-3 text-xs text-warning">
+            Store this key securely. If you lose it, you will need to rotate the key to generate a
+            new one.
           </div>
         </div>
         <Separator />

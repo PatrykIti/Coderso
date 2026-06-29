@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { MouseEvent } from "react";
 import {
   BadgeCheck,
+  BellRing,
+  ChevronRight,
   Gauge,
   Globe,
   KeyRound,
+  Monitor,
   Network,
   Plus,
   Shield,
@@ -14,6 +18,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -35,9 +40,13 @@ import {
   type SecuritySettingsResponse,
 } from "@/services/settingsClient";
 import { SettingsShell } from "@/ui/layouts/SettingsShell";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { InfoTip } from "@/ui/shared/InfoTip";
-import { useRegisterSettingsDirty } from "@/ui/settings/SettingsDirtyNavigation";
+import {
+  useRegisterSettingsDirty,
+  useSettingsDirtyNavigation,
+} from "@/ui/settings/SettingsDirtyNavigation";
 import { useAutoSaveEffect, useSettingsAutoSave } from "@/ui/settings/useSettingsAutoSave";
 
 import { IpAllowlistDrawer } from "./IpAllowlistDrawer";
@@ -497,6 +506,73 @@ const classifySecuritySettingsRisk = (before: SecurityFormState, after: Security
   return risks;
 };
 
+// TASK-479-28-L04: prototype "More" quick-link cards to the security sub-pages.
+// Routes are the EXISTING /admin/settings/security/* targets, resolved via
+// AdminLink (+ prefetch) and wrapped in the dirty-navigation guard — never a
+// hand-built <a href>.
+const SECURITY_QUICK_LINKS: Array<{
+  href: string;
+  title: string;
+  desc: string;
+  icon: typeof Network;
+}> = [
+  {
+    href: "/admin/settings/security/ip-allowlist",
+    title: "IP allowlist",
+    desc: "Restrict admin access to trusted networks.",
+    icon: Network,
+  },
+  {
+    href: "/admin/settings/security/sessions",
+    title: "Active sessions",
+    desc: "Review and revoke signed-in devices.",
+    icon: Monitor,
+  },
+  {
+    href: "/admin/settings/security/login-alerts",
+    title: "Login alerts",
+    desc: "Get notified about new or risky sign-ins.",
+    icon: BellRing,
+  },
+];
+
+function SecurityQuickLinks() {
+  const { requestNavigation } = useSettingsDirtyNavigation();
+  const guard = (event: MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (event.defaultPrevented) return;
+    if (event.button > 0) return;
+    if (event.metaKey || event.altKey || event.ctrlKey || event.shiftKey) return;
+    if (!requestNavigation(href)) event.preventDefault();
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      {SECURITY_QUICK_LINKS.map((link) => {
+        const Icon = link.icon;
+        return (
+          <AdminLink
+            key={link.href}
+            href={link.href}
+            prefetch
+            className="block"
+            onClick={(event) => guard(event, link.href)}
+          >
+            <Card className="flex flex-row items-center gap-4 p-4 transition-colors hover:bg-accent">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                <Icon className="size-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium">{link.title}</div>
+                <div className="truncate text-sm text-muted-foreground">{link.desc}</div>
+              </div>
+              <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+            </Card>
+          </AdminLink>
+        );
+      })}
+    </div>
+  );
+}
+
 export function SecuritySettingsPage() {
   const [settings, setSettings] = useState<SecuritySettingsResponse | null>(null);
   const [form, setForm] = useState<SecurityFormState>(defaultFormState);
@@ -860,18 +936,18 @@ export function SecuritySettingsPage() {
                       type="button"
                       onClick={() => setActiveSection(section.id)}
                       className={cn(
-                        "flex w-full items-start gap-3 rounded-lg border px-3 py-3 text-left transition",
+                        "flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition",
                         isActive
-                          ? "border-primary/40 bg-primary/5 text-foreground"
-                          : "border-border/60 bg-background text-muted-foreground hover:bg-muted/50"
+                          ? "border-transparent bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "border-transparent text-muted-foreground hover:bg-accent hover:text-foreground"
                       )}
                     >
                       <div
                         className={cn(
-                          "mt-0.5 flex h-8 w-8 items-center justify-center rounded-md",
+                          "mt-0.5 flex h-8 w-8 items-center justify-center rounded-xl",
                           isActive
-                            ? "bg-primary/15 text-primary"
-                            : "bg-muted/60 text-muted-foreground"
+                            ? "bg-primary-soft text-primary"
+                            : "bg-muted text-muted-foreground"
                         )}
                       >
                         <Icon className="h-4 w-4" />
@@ -1970,11 +2046,19 @@ export function SecuritySettingsPage() {
                     </div>
                   </SecurityPolicyCard>
                 ) : null}
+
+                <div className="border-t border-border pt-6">
+                  <h3 className="font-display text-[15px] font-semibold">More</h3>
+                  <p className="mb-3 mt-1 text-sm text-muted-foreground">
+                    Detailed security controls and logs.
+                  </p>
+                  <SecurityQuickLinks />
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 z-10 border-t border-border bg-card/90 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Checkbox

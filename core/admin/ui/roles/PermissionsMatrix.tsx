@@ -1,4 +1,5 @@
 import { Fragment, useMemo } from "react";
+import { Check, Minus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,7 +56,7 @@ export function PermissionsMatrix({
   }, [roles, rolePermissions]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       {readOnlyReason ? (
         <p id={readOnlyReasonId} className="sr-only">
           {readOnlyReason}
@@ -69,7 +70,15 @@ export function PermissionsMatrix({
               Apply access across an entire role column in one click.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <Check className="size-3.5 text-primary" /> Allowed
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Minus className="size-3.5 text-muted-foreground/40" /> No access
+              </span>
+            </div>
             <Badge variant="secondary" className="text-xs">
               {roles.length} roles
             </Badge>
@@ -109,7 +118,7 @@ export function PermissionsMatrix({
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow className="border-b">
-              <TableHead className="min-w-[260px] px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              <TableHead className="sticky left-0 z-20 min-w-[260px] bg-muted px-6 py-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Permission Name
               </TableHead>
               {roles.map((role) => (
@@ -125,17 +134,17 @@ export function PermissionsMatrix({
           <TableBody>
             {resolvedGroups.map((group) => (
               <Fragment key={group.id}>
-                <TableRow className="bg-muted/30">
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableCell
                     colSpan={roles.length + 1}
-                    className="px-6 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/70"
+                    className="sticky left-0 z-10 px-6 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground"
                   >
                     {group.label}
                   </TableCell>
                 </TableRow>
                 {group.permissions.map((permission) => (
                   <TableRow key={permission.id} className="border-b">
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="sticky left-0 z-10 bg-card px-6 py-4">
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-foreground">
                           {permission.label}
