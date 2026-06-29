@@ -20,6 +20,7 @@ import {
 import type { EntrySummary } from "@/services/entriesClient";
 import { InlineEditWrapper } from "@/ui/authoring";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import type {
   CustomScreenListColumn,
   CustomScreenListViewDefinition,
@@ -110,7 +111,7 @@ export function CustomScreenEntriesTable({
   const colSpan = Math.max(resolvedColumns.length + (hasSelection ? 2 : hasActions ? 1 : 0), 2);
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
@@ -175,6 +176,7 @@ export function CustomScreenEntriesTable({
                     isListRowFieldWritable(binding);
                   const rawValue = resolveEntryColumnRawValue({ entry: item, column });
                   const renderedValue = resolveEntryColumnValue({ entry: item, column });
+                  const isStatusColumn = column.source === "system" && column.field === "status";
                   return (
                     <TableCell key={column.id} className="px-4 py-5 text-sm first:pl-6">
                       {editable ? (
@@ -188,6 +190,8 @@ export function CustomScreenEntriesTable({
                             void onCommitRowField?.(item, column, next);
                           }}
                         />
+                      ) : isStatusColumn && rawValue ? (
+                        <StatusBadge status={String(rawValue)} />
                       ) : index === 0 && !preview ? (
                         <div className="flex flex-col gap-1">
                           <AdminLink

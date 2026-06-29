@@ -912,7 +912,7 @@ export function CustomScreenEntryEditor() {
   const presentationPanel =
     screen && canEditInScreen && !isCreateMode && selectedPresentationTarget ? (
       <div
-        className="rounded-lg border bg-card/70 p-4 shadow-sm"
+        className="rounded-2xl border border-border bg-card p-4 shadow-soft"
         data-custom-screen-entry-presentation-panel="true"
       >
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1116,7 +1116,7 @@ export function CustomScreenEntryEditor() {
               </Badge>
             ) : null}
             {hasUnsavedChanges ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+              <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-warning">
                 Unsaved changes
               </span>
             ) : null}
@@ -1197,31 +1197,36 @@ export function CustomScreenEntryEditor() {
             {presentationPanel}
 
             {isLoading ? (
-              <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+              <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-soft">
                 Loading custom screen record...
               </div>
             ) : screen && canEditInScreen ? (
-              <AuthoringCanvasFrame
-                borderless
-                onClearSelection={() => {
-                  setSelectedRuntimeBlockId(null);
-                }}
+              <div
+                className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+                data-custom-screen-entry-document="true"
               >
-                <CustomScreenEntryCanvas
-                  document={runtimeDocument}
-                  bindings={runtimeBindings}
-                  fieldValues={buildCanvasFieldValues()}
-                  fieldErrors={fieldErrors}
-                  fields={fields}
-                  relationTargets={relationTargets}
-                  onFieldChange={handleFieldChange}
-                  onTitleChange={handleTitleChange}
-                  onSlugChange={handleSlugChange}
-                  presentationOverrides={draftOverrides}
-                  selectedBlockId={selectedRuntimeBlockId}
-                  onSelectBlock={setSelectedRuntimeBlockId}
-                />
-              </AuthoringCanvasFrame>
+                <AuthoringCanvasFrame
+                  borderless
+                  onClearSelection={() => {
+                    setSelectedRuntimeBlockId(null);
+                  }}
+                >
+                  <CustomScreenEntryCanvas
+                    document={runtimeDocument}
+                    bindings={runtimeBindings}
+                    fieldValues={buildCanvasFieldValues()}
+                    fieldErrors={fieldErrors}
+                    fields={fields}
+                    relationTargets={relationTargets}
+                    onFieldChange={handleFieldChange}
+                    onTitleChange={handleTitleChange}
+                    onSlugChange={handleSlugChange}
+                    presentationOverrides={draftOverrides}
+                    selectedBlockId={selectedRuntimeBlockId}
+                    onSelectBlock={setSelectedRuntimeBlockId}
+                  />
+                </AuthoringCanvasFrame>
+              </div>
             ) : screen ? (
               <CustomScreenPreview
                 document={runtimeDocument}

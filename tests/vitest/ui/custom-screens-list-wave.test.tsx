@@ -522,7 +522,7 @@ test("CustomScreenListPage create drawer submits schema fields and navigates by 
   customScreensState.cachedContentTypes = [customScreensState.makeContentType()];
 
   const { container, root } = await renderPage();
-  await clickButton(findButton(container, "New"));
+  await clickButton(findButton(container, "New screen"));
 
   const drawer = container.querySelector("[data-sheet-content='true']");
   if (!(drawer instanceof HTMLElement)) {

@@ -438,7 +438,7 @@ export function FieldBindingPanel({
             </SelectContent>
           </Select>
           {hasUnsupportedMode ? (
-            <p className="text-xs text-amber-700">
+            <p className="text-xs text-warning">
               This saved binding mode is no longer supported for the current widget contract. Choose
               a supported mode before saving.
             </p>

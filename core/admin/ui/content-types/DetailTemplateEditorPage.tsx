@@ -156,11 +156,6 @@ const pageMaxWidthClassMap: Record<PageMaxWidthToken, string> = {
 const joinClasses = (...classes: Array<string | undefined | false>) =>
   classes.filter(Boolean).join(" ");
 
-const formatStatusBadgeClassName = (status: string) =>
-  status === "published"
-    ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
-    : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
-
 const formatTimestamp = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -900,7 +895,7 @@ export function DetailTemplateEditorPage() {
         onValueChange={(next) => setActiveDetailsTab(next as typeof activeDetailsTab)}
         className="space-y-5"
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList variant="line" className="w-full">
           <TabsTrigger value="template">Template</TabsTrigger>
           <TabsTrigger value="data">Data</TabsTrigger>
           <TabsTrigger value="widget">Widget</TabsTrigger>
@@ -998,14 +993,10 @@ export function DetailTemplateEditorPage() {
       breadcrumbs={["Advanced", "Engine", "Collection", title]}
       topbarActions={
         <div className="flex items-center gap-2">
-          <span className={formatStatusBadgeClassName(record?.status ?? "draft")}>
+          <Badge variant={record?.status === "published" ? "success" : "secondary"}>
             {record?.status === "published" ? "Published" : "Draft"}
-          </span>
-          {hasUnsavedChanges ? (
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-rose-700">
-              Unsaved changes
-            </span>
-          ) : null}
+          </Badge>
+          {hasUnsavedChanges ? <Badge variant="warning">Unsaved changes</Badge> : null}
         </div>
       }
     >

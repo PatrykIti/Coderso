@@ -303,6 +303,7 @@ vi.mock("@/ui/shared/PageHeader", () => ({
 vi.mock("@/utils/adminPaths", () => ({
   resolveAdminBasePath: () => "/admin",
   withAdminBasePath: (_basePath: string, path: string) => `/admin${path}`,
+  resolveAdminRoutePath: (path: string) => path.replace(/^\/content-types/, "/advanced/engine"),
 }));
 
 vi.mock("@/utils/cacheBus", () => ({

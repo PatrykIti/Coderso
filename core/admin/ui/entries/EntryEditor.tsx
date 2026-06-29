@@ -706,17 +706,13 @@ export function EntryEditor() {
           <Badge variant="outline" className="text-[10px] uppercase">
             {status}
           </Badge>
-          {hasAnyUnsavedChanges ? (
-            <Badge variant="outline" className="border-rose-500/30 bg-rose-500/10 text-rose-600">
-              Unsaved changes
-            </Badge>
-          ) : null}
+          {hasAnyUnsavedChanges ? <Badge variant="warning">Unsaved changes</Badge> : null}
         </div>
       }
     >
       <div className="flex h-full min-h-0">
-        <div className="flex min-h-0 flex-1 flex-col bg-background">
-          <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-6 py-3 backdrop-blur">
+        <div className="flex min-h-0 flex-1 flex-col bg-muted/30">
+          <div className="sticky top-0 z-10 w-full border-b border-border bg-card/70 px-6 py-3 backdrop-blur">
             <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <Button
@@ -795,20 +791,20 @@ export function EntryEditor() {
                   </AlertDescription>
                 </Alert>
               ) : null}
-              <div className="space-y-4">
+              <div className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-card">
                 <Textarea
                   ref={titleRef}
                   value={title}
                   onChange={(event) => handleTitleChange(event.target.value)}
                   rows={1}
-                  className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border bg-background px-3 py-1 text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-1 focus-visible:ring-ring"
+                  className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border-transparent bg-transparent px-0 py-1 font-display text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-0"
                   placeholder="Enter post title..."
                 />
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Slug
                   </span>
-                  <div className="flex flex-1 items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+                  <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
                     <span className="text-xs text-muted-foreground">/</span>
                     <Input
                       value={slug}

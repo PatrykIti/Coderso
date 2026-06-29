@@ -102,14 +102,14 @@ const presentationToneClassMap: Record<string, string> = {
   default: "text-foreground",
   muted: "text-muted-foreground",
   strong: "text-foreground",
-  neutral: "text-neutral-700",
+  neutral: "text-muted-foreground",
   primary: "text-primary",
   secondary: "text-secondary-foreground",
   accent: "text-accent-foreground",
-  success: "text-emerald-700",
-  warning: "text-amber-700",
+  success: "text-success",
+  warning: "text-warning",
   danger: "text-destructive",
-  info: "text-sky-700",
+  info: "text-info",
 };
 
 const stringifyValue = (value: unknown) => {

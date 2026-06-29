@@ -1,9 +1,4 @@
-import {
-  Copy,
-  MoreHorizontal,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { Copy, FileText, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import {
   Table,
   TableBody,
@@ -26,20 +22,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { EntryListContentType, EntrySummary } from "@/services/entriesClient";
-
-const statusStyles = {
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  scheduled: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  archived: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-};
-
-const statusLabels = {
-  published: "Published",
-  draft: "Draft",
-  scheduled: "Scheduled",
-  archived: "Archived",
-};
 
 type EntryTableProps = {
   entries: EntryTableItem[];
@@ -126,10 +108,13 @@ export function EntryTable({
   entryTypeSlug,
 }: EntryTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div
+      data-slot="data-table"
+      className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+    >
       <Table>
         <TableHeader className="bg-muted/40">
-          <TableRow>
+          <TableRow className="hover:bg-transparent">
             <TableHead className="w-10 pl-4">
               <Checkbox
                 aria-label="Select all entries"
@@ -170,103 +155,104 @@ export function EntryTable({
               const isSelected = (selectedKeys ?? selectedIds).includes(key);
               const typeSlug = entry.contentType?.slug ?? entryTypeSlug ?? null;
               return (
-              <TableRow
-                key={key}
-                className={isSelected ? "group bg-muted/30" : "group"}
-              >
-                <TableCell className="pl-4">
-                  <Checkbox
-                    aria-label={`Select ${entry.title}`}
-                    checked={isSelected}
-                    onCheckedChange={() => onToggleEntry?.(entry.id)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    {typeSlug ? (
-                      <AdminLink
-                        href={`/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`}
-                        prefetch
-                        className="text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                        aria-label={`Edit entry: ${entry.title}`}
-                      >
-                        {entry.title}
-                      </AdminLink>
-                    ) : onEdit ? (
-                      <button
-                        type="button"
-                        className="text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                        onClick={() => onEdit(entry.id)}
-                        aria-label={`Edit entry: ${entry.title}`}
-                      >
-                        {entry.title}
-                      </button>
-                    ) : (
-                      <span className="font-semibold text-foreground">
-                        {entry.title}
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {entry.slug}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {entry.contentType ? (
-                    <AdminLink
-                      href={`/content-types/${encodeURIComponent(entry.contentType.id)}`}
-                      prefetch
-                      className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
-                    >
-                      {entry.contentType.name}
-                    </AdminLink>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Unknown</span>
-                  )}
-                  {entry.contentType ? (
-                    <div className="text-xs text-muted-foreground">
-                      {entry.contentType.slug}
-                    </div>
-                  ) : null}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className={statusStyles[entry.status]}>
-                    {statusLabels[entry.status]}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Avatar size="sm">
-                      <AvatarFallback>
-                        {(entry.author?.name ?? entry.author?.email ?? "NA")
-                          .split(" ")
-                          .filter(Boolean)
-                          .map((chunk) => chunk[0])
-                          .join("")
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-sm text-muted-foreground">
-                      {entry.author?.name ?? entry.author?.email ?? "System"}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {formatUpdatedAt(entry.updatedAt)}
-                </TableCell>
-                <TableCell className="pr-4 text-right">
-                  <div className="flex justify-end opacity-100 transition-opacity">
-                    <EntryRowActions
-                      onEdit={onEdit}
-                      onDuplicate={onDuplicate}
-                      onDelete={onDelete}
-                      entryId={entry.id}
+                <TableRow
+                  key={key}
+                  className={isSelected ? "group bg-muted/30" : "group hover:bg-accent/40"}
+                >
+                  <TableCell className="pl-4">
+                    <Checkbox
+                      aria-label={`Select ${entry.title}`}
+                      checked={isSelected}
+                      onCheckedChange={() => onToggleEntry?.(entry.id)}
                     />
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <span className="hidden size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground sm:flex">
+                        <FileText className="size-4" />
+                      </span>
+                      <div className="flex min-w-0 flex-col">
+                        {typeSlug ? (
+                          <AdminLink
+                            href={`/entries/${encodeURIComponent(typeSlug)}/${encodeURIComponent(entry.id)}`}
+                            prefetch
+                            className="text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                            aria-label={`Edit entry: ${entry.title}`}
+                          >
+                            {entry.title}
+                          </AdminLink>
+                        ) : onEdit ? (
+                          <button
+                            type="button"
+                            className="text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                            onClick={() => onEdit(entry.id)}
+                            aria-label={`Edit entry: ${entry.title}`}
+                          >
+                            {entry.title}
+                          </button>
+                        ) : (
+                          <span className="font-semibold text-foreground">{entry.title}</span>
+                        )}
+                        <span className="truncate font-mono text-xs text-muted-foreground">
+                          {entry.slug}
+                        </span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {entry.contentType ? (
+                      <AdminLink
+                        href={`/content-types/${encodeURIComponent(entry.contentType.id)}`}
+                        prefetch
+                        className="underline-offset-4 hover:underline"
+                      >
+                        <Badge variant="soft">{entry.contentType.name}</Badge>
+                      </AdminLink>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">Unknown</span>
+                    )}
+                    {entry.contentType ? (
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {entry.contentType.slug}
+                      </div>
+                    ) : null}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={entry.status} />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Avatar size="sm">
+                        <AvatarFallback>
+                          {(entry.author?.name ?? entry.author?.email ?? "NA")
+                            .split(" ")
+                            .filter(Boolean)
+                            .map((chunk) => chunk[0])
+                            .join("")
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-sm text-muted-foreground">
+                        {entry.author?.name ?? entry.author?.email ?? "System"}
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {formatUpdatedAt(entry.updatedAt)}
+                  </TableCell>
+                  <TableCell className="pr-4 text-right">
+                    <div className="flex justify-end opacity-100 transition-opacity">
+                      <EntryRowActions
+                        onEdit={onEdit}
+                        onDuplicate={onDuplicate}
+                        onDelete={onDelete}
+                        entryId={entry.id}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
             })
           )}
         </TableBody>

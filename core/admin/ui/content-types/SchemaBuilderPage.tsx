@@ -1,8 +1,18 @@
-import { Image, Link2, PlusCircle, Save, SlidersHorizontal, Type } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import {
+  Binary,
+  GitBranch,
+  Hash,
+  Image as ImageIcon,
+  ListChecks,
+  Type,
+  WholeWord,
+} from "lucide-react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import {
   getCachedContentTypes,
@@ -13,42 +23,127 @@ import {
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 
 import { ContentTypeSidebar } from "./ContentTypeSidebar";
-import { FieldCard } from "./FieldCard";
 import { SchemaPreviewPanel } from "./SchemaPreviewPanel";
 import { buildSchemaFromFields, fieldsFromSchema, type ContentSchema } from "./schemaMapping";
+import { type ContentField, type FieldType } from "./SchemaBuilder";
 import { resolveContentTypeIdFromPath } from "./pathResolvers";
 
-const iconForType = (type: string) => {
+const FIELD_TYPES: Array<{ type: FieldType; label: string; icon: ReactNode }> = [
+  { type: "text", label: "Text", icon: <Type /> },
+  { type: "number", label: "Number", icon: <Hash /> },
+  { type: "boolean", label: "Boolean", icon: <Binary /> },
+  { type: "richtext", label: "Rich text", icon: <WholeWord /> },
+  { type: "media", label: "Media", icon: <ImageIcon /> },
+  { type: "relation", label: "Relation", icon: <GitBranch /> },
+  { type: "select", label: "Select", icon: <ListChecks /> },
+];
+
+const iconForType = (type: FieldType): ReactNode => {
   switch (type) {
+    case "number":
+      return <Hash className="size-4" />;
+    case "boolean":
+      return <Binary className="size-4" />;
+    case "select":
+      return <ListChecks className="size-4" />;
     case "media":
-      return <Image className="h-5 w-5" />;
+      return <ImageIcon className="size-4" />;
     case "relation":
-      return <Link2 className="h-5 w-5" />;
+      return <GitBranch className="size-4" />;
+    case "richtext":
+      return <WholeWord className="size-4" />;
     default:
-      return <Type className="h-5 w-5" />;
+      return <Type className="size-4" />;
   }
 };
 
-const typeLabel = (type: string) => {
-  switch (type) {
-    case "number":
-      return "Number";
-    case "boolean":
-      return "Boolean";
-    case "select":
-      return "Select";
-    case "media":
-      return "Media";
-    case "relation":
-      return "Relation";
-    case "richtext":
-      return "Rich text";
-    default:
-      return "String";
+const typeLabel = (type: FieldType) =>
+  FIELD_TYPES.find((item) => item.type === type)?.label ?? "Text";
+
+function FieldNode({
+  icon,
+  name,
+  type,
+  selected,
+  onSelect,
+}: {
+  icon: ReactNode;
+  name: string;
+  type: string;
+  selected?: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        "flex w-full flex-row items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-soft transition-colors",
+        selected ? "border-2 border-primary" : "border-border hover:border-primary/40"
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-9 items-center justify-center rounded-xl [&_svg]:size-4",
+          selected ? "bg-primary-soft text-primary" : "bg-muted text-muted-foreground"
+        )}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium">{name}</div>
+        <div className="truncate text-xs text-muted-foreground">{type}</div>
+      </div>
+      <span
+        className={cn("size-2.5 rounded-full", selected ? "bg-primary" : "bg-muted-foreground/30")}
+      />
+    </button>
+  );
+}
+
+function InspectorRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="mb-3">
+      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
+      <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm">{value}</div>
+    </div>
+  );
+}
+
+function ToggleRow({ label, on }: { label: string; on?: boolean }) {
+  return (
+    <div className="mb-2 flex items-center justify-between gap-4 rounded-xl border border-border px-3 py-2.5">
+      <div className="text-sm font-medium">{label}</div>
+      <Badge variant={on ? "success" : "outline"}>{on ? "On" : "Off"}</Badge>
+    </div>
+  );
+}
+
+function FieldInspector({ field }: { field: ContentField | null }) {
+  if (!field) {
+    return <p className="text-sm text-muted-foreground">Select a field to inspect its settings.</p>;
   }
-};
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-semibold">{field.label}</span>
+        <Badge variant="soft">{typeLabel(field.type)}</Badge>
+      </div>
+      <InspectorRow label="Label" value={field.label} />
+      <InspectorRow
+        label="API id"
+        value={<span className="font-mono text-xs">{field.name}</span>}
+      />
+      <InspectorRow label="Field type" value={typeLabel(field.type)} />
+      <ToggleRow label="Required" on={field.required} />
+      <InspectorRow label="Default value" value={field.defaultValue || "—"} />
+      <InspectorRow label="Help text" value={field.help || "—"} />
+    </div>
+  );
+}
 
 export function SchemaBuilderPage() {
   const { navigate } = useAdminRouter();
@@ -70,6 +165,9 @@ export function SchemaBuilderPage() {
   const [list, setList] = useState<ContentTypeSummary[]>(initialCachedList ?? []);
   const [isLoading, setIsLoading] = useState(() => !initialCachedType);
   const [error, setError] = useState<string | null>(null);
+  const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
+    () => initialFields[0]?.id ?? null
+  );
 
   useEffect(() => {
     let active = true;
@@ -111,29 +209,9 @@ export function SchemaBuilderPage() {
     };
   }, [typeId]);
 
-  const cards = useMemo(
-    () =>
-      fields.map((field, index) => (
-        <FieldCard
-          key={field.id}
-          name={field.label}
-          typeLabel={typeLabel(field.type)}
-          description={field.help}
-          badges={field.required ? ["Required"] : undefined}
-          icon={iconForType(field.type)}
-          expanded={index === 0}
-          settings={{
-            displayName: field.label,
-            apiId: field.name,
-            fieldType: field.type,
-            description: field.help,
-            validation: { required: field.required },
-            helpText: field.help,
-            typeOptions: ["text", "rich-text", "media", "relation"],
-          }}
-        />
-      )),
-    [fields]
+  const selectedField = useMemo(
+    () => fields.find((field) => field.id === selectedFieldId) ?? fields[0] ?? null,
+    [fields, selectedFieldId]
   );
 
   return (
@@ -145,7 +223,6 @@ export function SchemaBuilderPage() {
         <div className="flex items-center gap-2">
           <Button variant="ghost">Discard</Button>
           <Button className="gap-2" disabled>
-            <Save className="h-4 w-4" />
             Save schema
           </Button>
         </div>
@@ -154,17 +231,9 @@ export function SchemaBuilderPage() {
       <div className="flex flex-col gap-6">
         <PageHeader
           title={contentType?.name ?? "Schema Builder"}
-          description={
-            contentType
-              ? `Edit schema for ${contentType.name}.`
-              : "Define the structure for your content type."
-          }
-          actions={
-            <Button variant="outline" className="gap-2">
-              <SlidersHorizontal className="h-4 w-4" />
-              Edit metadata
-            </Button>
-          }
+          description="Compose your content model visually."
+          icon={<GitBranch />}
+          actions={<Badge variant="outline">{fields.length} fields</Badge>}
         />
         {error ? (
           <Alert variant="destructive">
@@ -172,36 +241,70 @@ export function SchemaBuilderPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        <div className="flex gap-6">
-          <aside className="hidden w-72 shrink-0 overflow-hidden rounded-xl border bg-background lg:block">
-            <ContentTypeSidebar
-              items={list.map((item) => ({
-                id: item.id,
-                name: item.name,
-              }))}
-              activeId={contentType?.id}
-              onSelect={(id) => {
-                navigate(`/content-types/${id}/schema`);
-              }}
-            />
-          </aside>
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
-            {isLoading ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                Loading fields...
+        <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_300px]">
+          <div className="flex flex-col gap-5">
+            <div className="hidden h-[340px] overflow-hidden rounded-2xl border bg-card shadow-soft lg:block">
+              <ContentTypeSidebar
+                items={list.map((item) => ({ id: item.id, name: item.name }))}
+                activeId={contentType?.id}
+                onSelect={(id) => {
+                  navigate(`/content-types/${id}/schema`);
+                }}
+              />
+            </div>
+            <SectionCard title="Field types">
+              <div className="flex flex-col gap-1">
+                {FIELD_TYPES.map((fieldType) => (
+                  <button
+                    key={fieldType.type}
+                    type="button"
+                    className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-primary-soft [&_svg]:size-4 [&_svg]:text-muted-foreground"
+                  >
+                    {fieldType.icon}
+                    {fieldType.label}
+                  </button>
+                ))}
               </div>
-            ) : cards.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                No fields defined yet.
-              </div>
-            ) : (
-              cards
-            )}
-            <Button variant="outline" className="w-full gap-2" disabled>
-              <PlusCircle className="h-4 w-4" />
-              Add new field
-            </Button>
+            </SectionCard>
           </div>
+
+          <SectionCard title="Schema builder">
+            <div className="mx-auto flex max-w-xl flex-col items-stretch gap-3">
+              {isLoading ? (
+                <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                  Loading fields...
+                </div>
+              ) : fields.length === 0 ? (
+                <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+                  No fields defined yet.
+                </div>
+              ) : (
+                fields.map((field, index) => (
+                  <div key={field.id} className="flex flex-col items-stretch gap-3">
+                    {index > 0 ? <span className="mx-auto h-4 w-px bg-border" /> : null}
+                    <FieldNode
+                      icon={iconForType(field.type)}
+                      name={field.label}
+                      type={`${typeLabel(field.type)}${field.required ? " · required" : ""}`}
+                      selected={field.id === selectedField?.id}
+                      onSelect={() => setSelectedFieldId(field.id)}
+                    />
+                  </div>
+                ))
+              )}
+              <button
+                type="button"
+                disabled
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-4 text-sm font-medium text-muted-foreground disabled:opacity-60"
+              >
+                <Hash className="size-4" /> Add new field
+              </button>
+            </div>
+          </SectionCard>
+
+          <SectionCard title="Field settings">
+            <FieldInspector field={selectedField} />
+          </SectionCard>
         </div>
       </div>
     </SplitShell>

@@ -27,6 +27,7 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { InfoTip } from "@/ui/shared/InfoTip";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import type { EntryChecklist } from "./entryChecklist";
 
@@ -38,13 +39,6 @@ const statusOptions: Array<{ value: EntryStatus; label: string }> = [
   { value: "scheduled", label: "Scheduled" },
   { value: "archived", label: "Archived" },
 ];
-
-const statusStyles: Record<EntryStatus, string> = {
-  published: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
-  draft: "border-amber-500/30 bg-amber-500/10 text-amber-700",
-  scheduled: "border-blue-500/30 bg-blue-500/10 text-blue-600",
-  archived: "border-slate-500/30 bg-slate-500/10 text-slate-600",
-};
 
 const NO_CATEGORY_VALUE = "__none__";
 
@@ -131,25 +125,19 @@ export function EntryMetadataPanel({
   const previewUrl = seoPreviewUrl ?? `/${slug || "entry-slug"}`;
   const canSchedule = status === "scheduled";
   const checklistItems = checklist?.items ?? [];
-  const checklistReadyCount = checklistItems.filter(
-    (item) => item.status === "complete"
-  ).length;
-  const checklistHasWarnings = checklistItems.some(
-    (item) => item.status === "warning"
-  );
+  const checklistReadyCount = checklistItems.filter((item) => item.status === "complete").length;
+  const checklistHasWarnings = checklistItems.some((item) => item.status === "warning");
   const checklistBadgeLabel = checklistItems.length
     ? checklistHasWarnings
       ? "Needs attention"
       : `${checklistReadyCount}/${checklistItems.length} ready`
     : "Ready";
-  const checklistBadgeClass = checklistHasWarnings
-    ? "border-amber-500/30 bg-amber-500/10 text-amber-700"
-    : "border-emerald-500/30 bg-emerald-500/10 text-emerald-600";
+  const checklistBadgeVariant = checklistHasWarnings ? "warning" : "success";
 
   const categoryOptions = taxonomy?.categories ?? [];
   const tagOptions = taxonomy?.tags ?? [];
   const selectedCategory = taxonomy?.selectedCategoryId
-    ? categoryOptions.find((term) => term.id === taxonomy.selectedCategoryId) ?? null
+    ? (categoryOptions.find((term) => term.id === taxonomy.selectedCategoryId) ?? null)
     : null;
   const selectedTags = taxonomy
     ? tagOptions.filter((term) => taxonomy.selectedTagIds.includes(term.id))
@@ -170,8 +158,7 @@ export function EntryMetadataPanel({
     if (!value) return;
     const normalized = value.toLowerCase();
     const existing = categoryOptions.find(
-      (term) =>
-        term.name.toLowerCase() === normalized || term.slug === slugify(value)
+      (term) => term.name.toLowerCase() === normalized || term.slug === slugify(value)
     );
     if (existing) {
       onCategoryChange?.(existing.id);
@@ -200,8 +187,7 @@ export function EntryMetadataPanel({
     if (!value) return;
     const normalized = value.toLowerCase();
     const existing = tagOptions.find(
-      (term) =>
-        term.name.toLowerCase() === normalized || term.slug === slugify(value)
+      (term) => term.name.toLowerCase() === normalized || term.slug === slugify(value)
     );
     let nextId = existing?.id;
     if (!nextId && onCreateTag) {
@@ -214,10 +200,7 @@ export function EntryMetadataPanel({
       setTagInput("");
       return;
     }
-    const next = Array.from(new Set([...taxonomy.selectedTagIds, nextId])).slice(
-      0,
-      20
-    );
+    const next = Array.from(new Set([...taxonomy.selectedTagIds, nextId])).slice(0, 20);
     onTagIdsChange?.(next);
     setTagInput("");
   };
@@ -241,10 +224,7 @@ export function EntryMetadataPanel({
   };
 
   return (
-    <div
-      data-entry-metadata-panel="true"
-      className="flex h-full min-h-0 flex-col overflow-hidden"
-    >
+    <div data-entry-metadata-panel="true" className="flex h-full min-h-0 flex-col overflow-hidden">
       <ScrollArea className="min-h-0 flex-1 px-6 py-6">
         <div className="space-y-6 pb-6">
           <section className="space-y-3">
@@ -252,9 +232,7 @@ export function EntryMetadataPanel({
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Publishing
               </p>
-              <Badge variant="outline" className={statusStyles[status]}>
-                {statusOptions.find((option) => option.value === status)?.label ?? status}
-              </Badge>
+              <StatusBadge status={status} />
             </div>
             <Card>
               <CardContent className="space-y-4 p-4">
@@ -303,9 +281,7 @@ export function EntryMetadataPanel({
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Publish checklist
                 </p>
-                <Badge variant="outline" className={checklistBadgeClass}>
-                  {checklistBadgeLabel}
-                </Badge>
+                <Badge variant={checklistBadgeVariant}>{checklistBadgeLabel}</Badge>
               </div>
               <Card>
                 <CardContent className="space-y-3 p-4">
@@ -318,9 +294,9 @@ export function EntryMetadataPanel({
                           : Info;
                     const iconClass =
                       item.status === "complete"
-                        ? "text-emerald-600"
+                        ? "text-success"
                         : item.status === "warning"
-                          ? "text-amber-600"
+                          ? "text-warning"
                           : "text-muted-foreground";
                     return (
                       <div key={item.id} className="flex gap-2">
@@ -328,9 +304,7 @@ export function EntryMetadataPanel({
                         <div className="space-y-1">
                           <p className="text-sm font-medium">{item.label}</p>
                           {item.detail ? (
-                            <p className="text-[11px] text-muted-foreground">
-                              {item.detail}
-                            </p>
+                            <p className="text-[11px] text-muted-foreground">{item.detail}</p>
                           ) : null}
                         </div>
                       </div>
@@ -392,7 +366,7 @@ export function EntryMetadataPanel({
                   </p>
                   <div className="rounded-lg border bg-muted/40 p-3">
                     <p className="text-sm font-semibold text-primary">{previewTitle}</p>
-                    <p className="text-[10px] text-emerald-700">{previewUrl}</p>
+                    <p className="text-[10px] text-success">{previewUrl}</p>
                     <p className="text-[11px] text-muted-foreground">
                       {seoDescription || "Add a short summary for search results."}
                     </p>
@@ -441,14 +415,12 @@ export function EntryMetadataPanel({
                       Category
                     </label>
                     <Select
-                      value={
-                        taxonomy.selectedCategoryId ?? NO_CATEGORY_VALUE
-                      }
+                      value={taxonomy.selectedCategoryId ?? NO_CATEGORY_VALUE}
                       onValueChange={handleCategorySelect}
                     >
-                    <SelectTrigger>
+                      <SelectTrigger>
                         <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value={NO_CATEGORY_VALUE}>No category</SelectItem>
                         {categoryOptions.map((term) => (
@@ -506,9 +478,7 @@ export function EntryMetadataPanel({
                         </Badge>
                       ))}
                       {selectedTags.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">
-                          No tags selected.
-                        </span>
+                        <span className="text-xs text-muted-foreground">No tags selected.</span>
                       ) : null}
                     </div>
                     <Input

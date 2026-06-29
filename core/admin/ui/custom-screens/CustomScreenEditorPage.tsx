@@ -862,36 +862,44 @@ export function CustomScreenEditorPage() {
             hasUnsavedChanges={hasUnsavedChanges}
             isCreateMode={isCreateMode}
           >
-            <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
+            <div className="sticky top-0 z-10 w-full border-b border-border bg-card/80 px-4 py-3 backdrop-blur">
               <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <Button
-                    variant="secondary"
+                    variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-1.5"
                     onClick={() => setPreviewOpen(true)}
                   >
                     <Eye className="h-4 w-4" />
                     Preview
                   </Button>
                   <div className="flex flex-wrap items-center gap-2">
-                    <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
-                      <Button
-                        variant={activeBuilderTab === "list-view" ? "secondary" : "ghost"}
-                        size="sm"
-                        className="gap-2"
+                    <div className="hidden items-center gap-1 rounded-xl border border-border bg-muted/60 p-1 sm:flex">
+                      <button
+                        type="button"
+                        aria-pressed={activeBuilderTab === "list-view"}
                         onClick={() => setActiveBuilderTab("list-view")}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                          activeBuilderTab === "list-view"
+                            ? "bg-card text-foreground shadow-soft"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
                       >
                         List View
-                      </Button>
-                      <Button
-                        variant={activeBuilderTab === "editor-view" ? "secondary" : "ghost"}
-                        size="sm"
-                        className="gap-2"
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={activeBuilderTab === "editor-view"}
                         onClick={() => setActiveBuilderTab("editor-view")}
+                        className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                          activeBuilderTab === "editor-view"
+                            ? "bg-card text-foreground shadow-soft"
+                            : "text-muted-foreground hover:text-foreground"
+                        }`}
                       >
                         Editor View
-                      </Button>
+                      </button>
                     </div>
                     <Button
                       variant="outline"

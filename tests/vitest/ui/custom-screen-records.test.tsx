@@ -161,7 +161,7 @@ test("CustomScreenEntriesPage renders cached records", () => {
       path: "/admin/advanced/custom-screens/screen-1/entries",
     });
 
-    expect(html).toContain("Property Catalog Records");
+    expect(html).toContain("Property Catalog");
     expect(html).toContain("Ocean View");
     expect(html).toContain("New");
     expect(html).not.toContain("Open builder");

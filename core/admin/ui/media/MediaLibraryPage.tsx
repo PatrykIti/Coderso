@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Download, Settings2, Trash2, UploadCloud } from "lucide-react";
+import {
+  Download,
+  FileText,
+  HardDrive,
+  Image as ImageIcon,
+  Music,
+  Settings2,
+  Trash2,
+  UploadCloud,
+  Video,
+} from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -27,7 +38,7 @@ import { MediaSettingsDrawer } from "@/ui/media/MediaSettingsDrawer";
 import { MediaToolbar, type MediaFilter, type MediaView } from "@/ui/media/MediaToolbar";
 import type { MediaItem, MediaMetaUpdate, MediaUsageItem } from "@/ui/media/types";
 import { UploadDropzone, type UploadDropzoneHandle } from "@/ui/media/UploadDropzone";
-import { resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
+import { formatBytes, resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
@@ -56,6 +67,17 @@ const defaultDimensionState: DimensionRecoveryState = {
   state: "idle",
   message: null,
 };
+
+// TASK-479-11-L01: folder rail definitions ported from the prototype. Each key is
+// a valid MediaFilter the existing `filter` state already understands; counts are
+// derived render-time from the loaded `items` (no folders backend, no new fetch).
+const folderDefs = [
+  { key: "all", label: "All files", icon: HardDrive },
+  { key: "image", label: "Images", icon: ImageIcon },
+  { key: "video", label: "Videos", icon: Video },
+  { key: "document", label: "Documents", icon: FileText },
+  { key: "audio", label: "Audio", icon: Music },
+] as const;
 
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
@@ -192,6 +214,18 @@ export function MediaLibraryPage() {
       return matchesSearch && matchesFilter;
     });
   }, [items, search, filter]);
+
+  // Folder rail counts + storage summary are pure render-time derivations of the
+  // already-loaded `items` (no extra fetch, no setState-in-effect).
+  const folderCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: items.length };
+    for (const it of items) counts[it.type] = (counts[it.type] ?? 0) + 1;
+    return counts;
+  }, [items]);
+  const totalBytes = useMemo(
+    () => items.reduce((sum, it) => sum + (it.sizeBytes ?? 0), 0),
+    [items]
+  );
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
   const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
@@ -501,6 +535,7 @@ export function MediaLibraryPage() {
         <PageHeader
           title="Media Library"
           description="Manage your images and assets."
+          icon={<ImageIcon className="h-5 w-5" />}
           actions={
             <div className="flex flex-wrap items-center gap-2">
               <Button variant="outline" className="gap-2" onClick={handleOpenMediaSettings}>
@@ -526,99 +561,143 @@ export function MediaLibraryPage() {
             <AlertDescription>{actionMessage}</AlertDescription>
           </Alert>
         ) : null}
-        <MediaToolbar
-          search={search}
-          filter={filter}
-          view={view}
-          onSearchChange={setSearch}
-          onFilterChange={setFilter}
-          onViewChange={setView}
-        />
-        <div className="flex flex-col gap-3 rounded-lg border bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">{selectedIds.length} selected</p>
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" onClick={handleSelectVisible}>
-              Select visible
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              disabled={selectedIds.length === 0}
-              onClick={handleBulkDownload}
-            >
-              <Download className="h-4 w-4" />
-              Download
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="gap-2"
-              disabled={selectedIds.length === 0}
-              onClick={() => {
-                handleBulkDelete().catch(() => undefined);
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleClearSelection}>
-              Clear
-            </Button>
-          </div>
-        </div>
-        <Card className="border-border/60">
-          <CardContent className="space-y-8">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">Upload assets</p>
-                  <p className="text-xs text-muted-foreground">
-                    New uploads use the configured media storage provider.
-                  </p>
-                </div>
-                <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Checkbox
-                    checked={openAfterUpload}
-                    onCheckedChange={(next) => updateOpenAfterUpload(next === true)}
-                  />
-                  Open details after upload
-                </label>
-              </div>
-              <UploadDropzone
-                ref={dropzoneRef}
-                onFiles={handleUploadFiles}
-                disabled={isUploading}
-                error={uploadError}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-              <span>
-                Showing {filteredItems.length} of {items.length} assets
+        <Card className="shadow-soft">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                <HardDrive className="size-5" />
               </span>
-              {isLoading ? <span>Loading...</span> : null}
+              <div>
+                <p className="font-display text-[15px] font-semibold text-foreground">Storage</p>
+                <p className="text-sm text-muted-foreground">
+                  {items.length} {items.length === 1 ? "asset" : "assets"} ·{" "}
+                  {formatBytes(totalBytes)}
+                </p>
+              </div>
             </div>
-            {isLoading ? (
-              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                Loading assets...
-              </div>
-            ) : filteredItems.length === 0 ? (
-              <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                No media assets found.
-              </div>
-            ) : (
-              <MediaGrid
-                items={filteredItems}
-                selectedId={selectedId}
-                selectedIds={selectedIds}
-                view={view}
-                selectionMode
-                onSelect={handleSelectItem}
-                onToggleSelect={handleToggleSelect}
-              />
-            )}
           </CardContent>
         </Card>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
+          <nav className="flex flex-row flex-wrap gap-1 lg:flex-col" aria-label="Media folders">
+            {folderDefs.map((folder) => {
+              const FolderIcon = folder.icon;
+              const active = filter === folder.key;
+              return (
+                <button
+                  key={folder.key}
+                  type="button"
+                  onClick={() => setFilter(folder.key)}
+                  aria-pressed={active}
+                  className={cn(
+                    "flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition-colors",
+                    active
+                      ? "bg-primary/10 font-medium text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  )}
+                >
+                  <span className="flex items-center gap-2.5">
+                    <FolderIcon className="size-4" />
+                    {folder.label}
+                  </span>
+                  <span className="text-xs tabular-nums">{folderCounts[folder.key] ?? 0}</span>
+                </button>
+              );
+            })}
+          </nav>
+          <div className="flex min-w-0 flex-col gap-4">
+            <MediaToolbar
+              search={search}
+              view={view}
+              onSearchChange={setSearch}
+              onViewChange={setView}
+            />
+            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-soft sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">{selectedIds.length} selected</p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={handleSelectVisible}>
+                  Select visible
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  disabled={selectedIds.length === 0}
+                  onClick={handleBulkDownload}
+                >
+                  <Download className="h-4 w-4" />
+                  Download
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="gap-2"
+                  disabled={selectedIds.length === 0}
+                  onClick={() => {
+                    handleBulkDelete().catch(() => undefined);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </Button>
+                <Button variant="ghost" size="sm" onClick={handleClearSelection}>
+                  Clear
+                </Button>
+              </div>
+            </div>
+            <Card>
+              <CardContent className="space-y-8">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Upload assets</p>
+                      <p className="text-xs text-muted-foreground">
+                        New uploads use the configured media storage provider.
+                      </p>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Checkbox
+                        checked={openAfterUpload}
+                        onCheckedChange={(next) => updateOpenAfterUpload(next === true)}
+                      />
+                      Open details after upload
+                    </label>
+                  </div>
+                  <UploadDropzone
+                    ref={dropzoneRef}
+                    onFiles={handleUploadFiles}
+                    disabled={isUploading}
+                    error={uploadError}
+                  />
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                  <span>
+                    Showing {filteredItems.length} of {items.length} assets
+                  </span>
+                  {isLoading ? <span>Loading...</span> : null}
+                </div>
+                {isLoading ? (
+                  <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                    Loading assets...
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">
+                    No media assets found.
+                  </div>
+                ) : (
+                  <MediaGrid
+                    items={filteredItems}
+                    selectedId={selectedId}
+                    selectedIds={selectedIds}
+                    view={view}
+                    selectionMode
+                    onSelect={handleSelectItem}
+                    onToggleSelect={handleToggleSelect}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
       <MediaDetailsDrawer
         key={selectedItem?.id ?? "empty"}

@@ -1,11 +1,7 @@
-import { CalendarDays, ChevronDown, Filter, Layers, Search, User } from "lucide-react";
+import { CalendarDays, Filter, Layers, Search, SlidersHorizontal, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -63,7 +59,7 @@ export function EntryFilters({
     <Collapsible
       open={advancedOpen}
       onOpenChange={onAdvancedOpenChange}
-      className="rounded-xl border bg-card/60 p-3 shadow-sm"
+      className="rounded-2xl border border-border bg-card p-3 shadow-soft"
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
@@ -90,28 +86,8 @@ export function EntryFilters({
               <SelectItem value="archived">Archived</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <CollapsibleTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-expanded={advancedOpen}
-              className="gap-2"
-            >
-              Advanced
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </CollapsibleTrigger>
-          <Button variant="ghost" size="sm" onClick={onClear}>
-            Clear
-          </Button>
-        </div>
-      </div>
-      <CollapsibleContent className="pt-3">
-        <div className="grid gap-3 border-t pt-3 sm:grid-cols-2 lg:grid-cols-4">
           <Select value={typeValue} onValueChange={onTypeChange}>
-            <SelectTrigger className="h-8 w-full">
+            <SelectTrigger className="h-8 w-full sm:w-[180px]">
               <Layers className="h-3 w-3 text-muted-foreground" />
               <SelectValue placeholder="Content type" />
             </SelectTrigger>
@@ -123,6 +99,21 @@ export function EntryFilters({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" size="sm" aria-expanded={advancedOpen} className="gap-2">
+              <SlidersHorizontal className="h-4 w-4" />
+              Filters
+            </Button>
+          </CollapsibleTrigger>
+          <Button variant="ghost" size="sm" onClick={onClear}>
+            Clear
+          </Button>
+        </div>
+      </div>
+      <CollapsibleContent className="pt-3">
+        <div className="grid gap-3 border-t border-border pt-3 sm:grid-cols-2 lg:grid-cols-3">
           <Select value={author} onValueChange={onAuthorChange}>
             <SelectTrigger className="h-8 w-full">
               <User className="h-3 w-3 text-muted-foreground" />
