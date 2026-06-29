@@ -285,7 +285,10 @@ test("PluginList renders rows, links, and selection callbacks", () => {
     expect(view.container.textContent).toContain("manual");
     expect(view.container.innerHTML).toContain("/panel/store/plugins/SEO%20Optimizer");
 
-    const row = view.container.querySelector("tbody tr");
+    // TASK-479-24-L01: PluginList rows are now soft cards; the per-card selection
+    // node moved from a `<tbody><tr>` to the card's selection `<button>` (the Manage
+    // link is a sibling `<a>`). Selection intent is unchanged.
+    const row = view.container.querySelector("button[aria-pressed]");
     React.act(() => {
       row?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });

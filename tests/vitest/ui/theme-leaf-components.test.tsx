@@ -7,9 +7,11 @@ import { expect, test, vi } from "vitest";
 
 import { ThemeCard } from "../../../core/admin/ui/themes/ThemeCard";
 import { ThemeExportDialog } from "../../../core/admin/ui/themes/ThemeExportDialog";
+import { ThemeLivePreview } from "../../../core/admin/ui/themes/ThemeLivePreview";
 import { ThemePreviewPanel } from "../../../core/admin/ui/themes/ThemePreviewPanel";
 import { ThemeProfileCard } from "../../../core/admin/ui/themes/ThemeProfileCard";
 import { ThemeTemplateCard } from "../../../core/admin/ui/themes/ThemeTemplateCard";
+import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../core/services/adminThemes/tokenTypes";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -165,6 +167,99 @@ test("theme leaf cards render state and forward action callbacks", () => {
     expect(onActivateProfile).toHaveBeenCalledOnce();
     expect(onEditTemplate).toHaveBeenCalledOnce();
     expect(onDuplicateTemplate).toHaveBeenCalledOnce();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ThemeProfileCard marks the active profile", () => {
+  const activeView = mount(
+    <ThemeProfileCard
+      profile={{
+        id: "profile-active",
+        name: "Studio Active",
+        description: "Main admin profile",
+        templateId: "template-1",
+        templateName: "Studio",
+        palette: ["#111111", "#ffffff"],
+        isActive: true,
+      }}
+      onEdit={() => undefined}
+      onActivate={() => undefined}
+    />
+  );
+
+  try {
+    // Active affordance present; no "Activate" call-to-action when already active.
+    expect(activeView.container.textContent).toContain("Active");
+    expect(activeView.container.textContent).toContain("Current");
+    const activateButton = Array.from(activeView.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Activate")
+    );
+    expect(activateButton).toBeUndefined();
+  } finally {
+    activeView.cleanup();
+  }
+
+  const inactiveView = mount(
+    <ThemeProfileCard
+      profile={{
+        id: "profile-inactive",
+        name: "Draft",
+        description: "Inactive",
+        templateId: "template-1",
+        templateName: "Studio",
+        palette: ["#111111", "#ffffff"],
+      }}
+      onEdit={() => undefined}
+      onActivate={() => undefined}
+    />
+  );
+
+  try {
+    const activateButton = Array.from(inactiveView.container.querySelectorAll("button")).find(
+      (button) => button.textContent?.includes("Activate")
+    );
+    expect(activateButton).toBeTruthy();
+  } finally {
+    inactiveView.cleanup();
+  }
+});
+
+test("ThemeTemplateCard renders one palette swatch per color", () => {
+  const palette = ["#7c3aed", "#ede9fe", "#faf5ff"];
+  const view = mount(
+    <ThemeTemplateCard
+      template={{
+        id: "template-1",
+        name: "Studio",
+        description: "Editorial palette",
+        palette,
+        tokenCount: 24,
+      }}
+      onEdit={() => undefined}
+    />
+  );
+
+  try {
+    const swatches = view.container.querySelectorAll("span.rounded-full");
+    expect(swatches).toHaveLength(palette.length);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ThemeLivePreview paints --admin-* vars from the supplied tokens", () => {
+  const view = mount(<ThemeLivePreview tokens={DEFAULT_ADMIN_THEME_TOKENS} />);
+
+  try {
+    const root = view.container.firstElementChild as HTMLElement | null;
+    expect(root?.style.getPropertyValue("--admin-base-bg")).toBe(
+      DEFAULT_ADMIN_THEME_TOKENS.base.bg
+    );
+    expect(root?.style.getPropertyValue("--admin-sidebar-bg")).toBe(
+      DEFAULT_ADMIN_THEME_TOKENS.sidebar.bg
+    );
   } finally {
     view.cleanup();
   }

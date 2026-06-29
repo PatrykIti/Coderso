@@ -15,27 +15,14 @@ import {
 import { cn } from "@/lib/utils";
 import type { BackupItem, BackupListResult, BackupStatus } from "@/services/backupsClient";
 
-const statusMeta: Record<BackupStatus, { label: string; className: string }> = {
-  queued: {
-    label: "Queued",
-    className:
-      "border-slate-500/20 bg-slate-500/10 text-slate-600 dark:border-slate-500/30 dark:bg-slate-500/15 dark:text-slate-300",
-  },
-  running: {
-    label: "Running",
-    className:
-      "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:border-blue-500/40 dark:bg-blue-500/15 dark:text-blue-400",
-  },
-  complete: {
-    label: "Completed",
-    className:
-      "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-400",
-  },
-  failed: {
-    label: "Failed",
-    className:
-      "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/15 dark:text-rose-400",
-  },
+const statusMeta: Record<
+  BackupStatus,
+  { label: string; variant: "secondary" | "info" | "success" | "destructive" }
+> = {
+  queued: { label: "Queued", variant: "secondary" },
+  running: { label: "Running", variant: "info" },
+  complete: { label: "Completed", variant: "success" },
+  failed: { label: "Failed", variant: "destructive" },
 };
 
 const formatBytes = (value: number | null) => {
@@ -138,8 +125,8 @@ export function BackupsTable({
   const items = result.items;
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <div className="flex flex-col gap-4 border-b bg-muted/10 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+      <div className="flex flex-col gap-4 border-b border-border bg-muted/30 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h3 className="text-base font-semibold">Recent Backups</h3>
           <p className="text-xs text-muted-foreground">{result.worker.message}</p>
@@ -236,15 +223,7 @@ export function BackupsTable({
                   </TableCell>
                   <TableCell className="px-6 py-4">
                     <div className="space-y-1">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "rounded-full border px-2 py-1 text-[10px] font-semibold uppercase tracking-wide",
-                          status.className
-                        )}
-                      >
-                        {status.label}
-                      </Badge>
+                      <Badge variant={status.variant}>{status.label}</Badge>
                       {queueMessage ? (
                         <p className="max-w-64 text-xs text-muted-foreground">{queueMessage}</p>
                       ) : backup.error ? (

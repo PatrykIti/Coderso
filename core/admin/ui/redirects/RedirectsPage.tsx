@@ -1,9 +1,10 @@
-import { Plus, Search } from "lucide-react";
+import { ArrowRight, Plus, Search, Signpost } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -26,6 +27,7 @@ import { cacheKeys } from "@/services/cachePolicy";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { RedirectDrawer } from "./RedirectDrawer";
@@ -55,6 +57,9 @@ export function RedirectsPage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editingRedirect, setEditingRedirect] = useState<RedirectRow | null>(null);
   const [query, setQuery] = useState("");
+  const [addFrom, setAddFrom] = useState("");
+  const [addTo, setAddTo] = useState("");
+  const [addType, setAddType] = useState<RedirectRow["type"]>("301");
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<RedirectRow[]>(initialState.items);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -203,6 +208,31 @@ export function RedirectsPage() {
     [items]
   );
 
+  // TASK-479-26-L06: stat row derived from loaded items across all four real
+  // RedirectStatusCodes (no fabricated "142"/"404s caught" — those have no backing).
+  const redirectStats = useMemo(() => {
+    const byCode = (code: RedirectRow["type"]) => items.filter((item) => item.type === code).length;
+    return {
+      total: items.length,
+      permanent: byCode("301") + byCode("308"),
+      temporary: byCode("302") + byCode("307"),
+    };
+  }, [items]);
+
+  const handleInlineAdd = () => {
+    if (!addFrom.trim() || !addTo.trim()) return;
+    // Reuse the same single create path the drawer uses (handleSave creates when
+    // no row is being edited); statusCode is the real NUMERIC RedirectStatusCode.
+    setEditingRedirect(null);
+    void handleSave({
+      fromPath: addFrom.trim(),
+      toPath: addTo.trim(),
+      statusCode: Number(addType) as RedirectCreateInput["statusCode"],
+    });
+    setAddFrom("");
+    setAddTo("");
+  };
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / redirectsPageSize));
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice(
@@ -299,6 +329,7 @@ export function RedirectsPage() {
         <PageHeader
           title="Redirects"
           description={`Site management - ${activeCount} active routes.`}
+          icon={<Signpost />}
           actions={
             <>
               {selectedCount > 0 ? (
@@ -342,9 +373,24 @@ export function RedirectsPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        {/* Stat row — derived from loaded items (all four RedirectStatusCodes). */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Total redirects" value={redirectStats.total} icon={<Signpost />} />
+          <StatCard
+            label="301 + 308 permanent"
+            value={redirectStats.permanent}
+            icon={<ArrowRight />}
+          />
+          <StatCard
+            label="302 + 307 temporary"
+            value={redirectStats.temporary}
+            icon={<ArrowRight />}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft lg:flex-row lg:items-center lg:justify-between">
           <div className="relative w-full lg:max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search redirects..."
               className="pl-9"
@@ -353,6 +399,51 @@ export function RedirectsPage() {
             />
           </div>
         </div>
+
+        {/* Inline quick-add row — reuses the single create path (handleSave). */}
+        <Card className="p-3">
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleInlineAdd();
+            }}
+            className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center"
+          >
+            <Input
+              placeholder="/old-path"
+              aria-label="Redirect source path"
+              className="font-mono sm:flex-1"
+              value={addFrom}
+              onChange={(event) => setAddFrom(event.target.value)}
+            />
+            <ArrowRight className="hidden size-4 shrink-0 text-muted-foreground sm:block" />
+            <Input
+              placeholder="/new-path"
+              aria-label="Redirect destination path"
+              className="font-mono sm:flex-1"
+              value={addTo}
+              onChange={(event) => setAddTo(event.target.value)}
+            />
+            <Select
+              value={addType}
+              onValueChange={(value) => setAddType(value as RedirectRow["type"])}
+            >
+              <SelectTrigger className="sm:w-28">
+                <SelectValue placeholder="Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="301">301</SelectItem>
+                <SelectItem value="302">302</SelectItem>
+                <SelectItem value="307">307</SelectItem>
+                <SelectItem value="308">308</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button type="submit" className="gap-1.5" disabled={isSaving}>
+              <Plus className="size-4" /> Add
+            </Button>
+          </form>
+        </Card>
+
         <RedirectsTable
           items={paginated}
           isLoading={isLoading}

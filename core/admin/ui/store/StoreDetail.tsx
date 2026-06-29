@@ -76,12 +76,12 @@ export function StoreDetail({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-lg border bg-muted/40 p-3">
+          <div className="rounded-xl border bg-muted/40 p-3">
             <p className="text-xs text-muted-foreground">Security score</p>
             <p className="text-lg font-semibold">{plugin.securityScore}%</p>
             <Progress value={plugin.securityScore} className="mt-2" />
           </div>
-          <div className="rounded-lg border bg-muted/40 p-3">
+          <div className="rounded-xl border bg-muted/40 p-3">
             <p className="text-xs text-muted-foreground">Latest update</p>
             <p className="text-lg font-semibold">{plugin.lastUpdated}</p>
             <p className="text-xs text-muted-foreground">{plugin.downloads}</p>
@@ -97,10 +97,7 @@ export function StoreDetail({
               {releaseType}
             </Badge>
           </div>
-          <Select
-            value={version?.version ?? ""}
-            onValueChange={(value) => onSelectVersion(value)}
-          >
+          <Select value={version?.version ?? ""} onValueChange={(value) => onSelectVersion(value)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select version" />
             </SelectTrigger>
@@ -114,13 +111,9 @@ export function StoreDetail({
           </Select>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             {compatible ? (
-              <Badge variant="outline" className="border-emerald-500/30 text-emerald-600">
-                Compatible with current core
-              </Badge>
+              <Badge variant="success">Compatible with current core</Badge>
             ) : (
-              <Badge variant="outline" className="border-amber-500/40 text-amber-600">
-                Requires core update
-              </Badge>
+              <Badge variant="warning">Requires core update</Badge>
             )}
             <span>Installed: {plugin.installedVersion ?? "Not installed"}</span>
           </div>
@@ -129,8 +122,7 @@ export function StoreDetail({
         {!compatible && (
           <Alert variant="destructive">
             <AlertDescription>
-              This version requires a newer core. Update core or select a compatible
-              version.
+              This version requires a newer core. Update core or select a compatible version.
             </AlertDescription>
           </Alert>
         )}
@@ -139,8 +131,7 @@ export function StoreDetail({
           <Alert>
             <AlertDescription className="flex items-start gap-2">
               <Sparkles className="mt-0.5 h-4 w-4" />
-              This update is not marked as a security release and will require
-              manual approval.
+              This update is not marked as a security release and will require manual approval.
             </AlertDescription>
           </Alert>
         )}

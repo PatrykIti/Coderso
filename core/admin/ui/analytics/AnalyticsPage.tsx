@@ -1,4 +1,4 @@
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Download } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
   exportTopContent,
@@ -205,7 +206,13 @@ export function AnalyticsPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
         <PageHeader
           title="Analytics Overview"
-          description="Monitor traffic, conversions, and content performance."
+          description="Understand how visitors move through your site."
+          actions={
+            <Button variant="outline" className="gap-1.5" onClick={handleExportTopContent}>
+              <Download className="size-4" />
+              Export
+            </Button>
+          }
         />
         {error ? (
           <Alert variant="destructive">

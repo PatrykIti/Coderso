@@ -13,5 +13,5 @@ test("PluginDetailsPage renders tabs and details", () => {
   expect(html).toContain("Permissions");
   expect(html).toContain("Changelog");
   expect(html).toContain("Settings");
-  expect(html).toContain("Plugin information");
+  expect(html).toContain("Information");
 });

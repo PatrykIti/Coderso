@@ -34,8 +34,8 @@ const descriptionMax = 160;
 
 function getCountTone(length: number, max: number) {
   if (length === 0) return "text-muted-foreground";
-  if (length <= max) return "text-emerald-600";
-  return "text-amber-600";
+  if (length <= max) return "text-success";
+  return "text-warning";
 }
 
 export function SeoDrawer({
@@ -93,13 +93,13 @@ function SeoDrawerContent({ item, onSave, isSaving, error }: SeoDrawerContentPro
   const analysisTone = useMemo(() => {
     if (item?.analysisStatus === "attention") {
       return {
-        container: "border-amber-200/70 bg-amber-50/60 text-amber-700",
-        icon: "text-amber-600",
+        container: "border-warning/30 bg-warning-soft text-warning",
+        icon: "text-warning",
       };
     }
     return {
-      container: "border-emerald-200/60 bg-emerald-50/50 text-emerald-700",
-      icon: "text-emerald-600",
+      container: "border-success/30 bg-success-soft text-success",
+      icon: "text-success",
     };
   }, [item?.analysisStatus]);
 
@@ -150,7 +150,7 @@ function SeoDrawerContent({ item, onSave, isSaving, error }: SeoDrawerContentPro
                 {item?.previewPath ? ` › ${item.previewPath}` : ""}
               </span>
             </p>
-            <p className="mt-1 text-base font-semibold text-blue-600">
+            <p className="mt-1 text-base font-semibold text-info">
               {metaTitle || "Add a meta title"}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
