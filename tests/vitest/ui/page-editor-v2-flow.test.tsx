@@ -32,6 +32,9 @@ import {
   editorCanvasCtaButtonClass,
   editorDarkButtonClass,
   editorDarkGhostButtonClass,
+  editorPanelButtonClass,
+  editorPanelGhostButtonClass,
+  editorPanelSegmentTrackClass,
 } from "../../../core/admin/ui/pages/editorControls/controlChrome";
 import { resolvePageEditorControlUiModel } from "../../../core/services/pages/pageEditorControlUiModel";
 import { getPageBlockRenderDefault } from "../../../core/services/pages/pageBlockRenderDefaults";
@@ -2981,7 +2984,7 @@ test("PageEditor canvas + block color swatches reflect the live site neutral tok
   }
 });
 
-test("PageEditor floating toolbar labels selection, switches one panel, collapses, and tracks drag state", async () => {
+test("PageEditor floating toolbar labels selection, switches one panel, collapses, and right-docks (builder chrome)", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -3068,42 +3071,27 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
     ) as HTMLElement | null;
     expect(toolbar?.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
 
-    const dragHandle = view.container.querySelector('button[aria-label="Drag toolbar"]');
-    React.act(() => {
-      dragHandle?.dispatchEvent(
-        new MouseEvent("pointerdown", { bubbles: true, clientX: 20, clientY: 20 })
-      );
-    });
-    await flush();
+    // TASK-495-02: the builder chrome (page host) right-docks the panel — it is
+    // NOT draggable. The legacy bottom-center draggable panel (drag handle +
+    // data-page-editor-toolbar-dragging + transform) is exercised only on the
+    // menu host (see menu-design-editor-flow.test.tsx). Assert the right-dock
+    // position classes and that no drag affordances are present here.
     toolbar = view.container.querySelector(
       '[data-page-editor-floating-toolbar="true"]'
     ) as HTMLElement | null;
-    expect(toolbar?.getAttribute("data-page-editor-toolbar-dragging")).toBe("true");
-
-    React.act(() => {
-      window.dispatchEvent(
-        new MouseEvent("pointermove", { bubbles: true, clientX: 55, clientY: 42 })
-      );
-    });
-    await flush();
-    expect(toolbar?.style.transform).toContain("35px");
-    expect(toolbar?.style.transform).toContain("22px");
-
-    React.act(() => {
-      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
-    });
-    await flush();
-    expect(
-      view.container
-        .querySelector('[data-page-editor-floating-toolbar="true"]')
-        ?.getAttribute("data-page-editor-toolbar-dragging")
-    ).toBe("false");
+    expect(toolbar?.className).toContain("right-4");
+    expect(toolbar?.className).toContain("top-4");
+    expect(toolbar?.className).not.toContain("bottom-6");
+    expect(toolbar?.className).not.toContain("left-1/2");
+    expect(toolbar?.style.transform).toBe("");
+    expect(toolbar?.hasAttribute("data-page-editor-toolbar-dragging")).toBe(false);
+    expect(view.container.querySelector('button[aria-label="Drag toolbar"]')).toBeNull();
   } finally {
     view.cleanup();
   }
 });
 
-test("PageEditor dark-toolbar buttons and canvas CTAs use the shared non-inverting chrome", async () => {
+test("PageEditor builder panel buttons and canvas CTAs use the shared non-inverting chrome", async () => {
   const chromePage = createPage({
     currentData: createDocument({
       sections: [
@@ -3145,20 +3133,26 @@ test("PageEditor dark-toolbar buttons and canvas CTAs use the shared non-inverti
     const gapCta = view.container.querySelector('button[aria-label="Add section at position 1"]');
     expect(gapCta?.className).toContain(editorCanvasCtaButtonClass);
 
-    // Owner finding #4 contract tokens: idle subtle light fill, hover only a
+    // Mode-agnostic CONSTANT-value (shape) checks — the dark constants stay LIVE
+    // (the menu branch renders them), and the light siblings now back the
+    // builder rail. Owner finding #4 contract: idle subtle fill, hover only a
     // slightly lighter fill — never the inverted white-bg/black-text jump.
     expect(editorDarkButtonClass).toContain("bg-white/10");
     expect(editorDarkButtonClass).toContain("hover:bg-white/20");
+    expect(editorDarkGhostButtonClass).toContain("text-slate-200");
+    expect(editorDarkGhostButtonClass).toContain("hover:bg-white/10");
+    expect(editorPanelButtonClass).toContain("bg-muted");
+    expect(editorPanelGhostButtonClass).toContain("text-muted-foreground");
     expect(editorCanvasCtaButtonClass).toContain("bg-white");
     expect(editorCanvasCtaButtonClass).toContain("hover:bg-slate-100");
 
-    // "Add block" inside the (default-open) Content panel carries the dark
-    // toolbar chrome.
+    // TASK-495-02: the page host is now the light builder rail. "Add block"
+    // inside the (default-open) Content panel carries the LIGHT panel chrome.
     const addBlock = findButton(view.container, "Add block");
-    expect(addBlock?.className).toContain(editorDarkButtonClass);
+    expect(addBlock?.className).toContain(editorPanelButtonClass);
 
-    // The Background panel's external URL readout "Clear" keeps the quiet
-    // dark-ghost chrome instead of the admin ghost hover inversion.
+    // The Background panel's external URL readout "Clear" carries the light
+    // ghost chrome on the builder rail (the in-file ToolbarMediaUrlField).
     clickButtonByLabel(view.container, "Background panel");
     await flush();
     const externalReadout = view.container.querySelector(
@@ -3166,8 +3160,87 @@ test("PageEditor dark-toolbar buttons and canvas CTAs use the shared non-inverti
     );
     expect(externalReadout).toBeTruthy();
     expect(externalReadout?.querySelector("button")?.className).toContain(
-      editorDarkGhostButtonClass
+      editorPanelGhostButtonClass
     );
+
+    // INTEGRATION-level non-button relight guard (TASK-495-02): a NON-button
+    // registry control rendered through the real page-host rail must carry the
+    // LIGHT token via the EditorControlToneContext path (NO explicit `tone`
+    // prop — the per-primitive test covers the explicit-prop case). The
+    // Background panel's "Background type" SegmentedControl track resolves
+    // `tone="light"` from the rail provider, so it carries
+    // `editorPanelSegmentTrackClass` and NEVER the dark `bg-white/10`. Guards
+    // the "silent button-only" regression where a registry control stops
+    // consuming the tone context yet every button assertion stays green.
+    const bgTypeTrack = findSegmentedGroup(view.container, "Background type");
+    expect(bgTypeTrack.className).toContain(editorPanelSegmentTrackClass);
+    expect(bgTypeTrack.className).not.toContain("bg-white/10");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor builder chrome renders the in-content PageHeader and page-builder sub-toolbar (TASK-495-02)", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // PageHeader actions in order: Page settings → History → Preview → Save
+    // draft → Publish.
+    const buttonTexts = Array.from(view.container.querySelectorAll("button")).map(
+      (button) => button.textContent ?? ""
+    );
+    const indexOfText = (label: string) => buttonTexts.findIndex((text) => text.includes(label));
+    const settingsIdx = indexOfText("Page settings");
+    const historyIdx = indexOfText("History");
+    const previewIdx = indexOfText("Preview");
+    const saveDraftIdx = indexOfText("Save draft");
+    const publishIdx = indexOfText("Publish");
+    expect(settingsIdx).toBeGreaterThanOrEqual(0);
+    expect(historyIdx).toBeGreaterThan(settingsIdx);
+    expect(previewIdx).toBeGreaterThan(historyIdx);
+    expect(saveDraftIdx).toBeGreaterThan(previewIdx);
+    expect(publishIdx).toBeGreaterThan(saveDraftIdx);
+
+    // Save relabeled to "Save draft"; Publish carries the Rocket icon.
+    const publishButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      (button.textContent ?? "").includes("Publish")
+    );
+    expect(publishButton?.querySelector("svg")?.getAttribute("class")).toContain("lucide-rocket");
+
+    // The DeviceSwitcher relocated into the sub-toolbar (top-bar {actions} are
+    // drained — the topbar-slot drainage is asserted in menu-design-editor-flow).
+    // Exactly ONE device switcher group renders (no duplicate in a drained top
+    // bar): one button per device, by accessible name.
+    expect(view.container.querySelectorAll('button[aria-label="Desktop"]').length).toBe(1);
+    expect(view.container.querySelector('button[aria-label="Tablet"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Mobile"]')).toBeTruthy();
+
+    // Sub-toolbar: "Page builder" label + relocated controls.
+    expect(view.container.textContent).toContain("Page builder");
+    expect(view.container.querySelector('button[aria-label="Undo"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Redo"]')).toBeTruthy();
+    // Panel toggle, open by default (label "Hide panel"). Its aria-pressed
+    // state is asserted with the real Button in page-editor.test.tsx.
+    const panelToggle = view.container.querySelector('button[aria-label="Hide panel"]');
+    expect(panelToggle).toBeTruthy();
+
+    // The page host provides publish, so NO "Save only" capability badge.
+    const badges = Array.from(view.container.querySelectorAll('[data-slot="badge"]'));
+    expect(badges.some((badge) => (badge.textContent ?? "").includes("Save only"))).toBe(false);
+
+    // Hide the panel: the toggle flips and the reopen chip appears top-right.
+    // (After hiding, both the sub-toolbar toggle and the chip carry
+    // aria-label="Show panel"; the chip is the absolutely-positioned one.)
+    clickButtonByLabel(view.container, "Hide panel");
+    await flush();
+    const reopenChip = Array.from(
+      view.container.querySelectorAll('button[aria-label="Show panel"]')
+    ).find((button) => button.className.includes("right-4") && button.className.includes("top-4"));
+    expect(reopenChip).toBeTruthy();
+    expect(reopenChip?.className).not.toContain("bottom-6");
+    expect(reopenChip?.className).not.toContain("left-1/2");
   } finally {
     view.cleanup();
   }
@@ -3322,7 +3395,10 @@ test("PageEditor toolbar panel icons expose metadata tooltips and toggle a singl
       expect(button?.getAttribute("data-slot")).toBe("tooltip-trigger");
       expect(button?.hasAttribute("title")).toBe(false);
     }
-    for (const label of ["Drag toolbar", "Collapse toolbar", "Duplicate section"]) {
+    // TASK-495-02: the builder chrome (page host) replaces the legacy drag
+    // handle with a header "Hide options panel" close button; both are
+    // ToolbarIconButton tooltip-triggers.
+    for (const label of ["Hide options panel", "Collapse toolbar", "Duplicate section"]) {
       expect(
         view.container.querySelector(`button[aria-label="${label}"]`)?.getAttribute("data-slot")
       ).toBe("tooltip-trigger");
@@ -6486,27 +6562,12 @@ test("PageEditor inline-edit blur commits first and the same gesture's click tar
   }
 });
 
-test("PageEditor reserves floating-toolbar scroll clearance on the canvas scroller while a selection is active", async () => {
-  // Deterministic ResizeObserver: fires once on observe (like the real one)
-  // so the measured toolbar footprint lands in state. happy-dom rects are
-  // zero-height, so the clearance equals the anchor+gap constant (40px).
-  class ImmediateResizeObserver {
-    private readonly callback: ResizeObserverCallback;
-
-    constructor(callback: ResizeObserverCallback) {
-      this.callback = callback;
-    }
-
-    observe() {
-      this.callback([], this as unknown as ResizeObserver);
-    }
-
-    unobserve() {}
-
-    disconnect() {}
-  }
-  vi.stubGlobal("ResizeObserver", ImmediateResizeObserver);
-
+test("PageEditor reserves right-rail padding on the canvas scroller while a selection is active (builder chrome)", async () => {
+  // TASK-495-02: the builder chrome (page host) docks the panel into a light
+  // right rail, so the canvas reserves RIGHT padding (not bottom clearance) so
+  // the centered frame is not occluded by the overlay. The legacy bottom
+  // clearance (ResizeObserver + --page-editor-toolbar-clearance) is retained
+  // for the menu host only.
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -6517,26 +6578,26 @@ test("PageEditor reserves floating-toolbar scroll clearance on the canvas scroll
     ) as HTMLElement;
     expect(scroller).toBeTruthy();
 
-    // The editor auto-selects the first section, so the toolbar is visible
-    // and its footprint is reserved as scroll clearance from the start.
+    // The editor auto-selects the first section, so the right rail is visible
+    // and right padding is reserved from the start.
     expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeTruthy();
-    expect(scroller.style.paddingBottom).toBe("40px");
-    expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("40px");
+    expect(scroller.style.paddingRight).toBe("360px");
+    // The builder branch never sets the legacy bottom-clearance var.
+    expect(scroller.style.paddingBottom).toBe("");
+    expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("");
 
-    // Escape clears the selection: the toolbar unmounts and the clearance is
+    // Escape clears the selection: the rail unmounts and the padding is
     // released with it.
     dispatchDocumentKey("Escape");
     await flush();
     expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeFalsy();
-    expect(scroller.style.paddingBottom).toBe("");
-    expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("");
+    expect(scroller.style.paddingRight).toBe("");
 
-    // Selecting a block restores the clearance.
+    // Selecting a block restores the right padding.
     clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
     await flush();
-    expect(scroller.style.paddingBottom).toBe("40px");
+    expect(scroller.style.paddingRight).toBe("360px");
   } finally {
-    vi.unstubAllGlobals();
     view.cleanup();
   }
 });

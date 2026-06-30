@@ -35,6 +35,7 @@ import {
   Plus,
   RotateCcw,
   Redo2,
+  Rocket,
   Save,
   Settings2,
   SlidersHorizontal,
@@ -82,6 +83,7 @@ import { EditorShell } from "@/ui/layouts/EditorShell";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
 import { useAdminDirtyNavigationGuard } from "@/ui/shared/AdminDirtyNavigationGuard";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
+import { PageHeader } from "@/ui/shared/PageHeader";
 import { StatusBadge } from "@/ui/shared/StatusBadge";
 import {
   clearActiveAssistantSurfaceContext,
@@ -148,11 +150,17 @@ import {
   type ComboboxControlOption,
 } from "./editorControls";
 import {
+  EditorControlToneContext,
+  editorButtonClassFor,
   editorCanvasCtaButtonClass,
-  editorControlFocusClass,
-  editorControlLabelClass,
-  editorDarkButtonClass,
-  editorDarkGhostButtonClass,
+  editorControlFocusClassFor,
+  editorControlLabelClassFor,
+  editorGhostButtonClassFor,
+  editorPanelInputClass,
+  editorPanelOptionActiveClass,
+  editorPanelRowClass,
+  editorPanelSelectClass,
+  useEditorControlTone,
 } from "./editorControls/controlChrome";
 import {
   deletePageBlockAtPath,
@@ -720,6 +728,29 @@ const duplicateSectionWithIds = (section: PageSectionV2): PageSectionV2 => ({
   blocks: section.blocks.map(duplicatePageBlockTreeWithNewIds),
 });
 
+/**
+ * TASK-495-02 (GAP B fix): builder-chrome canvas region.
+ *
+ * The light right-pinned options rail, the reopen chip and the Layers overlay
+ * are positioned `absolute right-4 top-4` / `top-16`. They MUST be measured
+ * from the CANVAS top — below the in-content PageHeader + page-builder
+ * sub-toolbar — so they never occlude the header CTAs (Preview / Save draft /
+ * Publish) or the sub-toolbar (Layers / Panel toggle). This mirrors the
+ * prototype CanvasEditor, which wraps the canvas scroller + its overlays in a
+ * canvas-only `relative min-h-0 flex-1` container BELOW the chrome bar
+ * (_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx:99-110).
+ *
+ * SCOPE GATE: only the builder chrome (page + page-template, mode !== "menu")
+ * gets the canvas-relative container. The legacy (menu) draggable bottom-center
+ * toolbar + clearance plumbing stays on its current code path — the overlays
+ * remain direct children of the editor body — so this fragment is transparent
+ * for `builder === false`.
+ */
+function BuilderCanvasRegion({ builder, children }: { builder: boolean; children: ReactNode }) {
+  if (!builder) return <>{children}</>;
+  return <div className="relative flex min-h-0 flex-1 flex-col">{children}</div>;
+}
+
 export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEditorProps) {
   const editorHost = host ?? defaultPagesEditorHost;
   const [pageId] = useState<string | null>(() => {
@@ -946,6 +977,36 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   // Mirrors the floating toolbar render condition; drives the canvas scroll
   // clearance that keeps canvas targets reachable under the toolbar.
   const floatingToolbarVisible = hasFloatingPanelSelection && panelOpen;
+  // TASK-495-02 scope gate: the prototype covers page + page-template only. The
+  // menu visual designer stays on the legacy dark bottom-center draggable
+  // toolbar (drag + clearance plumbing, topbarActions in the global top bar);
+  // page + page-template adopt the new builder chrome (PageHeader + sub-toolbar
+  // + light right-pinned panel).
+  const useLegacyChrome = editorHost.mode === "menu";
+  const useBuilderChrome = !useLegacyChrome;
+  const panelTone: "dark" | "light" = useLegacyChrome ? "dark" : "light";
+  const panelTokens =
+    panelTone === "dark"
+      ? {
+          headerBorder: "border-white/10",
+          label: "text-slate-400",
+          chip: "bg-white/10",
+          scopePill: "bg-sky-400/15 text-sky-200",
+          subPanelBg: "bg-white/5 text-slate-100",
+          subHeaderBorder: "border-white/10",
+          subTitle: "text-slate-200",
+          subDesc: "text-slate-400",
+        }
+      : {
+          headerBorder: "border-border",
+          label: "text-muted-foreground",
+          chip: "bg-muted text-muted-foreground",
+          scopePill: "bg-primary-soft text-primary-soft-foreground",
+          subPanelBg: "bg-muted/40 text-foreground",
+          subHeaderBorder: "border-border",
+          subTitle: "text-foreground",
+          subDesc: "text-muted-foreground",
+        };
   const selectedBlock =
     selectedBlockPath && selectedSection
       ? getPageBlockAtPath(selectedSection, selectedBlockPath)
@@ -2619,22 +2680,40 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   return (
     <EditorShell
       breadcrumbs={
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">{editorHost.resourceLabel}</span>
-          <span className="text-sm font-semibold">{page?.title ?? settingsTitle}</span>
-          <StatusBadge status={page?.status ?? "draft"} />
-          {hasUnsavedChanges ? (
-            <Badge variant="warning" className="text-[10px] font-semibold uppercase">
-              Unsaved
-            </Badge>
-          ) : null}
-        </div>
+        useLegacyChrome ? (
+          // Menu (legacy) keeps the full breadcrumb: resourceLabel · title ·
+          // StatusBadge · Unsaved pill in the global top bar.
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{editorHost.resourceLabel}</span>
+            <span className="text-sm font-semibold">{page?.title ?? settingsTitle}</span>
+            <StatusBadge status={page?.status ?? "draft"} />
+            {hasUnsavedChanges ? (
+              <Badge variant="warning" className="text-[10px] font-semibold uppercase">
+                Unsaved
+              </Badge>
+            ) : null}
+          </div>
+        ) : (
+          // Builder chrome: top-bar breadcrumb is resourceLabel · title only.
+          // The StatusBadge + Unsaved pill relocate to the page-builder
+          // sub-toolbar (Step 3).
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{editorHost.resourceLabel}</span>
+            <span className="text-sm font-semibold">{page?.title ?? settingsTitle}</span>
+          </div>
+        )
       }
-      topbarActions={topbarActions}
+      // Builder chrome drains the global top bar; the actions move to the
+      // in-content PageHeader + sub-toolbar. Menu keeps the legacy topbarActions.
+      topbarActions={useLegacyChrome ? topbarActions : undefined}
       centerScroll={false}
       contentClassName="h-full"
     >
-      <div className="relative flex h-full min-h-0 flex-col bg-dotted">
+      <div
+        className={`relative flex h-full min-h-0 flex-col ${
+          useLegacyChrome ? "bg-dotted" : "bg-background"
+        }`}
+      >
         {error ? (
           <Alert variant="destructive" className="m-4">
             <AlertTitle>Page editor error</AlertTitle>
@@ -2717,486 +2796,691 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           </Alert>
         ) : null}
 
-        <div
-          className="flex items-center justify-center border-b border-border bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase text-muted-foreground"
-          data-page-editor-canvas-context={device}
-        >
-          {device === "desktop"
-            ? `${deviceScopeReadout("desktop")} · base view`
-            : `${deviceScopeReadout(device)} · override context`}
-        </div>
-
-        <div
-          className="min-h-0 flex-1 overflow-auto overscroll-contain p-6"
-          data-page-editor-canvas-scroller="true"
-          // Reserved floating-toolbar clearance: the bottom padding guarantees
-          // scroll room past the toolbar, and the CSS variable feeds the
-          // scroll-margin-bottom rule (globals.css) so scroll-into-view lands
-          // canvas targets above the panel instead of underneath it.
-          style={
-            floatingToolbarVisible && toolbarCanvasClearance > 0
-              ? ({
-                  paddingBottom: toolbarCanvasClearance,
-                  "--page-editor-toolbar-clearance": `${toolbarCanvasClearance}px`,
-                } as CSSProperties)
-              : undefined
-          }
-          onClick={() => selectSection(null)}
-        >
-          <div
-            className={`mx-auto min-h-full w-full rounded-2xl bg-white p-4 shadow-soft transition-all ${canvasDeviceFrameClassMap[device]}`}
-            // Site typography token variables (not the admin-theme ones) so
-            // canvas `var(--text-*)`/`var(--font-*)` paints match the front.
-            style={canvasSiteTokenVariables}
-            data-page-editor-canvas-frame="true"
-            data-page-editor-canvas-device={device}
-          >
-            {!isLoading && editorHost.canvasChrome ? (
-              <div className="mb-4" data-page-editor-canvas-chrome="true">
-                {editorHost.canvasChrome({ document: pageDocument, device })}
-              </div>
-            ) : null}
-            {isLoading ? (
-              <div className="p-16 text-center text-sm text-muted-foreground">Loading page...</div>
-            ) : pageDocument.sections.length === 0 ? (
-              <div className="p-16 text-center">
-                <p className="text-sm text-muted-foreground">This page has no sections yet.</p>
-                {canInsertSections ? (
-                  <Button type="button" className="mt-4" onClick={openCommandPalette}>
-                    <Plus className="h-4 w-4" />
-                    Add section
+        {useBuilderChrome ? (
+          <>
+            {/* Step 2 — in-content PageHeader (no own breadcrumb: the top-bar
+                breadcrumb is the sole trail). mb-6 + font-display text-2xl are
+                too tall for the fixed-height editor, so spacing is tuned here. */}
+            <PageHeader
+              className="mb-0 shrink-0 border-b border-border bg-background px-6 pb-3 pt-4"
+              title={page?.title ?? settingsTitle}
+              actions={
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSettingsOpen(true)}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    {editorHost.settingsLabel}
                   </Button>
-                ) : null}
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {canInsertSections ? (
-                  <div className="flex justify-center">
+                  {revisionsHost ? (
+                    <Button type="button" variant="ghost" size="sm" onClick={openRevisions}>
+                      <History className="h-4 w-4" />
+                      History
+                    </Button>
+                  ) : null}
+                  {editorHost.preview ? (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      className={editorCanvasCtaButtonClass}
-                      onClick={openCommandPalette}
+                      disabled={previewLoading || !page}
+                      onClick={handlePreview}
                     >
+                      <Eye className="h-4 w-4" />
+                      Preview
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isSaving || !page}
+                    onClick={handleSaveDraft}
+                  >
+                    <Save className="h-4 w-4" />
+                    {isSaving ? "Saving..." : "Save draft"}
+                  </Button>
+                  {editorHost.publish ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={isPublishing || !page}
+                      onClick={handlePublish}
+                    >
+                      <Rocket className="h-4 w-4" />
+                      {isPublishing ? "Publishing..." : "Publish"}
+                    </Button>
+                  ) : null}
+                </>
+              }
+            />
+            {/* Step 3 — page-builder sub-toolbar (modeled on the prototype
+                CanvasEditor chrome bar). */}
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Page builder</span>
+                {!editorHost.publish ? (
+                  // Capability badge: this host can Save draft but omits publish
+                  // (the page-template host). "Save only" — NOT "Preview only"
+                  // (that would mislabel a savable resource).
+                  <Badge variant="soft">Save only</Badge>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-1.5">
+                {/* Relocated doc status (was the breadcrumb slot) + Unsaved pill. */}
+                <StatusBadge status={page?.status ?? "draft"} />
+                {hasUnsavedChanges ? (
+                  <Badge variant="warning" className="text-[10px] font-semibold uppercase">
+                    Unsaved
+                  </Badge>
+                ) : null}
+                <div className="mx-1 h-5 w-px bg-border" />
+                {/* Relocated Undo/Redo (were inside the floating toolbar). The
+                    aria-label MUST stay "Undo"/"Redo" — the undo/redo flow test
+                    clicks them by label. */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Undo"
+                  disabled={!canUndoEditorChange}
+                  onClick={undoEditorChange}
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Redo"
+                  disabled={!canRedoEditorChange}
+                  onClick={redoEditorChange}
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+                <div className="mx-1 h-5 w-px bg-border" />
+                {/* Relocated DeviceSwitcher — keeps data-page-editor-device-option. */}
+                <DeviceSwitcher value={device} onChange={setDevice} />
+                {/* Relocated Layers. */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLayersOpen((open) => !open)}
+                >
+                  <Layers className="h-4 w-4" />
+                  Layers
+                </Button>
+                {/* Relocated Panel toggle — keeps soft/ghost + aria-pressed. */}
+                <Button
+                  type="button"
+                  variant={panelOpen ? "soft" : "ghost"}
+                  size="sm"
+                  onClick={() => setPanelOpen((open) => !open)}
+                  aria-label={panelOpen ? "Hide panel" : "Show panel"}
+                  aria-pressed={panelOpen}
+                >
+                  <PanelRight className="h-4 w-4" />
+                  {panelOpen ? "Hide panel" : "Show panel"}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {/* GAP B: builder wraps the canvas-context bar + scroller + overlays
+            (Layers / right rail / reopen chip) in a canvas-only relative
+            container so their `top-4`/`top-16` is measured from the canvas top,
+            below the PageHeader + sub-toolbar. Menu keeps the flat body. */}
+        <BuilderCanvasRegion builder={useBuilderChrome}>
+          <div
+            className="flex items-center justify-center border-b border-border bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase text-muted-foreground"
+            data-page-editor-canvas-context={device}
+          >
+            {device === "desktop"
+              ? `${deviceScopeReadout("desktop")} · base view`
+              : `${deviceScopeReadout(device)} · override context`}
+          </div>
+
+          <div
+            className={`min-h-0 flex-1 overflow-auto overscroll-contain p-6 ${
+              useBuilderChrome ? "bg-dotted" : ""
+            }`}
+            data-page-editor-canvas-scroller="true"
+            // MENU (legacy): reserved floating-toolbar clearance — the bottom
+            // padding guarantees scroll room past the toolbar, and the CSS
+            // variable feeds the scroll-margin-bottom rule (globals.css) so
+            // scroll-into-view lands canvas targets above the panel.
+            // BUILDER: the right rail no longer covers the bottom; reserve RIGHT
+            // padding instead so the centered frame is not occluded by the overlay.
+            style={
+              useLegacyChrome
+                ? floatingToolbarVisible && toolbarCanvasClearance > 0
+                  ? ({
+                      paddingBottom: toolbarCanvasClearance,
+                      "--page-editor-toolbar-clearance": `${toolbarCanvasClearance}px`,
+                    } as CSSProperties)
+                  : undefined
+                : panelOpen && hasFloatingPanelSelection
+                  ? ({ paddingRight: 360 } as CSSProperties)
+                  : undefined
+            }
+            onClick={() => selectSection(null)}
+          >
+            <div
+              className={`mx-auto min-h-full w-full rounded-2xl bg-white p-4 shadow-soft transition-all ${canvasDeviceFrameClassMap[device]}`}
+              // Site typography token variables (not the admin-theme ones) so
+              // canvas `var(--text-*)`/`var(--font-*)` paints match the front.
+              style={canvasSiteTokenVariables}
+              data-page-editor-canvas-frame="true"
+              data-page-editor-canvas-device={device}
+            >
+              {!isLoading && editorHost.canvasChrome ? (
+                <div className="mb-4" data-page-editor-canvas-chrome="true">
+                  {editorHost.canvasChrome({ document: pageDocument, device })}
+                </div>
+              ) : null}
+              {isLoading ? (
+                <div className="p-16 text-center text-sm text-muted-foreground">
+                  Loading page...
+                </div>
+              ) : pageDocument.sections.length === 0 ? (
+                <div className="p-16 text-center">
+                  <p className="text-sm text-muted-foreground">This page has no sections yet.</p>
+                  {canInsertSections ? (
+                    <Button type="button" className="mt-4" onClick={openCommandPalette}>
                       <Plus className="h-4 w-4" />
                       Add section
                     </Button>
-                  </div>
-                ) : null}
-                {pageDocument.sections.map((section, sectionIndex) => (
-                  <Fragment key={section.id}>
-                    {canInsertSections ? (
-                      <SectionGapInsertZone
-                        index={sectionIndex}
-                        onInsert={openCommandPaletteAtGap}
-                      />
-                    ) : null}
-                    <SectionCanvas
-                      section={resolvePageSectionForBreakpoint(section, device)}
-                      baseSection={section}
-                      selected={section.id === selectedSectionId}
-                      selectedBlockPath={
-                        section.id === selectedSectionId ? selectedBlockPath : null
-                      }
-                      selectedBlockId={section.id === selectedSectionId ? selectedBlockId : null}
-                      inlineEditTarget={inlineEditTarget}
-                      device={device}
-                      canAddBlockBeside={canAddBlockBeside}
-                      canvasDataByBlockId={canvasDataByBlockId}
-                      markToolbarDock={markToolbarDock}
-                      onMarkToolbarDockChange={setMarkToolbarDock}
-                      onSelect={() => selectSection(section.id)}
-                      onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
-                      onAddBlock={openCommandPalette}
-                      onAddBlockToTarget={openCommandPaletteForTarget}
-                      onAddBlockBeside={openCommandPaletteBesideSelected}
-                      onStartInlineEdit={startInlineEdit}
-                      onCommitInlineEdit={commitInlineEdit}
-                      onApplyTextMark={applyInlineTextMark}
-                    />
-                  </Fragment>
-                ))}
-                {canInsertSections ? (
-                  <SectionGapInsertZone
-                    index={pageDocument.sections.length}
-                    onInsert={openCommandPaletteAtGap}
-                  />
-                ) : null}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {layersOpen ? (
-          <div className="absolute left-4 top-16 z-20 w-72 rounded-2xl border border-border bg-popover p-3 shadow-pop">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-semibold">Layers</p>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                onClick={() => setLayersOpen(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="space-y-1">
-              {pageDocument.sections.map((section) => (
-                <div key={section.id} className="space-y-1">
-                  <button
-                    type="button"
-                    className={`flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm ${
-                      section.id === selectedSectionId && !selectedBlockId
-                        ? "bg-primary/10 text-primary"
-                        : "hover:bg-muted"
-                    }`}
-                    data-page-editor-layer-section-id={section.id}
-                    data-page-editor-responsive-target={
-                      hasAnyResponsiveOverride(
-                        device,
-                        readSectionBreakpointOverride(section, device)
-                      )
-                        ? "override"
-                        : "inherited"
-                    }
-                    onClick={() => selectSection(section.id)}
-                  >
-                    <span>{section.name}</span>
-                    <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
-                      {hasAnyResponsiveOverride(
-                        device,
-                        readSectionBreakpointOverride(section, device)
-                      )
-                        ? `${device} override`
-                        : null}
-                      {section.type}
-                    </span>
-                  </button>
-                  <div className="space-y-1 pl-4">
-                    <LayerBlockRows
-                      section={section}
-                      blocks={section.blocks}
-                      ownerPath={null}
-                      selectedBlockPath={
-                        section.id === selectedSectionId ? selectedBlockPath : null
-                      }
-                      canAddBeside={canAddBlockBeside}
-                      device={device}
-                      onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
-                      onAddToTarget={openCommandPaletteForTarget}
-                      onMoveToTarget={moveSelectedBlockToTarget}
-                      onAddBeside={openCommandPaletteBesideSelected}
-                    />
-                  </div>
+                  ) : null}
                 </div>
-              ))}
-            </div>
-          </div>
-        ) : null}
-
-        {panelOpen && selectedSection && resolvedSelectedSection ? (
-          <div
-            ref={toolbarElementRef}
-            className="absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] rounded-2xl bg-slate-950 p-2 text-white shadow-2xl"
-            style={{
-              transform: `translateX(calc(-50% + ${toolbarOffset.x}px)) translateY(${toolbarOffset.y}px)`,
-            }}
-            aria-label={`${toolbarTargetLabel} tools`}
-            data-page-editor-floating-toolbar="true"
-            data-page-editor-toolbar-collapsed={toolbarCollapsed ? "true" : "false"}
-            data-page-editor-toolbar-dragging={toolbarDragging ? "true" : "false"}
-          >
-            {/*
-              Head row owns identity (name + variant chip + editing-scope
-              pill) on the left and the right-aligned action cluster; the
-              panel category icons live on their own second row so they can
-              never collide with the scope pill (owner finding #3).
-            */}
-            <div className="flex flex-wrap items-center gap-2" data-page-editor-toolbar-row="head">
-              <ToolbarIconButton
-                tooltip={toolbarActionTooltips.drag}
-                onPointerDown={startToolbarDrag}
-              >
-                <GripVertical className="h-4 w-4" />
-              </ToolbarIconButton>
-              <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
-                <PanelTop className="h-4 w-4 text-slate-400" />
-                <span className="truncate text-sm font-semibold">{toolbarTargetLabel}</span>
-                <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase">
-                  {toolbarSelectionMeta}
-                </span>
-                <span
-                  className="shrink-0 rounded-full bg-sky-400/15 px-2 py-0.5 text-[10px] font-semibold text-sky-200"
-                  data-page-editor-editing-scope={device}
-                >
-                  {device === "desktop"
-                    ? `Editing: ${deviceScopeReadout("desktop")} (base)`
-                    : `Editing: ${deviceScopeReadout(device)} (overrides)`}
-                </span>
-              </div>
-              <div
-                className="ml-auto flex shrink-0 items-center gap-1"
-                data-page-editor-toolbar-actions="true"
-              >
-                <ToolbarIconButton
-                  tooltip={
-                    toolbarCollapsed ? toolbarActionTooltips.expand : toolbarActionTooltips.collapse
-                  }
-                  onClick={() => setToolbarCollapsed((collapsed) => !collapsed)}
-                >
-                  {toolbarCollapsed ? (
-                    <Maximize2 className="h-4 w-4" />
-                  ) : (
-                    <Minimize2 className="h-4 w-4" />
-                  )}
-                </ToolbarIconButton>
-                {!toolbarCollapsed ? (
-                  <>
-                    <ToolbarIconButton
-                      tooltip={toolbarActionTooltips.undo}
-                      disabled={!canUndoEditorChange}
-                      onClick={undoEditorChange}
-                    >
-                      <Undo2 className="h-4 w-4" />
-                    </ToolbarIconButton>
-                    <ToolbarIconButton
-                      tooltip={toolbarActionTooltips.redo}
-                      disabled={!canRedoEditorChange}
-                      onClick={redoEditorChange}
-                    >
-                      <Redo2 className="h-4 w-4" />
-                    </ToolbarIconButton>
-                    <ToolbarIconButton
-                      tooltip={toolbarActionTooltips.copySelection}
-                      onClick={() => void copySelectedFragment()}
-                    >
-                      <Clipboard className="h-4 w-4" />
-                    </ToolbarIconButton>
-                    <ToolbarIconButton
-                      tooltip={toolbarActionTooltips.pasteSelection}
-                      onClick={() => void pasteClipboardFragment()}
-                    >
-                      <ClipboardPaste className="h-4 w-4" />
-                    </ToolbarIconButton>
-                    {verticalBlockMoveAvailable ? (
-                      <>
-                        <ToolbarIconButton
-                          tooltip={
-                            selectedBlock
-                              ? sectionColumnMoveActive
-                                ? toolbarActionTooltips.moveBlockUpColumn
-                                : verticalBlockMoveStep > 1
-                                  ? toolbarActionTooltips.moveBlockUpRow
-                                  : toolbarActionTooltips.moveBlockUp
-                              : toolbarActionTooltips.moveSectionUp
-                          }
-                          onClick={() =>
-                            selectedBlock
-                              ? sectionColumnMoveActive
-                                ? moveSelectedBlockWithinColumnStack(-1)
-                                : moveSelectedBlockBy(-verticalBlockMoveStep)
-                              : moveSelectedSection(-1)
-                          }
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </ToolbarIconButton>
-                        <ToolbarIconButton
-                          tooltip={
-                            selectedBlock
-                              ? sectionColumnMoveActive
-                                ? toolbarActionTooltips.moveBlockDownColumn
-                                : verticalBlockMoveStep > 1
-                                  ? toolbarActionTooltips.moveBlockDownRow
-                                  : toolbarActionTooltips.moveBlockDown
-                              : toolbarActionTooltips.moveSectionDown
-                          }
-                          onClick={() =>
-                            selectedBlock
-                              ? sectionColumnMoveActive
-                                ? moveSelectedBlockWithinColumnStack(1)
-                                : moveSelectedBlockBy(verticalBlockMoveStep)
-                              : moveSelectedSection(1)
-                          }
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </ToolbarIconButton>
-                      </>
-                    ) : null}
-                    {selectedBlock && horizontalBlockMoveAvailable ? (
-                      <>
-                        <ToolbarIconButton
-                          tooltip={
-                            horizontalMoveSetsColumn
-                              ? toolbarActionTooltips.moveBlockLeftColumn
-                              : toolbarActionTooltips.moveBlockLeft
-                          }
-                          onClick={() => moveSelectedBlockHorizontally(-1)}
-                        >
-                          <ArrowLeft className="h-4 w-4" />
-                        </ToolbarIconButton>
-                        <ToolbarIconButton
-                          tooltip={
-                            horizontalMoveSetsColumn
-                              ? toolbarActionTooltips.moveBlockRightColumn
-                              : toolbarActionTooltips.moveBlockRight
-                          }
-                          onClick={() => moveSelectedBlockHorizontally(1)}
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                        </ToolbarIconButton>
-                      </>
-                    ) : null}
-                    {selectedBlock ? (
-                      // Owner finding #7 (round 3): a bare Columns2 glyph read
-                      // as a layout toggle, not an insert action — the icon
-                      // now carries an explicit "+" badge so the action is
-                      // discoverable without hovering for the tooltip.
-                      <ToolbarIconButton
-                        tooltip={toolbarActionTooltips.addBlockBeside}
-                        disabled={!canAddBlockBeside}
-                        onClick={openCommandPaletteBesideSelected}
+              ) : (
+                <div className="space-y-4">
+                  {canInsertSections ? (
+                    <div className="flex justify-center">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className={editorCanvasCtaButtonClass}
+                        onClick={openCommandPalette}
                       >
-                        <span className="relative inline-flex" aria-hidden="true">
-                          <Columns2 className="h-4 w-4" />
-                          <Plus
-                            className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-slate-950"
-                            strokeWidth={3}
-                          />
-                        </span>
-                      </ToolbarIconButton>
-                    ) : null}
-                    <ToolbarIconButton
-                      tooltip={
-                        selectedBlock
-                          ? toolbarActionTooltips.duplicateBlock
-                          : toolbarActionTooltips.duplicateSection
-                      }
-                      onClick={selectedBlock ? duplicateSelectedBlock : duplicateSelectedSection}
-                    >
-                      <Copy className="h-4 w-4" />
-                    </ToolbarIconButton>
-                    <ToolbarIconButton
-                      tooltip={
-                        selectedBlock
-                          ? toolbarActionTooltips.deleteBlock
-                          : toolbarActionTooltips.deleteSection
-                      }
-                      onClick={requestDeleteSelection}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </ToolbarIconButton>
-                  </>
-                ) : null}
-              </div>
+                        <Plus className="h-4 w-4" />
+                        Add section
+                      </Button>
+                    </div>
+                  ) : null}
+                  {pageDocument.sections.map((section, sectionIndex) => (
+                    <Fragment key={section.id}>
+                      {canInsertSections ? (
+                        <SectionGapInsertZone
+                          index={sectionIndex}
+                          onInsert={openCommandPaletteAtGap}
+                        />
+                      ) : null}
+                      <SectionCanvas
+                        section={resolvePageSectionForBreakpoint(section, device)}
+                        baseSection={section}
+                        selected={section.id === selectedSectionId}
+                        selectedBlockPath={
+                          section.id === selectedSectionId ? selectedBlockPath : null
+                        }
+                        selectedBlockId={section.id === selectedSectionId ? selectedBlockId : null}
+                        inlineEditTarget={inlineEditTarget}
+                        device={device}
+                        canAddBlockBeside={canAddBlockBeside}
+                        canvasDataByBlockId={canvasDataByBlockId}
+                        markToolbarDock={markToolbarDock}
+                        onMarkToolbarDockChange={setMarkToolbarDock}
+                        onSelect={() => selectSection(section.id)}
+                        onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
+                        onAddBlock={openCommandPalette}
+                        onAddBlockToTarget={openCommandPaletteForTarget}
+                        onAddBlockBeside={openCommandPaletteBesideSelected}
+                        onStartInlineEdit={startInlineEdit}
+                        onCommitInlineEdit={commitInlineEdit}
+                        onApplyTextMark={applyInlineTextMark}
+                      />
+                    </Fragment>
+                  ))}
+                  {canInsertSections ? (
+                    <SectionGapInsertZone
+                      index={pageDocument.sections.length}
+                      onInsert={openCommandPaletteAtGap}
+                    />
+                  ) : null}
+                </div>
+              )}
             </div>
-            {!toolbarCollapsed ? (
-              <div
-                className="mt-1 flex flex-wrap items-center gap-1 border-t border-white/10 pt-1"
-                data-page-editor-toolbar-row="panels"
-              >
-                {visibleToolbarPanelOptions.map(({ panel, label, description, Icon }) => (
-                  <ToolbarIconButton
-                    key={panel}
-                    tooltip={{ label: `${label} panel`, description }}
-                    active={activeToolbarPanel === panel}
-                    expanded={activeToolbarPanel === panel}
-                    panelId={panel}
-                    onClick={() => setActivePanel((current) => (current === panel ? null : panel))}
-                  >
-                    <Icon className="h-4 w-4" />
-                  </ToolbarIconButton>
+          </div>
+
+          {layersOpen ? (
+            <div className="absolute left-4 top-16 z-20 w-72 rounded-2xl border border-border bg-popover p-3 shadow-pop">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-semibold">Layers</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => setLayersOpen(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-1">
+                {pageDocument.sections.map((section) => (
+                  <div key={section.id} className="space-y-1">
+                    <button
+                      type="button"
+                      className={`flex w-full items-center justify-between rounded px-2 py-2 text-left text-sm ${
+                        section.id === selectedSectionId && !selectedBlockId
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-muted"
+                      }`}
+                      data-page-editor-layer-section-id={section.id}
+                      data-page-editor-responsive-target={
+                        hasAnyResponsiveOverride(
+                          device,
+                          readSectionBreakpointOverride(section, device)
+                        )
+                          ? "override"
+                          : "inherited"
+                      }
+                      onClick={() => selectSection(section.id)}
+                    >
+                      <span>{section.name}</span>
+                      <span className="flex items-center gap-2 text-xs uppercase text-muted-foreground">
+                        {hasAnyResponsiveOverride(
+                          device,
+                          readSectionBreakpointOverride(section, device)
+                        )
+                          ? `${device} override`
+                          : null}
+                        {section.type}
+                      </span>
+                    </button>
+                    <div className="space-y-1 pl-4">
+                      <LayerBlockRows
+                        section={section}
+                        blocks={section.blocks}
+                        ownerPath={null}
+                        selectedBlockPath={
+                          section.id === selectedSectionId ? selectedBlockPath : null
+                        }
+                        canAddBeside={canAddBlockBeside}
+                        device={device}
+                        onSelectBlock={(blockPath) => selectBlock(section.id, blockPath)}
+                        onAddToTarget={openCommandPaletteForTarget}
+                        onMoveToTarget={moveSelectedBlockToTarget}
+                        onAddBeside={openCommandPaletteBesideSelected}
+                      />
+                    </div>
+                  </div>
                 ))}
               </div>
-            ) : null}
-            {!toolbarCollapsed && activeToolbarPanel === "host-appearance" ? (
-              // Host-owned appearance panel (TASK-458-03): same subpanel
-              // chrome as the registry panels, content rendered by the host
-              // through the shared control primitives.
+            </div>
+          ) : null}
+
+          {panelOpen && selectedSection && resolvedSelectedSection ? (
+            <EditorControlToneContext.Provider value={panelTone}>
               <div
-                className="mt-2 flex max-h-[min(72vh,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg bg-white/5 text-slate-100"
-                data-page-editor-toolbar-panel="host-appearance"
-                data-page-editor-subpanel="viewport-safe"
-                role="region"
-                aria-label={`${hostAppearancePanel?.label ?? "Appearance"} toolbar panel`}
+                ref={toolbarElementRef}
+                className={
+                  useLegacyChrome
+                    ? "absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] rounded-2xl bg-slate-950 p-2 text-white shadow-2xl"
+                    : "absolute right-4 top-4 z-30 flex max-h-[calc(100%-2rem)] w-[min(340px,calc(100%-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-popover p-2 text-foreground shadow-pop"
+                }
+                // MENU: draggable transform. BUILDER: no transform (the right rail
+                // is pinned, not dragged — see the drag/clearance reconciliation).
+                style={
+                  useLegacyChrome
+                    ? {
+                        transform: `translateX(calc(-50% + ${toolbarOffset.x}px)) translateY(${toolbarOffset.y}px)`,
+                      }
+                    : undefined
+                }
+                aria-label={`${toolbarTargetLabel} tools`}
+                data-page-editor-floating-toolbar="true"
+                data-page-editor-toolbar-collapsed={toolbarCollapsed ? "true" : "false"}
+                // Drag-state hook only exists on the legacy (menu) draggable panel.
+                data-page-editor-toolbar-dragging={
+                  useLegacyChrome ? (toolbarDragging ? "true" : "false") : undefined
+                }
               >
+                {/*
+                Head row owns identity (name + variant chip + editing-scope
+                pill) on the left and the right-aligned action cluster; the
+                panel category icons live on their own second row so they can
+                never collide with the scope pill (owner finding #3). The
+                builder rail re-stacks the head vertically to fit 340px.
+              */}
                 <div
-                  className="flex shrink-0 items-start justify-between gap-2 border-b border-white/10 px-3 py-2"
-                  data-page-editor-subpanel-header="true"
+                  className={
+                    useLegacyChrome ? "flex flex-wrap items-center gap-2" : "flex flex-col gap-2"
+                  }
+                  data-page-editor-toolbar-row="head"
                 >
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
-                      {hostAppearancePanel?.label ?? "Appearance"}
-                    </p>
-                    {hostAppearancePanel ? (
-                      <p className="truncate text-[11px] text-slate-400">
-                        {hostAppearancePanel.description}
-                      </p>
+                  {useLegacyChrome ? (
+                    <ToolbarIconButton
+                      tooltip={toolbarActionTooltips.drag}
+                      onPointerDown={startToolbarDrag}
+                    >
+                      <GripVertical className="h-4 w-4" />
+                    </ToolbarIconButton>
+                  ) : (
+                    <ToolbarIconButton
+                      tooltip={toolbarActionTooltips.hidePanel}
+                      onClick={() => setPanelOpen(false)}
+                    >
+                      <PanelRight className="h-4 w-4" />
+                    </ToolbarIconButton>
+                  )}
+                  <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
+                    <PanelTop className={`h-4 w-4 ${panelTokens.label}`} />
+                    <span className="truncate text-sm font-semibold">{toolbarTargetLabel}</span>
+                    <span
+                      className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase ${panelTokens.chip}`}
+                    >
+                      {toolbarSelectionMeta}
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${panelTokens.scopePill}`}
+                      data-page-editor-editing-scope={device}
+                    >
+                      {device === "desktop"
+                        ? `Editing: ${deviceScopeReadout("desktop")} (base)`
+                        : `Editing: ${deviceScopeReadout(device)} (overrides)`}
+                    </span>
+                  </div>
+                  <div
+                    className="ml-auto flex shrink-0 items-center gap-1"
+                    data-page-editor-toolbar-actions="true"
+                  >
+                    <ToolbarIconButton
+                      tooltip={
+                        toolbarCollapsed
+                          ? toolbarActionTooltips.expand
+                          : toolbarActionTooltips.collapse
+                      }
+                      onClick={() => setToolbarCollapsed((collapsed) => !collapsed)}
+                    >
+                      {toolbarCollapsed ? (
+                        <Maximize2 className="h-4 w-4" />
+                      ) : (
+                        <Minimize2 className="h-4 w-4" />
+                      )}
+                    </ToolbarIconButton>
+                    {!toolbarCollapsed ? (
+                      <>
+                        {/* Undo/Redo live in the panel only for the legacy (menu)
+                        chrome; the builder relocates them to the sub-toolbar. */}
+                        {useLegacyChrome ? (
+                          <>
+                            <ToolbarIconButton
+                              tooltip={toolbarActionTooltips.undo}
+                              disabled={!canUndoEditorChange}
+                              onClick={undoEditorChange}
+                            >
+                              <Undo2 className="h-4 w-4" />
+                            </ToolbarIconButton>
+                            <ToolbarIconButton
+                              tooltip={toolbarActionTooltips.redo}
+                              disabled={!canRedoEditorChange}
+                              onClick={redoEditorChange}
+                            >
+                              <Redo2 className="h-4 w-4" />
+                            </ToolbarIconButton>
+                          </>
+                        ) : null}
+                        <ToolbarIconButton
+                          tooltip={toolbarActionTooltips.copySelection}
+                          onClick={() => void copySelectedFragment()}
+                        >
+                          <Clipboard className="h-4 w-4" />
+                        </ToolbarIconButton>
+                        <ToolbarIconButton
+                          tooltip={toolbarActionTooltips.pasteSelection}
+                          onClick={() => void pasteClipboardFragment()}
+                        >
+                          <ClipboardPaste className="h-4 w-4" />
+                        </ToolbarIconButton>
+                        {verticalBlockMoveAvailable ? (
+                          <>
+                            <ToolbarIconButton
+                              tooltip={
+                                selectedBlock
+                                  ? sectionColumnMoveActive
+                                    ? toolbarActionTooltips.moveBlockUpColumn
+                                    : verticalBlockMoveStep > 1
+                                      ? toolbarActionTooltips.moveBlockUpRow
+                                      : toolbarActionTooltips.moveBlockUp
+                                  : toolbarActionTooltips.moveSectionUp
+                              }
+                              onClick={() =>
+                                selectedBlock
+                                  ? sectionColumnMoveActive
+                                    ? moveSelectedBlockWithinColumnStack(-1)
+                                    : moveSelectedBlockBy(-verticalBlockMoveStep)
+                                  : moveSelectedSection(-1)
+                              }
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </ToolbarIconButton>
+                            <ToolbarIconButton
+                              tooltip={
+                                selectedBlock
+                                  ? sectionColumnMoveActive
+                                    ? toolbarActionTooltips.moveBlockDownColumn
+                                    : verticalBlockMoveStep > 1
+                                      ? toolbarActionTooltips.moveBlockDownRow
+                                      : toolbarActionTooltips.moveBlockDown
+                                  : toolbarActionTooltips.moveSectionDown
+                              }
+                              onClick={() =>
+                                selectedBlock
+                                  ? sectionColumnMoveActive
+                                    ? moveSelectedBlockWithinColumnStack(1)
+                                    : moveSelectedBlockBy(verticalBlockMoveStep)
+                                  : moveSelectedSection(1)
+                              }
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </ToolbarIconButton>
+                          </>
+                        ) : null}
+                        {selectedBlock && horizontalBlockMoveAvailable ? (
+                          <>
+                            <ToolbarIconButton
+                              tooltip={
+                                horizontalMoveSetsColumn
+                                  ? toolbarActionTooltips.moveBlockLeftColumn
+                                  : toolbarActionTooltips.moveBlockLeft
+                              }
+                              onClick={() => moveSelectedBlockHorizontally(-1)}
+                            >
+                              <ArrowLeft className="h-4 w-4" />
+                            </ToolbarIconButton>
+                            <ToolbarIconButton
+                              tooltip={
+                                horizontalMoveSetsColumn
+                                  ? toolbarActionTooltips.moveBlockRightColumn
+                                  : toolbarActionTooltips.moveBlockRight
+                              }
+                              onClick={() => moveSelectedBlockHorizontally(1)}
+                            >
+                              <ArrowRight className="h-4 w-4" />
+                            </ToolbarIconButton>
+                          </>
+                        ) : null}
+                        {selectedBlock ? (
+                          // Owner finding #7 (round 3): a bare Columns2 glyph read
+                          // as a layout toggle, not an insert action — the icon
+                          // now carries an explicit "+" badge so the action is
+                          // discoverable without hovering for the tooltip.
+                          <ToolbarIconButton
+                            tooltip={toolbarActionTooltips.addBlockBeside}
+                            disabled={!canAddBlockBeside}
+                            onClick={openCommandPaletteBesideSelected}
+                          >
+                            <span className="relative inline-flex" aria-hidden="true">
+                              <Columns2 className="h-4 w-4" />
+                              <Plus
+                                className="absolute -right-1.5 -top-1.5 h-2.5 w-2.5 rounded-full bg-slate-950"
+                                strokeWidth={3}
+                              />
+                            </span>
+                          </ToolbarIconButton>
+                        ) : null}
+                        <ToolbarIconButton
+                          tooltip={
+                            selectedBlock
+                              ? toolbarActionTooltips.duplicateBlock
+                              : toolbarActionTooltips.duplicateSection
+                          }
+                          onClick={
+                            selectedBlock ? duplicateSelectedBlock : duplicateSelectedSection
+                          }
+                        >
+                          <Copy className="h-4 w-4" />
+                        </ToolbarIconButton>
+                        <ToolbarIconButton
+                          tooltip={
+                            selectedBlock
+                              ? toolbarActionTooltips.deleteBlock
+                              : toolbarActionTooltips.deleteSection
+                          }
+                          onClick={requestDeleteSelection}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </ToolbarIconButton>
+                      </>
                     ) : null}
                   </div>
-                  <ToolbarIconButton
-                    tooltip={toolbarActionTooltips.closePanel}
-                    onClick={() => setActivePanel(null)}
+                </div>
+                {!toolbarCollapsed ? (
+                  <div
+                    className={`mt-1 flex flex-wrap items-center gap-1 border-t pt-1 ${panelTokens.headerBorder}`}
+                    data-page-editor-toolbar-row="panels"
                   >
-                    <X className="h-4 w-4" />
-                  </ToolbarIconButton>
-                </div>
-                <div
-                  className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
-                  data-page-editor-subpanel-scroll="true"
-                >
-                  {hostAppearancePanel?.render({
-                    document: pageDocument,
-                    device,
-                    updateDocument: setDocumentDraft,
-                  })}
-                </div>
+                    {visibleToolbarPanelOptions.map(({ panel, label, description, Icon }) => (
+                      <ToolbarIconButton
+                        key={panel}
+                        tooltip={{ label: `${label} panel`, description }}
+                        active={activeToolbarPanel === panel}
+                        expanded={activeToolbarPanel === panel}
+                        panelId={panel}
+                        onClick={() =>
+                          setActivePanel((current) => (current === panel ? null : panel))
+                        }
+                      >
+                        <Icon className="h-4 w-4" />
+                      </ToolbarIconButton>
+                    ))}
+                  </div>
+                ) : null}
+                {!toolbarCollapsed && activeToolbarPanel === "host-appearance" ? (
+                  // Host-owned appearance panel (TASK-458-03): same subpanel
+                  // chrome as the registry panels, content rendered by the host
+                  // through the shared control primitives.
+                  <div
+                    className={`mt-2 flex max-h-[min(72vh,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg ${panelTokens.subPanelBg}`}
+                    data-page-editor-toolbar-panel="host-appearance"
+                    data-page-editor-subpanel="viewport-safe"
+                    role="region"
+                    aria-label={`${hostAppearancePanel?.label ?? "Appearance"} toolbar panel`}
+                  >
+                    <div
+                      className={`flex shrink-0 items-start justify-between gap-2 border-b px-3 py-2 ${panelTokens.subHeaderBorder}`}
+                      data-page-editor-subpanel-header="true"
+                    >
+                      <div className="min-w-0">
+                        <p
+                          className={`text-xs font-semibold uppercase tracking-wide ${panelTokens.subTitle}`}
+                        >
+                          {hostAppearancePanel?.label ?? "Appearance"}
+                        </p>
+                        {hostAppearancePanel ? (
+                          <p className={`truncate text-[11px] ${panelTokens.subDesc}`}>
+                            {hostAppearancePanel.description}
+                          </p>
+                        ) : null}
+                      </div>
+                      <ToolbarIconButton
+                        tooltip={toolbarActionTooltips.closePanel}
+                        onClick={() => setActivePanel(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </ToolbarIconButton>
+                    </div>
+                    <div
+                      className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
+                      data-page-editor-subpanel-scroll="true"
+                    >
+                      {hostAppearancePanel?.render({
+                        document: pageDocument,
+                        device,
+                        updateDocument: setDocumentDraft,
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+                {!toolbarCollapsed &&
+                activeToolbarPanel &&
+                activeToolbarPanel !== "host-appearance" ? (
+                  <PageEditorColorPaletteContext.Provider value={sitePalette}>
+                    <ToolbarSubpanel
+                      panel={activeToolbarPanel}
+                      device={device}
+                      section={resolvedSelectedSection}
+                      baseSection={selectedSection}
+                      block={toolbarBlockTarget}
+                      baseBlock={
+                        selectedBlockId ? selectedBlock : (selectedSection.blocks[0] ?? null)
+                      }
+                      hasBlockSelection={Boolean(selectedBlockId)}
+                      onSectionControlChange={updateSelectedSectionControl}
+                      onSectionVariantChange={updateSelectedSectionVariant}
+                      onSectionStyle={(patch) => updateSectionGroup("style", patch)}
+                      onSectionVisibility={(patch) => updateSectionGroup("visibility", patch)}
+                      onBlockControlChange={updateSelectedBlockControl}
+                      onClearOverride={(path) => {
+                        if (device === "desktop") return;
+                        updateSelectedSection((section) =>
+                          clearResponsiveOverride(section, device, path)
+                        );
+                      }}
+                      onClearBlockOverride={clearSelectedBlockOverride}
+                      onResponsiveVisibleChange={setResponsiveTargetVisible}
+                      onResponsiveOverrideReset={clearResponsiveTargetOverride}
+                      onAddBlock={openCommandPalette}
+                      onClose={() => setActivePanel(null)}
+                    />
+                  </PageEditorColorPaletteContext.Provider>
+                ) : null}
               </div>
-            ) : null}
-            {!toolbarCollapsed && activeToolbarPanel && activeToolbarPanel !== "host-appearance" ? (
-              <PageEditorColorPaletteContext.Provider value={sitePalette}>
-                <ToolbarSubpanel
-                  panel={activeToolbarPanel}
-                  device={device}
-                  section={resolvedSelectedSection}
-                  baseSection={selectedSection}
-                  block={toolbarBlockTarget}
-                  baseBlock={selectedBlockId ? selectedBlock : (selectedSection.blocks[0] ?? null)}
-                  hasBlockSelection={Boolean(selectedBlockId)}
-                  onSectionControlChange={updateSelectedSectionControl}
-                  onSectionVariantChange={updateSelectedSectionVariant}
-                  onSectionStyle={(patch) => updateSectionGroup("style", patch)}
-                  onSectionVisibility={(patch) => updateSectionGroup("visibility", patch)}
-                  onBlockControlChange={updateSelectedBlockControl}
-                  onClearOverride={(path) => {
-                    if (device === "desktop") return;
-                    updateSelectedSection((section) =>
-                      clearResponsiveOverride(section, device, path)
-                    );
-                  }}
-                  onClearBlockOverride={clearSelectedBlockOverride}
-                  onResponsiveVisibleChange={setResponsiveTargetVisible}
-                  onResponsiveOverrideReset={clearResponsiveTargetOverride}
-                  onAddBlock={openCommandPalette}
-                  onClose={() => setActivePanel(null)}
-                />
-              </PageEditorColorPaletteContext.Provider>
-            ) : null}
-          </div>
-        ) : null}
+            </EditorControlToneContext.Provider>
+          ) : null}
 
-        {!panelOpen && hasFloatingPanelSelection ? (
-          // Reopen affordance when the sole control panel is hidden (mirrors the
-          // shared CanvasEditor "Show panel" button). Restores panelOpen only.
-          <button
-            type="button"
-            onClick={() => setPanelOpen(true)}
-            className="absolute bottom-6 right-6 z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary"
-            aria-label="Show panel"
-          >
-            <SlidersHorizontal className="size-3.5" /> Show panel
-          </button>
-        ) : null}
+          {!panelOpen && hasFloatingPanelSelection ? (
+            // Reopen affordance when the sole control panel is hidden (mirrors the
+            // shared CanvasEditor "Show panel" button). Restores panelOpen only.
+            // MENU keeps it bottom-right (mirrors the legacy bottom panel); the
+            // builder moves it top-right (mirrors the right-pinned rail).
+            <button
+              type="button"
+              onClick={() => setPanelOpen(true)}
+              className={`absolute z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary ${
+                useLegacyChrome ? "bottom-6 right-6" : "right-4 top-4"
+              }`}
+              aria-label="Show panel"
+            >
+              <SlidersHorizontal className="size-3.5" /> Show panel
+            </button>
+          ) : null}
+        </BuilderCanvasRegion>
 
         {commandOpen ? (
           <PageEditorCommandPalette
@@ -3364,24 +3648,31 @@ const ToolbarSubpanel = ({
     Boolean(primaryBlock) && (panel === "content" || (hasBlockSelection && panel !== "responsive"));
   const sectionOverride = readSectionBreakpointOverride(baseSection, device);
   const panelMeta = toolbarPanelOptions.find((option) => option.panel === panel);
+  const tone = useEditorControlTone();
+  const isLight = tone === "light";
+  const subPanelBgClass = isLight ? "bg-muted/40 text-foreground" : "bg-white/5 text-slate-100";
+  const subHeaderBorderClass = isLight ? "border-border" : "border-white/10";
+  const subTitleClass = isLight ? "text-foreground" : "text-slate-200";
+  const subDescClass = isLight ? "text-muted-foreground" : "text-slate-400";
+  const addBlockButtonClass = editorButtonClassFor(tone);
   return (
     <div
-      className="mt-2 flex max-h-[min(72vh,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg bg-white/5 text-slate-100"
+      className={`mt-2 flex max-h-[min(72vh,calc(100dvh-8rem))] flex-col overflow-hidden rounded-lg ${subPanelBgClass}`}
       data-page-editor-toolbar-panel={panel}
       data-page-editor-subpanel="viewport-safe"
       role="region"
       aria-label={`${panel} toolbar panel`}
     >
       <div
-        className="flex shrink-0 items-start justify-between gap-2 border-b border-white/10 px-3 py-2"
+        className={`flex shrink-0 items-start justify-between gap-2 border-b px-3 py-2 ${subHeaderBorderClass}`}
         data-page-editor-subpanel-header="true"
       >
         <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+          <p className={`text-xs font-semibold uppercase tracking-wide ${subTitleClass}`}>
             {panelMeta?.label ?? panel}
           </p>
           {panelMeta ? (
-            <p className="truncate text-[11px] text-slate-400">{panelMeta.description}</p>
+            <p className={`truncate text-[11px] ${subDescClass}`}>{panelMeta.description}</p>
           ) : null}
         </div>
         <ToolbarIconButton tooltip={toolbarActionTooltips.closePanel} onClick={onClose}>
@@ -3412,7 +3703,7 @@ const ToolbarSubpanel = ({
                 <Button
                   type="button"
                   variant="outline"
-                  className={editorDarkButtonClass}
+                  className={addBlockButtonClass}
                   onClick={onAddBlock}
                 >
                   <Plus className="h-4 w-4" />
@@ -3492,14 +3783,14 @@ const ToolbarSubpanel = ({
         ) : null}
         {!shouldRenderBlockControls && panel === "content" ? (
           <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-            <p className="flex items-center text-sm text-slate-400">
+            <p className={`flex items-center text-sm ${subDescClass}`}>
               {primaryBlock ? getBlockDisplayLabel(primaryBlock) : "No block selected"}
             </p>
             <div className="flex items-end">
               <Button
                 type="button"
                 variant="outline"
-                className={editorDarkButtonClass}
+                className={addBlockButtonClass}
                 onClick={onAddBlock}
               >
                 <Plus className="h-4 w-4" />
@@ -3553,6 +3844,9 @@ const ResponsivePanelContent = ({
   onResponsiveVisibleChange: (breakpoint: PageBreakpoint, visible: boolean) => void;
   onResponsiveOverrideReset: (breakpoint: PageOverrideBreakpoint, path: readonly string[]) => void;
 }) => {
+  const tone = useEditorControlTone();
+  const isLight = tone === "light";
+  const mutedText = isLight ? "text-muted-foreground" : "text-slate-400";
   const target = baseBlock ?? baseSection;
   const overrideSource = baseBlock
     ? readBlockBreakpointOverride(baseBlock, device)
@@ -3570,14 +3864,20 @@ const ResponsivePanelContent = ({
   return (
     <div className="space-y-4" data-page-editor-responsive-panel={baseBlock ? "block" : "section"}>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-sm text-slate-400">
+        <p className={`text-sm ${mutedText}`}>
           {device === "desktop"
             ? `Editing ${deviceScopeReadout("desktop")} — the base every breakpoint inherits.`
             : `Editing ${deviceScopeReadout(device)} — edits create ${device} overrides.`}
         </p>
         <span
           className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
-            hasTargetOverride ? "bg-sky-400/20 text-sky-200" : "bg-white/10 text-slate-400"
+            hasTargetOverride
+              ? isLight
+                ? editorPanelOptionActiveClass
+                : "bg-sky-400/20 text-sky-200"
+              : isLight
+                ? "bg-muted text-muted-foreground"
+                : "bg-white/10 text-slate-400"
           }`}
           data-page-editor-responsive-target-state={hasTargetOverride ? "override" : "inherited"}
         >
@@ -3637,16 +3937,20 @@ const ResponsivePanelContent = ({
         />
       )}
       <div className="space-y-2" data-page-editor-responsive-override-list={device}>
-        <p className="text-xs font-semibold uppercase tracking-wide text-slate-200">
+        <p
+          className={`text-xs font-semibold uppercase tracking-wide ${
+            isLight ? "text-foreground" : "text-slate-200"
+          }`}
+        >
           Per-field overrides
           {overrideDevice ? ` (${overrideCount})` : ""}
         </p>
         {overrideDevice === null ? (
-          <p className="text-xs text-slate-400">
+          <p className={`text-xs ${mutedText}`}>
             Desktop is the base. Switch to tablet or mobile to review or reset per-field overrides.
           </p>
         ) : entries.length === 0 ? (
-          <p className="text-xs text-slate-400">This selection exposes no responsive fields.</p>
+          <p className={`text-xs ${mutedText}`}>This selection exposes no responsive fields.</p>
         ) : (
           <ul className="space-y-1">
             {entries.map(({ control, state }) => (
@@ -3656,7 +3960,11 @@ const ResponsivePanelContent = ({
                 data-page-editor-override-entry={control.id}
                 data-page-editor-override-state={state}
               >
-                <span className="min-w-0 truncate text-xs text-slate-300">{control.label}</span>
+                <span
+                  className={`min-w-0 truncate text-xs ${isLight ? "text-muted-foreground" : "text-slate-300"}`}
+                >
+                  {control.label}
+                </span>
                 <span className="flex shrink-0 items-center gap-2">
                   <ResponsiveStateBadge state={state} device={device} />
                   {state === "override" ? (
@@ -3687,19 +3995,24 @@ const ResponsivePanelResetButton = ({
   label: string;
   entryId?: string;
   onClick: () => void;
-}) => (
-  <button
-    type="button"
-    aria-label={`Reset ${label} to inherited`}
-    className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${editorControlFocusClass}`}
-    data-page-editor-responsive-reset={label}
-    data-page-editor-override-reset={entryId}
-    onClick={onClick}
-  >
-    <RotateCcw className="h-3 w-3" />
-    Reset
-  </button>
-);
+}) => {
+  const tone = useEditorControlTone();
+  return (
+    <button
+      type="button"
+      aria-label={`Reset ${label} to inherited`}
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold transition-colors ${editorGhostButtonClassFor(
+        tone
+      )} ${editorControlFocusClassFor(tone)}`}
+      data-page-editor-responsive-reset={label}
+      data-page-editor-override-reset={entryId}
+      onClick={onClick}
+    >
+      <RotateCcw className="h-3 w-3" />
+      Reset
+    </button>
+  );
+};
 
 const SectionRegistryControlField = ({
   section,
@@ -4191,6 +4504,7 @@ const ToolbarGradientField = ({
   value: string;
   onCommit: (value: string) => void;
 }) => {
+  const tone = useEditorControlTone();
   const colorPalette = usePageEditorColorPalette();
   const sourceValue = value.trim();
   const [draftState, setDraftState] = useState(() => ({
@@ -4240,7 +4554,9 @@ const ToolbarGradientField = ({
         {draft.stops.map((stop, index) => (
           <div
             key={stop.id}
-            className="grid gap-2 rounded-md border border-white/10 bg-white/5 p-2"
+            className={`grid gap-2 rounded-md p-2 ${
+              tone === "light" ? editorPanelRowClass : "border border-white/10 bg-white/5"
+            }`}
             data-page-editor-gradient-stop={index + 1}
           >
             <div className="flex items-start justify-between gap-2">
@@ -4258,7 +4574,7 @@ const ToolbarGradientField = ({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className={editorDarkGhostButtonClass}
+                  className={editorGhostButtonClassFor(tone)}
                   onClick={() =>
                     commitDraft({
                       ...draft,
@@ -4286,7 +4602,7 @@ const ToolbarGradientField = ({
         type="button"
         variant="outline"
         size="sm"
-        className={editorDarkButtonClass}
+        className={editorButtonClassFor(tone)}
         disabled={draft.stops.length >= 6}
         onClick={() => {
           const lastPosition = draft.stops.at(-1)?.position ?? 100;
@@ -4497,16 +4813,21 @@ const UnsupportedControlNotice = ({
 }: {
   label: string;
   model: Extract<PageEditorControlUiModel, { kind: "unsupported" }>;
-}) => (
-  <div
-    className="grid gap-1"
-    data-page-editor-control="unsupported"
-    data-page-editor-control-reason={model.reason}
-  >
-    <span className={editorControlLabelClass}>{label}</span>
-    <p className="text-xs text-slate-400">This value cannot be edited here.</p>
-  </div>
-);
+}) => {
+  const tone = useEditorControlTone();
+  return (
+    <div
+      className="grid gap-1"
+      data-page-editor-control="unsupported"
+      data-page-editor-control-reason={model.reason}
+    >
+      <span className={editorControlLabelClassFor(tone)}>{label}</span>
+      <p className={`text-xs ${tone === "light" ? "text-muted-foreground" : "text-slate-400"}`}>
+        This value cannot be edited here.
+      </p>
+    </div>
+  );
+};
 
 /**
  * Bridges URL-valued Page v2 media fields (image/video sources, card image,
@@ -4526,6 +4847,7 @@ const ToolbarMediaUrlField = ({
   accept?: readonly string[];
   onChange: (url: string | null) => void;
 }) => {
+  const tone = useEditorControlTone();
   const [assets, setAssets] = useState<readonly MediaRecord[] | null>(() => getCachedMedia());
   const requestRef = useRef(0);
   const selectedAssetId = value ? (assets?.find((asset) => asset.url === value)?.id ?? null) : null;
@@ -4575,15 +4897,21 @@ const ToolbarMediaUrlField = ({
       />
       {showsExternalValue ? (
         <div
-          className="flex items-center justify-between gap-2 rounded-md bg-white/10 px-2 py-1"
+          className={`flex items-center justify-between gap-2 rounded-md px-2 py-1 ${
+            tone === "light" ? "bg-muted/40" : "bg-white/10"
+          }`}
           data-page-editor-media-external={label}
         >
-          <span className="truncate text-xs text-slate-300">{value}</span>
+          <span
+            className={`truncate text-xs ${tone === "light" ? "text-muted-foreground" : "text-slate-300"}`}
+          >
+            {value}
+          </span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className={editorDarkGhostButtonClass}
+            className={editorGhostButtonClassFor(tone)}
             onClick={() => onChange(null)}
           >
             Clear
@@ -4602,16 +4930,26 @@ const ToolbarTextField = ({
   label: string;
   value: string;
   onChange: (value: string) => void;
-}) => (
-  <label className={`grid gap-1 ${editorControlLabelClass}`} data-page-editor-control="text">
-    {label}
-    <input
-      className={`rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-100 placeholder:text-slate-500 ${editorControlFocusClass}`}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-    />
-  </label>
-);
+}) => {
+  const tone = useEditorControlTone();
+  return (
+    <label
+      className={`grid gap-1 ${editorControlLabelClassFor(tone)}`}
+      data-page-editor-control="text"
+    >
+      {label}
+      <input
+        className={`rounded-md px-2 py-1.5 text-sm font-normal normal-case tracking-normal ${
+          tone === "light"
+            ? editorPanelInputClass
+            : "border border-white/15 bg-white/10 text-slate-100 placeholder:text-slate-500"
+        } ${editorControlFocusClassFor(tone)}`}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+};
 
 const ToolbarSelectField = ({
   label,
@@ -4625,22 +4963,32 @@ const ToolbarSelectField = ({
   options: readonly string[];
   optionLabels?: Readonly<Record<string, string>>;
   onChange: (value: string) => void;
-}) => (
-  <label className={`grid gap-1 ${editorControlLabelClass}`} data-page-editor-control="select">
-    {label}
-    <select
-      className={`rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm font-normal normal-case tracking-normal text-slate-100 ${editorControlFocusClass}`}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
+}) => {
+  const tone = useEditorControlTone();
+  return (
+    <label
+      className={`grid gap-1 ${editorControlLabelClassFor(tone)}`}
+      data-page-editor-control="select"
     >
-      {options.map((option) => (
-        <option key={option} value={option}>
-          {optionLabels?.[option] ?? option}
-        </option>
-      ))}
-    </select>
-  </label>
-);
+      {label}
+      <select
+        className={`rounded-md px-2 py-1.5 text-sm font-normal normal-case tracking-normal ${
+          tone === "light"
+            ? editorPanelSelectClass
+            : "border border-white/15 bg-white/10 text-slate-100"
+        } ${editorControlFocusClassFor(tone)}`}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      >
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {optionLabels?.[option] ?? option}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+};
 
 type ResponsiveBadgeState = "base" | "override" | "inherited";
 
@@ -4666,24 +5014,36 @@ const ResponsiveStateBadge = ({
   state: ResponsiveBadgeState;
   device: PageBreakpoint;
   description?: string;
-}) => (
-  <Tooltip>
-    <TooltipTrigger asChild>
-      <span
-        tabIndex={0}
-        className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${editorControlFocusClass} ${
-          state === "override" ? "bg-sky-400/20 text-sky-200" : "bg-white/10 text-slate-400"
-        }`}
-        data-page-editor-responsive-badge={state}
-      >
-        {state === "base" ? "Base" : state === "override" ? "Override" : "Inherited"}
-      </span>
-    </TooltipTrigger>
-    <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
-      {description ?? responsiveBadgeDescription(state, device)}
-    </TooltipContent>
-  </Tooltip>
-);
+}) => {
+  const tone = useEditorControlTone();
+  const isLight = tone === "light";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${editorControlFocusClassFor(
+            tone
+          )} ${
+            state === "override"
+              ? isLight
+                ? editorPanelOptionActiveClass
+                : "bg-sky-400/20 text-sky-200"
+              : isLight
+                ? "bg-muted text-muted-foreground"
+                : "bg-white/10 text-slate-400"
+          }`}
+          data-page-editor-responsive-badge={state}
+        >
+          {state === "base" ? "Base" : state === "override" ? "Override" : "Inherited"}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
+        {description ?? responsiveBadgeDescription(state, device)}
+      </TooltipContent>
+    </Tooltip>
+  );
+};
 
 const ResponsiveControlShell = ({
   device,
@@ -4699,6 +5059,7 @@ const ResponsiveControlShell = ({
   onReset: () => void;
   children: ReactNode;
 }) => {
+  const tone = useEditorControlTone();
   const state: ResponsiveBadgeState =
     device === "desktop" ? "base" : override ? "override" : "inherited";
   return (
@@ -4717,7 +5078,9 @@ const ResponsiveControlShell = ({
               <button
                 type="button"
                 aria-label={label ? `Reset ${label} to inherited` : "Reset to inherited"}
-                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold text-slate-300 transition-colors hover:bg-white/10 hover:text-white ${editorControlFocusClass}`}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold transition-colors ${editorGhostButtonClassFor(
+                  tone
+                )} ${editorControlFocusClassFor(tone)}`}
                 data-page-editor-responsive-reset={label ?? "field"}
                 onClick={onReset}
               >

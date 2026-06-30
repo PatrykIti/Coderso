@@ -1,10 +1,13 @@
 // @vitest-environment happy-dom
 //
 // TASK-479-06-L07: TopBar — light/dark toggle (+ persistence), the D1 dark-recolor
-// gate (real computed --admin-* token flip for button + sidebar + topbar), the
-// profile switcher vs. color-mode toggle as two distinct controls, the user menu
-// (Settings AdminLink resolves, Profile is non-navigating), the command-search
+// gate (real computed --admin-* token flip for button + sidebar + topbar), the user
+// menu (Settings AdminLink resolves, Profile is non-navigating), the command-search
 // trigger, host-provided search override, and Sign out wiring.
+//
+// TASK-495-01: the theme-profile switcher (AdminThemeSwitcher) was removed from the
+// TopBar — only the color-mode toggle remains in the chrome; theme management now
+// lives at sidebar "Visual → Admin UI Theme" (/admin/themes).
 //
 // The Radix DropdownMenu is portal-mounted only when open, so (matching the
 // repo's `users-table` idiom) we mock `@/components/ui/dropdown-menu` to render
@@ -205,12 +208,13 @@ test("dark mode recolors the button + sidebar + topbar chrome (real token flip)"
   }
 });
 
-test("renders the profile switcher AND the light/dark toggle as two distinct controls", () => {
+test("renders the light/dark toggle but no longer the theme-profile switcher", () => {
   const html = renderAdminUi(<TopBar />);
-  // AdminColorModeToggle (light/dark).
+  // AdminColorModeToggle (light/dark) stays in the chrome.
   expect(html).toContain('aria-label="Toggle dark mode"');
-  // AdminThemeSwitcher (profile) — its trigger label and menu heading.
-  expect(html).toContain("Admin UI Theme");
+  // TASK-495-01: AdminThemeSwitcher removed — theme management now lives only at
+  // sidebar "Visual → Admin UI Theme" (/admin/themes), not the top bar.
+  expect(html).not.toContain("Admin UI Theme");
 });
 
 test("user menu renders the Settings AdminLink with a resolved href; no bogus profile route", () => {

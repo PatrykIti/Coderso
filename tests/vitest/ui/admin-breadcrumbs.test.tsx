@@ -2,14 +2,10 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { expect, test, vi } from "vitest";
+import { expect, test } from "vitest";
 
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
 import { TopBar } from "../../../core/admin/ui/shared/TopBar";
-
-vi.mock("@/ui/shared/AdminThemeSwitcher", () => ({
-  AdminThemeSwitcher: () => <div data-testid="admin-theme-switcher" />,
-}));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 

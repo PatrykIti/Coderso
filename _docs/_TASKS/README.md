@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 335 tasks
+- **To Do:** 338 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2729 tasks
 
@@ -125,6 +125,9 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-491 | Integrations Runtime Wiring (GA / Slack / Zapier / Sentry) | Medium | Medium | FEATURE: 4 of 7 integrations are decorative credential stores. Inject the GA tag, dispatch Slack/Zapier, init Sentry, real health checks. 4 subtasks (01–04) + 7 leaves. |
 | TASK-492 | Login Alert Delivery (Email + Webhook) & Recipient Settings | Medium | Small | FEATURE: new-device/location login alerts only write an audit row; add email/webhook delivery + recipient/webhook settings. 3 subtasks (01–03) + 6 leaves. |
 | TASK-493 | SEO: Indexing & Search-Performance Pipeline | Medium | Large | FEATURE: no indexed-pages/search-performance data today. Full pipeline: sitemap submission/status + Google Search Console integration (indexed-pages/impressions/queries). 6 subtasks (01–06) + 11 leaves. |
+| TASK-495 | Page/Template Editor & Top-Bar Prototype-Parity Remediation | Medium | Large | Post-479 UI-only parity: remove the "Soft Violet" theme-name switcher from the global TopBar; for page+page-template editors only (`mode !== "menu"`) drain `topbarActions`, add a PageHeader + page-builder sub-toolbar, and re-dock the dark bottom floating panel to a light right-pinned collapsible rail. Supersedes TASK-479-06-L04 keep-decision; fulfills TASK-479-08-L02 right-dock. 2 subtasks (01–02). |
+| TASK-495-01 | TopBar Theme-Switcher Removal | Medium | Small | Remove `<AdminThemeSwitcher/>` from `TopBar.tsx` (import :25 + mount :218) + update the 2 tests asserting it (and delete a now-dead switcher mock in a 3rd test, `admin-breadcrumbs.test.tsx`); theme management stays at `/admin/themes`. |
+| TASK-495-02 | Page-Template Editor Chrome And Panel Parity | Medium | Large | Gated `mode !== "menu"`: drain `topbarActions`, add PageHeader [Page settings, History, Preview, Save draft, Publish] + page-builder sub-toolbar [status, undo/redo, device, Layers, Panel toggle], re-dock floating panel bottom→right + relight; menu mode keeps the legacy path. |
 | TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
 | TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
 | TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |

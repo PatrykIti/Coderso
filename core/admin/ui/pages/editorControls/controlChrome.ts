@@ -1,3 +1,30 @@
+import { createContext, useContext } from "react";
+
+/**
+ * Tone of the surface the editor control primitives render on.
+ *
+ * - `"dark"` — the legacy dark `bg-slate-950` bottom-center floating toolbar
+ *   (the `menu` visual-designer host keeps this).
+ * - `"light"` — the right-pinned `bg-popover` rail used by the page /
+ *   page-template builder chrome (TASK-495-02).
+ *
+ * The tone is provided through context so the full registry-control pipeline
+ * (`ToolbarSubpanel` → every leaf control) relights without threading a prop
+ * through every intermediate wrapper. Each primitive may still accept an
+ * explicit `tone` prop that overrides the context (used by the per-primitive
+ * tests); the context default is `"dark"` so the menu branch and any bare
+ * mount stay on the legacy dark tokens.
+ */
+export type EditorControlTone = "dark" | "light";
+
+export const EditorControlToneContext = createContext<EditorControlTone>("dark");
+
+/** Resolve the effective tone: an explicit prop wins, else the context. */
+export const useEditorControlTone = (tone?: EditorControlTone): EditorControlTone => {
+  const contextTone = useContext(EditorControlToneContext);
+  return tone ?? contextTone;
+};
+
 /**
  * Shared Tailwind chrome for the page editor floating-toolbar control
  * primitives. The floating toolbar is a dark `bg-slate-950` surface, so these
@@ -60,3 +87,71 @@ export const editorCanvasGhostTileCompactClass =
  */
 export const editorCanvasGhostBesideHandleClass =
   "absolute right-0 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-dashed border-slate-300 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900";
+
+/* -------------------------------------------------------------------------- *
+ * Light (`tone="light"`) siblings — TASK-495-02
+ *
+ * The page / page-template builder docks the SAME control surface into a light
+ * `bg-popover` right rail. Every dark token above (slate-on-dark fills,
+ * white/NN overlays, `ring-white/60`, `accent-white`) renders illegible /
+ * invisible on that light surface, so each token KIND below has a light
+ * sibling. The dark constants stay for the `menu` legacy branch.
+ * -------------------------------------------------------------------------- */
+
+// Buttons / text.
+export const editorPanelButtonClass =
+  "border border-border bg-muted text-foreground shadow-none hover:bg-muted/70";
+export const editorPanelGhostButtonClass =
+  "text-muted-foreground hover:bg-muted hover:text-foreground";
+export const editorPanelLabelClass =
+  "text-[10px] font-semibold uppercase tracking-wide text-muted-foreground";
+export const editorPanelValueClass = "text-xs font-semibold tabular-nums text-foreground";
+
+// Focus ring (replaces `editorControlFocusClass`'s `ring-white/60` on light).
+export const editorPanelFocusClass = "outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
+// Inputs / selects (ColorSwatch hex, ListItems/FacetList inputs + select,
+// Combobox trigger + search).
+export const editorPanelInputClass =
+  "border border-border bg-background text-foreground placeholder:text-muted-foreground";
+export const editorPanelSubInputClass =
+  "border border-border bg-muted/40 text-foreground placeholder:text-muted-foreground";
+export const editorPanelSelectClass =
+  "border border-border bg-background text-foreground [&>option]:bg-popover";
+
+// Swatch borders (`border-white/15` → light).
+export const editorPanelSwatchBorderClass = "border-border hover:border-foreground/40";
+
+// Row container (FacetList / gradient stop `bg-white/5 border-white/10` → light).
+export const editorPanelRowClass = "border border-border bg-muted/40";
+
+// Segmented control (track / active / idle).
+export const editorPanelSegmentTrackClass = "bg-muted";
+export const editorPanelSegmentActiveClass = "bg-background text-foreground shadow-sm";
+export const editorPanelSegmentIdleClass =
+  "text-muted-foreground hover:bg-muted hover:text-foreground";
+
+// Combobox dropdown surface + option states.
+export const editorPanelDropdownClass = "border border-border bg-popover shadow-pop";
+export const editorPanelOptionActiveClass = "bg-primary-soft text-primary-soft-foreground";
+export const editorPanelOptionFocusClass = "bg-muted text-foreground";
+export const editorPanelOptionIdleClass = "text-foreground hover:bg-muted hover:text-foreground";
+
+// Toggle off-track (`bg-white/20` → light).
+export const editorPanelToggleOffClass = "bg-muted-foreground/30";
+
+// Slider range accent (`accent-white` → light).
+export const editorPanelSliderAccentClass = "accent-primary";
+
+/* Tone-aware getters used by the leaf primitives so each call site stays a
+ * single expression instead of a scattered ternary. */
+export const editorControlLabelClassFor = (tone: EditorControlTone): string =>
+  tone === "light" ? editorPanelLabelClass : editorControlLabelClass;
+export const editorControlValueClassFor = (tone: EditorControlTone): string =>
+  tone === "light" ? editorPanelValueClass : editorControlValueClass;
+export const editorControlFocusClassFor = (tone: EditorControlTone): string =>
+  tone === "light" ? editorPanelFocusClass : editorControlFocusClass;
+export const editorButtonClassFor = (tone: EditorControlTone): string =>
+  tone === "light" ? editorPanelButtonClass : editorDarkButtonClass;
+export const editorGhostButtonClassFor = (tone: EditorControlTone): string =>
+  tone === "light" ? editorPanelGhostButtonClass : editorDarkGhostButtonClass;

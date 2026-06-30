@@ -2,10 +2,14 @@ import { Plus, Trash2 } from "lucide-react";
 
 import { createPageListItem, type PageListItemV2 } from "../../../../services/pages/pageDocumentV2";
 import {
-  editorControlFocusClass,
-  editorControlLabelClass,
-  editorDarkButtonClass,
-  editorDarkGhostButtonClass,
+  editorButtonClassFor,
+  editorControlFocusClassFor,
+  editorControlLabelClassFor,
+  editorGhostButtonClassFor,
+  editorPanelInputClass,
+  editorPanelSubInputClass,
+  useEditorControlTone,
+  type EditorControlTone,
 } from "./controlChrome";
 
 export type ListItemsControlProps = {
@@ -15,6 +19,8 @@ export type ListItemsControlProps = {
   /** Emits the full next items array in the owner stored shapes. */
   onChange: (items: PageListItemV2[]) => void;
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
 };
 
 type ListItemRow = { label: string; href: string };
@@ -32,7 +38,18 @@ export const ListItemsControl = ({
   value,
   onChange,
   disabled = false,
+  tone,
 }: ListItemsControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
+  const focusClass = editorControlFocusClassFor(resolvedTone);
+  const inputClass =
+    resolvedTone === "light"
+      ? editorPanelInputClass
+      : "border border-white/15 bg-white/10 text-slate-100 placeholder:text-slate-500";
+  const subInputClass =
+    resolvedTone === "light"
+      ? editorPanelSubInputClass
+      : "border border-white/15 bg-white/5 text-slate-200 placeholder:text-slate-500";
   const rows: ListItemRow[] = value.map((item) => {
     if (typeof item === "string") return { label: item, href: "" };
     if (item && typeof item === "object") {
@@ -55,7 +72,7 @@ export const ListItemsControl = ({
 
   return (
     <div className="grid gap-1.5" data-page-editor-control="list-items">
-      <span className={editorControlLabelClass}>{label}</span>
+      <span className={editorControlLabelClassFor(resolvedTone)}>{label}</span>
       <div className="grid gap-1.5">
         {rows.map((row, index) => (
           <div
@@ -67,7 +84,7 @@ export const ListItemsControl = ({
           >
             <div className="grid min-w-0 flex-1 gap-1">
               <input
-                className={`w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 ${editorControlFocusClass}`}
+                className={`w-full rounded-md px-2 py-1.5 text-sm ${inputClass} ${focusClass}`}
                 value={row.label}
                 placeholder={`Item ${index + 1}`}
                 aria-label={`Item ${index + 1} label`}
@@ -75,7 +92,7 @@ export const ListItemsControl = ({
                 onChange={(event) => patchRow(index, { label: event.target.value })}
               />
               <input
-                className={`w-full rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs text-slate-200 placeholder:text-slate-500 ${editorControlFocusClass}`}
+                className={`w-full rounded-md px-2 py-1 text-xs ${subInputClass} ${focusClass}`}
                 value={row.href}
                 placeholder="Link URL (optional)"
                 aria-label={`Item ${index + 1} link URL`}
@@ -85,7 +102,9 @@ export const ListItemsControl = ({
             </div>
             <button
               type="button"
-              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${editorDarkGhostButtonClass} ${editorControlFocusClass}`}
+              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${editorGhostButtonClassFor(
+                resolvedTone
+              )} ${focusClass}`}
               aria-label={`Remove item ${index + 1}`}
               disabled={disabled}
               onClick={() => commitRows(rows.filter((_, rowIndex) => rowIndex !== index))}
@@ -97,7 +116,9 @@ export const ListItemsControl = ({
       </div>
       <button
         type="button"
-        className={`flex h-7 items-center justify-center gap-1 rounded-md text-xs font-semibold ${editorDarkButtonClass} ${editorControlFocusClass}`}
+        className={`flex h-7 items-center justify-center gap-1 rounded-md text-xs font-semibold ${editorButtonClassFor(
+          resolvedTone
+        )} ${focusClass}`}
         disabled={disabled}
         onClick={() => commitRows([...rows, { label: "", href: "" }])}
       >

@@ -326,6 +326,11 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
 
 import { MenuDesignEditorPage } from "../../../core/admin/ui/menus/MenuDesignEditorPage";
 import { PageEditor, type PageEditorHost } from "../../../core/admin/ui/pages/PageEditor";
+import {
+  editorDarkButtonClass,
+  editorDarkGhostButtonClass,
+  editorPanelSegmentTrackClass,
+} from "../../../core/admin/ui/pages/editorControls/controlChrome";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -652,9 +657,15 @@ test("the default page host keeps the full palette and the preview affordance", 
   );
   await flush();
 
-  // Preview stays available for hosts that provide preview issuance.
+  // TASK-495-02: builder chrome drains topbarActions; Preview relocates from
+  // the top-bar slot to the in-content PageHeader (in <main>).
+  const main = container.querySelector("main") as ParentNode;
+  expect(findButton(main, "Preview")).toBeTruthy();
   const topbar = container.querySelector('[data-editor-topbar="true"]');
-  expect(findButton(topbar as ParentNode, "Preview")).toBeTruthy();
+  expect(findButton(topbar as ParentNode, "Preview")).toBeUndefined();
+  // The page host provides publish, so the sub-toolbar shows NO "Save only" badge.
+  const pageHostBadges = Array.from(main.querySelectorAll('[data-slot="badge"]'));
+  expect(pageHostBadges.some((badge) => badge.textContent?.includes("Save only"))).toBe(false);
 
   // Section inserts stay available and the palette keeps the full catalog.
   clickButton(container, "Add section");
@@ -668,6 +679,180 @@ test("the default page host keeps the full palette and the preview affordance", 
   expect(labels.length).toBeGreaterThan(10);
   // The gated navigation section stays out of the global palette too.
   expect(labels).not.toContain("Navigation");
+
+  cleanup();
+});
+
+test("builder sub-toolbar shows the 'Save only' badge for a publish-absent (page-template) host (TASK-495-02)", async () => {
+  const detail = createPageHostDetail();
+  // A page-template host: preview-present, savable, but NO `publish` key. The
+  // badge is keyed on `!editorHost.publish`, so it must read "Save only" (a
+  // savable resource), NOT "Preview only", and carry no Eye icon.
+  const host: PageEditorHost = {
+    mode: "page-template",
+    resourceLabel: "Page templates",
+    settingsLabel: "Template settings",
+    previewTitle: "Template preview",
+    loadFailedMessage: "Failed to load template.",
+    assistantSurface: false,
+    detailCacheKey: (id) => `page-templates:detail:${id}`,
+    getCachedDetail: () => detail,
+    loadDetail: async () => detail,
+    saveDocument: async () => detail,
+    preview: async (id) => pagesClientState.previewPage(id),
+  };
+
+  const { container, cleanup } = mount(
+    <PageEditor pageId="page-1" initialPage={detail} host={host} />
+  );
+  await flush();
+
+  const main = container.querySelector("main") as ParentNode;
+  const badge = Array.from(main.querySelectorAll('[data-slot="badge"]')).find((node) =>
+    node.textContent?.includes("Save only")
+  );
+  expect(badge).toBeTruthy();
+  // "Save only" — not the mislabeled "Preview only", and no Eye icon.
+  expect(badge?.textContent).not.toContain("Preview only");
+  expect(badge?.querySelector("svg")).toBeNull();
+  // Savable: "Save draft" is present; "Publish" is gated out (no publish key).
+  expect(findButton(main, "Save draft")).toBeTruthy();
+  expect(findButton(main, "Publish")).toBeUndefined();
+  // Preview stays available (preview-present host).
+  expect(findButton(main, "Preview")).toBeTruthy();
+
+  cleanup();
+});
+
+test("menu host keeps the legacy dark draggable bottom toolbar and dark chrome tokens (TASK-495-02)", async () => {
+  // A bare mode:"menu" PageEditorHost — NOT a MenuDesignEditorPage mount, whose
+  // restricted palette + appearance-panel default never surface the "Add block"
+  // CTA or the Background external-URL "Clear" readout. The hero has an external
+  // backgroundImage + a heading block, so selecting it opens both the Content
+  // subpanel (Add block) and the Background subpanel (Clear).
+  const detail: PageDetail = {
+    id: "menu-page",
+    title: "Menu canvas",
+    slug: "menu-canvas",
+    status: "draft",
+    updatedAt: "2026-06-12T09:00:00.000Z",
+    currentData: {
+      schemaVersion: 2,
+      breakpoints: ["desktop", "tablet", "mobile"],
+      seo: {},
+      settings: { template: "page-v2", showInNav: true },
+      sections: [
+        createPageSectionV2("hero", {
+          id: "sec-hero",
+          name: "Hero",
+          variant: "centered",
+          style: {
+            background: "#ffffff",
+            backgroundType: "image",
+            backgroundImage: "https://cdn.example.com/external-bg.png",
+            accent: "#0d9488",
+            radius: 0,
+            shadow: "none",
+          },
+          blocks: [
+            createPageBlockV2("heading", {
+              id: "blk-heading",
+              props: { text: "Welcome", level: "h1", align: "center" },
+            }),
+          ],
+        }),
+      ],
+    } as unknown as Record<string, unknown>,
+  };
+  const host: PageEditorHost = {
+    mode: "menu",
+    resourceLabel: "Menus",
+    settingsLabel: "Menu settings",
+    previewTitle: "Menu preview",
+    loadFailedMessage: "Failed to load menu.",
+    assistantSurface: false,
+    detailCacheKey: (id) => `menus:detail:${id}`,
+    getCachedDetail: () => detail,
+    loadDetail: async () => detail,
+    saveDocument: async () => detail,
+    publish: async () => ({ ok: true }),
+  };
+
+  const { container, cleanup } = mount(
+    <PageEditor pageId="menu-page" initialPage={detail} host={host} />
+  );
+  await flush();
+
+  let toolbar = container.querySelector(
+    '[data-page-editor-floating-toolbar="true"]'
+  ) as HTMLElement | null;
+  expect(toolbar).toBeTruthy();
+  // Legacy dark bottom-center panel (NOT the right rail).
+  expect(toolbar?.className).toContain("bottom-6");
+  expect(toolbar?.className).toContain("left-1/2");
+  expect(toolbar?.className).toContain("bg-slate-950");
+  expect(toolbar?.className).not.toContain("right-4");
+
+  // No in-content PageHeader / sub-toolbar for the menu host.
+  expect(container.textContent).not.toContain("Page builder");
+  expect(findButton(container, "Save draft")).toBeUndefined();
+  // topbarActions stay in the global top bar.
+  const topbar = container.querySelector('[data-editor-topbar="true"]');
+  expect(findButton(topbar as ParentNode, "Save")).toBeTruthy();
+
+  // Draggable: pointerdown on the drag handle flips the drag-state hook and
+  // applies the transform.
+  const dragHandle = container.querySelector('button[aria-label="Drag toolbar"]');
+  expect(dragHandle).toBeTruthy();
+  React.act(() => {
+    dragHandle?.dispatchEvent(
+      new MouseEvent("pointerdown", { bubbles: true, clientX: 20, clientY: 20 })
+    );
+  });
+  await flush();
+  toolbar = container.querySelector(
+    '[data-page-editor-floating-toolbar="true"]'
+  ) as HTMLElement | null;
+  expect(toolbar?.getAttribute("data-page-editor-toolbar-dragging")).toBe("true");
+  React.act(() => {
+    window.dispatchEvent(
+      new MouseEvent("pointermove", { bubbles: true, clientX: 55, clientY: 42 })
+    );
+  });
+  await flush();
+  expect(toolbar?.style.transform).toContain("35px");
+  React.act(() => {
+    window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
+  });
+  await flush();
+
+  // Dark RENDER tokens the page builder no longer shows: "Add block" CTA carries
+  // the dark button chrome, and the Background external-URL "Clear" the dark
+  // ghost chrome.
+  const addBlock = findButton(container, "Add block");
+  expect(addBlock?.className).toContain(editorDarkButtonClass);
+
+  clickSelector(container, 'button[aria-label="Background panel"]');
+  await flush();
+  const externalReadout = container.querySelector(
+    '[data-page-editor-media-external="Background image"]'
+  );
+  expect(externalReadout).toBeTruthy();
+  expect(externalReadout?.querySelector("button")?.className).toContain(editorDarkGhostButtonClass);
+
+  // INTEGRATION-level non-button relight guard (TASK-495-02), DARK side: on a
+  // bare mode:"menu" host the SAME non-button registry control (the Background
+  // panel's "Background type" SegmentedControl) resolves `tone="dark"` from the
+  // EditorControlToneContext path — NO explicit `tone` prop — so its track
+  // keeps the dark `bg-white/10` and NEVER the light `editorPanelSegmentTrackClass`.
+  const bgTypeTrack = Array.from(
+    container.querySelectorAll('[data-page-editor-control="segmented"] [role="group"]')
+  ).find((group) => group.getAttribute("aria-label") === "Background type") as
+    | HTMLElement
+    | undefined;
+  expect(bgTypeTrack).toBeTruthy();
+  expect(bgTypeTrack?.className).toContain("bg-white/10");
+  expect(bgTypeTrack?.className).not.toContain(editorPanelSegmentTrackClass);
 
   cleanup();
 });

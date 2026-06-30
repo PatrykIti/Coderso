@@ -2,7 +2,14 @@ import {
   getPageEditorColorPalette,
   type PageEditorColorSwatch,
 } from "../../../../services/pages/pageEditorControlUiModel";
-import { editorControlFocusClass, editorControlLabelClass } from "./controlChrome";
+import {
+  editorControlFocusClassFor,
+  editorControlLabelClassFor,
+  editorPanelInputClass,
+  editorPanelSwatchBorderClass,
+  useEditorControlTone,
+  type EditorControlTone,
+} from "./controlChrome";
 
 export type ColorSwatchControlProps = {
   label: string;
@@ -19,6 +26,8 @@ export type ColorSwatchControlProps = {
    */
   allowTransparent?: boolean;
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
 };
 
 const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
@@ -64,7 +73,14 @@ export const ColorSwatchControl = ({
   allowCustom = true,
   allowTransparent = true,
   disabled = false,
+  tone,
 }: ColorSwatchControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
+  const focusClass = editorControlFocusClassFor(resolvedTone);
+  const idleSwatchBorderClass =
+    resolvedTone === "light"
+      ? editorPanelSwatchBorderClass
+      : "border-white/15 hover:border-white/45";
   const normalizedValue = value.trim().toLowerCase();
   const transparentActive = normalizedValue.length === 0;
   const commitHexDraft = (input: HTMLInputElement) => {
@@ -78,7 +94,7 @@ export const ColorSwatchControl = ({
   };
   return (
     <div className="grid gap-1" data-page-editor-control="color-swatch">
-      <span className={editorControlLabelClass}>{label}</span>
+      <span className={editorControlLabelClassFor(resolvedTone)}>{label}</span>
       <div role="group" aria-label={label} className="flex flex-wrap items-center gap-2">
         {allowTransparent ? (
           <button
@@ -88,10 +104,10 @@ export const ColorSwatchControl = ({
             title="Transparent"
             disabled={disabled}
             data-page-editor-color-swatch="transparent"
-            className={`size-7 rounded-lg border-2 transition-shadow disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClass} ${
+            className={`size-7 rounded-lg border-2 transition-shadow disabled:cursor-not-allowed disabled:opacity-50 ${focusClass} ${
               transparentActive
                 ? "border-white shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
-                : "border-white/15 hover:border-white/45"
+                : idleSwatchBorderClass
             }`}
             style={transparentSwatchStyle}
             onClick={() => {
@@ -110,10 +126,10 @@ export const ColorSwatchControl = ({
               title={swatch.label}
               disabled={disabled}
               data-page-editor-color-swatch={swatch.id}
-              className={`size-7 rounded-lg border-2 transition-shadow disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClass} ${
+              className={`size-7 rounded-lg border-2 transition-shadow disabled:cursor-not-allowed disabled:opacity-50 ${focusClass} ${
                 active
                   ? "border-white shadow-[0_0_0_2px_rgba(255,255,255,0.25)]"
-                  : "border-white/15 hover:border-white/45"
+                  : idleSwatchBorderClass
               }`}
               style={{ backgroundColor: swatch.previewValue ?? swatch.value }}
               onClick={() => {
@@ -130,7 +146,9 @@ export const ColorSwatchControl = ({
               disabled={disabled}
               data-page-editor-color-picker={label}
               value={toSafeHexColor(value)}
-              className={`size-7 cursor-pointer rounded-lg border-2 border-white/15 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClass}`}
+              className={`size-7 cursor-pointer rounded-lg border-2 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50 ${
+                resolvedTone === "light" ? "border-border" : "border-white/15"
+              } ${focusClass}`}
               onChange={(event) => onChange(event.target.value)}
             />
             <input
@@ -142,7 +160,11 @@ export const ColorSwatchControl = ({
               defaultValue={value}
               placeholder="#000000"
               spellCheck={false}
-              className={`w-20 rounded-md border border-white/15 bg-white/10 px-2 py-1 font-mono text-xs text-slate-100 placeholder:text-slate-500 disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClass}`}
+              className={`w-20 rounded-md px-2 py-1 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+                resolvedTone === "light"
+                  ? editorPanelInputClass
+                  : "border border-white/15 bg-white/10 text-slate-100 placeholder:text-slate-500"
+              } ${focusClass}`}
               onBlur={(event) => commitHexDraft(event.currentTarget)}
               onKeyDown={(event) => {
                 if (event.key === "Enter") commitHexDraft(event.currentTarget);

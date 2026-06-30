@@ -183,6 +183,10 @@ export const toolbarActionTooltips = {
     label: "Close panel",
     description: "Close this panel; the toolbar stays open.",
   },
+  hidePanel: {
+    label: "Hide options panel",
+    description: "Hide the options panel; reopen it from the page-builder toolbar.",
+  },
   undo: {
     label: "Undo",
     description: "Restore the previous edit in this editor session.",

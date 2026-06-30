@@ -7,7 +7,18 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 
-import { editorControlFocusClass, editorControlLabelClass } from "./controlChrome";
+import {
+  editorControlFocusClassFor,
+  editorControlLabelClassFor,
+  editorPanelDropdownClass,
+  editorPanelInputClass,
+  editorPanelOptionActiveClass,
+  editorPanelOptionFocusClass,
+  editorPanelOptionIdleClass,
+  editorPanelSubInputClass,
+  useEditorControlTone,
+  type EditorControlTone,
+} from "./controlChrome";
 
 export type ComboboxControlOption = {
   /** Stored value token (e.g. a form id). */
@@ -33,6 +44,8 @@ export type ComboboxControlProps = {
   /** Copy when the search yields no matching options. */
   emptyMessage?: string;
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
 };
 
 const NONE_OPTION_ID = "__none__";
@@ -64,7 +77,12 @@ export const ComboboxControl = ({
   loading = false,
   emptyMessage = "No matches found.",
   disabled = false,
+  tone,
 }: ComboboxControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
+  const isLight = resolvedTone === "light";
+  const focusClass = editorControlFocusClassFor(resolvedTone);
+  const mutedTextClass = isLight ? "text-muted-foreground" : "text-slate-400";
   const baseId = useId().replace(/:/g, "");
   const listboxId = `${baseId}-listbox`;
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -165,7 +183,7 @@ export const ComboboxControl = ({
 
   return (
     <div ref={rootRef} className="relative grid min-w-0 gap-1" data-page-editor-control="combobox">
-      <span className={editorControlLabelClass} id={`${baseId}-label`}>
+      <span className={editorControlLabelClassFor(resolvedTone)} id={`${baseId}-label`}>
         {label}
       </span>
       <button
@@ -178,19 +196,31 @@ export const ComboboxControl = ({
         disabled={disabled}
         data-page-editor-combobox-trigger={label}
         data-page-editor-combobox-dangling={danglingValue ?? undefined}
-        className={`flex w-full items-center justify-between gap-2 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-left text-sm font-normal normal-case tracking-normal disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClass} ${
-          danglingValue ? "text-amber-300" : selectedOption ? "text-slate-100" : "text-slate-400"
+        className={`flex w-full items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-sm font-normal normal-case tracking-normal disabled:cursor-not-allowed disabled:opacity-50 ${
+          isLight ? editorPanelInputClass : "border border-white/15 bg-white/10"
+        } ${focusClass} ${
+          danglingValue
+            ? isLight
+              ? "text-amber-600"
+              : "text-amber-300"
+            : selectedOption
+              ? isLight
+                ? "text-foreground"
+                : "text-slate-100"
+              : mutedTextClass
         }`}
         onClick={() => (open ? setOpen(false) : openList())}
       >
         <span className="truncate">{triggerText}</span>
-        <span aria-hidden="true" className="shrink-0 text-[10px] text-slate-400">
+        <span aria-hidden="true" className={`shrink-0 text-[10px] ${mutedTextClass}`}>
           ▾
         </span>
       </button>
       {open ? (
         <div
-          className="absolute left-0 right-0 top-full z-30 mt-1 grid gap-1 rounded-md border border-white/15 bg-slate-900 p-1 shadow-xl"
+          className={`absolute left-0 right-0 top-full z-30 mt-1 grid gap-1 rounded-md p-1 ${
+            isLight ? editorPanelDropdownClass : "border border-white/15 bg-slate-900 shadow-xl"
+          }`}
           data-page-editor-combobox-popover={label}
         >
           <input
@@ -207,7 +237,11 @@ export const ComboboxControl = ({
             autoComplete="off"
             spellCheck={false}
             placeholder="Search..."
-            className={`rounded border border-white/15 bg-white/10 px-2 py-1 text-sm font-normal text-slate-100 placeholder:text-slate-500 ${editorControlFocusClass}`}
+            className={`rounded px-2 py-1 text-sm font-normal ${
+              isLight
+                ? editorPanelSubInputClass
+                : "border border-white/15 bg-white/10 text-slate-100 placeholder:text-slate-500"
+            } ${focusClass}`}
             value={query}
             onChange={(event) => {
               setQuery(event.target.value);
@@ -234,14 +268,14 @@ export const ComboboxControl = ({
             ) : null}
             {loading ? (
               <li
-                className="px-2 py-1.5 text-xs text-slate-400"
+                className={`px-2 py-1.5 text-xs ${mutedTextClass}`}
                 data-page-editor-combobox-state="loading"
               >
                 Loading options...
               </li>
             ) : rows.length === 0 ? (
               <li
-                className="px-2 py-1.5 text-xs text-slate-400"
+                className={`px-2 py-1.5 text-xs ${mutedTextClass}`}
                 data-page-editor-combobox-state="empty"
               >
                 {emptyMessage}
@@ -264,12 +298,20 @@ export const ComboboxControl = ({
                       tabIndex={-1}
                       className={`w-full rounded px-2 py-1.5 text-left text-sm transition-colors ${
                         selected
-                          ? "bg-white font-semibold text-slate-950"
+                          ? isLight
+                            ? `font-semibold ${editorPanelOptionActiveClass}`
+                            : "bg-white font-semibold text-slate-950"
                           : active
-                            ? "bg-white/15 text-white"
+                            ? isLight
+                              ? editorPanelOptionFocusClass
+                              : "bg-white/15 text-white"
                             : isNoneRow
-                              ? "text-slate-400 hover:bg-white/10 hover:text-white"
-                              : "text-slate-200 hover:bg-white/10 hover:text-white"
+                              ? isLight
+                                ? `text-muted-foreground ${editorPanelOptionIdleClass}`
+                                : "text-slate-400 hover:bg-white/10 hover:text-white"
+                              : isLight
+                                ? editorPanelOptionIdleClass
+                                : "text-slate-200 hover:bg-white/10 hover:text-white"
                       }`}
                       onPointerEnter={() => setActiveIndex(index)}
                       onClick={() => commitRow(row)}

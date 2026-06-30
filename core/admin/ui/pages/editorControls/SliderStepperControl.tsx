@@ -1,7 +1,12 @@
 import { Minus, Plus } from "lucide-react";
 
 import { clampPageEditorSliderValue } from "../../../../services/pages/pageEditorControlUiModel";
-import { editorControlFocusClass } from "./controlChrome";
+import {
+  editorControlFocusClassFor,
+  editorPanelButtonClass,
+  useEditorControlTone,
+  type EditorControlTone,
+} from "./controlChrome";
 import { SliderControl } from "./SliderControl";
 
 export type SliderStepperControlProps = {
@@ -13,9 +18,16 @@ export type SliderStepperControlProps = {
   unit?: string;
   onChange: (value: number) => void;
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
 };
 
-const stepperButtonClass = `flex size-7 shrink-0 items-center justify-center rounded-md bg-white/10 text-slate-200 transition-colors hover:bg-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClass}`;
+const stepperButtonClassFor = (tone: EditorControlTone) =>
+  `flex size-7 shrink-0 items-center justify-center rounded-md transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+    tone === "light"
+      ? editorPanelButtonClass
+      : "bg-white/10 text-slate-200 hover:bg-white/20 hover:text-white"
+  } ${editorControlFocusClassFor(tone)}`;
 
 /**
  * Slider paired with clamped stepper buttons for wide bounded ranges such as
@@ -32,7 +44,10 @@ export const SliderStepperControl = ({
   unit = "",
   onChange,
   disabled = false,
+  tone,
 }: SliderStepperControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
+  const stepperButtonClass = stepperButtonClassFor(resolvedTone);
   const clamped = clampPageEditorSliderValue(value, { min, max });
   const stepBy = (direction: -1 | 1) => {
     onChange(clampPageEditorSliderValue(clamped + direction * step, { min, max }));
@@ -53,6 +68,7 @@ export const SliderStepperControl = ({
           unit={unit}
           onChange={onChange}
           disabled={disabled}
+          tone={resolvedTone}
         />
       </div>
       <button

@@ -19,6 +19,10 @@ import { ColorSwatchControl } from "../../../core/admin/ui/pages/editorControls/
 import {
   editorDarkButtonClass,
   editorDarkGhostButtonClass,
+  editorPanelButtonClass,
+  editorPanelGhostButtonClass,
+  editorPanelInputClass,
+  editorPanelSegmentTrackClass,
 } from "../../../core/admin/ui/pages/editorControls/controlChrome";
 import { MediaPickerControl } from "../../../core/admin/ui/pages/editorControls/MediaPickerControl";
 import { SegmentedControl } from "../../../core/admin/ui/pages/editorControls/SegmentedControl";
@@ -511,4 +515,39 @@ test("MediaPickerControl wraps the shared MediaPicker and never offers a bare UR
   expect(typeof mediaPickerState.lastProps?.onChange).toBe("function");
   (mediaPickerState.lastProps?.onChange as (value: unknown) => void)("asset-456");
   expect(onChange).toHaveBeenCalledWith("asset-456");
+});
+
+test("control primitives relight to the light panel tokens when tone='light' (TASK-495-02)", () => {
+  // The threaded `tone` defaults to "dark" (asserted above with no prop); the
+  // builder right rail mounts these same primitives with tone="light", which
+  // must swap in the editorPanel* light siblings so they stay legible on the
+  // light bg-popover surface.
+  const mediaContainer = render(
+    <MediaPickerControl label="Source" value="asset-1" onChange={vi.fn()} tone="light" />
+  );
+  expect(mediaContainer.querySelector('[data-page-editor-media-control="Source"]')).toBeTruthy();
+  expect(mediaPickerState.lastProps).toMatchObject({
+    triggerButtonClassName: editorPanelButtonClass,
+    removeButtonClassName: editorPanelGhostButtonClass,
+  });
+
+  const segmentedContainer = render(
+    <SegmentedControl
+      label="Align"
+      value="left"
+      options={["left", "center", "right"]}
+      onChange={vi.fn()}
+      tone="light"
+    />
+  );
+  expect(segmentedContainer.querySelector('[role="group"]')?.className).toContain(
+    editorPanelSegmentTrackClass
+  );
+
+  const swatchContainer = render(
+    <ColorSwatchControl label="Accent" value="#aabbcc" onChange={vi.fn()} tone="light" />
+  );
+  expect(
+    swatchContainer.querySelector<HTMLElement>("[data-page-editor-color-hex]")?.className
+  ).toContain(editorPanelInputClass);
 });

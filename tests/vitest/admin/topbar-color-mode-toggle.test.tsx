@@ -2,11 +2,7 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
-
-vi.mock("@/ui/shared/AdminThemeSwitcher", () => ({
-  AdminThemeSwitcher: () => <div data-testid="admin-theme-switcher">Theme</div>,
-}));
+import { afterEach, beforeEach, expect, test } from "vitest";
 
 import { TopBar } from "../../../core/admin/ui/shared/TopBar";
 import { AdminRouterProvider } from "../../../core/admin/ui/contexts/AdminRouterContext";
@@ -43,24 +39,28 @@ const mount = () => {
   };
 };
 
-test("TopBar mounts the color-mode toggle alongside the theme-profile switcher", () => {
+test("TopBar mounts the color-mode toggle and no longer renders the theme switcher", () => {
   const view = mount();
   try {
     const switcher = view.container.querySelector("[data-testid='admin-theme-switcher']");
     const toggle = view.container.querySelector("button[aria-label='Toggle dark mode']");
 
-    expect(switcher).not.toBeNull();
+    // TASK-495-01: AdminThemeSwitcher removed from the TopBar.
+    expect(switcher).toBeNull();
     expect(toggle).not.toBeNull();
     // The toggle starts in light mode (Moon shown, click → dark).
     expect(toggle?.getAttribute("aria-pressed")).toBe("false");
 
-    // It sits in the right-hand action cluster, after the profile switcher.
-    const cluster = switcher?.parentElement;
+    // It still sits in the right-hand action cluster, AFTER the Create button.
+    const cluster = toggle?.parentElement ?? null;
     expect(cluster).not.toBeNull();
-    expect(cluster?.contains(toggle ?? null)).toBe(true);
+    const createButton = Array.from(cluster?.querySelectorAll("button") ?? []).find((b) =>
+      (b.textContent ?? "").includes("Create")
+    );
+    expect(createButton).toBeTruthy();
     const children = cluster ? Array.from(cluster.children) : [];
     expect(children.indexOf(toggle as Element)).toBeGreaterThan(
-      children.indexOf(switcher as Element)
+      children.indexOf(createButton as Element)
     );
   } finally {
     view.cleanup();

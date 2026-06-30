@@ -22,7 +22,6 @@ import {
 } from "@/ui/shared/AdminBreadcrumbs";
 import { AdminColorModeToggle } from "@/ui/shared/AdminColorModeToggle";
 import { AdminLink } from "@/ui/shared/AdminLink";
-import { AdminThemeSwitcher } from "@/ui/shared/AdminThemeSwitcher";
 import { useAdminAuth } from "@/ui/contexts/AdminAuthContext";
 import { useAdminBasePath } from "@/ui/contexts/AdminBasePathContext";
 import { withAdminBasePath } from "@/utils/adminPaths";
@@ -215,7 +214,6 @@ export function TopBar({ navToggle, breadcrumbs, search, actions, user, classNam
 
       <div className="ml-auto flex items-center gap-2">
         <CreateButton />
-        <AdminThemeSwitcher />
         <AdminColorModeToggle />
         {actions}
         <NotificationsMenu />

@@ -9,10 +9,16 @@ import {
 } from "../../../../services/search/filterContract";
 import { pageFiltersFacetKinds } from "../../../../services/pages/pageDocumentV2";
 import {
-  editorControlFocusClass,
-  editorControlLabelClass,
-  editorDarkButtonClass,
-  editorDarkGhostButtonClass,
+  editorButtonClassFor,
+  editorControlFocusClassFor,
+  editorControlLabelClassFor,
+  editorGhostButtonClassFor,
+  editorPanelInputClass,
+  editorPanelRowClass,
+  editorPanelSelectClass,
+  editorPanelSubInputClass,
+  useEditorControlTone,
+  type EditorControlTone,
 } from "./controlChrome";
 
 export type FacetListControlProps = {
@@ -22,11 +28,28 @@ export type FacetListControlProps = {
   /** Emits the full next facets array in the owner stored shapes. */
   onChange: (facets: ListingFacetConfig[]) => void;
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
 };
 
-const inputClass = `w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 ${editorControlFocusClass}`;
-const subInputClass = `w-full rounded-md border border-white/15 bg-white/5 px-2 py-1 text-xs text-slate-200 placeholder:text-slate-500 ${editorControlFocusClass}`;
-const selectClass = `w-full rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-xs text-slate-100 ${editorControlFocusClass} [&>option]:bg-slate-900`;
+const inputClassFor = (tone: EditorControlTone) =>
+  `w-full rounded-md px-2 py-1.5 text-sm ${
+    tone === "light"
+      ? editorPanelInputClass
+      : "border border-white/15 bg-white/10 text-slate-100 placeholder:text-slate-500"
+  } ${editorControlFocusClassFor(tone)}`;
+const subInputClassFor = (tone: EditorControlTone) =>
+  `w-full rounded-md px-2 py-1 text-xs ${
+    tone === "light"
+      ? editorPanelSubInputClass
+      : "border border-white/15 bg-white/5 text-slate-200 placeholder:text-slate-500"
+  } ${editorControlFocusClassFor(tone)}`;
+const selectClassFor = (tone: EditorControlTone) =>
+  `w-full rounded-md px-2 py-1.5 text-xs ${
+    tone === "light"
+      ? editorPanelSelectClass
+      : "border border-white/15 bg-white/10 text-slate-100 [&>option]:bg-slate-900"
+  } ${editorControlFocusClassFor(tone)}`;
 
 const facetKindLabels: Record<ListingFacetKind, string> = {
   checkbox: "Checkbox",
@@ -133,18 +156,20 @@ const FacetLinesField = ({
   placeholder,
   initialText,
   disabled,
+  tone,
   onCommit,
 }: {
   ariaLabel: string;
   placeholder: string;
   initialText: string;
   disabled: boolean;
+  tone: EditorControlTone;
   onCommit: (text: string) => void;
 }) => {
   const [text, setText] = useState(initialText);
   return (
     <textarea
-      className={`${subInputClass} min-h-14 resize-y`}
+      className={`${subInputClassFor(tone)} min-h-14 resize-y`}
       value={text}
       placeholder={placeholder}
       aria-label={ariaLabel}
@@ -169,7 +194,13 @@ export const FacetListControl = ({
   value,
   onChange,
   disabled = false,
+  tone,
 }: FacetListControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
+  const focusClass = editorControlFocusClassFor(resolvedTone);
+  const inputClass = inputClassFor(resolvedTone);
+  const subInputClass = subInputClassFor(resolvedTone);
+  const selectClass = selectClassFor(resolvedTone);
   const facets = value.map(toFacetRecord);
 
   const commit = (nextFacets: readonly FacetRecord[]) => {
@@ -184,7 +215,7 @@ export const FacetListControl = ({
 
   return (
     <div className="grid gap-1.5" data-page-editor-control="facet-list">
-      <span className={editorControlLabelClass}>{label}</span>
+      <span className={editorControlLabelClassFor(resolvedTone)}>{label}</span>
       <div className="grid gap-2">
         {facets.map((facet, index) => {
           const kind = readFacetKind(facet);
@@ -196,7 +227,9 @@ export const FacetListControl = ({
           return (
             <div
               key={rowKey}
-              className="grid gap-1 rounded-md border border-white/10 bg-white/5 p-2"
+              className={`grid gap-1 rounded-md p-2 ${
+                resolvedTone === "light" ? editorPanelRowClass : "border border-white/10 bg-white/5"
+              }`}
               data-page-editor-facet-row={index}
             >
               <div className="flex items-center gap-1.5">
@@ -225,7 +258,9 @@ export const FacetListControl = ({
                 </select>
                 <button
                   type="button"
-                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${editorDarkGhostButtonClass} ${editorControlFocusClass}`}
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${editorGhostButtonClassFor(
+                    resolvedTone
+                  )} ${focusClass}`}
                   aria-label={`Remove facet ${index + 1}`}
                   disabled={disabled}
                   onClick={() => commit(facets.filter((_, facetIndex) => facetIndex !== index))}
@@ -272,6 +307,7 @@ export const FacetListControl = ({
                   placeholder={"One option per line: value | Label"}
                   initialText={formatOptionLines(facet.options)}
                   disabled={disabled}
+                  tone={resolvedTone}
                   onCommit={(text) => patchFacet(index, { options: parseOptionLines(text) })}
                 />
               ) : null}
@@ -281,6 +317,7 @@ export const FacetListControl = ({
                   placeholder={"One per line: field:asc | Label"}
                   initialText={formatSortOptionLines(facet.sortOptions)}
                   disabled={disabled}
+                  tone={resolvedTone}
                   onCommit={(text) =>
                     patchFacet(index, { sortOptions: parseSortOptionLines(text) })
                   }
@@ -292,7 +329,9 @@ export const FacetListControl = ({
       </div>
       <button
         type="button"
-        className={`flex h-7 items-center justify-center gap-1 rounded-md text-xs font-semibold ${editorDarkButtonClass} ${editorControlFocusClass}`}
+        className={`flex h-7 items-center justify-center gap-1 rounded-md text-xs font-semibold ${editorButtonClassFor(
+          resolvedTone
+        )} ${focusClass}`}
         disabled={disabled}
         onClick={() =>
           commit([

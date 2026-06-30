@@ -1,7 +1,13 @@
 import { useId } from "react";
 
 import { clampPageEditorSliderValue } from "../../../../services/pages/pageEditorControlUiModel";
-import { editorControlLabelClass, editorControlValueClass } from "./controlChrome";
+import {
+  editorControlLabelClassFor,
+  editorControlValueClassFor,
+  editorPanelSliderAccentClass,
+  useEditorControlTone,
+  type EditorControlTone,
+} from "./controlChrome";
 
 export type SliderControlProps = {
   label: string;
@@ -12,6 +18,8 @@ export type SliderControlProps = {
   unit?: string;
   onChange: (value: number) => void;
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
 };
 
 const formatSliderValue = (value: number, unit: string) =>
@@ -31,16 +39,18 @@ export const SliderControl = ({
   unit = "",
   onChange,
   disabled = false,
+  tone,
 }: SliderControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
   const inputId = useId();
   const clamped = clampPageEditorSliderValue(value, { min, max });
   return (
     <div className="grid gap-1" data-page-editor-control="slider">
       <div className="flex items-center justify-between gap-2">
-        <label htmlFor={inputId} className={editorControlLabelClass}>
+        <label htmlFor={inputId} className={editorControlLabelClassFor(resolvedTone)}>
           {label}
         </label>
-        <output htmlFor={inputId} className={editorControlValueClass}>
+        <output htmlFor={inputId} className={editorControlValueClassFor(resolvedTone)}>
           {formatSliderValue(clamped, unit)}
         </output>
       </div>
@@ -53,7 +63,9 @@ export const SliderControl = ({
         value={clamped}
         disabled={disabled}
         data-page-editor-slider={label}
-        className="h-1.5 w-full cursor-pointer accent-white disabled:cursor-not-allowed disabled:opacity-50"
+        className={`h-1.5 w-full cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 ${
+          resolvedTone === "light" ? editorPanelSliderAccentClass : "accent-white"
+        }`}
         onChange={(event) => {
           const next = Number(event.target.value);
           onChange(clampPageEditorSliderValue(next, { min, max }));
