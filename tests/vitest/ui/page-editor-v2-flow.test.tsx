@@ -2909,6 +2909,10 @@ test("PageEditor canvas frame anchors site typography token variables for WYSIWY
       '[data-page-editor-canvas-frame="true"]'
     ) as HTMLElement;
     expect(frame).toBeTruthy();
+    // TASK-495-03 P1a: the frame is an adaptive `bg-card` surface (the dark-mode
+    // fix) — never the hardcoded `bg-white` slab that stayed bright in dark mode.
+    expect(frame.className).toContain("bg-card");
+    expect(frame.className).not.toContain("bg-white");
     for (const [variable, value] of Object.entries(
       toPageTypographyCssVariableMap(DEFAULT_TOKENS)
     )) {
@@ -3081,11 +3085,41 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
     ) as HTMLElement | null;
     expect(toolbar?.className).toContain("right-4");
     expect(toolbar?.className).toContain("top-4");
+    // TASK-495-03 P3a: the builder rail is narrowed to the proto 280px width.
+    expect(toolbar?.className).toContain("w-[min(280px,calc(100%-2rem))]");
+    expect(toolbar?.className).not.toContain("w-[min(340px,calc(100%-2rem))]");
     expect(toolbar?.className).not.toContain("bottom-6");
     expect(toolbar?.className).not.toContain("left-1/2");
     expect(toolbar?.style.transform).toBe("");
     expect(toolbar?.hasAttribute("data-page-editor-toolbar-dragging")).toBe(false);
     expect(view.container.querySelector('button[aria-label="Drag toolbar"]')).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor builder wraps the sub-toolbar and canvas region in one separated card (TASK-495-03 P2a)", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // The dotted canvas region sits inside ONE rounded/bordered/shadowed card
+    // (proto CanvasEditor card — CanvasEditor.tsx:53).
+    const scroller = view.container.querySelector(
+      '[data-page-editor-canvas-scroller="true"]'
+    ) as HTMLElement;
+    expect(scroller).toBeTruthy();
+    const canvasCard = scroller.closest(".rounded-2xl.border.bg-card.shadow-card");
+    expect(canvasCard).toBeTruthy();
+
+    // The page-builder sub-toolbar ("Page builder") shares that SAME card
+    // ancestor — the chrome bar + the canvas are blended into one card.
+    const builderLabel = Array.from(view.container.querySelectorAll("span")).find(
+      (el) => el.textContent === "Page builder"
+    );
+    expect(builderLabel).toBeTruthy();
+    expect(builderLabel?.closest(".rounded-2xl.border.bg-card.shadow-card")).toBe(canvasCard);
   } finally {
     view.cleanup();
   }
@@ -3143,8 +3177,8 @@ test("PageEditor builder panel buttons and canvas CTAs use the shared non-invert
     expect(editorDarkGhostButtonClass).toContain("hover:bg-white/10");
     expect(editorPanelButtonClass).toContain("bg-muted");
     expect(editorPanelGhostButtonClass).toContain("text-muted-foreground");
-    expect(editorCanvasCtaButtonClass).toContain("bg-white");
-    expect(editorCanvasCtaButtonClass).toContain("hover:bg-slate-100");
+    expect(editorCanvasCtaButtonClass).toContain("bg-card");
+    expect(editorCanvasCtaButtonClass).toContain("hover:bg-muted");
 
     // TASK-495-02: the page host is now the light builder rail. "Add block"
     // inside the (default-open) Content panel carries the LIGHT panel chrome.
@@ -6581,7 +6615,7 @@ test("PageEditor reserves right-rail padding on the canvas scroller while a sele
     // The editor auto-selects the first section, so the right rail is visible
     // and right padding is reserved from the start.
     expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeTruthy();
-    expect(scroller.style.paddingRight).toBe("360px");
+    expect(scroller.style.paddingRight).toBe("300px");
     // The builder branch never sets the legacy bottom-clearance var.
     expect(scroller.style.paddingBottom).toBe("");
     expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("");
@@ -6596,7 +6630,7 @@ test("PageEditor reserves right-rail padding on the canvas scroller while a sele
     // Selecting a block restores the right padding.
     clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
     await flush();
-    expect(scroller.style.paddingRight).toBe("360px");
+    expect(scroller.style.paddingRight).toBe("300px");
   } finally {
     view.cleanup();
   }

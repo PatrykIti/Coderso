@@ -793,6 +793,17 @@ test("menu host keeps the legacy dark draggable bottom toolbar and dark chrome t
   expect(toolbar?.className).toContain("bg-slate-950");
   expect(toolbar?.className).not.toContain("right-4");
 
+  // TASK-495-03 P2a (the menu-card-leak regression catcher): the builder-only
+  // separated card (rounded-2xl + border + bg-card + shadow-card) must NEVER
+  // wrap the MENU canvas region — the menu body stays FLAT with no card / no
+  // extra ancestor. The required suite is otherwise attribute-blind to a leak,
+  // so this is the single guard that detects one.
+  const menuScroller = container.querySelector(
+    '[data-page-editor-canvas-scroller="true"]'
+  ) as HTMLElement | null;
+  expect(menuScroller).toBeTruthy();
+  expect(menuScroller?.closest(".rounded-2xl.border.bg-card.shadow-card")).toBeNull();
+
   // No in-content PageHeader / sub-toolbar for the menu host.
   expect(container.textContent).not.toContain("Page builder");
   expect(findButton(container, "Save draft")).toBeUndefined();

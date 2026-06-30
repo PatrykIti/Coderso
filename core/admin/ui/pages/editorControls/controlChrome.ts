@@ -58,12 +58,13 @@ export const editorDarkGhostButtonClass = "text-slate-200 hover:bg-white/10 hove
 
 /**
  * Canvas CTA chrome ("Add section", "Add the first block"). The editor canvas
- * frame is always a white, site-like surface, so these CTAs use explicit
- * neutral light-surface colors instead of admin-theme button variables that
- * can invert under dark admin themes.
+ * frame is now an adaptive `bg-card` surface (TASK-495-03 P1a — the dark-mode
+ * fix), so these CTAs use design tokens (`bg-card`/`border-border`/
+ * `text-foreground`, hover `bg-muted`) that flip with the theme instead of the
+ * hardcoded light literals that stayed bright-white on the dark frame.
  */
 export const editorCanvasCtaButtonClass =
-  "border border-slate-300 bg-white text-slate-700 shadow-sm hover:bg-slate-100 hover:text-slate-900";
+  "border border-border bg-card text-foreground shadow-sm hover:bg-muted hover:text-foreground";
 
 /**
  * Canvas-only ghost "Add block" tiles (empty multi-column section cells, the
@@ -73,11 +74,11 @@ export const editorCanvasCtaButtonClass =
  * public front.
  */
 export const editorCanvasGhostTileClass =
-  "flex min-h-14 w-full items-center justify-center gap-1 rounded border border-dashed border-slate-300 bg-white text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900";
+  "flex min-h-14 w-full items-center justify-center gap-1 rounded border border-dashed border-border bg-background text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
 /** Compact variant for trailing add affordances inside non-empty columns slots. */
 export const editorCanvasGhostTileCompactClass =
-  "flex h-8 w-full items-center justify-center gap-1 rounded border border-dashed border-slate-300 bg-white text-xs text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900";
+  "flex h-8 w-full items-center justify-center gap-1 rounded border border-dashed border-border bg-background text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground";
 
 /**
  * Compact ghost "+" handle pinned to the right edge of the SELECTED canvas
@@ -86,7 +87,7 @@ export const editorCanvasGhostTileCompactClass =
  * that straddles the block border. Canvas-only, never on the public front.
  */
 export const editorCanvasGhostBesideHandleClass =
-  "absolute right-0 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-dashed border-slate-300 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-100 hover:text-slate-900";
+  "absolute right-0 top-1/2 z-10 flex h-6 w-6 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-dashed border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground";
 
 /* -------------------------------------------------------------------------- *
  * Light (`tone="light"`) siblings — TASK-495-02
