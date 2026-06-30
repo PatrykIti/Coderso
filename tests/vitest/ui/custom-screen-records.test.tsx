@@ -271,7 +271,10 @@ test("CustomScreenEntryEditor renders bound field editor from cached data", () =
     });
 
     expect(html).toContain("Headline");
-    expect(html).toContain("Screen-owned record editor");
+    // TASK-496-02: shared `CanvasEditor` shell PageHeader (no eyebrow) replaces
+    // the old "Screen-owned record editor" sub-header; retargeted to the
+    // PRESERVED PageHeader description text.
+    expect(html).toContain("The canvas is the active editing surface for this record.");
     expect(html).toContain("Ocean View");
     expect(html).not.toContain("Bound fields");
     expect(html).not.toContain("Back to records");

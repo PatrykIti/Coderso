@@ -91,7 +91,12 @@ test("renders the soft segmented view control and the floating-panel canvas", ()
   expect(html).toContain("aria-pressed");
   expect(html).toContain("Save");
   expect(html).toContain("Preview");
-  expect(html).toContain('data-authoring-floating-toolbar="true"');
+  // TASK-496-02: the dark floating authoring toolbar is retired — the builder now
+  // routes through the shared `CanvasEditor` shell. Assert its chrome: the panel
+  // Hide/Show toggle, the in-content PageHeader title, and the light panel rail.
+  expect(html).toContain("Hide panel");
+  expect(html).toContain("New screen");
+  expect(html).toContain('data-screen-toolbar-rail="true"');
   // Restyle regression: the legacy hardcoded amber unsaved pill is gone.
   expect(html).not.toContain("bg-amber-100");
 });

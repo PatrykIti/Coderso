@@ -173,7 +173,10 @@ test("Editor View library exposes screen blocks and content fields without page 
     await flush();
 
     expect(view.container.textContent).toContain("Screen Blocks");
-    expect(view.container.querySelector("[data-authoring-toolbar-subpanel]")).not.toBeNull();
+    // TASK-496-02: the Insert subpanel now mounts in the shared `CanvasEditor`
+    // docked panel (data-screen-editor-panel) instead of the retired dark
+    // floating-toolbar subpanel.
+    expect(view.container.querySelector("[data-screen-editor-panel]")).not.toBeNull();
     expect(view.container.textContent).toContain("Record header");
     expect(view.container.textContent).toContain("Field group");
     expect(view.container.textContent).toContain("Two columns");

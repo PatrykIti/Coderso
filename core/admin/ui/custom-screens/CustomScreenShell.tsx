@@ -15,6 +15,10 @@ export type CustomScreenShellProps = {
   leftPanel?: React.ReactNode;
   rightPanel?: React.ReactNode;
   rightPanelClassName?: string;
+  // TASK-496-02: "canvas" routes the builder through the full-height shared
+  // editor-chrome shell (`shared/CanvasEditor`); default keeps the legacy
+  // "panels" layout for backward compatibility.
+  variant?: "panels" | "canvas";
   children: React.ReactNode;
 };
 
@@ -26,12 +30,14 @@ export function CustomScreenShell({
   leftPanel,
   rightPanel,
   rightPanelClassName,
+  variant,
   children,
 }: CustomScreenShellProps) {
   const resolvedName = name.trim().length > 0 ? name : isCreateMode ? "New screen" : "Untitled";
   return (
     <EditorShell
       activeHref="/admin/advanced/custom-screens"
+      variant={variant}
       leftPanel={leftPanel}
       rightPanel={rightPanel}
       rightPanelClassName={rightPanelClassName}

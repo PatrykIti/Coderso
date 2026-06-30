@@ -17,14 +17,13 @@ import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "rea
 
 import { Button } from "@/components/ui/button";
 import {
-  AuthoringCanvasFrame,
   AuthoringCommandPalette,
-  AuthoringFloatingToolbar,
   AuthoringLayersPanel,
   type AuthoringCommandGroup,
   type AuthoringLayerNode,
   type AuthoringSelectionTarget,
 } from "@/ui/authoring";
+import { CanvasEditor } from "@/ui/shared/CanvasEditor";
 import type {
   ScreenBlockV1,
   ScreenDocumentV1,
@@ -38,6 +37,7 @@ import {
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { ScreenBlockInspector } from "./ScreenBlockInspector";
 import { ScreenBlockLibrary } from "./ScreenBlockLibrary";
+import { ScreenPanelToggleRail } from "./ScreenPanelToggleRail";
 import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
 
 type ScreenAuthoringPanel =
@@ -57,6 +57,16 @@ type ScreenAuthoringCanvasProps = {
   values: Record<string, unknown>;
   previewNotice?: React.ReactNode;
   settingsPanel?: React.ReactNode;
+  // TASK-496-02: shared editor-chrome slots forwarded from CustomScreenEditorPage
+  // so the Editor view routes through the same `CanvasEditor` shell as the List
+  // view. `header` is the shared in-content PageHeader (this component authors
+  // none of its own); `panelToggle` is the Hide/Show panel button (the real
+  // setPanelOpen consumer); `reopenAffordance` is the host "Show panel" chip.
+  header?: React.ReactNode;
+  panelToggle?: React.ReactNode;
+  reopenAffordance?: React.ReactNode;
+  panelOpen: boolean;
+  onPanelOpenChange: (open: boolean) => void;
   selectedSectionId: string | null;
   selectedBlockId: string | null;
   onSelectSection: (sectionId: string | null) => void;
@@ -159,6 +169,11 @@ export function ScreenAuthoringCanvas({
   values,
   previewNotice,
   settingsPanel,
+  header,
+  panelToggle,
+  reopenAffordance,
+  panelOpen,
+  onPanelOpenChange,
   selectedSectionId,
   selectedBlockId,
   onSelectSection,
@@ -364,108 +379,116 @@ export function ScreenAuthoringCanvas({
   };
 
   return (
-    <AuthoringCanvasFrame
-      onClearSelection={() => selectTarget(null)}
-      commandPalette={
-        commandOpen ? (
-          <AuthoringCommandPalette
-            groups={filteredGroups}
-            query={commandQuery}
-            activeIndex={0}
-            placeholder="Search screen blocks and fields"
-            onQueryChange={setCommandQuery}
-            onKeyDown={onCommandKeyDown}
-            onClose={() => setCommandOpen(false)}
-          />
-        ) : null
-      }
+    <CanvasEditor
+      header={header}
+      title="Entry-view builder"
+      panelPosition="right"
+      panelOpen={panelOpen}
+      onPanelOpenChange={onPanelOpenChange}
+      panelAriaLabel={`${selectedBlock ? blockLabel(selectedBlock) : "Screen"} tools`}
+      panelDataProps={{ "data-screen-editor-panel": "true" }}
+      reopenAffordance={reopenAffordance}
       toolbar={
-        <AuthoringFloatingToolbar
-          label={selectedBlock ? blockLabel(selectedBlock) : "Screen"}
-          panels={toolbarPanels}
-          subpanel={floatingPanel}
-          actions={
-            selectedBlock ? (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Move selected block up"
-                  className="h-8 w-8 text-zinc-300 hover:bg-white/10 hover:text-white"
-                  onClick={() => onMove(selectedBlock.id, "up")}
-                >
-                  <MoveUp className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Move selected block down"
-                  className="h-8 w-8 text-zinc-300 hover:bg-white/10 hover:text-white"
-                  onClick={() => onMove(selectedBlock.id, "down")}
-                >
-                  <MoveDown className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Duplicate selected block"
-                  className="h-8 w-8 text-zinc-300 hover:bg-white/10 hover:text-white"
-                  onClick={() => onDuplicate(selectedBlock.id)}
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="Delete selected block"
-                  className="h-8 w-8 text-zinc-300 hover:bg-white/10 hover:text-white"
-                  onClick={() => onDelete(selectedBlock.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </>
-            ) : (
+        <>
+          <ScreenPanelToggleRail panels={toolbarPanels} />
+          {selectedBlock ? (
+            <>
               <Button
                 type="button"
                 variant="ghost"
-                size="icon"
-                aria-label="Open command palette"
-                className="h-8 w-8 text-zinc-300 hover:bg-white/10 hover:text-white"
-                onClick={() => setCommandOpen(true)}
+                size="icon-sm"
+                aria-label="Move selected block up"
+                onClick={() => onMove(selectedBlock.id, "up")}
               >
-                <Search className="h-4 w-4" />
+                <MoveUp className="h-4 w-4" />
               </Button>
-            )
-          }
-        />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Move selected block down"
+                onClick={() => onMove(selectedBlock.id, "down")}
+              >
+                <MoveDown className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Duplicate selected block"
+                onClick={() => onDuplicate(selectedBlock.id)}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Delete selected block"
+                onClick={() => onDelete(selectedBlock.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Open command palette"
+              onClick={() => setCommandOpen(true)}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          )}
+          {panelToggle}
+        </>
       }
-      borderless
-    >
-      <div className="space-y-4" data-screen-authoring-canvas="true">
-        {previewNotice}
-        <ScreenRuntimeRenderer
-          document={document}
-          bindings={bindings}
-          values={values}
-          fields={fields}
-          mode="builder"
-          selectedSectionId={selectedSectionId}
-          selectedBlockId={selectedBlockId}
-          onSelectSection={(sectionId) => selectTarget({ kind: "section", id: sectionId })}
-          onSelectBlock={(blockId) =>
-            selectTarget({
-              kind: "block",
-              sectionId: findBlockSectionId(document, blockId) ?? document.sections[0]?.id ?? "",
-              id: blockId,
-            })
-          }
-          emptyMessage="Use Insert or the command palette to add screen blocks."
-        />
-      </div>
-    </AuthoringCanvasFrame>
+      panel={floatingPanel}
+      canvas={
+        <>
+          {commandOpen ? (
+            <AuthoringCommandPalette
+              groups={filteredGroups}
+              query={commandQuery}
+              activeIndex={0}
+              placeholder="Search screen blocks and fields"
+              onQueryChange={setCommandQuery}
+              onKeyDown={onCommandKeyDown}
+              onClose={() => setCommandOpen(false)}
+            />
+          ) : null}
+          <div
+            className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
+            data-screen-editor-canvas-scroller="true"
+            style={panelOpen && floatingPanel ? { paddingRight: 300 } : undefined}
+            onClick={() => selectTarget(null)}
+          >
+            <div className="mx-auto w-full max-w-4xl space-y-4" data-screen-authoring-canvas="true">
+              {previewNotice}
+              <ScreenRuntimeRenderer
+                document={document}
+                bindings={bindings}
+                values={values}
+                fields={fields}
+                mode="builder"
+                selectedSectionId={selectedSectionId}
+                selectedBlockId={selectedBlockId}
+                onSelectSection={(sectionId) => selectTarget({ kind: "section", id: sectionId })}
+                onSelectBlock={(blockId) =>
+                  selectTarget({
+                    kind: "block",
+                    sectionId:
+                      findBlockSectionId(document, blockId) ?? document.sections[0]?.id ?? "",
+                    id: blockId,
+                  })
+                }
+                emptyMessage="Use Insert or the command palette to add screen blocks."
+              />
+            </div>
+          </div>
+        </>
+      }
+    />
   );
 }

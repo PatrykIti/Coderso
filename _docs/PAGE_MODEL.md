@@ -1442,6 +1442,22 @@ Page Settings panels that do not apply to templates (SEO, `showInNav`,
 `collectionLink`, revision retention) are hidden in template mode while the
 stored document keeps their normalized defaults.
 
+**TASK-496 (shared editor-chrome shell — DONE 2026-06-30):** the page-editor
+builder chrome is now the shared, purely-presentational shell
+`core/admin/ui/shared/CanvasEditor.tsx` (in-content `PageHeader` + "Page builder"
+sub-toolbar + separated `rounded-2xl border bg-card shadow-card` card + light
+right-docked 280px collapsible rail + dark-correct dotted canvas), consumed by
+Pages, Page Templates, AND Custom Screens (`panelPosition: "right" | "bottom"`;
+controlled `panelOpen` with the host as the single source of truth). Pages + Page
+Templates render through it **behavior-preserving** — the `PageDocumentV2` document
+model, ops, cache, dirty/autosave, and preview pipeline are unchanged and all
+`data-page-editor-*` hooks are intact; only the chrome is extracted. The
+`mode:"menu"` designer keeps its legacy dark bottom panel. The previously orphaned
+copy of `shared/CanvasEditor.tsx` is resolved (it BECAME this shell, with real
+importers from both `ui/pages/` and `ui/custom-screens/`); the dark
+`AuthoringFloatingToolbar` / `AuthoringCanvasFrame` / authoring `canvasChrome.ts`
+chrome is removed.
+
 Assistant: the Page Templates editor advertises NO assistant active surface
 in v1 (the `widget-template` active-surface kind and `widget-template.*`
 action families are deleted with the old surface). A dedicated follow-up task

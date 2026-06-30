@@ -1,182 +1,160 @@
-import {
-  GripHorizontal,
-  Monitor,
-  PanelRight,
-  Redo2,
-  SlidersHorizontal,
-  Smartphone,
-  Undo2,
-} from "lucide-react";
-import { useState, type ReactNode } from "react";
+import type { ReactNode, Ref } from "react";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * TASK-479-06-L06: interactive-canvas + FLOATING PANEL editor surface — the
- * Page Editor V2 model ported from `_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx`.
+ * TASK-496-01: the ONE shared editor-chrome shell (repurposed in place from the
+ * TASK-479-06-L06 orphan). Reproduces the PROVEN PageEditor builder chrome
+ * (TASK-495-03) so Pages, Page Templates (this leaf) and Screens (TASK-496-02)
+ * render the IDENTICAL frame: the in-content `PageHeader` region + the separated
+ * `rounded-2xl border bg-card shadow-card` card + the "Page builder" sub-toolbar
+ * + an optional device-context strip + the dotted canvas region + the single
+ * right/bottom floating panel (positioned + shown/hidden here).
  *
- * The floating panel is the sole control surface (no permanent side rails) and
- * can be hidden via the chrome toggle so the canvas/preview is unobstructed
- * while arranging sections & blocks; a reopen affordance restores it. This is a
- * purely presentational shell: the host editor owns `canvas` (its block tree /
- * preview) and `panel` (its controls) and wires `toolbar` + undo/redo to its
- * real history & autosave. `CanvasEditor` owns only `panelOpen` (lazy `useState`,
- * toggled by user events — never derived from props in an effect, never reset on
- * the host's data changes), so it never overwrites a host dirty buffer and never
- * refetches on mount.
+ * Presentational ONLY — the host owns the canvas tree, the panel body, history,
+ * autosave, and the `panelOpen` flag. `panelOpen` is CONTROLLED, read-only: the
+ * shell only READS it (to decide whether to render the panel + the reopen
+ * affordance) and NEVER calls `onPanelOpenChange`. Both panel affordances — the
+ * toolbar's "Hide/Show panel" toggle and the `reopenAffordance` chip — are
+ * host-supplied slots that flip the host's OWN setter directly, so the host
+ * stays the single source of truth (it derives the canvas right-clearance and
+ * the floating-toolbar visibility from the same flag; an internal `panelOpen`
+ * would fork that state). This controlled read-only model is the one deliberate
+ * deviation from the orphan's prior uncontrolled `panelOpen` + built-in toggle.
  *
- * Meant for reuse by the page, post, custom-screen entry-view, entry-content,
- * and page-template editors, mounted inside `EditorShell variant="canvas"` (L05).
- * Adopting it per-editor is out of scope here (→ TASK-479-07).
+ * IMPORTS: `cn` + react types only. The header / toolbar / panel / badge /
+ * reopen are all host-supplied `ReactNode` slots, so the shell imports NO
+ * `PageHeader`, NO `Button`, NO `lucide-react`, and NO data/service module —
+ * keeping it inside the custom-screen authoring boundary for the 496-02 Screen
+ * consumers as well as the Pages host here.
  */
 type CanvasEditorProps = {
-  title?: ReactNode;
-  /** e.g. a status pill rendered next to the title. */
+  /**
+   * In-content `PageHeader` region rendered ABOVE the card (host supplies the
+   * node, including its className "mb-0 shrink-0 px-6 pb-3 pt-4").
+   */
+  header?: ReactNode;
+
+  /** Sub-toolbar (chrome bar) title, e.g. "Page builder". */
+  title: ReactNode;
+  /** Optional status pill next to the title, e.g. a "Save only" badge. */
   badge?: ReactNode;
-  /** Host-provided chrome controls (slot) — e.g. real undo/redo, save state. */
+  /**
+   * Host control cluster rendered VERBATIM on the right of the sub-toolbar
+   * (StatusBadge + Unsaved, Undo/Redo, DeviceSwitcher, Layers, Panel toggle).
+   * The shell renders NO built-in undo/redo/device controls — the host's wired
+   * controls win.
+   */
   toolbar?: ReactNode;
-  /** Show the desktop/mobile preview segmented control. */
-  device?: boolean;
-  /** The interactive preview surface (host-owned). */
+
+  /**
+   * Optional device-context strip below the sub-toolbar; `value` feeds the
+   * `data-page-editor-canvas-context` hook. Omit it (e.g. for Screens).
+   */
+  deviceContext?: { value: string; label: ReactNode };
+
+  /** Canvas region — host: dotted scroller + page frame + sections + layers overlay. */
   canvas: ReactNode;
-  /** The single floating control panel body (host-owned). */
+
+  /**
+   * Single floating panel body (already wrapped in any tone context by the
+   * host). Pass `null` when nothing is selected so no rail renders.
+   */
   panel?: ReactNode;
-  panelTitle?: ReactNode;
-  /** Right inspector OR bottom toolbar placement for the floating panel. */
+  /** CONTROLLED, read-only — host is the single source of truth; the shell only READS it. */
+  panelOpen: boolean;
+  /**
+   * Host's `setPanelOpen` passthrough (controlled-prop symmetry; keeps the
+   * host's setter referenced for surfaces with no built-in hide toggle). REQUIRED
+   * so the host wires it, but the shell NEVER consumes it (it is intentionally
+   * not destructured below) — the toolbar toggle + `reopenAffordance` slots flip
+   * the host setter directly.
+   */
+  onPanelOpenChange: (open: boolean) => void;
+  /** Floating-panel dock. */
   panelPosition?: "right" | "bottom";
-  panelClassName?: string;
+  /** Ref on the single rail div (= the host's toolbar element ref). */
+  panelRef?: Ref<HTMLDivElement>;
+  /** aria-label on the rail div, e.g. `${target} tools`. */
+  panelAriaLabel?: string;
+  /** data-* hooks forwarded onto the rail div (floating-toolbar / -collapsed). */
+  panelDataProps?: Record<string, string | undefined>;
+  /** Host-gated "Show panel" chip; the shell renders it only when `!panelOpen`. */
+  reopenAffordance?: ReactNode;
+
   className?: string;
-  /** Lazy initial open state — NO sync setState in effects, never re-derived. */
-  defaultPanelOpen?: boolean;
 };
 
+// Container classes are the EXACT strings lifted from the proven PageEditor
+// builder chrome (the right rail = the builder floating-toolbar container).
+const PANEL_POSITION_CLASS = {
+  right:
+    "absolute right-4 top-4 z-30 flex max-h-[calc(100%-2rem)] w-[min(280px,calc(100%-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-popover p-2 text-foreground shadow-pop",
+  // Centered-bottom dock (prototype CanvasEditor) — first exercised by the
+  // Screen entry-content editor in TASK-496-02, not by Pages here.
+  bottom:
+    "absolute bottom-5 left-1/2 z-30 flex max-h-[calc(100%-2rem)] w-[min(760px,calc(100%-2rem))] -translate-x-1/2 flex-col overflow-hidden rounded-2xl border border-border bg-popover p-2 text-foreground shadow-pop",
+} as const;
+
 export function CanvasEditor({
-  title = "Canvas",
+  header,
+  title,
   badge,
   toolbar,
-  device = true,
+  deviceContext,
   canvas,
   panel,
-  panelTitle,
-  panelPosition = "right",
-  panelClassName,
+  panelOpen,
+  // `onPanelOpenChange` is deliberately NOT destructured — the shell is
+  // controlled read-only and never calls it; it stays a required prop only so
+  // the host passes its setPanelOpen through (keeping that setter referenced
+  // host-side). Destructuring it here would trip @typescript-eslint/no-unused-vars.
+  panelPosition,
+  panelRef,
+  panelAriaLabel,
+  panelDataProps,
+  reopenAffordance,
   className,
-  defaultPanelOpen = true,
 }: CanvasEditorProps) {
-  // Panel open/close is this component's ONLY state — lazy init from the prop so
-  // a host data re-render never resets it (ESLint react-hooks safe: no effect).
-  const [panelOpen, setPanelOpen] = useState(defaultPanelOpen);
-
   return (
-    <div
-      className={cn(
-        // Fixed viewport-height pane so the canvas scrolls INTERNALLY and the
-        // floating panel stays pinned/visible even on tall content.
-        "flex h-[calc(100vh-12rem)] min-h-[540px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card",
-        className
-      )}
-    >
-      {/* Chrome bar: title + badge, host toolbar slot, undo/redo + device + panel toggle. */}
-      <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-medium">{title}</span>
-          {badge}
+    <>
+      {header}
+      <div
+        className={cn(
+          "mx-6 mb-6 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card",
+          className
+        )}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">{title}</span>
+            {badge}
+          </div>
+          <div className="flex items-center gap-1.5">{toolbar}</div>
         </div>
-        <div className="flex items-center gap-1.5">
-          {toolbar}
-          <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          {/* Undo/Redo are slots the host wires to its real history via `toolbar`;
-              the built-ins are disabled placeholders so the chrome reads complete. */}
-          <Button variant="ghost" size="icon-sm" aria-label="Undo" disabled>
-            <Undo2 className="size-4" />
-          </Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Redo" disabled>
-            <Redo2 className="size-4" />
-          </Button>
-          {device ? (
-            <div className="ml-1 hidden items-center rounded-lg border border-border bg-card p-0.5 sm:flex">
-              <span className="flex size-6 items-center justify-center rounded-md bg-muted text-foreground">
-                <Monitor className="size-3.5" />
-              </span>
-              <span className="flex size-6 items-center justify-center rounded-md text-muted-foreground">
-                <Smartphone className="size-3.5" />
-              </span>
+        {deviceContext ? (
+          <div
+            className="flex shrink-0 items-center justify-center bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase text-muted-foreground"
+            data-page-editor-canvas-context={deviceContext.value}
+          >
+            {deviceContext.label}
+          </div>
+        ) : null}
+        <div className="relative flex min-h-0 flex-1 flex-col">
+          {canvas}
+          {panelOpen && panel ? (
+            <div
+              ref={panelRef}
+              className={PANEL_POSITION_CLASS[panelPosition ?? "right"]}
+              aria-label={panelAriaLabel}
+              {...panelDataProps}
+            >
+              {panel}
             </div>
           ) : null}
-          <div className="mx-1 hidden h-5 w-px bg-border sm:block" />
-          {/* Show/hide the single floating options panel. */}
-          <Button
-            variant={panelOpen ? "soft" : "ghost"}
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setPanelOpen((v) => !v)}
-            aria-label={panelOpen ? "Hide panel" : "Show panel"}
-            aria-pressed={panelOpen}
-          >
-            <PanelRight className="size-4" />
-            <span className="hidden sm:inline">{panelOpen ? "Hide panel" : "Panel"}</span>
-          </Button>
+          {!panelOpen ? reopenAffordance : null}
         </div>
       </div>
-
-      {/* Canvas surface with the single floating panel overlaid. */}
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="h-full overflow-y-auto bg-dotted p-6 lg:p-8">{canvas}</div>
-
-        {panelOpen ? (
-          <div
-            className={cn(
-              "absolute z-20",
-              panelPosition === "right" && "right-4 top-4 w-[280px]",
-              panelPosition === "bottom" && "bottom-5 left-1/2 -translate-x-1/2",
-              panelClassName
-            )}
-          >
-            <div className="overflow-hidden rounded-2xl border border-border bg-popover shadow-pop">
-              {panelTitle ? (
-                <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-                  <GripHorizontal className="size-4 cursor-grab text-muted-foreground/60" />
-                  <span className="flex-1 text-xs font-semibold">{panelTitle}</span>
-                  <button
-                    type="button"
-                    onClick={() => setPanelOpen(false)}
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Hide panel"
-                  >
-                    <PanelRight className="size-3.5" />
-                  </button>
-                </div>
-              ) : null}
-              <div className={panelPosition === "right" ? "max-h-[58vh] overflow-y-auto" : ""}>
-                {panel}
-              </div>
-            </div>
-          </div>
-        ) : (
-          // Reopen affordance when the panel is hidden.
-          <button
-            type="button"
-            onClick={() => setPanelOpen(true)}
-            className="absolute right-4 top-4 z-20 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary"
-          >
-            <SlidersHorizontal className="size-3.5" /> Show panel
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/** A block chip for the "add block" palette inside floating panels. */
-export function BlockChip({ icon, label }: { icon: ReactNode; label: string }) {
-  return (
-    <button
-      type="button"
-      className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground [&_svg]:size-4 [&_svg]:text-muted-foreground"
-    >
-      {icon}
-      {label}
-    </button>
+    </>
   );
 }

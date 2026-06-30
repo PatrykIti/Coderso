@@ -192,13 +192,17 @@ test("list view canvas reorders visible columns in the header and keeps hidden c
   }
 });
 
-test("custom screen List View editor renders a canvas toolbar without editor rails", () => {
+test("custom screen List View editor renders the shared canvas chrome without editor rails", () => {
   const html = renderAdminUi(<CustomScreenEditorPage />, {
     path: "/admin/advanced/custom-screens/new",
   });
 
-  expect(html).toContain('data-authoring-canvas-frame="true"');
-  expect(html).toContain('data-authoring-floating-toolbar="true"');
+  // TASK-496-02: the dark canvas-frame + floating toolbar are retired; the List
+  // View now renders through the shared `CanvasEditor` shell
+  // (dotted scroller + ScreenPanelToggleRail + Hide/Show panel toggle).
+  expect(html).toContain('data-screen-editor-canvas-scroller="true"');
+  expect(html).toContain('data-screen-toolbar-rail="true"');
+  expect(html).toContain("Hide panel");
   expect(html).not.toContain('data-editor-shell-left-panel="true"');
   expect(html).not.toContain('data-editor-shell-right-panel="true"');
   expect(html).not.toContain("Components");

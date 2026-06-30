@@ -232,7 +232,11 @@ test("renders the screen-defined layout inside a soft document card", () => {
   expect(html).toMatch(/rounded-2xl/);
   expect(html).toMatch(/shadow-card/);
   expect(html).toContain('data-custom-screen-entry-document="true"');
-  expect(html).toContain("Screen-owned record editor");
+  // TASK-496-02: the entry editor now renders through the shared `CanvasEditor`
+  // shell; the old sticky sub-header eyebrow "Screen-owned record editor" is
+  // replaced by the in-content PageHeader (no eyebrow). Retargeted to the
+  // PRESERVED PageHeader description text.
+  expect(html).toContain("The canvas is the active editing surface for this record.");
   expect(html).toContain("Headline");
 });
 

@@ -83,7 +83,10 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
   expect(html).toContain("Save");
   expect(html).toContain("List View");
   expect(html).toContain("Editor View");
-  expect(html).toContain("data-authoring-floating-toolbar");
+  // TASK-496-02: shared `CanvasEditor` shell sub-toolbar (panel toggle + light
+  // panel rail) replaces the retired dark floating toolbar.
+  expect(html).toContain('data-screen-toolbar-rail="true"');
+  expect(html).toContain("Hide panel");
   expect(html).toContain('aria-label="List settings"');
   expect(html).toContain('aria-label="Screen settings"');
   expect(html).toContain("Select a content type before configuring List View.");
@@ -205,7 +208,9 @@ test("CustomScreenEditorPage tolerates cached stale screen bindings on read", ()
     expect(html).toContain("Legacy Header Screen");
     expect(html).toContain("Preview");
     expect(html).toContain("List View");
-    expect(html).toContain("data-authoring-floating-toolbar");
+    // TASK-496-02: shared `CanvasEditor` shell sub-toolbar replaces the retired
+    // dark floating toolbar.
+    expect(html).toContain('data-screen-toolbar-rail="true"');
     expect(html).not.toContain("Selected Column");
     expect(html).not.toContain("custom_screen_definition_invalid");
   } finally {

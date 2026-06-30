@@ -5,10 +5,7 @@ import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
 import {
-  AuthoringCanvasFrame,
   AuthoringCommandPalette,
-  AuthoringFloatingToolbar,
-  AuthoringInsertionZone,
   AuthoringLayersPanel,
   isSameAuthoringSelection,
   type AuthoringCommandGroup,
@@ -42,56 +39,11 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("AuthoringCanvasFrame renders viewport, floating toolbar, and attached panel", () => {
-  const clearSelection = vi.fn();
-  const selectPanel = vi.fn();
-  const view = mount(
-    <AuthoringCanvasFrame
-      onClearSelection={clearSelection}
-      toolbar={
-        <AuthoringFloatingToolbar
-          label="Hero"
-          panels={[
-            {
-              id: "layers",
-              label: "Layers",
-              description: "Open layers",
-              active: true,
-              onSelect: selectPanel,
-            },
-          ]}
-        />
-      }
-      floatingPanel={<div data-test-floating-panel="true">Panel</div>}
-    >
-      <div data-test-canvas-child="true">Canvas</div>
-    </AuthoringCanvasFrame>
-  );
-
-  try {
-    expect(view.container.querySelector("[data-authoring-canvas-frame]")).not.toBeNull();
-    expect(view.container.querySelector("[data-authoring-canvas-viewport]")).not.toBeNull();
-    expect(view.container.querySelector("[data-authoring-floating-toolbar]")).not.toBeNull();
-    expect(view.container.querySelector("[data-authoring-toolbar-subpanel]")).not.toBeNull();
-    expect(view.container.querySelector("[data-test-floating-panel]")).not.toBeNull();
-
-    React.act(() => {
-      view.container
-        .querySelector('[data-authoring-toolbar-panel="layers"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    expect(selectPanel).toHaveBeenCalledTimes(1);
-
-    React.act(() => {
-      view.container
-        .querySelector("[data-authoring-canvas-viewport]")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    expect(clearSelection).toHaveBeenCalledTimes(1);
-  } finally {
-    view.cleanup();
-  }
-});
+// TASK-496-02: the dark canvas-frame + floating-toolbar primitives were retired
+// (Screens now render through the shared `CanvasEditor` shell), so their
+// render/hook case is dropped here. The surviving authoring LOGIC modules
+// (AuthoringLayersPanel / AuthoringCommandPalette / isSameAuthoringSelection)
+// keep their coverage below.
 
 test("AuthoringLayersPanel selects nested section and block targets", () => {
   const onSelect = vi.fn();
@@ -187,28 +139,6 @@ test("AuthoringCommandPalette filters input and runs enabled commands", () => {
         ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     });
     expect(close).toHaveBeenCalledTimes(1);
-  } finally {
-    view.cleanup();
-  }
-});
-
-test("AuthoringInsertionZone inserts without clearing the surrounding canvas", () => {
-  const insert = vi.fn();
-  const clearSelection = vi.fn();
-  const view = mount(
-    <div onClick={clearSelection}>
-      <AuthoringInsertionZone label="Add field" onInsert={insert} />
-    </div>
-  );
-
-  try {
-    React.act(() => {
-      view.container
-        .querySelector('button[aria-label="Add field"]')
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    expect(insert).toHaveBeenCalledTimes(1);
-    expect(clearSelection).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

@@ -2,6 +2,7 @@ import { Columns3, Eye, EyeOff, ListPlus, Save, Settings2, SlidersHorizontal } f
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -50,7 +51,9 @@ import { ListViewColumnInspector } from "./ListViewColumnInspector";
 import { ListViewElementLibrary } from "./ListViewElementLibrary";
 import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
 import { resolveCustomScreenId } from "./routeParams";
-import { AuthoringCanvasFrame, AuthoringFloatingToolbar } from "@/ui/authoring";
+import { CanvasEditor } from "@/ui/shared/CanvasEditor";
+import { PageHeader } from "@/ui/shared/PageHeader";
+import { ScreenPanelToggleRail } from "./ScreenPanelToggleRail";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
   addScreenBlock,
@@ -188,6 +191,9 @@ export function CustomScreenEditorPage() {
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
+  // (the shell only READS it; the toolbar toggle + reopen chip flip it directly).
+  const [panelOpen, setPanelOpen] = useState(true);
   const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
     "list-view"
   );
@@ -854,133 +860,195 @@ export function CustomScreenEditorPage() {
 
   return (
     <CustomScreenPreviewRecordOwner key={previewOwnerKey} contentType={selectedContentType}>
-      {({ isLoading: previewDataLoading, previewRecordState }) => (
-        <>
-          <CustomScreenShell
-            name={name}
-            status={status}
-            hasUnsavedChanges={hasUnsavedChanges}
-            isCreateMode={isCreateMode}
-          >
-            <div className="sticky top-0 z-10 w-full border-b border-border bg-card/80 px-4 py-3 backdrop-blur">
-              <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1.5"
-                    onClick={() => setPreviewOpen(true)}
+      {({ isLoading: previewDataLoading, previewRecordState }) => {
+        // Build the in-content PageHeader ONCE, OUTSIDE the List/Editor branch —
+        // it carries the List/Editor toggle + Preview + Save and MUST stay
+        // reachable in BOTH views (the prototype renders one PageHeader with the
+        // toggle above one CanvasEditor — CustomScreenEditorPreview.tsx:188-211).
+        const screenPageHeader = (
+          <PageHeader
+            className="mb-0 shrink-0 px-6 pb-3 pt-4"
+            title={name || (isCreateMode ? "New screen" : "Untitled")}
+            actions={
+              <>
+                <div className="hidden items-center gap-1 rounded-xl border border-border bg-muted/60 p-1 sm:flex">
+                  <button
+                    type="button"
+                    aria-pressed={activeBuilderTab === "list-view"}
+                    onClick={() => setActiveBuilderTab("list-view")}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                      activeBuilderTab === "list-view"
+                        ? "bg-card text-foreground shadow-soft"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <Eye className="h-4 w-4" />
-                    Preview
-                  </Button>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="hidden items-center gap-1 rounded-xl border border-border bg-muted/60 p-1 sm:flex">
-                      <button
-                        type="button"
-                        aria-pressed={activeBuilderTab === "list-view"}
-                        onClick={() => setActiveBuilderTab("list-view")}
-                        className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                          activeBuilderTab === "list-view"
-                            ? "bg-card text-foreground shadow-soft"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        List View
-                      </button>
-                      <button
-                        type="button"
-                        aria-pressed={activeBuilderTab === "editor-view"}
-                        onClick={() => setActiveBuilderTab("editor-view")}
-                        className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                          activeBuilderTab === "editor-view"
-                            ? "bg-card text-foreground shadow-soft"
-                            : "text-muted-foreground hover:text-foreground"
-                        }`}
-                      >
-                        Editor View
-                      </button>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 sm:hidden"
-                      onClick={() =>
-                        setActiveBuilderTab((current) =>
-                          current === "list-view" ? "editor-view" : "list-view"
-                        )
-                      }
-                    >
-                      {activeBuilderTab === "list-view" ? "Editor View" : "List View"}
-                    </Button>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    onClick={handleSave}
-                    disabled={isLoading || isSaving}
+                    List View
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={activeBuilderTab === "editor-view"}
+                    onClick={() => setActiveBuilderTab("editor-view")}
+                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
+                      activeBuilderTab === "editor-view"
+                        ? "bg-card text-foreground shadow-soft"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
                   >
-                    <Save className="h-4 w-4" />
-                    {isSaving ? "Saving..." : "Save"}
-                  </Button>
+                    Editor View
+                  </button>
                 </div>
-              </div>
-            </div>
-            <div
-              className={`mx-auto flex w-full flex-col gap-4 px-6 py-8 ${
-                activeBuilderTab === "editor-view" ? "max-w-6xl" : "max-w-4xl"
-              }`}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 sm:hidden"
+                  onClick={() =>
+                    setActiveBuilderTab((current) =>
+                      current === "list-view" ? "editor-view" : "list-view"
+                    )
+                  }
+                >
+                  {activeBuilderTab === "list-view" ? "Editor View" : "List View"}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setPreviewOpen(true)}
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleSave}
+                  disabled={isLoading || isSaving}
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </>
+            }
+          />
+        );
+        // Panel Hide/Show toggle (mirrors PageEditor) — the real consumer of
+        // setPanelOpen, so the controlled-shell setter is not a dead passthrough.
+        const screenPanelToggle = (
+          <Button
+            type="button"
+            variant={panelOpen ? "soft" : "ghost"}
+            size="sm"
+            onClick={() => setPanelOpen((open) => !open)}
+            aria-label={panelOpen ? "Hide panel" : "Show panel"}
+            aria-pressed={panelOpen}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {panelOpen ? "Hide panel" : "Show panel"}
+          </Button>
+        );
+        // Pages-parity reopen chip shown when the panel is hidden.
+        const screenReopen = (
+          <button
+            type="button"
+            onClick={() => setPanelOpen(true)}
+            aria-label="Show panel"
+            className="absolute right-4 top-4 z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary"
+          >
+            <SlidersHorizontal className="size-3.5" /> Show panel
+          </button>
+        );
+        const listPanelBody = renderActiveListPanel();
+        return (
+          <>
+            <CustomScreenShell
+              variant="canvas"
+              name={name}
+              status={status}
+              hasUnsavedChanges={hasUnsavedChanges}
+              isCreateMode={isCreateMode}
             >
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Custom screen error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-              {remoteUpdatePending ? (
-                <Alert>
-                  <AlertTitle>Updated in another tab</AlertTitle>
-                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span>New changes are available. Refresh to load the latest version.</span>
-                    <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
-                      Refresh
-                    </Button>
-                  </AlertDescription>
-                </Alert>
+              {error || remoteUpdatePending ? (
+                <div className="shrink-0 space-y-3 px-6 pt-4">
+                  {error ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Custom screen error</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {remoteUpdatePending ? (
+                    <Alert>
+                      <AlertTitle>Updated in another tab</AlertTitle>
+                      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span>New changes are available. Refresh to load the latest version.</span>
+                        <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
+                          Refresh
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                </div>
               ) : null}
 
               {isLoading ? (
-                <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+                <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
                   Loading custom screen...
                 </div>
               ) : activeBuilderTab === "list-view" ? (
-                <AuthoringCanvasFrame
-                  borderless
-                  toolbar={
-                    <AuthoringFloatingToolbar
-                      label={selectedListColumn?.label ?? "List view"}
-                      panels={listToolbarPanels}
-                      subpanel={renderActiveListPanel()}
-                    />
+                <CanvasEditor
+                  header={screenPageHeader}
+                  title="List view"
+                  badge={
+                    hasUnsavedChanges ? (
+                      <Badge variant="warning" className="text-[10px] font-semibold uppercase">
+                        Unsaved
+                      </Badge>
+                    ) : null
                   }
-                >
-                  <ListViewCanvas
-                    contentType={selectedContentType}
-                    listView={definition.listView}
-                    selectedColumnId={selectedListColumnId}
-                    onSelectColumn={(columnId) => {
-                      setSelectedListColumnId(columnId);
-                      setActiveListPanel("column");
-                    }}
-                    onMoveColumn={handleMoveListColumn}
-                  />
-                </AuthoringCanvasFrame>
+                  toolbar={
+                    <>
+                      <ScreenPanelToggleRail panels={listToolbarPanels} />
+                      {screenPanelToggle}
+                    </>
+                  }
+                  panelPosition="right"
+                  panel={listPanelBody}
+                  panelOpen={panelOpen}
+                  onPanelOpenChange={setPanelOpen}
+                  panelAriaLabel={`${selectedListColumn?.label ?? "List view"} tools`}
+                  panelDataProps={{ "data-screen-editor-panel": "true" }}
+                  reopenAffordance={screenReopen}
+                  canvas={
+                    <div
+                      className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
+                      data-screen-editor-canvas-scroller="true"
+                      style={panelOpen && listPanelBody ? { paddingRight: 300 } : undefined}
+                    >
+                      <div className="mx-auto w-full max-w-4xl">
+                        <ListViewCanvas
+                          contentType={selectedContentType}
+                          listView={definition.listView}
+                          selectedColumnId={selectedListColumnId}
+                          onSelectColumn={(columnId) => {
+                            setSelectedListColumnId(columnId);
+                            setActiveListPanel("column");
+                          }}
+                          onMoveColumn={handleMoveListColumn}
+                        />
+                      </div>
+                    </div>
+                  }
+                />
               ) : (
                 <ScreenAuthoringCanvas
                   document={screenDocument}
                   bindings={screenBindings}
                   fields={contentFields}
                   values={previewRecordState.data}
+                  header={screenPageHeader}
+                  panelToggle={screenPanelToggle}
+                  reopenAffordance={screenReopen}
+                  panelOpen={panelOpen}
+                  onPanelOpenChange={setPanelOpen}
                   previewNotice={
                     <PreviewStateNotice
                       contentType={selectedContentType}
@@ -1002,23 +1070,23 @@ export function CustomScreenEditorPage() {
                   onDelete={handleDeleteBlock}
                 />
               )}
-            </div>
-          </CustomScreenShell>
+            </CustomScreenShell>
 
-          <CustomScreenWorkspacePreviewDialog
-            open={previewOpen}
-            onOpenChange={setPreviewOpen}
-            mode={activeBuilderTab}
-            contentType={selectedContentType}
-            listView={definition.listView}
-            document={screenDocument}
-            bindings={screenBindings}
-            fields={contentFields}
-            previewRecordState={previewRecordState}
-            previewLoading={previewDataLoading}
-          />
-        </>
-      )}
+            <CustomScreenWorkspacePreviewDialog
+              open={previewOpen}
+              onOpenChange={setPreviewOpen}
+              mode={activeBuilderTab}
+              contentType={selectedContentType}
+              listView={definition.listView}
+              document={screenDocument}
+              bindings={screenBindings}
+              fields={contentFields}
+              previewRecordState={previewRecordState}
+              previewLoading={previewDataLoading}
+            />
+          </>
+        );
+      }}
     </CustomScreenPreviewRecordOwner>
   );
 }

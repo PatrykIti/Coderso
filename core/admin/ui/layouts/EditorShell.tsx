@@ -10,9 +10,11 @@ type EditorShellProps = {
   centerScroll?: boolean;
   centerPanelClassName?: string;
   // TASK-479-06-L05: "panels" (default) keeps the existing 3-pane side-rail
-  // layout; "canvas" hosts the L06 floating-panel CanvasEditor as a single
-  // full-height surface that fills the center region. Additive, backward
-  // compatible — existing editors stay on "panels".
+  // layout; "canvas" hosts a single full-height surface that fills the center
+  // region. The shared `shared/CanvasEditor` editor-chrome shell (TASK-496-01,
+  // now wired into the Pages + Page-Templates builder branch; Screens via
+  // TASK-496-02) renders such a surface. Additive, backward compatible —
+  // existing editors stay on "panels".
   variant?: "panels" | "canvas";
 } & React.ComponentProps<typeof AdminShell>;
 

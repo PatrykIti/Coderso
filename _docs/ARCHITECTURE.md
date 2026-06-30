@@ -877,6 +877,21 @@ Zakres CMS, model danych, auth i security opisane sa w:
     widget runtime, DB, server adapters, ani clients,
   - Page Editor pozostaje Page-owned; Custom Screens uzywaja
     `ScreenAuthoringCanvas` jako adaptera nad `ScreenDocumentV1`.
+- **TASK-496 shared editor-chrome shell (DONE 2026-06-30):** the page-editor
+  builder chrome is extracted into one shared, purely-presentational shell
+  `core/admin/ui/shared/CanvasEditor.tsx` consumed by Pages, Page Templates, AND
+  Custom Screens (builder `panelPosition="right"`, entry content `="bottom"`); it
+  carries no data/service import, so it stays legal under the
+  custom-screen-authoring boundary for both `@/ui/pages/*` and
+  `@/ui/custom-screens/*`. The previously orphaned copy BECAME this shell (real
+  importers, dead `BlockChip` removed). The dark authoring chrome —
+  `AuthoringFloatingToolbar`, `AuthoringCanvasFrame`, the authoring `canvasChrome.ts`
+  styling module, plus the orphan `AuthoringInsertionZone` / `FieldBindingPanel` /
+  `shared/FilterBar` — is deleted; surviving authoring LOGIC stays:
+  `InlineEditWrapper`, `authoringSelection`, `selectionChrome`/`selectionBorder`,
+  `AuthoringLayersPanel`, `AuthoringCommandPalette`, `authoringCommands`. Screens keep
+  `ScreenDocumentV1`, field bindings, List/Editor views, and `ScreenRuntimeRenderer` —
+  inheriting only the visual frame; `mode:"menu"` keeps the legacy dark bottom panel.
 - `Editor View` preview owner jest cached-first nad `entries:list:<typeSlug>`:
   pierwszy cached record hydratuje i builder canvas, i preview dialog; cold
   cache fallback pozostaje schema-shaped z jawna notka dla `no-records` albo

@@ -6,7 +6,8 @@
 **Category:** Admin UI / Visual Refresh / Shell (TopBar)
 **Estimated Effort:** Small
 **Dependencies:** TASK-479-06 (TopBar redesign), TASK-479-06-L04 (this leaf **supersedes** its keep-decision)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-30
 
 ---
 

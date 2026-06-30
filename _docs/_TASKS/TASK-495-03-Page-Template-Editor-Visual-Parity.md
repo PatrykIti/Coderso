@@ -6,7 +6,8 @@
 **Category:** Admin UI / Visual Refresh / Pages+Templates / Page Builder
 **Estimated Effort:** Medium
 **Dependencies:** **TASK-495-02** (Page-Template Editor Chrome And Panel Parity — its restructured `return (...)` block + the `useLegacyChrome`/`useBuilderChrome`/`panelTone` gate are the substrate this subtask refines; 495-02 must land first). Builds on TASK-479-05 (tokens: `--card`/`--popover`/`--muted`/`shadow-card`/`bg-dotted`) already shipped on `feature/visual`.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-30
 
 ---
 

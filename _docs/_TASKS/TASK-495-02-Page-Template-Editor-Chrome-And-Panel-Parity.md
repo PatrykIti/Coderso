@@ -6,7 +6,8 @@
 **Category:** Admin UI / Visual Refresh / Pages+Templates / Page Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-495 (parent); fulfils the unmet right-dock contract of **TASK-479-08-L02** (Done); reuses the `PageHeader` from **TASK-479-06-L02**
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-30
 
 ---
 

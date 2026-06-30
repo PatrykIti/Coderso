@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -41,7 +40,8 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
-import { AuthoringCanvasFrame } from "@/ui/authoring";
+import { CanvasEditor } from "@/ui/shared/CanvasEditor";
+import { PageHeader } from "@/ui/shared/PageHeader";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { MediaPicker } from "@/ui/media/MediaPicker";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -366,6 +366,9 @@ export function CustomScreenEntryEditor() {
   const [presentationError, setPresentationError] = useState<string | null>(null);
   const [remotePresentationUpdatePending, setRemotePresentationUpdatePending] = useState(false);
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
+  // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
+  // (bottom-docked inline format/presentation panel).
+  const [panelOpen, setPanelOpen] = useState(true);
   const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
     () =>
       (getCachedContentTypes() ?? []).map((item) => ({
@@ -1133,23 +1136,10 @@ export function CustomScreenEntryEditor() {
             ) : null}
           </div>
         }
+        variant="canvas"
       >
-        <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-6 py-3 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Screen-owned record editor
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {canEditInScreen
-                  ? "The canvas is the active editing surface for this record."
-                  : "This screen still needs writable bindings before it can replace legacy editing paths."}
-              </p>
-            </div>
-          </div>
-        </div>
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-8">
+        {error || remoteUpdatePending || remotePresentationUpdatePending || !canEditInScreen ? (
+          <div className="shrink-0 space-y-3 px-6 pt-4">
             {error ? (
               <Alert variant="destructive">
                 <AlertTitle>Custom screen record error</AlertTitle>
@@ -1193,41 +1183,73 @@ export function CustomScreenEntryEditor() {
                 </AlertDescription>
               </Alert>
             ) : null}
+          </div>
+        ) : null}
 
-            {presentationPanel}
-
-            {isLoading ? (
-              <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-soft">
-                Loading custom screen record...
-              </div>
-            ) : screen && canEditInScreen ? (
-              <div
-                className="overflow-hidden rounded-2xl border border-border bg-card shadow-card"
-                data-custom-screen-entry-document="true"
-              >
-                <AuthoringCanvasFrame
-                  borderless
-                  onClearSelection={() => {
+        {isLoading ? (
+          <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
+            Loading custom screen record...
+          </div>
+        ) : screen && canEditInScreen ? (
+          <div className="flex min-h-0 flex-1 flex-col" data-custom-screen-entry-document="true">
+            <CanvasEditor
+              header={
+                <PageHeader
+                  className="mb-0 shrink-0 px-6 pb-3 pt-4"
+                  title={entry?.title?.trim() || (isCreateMode ? "New record" : "Record")}
+                  description={
+                    canEditInScreen
+                      ? "The canvas is the active editing surface for this record."
+                      : "This screen still needs writable bindings before it can replace legacy editing paths."
+                  }
+                />
+              }
+              title="Entry content"
+              badge={
+                hasUnsavedChanges ? (
+                  <Badge variant="warning" className="text-[10px] font-semibold uppercase">
+                    Unsaved
+                  </Badge>
+                ) : null
+              }
+              panelPosition="bottom"
+              panel={presentationPanel}
+              panelOpen={panelOpen}
+              onPanelOpenChange={setPanelOpen}
+              panelAriaLabel="Record presentation"
+              panelDataProps={{ "data-screen-editor-panel": "true" }}
+              canvas={
+                <div
+                  className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
+                  data-screen-editor-canvas-scroller="true"
+                  style={panelOpen && presentationPanel ? { paddingBottom: 260 } : undefined}
+                  onClick={() => {
                     setSelectedRuntimeBlockId(null);
                   }}
                 >
-                  <CustomScreenEntryCanvas
-                    document={runtimeDocument}
-                    bindings={runtimeBindings}
-                    fieldValues={buildCanvasFieldValues()}
-                    fieldErrors={fieldErrors}
-                    fields={fields}
-                    relationTargets={relationTargets}
-                    onFieldChange={handleFieldChange}
-                    onTitleChange={handleTitleChange}
-                    onSlugChange={handleSlugChange}
-                    presentationOverrides={draftOverrides}
-                    selectedBlockId={selectedRuntimeBlockId}
-                    onSelectBlock={setSelectedRuntimeBlockId}
-                  />
-                </AuthoringCanvasFrame>
-              </div>
-            ) : screen ? (
+                  <div className="mx-auto w-full max-w-3xl">
+                    <CustomScreenEntryCanvas
+                      document={runtimeDocument}
+                      bindings={runtimeBindings}
+                      fieldValues={buildCanvasFieldValues()}
+                      fieldErrors={fieldErrors}
+                      fields={fields}
+                      relationTargets={relationTargets}
+                      onFieldChange={handleFieldChange}
+                      onTitleChange={handleTitleChange}
+                      onSlugChange={handleSlugChange}
+                      presentationOverrides={draftOverrides}
+                      selectedBlockId={selectedRuntimeBlockId}
+                      onSelectBlock={setSelectedRuntimeBlockId}
+                    />
+                  </div>
+                </div>
+              }
+            />
+          </div>
+        ) : screen ? (
+          <div className="min-h-0 flex-1 overflow-auto px-6 py-8">
+            <div className="mx-auto max-w-5xl">
               <CustomScreenPreview
                 document={runtimeDocument}
                 bindings={runtimeBindings}
@@ -1236,13 +1258,13 @@ export function CustomScreenEntryEditor() {
                 emptyTitle="Editor upgrade required"
                 emptyMessage="Add writable screen blocks and bindings in the builder before using this route as the dedicated record editor."
               />
-            ) : (
-              <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-                Screen record unavailable.
-              </div>
-            )}
+            </div>
           </div>
-        </ScrollArea>
+        ) : (
+          <div className="mx-6 mb-6 rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-card">
+            Screen record unavailable.
+          </div>
+        )}
       </EditorShell>
     </>
   );

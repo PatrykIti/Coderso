@@ -29,10 +29,12 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1200 for the next changelog entry.
+assistant policy coverage fix. Use 1206 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1205 | 2026-06-30 | TASK-496 Shared editor-chrome shell and Screens adoption | Pages/Custom Screens/Admin UI/Architecture/Cleanup/Docs/Task Board |
+| 1204 | 2026-06-30 | TASK-495 Page/Template editor and Top-Bar prototype parity | Pages/Page Templates/Admin UI/Page Builder/QA/Docs/Task Board |
 | 1199 | 2026-06-27 | TASK-477-02 Page Editor block-level swatch preview accuracy | Pages/Admin UI/Theme/QA/Docs/Task Board |
 | 1198 | 2026-06-26 | TASK-477-01 Page Editor inline color swatch accuracy and picker | Pages/Admin UI/QA/Docs/Task Board |
 | 1197 | 2026-06-26 | TASK-476-02 Page Editor live in-edit mark feedback | Pages/Admin UI/QA/Docs/Task Board |

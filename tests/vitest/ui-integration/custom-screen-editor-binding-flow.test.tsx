@@ -5,7 +5,6 @@ import React, { useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-import { FieldBindingPanel } from "../../../core/admin/ui/custom-screens/FieldBindingPanel";
 import { ScreenBlockInspector } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../core/admin/components/ui/tabs";
@@ -52,9 +51,13 @@ function Harness() {
   const [activeInspectorTab, setActiveInspectorTab] = useState<"screen" | "data" | "widget">(
     "widget"
   );
-  const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
+  // TASK-496-02: the standalone FieldBindingPanel (and its focusedPropPath wiring)
+  // is retired; the binding surface is covered by custom-screen-binding-panel.test
+  // through ScreenBlockInspector. This harness now only asserts that the BlockSettings
+  // widget tab exposes no legacy binding jump controls for retired screen widgets.
+  const [, setFocusedBindingPropPath] = useState<string | null>(null);
   const [block, setBlock] = useState<Block>(headerBlock);
-  const [bindings, setBindings] = useState<CustomScreenBinding[]>([
+  const [bindings] = useState<CustomScreenBinding[]>([
     {
       id: "binding-title",
       widgetId: "header-1",
@@ -89,25 +92,6 @@ function Harness() {
         <TabsTrigger value="data">Data</TabsTrigger>
         <TabsTrigger value="widget">Selected Widget</TabsTrigger>
       </TabsList>
-      <TabsContent value="data">
-        <FieldBindingPanel
-          selectedBlock={block}
-          selectedWidget={widget ?? null}
-          selectedWidgetSource="screen-registry"
-          value={bindings}
-          fields={[
-            {
-              id: "field-project-title",
-              name: "projectTitle",
-              type: "text",
-              label: "Project title",
-            },
-          ]}
-          focusedPropPath={focusedBindingPropPath}
-          onFocusedPropPathChange={setFocusedBindingPropPath}
-          onChange={setBindings}
-        />
-      </TabsContent>
       <TabsContent value="widget">
         <BlockSettings
           block={block}

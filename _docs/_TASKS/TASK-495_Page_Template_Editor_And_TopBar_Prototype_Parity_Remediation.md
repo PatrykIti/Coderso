@@ -5,7 +5,8 @@
 **Category:** Admin UI / Visual Refresh / Pages+Templates / Page Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 family (post-closure remediation). Specifically **supersedes** the keep-decision in **TASK-479-06-L04** (TopBar Redesign, Done) and **fulfills the unmet right-dock contract** of **TASK-479-08-L02** (Page Editor → Floating-Canvas, Done). Builds on TASK-479-05 (tokens) + TASK-479-06 (shell/primitives) already shipped on `feature/visual`.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-30
 
 ---
 
