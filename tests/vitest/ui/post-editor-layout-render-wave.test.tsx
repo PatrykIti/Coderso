@@ -84,9 +84,7 @@ const mount = (node: React.ReactNode) => {
   React.act(() => {
     root.render(
       <AdminRouterProvider initialPath="/admin/posts/post-1">
-        <AdminBasePathProvider value="/admin">
-          {node}
-        </AdminBasePathProvider>
+        <AdminBasePathProvider value="/admin">{node}</AdminBasePathProvider>
       </AdminRouterProvider>
     );
   });
@@ -121,7 +119,10 @@ test("PostEditorLayout resolves auto viewport from matchMedia and wires mobile c
     }),
   };
 
-  vi.stubGlobal("matchMedia", vi.fn(() => mediaQuery));
+  vi.stubGlobal(
+    "matchMedia",
+    vi.fn(() => mediaQuery)
+  );
 
   const onSecondarySidebarOpenChange = vi.fn();
   const onDetailsSidebarOpenChange = vi.fn();
@@ -196,10 +197,14 @@ test("PostEditorLayout renders compact desktop sidebars and keeps content region
   );
 
   try {
-    const secondaryRegion = view.container.querySelector("[data-post-editor-region='secondary-sidebar']");
+    const secondaryRegion = view.container.querySelector(
+      "[data-post-editor-region='secondary-sidebar']"
+    );
     const detailsRegion = view.container.querySelector("[data-post-editor-region='sidebar']");
     expect(secondaryRegion?.className).toContain("w-56");
-    expect(detailsRegion?.className).toContain("w-72");
+    // TASK-497-02 (E4): right inspector base is now w-72 (proto), so the compact
+    // override narrows it to w-64 (mirrors the left rail's w-60→w-56 narrowing).
+    expect(detailsRegion?.className).toContain("w-64");
     expect(view.container.textContent).toContain("Canvas");
     expect(view.container.querySelectorAll("[data-sheet-side]")).toHaveLength(0);
   } finally {

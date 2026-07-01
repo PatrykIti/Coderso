@@ -4,7 +4,7 @@
 **Priority:** High
 **Category:** Admin UI / Content (Menus) / Page Builder / Visual Refresh
 **Estimated Effort:** Large
-**Dependencies:** TASK-499-02 (menuDocumentV2), TASK-496-01 (`CanvasEditor` shared shell), TASK-479 (control primitives)
+**Dependencies:** TASK-499-02 (menuDocumentV2), TASK-499-04 (`core/site/menuDocumentCss.ts` — the device-forced `buildMenuDocumentPreviewCss` the in-canvas preview consumes, §2), TASK-496-01 (`CanvasEditor` shared shell), TASK-479 (control primitives)
 **Status:** ⏳ To Do
 **Parent Task:** TASK-499
 
@@ -28,6 +28,9 @@ published item tree (with nesting) — never duplicating item data.
 - **Owning modules:** `core/admin/ui/menus/{MenuDesignEditor,MenuDesignEditorPage}.tsx`,
   `core/admin/ui/shared/CanvasEditor.tsx` (consumed, not changed),
   `core/admin/ui/pages/editorControls/*` (consumed),
+  `core/site/menuDocumentCss.ts` (consumed, NOT authored here — `buildMenuDocumentPreviewCss(doc, device)`
+  is OWNED by TASK-499-04 §1; the in-canvas preview §2 imports it, so the CSS-builder
+  portion of that module is a hard prerequisite for this subtask — see Sequencing note),
   `core/admin/services/menusClient.ts` (extend `updateMenu` input with
   `document?: unknown` — the PATCH body forwarder; `:204-214` has no `document`
   today),
@@ -97,12 +100,25 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
   const [panelOpen, setPanelOpen] = useState(true);                    // lazy-init; host owns it (CanvasEditor is controlled read-only)
   const [isDirty, setIsDirty] = useState(false);
   const [items, setItems] = useState<NavigationItem[]>([]);            // published item tree, for nav-items binding
+  // BOUNDED undo/redo — Pages-identical chrome ships Undo/Redo, so the thin editor
+  // keeps its OWN small doc-snapshot stack (bounded, e.g. 50 entries). Host-owned,
+  // scoped to menuDocumentV2 (NOT the page editor's history) — regressions stay on
+  // the menu surface.
+  const [past, setPast] = useState<MenuDocumentV2[]>([]);
+  const [future, setFuture] = useState<MenuDocumentV2[]>([]);
 
   // load the menu's items (cache-first) + page slugs to bind nav-items preview
   useEffect(() => { /* getMenuWithItemsCached + listPagesCached ->
     mapMenuNodesToNavigationItems(detail.items, pagePathById, {includeDefaultTarget:true}) */ }, [menuId]);
 
-  const updateDoc = (fn: (d: MenuDocumentV2) => MenuDocumentV2) => { setDoc(fn); setIsDirty(true); };
+  const updateDoc = (fn: (d: MenuDocumentV2) => MenuDocumentV2) => {
+    setPast((p) => [...p, doc].slice(-50)); setFuture([]);            // push prior snapshot, clear redo
+    setDoc(fn); setIsDirty(true);
+  };
+  const undo = () => setPast((p) => { if (!p.length) return p;
+    const prev = p[p.length - 1]; setFuture((f) => [doc, ...f]); setDoc(prev); setIsDirty(true); return p.slice(0, -1); });
+  const redo = () => setFuture((f) => { if (!f.length) return f;
+    const next = f[0]; setPast((p) => [...p, doc]); setDoc(next); setIsDirty(true); return f.slice(1); });
   const selectedBlock = findMenuBlock(doc, selectedId);
 
   // Block composition — a real composer, not add-only (mirrors the page editor's
@@ -126,7 +142,9 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                 actions={<>{/* Structure tab link (navigate `/menus/${id}`) + Discard + Save + Publish — real handlers */}</>} />}
       title="Menu builder"
       badge={isDirty ? <Badge variant="warning">Unsaved</Badge> : null}
-      toolbar={/* DeviceSwitcher(setDevice) + Hide/Show panel toggle (setPanelOpen) */}
+      toolbar={/* Undo(undo, disabled !past.length) + Redo(redo, disabled !future.length)
+                  + DeviceSwitcher(setDevice) + Hide/Show panel toggle (setPanelOpen) —
+                  the SAME control cluster order Pages use (CanvasEditor.tsx:44-48). */}
       deviceContext={{ value: device, label: deviceLabel(device) }}
       panelOpen={panelOpen}
       onPanelOpenChange={setPanelOpen}                                  // required prop; shell reads only
@@ -157,6 +175,17 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
   host's setter directly (`CanvasEditor.tsx:14-23,64-83`).
 - Reuse the menu detail cache + refresh contract from the items editor
   (`getCachedMenuDetail` / `getMenuWithItemsCached`).
+- **Chrome parity scope (be precise, don't over-claim "identical").** The thin
+  editor reuses the SAME `CanvasEditor` shell + the SAME `editorControls/*`, and
+  ships the toolbar cluster Pages ship: **Undo / Redo** (the bounded doc-snapshot
+  stack above), **DeviceSwitcher**, and the **Hide/Show panel** toggle. The Pages
+  **Layers** overlay is intentionally SCOPED OUT and served instead by the
+  `MenuBarPanel` **"Blocks" list** (§3 — click-to-select + up/down + remove over the
+  single `menu-bar`): a menu document is one shallow section with a handful of
+  blocks, so a full Pages-style Layers tree would be redundant chrome. This is the
+  ONE deliberate, documented scope narrowing of "Pages-identical" — NOT a dropped
+  affordance (selection, reorder, and remove are all reachable). Note it in the
+  499-05 closure so it is not read as drift.
 
 ### 2. `MenuDocumentCanvas` — render menu-bar + blocks, click-to-select
 
@@ -169,12 +198,19 @@ function SelectableBlock({ id, selected, onSelect, children }) {
   return <div data-menu-block-id={id} onClick={(e) => { e.stopPropagation(); onSelect(id); }}
     className={cn("rounded-lg", selected && "ring-2 ring-primary")}>{children}</div>;
 }
-// Styling comes from the menu-bar layout (reuse buildSiteShellPreviewCss-style
-// CSS over the document's menu-bar layout — see TASK-499-04's menuDocumentCss).
+// Styling comes from the menu-bar layout: emit the DEVICE-FORCED preview sheet
+// `buildMenuDocumentPreviewCss(doc, device)` (TASK-499-04 §1) so the DeviceSwitcher
+// actually flattens the mobile disclosure IN-CANVAS — mirroring
+// buildSiteShellPreviewCss(appearance, device) at MenuDesignEditorPage.tsx:122-125.
+// (The FRONT renderer uses the viewport variant buildMenuDocumentCss(doc); the
+// admin canvas uses the device-forced one — same scoped [data-site-menu-doc] rules.)
 ```
 
 The canvas binds `nav-items` to the published `items` (read-only) — the same data
-the front renders, so empty-vs-custom parity is visible while authoring. Clicking
+the front renders, so empty-vs-custom parity is visible while authoring. The
+`device` prop feeds `buildMenuDocumentPreviewCss(doc, device)`, so the in-canvas
+preview flattens the mobile disclosure at the selected breakpoint (the
+DeviceSwitcher is not a dead control). Clicking
 a block selects it (innermost wins via `stopPropagation`); clicking the dotted
 backdrop clears selection (matches the page editor's `selectSection(null)`).
 
@@ -298,6 +334,10 @@ must not refetch or clear dirty state.
     the per-block Remove deletes it AND clears a stale selection; up/down reorders
     within the menu-bar; each marks dirty and round-trips through `updateMenu({document})`.
   - `nav-items` binds the live item tree read-only (does not persist item data).
+  - **Undo/Redo (bounded history):** an edit pushes a snapshot; Undo restores the
+    prior document + Redo re-applies; Undo is disabled with an empty history and a
+    fresh edit clears the redo stack. (Confirms the toolbar's Undo/Redo are wired,
+    not decorative — Pages-chrome parity.)
 - **Replace** `tests/vitest/ui/menu-design-editor-flow.test.tsx` (old PageEditor
   host flow) with the new editor's flow; assert the legacy dark chrome is gone.
 - **Impacted page-editor host-contract suite — MUST be updated here:**

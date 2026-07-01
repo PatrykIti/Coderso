@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import type { AdminBreadcrumbInput } from "@/ui/shared/AdminBreadcrumbs";
+import { PageHeader } from "@/ui/shared/PageHeader";
 
 import {
   PostEditorContentRegion,
@@ -18,6 +19,9 @@ type PostEditorViewportMode = "auto" | "desktop" | "mobile";
 type PostEditorLayoutProps = {
   activeHref: string;
   breadcrumbs?: React.ReactNode | AdminBreadcrumbInput[];
+  pageTitle?: string;
+  pageDescription?: React.ReactNode;
+  pageActions?: React.ReactNode;
   header?: React.ReactNode;
   content: React.ReactNode;
   footer?: React.ReactNode;
@@ -45,6 +49,9 @@ const resolveInitialDesktop = (viewportMode: PostEditorViewportMode) => {
 export function PostEditorLayout({
   activeHref,
   breadcrumbs,
+  pageTitle,
+  pageDescription,
+  pageActions,
   header,
   content,
   footer,
@@ -83,45 +90,41 @@ export function PostEditorLayout({
   const showMobileSecondary = !isDesktopViewport && !focusMode && Boolean(secondarySidebar);
   const showMobileDetails = !isDesktopViewport && !focusMode && Boolean(detailsSidebar);
 
-  const contentRegion = useMemo(
-    () => (
-      <section className="min-h-0 min-w-0 flex-1 bg-background">
-        <div className="flex h-full min-h-0 flex-col overflow-hidden">
-          {header ? <PostEditorHeaderRegion>{header}</PostEditorHeaderRegion> : null}
-          <PostEditorContentRegion>{content}</PostEditorContentRegion>
-          {footer ? <PostEditorFooterRegion>{footer}</PostEditorFooterRegion> : null}
-        </div>
-      </section>
-    ),
-    [content, footer, header]
-  );
+  const showPageHeader = Boolean(pageTitle || pageDescription || pageActions);
 
   return (
-    <AdminShell
-      activeHref={activeHref}
-      breadcrumbs={breadcrumbs}
-      contentClassName="overflow-hidden p-0"
-    >
+    <AdminShell activeHref={activeHref} breadcrumbs={breadcrumbs}>
+      {showPageHeader ? (
+        <PageHeader title={pageTitle} description={pageDescription} actions={pageActions} />
+      ) : null}
+
       <div
         className={cn(
-          "flex h-full min-h-0 min-h-[calc(100vh-4rem)] overflow-hidden bg-background",
+          "flex min-h-[calc(100vh-13rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card",
           editorDensity === "compact" ? "text-[13px]" : "text-[14px]"
         )}
+        data-post-editor-frame="true"
         data-post-editor-density={editorDensity}
       >
-        {showDesktopSecondary ? (
-          <PostEditorSecondarySidebarRegion className={compactSidePanels ? "w-56" : undefined}>
-            {secondarySidebar}
-          </PostEditorSecondarySidebarRegion>
-        ) : null}
+        {header ? <PostEditorHeaderRegion>{header}</PostEditorHeaderRegion> : null}
 
-        {contentRegion}
+        <div className="flex min-h-0 flex-1">
+          {showDesktopSecondary ? (
+            <PostEditorSecondarySidebarRegion className={compactSidePanels ? "w-56" : undefined}>
+              {secondarySidebar}
+            </PostEditorSecondarySidebarRegion>
+          ) : null}
 
-        {showDesktopDetails ? (
-          <PostEditorSidebarRegion className={compactSidePanels ? "w-72" : undefined}>
-            {detailsSidebar}
-          </PostEditorSidebarRegion>
-        ) : null}
+          <PostEditorContentRegion>{content}</PostEditorContentRegion>
+
+          {showDesktopDetails ? (
+            <PostEditorSidebarRegion className={compactSidePanels ? "w-64" : undefined}>
+              {detailsSidebar}
+            </PostEditorSidebarRegion>
+          ) : null}
+        </div>
+
+        {footer ? <PostEditorFooterRegion>{footer}</PostEditorFooterRegion> : null}
       </div>
 
       {showMobileSecondary ? (

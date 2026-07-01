@@ -129,8 +129,13 @@ avoid touching any route. See TASK-498-03 for its explicit Security Contract sub
 
 ## Documentation Updates Required
 
-- Update `_docs/_TASKS/README.md` board + **Statistics** when any subtask changes status
-  (handled by the orchestrator for the initial add).
+- Update `_docs/_TASKS/README.md` board + **Statistics** when any subtask changes status.
+  **Board-sync requirement (AGENTS.md):** the README board index MUST carry a row for the
+  **TASK-498** parent AND each of **TASK-498-01..04** (like the adjacent TASK-497 / TASK-499
+  rows), with the **Statistics** counts updated, or a task-graph/board-sync gate can fail on a
+  task file with no board row. The initial add is handled by the orchestrator (README is outside
+  these TASK-498 contract files); if it is still absent, it MUST be reconciled before closure —
+  do not treat "orchestrator-owned" as "optional".
 - Add a `_docs/_CHANGELOG/` entry on closure linking **TASK-498** + the closed subtasks.
 - Extend `_docs/CONTENT_TYPES_SPEC.md` (or a dedicated screens contract doc) with the new
   per-kind `data` schemas and the Related-list relation-resolution contract (TASK-498-04).

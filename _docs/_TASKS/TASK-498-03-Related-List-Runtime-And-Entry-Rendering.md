@@ -250,6 +250,24 @@ export async function resolveRelatedEntries(input: {
 //   // PREVIEW DIALOG variant: `values` = previewRecordState.data and document/bindings/fields are the
 //   // dialog's props; otherwise the body is byte-identical.
 //
+//   // ── STABLE `values` SOURCE — MANDATORY in the OWNER hosts (do NOT feed the effect a per-render
+//   //    fresh object) ── The effect keys on `values`. In CustomScreenEntryEditor the correct value
+//   //    source is the MERGED payload (non-editable relation IDs live in `originalData`, merged only
+//   //    inside buildPayloadData — the stable `values` state alone is insufficient), BUT buildPayloadData
+//   //    (:765) and buildCanvasFieldValues (:775) are PLAIN non-memoized arrow functions that return a
+//   //    FRESH object every render (unlike the memoized runtimeDocument/runtimeBindings :390-391). If the
+//   //    effect's `values` maps to that fresh object, the effect re-runs EVERY render → setRelatedEntries
+//   //    yields a new object ref → re-render → new `values` → effect re-runs: an UNBOUNDED
+//   //    resolve/setState loop, not a one-shot resolve. So the owner host MUST feed the effect a STABLE
+//   //    value source: either `const canvasFieldValues = useMemo(() => ({ ...buildPayloadData(), title,
+//   //    slug, ... }), [originalData, values, title, slug, entry?.status, entry?.updatedAt, ...])` (memoize
+//   //    the merged payload over its real inputs) OR key the effect on `entryId` + a SERIALIZED relation-ID
+//   //    signature (JSON of just the related-list fields' ids) instead of the whole object. AND guard the
+//   //    setState — only `setRelatedEntries(next)` when `next` actually differs from the current map (shallow
+//   //    per-block compare / serialized-signature compare), so an unchanged resolve never triggers a
+//   //    re-render. The PREVIEW DIALOG owner is ALREADY SAFE (its value source `previewRecordState.data` is
+//   //    stable React state, not a per-render object) — this trap is SPECIFIC to the entry-editor owner host.
+//
 // Wire in (entry + preview hosts ONLY) — OWNERSHIP of the useState/useEffect skeleton above:
 //   OWNER hosts (RUN the skeleton, hold the state): CustomScreenEntryEditor (ONE map fed to BOTH
 //     canEditInScreen branches) and CustomScreenWorkspacePreviewDialog/its owner (its OWN map from

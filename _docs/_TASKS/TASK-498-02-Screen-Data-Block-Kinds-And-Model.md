@@ -216,7 +216,26 @@ Add per-kind control rows and filter the field options per kind via `buildFieldO
 // BOUND-FIELD-CHANGE WIRING (load-bearing — NOT optional). The bound chips
 // (field/stat/image/related-list) insert the block with NO field (palette → onAddBlock(kind)
 // → focus Bound-field), so the binding + data.target are FIRST set HERE in the inspector, not
-// in the factory. Two things the generic onPatchBinding does NOT do on its own:
+// in the factory.
+//   0. PER-KIND BOUND-FIELD propPath (load-bearing — must match the B2 factory binding AND the
+//      498-03 resolver lookup). FieldBindingControls takes an EXPLICIT `propPath` prop
+//      (ScreenBlockInspector.tsx:257 record-header→"title", :289 field→"value"); each bound
+//      kind's Bound-field control MUST pass the propPath the B2 factory + normalizer + renderer
+//      use for that kind — DO NOT copy the field branch's `propPath="value"` for every kind:
+//        field         → propPath "value"   (readwrite)
+//        record-header → propPath "title"   (readwrite)
+//        heading       → propPath "text"
+//        stat          → propPath "value"
+//        image         → propPath "src"
+//        button        → propPath "href"
+//        related-list  → propPath "items"   ← MUST be "items", NOT "value"
+//      The related-list Bound-field control MUST render FieldBindingControls with
+//      `propPath="items"` (matching the B2 `{ propPath:'items', ... }` binding and the 498-03
+//      host precompute lookup `bindings.find(bd => bd.blockId===block.id && bd.propPath==="items")`,
+//      498-03:232). Binding it on `value` (the field-branch copy) creates an orphan binding the
+//      resolver never finds → the related-list renders a SILENT perpetual empty state (no error,
+//      lint/types clean). This is why the regression shape below pins `propPath === "items"`.
+// Two things the generic onPatchBinding does NOT do on its own:
 //   1. DISPLAY-KIND BIND MODE = read. createScreenFieldBinding defaults a brand-new binding to
 //      "readwrite" (ScreenBlockInspector.tsx:83) and handlePatchBinding creates it with
 //      `mode: patch.mode` (CustomScreenEditorPage.tsx:518-523), while the Bound-field control's
@@ -317,7 +336,10 @@ entry/preview (value). Inspector bound-field-change wiring (`custom-screen-bindi
 "Interaction" Select, no style modal, per the 498-01 A4 re-point): binding a display kind
 (stat/image/related-list) via the Bound-field control creates the binding with `mode === "read"`
 (NOT readwrite); binding a
-`related-list` to a relation field ALSO sets `data.target` to that field's `relation.target`
+`related-list` to a relation field creates a binding whose `propPath === "items"` (NOT `"value"` —
+matching the B2 factory binding + the 498-03 resolver lookup; a `value`-propPath binding would be
+orphaned and render a silent empty state) and ALSO sets `data.target` to that field's
+`relation.target`
 (asserts the `items`-propPath path syncs `data.target`, since `handlePatchBinding` only
 auto-syncs `data` for `propPath === "value"`); `field` (and an editable header bound to
 `title`) still bind `readwrite`.

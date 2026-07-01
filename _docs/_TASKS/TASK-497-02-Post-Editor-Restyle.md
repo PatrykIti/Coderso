@@ -228,9 +228,32 @@ const normalizeLeftRailMode = (value: PostEditorLeftRailMode | undefined): PostE
 > secondary-sidebar open handler** (`PostBlockEditorShell.tsx:646-648`) hardcodes
 > `setLeftRailMode("outline") + openListView()` — opening the rail on mobile would land on Outline,
 > not the new default **Blocks**. Change it to `setLeftRailMode("blocks")` so mobile matches the
-> desktop Blocks-default the whole re-scope is built on. (Both are E1/E4 details; the "mobile
-> Sheets KEEP as today" / "handleToggleOutline unchanged shape" notes cover container/shape, not
-> these two derived values.)
+> desktop Blocks-default the whole re-scope is built on. **(c) the SIBLING derived flag
+> `showListView`** (`usePostEditorLayout.ts:287` `state.secondarySidebar === "list-view"`) — once the
+> sentinel overloads `open_secondary "list-view"` for ALL three rail-open paths, this bare check reads
+> TRUE whenever the rail is open on **any** tab (Blocks/Outline/List), so it collapses to `==
+> secondarySidebarOpen` and no longer means "List tab active." Apply the SAME coherence fix E1 applies
+> to `showInserter`: **redefine `showListView => secondarySidebar !== null && leftRailMode ===
+> "list-view"`** so it truthfully tracks the List tab (it is on the public `UsePostEditorLayoutResult`;
+> keeping it truthful matches the "keep every derived value truthful" standard). This redefinition
+> flips ONLY `post-editor-layout-hook-wave.test.tsx:174` (the init `initialSecondarySidebar:"inserter"`
+> + `initialLeftRailMode:"list-view"` case: the OLD bare `=== "list-view"` gave `showListView===false`,
+> but the new `secondarySidebar!==null && leftRailMode==="list-view"` gives `true`, so `:174` flips
+> `false`→`true`). **`:182` does NOT flip** — it sits AFTER an `openListView()` act (which leaves
+> `leftRailMode` at `"list-view"`) and already asserts `showListView===true`, which the new derivation
+> also yields; it is a verify-not-flip anchor and MUST stay `toBe(true)` (do NOT re-point it to
+> `false`). So **add `:174` to that suite's re-baseline** (the hook-wave re-baseline list in Testing
+> below now covers :66/:173/:193 **and :174** — re-point `:174` to the new `secondarySidebar!==null &&
+> leftRailMode==="list-view"` semantics (`false`→`true`) and verify `:182` stays `true`; keep every
+> other transition/focus-restore assertion). (Both
+> `showInserter` and `showListView` therefore share the identical coherent shape `secondarySidebar
+> !== null && leftRailMode === <mode>`.) **`toggleInserter`/`toggleListView`** (which flip
+> `secondarySidebar` but not `leftRailMode`) must ALSO set the mode in lockstep —
+> `toggleInserter` → `setLeftRailMode("blocks")` on open, `toggleListView` → `setLeftRailMode(
+> "list-view")` on open — so the tab-open path and the segmented-control path agree; the segmented
+> `Tabs onValueChange` (E2) remains the primary mode control, these toggles just keep the mode
+> coherent when they open the rail. (These are E1/E4 details; the "mobile Sheets KEEP as today" /
+> "handleToggleOutline unchanged shape" notes cover container/shape, not these derived values.)
 
 `PostBlockEditorShell.tsx` — the storage fallback + parse + serialize:
 
@@ -366,7 +389,17 @@ draft (ghost) + Publish (`Rocket`, `Update` when published). **Remove** the auto
 `Badge` + undo/redo from this cluster (they move to the chrome bar, E4). Keep
 `data-post-editor-header-cluster="primary-actions"` + `data-post-editor-save-draft`. Keep
 the `status === "published" ? "Update" : "Publish"` label flip + status-driven
-`aria-label`.
+`aria-label`. **Also trim `PostEditorActionClusterProps` to `{ status, saving, onPreview,
+onSaveDraft, onPublish }`** — the badge+undo/redo relocation makes `dirty` / `lastSavedAt`
+(today REQUIRED, `PostEditorActionCluster.tsx:8,10`) plus `canUndo` / `canRedo` / `onUndo` /
+`onRedo` (and the internal `syncLabel`) DEAD props on the cluster. Removing them keeps the
+E3 `pageActions` call above (which passes only `status`/`saving`/`onPreview`/`onSaveDraft`/
+`onPublish`) type-clean — leaving `dirty` / `lastSavedAt` REQUIRED would fail `bun --cwd core
+lint:types` (TS2741 missing required prop), while keeping them destructured-but-unused would
+trip `no-unused-vars`. **Scope note:** only the *cluster* signature narrows — `PostEditorHeader`
+RETAINS its `dirty` / `saving` / `lastSavedAt` props (it computes `syncLabel` for the re-homed
+sync `Badge`, E4:518-519) and its `canUndo` / `canRedo` / `onUndo` / `onRedo` props (it renders
+the relocated undo/redo, E4), since the chrome bar is now the sole render site for those.
 
 ### E4 — Extension #2b + #3: the framed card + chrome bar
 
@@ -384,7 +417,15 @@ return (
       actions={pageActions}
     />                                                {/* NO breadcrumbs prop — AdminShell owns the trail (E3), so no double breadcrumb; matches TASK-497-01 */}
     <div
-      className="flex min-h-[calc(100vh-13rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+      className={cn(
+        "flex min-h-[calc(100vh-13rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card",
+        editorDensity === "compact" ? "text-[13px]" : "text-[14px]",   // KEEP the density TEXT-SIZE
+        //   class (was PostEditorLayout.tsx:108) — it is what actually DELIVERS comfortable/compact
+        //   editor text sizing; the data attribute alone does NOT resize text. Carry BOTH the class
+        //   and the attribute onto the framed card (or an inner wrapper), or the preference silently
+        //   regresses to a fixed size. No test guards the class today (only the attribute), so add a
+        //   chrome-wave/responsive assertion on text-[13px]/text-[14px] to lock it if convenient.
+      )}
       data-post-editor-frame="true"        // EditorPreviewFrame.tsx:31-36
       data-post-editor-density={editorDensity}   // KEEP the density hook (was PostEditorLayout.tsx:110)
       //   — user-persisted comfortable/compact text sizing must survive the re-layout
@@ -399,22 +440,40 @@ return (
         ) : null}
         <PostEditorContentRegion>{content}</PostEditorContentRegion>                {/* bg-dotted canvas */}
         {showDesktopDetails ? (
-          <PostEditorSidebarRegion className={compactSidePanels ? "w-72" : undefined}>
-            {detailsSidebar}                                                       // w-72 bg-card lg:block (gate-consistent — see E4 regions note; compact override kept)
+          <PostEditorSidebarRegion className={compactSidePanels ? "w-64" : undefined}>
+            {detailsSidebar}                                                       // w-72 bg-card lg:block (gate-consistent — see E4 regions note; compact override kept + still NARROWS)
           </PostEditorSidebarRegion>
         ) : null}
         {/* KEEP the compactSidePanels width override (was PostEditorLayout.tsx:113,121, w-56/w-72)
-            threaded into the new w-60/w-72 regions — this is a user-persisted preference, do NOT
-            drop it when hardcoding the prototype widths. */}
+            threaded into the new regions — this is a user-persisted preference, do NOT drop it
+            when hardcoding the prototype widths. IMPORTANT: the right-inspector proto base is now
+            w-72 (was w-80), so the compact override MUST be NARROWER than the new base or the
+            preference becomes a right-panel no-op (w-72 over w-72 = nothing narrows). Use compact
+            **w-64** over base **w-72** for the details region (mirrors the left rail's real narrowing
+            compact w-56 over base w-60) so compact/comfortable still visibly narrows BOTH side panels,
+            symmetrically. */}
       </div>
+      {footer ? <PostEditorFooterRegion>{footer}</PostEditorFooterRegion> : null}
+      {/* KEEP the footer region (PostEditorRegions.tsx:32-42, aria-label="Post editor footer")
+          inside the framed-card flex column, BELOW the three panes. The real shell passes NO
+          `footer` prop, so nothing renders visually — but `footer?: React.ReactNode` MUST stay
+          on PostEditorLayoutProps and the region MUST keep being emitted, because two suites
+          mount PostEditorLayout DIRECTLY with a `footer={…}` prop and one hard-asserts the
+          landmark: post-editor-keyboard-a11y.test.tsx test 2 (:79 mount, :124 asserts
+          aria-label="Post editor footer") + post-editor-layout-responsive.test.tsx:14. Dropping
+          the region (or the prop) turns test 2 RED (broken vitest gate) and turns the two
+          `footer={…}` props into unknown-prop `lint:types` errors — see the "Verify after E4"
+          note below. Do NOT remove the footer region in this re-layout. */}
     </div>
     {/* mobile Sheets for secondary/details — KEEP as today (:127-155) */}
   </AdminShell>
 );
 ```
 
-`layout/PostEditorRegions.tsx` — adopt prototype widths + the left=lg / right=xl reveal;
-the header region stays the chrome-bar surface.
+`layout/PostEditorRegions.tsx` — adopt prototype widths + the left=lg / right=lg
+(gate-consistent) reveal (both regions stay `lg:block` to match the JS `showDesktopDetails`/
+`showDesktopSecondary` mount gate — do NOT adopt the proto's `xl:block`; see the detailed
+regions note below); the header region stays the chrome-bar surface.
 
 ```tsx
 // PostEditorHeaderRegion (:12): keep "shrink-0 border-b border-border bg-muted/40"  (chrome bar)
@@ -455,7 +514,14 @@ gone → `PageHeader`). Keep the single strip carrying `data-post-editor-header-
 //   (EditorPreviewFrame.tsx:37-52 renders `{toolbar}` :44-45 before the undo/redo divider :46-52;
 //   PostEditorPreview.tsx:58 feeds toolbar={<Badge>Draft · autosaved</Badge>}).
 <Badge variant="outline" data-post-editor-sync-state="true">{syncLabel}</Badge>  {/* moved here from the cluster; proto `toolbar` slot :44-45 */}
-//   then undo/redo (proto EditorPreviewFrame.tsx:47-52), device toggle (unchanged,
+//   then undo/redo — RELOCATE THE EXISTING ActionCluster undo/redo BUTTONS (do NOT rebuild from
+//   the hookless proto): carry over VERBATIM the data-post-editor-undo="true" (ActionCluster :69) /
+//   data-post-editor-redo="true" (:83) hooks + disabled={!canUndo}/{!canRedo} + aria-label + title.
+//   The prototype's undo/redo (EditorPreviewFrame.tsx:47-52) are HOOKLESS plain aria-label="Undo"/
+//   "Redo" buttons; porting the proto version verbatim would silently DROP -undo/-redo (Preserve
+//   list line 172 commits to keeping them, and NO test currently guards these two attrs — grep tests/
+//   for data-post-editor-undo|redo = NONE — so a drop would pass every gate green while regressing a
+//   preserved hook; the regression shape below now guards both). device toggle (unchanged,
 //   PostEditorHeader.tsx:143-177), then Add block / Outline / Details / Focus / Revisions /
 //   Settings — icon-ghost, EVERY aria-pressed/aria-expanded/aria-controls/aria-keyshortcuts/
 //   data-post-editor-shortcut/ref preserved VERBATIM from the current PostEditorHeader.tsx:181-265.
@@ -535,7 +601,9 @@ Run from repo root (per [[local-cms-run-and-test]] / TASK-479 close-out norm):
     shell/hook and assert the exact affordances E1/E2 change):** `post-block-editor-shell.test.tsx`
     (asserts the literal `"Document Outline"` / `"List view"` / `data-post-editor-outline-insert`
     strings E2 relocates — :12,:13,:18), `post-editor-layout-hook-wave.test.tsx` (hard-asserts the
-    OLD default `"outline"` + the old `showInserter` derivation E1 changes — :66,:173,:193),
+    OLD default `"outline"` + the old `showInserter` derivation E1 changes — :66, plus :173 which
+    FLIPS `true`→`false` and :193 which STAYS `true` under the new derivation; see the hook-wave
+    contract-lock bullet below for the per-anchor FLIP-vs-STAYS split),
     `post-block-editor-shell-wave.test.tsx` (a **TWO-anchor re-baseline** — NOT one line, and
     NOT "not a weakening": (a) its malformed-stored-layout tolerance test — `"tolerates malformed
     stored layout fields"` at :1129 — seeds `leftRailMode:"also-bad"` (:1140) and hard-asserts the
@@ -613,10 +681,20 @@ Run from repo root (per [[local-cms-run-and-test]] / TASK-479 close-out norm):
     `primary-actions`, close, `"Loading post editor"`, `"Move to trash"`, and the **Outline** +
     **List** tabs present.
   - `tests/vitest/ui-integration/post-editor-listview-outline.test.tsx` — re-baseline to
-    the **three-tab** rail (Blocks default | Outline | List); the `"Document Outline"` (:41)
-    and `"List view"` (:45) copy is re-pointed to the new rail-tab labels / a stable marker
-    (the outline-insert hook at :47 is **kept** — re-homed into the Outline tab per E2); keep
-    the Outline/List panel behavior assertions.
+    the **three-tab** rail (Blocks default | Outline | List). This suite mounts
+    `PostListViewSidebar` **directly with NO `leftRailMode` prop** (:9-38), so its rendered
+    rail-**mode** reflects the component's default param (`PostListViewSidebar.tsx:49`
+    `leftRailMode = "outline"` today). Per E1/E2 + AC4 the default becomes **Blocks**, so
+    **flip that component default param to `"blocks"`** (in lockstep with the sibling
+    `post-editor-layout-shell.test.tsx` :19 re-point `mode="outline"→"blocks"` and the reducer
+    normalize default, E1). Consequently **re-point :42** `data-post-editor-left-rail-mode="outline"`
+    **→ `"blocks"`** (the active default mode is now Blocks) — do NOT leave :42 unaddressed or it
+    goes RED. The `"Document Outline"` (:41) header copy + `"List view"` (:45) copy are re-pointed
+    to the new rail-tab labels / a stable marker; the tab-presence markers
+    `data-post-editor-left-rail-tab="outline"` (:43) + `"list-view"` (:44) **stay green** (both
+    tabs still render via `forceMount`, now alongside a new `"blocks"` tab); the outline-insert
+    hook at :47 is **kept** — re-homed into the Outline tab per E2; keep the Outline/List panel
+    behavior assertions.
   - `tests/vitest/ui/post-block-editor-shell.test.tsx` — **re-baseline (moved out of the
     unchanged bucket):** it renders the real shell (no mocks) and asserts the exact strings E2
     relocates — re-point `"Document Outline"` (:12) + `"List view"` (:18) to the new rail-tab
@@ -625,9 +703,26 @@ Run from repo root (per [[local-cms-run-and-test]] / TASK-479 close-out norm):
     Outline tab, not dropped).
   - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx` — **contract lock for Extension #1
     (moved out of the unchanged bucket):** re-baseline the invalid-mode normalize default (:66)
-    `"outline"` → `"blocks"`, and rewrite the `showInserter` expectations (:173 / :193) to the new
-    "rail-open AND `leftRailMode === "blocks"`" semantics; keep every other transition/focus-
-    restore assertion.
+    `"outline"` → `"blocks"`, rewrite the `showInserter` expectations to the new "rail-open AND
+    `leftRailMode === "blocks"`" semantics — but **split `:173` from `:193` exactly as done for the
+    sibling `showListView` (`:174`/`:182`), because one FLIPS and the other STAYS:** at init
+    (`secondarySidebar:"inserter"`, `leftRailMode:"list-view"`) `:173` `showInserter` **FLIPS**
+    `true`→`false` (rail open but `leftRailMode "list-view"` ≠ `"blocks"`) — re-point `:173`
+    `toBe(true)` → `toBe(false)`; whereas `:193` follows `openListView` → `toggleListView` (close) →
+    `toggleInserter`, and — PROVIDED `toggleInserter` sets `leftRailMode("blocks")` on open (the E1
+    lockstep at :251-253) — leaves state `secondarySidebar:"inserter"` (≠null) AND
+    `leftRailMode:"blocks"`, so `:193` `showInserter` **STAYS** `true`: **verify it, do NOT re-point
+    it to `false`.** (`:193` flips to `false` ONLY if the `toggleInserter`→`setLeftRailMode("blocks")`
+    lockstep is omitted — re-pointing `:193` to `false` would mask that real behavior divergence.)
+    **AND re-point the sibling `showListView`
+    expectation at `:174` to the parallel "rail-open AND `leftRailMode === "list-view"`" semantics**
+    (E1 redefines `showListView` in lockstep with `showInserter` so it stays truthful of the List tab
+    — see the E1 reconcile note item (c)). Under the new derivation the init
+    `initialSecondarySidebar:"inserter"` + `initialLeftRailMode:"list-view"` case makes `:174`
+    `showListView` flip `false`→`true`, so re-point `:174` `toBe(false)` → `toBe(true)`. **`:182`
+    already asserts `showListView===true` (it follows an `openListView()` act that leaves
+    `leftRailMode:"list-view"`) and STAYS `true` under the new derivation — verify it, do NOT flip it
+    to `false`.** Keep every other transition/focus-restore assertion.
   - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx` — **TWO-anchor re-baseline (moved out
     of the unchanged bucket) — NOT a single line:** (a) the `"tolerates malformed stored layout
     fields"` test (:1129) seeds a stored `leftRailMode:"also-bad"` (:1140) and hard-asserts the
@@ -676,6 +771,28 @@ Run from repo root (per [[local-cms-run-and-test]] / TASK-479 close-out norm):
     wave` regression, or mount `PostBlockEditorShell` here) so `pageActions` is in the DOM; keep
     the Outline-toggle `"Hide document overview"` icon assertion against the TopBar mount. KEEP the
     `PostListViewPanel` test green.
+  - `tests/vitest/ui/post-editor-layout-render-wave.test.tsx` — **contract/presentation-lock
+    re-baseline for E4's compact-width change (Fix 3):** its compact-sidebars test (`:184`, mounted
+    with `compactSidePanels` at `:193`) hard-asserts the COMPACT details override
+    `detailsRegion.className` `toContain("w-72")` (`:202`) — that override is `w-72` TODAY
+    (`PostEditorLayout.tsx:121`). E4 narrows the compact details override `w-72` → **`w-64`** (the base
+    right inspector stays `w-72`), so under this compact mount `:202` renders `w-64` and goes RED
+    unless re-pointed: change `:202` `toContain("w-72")` → `toContain("w-64")`. **KEEP `:201`**
+    (`toContain("w-56")` — the compact secondary rail is unchanged) and every other assertion green.
+    (Re-baseline of a committed file — does not move the test-file count. Corrects the earlier
+    "Verify after E4 — stays green" mischaracterization of this suite, see that note below.)
+  - **Verify after E3/E4 — `tests/vitest/ui-integration/post-autosave-flow.test.tsx` (stays green
+    ONLY IF the sync badge + Revisions stay in the TopBar):** this suite renders `PostEditorTopBar`
+    in ISOLATION (`renderToString(<PostEditorTopBar/>)` at :30) and hard-asserts the sync-badge
+    strings `"Saved at"` (:32), `"Saving..."` (:44), `"Unsaved changes"` (:53) plus `"Revisions"`
+    (:33). E3/E4 MOVE `PostEditorActionCluster` OUT of the TopBar into `pageActions`/`PageHeader`, but
+    E4 KEEPS the dynamic sync `Badge` (`data-post-editor-sync-state`) inside the chrome bar within
+    `PostEditorHeader` (RIGHT of the strip, ahead of undo/redo — see E4) and keeps Revisions as a
+    chrome toggle in the TopBar, so these four assertions STAY green in a TopBar-only mount (no
+    `PageHeader`) and the suite needs NO edit. **If an implementer instead moves the sync badge /
+    Revisions OUT with the cluster into `pageActions`, all four go RED (a TopBar-only mount has no
+    `PageHeader`) and break the vitest gate** — so relocate the badge INTO `PostEditorHeader` /
+    `PostEditorTopBar` per E4, NOT into `pageActions`. Just re-run it.
   - **Verify after E1 (should stay green, but re-run because E1 touches `openInserter` +
     the `showInserter` derivation):** `tests/vitest/ui/post-editor-support-wave-2.test.tsx`
     exercises the reducer/hook transitions directly (`createPostEditorLayoutState` shape :240-247;
@@ -686,18 +803,44 @@ Run from repo root (per [[local-cms-run-and-test]] / TASK-479 close-out norm):
   - **Verify after E4 — re-run because E4 REWRITES `PostEditorLayout` (full-bleed shell →
     padded `AdminShell` + in-page `PageHeader` + framed card):** the three suites that mount
     `PostEditorLayout` DIRECTLY with the OLD prop set (no PageHeader props) —
-    `tests/vitest/ui-integration/post-editor-layout-responsive.test.tsx` (3 tests) and
-    `tests/vitest/ui/post-editor-layout-render-wave.test.tsx` (2 tests). They should STAY green
-    (regions / density / compact widths / matchMedia / mobile Sheets are all preserved; the
-    `data-post-editor-density` attr moves onto the framed-card `div`, but the SSR string still
-    contains it), **provided the new PageHeader props are declared OPTIONAL** (see E4 above) — if
-    they were required these two suites (and `post-editor-keyboard-a11y.test.tsx` test 2, below)
-    would fail `lint:types`. Re-run and re-baseline only if a token genuinely moved.
+    `tests/vitest/ui-integration/post-editor-layout-responsive.test.tsx` (3 tests, passes a
+    `footer` prop at :14) and `tests/vitest/ui/post-editor-layout-render-wave.test.tsx` (2 tests).
+    They should STAY green (**all** regions — including the **footer region**
+    (`PostEditorRegions.tsx:32-42`, `aria-label="Post editor footer"`), which E4 keeps emitting
+    inside the framed card, see the E4 pseudocode above — plus density / compact widths /
+    matchMedia / mobile Sheets are preserved; the `data-post-editor-density` attr **and its
+    density text-size class** (`editorDensity === "compact" ? "text-[13px]" : "text-[14px]"`) both
+    move onto the framed-card `div` — see the E4 pseudocode — so the SSR string still contains both;
+    and the compact right-inspector override is now **w-64 over base w-72** (E4), while the compact
+    left rail stays **w-56 over base w-60**. **⚠ CORRECTION — `post-editor-layout-render-wave.test.tsx`
+    does NOT stay green on its width assertion; it is MOVED to the CONTRACT re-baseline list above.**
+    Its `:202` assertion is NOT a comfortable-base check — it lives inside the test `"PostEditorLayout
+    renders compact desktop sidebars…"` (`:184`), which mounts with `compactSidePanels` (`:193`) and
+    asserts the COMPACT details override `detailsRegion.className` `toContain("w-72")` (`:202`; today
+    `PostEditorLayout.tsx:121` `compactSidePanels ? "w-72"`). E4's Fix 3 narrows that compact details
+    override to **w-64**, so under this compact mount `:202` renders `w-64` and `toContain("w-72")`
+    goes RED — breaking the vitest gate. (`:201` asserts the compact secondary `w-56` and STAYS green;
+    `:201`/`:202` are the ONLY width assertions in the file — there is no comfortable-base `w-72`
+    assertion, so the old "comfortable base w-72 (render-wave:202)" characterization was a misread.)
+    Re-point `:202` `"w-72"` → `"w-64"` per the render-wave re-baseline bullet above.
+    `tests/vitest/ui-integration/post-editor-layout-responsive.test.tsx` DOES stay green here (it
+    asserts no compact width)), **provided (a) the new PageHeader
+    props are declared OPTIONAL AND (b) `footer?: React.ReactNode` is RETAINED on
+    `PostEditorLayoutProps`** (see E4 above) — if the PageHeader props were required, or the
+    `footer` prop were dropped, these two suites (and `post-editor-keyboard-a11y.test.tsx` test 2,
+    below, whose `footer={…}` prop + `aria-label="Post editor footer"` assertion depend on the
+    retained footer) would fail `lint:types` / go RED. Re-run and re-baseline only if a token
+    genuinely moved.
   - **Verified NOT broken (leave untouched):** `post-list-restyle.test.tsx` (list track,
     497-01), `post-editor-details-tabs.test.tsx` (Block tab kept),
     `post-editor-keyboard-a11y.test.tsx` (aria hooks preserved — but note its **test 2 mounts
-    `PostEditorLayout` directly** at :79 with no PageHeader props, so its "untouched" green status
-    likewise DEPENDS on the new PageHeader props being OPTIONAL per E4).
+    `PostEditorLayout` directly** at :79 with no PageHeader props AND passes `footer={…}`, then
+    hard-asserts the `aria-label="Post editor footer"` landmark at :124, so its "untouched" green
+    status DEPENDS on E4 (a) declaring the new PageHeader props OPTIONAL **and (b) RETAINING the
+    `footer?` prop + continuing to emit `PostEditorFooterRegion`** — see the E4 pseudocode/footer
+    note above. If E4 instead intentionally dropped the footer, this suite would NOT be untouched:
+    it would have to be re-baselined (drop the `footer` prop + the footer-landmark assertion) and
+    moved out of this "untouched" set — but the contract KEEPS the footer, so it stays untouched).
 - **REPLACE / re-baseline (NOT a new file) — `tests/vitest/ui/posts-editor-chrome-wave.test.tsx`
   ALREADY EXISTS and is committed (HEAD, 453 lines).** It currently encodes the **rejected
   first-pass** look: it mocks `leftRailMode: "outline"` (:24,:32 — the old default) and its
@@ -769,10 +912,14 @@ describe("TASK-497-02 post editor prototype parity", () => {
     expect(container.querySelector('[aria-label="Desktop preview"]')).toBeTruthy();
   });
 
-  it("undo/redo disabled when no history (override the mock canUndo/canRedo → false)", () => {
+  it("undo/redo disabled when no history + preserve the data-post-editor-undo/redo hooks (override the mock canUndo/canRedo → false)", () => {
     const { container } = renderEditor();
     expect(container.querySelector('[aria-label="Undo"]')?.hasAttribute("disabled")).toBe(true);
     expect(container.querySelector('[aria-label="Redo"]')?.hasAttribute("disabled")).toBe(true);
+    // the RELOCATED undo/redo MUST carry over their existing data hooks (Preserve line 172) —
+    // otherwise unguarded, they would drop silently if rebuilt from the hookless prototype
+    expect(container.querySelector('[data-post-editor-undo="true"]')).toBeTruthy();
+    expect(container.querySelector('[data-post-editor-redo="true"]')).toBeTruthy();
   });
 
   it("LEFT rail defaults to Blocks; Outline + List survive as sibling tabs", () => {

@@ -65,12 +65,22 @@ raw stored input never reaches CSS.
 // Build the menu-bar + nav typography CSS from a menuDocumentV2, scoped under a
 // NEW attribute so it can never collide with buildSiteShellCss's default rules.
 export const SITE_MENU_DOC_ATTRIBUTE = "data-site-menu-doc" as const;
-export function buildMenuDocumentCss(doc: MenuDocumentV2): string {
-  // Reuse the appearance->CSS mapping shape from siteShellCss.ts:114-180 over the
-  // menu-bar layout + nav-items props (both MenuAppearance-subset). Scope every
-  // rule under `[data-site-menu-doc="true"]`. The default buildSiteShellCss(null)
-  // output is NOT imported, NOT modified, NOT re-emitted here.
-}
+// FRONT sheet — VIEWPORT-media responsive (mobile disclosure via `@media`), like
+// buildSiteShellCss. Reuse the appearance->CSS mapping shape from
+// siteShellCss.ts:114-180 over the menu-bar layout + nav-items props (both
+// MenuAppearance-subset). Scope every rule under `[data-site-menu-doc="true"]`. The
+// default buildSiteShellCss(null) output is NOT imported, NOT modified, NOT
+// re-emitted here.
+export function buildMenuDocumentCss(doc: MenuDocumentV2): string { /* viewport media queries */ }
+// ADMIN-CANVAS variant — DEVICE-FORCED. The Design canvas has a DeviceSwitcher
+// (TASK-499-03 §1), so the in-canvas preview needs the mobile-disclosure flatten
+// resolved against the SELECTED breakpoint, not the viewport — exactly the
+// buildSiteShellCss / buildSiteShellPreviewCss(appearance, device) pair the current
+// MenuDesignEditorPage.tsx:122-125 already uses. Same scoped `[data-site-menu-doc]`
+// rules, but each `@media` breakpoint is resolved from `device`. Used ONLY by the
+// admin canvas (TASK-499-03 §2); the front (§2 below) keeps calling the viewport
+// variant `buildMenuDocumentCss(doc)`.
+export function buildMenuDocumentPreviewCss(doc: MenuDocumentV2, device: PageBreakpoint): string { /* device-forced flatten */ }
 ```
 
 > **Byte-identity guard:** do NOT change `siteShellCss.ts`. The default path keeps

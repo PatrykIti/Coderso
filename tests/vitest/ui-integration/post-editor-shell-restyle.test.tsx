@@ -4,6 +4,7 @@ import { renderToString } from "react-dom/server";
 
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { PostBlockEditorShell } from "../../../core/admin/ui/posts/editor/PostBlockEditorShell";
+import { PostEditorActionCluster } from "../../../core/admin/ui/posts/editor/header/PostEditorActionCluster";
 import { PostEditorCanvas } from "../../../core/admin/ui/posts/editor/PostEditorCanvas";
 import {
   createInitialPostEditorState,
@@ -25,8 +26,60 @@ test("shell renders the restyled inspector sections + Publish action", () => {
   // InspectorSection card).
   expect(html).toContain("Post settings");
   expect(html).toContain("Featured image");
-  // header workflow action still present
+  // TASK-497-02 (E3): Preview/Save draft/Publish + the primary-actions cluster relocated from
+  // the chrome-bar TopBar into the in-page PageHeader pageActions — now on the full-shell mount
+  // (moved here from post-editor-header-workflow / post-editor-writing-canvas-flow TopBar mounts).
+  expect(html).toContain('data-post-editor-header-cluster="primary-actions"');
+  expect(html).toContain("Preview");
   expect(html).toContain("Publish");
+});
+
+test("the relocated primary-actions cluster flips the publish label + disables while saving", () => {
+  // TASK-497-02 (E3): the "Update" publish-label flip and the saving-`disabled` state moved with
+  // PostEditorActionCluster from the chrome-bar TopBar into PageHeader pageActions. Render the
+  // cluster directly (context-free leaf) to assert the state-driven affordances the full-shell
+  // mount cannot seed (published status / saving=true) — moved here from
+  // post-editor-header-workflow.test.tsx :51/:59.
+  const published = renderToString(
+    <PostEditorActionCluster
+      status="published"
+      saving={false}
+      onPreview={() => undefined}
+      onSaveDraft={() => undefined}
+      onPublish={() => undefined}
+    />
+  );
+  expect(published).toContain("Update");
+  expect(published).not.toContain(">Publish<");
+
+  const saving = renderToString(
+    <PostEditorActionCluster
+      status="draft"
+      saving
+      onPreview={() => undefined}
+      onSaveDraft={() => undefined}
+      onPublish={() => undefined}
+    />
+  );
+  expect(saving).toContain("disabled");
+});
+
+test("shell renders the in-page PageHeader (description + Preview/Publish) inside the framed card", () => {
+  // TASK-497-02 (Extension #2, re-scope to prototype parity): the editor drops the
+  // full-viewport app chrome for an in-page PageHeader (prototype PostEditorPreview.tsx:42
+  // description + Preview/Publish primary actions) ABOVE a bordered rounded editor CARD
+  // (EditorPreviewFrame.tsx:31-36 `rounded-2xl … shadow-card`). Both render outside the
+  // content loading gate, so they appear in the shell SSR string.
+  const html = renderAdminUi(<PostBlockEditorShell />, { path: "/admin/posts/post-1" });
+  // in-page PageHeader description (prototype copy)
+  expect(html).toContain("Write, format, and publish your story.");
+  // Preview + Publish live in the PageHeader actions cluster (aria-labels)
+  expect(html).toContain('aria-label="Open runtime preview"');
+  expect(/aria-label="(Publish post|Update published post)"/.test(html)).toBe(true);
+  // the editor body is wrapped in the framed rounded card (prototype EditorPreviewFrame)
+  expect(html).toContain('data-post-editor-frame="true"');
+  expect(html).toContain("rounded-2xl");
+  expect(html).toContain("shadow-card");
 });
 
 test("the restyled document canvas card carries the prototype card tokens", () => {

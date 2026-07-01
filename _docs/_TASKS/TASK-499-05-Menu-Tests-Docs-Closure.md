@@ -46,7 +46,7 @@ tests/vitest/ui/menu-editor-shell-wave.test.tsx
 tests/vitest/ui/menu-editor-validation.test.ts
 tests/vitest/ui/menu-editor-refresh-policy.test.tsx
 tests/vitest/ui/menu-tree.test.tsx                 # DnD intents + keyboard move/indent/outdent — DO NOT WEAKEN
-tests/vitest/ui/menu-item-row.test.tsx             # grip/description/Sub-item hint + drop-line + aria-labels — ZERO assertion edits (compact = OUTER framing only)
+tests/vitest/ui/menu-item-row.test.tsx             # DnD/keyboard/a11y assertions (drag-handle + Drag/Move/Indent/Outdent aria-labels, data-menu-nested-indent, drop-line markers, data-menu-row-active) — ZERO edits; pure-VISUAL assertions (grip-box dims :61-64, letter-avatar, text "Sub-item of X" :68) UPDATED to the compacted prototype row (499-01 "row fidelity" split)
 tests/vitest/ui/menu-item-form.test.tsx            # MUST stay green: NO switch in MenuItemForm (Switch lives in the inspector wrapper)
 tests/vitest/ui/menu-leaf-components.test.tsx
 tests/vitest/ui/menu-list-page.test.tsx
@@ -84,7 +84,10 @@ tests/vitest/services/menu-nav-extras.test.ts      # back-compat render path (no
   `[data-site-menu-doc]`), so this test changes by ZERO lines.
 - **DnD + nesting suites:** keep `menu-tree.test.tsx` asserting `child|before|after`
   intent resolution + keyboard indent/outdent/move + parent reparent; the PART 1
-  re-skin must keep these green without assertion edits.
+  re-skin must keep these BEHAVIOR assertions green without edits. The row's
+  pure-VISUAL assertions (grip-box dims, letter-avatar, the text "Sub-item of X"
+  hint) ARE updated as the row is compacted toward the prototype (499-01 "row
+  fidelity" split) — the re-skin is a real fidelity move, not preserved-old chrome.
 - **menuDocumentV2 strictness:** the new suite must assert reject-unknown
   (`menu_document_invalid` + `path`) AND fail-closed read AND leaf-validator reuse
   (button/image/divider/spacer inherit page validation).
@@ -117,7 +120,11 @@ bun --cwd core test:bun                                    # bun lane
   Posts/Categories rail, and `menuDesignDocument.ts` — left in place as deferred
   dead code to keep `menu-nav-extras.test.ts` green; unreferenced by production once
   the menu host stops hosting `PageEditor`, deletable once that suite is migrated)
-  as follow-ups, not silent gaps.
+  as follow-ups, not silent gaps. Also record the ONE deliberate PART 2 chrome-scope
+  narrowing: the Design tab ships Undo/Redo + DeviceSwitcher + panel toggle, but the
+  Pages **Layers** overlay is served by the `MenuBarPanel` "Blocks" list (shallow
+  single-section menu doc), not a separate tree — a documented scope decision, not a
+  dropped affordance (499-03 §1).
 
 ---
 

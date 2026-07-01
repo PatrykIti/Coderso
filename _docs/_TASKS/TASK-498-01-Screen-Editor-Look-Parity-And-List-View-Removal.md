@@ -105,9 +105,13 @@ function PaletteChip({ icon: Icon, label, onClick, disabled }: {  // NOT `BlockC
 > `ScreenBlockKind`. In THIS leaf, render the palette with the chips disabled-or-no-op for
 > the not-yet-added kinds, OR sequence the palette swap so the chip→`onAddBlock` wiring for
 > a kind is enabled only once 498-02 adds that kind. The look (3-col grid + `BlockChip`)
-> ships here; the per-kind insert wiring is owned by 498-02. Keep the existing per-field
-> "Fields" list available (or fold it into the Field chip's bound-field picker) so a field
-> block can still be inserted.
+> ships here; the per-kind insert wiring is owned by 498-02. The 9-chip grid is the SOLE
+> insert surface (prototype palette is 9 chips only, `:234-246`): **DELETE the old per-field
+> "Fields" list entirely** (`ScreenBlockLibrary.tsx:52-131`) — do NOT keep it beneath the grid
+> and do NOT re-add it as a folded picker. A field block is inserted by the **Field** chip
+> (`onAddBlock("field")`), and its specific bound field is chosen afterward via the first-class
+> **Bound field** `Select` row in the Inspect inspector (A4), exactly like every other bound
+> chip (stat/image/related-list). There is no separate per-field palette list.
 
 ### A2/A3 — corner-tag cards + builder `{{ }}` tokens (`ScreenRuntimeRenderer.tsx`)
 
@@ -201,6 +205,12 @@ Make the screen rail **structurally identical to the Pages rail**:
 //          Layout/Bound field/Spacing/Background/Visible in one stack — :194-196 already
 //          supports panel="all"); drop the per-category content/binding/style sub-routing
 //          (`ScreenAuthoringCanvas.tsx:335-354`).
+//     <default active category> = the rail is NEVER empty on load (the prototype ALWAYS shows the
+//        palette, CustomScreenEditorPreview.tsx:234-246). Default `activePanel` to `"insert"` (palette)
+//        when NO block is selected, and to `"inspect"` when a block IS selected. This REPLACES today's
+//        initial `useState<ScreenAuthoringPanel | null>(null)` (ScreenAuthoringCanvas.tsx:189), which
+//        leaves the floating-panel body blank until a category is clicked — seed the initial value to
+//        `"insert"` (and switch to `"inspect"` on first selection) so the palette renders on first paint.
 // The Pages rail renders a DISTINCT ToolbarSubpanel per category icon (PageEditor.tsx:3284,
 // :3661 ToolbarSubpanel). That per-category split is INTENTIONALLY NOT ported here — the
 // screen inspector is one flat body (prototype CustomScreenEditorPreview.tsx:250-296). Pages
@@ -271,17 +281,64 @@ re-points). 498-02 B4 cross-notes this drop and adds only the BEHAVIORAL mode co
 > AuthoringCommandPalette `commandOpen` flow stay wired), so block reorder/duplicate/delete + search
 > stay reachable.
 
-### A5 — entry-dock slim format toolbar (`CustomScreenEntryEditor.tsx`)
+### A5 — entry-dock slim presentation toolbar (`CustomScreenEntryEditor.tsx`) — RESTYLE, do NOT drop the override editor
 
-The entry editor's bottom dock is a tall "Presentation" card (3 Selects + Save/Reload/Clear).
-Replace with the prototype's slim inline rich-text format toolbar
-(`CustomScreenEntryEditorPreview.tsx:242-284`): a single row of `Aa` + Bold/Italic/Underline/
-Strikethrough + divider + Heading/List/Link + text-color swatch + divider + Align controls,
-docked via `CanvasEditor panelPosition="bottom"`. Keep the real save/reload handlers
-reachable in the PageHeader actions (they already are). **Real-input guard (memory
-[[page-editor-color-toolbar-live-findings]]):** do NOT add a panel-wide
-`onMouseDown`/`onPointerDown` `preventDefault` — keep the color swatch, link input, and
-inline-mark controls focusable + live-updating with a real mouse + keyboard.
+**Reconcile-lens WARNING — the bottom dock is NOT a look-only card.** The entry editor's
+bottom-dock `presentationPanel` (`CustomScreenEntryEditor.tsx:915-1086`) is the fully-wired,
+shipped **presentation-OVERRIDE editing surface** (TASK-496-02): it edits per-record per-block
+**Text size / Emphasis / Tone** (`data-presentation-control="textSize|textEmphasis|tone"`,
+`:986/:1012/:1038`) + a **Media override** (`data-presentation-control="mediaAssetId"`, `:1069`)
+via `handleSelectedPresentationChange → draftOverrides`, and persists them through the
+**Save / Reload / Clear selected presentation** handlers (`handleSavePresentation` `:943`,
+`handleReloadPresentation` `:956`, `handleClearSelectedPresentation` `:967`) to the presentation
+save endpoint. The prototype's bottom toolbar (`CustomScreenEntryEditorPreview.tsx:242-284`) is a
+**decorative** `Aa` + Bold/Italic/Underline/Strikethrough + Heading/List/Link + color-swatch +
+Align row with **NO handlers** — a DIFFERENT capability (inline text formatting). A wholesale
+"replace with the prototype toolbar" would (a) DROP the shipped presentation-override editing, (b)
+ORPHAN a large block of state/handlers (`draftOverrides` consumers, `handleSavePresentation`/
+`Reload`/`ClearSelectedPresentation`, `presentationText*Options`, `presentationToneOptions`,
+`selectedTextSize`/`selectedTextEmphasis`/`selectedTone`/`selectedMediaAssetId`,
+`isPresentationSaving`, `presentationError`, `selectedPresentationOverrideCount`) →
+`@typescript-eslint/no-unused-vars` → the leaf's required `bun --cwd core lint` FAILS, and (c)
+turn RED the 5 `custom-screen-record-interactions.test.tsx` tests that hard-assert the panel + its
+controls. That is the reconcile defect the Posts lesson warns against — a shipped capability
+silently dropped.
+
+**What to do (owner rule: adapt/extend the LOOK, drop NOTHING).** Adopt the prototype's slim
+bottom-docked toolbar **LOOK** — a single compact inline row docked via
+`CanvasEditor panelPosition="bottom"` — but keep it wired to the **REAL** presentation-override
+controls. Restyle the tall `rounded-2xl border … p-4 shadow-soft` card (`:917-1086`) into one slim
+inline `flex items-center gap-1 … py-1.5` toolbar row (prototype `:243` shape) that hosts, left to
+right: the selected-block label chip + a compact **Text size**, **Emphasis**, **Tone** control
+group (the existing 3 Selects, restyled small/inline — segmented or compact `Select`, not a
+3-column grid card) + the **Media override** control (kept, shown only when
+`selectedPresentationTarget.mediaField`) + a divider + the **Save presentation** / **Reload
+presentation** / **Clear selected presentation** buttons (kept, restyled to `icon-sm`/`ghost`
+prototype density). Do **NOT** port the prototype's decorative `Bold/Italic/Underline/Strikethrough/
+Heading/List/Link/Align` no-op marks — they have no backing in the custom-screen model and adding
+non-functional controls violates the real-input rule (they are the exact fabricated affordances the
+entry-restyle guard `custom-screen-entry-editor-restyle.test.tsx:20-25` de-fabricates); the REAL
+analog of "text formatting" here IS the Text-size/Emphasis/Tone override group, so wire the look to
+those.
+
+**Fate of every symbol — KEPT (nothing orphaned).** Keep `presentationPanel` and every hook it
+consumes: the `data-custom-screen-entry-presentation-panel="true"` container (`:919`), all four
+`data-presentation-control` hooks (`:986/:1012/:1038/:1069`), the "Save presentation" / "Reload
+presentation" / "Clear selected presentation" buttons + their handlers, the
+`presentationTextSizeOptions`/`presentationTextEmphasisOptions`/`presentationToneOptions`,
+`selectedTextSize`/`selectedTextEmphasis`/`selectedTone`/`selectedMediaAssetId`,
+`isPresentationSaving`, `presentationError`, and `selectedPresentationOverrideCount` — only the
+wrapper CLASSES change (card → slim toolbar row). `panelPosition="bottom"`, `panel={presentationPanel}`,
+`panelOpen`/`onPanelOpenChange`, `panelDataProps={{ "data-screen-editor-panel": "true" }}`, and the
+`presentationOverrides={draftOverrides}` render prop (`:1241`) all stay wired, so the persisted
+overrides keep RENDERING on the canvas and the save round-trip is intact. Because every symbol +
+data hook + button label is retained, `lint`/`lint:types` stay green and the 5
+`custom-screen-record-interactions.test.tsx` tests + the `custom-screen-entry-editor-restyle`
+presentation guard stay green with NO test re-point.
+
+**Real-input guard (memory [[page-editor-color-toolbar-live-findings]]):** do NOT add a panel-wide
+`onMouseDown`/`onPointerDown` `preventDefault` — keep the Select controls, media picker, and any
+swatch focusable + live-updating with a real mouse + keyboard.
 
 ### A6 — minor look (`ScreenAuthoringCanvas.tsx`)
 
@@ -435,7 +492,7 @@ its Sweep 6 KEEP regex is extended to allowlist the retained `ListViewDesigner`/
 
 - `bun --cwd core lint` (must be clean — no unused list-editor symbols after the removal)
 - `bun --cwd core lint:types`
-- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx tests/vitest/ui/custom-screen-binding-panel.test.tsx tests/vitest/ui/custom-screen-list-view-canvas.test.tsx tests/vitest/ui/custom-screens-page.test.tsx tests/vitest/ui/custom-screen-authoring-boundary.test.ts tests/vitest/ui/editor-surface-dead-code.test.ts`
+- `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx tests/vitest/ui-integration/custom-screen-editor-binding-flow.test.tsx tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx tests/vitest/ui-integration/custom-screen-widget-picker.test.tsx tests/vitest/ui/custom-screen-binding-panel.test.tsx tests/vitest/ui/custom-screen-list-view-canvas.test.tsx tests/vitest/ui/custom-screens-page.test.tsx tests/vitest/ui/custom-screen-authoring-boundary.test.ts tests/vitest/ui/editor-surface-dead-code.test.ts`
 - **Boundary suite must stay green:** `tests/vitest/ui/custom-screen-authoring-boundary.test.ts`
   forbids `@/ui/pages` / `ui/pages/builder` (+ widget-runtime) imports from the custom-screens
   modules (`:53-75`). Achieving Pages-rail parity by re-creating the railBody markup locally
@@ -530,9 +587,13 @@ its Sweep 6 KEEP regex is extended to allowlist the retained `ListViewDesigner`/
     A1. Replace those positive assertions with new chip labels actually rendered (e.g.
     `toContain("Heading")` / `toContain("Field")` / `toContain("Stat")` / `toContain("Related list")`);
     DROP `"Field group"`/`"Two columns"` outright — `field-group`/`columns` have NO replacement chip
-    in the 9-chip palette, so they must NOT be renamed-to-something, just removed. KEEP
-    `toContain("Title")` (`:183`, the retained per-field "Fields" list — A1 keeps the field list
-    available) and the `not.toContain("Hero")` (`:184`) / `not.toContain("Feature Grid")` (`:185,
+    in the 9-chip palette, so they must NOT be renamed-to-something, just removed. **DROP
+    `toContain("Title")` (`:183`) too** — A1 DELETES the per-field "Fields" list (the 9-chip grid is
+    the sole insert surface; a field's specific bound field is chosen via the Bound-field `Select` in
+    the Inspect inspector, not a per-field palette list), so no individual schema-field label (e.g.
+    "Title") renders in the palette any more; re-point it to a rendered chip label (e.g.
+    `toContain("Field")`, already added above) instead of the removed field list. KEEP
+    the `not.toContain("Hero")` (`:184`) / `not.toContain("Feature Grid")` (`:185,
     :256, :289`) page-widget exclusions (none of the new chip labels contains "Hero"/"Feature Grid";
     the lowercase `toContain("hero")` legacy-block CANVAS assertion at `:254` is about the rendered
     legacy block, not the palette, and is unaffected). State explicitly that the palette label set
@@ -566,12 +627,26 @@ its Sweep 6 KEEP regex is extended to allowlist the retained `ListViewDesigner`/
     do not expose legacy binding jump controls" `:111-120`) is unrelated and stays unchanged. Do not
     weaken binding coverage. Both suites are named in this leaf's Testing command (`:318`) and re-run
     in 498-02 (`:308`) + 498-04's full `tests/vitest/ui` + `tests/vitest/ui-integration` gates.
+- **Presentation-override guard stays green with NO re-point (A5 restyle keeps the capability):**
+  `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx` (added to the leaf
+  command above) has 5 tests that hard-assert the presentation-override editor —
+  `[data-custom-screen-entry-presentation-panel]` (`:420, :541`), the "Save presentation" /
+  "Reload presentation" / "Clear selected presentation" buttons (`:424, :431, :465, :481, :516`),
+  and `[data-presentation-control="mediaAssetId"]` (`:557, :567`). A5 RESTYLES the bottom dock's
+  card into the slim prototype toolbar but KEEPS every one of those hooks + button labels + handlers
+  wired (nothing dropped/orphaned), so these tests + the `custom-screen-entry-editor-restyle`
+  presentation guard (`:20-25`, which already de-fabricates the prototype's decorative mark toolbar)
+  stay green WITHOUT edits. Do NOT drop the presentation editor or replace it with the prototype's
+  no-op Bold/Italic/Underline marks — that would break this suite AND `lint` (orphaned override
+  state/handlers).
 - All other `tests/vitest/ui*/custom-screen*` suites must stay green (update, do not
   weaken, any assertion that targeted the removed List/Editor toggle — re-point it to the
   always-on entry-view builder; keep the `definition.listView` round-trip assertions).
 - Real-input verification (manual / `playwright-cli` on `http://coderso-a.localhost:5173/admin/`
-  per MEMORY) of the entry-dock format toolbar: text-color swatch click, link input focus,
-  inline mark live update — guarding the `page-editor-color-toolbar-live-findings` regression.
+  per MEMORY) of the restyled slim entry-dock presentation toolbar: change Text size / Emphasis /
+  Tone, set a Media override, and Save/Reload/Clear presentation with a real mouse + keyboard and
+  confirm the override live-updates the canvas — guarding the `page-editor-color-toolbar-live-findings`
+  regression (no panel-wide `preventDefault`).
 
 ---
 

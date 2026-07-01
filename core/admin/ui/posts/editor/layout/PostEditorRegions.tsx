@@ -46,7 +46,7 @@ export function PostEditorSecondarySidebarRegion({ children, className }: Region
     <aside
       data-post-editor-region="secondary-sidebar"
       className={cn(
-        "hidden h-full min-h-0 w-64 shrink-0 border-r border-border bg-muted/20 lg:block",
+        "hidden h-full min-h-0 w-60 shrink-0 border-r border-border bg-muted/20 lg:block",
         className
       )}
       aria-label="Post editor secondary sidebar"
@@ -61,7 +61,7 @@ export function PostEditorSidebarRegion({ children, className }: RegionProps) {
     <aside
       data-post-editor-region="sidebar"
       className={cn(
-        "hidden h-full min-h-0 w-80 shrink-0 border-l border-border bg-card lg:block",
+        "hidden h-full min-h-0 w-72 shrink-0 border-l border-border bg-card lg:block",
         className
       )}
       aria-label="Post editor details sidebar"

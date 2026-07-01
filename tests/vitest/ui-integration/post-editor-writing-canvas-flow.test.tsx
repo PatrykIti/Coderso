@@ -27,14 +27,16 @@ const createTopBarProps = () => ({
   onOpenSettings: () => undefined,
 });
 
-test("post editor top bar exposes document tools and publish actions", () => {
+test("post editor top bar exposes the chrome-bar document tools", () => {
   const html = renderToString(<PostEditorTopBar {...createTopBarProps()} />);
 
-  // TASK-497-02 (B1): the Outline header label is demoted to an icon button; assert the
-  // preserved aria-label/title (this suite seeds outlineVisible:true → "Hide document overview").
+  // TASK-497-02 (E3/E4): Preview/Publish moved OUT of the chrome-bar TopBar into the shell's
+  // PageHeader pageActions (asserted on the full-shell mount in post-editor-shell-restyle.test.tsx).
+  // The Outline toggle stays in the chrome bar as an icon button (outlineVisible:true →
+  // "Hide document overview").
   expect(html).toContain("Hide document overview");
-  expect(html).toContain("Preview");
-  expect(html).toContain("Publish");
+  expect(html).not.toContain("Preview");
+  expect(html).not.toContain("Publish");
 });
 
 test("post list view panel uses logical writing-first labels", () => {

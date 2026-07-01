@@ -21,11 +21,11 @@ import {
   type PostEditorSecondarySidebar,
 } from "./hooks/usePostEditorLayout";
 import { PostDetailsSidebar } from "./inspector/PostDetailsSidebar";
+import { PostEditorActionCluster } from "./header/PostEditorActionCluster";
 import { PostEditorLayout } from "./layout/PostEditorLayout";
 import { PostEditorCanvas } from "./PostEditorCanvas";
 import { PostEditorTopBar } from "./PostEditorTopBar";
 import { PostRevisionDrawer } from "./PostRevisionDrawer";
-import { PostInserterSidebar } from "./sidebars/PostInserterSidebar";
 import { PostListViewSidebar } from "./sidebars/PostListViewSidebar";
 import { usePostEditorState } from "./hooks/usePostEditorState";
 import { PostEditorSettingsDialog } from "./settings/PostEditorSettingsDialog";
@@ -81,7 +81,7 @@ const resolveInitialLayoutState = (
     secondarySidebar: "list-view",
     detailsOpen: true,
     detailsTab: resolveInitialDetailsTab(preferences),
-    leftRailMode: "outline",
+    leftRailMode: "blocks",
   };
 
   if (!preferences.restoreLastSidebarsState) return fallback;
@@ -94,16 +94,24 @@ const resolveInitialLayoutState = (
   try {
     const parsed = JSON.parse(raw);
     if (!isRecord(parsed)) return fallback;
-    const secondarySidebar =
-      parsed.secondarySidebar === "list-view" || parsed.secondarySidebar === "inserter"
-        ? parsed.secondarySidebar
+    // Legacy stored layouts used a mutually-exclusive secondarySidebar:"inserter"
+    // for the block palette. The palette is now the "blocks" left-rail mode of the
+    // single always-open rail, so map that legacy value to open + leftRailMode "blocks".
+    const legacyInserter = parsed.secondarySidebar === "inserter";
+    const secondarySidebar = legacyInserter
+      ? "list-view"
+      : parsed.secondarySidebar === "list-view"
+        ? "list-view"
         : parsed.secondarySidebar === null
           ? null
           : fallback.secondarySidebar;
     const detailsOpen =
       typeof parsed.detailsOpen === "boolean" ? parsed.detailsOpen : fallback.detailsOpen;
-    const leftRailMode =
-      parsed.leftRailMode === "list-view" || parsed.leftRailMode === "outline"
+    const leftRailMode = legacyInserter
+      ? "blocks"
+      : parsed.leftRailMode === "blocks" ||
+          parsed.leftRailMode === "outline" ||
+          parsed.leftRailMode === "list-view"
         ? parsed.leftRailMode
         : fallback.leftRailMode;
 
@@ -452,19 +460,20 @@ export function PostBlockEditorShell() {
     />
   );
 
-  const secondarySidebar = layout.showInserter ? (
-    <PostInserterSidebar
-      open
-      onClose={() => handleCloseSecondarySidebar("inserter")}
-      onInsertBlock={(type) =>
-        editor.insertBlock(type, {
-          source: "sidebar",
-          target: { mode: "after-selected" },
-        })
-      }
-      disabled={editor.loading}
-    />
-  ) : (
+  const recentlyUsedBlockTypes = useMemo(() => {
+    const seen = new Set<string>();
+    return editor.state.document.blocks
+      .map((block) => block.type)
+      .filter((type) => {
+        if (seen.has(type)) return false;
+        seen.add(type);
+        return true;
+      });
+  }, [editor.state.document.blocks]);
+
+  // The left rail is one always-open panel with a segmented Blocks | Outline | List
+  // control (leftRailMode). The Blocks tab hosts the real BlockInserter palette.
+  const secondarySidebar = (
     <PostListViewSidebar
       document={editor.state.document}
       selectedBlockId={editor.state.selectedBlockId}
@@ -481,19 +490,11 @@ export function PostBlockEditorShell() {
       onLeftRailModeChange={layout.setLeftRailMode}
       showOutlineHints={preferences.showOutlineHints}
       showKeyboardHints={preferences.showKeyboardHints}
+      recentlyUsedTypes={recentlyUsedBlockTypes}
     />
   );
 
   const shellBreadcrumbs = ["Content", "Posts", editor.title || "Edit Post"];
-
-  const editorBreadcrumbs = useMemo(
-    () => (
-      <div className="flex min-w-0 items-center gap-2 text-sm">
-        <span className="truncate font-medium text-foreground">{editor.title || "Edit Post"}</span>
-      </div>
-    ),
-    [editor.title]
-  );
 
   const content = (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -578,54 +579,64 @@ export function PostBlockEditorShell() {
     </div>
   );
 
+  const handlePublish = useCallback(() => {
+    const wasPublished = editor.status === "published";
+    const action = wasPublished ? "update" : "publish";
+    editor
+      .publish()
+      .then(() => {
+        postEditorActionToasts.success(action);
+      })
+      .catch((error) => {
+        postEditorActionToasts.error(action, error);
+      });
+  }, [editor]);
+
+  const pageActions = (
+    <PostEditorActionCluster
+      status={editor.status}
+      saving={editor.state.saving || editor.autosaveSaving || editor.restoringRevisionId !== null}
+      onPreview={() => {
+        editor.preview().catch(() => undefined);
+      }}
+      onSaveDraft={() => {
+        editor.saveDraft().catch(() => undefined);
+      }}
+      onPublish={handlePublish}
+    />
+  );
+
   return (
     <>
       <PostEditorLayout
         activeHref="/admin/posts"
         breadcrumbs={shellBreadcrumbs}
+        pageTitle={editor.title || "Edit Post"}
+        pageDescription="Write, format, and publish your story."
+        pageActions={pageActions}
         header={
           <PostEditorTopBar
-            title={editor.title}
             status={editor.status}
             dirty={editor.hasUnsavedChanges}
             saving={
               editor.state.saving || editor.autosaveSaving || editor.restoringRevisionId !== null
             }
             lastSavedAt={editor.lastSavedAt}
-            breadcrumbs={editorBreadcrumbs}
             onClose={() => navigate("/admin/posts", { replace: true })}
             onOpenRevisions={editor.openRevisions}
-            onPreview={() => {
-              editor.preview().catch(() => undefined);
-            }}
-            onSaveDraft={() => {
-              editor.saveDraft().catch(() => undefined);
-            }}
             canUndo={editor.canUndo}
             canRedo={editor.canRedo}
             onUndo={editor.undo}
             onRedo={editor.redo}
             viewportMode={viewportMode}
             onSetViewportMode={setViewportMode}
-            onPublish={() => {
-              const wasPublished = editor.status === "published";
-              const action = wasPublished ? "update" : "publish";
-              editor
-                .publish()
-                .then(() => {
-                  postEditorActionToasts.success(action);
-                })
-                .catch((error) => {
-                  postEditorActionToasts.error(action, error);
-                });
-            }}
             onToggleInserter={handleToggleInserter}
             inserterVisible={layout.showInserter}
             onToggleFocusMode={layout.toggleFocusMode}
             focusMode={layout.focusMode}
             onToggleOutline={handleToggleOutline}
             outlineVisible={
-              !layout.focusMode && layout.secondarySidebarOpen && !layout.showInserter
+              !layout.focusMode && layout.secondarySidebarOpen && layout.leftRailMode === "outline"
             }
             onToggleDetails={handleToggleDetails}
             detailsOpen={!layout.focusMode && layout.detailsSidebarOpen}
@@ -644,7 +655,7 @@ export function PostBlockEditorShell() {
             return;
           }
           if (!layout.secondarySidebarOpen) {
-            layout.setLeftRailMode("outline");
+            layout.setLeftRailMode("blocks");
             layout.openListView();
           }
         }}

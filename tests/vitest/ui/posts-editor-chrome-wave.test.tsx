@@ -21,15 +21,15 @@ const chromeState = vi.hoisted(() => ({
       detailsOpen: true,
       detailsTab: "document" as "document" | "block",
       focusMode: false,
-      leftRailMode: "outline" as "outline" | "list-view",
+      leftRailMode: "blocks" as "blocks" | "outline" | "list-view",
       focusRestore: null as unknown,
     },
     secondarySidebarOpen: true,
     detailsSidebarOpen: true,
-    showListView: true,
+    showListView: false,
     showInserter: false,
     focusMode: false,
-    leftRailMode: "outline" as "outline" | "list-view",
+    leftRailMode: "blocks" as "blocks" | "outline" | "list-view",
     openListView: vi.fn(),
     toggleListView: vi.fn(),
     openInserter: vi.fn(),
@@ -153,10 +153,12 @@ const chromeState = vi.hoisted(() => ({
     this.editor.selectedBlock = null;
     this.editor.state.selectedBlockId = null;
     this.layout.showInserter = false;
-    this.layout.showListView = true;
+    this.layout.showListView = false;
     this.layout.secondarySidebarOpen = true;
     this.layout.detailsSidebarOpen = true;
     this.layout.state.secondarySidebar = "list-view";
+    this.layout.state.leftRailMode = "blocks";
+    this.layout.leftRailMode = "blocks";
     this.layout.focusMode = false;
     this.layout.state.focusMode = false;
   },
@@ -297,81 +299,89 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-describe("post editor chrome restyle (TASK-497-02)", () => {
-  it("renders a single muted chrome strip (no secondary toolbar row)", async () => {
+describe("TASK-497-02 post editor prototype parity", () => {
+  it("renders an in-page PageHeader (description + Preview/Publish in actions) ABOVE a framed card", async () => {
     const view = await renderEditor();
     try {
       const { container } = view;
-      expect(container.querySelector('[data-post-editor-header-row="primary"]')).toBeTruthy();
-      expect(container.querySelector('[data-post-editor-header-row="secondary"]')).toBeNull();
-      expect(container.querySelector('[data-post-editor-region="header"]')?.className).toContain(
-        "bg-muted/40"
-      );
-      for (const id of [
-        "post-editor-block-inserter",
-        "post-editor-document-overview",
-        "post-editor-details",
-      ]) {
-        expect(container.querySelector(`[aria-controls="${id}"]`)).toBeTruthy();
-      }
+      expect(container.textContent).toContain("Write, format, and publish your story.");
+      const frame = container.querySelector('[data-post-editor-frame="true"]');
+      expect(frame?.className).toContain("rounded-2xl");
+      expect(frame?.className).toContain("shadow-card");
+      // Preview + Publish live in the PageHeader actions, ABOVE the frame (not the chrome strip)
+      expect(container.querySelector('[aria-label="Open runtime preview"]')).toBeTruthy();
+      expect(
+        Array.from(container.querySelectorAll("button")).some((b) =>
+          /Publish post|Update published post/.test(b.getAttribute("aria-label") ?? "")
+        )
+      ).toBe(true);
     } finally {
       view.cleanup();
     }
   });
 
-  it("keeps the autosave badge with dynamic sync text", async () => {
+  it("chrome bar: single strip with title, autosave badge, undo/redo, device toggle", async () => {
     const view = await renderEditor();
     try {
-      const badge = view.container.querySelector('[data-post-editor-sync-state="true"]');
-      expect(badge?.textContent).toMatch(/Saving\.\.\.|Unsaved changes|Saved at|Synced/);
+      const { container } = view;
+      const header = container.querySelector('[data-post-editor-region="header"]');
+      expect(header?.className).toContain("bg-muted/40");
+      expect(container.querySelector('[data-post-editor-header-row="secondary"]')).toBeNull();
+      expect(container.querySelector('[data-post-editor-sync-state="true"]')?.textContent).toMatch(
+        /Saving\.\.\.|Unsaved changes|Saved at|Synced/
+      );
+      expect(container.querySelector('[aria-label="Undo"]')).toBeTruthy();
+      expect(container.querySelector('[aria-label="Desktop preview"]')).toBeTruthy();
     } finally {
       view.cleanup();
     }
   });
 
-  it("wires undo/redo and disables them when no history", async () => {
+  it("undo/redo disabled when no history + preserve the data-post-editor-undo/redo hooks (override the mock canUndo/canRedo → false)", async () => {
     chromeState.editor.canUndo = false;
     chromeState.editor.canRedo = false;
     const view = await renderEditor();
     try {
-      expect(view.container.querySelector('[aria-label="Undo"]')?.hasAttribute("disabled")).toBe(
-        true
-      );
-      expect(view.container.querySelector('[aria-label="Redo"]')?.hasAttribute("disabled")).toBe(
-        true
-      );
+      const { container } = view;
+      expect(container.querySelector('[aria-label="Undo"]')?.hasAttribute("disabled")).toBe(true);
+      expect(container.querySelector('[aria-label="Redo"]')?.hasAttribute("disabled")).toBe(true);
+      // the RELOCATED undo/redo MUST carry over their existing data hooks (Preserve line 172) —
+      // otherwise unguarded, they would drop silently if rebuilt from the hookless prototype
+      expect(container.querySelector('[data-post-editor-undo="true"]')).toBeTruthy();
+      expect(container.querySelector('[data-post-editor-redo="true"]')).toBeTruthy();
     } finally {
       view.cleanup();
     }
   });
 
-  it("exposes Save draft, Preview, and a status-driven Publish(Rocket)", async () => {
+  it("LEFT rail defaults to Blocks; Outline + List survive as sibling tabs", async () => {
     const view = await renderEditor();
     try {
       const { container } = view;
-      expect(container.querySelector('[aria-label="Save draft"]')).toBeTruthy();
-      expect(container.querySelector('[aria-label="Open runtime preview"]')).toBeTruthy();
-      const publish = Array.from(container.querySelectorAll("button")).find((b) =>
-        /Publish post|Update published post/.test(b.getAttribute("aria-label") ?? "")
-      );
-      expect(publish).toBeTruthy();
-      expect(publish?.textContent).toContain("Publish");
+      const region = container.querySelector('[data-post-editor-region="secondary-sidebar"]');
+      expect(region?.className).toContain("bg-muted/20");
+      // three tabs; Blocks is the default (Extension #1)
+      expect(container.querySelector('[data-post-editor-left-rail-tab="blocks"]')).toBeTruthy();
+      expect(container.querySelector('[data-post-editor-left-rail-tab="outline"]')).toBeTruthy();
+      expect(container.querySelector('[data-post-editor-left-rail-tab="list-view"]')).toBeTruthy();
+      // EditorRail IS consumed: the Blocks palette wraps its sections in EditorRailGroup
+      expect(container.querySelector("[data-editor-rail-group]")).toBeTruthy();
+      // the default rail mode is "blocks"
+      expect(container.querySelector('[data-post-editor-left-rail-mode="blocks"]')).toBeTruthy();
     } finally {
       view.cleanup();
     }
   });
 
-  it("preserves toggle a11y + shortcut hooks after demoting labels to icons", async () => {
+  it("preserves the six chrome toggles' a11y + shortcut hooks after demoting labels to icons", async () => {
     const view = await renderEditor();
     try {
       const { container } = view;
-      const add = container.querySelector('[aria-label="Toggle block inserter"]');
+      const header = container.querySelector('[data-post-editor-region="header"]');
+      const add = header?.querySelector('[aria-label="Toggle block inserter"]');
       expect(add?.getAttribute("aria-controls")).toBe("post-editor-block-inserter");
       expect(add?.hasAttribute("aria-pressed")).toBe(true);
       expect(add?.getAttribute("data-post-editor-shortcut")).toBeTruthy();
-      // Scope to the header BUTTON — PostListViewSidebar's region also carries an
-      // aria-label containing "document overview".
-      const header = container.querySelector('[data-post-editor-region="header"]');
       const outline = Array.from(header?.querySelectorAll("button") ?? []).find((b) =>
         /document overview/i.test(b.getAttribute("aria-label") ?? "")
       );
@@ -381,56 +391,14 @@ describe("post editor chrome restyle (TASK-497-02)", () => {
     }
   });
 
-  it("wires the optional device toggle (aria-pressed) with no network change", async () => {
-    const view = await renderEditor();
-    try {
-      const { container } = view;
-      const desktop = container.querySelector('[aria-label="Desktop preview"]');
-      const mobile = container.querySelector('[aria-label="Mobile preview"]');
-      expect(desktop?.getAttribute("aria-pressed")).toBe("true");
-      React.act(() => {
-        mobile?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-      });
-      expect(desktop?.getAttribute("aria-pressed")).toBe("false");
-    } finally {
-      view.cleanup();
-    }
-  });
-
-  it("uses bg-muted/20 left rail and wraps the inserter in EditorRailGroup with the active rail token", async () => {
-    chromeState.layout.showInserter = true;
-    chromeState.layout.showListView = false;
-    chromeState.layout.state.secondarySidebar = "inserter";
-    const view = await renderEditor();
-    try {
-      const { container } = view;
-      const region = container.querySelector('[data-post-editor-region="secondary-sidebar"]');
-      expect(region?.className).toContain("bg-muted/20");
-      // EditorRail.tsx IS consumed (parent AC#5): inserter sections are wrapped in
-      // EditorRailGroup (emits data-editor-rail-group).
-      expect(container.querySelector("[data-editor-rail-group]")).toBeTruthy();
-      // …and an inserter option row carries the active rail token via its kept
-      // <Button role="option"> className (NOT a literal EditorRailItem element).
-      const activeOption = Array.from(region?.querySelectorAll('[role="option"]') ?? []).find(
-        (node) => node.className.includes("bg-primary-soft")
-      );
-      expect(activeOption).toBeTruthy();
-    } finally {
-      view.cleanup();
-    }
-  });
-
-  it("flattens the inspector: Post settings header + single SEO sub-card + Block tab", async () => {
+  it("RIGHT inspector is flat 'Post settings' with a single SEO sub-card + Block tab, default open", async () => {
     const view = await renderEditor();
     try {
       const { container } = view;
       const sidebar = container.querySelector('[data-post-editor-region="sidebar"]');
       expect(sidebar?.className).toContain("bg-card");
       expect(sidebar?.textContent).toContain("Post settings");
-      expect(sidebar?.textContent).toContain("SEO");
-      // exactly ONE muted SEO sub-card — scoped to the details sidebar.
       expect(sidebar?.querySelectorAll(".bg-muted\\/30").length).toBe(1);
-      // Block tab still present (post block model preserved).
       expect(
         container.querySelector('[data-post-editor-details-tab-trigger="block"]')
       ).toBeTruthy();
@@ -439,13 +407,41 @@ describe("post editor chrome restyle (TASK-497-02)", () => {
     }
   });
 
-  it("keeps the canvas dotted background + max-w-2xl card without a fixture byline", async () => {
+  it("canvas keeps bg-dotted + max-w-2xl card", async () => {
     const view = await renderEditor();
     try {
       const { container } = view;
       expect(container.querySelector(".bg-dotted")).toBeTruthy();
       expect(container.querySelector(".max-w-2xl")).toBeTruthy();
-      expect(container.textContent).not.toContain("Alex Rivera");
+    } finally {
+      view.cleanup();
+    }
+  });
+
+  it("device toggle is client-only: clicking Mobile preview flips Desktop preview aria-pressed true→false", async () => {
+    const view = await renderEditor();
+    try {
+      const { container } = view;
+      expect(
+        container.querySelector('[aria-label="Desktop preview"]')?.getAttribute("aria-pressed")
+      ).toBe("true");
+
+      React.act(() => {
+        (container.querySelector('[aria-label="Mobile preview"]') as HTMLButtonElement).click();
+      });
+
+      expect(
+        container.querySelector('[aria-label="Desktop preview"]')?.getAttribute("aria-pressed")
+      ).toBe("false");
+    } finally {
+      view.cleanup();
+    }
+  });
+
+  it("does not port the prototype sample byline into the canvas", async () => {
+    const view = await renderEditor();
+    try {
+      expect(view.container.textContent).not.toContain("Alex Rivera");
     } finally {
       view.cleanup();
     }

@@ -63,7 +63,7 @@ test("usePostEditorLayout normalizes invalid initial options and reducer handles
     detailsOpen: false,
     detailsTab: "document",
     focusMode: false,
-    leftRailMode: "outline",
+    leftRailMode: "blocks",
     focusRestore: null,
   });
 
@@ -170,8 +170,8 @@ test("usePostEditorLayout exposes derived flags and routes secondary, details, a
   });
 
   try {
-    expect(hook.value.showInserter).toBe(true);
-    expect(hook.value.showListView).toBe(false);
+    expect(hook.value.showInserter).toBe(false);
+    expect(hook.value.showListView).toBe(true);
     expect(hook.value.secondarySidebarOpen).toBe(true);
     expect(hook.value.detailsSidebarOpen).toBe(false);
     expect(hook.value.leftRailMode).toBe("list-view");

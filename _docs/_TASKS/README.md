@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 341 tasks
+- **To Do:** 346 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2741 tasks
 
@@ -131,6 +131,11 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-499-03 | Menu Design Tab — Shared-Shell Editor | Medium | Large | Thin `MenuDesignEditor` on the shared `CanvasEditor`; `nav-items` binding keystone; add/remove/reorder menu blocks; staged retirement of PageEditor's `mode==="menu"` legacy chrome (audit-first). |
 | TASK-499-04 | Menu Front Renderer & Default Fallback | Medium | Large | `SiteHeaderMenuDocumentRender` + scoped `menuDocumentCss`; `navigationDocument` on render props; `DefaultRuntimePageShellV2` empty⇒default (byte-identical `buildSiteShellCss(null)`) / non-empty⇒document branch. |
 | TASK-499-05 | Menu Tests, Docs & Closure | Medium | Medium | Cross-cutting regression matrix (keep byte-identical default-shell CSS test + DnD/nesting suites green), gates, runtime smoke, docs + changelog + README/board closure. |
+| TASK-498 | Custom-Screen Data-Oriented Builder & Look Parity | Medium | Large | Make the screen editor match the prototype: data-oriented block set (Field/Stat/Divider/Image/Related-list/Tabs/Heading/Text/Button; `{{ Field }}` tokens in builder), right-panel = the Pages shared-shell rail, remove the List-view editor (non-destructive). New per-kind schema (reject-unknown, no ScreenDocumentV1 version bump), a relation resolver for Related-list. Contract re-audited for no-prototype-deviations. 4 subtasks (01–04). |
+| TASK-498-01 | Screen Editor Look Parity & List-View Removal | Medium | Large | 9-chip BlockChip palette, corner-tag cards, builder `{{ }}` tokens, right-panel identical to the Pages shell rail; remove the List/Editor toggle + list-view row-template editor (keep model/runtime/ListView* + row template). |
+| TASK-498-02 | Screen Data Block Kinds & Model | Medium | Large | Extend `ScreenBlockKind` + labels + factories; per-kind `normalizeScreenBlockData` (reject-unknown for new kinds, permissive legacy fall-through, NO schemaVersion bump); inspector per-kind controls + Bound-field filtering (stat→number, image→media, related-list→relation, propPath pinned). |
+| TASK-498-03 | Related-List Runtime & Entry Rendering | Medium | Large | Relation resolver (ID[]→summaries), pure-renderer `relatedEntries` prop (host-precomputed with a stable/memoized source — no setState loop), checklist/activity/cards variants; how a screen renders a content-type's entries (list row-template + entry view). |
+| TASK-498-04 | Screens Tests, Docs & Closure | Medium | Medium | Vitest matrix (schemas/ops/renderer/resolver/look-parity/list-view-removal/presentation-override preserved), gates, runtime smoke, docs + changelog + README/board closure. |
 | TASK-467 | Admin Bundle Heavy Chunk Hardening | High | Large | Split the heavy shell/custom-screens/widget-registry bundle graph without raising Vite's chunk warning limit. |
 | TASK-467-01 | Extract Lightweight Custom Screens Cache Invalidation | High | Small | Remove the `assistantClient -> customScreensClient` value import while preserving assistant mutation cache-bus behavior. |
 | TASK-467-02 | Split Browser Custom Screens Client | High | Medium | Keep list/sidebar/cache imports lightweight and move full Custom Screen definition normalization to editor-only modules. |

@@ -211,11 +211,18 @@ are the render pattern to copy — same mocks for `usePostEditorState`/store). P
   (`post-editor-block-inserter` `:189`, `post-editor-document-overview` `:206`,
   `post-editor-details` `:223`) even after being demoted to icon buttons — assert
   each is present and toggleable (guards `usePostEditorShortcuts`).
-- **Autosave badge states (B2):** the sync presentation (`PostEditorActionCluster.tsx`,
-  `data-post-editor-sync-state="true"` `:56`) still reaches all dynamic strings —
-  `"Saving..."` (`:43`), `"Unsaved changes"` (`:45`), `"Saved at …"` (`:47`),
-  `"Synced"` (`:48`) — **already** a `Badge` in the first-pass tree (`:56`; the pre-first-pass
-  `rounded-full … bg-muted/40` pill is history); assert the text is **dynamic, not hardcoded**.
+- **Autosave badge states (B2):** the sync presentation (`data-post-editor-sync-state="true"`)
+  still reaches all dynamic strings — `"Saving..."`, `"Unsaved changes"`, `"Saved at …"`,
+  `"Synced"` — **already** a `Badge`; assert the text is **dynamic, not hardcoded**.
+  **RELOCATION NOTE (like B1/B6):** the `PostEditorActionCluster.tsx` anchors (`:56` Badge,
+  `:43`/`:45`/`:47`/`:48` strings) are the **pre-restyle SOURCE** — TASK-497-02 E3/E4 **move**
+  the sync `Badge` (and undo/redo) OUT of `PostEditorActionCluster` INTO the **card chrome bar**
+  (`PostEditorHeader`, 497-02:366,:457,:462-463), while E3 moves the whole cluster into the in-page
+  `PageHeader` actions. So keep the assertion **container-agnostic** — query
+  `[data-post-editor-sync-state="true"]` (and/or scope to the chrome bar
+  `[data-post-editor-region="header"]`), **NOT** the `PageHeader` — matching the prototype, where
+  the badge feeds the card chrome `toolbar` slot (`EditorPreviewFrame.tsx:44-45`), not the page
+  header. No test-assertion change is needed (497-02:766 already queries it container-agnostically).
 - **Actions wired (B3/B4):** Preview (`Eye`, `:95`) present; Publish flips
   `"Publish"`→`"Update"` when `status === "published"` (`:123`) with its `aria-label`
   (`:120`) intact; optional Save draft present and wired; **undo/redo** buttons
@@ -469,8 +476,7 @@ suites that DO assert changed chrome are listed separately under "Presentation-l
 suites updated" below — those are re-baselined, **not** in this untouched set, so the
 old "only the files named under 497-01/02 Owning files change" wording is superseded:
 the restyle also re-points the presentation strings in the suites listed there.)
-- `post-editor-layout-render-wave.test.tsx`,
-  `post-editor-canvas-wave.test.tsx`, `post-details-sidebar-wave.test.tsx`,
+- `post-editor-canvas-wave.test.tsx`, `post-details-sidebar-wave.test.tsx`,
   `post-block-inserter-wave.test.tsx` (the `ArrowDown`+`Enter` listbox insertion path is
   preserved by the className-only restyle), `posts-create-drawer-a11y.test.tsx`,
   `post-classic-editor-shell-wave.test.tsx` (classic editor — proves it still
@@ -495,6 +501,14 @@ the restyle also re-points the presentation strings in the suites listed there.)
   and note `close-inserter` (:619) no longer renders so its `closeSecondarySidebar` coverage now
   comes solely from `close-secondary-shell` (:621). The `source:"outline-plus"` (:804) +
   toggle-outline assertions STAY green; touching ONLY :1155 leaves :635-638 RED and fails the gate).
+  Also `post-editor-layout-render-wave.test.tsx` — **NOT untouched-green: a contract/presentation-lock
+  re-baseline for E4's compact-width change (Fix 3)** (mirrors TASK-497-02:752-761,793-803). Its
+  compact-sidebars test (`:184`, mounted with `compactSidePanels` at `:193`) hard-asserts the COMPACT
+  details override `detailsRegion.className` `toContain("w-72")` at `:202` — E4 narrows that compact
+  details override `w-72` → **`w-64`** (base right inspector stays `w-72`), so `:202` renders `w-64`
+  and goes RED unless re-pointed: change `:202` `toContain("w-72")` → `toContain("w-64")`. **KEEP `:201`**
+  (`toContain("w-56")` — the compact secondary rail is unchanged) and every other assertion green.
+  (This corrects the earlier untouched-green classification of this suite.)
 - Plus the genuinely **functional** `tests/vitest/ui-integration/` suites that touch the
   restyled panes but assert only wiring/hooks (verified green): `post-autosave-flow`,
   `post-editor-keyboard-a11y`, `post-editor-inserter-sidebar`,

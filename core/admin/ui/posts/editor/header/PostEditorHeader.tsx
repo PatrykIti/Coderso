@@ -5,14 +5,16 @@ import {
   ListTree,
   Monitor,
   Plus,
+  Redo2,
   Settings,
   Sidebar,
   Smartphone,
+  Undo2,
 } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import { PostEditorActionCluster } from "./PostEditorActionCluster";
 import {
   formatPostEditorShortcutAria,
   formatPostEditorShortcutLabel,
@@ -21,21 +23,17 @@ import {
 type PostEditorViewportMode = "auto" | "desktop" | "mobile";
 
 type PostEditorHeaderProps = {
-  title: string;
-  status: string;
+  /** Vestigial: status-driven publish label moved to PageHeader pageActions. Kept accepted for back-compat mounts. */
+  status?: string;
   dirty: boolean;
   saving: boolean;
   lastSavedAt: string | null;
-  breadcrumbs?: React.ReactNode;
   onClose: () => void;
   outlineVisible: boolean;
   onToggleOutline: () => void;
   onToggleDetails: () => void;
   detailsOpen: boolean;
   onOpenRevisions: () => void;
-  onPreview: () => void;
-  onPublish: () => void;
-  onSaveDraft?: () => void;
   onToggleInserter: () => void;
   inserterVisible: boolean;
   onToggleFocusMode: () => void;
@@ -52,29 +50,32 @@ type PostEditorHeaderProps = {
   detailsButtonRef?: React.Ref<HTMLButtonElement>;
 };
 
+const formatSavedAt = (value: string) => {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
 export function PostEditorHeader({
-  title,
-  status,
   dirty,
   saving,
   lastSavedAt,
-  breadcrumbs,
   onClose,
   outlineVisible,
   onToggleOutline,
   onToggleDetails,
   detailsOpen,
   onOpenRevisions,
-  onPreview,
-  onPublish,
-  onSaveDraft,
   onToggleInserter,
   inserterVisible,
   onToggleFocusMode,
   focusMode,
   onOpenSettings,
-  canUndo,
-  canRedo,
+  canUndo = false,
+  canRedo = false,
   onUndo,
   onRedo,
   viewportMode = "auto",
@@ -83,31 +84,25 @@ export function PostEditorHeader({
   outlineButtonRef,
   detailsButtonRef,
 }: PostEditorHeaderProps) {
-  const entryLabel = title.trim().length > 0 ? title : "Edit Post";
   const inserterShortcut = formatPostEditorShortcutLabel("toggleInserter");
   const outlineShortcut = formatPostEditorShortcutLabel("toggleOutline");
   const detailsShortcut = formatPostEditorShortcutLabel("toggleDetails");
   const outlineLabel = outlineVisible ? "Hide document overview" : "Show document overview";
   const detailsLabel = detailsOpen ? "Hide post details" : "Show post details";
-  const leftContext = breadcrumbs ?? (
-    <nav
-      aria-label="Post editor breadcrumb"
-      className="flex min-w-0 items-center gap-2 overflow-hidden text-sm text-muted-foreground"
-    >
-      <span className="shrink-0">Content</span>
-      <span className="text-muted-foreground/50">/</span>
-      <span className="shrink-0">Posts</span>
-      <span className="text-muted-foreground/50">/</span>
-      <span className="truncate font-medium text-foreground">{entryLabel}</span>
-    </nav>
-  );
+  const syncLabel = saving
+    ? "Saving..."
+    : dirty
+      ? "Unsaved changes"
+      : lastSavedAt
+        ? `Saved at ${formatSavedAt(lastSavedAt)}`
+        : "Synced";
 
   return (
     <div
       className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6"
       data-post-editor-header-row="primary"
     >
-      <div className="flex min-w-0 items-center gap-3" data-post-editor-header-left-context="true">
+      <div className="flex min-w-0 items-center gap-2" data-post-editor-header-left-context="true">
         <Button
           type="button"
           variant="ghost"
@@ -119,26 +114,49 @@ export function PostEditorHeader({
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="min-w-0">{leftContext}</div>
+        <span className="text-sm font-medium">Post editor</span>
       </div>
 
       <div
         className="flex w-full flex-wrap items-center justify-end gap-1.5 md:w-auto"
         data-post-editor-header-cluster="primary-row"
       >
-        <PostEditorActionCluster
-          status={status}
-          dirty={dirty}
-          saving={saving}
-          lastSavedAt={lastSavedAt}
-          onPreview={onPreview}
-          onPublish={onPublish}
-          onSaveDraft={onSaveDraft}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          onUndo={onUndo}
-          onRedo={onRedo}
-        />
+        <Badge variant="outline" data-post-editor-sync-state="true">
+          {syncLabel}
+        </Badge>
+
+        {onUndo || onRedo ? (
+          <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
+        ) : null}
+
+        {onUndo ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onUndo}
+            disabled={!canUndo}
+            aria-label="Undo"
+            title="Undo"
+            data-post-editor-undo="true"
+          >
+            <Undo2 className="h-4 w-4" />
+          </Button>
+        ) : null}
+        {onRedo ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            onClick={onRedo}
+            disabled={!canRedo}
+            aria-label="Redo"
+            title="Redo"
+            data-post-editor-redo="true"
+          >
+            <Redo2 className="h-4 w-4" />
+          </Button>
+        ) : null}
 
         {onSetViewportMode ? (
           <div

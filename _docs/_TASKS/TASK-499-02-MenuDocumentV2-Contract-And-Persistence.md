@@ -81,8 +81,11 @@ a lower-risk, isolated editor.
   unvalidated. Menu-native block/section props reuse `normalizeMenuAppearance`'s
   validated color/number/enum shapes — raw stored input never reaches CSS.
 - **Versioning.** `MENU_DOCUMENT_SCHEMA_VERSION = 1`, independent of
-  `PAGE_DOCUMENT_SCHEMA_VERSION = 2`. A stored document without the marker (or a
-  lower version) is treated as legacy appearance+extras (backward-compatible).
+  `PAGE_DOCUMENT_SCHEMA_VERSION = 2`. A stored non-empty `document` object without the
+  exact marker (or a lower/unknown version) fails the strict write check (§4), so the
+  fail-closed stored-read degrades it to empty ⇒ `resolvePublishedMenuDocument` returns
+  `null` ⇒ it is treated as legacy appearance+extras (backward-compatible). NO
+  stamp-on-absent for a non-empty document.
 - **No new endpoint / no migration.** `document` rides the existing `PATCH
   /menus/:id` via `UpdateMenuInput.document`; `menus.settings` is freeform
   nullable jsonb (`schema.ts:1127`). Existing RBAC.
@@ -203,12 +206,24 @@ const normalizeMenuLeafBlock = (block, mode: "write" | "stored-read", path) => {
 export function normalizeMenuDocumentV2ForWrite(value: unknown): MenuDocumentV2 {
   if (!isPlainObject(value)) throw new MenuDocumentError("document");
   const sections = requireArray(value.sections, "document.sections");
-  // schemaVersion: accept absent (stamp current) or === MENU_DOCUMENT_SCHEMA_VERSION; else reject.
+  // schemaVersion (schema-first / reject-unknown, NO stamp-on-absent): a NON-EMPTY
+  // document MUST carry the EXACT current marker — reject an absent OR a lower/unknown
+  // version. This is precisely what makes a marker-less/lower-version STORED `document`
+  // object fail-closed to empty on read (normalizeStoredMenuDocumentV2ForRead catches
+  // the throw) ⇒ resolvePublishedMenuDocument returns null ⇒ legacy appearance+extras,
+  // so the "absent/lower ⇒ legacy" contract below holds verbatim. An EMPTY document
+  // (sections: []) needs no marker: it collapses to null via isEmptyMenuDocument
+  // regardless (the editor always seeds schemaVersion via createDefaultMenuDocumentV2,
+  // so no legitimate non-empty write ever arrives marker-less).
+  if (sections.length > 0 && value.schemaVersion !== MENU_DOCUMENT_SCHEMA_VERSION)
+    throw new MenuDocumentError("document.schemaVersion");
   return { schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
     sections: sections.map((s, i) => normalizeMenuSection(s, `document.sections[${i}]`, "write")) };
 }
 export function normalizeStoredMenuDocumentV2ForRead(value: unknown): MenuDocumentV2 {
-  try { return normalizeMenuDocumentV2ForWrite(value); }   // strict, but fail-closed:
+  // Fail-closed delegate to the strict writer: a marker-less/lower-version stored
+  // document throws (above) ⇒ degrades to empty here ⇒ resolver null ⇒ legacy.
+  try { return normalizeMenuDocumentV2ForWrite(value); }
   catch { return { schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION, sections: [] }; }
 }
 export const isEmptyMenuDocument = (d: MenuDocumentV2 | null) =>
@@ -354,7 +369,10 @@ if (input.appearance !== undefined || input.extras !== undefined || input.docume
     clamped numbers, enum strings); raw input never echoed.
   - `createDefaultMenuDocumentV2` = menu-bar ⊃ [brand(text), nav-items, cta-button?].
   - `buildMenuDocumentV2FromLegacy` maps appearance+extras → document round-trip.
-  - version marker: absent/lower ⇒ legacy treatment; `=== 1` ⇒ document path.
+  - version marker: a NON-EMPTY stored `document` with an absent OR lower/unknown
+    `schemaVersion` ⇒ strict write throws `menu_document_invalid`
+    (`document.schemaVersion`) AND stored-read degrades to empty ⇒
+    `resolvePublishedMenuDocument` ⇒ `null` (legacy treatment); `=== 1` ⇒ document path.
 - Persistence (`tests/unit/menus/menuService.test.ts`,
   `tests/vitest/validation/menuSchemas.test.ts`,
   `tests/integration/routes/menus.test.ts`):

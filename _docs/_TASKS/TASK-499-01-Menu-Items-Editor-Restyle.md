@@ -25,6 +25,9 @@ chrome and the row/inspector presentation change.
   and an always-on inspector, keeping `moveMenuItems`/`moveMenuItemToRoot`,
   keyboard move/indent/outdent, parent reparent, and `persistMenuEditorState`.
 - **Owning modules:** `core/admin/ui/shared/EditorFrame.tsx` (new),
+  `core/admin/ui/shared/EditorRail.tsx` (extend: route `disabled`/`title`-bearing
+  items to the `<button>` branch + add disabled styling, so handler-less deferred
+  Posts/Categories items are not silently dropped to the live-looking `<div>` branch — §1),
   `core/admin/ui/menus/{MenuEditorPage,MenuTree,MenuItemRow,MenuItemForm,MenuItemDrawer}.tsx`,
   `core/services/menus/menuItemSettings.ts` (+ `openInNewTab`, `variant`),
   `core/server/validation/menuSchemas.ts` (extend the `menuItemsSchema` per-item
@@ -57,35 +60,62 @@ chrome and the row/inspector presentation change.
 > `buildMenuItemsPayload` (`:190-212`) → `replaceMenuItems`; cache refresh
 > policy `:452-515`. **Do not weaken these or their tests.**
 
-> **"Compact row" reconciliation (HARD CONSTRAINT — resolves the restyle vs.
-> preserved-affordance conflict).** "Compact" is delivered by the LIGHTER CONTAINER
-> FRAMING ONLY — the dotted-canvas `Card max-w-xl` wrapper, tighter OUTER spacing
-> *between* rows, and the new frame chrome around the list — **NOT** by changing
-> anything *inside* `MenuItemRow`. It does NOT shrink the grip/avatar, does NOT drop the
-> description line, does NOT remove the "Sub-item of X" hint, and does NOT remove or
-> relocate any reorder/nesting affordance. This is mandatory because the two row suites
-> are in the must-stay-green bucket and assert the INNER row byte-shape directly; the
-> earlier "smaller grip / drop the description + hint" phrasing was wrong and is
-> superseded by this callout. The restyled `MenuItemRow` **RETAINS**, verbatim in
-> behavior AND in asserted byte-shape:
-> - the **12×12 grip** (`flex h-12 w-12 … self-center`, `MenuItemRow.tsx:144`), the
->   per-item **description line** (`MenuItemRow.tsx:203-204`), and the **"Sub-item of X"
->   nesting hint** (`MenuItemRow.tsx:98`) — gated by exact `toContain` at
->   `menu-item-row.test.tsx:61-63,68` and `menu-tree.test.tsx:124`; these stay byte-stable.
-> - the keyboard **move up / move down / indent / outdent** action controls
+> **Row fidelity reconciliation (HARD CONSTRAINT — resolves the restyle vs.
+> preserved-affordance conflict). Split the row's locked assertions into BEHAVIOR/A11Y
+> (must stay byte-stable) vs pure PRESENTATION (must be COMPACTED toward the
+> prototype).** The prototype row is deliberately light (`MenuEditorPreview.tsx:47-64`):
+> a bare `size-4` `GripVertical`, NO letter/status avatar, `pl-8` + a single
+> `CornerDownRight` for nesting (no text hint), one truncated mono URL subline, no
+> per-row badges. The restyle MUST move the row **toward** that shape — NOT preserve
+> today's heavy row inside a new frame. Preserving the heavy row and freezing its
+> visual assertions "to keep the suites green" would repeat the Posts **D4/B6**
+> "keep the old + protect it with frozen tests" pattern the owner rejected; the
+> earlier "keep grip/avatar/description/hint byte-stable" phrasing is therefore
+> **superseded** by this split. Concretely:
+>
+> **KEEP (behavior + a11y — the prototype omits these only because it is a STATIC
+> mock; they are real affordances and MUST stay byte-stable, ZERO assertion edits):**
+> - the **drag handle** as a `draggable` element with `data-menu-drag-handle` +
+>   `aria-label="Drag ${label}"` (`MenuItemRow.tsx:142-161`) — gated at
+>   `menu-item-row.test.tsx:57-59`. Only its VISUAL box compacts (below); the handle
+>   stays a real draggable, aria-labelled control.
+> - the keyboard **move up / move down / indent / outdent** toolbar
 >   (`MenuItemRow.tsx:235-254`) — the ONLY non-drag reorder/nesting path — kept as a
 >   compact hover/overflow toolbar; the `aria-label`s `Move up|Move down|Indent|Outdent ${label}`
 >   stay byte-stable (gated at `menu-item-row.test.tsx:70-74`, `menu-tree.test.tsx:258-271`).
+> - the **`CornerDownRight` nested-indent affordance** + its `data-menu-nested-indent`
+>   marker (`MenuItemRow.tsx:162-169`) — this is the PROTOTYPE's own nesting cue, gated
+>   at `menu-item-row.test.tsx:79-86`; keep it (it REPLACES the text hint below).
 > - the **`RowDropIndicator` drop-line labels** ("Drop before" / "Drop after",
->   `MenuItemRow.tsx:51-141`) and the `data-menu-drop-line="${id}:${intent}"` markers
->   that surface the live DnD intent (gated at `menu-item-row.test.tsx:99-108`,
->   `menu-tree.test.tsx:150-180`).
+>   `MenuItemRow.tsx:51-141`) + the `data-menu-drop-line="${id}:${intent}"` and
+>   "Drop as sub-menu" markers that surface the live DnD intent (gated at
+>   `menu-item-row.test.tsx:98-113`, `menu-tree.test.tsx:150-180`).
+> - the active-row selection hook `data-menu-row-active` + `bg-primary-soft/40`
+>   (`menu-item-row.test.tsx:89-96`).
 >
-> The prototype's lighter row (smaller grip, no description, no hint, no toolbar, no
-> drop-line labels) is a STATIC mock; it must NOT be ported literally — only the
-> canvas/Card framing AROUND the rows becomes lighter. `menu-item-row.test.tsx` and
-> `menu-tree.test.tsx` stay green with ZERO assertion edits. No affordance and no
-> asserted visual marker is removed or relocated off the row.
+> **COMPACT toward the prototype (pure PRESENTATION — these row-VISUAL assertions
+> are UPDATEABLE alongside the intentional restyle, NOT frozen):**
+> - replace the 48px grip BOX (`flex h-12 w-12 … border bg-muted/40 … self-center`,
+>   `MenuItemRow.tsx:144`) with a **bare `size-4` grip** on the (still-`draggable`,
+>   still-aria-labelled) handle — UPDATE the `h-12`/`w-12`/`self-center`/
+>   `[&_svg]:pointer-events-none` grip-box assertions (`menu-item-row.test.tsx:61-64`)
+>   to the compacted grip.
+> - **drop the 36px letter/status avatar** (`MenuItemRow.tsx:188-199`) — the label +
+>   URL subline carry the row; keep the `AlertTriangle`/"Missing URL" ERROR affordance
+>   (`:226-233`) as the only status marker.
+> - **drop the redundant TEXT "Sub-item of X" hint** (`MenuItemRow.tsx:98,209-214`) —
+>   `pl-8` + the kept `CornerDownRight` already convey nesting — and UPDATE the
+>   `Sub-item of Home` assertion (`menu-item-row.test.tsx:68`, `menu-tree.test.tsx:124`)
+>   accordingly. Collapse the subline to the truncated `href`/page path (mono), matching
+>   the prototype.
+>
+> The must-stay-green bucket for the two row suites is therefore **behavior + a11y
+> labels + DnD/nesting markers**, NOT the old visual byte-shape:
+> `menu-item-row.test.tsx` / `menu-tree.test.tsx` keep ALL of their
+> DnD/keyboard/marker assertions with ZERO edits; only the enumerated pure-VISUAL
+> assertions (grip-box dims, avatar, the "Sub-item of X" text) are updated to match
+> the restyle. No functional affordance and no DnD/a11y marker is removed or
+> relocated off the row.
 
 ---
 
@@ -114,11 +144,25 @@ surface.
 
 ## Implementation Pseudocode
 
-### 1. New shared `EditorFrame.tsx` (real port of the prototype primitives)
+### 1. New shared `EditorFrame.tsx` (frame wrapper only — REUSE the shipped rail)
+
+The rail primitives already EXIST as shared, wireable exports: TASK-497-02 (B9)
+shipped `core/admin/ui/shared/EditorRail.tsx` — `EditorRailGroup` (`:12`) and a
+real-`<button>` `EditorRailItem` (`:23`, spreads `ButtonHTMLAttributes`, so
+`disabled` is already supported for the Pages-empty / Posts-Categories
+deferred-disabled cases) — already consumed by
+`admin/ui/posts/editor/blocks/BlockInserter.tsx`. Do **NOT** re-declare a second
+copy of those two primitives inside `EditorFrame.tsx` (that forks the identical
+prototype port in `shared/` and the copies will drift). `EditorFrame.tsx`
+contributes ONLY the frame wrapper (chrome bar + `w-60` left / dotted canvas /
+`w-72` right three panes); the menu rail IMPORTS `EditorRailGroup`/`EditorRailItem`
+from the existing `EditorRail.tsx`.
 
 ```tsx
 // core/admin/ui/shared/EditorFrame.tsx
-// Real admin port of EditorPreviewFrame + EditorRailGroup + EditorRailItem.
+// Real admin port of the prototype EditorPreviewFrame *frame* only. The rail
+// primitives are NOT re-declared here — they live in ./EditorRail (TASK-497-02 B9)
+// and are re-exported at the bottom so the menu page imports them from one place.
 // Same SHAPE as the prototype (chrome bar / w-60 left rail / bg-dotted canvas /
 // w-72 right inspector), but the action slots are REAL (no "Preview only" pill).
 export function EditorFrame({
@@ -144,14 +188,30 @@ export function EditorFrame({
     </div>
   );
 }
-export function EditorRailGroup({ label, children }) { /* prototype :82-97 verbatim */ }
-export function EditorRailItem({ icon, children, active, onClick, disabled }) {
-  // prototype :99-119 but as a real <button> (onClick/disabled) — the rail is interactive here.
-}
+// EditorRailGroup / EditorRailItem: NOT re-declared — re-exported from the shipped
+// shared primitive so the menu rail imports them from one place:
+export { EditorRailGroup, EditorRailItem } from "./EditorRail";
 ```
 
-Reuse the existing `bg-dotted` token. The frame is presentation-only and is the
-foundation reused by TASK-499-03's Design tab chrome (same family as
+Reuse the existing `bg-dotted` token and the shipped `EditorRail.tsx` rail
+primitives (do not fork a second copy).
+
+**Deferred-rail wiring (HARD CONSTRAINT — closes the div-branch drop).**
+`EditorRailItem` renders a real `<button>` carrying `{...rest}` (so `disabled` and
+`title` apply) **only when an `onClick` is set**; a handler-less item falls to the
+presentational `<div>` branch (`EditorRail.tsx:61-66`) that DROPS `disabled` and
+`title`. So a deferred Posts/Categories item rendered handler-less + `disabled` +
+`title="Coming soon"` (§3 option a) would ship as a live-looking, un-dimmed,
+un-tooltipped **dead row** — the exact "faking" failure §3 forbids. The Pages-empty
+item is safe (it keeps its `onClick`, so `disabled` lands on the `<button>` branch),
+but the Posts/Categories deferred items are handler-less, so this MUST be fixed in
+the ONE shared `EditorRail.tsx`: route any `disabled` (or `title`-bearing) item to
+the `<button>` branch (rendered `disabled` + `aria-disabled`, `title` honored) — keep
+the `<div>` branch only for truly static decorative items — and add the disabled
+styling (`disabled:pointer-events-none disabled:opacity-50`). EXTEND that one shared
+file rather than forking a second rail; do NOT rely on passing `disabled` to a
+handler-less `EditorRailItem` (it is silently dropped today). The frame is presentation-only
+and is the foundation reused by TASK-499-03's Design tab chrome (same family as
 `CanvasEditor`). The right inspector aside is `xl:block` (≥1280px,
 prototype-faithful — `EditorPreviewFrame.tsx:73`); the menu page MUST align its
 mobile-`Sheet` trigger to the SAME `xl` breakpoint (see §2's `isLargeScreen`
@@ -236,7 +296,10 @@ return (
       }
     />
     <MenuItemDeleteDialog .../>           {/* keep verbatim */}
-    {/* mobile (< xl): the inspector still renders in the existing Sheet path */}
+    {/* mobile (< xl): the existing Sheet renders the SAME MenuItemInspector
+        (re-point rightPanel :732-745 from MenuItemDrawer to MenuItemInspector),
+        so openInNewTab/variant are editable across the whole < xl range and the
+        inline vs Sheet inspector UIs are identical — see §4 MOBILE-SHEET */}
    </div>
   </AdminShell>
 );
@@ -322,31 +385,90 @@ function MenuItemInspector({ activeItem, onChange, menuSettingsSlot }) {
         <span className="text-sm font-semibold">Item settings</span>
         {activeItem.linkType === "page" ? <Badge variant="soft">Page</Badge> : <Badge variant="soft">Link</Badge>}
       </div>
-      {/* PRIMARY fields (prototype default): Label / URL (mono) / Open in new tab / Visibility */}
+      {/* PRIMARY fields (prototype default): Label / Link (link-type-aware) /
+          Open in new tab / Visibility */}
       <InspectorRow label="Label"><Input .../></InspectorRow>
-      <InspectorRow label="URL"><Input className="font-mono text-xs" .../></InspectorRow>
+      {/* LINK — SINGLE SOURCE OF TRUTH, link-type-aware (mirrors MenuItemForm's
+          existing linkType conditional: EITHER the page picker OR the href input,
+          never both). The item model is pageId XOR href (menuService.ts:93-95): a
+          page item has href===null and derives its link from pageId. So:
+          - url / custom-link / button items -> the editable mono href Input (the
+            "URL" field);
+          - page items -> the Page picker is the PRIMARY editable control, with the
+            RESOLVED page path shown read-only/disabled beside it. NEVER an orphaned
+            editable href for a page item (editing a bare href would silently convert
+            it to a url item and corrupt the pageId link). */}
+      {activeItem.linkType === "page" ? (
+        <>
+          <InspectorRow label="Page"><PagePicker value={pageId} onChange={setPageId} /></InspectorRow>
+          <InspectorRow label="URL"><Input className="font-mono text-xs" value={resolvedPagePath} readOnly disabled /></InspectorRow>
+        </>
+      ) : (
+        <InspectorRow label="URL"><Input className="font-mono text-xs" value={href} onChange={setHref} /></InspectorRow>
+      )}
       <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-3 py-2.5">
         <div className="text-sm font-medium">Open in new tab</div>
         <Switch checked={openInNewTab} onCheckedChange={setOpenInNewTab} />   {/* §5 real field */}
       </div>
       <InspectorRow label="Visibility"><Select .../></InspectorRow>
-      {/* ADVANCED (collapsible, default-closed): Link type (page/url), Page picker,
+      {/* ADVANCED (collapsible, default-closed): Link TYPE toggle (page<->url retype),
           Parent select, Display as (Link|Button — §5 variant), Badge label+tone,
           Description, Icon — the EXISTING MenuItemForm controls (+ the new variant
-          segmented control), demoted so the default reads like the prototype. */}
+          segmented control), demoted so the default reads like the prototype. NOTE:
+          the Page PICKER is NOT buried here — it is surfaced as the PRIMARY Link
+          control when linkType==='page' (above); only the link-TYPE toggle stays in
+          Advanced. */}
     </>
   );
 }
 ```
+
+**LINK SOURCE-OF-TRUTH (HARD CONSTRAINT — do not orphan/desync the page link).**
+The primary "Link" control is link-type-aware, exactly mirroring the current
+`MenuItemForm` `linkType`-conditional (which shows EITHER the page picker OR the
+href input, never both). The prototype does not resolve this because its only
+inspected mock item (`Products`/`/products`, `MenuEditorPreview.tsx:103-108`) is
+url-typed; a literal unconditional "URL" `Input` promoted to primary would be
+orphaned for page items (`href===null`, `MenuItemRow.tsx:205-207` resolves them to
+the page title) and, if bound to `href`, would silently convert a page item to a
+url item on edit. There is therefore exactly ONE editable link source per item:
+`href` for url/custom-link/button, the Page picker for page items (the resolved path
+is read-only). Do NOT render both an editable href AND a page picker for the same
+item, and do NOT bury the page picker in Advanced for page items — it is the primary
+link control.
 
 Wire edits through the existing `handleSaveItem` (`:602-626`) shape so parent
 reparent/reindex and `normalizeMenuItemSettings` are reused unchanged. Reuse
 `MenuItemForm`'s `InspectorRow` + controls (`MenuItemForm.tsx:55-291`); restyle
 into "primary vs Advanced" groups — do not delete the advanced fields, just
 collapse them. Below `xl` (< 1280px) the inline inspector pane is CSS-hidden and
-item settings keep rendering inside the existing `Sheet` (`:999-1010`) — this is
+item settings render inside the existing `Sheet` (`:999-1010`) — this is
 why §2 retunes `isLargeScreen` to `(min-width: 1280px)`, so the Sheet auto-opens
 across the WHOLE `< xl` range (no 1024–1279 dead band).
+
+**MOBILE-SHEET = SAME INSPECTOR (HARD CONSTRAINT — do not ship two divergent
+inspector UIs; keeps `openInNewTab`/`variant` reachable < xl).** The Sheet must
+render the SAME `MenuItemInspector` as the inline `≥ xl` pane — NOT the legacy
+`MenuItemDrawer` → `MenuItemForm`. Today the Sheet renders `rightPanel`
+(`:999-1010` → `rightPanel`, defined `:732-745` as `MenuItemDrawer`, which wraps
+`MenuItemForm`), and per §5 the "Open in new tab" `Switch` (and the `variant`
+"Display as" control) live in `MenuItemInspector`, NOT in `MenuItemForm`. If the
+Sheet kept rendering `MenuItemDrawer`/`MenuItemForm`, then across the WHOLE
+`< xl` range — the exact range the §2 breakpoint retune routes to the Sheet —
+`openInNewTab`/`variant` would have NO editing UI at all, directly contradicting
+§2's justification that the Sheet is "the only place to edit
+Label/URL/Visibility/Open-in-new-tab" below xl, and shipping two divergent
+inspectors (inline vs Sheet). Therefore re-point `rightPanel` at the new
+`MenuItemInspector` (the same component + props the `right=` slot uses in §2), so
+the Sheet and the inline pane render one identical inspector (Switch included)
+everywhere below and at `xl`. `MenuItemDrawer` is either retired in favor of
+`MenuItemInspector` inside the Sheet, or refactored to embed `MenuItemInspector`
+as its body (its `onClose` Sheet-dismiss wiring may be preserved around the
+inspector). This is a THIRD explicitly-authorized surgical edit to the render
+block (alongside §2's `handleAddItem` dispatch and breakpoint retune): the
+`rightPanel` definition (`:732-745`) is re-pointed from `MenuItemDrawer` to
+`MenuItemInspector`; the hook LOGIC (`handleSaveItem`, `setDetailsOpen`,
+`setActiveItemId`) is otherwise untouched.
 
 ### 5. `openInNewTab` + `variant` — make the prototype Switch AND the Button source real
 
@@ -418,7 +540,12 @@ switch, and whose label is not "Open in new tab"). This is required because
 `tests/vitest/ui/menu-item-form.test.tsx:97,121-124` (TASK-479-10-L02) asserts
 `MenuItemForm` renders NO switch (`querySelector('[role="switch"]')` is `null`) and its
 text does NOT contain "Open in new tab"; that suite is in the must-stay-green bucket, so the
-Switch MUST live in the inspector wrapper, never in `MenuItemForm`.
+Switch MUST live in the inspector wrapper, never in `MenuItemForm`. Because the
+mobile `Sheet` is re-pointed to render the SAME `MenuItemInspector` (§4
+MOBILE-SHEET), the Switch is reachable across BOTH the `≥ xl` inline pane AND the
+`< xl` Sheet — putting it in the inspector wrapper (not `MenuItemForm`) satisfies
+the `menu-item-form.test.tsx` "no switch" lock WITHOUT leaving `openInNewTab`
+unreachable below 1280px.
 
 ### 6. Route-body schema — accept `openInNewTab` + `variant` on the EXISTING items PUT
 
@@ -453,13 +580,26 @@ drop-unknown); the schema only widens the accepted body so a real Save round-tri
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - New `EditorFrame` render test: three panes + chrome slots render; rail items
-  fire `onClick`; `disabled` items do not.
+  fire `onClick`; `disabled` items do not — INCLUDING a handler-less deferred item
+  (no `onClick`, `disabled`, `title="Coming soon"`): assert it renders a real
+  `disabled` control that is dimmed and surfaces the title (guards the
+  `EditorRail.tsx` div-branch drop above), NOT a live-looking clickable div.
 - `MenuEditorPage` restyle (`tests/vitest/ui/menu-editor.test.tsx`,
   `menu-editor-shell-wave.test.tsx`): typed rail dispatch inserts the correct
   link shape per source (`page` ⇒ `pageId`, `custom-link` ⇒ `href`, `button` ⇒
   `href` + `settings.variant:"button"`); always-on inspector edits
   Label/URL/Visibility/new-tab/variant; theme-location relocated to the empty
-  state still saves. **Assert the admin chrome survives** the SplitShell→AdminShell
+  state still saves. **Link source-of-truth (§4):** a `page` item shows the Page
+  picker as the PRIMARY link control + a read-only resolved path (NOT an editable
+  href), and retyping page↔url via the Advanced link-type toggle swaps the single
+  editable control — assert a page item still round-trips as `pageId` (its `href`
+  stays `null`, never corrupted to a url item by the inspector). **Mobile-Sheet =
+  same inspector (§4 MOBILE-SHEET):** with a selected item and `detailsOpen`, the
+  `Sheet` path renders the SAME `MenuItemInspector` — assert the Sheet body
+  contains the "Open in new tab" `Switch` (`[role="switch"]` present, mirroring
+  the inline `≥ xl` assertion) and the `variant` "Display as" control, so
+  `openInNewTab`/`variant` are provably editable below `xl`; assert the Sheet no
+  longer renders the legacy `MenuItemForm`-only drawer body. **Assert the admin chrome survives** the SplitShell→AdminShell
   swap: the rendered tree still has the sidebar/topbar (e.g. a sidebar nav
   landmark / `activeHref="/admin/menus"` marker), since no existing menu test
   guards the shell (`menu-editor-shell-wave.test.tsx` asserts only text).
@@ -507,10 +647,19 @@ drop-unknown); the schema only widens the accepted body so a real Save round-tri
   a non-empty URL/variant in the inspector so the item passes `validateMenuItemsPayload`
   before Publish — custom-link ⇒ `href`, button ⇒ `href` + `settings.variant:"button"`)
   so the Save/Publish lifecycle + payload coverage is provably not weakened.
+- **Row restyle (`menu-item-row.test.tsx` / `menu-tree.test.tsx`) — behavior stays
+  green, pure-visual assertions UPDATED (row fidelity reconciliation):** the
+  DnD/keyboard/nesting/a11y assertions (`data-menu-drag-handle` + `Drag`/`Move`/
+  `Indent`/`Outdent` aria-labels, `data-menu-nested-indent`, drop-line labels +
+  markers, `data-menu-row-active`) stay green with ZERO edits; the enumerated
+  pure-VISUAL assertions ONLY — grip-box dims (`:61-64`), the letter-avatar, the
+  text `Sub-item of Home` (`:68` / `menu-tree.test.tsx:124`) — are UPDATED to the
+  compacted prototype row (bare `size-4` grip, no avatar, `CornerDownRight`+`pl-8`
+  nesting, mono URL subline). Do NOT freeze the old row visuals.
 - **Regression (must stay green, do not weaken):**
-  `tests/vitest/ui/menu-tree.test.tsx` (DnD intents + keyboard move/indent/outdent),
+  `tests/vitest/ui/menu-tree.test.tsx` (DnD intents + keyboard move/indent/outdent —
+  behavior assertions only; see the row-restyle bullet above for the pure-visual updates),
   `menu-editor-validation.test.ts`, `menu-editor-refresh-policy.test.tsx`,
-  `menu-item-row.test.tsx` (drop-line labels + Move/Indent/Outdent aria-labels),
   `menu-item-form.test.tsx`,
   `tests/unit/menus/menuService.test.ts`, and the `moveMenuItems`/
   `moveMenuItemToRoot` export tests.

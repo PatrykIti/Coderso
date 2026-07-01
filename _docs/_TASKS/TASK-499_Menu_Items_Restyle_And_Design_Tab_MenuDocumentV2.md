@@ -75,9 +75,10 @@ justification (full argument in TASK-499-03 §1):
 
 ```
 PART 1 — items editor restyle
-  ADD    core/admin/ui/shared/EditorFrame.tsx            (real port of EditorPreviewFrame + rail)
+  ADD    core/admin/ui/shared/EditorFrame.tsx            (frame wrapper ONLY — port of EditorPreviewFrame's chrome/three-panes; REUSES the shipped EditorRail.tsx primitives, does NOT fork them)
+  EDIT   core/admin/ui/shared/EditorRail.tsx             (REUSE shipped TASK-497-02 (B9) EditorRailGroup + EditorRailItem; EXTEND so disabled/title-bearing items route to the <button> branch + gain disabled styling — else handler-less deferred Posts/Categories items drop to the live-looking <div> branch)
   EDIT   core/admin/ui/menus/MenuEditorPage.tsx          (frame chrome inside AdminShell; typed rail; always-on inspector owns the Open-in-new-tab Switch)
-  EDIT   core/admin/ui/menus/MenuItemRow.tsx             (compact OUTER framing only; KEEP grip/description/Sub-item hint + keyboard toolbar + RowDropIndicator — all gated)
+  EDIT   core/admin/ui/menus/MenuItemRow.tsx             (compact TOWARD the prototype: bare size-4 grip, drop letter-avatar + text "Sub-item of X" hint; KEEP drag handle/keyboard toolbar/CornerDownRight/RowDropIndicator a11y markers — gated)
   EDIT   core/admin/ui/menus/MenuItemForm.tsx            (thread openInNewTab/variant VALUES + Display-as variant segmented; advanced demoted; NO Switch here — inspector owns it, keeps menu-item-form.test.tsx green)
   EDIT   core/admin/ui/menus/MenuItemDrawer.tsx          (inspector reuse)
   EDIT   core/services/menus/menuItemSettings.ts         (+ openInNewTab, + variant; fail-soft)
@@ -122,6 +123,16 @@ is the keystone gate that blocks 499-03/04. 499-03 (authoring) repoints the rout
 and retires the legacy menu host. 499-04 (front fallback) is the behavioral
 keystone (empty ⇒ default `SiteHeaderNav`, non-empty ⇒ document) and must land
 with the byte-identity test intact. 499-05 closes tests + docs.
+**Shared-module ordering caveat:** the new `core/site/menuDocumentCss.ts` (owned by
+499-04) exports BOTH the front viewport `buildMenuDocumentCss(doc)` AND the
+device-forced admin-canvas `buildMenuDocumentPreviewCss(doc, device)`; 499-03's
+in-canvas preview (§2) consumes the latter, so the CSS-builder portion of
+`menuDocumentCss.ts` is a hard prerequisite of 499-03 even though 499-04's front
+wiring (renderer + fallback branch) follows. Land `menuDocumentCss.ts`'s builders
+with (or just before) 499-03's canvas; 499-03 lists 499-04 in its Dependencies for
+this reason. The two builders stay co-located in one module for scoped-rule cohesion
+(same `[data-site-menu-doc]` rules, viewport-media vs device-forced) rather than
+splitting the device-forced variant into 499-03.
 
 ---
 
@@ -134,9 +145,12 @@ with the byte-identity test intact. 499-05 closes tests + docs.
   (button/image/divider/spacer) inherit the page schema's existing validation;
   menu-native props reuse `normalizeMenuAppearance`'s validated color/number/enum
   shapes — raw stored input never reaches CSS.
-- **Versioning.** menuDocumentV2 stamps its OWN `MENU_DOCUMENT_SCHEMA_VERSION`
-  (start `1`), independent of `PAGE_DOCUMENT_SCHEMA_VERSION`. Absent/lower version
-  ⇒ treated as a legacy appearance+extras envelope (backward-compatible).
+- **Versioning.** menuDocumentV2 carries its OWN `MENU_DOCUMENT_SCHEMA_VERSION`
+  (start `1`), independent of `PAGE_DOCUMENT_SCHEMA_VERSION`. A stored non-empty
+  `document` with an absent OR lower/unknown version fails the strict write check, so
+  the fail-closed stored-read degrades it to empty ⇒ the resolver returns `null` ⇒ it
+  is treated as a legacy appearance+extras envelope (backward-compatible). No
+  stamp-on-absent for a non-empty document (see TASK-499-02 §4).
 - **Front renders published-only.** `resolvePublicSiteShell` already gates on
   `menu.status === "published"`; the document resolver reads the `published`
   snapshot, never the top-level draft (mirrors `resolvePublishedMenuAppearance`).
@@ -190,9 +204,13 @@ MUST NOT be weakened to fit:
   head emission is byte-unchanged (TASK-499-04 §5).
 - **Live DnD + nesting** — `tests/vitest/ui/menu-tree.test.tsx` (`child|before|after`
   intents + keyboard move/indent/outdent + parent reparent) and
-  `tests/vitest/ui/menu-item-row.test.tsx` (drop-line labels + Move/Indent/Outdent
-  aria-labels) stay green with NO assertion edits (TASK-499-01 "compact row"
-  reconciliation).
+  `tests/vitest/ui/menu-item-row.test.tsx` **behavior/a11y** assertions (drop-line
+  labels + markers, `data-menu-drag-handle` + Drag/Move/Indent/Outdent aria-labels,
+  `data-menu-nested-indent`, `data-menu-row-active`) stay green with NO edits; only
+  the enumerated pure-VISUAL row assertions (grip-box dims, letter-avatar, the text
+  "Sub-item of X" hint) are UPDATED to the compacted prototype row — the row is
+  re-skinned toward the prototype, NOT preserved (TASK-499-01 "row fidelity"
+  reconciliation, split behavior-locked vs visual-updateable).
 - **Page-editor isolation** — after the `mode === "menu"` retirement,
   `tests/vitest/pages/page-editor-*` (incl. `page-editor-host-contract.test.ts`,
   whose `mode` union must be edited down to `["page","page-template"]`),
