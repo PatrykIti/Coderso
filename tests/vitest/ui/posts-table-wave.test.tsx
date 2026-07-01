@@ -11,22 +11,42 @@ import { PostsTable } from "../../../core/admin/ui/posts/PostsTable";
 vi.mock("@/components/ui/table", () => ({
   Table: ({ children }: { children: React.ReactNode }) => <table>{children}</table>,
   TableBody: ({ children }: { children: React.ReactNode }) => <tbody>{children}</tbody>,
+  // TASK-497-01: forward className + onClick so the restyle (quiet header, soft shadow,
+  // whole-row click, stopPropagation cells) can be asserted.
   TableCell: ({
     children,
     colSpan,
     className,
+    onClick,
   }: {
     children: React.ReactNode;
     colSpan?: number;
     className?: string;
+    onClick?: (event: React.MouseEvent) => void;
   }) => (
-    <td colSpan={colSpan} className={className}>
+    <td colSpan={colSpan} className={className} onClick={onClick}>
       {children}
     </td>
   ),
-  TableHead: ({ children }: { children: React.ReactNode }) => <th>{children}</th>,
-  TableHeader: ({ children }: { children: React.ReactNode }) => <thead>{children}</thead>,
-  TableRow: ({ children }: { children: React.ReactNode }) => <tr>{children}</tr>,
+  TableHead: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <th className={className}>{children}</th>
+  ),
+  TableHeader: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <thead className={className}>{children}</thead>
+  ),
+  TableRow: ({
+    children,
+    className,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+    onClick?: (event: React.MouseEvent) => void;
+  }) => (
+    <tr className={className} onClick={onClick}>
+      {children}
+    </tr>
+  ),
 }));
 
 vi.mock("@/components/ui/badge", () => ({
@@ -218,8 +238,10 @@ test("PostsTable renders fallback status, author, tag, and date values", () => {
   try {
     expect(view.container.textContent).toContain("custom_status");
     expect(view.container.textContent).toContain("Unknown");
+    // Published cell renders "—" for publishedAt: null.
     expect(view.container.textContent).toContain("—");
-    expect(view.container.textContent).toContain("2026-03-06T12:00:00.000Z");
+    // TASK-497-01: the Updated column is dropped, so updatedAt no longer renders.
+    expect(view.container.textContent).not.toContain("2026-03-06T12:00:00.000Z");
     expect(view.container.textContent).toContain("N");
   } finally {
     dateSpy.mockRestore();
@@ -227,7 +249,7 @@ test("PostsTable renders fallback status, author, tag, and date values", () => {
   }
 });
 
-test("PostsTable trims tags to three items and forwards row action callbacks", () => {
+test("PostsTable renders lean columns, first-name author, and forwards row action callbacks", () => {
   const onEdit = vi.fn();
   const onPreview = vi.fn();
   const onPublish = vi.fn();
@@ -261,8 +283,11 @@ test("PostsTable trims tags to three items and forwards row action callbacks", (
   try {
     expect(view.container.querySelector("[data-has-delete='true']")).toBeTruthy();
     expect(view.container.querySelector("a")?.getAttribute("href")).toBe("/posts/post-1");
-    expect(view.container.textContent).toContain("news, release, launch");
-    expect(view.container.textContent).not.toContain("extra");
+    // TASK-497-01: tags column dropped; author cell shows first name only (Avatar initials
+    // still derive from the full name).
+    expect(view.container.textContent).toContain("Admin");
+    expect(view.container.textContent).not.toContain("Admin User");
+    expect(view.container.textContent).not.toContain("news, release, launch");
 
     clickByText(view.container, "edit-post");
     clickByText(view.container, "preview-post");
@@ -393,6 +418,121 @@ test("PostsTable omits delete action when onDelete is not provided", () => {
   try {
     expect(view.container.querySelector("[data-has-delete='false']")).toBeTruthy();
     expect(view.container.textContent).not.toContain("delete-post");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsTable renders a quiet header on a soft-shadow container with lean columns", () => {
+  const post = {
+    id: "post-1",
+    title: "Launch",
+    slug: "launch",
+    status: "draft",
+    tags: ["news"],
+    publishedAt: "2026-03-01T12:00:00.000Z",
+    updatedAt: "2026-03-06T12:00:00.000Z",
+    author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+  };
+
+  const view = mount(
+    <PostsTable
+      items={[post] as never}
+      onEdit={() => undefined}
+      onPreview={() => undefined}
+      onPublish={() => undefined}
+      onUnpublish={() => undefined}
+      onDuplicate={() => undefined}
+    />
+  );
+
+  try {
+    // A4: soft-shadow card (not the old shadow-card).
+    const wrapper = view.container.querySelector("div");
+    expect(wrapper?.className).toContain("shadow-soft");
+    expect(wrapper?.className).not.toContain("shadow-card");
+
+    // A5: quiet header — no bg-muted/40 surface, no uppercase/tracking-wider chrome.
+    const thead = view.container.querySelector("thead");
+    expect(thead?.className ?? "").not.toContain("bg-muted/40");
+    const headerCells = Array.from(view.container.querySelectorAll("thead th"));
+    expect(headerCells.some((cell) => cell.className.includes("uppercase"))).toBe(false);
+    expect(headerCells.some((cell) => cell.className.includes("tracking-wider"))).toBe(false);
+
+    // A6/D3: lean columns.
+    const headerText = thead?.textContent ?? "";
+    expect(headerText).toContain("Title");
+    expect(headerText).toContain("Status");
+    expect(headerText).toContain("Author");
+    expect(headerText).toContain("Published");
+    expect(headerText).toContain("Actions");
+    expect(headerText).not.toContain("Comments");
+    expect(headerText).not.toContain("Categories");
+    expect(headerText).not.toContain("Updated");
+
+    // A8: first-name author. D3: slug subtitle preserved in mono.
+    expect(view.container.textContent).toContain("Admin");
+    expect(view.container.textContent).not.toContain("Admin User");
+    const slug = Array.from(view.container.querySelectorAll("span")).find((node) =>
+      node.className.includes("font-mono")
+    );
+    expect(slug?.textContent).toBe("launch");
+
+    // A9: whole row is clickable.
+    expect(view.container.querySelector("tbody tr")?.className ?? "").toContain("cursor-pointer");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PostsTable navigates on whole-row click and stops propagation on checkbox + actions cells", () => {
+  const onEdit = vi.fn();
+  const onTogglePost = vi.fn();
+  const post = {
+    id: "post-1",
+    title: "Launch",
+    slug: "launch",
+    status: "draft",
+    tags: ["news"],
+    publishedAt: null,
+    updatedAt: "2026-03-06T12:00:00.000Z",
+    author: { id: "author-1", name: "Admin User", email: "admin@example.com" },
+  };
+
+  const view = mount(
+    <PostsTable
+      items={[post] as never}
+      onTogglePost={onTogglePost}
+      onEdit={onEdit}
+      onPreview={() => undefined}
+      onPublish={() => undefined}
+      onUnpublish={() => undefined}
+      onDuplicate={() => undefined}
+      onDelete={() => undefined}
+    />
+  );
+
+  try {
+    // A9: clicking the row reuses the existing onEdit navigation.
+    const dataRow = view.container.querySelector("tbody tr");
+    React.act(() => {
+      dataRow?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    expect(onEdit).toHaveBeenCalledWith("post-1");
+
+    onEdit.mockClear();
+
+    // checkbox cell stopPropagation: toggles selection without firing row nav.
+    const checkbox = view.container.querySelector('input[aria-label="Select Launch"]');
+    React.act(() => {
+      (checkbox as HTMLInputElement).click();
+    });
+    expect(onTogglePost).toHaveBeenCalledWith("post-1");
+    expect(onEdit).not.toHaveBeenCalled();
+
+    // actions cell stopPropagation: a row action does not fire row nav.
+    clickByText(view.container, "preview-post");
+    expect(onEdit).not.toHaveBeenCalled();
   } finally {
     view.cleanup();
   }

@@ -29,11 +29,14 @@ const createHeaderProps = () => ({
 test("PostEditorTopBar renders document tools, context, and action clusters", () => {
   const html = renderToString(<PostEditorTopBar {...createHeaderProps()} />);
 
-  expect(html).toContain("data-post-editor-header-cluster=\"primary-actions\"");
-  expect(html).toContain("data-post-editor-header-cluster=\"secondary-controls\"");
-  expect(html).toContain("data-post-editor-header-close=\"true\"");
-  expect(html).toContain("Add block");
-  expect(html).toContain("Outline");
+  expect(html).toContain('data-post-editor-header-cluster="primary-actions"');
+  // TASK-497-02 (B1): the secondary toolbar row is collapsed into the single chrome strip.
+  expect(html).not.toContain('data-post-editor-header-cluster="secondary-controls"');
+  expect(html).toContain('data-post-editor-header-close="true"');
+  // Add block / Outline labels are demoted to icon buttons — assert the preserved
+  // aria-label/title (this suite seeds outlineVisible:true → "Hide document overview").
+  expect(html).toContain("Toggle block inserter");
+  expect(html).toContain("Hide document overview");
   expect(html).toContain("Revisions");
   expect(html).toContain("Preview");
   expect(html).toContain("Editor settings");
@@ -41,13 +44,7 @@ test("PostEditorTopBar renders document tools, context, and action clusters", ()
 });
 
 test("PostEditorTopBar reflects saving and dirty states", () => {
-  const savingHtml = renderToString(
-    <PostEditorTopBar
-      {...createHeaderProps()}
-      saving
-      dirty
-    />
-  );
+  const savingHtml = renderToString(<PostEditorTopBar {...createHeaderProps()} saving dirty />);
 
   expect(savingHtml).toContain("Saving...");
   expect(savingHtml).not.toContain("Unsaved changes");
@@ -55,12 +52,7 @@ test("PostEditorTopBar reflects saving and dirty states", () => {
 });
 
 test("PostEditorTopBar switches publish label for published status", () => {
-  const html = renderToString(
-    <PostEditorTopBar
-      {...createHeaderProps()}
-      status="published"
-    />
-  );
+  const html = renderToString(<PostEditorTopBar {...createHeaderProps()} status="published" />);
 
   expect(html).not.toContain("data-post-editor-header-status");
   expect(html).not.toContain(">Published<");

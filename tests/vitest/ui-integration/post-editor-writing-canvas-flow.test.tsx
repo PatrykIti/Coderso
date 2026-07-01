@@ -30,7 +30,9 @@ const createTopBarProps = () => ({
 test("post editor top bar exposes document tools and publish actions", () => {
   const html = renderToString(<PostEditorTopBar {...createTopBarProps()} />);
 
-  expect(html).toContain("Outline");
+  // TASK-497-02 (B1): the Outline header label is demoted to an icon button; assert the
+  // preserved aria-label/title (this suite seeds outlineVisible:true → "Hide document overview").
+  expect(html).toContain("Hide document overview");
   expect(html).toContain("Preview");
   expect(html).toContain("Publish");
 });

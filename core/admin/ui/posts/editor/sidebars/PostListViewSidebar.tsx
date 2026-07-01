@@ -55,7 +55,7 @@ export function PostListViewSidebar({
 
   return (
     <div
-      className="flex h-full min-h-0 flex-col overflow-hidden bg-background"
+      className="flex h-full min-h-0 flex-col overflow-hidden bg-transparent"
       data-post-editor-sidebar="document-overview"
       data-post-editor-left-rail-mode={leftRailMode}
       role="region"
@@ -87,10 +87,7 @@ export function PostListViewSidebar({
                   {BLOCK_CATEGORY_LABELS[group.category]}
                 </DropdownMenuLabel>
                 {group.items.map((item) => (
-                  <DropdownMenuItem
-                    key={item.type}
-                    onClick={() => onInsertBlock(item.type)}
-                  >
+                  <DropdownMenuItem key={item.type} onClick={() => onInsertBlock(item.type)}>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{item.label}</p>
                       <p className="line-clamp-2 text-xs text-muted-foreground">

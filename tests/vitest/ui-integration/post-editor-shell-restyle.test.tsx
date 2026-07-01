@@ -20,9 +20,10 @@ import {
 
 test("shell renders the restyled inspector sections + Publish action", () => {
   const html = renderAdminUi(<PostBlockEditorShell />, { path: "/admin/posts/post-1" });
-  // real DocumentInspector sections render in the (ungated) details sidebar
-  // (NOT an invented single "Post settings" header)
-  expect(html).toContain("Publishing");
+  // TASK-497-02 (B7): the real DocumentInspector renders in the (ungated) details sidebar,
+  // now flattened to the single "Post settings" header (replacing the old "Publishing"
+  // InspectorSection card).
+  expect(html).toContain("Post settings");
   expect(html).toContain("Featured image");
   // header workflow action still present
   expect(html).toContain("Publish");

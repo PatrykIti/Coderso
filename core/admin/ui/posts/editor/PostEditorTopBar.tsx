@@ -1,5 +1,7 @@
 import { PostEditorHeader } from "./header/PostEditorHeader";
 
+type PostEditorViewportMode = "auto" | "desktop" | "mobile";
+
 type PostEditorTopBarProps = {
   title: string;
   status: string;
@@ -11,6 +13,7 @@ type PostEditorTopBarProps = {
   onOpenRevisions: () => void;
   onPreview: () => void;
   onPublish: () => void;
+  onSaveDraft?: () => void;
   onToggleInserter: () => void;
   inserterVisible: boolean;
   onToggleFocusMode: () => void;
@@ -20,6 +23,12 @@ type PostEditorTopBarProps = {
   onToggleDetails: () => void;
   detailsOpen: boolean;
   onOpenSettings: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  viewportMode?: PostEditorViewportMode;
+  onSetViewportMode?: (mode: PostEditorViewportMode) => void;
   addButtonRef?: React.Ref<HTMLButtonElement>;
   outlineButtonRef?: React.Ref<HTMLButtonElement>;
   detailsButtonRef?: React.Ref<HTMLButtonElement>;
@@ -36,6 +45,7 @@ export function PostEditorTopBar({
   onOpenRevisions,
   onPreview,
   onPublish,
+  onSaveDraft,
   onToggleInserter,
   inserterVisible,
   onToggleFocusMode,
@@ -45,6 +55,12 @@ export function PostEditorTopBar({
   onToggleDetails,
   detailsOpen,
   onOpenSettings,
+  canUndo,
+  canRedo,
+  onUndo,
+  onRedo,
+  viewportMode,
+  onSetViewportMode,
   addButtonRef,
   outlineButtonRef,
   detailsButtonRef,
@@ -63,6 +79,7 @@ export function PostEditorTopBar({
       onOpenRevisions={onOpenRevisions}
       onPreview={onPreview}
       onPublish={onPublish}
+      onSaveDraft={onSaveDraft}
       onToggleInserter={onToggleInserter}
       inserterVisible={inserterVisible}
       onToggleFocusMode={onToggleFocusMode}
@@ -70,6 +87,12 @@ export function PostEditorTopBar({
       outlineVisible={outlineVisible}
       onOpenSettings={onOpenSettings}
       detailsOpen={detailsOpen}
+      canUndo={canUndo}
+      canRedo={canRedo}
+      onUndo={onUndo}
+      onRedo={onRedo}
+      viewportMode={viewportMode}
+      onSetViewportMode={onSetViewportMode}
       addButtonRef={addButtonRef}
       outlineButtonRef={outlineButtonRef}
       detailsButtonRef={detailsButtonRef}

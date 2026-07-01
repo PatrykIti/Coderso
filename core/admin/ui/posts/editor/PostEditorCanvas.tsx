@@ -1369,7 +1369,7 @@ export function PostEditorCanvas({
                 onSelectBlock(null);
               }}
               placeholder="Enter post title..."
-              className="min-h-0 resize-none border-0 p-0 text-5xl font-display font-bold leading-tight tracking-tight text-foreground shadow-none placeholder:text-muted-foreground/30 focus-visible:ring-0"
+              className="min-h-0 resize-none border-0 p-0 text-3xl font-display font-bold leading-tight tracking-tight text-foreground shadow-none placeholder:text-muted-foreground/30 focus-visible:ring-0"
               rows={1}
               data-post-editor-title-input="true"
             />

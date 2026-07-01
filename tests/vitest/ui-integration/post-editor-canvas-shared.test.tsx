@@ -38,7 +38,8 @@ test("PostEditorCanvas renders unified document canvas", () => {
   expect(html).toContain('data-post-editor-canvas-shell="true"');
   expect(html).toContain('data-post-editor-title-input="true"');
   expect(html).toContain("max-w-2xl");
-  expect(html).toContain("text-5xl");
+  // TASK-497-02 (B8): the canvas title is nudged text-5xl → text-3xl for prototype parity.
+  expect(html).toContain("text-3xl");
   expect(html).toContain("Heading");
 });
 

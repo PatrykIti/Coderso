@@ -9,7 +9,7 @@ export function PostEditorHeaderRegion({ children, className }: RegionProps) {
   return (
     <header
       data-post-editor-region="header"
-      className={cn("shrink-0 border-b bg-background/95 backdrop-blur", className)}
+      className={cn("shrink-0 border-b border-border bg-muted/40", className)}
       aria-label="Post editor header"
     >
       {children}
@@ -21,10 +21,7 @@ export function PostEditorContentRegion({ children, className }: RegionProps) {
   return (
     <main
       data-post-editor-region="content"
-      className={cn(
-        "min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden",
-        className
-      )}
+      className={cn("min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden", className)}
       aria-label="Post editor content"
     >
       {children}
@@ -44,22 +41,17 @@ export function PostEditorFooterRegion({ children, className }: RegionProps) {
   );
 }
 
-export function PostEditorSecondarySidebarRegion({
-  children,
-  className,
-}: RegionProps) {
+export function PostEditorSecondarySidebarRegion({ children, className }: RegionProps) {
   return (
     <aside
       data-post-editor-region="secondary-sidebar"
       className={cn(
-        "hidden h-full min-h-0 w-64 shrink-0 border-r bg-background lg:block",
+        "hidden h-full min-h-0 w-64 shrink-0 border-r border-border bg-muted/20 lg:block",
         className
       )}
       aria-label="Post editor secondary sidebar"
     >
-      <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto">
-        {children}
-      </div>
+      <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto">{children}</div>
     </aside>
   );
 }
@@ -69,14 +61,12 @@ export function PostEditorSidebarRegion({ children, className }: RegionProps) {
     <aside
       data-post-editor-region="sidebar"
       className={cn(
-        "hidden h-full min-h-0 w-80 shrink-0 border-l bg-background lg:block",
+        "hidden h-full min-h-0 w-80 shrink-0 border-l border-border bg-card lg:block",
         className
       )}
       aria-label="Post editor details sidebar"
     >
-      <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto">
-        {children}
-      </div>
+      <div className="flex h-full min-h-0 w-full flex-col overflow-y-auto">{children}</div>
     </aside>
   );
 }

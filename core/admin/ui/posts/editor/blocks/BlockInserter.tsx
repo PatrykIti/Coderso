@@ -1,9 +1,10 @@
 import { Layers3, Search } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
+import { EditorRailGroup } from "@/ui/shared/EditorRail";
 
 import type { PostBlockType } from "../../../../../services/posts/editor/postBlockDocument";
 import {
@@ -25,21 +26,14 @@ type BlockInserterProps = {
 
 type BlockCategoryFilter = PostBlockCategory | "all";
 
-const BLOCK_CATEGORY_FILTERS: BlockCategoryFilter[] = [
-  "all",
-  ...POST_BLOCK_CATEGORY_ORDER,
-];
+const BLOCK_CATEGORY_FILTERS: BlockCategoryFilter[] = ["all", ...POST_BLOCK_CATEGORY_ORDER];
 
 const BLOCK_CATEGORY_FILTER_LABELS: Record<BlockCategoryFilter, string> = {
   all: "All",
   ...BLOCK_CATEGORY_LABELS,
 };
 
-const getNextRovingIndex = (
-  currentIndex: number,
-  count: number,
-  direction: "next" | "prev"
-) => {
+const getNextRovingIndex = (currentIndex: number, count: number, direction: "next" | "prev") => {
   if (count <= 0) return -1;
   if (currentIndex < 0) return 0;
   if (direction === "next") return (currentIndex + 1) % count;
@@ -54,23 +48,12 @@ export function BlockInserter({
 }: BlockInserterProps) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<BlockCategoryFilter>("all");
-  const [activeItemType, setActiveItemType] = useState<PostBlockType | null>(
-    null
-  );
+  const [activeItemType, setActiveItemType] = useState<PostBlockType | null>(null);
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-  const filtered = useMemo(
-    () => searchPostBlockCatalog(query, { category }),
-    [category, query]
-  );
-  const grouped = useMemo(
-    () => groupPostBlockCatalogByCategory(filtered),
-    [filtered]
-  );
-  const mostUsed = useMemo(
-    () => resolveMostUsedPostBlocks(recentlyUsedTypes),
-    [recentlyUsedTypes]
-  );
+  const filtered = useMemo(() => searchPostBlockCatalog(query, { category }), [category, query]);
+  const grouped = useMemo(() => groupPostBlockCatalogByCategory(filtered), [filtered]);
+  const mostUsed = useMemo(() => resolveMostUsedPostBlocks(recentlyUsedTypes), [recentlyUsedTypes]);
   const searchPlaceholder =
     category === "all"
       ? "Search blocks..."
@@ -124,9 +107,7 @@ export function BlockInserter({
     <div className="flex h-full min-h-0 flex-col">
       {showHeader ? (
         <div className="border-b px-4 py-3">
-          <p className="text-xs font-semibold uppercase text-muted-foreground">
-            Block inserter
-          </p>
+          <p className="text-xs font-semibold uppercase text-muted-foreground">Block inserter</p>
           <div className="relative mt-2">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -184,45 +165,39 @@ export function BlockInserter({
         onKeyDown={handleResultsKeyDown}
       >
         {!query && category === "all" && mostUsed.length > 0 ? (
-          <section className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
-                Most used
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              {mostUsed.map((item) => {
-                const itemIndex = filtered.findIndex(
-                  (candidate) => candidate.type === item.type
-                );
-                return (
-                  <Button
-                    key={`most-used-${item.type}`}
-                    ref={(element) => {
-                      if (itemIndex >= 0) itemRefs.current[itemIndex] = element;
-                    }}
-                    type="button"
-                    variant="outline"
-                    className="h-auto w-full justify-start px-3 py-2 text-left"
-                    disabled={disabled}
-                    onClick={() => insertCatalogItem(item)}
-                    onFocus={() => setActiveItemType(item.type)}
-                    role="option"
-                    aria-selected={itemIndex === activeItemIndex}
-                    tabIndex={itemIndex === activeItemIndex ? 0 : -1}
-                  >
-                    <Layers3 className="mr-2 mt-0.5 h-4 w-4 shrink-0" />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{item.label}</p>
-                      <p className="line-clamp-2 text-xs text-muted-foreground">
-                        {item.description}
-                      </p>
-                    </div>
-                  </Button>
-                );
-              })}
-            </div>
-          </section>
+          <EditorRailGroup label="Most used">
+            {mostUsed.map((item) => {
+              const itemIndex = filtered.findIndex((candidate) => candidate.type === item.type);
+              return (
+                <Button
+                  key={`most-used-${item.type}`}
+                  ref={(element) => {
+                    if (itemIndex >= 0) itemRefs.current[itemIndex] = element;
+                  }}
+                  type="button"
+                  variant="ghost"
+                  className={cn(
+                    "flex h-auto w-full items-center justify-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors",
+                    itemIndex === activeItemIndex
+                      ? "bg-primary-soft text-primary-soft-foreground"
+                      : "hover:bg-accent"
+                  )}
+                  disabled={disabled}
+                  onClick={() => insertCatalogItem(item)}
+                  onFocus={() => setActiveItemType(item.type)}
+                  role="option"
+                  aria-selected={itemIndex === activeItemIndex}
+                  tabIndex={itemIndex === activeItemIndex ? 0 : -1}
+                >
+                  <Layers3 className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold">{item.label}</p>
+                    <p className="line-clamp-2 text-xs text-muted-foreground">{item.description}</p>
+                  </div>
+                </Button>
+              );
+            })}
+          </EditorRailGroup>
         ) : null}
 
         {filtered.length === 0 ? (
@@ -233,41 +208,31 @@ export function BlockInserter({
 
         {grouped.map((group) =>
           group.items.length > 0 ? (
-            <section key={group.category} className="space-y-2">
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
-                  {BLOCK_CATEGORY_LABELS[group.category]}
-                </Badge>
-              </div>
-              <div className="space-y-2">
-                {group.items.map((item) => (
+            <EditorRailGroup key={group.category} label={BLOCK_CATEGORY_LABELS[group.category]}>
+              {group.items.map((item) => {
+                const itemIndex = filtered.findIndex((candidate) => candidate.type === item.type);
+                return (
                   <Button
                     key={item.type}
                     ref={(element) => {
-                      const itemIndex = filtered.findIndex(
-                        (candidate) => candidate.type === item.type
-                      );
                       if (itemIndex >= 0) itemRefs.current[itemIndex] = element;
                     }}
                     type="button"
-                    variant="outline"
-                    className="h-auto w-full justify-start px-3 py-2 text-left"
+                    variant="ghost"
+                    className={cn(
+                      "flex h-auto w-full items-center justify-start gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors",
+                      itemIndex === activeItemIndex
+                        ? "bg-primary-soft text-primary-soft-foreground"
+                        : "hover:bg-accent"
+                    )}
                     disabled={disabled}
                     onClick={() => insertCatalogItem(item)}
                     onFocus={() => setActiveItemType(item.type)}
                     role="option"
-                    aria-selected={
-                      filtered.findIndex((candidate) => candidate.type === item.type) ===
-                      activeItemIndex
-                    }
-                    tabIndex={
-                      filtered.findIndex((candidate) => candidate.type === item.type) ===
-                      activeItemIndex
-                        ? 0
-                        : -1
-                    }
+                    aria-selected={itemIndex === activeItemIndex}
+                    tabIndex={itemIndex === activeItemIndex ? 0 : -1}
                   >
-                    <Layers3 className="mr-2 mt-0.5 h-4 w-4 shrink-0" />
+                    <Layers3 className="mt-0.5 h-4 w-4 shrink-0" />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{item.label}</p>
                       <p className="line-clamp-2 text-xs text-muted-foreground">
@@ -275,9 +240,9 @@ export function BlockInserter({
                       </p>
                     </div>
                   </Button>
-                ))}
-              </div>
-            </section>
+                );
+              })}
+            </EditorRailGroup>
           ) : null
         )}
       </div>

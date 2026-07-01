@@ -1,4 +1,6 @@
-import { Eye, Send } from "lucide-react";
+import { Eye, Redo2, Rocket, Undo2 } from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type PostEditorActionClusterProps = {
@@ -8,6 +10,11 @@ type PostEditorActionClusterProps = {
   lastSavedAt: string | null;
   onPreview: () => void;
   onPublish: () => void;
+  onSaveDraft?: () => void;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
 };
 
 const formatSavedAt = (value: string) => {
@@ -26,6 +33,11 @@ export function PostEditorActionCluster({
   lastSavedAt,
   onPreview,
   onPublish,
+  onSaveDraft,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
 }: PostEditorActionClusterProps) {
   const syncLabel = saving
     ? "Saving..."
@@ -41,12 +53,38 @@ export function PostEditorActionCluster({
       aria-label="Primary editor actions"
       data-post-editor-header-cluster="primary-actions"
     >
-      <span
-        className="hidden items-center rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground md:inline-flex"
-        data-post-editor-sync-state="true"
-      >
+      <Badge variant="outline" className="hidden md:inline-flex" data-post-editor-sync-state="true">
         {syncLabel}
-      </span>
+      </Badge>
+
+      {onUndo ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onUndo}
+          disabled={!canUndo}
+          aria-label="Undo"
+          title="Undo"
+          data-post-editor-undo="true"
+        >
+          <Undo2 className="h-4 w-4" />
+        </Button>
+      ) : null}
+      {onRedo ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          onClick={onRedo}
+          disabled={!canRedo}
+          aria-label="Redo"
+          title="Redo"
+          data-post-editor-redo="true"
+        >
+          <Redo2 className="h-4 w-4" />
+        </Button>
+      ) : null}
 
       <Button
         type="button"
@@ -59,6 +97,21 @@ export function PostEditorActionCluster({
         <Eye className="h-4 w-4" />
         Preview
       </Button>
+
+      {onSaveDraft ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={onSaveDraft}
+          disabled={saving}
+          aria-label="Save draft"
+          data-post-editor-save-draft="true"
+        >
+          Save draft
+        </Button>
+      ) : null}
+
       <Button
         type="button"
         size="sm"
@@ -66,7 +119,7 @@ export function PostEditorActionCluster({
         disabled={saving}
         aria-label={status === "published" ? "Update published post" : "Publish post"}
       >
-        <Send className="h-4 w-4" />
+        <Rocket className="h-4 w-4" />
         {status === "published" ? "Update" : "Publish"}
       </Button>
     </div>

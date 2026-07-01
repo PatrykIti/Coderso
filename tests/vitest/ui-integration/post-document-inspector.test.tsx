@@ -36,12 +36,17 @@ test("DocumentInspector renders user-friendly document controls", () => {
     />
   );
 
-  expect(html).toContain("Publishing");
-  expect(html).toContain("Categories and tags");
+  // TASK-497-02 (B7): the heavy InspectorSection cards ("Publishing" / "Categories and
+  // tags" / "Advanced" / "Current category") are flattened to the "Post settings" header
+  // + light InspectorRow labels. Re-point the dropped chrome strings to the kept flat
+  // labels; the kept controls below (Featured image / Danger zone / Move to trash / Last
+  // updated) are unchanged.
+  expect(html).toContain("Post settings");
+  expect(html).toContain("Status");
+  expect(html).toContain("Category");
+  expect(html).toContain("Slug");
   expect(html).toContain("Featured image");
   expect(html).toContain("Danger zone");
   expect(html).toContain("Move to trash");
-  expect(html).toContain("Advanced");
-  expect(html).toContain("Current category");
   expect(html).toContain("Last updated");
 });

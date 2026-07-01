@@ -297,7 +297,9 @@ test("DocumentInspector keeps advanced fields expanded and routes document callb
   );
 
   try {
-    expect(view.container.textContent).toContain("Current category: Not assigned");
+    // TASK-497-02 (B7): the bg-muted/30 "Current category" summary box is dropped in the
+    // flat restyle; assert the kept "Category" InspectorRow label instead.
+    expect(view.container.textContent).toContain("Category");
 
     const selectsBeforeToggle = Array.from(view.container.querySelectorAll("select"));
     setSelectValue(selectsBeforeToggle[0], "cat-2");
@@ -317,7 +319,8 @@ test("DocumentInspector keeps advanced fields expanded and routes document callb
     });
 
     expect(view.container.textContent).not.toContain("Toggle");
-    expect(view.container.textContent).toContain("SEO fields completed: 0/3");
+    // TASK-497-02 (B7/B10): the SEO completion text is now the outline Badge "SEO 0/3".
+    expect(view.container.textContent).toContain("SEO 0/3");
     expect(view.container.textContent).toContain("Public URL:");
 
     const inputs = Array.from(view.container.querySelectorAll("input"));

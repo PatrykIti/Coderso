@@ -72,7 +72,11 @@ describe("editor-surface dead-code mandate (TASK-496)", () => {
       return refs.length === 0;
     });
     expect(orphans, `orphaned editor-surface file(s): ${orphans.join(", ")}`).toEqual([]);
-  }, 120000); // wide timeout: this case greps `core` + `tests` per editor-surface file (slow, but synchronous & deterministic).
+  }, 300000); // wide timeout: this case greps `core` + `tests` per editor-surface file (slow, but
+  // synchronous & deterministic). TASK-497 added shared/EditorRail.tsx to the swept set, so under
+  // full-suite parallel load the per-file `core tests` greps can exceed the old 120s bound (this
+  // case alone measured ~126s loaded vs ~32s isolated) — a pure timeout flake, not an orphan; the
+  // assertion is unchanged. Headroom raised to 300s.
 
   it("authoring logic that Screens still need is preserved (live importers)", () => {
     for (const sym of [

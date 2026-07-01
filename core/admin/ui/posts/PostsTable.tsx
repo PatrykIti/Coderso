@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { PageRowActions } from "../pages/PageRowActions";
@@ -36,11 +37,6 @@ const toInitials = (value: string) =>
     .join("")
     .slice(0, 2)
     .toUpperCase();
-
-const renderTags = (tags: string[] | undefined) => {
-  if (!Array.isArray(tags) || tags.length === 0) return "—";
-  return tags.slice(0, 3).join(", ");
-};
 
 export type PostsTableProps = {
   items: PostSummary[];
@@ -74,9 +70,9 @@ export function PostsTable({
   onDelete,
 }: PostsTableProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <Table>
-        <TableHeader className="bg-muted/40">
+        <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead className="w-10 pl-4">
               <Checkbox
@@ -85,42 +81,32 @@ export function PostsTable({
                 onCheckedChange={() => onToggleAll?.()}
               />
             </TableHead>
-            <TableHead className="min-w-[12rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Post title
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
-              Status
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
-              Author
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
-              Categories/Tags
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground 2xl:table-cell">
-              Published
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground 2xl:table-cell">
-              Updated
-            </TableHead>
-            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
-            </TableHead>
+            <TableHead className="min-w-[12rem]">Title</TableHead>
+            <TableHead className="hidden md:table-cell">Status</TableHead>
+            <TableHead className="hidden lg:table-cell">Author</TableHead>
+            <TableHead className="hidden lg:table-cell">Published</TableHead>
+            <TableHead className="w-12 pr-4 text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+              <TableCell colSpan={6} className="py-10 text-center text-sm text-muted-foreground">
                 {emptyMessage ?? "No posts yet. Create your first post to get started."}
               </TableCell>
             </TableRow>
           ) : null}
           {items.map((post) => {
             const isSelected = selectedIds.includes(post.id);
+            const authorName = post.author?.name ?? post.author?.email ?? "Unknown";
+            const authorFirst = authorName.split(" ")[0];
             return (
-              <TableRow key={post.id} className={isSelected ? "bg-primary-soft/40" : undefined}>
-                <TableCell className="pl-4">
+              <TableRow
+                key={post.id}
+                onClick={() => onEdit(post.id)}
+                className={cn("cursor-pointer", isSelected && "bg-primary-soft/40")}
+              >
+                <TableCell className="pl-4" onClick={(event) => event.stopPropagation()}>
                   <Checkbox
                     aria-label={`Select ${post.title}`}
                     checked={isSelected}
@@ -147,9 +133,9 @@ export function PostsTable({
                       <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
                         <StatusBadge status={post.status} />
                         <span className="text-muted-foreground/60">•</span>
-                        <span>{post.author?.name ?? post.author?.email ?? "Unknown"}</span>
+                        <span>{authorFirst}</span>
                         <span className="text-muted-foreground/60">•</span>
-                        <span>{renderTags(post.tags)}</span>
+                        <span>{formatDate(post.publishedAt)}</span>
                       </div>
                     </span>
                   </div>
@@ -164,21 +150,16 @@ export function PostsTable({
                         {toInitials(post.author?.name ?? post.author?.email ?? "NA")}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-sm text-muted-foreground">
-                      {post.author?.name ?? post.author?.email ?? "Unknown"}
-                    </span>
+                    <span className="text-sm text-muted-foreground">{authorFirst}</span>
                   </div>
                 </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                  {renderTags(post.tags)}
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground 2xl:table-cell">
+                <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
                   {formatDate(post.publishedAt)}
                 </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground 2xl:table-cell">
-                  {formatDate(post.updatedAt)}
-                </TableCell>
-                <TableCell className="w-12 pr-4 text-right">
+                <TableCell
+                  className="w-12 pr-4 text-right"
+                  onClick={(event) => event.stopPropagation()}
+                >
                   <PageRowActions
                     status={post.status}
                     onEdit={() => onEdit(post.id)}

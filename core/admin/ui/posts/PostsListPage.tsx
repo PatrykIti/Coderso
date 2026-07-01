@@ -430,7 +430,7 @@ export function PostsListPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Posts"
-          description="Create and publish articles rendered by widgets and templates."
+          description="Write, schedule, and publish blog posts for your site."
           actions={
             <>
               {selectedCount > 0 ? (
@@ -480,7 +480,7 @@ export function PostsListPage() {
               ) : null}
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
-                New
+                New post
               </Button>
             </>
           }

@@ -152,6 +152,7 @@ export function PostBlockEditorShell() {
   const { preferences, initialPreferences, setPreferences, resetPreferences } =
     usePostEditorPreferences();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [viewportMode, setViewportMode] = useState<"auto" | "desktop" | "mobile">("auto");
   const [slugRouteContext, setSlugRouteContext] = useState<PostSlugRouteContext>(() =>
     resolvePostSlugRouteContext(null)
   );
@@ -597,6 +598,15 @@ export function PostBlockEditorShell() {
             onPreview={() => {
               editor.preview().catch(() => undefined);
             }}
+            onSaveDraft={() => {
+              editor.saveDraft().catch(() => undefined);
+            }}
+            canUndo={editor.canUndo}
+            canRedo={editor.canRedo}
+            onUndo={editor.undo}
+            onRedo={editor.redo}
+            viewportMode={viewportMode}
+            onSetViewportMode={setViewportMode}
             onPublish={() => {
               const wasPublished = editor.status === "published";
               const action = wasPublished ? "update" : "publish";
@@ -647,6 +657,7 @@ export function PostBlockEditorShell() {
           }
         }}
         focusMode={layout.focusMode}
+        viewportMode={viewportMode}
         compactSidePanels={preferences.compactSidePanels}
         editorDensity={preferences.editorDensity}
       />
