@@ -5,7 +5,8 @@
 **Category:** Custom Screens / Screen Model / Admin UI / Screen Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-498-01 (look parity + palette shell)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-498
 
 ---
@@ -114,10 +115,14 @@ it later when the bound field changes — see B4). No other caller passes the ne
 stays optional and backward-compatible. (Add `CustomScreenEditorPage.tsx` to this leaf's
 touched files for the one-line `handleAddBlock` change.)
 
-Add a branch per new kind emitting `{ block, bindings }`, mirroring the `field` branch:
+Add a branch per new kind emitting `{ block, bindings }`, mirroring the `field` branch. Each
+branch spreads `...base`, so the base-seeded `data.label` (`:73-80`) survives into every kind
+— the per-kind `data` keys below are IN ADDITION to that inherited `label`. This is why B0's
+allow-list carries `"label"` for EVERY kind (heading + tabs included); do NOT let a heading/tabs
+branch keep base's label while B0 omits it, or the save-time reject-unknown throws (see B0 note).
 
 ```ts
-// heading (static text or bound):  data: { text, level: 1|2|3, align: 'left'|'center'|'right' }
+// heading (static text or bound):  data: { label(from base), text, level: 1|2|3, align: 'left'|'center'|'right' }
 //   bindings: input.field ? [{ propPath:'text', field, mode:'read' }] : []
 // text:        data: { content, tone: 'default'|'muted' };  bindings: []
 // stat:        data: { label, format:'number'|'percent'|'money', trend:'auto'|'up'|'down'|'flat' }
@@ -138,8 +143,9 @@ Add a branch per new kind emitting `{ block, bindings }`, mirroring the `field` 
 // related-list: data: { label, target: input.relationTarget ?? "", displayField, variant:'checklist'|'activity'|'cards', limit }
 //   data.target comes from input.relationTarget (= field.relation.target, passed by handleAddBlock)
 //   bindings: input.field ? [{ propPath:'items', field: input.field, mode:'read' }] : []  // TASK-498-03 resolves
-// tabs:        data: { tabs: [{ id:'tab-1', label:'Tab 1' }, { id:'tab-2', label:'Tab 2' }] }
-//   slots: { 'tab-1': [], 'tab-2': [] };  bindings: []
+// tabs:        data: { label(from base), tabs: [{ id:'tab-1', label:'Tab 1' }, { id:'tab-2', label:'Tab 2' }] }
+//   slots: { 'tab-1': [], 'tab-2': [] };  bindings: []  (the tab-item `label`s are nested inside
+//   data.tabs[]; the top-level data.label is the block-level base label — both are allow-listed in B0)
 // button (promote actions): data: { label, action:'link'|'publish'|'custom', variant,
 //   ...(href ? { href } : {}) };  bindings: input.field ? [{ propPath:'href', field, mode:'read' }] : []
 ```
@@ -157,15 +163,23 @@ permissive `normalizeScreenData`:
 
 ```ts
 const screenBlockDataAllowedKeys: Record<string, readonly string[]> = {
-  heading: ["text", "level", "align", "field"],
+  heading: ["label", "text", "level", "align", "field"],
   text: ["content", "tone", "label"],
   stat: ["label", "format", "trend", "deltaField", "field"],
   divider: ["variant", "label"],
   image: ["label", "fit", "ratio", "field"],
   "related-list": ["label", "target", "displayField", "variant", "limit", "field"],
-  tabs: ["tabs"],
+  tabs: ["label", "tabs"],
   button: ["label", "action", "variant", "href", "field"],
 };
+// NOTE — `"label"` is REQUIRED in EVERY new kind's allow-list (including heading + tabs).
+// `createScreenBlock`'s base factory ALWAYS seeds `data: { label, ... }` (screenDocumentOps.ts:73-80)
+// and each B2 branch spreads `...base`, so `data.label` survives into every kind (see B2). Omitting
+// "label" from heading/tabs (which otherwise carry only text/level/align resp. tabs) would make
+// normalizeScreenBlockData reject the base-seeded label as unknown → throw
+// custom_screen_definition_invalid on save → the block is silently dropped by ...ForRead read-repair
+// (nothing in lint/types catches it). B0 (this list) and B2 (base label survives) MUST stay
+// consistent: every kind above allows "label".
 
 const normalizeScreenBlockData = (type: string, value: unknown): Record<string, unknown> => {
   const data = normalizeScreenData(value);              // existing JSON-safe normalize :386-391
@@ -326,7 +340,11 @@ emit a SINGLE `mode:'read'` binding ONLY when a `field` is supplied and emit NO 
 chip-inserted WITHOUT a field (assert no placeholder-field binding is produced — it would fail
 `normalizeScreenFieldBinding` on save); `related-list` WITH a relation field emits an `items`
 binding + derived `target`; `tabs` emits two slots matching `data.tabs`; `divider`/`text` emit
-no binding; `normalizeScreenBlockData`
+no binding; a round-trip of EACH new kind — most pointedly `heading` and `tabs` (whose B0
+allow-lists were the label-omission footgun) — through create → `normalizeScreenBlockData` → read
+does NOT throw (asserts the base-seeded `data.label` is allow-listed for every kind, so a
+chip-inserted heading/tabs block survives `...ForRead` instead of being silently dropped);
+`normalizeScreenBlockData`
 rejects an unknown key within a new kind's `data` (throws) but accepts an unknown key on a
 legacy kind (backward-compat); the V4 editor-view validator still enforces blockId-in-doc +
 field-root allow-list; `schemaVersion` stays `1`/def `4`; a stored V4 screen round-trips

@@ -5,7 +5,8 @@
 **Category:** Admin UI / Visual Refresh / Custom Screens / Screen Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-496-02 (Screen surfaces on shared `CanvasEditor`), TASK-479 (soft/violet redesign)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-498
 
 ---
@@ -22,7 +23,8 @@ bg-card` card, dotted canvas, floating rail container) already comes from the sh
 model change in this leaf.
 
 - **Goal:** the builder reads as a graphical SCHEMA — corner-tag block cards, muted mono
-  `{{ Field }}` tokens in builder mode, a 9-chip `BlockChip` palette, a single
+  `{{ Field }}` tokens in builder mode, a 9-chip `PaletteChip` palette (the ported LOCAL chip
+  component MUST be named `PaletteChip`, NOT `BlockChip` — dead-code guard, see A1), a single
   consolidated right inspector that is structurally identical to the Pages right rail,
   the in-canvas "Add section" affordance and tighter `max-w-2xl` width — and the screen
   editor presents ONLY the entry-view builder (no List/Editor toggle, no list-view
@@ -65,7 +67,7 @@ TASK-498-02).
 
 ## Implementation Pseudocode
 
-### A1 — 9-chip `BlockChip` palette (`ScreenBlockLibrary.tsx`)
+### A1 — 9-chip `PaletteChip` palette (`ScreenBlockLibrary.tsx`)
 
 Replace the 4-item full-width outline-button list (`:13-43, :52-131`) with a 3-col icon
 grid of 9 data blocks, mirroring the prototype palette `:234-246`. There is **no shared
@@ -104,7 +106,7 @@ function PaletteChip({ icon: Icon, label, onClick, disabled }: {  // NOT `BlockC
 > NOTE: the 9 chips reference kinds that only exist after TASK-498-02 extends
 > `ScreenBlockKind`. In THIS leaf, render the palette with the chips disabled-or-no-op for
 > the not-yet-added kinds, OR sequence the palette swap so the chip→`onAddBlock` wiring for
-> a kind is enabled only once 498-02 adds that kind. The look (3-col grid + `BlockChip`)
+> a kind is enabled only once 498-02 adds that kind. The look (3-col grid + local `PaletteChip`)
 > ships here; the per-kind insert wiring is owned by 498-02. The 9-chip grid is the SOLE
 > insert surface (prototype palette is 9 chips only, `:234-246`): **DELETE the old per-field
 > "Fields" list entirely** (`ScreenBlockLibrary.tsx:52-131`) — do NOT keep it beneath the grid
@@ -201,10 +203,13 @@ Make the screen rail **structurally identical to the Pages rail**:
 //        - Settings active → screenSettingsPanel (screen-level settings body; unchanged)
 //        - Insert active   → palette (A1 9-chip `PaletteChip` grid)
 //        - Layers active   → AuthoringLayersPanel
-//        - Inspect active  → flat ScreenBlockInspector with panel="all" (renders
-//          Layout/Bound field/Spacing/Background/Visible in one stack — :194-196 already
-//          supports panel="all"); drop the per-category content/binding/style sub-routing
-//          (`ScreenAuthoringCanvas.tsx:335-354`).
+//        - Inspect active  → flat ScreenBlockInspector with panel="all" (renders the EXISTING
+//          real controls — Bound field + the per-kind content controls + the variant→Background
+//          swatch — in one flat InspectorRow stack; :194-196 already supports panel="all"). Port
+//          ONLY the prototype's flat-row LOOK; do NOT add no-op Layout(columns)/Spacing/Visible
+//          rows (they have no backing field in ScreenBlockV1 and this leaf adds no model — 498-02
+//          owns model), see the A4 flatten spec + "Dropped sub-controls" below. Drop the per-
+//          category content/binding/style sub-routing (`ScreenAuthoringCanvas.tsx:335-354`).
 //     <default active category> = the rail is NEVER empty on load (the prototype ALWAYS shows the
 //        palette, CustomScreenEditorPreview.tsx:234-246). Default `activePanel` to `"insert"` (palette)
 //        when NO block is selected, and to `"inspect"` when a block IS selected. This REPLACES today's
@@ -231,12 +236,24 @@ Make the screen rail **structurally identical to the Pages rail**:
 ```
 
 Flatten `ScreenBlockInspector.tsx` (`:252-365`) to the prototype's single inspector
-(`CustomScreenEditorPreview.tsx:250-296`): `Layout` / `Bound field` / `Spacing` /
-`Background` swatches / `Visible`, each as an `InspectorRow` (label + control), with the
-Bound-field `Select` promoted to a first-class row (currently buried under the "Binding"
-tab in a bordered card via `FieldBindingControls :100-166`). Remove the per-tab bordered
-`rounded-lg border p-3` card wrappers in favor of the flat `InspectorRow` stack. Keep the
-existing `onPatchBlock`/`onPatchBlockData`/`onPatchBinding` handlers wired. The block-actions
+(`CustomScreenEditorPreview.tsx:250-296`) by porting ONLY the prototype's flat-`InspectorRow`
+LOOK (label + control per row, no bordered cards) around the EXISTING real controls — do NOT
+reproduce the prototype's full row list. The prototype shows `Layout` / `Bound field` /
+`Spacing` / `Background` / `Visible`, but in THIS leaf only THREE of those map to real,
+already-wired data: **Bound field** (the `FieldBindingControls` `Select` → `onPatchBinding`,
+currently buried under the "Binding" tab in a bordered card, `:100-166`), the **per-kind content
+controls** (Header text / Field presentation / Group presentation / Columns / Shared text →
+`onPatchBlockData`, `:252-365`), and **Background** (the `variant` swatch/`Select` → `onPatchBlock`,
+today inside the Advanced-style modal `:367-399`). **The prototype's `Layout` (columns), `Spacing`,
+and `Visible` rows are DROPPED — do NOT ship them as no-op `InspectorRow`s.** There is NO
+`layout.columns`/`spacing`/decorative-`visible` control wired in this leaf and this leaf adds NO
+model (`ScreenBlockV1` exposes only `variant`; 498-02 owns any model extension), so rendering those
+three rows would ship exactly the fabricated affordances A5's de-fabrication rule forbids. Promote
+the **Bound field** `Select` to a first-class flat row, restyle the **variant** control inline as
+the flat **Background** row (see the "Advanced style" drop below), and lay the per-kind content
+controls out as flat rows. Remove the per-tab bordered `rounded-lg border p-3` card wrappers in
+favor of the flat `InspectorRow` stack. Keep the existing
+`onPatchBlock`/`onPatchBlockData`/`onPatchBinding` handlers wired. The block-actions
 (move/duplicate/delete) stay REACHABLE but render in the panel HEAD action cluster (specified in
 the head-row spec above — Pages parity), NOT in the inspector body: keep
 `ScreenBlockInspector showBlockActions={false}` (`ScreenAuthoringCanvas.tsx:346`) so the flattened
@@ -246,9 +263,18 @@ rendered controls live in the head row.
 
 **Dropped sub-controls (prototype-faithful) + `panel`-prop collapse — STATE THE FATE.** The
 prototype flat inspector (`:250-296`) has NO binding-mode "Interaction" row and NO "Advanced
-style"/"Open style controls" style-MODAL, so BOTH are removed by the flatten, and the
-`panel="content"|"binding"|"style"` sub-values collapse to one body:
+style"/"Open style controls" style-MODAL, so BOTH are removed by the flatten; the prototype's
+decorative `Layout` / `Spacing` / `Visible` rows are ALSO dropped (no backing model this leaf);
+and the `panel="content"|"binding"|"style"` sub-values collapse to one body:
 
+- The prototype's **`Layout` (columns), `Spacing`, and `Visible`** rows are **DROPPED — NOT ported
+  as no-op rows.** `ScreenBlockV1` (`customScreenSchemas.ts:112-124`) exposes only `variant` as an
+  inspector-editable style hook; there is NO `layout.columns`/`spacing`/decorative-`visible` control
+  wired in this leaf and this leaf adds no model (498-02 owns model). Shipping them as empty
+  `InspectorRow`s is the exact fabricated-affordance trap the A5 de-fabrication rule (and the
+  `custom-screen-entry-editor-restyle` guard) forbids. Port only the flat-row LOOK around the REAL
+  controls (Bound field + per-kind content + variant→Background); add these three rows only when
+  498-02 introduces backing model + controls for them.
 - The `FieldBindingControls` "Interaction" mode `Select` (`ScreenBlockInspector.tsx:142-163`) is
   **DROPPED**. Read/readwrite binding mode is no longer a user-visible control — it is set
   per-kind by the Bound-field control (TASK-498-02 B4: display kinds → `mode:"read"`; `field` +
@@ -465,7 +491,11 @@ with the in-panel hide-panel button + target label (Pages-parity) and the show/h
 flips `panelOpen`; assert the FOUR category icons (Settings / Insert / Layers / Inspect) render
 with Settings ALWAYS-enabled and Inspect disabled when no block is selected, and that selecting
 the Settings category opens `screenSettingsPanel` (screen-level settings stay reachable — guard
-that its floatingPanel branch is NOT dead after the list removal); **assert block actions stay
+that its floatingPanel branch is NOT dead after the list removal); **assert the flattened Inspect
+inspector renders the REAL controls (the first-class "Bound field" `Select`, the per-kind content
+inputs, and the inline "Background"/variant control) and does NOT render the three decorative
+prototype rows that have no backing model this leaf — no "Layout"/"Spacing"/"Visible" no-op rows**
+(de-fabrication: they are added only when 498-02 wires their model); **assert block actions stay
 REACHABLE after the sub-toolbar strip** — with a block selected, the panel HEAD renders the
 move-up / move-down / duplicate / delete action cluster (aria-labels intact) and clicking them
 fires `onMove`/`onDuplicate`/`onDelete`, the command-palette Search trigger is reachable from the
@@ -580,7 +610,7 @@ its Sweep 6 KEEP regex is extended to allowlist the retained `ListViewDesigner`/
     **Also re-point the POSITIVE palette-LABEL assertions, not just the toggle click** (this is
     load-bearing — the A1 palette swap, NOT the toggle removal, breaks them): A1 replaces
     `ScreenBlockLibrary`'s current 4-item labels `"Record header"`/`"Field group"`/`"Two columns"`
-    (`ScreenBlockLibrary.tsx:21/27/33`) with the 9-chip `BlockChip` labels (Heading/Text/Field/
+    (`ScreenBlockLibrary.tsx:21/27/33`) with the 9-chip `PaletteChip` labels (Heading/Text/Field/
     Stat/Divider/Image/Related list/Tabs/Button — the chip labels render as static text regardless
     of which kinds 498-02 has wired yet), so `toContain("Record header")` (`:180, :255, :288`),
     `toContain("Field group")` (`:181`) and `toContain("Two columns")` (`:182`) all turn RED after

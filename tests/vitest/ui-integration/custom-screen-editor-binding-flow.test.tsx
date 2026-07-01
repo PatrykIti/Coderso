@@ -119,7 +119,8 @@ test("retired screen widgets do not expose legacy binding jump controls", () => 
   }
 });
 
-test("ScreenBlockInspector opens advanced style controls in a modal", () => {
+test("ScreenBlockInspector edits the block variant inline in the flat Background row", () => {
+  const onPatchBlock = vi.fn();
   const view = mount(
     <ScreenBlockInspector
       selectedBlock={{
@@ -130,9 +131,9 @@ test("ScreenBlockInspector opens advanced style controls in a modal", () => {
       }}
       bindings={[]}
       fields={[]}
-      panel="style"
+      panel="all"
       showBlockActions={false}
-      onPatchBlock={vi.fn()}
+      onPatchBlock={onPatchBlock}
       onPatchBlockData={vi.fn()}
       onPatchBinding={vi.fn()}
       onMove={vi.fn()}
@@ -142,18 +143,17 @@ test("ScreenBlockInspector opens advanced style controls in a modal", () => {
   );
 
   try {
-    expect(view.container.textContent).toContain("Advanced style");
-    expect(view.container.textContent).toContain("Variant: compact");
-    expect(view.container.querySelector('input[placeholder="Default"]')).toBeNull();
+    // TASK-498-01 A4: the "Advanced style" modal is dropped — variant/style is
+    // edited INLINE in the flat "Background" row (no dialog).
+    expect(view.container.textContent).toContain("Background");
+    expect(document.body.querySelector("[data-screen-style-dialog]")).toBeNull();
+    expect(view.container.textContent).not.toContain("Open style controls");
 
-    React.act(() => {
-      Array.from(view.container.querySelectorAll("button"))
-        .find((button) => button.textContent === "Open style controls")
-        ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-
-    expect(document.body.querySelector('[data-screen-style-dialog="true"]')).not.toBeNull();
-    expect(document.body.querySelector('input[placeholder="Default"]')).not.toBeNull();
+    const variantInput = view.container.querySelector(
+      'input[placeholder="Default"]'
+    ) as HTMLInputElement | null;
+    expect(variantInput).not.toBeNull();
+    expect(variantInput?.value).toBe("compact");
   } finally {
     view.cleanup();
   }

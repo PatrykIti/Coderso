@@ -3,6 +3,7 @@ import type {
   ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
 import type { ScreenEntryPresentationOverrideDraft } from "../../../services/customScreens/screenEntryPresentationOverrideContract";
+import type { RelatedEntrySummary } from "../../../services/customScreens/relatedEntryResolver";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
 
@@ -14,6 +15,9 @@ type CustomScreenEntryCanvasProps = {
   presentationOverrides?: ScreenEntryPresentationOverrideDraft[];
   fields: ContentField[];
   relationTargets: Array<{ slug: string; name: string }>;
+  // TASK-498-03: host-precomputed related entries (forward-only — the owner
+  // CustomScreenEntryEditor resolves + passes this in).
+  relatedEntries?: Record<string, RelatedEntrySummary[]>;
   onFieldChange: (field: string, value: unknown) => void;
   onTitleChange: (value: string) => void;
   onSlugChange: (value: string) => void;
@@ -29,6 +33,7 @@ export function CustomScreenEntryCanvas({
   presentationOverrides,
   fields,
   relationTargets,
+  relatedEntries,
   onFieldChange,
   onTitleChange,
   onSlugChange,
@@ -44,6 +49,7 @@ export function CustomScreenEntryCanvas({
       fieldErrors={fieldErrors}
       presentationOverrides={presentationOverrides}
       relationTargets={relationTargets}
+      relatedEntries={relatedEntries}
       mode="entry"
       selectedBlockId={selectedBlockId}
       onSelectBlock={onSelectBlock}

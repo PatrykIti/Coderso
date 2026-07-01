@@ -25,7 +25,7 @@ export type ScreenToolbarPanel = {
 export function ScreenPanelToggleRail({ panels }: { panels: readonly ScreenToolbarPanel[] }) {
   return (
     <div
-      className="flex max-w-full items-center gap-1 overflow-x-auto"
+      className="flex max-w-full flex-wrap items-center gap-1 border-t border-border pt-2"
       data-screen-toolbar-rail="true"
     >
       {panels.map((panel) => {

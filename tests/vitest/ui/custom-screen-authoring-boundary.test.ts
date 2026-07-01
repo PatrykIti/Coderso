@@ -59,6 +59,7 @@ describe("custom screen authoring boundaries", () => {
         "core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx",
         "core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx",
         "core/admin/ui/custom-screens/CustomScreenPreview.tsx",
+        "core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx",
       ].map(async (relative) => ({
         file: path.join(repoRoot, relative),
         source: await readFile(path.join(repoRoot, relative), "utf8"),

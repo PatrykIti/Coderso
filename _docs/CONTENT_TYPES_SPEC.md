@@ -533,6 +533,72 @@ The content type schema remains the source of truth. Custom Screens do not store
 their own `contentTypeId` inside `definition`; they reference the record-level
 `custom_screens.content_type_id`.
 
+## Custom Screen entry-view builder — data-oriented block kinds (TASK-498)
+
+The Custom Screen **entry-view builder** is a data-oriented, graphical-schema editor.
+Blocks are stored inside the V4 definition's `editorView.document` (`ScreenDocumentV1`,
+`schemaVersion: 1`); this is **unchanged** by TASK-498 — no `ScreenDocumentV1`
+schema-version bump, no definition version bump (stays `4`), and no DB migration. Bound
+blocks reference schema/system fields through `ScreenFieldBinding` (allow-list +
+`blockId ∈ document`), resolved by `resolveBlockBinding` / `readBindingPathValue`. In
+**builder** mode a bound block renders a muted mono `{{ Field }}` token; in **entry** /
+**preview** mode it resolves the real value.
+
+### Per-kind `data` schema (schema-first, reject-unknown)
+
+`normalizeScreenBlockData(type, data)` enforces a per-kind, **reject-unknown** allow-list
+for the data-oriented kinds. Unknown keys within a new kind's `data` throw
+`custom_screen_definition_invalid`; **legacy** kinds (`field`, `record-header`,
+`field-group`, `columns`, `rich-text`, `legacy-widget`) keep their permissive
+normalization, so stored V4 screens read back byte-stable. `"label"` is allow-listed for
+every new kind (the base factory always seeds `data.label`). Enums are coerced to their
+allow-list; out-of-range/invalid values fall back to the listed default.
+
+| Kind | `data` keys (allow-list) | Enums / bound propPath |
+|------|--------------------------|------------------------|
+| `heading` | `label`, `text`, `level`, `align`, `field` | `level ∈ 1\|2\|3` (def 2); `align ∈ left\|center\|right`; bound → propPath `text` |
+| `text` | `content`, `tone`, `label` | `tone ∈ default\|muted` |
+| `stat` | `label`, `format`, `trend`, `deltaField`, `field` | `format ∈ number\|percent\|money`; `trend ∈ auto\|up\|down\|flat`; bound → propPath `value`, `mode:"read"` |
+| `divider` | `variant`, `label` | `variant ∈ line\|space\|label` |
+| `image` | `label`, `fit`, `ratio`, `field` | `fit ∈ cover\|contain`; bound → propPath `src`, `mode:"read"` |
+| `related-list` | `label`, `target`, `displayField`, `variant`, `limit`, `field` | `variant ∈ checklist\|activity\|cards`; `limit` clamped `1..50`; bound → propPath **`items`**, `mode:"read"` |
+| `tabs` | `label`, `tabs` | `tabs = [{ id, label }]` with ids matching `slots` keys |
+| `button` | `label`, `action`, `variant`, `href`, `field` | `action ∈ link\|publish\|custom`; `variant ∈ primary\|secondary\|ghost`; bound → propPath `href` |
+
+`field` and `record-header` remain the writable kinds (bind `mode:"readwrite"` — inline
+write-back stays on `title`/`slug`/schema fields only); every other bound kind binds
+`mode:"read"` (display-only). The pre-TASK-498 `actions` placeholder is promoted to
+`button`; a stored `actions` block is remapped to a usable `button` on the **read path only**
+(`normalizeScreenDocumentV1ForRead`, data intersected with the button allow-list) — the write
+path is untouched (no visual-repair on save).
+
+### Related-list relation-resolution contract
+
+The `related-list` block resolves a relation field's stored target-entry IDs into real
+related entries. Resolution is **read-only** and **host-precomputed**, so the renderer stays
+a pure function:
+
+- `resolveRelatedEntries({ ids, target, displayField, limit, readEntries })` coerces the
+  relation value (`ID[]` for a multiple relation, a bare `ID` string for a single relation,
+  or null/empty) to an id list, fetches the whole target-type list via the injected
+  `readEntries`, then **filters to the requested ids** and returns them in the relation's
+  **stored id order** (unknown ids skipped, clamped by `limit`). It returns
+  `RelatedEntrySummary[]` = `{ id, title, status?, displayValue?, updatedAt? }` where
+  `displayValue` resolves `displayField` against `row.data` (schema field) with a top-level
+  fallback, and `updatedAt` is surfaced from `row.updatedAt` (the activity variant's time source).
+- Admin hosts inject `readEntries = (t) => listEntriesCached(t)` — the **existing** admin
+  entries-read (the same read `FieldRenderer` uses for relation pickers), under the existing
+  session auth + RBAC. **No new endpoint, write path, permission, or RBAC change.**
+- The renderer receives a precomputed `relatedEntries?: Record<blockId, RelatedEntrySummary[]>`
+  prop; builder mode renders skeleton rows, entry/preview render the resolved rows
+  (checklist / activity / cards variants), and an unresolved/undefined map renders the
+  skeleton. The resolver `target` is derived authoritatively from the bound relation field's
+  `relation.target` (stored `data.target` is only a fallback). Host precompute effects MUST
+  feed a stable/memoized value source and diff-guard `setState`
+  (`relatedEntriesMapEqual`) to avoid a resolve→setState loop.
+- The **published entries list** (`CustomScreenEntriesTable`, a native column table) is out of
+  scope — related-list renders only in the entry + preview surfaces.
+
 ## API
 
 Admin API w `CMS_API.md`:

@@ -81,15 +81,19 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
   });
 
   expect(html).toContain("Save");
-  expect(html).toContain("List View");
-  expect(html).toContain("Editor View");
+  // TASK-498-01: the List/Editor toggle + list-view editor surface are removed —
+  // the editor is the always-on entry-view builder.
+  expect(html).not.toContain("List View");
+  expect(html).not.toContain("Editor View");
+  expect(html).toContain('data-screen-authoring-canvas="true"');
   // TASK-496-02: shared `CanvasEditor` shell sub-toolbar (panel toggle + light
-  // panel rail) replaces the retired dark floating toolbar.
+  // panel rail, relocated into the panel head) replaces the retired dark toolbar.
   expect(html).toContain('data-screen-toolbar-rail="true"');
   expect(html).toContain("Hide panel");
-  expect(html).toContain('aria-label="List settings"');
-  expect(html).toContain('aria-label="Screen settings"');
-  expect(html).toContain("Select a content type before configuring List View.");
+  // Screen-level settings stay reachable via the entry-view rail's Settings
+  // category (aria-label="Settings"). The list-only "List settings" panel is gone.
+  expect(html).not.toContain('aria-label="List settings"');
+  expect(html).toContain('aria-label="Settings"');
   expect(html).toContain("Preview");
   expect(html).not.toContain("Selected Column");
 });
@@ -109,8 +113,9 @@ test("CustomScreenEditorPage renders builder canvas and save action", () => {
   });
 
   expect(html).toContain("Save");
-  expect(html).toContain("List View");
-  expect(html).toContain("Editor View");
+  // TASK-498-01: List/Editor toggle removed.
+  expect(html).not.toContain("List View");
+  expect(html).not.toContain("Editor View");
   expect(html).toContain("Preview");
   expect(html).not.toContain("Open records");
   expect(html).not.toContain("Back to list");
@@ -207,7 +212,8 @@ test("CustomScreenEditorPage tolerates cached stale screen bindings on read", ()
 
     expect(html).toContain("Legacy Header Screen");
     expect(html).toContain("Preview");
-    expect(html).toContain("List View");
+    // TASK-498-01: List/Editor toggle removed (entry-view builder only).
+    expect(html).not.toContain("List View");
     // TASK-496-02: shared `CanvasEditor` shell sub-toolbar replaces the retired
     // dark floating toolbar.
     expect(html).toContain('data-screen-toolbar-rail="true"');

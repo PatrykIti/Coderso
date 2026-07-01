@@ -5,7 +5,8 @@
 **Category:** Custom Screens / Screen Runtime / Relations / Admin UI
 **Estimated Effort:** Large
 **Dependencies:** TASK-498-02 (kind set + `related-list` factory/inspector)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-498
 
 ---
@@ -207,8 +208,11 @@ export async function resolveRelatedEntries(input: {
 //      host already holds `fields: ContentField[]` (CustomScreenEntryCanvas.tsx:15/43,
 //      CustomScreenPreview.tsx:14/49, CustomScreenWorkspacePreviewDialog.tsx:41/135 →
 //      ContentField.relation.target, SchemaBuilder.tsx:176), so resolve:
-//        const target = fields.find((f) => f.name === binding.field)?.relation?.target
-//          ?? data.target ?? "";   // fall back to stored data.target only when the field is absent
+//        const target = (fields ?? []).find((f) => f.name === binding.field)?.relation?.target
+//          ?? data.target ?? "";   // fall back to stored data.target only when the field is absent.
+//          // MUST use `(fields ?? [])` — never bare `fields.find(...)`: a host may not always hold a
+//          // populated `fields` array, and an undefined-deref here would throw INSIDE the precompute
+//          // effect (or render) instead of degrading to the stored-data.target fallback + empty state.
 //      resolveRelatedEntries({ ids, target, displayField, limit, readEntries })
 //   4. build Record<blockId, RelatedEntrySummary[]> and pass as relatedEntries
 //
@@ -233,11 +237,16 @@ export async function resolveRelatedEntries(input: {
 //         if (!binding) return [block.id, [] as RelatedEntrySummary[]] as const;
 //         const ids = readBindingPathValue(values, binding.field);      // ID[] OR bare id — passed RAW
 //         const data = (block.data ?? {}) as { displayField?: string; limit?: number; target?: string };
-//         const target = fields.find((f) => f.name === binding.field)?.relation?.target
-//           ?? data.target ?? "";                                       // DERIVE (Issue-1 invariant)
+//         const target = (fields ?? []).find((f) => f.name === binding.field)?.relation?.target
+//           ?? data.target ?? "";                                       // DERIVE (Issue-1 invariant).
+//                                                                       // MUST guard `(fields ?? [])` —
+//                                                                       // never bare `fields.find(...)`;
+//                                                                       // fields may be undefined.
 //         const rows = await resolveRelatedEntries({
 //           ids, target, displayField: data.displayField, limit: data.limit,
-//           readEntries: (t) => listEntriesCached(t),                   // EXISTING entries-read; memoize by t
+//           readEntries: (t) => listEntriesCached(t),                   // PLAIN existing entries-read: pass
+//                                                                       // `t` straight through, NO id arg;
+//                                                                       // memoize by `t`.
 //         });
 //         return [block.id, rows] as const;
 //       }));
@@ -304,6 +313,24 @@ export async function resolveRelatedEntries(input: {
 //     (that would leave a perpetual skeleton in the preview dialog even though the first entry's IDs
 //     are right there in previewRecordState.data). "forwards relatedEntries via CustomScreenPreview"
 //     is the LAST hop, NOT a no-op pass-through — the precompute step is required here too.
+//   - BOUNDARY-ARRAY STEP (mandatory this leaf): because CustomScreenWorkspacePreviewDialog.tsx
+//     now precomputes its OWN map and NEWLY imports `listEntriesCached`, ADD
+//     "core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx" to the guarded array in
+//     tests/vitest/ui/custom-screen-authoring-boundary.test.ts (:55-61). It is NOT in that array
+//     today, so without this step a forbidden `@/ui/pages` / `WidgetRenderer` import added to the
+//     dialog would slip the per-leaf boundary gate.
+//
+// ── PER-IMPLEMENTER MUST (every related-list precompute host — prevents the known setState loop) ──
+//   • MEMOIZE the effect's `values`/payload source. Never key the precompute effect on a
+//     per-render fresh object (e.g. a non-memoized buildPayloadData()/buildCanvasFieldValues()
+//     result). Feed it a memoized merged payload (useMemo over its real inputs) OR a serialized
+//     relation-ID signature — see the entry-editor STABLE-`values` note above.
+//   • DIFF-GUARD setRelatedEntries: only call setRelatedEntries(next) when `next` actually differs
+//     from the current map (shallow per-block / serialized-signature compare). An unchanged resolve
+//     MUST NOT emit a new object ref, or resolve→setState→re-render→resolve becomes an unbounded loop.
+//   • OPTIONAL-FIELDS hosts: use PLAIN `listEntriesCached(t)` (no id arg) as `readEntries`, and
+//     `(fields ?? []).find((f) => f.name === binding.field)` for target derivation — NEVER assume
+//     `fields` is defined; an undefined-deref throws inside the effect instead of falling back.
 // OUT OF SCOPE: CustomScreenEntriesTable.tsx (the published list) — it is a native HTML table
 //   (resolveEntryColumnValue per column, :35,:178), not a ScreenRuntimeRenderer host, and
 //   buildDefaultListRowTemplate emits only `field` cells (customScreenSchemas.ts:861-873) so a
@@ -380,14 +407,20 @@ published list).
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/customScreens/customScreenService.test.ts tests/vitest/customScreens/bindingResolver.test.ts tests/vitest/customScreens/relatedEntryResolver.test.ts tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx tests/vitest/ui-integration/custom-screen-entry-editor-restyle.test.tsx tests/vitest/ui-integration/custom-screen-entries-restyle.test.tsx tests/vitest/ui/custom-screen-records.test.tsx tests/vitest/ui/custom-screen-workspace-preview-dialog.test.tsx tests/vitest/ui/custom-screen-authoring-boundary.test.ts`
-- **Boundary suite must stay green:** `tests/vitest/ui/custom-screen-authoring-boundary.test.ts`
-  guards `ScreenRuntimeRenderer.tsx`, `CustomScreenEntryCanvas.tsx`, `CustomScreenEntryEditor.tsx`
-  and `CustomScreenPreview.tsx` (all edited in this leaf) against `@/ui/pages` / `ui/pages/builder`
-  / `@/ui/widgets` / `WidgetRenderer` imports (`:53-75`). The `related-list` render branch + the
-  host `relatedEntries` precompute must use local soft-token markup + the existing
-  `listEntriesCached` entries-read only — do NOT pull a Pages widget/list renderer to render the
-  checklist/activity/cards rows. Running it in the per-leaf gate catches a forbidden import here,
-  not only at 498-04's full-dir run.
+- **Boundary suite must stay green — AND add the preview dialog to its guarded array:**
+  `tests/vitest/ui/custom-screen-authoring-boundary.test.ts` today guards
+  `ScreenRuntimeRenderer.tsx`, `CustomScreenEntryCanvas.tsx`, `CustomScreenEntryEditor.tsx` and
+  `CustomScreenPreview.tsx` (all edited in this leaf) against `@/ui/pages` / `ui/pages/builder`
+  / `@/ui/widgets` / `WidgetRenderer` imports (`:53-75`, guarded array `:55-61`). Because this
+  leaf ALSO edits `CustomScreenWorkspacePreviewDialog.tsx` (its OWN `relatedEntries` precompute
+  + new `listEntriesCached` import, B3.4), it MUST be ADDED to that guarded array (`:55-61`) in
+  this leaf so a forbidden `@/ui/pages` / `WidgetRenderer` import added to the dialog is caught by
+  the per-leaf gate — otherwise the dialog slips the boundary check entirely (it is NOT in the
+  array today). The `related-list` render branch + every host `relatedEntries` precompute (the
+  dialog included) must use local soft-token markup + the existing `listEntriesCached` entries-read
+  only — do NOT pull a Pages widget/list renderer to render the checklist/activity/cards rows.
+  Running the suite in the per-leaf gate catches a forbidden import here, not only at 498-04's
+  full-dir run.
 - Add a resolver unit suite `tests/vitest/customScreens/relatedEntryResolver.test.ts` (ID[] →
   `RelatedEntrySummary[]`, limit clamp, missing/empty target → `[]`, `displayValue` from a
   schema field under `row.data`). MUST also assert, against a `readEntries` stub that returns the

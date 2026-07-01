@@ -12,7 +12,30 @@ import {
   normalizeCustomScreenDefinitionForWrite,
   normalizeCustomScreenSidebarConfig,
 } from "../../../core/services/customScreens/customScreenSchemas";
+import { createScreenBlock } from "../../../core/services/customScreens/screenDocumentOps";
 import { validate } from "../../../core/server/validation/schemaValidator";
+
+// TASK-498-02 B0: helper wrapping data-oriented blocks in a valid V4 definition.
+const buildV4WithBlocks = (blocks: unknown[]) => ({
+  schemaVersion: 4,
+  listView: buildDefaultListViewDefinition(),
+  editorView: {
+    document: {
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "section-default",
+          type: "section",
+          data: { title: "Details" },
+          blocks,
+        },
+      ],
+    },
+    bindings: [],
+    saveMode: "entry",
+    interactionMode: "inline",
+  },
+});
 
 test("customScreenCreateSchema accepts minimal payload", () => {
   expect(() =>
@@ -755,6 +778,98 @@ test("buildDefaultListViewDefinition derives columns from the selected content t
     label: "Project status",
     operator: "equals",
   });
+});
+
+test("normalizeScreenBlockData validates every new data-oriented kind byte-stable", () => {
+  const kinds = [
+    "heading",
+    "text",
+    "stat",
+    "divider",
+    "image",
+    "related-list",
+    "tabs",
+    "button",
+  ] as const;
+  const blocks = kinds.map((kind) => createScreenBlock({ type: kind }).block);
+
+  const definition = normalizeCustomScreenDefinition({ definition: buildV4WithBlocks(blocks) });
+  expect(definition.schemaVersion).toBe(4);
+  expect(definition.editorView.document.schemaVersion).toBe(1);
+  // Every allow-listed new kind round-trips byte-stable (no key dropped, no throw).
+  expect(definition.editorView.document.sections[0]?.blocks).toEqual(blocks);
+});
+
+test("normalizeScreenBlockData rejects unknown keys on new kinds but stays permissive on legacy kinds", () => {
+  const headingWithUnknown = {
+    id: "heading-1",
+    type: "heading",
+    data: { label: "H", text: "", level: 2, align: "left", bogus: true },
+  };
+  expect(() =>
+    normalizeCustomScreenDefinition({ definition: buildV4WithBlocks([headingWithUnknown]) })
+  ).toThrow("custom_screen_definition_invalid");
+
+  // Legacy `field` keeps its permissive normalization (backward-compat).
+  const fieldWithExtra = {
+    id: "field-1",
+    type: "field",
+    data: { label: "F", legacyExtra: true },
+  };
+  expect(() =>
+    normalizeCustomScreenDefinition({ definition: buildV4WithBlocks([fieldWithExtra]) })
+  ).not.toThrow();
+});
+
+test("normalizeCustomScreenDefinitionForRead keeps chip-inserted heading + tabs (base label allow-listed)", () => {
+  const heading = createScreenBlock({ type: "heading" }).block;
+  const tabs = createScreenBlock({ type: "tabs" }).block;
+  const definition = normalizeCustomScreenDefinitionForRead({
+    definition: buildV4WithBlocks([heading, tabs]),
+  });
+  const outBlocks = definition.editorView.document.sections[0]?.blocks ?? [];
+  // If "label" were omitted from the heading/tabs allow-list, save-time reject-unknown
+  // would throw and ...ForRead would silently drop the block — assert survival.
+  expect(outBlocks.map((block) => block.type)).toEqual(["heading", "tabs"]);
+  expect(outBlocks[0]?.data.label).toBe(heading.data.label);
+  expect(outBlocks[1]?.data.label).toBe(tabs.data.label);
+});
+
+test("normalizeCustomScreenDefinitionForRead repairs a stored `actions` block into a usable button", () => {
+  // Disjoint fixture from the byte-stable / legacy-widget round-trip cases above:
+  // a screen persisted before TASK-498-02 promoted `actions` → `button`.
+  const storedActions = {
+    id: "cta-1",
+    type: "actions",
+    data: {
+      label: "Publish",
+      action: "publish",
+      variant: "primary",
+      href: "/go",
+      legacyOnly: "drop-me", // stray legacy key not in the button allow-list
+    },
+  };
+
+  const readDefinition = normalizeCustomScreenDefinitionForRead({
+    definition: buildV4WithBlocks([storedActions]),
+  });
+  const readBlock = readDefinition.editorView.document.sections[0]?.blocks[0];
+  // READ-PATH repair remaps the placeholder to the typed `button` kind (visual upgrade)…
+  expect(readBlock?.type).toBe("button");
+  // …intersecting data with the button allow-list so reject-unknown never throws.
+  expect(readBlock?.data).toEqual({
+    label: "Publish",
+    action: "publish",
+    variant: "primary",
+    href: "/go",
+  });
+
+  // The WRITE path is untouched by the repair: a stored `actions` kind stays permissive
+  // (unknown-but-typed, per TASK-498-02) and is NOT rewritten to `button`.
+  const writeDefinition = normalizeCustomScreenDefinition({
+    definition: buildV4WithBlocks([storedActions]),
+  });
+  expect(writeDefinition.editorView.document.sections[0]?.blocks[0]?.type).toBe("actions");
 });
 
 test("normalizeCustomScreenSidebarConfig normalizes sidebar flags", () => {

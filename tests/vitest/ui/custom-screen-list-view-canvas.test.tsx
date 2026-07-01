@@ -192,19 +192,23 @@ test("list view canvas reorders visible columns in the header and keeps hidden c
   }
 });
 
-test("custom screen List View editor renders the shared canvas chrome without editor rails", () => {
+test("custom screen editor renders the entry-view builder and no List-view editor surface", () => {
   const html = renderAdminUi(<CustomScreenEditorPage />, {
     path: "/admin/advanced/custom-screens/new",
   });
 
-  // TASK-496-02: the dark canvas-frame + floating toolbar are retired; the List
-  // View now renders through the shared `CanvasEditor` shell
-  // (dotted scroller + ScreenPanelToggleRail + Hide/Show panel toggle).
+  // TASK-498-01: the List-view EDITOR surface is removed — the editor is the
+  // always-on entry-view builder. It still renders through the shared
+  // `CanvasEditor` shell (dotted scroller + relocated ScreenPanelToggleRail +
+  // Hide/Show panel toggle).
   expect(html).toContain('data-screen-editor-canvas-scroller="true"');
   expect(html).toContain('data-screen-toolbar-rail="true"');
   expect(html).toContain("Hide panel");
+  expect(html).toContain('data-screen-authoring-canvas="true"');
   expect(html).not.toContain('data-editor-shell-left-panel="true"');
   expect(html).not.toContain('data-editor-shell-right-panel="true"');
   expect(html).not.toContain("Components");
+  // List-view editor markers are absent (no column inspector, no column selection).
   expect(html).not.toContain("Selected Column");
+  expect(html).not.toContain("data-selected-column");
 });

@@ -5,7 +5,8 @@
 **Category:** Custom Screens / Testing / Documentation / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-498-01, TASK-498-02, TASK-498-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-498
 
 ---
@@ -79,6 +80,26 @@ RBAC, CSRF, or rate-limit change. `schemaVersion` stays `1`/def `4`; no DB migra
 //    Inspect disabled when no block is selected;
 //  - List/Editor toggle absent; list-view canvas not rendered; definition.listView preserved
 //    on load→save round-trip.
+// Presentation-override look-parity/regression (TASK-496-02 surface MUST SURVIVE the restyle):
+//  - the per-entry presentation-override EDITING surface (textSize / textEmphasis / tone /
+//    mediaAssetId — the exact allow-list in
+//    core/services/customScreens/screenEntryPresentationOverrideContract.ts) MUST STILL render
+//    AND persist post-498; it MUST NOT be replaced/subsumed by the 9-chip BlockChip palette or
+//    the decorative toolbar chrome (those are additive; the override controls are a distinct,
+//    retained surface). Guard: tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx
+//    is a MUST-STAY-UNWEAKENED test — its override-render + override-persist assertions may be
+//    re-pointed at moved selectors but MUST NOT be deleted or relaxed by the 498 restyle.
+// List-View editor removal — concrete file split (removed-vs-kept):
+//  - tests/vitest/ui/custom-screen-list-view-canvas.test.tsx: RE-POINT the ~:195 PAGE-LEVEL
+//    assertion (the "List View editor renders the shared canvas chrome" case that reaches the
+//    List-View editor THROUGH `<CustomScreenEditorPage />` — that page path is removed by
+//    498-01) so it no longer asserts a page-reachable List-View editor; but KEEP the ~:89
+//    DIRECT-COMPONENT `<ListViewCanvas>` harness GREEN (parent 498 keeps the ListView* component
+//    FILES untouched, so the component still mounts + behaves in isolation).
+//  - tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx: DROP the ~:89-112
+//    'List View'/'Editor View' toggle-text (+ aria-pressed toggle) assertions and the
+//    'switching to the Editor View tab reveals the entry-view authoring canvas' case — both
+//    exercise the List/Editor toggle removed by 498-01.
 // Front/runtime: entries list + entry view render a screen containing every new block;
 //  inline write-back unaffected for field/title/slug.
 ```
@@ -114,7 +135,22 @@ repaired document or falls through to the existing legacy-read fallback on any t
 
 **Regression-test shape:** the suites enumerated above; assert all pre-existing
 `tests/vitest/customScreens/*` + `tests/vitest/ui*/custom-screen*` assertions stay green and
-were re-pointed (not weakened) where they referenced the removed List/Editor toggle.
+were re-pointed (not weakened) where they referenced the removed List/Editor toggle. Concrete
+removed-vs-kept split:
+
+- KEEP UNWEAKENED — `tests/vitest/ui-integration/custom-screen-record-interactions.test.tsx`
+  (presentation-override render + persist for textSize/textEmphasis/tone/mediaAssetId; selectors
+  may move, assertions may NOT be dropped/relaxed) and the `~:89` direct-component
+  `<ListViewCanvas>` harness in `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx` (the
+  ListView* component files stay, so it stays green as-is).
+- RE-POINT — the `~:195` page-level case in
+  `tests/vitest/ui/custom-screen-list-view-canvas.test.tsx` that reached the List-View editor
+  through `<CustomScreenEditorPage />` (page path removed by 498-01) → no longer asserts a
+  page-reachable List-View editor.
+- REMOVE — the `~:89-112` 'List View'/'Editor View' toggle-text (+ `aria-pressed`) assertions
+  and the 'switching to the Editor View tab reveals the entry-view authoring canvas' case in
+  `tests/vitest/ui-integration/custom-screen-editor-restyle.test.tsx` (List/Editor toggle removed
+  by 498-01).
 
 ---
 

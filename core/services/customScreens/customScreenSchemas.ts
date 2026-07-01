@@ -390,6 +390,96 @@ const normalizeScreenData = (value: unknown): Record<string, unknown> => {
   return normalized;
 };
 
+// TASK-498-02 B0: per-kind, schema-first, reject-unknown `data` allow-lists for the
+// data-oriented block kinds. `"label"` is REQUIRED in EVERY kind (including heading +
+// tabs) because `createScreenBlock`'s base factory always seeds `data.label` and each
+// branch spreads it — omitting it would make normalizeScreenBlockData reject the
+// base-seeded label and throw `custom_screen_definition_invalid` on save. LEGACY kinds
+// (field / record-header / field-group / columns / rich-text / legacy-widget) are NOT
+// listed here and stay permissive, so stored V4 screens read back byte-stable.
+const screenBlockDataAllowedKeys: Record<string, readonly string[]> = {
+  heading: ["label", "text", "level", "align", "field"],
+  text: ["content", "tone", "label"],
+  stat: ["label", "format", "trend", "deltaField", "field"],
+  divider: ["variant", "label"],
+  image: ["label", "fit", "ratio", "field"],
+  "related-list": ["label", "target", "displayField", "variant", "limit", "field"],
+  tabs: ["label", "tabs"],
+  button: ["label", "action", "variant", "href", "field"],
+};
+
+const coerceScreenEnum = <T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T => (typeof value === "string" && allowed.includes(value as T) ? (value as T) : fallback);
+
+const clampScreenInt = (value: unknown, fallback: number, min: number, max: number): number => {
+  const n = typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : fallback;
+  return Math.min(max, Math.max(min, n));
+};
+
+const normalizeScreenBlockData = (type: string, value: unknown): Record<string, unknown> => {
+  const data = normalizeScreenData(value); // existing JSON-safe normalize
+  const allowed = screenBlockDataAllowedKeys[type];
+  if (!allowed) return data; // legacy kinds: permissive (backward-compat)
+  rejectUnknownKeys(data, allowed); // throws "custom_screen_definition_invalid" on unknown keys
+  // Coerce enums / numerics to their allow-lists (no-op for already-valid stored data,
+  // so a valid new-kind block round-trips byte-stable).
+  switch (type) {
+    case "heading":
+      if ("level" in data) data.level = clampScreenInt(data.level, 2, 1, 3);
+      if ("align" in data)
+        data.align = coerceScreenEnum(data.align, ["left", "center", "right"], "left");
+      break;
+    case "text":
+      if ("tone" in data) data.tone = coerceScreenEnum(data.tone, ["default", "muted"], "default");
+      break;
+    case "stat":
+      if ("format" in data)
+        data.format = coerceScreenEnum(data.format, ["number", "percent", "money"], "number");
+      if ("trend" in data)
+        data.trend = coerceScreenEnum(data.trend, ["auto", "up", "down", "flat"], "auto");
+      break;
+    case "divider":
+      if ("variant" in data)
+        data.variant = coerceScreenEnum(data.variant, ["line", "space", "label"], "line");
+      break;
+    case "image":
+      if ("fit" in data) data.fit = coerceScreenEnum(data.fit, ["cover", "contain"], "cover");
+      break;
+    case "related-list":
+      if ("variant" in data)
+        data.variant = coerceScreenEnum(
+          data.variant,
+          ["checklist", "activity", "cards"],
+          "checklist"
+        );
+      if ("limit" in data) data.limit = clampScreenInt(data.limit, 5, 1, 50);
+      break;
+    case "tabs":
+      if ("tabs" in data) {
+        const raw = Array.isArray(data.tabs) ? data.tabs : [];
+        data.tabs = raw
+          .filter((tab): tab is Record<string, unknown> => isRecord(tab))
+          .map((tab) => ({
+            id: typeof tab.id === "string" ? tab.id : "",
+            label: typeof tab.label === "string" ? tab.label : "",
+          }));
+      }
+      break;
+    case "button":
+      if ("action" in data)
+        data.action = coerceScreenEnum(data.action, ["link", "publish", "custom"], "link");
+      if ("variant" in data)
+        data.variant = coerceScreenEnum(data.variant, ["primary", "secondary", "ghost"], "primary");
+      break;
+    default:
+      break;
+  }
+  return data;
+};
+
 const screenBlockTypeFromWidgetType = (type: string) => {
   switch (type) {
     case "screen-field-value":
@@ -471,7 +561,7 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
     type,
     ...(label ? { label } : {}),
     ...(variant ? { variant } : {}),
-    data: normalizeScreenData(value.data),
+    data: normalizeScreenBlockData(type, value.data),
     ...(value.layout !== undefined
       ? { layout: normalizeJsonValue(value.layout) as WidgetBlock["layout"] }
       : {}),
@@ -545,6 +635,51 @@ export function normalizeScreenDocumentV1(input: unknown): ScreenDocumentV1 {
   };
 }
 
+// TASK-498-04: READ-PATH-ONLY block repair — remap a stored `actions` placeholder block
+// (dropped from the union and promoted to `button` in TASK-498-02) to the typed `button`
+// kind so old screens upgrade VISUALLY on read without a write/migration. Applied ONLY inside
+// the ...ForRead document normalizers, NEVER on the write path (`normalizeScreenDocumentV1` /
+// `normalizeScreenBlock`), so it cannot widen the write contract. The remapped `button` data is
+// intersected with the button allow-list so the per-kind reject-unknown normalizer cannot throw
+// on a stray legacy `actions` data key — the block reads back usable instead of falling through
+// to the neutral legacy placeholder. Non-`actions` records pass through byte-stable.
+const READ_REPAIR_BLOCK_TYPE: Record<string, string> = { actions: "button" };
+
+const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
+  if (Array.isArray(node)) return node.map(repairLegacyScreenRecordForRead);
+  if (!isRecord(node)) return node;
+  const next: Record<string, unknown> = { ...node };
+  let changed = false;
+  const repairedType =
+    typeof node.type === "string" ? READ_REPAIR_BLOCK_TYPE[node.type] : undefined;
+  if (repairedType) {
+    next.type = repairedType;
+    const allowed = screenBlockDataAllowedKeys[repairedType];
+    if (allowed && isRecord(node.data)) {
+      next.data = Object.fromEntries(
+        Object.entries(node.data).filter(([key]) => allowed.includes(key))
+      );
+    }
+    changed = true;
+  }
+  for (const key of ["blocks", "children"] as const) {
+    if (Array.isArray(node[key])) {
+      next[key] = node[key].map(repairLegacyScreenRecordForRead);
+      changed = true;
+    }
+  }
+  if (isRecord(node.slots)) {
+    next.slots = Object.fromEntries(
+      Object.entries(node.slots).map(([slot, items]) => [
+        slot,
+        Array.isArray(items) ? items.map(repairLegacyScreenRecordForRead) : items,
+      ])
+    );
+    changed = true;
+  }
+  return changed ? next : node;
+};
+
 export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocumentV1 {
   if (input === undefined || input === null) return { schemaVersion: 1, sections: [] };
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
@@ -554,7 +689,7 @@ export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocument
   if (input.sections !== undefined && !Array.isArray(input.sections)) {
     throw new Error("custom_screen_definition_invalid");
   }
-  const sections = input.sections ?? [];
+  const sections = repairLegacyScreenRecordForRead(input.sections ?? []) as unknown[];
   if (sectionsLookLikeLegacyBlockArray(sections)) {
     return {
       schemaVersion: 1,

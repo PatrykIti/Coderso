@@ -31,6 +31,7 @@ import {
   createEntry,
   getCachedEntryDetail,
   getEntryCached,
+  listEntriesCached,
   updateEntry,
   type EntryDetail,
 } from "@/services/entriesClient";
@@ -60,9 +61,16 @@ import {
   type ScreenEntryPresentationOverridePropPath,
 } from "../../../services/customScreens/screenEntryPresentationOverrideContract";
 import {
+  collectScreenDocumentBlocks,
   findScreenBlockById,
   getFirstScreenBlockId,
 } from "../../../services/customScreens/screenDocumentOps";
+import {
+  relatedEntriesMapEqual,
+  resolveRelatedEntries,
+  type RelatedEntrySummary,
+} from "../../../services/customScreens/relatedEntryResolver";
+import { readBindingPathValue } from "../../../services/utils/bindingPath";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { CustomScreenEntryCanvas } from "./CustomScreenEntryCanvas";
@@ -782,6 +790,77 @@ export function CustomScreenEntryEditor() {
     publishedAt: entry?.publishedAt ?? null,
   });
 
+  // TASK-498-03 B3.4 — STABLE `values` source for the related-list precompute effect.
+  // buildPayloadData/buildCanvasFieldValues return a FRESH object every render; feeding
+  // that straight into the effect would loop (fresh values → effect → setState → re-render).
+  // Memoize the merged payload over its real inputs so the effect only re-runs when the
+  // underlying entry data actually changes. Fed to BOTH the canvas renderer AND the effect.
+  const canvasFieldValues = useMemo<Record<string, unknown>>(
+    () => buildCanvasFieldValues(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [originalData, editableFields, values, schemaFieldNames, title, slug, entry]
+  );
+
+  // TASK-498-03 B3.4 — OWNER host: precompute the related-list `relatedEntries` map for
+  // every related-list block in the document via the EXISTING entries-read
+  // (`listEntriesCached`, no new route). The SAME map feeds both `canEditInScreen`
+  // branches (editable canvas + read-only preview). Diff-guarded to avoid a setState loop.
+  const [relatedEntries, setRelatedEntries] = useState<Record<string, RelatedEntrySummary[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const blocks = collectScreenDocumentBlocks(runtimeDocument).filter(
+        (block) => block.type === "related-list"
+      );
+      if (blocks.length === 0) {
+        // block-GUARD: zero fetch when the document has no related-list block.
+        if (!cancelled) {
+          setRelatedEntries((current) => (Object.keys(current).length === 0 ? current : {}));
+        }
+        return;
+      }
+      const pairs = await Promise.all(
+        blocks.map(async (block) => {
+          const binding = runtimeBindings.find(
+            (bd) => bd.blockId === block.id && bd.propPath === "items"
+          );
+          if (!binding) return [block.id, [] as RelatedEntrySummary[]] as const;
+          const ids = readBindingPathValue(canvasFieldValues, binding.field) as
+            | string[]
+            | string
+            | null
+            | undefined;
+          const data = (block.data ?? {}) as {
+            displayField?: string;
+            limit?: number;
+            target?: string;
+          };
+          // DERIVE target from the bound relation field (authoritative); stored
+          // data.target is only a fallback. `(fields ?? [])` — fields is optional.
+          const target =
+            (fields ?? []).find((f) => f.name === binding.field)?.relation?.target ??
+            data.target ??
+            "";
+          const rows = await resolveRelatedEntries({
+            ids,
+            target,
+            displayField: data.displayField,
+            limit: data.limit,
+            readEntries: (t) => listEntriesCached(t),
+          });
+          return [block.id, rows] as const;
+        })
+      );
+      if (cancelled) return;
+      const next = Object.fromEntries(pairs) as Record<string, RelatedEntrySummary[]>;
+      setRelatedEntries((current) => (relatedEntriesMapEqual(current, next) ? current : next));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [runtimeDocument, runtimeBindings, canvasFieldValues, fields]);
+
   const handleSave = async () => {
     if (!contentType || !entryId) return;
     const draft: CustomScreenEntryDraft = {
@@ -1231,10 +1310,11 @@ export function CustomScreenEntryEditor() {
                     <CustomScreenEntryCanvas
                       document={runtimeDocument}
                       bindings={runtimeBindings}
-                      fieldValues={buildCanvasFieldValues()}
+                      fieldValues={canvasFieldValues}
                       fieldErrors={fieldErrors}
                       fields={fields}
                       relationTargets={relationTargets}
+                      relatedEntries={relatedEntries}
                       onFieldChange={handleFieldChange}
                       onTitleChange={handleTitleChange}
                       onSlugChange={handleSlugChange}
@@ -1255,6 +1335,7 @@ export function CustomScreenEntryEditor() {
                 bindings={runtimeBindings}
                 data={buildPayloadData()}
                 fields={fields}
+                relatedEntries={relatedEntries}
                 emptyTitle="Editor upgrade required"
                 emptyMessage="Add writable screen blocks and bindings in the builder before using this route as the dedicated record editor."
               />

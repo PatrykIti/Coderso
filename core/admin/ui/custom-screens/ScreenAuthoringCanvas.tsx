@@ -5,8 +5,9 @@ import {
   ListPlus,
   MoveDown,
   MoveUp,
-  Paintbrush,
+  PanelRight,
   PanelTop,
+  Plus,
   Search,
   Settings2,
   SlidersHorizontal,
@@ -40,15 +41,10 @@ import { ScreenBlockLibrary } from "./ScreenBlockLibrary";
 import { ScreenPanelToggleRail } from "./ScreenPanelToggleRail";
 import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
 
-type ScreenAuthoringPanel =
-  | "settings"
-  | "insert"
-  | "layers"
-  | "content"
-  | "binding"
-  | "layout"
-  | "style"
-  | "visibility";
+// TASK-498-01 A4: the tab-switched Content/Binding/Style categories collapse to a
+// single flat "inspect" category. The rail carries four doc/block categories —
+// Settings (doc-level), Insert, Layers (doc-level) and Inspect (block-level).
+type ScreenAuthoringPanel = "settings" | "insert" | "layers" | "inspect";
 
 type ScreenAuthoringCanvasProps = {
   document: ScreenDocumentV1;
@@ -186,7 +182,10 @@ export function ScreenAuthoringCanvas({
   onDuplicate,
   onDelete,
 }: ScreenAuthoringCanvasProps) {
-  const [activePanel, setActivePanel] = useState<ScreenAuthoringPanel | null>(null);
+  // The rail is NEVER empty on load (the prototype always shows the palette,
+  // CustomScreenEditorPreview.tsx:234-246): seed to "insert" so the palette
+  // renders on first paint; selecting a block forces "inspect" (selectTarget).
+  const [activePanel, setActivePanel] = useState<ScreenAuthoringPanel>("insert");
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const selectedBlock = findScreenBlockById(document, selectedBlockId);
@@ -271,9 +270,15 @@ export function ScreenAuthoringCanvas({
     }
     onSelectSection(target.sectionId);
     onSelectBlock(target.id);
-    setActivePanel((current) => current ?? "content");
+    // Selecting a block forces the flat Inspect body over the seeded palette.
+    setActivePanel("inspect");
   };
 
+  // TASK-498-01 A4: the four in-panel category icons (Settings / Insert / Layers /
+  // Inspect), mirroring the Pages panel-category row. Category selection is
+  // idempotent (never toggles the body to empty) so the rail is never blank.
+  // Settings is doc-level and stays always-enabled; Inspect is block-level and
+  // disabled until a block is selected.
   const toolbarPanels = [
     ...(settingsPanel
       ? [
@@ -283,7 +288,7 @@ export function ScreenAuthoringCanvas({
             description: "Edit screen-level settings.",
             icon: Settings2,
             active: activePanel === "settings",
-            onSelect: () => setActivePanel(activePanel === "settings" ? null : "settings"),
+            onSelect: () => setActivePanel("settings"),
           },
         ]
       : []),
@@ -293,7 +298,7 @@ export function ScreenAuthoringCanvas({
       description: "Add screen-owned blocks or bound fields.",
       icon: ListPlus,
       active: activePanel === "insert",
-      onSelect: () => setActivePanel(activePanel === "insert" ? null : "insert"),
+      onSelect: () => setActivePanel("insert"),
     },
     {
       id: "layers",
@@ -301,48 +306,34 @@ export function ScreenAuthoringCanvas({
       description: "Navigate sections and blocks.",
       icon: Layers,
       active: activePanel === "layers",
-      onSelect: () => setActivePanel(activePanel === "layers" ? null : "layers"),
+      onSelect: () => setActivePanel("layers"),
     },
     {
-      id: "content",
-      label: "Content",
-      description: "Edit labels and shared text.",
-      icon: Type,
-      active: activePanel === "content",
-      disabled: !selectedBlock,
-      onSelect: () => setActivePanel(activePanel === "content" ? null : "content"),
-    },
-    {
-      id: "binding",
-      label: "Binding",
-      description: "Connect the selected block to entry fields.",
+      id: "inspect",
+      label: "Inspect",
+      description: "Edit the selected block's bound field, content, and background.",
       icon: SlidersHorizontal,
-      active: activePanel === "binding",
+      active: activePanel === "inspect",
       disabled: !selectedBlock,
-      onSelect: () => setActivePanel(activePanel === "binding" ? null : "binding"),
-    },
-    {
-      id: "style",
-      label: "Style",
-      description: "Adjust presentation metadata.",
-      icon: Paintbrush,
-      active: activePanel === "style",
-      disabled: !selectedBlock,
-      onSelect: () => setActivePanel(activePanel === "style" ? null : "style"),
+      onSelect: () => setActivePanel("inspect"),
     },
   ];
 
-  const inspectorPanel =
-    activePanel === "content" ||
-    activePanel === "binding" ||
-    activePanel === "layout" ||
-    activePanel === "style" ||
-    activePanel === "visibility" ? (
+  // Single consolidated body (Pages `railBody` parity): the active category
+  // decides the body — no per-category content/binding/style sub-routing.
+  const railBodyContent =
+    activePanel === "settings" ? (
+      settingsPanel
+    ) : activePanel === "insert" ? (
+      <ScreenBlockLibrary fields={fields} onAddBlock={onAddBlock} />
+    ) : activePanel === "layers" ? (
+      <AuthoringLayersPanel nodes={layerNodes} selection={selection} onSelect={selectTarget} />
+    ) : (
       <ScreenBlockInspector
         selectedBlock={selectedBlock}
         bindings={bindings}
         fields={fields}
-        panel={activePanel}
+        panel="all"
         showBlockActions={false}
         onPatchBlock={onPatchBlock}
         onPatchBlockData={onPatchBlockData}
@@ -351,48 +342,38 @@ export function ScreenAuthoringCanvas({
         onDuplicate={onDuplicate}
         onDelete={onDelete}
       />
-    ) : null;
-
-  const floatingPanel =
-    activePanel === "settings" ? (
-      settingsPanel
-    ) : activePanel === "insert" ? (
-      <ScreenBlockLibrary fields={fields} onAddBlock={onAddBlock} />
-    ) : activePanel === "layers" ? (
-      <AuthoringLayersPanel nodes={layerNodes} selection={selection} onSelect={selectTarget} />
-    ) : (
-      inspectorPanel
     );
 
-  const onCommandKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      setCommandOpen(false);
-      return;
-    }
-    if (event.key === "Enter" && firstCommand) {
-      event.preventDefault();
-      void firstCommand.run();
-      setCommandOpen(false);
-      setCommandQuery("");
-    }
-  };
-
-  return (
-    <CanvasEditor
-      header={header}
-      title="Entry-view builder"
-      panelPosition="right"
-      panelOpen={panelOpen}
-      onPanelOpenChange={onPanelOpenChange}
-      panelAriaLabel={`${selectedBlock ? blockLabel(selectedBlock) : "Screen"} tools`}
-      panelDataProps={{ "data-screen-editor-panel": "true" }}
-      reopenAffordance={reopenAffordance}
-      toolbar={
-        <>
-          <ScreenPanelToggleRail panels={toolbarPanels} />
+  // TASK-498-01 A4: the Pages shell right-rail body — an in-panel HEAD row
+  // (hide-panel button + target label + selection chip + block-action cluster /
+  // command Search) over the category icon row (the RELOCATED, restyled
+  // ScreenPanelToggleRail) over the single scrollable consolidated body. The
+  // markup/classes are RE-CREATED locally (never importing the Pages rail) to
+  // stay inside the custom-screen authoring boundary.
+  const railBody = (
+    <div className="flex min-h-0 flex-col gap-2">
+      <div className="flex flex-col gap-2" data-screen-rail-head="true">
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label="Hide panel"
+            onClick={() => onPanelOpenChange(false)}
+          >
+            <PanelRight className="h-4 w-4" />
+          </Button>
+          <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
+            <PanelTop className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span className="truncate text-sm font-semibold">
+              {selectedBlock ? blockLabel(selectedBlock) : "Screen"}
+            </span>
+            <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase text-muted-foreground">
+              {selectedBlock ? selectedBlock.type : "Entry view"}
+            </span>
+          </div>
           {selectedBlock ? (
-            <>
+            <div className="ml-auto flex shrink-0 items-center gap-0.5">
               <Button
                 type="button"
                 variant="ghost"
@@ -429,22 +410,57 @@ export function ScreenAuthoringCanvas({
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
-            </>
+            </div>
           ) : (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
+              className="ml-auto"
               aria-label="Open command palette"
               onClick={() => setCommandOpen(true)}
             >
               <Search className="h-4 w-4" />
             </Button>
           )}
-          {panelToggle}
-        </>
+        </div>
+        <ScreenPanelToggleRail panels={toolbarPanels} />
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto">{railBodyContent}</div>
+    </div>
+  );
+
+  const onCommandKeyDown = (event: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      setCommandOpen(false);
+      return;
+    }
+    if (event.key === "Enter" && firstCommand) {
+      event.preventDefault();
+      void firstCommand.run();
+      setCommandOpen(false);
+      setCommandQuery("");
+    }
+  };
+
+  return (
+    <CanvasEditor
+      header={header}
+      title="Entry-view builder"
+      panelPosition="right"
+      panelOpen={panelOpen}
+      onPanelOpenChange={onPanelOpenChange}
+      panelAriaLabel={`${selectedBlock ? blockLabel(selectedBlock) : "Screen"} tools`}
+      panelDataProps={{ "data-screen-editor-panel": "true" }}
+      reopenAffordance={reopenAffordance}
+      toolbar={
+        // A4: the sub-toolbar now carries ONLY the Hide/Show-panel toggle — the
+        // category rail, block-action cluster, and command Search moved into the
+        // in-panel HEAD row (Pages parity).
+        panelToggle
       }
-      panel={floatingPanel}
+      panel={railBody}
       canvas={
         <>
           {commandOpen ? (
@@ -461,10 +477,10 @@ export function ScreenAuthoringCanvas({
           <div
             className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
             data-screen-editor-canvas-scroller="true"
-            style={panelOpen && floatingPanel ? { paddingRight: 300 } : undefined}
+            style={panelOpen ? { paddingRight: 300 } : undefined}
             onClick={() => selectTarget(null)}
           >
-            <div className="mx-auto w-full max-w-4xl space-y-4" data-screen-authoring-canvas="true">
+            <div className="mx-auto w-full max-w-2xl space-y-4" data-screen-authoring-canvas="true">
               {previewNotice}
               <ScreenRuntimeRenderer
                 document={document}
@@ -485,6 +501,21 @@ export function ScreenAuthoringCanvas({
                 }
                 emptyMessage="Use Insert or the command palette to add screen blocks."
               />
+              {/* A6: prototype dashed "Add section" affordance
+                  (CustomScreenEditorPreview.tsx:223-228). No section-create prop is
+                  exposed to this component yet, so it opens the existing block/section
+                  command palette (the existing add path). */}
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setCommandOpen(true);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-4 text-sm font-medium text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground"
+                data-screen-add-section="true"
+              >
+                <Plus className="h-4 w-4" /> Add section
+              </button>
             </div>
           </div>
         </>

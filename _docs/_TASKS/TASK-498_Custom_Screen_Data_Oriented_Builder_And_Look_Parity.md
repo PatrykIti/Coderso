@@ -5,7 +5,8 @@
 **Category:** Admin UI / Visual Refresh / Custom Screens / Screen Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 (soft/violet redesign), TASK-496-02 (Screen surfaces on the shared `CanvasEditor` shell), TASK-474 (custom-screen canvas parity)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 
 ---
 

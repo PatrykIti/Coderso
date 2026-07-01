@@ -13,7 +13,14 @@ export type ScreenBlockKind =
   | "field-group"
   | "columns"
   | "rich-text"
-  | "actions"
+  | "heading"
+  | "text"
+  | "stat"
+  | "divider"
+  | "image"
+  | "related-list"
+  | "tabs"
+  | "button"
   | "legacy-widget";
 
 export type ScreenBlockPatch = Partial<
@@ -40,7 +47,14 @@ export const screenBlockLabels: Record<ScreenBlockKind, string> = {
   "field-group": "Field Group",
   columns: "Columns",
   "rich-text": "Rich Text",
-  actions: "Actions",
+  heading: "Heading",
+  text: "Text",
+  stat: "Stat",
+  divider: "Divider",
+  image: "Image",
+  "related-list": "Related list",
+  tabs: "Tabs",
+  button: "Button",
   "legacy-widget": "Legacy Widget",
 };
 
@@ -61,12 +75,30 @@ export function createScreenSection(
   };
 }
 
+const createReadBinding = (
+  blockId: string,
+  propPath: string,
+  field: string,
+  mode: CustomScreenBindingMode = "read"
+): ScreenFieldBinding => ({
+  id: slugify(`${blockId}-${propPath}`) || `${blockId}-${propPath}`,
+  blockId,
+  propPath,
+  source: "entry",
+  field,
+  mode,
+});
+
 export function createScreenBlock(input: {
   type: ScreenBlockKind;
   id?: string;
   field?: string;
   label?: string;
   mode?: CustomScreenBindingMode;
+  // TASK-498-02 B2: the sole caller (CustomScreenEditorPage.handleAddBlock) passes
+  // `field.relation.target` so the `related-list` factory can seed `data.target`
+  // without re-deriving relation metadata (which `field` — a NAME string — lacks).
+  relationTarget?: string;
 }): { block: ScreenBlockV1; bindings: ScreenFieldBinding[] } {
   const id = input.id ?? createId(input.type);
   const label = input.label ?? (input.field ? input.field : screenBlockLabels[input.type]);
@@ -170,6 +202,136 @@ export function createScreenBlock(input: {
         },
       },
       bindings: [],
+    };
+  }
+
+  if (input.type === "heading") {
+    return {
+      block: {
+        ...base,
+        type: "heading",
+        data: {
+          label,
+          text: input.field ? "" : label,
+          level: 2,
+          align: "left",
+          ...(input.field ? { field: input.field } : {}),
+        },
+      },
+      bindings: input.field ? [createReadBinding(id, "text", input.field)] : [],
+    };
+  }
+
+  if (input.type === "text") {
+    return {
+      block: {
+        ...base,
+        type: "text",
+        data: {
+          label,
+          content: "Add supporting text",
+          tone: "default",
+        },
+      },
+      bindings: [],
+    };
+  }
+
+  if (input.type === "stat") {
+    return {
+      block: {
+        ...base,
+        type: "stat",
+        data: {
+          label,
+          format: "number",
+          trend: "auto",
+          ...(input.field ? { field: input.field } : {}),
+        },
+      },
+      bindings: input.field ? [createReadBinding(id, "value", input.field)] : [],
+    };
+  }
+
+  if (input.type === "divider") {
+    return {
+      block: {
+        ...base,
+        type: "divider",
+        data: {
+          label,
+          variant: "line",
+        },
+      },
+      bindings: [],
+    };
+  }
+
+  if (input.type === "image") {
+    return {
+      block: {
+        ...base,
+        type: "image",
+        data: {
+          label,
+          fit: "cover",
+          ...(input.field ? { field: input.field } : {}),
+        },
+      },
+      bindings: input.field ? [createReadBinding(id, "src", input.field)] : [],
+    };
+  }
+
+  if (input.type === "related-list") {
+    return {
+      block: {
+        ...base,
+        type: "related-list",
+        data: {
+          label,
+          target: input.relationTarget ?? "",
+          displayField: "",
+          variant: "checklist",
+          limit: 5,
+          ...(input.field ? { field: input.field } : {}),
+        },
+      },
+      // TASK-498-03 resolves these `items` into RelatedEntrySummary[].
+      bindings: input.field ? [createReadBinding(id, "items", input.field)] : [],
+    };
+  }
+
+  if (input.type === "tabs") {
+    return {
+      block: {
+        ...base,
+        type: "tabs",
+        data: {
+          label,
+          tabs: [
+            { id: "tab-1", label: "Tab 1" },
+            { id: "tab-2", label: "Tab 2" },
+          ],
+        },
+        slots: { "tab-1": [], "tab-2": [] },
+      },
+      bindings: [],
+    };
+  }
+
+  if (input.type === "button") {
+    return {
+      block: {
+        ...base,
+        type: "button",
+        data: {
+          label,
+          action: "link",
+          variant: "primary",
+          ...(input.field ? { field: input.field } : {}),
+        },
+      },
+      bindings: input.field ? [createReadBinding(id, "href", input.field)] : [],
     };
   }
 

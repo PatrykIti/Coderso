@@ -1,8 +1,7 @@
-import { Columns3, Eye, EyeOff, ListPlus, Save, Settings2, SlidersHorizontal } from "lucide-react";
+import { Eye, Save, SlidersHorizontal } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,15 +44,9 @@ import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
-import { ListViewDesigner } from "./ListViewDesigner";
-import { ListViewCanvas } from "./ListViewCanvas";
-import { ListViewColumnInspector } from "./ListViewColumnInspector";
-import { ListViewElementLibrary } from "./ListViewElementLibrary";
 import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
 import { resolveCustomScreenId } from "./routeParams";
-import { CanvasEditor } from "@/ui/shared/CanvasEditor";
 import { PageHeader } from "@/ui/shared/PageHeader";
-import { ScreenPanelToggleRail } from "./ScreenPanelToggleRail";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
   addScreenBlock,
@@ -68,19 +61,12 @@ import {
   type ScreenBlockKind,
 } from "../../../services/customScreens/screenDocumentOps";
 import {
-  buildListColumnFromOption,
-  getVisibleListColumns,
-  listSelectableListFields,
-} from "./customScreenListModel";
-import {
   useCustomScreenPreviewRecordState,
   type CustomScreenPreviewRecordState,
 } from "./customScreenPreviewData";
 import { createScreenFieldBinding } from "./ScreenBlockInspector";
 import { ScreenAuthoringCanvas } from "./ScreenAuthoringCanvas";
 import type { ContentField } from "../content-types/SchemaBuilder";
-
-type ListViewAuthoringPanel = "elements" | "column" | "list" | "hidden" | "settings";
 
 const normalizeText = (value: string) => value.trim();
 
@@ -194,13 +180,6 @@ export function CustomScreenEditorPage() {
   // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
   // (the shell only READS it; the toolbar toggle + reopen chip flip it directly).
   const [panelOpen, setPanelOpen] = useState(true);
-  const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
-    "list-view"
-  );
-  const [activeListPanel, setActiveListPanel] = useState<ListViewAuthoringPanel | null>(null);
-  const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
-    () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
-  );
   const definitionRef = useRef(definition);
 
   const selectedContentType = useMemo(
@@ -215,20 +194,6 @@ export function CustomScreenEditorPage() {
     () => resolveCustomScreenCapabilities({ definition }),
     [definition]
   );
-
-  const selectedListColumn = useMemo(
-    () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
-    [definition.listView.columns, selectedListColumnId]
-  );
-  const availableListFieldOptions = useMemo(() => {
-    if (!selectedContentType) return [];
-    const selectedKeys = new Set(
-      definition.listView.columns.map((column) => `${column.source}:${column.field}`)
-    );
-    return listSelectableListFields(selectedContentType).filter(
-      (option) => !selectedKeys.has(`${option.source}:${option.field}`)
-    );
-  }, [definition.listView.columns, selectedContentType]);
 
   useEffect(() => {
     if (isCreateMode || !screen || !screenId) {
@@ -311,19 +276,6 @@ export function CustomScreenEditorPage() {
     [updateDefinition]
   );
 
-  const updateListView = useCallback(
-    (next: CustomScreenDefinition["listView"]) => {
-      updateDefinition({
-        ...definition,
-        listView: next,
-      });
-      if (!next.columns.some((column) => column.id === selectedListColumnId)) {
-        setSelectedListColumnId(next.columns[0]?.id ?? null);
-      }
-    },
-    [definition, selectedListColumnId, updateDefinition]
-  );
-
   const applyScreen = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
     const nextSelection = resolveInitialSelection(nextDefinition.editorView.document);
@@ -337,7 +289,6 @@ export function CustomScreenEditorPage() {
     setDefinition(nextDefinition);
     setSelectedId(nextSelection.blockId);
     setSelectedSectionId(nextSelection.sectionId);
-    setSelectedListColumnId(nextDefinition.listView.columns[0]?.id ?? null);
     setHasUnsavedChanges(false);
   }, []);
 
@@ -430,6 +381,9 @@ export function CustomScreenEditorPage() {
       type,
       field: field?.name,
       label: field?.label,
+      // TASK-498-02 B2: pass the relation target so the `related-list` factory can
+      // seed `data.target` (the field NAME alone carries no relation metadata).
+      relationTarget: field?.relation?.target,
     });
     const target = resolveSelectedSlotTarget(current.editorView.document);
     const nextDocument = addScreenBlock(current.editorView.document, created.block, target);
@@ -544,66 +498,6 @@ export function CustomScreenEditorPage() {
     });
   };
 
-  const handleAddListColumn = (option: ReturnType<typeof listSelectableListFields>[number]) => {
-    const nextColumn = buildListColumnFromOption(option);
-    updateListView({
-      ...definition.listView,
-      columns: [...definition.listView.columns, nextColumn],
-    });
-    setSelectedListColumnId(nextColumn.id);
-  };
-
-  const handleMoveListColumn = (columnId: string, direction: "left" | "right") => {
-    const visibleColumns = getVisibleListColumns(definition.listView);
-    const visibleIds = visibleColumns.map((column) => column.id);
-    const currentVisibleIndex = visibleIds.indexOf(columnId);
-    if (currentVisibleIndex === -1) return;
-    const swapVisibleId =
-      direction === "left"
-        ? visibleIds[currentVisibleIndex - 1]
-        : visibleIds[currentVisibleIndex + 1];
-    if (!swapVisibleId) return;
-
-    const currentIndex = definition.listView.columns.findIndex((column) => column.id === columnId);
-    const swapIndex = definition.listView.columns.findIndex(
-      (column) => column.id === swapVisibleId
-    );
-    if (currentIndex === -1 || swapIndex === -1) return;
-    const nextColumns = [...definition.listView.columns];
-    [nextColumns[currentIndex], nextColumns[swapIndex]] = [
-      nextColumns[swapIndex]!,
-      nextColumns[currentIndex]!,
-    ];
-    updateListView({
-      ...definition.listView,
-      columns: nextColumns,
-    });
-  };
-
-  const handleChangeSelectedListColumn = (
-    patch: Partial<CustomScreenDefinition["listView"]["columns"][number]>
-  ) => {
-    if (!selectedListColumn) return;
-    updateListView({
-      ...definition.listView,
-      columns: definition.listView.columns.map((column) =>
-        column.id === selectedListColumn.id ? { ...column, ...patch } : column
-      ),
-    });
-  };
-
-  const handleRemoveSelectedListColumn = () => {
-    if (!selectedListColumn) return;
-    const nextColumns = definition.listView.columns.filter(
-      (column) => column.id !== selectedListColumn.id
-    );
-    updateListView({
-      ...definition.listView,
-      columns: nextColumns,
-    });
-    setSelectedListColumnId(nextColumns[0]?.id ?? null);
-  };
-
   const handleSave = async () => {
     const trimmedName = normalizeText(name);
     if (!trimmedName) {
@@ -646,10 +540,6 @@ export function CustomScreenEditorPage() {
       setIsSaving(false);
     }
   };
-
-  const libraryPanel = (
-    <ListViewElementLibrary options={availableListFieldOptions} onAddColumn={handleAddListColumn} />
-  );
 
   const screenSettingsPanel = (
     <div className="space-y-4">
@@ -750,165 +640,21 @@ export function CustomScreenEditorPage() {
     </div>
   );
 
-  const hiddenColumnsPanel = (
-    <div className="space-y-4">
-      <div className="space-y-1">
-        <p className="text-sm font-medium">Hidden columns</p>
-        <p className="text-xs text-muted-foreground">
-          Select a hidden column to restore it from the Column panel.
-        </p>
-      </div>
-      {definition.listView.columns.filter((column) => column.visible === false).length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          No hidden columns in this list view.
-        </div>
-      ) : (
-        <div className="grid gap-2 sm:grid-cols-2">
-          {definition.listView.columns
-            .filter((column) => column.visible === false)
-            .map((column) => (
-              <button
-                key={column.id}
-                type="button"
-                className="rounded-md border bg-background px-3 py-2 text-left hover:bg-muted/50"
-                data-hidden-column-id={column.id}
-                onClick={() => {
-                  setSelectedListColumnId(column.id);
-                  setActiveListPanel("column");
-                }}
-              >
-                <p className="text-sm font-medium">{column.label}</p>
-                <p className="text-xs text-muted-foreground">
-                  {column.field} · {column.formatter}
-                </p>
-              </button>
-            ))}
-        </div>
-      )}
-    </div>
-  );
-
-  const listSettingsPanel = (
-    <ListViewDesigner
-      contentType={selectedContentType}
-      value={definition.listView}
-      onChange={updateListView}
-    />
-  );
-
-  const listColumnPanel = (
-    <ListViewColumnInspector
-      column={selectedListColumn}
-      onChange={handleChangeSelectedListColumn}
-      onRemove={handleRemoveSelectedListColumn}
-    />
-  );
-
-  const renderActiveListPanel = () => {
-    if (activeListPanel === "elements") return libraryPanel;
-    if (activeListPanel === "column") return listColumnPanel;
-    if (activeListPanel === "list") return listSettingsPanel;
-    if (activeListPanel === "hidden") return hiddenColumnsPanel;
-    if (activeListPanel === "settings") return screenSettingsPanel;
-    return null;
-  };
-
-  const listToolbarPanels = [
-    {
-      id: "elements",
-      label: "Elements",
-      description: "Add content and system fields as columns.",
-      icon: ListPlus,
-      active: activeListPanel === "elements",
-      onSelect: () => setActiveListPanel(activeListPanel === "elements" ? null : "elements"),
-    },
-    {
-      id: "column",
-      label: "Column",
-      description: "Edit the selected column.",
-      icon: Columns3,
-      active: activeListPanel === "column",
-      onSelect: () => setActiveListPanel(activeListPanel === "column" ? null : "column"),
-    },
-    {
-      id: "list",
-      label: "List settings",
-      description: "Configure sorting, filters, and bulk actions.",
-      icon: SlidersHorizontal,
-      active: activeListPanel === "list",
-      onSelect: () => setActiveListPanel(activeListPanel === "list" ? null : "list"),
-    },
-    {
-      id: "hidden",
-      label: "Hidden columns",
-      description: "Review columns hidden from records.",
-      icon: EyeOff,
-      active: activeListPanel === "hidden",
-      onSelect: () => setActiveListPanel(activeListPanel === "hidden" ? null : "hidden"),
-    },
-    {
-      id: "settings",
-      label: "Screen settings",
-      description: "Edit screen name, status, content type, and sidebar shortcut.",
-      icon: Settings2,
-      active: activeListPanel === "settings",
-      onSelect: () => setActiveListPanel(activeListPanel === "settings" ? null : "settings"),
-    },
-  ];
-
   const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 
   return (
     <CustomScreenPreviewRecordOwner key={previewOwnerKey} contentType={selectedContentType}>
       {({ isLoading: previewDataLoading, previewRecordState }) => {
-        // Build the in-content PageHeader ONCE, OUTSIDE the List/Editor branch —
-        // it carries the List/Editor toggle + Preview + Save and MUST stay
-        // reachable in BOTH views (the prototype renders one PageHeader with the
-        // toggle above one CanvasEditor — CustomScreenEditorPreview.tsx:188-211).
+        // TASK-498-01: the List/Editor view toggle is removed — the screen editor
+        // is now the entry-view BUILDER only. The header keeps Preview + Save; the
+        // in-content PageHeader still renders above the shared `CanvasEditor` shell
+        // (prototype CustomScreenEditorPreview.tsx:188-211).
         const screenPageHeader = (
           <PageHeader
             className="mb-0 shrink-0 px-6 pb-3 pt-4"
             title={name || (isCreateMode ? "New screen" : "Untitled")}
             actions={
               <>
-                <div className="hidden items-center gap-1 rounded-xl border border-border bg-muted/60 p-1 sm:flex">
-                  <button
-                    type="button"
-                    aria-pressed={activeBuilderTab === "list-view"}
-                    onClick={() => setActiveBuilderTab("list-view")}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                      activeBuilderTab === "list-view"
-                        ? "bg-card text-foreground shadow-soft"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    List View
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={activeBuilderTab === "editor-view"}
-                    onClick={() => setActiveBuilderTab("editor-view")}
-                    className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                      activeBuilderTab === "editor-view"
-                        ? "bg-card text-foreground shadow-soft"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Editor View
-                  </button>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 sm:hidden"
-                  onClick={() =>
-                    setActiveBuilderTab((current) =>
-                      current === "list-view" ? "editor-view" : "list-view"
-                    )
-                  }
-                >
-                  {activeBuilderTab === "list-view" ? "Editor View" : "List View"}
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -957,7 +703,6 @@ export function CustomScreenEditorPage() {
             <SlidersHorizontal className="size-3.5" /> Show panel
           </button>
         );
-        const listPanelBody = renderActiveListPanel();
         return (
           <>
             <CustomScreenShell
@@ -993,51 +738,6 @@ export function CustomScreenEditorPage() {
                 <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
                   Loading custom screen...
                 </div>
-              ) : activeBuilderTab === "list-view" ? (
-                <CanvasEditor
-                  header={screenPageHeader}
-                  title="List view"
-                  badge={
-                    hasUnsavedChanges ? (
-                      <Badge variant="warning" className="text-[10px] font-semibold uppercase">
-                        Unsaved
-                      </Badge>
-                    ) : null
-                  }
-                  toolbar={
-                    <>
-                      <ScreenPanelToggleRail panels={listToolbarPanels} />
-                      {screenPanelToggle}
-                    </>
-                  }
-                  panelPosition="right"
-                  panel={listPanelBody}
-                  panelOpen={panelOpen}
-                  onPanelOpenChange={setPanelOpen}
-                  panelAriaLabel={`${selectedListColumn?.label ?? "List view"} tools`}
-                  panelDataProps={{ "data-screen-editor-panel": "true" }}
-                  reopenAffordance={screenReopen}
-                  canvas={
-                    <div
-                      className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
-                      data-screen-editor-canvas-scroller="true"
-                      style={panelOpen && listPanelBody ? { paddingRight: 300 } : undefined}
-                    >
-                      <div className="mx-auto w-full max-w-4xl">
-                        <ListViewCanvas
-                          contentType={selectedContentType}
-                          listView={definition.listView}
-                          selectedColumnId={selectedListColumnId}
-                          onSelectColumn={(columnId) => {
-                            setSelectedListColumnId(columnId);
-                            setActiveListPanel("column");
-                          }}
-                          onMoveColumn={handleMoveListColumn}
-                        />
-                      </div>
-                    </div>
-                  }
-                />
               ) : (
                 <ScreenAuthoringCanvas
                   document={screenDocument}
@@ -1075,7 +775,7 @@ export function CustomScreenEditorPage() {
             <CustomScreenWorkspacePreviewDialog
               open={previewOpen}
               onOpenChange={setPreviewOpen}
-              mode={activeBuilderTab}
+              mode="editor-view"
               contentType={selectedContentType}
               listView={definition.listView}
               document={screenDocument}

@@ -52,7 +52,12 @@ describe("editor-surface dead-code mandate (TASK-496)", () => {
   it("no editor-surface component is orphaned (0 core AND 0 test importers) — Sweep 6", () => {
     // KEEP = pre-existing test-covered wrappers TASK-496 does NOT own (route is PageEditor /
     // PageListPage, not these). They retain test importers; allowlisted belt-and-braces.
-    const KEEP = /^(PageEditorPage|PageList|PageRevisionDrawer)$/;
+    // TASK-498-01 removed the List-view EDITOR surface from CustomScreenEditorPage
+    // (its four ListView* imports). The row-template model/runtime + these three
+    // component FILES are retained on disk for later relocation, so they are
+    // import-removed-but-kept (0 core/test importers) and allowlisted here.
+    const KEEP =
+      /^(PageEditorPage|PageList|PageRevisionDrawer|ListViewDesigner|ListViewColumnInspector|ListViewElementLibrary)$/;
     const files = execSync(
       "git ls-files 'core/admin/ui/pages/*.tsx' 'core/admin/ui/pages/**/*.tsx' " +
         "'core/admin/ui/custom-screens/*.tsx' 'core/admin/ui/authoring/*.tsx' " +

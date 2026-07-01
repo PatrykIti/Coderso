@@ -81,19 +81,21 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("renders the soft segmented view control and the floating-panel canvas", () => {
+test("renders the entry-view builder and the floating-panel canvas", () => {
   const html = renderAdminUi(<CustomScreenEditorPage />, {
     path: "/admin/advanced/custom-screens/new",
   });
 
-  expect(html).toContain("List View");
-  expect(html).toContain("Editor View");
-  expect(html).toContain("aria-pressed");
+  // TASK-498-01: the List/Editor segmented toggle is removed — the screen editor
+  // is the entry-view BUILDER only. The List/Editor view control is gone.
+  expect(html).not.toContain("Editor View");
+  expect(html).not.toContain("List View");
   expect(html).toContain("Save");
   expect(html).toContain("Preview");
-  // TASK-496-02: the dark floating authoring toolbar is retired — the builder now
-  // routes through the shared `CanvasEditor` shell. Assert its chrome: the panel
-  // Hide/Show toggle, the in-content PageHeader title, and the light panel rail.
+  // The entry-view authoring canvas is present on initial render (no tab click).
+  expect(html).toContain('data-screen-authoring-canvas="true"');
+  // TASK-496-02 shell chrome: the panel Hide/Show toggle, the in-content
+  // PageHeader title, and the light panel category rail (relocated into the head).
   expect(html).toContain("Hide panel");
   expect(html).toContain("New screen");
   expect(html).toContain('data-screen-toolbar-rail="true"');
@@ -101,19 +103,14 @@ test("renders the soft segmented view control and the floating-panel canvas", ()
   expect(html).not.toContain("bg-amber-100");
 });
 
-test("switching to the Editor View tab reveals the entry-view authoring canvas", async () => {
+test("the entry-view authoring canvas renders without switching a tab", async () => {
   const view = mount("/admin/advanced/custom-screens/new");
 
   try {
     await flush();
-    expect(view.container.querySelector('[data-screen-authoring-canvas="true"]')).toBeNull();
-
-    React.act(() => {
-      findButton(view.container, "Editor View")?.click();
-    });
-    await flush();
-
+    // No tab click required — the entry-view builder is always on.
     expect(view.container.querySelector('[data-screen-authoring-canvas="true"]')).not.toBeNull();
+    expect(findButton(view.container, "Editor View")).toBeUndefined();
   } finally {
     view.cleanup();
   }

@@ -29,10 +29,11 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1207 for the next changelog entry.
+assistant policy coverage fix. Use 1208 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1207 | 2026-07-01 | TASK-498 Custom-screen data-oriented builder and look parity | Custom Screens/Admin UI/Screen Builder/Screen Model/Relations/Visual Refresh/QA/Docs/Task Board |
 | 1206 | 2026-06-30 | TASK-497 Posts list and editor prototype-parity restyle | Admin UI/Content (Posts)/Visual Refresh/QA/Docs/Task Board |
 | 1205 | 2026-06-30 | TASK-496 Shared editor-chrome shell and Screens adoption | Pages/Custom Screens/Admin UI/Architecture/Cleanup/Docs/Task Board |
 | 1204 | 2026-06-30 | TASK-495 Page/Template editor and Top-Bar prototype parity | Pages/Page Templates/Admin UI/Page Builder/QA/Docs/Task Board |

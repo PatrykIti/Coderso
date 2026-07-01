@@ -4,6 +4,7 @@ import type {
   ScreenDocumentV1,
   ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
+import type { RelatedEntrySummary } from "../../../services/customScreens/relatedEntryResolver";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
 
@@ -12,6 +13,9 @@ type CustomScreenPreviewProps = {
   bindings: ScreenFieldBinding[];
   data: Record<string, unknown>;
   fields?: ContentField[];
+  // TASK-498-03: host-precomputed related entries (forward-only — the owner supplies
+  // the map, e.g. CustomScreenWorkspacePreviewDialog / CustomScreenEntryEditor).
+  relatedEntries?: Record<string, RelatedEntrySummary[]>;
   emptyTitle?: string;
   emptyMessage?: string;
 };
@@ -21,6 +25,7 @@ export function CustomScreenPreview({
   bindings,
   data,
   fields,
+  relatedEntries,
   emptyTitle,
   emptyMessage,
 }: CustomScreenPreviewProps) {
@@ -47,6 +52,7 @@ export function CustomScreenPreview({
         bindings={bindings}
         values={data}
         fields={fields}
+        relatedEntries={relatedEntries}
         mode="preview"
       />
     </div>

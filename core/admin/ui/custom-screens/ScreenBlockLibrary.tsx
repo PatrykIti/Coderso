@@ -1,7 +1,16 @@
-import { Columns2, FileText, Heading, Layers, ListPlus, Type } from "lucide-react";
+import {
+  AlignLeft,
+  BarChart3,
+  Braces,
+  Columns3,
+  Image as ImageIcon,
+  List,
+  Minus,
+  Square,
+  Type,
+} from "lucide-react";
+import type { ComponentType } from "react";
 
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import type { ScreenBlockKind } from "../../../services/customScreens/screenDocumentOps";
 
@@ -10,122 +19,78 @@ type ScreenBlockLibraryProps = {
   onAddBlock: (type: ScreenBlockKind, field?: ContentField) => void;
 };
 
-const layoutBlocks: Array<{
-  type: ScreenBlockKind;
+/**
+ * TASK-498-01 A1: the ported prototype palette chip
+ * (`_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx:147-157`). The
+ * prototype's chip has no real-admin equivalent, so this is a small LOCAL chip.
+ * It MUST be named `PaletteChip` — the editor-surface dead-code guard
+ * (`tests/vitest/ui/editor-surface-dead-code.test.ts`) asserts the retired
+ * prototype chip symbol appears nowhere under `core/`, so no other name is valid.
+ */
+function PaletteChip({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: ComponentType<{ className?: string }>;
   label: string;
-  description: string;
-  icon: typeof Heading;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex flex-col items-center gap-1.5 rounded-xl border border-border bg-card px-2 py-2.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40 [&_svg]:size-4 [&_svg]:text-muted-foreground"
+    >
+      <Icon className="h-4 w-4" />
+      {label}
+    </button>
+  );
+}
+
+// 9 data-block chips (prototype order + icons, CustomScreenEditorPreview.tsx:234-246).
+// The 9-chip grid is the SOLE insert surface — a field/bound block is inserted by its
+// chip and its specific bound field is chosen afterward via the Inspect inspector's
+// Bound-field control (there is no per-field palette list). TASK-498-02 extends the
+// `ScreenBlockKind` set + insert wiring, so every chip is now live.
+const PALETTE_CHIPS: Array<{
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+  kind: ScreenBlockKind;
 }> = [
-  {
-    type: "record-header",
-    label: "Record header",
-    description: "Title-focused header bound to the active entry.",
-    icon: Heading,
-  },
-  {
-    type: "field-group",
-    label: "Field group",
-    description: "Framed group for related fields.",
-    icon: Layers,
-  },
-  {
-    type: "columns",
-    label: "Two columns",
-    description: "Side-by-side field layout.",
-    icon: Columns2,
-  },
-  {
-    type: "rich-text",
-    label: "Help text",
-    description: "Static guidance shared by every entry.",
-    icon: Type,
-  },
+  { label: "Heading", icon: Type, kind: "heading" },
+  { label: "Text", icon: AlignLeft, kind: "text" },
+  { label: "Field", icon: Braces, kind: "field" },
+  { label: "Stat", icon: BarChart3, kind: "stat" },
+  { label: "Divider", icon: Minus, kind: "divider" },
+  { label: "Image", icon: ImageIcon, kind: "image" },
+  { label: "Related list", icon: List, kind: "related-list" },
+  { label: "Tabs", icon: Columns3, kind: "tabs" },
+  { label: "Button", icon: Square, kind: "button" },
 ];
 
-const systemTitleField: ContentField = {
-  id: "system-title",
-  name: "title",
-  label: "Title",
-  type: "text",
-};
-
-export function ScreenBlockLibrary({ fields, onAddBlock }: ScreenBlockLibraryProps) {
-  const hasTitleField = fields.some((field) => field.name === "title");
-
+export function ScreenBlockLibrary({ onAddBlock }: ScreenBlockLibraryProps) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-screen-block-library="true">
       <div className="border-b px-4 py-3">
         <p className="text-sm font-semibold">Screen Blocks</p>
       </div>
-      <ScrollArea className="flex-1">
-        <div className="space-y-5 p-4">
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Layout
-            </p>
-            {layoutBlocks.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Button
-                  key={item.type}
-                  type="button"
-                  variant="outline"
-                  className="h-auto w-full justify-start gap-3 px-3 py-3 text-left"
-                  onClick={() => onAddBlock(item.type)}
-                >
-                  <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0">
-                    <span className="block text-sm font-medium">{item.label}</span>
-                    <span className="block text-xs font-normal text-muted-foreground">
-                      {item.description}
-                    </span>
-                  </span>
-                </Button>
-              );
-            })}
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Fields
-            </p>
-            {fields.length === 0 ? (
-              <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-                Select a content type to add fields.
-              </div>
-            ) : (
-              fields.map((field) => (
-                <Button
-                  key={field.name}
-                  type="button"
-                  variant="outline"
-                  className="h-auto w-full justify-start gap-3 px-3 py-3 text-left"
-                  onClick={() => onAddBlock("field", field)}
-                >
-                  <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">{field.label}</span>
-                    <span className="block text-xs font-normal text-muted-foreground">
-                      {field.name} · {field.type}
-                    </span>
-                  </span>
-                </Button>
-              ))
-            )}
-          </div>
-
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full gap-2"
-            onClick={() => onAddBlock("field", systemTitleField)}
-            disabled={fields.length === 0 || hasTitleField}
-          >
-            <ListPlus className="h-4 w-4" />
-            Add title field
-          </Button>
+      <div className="flex-1 overflow-y-auto p-3">
+        <div className="mb-2 text-xs font-medium text-muted-foreground">Add block</div>
+        <div className="grid grid-cols-3 gap-1.5">
+          {PALETTE_CHIPS.map((chip) => (
+            <PaletteChip
+              key={chip.label}
+              icon={chip.icon}
+              label={chip.label}
+              onClick={() => onAddBlock(chip.kind)}
+            />
+          ))}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   );
 }

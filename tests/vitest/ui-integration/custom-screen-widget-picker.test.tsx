@@ -134,11 +134,6 @@ const flush = async () => {
   });
 };
 
-const findButton = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("button")).find((button) =>
-    button.textContent?.includes(text)
-  ) as HTMLButtonElement | undefined;
-
 const findButtonByLabel = (container: ParentNode, label: string) =>
   container.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement | null;
 
@@ -152,19 +147,14 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("Editor View library exposes screen blocks and content fields without page widgets", async () => {
+test("entry-view builder palette exposes screen blocks without page widgets", async () => {
   const view = mount("/admin/advanced/custom-screens/screen-1");
 
   try {
     await flush();
 
-    React.act(() => {
-      findButton(view.container, "Editor View")?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
-    });
-    await flush();
-
+    // TASK-498-01: the List/Editor toggle is gone — the entry-view builder is
+    // always on. Open the Insert palette from the (relocated) category rail.
     React.act(() => {
       findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
@@ -173,14 +163,15 @@ test("Editor View library exposes screen blocks and content fields without page 
     await flush();
 
     expect(view.container.textContent).toContain("Screen Blocks");
-    // TASK-496-02: the Insert subpanel now mounts in the shared `CanvasEditor`
-    // docked panel (data-screen-editor-panel) instead of the retired dark
-    // floating-toolbar subpanel.
+    // The Insert subpanel mounts in the shared `CanvasEditor` docked panel.
     expect(view.container.querySelector("[data-screen-editor-panel]")).not.toBeNull();
-    expect(view.container.textContent).toContain("Record header");
-    expect(view.container.textContent).toContain("Field group");
-    expect(view.container.textContent).toContain("Two columns");
-    expect(view.container.textContent).toContain("Title");
+    // A1: the 9-chip PaletteChip grid replaces the old per-field list. Assert the
+    // rendered chip labels (they render as static text regardless of which kinds
+    // TASK-498-02 has wired yet).
+    expect(view.container.textContent).toContain("Heading");
+    expect(view.container.textContent).toContain("Field");
+    expect(view.container.textContent).toContain("Stat");
+    expect(view.container.textContent).toContain("Related list");
     expect(view.container.textContent).not.toContain("Hero");
     expect(view.container.textContent).not.toContain("Feature Grid");
   } finally {
@@ -188,7 +179,7 @@ test("Editor View library exposes screen blocks and content fields without page 
   }
 });
 
-test("Editor View keeps legacy blocks visible without exposing page widgets in the library", async () => {
+test("entry-view builder keeps legacy blocks visible without exposing page widgets in the library", async () => {
   const baseScreen = createScreenRecord();
   currentScreenRecord = {
     ...baseScreen,
@@ -237,13 +228,6 @@ test("Editor View keeps legacy blocks visible without exposing page widgets in t
     await flush();
 
     React.act(() => {
-      findButton(view.container, "Editor View")?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
-    });
-    await flush();
-
-    React.act(() => {
       findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
@@ -252,14 +236,14 @@ test("Editor View keeps legacy blocks visible without exposing page widgets in t
 
     expect(view.container.textContent).toContain("Legacy block placeholder");
     expect(view.container.textContent).toContain("hero");
-    expect(view.container.textContent).toContain("Record header");
+    expect(view.container.textContent).toContain("Heading");
     expect(view.container.textContent).not.toContain("Feature Grid");
   } finally {
     view.cleanup();
   }
 });
 
-test("Editor View field library stays empty until a content type is selected", async () => {
+test("entry-view builder palette renders without a selected content type", async () => {
   currentScreenRecord = {
     ...createScreenRecord(),
     contentTypeId: "",
@@ -271,21 +255,17 @@ test("Editor View field library stays empty until a content type is selected", a
     await flush();
 
     React.act(() => {
-      findButton(view.container, "Editor View")?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
-    });
-    await flush();
-
-    React.act(() => {
       findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
     });
     await flush();
 
-    expect(view.container.textContent).toContain("Select a content type to add fields.");
-    expect(view.container.textContent).toContain("Record header");
+    // A1: the 9-chip palette is the sole insert surface — there is no per-field
+    // "Fields" list, so no content-type-dependent field placeholder renders. The
+    // chip labels render regardless of content-type selection.
+    expect(view.container.textContent).toContain("Heading");
+    expect(view.container.textContent).toContain("Field");
     expect(view.container.textContent).not.toContain("Feature Grid");
   } finally {
     view.cleanup();
