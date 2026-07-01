@@ -1,593 +1,516 @@
 # TASK-497-02: Post Editor Restyle
+
 # FileName: TASK-497-02-Post-Editor-Restyle.md
 
 **Parent Task:** TASK-497
 **Priority:** Medium
 **Category:** Admin UI / Visual Refresh / Content (Posts) / Block Editor
 **Estimated Effort:** Large
-**Dependencies:** TASK-479-06 (badge soft/outline variants), TASK-479-08-L02 (page-editor chrome precedent), TASK-479-09-L02 (Post editor migrated to redesign tokens — baseline, Done 2026-06-29)
-**Status:** ✅ Done
-**Completed:** 2026-06-30
+**Dependencies:** TASK-479-06 (badge soft/outline variants + shared `PageHeader`), TASK-479-08-L02 (page-editor chrome precedent), TASK-479-09-L02 (Post editor migrated to redesign tokens — baseline, Done 2026-06-29)
+**Status:** 🚧 In Progress
 
 ---
 
-## Overview
+## Overview — RE-SCOPED (owner rejected the first pass as "the old approach")
 
-Bring the **Post block editor** to prototype parity as a **RESTYLE only** — no
-re-architecture, no feature change. The real editor
-(`core/admin/ui/posts/editor/PostBlockEditorShell.tsx`) is **already** its own
-three-pane shell via `PostEditorLayout` + `PostEditorRegions` (secondary sidebar /
-content canvas / details sidebar). We keep that shell and restyle the three panes'
-visual treatment to match `_docs/_PROTOTYPE/src/pages/content/PostEditorPreview.tsx`
-+ `_docs/_PROTOTYPE/src/components/patterns/EditorPreviewFrame.tsx`.
+The first delivery restyled the **existing** full-viewport three-pane app (a single
+muted chrome strip, **no** in-page `PageHeader`, **no** framed card, and a "Document
+Outline" default left pane). The owner rejected it: it looks like the **old editor**,
+not the prototype. **The standing instruction from the start was: make it like the
+PROTOTYPE, adapted functionally / EXTEND the contract where needed — NOT preserve the
+old layout.** This file is re-scoped to be **prototype-faithful**.
 
-**Hard decision (owner-approved):** Do **NOT** adopt the Pages floating-panel shell
-`core/admin/ui/shared/CanvasEditor.tsx`. Do **NOT** force the prototype's literal
-page-level `PageHeader` + `rounded-2xl … shadow-card` framed `EditorPreviewFrame`
-card — that card is non-functional preview scaffolding embedded in a scrolling page,
-and the real editor is a full-viewport app (`PostEditorLayout.tsx:103`
-`contentClassName="overflow-hidden p-0"`); a rounded scrolling card would regress
-full-height editing. **Parity target = the three panes' visual treatment + a single
-muted chrome strip**, not the literal card.
+**Design source of truth (read the SOURCE, not screenshots):**
+`_docs/_PROTOTYPE/src/pages/content/PostEditorPreview.tsx` +
+`_docs/_PROTOTYPE/src/components/patterns/EditorPreviewFrame.tsx`. Verified live, the
+prototype renders **two stacked regions inside a normal (non-full-bleed) page**:
 
-- **Goal:** the Post editor chrome (top strip), left rail surface + inserter look,
-  and right inspector treatment render in the soft/violet redesign matching the
-  prototype, while the **post block model, autosave, revisions, runtime preview,
-  status, bulk actions, create drawer, keyboard shortcuts, and every
-  `data-post-editor-*` hook / `aria-pressed` / `aria-controls`** stay untouched.
+1. **An in-page `PageHeader`** (`PostEditorPreview.tsx:39-54`) — breadcrumb `Posts ›
+   {title}`, the post title, the description **"Write, format, and publish your
+   story."**, and the primary actions **Preview / Save draft / Publish** (`Rocket`).
+2. **A bordered rounded editor CARD** below it (`EditorPreviewFrame.tsx:31-36`
+   `rounded-2xl border border-border bg-card shadow-card`) whose top is a light
+   **chrome bar** (`:37` `bg-muted/40`: title **"Post editor"** + a status/autosave
+   badge on the left; undo/redo + device toggle on the right) and whose body is a
+   three-pane split: **LEFT** a `w-60` **"Blocks"** rail (`:67` `bg-muted/20`;
+   `EditorRailGroup label="Blocks"` + block-type `EditorRailItem`s Paragraph(active)/
+   Heading/Image/Quote/Code/List/Embed, `PostEditorPreview.tsx:60-70`), **CENTER** a
+   dotted canvas holding a clean `max-w-2xl` article card (`:71` `bg-dotted`;
+   `PostEditorPreview.tsx:128-166`), **RIGHT** a `w-72` **"Post settings"** inspector
+   (`:73` `bg-card`; Status/Slug/Category/Tags-chips/Featured image/SEO,
+   `PostEditorPreview.tsx:73-125`).
+
+**The two invented "hard decisions" are DROPPED:**
+
+- **~~D4~~ (DROPPED): "no in-page `PageHeader`, no framed card — the real editor is a
+  full-viewport app".** WRONG. Adopt the prototype's in-page `PageHeader` + the
+  bordered `rounded-2xl … shadow-card` card. Convert `PostEditorLayout` from the
+  full-bleed `AdminShell contentClassName="overflow-hidden p-0"` shell
+  (`PostEditorLayout.tsx:103`) to a **normal padded, scrolling** `AdminShell` page that
+  renders `PageHeader` above a framed card (give the card a tall `min-height` so editing
+  stays large — the only real concern behind the old D4).
+- **~~B6 default~~ (DROPPED): "keep 'Document Outline' as the DEFAULT left pane".**
+  WRONG. The **"Blocks"** palette (the real `BlockInserter`) is the DEFAULT left content,
+  styled via the shared `EditorRail`. Document **Outline** + **List view** are **not
+  dropped** — they are **relocated** to sibling tabs in the same left rail (reachable
+  secondary spot), per **Contract Extension #1** below.
+
+**This is still a RESTYLE + a small, faithful contract EXTENSION — no data-model /
+autosave / revisions / preview / status / shortcuts / RBAC change.** Every post behavior
+and every `data-post-editor-*` / `aria-*` hook is preserved or re-homed (never dropped).
+The already-shipped **`core/admin/ui/shared/EditorRail.tsx`** primitive, the flat
+**"Post settings"** `DocumentInspector`, and the dotted `max-w-2xl` **canvas** are
+correct and stay.
+
 - **Owning files:**
-  `core/admin/ui/posts/editor/header/{PostEditorHeader,PostEditorActionCluster}.tsx`;
-  `core/admin/ui/posts/editor/PostEditorTopBar.tsx`;
-  `core/admin/ui/posts/editor/layout/{PostEditorLayout,PostEditorRegions}.tsx`;
-  `core/admin/ui/posts/editor/sidebars/{PostListViewSidebar,PostInserterSidebar}.tsx`;
-  `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` (B6 — className-only rail look;
-  **preserve** `role="listbox"`/`role="option"`/`aria-selected`/the item description +
-  the `activeItemIndex` roving keyboard nav — do NOT swap the option `<Button>` out);
-  `core/admin/ui/posts/editor/inspector/{DocumentInspector,PostDetailsSidebar}.tsx`;
-  `core/admin/ui/posts/editor/PostEditorCanvas.tsx` (near-zero);
-  `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` (prop wiring only);
-  **NEW** `core/admin/ui/shared/EditorRail.tsx`.
-- **Prototype source to port from:**
-  `_docs/_PROTOTYPE/src/components/patterns/EditorPreviewFrame.tsx` (chrome strip
-  `:37`, undo/redo `:47-52`, device toggle `:54-62`, left aside `:67`, right aside
-  `:73`, `EditorRailGroup` `:82-97`, `EditorRailItem` `:99-119`) and
-  `_docs/_PROTOTYPE/src/pages/content/PostEditorPreview.tsx` (autosave badge `:58`,
-  Publish `Rocket` `:48-50`, "Post settings" header + soft Draft badge `:75-77`,
-  `InspectorRow` `:27-34`, single SEO sub-card `:114-125`, canvas title `:130`).
-- **Background memory:** [[pages-editor-v2-remediation-program]] (the Pages
-  remediation that this restyle visually mirrors — do not regress its data-* hook
-  discipline), [[admin-ui-redesign-prototype]] (TASK-479 soft/violet close-out
-  norm: sequential drift-verify + gates).
+  `core/admin/ui/posts/editor/layout/{PostEditorLayout,PostEditorRegions}.tsx` (the big
+  re-layout: `PageHeader` + framed card + chrome-bar);
+  `core/admin/ui/posts/editor/header/{PostEditorHeader,PostEditorActionCluster}.tsx`
+  (split actions → `PageHeader`, chrome controls → card chrome-bar);
+  `core/admin/ui/posts/editor/PostEditorTopBar.tsx` (prop pass-through);
+  `core/admin/ui/posts/editor/hooks/usePostEditorLayout.ts` (**Extension #1**: add
+  `"blocks"` left-rail mode, default it);
+  `core/admin/ui/posts/editor/sidebars/{PostListViewSidebar,PostInserterSidebar}.tsx`
+  (unify into ONE left rail = **Blocks** | **Outline** | **List** tabs);
+  `core/admin/ui/posts/editor/blocks/BlockInserter.tsx` (the real "Blocks" palette —
+  className-only rail look; **preserve** `role="listbox"`/`role="option"`/
+  `aria-selected`/`activeItemIndex` roving keyboard — do NOT swap the option `<Button>`);
+  `core/admin/ui/posts/editor/inspector/{DocumentInspector,PostDetailsSidebar}.tsx`
+  (already flat — default-open only, keep the **Block** tab);
+  `core/admin/ui/posts/editor/PostEditorCanvas.tsx` (already parity — zero/near-zero);
+  `core/admin/ui/posts/editor/PostBlockEditorShell.tsx` (prop wiring + the unified rail);
+  the shared `core/admin/ui/shared/{PageHeader,EditorRail}.tsx` (both already exist —
+  **consumed**, not re-created).
+- **Prototype source to port from:** `EditorPreviewFrame.tsx` (card `:31-36`, chrome
+  bar `:37`, toolbar-badge slot `:44-45`, undo/redo `:47-52`, device toggle `:53-62`,
+  left aside `:67`, canvas `:71`, right aside `:73`, `EditorRailGroup`/`EditorRailItem`
+  `:82-119`) + `PostEditorPreview.tsx` (`PageHeader` `:39-54`, autosave badge `:58`,
+  `Rocket` Publish `:49-51`, "Blocks" rail `:60-70`, "Post settings" `:75-77`,
+  `InspectorRow` `:27-34`, canvas title `:130`).
+- **Background memory:** [[pages-editor-v2-remediation-program]] (visual sibling),
+  [[admin-ui-redesign-prototype]] (TASK-479 soft/violet close-out norm), and
+  [[prototype-source-over-screenshots]] (match the SOURCE, not screenshots — the reason
+  this task is re-scoped).
 - **Out of scope:** the **classic** editor `PostClassicEditorShell.tsx` (routed at
   `PostEditorPage.tsx:60-61` when `posts.editor.mode==='classic'`) has no prototype
-  counterpart — **OUT OF SCOPE** (B11); only verify it still renders on redesign
-  tokens. No `PAGE_MODEL`/post-block-document shape change, no preview/runtime
-  contract change, no endpoint/RBAC/cache change. The prototype's non-functional
-  preview footer ("This is a non-functional preview…", `PostEditorPreview.tsx:170`),
-  sample byline ("By Alex Rivera…", `:134`), and the literal rounded preview card
-  frame are preview scaffolding — **drop, do not port**.
+  counterpart — verify-only. No `PAGE_MODEL`/post-block-document shape change, no
+  preview/runtime/endpoint/RBAC/cache change. The prototype's sample byline ("By Alex
+  Rivera…", `PostEditorPreview.tsx:134`) and "non-functional preview" footnote (`:169`)
+  are preview scaffolding — **drop, do not port**.
+
+---
+
+## Contract Extensions (the "extend where needed", spelled out)
+
+The prototype omits several real-editor affordances (Outline, List view, the Block
+inspector tab, the six app toggles). Faithful parity + "nothing dropped" therefore
+requires **explicit, documented extensions of the prototype contract** — enumerated
+here so reviewers agree before code:
+
+- **Extension #1 — `"blocks"` becomes a first-class DEFAULT left-rail mode; Outline +
+  List survive as sibling tabs.** Today `PostEditorLeftRailMode = "outline" |
+  "list-view"` and `normalizeLeftRailMode` defaults `"outline"`
+  (`usePostEditorLayout.ts:5,37-39`); the block palette is a **separate** mutually
+  exclusive `secondarySidebar:"inserter"` surfaced only when "Add block" is toggled
+  (`PostBlockEditorShell.tsx:455-466`). EXTEND `PostEditorLeftRailMode` to
+  `"blocks" | "outline" | "list-view"`, default **`"blocks"`**, and make the left rail a
+  **single always-open panel** with a segmented control **Blocks** | **Outline** |
+  **List** (matching the prototype's `EditorRailGroup label="Blocks"`). The
+  `BlockInserter` palette is the **Blocks** tab (DEFAULT); `PostDocumentOutline` +
+  `PostListViewPanel` are the other two tabs — **relocated, not dropped**. Reverses the
+  rejected "Outline default".
+- **Extension #2 — the editor becomes an in-page `PageHeader` + framed card (drop the
+  full-viewport app shell).** `PostEditorLayout` renders the shared `PageHeader`
+  (`shared/PageHeader.tsx:17` — breadcrumbs/title/description/actions already supported)
+  above a `rounded-2xl border bg-card shadow-card` card with a tall `min-height`, whose
+  top is the chrome bar and whose body is the three panes. Reverses the rejected D4.
+- **Extension #3 — the six app-only chrome controls (Add block / Outline / Details /
+  Focus / Revisions / Settings) have no prototype slot → they live in the card chrome
+  bar as icon-ghost buttons.** Every `aria-pressed`/`aria-expanded`/`aria-controls`/
+  `aria-keyshortcuts`/`data-post-editor-shortcut`/`ref` is preserved verbatim (load-
+  bearing for `usePostEditorShortcuts` + tests). A documented extension of the
+  prototype's simpler chrome — not a drop.
+
+No other contract changes: block model, autosave, revisions, runtime preview, status,
+dirty-guard, keyboard shortcuts, focus-return, preferences, taxonomy, and the **Block**
+inspector tab are all preserved unchanged.
 
 ---
 
 ## Security Contract
 
-**UI-only restyle. No security surface changes.** No route, endpoint, RBAC,
-permission, adminPath, or cache-contract change. Autosave/draft/publish/preview keep
-flowing through the existing `usePostEditorState` handlers
-(`editor.saveDraft`/`editor.publish`/`editor.preview`/`editor.restoreRevision`) and
-the `PostRevisionDrawer` / `RuntimePreviewDialog` wiring exactly as today. Undo/redo
-and the optional device toggle are pure client-state affordances over the existing
-store (`postEditorStore.ts:72-73,438-464`; `usePostEditorState.ts:1051-1052,1069-1070`)
-and `PostEditorLayout`'s already-present `viewportMode` prop — they trigger **no**
-network call, refetch, or dirty-state mutation. All `data-post-editor-*` hooks,
-`aria-pressed`/`aria-controls`/`aria-keyshortcuts`, and `usePostEditorShortcuts`
-keybindings are preserved.
+**UI-only restyle + client-state layout extension. No security surface changes.** No
+route, endpoint, RBAC, permission, `adminPath`, or cache-contract change. Autosave/draft/
+publish/preview keep flowing through the existing `usePostEditorState` handlers
+(`editor.saveDraft`/`editor.publish`/`editor.preview`/`editor.restoreRevision`) and the
+`PostRevisionDrawer` / `RuntimePreviewDialog` wiring exactly as today
+(`PostBlockEditorShell.tsx:532-577,598-621`). The new `"blocks"` left-rail mode, undo/
+redo, and the device toggle are **pure client-state** affordances over the existing
+`postEditorStore` / `usePostEditorLayout` reducer — they trigger **no** network call,
+refetch, or dirty-state mutation. `PageHeader` and `EditorRail`
+(`core/admin/ui/shared/*`) are purely presentational (import only `@/components/*` /
+`@/lib/*` / `@/ui/shared/AdminLink` / `lucide-react` / `react` — no data/service import),
+so they carry no security surface. All `data-post-editor-*` hooks, `aria-pressed`/
+`aria-controls`/`aria-keyshortcuts`, and `usePostEditorShortcuts` keybindings are
+preserved.
+
+---
+
+## Preserve (untouched or re-homed — never dropped)
+
+- **Behavioral hooks (container-agnostic — survive the re-layout unchanged):**
+  autosave (`autosaveError` alert `PostBlockEditorShell.tsx:509-530`; `saveDraft`
+  `:601`), revisions (`PostRevisionDrawer` `:532-542`; `openRevisions` `:597`), preview
+  (`RuntimePreviewDialog` `:568-577`; `preview` `:598`), status/publish (`:610-621`),
+  dirty guard (`hasUnsavedChanges` `:590`), undo/redo (`editor.canUndo/canRedo/undo/redo`
+  `:604-607`), shortcuts (`usePostEditorShortcuts` `:389-394`), focus-return (`:335-372`),
+  focus mode (`:624`), preferences + settings dialog (`:665-671`), taxonomy (`:257-285`),
+  slug + canonical autofill (`:287-333`), move-to-trash (`:174-190`).
+- **Every `data-post-editor-*` hook** (`-header-row="primary"`, `-header-cluster`,
+  `-sync-state`, `-region`, `-details`, `-details-tab`, `-details-tab-trigger`,
+  `-shortcut`, `-density`, `-viewport-toggle`, `-undo`, `-redo`, `-save-draft`,
+  `-outline-insert` — the "Insert block from outline" Plus dropdown, re-homed into the
+  Outline tab per E2, **not** dropped) and every `aria-pressed`/`aria-expanded`/
+  `aria-controls` on the toggle buttons — **moved containers only** (into the chrome bar /
+  `PageHeader` / the unified rail's Outline tab), attributes verbatim.
+- **The DOM ids** the toggles target: `post-editor-block-inserter` (Add-block
+  `aria-controls`), `post-editor-document-overview` (Outline `aria-controls`),
+  `post-editor-details` — re-attached to the corresponding tab panels of the unified
+  left rail / the inspector.
+- **The Block inspector tab** (`PostDetailsSidebar.tsx:49-55`, both
+  `data-post-editor-details-tab-trigger="document"|"block"`) — selection-driven block
+  editing is required by the block model; the prototype simply omits it.
+- **The inserter listbox a11y** — `role="listbox"`/`role="option"`/`aria-selected`/
+  `tabIndex`/`activeItemIndex` roving keyboard + item descriptions in `BlockInserter.tsx`
+  (only className changes to the rail look).
+- **Classic editor** (`PostClassicEditorShell.tsx`) renders on redesign tokens — verify
+  only.
 
 ---
 
 ## Implementation Pseudocode
 
-> Re-anchor by structure, not line numbers — the shell shifts. Every anchor below
-> was verified against real source. `PostEditorCanvas.tsx` is large; **use
-> `Read`/`grep -an`, never `rg`** (binary-trap, see [[pageeditor-tsx-grep-binary-trap]]).
+> Re-anchor by structure, not line numbers — the shell shifts. Every anchor below was
+> verified against real source. `PostEditorCanvas.tsx` is large; **use `Read`/`grep -an`,
+> never `rg`** ([[pageeditor-tsx-grep-binary-trap]]).
 
-### B9 (foundation) — Port the rail primitives → NEW `core/admin/ui/shared/EditorRail.tsx`
+### E1 (foundation) — Extension #1: add the `"blocks"` left-rail mode + default it
 
-Confirmed: **no** `EditorRail`/`FilterBar` exists in admin today
-(`find core/admin/ui -iname "*EditorRail*"` → none). Port `EditorRailGroup` /
-`EditorRailItem` from the prototype (`EditorPreviewFrame.tsx:82-119`), swapping the
-prototype's `@/lib/cn` (confirmed `EditorPreviewFrame.tsx:6`) for the admin
-convention `@/lib/utils` (matches `shared/StatusBadge.tsx:4`, `shared/DataTable.tsx:12`).
-Keep it a pure presentational primitive — but make `EditorRailItem` **wireable**
-(real editor needs click/active), not the prototype's `cursor-default` div.
+`hooks/usePostEditorLayout.ts` — extend the enum + normalizer + default; keep the reducer
+transitions otherwise intact.
+
+```ts
+// usePostEditorLayout.ts:5
+export type PostEditorLeftRailMode = "blocks" | "outline" | "list-view";   // + "blocks"
+
+// usePostEditorLayout.ts:37-39 — default now "blocks" (was "outline")
+const normalizeLeftRailMode = (value: PostEditorLeftRailMode | undefined): PostEditorLeftRailMode =>
+  value === "outline" || value === "list-view" ? value : "blocks";
+
+// Derived helpers (:287-291): the left rail is one always-open panel; the Blocks palette
+//   is shown when leftRailMode === "blocks". Fold the old "inserter" surface into the mode:
+//   - showInserter  => secondarySidebar !== null && state.leftRailMode === "blocks"
+//   - openInserter() => dispatch open_secondary "list-view" (the generic "left rail open"
+//       value) + set_left_rail_mode "blocks"   (keeps the reducer's open/close transitions;
+//       the vestigial "inserter" secondarySidebar value stays in the type only for
+//       back-compat parse of stored layout — see E-store).
+```
+
+> **Reconcile the two OTHER `showInserter` consumers E1 re-means (do NOT leave them on the
+> old two-mode derivation):** redefining `showInserter` to `secondarySidebar !== null &&
+> leftRailMode === "blocks"` changes the meaning of `!showInserter` for two live consumers the
+> shell already has, neither of which is a drop but both of which must be re-pointed under 3 modes:
+> **(a) the Outline toggle's `aria-pressed`** — `outlineVisible = !focusMode &&
+> secondarySidebarOpen && !showInserter` (`PostBlockEditorShell.tsx:627-628`). Under 3 modes
+> `!showInserter` now also matches the **List** tab, so the Outline button would read pressed while
+> LIST is active. Change it to `... && leftRailMode === "outline"` (track the Outline tab only) so
+> the `aria-pressed` the contract preserves "verbatim" stays truthful. **(b) the mobile
+> secondary-sidebar open handler** (`PostBlockEditorShell.tsx:646-648`) hardcodes
+> `setLeftRailMode("outline") + openListView()` — opening the rail on mobile would land on Outline,
+> not the new default **Blocks**. Change it to `setLeftRailMode("blocks")` so mobile matches the
+> desktop Blocks-default the whole re-scope is built on. (Both are E1/E4 details; the "mobile
+> Sheets KEEP as today" / "handleToggleOutline unchanged shape" notes cover container/shape, not
+> these two derived values.)
+
+`PostBlockEditorShell.tsx` — the storage fallback + parse + serialize:
+
+```ts
+// resolveInitialLayoutState fallback (:80-85): default the left rail OPEN on "blocks"
+const fallback = {
+  secondarySidebar: "list-view",   // "left rail open" sentinel (Blocks shown via leftRailMode)
+  detailsOpen: true,
+  detailsTab: resolveInitialDetailsTab(preferences),
+  leftRailMode: "blocks",          // was "outline"
+};
+// parse validation (:105-108): accept "blocks" | "outline" | "list-view"; map a legacy
+//   stored secondarySidebar:"inserter" → open + leftRailMode "blocks".
+// serialize (:207-214): unchanged shape; now persists leftRailMode "blocks" by default.
+```
+
+> **`post-editor-layout-state` is a CONTRACT-lock suite here (not frozen):** adding
+> `"blocks"` + changing the default is a deliberate contract extension, so
+> `tests/vitest/posts/post-editor-layout-state.test.ts` is **re-baselined** (default
+> `leftRailMode` → `"blocks"`; add a `"blocks"→"outline"→"list-view"` transition case) —
+> keep every existing transition/focus-restore assertion.
+
+### E2 — Unify the left rail into ONE "Blocks | Outline | List" panel (DEFAULT = Blocks)
+
+Merge the two left components into a single always-open rail rendered by
+`sidebars/PostListViewSidebar.tsx` (extended). It already owns a 2-tab `Tabs`
+(`:105-144`, `value={leftRailMode}`); ADD a third **Blocks** tab hosting the real
+palette. `PostInserterSidebar.tsx` is **kept** (its own
+`post-editor-inserter-sidebar.test.tsx` mounts it) — the unified rail simply renders the
+same `<BlockInserter showHeader={false} …>` directly as the Blocks tab body.
 
 ```tsx
-// core/admin/ui/shared/EditorRail.tsx  (NEW)
-import { type ButtonHTMLAttributes, type ElementType, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+// sidebars/PostListViewSidebar.tsx — segmented control now THREE tabs (proto label "Blocks")
+//   Replace the "Document Outline" header copy (:66) with a neutral rail title (or drop the
+//   header row); the segmented control is the primary affordance.
+<Tabs value={leftRailMode} onValueChange={(v) => onLeftRailModeChange?.(v as PostEditorLeftRailMode)}>
+  <TabsList className="grid w-full grid-cols-3 bg-muted/40" aria-label="Editor left rail">
+    <TabsTrigger value="blocks"    data-post-editor-left-rail-tab="blocks">Blocks</TabsTrigger>
+    <TabsTrigger value="outline"   data-post-editor-left-rail-tab="outline">Outline</TabsTrigger>
+    <TabsTrigger value="list-view" data-post-editor-left-rail-tab="list-view">List</TabsTrigger>
+  </TabsList>
 
-export function EditorRailGroup({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="mb-4" data-editor-rail-group="true">
-      <div className="mb-2 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
-      </div>
-      <div className="flex flex-col gap-1">{children}</div>
-    </div>
-  );
-}
+  {/* BLOCKS (default) — the real palette; id is the Add-block toggle's aria-controls target */}
+  <TabsContent value="blocks" forceMount id="post-editor-block-inserter"
+               className="m-0 min-h-0 flex-1 overflow-auto">
+    <BlockInserter onInsertBlock={onInsertBlock} showHeader={false}
+                   recentlyUsedTypes={recentlyUsedTypes} />
+  </TabsContent>
 
-export function EditorRailItem({
-  icon, children, active, onClick, ...rest
-}: {
-  icon?: ReactNode;
-  children: ReactNode;
-  active?: boolean;
-  onClick?: () => void;          // wireable (proto was cursor-default decorative)
-} & ButtonHTMLAttributes<HTMLButtonElement>) {
-  // ADAPT-NOT-COPY: `const Cmp = onClick ? "button" : "div"` infers the string-literal
-  // UNION "button" | "div"; JSX then narrows allowed props to the INTERSECTION of
-  // button+div attributes, so `type={...}` and the `{...rest}` (ButtonHTMLAttributes)
-  // spread are NOT assignable to a possible <div> → a hard `lint:types` error (an
-  // explicit acceptance gate, TASK-497-03 AC#3). Annotating `Cmp: ElementType` (not the
-  // literal union) accepts arbitrary props on either tag and compiles clean. (Equivalent:
-  // `(onClick ? "button" : "div") as ElementType`, or two discriminated branches.)
-  const Cmp: ElementType = onClick ? "button" : "div";
-  return (
-    <Cmp
-      type={onClick ? "button" : undefined}
-      onClick={onClick}
-      data-active={active ? "true" : undefined}
-      className={cn(
-        "flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left text-sm transition-colors [&_svg]:size-4 [&_svg]:text-muted-foreground",
-        onClick ? "cursor-pointer" : "cursor-default",
-        active
-          ? "bg-primary-soft text-primary-soft-foreground [&_svg]:text-primary"
-          : "hover:bg-accent",
-      )}
-      {...rest}
+  {/* OUTLINE — keep PostDocumentOutline (:126-133). Keep id="post-editor-document-overview"
+      on the panel/region so the Outline toggle's aria-controls stays valid.
+      RE-HOME (do NOT drop) the "Insert block from outline" Plus dropdown + its
+      data-post-editor-outline-insert="true" hook (PostListViewSidebar.tsx:69-102,76-77) into
+      this Outline tab's header row — it is a real insert-after-selected affordance and a
+      data-post-editor-* hook, so per the "never dropped" invariant it moves containers only.
+      Three suites assert it (post-block-editor-shell.test.tsx:13, post-editor-listview-
+      outline.test.tsx:47, and the shell handler PostBlockEditorShell.tsx:474-479). */}
+  <TabsContent value="outline" forceMount id="post-editor-document-overview" …>
+    {/* keep the Plus dropdown here: aria-label="Insert block from outline" +
+        data-post-editor-outline-insert="true" */}
+    <PostDocumentOutline … />
+  </TabsContent>
+
+  {/* LIST — keep PostListViewPanel (:134-143) verbatim */}
+  <TabsContent value="list-view" forceMount …><PostListViewPanel … /></TabsContent>
+</Tabs>
+// KEEP: root data-post-editor-sidebar, data-post-editor-left-rail-mode={leftRailMode},
+//   role="region". Root surface bg stays transparent so the region's bg-muted/20 shows.
+```
+
+`PostBlockEditorShell.tsx` — collapse the `showInserter ? <PostInserterSidebar/> :
+<PostListViewSidebar/>` branch (`:455-485`) into the **single** unified rail; thread the
+new `onInsertBlock`/`recentlyUsedTypes` for the Blocks tab. Re-point the header toggles:
+
+```tsx
+// handleToggleInserter (:343-350): open the rail + setLeftRailMode("blocks")
+//   (openInserter now = open_secondary "list-view" + set_left_rail_mode "blocks").
+// handleToggleOutline (:352-362): open the rail + setLeftRailMode("outline") — unchanged shape.
+// secondarySidebar slot (:455-485) becomes ONE component:
+const secondarySidebar = (
+  <PostListViewSidebar
+    document={editor.state.document}
+    selectedBlockId={editor.state.selectedBlockId}
+    onSelectBlock={(id) => handleSelectBlock(id)}
+    onDeleteBlock={editor.deleteBlock}
+    onMoveBlockToIndex={editor.moveBlockToIndex}
+    onInsertBlock={(type) => editor.insertBlock(type, { source: "outline-plus", target: { mode: "after-selected" } })}
+    // ^ REUSE the existing PostInsertSource member "outline-plus" (postInsertFlow.ts:3 union =
+    //   "sidebar" | "slash" | "appender" | "outline-plus" — there is NO "left-rail"; inventing one
+    //   breaks lint:types + re-baselines post-block-editor-shell-wave.test.tsx:804). Keeping
+    //   "outline-plus" keeps that "unchanged" wave GREEN (it asserts source:"outline-plus").
+    leftRailMode={layout.leftRailMode}
+    onLeftRailModeChange={layout.setLeftRailMode}
+    showOutlineHints={preferences.showOutlineHints}
+    showKeyboardHints={preferences.showKeyboardHints}
+  />
+);
+```
+
+### E3 — Extension #2a: the in-page `PageHeader` (Preview / Save draft / Publish)
+
+`PostBlockEditorShell.tsx` — build the actions cluster and pass `PageHeader` props into
+the layout. Reuse the existing handlers (`:598-621`) unchanged.
+
+```tsx
+const pageActions = (
+  <PostEditorActionCluster                        // now = Preview + Save draft + Publish only
+    status={editor.status}
+    saving={editor.state.saving || editor.autosaveSaving || editor.restoringRevisionId !== null}
+    onPreview={() => { editor.preview().catch(() => undefined); }}
+    onSaveDraft={() => { editor.saveDraft().catch(() => undefined); }}
+    onPublish={/* existing publish handler with toast, :610-621 */}
+  />
+);
+// pass to <PostEditorLayout …>:
+pageTitle={editor.title || "Edit Post"}
+pageDescription="Write, format, and publish your story."     // proto PostEditorPreview.tsx:42
+pageActions={pageActions}
+// BREADCRUMB OWNERSHIP (single trail — do NOT double it): the AdminShell chrome ALREADY renders
+//   the persistent trail `["Content","Posts",title]` (shellBreadcrumbs, PostBlockEditorShell.tsx:487
+//   → AdminShell `breadcrumbs`, :585). So the in-page PageHeader is passed NO `breadcrumbs` prop —
+//   matching the shipped list convention (PostsListPage.tsx:429-433 / PageListPage.tsx:393-395:
+//   AdminShell owns the trail, PageHeader carries title/description/actions ONLY). Do NOT also
+//   thread `pageBreadcrumbs` into the PageHeader, or the editor renders TWO stacked breadcrumb
+//   trails (AdminShell chrome "Content / Posts / {title}" + PageHeader "Posts › {title}"),
+//   inconsistent with TASK-497-01. The prototype's in-page breadcrumb (PostEditorPreview.tsx:39-40)
+//   is satisfied by the AdminShell trail in the real app (the preview frame has no AdminShell
+//   chrome; the real editor page does — the single trail lives there).
+```
+
+`header/PostEditorActionCluster.tsx` — **split**: keep Preview (outline, `Eye`) + Save
+draft (ghost) + Publish (`Rocket`, `Update` when published). **Remove** the autosave
+`Badge` + undo/redo from this cluster (they move to the chrome bar, E4). Keep
+`data-post-editor-header-cluster="primary-actions"` + `data-post-editor-save-draft`. Keep
+the `status === "published" ? "Update" : "Publish"` label flip + status-driven
+`aria-label`.
+
+### E4 — Extension #2b + #3: the framed card + chrome bar
+
+`layout/PostEditorLayout.tsx` — convert from full-viewport app to a padded scrolling page
+rendering `PageHeader` + a framed card. The card's top is the chrome bar (the existing
+`header` region, now the `PostEditorHeader` chrome), its body is the three panes.
+
+```tsx
+// PostEditorLayout.tsx — NEW shape (was AdminShell contentClassName="overflow-hidden p-0" :103)
+return (
+  <AdminShell activeHref={activeHref} breadcrumbs={breadcrumbs}>   {/* default padded, scrolling; AdminShell OWNS the single breadcrumb trail */}
+    <PageHeader
+      title={pageTitle}
+      description={pageDescription}
+      actions={pageActions}
+    />                                                {/* NO breadcrumbs prop — AdminShell owns the trail (E3), so no double breadcrumb; matches TASK-497-01 */}
+    <div
+      className="flex min-h-[calc(100vh-13rem)] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-card"
+      data-post-editor-frame="true"        // EditorPreviewFrame.tsx:31-36
+      data-post-editor-density={editorDensity}   // KEEP the density hook (was PostEditorLayout.tsx:110)
+      //   — user-persisted comfortable/compact text sizing must survive the re-layout
+      //   (userSettingsService.test.ts:66-68,100-102); do NOT drop it onto the old shell root.
     >
-      {icon}
-      {children}
-    </Cmp>
-  );
-}
-```
-
-> **Types gate guard (verify before copying):** the `Cmp: ElementType` annotation is
-> load-bearing — without it `bun --cwd core lint:types` fails on the `type`/`{...rest}`
-> props (see comment above). Keep the `& ButtonHTMLAttributes` spread only because
-> `ElementType` makes it safe; it is **not** used to smuggle listbox semantics into the
-> inserter (B6 keeps the inserter's own `<Button role="option">` — see B6).
-
-### B1 + B6/B7 (region surfaces) — `layout/PostEditorRegions.tsx`
-
-Three surfaces only — keep every `data-post-editor-region`, `aria-label`, sizing.
-
-```tsx
-// PostEditorHeaderRegion (className on line 12): single muted chrome strip
-//   FROM: "shrink-0 border-b bg-background/95 backdrop-blur"
-//   TO:   "shrink-0 border-b border-border bg-muted/40"   // EditorPreviewFrame.tsx:37
-// PostEditorSecondarySidebarRegion (className on line 55): left rail surface → bg-muted/20
-//   FROM: "...w-64 shrink-0 border-r bg-background lg:block"
-//   TO:   "...w-64 shrink-0 border-r border-border bg-muted/20 lg:block"  // :67
-//   (KEEP w-64 — full-height app rail; do NOT shrink to proto w-60)
-// PostEditorSidebarRegion / details (className on line 72): inspector surface → bg-card
-//   FROM: "...w-80 shrink-0 border-l bg-background lg:block"
-//   TO:   "...w-80 shrink-0 border-l border-border bg-card lg:block"      // :73
-```
-
-### B1–B5 — Top bar: collapse two rows → ONE muted strip, with autosave badge, undo/redo, device toggle, Save draft + Rocket
-
-`header/PostEditorHeader.tsx` today renders TWO rows: row1
-(`data-post-editor-header-row="primary"`, `min-h-14 … px-4 py-2`, `:82-129`)
-= back-arrow + breadcrumb + `PostEditorActionCluster` + Settings gear; and a
-`border-t` row2 (`data-post-editor-header-row="secondary"`, `:131-214`) of **labeled**
-buttons Add block / Outline / Details / Focus / Revisions. Collapse to ONE strip;
-**demote** the row2 toggles to `size="icon"` ghost buttons; **preserve every a11y
-attribute** (`aria-pressed`/`aria-expanded`/`aria-controls`/`aria-keyshortcuts`/
-`data-post-editor-shortcut`/`title`/`ref`) so `usePostEditorShortcuts` + the layout
-tests keep passing.
-
-```tsx
-// header/PostEditorHeader.tsx — single strip (logic/handlers unchanged)
-// New props threaded in (all optional → backward compatible):
-//   canUndo, canRedo, onUndo, onRedo,
-//   onSaveDraft,                       // B3
-//   viewportMode, onSetViewportMode    // B5 (optional)
-return (
-  <div
-    className="flex min-h-14 flex-wrap items-center justify-between gap-3 px-4 py-2 sm:px-6"
-    data-post-editor-header-row="primary"            // KEEP hook (tests assert it)
-  >
-    {/* LEFT: back arrow + breadcrumb (unchanged, :86-102) */}
-    <div className="flex min-w-0 items-center gap-3" data-post-editor-header-left-context="true">
-      <Button variant="ghost" size="icon" onClick={onClose}
-        aria-label="Back to posts" title="Back to posts"
-        data-post-editor-header-close="true"><ArrowLeft className="h-4 w-4" /></Button>
-      <div className="min-w-0">{leftContext}</div>
+      {header ? <PostEditorHeaderRegion>{header}</PostEditorHeaderRegion> : null}   {/* chrome bar */}
+      <div className="flex min-h-0 flex-1">
+        {showDesktopSecondary ? (
+          <PostEditorSecondarySidebarRegion className={compactSidePanels ? "w-56" : undefined}>
+            {secondarySidebar}                                                     // w-60 bg-muted/20 lg:block (compact → w-56)
+          </PostEditorSecondarySidebarRegion>
+        ) : null}
+        <PostEditorContentRegion>{content}</PostEditorContentRegion>                {/* bg-dotted canvas */}
+        {showDesktopDetails ? (
+          <PostEditorSidebarRegion className={compactSidePanels ? "w-72" : undefined}>
+            {detailsSidebar}                                                       // w-72 bg-card lg:block (gate-consistent — see E4 regions note; compact override kept)
+          </PostEditorSidebarRegion>
+        ) : null}
+        {/* KEEP the compactSidePanels width override (was PostEditorLayout.tsx:113,121, w-56/w-72)
+            threaded into the new w-60/w-72 regions — this is a user-persisted preference, do NOT
+            drop it when hardcoding the prototype widths. */}
+      </div>
     </div>
-
-    {/* RIGHT cluster — order mirrors EditorPreviewFrame.tsx:44-62 then actions */}
-    <div className="flex w-full flex-wrap items-center justify-end gap-1.5 md:w-auto"
-         data-post-editor-header-cluster="primary-row">
-      {/* B2: autosave badge (in PostEditorActionCluster) + B3/B4 live here */}
-      <PostEditorActionCluster
-        status={status} dirty={dirty} saving={saving} lastSavedAt={lastSavedAt}
-        onPreview={onPreview} onPublish={onPublish}
-        onSaveDraft={onSaveDraft}                       // B3
-        canUndo={canUndo} canRedo={canRedo} onUndo={onUndo} onRedo={onRedo}  // B4
-      />
-
-      {/* B5 (optional): device/viewport toggle — model EditorPreviewFrame.tsx:54-62 */}
-      {onSetViewportMode ? (
-        <div className="ml-1 hidden items-center rounded-lg border border-border bg-card p-0.5 sm:flex"
-             role="group" aria-label="Editor viewport" data-post-editor-viewport-toggle="true">
-          <Button type="button" variant="ghost" size="icon-sm"
-            aria-pressed={viewportMode !== "mobile"} aria-label="Desktop preview"
-            onClick={() => onSetViewportMode("desktop")}
-            className={viewportMode !== "mobile" ? "bg-muted text-foreground" : "text-muted-foreground"}>
-            <Monitor className="size-3.5" /></Button>
-          <Button type="button" variant="ghost" size="icon-sm"
-            aria-pressed={viewportMode === "mobile"} aria-label="Mobile preview"
-            onClick={() => onSetViewportMode("mobile")}
-            className={viewportMode === "mobile" ? "bg-muted text-foreground" : "text-muted-foreground"}>
-            <Smartphone className="size-3.5" /></Button>
-        </div>
-      ) : null}
-
-      <div className="mx-1 hidden h-5 w-px bg-border sm:block" aria-hidden />
-
-      {/* DEMOTED row2 toggles → icon ghosts. KEEP every a11y attr + ref + data-* */}
-      <Button ref={addButtonRef} type="button"
-        variant={inserterVisible ? "secondary" : "ghost"} size="icon"
-        onClick={onToggleInserter}
-        aria-pressed={inserterVisible} aria-expanded={inserterVisible}
-        aria-controls="post-editor-block-inserter" aria-label="Toggle block inserter"
-        aria-keyshortcuts={formatPostEditorShortcutAria("toggleInserter")}
-        data-post-editor-shortcut={inserterShortcut}
-        title={`Add block (${inserterShortcut})`}><Plus className="h-4 w-4" /></Button>
-
-      <Button ref={outlineButtonRef} type="button"
-        variant={outlineVisible ? "secondary" : "ghost"} size="icon"
-        onClick={onToggleOutline}
-        aria-pressed={outlineVisible} aria-expanded={outlineVisible}
-        aria-controls="post-editor-document-overview" aria-label={outlineLabel}
-        aria-keyshortcuts={formatPostEditorShortcutAria("toggleOutline")}
-        data-post-editor-shortcut={outlineShortcut}
-        title={`${outlineLabel} (${outlineShortcut})`}><ListTree className="h-4 w-4" /></Button>
-
-      <Button ref={detailsButtonRef} type="button"
-        variant={detailsOpen ? "secondary" : "ghost"} size="icon"
-        onClick={onToggleDetails}
-        aria-pressed={detailsOpen} aria-expanded={detailsOpen}
-        aria-controls="post-editor-details" aria-label={detailsLabel}
-        aria-keyshortcuts={formatPostEditorShortcutAria("toggleDetails")}
-        data-post-editor-shortcut={detailsShortcut}
-        title={`${detailsLabel} (${detailsShortcut})`}><Sidebar className="h-4 w-4" /></Button>
-
-      <Button type="button" variant={focusMode ? "secondary" : "ghost"} size="icon"
-        onClick={onToggleFocusMode} aria-pressed={focusMode}
-        aria-label="Toggle full width editor" title="Toggle full width editor">
-        <Columns3 className="h-4 w-4" /></Button>
-
-      <Button type="button" variant="ghost" size="icon"
-        onClick={onOpenRevisions} aria-label="Open revision history" title="Revisions">
-        <History className="h-4 w-4" /></Button>
-
-      <Button type="button" variant="ghost" size="icon"
-        onClick={onOpenSettings} aria-label="Editor settings" title="Editor settings"
-        data-post-editor-header-settings="true"><Settings className="h-4 w-4" /></Button>
-    </div>
-  </div>
-  // NOTE: the old <div data-post-editor-header-row="secondary"> wrapper (:131-214)
-  // is REMOVED. The regression test asserts it is gone (single strip).
+    {/* mobile Sheets for secondary/details — KEEP as today (:127-155) */}
+  </AdminShell>
 );
 ```
 
-> **a11y guard:** the demoted icon buttons MUST keep `aria-label` (already present at
-> `:149` inserter, `:163` outline, `:180` details, `:196` focus, `:208` revisions),
-> so demoting label→icon does **not** lose accessible names.
-
-### B2 + B3 + B4 — `header/PostEditorActionCluster.tsx`
-
-Keep the dynamic `syncLabel` logic (`:30-36` Saving…/Unsaved changes/Saved at HH:MM/
-Synced) — only re-skin the pill `<span>` (`:44-49`) to a `Badge`. Add undo/redo
-(`EditorPreviewFrame.tsx:47-52`), an explicit **Save draft** ghost (`PostEditorPreview.tsx:48`),
-and swap Publish icon `Send`→`Rocket` (`:50`).
+`layout/PostEditorRegions.tsx` — adopt prototype widths + the left=lg / right=xl reveal;
+the header region stays the chrome-bar surface.
 
 ```tsx
-// header/PostEditorActionCluster.tsx
-import { Eye, Redo2, Rocket, Undo2 } from "lucide-react";   // was: Eye, Send
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-
-// props += onSaveDraft?, canUndo?, canRedo?, onUndo?, onRedo?
-const syncLabel = saving ? "Saving..." : dirty ? "Unsaved changes"
-  : lastSavedAt ? `Saved at ${formatSavedAt(lastSavedAt)}` : "Synced";
-
-return (
-  <div className="flex flex-wrap items-center justify-end gap-2"
-       aria-label="Primary editor actions" data-post-editor-header-cluster="primary-actions">
-
-    {/* B2: pill span → Badge outline. KEEP dynamic text + the data hook tests rely on */}
-    <Badge variant="outline" className="hidden md:inline-flex"
-           data-post-editor-sync-state="true">{syncLabel}</Badge>
-
-    {/* B4: undo/redo — WIRED, disabled when no history */}
-    {onUndo ? (
-      <Button type="button" variant="ghost" size="icon-sm" onClick={onUndo}
-        disabled={!canUndo} aria-label="Undo" title="Undo"
-        data-post-editor-undo="true"><Undo2 className="h-4 w-4" /></Button>
-    ) : null}
-    {onRedo ? (
-      <Button type="button" variant="ghost" size="icon-sm" onClick={onRedo}
-        disabled={!canRedo} aria-label="Redo" title="Redo"
-        data-post-editor-redo="true"><Redo2 className="h-4 w-4" /></Button>
-    ) : null}
-
-    <Button type="button" variant="outline" size="sm" onClick={onPreview}
-      disabled={saving} aria-label="Open runtime preview">
-      <Eye className="h-4 w-4" /> Preview</Button>
-
-    {/* B3: explicit Save draft (ghost) — wired to existing editor.saveDraft() */}
-    {onSaveDraft ? (
-      <Button type="button" variant="ghost" size="sm" onClick={onSaveDraft}
-        disabled={saving} aria-label="Save draft"
-        data-post-editor-save-draft="true">Save draft</Button>
-    ) : null}
-
-    {/* Publish: Send → Rocket. Label flip Update/Publish UNCHANGED (:67,70) */}
-    <Button type="button" size="sm" onClick={onPublish} disabled={saving}
-      aria-label={status === "published" ? "Update published post" : "Publish post"}>
-      <Rocket className="h-4 w-4" />
-      {status === "published" ? "Update" : "Publish"}</Button>
-  </div>
-);
+// PostEditorHeaderRegion (:12): keep "shrink-0 border-b border-border bg-muted/40"  (chrome bar)
+// PostEditorSecondarySidebarRegion (:49): "…w-60 shrink-0 border-r border-border bg-muted/20 lg:block"
+//   (proto w-60, EditorPreviewFrame.tsx:67 — was w-64)
+// PostEditorSidebarRegion (:64): "…w-72 shrink-0 border-l border-border bg-card lg:block"
+//   (proto w-72, EditorPreviewFrame.tsx:73 — was w-80; KEEP lg:block — do NOT adopt the proto's
+//   xl:block. The details-region MOUNT is JS-gated on the lg `(min-width:1024px)` matchMedia query
+//   (showDesktopDetails, PostEditorLayout.tsx:36,81-82), so the CSS reveal breakpoint MUST agree
+//   with that JS gate. Adopting xl:block literally opens a 1024–1279px dead zone where the
+//   inspector is open (toggle aria-pressed true, showDesktopDetails mounts the aside) yet the
+//   CSS `hidden … xl:block` keeps it display:none AND no mobile Sheet renders (isDesktopViewport
+//   true) — an open-but-hidden inspector, a real regression of AC "RIGHT Post settings inspector
+//   open by default". The proto's xl:block is a pure-CSS static-preview artifact with no JS gate.
+//   The LEFT rail stays lg:block for the same gate-consistency reason. If an xl reveal is ever
+//   wanted, raise the JS showDesktopDetails gate to `(min-width:1280px)` in lockstep and re-verify
+//   the secondary rail stays lg — the details reveal breakpoint MUST match the JS mount gate.)
 ```
 
-### Prop threading — `PostEditorTopBar.tsx` + `PostBlockEditorShell.tsx`
-
-`PostEditorTopBar.tsx` is a thin pass-through to `PostEditorHeader` (it does not
-forward the new props today) — extend its props type and forward the new ones
-(`onSaveDraft`, `canUndo`, `canRedo`, `onUndo`, `onRedo`, `viewportMode`,
-`onSetViewportMode`). Then wire from the shell:
+`header/PostEditorHeader.tsx` — becomes the **chrome bar** (Preview/Save/Publish are
+gone → `PageHeader`). Keep the single strip carrying `data-post-editor-header-row="primary"`.
 
 ```tsx
-// PostBlockEditorShell.tsx — add device state (B5) near the other layout state.
-const [viewportMode, setViewportMode] =
-  useState<"auto" | "desktop" | "mobile">("auto");           // matches PostEditorLayout type
+// LEFT of chrome bar: (optional) back-arrow + the static "Post editor" title ONLY.
+//   proto EditorPreviewFrame.tsx:38-42 (title span). The prototype's LEFT badge is the
+//   hardcoded "Preview only" scaffolding pill — correctly DROPPED. The dynamic sync Badge
+//   is a RIGHT-side live-state indicator (see below), grouped with undo/redo + device toggle.
+<div className="flex items-center gap-2" data-post-editor-header-left-context="true">
+  <Button variant="ghost" size="icon" onClick={onClose} aria-label="Back to posts"
+    title="Back to posts" data-post-editor-header-close="true"><ArrowLeft className="h-4 w-4"/></Button>
+  <span className="text-sm font-medium">Post editor</span>
+</div>
 
-// In the <PostEditorTopBar …> block (currently starts :586) add:
-onSaveDraft={() => { editor.saveDraft().catch(() => undefined); }}   // editor.saveDraft already used at :520
-canUndo={editor.canUndo}                                            // :1051 (usePostEditorState)
-canRedo={editor.canRedo}                                            // :1052
-onUndo={editor.undo}                                                // :1069
-onRedo={editor.redo}                                                // :1070
-viewportMode={viewportMode}
-onSetViewportMode={setViewportMode}
-// (onPreview/onPublish/onToggle*/refs/onOpenSettings — UNCHANGED)
-
-// On <PostEditorLayout …> (:582) pass the device state through (prop already exists,
-// PostEditorLayout.tsx:31,58,76-77; shell currently passes nothing → defaults "auto"):
-viewportMode={viewportMode}
+// RIGHT of chrome bar: the dynamic sync Badge + undo/redo + divider + device toggle + the six
+//   app toggles (Extension #3). The Badge sits in the prototype's `toolbar` slot position — on
+//   the RIGHT, immediately AHEAD of the undo/redo divider — matching the prototype's grouping of
+//   live-state indicators (autosave status + undo/redo + device) on the right
+//   (EditorPreviewFrame.tsx:37-52 renders `{toolbar}` :44-45 before the undo/redo divider :46-52;
+//   PostEditorPreview.tsx:58 feeds toolbar={<Badge>Draft · autosaved</Badge>}).
+<Badge variant="outline" data-post-editor-sync-state="true">{syncLabel}</Badge>  {/* moved here from the cluster; proto `toolbar` slot :44-45 */}
+//   then undo/redo (proto EditorPreviewFrame.tsx:47-52), device toggle (unchanged,
+//   PostEditorHeader.tsx:143-177), then Add block / Outline / Details / Focus / Revisions /
+//   Settings — icon-ghost, EVERY aria-pressed/aria-expanded/aria-controls/aria-keyshortcuts/
+//   data-post-editor-shortcut/ref preserved VERBATIM from the current PostEditorHeader.tsx:181-265.
+//   syncLabel = saving ? "Saving..." : dirty ? "Unsaved changes"
+//     : lastSavedAt ? `Saved at ${formatSavedAt(lastSavedAt)}` : "Synced"   (moved from the cluster)
+//   (The regression suite asserts data-post-editor-sync-state presence/text, not side, so this
+//    right-side placement is a free fidelity fix — no test change.)
 ```
 
-> The shell already maps `shellBreadcrumbs = ["Content","Posts", title]` (`:486`) and
-> `editorBreadcrumbs` (`:488`) into the header — leave those untouched.
+> **a11y guard:** the six demoted toggles keep `aria-label` (`PostEditorHeader.tsx:190`
+> inserter, `:207` outline, `:224` details, `:238` focus, `:249` revisions, `:260`
+> settings) + `aria-controls` (`post-editor-block-inserter` / `post-editor-document-
+> overview` / `post-editor-details`) — moving them into the chrome bar loses nothing.
 
-### B6 — Left rail: `bg-muted/20` surface (done via region) + inserter as rail-item look
+`PostEditorTopBar.tsx` + `PostBlockEditorShell.tsx` — thread the new `PageHeader` props
+(`pageTitle`/`pageDescription`/`pageActions`) through the layout; the
+existing `onSaveDraft`/`canUndo`/`canRedo`/`onUndo`/`onRedo`/`viewportMode`/
+`onSetViewportMode`/toggle handlers/refs stay wired. `viewportMode` state already exists
+(`PostBlockEditorShell.tsx:155`).
 
-Keep BOTH panels and all their behavior. The **inserter palette** is the true
-"Blocks" analog → re-skin its result rows to the rail look; the
-`PostListViewSidebar` (Outline / List view, `:56-149`, root `bg-background` at `:58`)
-keeps its tabs and sits on the `bg-muted/20` region. Restyle `PostListViewSidebar`'s
-root `bg-background` (`:58`) to `bg-transparent` so the region's `bg-muted/20` shows
-through; keep its `data-post-editor-sidebar`, `id`, tabs, and
-`data-post-editor-left-rail-*` hooks.
+> **The new `pageTitle`/`pageDescription`/`pageActions` props MUST be declared OPTIONAL on
+> `PostEditorLayoutProps`** (`pageTitle?: string` etc. — matching the shared `PageHeader`'s
+> documented backward-compat). Three suites mount `PostEditorLayout` **directly** with the OLD
+> prop set (zero PageHeader props) and would fail `bun --cwd core lint:types` (a gate) if any new
+> prop were declared **required**: `post-editor-layout-responsive.test.tsx` (3 tests,
+> mounts at :9/:34/:54), `post-editor-layout-render-wave.test.tsx` (2 tests, :129/:154/:186), and
+> `post-editor-keyboard-a11y.test.tsx` test 2 (:79). Declaring them optional keeps all three
+> green (PageHeader simply does not render when its data is absent).
 
-```tsx
-// EditorRail CONSUMPTION (REQUIRED — this is HOW the NEW core/admin/ui/shared/EditorRail.tsx
-//   is consumed by the left rail, satisfying parent AC#5; it is NOT optional):
-//   sidebars/PostInserterSidebar.tsx + blocks/BlockInserter.tsx — wrap the inserter's
-//   "Blocks"/"Recently used" result sections (the recently-used <section> BlockInserter.tsx:187
-//   and each catalog group <section> :236) in <EditorRailGroup label={…}>. EditorRailGroup
-//   renders only a plain <div> (+ a label <div>), so it is a11y-NEUTRAL — placing it inside
-//   the role="listbox" (:182) does NOT alter the role="option"/aria-selected/roving-keyboard
-//   semantics (post-block-inserter-wave ArrowDown+Enter stays green). To avoid a DUPLICATE
-//   heading, reuse each section's existing heading as the EditorRailGroup `label` (the
-//   recently-used Badge :189 / the category Badge :238, and/or the PostInserterSidebar header
-//   :34) and drop the now-redundant heading so the same label is not rendered twice.
-//   EditorRailItem is NOT rendered here (exported-for-reuse only — B6 keeps the inserter's own
-//   <Button role="option"> below; the inserter rows MIMIC EditorRailItem's active TOKEN, not
-//   the element).
+### E5 — Right inspector: already flat "Post settings" — DEFAULT-OPEN only
 
-// blocks/BlockInserter.tsx — restyle the catalog/recently-used option rows to the RAIL
-//   LOOK via className + the Button `variant` ONLY. Do NOT replace the existing <Button
-//   role="option"> with EditorRailItem — that would drop role="option"/aria-selected/tabIndex
-//   + the item description and break the listbox roving-keyboard insertion path.
-//   KEEP verbatim (BlockInserter.tsx): role="listbox" (:182), and per option (:205-218,
-//   :253-274): role="option", aria-selected={itemIndex === activeItemIndex}, tabIndex,
-//   ref, the {item.description}, the activeItemIndex keydown handler, onInsertBlock wiring,
-//   recentlyUsedTypes. Switch each option <Button>'s variant="outline" (:205,:253) →
-//   variant="ghost": the `outline` variant hard-codes `border … shadow-soft` (button.tsx:20)
-//   which the rail className below does NOT strip (tailwind-merge only drops *conflicting*
-//   utilities), so leaving it `outline` keeps a prototype-mismatched bordered-card look;
-//   `ghost` gives the borderless rail surface the prototype shows (EditorPreviewFrame.tsx:99-119).
-//   Then add rail classes to each option <Button> className. KEEP `h-auto` (the current
-//   `:206,:254` value): each option is TWO-LINE (label + `line-clamp-2` description,
-//   :216-219), and the default Button size hard-codes a fixed `h-9` (button.tsx:28) that
-//   tailwind-merge does NOT drop unless an explicit height utility is present — omit
-//   `h-auto` and the second (description) line clips/overflows. APPEND the rail classes to
-//   the existing `h-auto …` value (do not replace it):
-//     className={cn(
-//       "flex h-auto w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition-colors",
-//       itemIndex === activeItemIndex
-//         ? "bg-primary-soft text-primary-soft-foreground"   // <-- the rail active token
-//         : "hover:bg-accent",
-//     )}
-//   The chrome-wave's "inserter items use the rail active class bg-primary-soft" assertion
-//   is satisfied by THIS className (it does not require the literal EditorRailItem element).
-```
+`inspector/DocumentInspector.tsx` already renders the flat **"Post settings"** header +
+`StatusBadge`, light `InspectorRow` rows, and a single `bg-muted/30` SEO sub-card (B7,
+shipped/correct) = prototype `PostEditorPreview.tsx:75-125`. **No structural change.**
+Ensure the details sidebar defaults **open** (already `initialDetailsOpen:true` via the
+E1 fallback + `PostBlockEditorShell.tsx:83`) so the card's right pane shows Post settings
+by default. **KEEP** the **Block** tab (`PostDetailsSidebar.tsx:49-55`) + every
+`onChange*` handler (`PostBlockEditorShell.tsx:442-448`) + `data-post-editor-
+inspector="document"`. Optional cosmetic nudge: render Tags as soft `Badge` chips like
+`PostEditorPreview.tsx:98-102` (not required by any test).
 
-> **a11y is load-bearing here:** `post-block-inserter-wave.test.tsx:135-148` dispatches
-> `ArrowDown`+`Enter` on the `role="listbox"` container and asserts `onInsertBlock` fires,
-> and `post-editor-inserter-sidebar.test.tsx` mounts the sidebar — both must stay green.
-> So the inserter option keeps its `<Button role="option" aria-selected>` and only its
-> className changes. (The slash-menu, if it shares this markup, is therefore unaffected —
-> there is no element-type swap to scope.) Verify by `Read`ing `blocks/BlockInserter.tsx`
-> first; it is in the 497-02 Owning files.
+### E6 — Center canvas: already at parity — no change
 
-### B7 + B10 — Right inspector: flat "Post settings" + status header + `InspectorRow` + single SEO sub-card
+`PostEditorCanvas.tsx` is already the prototype's dotted-canvas + centered card: `:1354`
+`bg-dotted px-4 py-8…`, `:1359` `mx-auto … max-w-2xl rounded-2xl border bg-card p-6
+shadow-card`. Leave untouched (optional single-token nudge title `text-5xl`→`text-3xl` to
+match `PostEditorPreview.tsx:130`; **no** sample byline). The selection-gated
+`PostRichTextToolbar` is functional block editing (selection-driven) — not the "busy
+default toolbar"; it does not spoil the clean default look, no change.
 
-`inspector/DocumentInspector.tsx` today wraps every group in heavy `InspectorSection`
-cards (`InspectorSection.tsx:33` `space-y-3 rounded-xl border p-3`, uppercase titles +
-InfoTips) and **double-nests** SEO inside an "Advanced" section
-(`DocumentInspector.tsx:205-286`: outer "Advanced" → inner "Title, URL and excerpt"
-`:211` + "SEO summary" `:236`). Restyle to the prototype's light label-over-control
-rows and **one** muted SEO sub-card. **KEEP every `onChange*` handler** (wired from
-the shell `:441-447`) and the `data-post-editor-inspector="document"` hook (`:113`).
-**KEEP the Block tab** in `PostDetailsSidebar` (`:49-55`) — selection-driven block
-editing is required by the post block model; the prototype simply doesn't depict it.
+### E7 — Classic editor — OUT OF SCOPE (verify-only)
 
-```tsx
-// inspector/DocumentInspector.tsx — local light row helper (port PostEditorPreview.tsx:27-34)
-function InspectorRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="mb-3">
-      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
-      {children}
-    </div>
-  );
-}
-
-return (
-  <div className="space-y-4 p-4" data-post-editor-inspector="document">   // KEEP hook (:113)
-    {/* Flat header: "Post settings" + status badge (B7 + B10). proto :75-77 */}
-    <div className="mb-1 flex items-center justify-between">
-      <span className="text-sm font-semibold">Post settings</span>
-      <StatusBadge status={status} className="capitalize" />   {/* KEEP shared StatusBadge
-        (draft→secondary, StatusBadge.tsx:29). The prototype's "soft" Draft is an
-        optional cosmetic nuance (B10) — do NOT fork the shared StatusBadge map; the
-        regression tests do not assert a soft-only class on this badge. */}
-    </div>
-
-    {/* Post title — KEEP the existing title <Input> wired to onTitleChange (:213-214) as a
-        light row. The prototype omits a title field, but we KEEP it (exactly like the Block
-        tab is kept) so `onTitleChange` stays CONSUMED — dropping the row would strand the
-        destructured prop (ESLint --max-warnings=0 unused-var failure) AND break the
-        FUNCTIONAL post-document-inspector-wave.test.tsx:367 (`expect(onTitleChange)
-        .toHaveBeenCalledWith("Updated title")`, found by the input value "Hello world"). */}
-    <InspectorRow label="Post title">
-      {/* existing <Input value={title} onChange={(e) => onTitleChange(e.target.value)} /> (:213-214) */}
-    </InspectorRow>
-
-    {/* Publishing — keep StatusBadge + the timestamp <dl> (:120-133, incl. the "Last updated"
-        <dt> :122), unwrapped from InspectorSection, as light rows. The <dl> is
-        `formatTimestamp`'s SOLE consumer (:56-61 → :123/:127/:131), so it MUST be rendered
-        here (do NOT collapse Publishing to a bare StatusBadge): drop the <dl> and
-        `formatTimestamp` strands → `bun --cwd core lint` (`--max-warnings=0`) red-gates on
-        no-unused-vars AND the post-document-inspector.test.tsx:46 `toContain("Last updated")`
-        presentation-lock goes red. */}
-    <InspectorRow label="Status"><StatusBadge status={status} /></InspectorRow>
-    {/* keep the timestamps <dl> (:120-133) VERBATIM, directly under the Status row (no
-        InspectorSection wrapper) — this is what keeps `formatTimestamp` consumed: */}
-    <dl className="grid gap-2 text-xs text-muted-foreground">
-      <div className="flex items-center justify-between gap-3">
-        <dt>Last updated</dt>
-        <dd className="text-right text-foreground">{formatTimestamp(updatedAt)}</dd>
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <dt>Published</dt>
-        <dd className="text-right text-foreground">{formatTimestamp(publishedAt)}</dd>
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <dt>Scheduled</dt>
-        <dd className="text-right text-foreground">{formatTimestamp(scheduledAt)}</dd>
-      </div>
-    </dl>
-
-    <InspectorRow label="Category">
-      {/* the existing <Select value={categoryId…} onValueChange={onCategoryIdChange}>
-          block (:146-163) verbatim — handlers UNCHANGED, taxonomyLoading/error UI kept.
-          DROP the "Current category / Linked tag terms" bg-muted/30 summary box (:140-143)
-          so the SEO sub-card below is the ONLY bg-muted/30 (keeps the single-SEO test true). */}
-    </InspectorRow>
-
-    <InspectorRow label="Slug">
-      {/* existing slug <Input value={slug} onChange={onSlugChange}> (:218) +
-          className="font-mono text-xs" to match proto :87; keep slugDisplay note :219-224 */}
-    </InspectorRow>
-
-    <InspectorRow label="Tags (comma separated)">
-      {/* existing <Input value={tagsInput} onChange={onTagsInputChange}> (:185-189) */}
-    </InspectorRow>
-
-    <InspectorRow label="Featured image">
-      {/* existing <MediaPicker value={featuredImage} onChange={onFeaturedImageChange}> (:197-202) */}
-    </InspectorRow>
-
-    {/* Excerpt — keep <Textarea value={excerpt} onChange={onExcerptChange}> (:228-232) */}
-    <InspectorRow label="Excerpt">{/* … */}</InspectorRow>
-
-    {/* SINGLE muted SEO sub-card (collapse the double-nest). proto :114-125 */}
-    <div className="mt-4 rounded-xl border border-border bg-muted/30 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">SEO</span>
-        <Badge variant="outline">SEO {seoCompleteCount}/3</Badge>   {/* keep counter :208 */}
-      </div>
-      <InspectorRow label="SEO title">{/* <Input value={seo.title} onChange={onSeoChange({title})} /> :244-248 */}</InspectorRow>
-      <InspectorRow label="SEO description">{/* <Textarea value={seo.description} … /> :252-256 */}</InspectorRow>
-      <InspectorRow label="Canonical URL">{/* <Input value={seo.canonicalUrl} … /> :260-264 */}</InspectorRow>
-      <InspectorRow label="Robots">{/* existing robots <Select> :268-282 */}</InspectorRow>
-    </div>
-
-    {/* Danger zone — keep, but as a light bordered row (destructive Move to trash :288-306) */}
-  </div>
-);
-```
-
-> **Block tab unchanged.** `PostDetailsSidebar.tsx:44-57` keeps the Post/Block
-> `Tabs`, the `disabled={!hasBlock}` Block trigger (`:49-55`), and both
-> `data-post-editor-details-tab-trigger="document"|"block"` hooks (`:46,52`). Only
-> `DocumentInspector`'s internal layout changes.
-
-> **Lint guard (B7 flatten) — mirror the `onTitleChange` handling for the two symbols the
-> flatten STRANDS, or `bun --cwd core lint` (`--max-warnings=0`, AC#3/#7) red-gates on
-> `@typescript-eslint/no-unused-vars`:**
-> - **`taxonomySummary`** — dropping the "Current category / Linked tag terms" `bg-muted/30`
->   box (`DocumentInspector.tsx:140-143`) removes its **only** consumer (`:141-142`), so the
->   destructured `taxonomySummary` (`:86`) becomes unused. **Remove it from the destructure**
->   (it MAY stay in `DocumentInspectorProps` `:33-36` and keep being passed by the shell at
->   `PostBlockEditorShell.tsx:430` — an un-destructured prop is NOT a lint error).
-> - **`InspectorSection` import** (`DocumentInspector.tsx:17`) — the flatten replaces **every**
->   `<InspectorSection>` (used at `:114,136,193,205,211,236,288`) with `InspectorRow`/plain
->   `<div>`, so the import becomes unused. **Remove the import.** (Leave `InspectorSection.tsx`
->   itself in place — `PostDetailsSidebar`/other inspectors may still use it.)
->
-> **Kept-used (do NOT remove) — `formatTimestamp` (`:56-61`):** unlike the two stranded symbols
-> above, `formatTimestamp` stays REFERENCED, because B7 RETAINS its single consumer — the
-> timestamps `<dl>` (`:120-133`, used at `:123/:127/:131`), rendered verbatim under the Status
-> row in the Publishing pseudocode above. The "two symbols the flatten STRANDS" count above is
-> therefore exact (only `taxonomySummary` + the `InspectorSection` import are removed);
-> `formatTimestamp` and its `<dl>` are KEPT. If an implementer instead drops the `<dl>`
-> (collapsing Publishing to a bare StatusBadge), `formatTimestamp` becomes unused → the SAME
-> `--max-warnings=0` no-unused-vars red-gate, AND `post-document-inspector.test.tsx:46`
-> `toContain("Last updated")` goes red — so the `<dl>` is non-optional.
-
-### B8 — Canvas (near-parity, optional nudge only)
-
-`PostEditorCanvas.tsx` is **already at parity**: `:1354` `bg-dotted px-4 py-8…`,
-`:1359` `mx-auto … max-w-2xl rounded-2xl border bg-card p-6 shadow-card`. Optional
-single-token nudge: title `:1372` `text-5xl`→`text-3xl` to exactly match
-`PostEditorPreview.tsx:130`. **Do NOT** add the fixture byline. If skipped, leave the
-canvas untouched — the regression test guards `bg-dotted` + `max-w-2xl` either way.
-
-### B11 — Classic editor
-
-`PostClassicEditorShell.tsx` (routed `PostEditorPage.tsx:60-61`) is **OUT OF SCOPE**
-— no prototype reference. Do not restyle; only confirm it still renders on redesign
-tokens (its existing `post-classic-editor-shell-wave.test.tsx` must stay green).
+`PostClassicEditorShell.tsx` (routed `PostEditorPage.tsx:60-61`) has no prototype
+reference — do not restyle; only confirm it still renders on redesign tokens
+(`post-classic-editor-shell-wave.test.tsx` stays green).
 
 ---
 
@@ -597,238 +520,294 @@ Run from repo root (per [[local-cms-run-and-test]] / TASK-479 close-out norm):
 
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
-- **FUNCTIONAL posts suites — must stay GREEN, UNTOUCHED** (behavior, not chrome — do
-  **not** weaken to fit the restyle):
-  - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/posts/postEditorStore.test.ts tests/vitest/posts/post-editor-layout-state.test.ts tests/vitest/posts/post-editor-focus-return.test.ts tests/vitest/posts/post-editor-preferences.test.ts tests/vitest/posts/post-insert-flow.test.ts`
-  - DB-backed posts integration are **Bun-owned** (both `import … from "bun:test"`,
-    `tests/integration/posts/posts-revisions-flow.test.ts:1` + `posts-runtime-flow.test.ts:1`)
-    and are **not** under the vitest `include` glob (`vitest.config.ts:13` = `tests/vitest/**`)
-    nor the `test:bun` glob (`package.json:26` lists only routes/runtime/server/store/plugins),
-    so run them **explicitly via `bun test`** (NOT vitest — vitest would collect nothing /
-    fail to resolve `bun:test`), with the DB-test env per AGENTS.md:
+- **FUNCTIONAL posts suites — behavior, stay GREEN (do not weaken):**
+  - `NODE_ENV=test vitest run --config vitest.config.ts tests/vitest/posts/postEditorStore.test.ts tests/vitest/posts/post-editor-focus-return.test.ts tests/vitest/posts/post-editor-preferences.test.ts tests/vitest/posts/post-insert-flow.test.ts`
+  - DB-backed posts integration are **Bun-owned** (`bun:test`) and outside the vitest
+    glob — run explicitly with the DB-test env per AGENTS.md:
     `set -a && [ -f .env ] && . ./.env; set +a && bun test tests/integration/posts/posts-revisions-flow.test.ts tests/integration/posts/posts-runtime-flow.test.ts`
-  - Editor/list UI waves that touch **behavior** keep passing unchanged:
-    `post-block-editor-shell.test.tsx`, `post-block-editor-shell-wave.test.tsx`,
-    `post-details-sidebar-wave.test.tsx`, `post-editor-layout-render-wave.test.tsx`,
-    `post-editor-layout-hook-wave.test.tsx`, `post-classic-editor-shell-wave.test.tsx`
-    (B11 guard), `post-editor-canvas-wave.test.tsx`, `post-list-view-sidebar-wave.test.tsx`,
+  - Behavior-only editor/list waves stay green unchanged:
+    `post-details-sidebar-wave.test.tsx`,
+    `post-classic-editor-shell-wave.test.tsx` (E7 guard), `post-editor-canvas-wave.test.tsx`,
     `post-block-inserter-wave.test.tsx` (its `ArrowDown`+`Enter` listbox insertion path is
-    preserved by the B6 className-only restyle).
-- **PRESENTATION-LOCK suites — must be UPDATED (re-baselined to the new look, NOT
-  weakened).** These render the **real** header/inspector/list (no mocks) and assert the
-  exact first-pass chrome this restyle deliberately changes; they all run under the
-  `bun run test:vitest` closure gate (`vitest.config.ts:13` include = `tests/vitest/**`,
-  which covers `tests/vitest/ui-integration/`), so the restyle is impossible without
-  editing them. Re-point only the changed strings; keep every functional assertion:
-  - `tests/vitest/ui/post-document-inspector-wave.test.tsx` — re-baseline the two
-    presentation strings the flatten removes: `:300` `"Current category: Not assigned"`
-    (the `bg-muted/30` category summary box is dropped) and `:320`
-    `"SEO fields completed: 0/3"` (replaced by the `Badge` `"SEO 0/3"`). **KEEP** all the
-    functional callback assertions (`:364-374`: onCategoryIdChange / onTagsInputChange /
-    onFeaturedImageChange / **onTitleChange** / onSlugChange / onExcerptChange / onSeoChange ×4
-    / onMoveToTrash) green — B7 keeps the Post title row + every control + Danger zone, and
-    `:321` `"Public URL:"` survives (slugDisplay note kept).
-  - `tests/vitest/ui-integration/post-document-inspector.test.tsx` — re-point `:39`
-    `"Publishing"`, `:40` `"Categories and tags"`, `:44` `"Advanced"`, `:45`
-    `"Current category"` (all dropped by the flatten) to the new flat labels
-    (`"Post settings"` / the `InspectorRow` `"Status"`+`"Category"` labels). **KEEP** `:41`
-    `"Featured image"`, `:42` `"Danger zone"`, `:43` `"Move to trash"`, `:46` `"Last updated"`
-    (B7 preserves all four).
-  - `tests/vitest/ui-integration/post-editor-shell-restyle.test.tsx` — `:25`
-    `toContain("Publishing")` (and the inverted comment `:24` "(NOT an invented single
-    'Post settings' header)") is the designed inverse of B7 → re-baseline to
-    `toContain("Post settings")`. **KEEP** `:26` `"Featured image"`, `:28` `"Publish"`, and
-    the canvas-card test `:62-64` (`rounded-2xl`/`max-w-2xl`/`shadow-card` — B8 leaves the
-    canvas card untouched) and the reducer-dirty test `:67-76` green.
-  - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx` — drop `:33`
-    `data-post-editor-header-cluster="secondary-controls"` (the secondary row is removed),
-    and replace the visible-text checks `:35` `"Add block"` + `:36` `"Outline"` (labels
-    demoted to icons) with the preserved `aria-label`/`title` equivalents — `"Toggle block
-    inserter"` (static) and, because this suite seeds `outlineVisible: true` (`:23`), the
-    outline toggle's computed label is `"Hide document overview"` (PostEditorHeader.tsx:64
-    `outlineVisible ? "Hide document overview" : "Show document overview"`), so assert
-    `"Hide document overview"` — **not** `"Show document overview"`. (This suite renders via
-    `renderToString` and asserts on the `html` string, so re-point with
-    `html.toContain("Hide document overview")` / `html.toContain("Toggle block inserter")`, or
-    robustly `expect(/document overview/i.test(html)).toBe(true)` — it does **not** use
-    `screen`/`getByRole`, mirroring its existing `renderToString`+`toContain` idiom.) **KEEP** `:32`
-    `primary-actions`,
-    `:34` close, `:37` `"Revisions"` (title attr kept), `:38` `"Preview"`, `:39`
-    `"Editor settings"`, and the saving/dirty + publish-label tests green.
-  - `tests/vitest/ui-integration/post-editor-layout-shell.test.tsx` — drop `:16`
-    `data-post-editor-header-cluster="secondary-controls"`. **KEEP** `:14`
-    `secondary-sidebar`, `:15` `primary-actions`, `:17` close, `:18` left-rail-mode, `:19`
-    `"List view"`, `:20` `"Loading post editor"`, `:21` `"Document Outline"`, `:22`
-    `"Move to trash"` (all preserved).
-  - `tests/vitest/ui-integration/post-editor-writing-canvas-flow.test.tsx` — its FIRST
-    test renders `PostEditorTopBar`; replace `:33` `"Outline"` (header label demoted to an
-    icon) with the preserved `aria-label`/`title` — this suite also seeds `outlineVisible:
-    true` (`:24`), so the computed label is `"Hide document overview"` (PostEditorHeader.tsx:64),
-    **not** `"Show document overview"`; assert `"Hide document overview"` (or a
-    `/document overview/i` match). **KEEP** the
-    `PostListViewPanel` test (`Section`/`CTA block`/`Embed block`) green.
-  - **Verified NOT broken (leave untouched):** `tests/vitest/ui-integration/post-list-restyle.test.tsx`
-    — its `:38` `toContain("shadow-card")` renders `<PostsListPage>` in the **loading**
-    state, whose loading card (`PostsListPage.tsx:513`) independently carries `shadow-card`
-    (untouched; A4 only changes the `PostsTable` wrapper `:77`), and its `:60` asserts
-    `rounded-2xl` (A4 keeps it) — so it stays GREEN; and
-    `post-editor-listview-outline.test.tsx:46` `"Outline"` is the **rail tab** label
-    (preserved), not the demoted header toggle.
-- **NEW restyle suite:** `tests/vitest/ui/posts-editor-chrome-wave.test.tsx`
-  (Section "Regression-test shape").
+    preserved by the E2 className-only restyle), `post-editor-inserter-sidebar.test.tsx`
+    (`PostInserterSidebar` kept).
+  - **NOT in the unchanged set (moved to the re-baseline list below — they render the REAL
+    shell/hook and assert the exact affordances E1/E2 change):** `post-block-editor-shell.test.tsx`
+    (asserts the literal `"Document Outline"` / `"List view"` / `data-post-editor-outline-insert`
+    strings E2 relocates — :12,:13,:18), `post-editor-layout-hook-wave.test.tsx` (hard-asserts the
+    OLD default `"outline"` + the old `showInserter` derivation E1 changes — :66,:173,:193),
+    `post-block-editor-shell-wave.test.tsx` (a **TWO-anchor re-baseline** — NOT one line, and
+    NOT "not a weakening": (a) its malformed-stored-layout tolerance test — `"tolerates malformed
+    stored layout fields"` at :1129 — seeds `leftRailMode:"also-bad"` (:1140) and hard-asserts the
+    shell falls back to `initialLeftRailMode:"outline"` (:1155). E1's E-store change makes the
+    malformed fallback default `"blocks"` (see E1 `:227`), so :1155 goes RED — re-point :1155
+    `"outline"` → `"blocks"`. **(b) the `source:"sidebar"` insert assertion also breaks:** this
+    suite mocks `usePostEditorLayout` with `showInserter:true` (:25), so TODAY the shell renders the
+    MOCKED `PostInserterSidebar` (:474-491), which provides the `"insert-paragraph"` button
+    (:486-487 → `onInsertBlock("paragraph")` → shell `source:"sidebar"`) clicked at :620 and
+    hard-asserted at :635-638 (`insertBlock("paragraph", { source: "sidebar", target:{...} })`).
+    E2 COLLAPSES the `layout.showInserter ? <PostInserterSidebar/> : <PostListViewSidebar/>` branch
+    (`PostBlockEditorShell.tsx:455-485`) into ONE unified `PostListViewSidebar` whose insert path
+    uses `source:"outline-plus"`, so `PostInserterSidebar` no longer renders in the shell:
+    `"insert-paragraph"` never mounts, the `.find(...)?.click()` no-ops, and the `source:"sidebar"`
+    assertion goes RED. **Re-point that assertion to the unified rail's palette insert
+    (`source:"outline-plus"` — behaviorally identical in `resolvePostInsertMutation`, already
+    exercised by the mock's `"insert-heading"` button at :517-518 / assertion at :804), OR remove
+    the `insert-paragraph` click+assertion** (:620,:635-638). Also note the `"close-inserter"`
+    button (:619, from the same dropped `PostInserterSidebar` mock) no longer renders, so the
+    `closeSecondarySidebar` coverage that click provided now comes SOLELY from
+    `"close-secondary-shell"` (:621, assertion :631). Its `source:"outline-plus"` assertion at :804
+    and the toggle-outline `setLeftRailMode("outline")` assertions at :632,:850 **STAY GREEN** — the
+    Outline toggle is preserved. This is a pure test-anchor break (not a functional regression), but
+    it still fails the gate if only :1155 is touched — do NOT describe it as a "one-line, not a
+    weakening" re-baseline).
+- **CONTRACT / PRESENTATION-LOCK suites — UPDATED (re-baselined to the new look, NOT
+  weakened).** They render the **real** header/layout/inspector and assert the exact
+  chrome this re-scope changes; re-point only the changed strings, keep every functional
+  assertion:
+  - `tests/vitest/posts/post-editor-layout-state.test.ts` — **contract lock for
+    Extension #1:** re-baseline default `leftRailMode` `"outline"` → `"blocks"`; add a
+    `blocks → outline → list-view` transition; keep all existing open/close/focus-restore
+    transitions green.
+  - `tests/vitest/ui-integration/post-editor-shell-restyle.test.tsx` — **ADD** the new
+    look: an in-page `PageHeader` renders the description `"Write, format, and publish
+    your story."` + Preview/Publish in `PageHeader.actions`; the editor is wrapped in the
+    framed card (`data-post-editor-frame` / `rounded-2xl` + `shadow-card` on the frame).
+    Re-point the old `toContain("Publishing")` inverse to `"Post settings"`. KEEP the
+    canvas-card test (`rounded-2xl`/`max-w-2xl`/`shadow-card`) + the reducer-dirty test.
+  - `tests/vitest/ui-integration/post-editor-header-workflow.test.tsx` — **mount change
+    REQUIRED (this suite renders `PostEditorTopBar` in ISOLATION via
+    `renderToString(<PostEditorTopBar .../>)` at :30, NOT the full shell).** E3/E4 MOVE the
+    entire `PostEditorActionCluster` (Preview / Save draft / Publish / `data-post-editor-header-
+    cluster="primary-actions"` / the saving-`disabled` state / the `"Update"` publish-label flip)
+    OUT of `PostEditorHeader`/`PostEditorTopBar` into shell-built `pageActions` passed to
+    `PostEditorLayout`'s `PageHeader` — a **sibling** of, not nested inside, `PostEditorTopBar`.
+    Those buttons therefore no longer exist in a TopBar-only mount, so the primary-actions /
+    Preview (:41) / saving-`disabled` (:51) / `"Update"` (:59) assertions (:32,:41,:51,:59) **must
+    move onto a full-shell mount** — either relocate them to `post-editor-shell-restyle.test.tsx` /
+    the `posts-editor-chrome-wave` regression (both of which mount `renderAdminUi(<PostBlockEditor
+    Shell/>)` so `pageActions` is in the DOM), or change this suite's first test to mount the full
+    shell. **Also the dynamic-title assertion `toContain("Header workflow")` (:43) breaks the same
+    way:** E4 makes the chrome bar's left context a STATIC `"Post editor"` span (E4 above) and moves
+    the dynamic post title/breadcrumbs (the `breadcrumbs` prop that carries `"Header workflow"`, via
+    `PostEditorHeader` leftContext — `PostEditorHeader.tsx:92,122`) to the in-page `PageHeader`,
+    which does NOT render in a `renderToString(<PostEditorTopBar/>)` isolation mount. So **move :43
+    onto the full-shell mount too** (where the `PageHeader` renders `editor.title`), OR re-point the
+    TopBar-mount assertion to the new static chrome-bar title `"Post editor"`. Note that the
+    `title`/`breadcrumbs` props to `PostEditorTopBar`/`PostEditorHeader` become **vestigial** once the
+    dynamic title lives in `PageHeader`. **KEEP against the TopBar mount only the true chrome-bar affordances:** the six icon
+    toggles via preserved `aria-label`/`title` (`"Toggle block inserter"`, and — since this suite
+    seeds `outlineVisible:true` — `"Hide document overview"`), `data-post-editor-header-close`,
+    Revisions, Editor settings, and the sync badge (`"Saving..."`). Drop any
+    `data-post-editor-header-row="secondary"` / `secondary-controls` check (single strip). Do
+    **not** try to "re-point a demoted-label check to a preserved TopBar aria-label" for
+    Preview/Publish — they are moved-out primary actions, not demoted-to-icon toggles.
+  - `tests/vitest/ui-integration/post-editor-layout-shell.test.tsx` — assert the
+    `PageHeader` + framed card render; `secondary-sidebar` region uses `bg-muted/20`; the
+    left rail's **Blocks** tab is the default (`data-post-editor-left-rail-tab="blocks"`
+    present + selected). Re-point the three breaking string assertions (peer-precise, mirroring
+    shell.test :12/:13/:18): **:19** `data-post-editor-left-rail-mode="outline"` → `"blocks"`
+    (Blocks is now the default — E1); **:20** `"List view"` → `"List"` (the renamed rail-tab
+    label — E2); **:22** `"Document Outline"` → a stable rail marker (the retained
+    `post-editor-document-overview` id / the Outline tab label — E2 relocates it to a tab). KEEP
+    `primary-actions`, close, `"Loading post editor"`, `"Move to trash"`, and the **Outline** +
+    **List** tabs present.
+  - `tests/vitest/ui-integration/post-editor-listview-outline.test.tsx` — re-baseline to
+    the **three-tab** rail (Blocks default | Outline | List); the `"Document Outline"` (:41)
+    and `"List view"` (:45) copy is re-pointed to the new rail-tab labels / a stable marker
+    (the outline-insert hook at :47 is **kept** — re-homed into the Outline tab per E2); keep
+    the Outline/List panel behavior assertions.
+  - `tests/vitest/ui/post-block-editor-shell.test.tsx` — **re-baseline (moved out of the
+    unchanged bucket):** it renders the real shell (no mocks) and asserts the exact strings E2
+    relocates — re-point `"Document Outline"` (:12) + `"List view"` (:18) to the new rail-tab
+    labels / a stable marker (e.g. `data-post-editor-left-rail-tab="blocks"`), and keep the
+    `data-post-editor-outline-insert="true"` assertion (:13 — the dropdown is re-homed into the
+    Outline tab, not dropped).
+  - `tests/vitest/ui/post-editor-layout-hook-wave.test.tsx` — **contract lock for Extension #1
+    (moved out of the unchanged bucket):** re-baseline the invalid-mode normalize default (:66)
+    `"outline"` → `"blocks"`, and rewrite the `showInserter` expectations (:173 / :193) to the new
+    "rail-open AND `leftRailMode === "blocks"`" semantics; keep every other transition/focus-
+    restore assertion.
+  - `tests/vitest/ui/post-block-editor-shell-wave.test.tsx` — **TWO-anchor re-baseline (moved out
+    of the unchanged bucket) — NOT a single line:** (a) the `"tolerates malformed stored layout
+    fields"` test (:1129) seeds a stored `leftRailMode:"also-bad"` (:1140) and hard-asserts the
+    shell's malformed-storage fallback resolves `initialLeftRailMode:"outline"` (:1155). E1's
+    E-store change (`:227`) flips the malformed fallback default to `"blocks"`, so re-point :1155
+    `"outline"` → `"blocks"` (the malformed-tolerance behavior is unchanged). **(b)** because this
+    suite mocks `showInserter:true` (:25), the shell TODAY renders the mocked `PostInserterSidebar`
+    (:474-491) and its `"insert-paragraph"` click (:620) hard-asserts `insertBlock("paragraph", {
+    source: "sidebar" })` (:635-638). E2 collapses the `showInserter ? <PostInserterSidebar/> :
+    <PostListViewSidebar/>` branch (`PostBlockEditorShell.tsx:455-485`) into the ONE unified
+    `PostListViewSidebar` (insert path `source:"outline-plus"`), so `PostInserterSidebar` — and its
+    `"insert-paragraph"` (:620) + `"close-inserter"` (:619) buttons — no longer render; the
+    `source:"sidebar"` assertion goes RED. **Re-point the :620/:635-638 assertion to the unified
+    rail's palette insert (`source:"outline-plus"` — identical in `resolvePostInsertMutation`,
+    already covered by the mock's `"insert-heading"` at :517-518 / assertion :804), OR remove it;
+    and note `"close-inserter"` (:619) no longer renders so its `closeSecondarySidebar` coverage now
+    comes solely from `"close-secondary-shell"` (:621, assertion :631).** **KEEP** the
+    `source:"outline-plus"` assertion (:804 — the E2 Blocks-tab insert reuses that source) and the
+    toggle-outline `setLeftRailMode("outline")` assertions (:632,:850 — the Outline toggle is
+    preserved) green. Pure test-anchor break (no functional regression), but touching only :1155
+    fails the gate — this is **not** a one-line re-baseline.
+  - `tests/vitest/ui-integration/post-editor-smoke-regression.test.tsx` — **re-baseline (was
+    unlisted):** it renders the real page SSR and asserts `"Document Outline"` (:14, :35);
+    re-point those to a stable rail marker that survives the restyle (e.g.
+    `data-post-editor-region="secondary-sidebar"` or the retained `post-editor-document-overview`
+    id). KEEP the classic-route `not.toContain("Document Outline")` at :25 as-is.
+  - `tests/vitest/ui/post-list-view-sidebar-wave.test.tsx` — **re-baseline (was unlisted):** E2
+    restructures `PostListViewSidebar` from a 2-tab to a 3-tab rail (adds the **Blocks** tab
+    hosting a real `forceMount` `BlockInserter`, drops the `"Document Outline"` header, renames
+    `"List view"`→`"List"`). This suite mounts `PostListViewSidebar` directly (:188) and does NOT
+    mock `BlockInserter`, so mock `BlockInserter` here (as it already mocks the other tab bodies)
+    or assert the new three-tab shape; re-confirm the `[data-tabs-value='list-view']` (:209) +
+    button-textContent lookups still resolve. Thread the new `recentlyUsedTypes` prop (see E2
+    shell wiring).
+  - `tests/vitest/ui-integration/post-document-inspector.test.tsx` — inspector is already
+    flat (E5, no change): keep `"Post settings"`, the `InspectorRow` labels,
+    `"Featured image"`, `"Danger zone"`, `"Move to trash"`, `"Last updated"`, single SEO
+    sub-card green (no edits expected beyond any that already landed in the first pass).
+  - `tests/vitest/ui-integration/post-editor-writing-canvas-flow.test.tsx` — its first
+    test renders `PostEditorTopBar` in ISOLATION (`renderToString(<PostEditorTopBar .../>)` at
+    :31). The `"Preview"` (:36) + `"Publish"` (:37) assertions target the moved-out
+    `PostEditorActionCluster` (E3/E4 relocate it to the shell's `PageHeader` `pageActions`), so —
+    like `post-editor-header-workflow.test.tsx` — they are **NOT** demoted-to-icon toggles with a
+    preserved TopBar `aria-label` to re-point to. **Move the :36/:37 Preview/Publish assertions
+    onto a full-shell mount** (relocate to `post-editor-shell-restyle` / the `posts-editor-chrome-
+    wave` regression, or mount `PostBlockEditorShell` here) so `pageActions` is in the DOM; keep
+    the Outline-toggle `"Hide document overview"` icon assertion against the TopBar mount. KEEP the
+    `PostListViewPanel` test green.
+  - **Verify after E1 (should stay green, but re-run because E1 touches `openInserter` +
+    the `showInserter` derivation):** `tests/vitest/ui/post-editor-support-wave-2.test.tsx`
+    exercises the reducer/hook transitions directly (`createPostEditorLayoutState` shape :240-247;
+    the `openInserter`+`setLeftRailMode`+`showInserter` chain expecting `showInserter===false`
+    with `leftRailMode:"list-view"` at :282). Its assertions **should** survive the new derivation,
+    but if the `openInserter` two-dispatch form shifts them, re-baseline them to match — do not
+    assume it is frozen.
+  - **Verify after E4 — re-run because E4 REWRITES `PostEditorLayout` (full-bleed shell →
+    padded `AdminShell` + in-page `PageHeader` + framed card):** the three suites that mount
+    `PostEditorLayout` DIRECTLY with the OLD prop set (no PageHeader props) —
+    `tests/vitest/ui-integration/post-editor-layout-responsive.test.tsx` (3 tests) and
+    `tests/vitest/ui/post-editor-layout-render-wave.test.tsx` (2 tests). They should STAY green
+    (regions / density / compact widths / matchMedia / mobile Sheets are all preserved; the
+    `data-post-editor-density` attr moves onto the framed-card `div`, but the SSR string still
+    contains it), **provided the new PageHeader props are declared OPTIONAL** (see E4 above) — if
+    they were required these two suites (and `post-editor-keyboard-a11y.test.tsx` test 2, below)
+    would fail `lint:types`. Re-run and re-baseline only if a token genuinely moved.
+  - **Verified NOT broken (leave untouched):** `post-list-restyle.test.tsx` (list track,
+    497-01), `post-editor-details-tabs.test.tsx` (Block tab kept),
+    `post-editor-keyboard-a11y.test.tsx` (aria hooks preserved — but note its **test 2 mounts
+    `PostEditorLayout` directly** at :79 with no PageHeader props, so its "untouched" green status
+    likewise DEPENDS on the new PageHeader props being OPTIONAL per E4).
+- **REPLACE / re-baseline (NOT a new file) — `tests/vitest/ui/posts-editor-chrome-wave.test.tsx`
+  ALREADY EXISTS and is committed (HEAD, 453 lines).** It currently encodes the **rejected
+  first-pass** look: it mocks `leftRailMode: "outline"` (:24,:32 — the old default) and its
+  describe only asserts the single chrome strip / `bg-muted/40` / autosave badge / `bg-muted/20`
+  rail — it does **NOT** assert the in-page `PageHeader`, the framed card
+  (`data-post-editor-frame` / `rounded-2xl` / `shadow-card`), the `"Write, format, and publish
+  your story."` description, or the Blocks-default tab. **Overwrite** the stale describe body +
+  its `leftRailMode:"outline"` mock with the regression shape below (Section "Regression-test
+  shape"); do **not** append a second describe and leave the old outline-default assertions as a
+  false green. (This is a re-baseline of a committed file, so — like
+  `post-editor-layout-state.test.ts` — it does **not** move the test-file count.)
 - Full `bun test` (vitest + `test:bun`) + `gates:coderso` (5/5) green.
 - Runtime smoke via `coderso-dev-core-host` + `playwright-cli`
-  (`http://coderso-a.localhost:5173/admin/posts` → open a post): single chrome strip,
-  autosave badge text live-updates, Save draft + Publish(Rocket) + undo/redo +
-  device toggle work, Block tab still selectable after clicking a block, inspector
-  rows + single SEO sub-card render. White page = server down → re-run helper.
+  (`http://coderso-a.localhost:5173/admin/posts` → open a post; light + dark): an in-page
+  `PageHeader` (title + description + Preview/Save draft/Publish) ABOVE a bordered rounded
+  card; card chrome bar ("Post editor" + autosave badge + undo/redo + device toggle + the
+  six toggles); LEFT rail defaults to **Blocks** (the palette) with Outline/List tabs
+  reachable; dotted canvas clean article; RIGHT "Post settings" inspector open; Block tab
+  still selectable after clicking a block. White page = server down → re-run helper.
 
 ---
 
 ## Regression-test shape
 
 `tests/vitest/ui/posts-editor-chrome-wave.test.tsx` — render the **real**
-`PostBlockEditorShell` so the assertions below see real classNames/aria.
-
-> **Do NOT literally mirror `post-block-editor-shell-wave.test.tsx`'s mocks.** That suite
-> mocks away `PostEditorLayout` (`:347`), `PostEditorTopBar` (`:400`), `PostInserterSidebar`
-> (`:474`), `PostListViewSidebar` (`:493`), `PostDetailsSidebar` (`:322`), and
-> `PostEditorCanvas` (`:381`) — i.e. **exactly** the components whose real header/region/
-> inspector/canvas classNames + undo/redo buttons these new assertions target — so a literal
-> mirror yields an all-failing test. Instead:
-> - Mock **only the data/seam hooks** (`usePostEditorState` / `usePostEditorLayout` /
->   `usePostEditorPreferences` / `usePostEditorShortcuts` / `useFocusReturn` + router /
->   taxonomy / `sonner` / `RuntimePreviewDialog`). Leave `PostEditorLayout`/`PostEditorTopBar`/
->   the sidebars/inspector/canvas **real**.
-> - The desktop regions only mount when `isDesktopViewport` is true (`PostEditorLayout.tsx:76-84`),
->   and happy-dom's `matchMedia` defaults `matches:false` → the secondary-sidebar/sidebar
->   regions would never render. **Stub `matchMedia` `matches:true`** (the pattern at
->   `post-editor-layout-render-wave.test.tsx:124` `vi.stubGlobal("matchMedia", …)`) **or**
->   force `viewportMode="desktop"` (`:194`) so those regions mount.
-> - For the "undo/redo disabled on fresh load" case, override the `usePostEditorState` mock's
->   `canUndo`/`canRedo` to **false** (the shell-wave mock seeds them `true`).
+`PostBlockEditorShell` so the assertions see real classNames/aria. **Do NOT** mirror
+`post-block-editor-shell-wave.test.tsx`'s mocks (it mocks away `PostEditorLayout` /
+`PostEditorTopBar` / the sidebars / inspector / canvas — exactly the components these
+assertions target). Instead mock **only the data/seam hooks** (`usePostEditorState` /
+`usePostEditorLayout` / `usePostEditorPreferences` / `usePostEditorShortcuts` /
+`useFocusReturn` + router / taxonomy / `sonner` / `RuntimePreviewDialog`), leave the
+layout/topbar/sidebars/inspector/canvas **real**, and stub `matchMedia` `matches:true`
+(or force `viewportMode="desktop"`) so the desktop regions mount
+(`PostEditorLayout.tsx:76-84`; pattern at `post-editor-layout-render-wave.test.tsx:124`).
 
 > **Test idiom (repo convention — NOT `@testing-library`):** this repo has **no**
-> `@testing-library/react` (not in `package.json`/`core/package.json`, not in `node_modules`)
-> and **no** `jest-dom` (`tests/setup/vitest.ts:3-28` registers only `toBeTrue`/`toBeFalse`/
-> `toBeObject`), and **adding them is out of scope** (TASK-497-03 lists "changing the `bun test`
-> / vitest runner config" + "no production code beyond the new test file(s)" as out of scope, so
-> the fix is to *translate the assertions*, **not** add the infra). So **do NOT** write
-> `import { screen, fireEvent } from "@testing-library/react"` or use `.toBeDisabled()` /
-> `.toHaveAttribute(...)` — the module is unresolved (red `bun --cwd core lint:types`) and the
-> matchers are undefined (throw at runtime → red `bun run test:vitest`). Mirror the existing wave
-> idiom verbatim: a top-of-file `// @vitest-environment happy-dom` docblock (**required** —
-> `vitest.config.ts` defaults `environment: node`, which has no DOM), mount via `createRoot` +
-> `React.act` (copy the `mount` helper from `post-editor-layout-render-wave.test.tsx:79-103`,
-> here named `renderEditor()` → returns `{ container }`), and assert via
-> `container.querySelector(...)` / `Array.from(container.querySelectorAll("button")).find(...)`.
-> Translations used below: `screen.getByText(re)` → `container.querySelector(sel)?.textContent`
-> + `.toContain`/`.toMatch`; `screen.getByLabelText("X")` → `container.querySelector('[aria-label="X"]')`;
-> `screen.getByRole("button",{name:re})` → `Array.from(scope.querySelectorAll("button")).find(b =>
-> re.test(b.getAttribute("aria-label") ?? ""))`; `.toBeDisabled()` →
-> `expect(el?.hasAttribute("disabled")).toBe(true)`; `.toHaveAttribute("aria-controls", id)` →
-> `expect(el?.getAttribute("aria-controls")).toBe(id)`; `.toHaveAttribute("aria-pressed")`
-> (presence) → `expect(el?.hasAttribute("aria-pressed")).toBe(true)`; `fireEvent.click(el)` →
-> `React.act(() => el?.dispatchEvent(new MouseEvent("click", { bubbles: true })))`. The
-> `getAttribute(...).className.toContain(...)` template is already correct in the first/rail/
-> inspector/canvas cases — the rest are translated to match.
-
-Assertions (repo idiom — `renderEditor()` = the `createRoot` helper above; `React` imported):
+> `@testing-library/react` / `jest-dom`, and **adding them is out of scope** (TASK-497-03).
+> So **do NOT** import `screen`/`fireEvent`/`.toBeDisabled()`. Mirror the wave idiom: a
+> top-of-file `// @vitest-environment happy-dom` docblock (**required**), mount via
+> `createRoot` + `React.act` (copy the `mount` helper from
+> `post-editor-layout-render-wave.test.tsx:79-103`, here `renderEditor()` → `{ container }`),
+> assert via `container.querySelector(...)` / `Array.from(...querySelectorAll("button")).find(...)`.
 
 ```tsx
-describe("TASK-497-02 post editor chrome restyle", () => {
-  it("renders a single muted chrome strip (no secondary toolbar row)", () => {
+describe("TASK-497-02 post editor prototype parity", () => {
+  it("renders an in-page PageHeader (description + Preview/Publish in actions) ABOVE a framed card", () => {
     const { container } = renderEditor();
-    expect(container.querySelector('[data-post-editor-header-row="primary"]')).toBeTruthy();
-    // collapsed: the labeled second row is gone
+    expect(container.textContent).toContain("Write, format, and publish your story.");
+    const frame = container.querySelector('[data-post-editor-frame="true"]');
+    expect(frame?.className).toContain("rounded-2xl");
+    expect(frame?.className).toContain("shadow-card");
+    // Preview + Publish live in the PageHeader actions, ABOVE the frame (not the chrome strip)
+    expect(container.querySelector('[aria-label="Open runtime preview"]')).toBeTruthy();
+    expect(
+      Array.from(container.querySelectorAll("button")).some((b) =>
+        /Publish post|Update published post/.test(b.getAttribute("aria-label") ?? ""),
+      ),
+    ).toBe(true);
+  });
+
+  it("chrome bar: single strip with title, autosave badge, undo/redo, device toggle", () => {
+    const { container } = renderEditor();
+    const header = container.querySelector('[data-post-editor-region="header"]');
+    expect(header?.className).toContain("bg-muted/40");
     expect(container.querySelector('[data-post-editor-header-row="secondary"]')).toBeNull();
-    // header region surface reads the muted chrome token
-    expect(container.querySelector('[data-post-editor-region="header"]')?.className)
-      .toContain("bg-muted/40");
+    expect(container.querySelector('[data-post-editor-sync-state="true"]')?.textContent)
+      .toMatch(/Saving\.\.\.|Unsaved changes|Saved at|Synced/);
+    expect(container.querySelector('[aria-label="Undo"]')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Desktop preview"]')).toBeTruthy();
   });
 
-  it("keeps autosave badge with dynamic sync text", () => {
-    const { container } = renderEditor();
-    // the Badge carries data-post-editor-sync-state="true" (PostEditorActionCluster) — scope
-    // to it instead of a global text match, so the dynamic syncLabel is read off the real node.
-    const badge = container.querySelector('[data-post-editor-sync-state="true"]');
-    expect(badge?.textContent).toMatch(/Saving\.\.\.|Unsaved changes|Saved at|Synced/);
-  });
-
-  it("wires undo/redo and disables them when no history", () => {
-    // override the usePostEditorState mock's canUndo/canRedo to false for THIS render
+  it("undo/redo disabled when no history (override the mock canUndo/canRedo → false)", () => {
     const { container } = renderEditor();
     expect(container.querySelector('[aria-label="Undo"]')?.hasAttribute("disabled")).toBe(true);
     expect(container.querySelector('[aria-label="Redo"]')?.hasAttribute("disabled")).toBe(true);
   });
 
-  it("exposes Save draft, Preview, and Publish(Rocket; Update when published)", () => {
+  it("LEFT rail defaults to Blocks; Outline + List survive as sibling tabs", () => {
     const { container } = renderEditor();
-    expect(container.querySelector('[aria-label="Save draft"]')).toBeTruthy();
-    expect(container.querySelector('[aria-label="Open runtime preview"]')).toBeTruthy();
-    // Publish aria-label is status-driven ("Publish post" | "Update published post")
-    const publish = Array.from(container.querySelectorAll("button")).find((b) =>
-      /Publish post|Update published post/.test(b.getAttribute("aria-label") ?? ""),
-    );
-    expect(publish).toBeTruthy();
+    const region = container.querySelector('[data-post-editor-region="secondary-sidebar"]');
+    expect(region?.className).toContain("bg-muted/20");
+    // three tabs; Blocks is the default (Extension #1)
+    expect(container.querySelector('[data-post-editor-left-rail-tab="blocks"]')).toBeTruthy();
+    expect(container.querySelector('[data-post-editor-left-rail-tab="outline"]')).toBeTruthy();
+    expect(container.querySelector('[data-post-editor-left-rail-tab="list-view"]')).toBeTruthy();
+    // EditorRail IS consumed: the Blocks palette wraps its sections in EditorRailGroup
+    expect(container.querySelector("[data-editor-rail-group]")).toBeTruthy();
+    // the default rail mode is "blocks"
+    expect(container.querySelector('[data-post-editor-left-rail-mode="blocks"]')).toBeTruthy();
   });
 
-  it("preserves toggle a11y + shortcut hooks after demoting labels to icons", () => {
+  it("preserves the six chrome toggles' a11y + shortcut hooks after demoting labels to icons", () => {
     const { container } = renderEditor();
-    const add = container.querySelector('[aria-label="Toggle block inserter"]');
+    const header = container.querySelector('[data-post-editor-region="header"]');
+    const add = header?.querySelector('[aria-label="Toggle block inserter"]');
     expect(add?.getAttribute("aria-controls")).toBe("post-editor-block-inserter");
     expect(add?.hasAttribute("aria-pressed")).toBe(true);
     expect(add?.getAttribute("data-post-editor-shortcut")).toBeTruthy();
-    // Scope to the header BUTTON: PostListViewSidebar's region also carries
-    // aria-label="Document overview sidebar" (PostListViewSidebar.tsx:62), so a bare
-    // container-wide /document overview/i match is ambiguous (2 nodes) whenever the
-    // list-view sidebar is mounted. Scope the .find(...) to the header strip's <button>.
-    const header = container.querySelector('[data-post-editor-region="header"]');
     const outline = Array.from(header?.querySelectorAll("button") ?? []).find((b) =>
       /document overview/i.test(b.getAttribute("aria-label") ?? ""),
     );
     expect(outline?.getAttribute("aria-controls")).toBe("post-editor-document-overview");
   });
 
-  it("optional device toggle is wired (aria-pressed) and changes nothing on the network", () => {
+  it("RIGHT inspector is flat 'Post settings' with a single SEO sub-card + Block tab, default open", () => {
     const { container } = renderEditor();
-    const desktop = container.querySelector('[aria-label="Desktop preview"]');
-    const mobile = container.querySelector('[aria-label="Mobile preview"]');
-    React.act(() => {
-      mobile?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
-    // same reconciled node — its aria-pressed flips to "false" after selecting mobile
-    expect(desktop?.getAttribute("aria-pressed")).toBe("false");
-  });
-
-  it("left rail region uses bg-muted/20 and inserter is wrapped in EditorRailGroup with active rail token", () => {
-    // render with the inserter OPEN (layout.showInserter:true) so the rail-group host mounts
-    const { container } = renderEditor(/* inserterOpen */);
-    const region = container.querySelector('[data-post-editor-region="secondary-sidebar"]');
-    expect(region?.className).toContain("bg-muted/20");
-    // EditorRail.tsx IS consumed (parent AC#5): the inserter sections are wrapped in
-    // EditorRailGroup (emits data-editor-rail-group). Guards EditorRail.tsx against shipping
-    // as a dead/unconsumed module. NOTE — PostBlockEditorShell.tsx:454 renders the secondary
-    // slot as `showInserter ? <PostInserterSidebar/> : <PostListViewSidebar/>`, so the inserter
-    // and the Outline/List-view tabs are MUTUALLY EXCLUSIVE — do NOT also assert
-    // data-post-editor-left-rail-tab="outline" in THIS render (those tabs live in the untouched
-    // post-editor-listview-outline / post-list-view-sidebar-wave / layout-shell suites).
-    expect(container.querySelector('[data-editor-rail-group]')).toBeTruthy();
-    // …and an inserter option row carries the active rail token (bg-primary-soft) via its kept
-    // <Button role="option"> className (NOT a literal EditorRailItem element — B6 preserves the
-    // listbox a11y).
-  });
-
-  it("inspector is flat: Post settings header + InspectorRow labels + single SEO sub-card + Block tab", () => {
-    const { container } = renderEditor();
-    // exactly ONE muted SEO sub-card — SCOPE to the details-sidebar region: the REAL canvas
-    // rich-text toolbar also emits bg-muted/30 for a SELECTED block (PostRichTextToolbar.tsx:
-    // 403,456 via PostEditorCanvas.tsx:648), so a whole-container count is not reliably 1.
     const sidebar = container.querySelector('[data-post-editor-region="sidebar"]');
+    expect(sidebar?.className).toContain("bg-card");
     expect(sidebar?.textContent).toContain("Post settings");
-    expect(sidebar?.textContent).toContain("SEO");
     expect(sidebar?.querySelectorAll(".bg-muted\\/30").length).toBe(1);
-    // Block tab still present (post block model preserved)
     expect(container.querySelector('[data-post-editor-details-tab-trigger="block"]')).toBeTruthy();
   });
 
@@ -840,22 +819,24 @@ describe("TASK-497-02 post editor chrome restyle", () => {
 });
 ```
 
-> **Do not** assert against brittle full class strings beyond the load-bearing
-> tokens above; the existing functional suites (store/layout-state/focus-return/
-> preferences/insert-flow + revisions/runtime integration) remain the source of
-> truth for behavior and must pass unchanged.
+> **Do not** assert brittle full class strings beyond the load-bearing tokens above; the
+> functional suites (store / focus-return / preferences / insert-flow + revisions/runtime
+> integration) remain the source of truth for behavior and pass unchanged.
 
 ---
 
 ## Documentation Updates Required
 
-- Update `_docs/_TASKS/README.md` board + **Statistics** when this leaf changes status.
+- Update `_docs/_TASKS/README.md` board + **Statistics** when this leaf changes status
+  (**orchestrator-owned** — do not touch stats here).
 - Add a `_docs/_CHANGELOG/` entry on closure linking **TASK-497** + **TASK-497-02**,
-  noting: single muted chrome strip; autosave Badge; Save draft + Publish(Rocket);
-  undo/redo wired; optional device toggle; left rail `bg-muted/20` + inserter rail
-  look; inspector "Post settings" + `InspectorRow` + single SEO sub-card; **Block tab
-  kept**; new shared `core/admin/ui/shared/EditorRail.tsx`; classic editor explicitly
-  out of scope.
-- A pure visual restyle needs **no** contract edits to `_docs/PAGE_MODEL.md` /
+  noting the re-scope to prototype parity: in-page `PageHeader` (title + description +
+  Preview/Save draft/Publish) above a framed `rounded-2xl … shadow-card` card; card
+  chrome bar ("Post editor" + autosave Badge + undo/redo + device toggle + the six app
+  toggles); **Blocks** default left rail (Extension #1) with Outline + List relocated to
+  sibling tabs; flat "Post settings" inspector kept; **Block tab kept**; shared
+  `PageHeader` + `EditorRail` consumed; classic editor out of scope. State the two DROPPED
+  invented decisions (~~D4~~ full-viewport-no-card, ~~B6~~ Outline-default).
+- A pure visual/layout restyle needs **no** contract edits to `_docs/PAGE_MODEL.md` /
   `_docs/PREVIEW_SPEC.md` — state explicitly in the changelog that none were required.
-- Cross-link [[pages-editor-v2-remediation-program]] (visual sibling of this restyle).
+- Cross-link [[pages-editor-v2-remediation-program]] + [[prototype-source-over-screenshots]].
