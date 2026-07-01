@@ -46,7 +46,7 @@ tests/vitest/ui/menu-editor-shell-wave.test.tsx
 tests/vitest/ui/menu-editor-validation.test.ts
 tests/vitest/ui/menu-editor-refresh-policy.test.tsx
 tests/vitest/ui/menu-tree.test.tsx                 # DnD intents + keyboard move/indent/outdent — DO NOT WEAKEN
-tests/vitest/ui/menu-item-row.test.tsx             # DnD/keyboard/a11y assertions (drag-handle + Drag/Move/Indent/Outdent aria-labels, data-menu-nested-indent, drop-line markers, data-menu-row-active) — ZERO edits; pure-VISUAL assertions (grip-box dims :61-64, letter-avatar, text "Sub-item of X" :68) UPDATED to the compacted prototype row (499-01 "row fidelity" split)
+tests/vitest/ui/menu-item-row.test.tsx             # DnD/keyboard/a11y assertions (drag-handle + Drag/Move/Indent/Outdent aria-labels, data-menu-nested-indent, drop-line markers, data-menu-row-active) — kept BYTE-STABLE; the non-prototype pure-VISUAL assertions (letter-avatar, text "Sub-item of X" :68) are REMOVED (not updated) — the prototype row (MenuEditorPreview.tsx:47-64) has NEITHER; the compacted row is bare GripVertical + CornerDownRight + pl-8 (499-01 "row fidelity" split)
 tests/vitest/ui/menu-item-form.test.tsx            # MUST stay green: NO switch in MenuItemForm (Switch lives in the inspector wrapper)
 tests/vitest/ui/menu-leaf-components.test.tsx
 tests/vitest/ui/menu-list-page.test.tsx
@@ -62,7 +62,8 @@ tests/vitest/validation/menuSchemas.test.ts        # menuUpdateSchema accepts `d
 tests/integration/routes/menus.test.ts             # PATCH `document` round-trips the settings envelope (no appearance/extras dropped); :127/:151 toEqual locks updated
 tests/vitest/admin/menusClient.test.ts             # updateMenu PATCH body forwards `document`
 tests/vitest/pages/page-editor-host-contract.test.ts  # mode union loses "menu" — :18-20 MUST be edited to ["page","page-template"]
-tests/vitest/ui/menu-design-editor.test.tsx        # new — shared CanvasEditor chrome, NOT bg-slate-950; add/remove/reorder composer
+tests/vitest/ui/menu-design-editor-flow.test.tsx   # MUST-RETIRE/REWRITE (retirement OWNED by 499-03) — the 30KB TASK-458-03/495-02 suite: mounts MenuDesignEditorPage + a bare mode:"menu" PageEditorHost (:768) and asserts legacy dark chrome bg-slate-950 (:727/:793); once 499-03 drops "menu" from the mode union :768 fails lint:types AND the MenuDesignEditorPage assertions contradict the shared-shell rewrite — SUPERSEDED by the new menu-design-editor.test.tsx below; do NOT leave as an untracked breaking suite
+tests/vitest/ui/menu-design-editor.test.tsx        # new — shared CanvasEditor chrome, NOT bg-slate-950; add/remove/reorder composer; SUPERSEDES menu-design-editor-flow.test.tsx
 tests/unit/site/menu-document-render.test.tsx      # new — SiteHeaderMenuDocumentRender golden + nesting + openInNewTab
 tests/vitest/site/page-runtime-shell-branch.test.tsx  # new — document-vs-default branch + renderPublicPage head-CSS gate (zero-items / migrated)
 tests/integration/runtime/menu-design-extras-runtime.test.ts (+ document sibling)
@@ -84,10 +85,12 @@ tests/vitest/services/menu-nav-extras.test.ts      # back-compat render path (no
   `[data-site-menu-doc]`), so this test changes by ZERO lines.
 - **DnD + nesting suites:** keep `menu-tree.test.tsx` asserting `child|before|after`
   intent resolution + keyboard indent/outdent/move + parent reparent; the PART 1
-  re-skin must keep these BEHAVIOR assertions green without edits. The row's
-  pure-VISUAL assertions (grip-box dims, letter-avatar, the text "Sub-item of X"
-  hint) ARE updated as the row is compacted toward the prototype (499-01 "row
-  fidelity" split) — the re-skin is a real fidelity move, not preserved-old chrome.
+  re-skin must keep these BEHAVIOR/a11y assertions byte-stable without edits. The
+  row's non-prototype pure-VISUAL assertions (letter-avatar, the text "Sub-item of
+  X" hint) are REMOVED (not updated) as the row is compacted toward the prototype
+  (499-01 "row fidelity" split) — the prototype row (MenuEditorPreview.tsx:47-64)
+  has NEITHER; the compacted row is bare GripVertical + CornerDownRight + pl-8 — a
+  real fidelity move, not preserved-old chrome.
 - **menuDocumentV2 strictness:** the new suite must assert reject-unknown
   (`menu_document_invalid` + `path`) AND fail-closed read AND leaf-validator reuse
   (button/image/divider/spacer inherit page validation).
@@ -116,6 +119,11 @@ bun --cwd core test:bun                                    # bun lane
   thin-editor-on-shared-shell chosen, Posts/Categories disposition (from 499-01).
 - Flip TASK-499 + subtasks to ✅ Done in `_docs/_TASKS/README.md` board +
   Statistics (closing agent only).
+- Confirm `tests/vitest/ui/menu-design-editor-flow.test.tsx` (the 30KB TASK-458-03/
+  495-02 suite) was RETIRED/REWRITTEN by 499-03 and SUPERSEDED by
+  `menu-design-editor.test.tsx` (§1) — it is a KNOWN tracked retirement, not an
+  inherited untracked breaking suite; the closure must not ship with its bare
+  `mode:"menu"` host (:768) / `bg-slate-950` (:727) assertions still red.
 - Note residuals if any (e.g. phase-2 `search`/`account`/`language` blocks,
   Posts/Categories rail, and `menuDesignDocument.ts` — left in place as deferred
   dead code to keep `menu-nav-extras.test.ts` green; unreferenced by production once

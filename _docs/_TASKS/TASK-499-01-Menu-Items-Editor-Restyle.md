@@ -94,28 +94,37 @@ chrome and the row/inspector presentation change.
 >   (`menu-item-row.test.tsx:89-96`).
 >
 > **COMPACT toward the prototype (pure PRESENTATION — these row-VISUAL assertions
-> are UPDATEABLE alongside the intentional restyle, NOT frozen):**
+> are REMOVED alongside the intentional restyle, NOT frozen and NOT re-pointed to a
+> new value; the prototype row (`MenuEditorPreview.tsx:47-64`) has ONLY a bare
+> `size-4` `GripVertical`, `pl-8` + a single `CornerDownRight` for nesting, and a
+> label + mono URL subline — there is NO letter-avatar and NO "Sub-item of X" text
+> for an updated assertion to point at, so the assertions for those elements are
+> DELETED, not rewritten):**
 > - replace the 48px grip BOX (`flex h-12 w-12 … border bg-muted/40 … self-center`,
 >   `MenuItemRow.tsx:144`) with a **bare `size-4` grip** on the (still-`draggable`,
->   still-aria-labelled) handle — UPDATE the `h-12`/`w-12`/`self-center`/
->   `[&_svg]:pointer-events-none` grip-box assertions (`menu-item-row.test.tsx:61-64`)
->   to the compacted grip.
+>   still-aria-labelled) handle — REMOVE the `h-12`/`w-12`/`self-center`/
+>   `[&_svg]:pointer-events-none` grip-box assertions (`menu-item-row.test.tsx:61-64`);
+>   the compacted `size-4` grip (matching the prototype's bare `GripVertical`) carries
+>   no heavy-box assertion.
 > - **drop the 36px letter/status avatar** (`MenuItemRow.tsx:188-199`) — the label +
 >   URL subline carry the row; keep the `AlertTriangle`/"Missing URL" ERROR affordance
->   (`:226-233`) as the only status marker.
+>   (`:226-233`) as the only status marker. The prototype has NO avatar, so REMOVE the
+>   letter-avatar assertion entirely (do not re-point it).
 > - **drop the redundant TEXT "Sub-item of X" hint** (`MenuItemRow.tsx:98,209-214`) —
->   `pl-8` + the kept `CornerDownRight` already convey nesting — and UPDATE the
->   `Sub-item of Home` assertion (`menu-item-row.test.tsx:68`, `menu-tree.test.tsx:124`)
->   accordingly. Collapse the subline to the truncated `href`/page path (mono), matching
->   the prototype.
+>   `pl-8` + the kept `CornerDownRight` already convey nesting (exactly the prototype's
+>   only nesting cue) — and REMOVE the `Sub-item of Home` assertion
+>   (`menu-item-row.test.tsx:68`, `menu-tree.test.tsx:124`) entirely; the prototype
+>   renders no such text, so there is nothing to update it to. Collapse the subline to
+>   the truncated `href`/page path (mono), matching the prototype.
 >
 > The must-stay-green bucket for the two row suites is therefore **behavior + a11y
 > labels + DnD/nesting markers**, NOT the old visual byte-shape:
 > `menu-item-row.test.tsx` / `menu-tree.test.tsx` keep ALL of their
 > DnD/keyboard/marker assertions with ZERO edits; only the enumerated pure-VISUAL
-> assertions (grip-box dims, avatar, the "Sub-item of X" text) are updated to match
-> the restyle. No functional affordance and no DnD/a11y marker is removed or
-> relocated off the row.
+> assertions (grip-box dims, avatar, the "Sub-item of X" text) are REMOVED to match
+> the lighter prototype (bare `size-4` grip, no avatar, no text hint) — they are
+> deleted, not re-pointed to a new value. No functional affordance and no DnD/a11y
+> marker is removed or relocated off the row.
 
 ---
 
@@ -648,14 +657,16 @@ drop-unknown); the schema only widens the accepted body so a real Save round-tri
   before Publish — custom-link ⇒ `href`, button ⇒ `href` + `settings.variant:"button"`)
   so the Save/Publish lifecycle + payload coverage is provably not weakened.
 - **Row restyle (`menu-item-row.test.tsx` / `menu-tree.test.tsx`) — behavior stays
-  green, pure-visual assertions UPDATED (row fidelity reconciliation):** the
+  green, pure-visual assertions REMOVED (row fidelity reconciliation):** the
   DnD/keyboard/nesting/a11y assertions (`data-menu-drag-handle` + `Drag`/`Move`/
   `Indent`/`Outdent` aria-labels, `data-menu-nested-indent`, drop-line labels +
   markers, `data-menu-row-active`) stay green with ZERO edits; the enumerated
   pure-VISUAL assertions ONLY — grip-box dims (`:61-64`), the letter-avatar, the
-  text `Sub-item of Home` (`:68` / `menu-tree.test.tsx:124`) — are UPDATED to the
-  compacted prototype row (bare `size-4` grip, no avatar, `CornerDownRight`+`pl-8`
-  nesting, mono URL subline). Do NOT freeze the old row visuals.
+  text `Sub-item of Home` (`:68` / `menu-tree.test.tsx:124`) — are REMOVED (deleted,
+  not re-pointed) so the row matches the lighter prototype (bare `size-4` grip, NO
+  avatar, `CornerDownRight`+`pl-8` nesting, mono URL subline, NO "Sub-item of X"
+  text). Do NOT freeze the old row visuals and do NOT invent replacement visual
+  assertions for the removed avatar/text.
 - **Regression (must stay green, do not weaken):**
   `tests/vitest/ui/menu-tree.test.tsx` (DnD intents + keyboard move/indent/outdent —
   behavior assertions only; see the row-restyle bullet above for the pure-visual updates),

@@ -32,7 +32,13 @@ the normalizers, the legacy adapter, and the persistence plumbing with tests.
   field via `import type { MenuDocumentV2 }` — NO runtime code, no resolver here — plus
   one new public color validator), `core/services/menus/menuService.ts`
   (`UpdateMenuInput.document`, per-key merge/publish),
-  `core/server/validation/menuSchemas.ts` (accept `document` on the existing route).
+  `core/server/validation/menuSchemas.ts` (accept `document` on the existing route),
+  `core/server/routes/menuRoutes.ts` (`mapMenuError` — add an explicit
+  `isMenuDocumentError` branch: today `mapMenuError` (`:40-50`) only handles the
+  `field`-keyed `MenuAppearanceError`/`MenuNavExtrasError`; `MenuDocumentError`
+  carries a `path` (not a `field`), so without this branch a thrown
+  `MenuDocumentError` falls through `:95` (`instanceof Error`) → the `error.message`
+  switch (no match) → `null` ⇒ a generic 500 instead of a 400 `menu_document_invalid`).
 - **Out of scope:** the authoring UI (499-03), the front renderer (499-04). The
   legacy `appearance`+`extras` render path and `menuDesignDocument.ts` stay
   working for back-compat in this subtask.
@@ -62,6 +68,14 @@ a lower-risk, isolated editor.
   over-capacity trees; nothing is persisted. Mirrors `MenuNavExtrasError`
   (`menuNavExtras.ts:35-44`) and `MenuAppearanceError`
   (`normalizeMenuAppearance.ts:31-40`).
+- **Per-block prop allowlist is asserted, not `pick`-ed.** Menu-bar `layout` and
+  `nav-items` props are DISJOINT subsets of the same `MenuAppearance` key space, so
+  running the full `normalizeMenuAppearance` then `pick(subset)` would silently
+  ACCEPT-and-DROP a cross-subset key (e.g. `linkColor` on a menu-bar layout, or
+  `sticky` on nav-items) — reject-unknown would not hold. The write path MUST assert
+  the raw input contains NO key outside the intended subset (throwing
+  `MenuDocumentError` with a `path` of the form `block-path.offendingKey` on the
+  FIRST extra key) BEFORE `pick` (§2); `pick` is never the allowlist enforcer.
 - **Read path (fail-closed):** `normalizeStoredMenuDocumentV2ForRead` never
   throws — unreadable input degrades to an empty document (⇒ default look).
 - **Reused leaf validators only.** `cta-button`(=page `button`)/`divider`/`spacer`
@@ -161,10 +175,23 @@ verbatim (it is already strict, reject-unknown, token-backed):
 ```ts
 // menu-bar layout = MenuAppearance subset {surfaceColor,paddingX,paddingY,alignment,borderColor,borderWidth,shadow,sticky}
 // nav-items props  = MenuAppearance subset {itemGap,fontSize,fontWeight,textTransform,linkColor,linkHoverColor,linkActiveColor,dropdownDirection,mobileMode}
+// REJECT-UNKNOWN per subset — `normalizeMenuAppearance` is strict only over the
+// FULL appearance key set, so a nav-items-only key on a menu-bar layout (e.g.
+// `linkColor`) — or a menu-bar-only key on nav-items (e.g. `sticky`) — PASSES the
+// full normalize and would be silently DROPPED by `pick`, violating the Security
+// Contract's reject-unknown guarantee. So assert the RAW input carries no key
+// outside the intended subset BEFORE `pick` (throw on the FIRST offender); never
+// lean on `pick` to enforce the per-block prop allowlist.
 const normalizeMenuBarLayout = (value: unknown, path: string): MenuBarLayout => {
-  try { return pick(normalizeMenuAppearance(value), MENU_BAR_LAYOUT_KEYS); }   // strict reuse
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  for (const key of Object.keys(value))                                          // reject cross-subset / unknown keys
+    if (!MENU_BAR_LAYOUT_KEYS.includes(key as never)) throw new MenuDocumentError(`${path}.${key}`);
+  try { return pick(normalizeMenuAppearance(value), MENU_BAR_LAYOUT_KEYS); }     // strict reuse (value-level)
   catch (e) { if (isMenuAppearanceError(e)) throw new MenuDocumentError(`${path}.${e.field}`); throw e; }
 };
+// nav-items props are normalized identically against NAV_ITEMS_PROP_KEYS — same
+// pre-`pick` extra-key assertion (throw `${path}.${offendingKey}` on the first
+// key outside the subset) so a menu-bar-only field cannot slip through.
 // brand: { mode: "text" | "image", href?: string (default "/"),
 //          image?: { reuse the page `image` leaf via the wrapper trick } }
 // cta-button / divider / spacer: delegate to the page leaf pipeline (see §3).
@@ -350,9 +377,15 @@ if (input.appearance !== undefined || input.extras !== undefined || input.docume
 // machine-readable error mapped at the route boundary like menu_appearance_invalid).
 ```
 
-**Error handling:** the route maps `MenuDocumentError` (`menu_document_invalid` +
-`path`) to a 4xx with the offending path, exactly like `menu_appearance_invalid`
-/ `menu_nav_extras_invalid` today; stored-read failures never surface (fail-closed).
+**Error handling:** `core/server/routes/menuRoutes.ts`'s `mapMenuError` (`:40-50`)
+gains an explicit `isMenuDocumentError` branch that maps `MenuDocumentError`
+(`menu_document_invalid`) to a 400 emitting a PATH-keyed details shape from
+`error.path` (`{ path }`, mirroring the `{ field }` shape of the appearance/extras
+branches — `MenuDocumentError` carries a `path`, not a `field`). Without this
+branch a thrown `MenuDocumentError` falls through `:95` (`instanceof Error`) → the
+`error.message` switch (no case) → `null` ⇒ a generic 500, NOT the intended 400.
+Stored-read failures never surface (fail-closed). Add the matching route-level
+assertion below (`tests/integration/routes/menus.test.ts`).
 
 ---
 
@@ -390,6 +423,13 @@ if (input.appearance !== undefined || input.extras !== undefined || input.docume
     persist the document — assert the round-trip explicitly (this is the silent-drop
     failure mode that has NO compile error if `:235` is left unedited). A co-present
     merge case alone would NOT catch it.
+  - **Route error mapping (guards §7 `mapMenuError`):** mirroring the existing
+    "PATCH /menus/:id maps invalid appearance to a 400 menu_appearance_invalid"
+    case (`menus.test.ts:159`), add a "PATCH /menus/:id maps an invalid `document`
+    to a 400 `menu_document_invalid`" case: PATCH a `document` that fails the strict
+    writer and assert the caught `ApiError` has `code === "menu_document_invalid"`,
+    HTTP 400, and a path-keyed `details` (`{ path }`) — NOT a generic 500. Without
+    the new `isMenuDocumentError` branch this asserts red (falls through to 500).
   - **Regression:** existing appearance/extras envelope + publish tests stay green.
 - `resolvePublishedMenuDocument`: published snapshot only (draft never leaks);
   legacy envelope (no `published`) falls back to top-level; empty ⇒ `null`.

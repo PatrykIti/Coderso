@@ -276,9 +276,22 @@ export function MenuDesignEditorPage({ menuId }: { menuId?: string }) {
 // Once MenuDesignEditorPage no longer hosts PageEditor, "menu" is an unreachable
 // mode. Retire the branch:
 //   - drop "menu" from PageEditorHost.mode union (pageEditorHostContract.ts:178)
-//   - remove useLegacyChrome / panelTone "dark" / the bg-slate-950 legacy panel
-//     path (:963-965, :3499-3543) — the builder chrome (CanvasEditor) becomes the
-//     ONLY chrome; useBuilderChrome is always true.
+//   - AUDIT FIRST — the legacy chrome is NOT two ranges: `useLegacyChrome` /
+//     `panelTone` / `panelTokens` / `useBuilderChrome` fan out to ~17 sites well
+//     beyond :963-965. `grep -an` (PageEditor.tsx reads as binary to `rg`) all
+//     `useLegacyChrome` / `panelTone` / `panelTokens` / `useBuilderChrome`, then
+//     delete EVERY legacy branch, NOT just the const:
+//       · the seed const block :963-967 (`useLegacyChrome` / `panelTone "dark"` /
+//         `panelTokens`) — deleting :963 alone undefs all downstream refs +
+//         reds lint:types;
+//       · the topbar / canvas legacy arms :2661-2821 (topbar actions, `bg-dotted`
+//         vs `bg-background`, the bg-slate-950 dark canvas);
+//       · the control-tone arms :2999-3181 (+ the `panelTokens.*` header/subpanel
+//         classes :3215-3256) that read `useLegacyChrome` per-control;
+//       · BOTH `EditorControlToneContext.Provider value={panelTone}` dark-tone
+//         providers (:3323 and :3506-3543, the floating-panel + toolbar arms);
+//     collapsing the whole thing to the always-true builder chrome (CanvasEditor
+//     becomes the ONLY chrome; drop `useBuilderChrome` — it is now constant true).
 //   - remove the now-dead host seams used ONLY by the menu host: `palette` and
 //     `appearancePanel` (pageEditorHostContract.ts:213,215) — verified set ONLY by
 //     MenuDesignEditorPage.tsx (no page / page-template host wires them). If a future
