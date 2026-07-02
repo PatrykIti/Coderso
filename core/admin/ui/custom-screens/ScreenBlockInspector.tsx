@@ -1,5 +1,5 @@
 import { Copy, MoveDown, MoveUp, Trash2 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type {
-  CustomScreenBindingMode,
-  ScreenBlockV1,
-  ScreenFieldBinding,
+import {
+  normalizeScreenImageSrc,
+  screenBlockAligns,
+  screenBlockWidths,
+  screenImageRatios,
+  SCREEN_BLOCK_MIN_HEIGHT_CLAMP,
+  type CustomScreenBindingMode,
+  type ScreenBlockStyleV1,
+  type ScreenBlockV1,
+  type ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
+import { PAGE_BLOCK_BOX_SPACING_CLAMP } from "../../../services/pages/pageDocumentV2";
 import type { ContentField } from "../content-types/SchemaBuilder";
 
 type ScreenBlockInspectorProps = {
@@ -208,6 +215,153 @@ function EnumRow({
 const readEnum = (value: unknown, fallback: string) =>
   typeof value === "string" && value ? value : fallback;
 
+// TASK-503-03: block-level Layout (ScreenBlockStyleV1) authoring. onPatchBlock/
+// updateScreenBlock REPLACES the `style` key wholesale (screenDocumentOps.ts:627),
+// so buildStylePatch reads the CURRENT style, returns the FULL merged object, and
+// prunes empty/default records to keep an absent-style document byte-stable.
+type ScreenBoxSide = "top" | "right" | "bottom" | "left";
+
+/** Sentinel for "no align key" — align "start" (mr-auto) is NOT a no-op, so it
+ *  persists explicitly; only the sentinel prunes. Width "auto" IS the no-op
+ *  default (empty class in the 503-02 map), so "auto" prunes. */
+export const SCREEN_ALIGN_DEFAULT_OPTION = "__default__";
+
+export type ScreenBlockStyleEdit =
+  | { kind: "width"; value: string } // "auto" or unknown → prune key
+  | { kind: "align"; value: string } // sentinel or unknown → prune key
+  | { kind: "minHeight"; value: string } // "" / non-finite → prune; else floor+clamp 0..640
+  | { kind: "box"; box: "margin" | "padding"; side: ScreenBoxSide; value: string };
+// "" / non-finite → prune side; else floor+clamp 0..240
+
+const clampTo = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, Math.floor(value)));
+
+export const buildStylePatch = (
+  current: ScreenBlockStyleV1 | undefined,
+  edit: ScreenBlockStyleEdit
+): ScreenBlockStyleV1 | undefined => {
+  const next: ScreenBlockStyleV1 = { ...(current ?? {}) };
+  switch (edit.kind) {
+    case "width": {
+      if (edit.value === "auto" || !(screenBlockWidths as readonly string[]).includes(edit.value)) {
+        delete next.width;
+      } else {
+        next.width = edit.value as ScreenBlockStyleV1["width"];
+      }
+      break;
+    }
+    case "align": {
+      if (
+        edit.value === SCREEN_ALIGN_DEFAULT_OPTION ||
+        !(screenBlockAligns as readonly string[]).includes(edit.value)
+      ) {
+        delete next.align;
+      } else {
+        next.align = edit.value as ScreenBlockStyleV1["align"];
+      }
+      break;
+    }
+    case "minHeight": {
+      const parsed = Number(edit.value);
+      if (edit.value.trim() === "" || !Number.isFinite(parsed)) {
+        delete next.minHeight;
+      } else {
+        next.minHeight = clampTo(
+          parsed,
+          SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
+          SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max
+        );
+      }
+      break;
+    }
+    case "box": {
+      const record = { ...(next[edit.box] ?? {}) };
+      const parsed = Number(edit.value);
+      if (edit.value.trim() === "" || !Number.isFinite(parsed)) {
+        delete record[edit.side];
+      } else {
+        record[edit.side] = clampTo(
+          parsed,
+          PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+          PAGE_BLOCK_BOX_SPACING_CLAMP.max
+        );
+      }
+      if (Object.keys(record).length === 0) delete next[edit.box];
+      else next[edit.box] = record;
+      break;
+    }
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+};
+
+const boxSideLabels: ReadonlyArray<[ScreenBoxSide, string]> = [
+  ["top", "Top"],
+  ["right", "Right"],
+  ["bottom", "Bottom"],
+  ["left", "Left"],
+];
+
+function BoxSpacingRow({
+  box,
+  label,
+  style,
+  onEdit,
+}: {
+  box: "margin" | "padding";
+  label: string;
+  style: ScreenBlockStyleV1 | undefined;
+  onEdit: (edit: ScreenBlockStyleEdit) => void;
+}) {
+  return (
+    <InspectorRow label={`${label} (px)`}>
+      <div className="grid grid-cols-4 gap-2">
+        {boxSideLabels.map(([side, sideLabel]) => (
+          <Input
+            key={side}
+            type="number"
+            inputMode="numeric"
+            min={PAGE_BLOCK_BOX_SPACING_CLAMP.min}
+            max={PAGE_BLOCK_BOX_SPACING_CLAMP.max}
+            aria-label={`${label} ${sideLabel.toLowerCase()}`}
+            value={style?.[box]?.[side] ?? ""}
+            placeholder={sideLabel}
+            onChange={(event) => onEdit({ kind: "box", box, side, value: event.target.value })}
+          />
+        ))}
+      </div>
+    </InspectorRow>
+  );
+}
+
+// TASK-503-03: image src draft. The raw text lives in local state so typing
+// "https://…" character-by-character is not destroyed, while data.src only ever
+// receives the filtered value (normalizeScreenImageSrc — the same filter the save
+// path runs). Unsafe/incomplete → "" (placeholder shows); safe → verbatim.
+function ImageSrcRow({
+  block,
+  onPatchBlockData,
+}: {
+  block: ScreenBlockV1;
+  onPatchBlockData: ScreenBlockInspectorProps["onPatchBlockData"];
+}) {
+  const committed = readString(block.data.src);
+  const [draft, setDraft] = useState<{ blockId: string; value: string } | null>(null);
+  const value = draft && draft.blockId === block.id ? draft.value : committed;
+  return (
+    <InspectorRow label="Image URL">
+      <Input
+        value={value}
+        placeholder="https://… or /media/… — used when no field is bound"
+        onChange={(event) => {
+          const raw = event.target.value;
+          setDraft({ blockId: block.id, value: raw });
+          onPatchBlockData(block.id, { src: normalizeScreenImageSrc(raw) });
+        }}
+      />
+    </InspectorRow>
+  );
+}
+
 /** Tabs add/remove editor — keeps `data.tabs` and `slots` in sync (TASK-498-02 B4). */
 function TabsEditor({
   block,
@@ -313,6 +467,12 @@ export function ScreenBlockInspector({
 
   const patchData = (patch: Record<string, unknown>) => {
     onPatchBlockData(selectedBlock.id, patch);
+  };
+
+  const commitStyle = (edit: ScreenBlockStyleEdit) => {
+    onPatchBlock(selectedBlock.id, {
+      style: buildStylePatch(selectedBlock.style, edit),
+    });
   };
 
   return (
@@ -581,13 +741,7 @@ export function ScreenBlockInspector({
             filterTypes={["media"]}
             bindMode="read"
           />
-          <InspectorRow label="Image URL">
-            <Input
-              value={readString(selectedBlock.data.src)}
-              onChange={(event) => patchData({ src: event.target.value })}
-              placeholder="https://… or /media/… — used when no field is bound"
-            />
-          </InspectorRow>
+          <ImageSrcRow block={selectedBlock} onPatchBlockData={onPatchBlockData} />
           <EnumRow
             label="Fit"
             value={readEnum(selectedBlock.data.fit, "cover")}
@@ -597,13 +751,25 @@ export function ScreenBlockInspector({
             ]}
             onChange={(value) => patchData({ fit: value })}
           />
-          <InspectorRow label="Ratio">
-            <Input
-              value={readString(selectedBlock.data.ratio)}
-              onChange={(event) => patchData({ ratio: event.target.value })}
-              placeholder="e.g. 16/9 (optional)"
-            />
-          </InspectorRow>
+          <EnumRow
+            label="Ratio"
+            value={
+              (screenImageRatios as readonly string[]).includes(
+                readString(selectedBlock.data.ratio)
+              )
+                ? readString(selectedBlock.data.ratio)
+                : "auto" // legacy free text (e.g. "16:9") DISPLAYS as Auto; the
+              // stored value is only rewritten when the user changes the control
+            }
+            options={[
+              { value: "auto", label: "Auto" },
+              { value: "1/1", label: "Square (1:1)" },
+              { value: "4/3", label: "4:3" },
+              { value: "16/9", label: "16:9" },
+              { value: "3/2", label: "3:2" },
+            ]}
+            onChange={(value) => patchData({ ratio: value })}
+          />
         </>
       ) : null}
 
@@ -726,17 +892,58 @@ export function ScreenBlockInspector({
         </div>
       ) : null}
 
-      <InspectorRow label="Background">
-        <Input
-          value={selectedBlock.variant ?? ""}
-          onChange={(event) =>
-            onPatchBlock(selectedBlock.id, {
-              variant: event.target.value.trim() || undefined,
-            })
-          }
-          placeholder="Default"
+      {/* TASK-503-03: block-level Layout (ScreenBlockStyleV1). Replaces the dead
+          free-text "Background" row (block.variant — never read by the renderer;
+          parent decision 1: removed, key still accepted by the schema). */}
+      <div className="flex flex-col gap-4" data-screen-layout-group="true">
+        <EnumRow
+          label="Width"
+          value={selectedBlock.style?.width ?? "auto"}
+          options={[
+            { value: "auto", label: "Auto" },
+            { value: "full", label: "Full" },
+            { value: "half", label: "Half" },
+            { value: "third", label: "Third" },
+            { value: "two-thirds", label: "Two thirds" },
+          ]}
+          onChange={(value) => commitStyle({ kind: "width", value })}
         />
-      </InspectorRow>
+        <EnumRow
+          label="Align"
+          value={selectedBlock.style?.align ?? SCREEN_ALIGN_DEFAULT_OPTION}
+          options={[
+            { value: SCREEN_ALIGN_DEFAULT_OPTION, label: "Default" },
+            { value: "start", label: "Start" },
+            { value: "center", label: "Center" },
+            { value: "end", label: "End" },
+            { value: "stretch", label: "Stretch" },
+          ]}
+          onChange={(value) => commitStyle({ kind: "align", value })}
+        />
+        <InspectorRow label="Min height (px)">
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min}
+            max={SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max}
+            value={selectedBlock.style?.minHeight ?? ""}
+            placeholder="Auto"
+            onChange={(event) => commitStyle({ kind: "minHeight", value: event.target.value })}
+          />
+        </InspectorRow>
+        <BoxSpacingRow
+          box="margin"
+          label="Margin"
+          style={selectedBlock.style}
+          onEdit={commitStyle}
+        />
+        <BoxSpacingRow
+          box="padding"
+          label="Padding"
+          style={selectedBlock.style}
+          onEdit={commitStyle}
+        />
+      </div>
     </div>
   );
 }

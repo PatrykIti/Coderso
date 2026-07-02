@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -74,6 +75,7 @@ import { readBindingPathValue } from "../../../services/utils/bindingPath";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { CustomScreenEntryCanvas } from "./CustomScreenEntryCanvas";
+import { useScreenEntryPreferences } from "./hooks/useScreenEntryPreferences";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { resolveCustomScreenEntryParams } from "./routeParams";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
@@ -374,6 +376,9 @@ export function CustomScreenEntryEditor() {
   const [presentationError, setPresentationError] = useState<string | null>(null);
   const [remotePresentationUpdatePending, setRemotePresentationUpdatePending] = useState(false);
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
+  // TASK-503-03: per-user entry-view badge preference (localStorage, default OFF).
+  const { preferences: entryPreferences, setPreferences: setEntryPreferences } =
+    useScreenEntryPreferences();
   // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
   // (bottom-docked inline format/presentation panel).
   const [panelOpen, setPanelOpen] = useState(true);
@@ -1291,6 +1296,25 @@ export function CustomScreenEntryEditor() {
                   </Badge>
                 ) : null
               }
+              toolbar={
+                <label
+                  className="flex items-center gap-2 text-xs font-medium text-muted-foreground"
+                  data-screen-entry-metadata-toggle="true"
+                >
+                  <span>Field metadata</span>
+                  <Switch
+                    size="sm"
+                    checked={entryPreferences.showFieldMetadata}
+                    onCheckedChange={(checked) =>
+                      setEntryPreferences({
+                        ...entryPreferences,
+                        showFieldMetadata: checked,
+                      })
+                    }
+                    aria-label="Show field metadata"
+                  />
+                </label>
+              }
               panelPosition="bottom"
               panel={presentationPanel}
               panelOpen={panelOpen}
@@ -1299,7 +1323,7 @@ export function CustomScreenEntryEditor() {
               panelDataProps={{ "data-screen-editor-panel": "true" }}
               canvas={
                 <div
-                  className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
+                  className="min-h-0 flex-1 overflow-auto overscroll-contain p-6 lg:p-8"
                   data-screen-editor-canvas-scroller="true"
                   style={panelOpen && presentationPanel ? { paddingBottom: 260 } : undefined}
                   onClick={() => {
@@ -1321,6 +1345,7 @@ export function CustomScreenEntryEditor() {
                       presentationOverrides={draftOverrides}
                       selectedBlockId={selectedRuntimeBlockId}
                       onSelectBlock={setSelectedRuntimeBlockId}
+                      showFieldMetadata={entryPreferences.showFieldMetadata}
                     />
                   </div>
                 </div>

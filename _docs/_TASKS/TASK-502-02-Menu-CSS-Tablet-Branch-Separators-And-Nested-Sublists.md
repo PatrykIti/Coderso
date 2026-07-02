@@ -5,7 +5,8 @@
 **Category:** Front Renderer / Site Shell / Content (Menus) / Responsive
 **Estimated Effort:** Medium-Large
 **Dependencies:** TASK-502-01 (`"tablet"` in `MENU_RESPONSIVE_BREAKPOINT_KEYS` + per-breakpoint `resolveMenuSectionAppearanceForDevice` / `resolveMenuBlockVisibleForDevice` / `hasMenuBlockVisibilityOverride`), TASK-501-02 (`MENU_RULE_GROUPS` delta machinery + visibility plan), TASK-499-04 (`menuDocumentCss.ts`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 **Parent Task:** TASK-502
 
 ---

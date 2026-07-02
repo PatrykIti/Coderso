@@ -5,7 +5,8 @@
 **Category:** Site Front / Navigation / Content (Menus)
 **Estimated Effort:** Medium
 **Dependencies:** TASK-502-01 (`brand.props.text` + `"tablet"` in `MENU_RESPONSIVE_BREAKPOINT_KEYS` + generalized `hasMenuBlockVisibilityOverride`/`resolveMenuBlockVisibleForDevice`), TASK-502-02 (doc-scoped sublist hide/open + nested fly-out rules that gate this subtask's hover markup), TASK-499-04 (`SiteHeaderMenuDocumentRender`), TASK-501-02 (render-if-visible-anywhere gate)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 **Parent Task:** TASK-502
 
 ---

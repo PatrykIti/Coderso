@@ -8,6 +8,7 @@ import {
   normalizeCustomScreenDefinition,
   normalizeScreenDocumentV1,
   normalizeScreenDocumentV1ForRead,
+  normalizeScreenImageSrc,
 } from "../../../core/services/customScreens/customScreenSchemas";
 
 const buildV4WithBlocks = (blocks: unknown[]) => ({
@@ -99,5 +100,20 @@ describe("image static src (schema-first)", () => {
     // Whole-document assertion: stored-V4 images without src are untouched (no key seeded).
     expect(normalizeScreenDocumentV1(document)).toEqual(document);
     expect(normalizeScreenDocumentV1ForRead(document)).toEqual(document);
+  });
+
+  // TASK-503-01: normalizeScreenImageSrc is now exported as the single source of truth
+  // for the 503-02 builder-preview gate + 503-03 inspector write filter. Behavior is
+  // byte-identical to the pre-export write-path helper.
+  test("normalizeScreenImageSrc (exported) filters schemes + trims, idempotent", () => {
+    expect(normalizeScreenImageSrc("/media/a.jpg")).toBe("/media/a.jpg");
+    expect(normalizeScreenImageSrc("https://x/y.png")).toBe("https://x/y.png");
+    expect(normalizeScreenImageSrc("http://host/x.png")).toBe("http://host/x.png");
+    expect(normalizeScreenImageSrc("  https://x/y.png  ")).toBe("https://x/y.png");
+    for (const unsafe of ["javascript:alert(1)", "data:image/png;base64,x", "blob:x", "  ", 42]) {
+      expect(normalizeScreenImageSrc(unsafe)).toBe("");
+    }
+    // Idempotent.
+    expect(normalizeScreenImageSrc(normalizeScreenImageSrc("/media/a.jpg"))).toBe("/media/a.jpg");
   });
 });

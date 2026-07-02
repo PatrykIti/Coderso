@@ -5,7 +5,8 @@
 **Category:** Admin UI / Content (Menus) / Navigation / Site Front / Responsive
 **Estimated Effort:** Large
 **Dependencies:** TASK-499 (menuDocumentV2 + Design tab + `menuDocumentCss.ts`), TASK-501 (responsive records, `MenuResponsiveControlShell`, visibility plan), Pages canvas-token pattern (`PageEditor.tsx` `useCanvasSiteTokens` + `toPageCanvasColorCssVariableMap`), Pages tablet cascade (`pageResponsiveCss.ts`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

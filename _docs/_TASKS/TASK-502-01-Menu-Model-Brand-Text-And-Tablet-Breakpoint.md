@@ -6,7 +6,8 @@
 **Category:** Services / Content (Menus) / Schema / Responsive
 **Estimated Effort:** Medium
 **Dependencies:** TASK-501-01 (responsive records + helper set — this subtask generalizes them), TASK-499-02 (menuDocumentV2); Pages reference: `pageResponsiveCss.ts:10-13` (cascade rationale: mobile inherits DESKTOP, not tablet), `pageDocumentV2.ts` clear/prune ports already in place
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

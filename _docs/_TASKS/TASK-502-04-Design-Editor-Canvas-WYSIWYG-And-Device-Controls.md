@@ -6,7 +6,8 @@
 **Category:** Admin UI / Content (Menus) / Responsive
 **Estimated Effort:** Large
 **Dependencies:** TASK-502-01 (hard — generalized per-breakpoint helpers: `"tablet"` in `MENU_RESPONSIVE_BREAKPOINT_KEYS`, breakpoint-generic `resolveMenuBlockVisibleForDevice`/`setMenuBlockVisibleForDevice`/`patchMenuSectionForDevice`/`clearMenuSectionOverride`/`readMenuSectionOverrideValue`, `brand.props.text` in `BRAND_PROP_KEYS`), TASK-502-02 (`buildMenuDocumentPreviewCss` real tablet branch + divider context rules + nested-sublist rules — the canvas consumes its emission), TASK-502-03 (front markup this canvas must mirror: recursive `SiteNavItem`, `BrandRender` text chain)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

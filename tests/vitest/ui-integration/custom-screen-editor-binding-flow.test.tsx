@@ -119,7 +119,7 @@ test("retired screen widgets do not expose legacy binding jump controls", () => 
   }
 });
 
-test("ScreenBlockInspector edits the block variant inline in the flat Background row", () => {
+test("ScreenBlockInspector renders the flat inline Layout group in place of the retired Background row", () => {
   const onPatchBlock = vi.fn();
   const view = mount(
     <ScreenBlockInspector
@@ -143,17 +143,19 @@ test("ScreenBlockInspector edits the block variant inline in the flat Background
   );
 
   try {
-    // TASK-498-01 A4: the "Advanced style" modal is dropped — variant/style is
-    // edited INLINE in the flat "Background" row (no dialog).
-    expect(view.container.textContent).toContain("Background");
+    // TASK-503-03 (parent decision 1): the dead free-text "Background"
+    // (block.variant) row is REMOVED — the renderer never read block.variant.
+    // The block-level Layout group (Width/Align/Min height/Margin/Padding) is
+    // edited INLINE (no dialog) and replaces it. The `variant` key still
+    // round-trips through the schema; only the dead control is gone.
+    expect(view.container.textContent).not.toContain("Background");
     expect(document.body.querySelector("[data-screen-style-dialog]")).toBeNull();
     expect(view.container.textContent).not.toContain("Open style controls");
 
-    const variantInput = view.container.querySelector(
-      'input[placeholder="Default"]'
-    ) as HTMLInputElement | null;
-    expect(variantInput).not.toBeNull();
-    expect(variantInput?.value).toBe("compact");
+    const layoutGroup = view.container.querySelector("[data-screen-layout-group]");
+    expect(layoutGroup).not.toBeNull();
+    // the retired variant free-text Input (placeholder="Default") is gone
+    expect(view.container.querySelector('input[placeholder="Default"]')).toBeNull();
   } finally {
     view.cleanup();
   }

@@ -1108,7 +1108,7 @@ the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
   `menus.settings.published`; menus issue no preview tokens — the live canvas
   IS the preview.
 
-## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501
+## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502
 
 The Design tab of a menu edits a dedicated document contract owned by
 `core/services/menus/menuDocumentV2.ts` (NOT a Page v2 document). It persists
@@ -1139,58 +1139,153 @@ radius, asserted in `tests/vitest/services/menu-document-v2.test.ts`) — which
 is why every new persisted key must be added to the section/block key
 allowlists consciously.
 
-**Responsive overrides (TASK-501, mobile-only v1; tablet DEFERRED):**
+**Responsive overrides (TASK-501 mobile v1; TASK-502 un-defers the tablet
+breakpoint — Pages cascade):** `MENU_RESPONSIVE_BREAKPOINT_KEYS =
+["tablet","mobile"]`. Desktop = base; tablet AND mobile each carry their OWN
+sparse record and BOTH inherit from the DESKTOP base — mobile does NOT inherit
+tablet (mirrors `pageResponsiveCss.ts`).
 
-- `MenuSectionV2.responsive?: { mobile?: { layout?, navProps? } }` — a SPARSE
-  record holding ONLY explicitly edited keys, lazily created by
-  `patchMenuSectionForDevice` (desktop AND tablet write the BASE; the editor
-  badge shows "Base" on tablet). Resolve-for-display =
-  `resolveMenuSectionAppearanceForDevice` (base merged with the override;
-  mobile inherits DESKTOP). Override detection reads the RAW record
+- `MenuSectionV2.responsive?: { tablet?, mobile?: { layout?, navProps? } }` — a
+  SPARSE per-breakpoint record holding ONLY explicitly edited keys, lazily
+  created by `patchMenuSectionForDevice` (desktop writes the BASE; tablet and
+  mobile each write their own `responsive.<bp>` record; the editor badge shows
+  Override on tablet/mobile once a key is set). Resolve-for-display =
+  `resolveMenuSectionAppearanceForDevice(section, "tablet"|"mobile")` (base
+  merged with ONLY that breakpoint's record; tablet never sees mobile and
+  mobile never sees tablet). Override detection reads the RAW record
   (`readMenuSectionOverrideValue`), never the merge. Explicit Reset only
   (`clearMenuSectionOverride` — NO auto-remove-on-equality); empty
-  `group`/`mobile`/`responsive` parents are pruned on clear and on write.
-- `MenuBlockV2.responsive?: { mobile?: { visibility?: { visible: boolean } } }`
-  on ALL block types (native and leaf) — "hide on mobile" for any block,
-  "show only on mobile" for leaves (flat `visibility.visible:false` +
-  mobile `visible:true`). Flat leaf visibility WITHOUT a responsive record
-  keeps the legacy render-skip semantics byte-unchanged. Helpers:
-  `resolveMenuBlockVisibleForDevice` / `setMenuBlockVisibleForDevice`
-  (mobile ⇒ override; desktop ⇒ flat, leaf-only) /
-  `clearMenuBlockVisibilityOverride`.
+  `group`/`<bp>`/`responsive` parents are pruned on clear and on write per
+  breakpoint (clearing the last tablet key removes `responsive.tablet` while a
+  remaining mobile record survives).
+- `MenuBlockV2.responsive?: { tablet?, mobile?: { visibility?: { visible } } }`
+  on ALL block types (native and leaf) — "hide on tablet"/"hide on mobile" for
+  any block, "show only on <bp>" for leaves (flat `visibility.visible:false` +
+  the breakpoint `visible:true`). Flat leaf visibility WITHOUT a responsive
+  record keeps the legacy render-skip semantics byte-unchanged. Helpers:
+  `resolveMenuBlockVisibleForDevice(block, "tablet"|"mobile")` (tablet/mobile
+  override ?? flat) / `setMenuBlockVisibleForDevice` (tablet|mobile ⇒ their own
+  record, all block types; desktop ⇒ flat, leaf-only) /
+  `clearMenuBlockVisibilityOverride`. `hasMenuBlockVisibilityOverride` is
+  generalized to ANY breakpoint (true when `responsive.tablet?.visibility` OR
+  `responsive.mobile?.visibility` is set) — it gates the CSS visibility plan
+  and the front hand-off-to-CSS so a tablet-only override still emits hide
+  rules and gets the anywhere-gate.
 - Legacy documents WITHOUT `responsive` round-trip byte-identically; unknown
-  breakpoint (`tablet` today) / group / prop keys are rejected on write.
+  breakpoint (`wide` etc.) / group / prop keys are rejected on write.
+
+**Brand text (TASK-502):** `BRAND_PROP_KEYS = ["mode","href","image","text"]`.
+`brand.props.text?: string` is string-only, trimmed, capped at 120 chars
+(authoring-text cap — fail-SOFT clamp/slice, never throw-on-long; only a
+non-string non-null `text` throws with the offending path; `null`/empty/
+whitespace is OMITTED sparse). Fallback CHAIN, identical on front AND canvas:
+`brand.props.text` → `siteName` (`site.name` setting) → `null` (renders
+nothing). `createDefaultMenuBlock("brand")` and the legacy adapter stay
+textless (inherit the site name). The canvas no longer renders the menu name.
+
+**Device-defining nav props carve-out (TASK-502, conscious):**
+`MENU_NAV_DEVICE_DEFINING_KEYS = ["mobileMode","dropdownDirection"]` are
+device-DEFINING, not overridable — they always write the BASE. On WRITE, either
+key inside `responsive.*.navProps` throws `MenuDocumentError` with the offending
+path (reject-unknown-in-context). On STORED READ the two keys get SPLIT,
+non-destructive treatment (a fail-closed whole-doc degrade would be data loss
+for 501-era records):
+- `mobileMode` is NOT dead — the mobile CSS branch reads the mobile-RESOLVED
+  appearance today — so a 501-era `responsive.mobile.navProps.mobileMode`
+  override is HOISTED into the base appearance then the record is pruned
+  (behavior-preserving: published mobile CSS is byte-identical before/after the
+  migration; a junk value is prune-only, not hoisted).
+- `dropdownDirection` is truly dead (desktop/tablet-branch-only, reads the
+  base) ⇒ prune-only.
+  Either way an override record left empty by the prune is itself pruned and
+  the migrated doc round-trips clean through the WRITE normalizer, so the next
+  autosave persists the hoisted+pruned form. Any OTHER unknown navProps key
+  still degrades the whole doc (the carve-out is exactly these two keys). The
+  editor renders "Mobile menu" ONLY on the Mobile device and "Dropdown
+  direction" ONLY on Desktop/Tablet; both write the base and are NOT wrapped in
+  `MenuResponsiveControlShell` (no badge, no reset, no responsive record).
 
 **CSS emission** (`core/site/menuDocumentCss.ts`): ONE shared
-`buildMenuRuleSets` feeds both `buildMenuDocumentCss` (front sheet — base
-rules + desktop `min-width:640px` + mobile `max-width:639px` branches) and
-`buildMenuDocumentPreviewCss(doc, device)` (canvas flatten, no `@media`;
-tablet maps to the DESKTOP branch). All rules are scoped under
-`[data-site-menu-doc="true"]` (every comma-list selector member carries the
-prefix). Mobile override deltas emit per-GROUP (a triggered group re-emits all
-its declarations with explicit/neutral values) AFTER the `mobileMode`
-disclosure/inline rules so overrides win by source order. Orientation
-`vertical` emits `.site-nav-list{flex-direction:column;align-items:stretch}`
-in the branch where it resolves. Per-device visibility is CSS-gated: blocks
-visible on at least one device stay DOM-rendered (menu-native wrappers are
-stamped with inert `data-menu-block-id` — for `nav-items` on the `<nav>`
-landmark ancestor, never `.site-nav-list`; leaf frames keep `PageBlockFrame`'s
-`data-block-id`) and hidden per branch via the doc-scoped dual selector
-`[data-menu-block-id="X"],[data-block-id="X"]{display:none}`; blocks visible
-on NEITHER device stay render-skipped. A document with NO overrides emits
-byte-identical CSS to pre-TASK-501 (pinned in
-`tests/unit/site/menu-document-render.test.tsx`).
+`buildMenuRuleSets` feeds both `buildMenuDocumentCss` (front sheet) and
+`buildMenuDocumentPreviewCss(doc, device)` (canvas flatten, no `@media`). All
+rules are scoped under `[data-site-menu-doc="true"]` (every comma-list selector
+member carries the prefix). Override deltas emit per-GROUP (a triggered group
+re-emits all its declarations with explicit/neutral values) AFTER the
+`mobileMode` disclosure/inline rules so overrides win by source order.
+Orientation `vertical` emits `.site-nav-list{flex-direction:column;
+align-items:stretch}` in the branch where it resolves.
+
+- **Tablet branch (TASK-502):** tablet overrides emit per-GROUP delta rules in
+  a NEW bounded `@media (min-width: 640px) and (max-width: 1023px)`
+  (`pageResponsiveMediaBounds.tablet`) — bounded so tablet deltas never leak
+  into mobile widths. A doc with ONLY mobile overrides (or none) emits NO
+  tablet `@media` branch at all (zero responsive-branch drift). The canvas
+  builder no longer maps tablet⇒desktop: the forced tablet branch = base +
+  `desktopShared` (`dropdownRule` + `navNestingRules`) + tabletDelta.
+- **Per-device visibility (TASK-502)** is CSS-gated and placed per RESOLVED
+  tri-device visibility: hidden on desktop AND tablet ⇒ the shared
+  `min-width:640px` branch (byte-stable for docs without tablet overrides);
+  hidden on desktop ONLY (tablet-visible override) ⇒ a `min-width:1024px`
+  `@media` (so it stays visible at 640–1023px); hidden on tablet ONLY ⇒ the
+  bounded tablet branch; hidden on mobile ⇒ the mobile branch. Blocks visible
+  on at least one device stay DOM-rendered (menu-native wrappers stamped with
+  inert `data-menu-block-id` — for `nav-items` on the `<nav>` landmark
+  ancestor, never `.site-nav-list`; leaf frames keep `PageBlockFrame`'s
+  `data-block-id`) and hidden per branch via the doc-scoped dual selector
+  `[data-menu-block-id="X"],[data-block-id="X"]{display:none}`; blocks visible
+  on NEITHER device stay render-skipped. `buildMenuDocumentPreviewCss` emits NO
+  visibility hide rule in ANY forced branch — canvas visibility is owned solely
+  by the editor's dimmed-selectable GHOST gate (the hide rules target the
+  `[data-menu-block-id]` SelectableBlock stamp and would display:none the ghost).
+- **Nested sublists (TASK-502, DOC-SCOPED only — base sheet FORBIDDEN):** the
+  recursive fly-out block (`.site-nav-sublist{display:none}` hide-by-default,
+  the per-level `:hover`/`:focus-within` open pair to `display:grid`,
+  `.site-nav-sublist>li{position:relative}`, the direction-aware nested
+  `.site-nav-sublist .site-nav-sublist{left:100%;top:0;bottom:auto}` —
+  `bottom:0;top:auto` for `dropdownDirection:"top"` — and the group caret
+  rule) is emitted ONLY inside the shared `min-width:640px` branch (desktop AND
+  tablet); the mobile branch carries NO sublist hide/un-hide (the base sheet's
+  `display:grid` + cumulative per-depth `padding-left:16px` keep all levels
+  inline-indented). `buildSiteShellCss(null)` is byte-identical (no legacy CSS
+  added — 502-03 legacy path reuses base-sheet class rules).
+- **Divider context rules (TASK-502, per-divider-block, doc-scoped):** a doc
+  WITH a divider emits the frame-as-line pair
+  (`.site-header-inner [data-block-id="X"]{align-self:center;width:<thick>px;
+  height:1.5em;background:<tone>}` — deliberately NO `display:` so it cannot
+  out-specificity a visibility hide — plus inner `hr{display:none}`) in front
+  AND preview; a doc WITHOUT a divider emits neither. Declarations derive only
+  from already-validated enum/number props (injection-safe).
+
+A no-override / mobile-only document emits NO tablet branch and its base output
+changes from pre-502 ONLY by the unconditional structural divider/nested-sublist
+rules (re-baselined ONCE, pinned in
+`tests/unit/site/menu-document-render.test.tsx`); a mobile-only doc's mobile
+branch is byte-identical to pre-502.
 
 **Editor** (`core/admin/ui/menus/MenuDesignEditor.tsx`): the DeviceSwitcher
-forks the appearance writers — Mobile edits write the sparse override, Desktop
-(and deferred Tablet) write the base — from event handlers only. Every
-appearance control is wrapped in `MenuResponsiveControlShell`
-(Base/Override/Inherited badge + `data-menu-responsive-reset` Reset), panels
-show RESOLVED values, the canvas scope cue reads "Mobile (overrides)" /
-"Tablet (base)" / "Desktop (base)", and per-block visibility shows the flat
-"Visible" toggle for leaves on Desktop and the "Visible on mobile" override
-toggle on Mobile. Content writes (brand/cta/utility props) stay FLAT on every
-device.
+forks the appearance writers — Tablet AND Mobile edits each write their own
+sparse override, Desktop writes the base — from event handlers only (no
+setState-in-effect). Overridable appearance controls are wrapped in
+`MenuResponsiveControlShell` (Base/Override/Inherited badge +
+`data-menu-responsive-reset` Reset), panels show RESOLVED values, the canvas
+scope cue reads "Tablet (overrides)" / "Mobile (overrides)" / "Desktop (base)";
+per-block visibility shows the flat "Visible" toggle for leaves on Desktop and
+the breakpoint override toggle on Tablet/Mobile. Content writes (brand/cta/
+utility props) stay FLAT on every device. TASK-502 canvas WYSIWYG: the
+`MenuDocumentCanvas` frame ROOT paints the seven site `--color-*` tokens
+(shared `useCanvasSiteTokens` in `core/admin/ui/shared/` +
+`toMenuCanvasColorCssVariableMap` in `core/ui/theme/tokenCss.ts`) so swatches
+resolve against SITE tokens, not the admin theme — it must be the root because
+the section Surface/Border rules emit onto the scope root and CSS custom
+properties inherit downward only; the selection ring is re-pointed to an
+`--admin-*` var. `getPageEditorColorPalette(siteTokens)` is passed as
+`palette` to every `ColorSwatchControl`. Hidden blocks render as a dimmed,
+selectable "Hidden" GHOST (the sole canvas visibility owner). The brand panel
+adds a text-mode-only "Brand text" Input (sparse; empty deletes the prop); the
+cta panel adds a "Size" SegmentedControl + "Open in new tab" toggle rendered
+via the real leaf through a local `canvasMenuLeafToPageBlock` replica
+(visibility forced true); the divider renders the real leaf frame (no literal
+"—"); `NavItemsPreview` is recursive (grandchildren reachable, never dropped).
 
 ## Revisions And Autosave
 

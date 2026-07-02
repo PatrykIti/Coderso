@@ -391,7 +391,7 @@ test("native DnD reorders within a list against the PRE-removal index (downward 
 
     const dataTransfer = makeDataTransfer();
     fireDnd(
-      view.container.querySelector('[data-screen-block-id="heading-1"]'),
+      view.container.querySelector('[data-screen-drag-handle="heading-1"]'),
       "dragstart",
       dataTransfer
     );
@@ -426,7 +426,7 @@ test("native DnD moves a block ACROSS sections and INTO a nested slot with the S
     // Cross-section: heading-1 (section-1) → the gap before field-1 (section-2).
     const crossTransfer = makeDataTransfer();
     fireDnd(
-      view.container.querySelector('[data-screen-block-id="heading-1"]'),
+      view.container.querySelector('[data-screen-drag-handle="heading-1"]'),
       "dragstart",
       crossTransfer
     );
@@ -460,7 +460,7 @@ test("native DnD moves a block ACROSS sections and INTO a nested slot with the S
     // Into a nested slot at depth: text-1 → columns-1.left drop zone.
     const slotTransfer = makeDataTransfer();
     fireDnd(
-      view.container.querySelector('[data-screen-block-id="text-1"]'),
+      view.container.querySelector('[data-screen-drag-handle="text-1"]'),
       "dragstart",
       slotTransfer
     );
@@ -502,7 +502,7 @@ test("during a native drag the gaps force-reveal and the hovered zone highlights
 
     const dataTransfer = makeDataTransfer();
     fireDnd(
-      view.container.querySelector('[data-screen-block-id="heading-1"]'),
+      view.container.querySelector('[data-screen-drag-handle="heading-1"]'),
       "dragstart",
       dataTransfer
     );
@@ -535,7 +535,7 @@ test("during a native drag the gaps force-reveal and the hovered zone highlights
 
     // ...and dragend hides the gaps again.
     fireDnd(
-      view.container.querySelector('[data-screen-block-id="heading-1"]'),
+      view.container.querySelector('[data-screen-drag-handle="heading-1"]'),
       "dragend",
       dataTransfer
     );
@@ -558,7 +558,7 @@ test("a drop ON a block card resolves before/after by vertical midpoint instead 
     // Top half of heading-1 → BEFORE it (a section-end fallthrough would have
     // left the order unchanged, so this discriminates the fix).
     const first = makeDataTransfer();
-    fireDnd(view.container.querySelector('[data-screen-block-id="text-1"]'), "dragstart", first);
+    fireDnd(view.container.querySelector('[data-screen-drag-handle="text-1"]'), "dragstart", first);
     fireDnd(view.container.querySelector('[data-screen-block-id="heading-1"]'), "drop", first, {
       clientY: -1,
     });
@@ -567,7 +567,11 @@ test("a drop ON a block card resolves before/after by vertical midpoint instead 
 
     // Bottom half of heading-1 → AFTER it.
     const second = makeDataTransfer();
-    fireDnd(view.container.querySelector('[data-screen-block-id="text-1"]'), "dragstart", second);
+    fireDnd(
+      view.container.querySelector('[data-screen-drag-handle="text-1"]'),
+      "dragstart",
+      second
+    );
     fireDnd(view.container.querySelector('[data-screen-block-id="heading-1"]'), "drop", second, {
       clientY: 1,
     });
@@ -608,7 +612,7 @@ test("the cycle-guard drop (container onto its own descendant slot) is a no-op; 
     // zones are suppressed (the op-level guard stays the real gate).
     const dragTransfer = makeDataTransfer();
     fireDnd(
-      view.container.querySelector('[data-screen-block-id="group-1"]'),
+      view.container.querySelector('[data-screen-drag-handle="group-1"]'),
       "dragstart",
       dragTransfer
     );
@@ -618,7 +622,7 @@ test("the cycle-guard drop (container onto its own descendant slot) is a no-op; 
       )
     ).toBeNull();
     fireDnd(
-      view.container.querySelector('[data-screen-block-id="group-1"]'),
+      view.container.querySelector('[data-screen-drag-handle="group-1"]'),
       "dragend",
       dragTransfer
     );
@@ -627,6 +631,115 @@ test("the cycle-guard drop (container onto its own descendant slot) is a no-op; 
         '[data-screen-slot-dropzone="left"][data-insert-parent="columns-1"]'
       )
     ).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("TASK-503-02 D: a container drags by ITS badge; a nested child drags by its own badge (non-shadowing)", async () => {
+  // The drag source moved onto the corner type Badge, so a container is no
+  // longer shadowed by nested draggable children on its card surface: group-1
+  // reorders when grabbed by its OWN badge, and grabbing the nested columns-1
+  // by ITS badge moves only the child while group-1 stays put.
+  const view = mount("/admin/advanced/custom-screens/screen-1");
+
+  try {
+    await flush();
+    expect(sectionBlockIds(view.container, "section-2")).toEqual(["field-1", "group-1"]);
+
+    // Drag the group-1 CONTAINER by its corner badge → drop on field-1's top
+    // half → group-1 lands BEFORE field-1 (the container's own badge is the sole
+    // drag source; the nested columns-1 on its surface cannot hijack it).
+    const containerTransfer = makeDataTransfer();
+    fireDnd(
+      view.container.querySelector('[data-screen-drag-handle="group-1"]'),
+      "dragstart",
+      containerTransfer
+    );
+    fireDnd(
+      view.container.querySelector('[data-screen-block-id="field-1"]'),
+      "drop",
+      containerTransfer,
+      {
+        clientY: -1,
+      }
+    );
+    await flush();
+    expect(sectionBlockIds(view.container, "section-2")).toEqual(["group-1", "field-1"]);
+    // columns-1 rode along inside its still-intact container.
+    expect(
+      view.container.querySelector(
+        '[data-screen-block-id="group-1"] [data-screen-block-id="columns-1"]'
+      )
+    ).not.toBeNull();
+
+    // Now grab the NESTED columns-1 by ITS OWN badge → drop on field-1's top
+    // half → only columns-1 moves out to the section top level; group-1 stays.
+    const childTransfer = makeDataTransfer();
+    fireDnd(
+      view.container.querySelector('[data-screen-drag-handle="columns-1"]'),
+      "dragstart",
+      childTransfer
+    );
+    fireDnd(
+      view.container.querySelector('[data-screen-block-id="field-1"]'),
+      "drop",
+      childTransfer,
+      {
+        clientY: -1,
+      }
+    );
+    await flush();
+    expect(sectionBlockIds(view.container, "section-2")).toEqual([
+      "group-1",
+      "columns-1",
+      "field-1",
+    ]);
+    // group-1 survived; it just no longer nests columns-1.
+    expect(view.container.querySelector('[data-screen-block-id="group-1"]')).not.toBeNull();
+    expect(
+      view.container.querySelector(
+        '[data-screen-block-id="group-1"] [data-screen-block-id="columns-1"]'
+      )
+    ).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("TASK-503-02 D: a dragstart on the card BODY (old drag surface) starts no move", async () => {
+  // Regression pin: the card div is drop-only now. Firing dragstart on it must
+  // set no payload and force-reveal no gaps, and a following drop is a no-op.
+  const view = mount("/admin/advanced/custom-screens/screen-1");
+
+  try {
+    await flush();
+    expect(sectionBlockIds(view.container, "section-1")).toEqual(["heading-1", "text-1"]);
+
+    const dataTransfer = makeDataTransfer();
+    fireDnd(
+      view.container.querySelector('[data-screen-block-id="heading-1"]'),
+      "dragstart",
+      dataTransfer
+    );
+    // No drag source on the card → empty payload, gaps stay hidden.
+    expect(dataTransfer.getData("text/plain")).toBe("");
+    expect(
+      view.container.querySelector(
+        '[data-screen-insert-gap][data-insert-section="section-1"][data-insert-index="0"]'
+      )?.className
+    ).toContain("opacity-0");
+
+    // A drop after the phantom dragstart carries no block id → tree unchanged.
+    fireDnd(
+      view.container.querySelector(
+        '[data-screen-insert-gap][data-insert-section="section-1"][data-insert-index="2"]'
+      ),
+      "drop",
+      dataTransfer
+    );
+    await flush();
+    expect(sectionBlockIds(view.container, "section-1")).toEqual(["heading-1", "text-1"]);
   } finally {
     view.cleanup();
   }

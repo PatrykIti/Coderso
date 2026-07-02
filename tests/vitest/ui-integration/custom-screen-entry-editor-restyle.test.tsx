@@ -216,6 +216,7 @@ const flush = async () => {
 beforeEach(() => {
   current = projectFixture;
   vi.mocked(updateEntry).mockResolvedValue(projectFixture.entry as never);
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -274,6 +275,58 @@ test("an inline content edit surfaces the unsaved-changes affordance", async () 
     await flush();
 
     expect(view.container.textContent).toContain("Unsaved changes");
+  } finally {
+    view.cleanup();
+  }
+});
+
+// --- TASK-503-03: entry-view "Field metadata" toggle + surface flatten ---
+
+test("the entry sub-toolbar exposes an unchecked Field metadata toggle and drops bg-dotted", async () => {
+  current = projectFixture;
+  const view = mount("/admin/advanced/custom-screens/project-catalog/entries/1");
+  try {
+    await flush();
+    const toggle = view.container.querySelector("[data-screen-entry-metadata-toggle]");
+    expect(toggle).not.toBeNull();
+    const switchButton = toggle?.querySelector('[role="switch"]');
+    expect(switchButton?.getAttribute("aria-checked")).toBe("false");
+
+    const scroller = view.container.querySelector("[data-screen-editor-canvas-scroller]");
+    expect(scroller).not.toBeNull();
+    expect(scroller?.className).not.toContain("bg-dotted");
+    // the other scroller affordances are byte-identical.
+    expect(scroller?.className).toContain("overflow-auto");
+    expect(scroller?.className).toContain("overscroll-contain");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("toggling Field metadata on persists to localStorage and reveals the entry badges", async () => {
+  current = projectFixture;
+  const view = mount("/admin/advanced/custom-screens/project-catalog/entries/1");
+  try {
+    await flush();
+    // Default OFF: the entry binding badge is hidden.
+    expect(view.container.textContent).not.toContain("Editable");
+
+    const switchButton = view.container.querySelector(
+      "[data-screen-entry-metadata-toggle] [role='switch']"
+    ) as HTMLElement | null;
+    expect(switchButton).not.toBeNull();
+    React.act(() => {
+      switchButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+
+    // Persisted per-user (survives a reload)…
+    expect(
+      JSON.parse(window.localStorage.getItem("coderso.screens.entry.preferences.v1") ?? "null")
+    ).toEqual({ showFieldMetadata: true });
+    // …and the badge is now visible through the threaded prop → the 503-02 gate.
+    expect(view.container.textContent).toContain("Editable");
+    expect(switchButton?.getAttribute("aria-checked")).toBe("true");
   } finally {
     view.cleanup();
   }

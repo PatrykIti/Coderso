@@ -438,6 +438,84 @@ test("updateCustomScreen accepts V4 definition writes", async () => {
   expect(result?.definition.editorView.document.sections[0]?.blocks[0]?.id).toBe("field-2");
 });
 
+test("updateCustomScreen accepts a style-carrying V4 definition and preserves it (TASK-503)", async () => {
+  const styledDefinition = makeV4Definition("field-1");
+  const styledBlock = styledDefinition.editorView.document.sections[0]?.blocks[0] as Record<
+    string,
+    unknown
+  >;
+  styledBlock.style = {
+    width: "half",
+    minHeight: 120,
+    margin: { top: 24, left: 8 },
+    padding: { top: 16 },
+    align: "center",
+  };
+
+  mockDb.state.selectRows = [
+    createRow({
+      schemaVersion: 4,
+      definition: makeV4Definition("field-1"),
+    }),
+  ];
+  mockDb.state.updateRows = [
+    createRow({
+      schemaVersion: 4,
+      definition: styledDefinition,
+    }),
+  ];
+
+  const result = await updateCustomScreen("screen-1", {
+    definition: styledDefinition,
+  });
+
+  // The write path (real normalizeCustomScreenDefinitionForWrite; only db is mocked)
+  // preserves the validated style verbatim — clamped ints, allow-listed enums.
+  const writtenBlock = (
+    mockDb.state.lastUpdateValues?.definition as {
+      editorView: { document: { sections: Array<{ blocks: Array<Record<string, unknown>> }> } };
+    }
+  ).editorView.document.sections[0]?.blocks[0];
+  expect(writtenBlock?.style).toEqual({
+    width: "half",
+    minHeight: 120,
+    margin: { top: 24, left: 8 },
+    padding: { top: 16 },
+    align: "center",
+  });
+  // Read-back round-trips the same style.
+  expect(result?.definition.editorView.document.sections[0]?.blocks[0]?.style).toEqual({
+    width: "half",
+    minHeight: 120,
+    margin: { top: 24, left: 8 },
+    padding: { top: 16 },
+    align: "center",
+  });
+});
+
+test("updateCustomScreen rejects an unknown style key with custom_screen_definition_invalid (TASK-503)", async () => {
+  const badDefinition = makeV4Definition("field-1");
+  const badBlock = badDefinition.editorView.document.sections[0]?.blocks[0] as Record<
+    string,
+    unknown
+  >;
+  badBlock.style = { width: "half", bogus: 1 } as Record<string, unknown>;
+
+  mockDb.state.selectRows = [
+    createRow({
+      schemaVersion: 4,
+      definition: makeV4Definition("field-1"),
+    }),
+  ];
+
+  await expect(
+    updateCustomScreen("screen-1", {
+      definition: badDefinition,
+    })
+  ).rejects.toThrow("custom_screen_definition_invalid");
+  expect(mockDb.state.lastUpdateValues).toBeNull();
+});
+
 test("deleteCustomScreen returns the normalized deleted record or null", async () => {
   mockDb.state.deleteRows = [createRow()];
 

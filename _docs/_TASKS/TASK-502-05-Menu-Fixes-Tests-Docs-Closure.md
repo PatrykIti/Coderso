@@ -5,7 +5,8 @@
 **Category:** Testing / Documentation / Content (Menus) / Site Front / Responsive
 **Estimated Effort:** Large
 **Dependencies:** TASK-502-01 (model: brand.text + tablet + carve-out), TASK-502-02 (CSS: tablet branch, separators, nested sublists), TASK-502-03 (front: recursive nav + brand chain), TASK-502-04 (editor: tokens, ghost, device controls)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 **Parent Task:** TASK-502
 
 ---

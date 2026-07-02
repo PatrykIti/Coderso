@@ -60,6 +60,8 @@ describe("custom screen authoring boundaries", () => {
         "core/admin/ui/custom-screens/CustomScreenEntryCanvas.tsx",
         "core/admin/ui/custom-screens/CustomScreenPreview.tsx",
         "core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog.tsx",
+        "core/admin/ui/custom-screens/ScreenBlockInspector.tsx",
+        "core/admin/ui/custom-screens/hooks/useScreenEntryPreferences.ts",
       ].map(async (relative) => ({
         file: path.join(repoRoot, relative),
         source: await readFile(path.join(repoRoot, relative), "utf8"),

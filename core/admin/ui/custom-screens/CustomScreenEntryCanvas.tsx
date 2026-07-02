@@ -23,6 +23,8 @@ type CustomScreenEntryCanvasProps = {
   onSlugChange: (value: string) => void;
   selectedBlockId?: string | null;
   onSelectBlock?: (blockId: string) => void;
+  // TASK-503-03: entry-view badge gating (per-user preference, default off).
+  showFieldMetadata?: boolean;
 };
 
 export function CustomScreenEntryCanvas({
@@ -39,6 +41,7 @@ export function CustomScreenEntryCanvas({
   onSlugChange,
   selectedBlockId,
   onSelectBlock,
+  showFieldMetadata,
 }: CustomScreenEntryCanvasProps) {
   return (
     <ScreenRuntimeRenderer
@@ -53,6 +56,7 @@ export function CustomScreenEntryCanvas({
       mode="entry"
       selectedBlockId={selectedBlockId}
       onSelectBlock={onSelectBlock}
+      showFieldMetadata={showFieldMetadata}
       onFieldChange={onFieldChange}
       onTitleChange={onTitleChange}
       onSlugChange={onSlugChange}

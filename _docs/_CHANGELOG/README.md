@@ -29,10 +29,12 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1211 for the next changelog entry.
+assistant policy coverage fix. Use 1212 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1212 | 2026-07-02 | TASK-503 Screens Polish V2 — block style channel, clearable labels, clean entry view, drag handle & image residuals | Admin UI/Custom Screens/Screen Builder/Entry View/QA/Docs/Task Board |
+| 1211 | 2026-07-02 | TASK-502 Menu design fixes V2 — brand text, tablet cascade, canvas WYSIWYG & nested submenus | Admin UI/Content (Menus)/Navigation/Site Front/Responsive/QA/Docs/Task Board |
 | 1210 | 2026-07-02 | TASK-501 Menu per-device overrides, orientation & block visibility | Admin UI/Content (Menus)/Navigation/Page Builder/Responsive/QA/Docs/Task Board |
 | 1209 | 2026-07-02 | TASK-500 Screen builder — sections, insertion targeting and editor UX | Admin UI/Custom Screens/Screen Builder/Page-Builder UX/QA/Docs/Task Board |
 | 1208 | 2026-07-01 | TASK-499 Menu items restyle and Design tab (menuDocumentV2) | Admin UI/Content (Menus)/Navigation/Page Builder/Visual Refresh/QA/Docs/Task Board |

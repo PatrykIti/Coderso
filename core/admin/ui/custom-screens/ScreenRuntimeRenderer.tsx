@@ -1,4 +1,10 @@
-import { Fragment, useState, type DragEvent as ReactDragEvent, type ReactNode } from "react";
+import {
+  Fragment,
+  useState,
+  type CSSProperties,
+  type DragEvent as ReactDragEvent,
+  type ReactNode,
+} from "react";
 import { AlertTriangle, Image as ImageIcon, MoveDown, MoveUp, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -6,10 +12,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { InlineEditWrapper, selectionBorder } from "@/ui/authoring";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
-import type {
-  ScreenBlockV1,
-  ScreenDocumentV1,
-  ScreenFieldBinding,
+import {
+  normalizeScreenImageSrc,
+  type ScreenBlockStyleV1,
+  type ScreenBlockV1,
+  type ScreenDocumentV1,
+  type ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
   screenBlockLabels,
@@ -66,6 +74,14 @@ type ScreenRuntimeRendererProps = {
   renderBuilderActions?: (block: ScreenBlockV1) => ReactNode;
   enableInlineFieldEditing?: boolean;
   emptyMessage?: string;
+  /**
+   * TASK-503-02 C(i): entry-mode-only chrome gate for the binding badges
+   * ("Editable"/"Read"/"Unbound") and the uppercase field-type badge.
+   * DEFAULT OFF — a published entry view is clean unless the user opts in
+   * (503-03 threads the per-user localStorage preference). Preview ALWAYS
+   * shows the badges; builder chrome is untouched by this prop.
+   */
+  showFieldMetadata?: boolean;
 };
 
 const systemFieldLabels = new Map([
@@ -140,6 +156,52 @@ const presentationToneClassMap: Record<string, string> = {
   warning: "text-warning",
   danger: "text-destructive",
   info: "text-info",
+};
+
+// TASK-503-02 A: parent-normative width/align class maps for the block STYLE
+// channel. Applied on the wrap() root div identically in builder/preview/entry.
+const screenBlockWidthClass: Record<string, string> = {
+  auto: "",
+  full: "w-full",
+  half: "w-1/2",
+  third: "w-1/3",
+  "two-thirds": "w-2/3",
+};
+const screenBlockAlignClass: Record<string, string> = {
+  start: "mr-auto",
+  center: "mx-auto",
+  end: "ml-auto",
+  stretch: "w-full",
+};
+// TASK-503-02 E: image ratio enum → aspect-* wrapper class ("auto"/legacy free
+// text → no class, renders as today).
+const screenImageRatioClass: Record<string, string> = {
+  "1/1": "aspect-square",
+  "4/3": "aspect-[4/3]",
+  "16/9": "aspect-video",
+  "3/2": "aspect-[3/2]",
+};
+
+// TASK-503-02 A: inline box CSS from the VALIDATED style record. Values arrive
+// already clamped as ints (503-01 validator); the renderer still type-guards
+// (typeof number) so a hand-crafted document can only ever emit numbers into
+// style={} — never strings/raw input. Returns undefined (no style attr) when
+// nothing to emit, preserving absent-style DOM identity.
+const screenBoxSides = ["top", "right", "bottom", "left"] as const;
+const resolveScreenBlockBoxStyle = (
+  style: ScreenBlockStyleV1 | undefined
+): CSSProperties | undefined => {
+  if (!style) return undefined;
+  const out: CSSProperties = {};
+  if (typeof style.minHeight === "number") out.minHeight = style.minHeight;
+  for (const side of screenBoxSides) {
+    const cap = side[0].toUpperCase() + side.slice(1); // Top/Right/Bottom/Left
+    const m = style.margin?.[side];
+    if (typeof m === "number") (out as Record<string, number>)[`margin${cap}`] = m;
+    const p = style.padding?.[side];
+    if (typeof p === "number") (out as Record<string, number>)[`padding${cap}`] = p;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
 };
 
 const stringifyValue = (value: unknown) => {
@@ -275,6 +337,7 @@ export function ScreenRuntimeRenderer({
   renderBuilderActions,
   enableInlineFieldEditing = false,
   emptyMessage,
+  showFieldMetadata = false,
 }: ScreenRuntimeRendererProps) {
   // TASK-500-02: id of the card being natively dragged (builder-only) —
   // suppresses that block's OWN inner drop zones while it is in flight. Set and
@@ -544,7 +607,10 @@ export function ScreenRuntimeRenderer({
               "rounded-2xl bg-card p-5"
             )
           : cn(
-              "bg-background/90",
+              // TASK-503-02 C(ii): entry surface flatten — one opaque card
+              // surface (selection/interaction ring kept so entry blocks stay
+              // clickable for the floating-panel select).
+              "rounded-xl bg-card",
               selectionBorder({
                 level: "item",
                 selected,
@@ -552,6 +618,29 @@ export function ScreenRuntimeRenderer({
               })
             )
     );
+
+    // TASK-503-02 A: block STYLE emission — computed once here (inside
+    // renderBlock, so every kind inherits it) and applied on the wrap() root div
+    // in ONE code path shared by builder/preview/entry. An absent `style` key →
+    // widthClass/alignClass "" + boxStyle undefined → byte-identical DOM to today.
+    const blockStyle = block.style;
+    const widthClass = blockStyle?.width ? (screenBlockWidthClass[blockStyle.width] ?? "") : "";
+    // Determinism rule 1: explicit horizontal margins WIN over the align preset
+    // (mx-auto etc. would lose to inline margin anyway) — suppress the class.
+    const hasHorizontalMargin =
+      blockStyle?.margin?.left !== undefined || blockStyle?.margin?.right !== undefined;
+    // Determinism rule 2: a width preset WINS over align:"stretch" — "stretch"
+    // only emits w-full when no width class is present (two width utilities would
+    // resolve by stylesheet order, not intent).
+    const alignClass =
+      blockStyle?.align && !hasHorizontalMargin
+        ? blockStyle.align === "stretch"
+          ? widthClass
+            ? ""
+            : "w-full"
+          : (screenBlockAlignClass[blockStyle.align] ?? "")
+        : "";
+    const boxStyle = resolveScreenBlockBoxStyle(blockStyle);
 
     // TASK-500 post-audit: dropping on a block CARD BODY (the most natural drag
     // target) resolves to before/after THAT card by vertical midpoint instead of
@@ -570,7 +659,8 @@ export function ScreenRuntimeRenderer({
     const wrap = (content: ReactNode) => (
       <div
         key={block.id}
-        className={wrapperClass}
+        className={cn(wrapperClass, widthClass, alignClass)}
+        style={boxStyle}
         data-screen-block-id={block.id}
         data-screen-block-type={block.type}
         data-screen-presentation-override={
@@ -579,27 +669,9 @@ export function ScreenRuntimeRenderer({
         data-selected={selected ? "true" : "false"}
         role={isInteractive ? "button" : undefined}
         tabIndex={isInteractive ? 0 : undefined}
-        // TASK-500-02: builder cards are native-DnD drag sources. stopPropagation
-        // keeps a nested card's drag from being hijacked by its container card.
-        draggable={canDrag ? true : undefined}
-        onDragStart={
-          canDrag
-            ? (event) => {
-                event.stopPropagation();
-                event.dataTransfer?.setData("text/plain", block.id);
-                if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-                setDraggingBlockId(block.id);
-              }
-            : undefined
-        }
-        onDragEnd={
-          canDrag
-            ? () => {
-                setDraggingBlockId(null);
-                setDragHoverTarget(null);
-              }
-            : undefined
-        }
+        // TASK-503-02 D: the drag source moved OFF the card onto the corner type
+        // Badge (below) so nested draggable children no longer shadow their
+        // container. The card stays a drop-only target (onDragOver/onDrop kept).
         onDragOver={
           cardDropTargets
             ? (event) => {
@@ -647,7 +719,37 @@ export function ScreenRuntimeRenderer({
           <>
             <Badge
               variant="outline"
-              className="absolute -top-2 left-3 z-10 px-1.5 py-0 text-[10px] font-medium"
+              // TASK-503-02 D: the corner type Badge is now the native-DnD drag
+              // source (Badge is a span that spreads ...props). ALL drop wiring
+              // stays on the card div; only the element that STARTS a drag moves,
+              // so a container card can no longer be shadowed by nested draggable
+              // children (the card surface is drop-only).
+              data-screen-drag-handle={canDrag ? block.id : undefined}
+              draggable={canDrag ? true : undefined}
+              onDragStart={
+                canDrag
+                  ? (event) => {
+                      // Belt-and-braces: no ancestor drag source remains, but a
+                      // nested badge's dragstart must never leak upward.
+                      event.stopPropagation();
+                      event.dataTransfer?.setData("text/plain", block.id);
+                      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+                      setDraggingBlockId(block.id);
+                    }
+                  : undefined
+              }
+              onDragEnd={
+                canDrag
+                  ? () => {
+                      setDraggingBlockId(null);
+                      setDragHoverTarget(null);
+                    }
+                  : undefined
+              }
+              className={cn(
+                "absolute -top-2 left-3 z-10 px-1.5 py-0 text-[10px] font-medium",
+                canDrag && "cursor-grab active:cursor-grabbing"
+              )}
             >
               {screenBlockLabels[block.type as ScreenBlockKind] ?? block.type}
             </Badge>
@@ -776,28 +878,44 @@ export function ScreenRuntimeRenderer({
       const fieldName =
         binding?.field ?? (typeof block.data.field === "string" ? block.data.field : "");
       const field = fieldName ? findField(fields, fieldName) : null;
-      const label =
-        readText(block.data, "label") ||
-        field?.label ||
-        (fieldName ? (systemFieldLabels.get(fieldName) ?? fieldName) : "Field");
+      // TASK-503-02 B: explicit-string label semantics. A stored string (incl. a
+      // trimmed "") is honored verbatim → an explicitly cleared label renders NO
+      // label <p>; an absent/non-string key falls through to today's default
+      // chain so stored screens render identically.
+      const defaultLabel =
+        field?.label ?? (fieldName ? (systemFieldLabels.get(fieldName) ?? fieldName) : "Field");
+      const rawLabel = block.data.label;
+      const label = typeof rawLabel === "string" ? rawLabel.trim() : defaultLabel;
+      // Builder {{ token }} / a11y stand-in — keeps the binding visible and the
+      // accessible name non-empty even with a cleared label (reuses defaultLabel
+      // so cleared and never-set show the same token text).
+      const tokenLabel = label || defaultLabel;
       const value = binding ? readBindingPathValue(values, binding.field) : undefined;
       const presentationMediaValue =
         field?.type === "media" ? readMediaPresentationValue(block.id) : null;
       const displayValue = presentationMediaValue ?? value;
       const writable = bindingAllowsWrite(binding);
       const canEdit = canWriteBinding(binding, field);
+      // TASK-503-02 C(i): binding badges show in preview always; in entry ONLY
+      // when the user opted in (showFieldMetadata); builder rendered null here
+      // already, so this preserves today's builder output exactly.
+      const showBindingBadges = mode === "preview" || (mode === "entry" && showFieldMetadata);
       return wrap(
         <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {label}
-              </p>
+              {label ? (
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {label}
+                </p>
+              ) : null}
               {mode === "builder" ? (
                 // TASK-498-01 A3: builder mode shows the muted `{{ label }}` Token in
                 // place of the resolved value / inline-edit surface (graphical schema).
+                // TASK-503-02 B: uses tokenLabel so a cleared label still shows the
+                // field-name stand-in.
                 <p className={withTextPresentation(block.id, "mt-2 break-words text-base")}>
-                  <RuntimeToken>{`{{ ${label} }}`}</RuntimeToken>
+                  <RuntimeToken>{`{{ ${tokenLabel} }}`}</RuntimeToken>
                 </p>
               ) : canEdit ? (
                 field && binding && isInlineEditableField(field) ? (
@@ -805,7 +923,7 @@ export function ScreenRuntimeRenderer({
                     as="p"
                     value={editableTextValue(value)}
                     editable
-                    ariaLabel={label}
+                    ariaLabel={tokenLabel}
                     placeholder="Empty"
                     className={withTextPresentation(
                       block.id,
@@ -835,20 +953,26 @@ export function ScreenRuntimeRenderer({
                 </p>
               )}
             </div>
-            {mode === "builder" ? null : binding ? (
-              <Badge variant={writable ? "default" : "outline"} className="shrink-0 text-[10px]">
-                {writable ? "Editable" : "Read"}
-              </Badge>
-            ) : (
-              <Badge variant="outline" className="shrink-0 text-[10px]">
-                Unbound
-              </Badge>
-            )}
+            {showBindingBadges ? (
+              binding ? (
+                <Badge variant={writable ? "default" : "outline"} className="shrink-0 text-[10px]">
+                  {writable ? "Editable" : "Read"}
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="shrink-0 text-[10px]">
+                  Unbound
+                </Badge>
+              )
+            ) : null}
           </div>
           {readText(block.data, "helper") ? (
             <p className="mt-2 text-xs text-muted-foreground">{readText(block.data, "helper")}</p>
           ) : null}
-          {field ? (
+          {/* TASK-503-02 C(i): the field-type badge had NO mode gate today
+              (rendered in builder+preview+entry). Keep builder+preview; gate ONLY
+              entry behind showFieldMetadata (dropping it from builder would be a
+              498 byte-parity regression). */}
+          {field && (mode === "builder" || showBindingBadges) ? (
             <Badge variant="outline" className="mt-3 text-[10px] uppercase">
               {fieldTypeLabels[field.type as keyof typeof fieldTypeLabels] ?? field.type}
             </Badge>
@@ -957,14 +1081,18 @@ export function ScreenRuntimeRenderer({
 
     if (block.type === "stat") {
       const binding = resolveBlockBinding(bindings, block.id, "value");
-      const label = readText(block.data, "label", "Stat");
+      // TASK-503-02 B: explicit-string label semantics (same model as field;
+      // "Stat" is the never-set default). A cleared "" renders no label <p>.
+      const rawLabel = block.data.label;
+      const label = typeof rawLabel === "string" ? rawLabel.trim() : "Stat";
+      const tokenLabel = label || "Stat";
       const format = readText(block.data, "format", "number");
       const trend = readText(block.data, "trend", "auto");
       const raw = binding ? readBindingPathValue(values, binding.field) : undefined;
       const value =
         mode === "builder" ? (
           binding ? (
-            <RuntimeToken>{`{{ ${label} }}`}</RuntimeToken>
+            <RuntimeToken>{`{{ ${tokenLabel} }}`}</RuntimeToken>
           ) : (
             "—"
           )
@@ -973,9 +1101,11 @@ export function ScreenRuntimeRenderer({
         );
       return wrap(
         <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {label}
-          </p>
+          {label ? (
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              {label}
+            </p>
+          ) : null}
           <div
             className={withTextPresentation(
               block.id,
@@ -1021,11 +1151,17 @@ export function ScreenRuntimeRenderer({
       const binding = resolveBlockBinding(bindings, block.id, "src");
       const label = readText(block.data, "label", "Image");
       const fit = readText(block.data, "fit", "cover");
+      // TASK-503-02 E: authored ratio enum → aspect-* wrapper class. "auto",
+      // absent, or a legacy free-text value (e.g. "16:9") misses the map → no
+      // class → today's exact markup.
+      const ratioValue = typeof block.data.ratio === "string" ? block.data.ratio : "auto";
+      const ratioClass = screenImageRatioClass[ratioValue];
       const bound = binding ? readBindingPathValue(values, binding.field) : undefined;
-      // TASK-500-04: authored static src (schema already scheme-checked on save).
-      // Resolution order preserves override-first precedence: per-entry media/presentation
-      // override → bound field value → authored static src → labeled placeholder.
-      const staticSrc = readText(block.data, "src");
+      // TASK-500-04 / 503-02 E: authored static src, now filtered at READ time
+      // (defense-in-depth — idempotent for saved docs since the save path already
+      // normalized, but it gates the builder's live preview of a raw inspector
+      // draft pre-503-03 so an unsafe scheme can never reach <img src>).
+      const staticSrc = normalizeScreenImageSrc(readText(block.data, "src"));
       const src =
         readMediaPresentationValue(block.id) ?? resolveMediaSrc(bound) ?? (staticSrc || null);
       // Builder mirrors heading: a bound image keeps the {{ label }} token; an unbound
@@ -1034,20 +1170,38 @@ export function ScreenRuntimeRenderer({
       if (showImage && src) {
         return wrap(
           <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
-            <img
-              src={src}
-              alt={label}
-              className={cn(
-                "w-full rounded-lg",
-                fit === "contain" ? "object-contain" : "object-cover"
-              )}
-            />
+            {ratioClass ? (
+              <div className={cn("relative w-full overflow-hidden rounded-lg", ratioClass)}>
+                <img
+                  src={src}
+                  alt={label}
+                  className={cn(
+                    "h-full w-full",
+                    fit === "contain" ? "object-contain" : "object-cover"
+                  )}
+                />
+              </div>
+            ) : (
+              <img
+                src={src}
+                alt={label}
+                className={cn(
+                  "w-full rounded-lg",
+                  fit === "contain" ? "object-contain" : "object-cover"
+                )}
+              />
+            )}
           </div>
         );
       }
       return wrap(
         <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
-          <div className="flex aspect-video w-full items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground">
+          <div
+            className={cn(
+              "flex w-full items-center justify-center rounded-lg bg-muted text-xs text-muted-foreground",
+              ratioClass ?? "aspect-video"
+            )}
+          >
             {binding ? (
               <RuntimeToken>{`{{ ${label} }}`}</RuntimeToken>
             ) : (
@@ -1413,14 +1567,26 @@ export function ScreenRuntimeRenderer({
               "relative p-4 transition",
               mode === "preview"
                 ? "rounded-2xl border bg-background/80"
-                : cn(
-                    "bg-background/60",
-                    selectionBorder({
-                      level: "container",
-                      selected,
-                      interactive: isInteractive,
-                    })
-                  )
+                : mode === "builder"
+                  ? cn(
+                      "bg-background/60",
+                      selectionBorder({
+                        level: "container",
+                        selected,
+                        interactive: isInteractive,
+                      })
+                    )
+                  : // TASK-503-02 C(ii): entry surface flatten — transparent
+                    // section (the block wrapper carries the single opaque card).
+                    // Forked into 3 so builder keeps bg-background/60 (498 parity).
+                    cn(
+                      "bg-transparent",
+                      selectionBorder({
+                        level: "container",
+                        selected,
+                        interactive: isInteractive,
+                      })
+                    )
             )}
             data-screen-section-id={section.id}
             data-screen-section-type={section.type}

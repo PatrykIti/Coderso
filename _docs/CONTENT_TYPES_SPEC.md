@@ -686,6 +686,144 @@ placeholder. The rejected alternative — marking image "requires a bound field"
 (builder-only affordance, no schema change) — was declined because it would keep image
 the single kind unable to carry authored static content.
 
+## Custom Screen entry-view builder — block style channel, clearable labels & entry presentation (TASK-503)
+
+TASK-503 polishes the screen builder on top of TASK-498/500 **without** a schema
+version bump: `ScreenDocumentV1` stays `schemaVersion: 1`, the custom-screen
+definition stays `v4`, and a stored V4 screen round-trips **byte-stable**. All five
+changes below are additive or entry-mode-only; builder/preview renderer output is
+byte-identical to pre-503.
+
+### Block style channel — `ScreenBlockStyleV1` (TASK-503-01)
+
+`ScreenBlockV1` gains an OPTIONAL, validated `style` member (block-level layout).
+The block-level allow-list (`normalizeScreenBlock`) gains exactly `"style"`; every
+other block key is unchanged; `variant` **stays accepted** on read/write (only its
+dead inspector "Background" control was removed — decision 1).
+
+```ts
+export const screenBlockWidths = ["auto", "full", "half", "third", "two-thirds"] as const;
+export const screenBlockAligns = ["start", "center", "end", "stretch"] as const;
+export const SCREEN_BLOCK_MIN_HEIGHT_CLAMP = { min: 0, max: 640 } as const;
+// box sides = top/right/bottom/left, each clamped to PAGE_BLOCK_BOX_SPACING_CLAMP
+// ({min:0,max:240}) — imported read-only from services/pages/pageDocumentV2
+// (the allowed services→services precedent set by menuDocumentV2; the Bun-free
+//  boundary bans only @/ui/pages, not this constant import).
+export type ScreenBlockBoxSpacingV1 = Partial<Record<"top"|"right"|"bottom"|"left", number>>;
+export type ScreenBlockStyleV1 = {
+  width?: (typeof screenBlockWidths)[number];
+  minHeight?: number;                 // clamped int px, 0..640
+  margin?: ScreenBlockBoxSpacingV1;   // per-side clamped ints, 0..240
+  padding?: ScreenBlockBoxSpacingV1;
+  align?: (typeof screenBlockAligns)[number];
+};
+```
+
+Validation is schema-first and matches the screen module's split discipline:
+**unknown KEYS throw** `custom_screen_definition_invalid` (both an unknown
+`style.*` key and an unknown box side), while **invalid VALUES coerce/clamp** and
+never throw (`width:"huge"→"auto"`, `align:7→"start"`, `minHeight:9999→640`,
+`minHeight:-4→0`, `margin.top:3.7→3` floor, non-number → clamp min). The channel is
+**sparse and self-pruning**: only present keys are emitted, an empty `style: {}` or
+`style: { margin: {} }` prunes to NO `style` member, and an **absent `style` key
+stays absent** after normalize (spread-emit-only-when-present) so no-style documents
+are byte-stable. The same rules apply on the READ path
+(`normalizeScreenDocumentV1ForRead`), so stored screens are never mutated. A
+mirrored Ajv schema (`screenBlockStyleV1Schema`, `additionalProperties:false`,
+integer ranges) at the route validation layer rejects an unknown/out-of-range/junk
+style at the edge with `validation_error` **before** the service normalizer runs —
+raw stored input can never reach the renderer's inline `style={}` except as a
+clamped number or a mapped Tailwind class.
+
+Renderer emission (`ScreenRuntimeRenderer.wrap()`, ONE path for
+builder/preview/entry): `style.width`→width class (`w-1/2`, `w-1/3`, `w-2/3`,
+`w-full`; `auto`→none), `style.align`→align class (`mr-auto`/`mx-auto`/`ml-auto`;
+`stretch`→`w-full`), `minHeight`+per-side `margin*`/`padding*`→inline CSS.
+**Deterministic precedence:** the align class is suppressed when an explicit
+horizontal margin (`margin.left`/`margin.right`) is set, so inline margins win over
+the align preset with no inline-vs-class fight.
+
+### Clearable labels (renderer semantics, TASK-503-02)
+
+The old `readText(...) || fallback` made an explicitly-cleared label (`""`)
+indistinguishable from never-set. Fixed to the divider model: a `string` label is
+treated as explicit (trimmed `""` = **no label**, the `<p>` is not rendered);
+an **absent** label key keeps today's default chain
+(`field.label → systemFieldLabels → fieldName → "Field"`; stat default `"Stat"`),
+so stored screens render identically. The builder keeps a field-name stand-in
+**inside** the `{{ token }}` so a cleared-label binding stays visible on the canvas.
+Applies to `field` and `stat` kinds.
+
+### Image `ratio` enum (TASK-503-01/02) — NO schema coercion
+
+`screenImageRatios = ["auto","1/1","4/3","16/9","3/2"]` (canonical **slash** tokens).
+Per decision 3 the schema keeps `ratio` **permissive and UNCOERCED** (the image
+`data` allow-list is unchanged) so a stored legacy free-text ratio (e.g. `"16:9"`)
+round-trips **byte-identical on BOTH read and write** — a coercion would also run on
+the read path (`normalizeScreenDocumentV1ForRead`) and mutate stored reads. The enum
+is consumed only by the renderer class-map and the inspector EnumRow:
+`1/1→aspect-square`, `4/3→aspect-[4/3]`, `16/9→aspect-video`, `3/2→aspect-[3/2]`;
+`auto`/absent/unknown/legacy-colon → NO aspect class (today's exact `<img>` markup,
+no wrapper — byte-parity). The inspector EnumRow shows colon LABELS
+(`auto/1:1/4:3/16:9/3:2`) but WRITES the slash enum value.
+
+### Exported `normalizeScreenImageSrc` (TASK-503-01) — enforced write + preview + save
+
+`normalizeScreenImageSrc` is now EXPORTED and is the single source of truth for the
+`src` prefix filter (`/`, `http://`, `https://` allowed; everything else → `""`,
+never throws). It runs on the save path (as before) AND the inspector write path
+(raw text stays in a local input draft so typing `https://…` character-by-character
+is not destroyed) AND the builder preview — so a `javascript:`/`data:` src can never
+reach `<img src>` at any point in the authoring session.
+
+### Entry-view presentation (`showFieldMetadata`, TASK-503-03)
+
+The published-screen **entry** canvas is clean by default. Three gated changes,
+**entry-mode-only** (builder/preview chrome unchanged, byte-parity preserved):
+
+- **Metadata badges** (binding "Editable/Read/Unbound" + the uppercase field-type
+  badge) are gated by a new `showFieldMetadata` prop (default **false**). The two
+  badges have different current gates and are gated **separately**: the field-type
+  badge (no mode gate historically) STAYS in builder + preview and is gated only in
+  entry; the binding badge stays builder-absent. `entryChromeVisible = mode ===
+  "preview" || (mode === "entry" && showFieldMetadata)`.
+- **Flat surface:** the entry block wrapper recolors to opaque `bg-card rounded-xl`
+  **while retaining `selectionBorder`** (the TASK-498 selection ring the
+  presentation-override panel is scoped to — load-bearing, NOT stripped), the entry
+  section carries `bg-transparent`, and the entry canvas scroller drops `bg-dotted`.
+  The section's 2-way fork was forked into 3 so builder keeps `bg-background/60`.
+- **Preference:** `useScreenEntryPreferences` (`usePostEditorPreferences` pattern) —
+  localStorage-only, key `coderso.screens.entry.preferences.v1`, default
+  `{ showFieldMetadata: false }`; junk / non-boolean / parse errors swallow to the
+  default. Surfaced as a "Show field metadata" Switch
+  (`[data-screen-entry-metadata-toggle]`) in the entry-canvas sub-toolbar
+  (reachable on a fresh record view with no block selected — NOT the Presentation
+  panel, which is null until a presentation-capable block is selected).
+
+### Drag-handle contract (TASK-503-02) — `data-screen-drag-handle`
+
+The whole builder card used to be the native-DnD source, so nested draggable
+children shadowed their container. `draggable` + `onDragStart` + `onDragEnd` now
+live on the corner type Badge (`data-screen-drag-handle={block.id}`, builder-only);
+ALL drop wiring (`onDragOver`/`onDrop`/card drop targets) and keyboard/a11y move
+flows stay on the card (which keeps `data-screen-block-id`). Insertion-targeting
+tests that simulate `dragstart`/`dragend` fire on the handle; drop/read queries stay
+on the wrapper.
+
+### Legacy record-header copy — authoring note (decision 2, NO read-path repair)
+
+The "RECORD OVERVIEW" eyebrow / "Preview the primary content fields in one place."
+subtitle on migrated screens are STORED `screenRecordHeader` widget-migration DATA,
+not code defaults. They are cleared via the record-header eyebrow/subtitle inspector
+rows (record-header renders `null` for empty values). There is deliberately **NO
+read-path mutation** — that would break stored-V4 byte-stability and could discard
+copy the author kept intentionally.
+
+**Residual follow-ups (documented, not silent gaps):** a future validated
+`ScreenBlockStyleV1.background` enum (the additive successor to the removed free-text
+`variant` "Background" row); `useScreenEntryPreferences` is local-only v1, with
+`userSettingsClient` cross-device sync deferred.
+
 ## API
 
 Admin API w `CMS_API.md`:

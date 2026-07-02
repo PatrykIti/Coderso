@@ -1,6 +1,10 @@
 import type { WidgetBlock } from "../../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
 import { normalizeWidgetBlock } from "../../widgets/validator";
+// TASK-503-01: block-level style channel reuses the exported page spacing clamp.
+// services→services import is the menuDocumentV2 precedent; the Bun-free boundary
+// bans only @/ui/pages imports. PAGE_BLOCK_BOX_SPACING_CLAMP = { min: 0, max: 240 }.
+import { PAGE_BLOCK_BOX_SPACING_CLAMP } from "../pages/pageDocumentV2";
 import {
   isBindingWriteModeSupported,
   resolveCustomScreenBindingContracts,
@@ -114,6 +118,7 @@ export type ScreenBlockV1 = {
   type: string;
   label?: string;
   variant?: string;
+  style?: ScreenBlockStyleV1;
   data: Record<string, unknown>;
   layout?: WidgetBlock["layout"];
   visibility?: WidgetBlock["visibility"];
@@ -419,13 +424,88 @@ const clampScreenInt = (value: unknown, fallback: number, min: number, max: numb
   return Math.min(max, Math.max(min, n));
 };
 
+// TASK-503-01: block-level style channel — a validated, sparse, additive subset on
+// ScreenBlockV1. Consumed by the renderer (503-02 class maps + inline style) and the
+// inspector Layout group (503-03). Enums coerce, ints clamp (coerce-not-throw, the
+// screen module's value style); only unknown KEYS throw (rejectUnknownKeys).
+export const screenBlockWidths = ["auto", "full", "half", "third", "two-thirds"] as const;
+export const screenBlockAligns = ["start", "center", "end", "stretch"] as const;
+export const screenImageRatios = ["auto", "1/1", "4/3", "16/9", "3/2"] as const;
+export const SCREEN_BLOCK_MIN_HEIGHT_CLAMP = { min: 0, max: 640 } as const;
+export const screenBlockBoxSides = ["top", "right", "bottom", "left"] as const;
+
+export type ScreenBlockWidth = (typeof screenBlockWidths)[number];
+export type ScreenBlockAlign = (typeof screenBlockAligns)[number];
+export type ScreenImageRatio = (typeof screenImageRatios)[number];
+export type ScreenBlockBoxSpacingV1 = Partial<Record<(typeof screenBlockBoxSides)[number], number>>;
+export type ScreenBlockStyleV1 = {
+  width?: ScreenBlockWidth;
+  minHeight?: number; // clamped int px 0..640 — height as min-height, content-safe
+  margin?: ScreenBlockBoxSpacingV1; // per-side clamped ints, PAGE_BLOCK_BOX_SPACING_CLAMP
+  padding?: ScreenBlockBoxSpacingV1;
+  align?: ScreenBlockAlign;
+};
+
+const screenBlockStyleAllowedKeys = ["width", "minHeight", "margin", "padding", "align"] as const;
+
+// Per-side box spacing: junk container drops (never throws); an unknown SIDE key throws;
+// each present side clamps via the exported page clamp (non-number → min). Prunes empty.
+const normalizeScreenBlockBoxSpacing = (value: unknown): ScreenBlockBoxSpacingV1 | undefined => {
+  if (!isRecord(value)) return undefined;
+  rejectUnknownKeys(value, screenBlockBoxSides);
+  const out: ScreenBlockBoxSpacingV1 = {};
+  for (const side of screenBlockBoxSides) {
+    if (value[side] === undefined) continue;
+    out[side] = clampScreenInt(
+      value[side],
+      PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      PAGE_BLOCK_BOX_SPACING_CLAMP.max
+    );
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+};
+
+// absent/null/non-record → undefined (no throw, byte-stable); unknown style key throws;
+// values coerce/clamp; empty (all-junk / {}) prunes to undefined so it never persists.
+const normalizeScreenBlockStyle = (value: unknown): ScreenBlockStyleV1 | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isRecord(value)) return undefined;
+  rejectUnknownKeys(value, screenBlockStyleAllowedKeys);
+  const margin = normalizeScreenBlockBoxSpacing(value.margin);
+  const padding = normalizeScreenBlockBoxSpacing(value.padding);
+  const style: ScreenBlockStyleV1 = {
+    ...(value.width !== undefined
+      ? { width: coerceScreenEnum(value.width, screenBlockWidths, "auto") }
+      : {}),
+    ...(value.minHeight !== undefined
+      ? {
+          minHeight: clampScreenInt(
+            value.minHeight,
+            SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
+            SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
+            SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max
+          ),
+        }
+      : {}),
+    ...(margin ? { margin } : {}),
+    ...(padding ? { padding } : {}),
+    ...(value.align !== undefined
+      ? { align: coerceScreenEnum(value.align, screenBlockAligns, "start") }
+      : {}),
+  };
+  return Object.keys(style).length > 0 ? style : undefined;
+};
+
 // TASK-500-04: static <img src> for the image kind — relative paths + http(s) only.
 // Everything else (javascript:, data:, blob:, file:, vbscript:, bare tokens, non-strings)
 // normalizes to "" (dropped, NEVER throws) so a stored value can never reach <img src>
 // with an unsafe scheme (write-path defense-in-depth). NOT a navigational href
 // (button.href) — so no mailto:/tel:. Idempotent: a safe value round-trips byte-stable.
 const safeImageSrcPrefixes = ["/", "http://", "https://"] as const;
-const normalizeScreenImageSrc = (value: unknown): string => {
+// TASK-503-01: exported as the single source of truth — 503-02 builder-preview gate
+// and 503-03 inspector write filter enforce the same prefix filter pre-save.
+export const normalizeScreenImageSrc = (value: unknown): string => {
   if (typeof value !== "string") return "";
   const trimmed = value.trim();
   if (!trimmed) return "";
@@ -535,6 +615,7 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
     "type",
     "label",
     "variant",
+    "style",
     "data",
     "layout",
     "visibility",
@@ -548,6 +629,7 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
   if (!type) throw new Error("custom_screen_definition_invalid");
   const label = normalizeText(value.label);
   const variant = normalizeText(value.variant);
+  const style = normalizeScreenBlockStyle(value.style);
   const legacyWidgetType = normalizeText(value.legacyWidgetType);
   const children = Array.isArray(value.children)
     ? normalizeUniqueIds(
@@ -578,6 +660,7 @@ const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
     type,
     ...(label ? { label } : {}),
     ...(variant ? { variant } : {}),
+    ...(style ? { style } : {}),
     data: normalizeScreenBlockData(type, value.data),
     ...(value.layout !== undefined
       ? { layout: normalizeJsonValue(value.layout) as WidgetBlock["layout"] }
@@ -2114,6 +2197,53 @@ const screenFieldBindingSchema = {
   additionalProperties: false,
 } as const;
 
+// TASK-503-01: Ajv mirror of ScreenBlockStyleV1 — references the SAME exported
+// constants as the normalizer (zero drift). The route layer REJECTS out-of-range /
+// float / unknown-key style payloads (additionalProperties: false); stored documents
+// read through the coercing normalizer. Both reference identical constants.
+const screenBlockBoxSpacingSchema = {
+  type: "object",
+  properties: {
+    top: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+    right: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+    bottom: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+    left: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+const screenBlockStyleV1Schema = {
+  type: "object",
+  properties: {
+    width: { enum: screenBlockWidths },
+    minHeight: {
+      type: "integer",
+      minimum: SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
+      maximum: SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max,
+    },
+    margin: screenBlockBoxSpacingSchema,
+    padding: screenBlockBoxSpacingSchema,
+    align: { enum: screenBlockAligns },
+  },
+  additionalProperties: false,
+} as const;
+
 const screenBlockV1Schema = {
   type: "object",
   required: ["id", "type", "data"],
@@ -2122,6 +2252,7 @@ const screenBlockV1Schema = {
     type: { type: "string", minLength: 1, maxLength: 160 },
     label: { type: "string", minLength: 1, maxLength: 160 },
     variant: { type: "string", minLength: 1, maxLength: 80 },
+    style: screenBlockStyleV1Schema,
     data: { type: "object" },
     layout: { type: "object" },
     visibility: { type: "object" },

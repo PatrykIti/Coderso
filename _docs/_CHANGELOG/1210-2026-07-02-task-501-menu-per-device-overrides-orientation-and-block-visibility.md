@@ -131,7 +131,7 @@ published snapshot only; `buildSiteShellCss(null)` byte-identity inviolate.
   (`posts-editor-chrome-wave.test.tsx`, TASK-497 surface — passes standalone;
   first full-glob run also showed known spurious timeout flakes, all named
   re-runs green)
-- Bun lane ✅ (`menus` routes 39/39 incl. the two new responsive tests,
+- Bun lane ✅ (`menus` routes 11/11 incl. the two new responsive tests,
   `menu-document-render` 19/19, `siteShellCss` byte-identity pin with a
   ZERO-line diff, `site-shell-runtime` 8/8; full `bun run test:bun` run at
   closure)
