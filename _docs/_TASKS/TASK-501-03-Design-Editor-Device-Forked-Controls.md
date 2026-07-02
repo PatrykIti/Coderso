@@ -255,6 +255,13 @@ const setLayoutField =
 // setNavField (inside MenuBlockPanel): drop the patchBlock body; route the
 // SAME section-level helper with group "navProps". Desktop writes land in the
 // nav-items block props (base), mobile in responsive.mobile.navProps.
+// NORMATIVE write target (501-01 §3): patchMenuSectionForDevice targets the
+// FIRST nav-items block (findIndex), REGARDLESS of which nav-items block is
+// selected in MenuBlockPanel. For docs with >1 nav-items block this is a
+// behavior change from today's patchBlock-by-selected-id: editing a second
+// nav-items block's appearance controls writes the FIRST block's props;
+// non-first nav-items blocks keep their props but stop being writable
+// through these controls.
 const setNavField = <K extends keyof NavItemsProps>(field: K, value: NavItemsProps[K] | undefined) =>
   updateDoc((doc) => {
     const section = doc.sections[0];
@@ -308,6 +315,9 @@ Same pattern with `group = "navProps"` around the 9 existing nav controls
 `FONT_WEIGHT_INHERIT` mapping), `override` / `onReset` per key via
 `readMenuSectionOverrideValue` / `clearMenuSectionOverride`. `MenuBlockPanel`
 needs the section handle — thread `doc` (or `section`) alongside `block`.
+Write-target note (normative, 501-01 §3): these nav appearance controls write
+the FIRST nav-items block via `patchMenuSectionForDevice` even when a
+different nav-items block is selected — see the `setNavField` comment in §2.
 
 Brand/cta/utility content inputs (`:752-847`) stay UNwrapped and keep
 `patchBlock` (device-invariant content; see Overview).
@@ -348,7 +358,12 @@ const visibilityOverride =
     <ToggleSwitch label="Visible on mobile" value={visibleOnDevice}
       onChange={(next) => updateDoc((doc) => setMenuBlockVisibleForDevice(doc, block.id, "mobile", next))} />
   </MenuResponsiveControlShell>
-) : isMenuLeafBlock(block) ? (
+) : block.type === "cta-button" || block.type === "divider" || block.type === "spacer" ? (
+  // Leaf-block check. NOTE: menuDocumentV2.ts exports NO leaf predicate —
+  // `isMenuLeafBlockType` (:380-381) and `MENU_LEAF_BLOCK_TYPES` (:71) are
+  // module-private, so the editor inlines the three types verbatim; the
+  // source of truth stays MENU_LEAF_BLOCK_TYPES and a vitest divergence
+  // guard (see Test Plan) fails if the lists drift apart.
   // Flat visibility on desktop/tablet — LEAF blocks only (native blocks have
   // no flat visibility slot; menuDocumentV2.ts:364-365 key lists). Enables
   // "show only on mobile": flat visible:false + mobile override true.
@@ -432,6 +447,11 @@ already in place):**
   and creates NO `responsive` member.
 - **Device-forked nav write:** on Mobile, change "Item gap"; assert nav-items
   block `props` unchanged + `responsive.mobile.navProps.itemGap` set.
+- **First-nav-items write target (>1 nav-items):** doc seeded with TWO
+  nav-items blocks; select the SECOND and edit a nav appearance control ⇒ the
+  FIRST block's `props` mutate (Desktop) / section `responsive.mobile.navProps`
+  is written (Mobile); the second block's `props` stay byte-identical
+  (normative per 501-01 §3).
 - **Tablet writes base:** on Tablet, edit a control; assert the base mutated,
   no `responsive` record, and the badge reads "Base"
   (`data-menu-responsive-badge="base"`).
@@ -466,6 +486,15 @@ already in place):**
   `data-menu-block-hidden`; Reset clears the record. On Desktop, leaf block
   shows the flat "Visible" toggle (writes flat `visibility.visible`), native
   blocks show none.
+- **Leaf-list divergence guard:** the editor's inlined leaf-type check (step
+  6) must equal schema truth without importing the private
+  `MENU_LEAF_BLOCK_TYPES`: for EVERY type in the exported `menuBlockTypes`,
+  run `normalizeMenuDocumentV2ForWrite` on a doc whose block of that type
+  carries `visibility: { visible: false }` — assert the set of types that
+  ACCEPT it (vs throw `MenuDocumentError`) is exactly
+  `{"cta-button","divider","spacer"}`, i.e. the editor's inline list. A new
+  leaf/native type added to the schema fails this test until step 6's list is
+  updated.
 - **Content stays flat:** on Mobile, edit the cta "Label" input ⇒ base
   `props.label` mutated, no `responsive` record, control carries no badge.
 - **Undo/redo across forks:** mobile edit → undo ⇒ doc deep-equals the

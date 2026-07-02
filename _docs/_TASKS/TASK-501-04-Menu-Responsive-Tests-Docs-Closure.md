@@ -17,7 +17,10 @@ per-device menu overrides / orientation / block visibility, VERIFY and
 consolidate the guard tests the siblings land with their code (the **conscious
 fail-closed blast-radius** assertion and the **legacy round-trip identity** —
 owned by 501-01; the **no-override byte-identity** pins for both CSS builders
-— owned by 501-02), run all gates, do the real-input playwright smoke (canvas
+AND the **responsive-gated blocks render in the DOM** guard (leaf frames stay
+mounted, CSS owns the gating — the `menuLeafToPageBlock` visibility handoff
+against `PageBlockFrame`'s null-return on `visibility.visible:false`,
+`pageRendererV2.tsx:1950`) — owned by 501-02), run all gates, do the real-input playwright smoke (canvas
 + `:3000` at a real mobile viewport), and close docs/changelog/board.
 
 - **Goal:** every suite in §1 green together; legacy menu documents provably
@@ -213,7 +216,7 @@ test("no-override byte-identity: buildMenuDocumentCss(legacyDoc) === the pre-TAS
 test("orientation default 'horizontal' emits NOTHING (sheet for doc-with-explicit-horizontal === sheet without)", () => {});
 
 // EMISSION SHAPE (front @media, buildMenuDocumentCss :150-161):
-test("mobile overrides emit DIFF rules inside @media (max-width: 639px), AFTER the mobileMode disclosure/inline rules (source-order win)", () => {
+test("mobile overrides emit per-GROUP delta rules (triggered group = TOTAL emission, 501-02 §2-3) inside @media (max-width: 639px), AFTER the mobileMode disclosure/inline rules (source-order win)", () => {
   // assert indexOf(disclosureRule) < indexOf(overrideRule) within the mobile branch
 });
 test("orientation vertical emits `.site-nav-list{flex-direction:column;align-items:stretch}` in the branch matching where it is set (base vs mobile)", () => {});
@@ -221,6 +224,7 @@ test("hide-on-mobile ⇒ mobile branch doc-scoped DUAL selector [data-menu-block
 test("nav-items block hidden on mobile WINS in BOTH mobileMode:'inline' and mobileMode:'disclosure' with the disclosure [open] — front @media AND canvas flatten (guards the <nav> ancestor-wrapper stamp against the higher-specificity .site-nav-list{display:flex} / disclosure-open rules; OWNED by 501-02, verified here)", () => {});
 test("no UNSCOPED attribute selector anywhere in the emitted sheet: every comma-list member carries the `${header}` prefix (explicit assertion, beyond the [data-site-menu-doc] scoping check below)", () => {});
 test("data-menu-block-id is stamped on menu-native wrappers only (nav <nav>, brand <a>, utility <span>) while leaf frames carry PageBlockFrame's data-block-id (extend the :61 golden); blocks invisible on BOTH devices stay render-SKIPPED (no DOM, no rule)", () => {});
+test("DOM-presence guard for override-gated blocks (PageBlockFrame null-return trap): the rendered front HTML for overriddenDoc CONTAINS the hide-on-mobile block's wrapper AND the show-only-on-mobile leaf's data-block-id — present in the DOM, gated by CSS only; ONLY both-invisible blocks are absent (guards the 501-02-owned menuLeafToPageBlock visibility handoff — a regression to render-skipping flat-false leaves would silently break show-only-on-mobile while every CSS-sheet assertion above stays green)", () => {});
 
 // CANVAS FLATTEN (buildMenuDocumentPreviewCss :209-213):
 test("canvas device='mobile' flattens mobile-resolved rules (no @media); device='tablet' still maps to the DESKTOP branch", () => {});
@@ -248,10 +252,18 @@ bun run gates:coderso               # repo gate alias (package.json:70)
 #   DEV-SERVER GOTCHA: Bun server code does NOT hot-reload — kill the stale
 #   `bun --eval` process (check its start date) and re-run coderso-dev-core-host
 #   BEFORE trusting admin-API responses; white admin page = server down.
-# 1. admin /admin/menus → Design tab: DeviceSwitcher→Mobile; set itemGap override,
-#    orientation=vertical, hide the CTA. Canvas shows all three; switch to Desktop
-#    ⇒ unchanged base look. Save + Publish.
-# 2. front :3000 at viewport 390px: vertical stacked nav, overridden gap, NO CTA.
+# 1. admin /admin/menus → Design tab: FIRST set mobileMode to "Inline" in the
+#    nav-items panel (MenuDesignEditor mobileModeLabels: disclosure="Collapsed",
+#    inline="Inline") — under the default "disclosure" the 390px nav is hidden
+#    behind the toggle and the disclosure-open rule ALREADY forces
+#    flex-direction:column (menuDocumentCss.ts:133), so a "vertical stacked nav"
+#    check would pass with or without the feature. Then DeviceSwitcher→Mobile;
+#    set itemGap override, orientation=vertical, hide the CTA. Canvas shows all
+#    three; switch to Desktop ⇒ unchanged base look. Save + Publish.
+# 2. front :3000 at viewport 390px: the INLINE nav is visible and stacked
+#    vertically — assert computed flex-direction:column on .site-nav-list, where
+#    the inline default would be row (a signal unique to the new orientation
+#    override) — plus overridden gap, NO CTA.
 #    At 1280px: untouched desktop look, CTA present.
 # 3. back in admin on Mobile: Reset the itemGap override ⇒ badge Override→Inherited,
 #    canvas re-inherits desktop live; Save; verify the stored document has the

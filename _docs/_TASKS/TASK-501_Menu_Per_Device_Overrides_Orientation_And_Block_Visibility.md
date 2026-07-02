@@ -137,8 +137,11 @@ clearMenuBlockVisibilityOverride(doc, blockId, "mobile"): MenuDocumentV2;
 ```ts
 // core/site/menuDocumentCss.ts — 501-02
 // buildMenuRuleSets gains the mobile-RESOLVED appearance next to the base one;
-// the mobile branch appends DIFF rules (only declarations whose mobile-resolved
-// input differs from base) AFTER the mobileMode disclosure/inline rules
+// the mobile branch appends per-GROUP delta rules — a rule group is emitted
+// only when SOME field in the group's mobile-resolved input differs from base,
+// and a triggered group emits ALL its declarations with explicit/neutral
+// values so clearing an override reverts without leakage (501-02 §2-3) —
+// AFTER the mobileMode disclosure/inline rules
 // (:128-140) so overrides — orientation included — win source order (the
 // disclosure-open rule :133 already forces column when open). Orientation
 // vertical emits `${header} .site-nav-list{flex-direction:column;align-items:stretch}`.
@@ -167,9 +170,12 @@ clearMenuBlockVisibilityOverride(doc, blockId, "mobile"): MenuDocumentV2;
 ```
 
 React-hooks rule (501-03): no setState-in-effect; all device-forked writes
-happen in **event handlers** (the existing `setLayoutField`/`setNavField`/
-`patchBlock` call sites), which route through `patchMenuSectionForDevice` /
-`setMenuBlockVisibleForDevice` keyed on the current `device` state.
+happen in **event handlers** (the existing `setLayoutField`/`setNavField`
+call sites plus the per-block visibility toggle), which route through
+`patchMenuSectionForDevice` / `setMenuBlockVisibleForDevice` keyed on the
+current `device` state. `patchBlock` content writes (brand/cta/utility) are
+NOT device-forked — they stay FLAT on every device (the responsive contract
+covers only `layout`, `navProps`, and `visibility`).
 
 ---
 
@@ -210,12 +216,15 @@ ADD  tests (501-04; see Testing Requirements)
   `data-menu-block-id`/`data-block-id` hide rules (mobile branch =
   hide-on-mobile, desktop branch = show-only-on-mobile) for BOTH the front
   `@media` builder and the device-forced canvas flatten.
-- **501-03** — editor: `setLayoutField`/`setNavField`/`patchBlock` become
-  device-forked (Mobile ⇒ sparse override, in event handlers), every control
-  wrapped in a ported `MenuResponsiveControlShell` (Base/Override/Inherited
-  badge + Reset with `data-menu-responsive-reset`), orientation
-  SegmentedControl in the nav-items panel, per-block visibility toggle on
-  Mobile, panel displays resolved values while badges compare against base.
+- **501-03** — editor: the APPEARANCE writers become device-forked (Mobile ⇒
+  sparse override, in event handlers): `setLayoutField` ⇒ section `layout`,
+  `setNavField` ⇒ `navProps`, plus the per-block visibility toggle; every
+  appearance control wrapped in a ported `MenuResponsiveControlShell`
+  (Base/Override/Inherited badge + Reset with `data-menu-responsive-reset`),
+  orientation SegmentedControl in the nav-items panel, per-block visibility
+  toggle on Mobile, panel displays resolved values while badges compare
+  against base. `patchBlock` content writes (brand/cta/utility) stay FLAT
+  and their inputs UNwrapped on every device.
 - **501-04** — closure: full vitest + bun matrices, byte-identity guards,
   playwright smoke (canvas + :3000 real mobile viewport), docs + changelog
   (next free number, expected 1209) + README/board/Statistics.
