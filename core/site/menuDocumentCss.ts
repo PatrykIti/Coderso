@@ -161,16 +161,53 @@ export function buildMenuDocumentCss(doc: MenuDocumentV2): string {
 }
 
 /**
+ * ADMIN-CANVAS structural baseline. On the FRONT the published header carries
+ * BOTH scopes: the base site-shell sheet (`[data-site-header]`,
+ * `buildSiteShellCss` — which owns the STRUCTURAL nav rules like
+ * `.site-nav-list{display:flex}`) plus this module's scoped overrides. The
+ * Design canvas injects ONLY the document sheet, so without a structural
+ * baseline the nav `<ul>` falls back to `display:block` and the items stack
+ * VERTICALLY (canvas-only fidelity bug — the front renders horizontally).
+ * These rules mirror the base sheet's structure-only declarations (no colors /
+ * appearance — those come from the document rules, emitted AFTER, which win).
+ */
+const buildCanvasStructuralBaseline = (device: PageBreakpoint): string[] => {
+  const header = `[${SITE_MENU_DOC_ATTRIBUTE}="true"]`;
+  const base = [
+    `${header} .site-header-brand{font-weight:600;color:inherit;text-decoration:none}`,
+    `${header} .site-nav summary{cursor:pointer;list-style:none}`,
+    `${header} .site-nav summary::-webkit-details-marker{display:none}`,
+    `${header} .site-nav-list{display:flex;flex-wrap:wrap;align-items:center;list-style:none;margin:0;padding:0}`,
+    `${header} .site-nav-item{position:relative}`,
+    `${header} .site-nav-link{display:block;padding:8px 12px;border-radius:6px;text-decoration:none}`,
+    `${header} .site-nav-group>summary{display:block;padding:8px 12px;border-radius:6px}`,
+    `${header} .site-nav-group>summary::after{content:" \\25BE";font-size:.7em}`,
+    `${header} .site-nav-sublist{list-style:none;margin:0;padding:6px;display:grid;gap:2px;min-width:180px}`,
+    `${header} .site-nav-disclosure{display:none}`,
+    `${header} .site-nav-disclosure>summary{padding:8px 12px;border:1px solid rgba(15,23,42,.16);border-radius:6px}`,
+  ];
+  const desktop = [
+    `${header} .site-nav-sublist{position:absolute;left:0;z-index:40;background:var(--color-bg,#fff);border:1px solid rgba(15,23,42,.12);border-radius:8px;box-shadow:0 8px 24px rgba(15,23,42,.12)}`,
+  ];
+  const mobile = [
+    `${header} .site-nav{width:100%}`,
+    `${header} .site-nav-sublist{padding-left:16px}`,
+  ];
+  return device === "mobile" ? [...base, ...mobile] : [...base, ...desktop];
+};
+
+/**
  * ADMIN-CANVAS builder: device-forced scoped sheet. The Design canvas constrains
  * the frame width per the selected `DeviceSwitcher` breakpoint, but `@media`
  * queries respond to the real admin viewport, so the responsive branch is
  * flattened (emitted unwrapped) for the requested device. Desktop and tablet
  * share the desktop branch, mirroring the public breakpoint bounds. Consumed
  * ONLY by the admin canvas preview (TASK-499-03); the front uses the viewport
- * variant above.
+ * variant above. Prepends the structural baseline (see above) that the front
+ * gets from the base site-shell sheet — document rules follow, so they win.
  */
 export function buildMenuDocumentPreviewCss(doc: MenuDocumentV2, device: PageBreakpoint): string {
   const sets = buildMenuRuleSets(resolveMenuAppearance(doc));
   const branch = device === "mobile" ? sets.mobile : sets.desktop;
-  return [...sets.base, ...branch].join("\n");
+  return [...buildCanvasStructuralBaseline(device), ...sets.base, ...branch].join("\n");
 }
