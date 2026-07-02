@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -48,10 +56,12 @@ import {
   resolveMenuSectionAppearanceForDevice,
   resolveStoredMenuDocument,
   setMenuBlockVisibleForDevice,
+  MENU_BRAND_TEXT_MAX_LENGTH,
   type MenuBarLayout,
   type MenuBlockType,
   type MenuBlockV2,
   type MenuDocumentV2,
+  type MenuResponsiveBreakpoint,
   type NavItemsProps,
 } from "../../../services/menus/menuDocumentV2";
 import {
@@ -68,13 +78,23 @@ import {
   type MenuAppearanceFontWeight,
 } from "../../../services/menus/normalizeMenuAppearance";
 import { mapMenuNodesToNavigationItems } from "../../../services/navigation/navigationMenuMapping";
-import type { PageBreakpoint } from "../../../services/pages/pageDocumentV2";
-import { pageButtonVariants } from "../../../services/pages/pageDocumentV2";
+import type { PageBlockV2, PageBreakpoint } from "../../../services/pages/pageDocumentV2";
+import {
+  pageButtonSizes,
+  pageButtonTargets,
+  pageButtonVariants,
+} from "../../../services/pages/pageDocumentV2";
+import {
+  getPageEditorColorPalette,
+  type PageEditorColorSwatch,
+} from "../../../services/pages/pageEditorControlUiModel";
+import { PageBlockContent, PageBlockFrame } from "../../../services/pages/pageRendererV2";
 import {
   SITE_MENU_DOC_ATTRIBUTE,
   buildMenuDocumentPreviewCss,
 } from "../../../site/menuDocumentCss";
 import { SHELL_APPEARANCE_DEFAULTS } from "../../../site/siteShellCss";
+import { toMenuCanvasColorCssVariableMap } from "../../../ui/theme/tokenCss";
 import type { NavigationItem } from "../../../widgets/core/navigation";
 import { DeviceSwitcher } from "../pages/DeviceSwitcher";
 import {
@@ -92,6 +112,7 @@ import {
   useEditorControlTone,
 } from "../pages/editorControls/controlChrome";
 import { CanvasEditor } from "../shared/CanvasEditor";
+import { useCanvasSiteName, useCanvasSiteTokens } from "../shared/useCanvasSiteTokens";
 
 /**
  * MenuDesignEditor (TASK-499-03): the Design tab's Pages-identical editor — a
@@ -265,53 +286,103 @@ const toSwatchValue = (value: string) => (value === "transparent" ? "" : value);
 function SelectableBlock({
   id,
   selected,
+  ghost = false,
   onSelect,
   children,
 }: {
   id: string;
   selected: boolean;
+  /** TASK-502-04: the block is hidden on the current device — dim it to a
+   * selectable ghost (opacity + "Hidden" badge) instead of skipping it. */
+  ghost?: boolean;
   onSelect: (id: string) => void;
   children: ReactNode;
 }) {
   return (
     <div
       data-menu-block-id={id}
+      data-menu-block-ghost={ghost ? "true" : undefined}
       data-menu-block-selected={selected ? "true" : "false"}
       onClick={(event) => {
+        // Real leaf previews (cta/divider) render live anchors/buttons; keep the
+        // canvas click intercept + preventDefault so a preview link SELECTS the
+        // block instead of navigating away from the editor.
         event.stopPropagation();
+        event.preventDefault();
         onSelect(id);
       }}
       className={cn(
-        "cursor-pointer rounded-lg outline-none transition-shadow",
-        selected && "ring-2 ring-primary"
+        // Chrome-safety (TASK-502-04 §2): the canvas frame repaints the SITE
+        // `--color-primary`, so the selection ring is pinned to an admin var
+        // (NOT `ring-primary`) to stay admin-themed and immune to token paint.
+        "relative cursor-pointer rounded-lg outline-none transition-shadow",
+        selected && "ring-2 ring-[color:var(--admin-input-ring,#7c3aed)]"
       )}
     >
       {children}
+      {ghost ? (
+        <span
+          aria-hidden="true"
+          data-menu-block-hidden-badge="true"
+          className="pointer-events-none absolute -top-2 right-1 z-10 rounded-full bg-muted px-1.5 text-[9px] font-semibold uppercase text-muted-foreground shadow-sm"
+        >
+          Hidden
+        </span>
+      ) : null}
     </div>
   );
 }
 
+/**
+ * Canvas visibility presentation (TASK-502-04 §3). The 502-02 preview builder
+ * emits NO `[data-menu-block-id]{display:none}` hide rules, so the ghost gate
+ * is the SOLE owner of canvas visibility. These rules are DEFENSE IN DEPTH:
+ * appended AFTER the builder CSS (later source order + equal specificity) so a
+ * stray hide rule reaching the canvas `<style>` can never `display:none` a
+ * ghost subtree — force-show only applies to `data-menu-block-ghost` subtrees
+ * and is inert against a compliant builder. The nested `[data-block-id]` revert
+ * covers real leaf frames (PageBlockFrame) inside a ghost.
+ */
+const MENU_CANVAS_GHOST_CSS = [
+  `[data-menu-document-canvas="true"] [data-menu-block-ghost="true"]{display:block;opacity:.4}`,
+  `[data-menu-document-canvas="true"] [data-menu-block-ghost="true"] [data-block-id]{display:revert}`,
+].join("\n");
+
 // --- responsive control shell (TASK-501-03) ----------------------------------
 
 /**
- * Tablet is BASE-mapped for menus (TASK-501 parent scoping decision — tablet
- * overrides are DEFERRED; the canvas maps tablet⇒desktop) — the ONE deliberate
- * divergence from the Pages `ResponsiveControlShell`, where tablet is an
- * override breakpoint. Encoded in this single predicate used by badge +
- * writers + visibility controls.
+ * TASK-502-04: tablet is now a REAL override breakpoint (mirrors the Pages
+ * `ResponsiveControlShell`) — tablet AND mobile each carry their own sparse
+ * responsive record inheriting the desktop base. This single predicate (used
+ * by badge + writers + visibility controls) narrows the current device to a
+ * `MenuResponsiveBreakpoint` ("tablet" | "mobile") so the override read/write
+ * call sites type-check.
  */
-const isMenuOverrideDevice = (device: PageBreakpoint): device is "mobile" => device === "mobile";
+const isMenuOverrideDevice = (device: PageBreakpoint): device is MenuResponsiveBreakpoint =>
+  device !== "desktop";
 
 type MenuResponsiveBadgeState = "base" | "override" | "inherited";
 
-const menuResponsiveBadgeDescription = (state: MenuResponsiveBadgeState): string =>
+/** Per-breakpoint copy (bounded tablet window per `pageResponsiveMediaBounds.tablet`). */
+const menuResponsiveBadgeDescription = (
+  state: MenuResponsiveBadgeState,
+  device: PageBreakpoint
+): string =>
   state === "base"
     ? "Editing the base value (applies to every device)."
     : state === "override"
-      ? "Mobile override — this value replaces the desktop value below 640px."
-      : "Inherited from desktop. Edit to create a mobile override.";
+      ? device === "tablet"
+        ? "Tablet override — this value replaces the desktop value between 640px and 1023px."
+        : "Mobile override — this value replaces the desktop value below 640px."
+      : `Inherited from desktop. Edit to create a ${DEVICE_LABELS[device].toLowerCase()} override.`;
 
-function MenuResponsiveStateBadge({ state }: { state: MenuResponsiveBadgeState }) {
+function MenuResponsiveStateBadge({
+  state,
+  device,
+}: {
+  state: MenuResponsiveBadgeState;
+  device: PageBreakpoint;
+}) {
   const tone = useEditorControlTone();
   const isLight = tone === "light";
   return (
@@ -336,7 +407,7 @@ function MenuResponsiveStateBadge({ state }: { state: MenuResponsiveBadgeState }
         </span>
       </TooltipTrigger>
       <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
-        {menuResponsiveBadgeDescription(state)}
+        {menuResponsiveBadgeDescription(state, device)}
       </TooltipContent>
     </Tooltip>
   );
@@ -378,7 +449,7 @@ function MenuResponsiveControlShell({
     <div className="grid min-w-0 gap-1" data-menu-responsive-field={state}>
       {children}
       <div className="flex min-h-6 items-center justify-between gap-2">
-        <MenuResponsiveStateBadge state={state} />
+        <MenuResponsiveStateBadge state={state} device={device} />
         {state === "override" ? (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -396,7 +467,7 @@ function MenuResponsiveControlShell({
               </button>
             </TooltipTrigger>
             <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
-              Remove the mobile override and inherit the desktop value.
+              {`Remove the ${DEVICE_LABELS[device].toLowerCase()} override and inherit the desktop value.`}
             </TooltipContent>
           </Tooltip>
         ) : null}
@@ -404,6 +475,45 @@ function MenuResponsiveControlShell({
     </div>
   );
 }
+
+/** Same predicate as `siteShell` (`href !== "#"` / non-empty). */
+const previewHasRealHref = (href: string) => href.trim().length > 0 && href.trim() !== "#";
+
+/**
+ * TASK-502-04 §8: recursive canvas nav item mirroring the 502-03 FRONT hover
+ * markup EXACTLY (`li.site-nav-item[data-site-nav-group]` + link / group-label
+ * span + nested `ul.site-nav-sublist`) — grandchildren are NEVER dropped. The
+ * 502-02 doc-scoped preview CSS owns reachability (hover/focus-within open +
+ * fly-out); this only guarantees the recursive markup exists. `tabIndex={0}` on
+ * the linkless group label is NORMATIVE so :focus-within can open its sublist.
+ */
+const renderPreviewNavItem = (item: NavigationItem, key: string): ReactNode => {
+  const children = item.children ?? [];
+  return (
+    <li
+      className="site-nav-item"
+      data-site-nav-group={children.length > 0 ? "true" : undefined}
+      key={key}
+    >
+      {previewHasRealHref(item.href) ? (
+        <a className="site-nav-link" href={item.href} onClick={(event) => event.preventDefault()}>
+          {item.label}
+        </a>
+      ) : (
+        <span className="site-nav-link site-nav-group-label" tabIndex={0}>
+          {item.label}
+        </span>
+      )}
+      {children.length > 0 ? (
+        <ul className="site-nav-sublist">
+          {children.map((child, index) =>
+            renderPreviewNavItem(child, `${key}-${child.label}-${index}`)
+          )}
+        </ul>
+      ) : null}
+    </li>
+  );
+};
 
 function NavItemsPreview({ items, label }: { items: NavigationItem[]; label: string }) {
   return (
@@ -416,68 +526,60 @@ function NavItemsPreview({ items, label }: { items: NavigationItem[]; label: str
         {items.length === 0 ? (
           <li className="text-sm text-muted-foreground">No published menu items yet.</li>
         ) : (
-          items.map((item, index) => (
-            <li className="site-nav-item" key={`${item.label}-${index}`}>
-              <a
-                className="site-nav-link"
-                href={item.href}
-                onClick={(event) => event.preventDefault()}
-              >
-                {item.label}
-              </a>
-              {item.children && item.children.length > 0 ? (
-                <ul className="site-nav-sublist">
-                  {item.children.map((child, childIndex) => (
-                    <li key={`${child.label}-${childIndex}`}>
-                      <a
-                        className="site-nav-link"
-                        href={child.href}
-                        onClick={(event) => event.preventDefault()}
-                      >
-                        {child.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-            </li>
-          ))
+          items.map((item, index) => renderPreviewNavItem(item, `${item.label}-${index}`))
         )}
       </ul>
     </nav>
   );
 }
 
+/**
+ * Local, blessed replica of `siteShell`'s module-private `menuLeafToPageBlock`
+ * (TASK-502-04 §7 — the sibling keeps it private; a verbatim import would carry
+ * its hand-off-to-CSS visibility skip into the canvas, fighting the ghost gate).
+ * Visibility is ALWAYS `{ visible: true }` — the §3 ghost gate is the SOLE owner
+ * of canvas hiding. Drift vs the original is pinned by this subtask's vitest.
+ */
+const CANVAS_LEAF_TO_PAGE_TYPE = { "cta-button": "button", divider: "divider" } as const;
+const canvasMenuLeafToPageBlock = (block: MenuBlockV2): PageBlockV2 =>
+  ({
+    id: block.id,
+    type: CANVAS_LEAF_TO_PAGE_TYPE[block.type as keyof typeof CANVAS_LEAF_TO_PAGE_TYPE],
+    props: block.props,
+    style: "style" in block ? block.style : undefined,
+    visibility: { visible: true },
+  }) as PageBlockV2;
+
 function MenuBlockPreview({
   block,
   items,
   navLabel,
-  menuName,
+  siteName,
 }: {
   block: MenuBlockV2;
   items: NavigationItem[];
   navLabel: string;
-  menuName: string;
+  siteName: string | null;
 }) {
   switch (block.type) {
     case "nav-items":
       return <NavItemsPreview items={items} label={navLabel} />;
     case "brand": {
       const href = block.props.href || "/";
+      // Mirror the 502-03 FRONT fallback chain EXACTLY: per-menu override →
+      // site name → placeholder (menuName is GONE — the front renders the SITE
+      // name, never the menu name). The placeholder marks where the front
+      // renders null.
+      const text =
+        (typeof block.props.text === "string" ? block.props.text.trim() : "") ||
+        siteName ||
+        "Site name";
       return (
         <a className="site-header-brand" href={href} onClick={(event) => event.preventDefault()}>
           {block.props.mode === "image" && block.props.image
             ? String(block.props.image.alt ?? "") || "Logo"
-            : menuName || "Brand"}
+            : text}
         </a>
-      );
-    }
-    case "cta-button": {
-      const label = typeof block.props.label === "string" ? block.props.label : "Button";
-      return (
-        <span className="site-nav-utility" data-menu-cta-preview="true">
-          {label}
-        </span>
       );
     }
     case "search":
@@ -493,12 +595,22 @@ function MenuBlockPreview({
         </span>
       );
     }
-    case "divider":
+    // cta-button / divider: render the REAL front leaf structure. PageBlockFrame
+    // stamps `data-block-id`, so 502-02's divider context rules (frame-as-line +
+    // inner <hr> hidden) apply identically on canvas, and variant/size/target
+    // render through the page renderer for visible effect.
+    case "cta-button":
+    case "divider": {
+      const leaf = canvasMenuLeafToPageBlock(block);
       return (
-        <span className="text-muted-foreground" aria-hidden="true">
-          —
-        </span>
+        <PageBlockFrame block={leaf}>
+          <PageBlockContent block={leaf} />
+        </PageBlockFrame>
       );
+    }
+    // SPACER is DELIBERATELY the fixed-24px stub: the real leaf is a 0-width
+    // `<div style={{height}}/>` flex item with zero 502-02 rules (flex-push is a
+    // named residual), so a real render would collapse to an unclickable sliver.
     case "spacer":
       return <span aria-hidden="true" style={{ display: "inline-block", width: 24 }} />;
     default:
@@ -511,7 +623,8 @@ function MenuDocumentCanvas({
   device,
   items,
   navLabel,
-  menuName,
+  siteName,
+  tokenVariables,
   selectedId,
   onSelect,
 }: {
@@ -519,7 +632,10 @@ function MenuDocumentCanvas({
   device: PageBreakpoint;
   items: NavigationItem[];
   navLabel: string;
-  menuName: string;
+  siteName: string | null;
+  /** Site design token vars (all seven `--color-*` + typography) painted inline
+   * on the canvas frame ROOT so the doc CSS resolves the SITE theme, not admin. */
+  tokenVariables: CSSProperties;
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
@@ -530,8 +646,12 @@ function MenuDocumentCanvas({
       className="site-header"
       data-menu-document-canvas="true"
       {...{ [SITE_MENU_DOC_ATTRIBUTE]: "true" }}
+      // Painted on the ROOT (NORMATIVE): the section Surface/Border doc rules
+      // target this very element, and CSS custom properties inherit downward
+      // only — a per-block wrapper could never feed those root-level rules.
+      style={tokenVariables}
     >
-      <style>{css}</style>
+      <style>{`${css}\n${MENU_CANVAS_GHOST_CSS}`}</style>
       <div className="site-header-inner">
         {blocks.length === 0 ? (
           <p className="p-6 text-center text-sm text-muted-foreground">
@@ -542,6 +662,7 @@ function MenuDocumentCanvas({
             <SelectableBlock
               key={block.id}
               id={block.id}
+              ghost={!resolveMenuBlockVisibleForDevice(block, device)}
               selected={block.id === selectedId}
               onSelect={onSelect}
             >
@@ -549,7 +670,7 @@ function MenuDocumentCanvas({
                 block={block}
                 items={items}
                 navLabel={navLabel}
-                menuName={menuName}
+                siteName={siteName}
               />
             </SelectableBlock>
           ))
@@ -598,6 +719,7 @@ const patchBlock =
 function MenuBarPanel({
   doc,
   device,
+  palette,
   updateDoc,
   onSelectBlock,
   onAddBlock,
@@ -606,6 +728,8 @@ function MenuBarPanel({
 }: {
   doc: MenuDocumentV2;
   device: PageBreakpoint;
+  /** Site-resolved swatch palette so preset swatches preview their REAL colors. */
+  palette: readonly PageEditorColorSwatch[];
   updateDoc: UpdateDoc;
   onSelectBlock: (id: string) => void;
   onAddBlock: (type: MenuBlockType) => void;
@@ -613,7 +737,7 @@ function MenuBarPanel({
   onMoveBlock: (id: string, dir: "up" | "down") => void;
 }) {
   const section = doc.sections[0];
-  // Panels DISPLAY resolved values (base merged with the mobile override)…
+  // Panels DISPLAY resolved values (base merged with the device override)…
   const layout: MenuBarLayout = section
     ? resolveMenuSectionAppearanceForDevice(section, device).layout
     : {};
@@ -621,15 +745,17 @@ function MenuBarPanel({
   const setField = setLayoutField(updateDoc, device);
   const setColor = (field: "surfaceColor" | "borderColor") => (value: string | null) =>
     setField(field, value === null ? "transparent" : value);
-  // …while override DETECTION reads the raw BASE record (Pages split).
+  // …while override DETECTION reads the raw BASE record for the CURRENT override
+  // breakpoint (tablet OR mobile) — never the resolved merge, never desktop.
   const layoutOverride = (key: keyof MenuBarLayout) =>
     section !== undefined &&
-    readMenuSectionOverrideValue(section, "mobile", "layout", key) !== undefined;
+    isMenuOverrideDevice(device) &&
+    readMenuSectionOverrideValue(section, device, "layout", key) !== undefined;
   const resetLayout = (key: keyof MenuBarLayout) => () =>
     updateDoc((current) => {
       const target = current.sections[0];
-      return target
-        ? clearMenuSectionOverride(current, target.id, "mobile", "layout", key)
+      return target && isMenuOverrideDevice(device)
+        ? clearMenuSectionOverride(current, target.id, device, "layout", key)
         : current;
     });
 
@@ -648,6 +774,7 @@ function MenuBarPanel({
           >
             <ColorSwatchControl
               label="Surface color"
+              palette={palette}
               value={toSwatchValue(layout.surfaceColor ?? SHELL_APPEARANCE_DEFAULTS.surfaceColor)}
               onChange={setColor("surfaceColor")}
             />
@@ -660,6 +787,7 @@ function MenuBarPanel({
           >
             <ColorSwatchControl
               label="Border color"
+              palette={palette}
               value={toSwatchValue(layout.borderColor ?? SHELL_APPEARANCE_DEFAULTS.borderColor)}
               onChange={setColor("borderColor")}
             />
@@ -845,6 +973,8 @@ function MenuBlockPanel({
   block,
   doc,
   device,
+  palette,
+  siteName,
   updateDoc,
   onRemove,
   onMove,
@@ -852,39 +982,45 @@ function MenuBlockPanel({
   block: MenuBlockV2;
   doc: MenuDocumentV2;
   device: PageBreakpoint;
+  /** Site-resolved swatch palette so preset swatches preview their REAL colors. */
+  palette: readonly PageEditorColorSwatch[];
+  /** Site name for the brand-text placeholder (the default the front renders). */
+  siteName: string | null;
   updateDoc: UpdateDoc;
   onRemove: () => void;
   onMove: (dir: "up" | "down") => void;
 }) {
   // patchBlock stays FLAT and device-invariant: content writes (brand/cta/
-  // utility label/href/variant/logo) are NOT device-forked by contract.
+  // utility label/href/variant/logo/size/target) are NOT device-forked.
   const patch = patchBlock(updateDoc);
 
   const section = doc.sections[0];
-  // Resolved nav appearance for DISPLAY (base merged with the mobile override;
+  // Resolved nav appearance for DISPLAY (base merged with the device override;
   // base navProps = the FIRST nav-items block's props, mirroring the CSS
   // pipeline's collectMenuAppearance binding).
   const navProps: NavItemsProps = section
     ? resolveMenuSectionAppearanceForDevice(section, device).navProps
     : {};
-  // Override detection reads the raw BASE record, never the resolved merge.
+  // Override detection reads the raw BASE record for the CURRENT override
+  // breakpoint (tablet OR mobile), never the resolved merge, never desktop.
   const navOverride = (key: keyof NavItemsProps) =>
     section !== undefined &&
-    readMenuSectionOverrideValue(section, "mobile", "navProps", key) !== undefined;
+    isMenuOverrideDevice(device) &&
+    readMenuSectionOverrideValue(section, device, "navProps", key) !== undefined;
   const resetNav = (key: keyof NavItemsProps) => () =>
     updateDoc((current) => {
       const target = current.sections[0];
-      return target
-        ? clearMenuSectionOverride(current, target.id, "mobile", "navProps", key)
+      return target && isMenuOverrideDevice(device)
+        ? clearMenuSectionOverride(current, target.id, device, "navProps", key)
         : current;
     });
   /**
-   * Device-forked nav appearance writer: Desktop/Tablet ⇒ the FIRST nav-items
-   * block's base props; Mobile ⇒ sparse `responsive.mobile.navProps`.
+   * Device-forked nav appearance writer: Desktop ⇒ the FIRST nav-items block's
+   * base props; tablet/mobile ⇒ sparse `responsive.{device}.navProps`.
    * NORMATIVE (501-01 §3): `patchMenuSectionForDevice` targets the FIRST
    * nav-items block regardless of which nav-items block is selected — the
    * section-level override record can only represent one nav-items block.
-   * `undefined` ⇒ delete-key-from-target on both device paths (the sole
+   * `undefined` ⇒ delete-key-from-target on every device path (the sole
    * emitter today is fontWeight "Theme").
    */
   const setNavField = <K extends keyof NavItemsProps>(
@@ -899,9 +1035,27 @@ function MenuBlockPanel({
       } as NavItemsProps);
     });
 
+  /**
+   * BASE-writing sibling of setNavField for the DEVICE-DEFINING nav props
+   * (`MENU_NAV_DEVICE_DEFINING_KEYS` in menuDocumentV2 — mobileMode +
+   * dropdownDirection). These are NOT overridable: they always write the BASE
+   * (device literal "desktop") regardless of the current device, so no dead
+   * override record is ever stored (the 501 residual this kills). 502-01's
+   * write-reject + stored-read migration guarantee `resolved ≡ base` here.
+   */
+  const setNavBaseField = <K extends keyof NavItemsProps>(field: K, value: NavItemsProps[K]) =>
+    updateDoc((current) => {
+      const target = current.sections[0];
+      if (!target) return current;
+      return patchMenuSectionForDevice(current, target.id, "desktop", "navProps", {
+        [field]: value,
+      } as NavItemsProps);
+    });
+
   const visibleOnDevice = resolveMenuBlockVisibleForDevice(block, device);
   const visibilityOverride =
-    isMenuOverrideDevice(device) && block.responsive?.mobile?.visibility !== undefined;
+    isMenuOverrideDevice(device) && block.responsive?.[device]?.visibility !== undefined;
+  const deviceLabelLower = DEVICE_LABELS[device].toLowerCase();
 
   return (
     <div className="flex flex-col gap-4" data-menu-block-panel={block.type}>
@@ -939,33 +1093,31 @@ function MenuBlockPanel({
       </div>
 
       {isMenuOverrideDevice(device) ? (
-        // Mobile: EVERY block type gets a per-device visibility override
-        // toggle (writes the sparse block responsive record).
+        // Tablet AND Mobile: EVERY block type gets a per-device visibility
+        // override toggle (writes the sparse block responsive record).
         <MenuResponsiveControlShell
           device={device}
           override={visibilityOverride}
-          label="Visible on mobile"
+          label={`Visible on ${deviceLabelLower}`}
           onReset={() =>
-            updateDoc((current) => clearMenuBlockVisibilityOverride(current, block.id, "mobile"))
+            updateDoc((current) => clearMenuBlockVisibilityOverride(current, block.id, device))
           }
         >
           <ToggleSwitch
-            label="Visible on mobile"
+            label={`Visible on ${deviceLabelLower}`}
             value={visibleOnDevice}
             onChange={(next) =>
-              updateDoc((current) =>
-                setMenuBlockVisibleForDevice(current, block.id, "mobile", next)
-              )
+              updateDoc((current) => setMenuBlockVisibleForDevice(current, block.id, device, next))
             }
           />
         </MenuResponsiveControlShell>
       ) : block.type === "cta-button" || block.type === "divider" || block.type === "spacer" ? (
-        // Desktop/Tablet: LEAF blocks only get the FLAT visibility toggle
-        // (native blocks carry no flat visibility slot by schema). The inlined
-        // three-type check mirrors the module-private MENU_LEAF_BLOCK_TYPES;
-        // a vitest divergence guard pins the lists against schema drift.
-        // Composable with the mobile override: flat visible:false + mobile
-        // override true = "show only on mobile".
+        // Desktop only: LEAF blocks get the FLAT visibility toggle (native blocks
+        // carry no flat visibility slot by schema). The inlined three-type check
+        // mirrors the module-private MENU_LEAF_BLOCK_TYPES; a vitest divergence
+        // guard pins the lists against schema drift. Composable with a device
+        // override: flat visible:false + tablet/mobile override true =
+        // "show only on tablet/mobile".
         <ToggleSwitch
           label="Visible"
           value={block.visibility?.visible ?? true}
@@ -1068,6 +1220,7 @@ function MenuBlockPanel({
           >
             <ColorSwatchControl
               label="Link color"
+              palette={palette}
               value={toSwatchValue(navProps.linkColor ?? SHELL_APPEARANCE_DEFAULTS.linkColor)}
               onChange={(value) => setNavField("linkColor", value === null ? "transparent" : value)}
             />
@@ -1075,11 +1228,14 @@ function MenuBlockPanel({
           <MenuResponsiveControlShell
             device={device}
             override={navOverride("linkHoverColor")}
-            label="Link hover color"
+            label="Hover background"
             onReset={resetNav("linkHoverColor")}
           >
+            {/* Copy fix (bug 4 secondary): the emission is a state-only
+                background pill (menuDocumentCss linkHoverColor), NOT link color. */}
             <ColorSwatchControl
-              label="Link hover color"
+              label="Hover background"
+              palette={palette}
               value={toSwatchValue(
                 navProps.linkHoverColor ?? SHELL_APPEARANCE_DEFAULTS.linkHoverColor
               )}
@@ -1091,47 +1247,47 @@ function MenuBlockPanel({
           <MenuResponsiveControlShell
             device={device}
             override={navOverride("linkActiveColor")}
-            label="Link active color"
+            label="Active background"
             onReset={resetNav("linkActiveColor")}
           >
             <ColorSwatchControl
-              label="Link active color"
+              label="Active background"
+              palette={palette}
               value={toSwatchValue(navProps.linkActiveColor ?? "transparent")}
               onChange={(value) =>
                 setNavField("linkActiveColor", value === null ? "transparent" : value)
               }
             />
           </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("dropdownDirection")}
-            label="Dropdown direction"
-            onReset={resetNav("dropdownDirection")}
-          >
+          {device !== "mobile" ? (
+            // Device-DEFINING (base-writing, NOT overridable): dropdowns exist
+            // only >=640px (sublists collapse inline on mobile), so a mobile
+            // override would be dead data. Rendered on Desktop/Tablet only, NOT
+            // wrapped in MenuResponsiveControlShell — no badge, no Reset.
             <SegmentedControl
               label="Dropdown direction"
               value={navProps.dropdownDirection ?? SHELL_APPEARANCE_DEFAULTS.dropdownDirection}
               options={menuAppearanceDropdownDirections}
               optionLabels={dropdownDirectionLabels}
               onChange={(next) =>
-                setNavField("dropdownDirection", next as MenuAppearance["dropdownDirection"])
+                setNavBaseField("dropdownDirection", next as MenuAppearance["dropdownDirection"])
               }
             />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("mobileMode")}
-            label="Mobile menu"
-            onReset={resetNav("mobileMode")}
-          >
+          ) : null}
+          {device === "mobile" ? (
+            // Device-DEFINING (base-writing): mobileMode chooses how the mobile
+            // viewport behaves — it IS the mobile design, not an override of a
+            // desktop value. Rendered on Mobile only; no badge, no Reset.
             <SegmentedControl
               label="Mobile menu"
               value={navProps.mobileMode ?? SHELL_APPEARANCE_DEFAULTS.mobileMode}
               options={menuAppearanceMobileModes}
               optionLabels={mobileModeLabels}
-              onChange={(next) => setNavField("mobileMode", next as MenuAppearance["mobileMode"])}
+              onChange={(next) =>
+                setNavBaseField("mobileMode", next as MenuAppearance["mobileMode"])
+              }
             />
-          </MenuResponsiveControlShell>
+          ) : null}
         </div>
       ) : null}
 
@@ -1150,6 +1306,34 @@ function MenuBlockPanel({
               )
             }
           />
+          {block.props.mode === "text" ? (
+            // Sparse per-menu override of the site name. Raw keystrokes are
+            // written as-is (no per-keystroke trim — it would eat mid-word
+            // spaces); the 502-01 normalizer trims + caps on save. maxLength is
+            // pinned to the same imported constant (never a magic literal).
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-muted-foreground">Brand text</span>
+              <Input
+                aria-label="Brand text"
+                maxLength={MENU_BRAND_TEXT_MAX_LENGTH}
+                placeholder={siteName ?? "Site name (default)"}
+                value={typeof block.props.text === "string" ? block.props.text : ""}
+                onChange={(event) =>
+                  patch(block.id, (current) => {
+                    if (current.type !== "brand") return current;
+                    const value = event.target.value;
+                    if (value.length === 0) {
+                      // sparse contract: empty DELETES the prop (canvas + front
+                      // fall back to the site name; the doc round-trips textless).
+                      const { text: _removed, ...rest } = current.props;
+                      return { ...current, props: rest };
+                    }
+                    return { ...current, props: { ...current.props, text: value } };
+                  })
+                }
+              />
+            </label>
+          ) : null}
           <label className="grid gap-1">
             <span className="text-xs font-medium text-muted-foreground">Link</span>
             <Input
@@ -1229,10 +1413,47 @@ function MenuBlockPanel({
               )
             }
           />
+          {/* size + target are already validated by the page button pipeline
+              (pageDocumentV2 button allow-list) — no schema work. */}
+          <SegmentedControl
+            label="Size"
+            value={typeof block.props.size === "string" ? block.props.size : "md"}
+            options={pageButtonSizes}
+            optionLabels={{ sm: "Small", md: "Medium", lg: "Large" }}
+            onChange={(next) =>
+              patch(block.id, (current) =>
+                current.type === "cta-button"
+                  ? { ...current, props: { ...current.props, size: next } }
+                  : current
+              )
+            }
+          />
+          <ToggleSwitch
+            label="Open in new tab"
+            value={block.props.target === "blank"}
+            onChange={(next) =>
+              patch(block.id, (current) =>
+                current.type === "cta-button"
+                  ? {
+                      ...current,
+                      props: {
+                        ...current.props,
+                        target: (next ? "blank" : "self") as (typeof pageButtonTargets)[number],
+                      },
+                    }
+                  : current
+              )
+            }
+          />
         </div>
       ) : null}
 
-      {block.type === "divider" || block.type === "spacer" ? (
+      {block.type === "divider" ? (
+        <p className="text-xs text-muted-foreground">
+          Renders as a vertical separator line in the menu bar. Use reorder/remove above.
+        </p>
+      ) : null}
+      {block.type === "spacer" ? (
         <p className="text-xs text-muted-foreground">
           This block has no editable options; use reorder/remove above.
         </p>
@@ -1274,6 +1495,19 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
   const [error, setError] = useState<string | null>(null);
 
   const updateDoc = useCallback<UpdateDoc>((updater) => dispatch({ type: "update", updater }), []);
+
+  // Canvas WYSIWYG (TASK-502-04): the SAME live site-token payload the Pages
+  // canvas uses (shared hook). The seven-var map is painted inline on the canvas
+  // frame ROOT so the doc CSS resolves the SITE theme (not the admin beige); the
+  // palette makes preset swatches preview their REAL site colors; siteName feeds
+  // the brand fallback chain (per-menu text → site name → placeholder).
+  const siteTokens = useCanvasSiteTokens();
+  const siteName = useCanvasSiteName();
+  const canvasSiteTokenVariables = useMemo(
+    () => toMenuCanvasColorCssVariableMap(siteTokens) as CSSProperties,
+    [siteTokens]
+  );
+  const sitePalette = useMemo(() => getPageEditorColorPalette(siteTokens), [siteTokens]);
 
   // Load the published item tree (cache-first) + page slugs to BIND nav-items.
   useEffect(() => {
@@ -1489,7 +1723,8 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                   device={device}
                   items={items}
                   navLabel={navLabel}
-                  menuName={menuName}
+                  siteName={siteName}
+                  tokenVariables={canvasSiteTokenVariables}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                 />
@@ -1504,6 +1739,8 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                     block={selectedBlock}
                     doc={doc}
                     device={device}
+                    palette={sitePalette}
+                    siteName={siteName}
                     updateDoc={updateDoc}
                     onRemove={() => removeMenuBlock(selectedBlock.id)}
                     onMove={(dir) => moveMenuBlock(selectedBlock.id, dir)}
@@ -1512,6 +1749,7 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                   <MenuBarPanel
                     doc={doc}
                     device={device}
+                    palette={sitePalette}
                     updateDoc={updateDoc}
                     onSelectBlock={setSelectedId}
                     onAddBlock={addMenuBlock}

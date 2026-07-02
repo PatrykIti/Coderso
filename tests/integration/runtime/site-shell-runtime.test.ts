@@ -531,10 +531,21 @@ testIfDbWithOptions(
     // It reuses the base .site-header* class names, so the base layout sheet
     // (buildSiteShellCss(null)) MUST still be emitted in the head.
     expect(html).toContain(buildSiteShellCss(null));
-    // The live item tree is bound into nav-items, with the nested dropdown group.
+    // The live item tree is bound into nav-items. TASK-502-03: the
+    // menu-document header renders in HOVER mode (details-FREE), so `Services`
+    // is NO longer a `<summary>` — it renders ONCE as its own link inside a
+    // `li[data-site-nav-group="true"]`, with the child in a nested sublist.
     expect(html).toContain(`>Home ${token}</a>`);
     expect(html).toContain('data-site-nav-group="true"');
-    expect(html).toContain(`<summary>Services ${token}</summary>`);
+    expect(html).not.toContain(`<summary>Services ${token}</summary>`);
+    expect(html).toMatch(
+      new RegExp(
+        `<li class="site-nav-item" data-site-nav-group="true"><a class="site-nav-link"[^>]*href="/services-${token}"`
+      )
+    );
+    expect(html).toMatch(
+      new RegExp(`<ul class="site-nav-sublist">.*href="/services-${token}/consulting"`)
+    );
 
     // Clearing the document falls back to today's default SiteHeaderNav.
     await updateMenu(menu.id, { document: null });

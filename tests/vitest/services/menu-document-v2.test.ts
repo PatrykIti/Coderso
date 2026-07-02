@@ -1,8 +1,10 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  MENU_BRAND_TEXT_MAX_LENGTH,
   MENU_DOCUMENT_INVALID,
   MENU_DOCUMENT_SCHEMA_VERSION,
+  MENU_NAV_DEVICE_DEFINING_KEYS,
   MENU_RESPONSIVE_BREAKPOINT_KEYS,
   buildMenuDocumentV2FromLegacy,
   clearMenuBlockVisibilityOverride,
@@ -20,11 +22,13 @@ import {
   resolvePublishedMenuDocument,
   resolveStoredMenuDocument,
   setMenuBlockVisibleForDevice,
+  type BrandProps,
   type MenuBlockV2,
   type MenuDocumentV2,
   type MenuSectionV2,
 } from "../../../core/services/menus/menuDocumentV2";
 import { createPageBlockV2 } from "../../../core/services/pages/pageDocumentV2";
+import { buildMenuDocumentCss } from "../../../core/site/menuDocumentCss";
 
 const section = (blocks: unknown[], extra?: Record<string, unknown>) => ({
   type: "menu-bar",
@@ -307,8 +311,8 @@ describe("menuDocumentV2 resolvers", () => {
 // --- TASK-501-01: per-device responsive overrides ----------------------------
 
 describe("menuDocumentV2 responsive write round-trips (TASK-501-01)", () => {
-  test("breakpoint vocabulary is mobile-only (tablet deferred)", () => {
-    expect(MENU_RESPONSIVE_BREAKPOINT_KEYS).toEqual(["mobile"]);
+  test("breakpoint vocabulary is tablet + mobile (TASK-502-01 un-deferral)", () => {
+    expect(MENU_RESPONSIVE_BREAKPOINT_KEYS).toEqual(["tablet", "mobile"]);
   });
 
   test("section + block responsive records round-trip through the strict writer", () => {
@@ -387,8 +391,8 @@ describe("menuDocumentV2 responsive write round-trips (TASK-501-01)", () => {
 });
 
 describe("menuDocumentV2 responsive write reject-unknown (TASK-501-01)", () => {
-  test("rejects non-mobile breakpoint keys (desktop/tablet/junk)", () => {
-    for (const breakpoint of ["desktop", "tablet", "wide"]) {
+  test("rejects non-responsive breakpoint keys (desktop is the base, junk rejected)", () => {
+    for (const breakpoint of ["desktop", "wide"]) {
       expectDocError(
         () =>
           normalizeMenuDocumentV2ForWrite(
@@ -527,15 +531,23 @@ describe("menuDocumentV2 responsive fail-closed read (TASK-501-01, conscious)", 
   });
 
   test("a stored doc with an UNKNOWN responsive key degrades the WHOLE document to empty (designed blast radius)", () => {
-    // CONSCIOUS assertion: the stored read delegates to the strict writer, so
-    // one unknown responsive key (e.g. the deferred "tablet") fails the whole
-    // document closed to the legacy look — this is the designed blast radius
-    // of the fail-closed read, not an accident.
-    const stored = doc([{ type: "nav-items", props: {} }], {
-      responsive: { tablet: { layout: { paddingY: 4 } } },
-    });
-    expect(normalizeStoredMenuDocumentV2ForRead(stored).sections).toEqual([]);
-    expect(resolveStoredMenuDocument({ document: stored })).toBeNull();
+    // CONSCIOUS assertion: the stored read is fail-closed EXCEPT the one
+    // device-defining carve-out, so one unknown responsive key (`desktop` is
+    // never a record; `wide` is junk) fails the whole document closed to the
+    // legacy look — this is the designed blast radius of the fail-closed read,
+    // not an accident. (Tablet is now a VALID breakpoint — see the tablet
+    // round-trip suite below.)
+    for (const stored of [
+      doc([{ type: "nav-items", props: {} }], {
+        responsive: { desktop: { layout: { paddingY: 4 } } },
+      }),
+      doc([{ type: "nav-items", props: {} }], {
+        responsive: { wide: { layout: { paddingY: 4 } } },
+      }),
+    ]) {
+      expect(normalizeStoredMenuDocumentV2ForRead(stored).sections).toEqual([]);
+      expect(resolveStoredMenuDocument({ document: stored })).toBeNull();
+    }
   });
 });
 
@@ -554,10 +566,12 @@ describe("menuDocumentV2 per-device resolve/read helpers (TASK-501-01)", () => {
     },
   };
 
-  test("desktop resolves the base; tablet === desktop (tablet deferred)", () => {
+  test("desktop resolves the base; a mobile-only override leaves tablet === desktop (mobile does NOT leak to tablet)", () => {
     const desktop = resolveMenuSectionAppearanceForDevice(sectionFixture, "desktop");
     expect(desktop.layout).toEqual({ paddingY: 16, surfaceColor: "#0f172a" });
     expect(desktop.navProps).toEqual({ itemGap: 8, fontSize: 14 });
+    // The fixture carries ONLY a mobile record ⇒ tablet reads its OWN (absent)
+    // record and inherits the desktop base unchanged.
     expect(resolveMenuSectionAppearanceForDevice(sectionFixture, "tablet")).toEqual(desktop);
   });
 
@@ -596,22 +610,52 @@ describe("menuDocumentV2 patchMenuSectionForDevice (TASK-501-01)", () => {
     ],
   });
 
-  test("desktop patch mutates the base and leaves responsive absent; tablet writes the base too", () => {
-    for (const device of ["desktop", "tablet"] as const) {
-      const out = patchMenuSectionForDevice(makeDoc(), "sec-1", device, "layout", {
-        paddingY: 2,
-      });
-      expect(out.sections[0]?.layout).toEqual({ paddingY: 2 });
-      expect("responsive" in (out.sections[0] as MenuSectionV2)).toBe(false);
-      const nav = patchMenuSectionForDevice(makeDoc(), "sec-1", device, "navProps", {
-        orientation: "vertical",
-      });
-      expect((nav.sections[0]?.blocks[0] as { props: Record<string, unknown> }).props).toEqual({
-        itemGap: 8,
-        orientation: "vertical",
-      });
-      expect("responsive" in (nav.sections[0] as MenuSectionV2)).toBe(false);
-    }
+  test("desktop patch mutates the base and leaves responsive absent", () => {
+    const out = patchMenuSectionForDevice(makeDoc(), "sec-1", "desktop", "layout", {
+      paddingY: 2,
+    });
+    expect(out.sections[0]?.layout).toEqual({ paddingY: 2 });
+    expect("responsive" in (out.sections[0] as MenuSectionV2)).toBe(false);
+    const nav = patchMenuSectionForDevice(makeDoc(), "sec-1", "desktop", "navProps", {
+      orientation: "vertical",
+    });
+    expect((nav.sections[0]?.blocks[0] as { props: Record<string, unknown> }).props).toEqual({
+      itemGap: 8,
+      orientation: "vertical",
+    });
+    expect("responsive" in (nav.sections[0] as MenuSectionV2)).toBe(false);
+  });
+
+  test("tablet patch writes its OWN sparse responsive.tablet record and leaves the base untouched", () => {
+    const out = patchMenuSectionForDevice(makeDoc(), "sec-1", "tablet", "layout", { paddingY: 2 });
+    expect(out.sections[0]?.responsive).toEqual({ tablet: { layout: { paddingY: 2 } } });
+    expect(out.sections[0]?.layout).toEqual({ paddingY: 16 }); // base untouched
+    const nav = patchMenuSectionForDevice(makeDoc(), "sec-1", "tablet", "navProps", {
+      orientation: "vertical",
+    });
+    expect(nav.sections[0]?.responsive).toEqual({
+      tablet: { navProps: { orientation: "vertical" } },
+    });
+    // The base nav-items props stay untouched by a tablet write.
+    expect((nav.sections[0]?.blocks[0] as { props: Record<string, unknown> }).props).toEqual({
+      itemGap: 8,
+    });
+  });
+
+  test("a tablet patch NEVER touches an existing mobile record and vice versa", () => {
+    const withMobile = patchMenuSectionForDevice(makeDoc(), "sec-1", "mobile", "layout", {
+      paddingY: 4,
+    });
+    const both = patchMenuSectionForDevice(withMobile, "sec-1", "tablet", "layout", {
+      paddingY: 8,
+    });
+    expect(both.sections[0]?.responsive).toEqual({
+      mobile: { layout: { paddingY: 4 } },
+      tablet: { layout: { paddingY: 8 } },
+    });
+    // Clearing the tablet override leaves the mobile record deep-equal to before.
+    const clearedTablet = clearMenuSectionOverride(both, "sec-1", "tablet", "layout", "paddingY");
+    expect(clearedTablet.sections[0]?.responsive).toEqual({ mobile: { layout: { paddingY: 4 } } });
   });
 
   test("mobile patch creates the sparse record with ONLY the patched key; a second patch merges", () => {
@@ -803,10 +847,11 @@ describe("menuDocumentV2 block visibility per device (TASK-501-01)", () => {
     sections: [{ id: "sec-1", type: "menu-bar", name: "Menu bar", layout: {}, blocks }],
   });
 
-  test("resolveMenuBlockVisibleForDevice: desktop = flat visibility (native ⇒ true); tablet === desktop", () => {
+  test("resolveMenuBlockVisibleForDevice: desktop = flat visibility (native ⇒ true); tablet inherits desktop with no tablet record", () => {
     expect(resolveMenuBlockVisibleForDevice(nativeBlock, "desktop")).toBe(true);
     expect(resolveMenuBlockVisibleForDevice(leafVisible, "desktop")).toBe(true);
     expect(resolveMenuBlockVisibleForDevice(leafHidden, "desktop")).toBe(false);
+    // No tablet record ⇒ tablet inherits the flat/desktop value.
     expect(resolveMenuBlockVisibleForDevice(leafHidden, "tablet")).toBe(false);
   });
 
@@ -884,5 +929,371 @@ describe("menuDocumentV2 block visibility per device (TASK-501-01)", () => {
     const noop = clearMenuBlockVisibilityOverride(base, "blk-nav", "mobile");
     expect(noop.sections[0]?.blocks[0]).toBe(nativeBlock);
     expect(clearMenuBlockVisibilityOverride(base, "blk-missing", "mobile")).toBe(base);
+  });
+});
+
+// --- TASK-502-01: brand.text ------------------------------------------------
+
+describe("menuDocumentV2 brand text (TASK-502-01)", () => {
+  const brandDoc = (props: Record<string, unknown>) =>
+    doc([{ id: "blk-brand", type: "brand", props }]);
+  const readBrand = (props: Record<string, unknown>) =>
+    normalizeMenuDocumentV2ForWrite(brandDoc(props)).sections[0]?.blocks[0] as {
+      props: BrandProps;
+    };
+
+  test("accepts a text override, round-tripping through the strict writer", () => {
+    expect(readBrand({ mode: "text", href: "/", text: "Acme Corp" }).props.text).toBe("Acme Corp");
+  });
+
+  test("trims surrounding whitespace", () => {
+    expect(readBrand({ mode: "text", href: "/", text: "  Acme  " }).props.text).toBe("Acme");
+  });
+
+  test("caps at MENU_BRAND_TEXT_MAX_LENGTH without throwing", () => {
+    const long = "a".repeat(200);
+    const stored = readBrand({ mode: "text", href: "/", text: long }).props.text;
+    expect(stored).toBe("a".repeat(MENU_BRAND_TEXT_MAX_LENGTH));
+    expect(stored?.length).toBe(MENU_BRAND_TEXT_MAX_LENGTH);
+  });
+
+  test("empty / whitespace / null store NO text member (sparse omit ⇒ inherit site name)", () => {
+    for (const text of ["", "   ", null]) {
+      const props = readBrand({ mode: "text", href: "/", text }).props;
+      expect("text" in props).toBe(false);
+    }
+  });
+
+  test("rejects a non-string text with the exact path", () => {
+    expectDocError(
+      () => normalizeMenuDocumentV2ForWrite(brandDoc({ mode: "text", href: "/", text: 42 })),
+      "document.sections[0].blocks[0].props.text"
+    );
+    expectDocError(
+      () => normalizeMenuDocumentV2ForWrite(brandDoc({ mode: "text", href: "/", text: {} })),
+      "document.sections[0].blocks[0].props.text"
+    );
+  });
+
+  test("a legacy brand WITHOUT text round-trips deep-equal (no text member materializes)", () => {
+    const legacy = normalizeMenuDocumentV2ForWrite(brandDoc({ mode: "text", href: "/" }));
+    const read = normalizeStoredMenuDocumentV2ForRead(legacy);
+    expect(read).toEqual(legacy);
+    const props = read.sections[0]?.blocks[0]?.props as BrandProps;
+    expect("text" in props).toBe(false);
+  });
+
+  test("createDefaultMenuDocumentV2 and buildMenuDocumentV2FromLegacy stay textless", () => {
+    const def = createDefaultMenuDocumentV2();
+    const brand = def.sections[0]?.blocks.find((block) => block.type === "brand");
+    expect("text" in (brand as { props: BrandProps }).props).toBe(false);
+    const built = buildMenuDocumentV2FromLegacy(null, [
+      createPageBlockV2("image", { id: "blk-logo" }),
+    ]);
+    const builtBrand = built?.sections[0]?.blocks.find((block) => block.type === "brand");
+    expect("text" in (builtBrand as { props: BrandProps }).props).toBe(false);
+  });
+});
+
+// --- TASK-502-01: tablet breakpoint round-trip + reject ----------------------
+
+describe("menuDocumentV2 tablet breakpoint (TASK-502-01)", () => {
+  test("section tablet layout/navProps + tablet & mobile side-by-side round-trip deep-equal", () => {
+    const input = doc(
+      [
+        {
+          id: "blk-nav",
+          type: "nav-items",
+          props: { itemGap: 8 },
+          responsive: {
+            tablet: { visibility: { visible: false } },
+            mobile: { visibility: { visible: true } },
+          },
+        },
+        {
+          id: "blk-cta",
+          type: "cta-button",
+          props: { label: "Go", href: "/x", target: "self", variant: "primary", size: "md" },
+          visibility: { visible: true },
+          responsive: { tablet: { visibility: { visible: false } } },
+        },
+      ],
+      {
+        responsive: {
+          tablet: { layout: { paddingY: 12 }, navProps: { itemGap: 24 } },
+          mobile: { layout: { paddingY: 4 }, navProps: { orientation: "vertical" } },
+        },
+      }
+    );
+    const out = normalizeMenuDocumentV2ForWrite(input);
+    const section0 = out.sections[0] as MenuSectionV2;
+    expect(section0.responsive).toEqual({
+      tablet: { layout: { paddingY: 12 }, navProps: { itemGap: 24 } },
+      mobile: { layout: { paddingY: 4 }, navProps: { orientation: "vertical" } },
+    });
+    expect(section0.blocks[0]?.responsive).toEqual({
+      tablet: { visibility: { visible: false } },
+      mobile: { visibility: { visible: true } },
+    });
+    expect(section0.blocks[1]?.responsive).toEqual({ tablet: { visibility: { visible: false } } });
+    // Idempotent through BOTH the writer and the stored read.
+    expect(normalizeMenuDocumentV2ForWrite(out)).toEqual(out);
+    expect(normalizeStoredMenuDocumentV2ForRead(out)).toEqual(out);
+  });
+
+  test("reject-unknown: cross-subset keys inside a tablet record throw with the exact path", () => {
+    expectDocError(
+      () =>
+        normalizeMenuDocumentV2ForWrite(
+          doc([], { responsive: { tablet: { layout: { linkColor: "var(--color-primary)" } } } })
+        ),
+      "document.sections[0].responsive.tablet.layout.linkColor"
+    );
+    expectDocError(
+      () =>
+        normalizeMenuDocumentV2ForWrite(
+          doc([], { responsive: { tablet: { navProps: { sticky: true } } } })
+        ),
+      "document.sections[0].responsive.tablet.navProps.sticky"
+    );
+  });
+
+  test("reject-unknown: a tablet block override carrying page-shaped props is rejected (leaf strip trap)", () => {
+    expectDocError(
+      () =>
+        normalizeMenuDocumentV2ForWrite(
+          doc([{ type: "nav-items", props: {}, responsive: { tablet: { props: { x: 1 } } } }])
+        ),
+      "document.sections[0].blocks[0].responsive.tablet.props"
+    );
+  });
+});
+
+// --- TASK-502-01: cascade (mobile does NOT inherit tablet) -------------------
+
+describe("menuDocumentV2 cascade (TASK-502-01)", () => {
+  const sectionFixture: MenuSectionV2 = {
+    id: "sec-1",
+    type: "menu-bar",
+    name: "Menu bar",
+    layout: { paddingY: 16, surfaceColor: "#0f172a" },
+    blocks: [{ id: "blk-nav", type: "nav-items", props: { itemGap: 8, fontSize: 14 } }],
+    responsive: { tablet: { layout: { paddingY: 12 }, navProps: { itemGap: 24 } } },
+  };
+
+  test("tablet = base merged with ONLY the tablet record", () => {
+    const tablet = resolveMenuSectionAppearanceForDevice(sectionFixture, "tablet");
+    expect(tablet.layout).toEqual({ paddingY: 12, surfaceColor: "#0f172a" });
+    expect(tablet.navProps).toEqual({ itemGap: 24, fontSize: 14 });
+  });
+
+  test("a tablet-only override leaves the mobile resolve deep-equal to desktop (mobile ignores tablet)", () => {
+    const desktop = resolveMenuSectionAppearanceForDevice(sectionFixture, "desktop");
+    const mobile = resolveMenuSectionAppearanceForDevice(sectionFixture, "mobile");
+    expect(mobile).toEqual(desktop);
+    expect(mobile.layout).toEqual({ paddingY: 16, surfaceColor: "#0f172a" });
+    expect(mobile.navProps).toEqual({ itemGap: 8, fontSize: 14 });
+  });
+});
+
+// --- TASK-502-01: device-defining carve-out ---------------------------------
+
+describe("menuDocumentV2 device-defining carve-out (TASK-502-01)", () => {
+  test("exported key list is mobileMode + dropdownDirection", () => {
+    expect(MENU_NAV_DEVICE_DEFINING_KEYS).toEqual(["mobileMode", "dropdownDirection"]);
+  });
+
+  test("WRITE rejects mobileMode / dropdownDirection inside a responsive navProps record", () => {
+    expectDocError(
+      () =>
+        normalizeMenuDocumentV2ForWrite(
+          doc([], { responsive: { mobile: { navProps: { mobileMode: "inline" } } } })
+        ),
+      "document.sections[0].responsive.mobile.navProps.mobileMode"
+    );
+    expectDocError(
+      () =>
+        normalizeMenuDocumentV2ForWrite(
+          doc([], { responsive: { tablet: { navProps: { dropdownDirection: "top" } } } })
+        ),
+      "document.sections[0].responsive.tablet.navProps.dropdownDirection"
+    );
+  });
+
+  test("BASE nav-items props still accept mobileMode / dropdownDirection", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([{ type: "nav-items", props: { mobileMode: "inline", dropdownDirection: "top" } }])
+    );
+    expect((out.sections[0]?.blocks[0] as { props: Record<string, unknown> }).props).toEqual({
+      mobileMode: "inline",
+      dropdownDirection: "top",
+    });
+  });
+
+  test("STORED READ hoists a mobile mobileMode override into the base props then prunes the record", () => {
+    // A 501-era doc: base nav-items mobileMode "disclosure", mobile override "inline".
+    const stored = doc(
+      [{ id: "blk-nav", type: "nav-items", props: { mobileMode: "disclosure", itemGap: 8 } }],
+      { responsive: { mobile: { navProps: { mobileMode: "inline" } } } }
+    );
+    const read = normalizeStoredMenuDocumentV2ForRead(stored);
+    const nav = read.sections[0]?.blocks[0] as { props: Record<string, unknown> };
+    // Hoisted: the base value is overwritten with the override value.
+    expect(nav.props).toEqual({ mobileMode: "inline", itemGap: 8 });
+    // The record is pruned back to the never-overridden shape (no responsive member).
+    expect("responsive" in (read.sections[0] as MenuSectionV2)).toBe(false);
+    // Doc NOT degraded.
+    expect(read.sections).toHaveLength(1);
+    // Migrated doc round-trips clean through the STRICT writer (persistable).
+    expect(() => normalizeMenuDocumentV2ForWrite(read)).not.toThrow();
+    expect(normalizeMenuDocumentV2ForWrite(read)).toEqual(read);
+  });
+
+  test("mobileMode hoist emits byte-identical published CSS before and after the migration", () => {
+    // "Before" = the raw 501-era doc with the live override; "after" = the
+    // migrated (hoisted+pruned) doc. The mobile branch reads the mobile-resolved
+    // appearance, so the hoist must not change one byte of the emission.
+    const before = doc(
+      [{ id: "blk-nav", type: "nav-items", props: { mobileMode: "disclosure" } }],
+      { responsive: { mobile: { navProps: { mobileMode: "inline" } } } }
+    ) as unknown as MenuDocumentV2;
+    const after = normalizeStoredMenuDocumentV2ForRead(before);
+    expect(buildMenuDocumentCss(after)).toBe(buildMenuDocumentCss(before));
+  });
+
+  test("STORED READ prune-only drops a dead dropdownDirection override (never hoisted)", () => {
+    const stored = doc(
+      [{ id: "blk-nav", type: "nav-items", props: { dropdownDirection: "bottom" } }],
+      { responsive: { mobile: { navProps: { dropdownDirection: "top" } } } }
+    );
+    const read = normalizeStoredMenuDocumentV2ForRead(stored);
+    const nav = read.sections[0]?.blocks[0] as { props: Record<string, unknown> };
+    // Base is UNCHANGED — dropdownDirection is never hoisted.
+    expect(nav.props).toEqual({ dropdownDirection: "bottom" });
+    expect("responsive" in (read.sections[0] as MenuSectionV2)).toBe(false);
+  });
+
+  test("a junk mobileMode override value is NOT hoisted (prune-only, base unchanged, doc not degraded)", () => {
+    const stored = doc(
+      [{ id: "blk-nav", type: "nav-items", props: { mobileMode: "disclosure" } }],
+      { responsive: { mobile: { navProps: { mobileMode: "diagonal" } } } }
+    );
+    const read = normalizeStoredMenuDocumentV2ForRead(stored);
+    const nav = read.sections[0]?.blocks[0] as { props: Record<string, unknown> };
+    expect(nav.props).toEqual({ mobileMode: "disclosure" }); // base untouched
+    expect("responsive" in (read.sections[0] as MenuSectionV2)).toBe(false);
+    expect(read.sections).toHaveLength(1); // NOT degraded
+  });
+
+  test("sibling override keys in the same record survive the carve-out prune", () => {
+    const stored = doc([{ id: "blk-nav", type: "nav-items", props: {} }], {
+      responsive: { mobile: { navProps: { mobileMode: "inline", itemGap: 20 } } },
+    });
+    const read = normalizeStoredMenuDocumentV2ForRead(stored);
+    // itemGap survives as a real mobile override; mobileMode is hoisted+pruned.
+    expect(read.sections[0]?.responsive).toEqual({ mobile: { navProps: { itemGap: 20 } } });
+    expect((read.sections[0]?.blocks[0] as { props: Record<string, unknown> }).props).toEqual({
+      mobileMode: "inline",
+    });
+  });
+
+  test("blast radius unchanged: a malformed LEAF prop still degrades the whole doc (carve-out did NOT loosen leaf validation)", () => {
+    const stored = doc([
+      {
+        type: "cta-button",
+        props: { label: "Go", variant: "NONSENSE" },
+        visibility: { visible: true },
+      },
+    ]);
+    expect(normalizeStoredMenuDocumentV2ForRead(stored).sections).toEqual([]);
+  });
+});
+
+// --- TASK-502-01: per-breakpoint block visibility (tablet) ------------------
+
+describe("menuDocumentV2 tablet block visibility (TASK-502-01)", () => {
+  const nativeBlock: MenuBlockV2 = { id: "blk-nav", type: "nav-items", props: {} };
+  const leafVisible: MenuBlockV2 = {
+    id: "blk-cta",
+    type: "cta-button",
+    props: {},
+    visibility: { visible: true },
+  };
+  const makeDoc = (blocks: MenuBlockV2[]): MenuDocumentV2 => ({
+    schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
+    sections: [{ id: "sec-1", type: "menu-bar", name: "Menu bar", layout: {}, blocks }],
+  });
+
+  test("setMenuBlockVisibleForDevice tablet writes responsive.tablet on native AND leaf; desktop stays flat", () => {
+    const base = makeDoc([nativeBlock, leafVisible]);
+    const out = setMenuBlockVisibleForDevice(
+      setMenuBlockVisibleForDevice(base, "blk-nav", "tablet", false),
+      "blk-cta",
+      "tablet",
+      false
+    );
+    expect(out.sections[0]?.blocks[0]?.responsive).toEqual({
+      tablet: { visibility: { visible: false } },
+    });
+    expect(out.sections[0]?.blocks[1]?.responsive).toEqual({
+      tablet: { visibility: { visible: false } },
+    });
+    // Flat leaf visibility untouched by the tablet write.
+    expect(
+      (out.sections[0]?.blocks[1] as { visibility?: { visible: boolean } }).visibility
+    ).toEqual({
+      visible: true,
+    });
+  });
+
+  test("resolveMenuBlockVisibleForDevice reads the tablet record; mobile ignores it", () => {
+    const block: MenuBlockV2 = {
+      ...leafVisible,
+      responsive: { tablet: { visibility: { visible: false } } },
+    };
+    expect(resolveMenuBlockVisibleForDevice(block, "desktop")).toBe(true);
+    expect(resolveMenuBlockVisibleForDevice(block, "tablet")).toBe(false);
+    // A tablet-only override leaves mobile inheriting the flat/desktop value.
+    expect(resolveMenuBlockVisibleForDevice(block, "mobile")).toBe(true);
+  });
+
+  test("hasMenuBlockVisibilityOverride: any-breakpoint vs a specific breakpoint", () => {
+    const tabletOnly: MenuBlockV2 = {
+      ...nativeBlock,
+      responsive: { tablet: { visibility: { visible: false } } },
+    };
+    expect(hasMenuBlockVisibilityOverride(tabletOnly)).toBe(true); // any-breakpoint
+    expect(hasMenuBlockVisibilityOverride(tabletOnly, "tablet")).toBe(true);
+    expect(hasMenuBlockVisibilityOverride(tabletOnly, "mobile")).toBe(false);
+    expect(hasMenuBlockVisibilityOverride(nativeBlock)).toBe(false);
+  });
+
+  test("clearMenuBlockVisibilityOverride accepts tablet and prunes to the pre-override shape", () => {
+    const base = makeDoc([nativeBlock]);
+    const withOverride = setMenuBlockVisibleForDevice(base, "blk-nav", "tablet", false);
+    const cleared = clearMenuBlockVisibilityOverride(withOverride, "blk-nav", "tablet");
+    expect(cleared).toEqual(base);
+    expect("responsive" in (cleared.sections[0]?.blocks[0] as MenuBlockV2)).toBe(false);
+  });
+});
+
+// --- TASK-502-01: mobile-only doc byte-identity -----------------------------
+
+describe("menuDocumentV2 mobile-only byte-identity (TASK-502-01)", () => {
+  test("a 501-era doc with ONLY mobile overrides (no dead keys) round-trips deep-equal", () => {
+    const mobileOnly = normalizeMenuDocumentV2ForWrite(
+      doc(
+        [
+          {
+            id: "blk-nav",
+            type: "nav-items",
+            props: { itemGap: 8 },
+            responsive: { mobile: { visibility: { visible: false } } },
+          },
+        ],
+        { responsive: { mobile: { layout: { paddingY: 4 }, navProps: { itemGap: 16 } } } }
+      )
+    );
+    expect(normalizeStoredMenuDocumentV2ForRead(mobileOnly)).toEqual(mobileOnly);
   });
 });

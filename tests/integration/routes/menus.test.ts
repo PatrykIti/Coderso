@@ -112,6 +112,17 @@ const getPatchHandler = () => {
   return route.handler;
 };
 
+const getGetHandler = () => {
+  const { router, routes } = makeRouter();
+  registerMenuRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate,
+  });
+  const route = routes.find((entry) => entry.method === "GET" && entry.path === "/menus/:id");
+  if (!route) throw new Error("get_route_missing");
+  return route.handler;
+};
+
 testIfDb(
   "PATCH /menus/:id persists a valid appearance through the menus.settings envelope",
   async () => {
@@ -313,8 +324,9 @@ testIfDb(
             sections: [
               {
                 ...document.sections[0]!,
-                // Tablet is DEFERRED (mobile-only v1): reject-unknown must fire.
-                responsive: { tablet: { layout: { paddingY: 4 } } },
+                // "wide" is NOT a responsive breakpoint (tablet + mobile only as
+                // of TASK-502-01): reject-unknown must fire.
+                responsive: { wide: { layout: { paddingY: 4 } } },
               },
             ],
           },
@@ -326,7 +338,117 @@ testIfDb(
       const apiError = error as ApiError;
       expect(apiError.code).toBe("menu_document_invalid");
       expect(apiError.status).toBe(400);
-      expect(apiError.details).toEqual({ path: "document.sections[0].responsive.tablet" });
+      expect(apiError.details).toEqual({ path: "document.sections[0].responsive.wide" });
+    }
+  },
+  dbTestTimeoutMs
+);
+
+// --- TASK-502-05 §2.1: the two headline new keys (brand.text + responsive.tablet)
+// proven at the route/persistence boundary (service-layer coverage lives in
+// menu-document-v2.test.ts; the route is a thin delegate, so these assert the
+// verbatim round-trip and the ApiError-400 mapping actually reach the wire). ---
+
+const routeBrandTabletMenuDocument = () => ({
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "sec-route-menu-bar",
+      type: "menu-bar" as const,
+      name: "Menu bar",
+      layout: { surfaceColor: "#0f172a" },
+      // responsive.tablet is a NEW breakpoint (TASK-502-01) — its OWN sparse
+      // record must ride the envelope verbatim, base untouched.
+      responsive: {
+        tablet: {
+          layout: { paddingY: 6 },
+          navProps: { orientation: "vertical" as const, itemGap: 20 },
+        },
+      },
+      blocks: [
+        {
+          id: "blk-route-brand",
+          type: "brand" as const,
+          // brand.text is the OTHER new key (TASK-502-01): a clean string
+          // persists verbatim (no trim needed here).
+          props: { mode: "text" as const, href: "/", text: "Acme Co" },
+        },
+        { id: "blk-route-nav", type: "nav-items" as const, props: { itemGap: 12 } },
+      ],
+    },
+  ],
+});
+
+testIfDb(
+  "PATCH /menus/:id persists brand.text + responsive.tablet verbatim, read back through GET",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Brand Tablet ${randomUUID()}`,
+      location: `route-brand-tablet-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const patch = getPatchHandler();
+    const document = routeBrandTabletMenuDocument();
+    await patch({ params: { id: menu.id }, query: {}, body: { document } });
+
+    // Round-trip through the GET handler: the persisted envelope carries the
+    // new keys byte-for-byte (brand.text unmodified, responsive.tablet sparse).
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings).toEqual({ document });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps a non-string brand.text to a 400 menu_document_invalid ApiError with the brand text path",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Brand Text Invalid ${randomUUID()}`,
+      location: `route-brand-text-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            schemaVersion: 1,
+            sections: [
+              {
+                id: "sec-route-menu-bar",
+                type: "menu-bar",
+                name: "Menu bar",
+                layout: {},
+                // brand at blocks[0] so the normalizer path anchors on it; a
+                // non-string text must be rejected (TASK-502-01 write guard).
+                blocks: [
+                  {
+                    id: "blk-route-brand",
+                    type: "brand",
+                    props: { mode: "text", href: "/", text: 42 },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({
+        path: "document.sections[0].blocks[0].props.text",
+      });
     }
   },
   dbTestTimeoutMs

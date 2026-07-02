@@ -71,7 +71,6 @@ import {
   type PreviewProbeResult,
 } from "@/services/pagesClient";
 import { getPageTemplateCached, listPageTemplatesCached } from "@/services/pageTemplatesClient";
-import { getCachedSettings, getSettingsCached } from "@/services/settingsClient";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 import { EditorShell } from "@/ui/layouts/EditorShell";
 import { createAdminActionToastAdapter } from "@/ui/shared/actionToasts";
@@ -124,14 +123,8 @@ import {
   type PageEditorControlUiModel,
 } from "../../../services/pages/pageEditorControlUiModel";
 import { getPageBlockRenderDefault } from "../../../services/pages/pageBlockRenderDefaults";
-import {
-  DEFAULT_TOKENS,
-  type DesignTokenOverrides,
-  type DesignTokens,
-} from "../../../services/theme/tokenTypes";
-import { mergeTokens } from "../../../services/theme/tokenUtils";
-import { assertTokenOverrides } from "../../../services/theme/tokenValidation";
 import { toPageCanvasColorCssVariableMap } from "../../../ui/theme/tokenCss";
+import { useCanvasSiteTokens } from "../shared/useCanvasSiteTokens";
 import {
   ColorSwatchControl,
   ComboboxControl,
@@ -346,71 +339,6 @@ const pageEditorActionToasts = createAdminActionToastAdapter({
     },
   },
 });
-
-/**
- * Site token overrides stored under `design.tokens` in the admin settings
- * payload (the route returns the server-resolved token set). Anything that is
- * not a valid token-override record fails closed to `null` so the canvas
- * anchors on `DEFAULT_TOKENS` — never on a guessed shape.
- */
-const readSiteDesignTokenOverrides = (
-  settings: Record<string, unknown> | null
-): DesignTokenOverrides | null => {
-  const value = settings?.["design.tokens"];
-  if (!isPlainRecord(value)) return null;
-  try {
-    assertTokenOverrides(value);
-    return value;
-  } catch {
-    return null;
-  }
-};
-
-/**
- * WYSIWYG anchor for the canvas (phase2 smoke anomaly #2): the admin shell
- * paints its OWN `--text-*`/`--font-*` admin-theme variables on `:root`, so a
- * canvas heading using `var(--text-sm, <fallback>)` would resolve the ADMIN
- * typography scale instead of the site's — drifting from the published front.
- * The canvas frame therefore re-paints the site typography token variables
- * (the exact map `toCssVariables` emits on the front `:root`) inline: cached
- * settings hydrate first, one background fetch revalidates, and settings
- * cache-bus updates keep the frame in sync. With nothing cached the frame
- * carries the `DEFAULT_TOKENS` values — the documented `var()` fallbacks.
- */
-const useCanvasSiteTokens = (): DesignTokens => {
-  const [settings, setSettings] = useState<Record<string, unknown> | null>(() =>
-    getCachedSettings()
-  );
-
-  useEffect(() => {
-    let active = true;
-    void getSettingsCached()
-      .then((payload) => {
-        if (active) setSettings(payload);
-      })
-      .catch(() => {
-        // Offline/unauthorized: the canvas keeps the DEFAULT_TOKENS anchor.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  useEffect(
-    () =>
-      subscribeCacheEvents((event) => {
-        if (event.key !== cacheKeys.settingsRedacted) return;
-        const cached = getCachedSettings();
-        if (cached) setSettings(cached);
-      }),
-    []
-  );
-
-  return useMemo(
-    () => mergeTokens(DEFAULT_TOKENS, readSiteDesignTokenOverrides(settings)),
-    [settings]
-  );
-};
 
 /**
  * Live design-token swatch palette (used by the block/section color controls)

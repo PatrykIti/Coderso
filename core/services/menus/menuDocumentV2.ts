@@ -45,14 +45,27 @@ import {
  * (`cta-button`/`divider`/`spacer`) carry style/visibility, validated for free
  * by the page block pipeline.
  *
- * Per-device overrides (TASK-501-01): sections carry a SPARSE
- * `responsive.mobile.{layout,navProps}` record; EVERY block type (menu-native
- * included) carries a sparse `responsive.mobile.visibility` record. The block
- * record is document-level render/CSS gating owned by THIS contract — it does
- * NOT touch the page visibility pipeline. Records store only edited keys, are
- * lazily created, pruned when empty, and removed by explicit Reset only
- * (never auto-removed on equality). Mobile inherits the DESKTOP base; tablet
- * is DEFERRED — tablet reads/writes address the base, like desktop.
+ * Per-device overrides (TASK-501-01 + TASK-502-01): sections carry SPARSE
+ * `responsive.{tablet,mobile}.{layout,navProps}` records; EVERY block type
+ * (menu-native included) carries sparse `responsive.{tablet,mobile}.visibility`
+ * records. The block record is document-level render/CSS gating owned by THIS
+ * contract — it does NOT touch the page visibility pipeline. Records store only
+ * edited keys, are lazily created, pruned when empty, and removed by explicit
+ * Reset only (never auto-removed on equality). Cascade mirrors Pages EXACTLY
+ * (`pageResponsiveCss.ts:10-13`): desktop = base; tablet AND mobile each merge
+ * ONLY their OWN record over the DESKTOP base — mobile does NOT inherit tablet.
+ *
+ * Device-defining nav props (TASK-502-01): `mobileMode` and `dropdownDirection`
+ * are device-DEFINING, never overridable — a `responsive.*.navProps` record
+ * carrying either key is REJECTED on the strict WRITE. On the fail-closed
+ * STORED READ the one conscious carve-out applies (a 501-era doc may legit hold
+ * such a record; degrading the whole doc for it would be data loss): the keys
+ * get SPLIT treatment — `dropdownDirection` is truly DEAD (the desktop-branch
+ * emission reads the BASE) ⇒ silently PRUNED; a mobile `mobileMode` override is
+ * LIVE (the mobile branch consumes the mobile-resolved value) ⇒ HOISTED into
+ * the first nav-items block's base props, THEN pruned — behavior-preserving
+ * (published mobile rendering byte-identical). Migration is non-destructive:
+ * the migrated doc round-trips clean ⇒ the next autosave persists it.
  *
  * This module is Bun-free and import-side-effect free (Vitest lane).
  */
@@ -108,14 +121,27 @@ const NAV_ITEMS_PROP_KEYS = [
 export type MenuBarLayout = Pick<MenuAppearance, (typeof MENU_BAR_LAYOUT_KEYS)[number]>;
 export type NavItemsProps = Pick<MenuAppearance, (typeof NAV_ITEMS_PROP_KEYS)[number]>;
 
-// --- per-device override vocabulary (TASK-501-01; tablet DEFERRED) -----------
+// --- per-device override vocabulary (TASK-501-01 + TASK-502-01: tablet) ------
 
-export const MENU_RESPONSIVE_BREAKPOINT_KEYS = ["mobile"] as const;
+// Order tablet-first (wider viewport first; the CSS builder 502-02 iterates
+// this const for branch emission). Both tablet and mobile inherit the DESKTOP
+// base; mobile does NOT inherit tablet (Pages cascade, pageResponsiveCss.ts).
+export const MENU_RESPONSIVE_BREAKPOINT_KEYS = ["tablet", "mobile"] as const;
 export type MenuResponsiveBreakpoint = (typeof MENU_RESPONSIVE_BREAKPOINT_KEYS)[number];
 const MENU_SECTION_OVERRIDE_GROUP_KEYS = ["layout", "navProps"] as const;
 export type MenuSectionOverrideGroup = (typeof MENU_SECTION_OVERRIDE_GROUP_KEYS)[number];
 
-/** Editor device kind. Desktop AND tablet address the base (canvas maps tablet⇒desktop). */
+/**
+ * `mobileMode` and `dropdownDirection` are device-DEFINING nav props: they write
+ * to the BASE on every device and are NEVER stored inside a responsive record
+ * (rejected on write, pruned/hoisted on stored read). Exported so 502-04 can
+ * scope the panel controls and tests can assert the carve-out.
+ */
+export const MENU_NAV_DEVICE_DEFINING_KEYS = ["mobileMode", "dropdownDirection"] as const;
+
+/** Editor device kind. Desktop = base; tablet and mobile each address their OWN
+ *  sparse responsive record. Cascade (Pages, pageResponsiveCss.ts:10-13):
+ *  tablet and mobile BOTH inherit the DESKTOP base; mobile does NOT inherit tablet. */
 export type MenuDeviceKind = "desktop" | "tablet" | "mobile";
 
 export type MenuSectionOverride = {
@@ -124,16 +150,23 @@ export type MenuSectionOverride = {
   /** SPARSE — edited keys only (incl. orientation). */
   navProps?: NavItemsProps;
 };
-export type MenuSectionResponsive = { mobile?: MenuSectionOverride };
+export type MenuSectionResponsive = Partial<Record<MenuResponsiveBreakpoint, MenuSectionOverride>>;
 
 export type MenuBlockOverride = { visibility?: { visible: boolean } };
-export type MenuBlockResponsive = { mobile?: MenuBlockOverride };
+export type MenuBlockResponsive = Partial<Record<MenuResponsiveBreakpoint, MenuBlockOverride>>;
 
 export type BrandProps = {
   mode: "text" | "image";
   href: string;
   /** Validated page `image` leaf props (assetId/src/alt/caption/fit). */
   image?: Record<string, unknown>;
+  /**
+   * Per-menu brand text override. Fallback chain (normative for 502-03 front
+   * AND 502-04 canvas): props.text → siteName (`site.name` setting) → null.
+   * Absent = inherit the site name. Text FORMATTING is a named residual, not a
+   * member here. Rendered as React text only (never reaches CSS).
+   */
+  text?: string;
 };
 
 export type MenuUtilityProps = {
@@ -275,15 +308,25 @@ const normalizeNavItemsProps = (value: unknown, path: string): NavItemsProps =>
 
 // --- responsive override write normalizers (reject-unknown, prune-empty) ----
 
+/**
+ * Read/write divergence for the device-defining carve-out (TASK-502-01). The
+ * write path REJECTS a `mobileMode`/`dropdownDirection` inside a responsive
+ * navProps record; the stored read PRUNES it (a 501-era doc may legit hold one
+ * — degrading the whole doc would be data loss). This is a NARROW channel,
+ * separate from the leaf `mode` param (leaf validation stays strict on read).
+ */
+type MenuResponsiveCarveout = "reject" | "prune";
+
 const normalizeMenuSectionResponsive = (
   value: unknown,
-  path: string
+  path: string,
+  carveout: MenuResponsiveCarveout
 ): MenuSectionResponsive | undefined => {
   if (!isPlainObject(value)) throw new MenuDocumentError(path);
   const out: MenuSectionResponsive = {};
   for (const [key, raw] of Object.entries(value)) {
     if (!(MENU_RESPONSIVE_BREAKPOINT_KEYS as readonly string[]).includes(key)) {
-      throw new MenuDocumentError(`${path}.${key}`); // "desktop"/"tablet"/junk ⇒ reject
+      throw new MenuDocumentError(`${path}.${key}`); // "desktop"/junk ⇒ reject
     }
     if (raw === undefined || raw === null) continue;
     if (!isPlainObject(raw)) throw new MenuDocumentError(`${path}.${key}`);
@@ -300,12 +343,62 @@ const normalizeMenuSectionResponsive = (
       if (Object.keys(layout).length > 0) override.layout = layout; // prune empty
     }
     if (raw.navProps !== undefined && raw.navProps !== null) {
-      const navProps = normalizeNavItemsProps(raw.navProps, `${path}.${key}.navProps`);
+      if (!isPlainObject(raw.navProps)) throw new MenuDocumentError(`${path}.${key}.navProps`);
+      // Device-defining carve-out: mobileMode/dropdownDirection are never
+      // overridable. WRITE ⇒ reject (offending path); STORED READ ⇒ prune the
+      // key from the record (mobileMode is HOISTED to the base earlier, in the
+      // section pre-pass; dropdownDirection is dead ⇒ prune-only).
+      let navInput: Record<string, unknown> = raw.navProps;
+      for (const defKey of MENU_NAV_DEVICE_DEFINING_KEYS) {
+        if (!Object.prototype.hasOwnProperty.call(navInput, defKey)) continue;
+        if (carveout === "reject") {
+          throw new MenuDocumentError(`${path}.${key}.navProps.${defKey}`);
+        }
+        if (navInput === raw.navProps) navInput = { ...navInput }; // copy-on-first-prune
+        delete navInput[defKey];
+      }
+      const navProps = normalizeNavItemsProps(navInput, `${path}.${key}.navProps`);
       if (Object.keys(navProps).length > 0) override.navProps = navProps; // prune empty
     }
     if (Object.keys(override).length > 0) out[key as MenuResponsiveBreakpoint] = override;
   }
   return Object.keys(out).length > 0 ? out : undefined; // empty ⇒ NEVER persisted
+};
+
+/**
+ * HOIST pre-pass (stored read ONLY, TASK-502-01). A 501-era
+ * `responsive.mobile.navProps.mobileMode` override is LIVE data (the mobile CSS
+ * branch reads the mobile-resolved value), so prune-only would silently change
+ * published mobile rendering. When the raw mobile record carries an OWN
+ * mobileMode whose value is a VALID enum member, write it into the raw FIRST
+ * nav-items block's `props.mobileMode` (the normative base target, overwriting
+ * the base value); `normalizeNavItemsProps` then validates it like any base
+ * prop. Invalid/junk values are NOT hoisted (prune-only — hoisting junk would
+ * degrade the doc the carve-out exists to save); tablet records and
+ * `dropdownDirection` are NEVER hoisted (never consumed / truly dead). Returns
+ * a new blocks array when a hoist happened, else null (identity).
+ */
+const NAV_ITEMS_MOBILE_MODE_VALUES = ["disclosure", "inline"] as const;
+
+const hoistMobileModeOverride = (responsive: unknown, rawBlocks: unknown[]): unknown[] | null => {
+  if (!isPlainObject(responsive)) return null;
+  const mobile = responsive.mobile;
+  if (!isPlainObject(mobile)) return null;
+  const navProps = mobile.navProps;
+  if (!isPlainObject(navProps)) return null;
+  if (!Object.prototype.hasOwnProperty.call(navProps, "mobileMode")) return null;
+  const override = navProps.mobileMode;
+  if (!(NAV_ITEMS_MOBILE_MODE_VALUES as readonly unknown[]).includes(override)) return null;
+  const navIndex = rawBlocks.findIndex(
+    (block) => isPlainObject(block) && block.type === "nav-items"
+  );
+  if (navIndex === -1) return null;
+  const navBlock = rawBlocks[navIndex];
+  if (!isPlainObject(navBlock)) return null;
+  const props = isPlainObject(navBlock.props) ? navBlock.props : {};
+  const next = [...rawBlocks];
+  next[navIndex] = { ...navBlock, props: { ...props, mobileMode: override } };
+  return next;
 };
 
 const MENU_BLOCK_VISIBILITY_OVERRIDE_KEYS = ["visible"] as const;
@@ -343,7 +436,13 @@ const normalizeMenuBlockResponsive = (
   return Object.keys(out).length > 0 ? out : undefined;
 };
 
-const BRAND_PROP_KEYS = ["mode", "href", "image"] as const;
+/** Authoring cap for the per-menu brand text override (exported: 502-04 sets Input maxLength). */
+export const MENU_BRAND_TEXT_MAX_LENGTH = 120 as const;
+
+// CONSCIOUS key-list extension (fail-closed read trap: BRAND_PROP_KEYS gates
+// BOTH write and stored read; forgetting a key would degrade every saved doc
+// carrying that member to empty on read — asserted in tests).
+const BRAND_PROP_KEYS = ["mode", "href", "image", "text"] as const;
 
 const normalizeBrandProps = (
   value: unknown,
@@ -377,6 +476,12 @@ const normalizeBrandProps = (
     if (trimmed.length > 0) href = sanitizeAuthoringLinkHref(trimmed) ?? "/";
   }
   const props: BrandProps = { mode: brandMode, href };
+  if (value.text !== undefined && value.text !== null) {
+    // null tolerated as absent (mirrors image below).
+    if (typeof value.text !== "string") throw new MenuDocumentError(`${path}.text`);
+    const text = value.text.trim().slice(0, MENU_BRAND_TEXT_MAX_LENGTH); // fail-soft cap, never throw-on-long
+    if (text.length > 0) props.text = text; // SPARSE: empty/whitespace ⇒ OMIT ⇒ inherit site name
+  }
   if (value.image !== undefined && value.image !== null) {
     props.image = normalizeBrandImage(value.image, mode, `${path}.image`);
   }
@@ -574,7 +679,8 @@ const MENU_SECTION_KEYS = ["id", "type", "name", "layout", "blocks", "responsive
 const normalizeMenuSection = (
   value: unknown,
   path: string,
-  mode: "write" | "stored-read"
+  mode: "write" | "stored-read",
+  carveout: MenuResponsiveCarveout
 ): MenuSectionV2 => {
   if (!isPlainObject(value)) throw new MenuDocumentError(path);
   for (const key of Object.keys(value)) {
@@ -594,8 +700,17 @@ const normalizeMenuSection = (
       ? value.name.trim()
       : sectionTypeName[sectionType];
   const layout = normalizeMenuBarLayout(value.layout ?? {}, `${path}.layout`);
-  const rawBlocks = requireArray(value.blocks ?? [], `${path}.blocks`);
+  let rawBlocks = requireArray(value.blocks ?? [], `${path}.blocks`);
   if (rawBlocks.length > MENU_SECTION_MAX_BLOCKS) throw new MenuDocumentError(`${path}.blocks`);
+  // HOIST pre-pass (stored read only): a 501-era mobile `mobileMode` override is
+  // consumed by the mobile branch today, so it is hoisted into the base props
+  // BEFORE block normalization (the responsive normalizer then prunes the
+  // record). Behavior-preserving; runs before normalization so the hoisted
+  // value is validated like any base prop.
+  if (carveout === "prune") {
+    const hoisted = hoistMobileModeOverride(value.responsive, rawBlocks);
+    if (hoisted) rawBlocks = hoisted;
+  }
   const blocks = rawBlocks.map((block, index) =>
     normalizeMenuBlock(block, `${path}.blocks[${index}]`, mode)
   );
@@ -604,13 +719,16 @@ const normalizeMenuSection = (
   const responsive =
     value.responsive === undefined || value.responsive === null
       ? undefined
-      : normalizeMenuSectionResponsive(value.responsive, `${path}.responsive`);
+      : normalizeMenuSectionResponsive(value.responsive, `${path}.responsive`, carveout);
   return { id, type: sectionType, name, layout, blocks, ...(responsive ? { responsive } : {}) };
 };
 
 // --- write / read / resolvers -----------------------------------------------
 
-export function normalizeMenuDocumentV2ForWrite(value: unknown): MenuDocumentV2 {
+const normalizeMenuDocumentV2 = (
+  value: unknown,
+  carveout: MenuResponsiveCarveout
+): MenuDocumentV2 => {
   if (!isPlainObject(value)) throw new MenuDocumentError("document");
   const sections = requireArray(value.sections, "document.sections");
   if (sections.length > MENU_DOCUMENT_MAX_SECTIONS)
@@ -621,12 +739,19 @@ export function normalizeMenuDocumentV2ForWrite(value: unknown): MenuDocumentV2 
   if (sections.length > 0 && value.schemaVersion !== MENU_DOCUMENT_SCHEMA_VERSION) {
     throw new MenuDocumentError("document.schemaVersion");
   }
+  // Leaf/brand `mode` stays the literal "write" in BOTH paths (the carve-out is
+  // a separate narrow channel — leaf validation never flips to the lenient page
+  // read path on a stored read).
   return {
     schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
     sections: sections.map((section, index) =>
-      normalizeMenuSection(section, `document.sections[${index}]`, "write")
+      normalizeMenuSection(section, `document.sections[${index}]`, "write", carveout)
     ),
   };
+};
+
+export function normalizeMenuDocumentV2ForWrite(value: unknown): MenuDocumentV2 {
+  return normalizeMenuDocumentV2(value, "reject");
 }
 
 const EMPTY_MENU_DOCUMENT: MenuDocumentV2 = {
@@ -635,10 +760,11 @@ const EMPTY_MENU_DOCUMENT: MenuDocumentV2 = {
 };
 
 export function normalizeStoredMenuDocumentV2ForRead(value: unknown): MenuDocumentV2 {
-  // Fail-closed delegate to the strict writer: a marker-less/lower-version stored
-  // document throws ⇒ degrades to empty here ⇒ resolver null ⇒ legacy look.
+  // Fail-closed EXCEPT the one conscious device-defining carve-out (prune): a
+  // marker-less/lower-version or otherwise-invalid stored document throws ⇒
+  // degrades to empty here ⇒ resolver null ⇒ legacy look.
   try {
-    return normalizeMenuDocumentV2ForWrite(value);
+    return normalizeMenuDocumentV2(value, "prune");
   } catch {
     return { schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION, sections: [] };
   }
@@ -739,8 +865,9 @@ export function reorderMenuBlock(
 // All immutable and tolerant (missing id/override ⇒ identity return); consumed
 // by the CSS builder (501-02) and the Design editor's event handlers (501-03).
 
-const isMobileDevice = (device: MenuDeviceKind): device is "mobile" => device === "mobile";
-// desktop AND tablet ⇒ base, everywhere below (tablet deferred; canvas maps tablet⇒desktop).
+/** desktop ⇒ null (the base); tablet/mobile ⇒ their OWN sparse responsive record. */
+const menuDeviceBreakpoint = (device: MenuDeviceKind): MenuResponsiveBreakpoint | null =>
+  device === "desktop" ? null : device;
 
 const mapMenuSection = (
   doc: MenuDocumentV2,
@@ -774,10 +901,11 @@ const mapMenuBlock = (
 };
 
 /**
- * Resolve-for-display/CSS: desktop/tablet = the base; mobile = base merged
- * with the sparse `responsive.mobile` override (mobile inherits DESKTOP).
- * The nav base is the FIRST `nav-items` block's props (mirrors
- * `collectMenuAppearance`'s `.find()` binding in `menuDocumentCss.ts`).
+ * Resolve-for-display/CSS: desktop = the base; tablet/mobile = base merged with
+ * ONLY their OWN sparse `responsive[bp]` record (both inherit DESKTOP — mobile
+ * NEVER merges the tablet record). The nav base is the FIRST `nav-items` block's
+ * props (mirrors `collectMenuAppearance`'s `.find()` binding in
+ * `menuDocumentCss.ts`).
  */
 export function resolveMenuSectionAppearanceForDevice(
   section: MenuSectionV2,
@@ -785,12 +913,13 @@ export function resolveMenuSectionAppearanceForDevice(
 ): { layout: MenuBarLayout; navProps: NavItemsProps } {
   const navBlock = section.blocks.find((block) => block.type === "nav-items");
   const baseNavProps: NavItemsProps = navBlock?.type === "nav-items" ? navBlock.props : {};
-  if (!isMobileDevice(device)) {
+  const bp = menuDeviceBreakpoint(device);
+  if (bp === null) {
     return { layout: { ...section.layout }, navProps: { ...baseNavProps } };
   }
-  const override = section.responsive?.mobile;
+  const override = section.responsive?.[bp]; // ONLY the device's own record
   return {
-    layout: { ...section.layout, ...(override?.layout ?? {}) }, // mobile inherits desktop base
+    layout: { ...section.layout, ...(override?.layout ?? {}) }, // inherits desktop base
     navProps: { ...baseNavProps, ...(override?.navProps ?? {}) },
   };
 }
@@ -809,18 +938,19 @@ export function readMenuSectionOverrideValue(
 }
 
 /**
- * Device-forked writer. desktop/tablet ⇒ base (group "layout" ⇒
- * `section.layout`; group "navProps" ⇒ the FIRST nav-items block's props ONLY
- * — NORMATIVE: matches the readers above and `collectMenuAppearance`, and the
- * section-level `responsive.mobile.navProps` record can only represent ONE
- * nav-items block; additional nav-items blocks are left untouched). mobile ⇒
- * lazily-created SPARSE `responsive.mobile[group]`. `patch` values MUST be
- * valid `MenuAppearance` values OR `undefined`: an `undefined` patch value
- * means DELETE-KEY-FROM-TARGET (base-key delete on desktop/tablet; override
- * leaf delete + prune chain on mobile) — never an own `undefined` key, which
- * would break legacy byte-identity and `readMenuSectionOverrideValue`'s
- * hasOwnProperty detection. The write normalizer re-validates on save. NO
- * auto-remove-on-equality — an override exists until cleared.
+ * Device-forked writer. desktop ⇒ base (group "layout" ⇒ `section.layout`;
+ * group "navProps" ⇒ the FIRST nav-items block's props ONLY — NORMATIVE: matches
+ * the readers above and `collectMenuAppearance`, and a section-level
+ * `responsive[bp].navProps` record can only represent ONE nav-items block;
+ * additional nav-items blocks are left untouched). tablet/mobile ⇒ their OWN
+ * lazily-created SPARSE `responsive[bp][group]` record (a tablet patch NEVER
+ * touches an existing mobile record and vice versa). `patch` values MUST be
+ * valid `MenuAppearance` values OR `undefined`: an `undefined` patch value means
+ * DELETE-KEY-FROM-TARGET (base-key delete on desktop; override leaf delete +
+ * prune chain on tablet/mobile) — never an own `undefined` key, which would
+ * break legacy byte-identity and `readMenuSectionOverrideValue`'s hasOwnProperty
+ * detection. The write normalizer re-validates on save. NO auto-remove-on-
+ * equality — an override exists until cleared.
  */
 export function patchMenuSectionForDevice(
   doc: MenuDocumentV2,
@@ -839,7 +969,8 @@ export function patchMenuSectionForDevice(
     return next as T;
   };
   return mapMenuSection(doc, sectionId, (section) => {
-    if (!isMobileDevice(device)) {
+    const bp = menuDeviceBreakpoint(device);
+    if (bp === null) {
       if (group === "layout") {
         return {
           ...section,
@@ -860,17 +991,15 @@ export function patchMenuSectionForDevice(
         ),
       };
     }
-    const mobile = section.responsive?.mobile ?? {};
-    const nextGroup = applyPatch((mobile[group] ?? {}) as Record<string, unknown>);
-    const { [group]: _g, ...restMobile } = mobile;
-    const nextMobile = (
-      Object.keys(nextGroup).length > 0 ? { ...restMobile, [group]: nextGroup } : restMobile
+    const record = section.responsive?.[bp] ?? {};
+    const nextGroup = applyPatch((record[group] ?? {}) as Record<string, unknown>);
+    const { [group]: _g, ...restRecord } = record;
+    const nextRecord = (
+      Object.keys(nextGroup).length > 0 ? { ...restRecord, [group]: nextGroup } : restRecord
     ) as MenuSectionOverride;
-    const { mobile: _m, ...restResponsive } = section.responsive ?? {};
+    const { [bp]: _b, ...restResponsive } = section.responsive ?? {};
     const responsive: MenuSectionResponsive =
-      Object.keys(nextMobile).length > 0
-        ? { ...restResponsive, mobile: nextMobile }
-        : restResponsive;
+      Object.keys(nextRecord).length > 0 ? { ...restResponsive, [bp]: nextRecord } : restResponsive;
     const next: MenuSectionV2 = { ...section, responsive };
     // Prune chain to the byte-identical legacy shape, same as clearMenuSectionOverride.
     if (Object.keys(responsive).length === 0) delete next.responsive;
@@ -910,29 +1039,40 @@ export function clearMenuSectionOverride(
   });
 }
 
-/** desktop/tablet = flat leaf visibility (`visibility?.visible ?? true`; native blocks ⇒ true); mobile = override ?? desktop value. */
+/** desktop = flat leaf visibility (`visibility?.visible ?? true`; native blocks ⇒ true); tablet/mobile = their OWN override ?? DESKTOP value (mobile never reads tablet). */
 export function resolveMenuBlockVisibleForDevice(
   block: MenuBlockV2,
   device: MenuDeviceKind
 ): boolean {
   const desktopVisible = "visibility" in block ? (block.visibility?.visible ?? true) : true;
-  if (!isMobileDevice(device)) return desktopVisible;
-  return block.responsive?.mobile?.visibility?.visible ?? desktopVisible;
+  const bp = menuDeviceBreakpoint(device);
+  if (bp === null) return desktopVisible;
+  return block.responsive?.[bp]?.visibility?.visible ?? desktopVisible;
 }
 
 /**
- * Input to the render-if-visible-anywhere gate (501-02): a block with a
+ * Input to the render-if-visible-anywhere gate (501-02/502-02): a block with a
  * visibility override is DOM-rendered whenever visible on AT LEAST ONE device
  * and CSS-gated per branch; visible-on-neither blocks stay render-skipped.
+ * Zero-arg = ANY breakpoint (back-compat: the CSS visibility plan + the
+ * hand-off-to-CSS gate render-if-visible-anywhere, now seeing tablet records
+ * too); with a `breakpoint` arg = that record only (502-04 badge/Reset).
  */
-export const hasMenuBlockVisibilityOverride = (block: MenuBlockV2): boolean =>
-  block.responsive?.mobile?.visibility !== undefined;
+export const hasMenuBlockVisibilityOverride = (
+  block: MenuBlockV2,
+  breakpoint?: MenuResponsiveBreakpoint
+): boolean =>
+  breakpoint !== undefined
+    ? block.responsive?.[breakpoint]?.visibility !== undefined
+    : MENU_RESPONSIVE_BREAKPOINT_KEYS.some(
+        (bp) => block.responsive?.[bp]?.visibility !== undefined
+      );
 
 /**
- * mobile ⇒ `responsive.mobile.visibility` (any block type, incl. menu-native);
- * desktop/tablet ⇒ FLAT `visibility`, LEAF blocks only (native blocks carry no
- * flat visibility by contract — documented no-op for them on desktop/tablet).
- * Mirrors `setBlockVisibleForBreakpoint` (`pageEditorMutationActions.ts`).
+ * tablet/mobile ⇒ their OWN `responsive[bp].visibility` record (any block type,
+ * incl. menu-native); desktop ⇒ FLAT `visibility`, LEAF blocks only (native
+ * blocks carry no flat visibility by contract — documented no-op for them on
+ * desktop). Mirrors `setBlockVisibleForBreakpoint` (`pageEditorMutationActions.ts`).
  */
 export function setMenuBlockVisibleForDevice(
   doc: MenuDocumentV2,
@@ -941,19 +1081,20 @@ export function setMenuBlockVisibleForDevice(
   visible: boolean
 ): MenuDocumentV2 {
   return mapMenuBlock(doc, blockId, (block) => {
-    if (!isMobileDevice(device)) {
+    const bp = menuDeviceBreakpoint(device);
+    if (bp === null) {
       // Direct discriminant comparisons (not the type-guard helper) so the
       // union narrows to the leaf members that carry flat `visibility`.
       if (block.type === "cta-button" || block.type === "divider" || block.type === "spacer") {
         return { ...block, visibility: { visible } };
       }
-      return block; // menu-native on desktop/tablet ⇒ documented no-op
+      return block; // menu-native on desktop ⇒ documented no-op
     }
     return {
       ...block,
       responsive: {
         ...(block.responsive ?? {}),
-        mobile: { ...(block.responsive?.mobile ?? {}), visibility: { visible } },
+        [bp]: { ...(block.responsive?.[bp] ?? {}), visibility: { visible } },
       },
     };
   });

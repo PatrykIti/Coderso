@@ -1,4 +1,5 @@
 import {
+  MENU_RESPONSIVE_BREAKPOINT_KEYS,
   hasMenuBlockVisibilityOverride,
   resolveMenuBlockVisibleForDevice,
   type MenuBlockV2,
@@ -28,9 +29,27 @@ import {
  * document below it. Both are server-rendered, ship ZERO client JavaScript,
  * and stay fail closed: a `null` shell part renders nothing.
  *
- * Navigation pattern decision: native `<details>/<summary>` disclosures.
- * - Nested menu items render as a `<details>` dropdown per top-level group
- *   (keyboard accessible, announces expanded/collapsed, no JS).
+ * Navigation pattern decision (TASK-502-03): `SiteNavItem` is RECURSIVE and
+ * takes TWO interaction modes — nested submenus render one `.site-nav-sublist`
+ * per level (bug 7: the old `flattenNavigationDescendants` squashed every
+ * descendant into a single level and duplicated the parent link; both deleted).
+ * - `interaction="details"` (LEGACY `SiteHeaderNav`, the default): recursive
+ *   native `<details>/<summary>` click-open per level, keyboard accessible, no
+ *   JS. The audit resolution (option (b)) keeps `<details>` on this path:
+ *   `buildSiteShellCss` (the FROZEN base sheet — `siteShellCss.ts`) carries NO
+ *   sublist hide/hover rules, so de-detailed plain `<ul>` submenus would render
+ *   permanently open, and closed-`<details>` content cannot be CSS-revealed —
+ *   hover-open is impossible without JS on the legacy path. A linked parent
+ *   stays reachable as the FIRST entry of its DIRECT sublist (a `<summary>` is
+ *   not a link). FLAT legacy menus render byte-identical markup to pre-502.
+ * - `interaction="hover"` (menu-document `NavItemsRender`): details-FREE nested
+ *   `<ul class="site-nav-sublist">` per level; a linked parent renders ONCE as
+ *   its own `.site-nav-link`, a linkless (`#`) group as a
+ *   `.site-nav-link.site-nav-group-label` span with `tabIndex={0}`. The
+ *   DOC-SCOPED sheet (`buildMenuDocumentCss`, TASK-502-02) owns hide-by-default
+ *   + per-level `:hover`/`:focus-within` open + fly-out; the group hook is
+ *   `data-site-nav-group="true"` on the `<li>` (NOT a `.site-nav-group` class).
+ *   `buildSiteShellCss(null)` is untouched by BOTH modes.
  * - The mobile collapse is CSS-only: a `<details data-site-nav-disclosure>`
  *   toggle whose `[open]` attribute drives a sibling selector that reveals
  *   the single shared link list below the mobile breakpoint. Desktop hides
@@ -89,22 +108,19 @@ const isPubliclyVisibleNavigationItem = (item: NavigationItem) =>
 
 const hasRealHref = (href: string) => href.trim().length > 0 && href.trim() !== "#";
 
+type SiteNavInteraction = "details" | "hover";
+
 /**
- * Flattens every publicly visible descendant of a group item into one
- * dropdown level: the shell intentionally supports a single submenu depth
- * (deeper nesting stays reachable instead of unreachable).
+ * An item earns markup iff it links somewhere OR shelters a publicly visible
+ * descendant that does — preserves the pre-502 "no empty dropdowns / no
+ * dangling toggles" behavior at EVERY depth (the old flatten dropped groups
+ * whose only content was unreachable descendants).
  */
-const flattenNavigationDescendants = (items: NavigationItem[]): NavigationItem[] => {
-  const flat: NavigationItem[] = [];
-  for (const item of items) {
-    if (!isPubliclyVisibleNavigationItem(item)) continue;
-    if (hasRealHref(item.href)) flat.push(item);
-    if (item.children && item.children.length > 0) {
-      flat.push(...flattenNavigationDescendants(item.children));
-    }
-  }
-  return flat;
-};
+const isRenderableNavItem = (item: NavigationItem): boolean =>
+  hasRealHref(item.href) ||
+  (item.children ?? []).some(
+    (child) => isPubliclyVisibleNavigationItem(child) && isRenderableNavItem(child)
+  );
 
 /**
  * TASK-499-01: server-rendered "button" nav affordance. Applied via an inline
@@ -140,11 +156,21 @@ const SiteNavLink = ({ item }: { item: NavigationItem }) => {
   );
 };
 
-const SiteNavItem = ({ item }: { item: NavigationItem }) => {
-  const dropdownItems = item.children ? flattenNavigationDescendants(item.children) : [];
+const SiteNavItem = ({
+  item,
+  interaction = "details", // fail-safe default: works with the frozen base sheet alone
+}: {
+  item: NavigationItem;
+  interaction?: SiteNavInteraction;
+}) => {
+  // Filter-then-recurse: an invisible item hides its WHOLE subtree (flatten
+  // parity), and non-renderable descendants never produce empty markup.
+  const children = (item.children ?? [])
+    .filter(isPubliclyVisibleNavigationItem)
+    .filter(isRenderableNavItem);
 
-  if (dropdownItems.length === 0) {
-    if (!hasRealHref(item.href)) return null;
+  if (children.length === 0) {
+    if (!hasRealHref(item.href)) return null; // unchanged leaf semantics
     return (
       <li className="site-nav-item">
         <SiteNavLink item={item} />
@@ -152,21 +178,57 @@ const SiteNavItem = ({ item }: { item: NavigationItem }) => {
     );
   }
 
-  // A linked parent stays reachable as the first entry of its own dropdown.
-  const entries = hasRealHref(item.href) ? [item, ...dropdownItems] : dropdownItems;
+  const sublist = (
+    <ul className="site-nav-sublist">
+      {interaction === "details" && hasRealHref(item.href) ? (
+        // Details-mode reachability convention (audit resolution, option (b)):
+        // a <summary> is not a link, so the linked parent stays reachable as
+        // the FIRST entry of its DIRECT sublist (never flattened descendants).
+        // Conscious trade-off: the "label exactly once" guarantee is a
+        // hover-mode property; details mode trades it for parent reachability.
+        <li className="site-nav-item">
+          <SiteNavLink item={item} />
+        </li>
+      ) : null}
+      {children.map((child, index) => (
+        <SiteNavItem key={`${child.label}-${index}`} item={child} interaction={interaction} />
+      ))}
+    </ul>
+  );
 
+  if (interaction === "details") {
+    return (
+      <li className="site-nav-item">
+        <details className="site-nav-group" data-site-nav-group="true">
+          <summary>{item.label}</summary>
+          {sublist}
+        </details>
+      </li>
+    );
+  }
+
+  // hover mode (menu-document headers): the parent renders ONCE as its own link
+  // (or a plain group label when it links nowhere); 502-02's doc-scoped CSS owns
+  // hide-by-default + per-level :hover/:focus-within open + fly-out. The group
+  // hook moves onto the <li> so 502-02 targets
+  // `li[data-site-nav-group="true"]>.site-nav-link::after` (caret) and anchors
+  // the sublist without a `.site-nav-group` class.
   return (
-    <li className="site-nav-item">
-      <details className="site-nav-group" data-site-nav-group="true">
-        <summary>{item.label}</summary>
-        <ul className="site-nav-sublist">
-          {entries.map((entry, index) => (
-            <li key={`${entry.href}-${index}`}>
-              <SiteNavLink item={entry} />
-            </li>
-          ))}
-        </ul>
-      </details>
+    <li className="site-nav-item" data-site-nav-group="true">
+      {hasRealHref(item.href) ? (
+        <SiteNavLink item={item} />
+      ) : (
+        // BOTH classes (502-02 Coordination): link color/typography/caret rules
+        // target `.site-nav-link`, so group labels style with no new selectors.
+        // tabIndex={0} (parent NORMATIVE keyboard contract): spans are not
+        // focusable by default and children inside `display:none` cannot receive
+        // focus, so without it 502-02's :focus-within open rule could NEVER fire
+        // for this subtree (keyboard-unreachable; the replaced <summary> was).
+        <span className="site-nav-link site-nav-group-label" tabIndex={0}>
+          {item.label}
+        </span>
+      )}
+      {sublist}
     </li>
   );
 };
@@ -216,7 +278,7 @@ export function SiteHeaderNav({
             </details>
             <ul className="site-nav-list" data-site-nav-list="true">
               {items.map((item, index) => (
-                <SiteNavItem key={`${item.label}-${index}`} item={item} />
+                <SiteNavItem key={`${item.label}-${index}`} item={item} interaction="details" />
               ))}
             </ul>
           </nav>
@@ -280,10 +342,18 @@ const menuLeafToPageBlock = (block: MenuBlockV2): PageBlockV2 =>
  * markup and emit no CSS. Blocks without an override keep the legacy path
  * unchanged.
  */
+// Derive the enumeration from the model (TASK-502-01 added "tablet" to
+// MENU_RESPONSIVE_BREAKPOINT_KEYS) so the gate can NEVER drift from the key
+// list: a show-only-on-tablet block (flat `visible:false` +
+// `responsive.tablet.visibility.visible:true`) resolves false on desktop AND
+// mobile — the pre-502 OR would DOM-skip it and 502-02's tablet-branch show
+// rule would have no node to reveal. Pre-tablet docs are bit-identical (no
+// tablet override can exist ⇒ identical OR result).
+const MENU_RENDER_DEVICES = ["desktop", ...MENU_RESPONSIVE_BREAKPOINT_KEYS] as const;
+
 const shouldRenderMenuBlock = (block: MenuBlockV2): boolean =>
   !hasMenuBlockVisibilityOverride(block) ||
-  resolveMenuBlockVisibleForDevice(block, "desktop") ||
-  resolveMenuBlockVisibleForDevice(block, "mobile");
+  MENU_RENDER_DEVICES.some((device) => resolveMenuBlockVisibleForDevice(block, device));
 
 const MENU_UTILITY_DEFAULT_LABEL: Record<"search" | "account" | "language", string> = {
   search: "Search",
@@ -314,7 +384,7 @@ const NavItemsRender = ({
       </details>
       <ul className="site-nav-list" data-site-nav-list="true">
         {items.map((item, index) => (
-          <SiteNavItem key={`${item.label}-${index}`} item={item} />
+          <SiteNavItem key={`${item.label}-${index}`} item={item} interaction="hover" />
         ))}
       </ul>
     </nav>
@@ -346,10 +416,17 @@ const BrandRender = ({
       </a>
     );
   }
-  if (!siteName) return null;
+  // Fallback CHAIN (parent contract, TASK-502-01/03): per-menu override →
+  // site name → null. Applies to text mode AND the image-mode-without-image
+  // fallthrough (same branch), so the front matches the 502-04 canvas chain
+  // (`block.props.text || siteName || "Site name"`) for every combination.
+  // 502-01 stores `text` trimmed/capped/sparse; trim again = defense in depth.
+  // Empty `siteName` is falsy ⇒ treated as absent (unchanged semantics).
+  const text = block.props.text?.trim() || siteName || null;
+  if (!text) return null;
   return (
     <a className="site-header-brand" href={href} data-menu-block-id={block.id}>
-      {siteName}
+      {text}
     </a>
   );
 };

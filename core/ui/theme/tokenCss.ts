@@ -134,6 +134,32 @@ export function toPageCanvasColorCssVariableMap(tokens: DesignTokens): Record<st
   };
 }
 
+/**
+ * CSS variable map for the Menu Design editor canvas frame: site typography
+ * vars PLUS ALL SEVEN `--color-*` (primary/secondary/accent/bg/surface/border/
+ * text). Unlike the page canvas map (which keeps the brand `--color-*` OFF the
+ * frame because page chrome consumes `--color-primary`), the menu doc CSS
+ * references the brand vars too — swatches store
+ * `var(--color-primary|secondary|accent|border)` and the section
+ * Surface/Border rules paint onto the scope root — while the admin `@theme`
+ * maps those brand names to ADMIN colors, so leaving them unpainted leaks the
+ * admin beige into the menu preview (bug 4). The menu canvas therefore repaints
+ * all seven and pins its own chrome instead (the `SelectableBlock` selection
+ * ring is re-pointed off `--color-primary` onto an `--admin-*` var).
+ */
+export function toMenuCanvasColorCssVariableMap(tokens: DesignTokens): Record<string, string> {
+  return {
+    ...toPageTypographyCssVariableMap(tokens),
+    "--color-primary": tokens.colors.primary,
+    "--color-secondary": tokens.colors.secondary,
+    "--color-accent": tokens.colors.accent,
+    "--color-bg": tokens.neutrals.bg,
+    "--color-surface": tokens.neutrals.surface,
+    "--color-text": tokens.neutrals.text,
+    "--color-border": tokens.neutrals.border,
+  };
+}
+
 export function toCssVariableMap(tokens: DesignTokens): Record<string, string> {
   return {
     "--color-primary": tokens.colors.primary,

@@ -180,9 +180,16 @@ vi.mock("@/services/cachePolicy", () => ({
   cacheTtlMs: { list: 300_000, detail: 300_000 },
 }));
 
+const settingsState = vi.hoisted(() => ({
+  payload: null as Record<string, unknown> | null,
+  reset() {
+    settingsState.payload = null;
+  },
+}));
+
 vi.mock("@/services/settingsClient", () => ({
-  getCachedSettings: () => null,
-  getSettingsCached: async () => ({}),
+  getCachedSettings: () => settingsState.payload,
+  getSettingsCached: async () => settingsState.payload ?? {},
 }));
 
 vi.mock("@/services/menusClient", () => ({
@@ -305,6 +312,7 @@ import {
   createDefaultMenuDocumentV2,
   menuBlockTypes,
   normalizeMenuDocumentV2ForWrite,
+  MENU_BRAND_TEXT_MAX_LENGTH,
   type MenuDocumentV2,
 } from "../../../core/services/menus/menuDocumentV2";
 import { MenuDesignEditorPage } from "../../../core/admin/ui/menus/MenuDesignEditorPage";
@@ -408,6 +416,7 @@ const readSavedDocument = () => {
 beforeEach(() => {
   menusClientState.reset();
   navigateState.reset();
+  settingsState.reset();
 });
 
 afterEach(() => {
@@ -660,13 +669,21 @@ type SavedMenuBlock = {
   type: string;
   props: Record<string, unknown>;
   visibility?: { visible?: boolean };
-  responsive?: { mobile?: { visibility?: { visible?: boolean } } };
+  responsive?: {
+    tablet?: { visibility?: { visible?: boolean } };
+    mobile?: { visibility?: { visible?: boolean } };
+  };
+};
+type SavedMenuSectionOverride = {
+  layout?: Record<string, unknown>;
+  navProps?: Record<string, unknown>;
 };
 type SavedMenuDocument = {
   sections: Array<{
     layout: Record<string, unknown>;
     responsive?: {
-      mobile?: { layout?: Record<string, unknown>; navProps?: Record<string, unknown> };
+      tablet?: SavedMenuSectionOverride;
+      mobile?: SavedMenuSectionOverride;
     };
     blocks: SavedMenuBlock[];
   }>;
@@ -784,26 +801,42 @@ test("mobile edit writes a SPARSE responsive.mobile.layout override; the base st
   cleanup();
 });
 
-test("tablet edit writes the BASE and the badge reads 'base' (tablet deferred)", async () => {
+test("tablet is a real override breakpoint: forked write + Override badge + working Reset (502-04)", async () => {
   const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
   await flush();
 
   switchDevice(container, "Tablet");
+  // TASK-502-04: tablet is now a REAL override breakpoint — an un-overridden
+  // field reads "inherited" on Tablet (badge/Reset generalized off the
+  // mobile-only predicate), and the edit writes the sparse tablet record.
   expect(findMenuResponsiveField(container, "Vertical padding").dataset.menuResponsiveField).toBe(
-    "base"
+    "inherited"
   );
-  expect(
-    findMenuResponsiveField(container, "Vertical padding").querySelector(
-      '[data-menu-responsive-badge="base"]'
-    )?.textContent
-  ).toBe("Base");
   setSliderValue(container, "Vertical padding", "18");
+  const field = findMenuResponsiveField(container, "Vertical padding");
+  expect(field.dataset.menuResponsiveField).toBe("override");
+  expect(field.querySelector('[data-menu-responsive-badge="override"]')?.textContent).toBe(
+    "Override"
+  );
   clickButton(container, "Save");
   await flush();
 
   const document = readLastSavedDocument();
-  expect(document?.sections[0]?.layout.paddingY).toBe(18);
-  expect(JSON.stringify(document)).not.toContain('"responsive"');
+  const section = document?.sections[0];
+  // NEW model contract: the Tablet edit writes its OWN sparse record; the base
+  // layout is untouched and NO mobile record materializes.
+  expect(Object.prototype.hasOwnProperty.call(section?.layout ?? {}, "paddingY")).toBe(false);
+  expect(section?.responsive?.tablet?.layout).toEqual({ paddingY: 18 });
+  expect(section?.responsive?.mobile).toBeUndefined();
+
+  // Reset removes the tablet override + prunes back to the legacy shape.
+  clickSelector(container, '[data-menu-responsive-reset="Vertical padding"]');
+  expect(findMenuResponsiveField(container, "Vertical padding").dataset.menuResponsiveField).toBe(
+    "inherited"
+  );
+  clickButton(container, "Save");
+  await flush();
+  expect(JSON.stringify(readLastSavedDocument())).not.toContain('"responsive"');
 
   cleanup();
 });
@@ -1107,14 +1140,15 @@ test("undo/redo works across device-forked writes (no responsive residue after u
   cleanup();
 });
 
-test("canvas scope cue reads 'Mobile (overrides)' / 'Tablet (base)' / 'Desktop (base)'", async () => {
+test("canvas scope cue reads 'Mobile (overrides)' / 'Tablet (overrides)' / 'Desktop (base)'", async () => {
   const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
   await flush();
 
   const contextPill = () => container.querySelector("[data-page-editor-canvas-context]");
   expect(contextPill()?.textContent).toBe("Desktop (base)");
+  // TASK-502-04: tablet is now a real override breakpoint.
   switchDevice(container, "Tablet");
-  expect(contextPill()?.textContent).toBe("Tablet (base)");
+  expect(contextPill()?.textContent).toBe("Tablet (overrides)");
   switchDevice(container, "Mobile");
   expect(contextPill()?.textContent).toBe("Mobile (overrides)");
   expect(contextPill()?.getAttribute("data-page-editor-canvas-context")).toBe("mobile");
@@ -1148,4 +1182,337 @@ test("leaf-list divergence guard: exactly cta-button/divider/spacer accept flat 
     }
   });
   expect(acceptingTypes).toEqual(["cta-button", "divider", "spacer"]);
+});
+
+// --- TASK-502-04: canvas WYSIWYG, ghost, brand, cta, device scoping ----------
+
+const canvasFrame = (container: ParentNode) =>
+  container.querySelector('[data-menu-document-canvas="true"]') as HTMLElement;
+const canvasBlock = (container: ParentNode, id: string) =>
+  container.querySelector(`[data-menu-block-id="${id}"]`) as HTMLElement | null;
+const ctaBlockId = (doc: MenuDocumentV2) =>
+  doc.sections[0]!.blocks.find((block) => block.type === "cta-button")!.id;
+
+test("canvas frame paints all seven --color-* from settings overrides; swatch previews + admin-pinned ring", async () => {
+  settingsState.payload = {
+    "design.tokens": { colors: { secondary: "#654321" }, neutrals: { bg: "#abcdef" } },
+  };
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  const frame = canvasFrame(container);
+  // WYSIWYG: the seven brand+neutral vars are painted inline on the frame ROOT.
+  expect(frame.style.getPropertyValue("--color-secondary")).toBe("#654321");
+  expect(frame.style.getPropertyValue("--color-bg")).toBe("#abcdef");
+  for (const name of [
+    "--color-primary",
+    "--color-secondary",
+    "--color-accent",
+    "--color-bg",
+    "--color-surface",
+    "--color-border",
+    "--color-text",
+  ]) {
+    expect(frame.style.getPropertyValue(name).length, name).toBeGreaterThan(0);
+  }
+
+  // Every ColorSwatchControl gets the SITE palette: the secondary swatch preview
+  // renders the overridden site hex (not the DEFAULT_TOKENS #0f766e).
+  const secondarySwatch = container.querySelector(
+    '[data-page-editor-color-swatch="secondary"]'
+  ) as HTMLElement | null;
+  expect(secondarySwatch?.style.backgroundColor).toBe("#654321");
+
+  // Chrome-safety regression pin: the selection ring is admin-pinned, NOT
+  // ring-primary (which would recolor to the SITE primary once the frame paints).
+  selectBlockRow(container, "Brand");
+  const selected = canvasFrame(container).querySelector('[data-menu-block-selected="true"]');
+  expect(selected?.className).toContain("ring-[color:var(--admin-input-ring");
+  expect(selected?.className).not.toContain("ring-primary");
+
+  cleanup();
+});
+
+test("canvas ghost: flat-hidden, override-hidden, and visible-on-neither blocks dim to a selectable Hidden badge", async () => {
+  const doc = seedDocument((d) => {
+    const cta = d.sections[0]!.blocks.find((b) => b.type === "cta-button")!;
+    (cta as { visibility?: unknown }).visibility = { visible: false }; // flat hide
+  });
+  const ctaId = ctaBlockId(doc);
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  // Desktop: the flat-hidden cta renders as a ghost (NOT skipped) + Hidden badge.
+  const ghost = canvasBlock(container, ctaId);
+  expect(ghost?.getAttribute("data-menu-block-ghost")).toBe("true");
+  expect(ghost?.querySelector('[data-menu-block-hidden-badge="true"]')?.textContent).toBe("Hidden");
+
+  // …and STAYS selectable: clicking the ghost selects it.
+  React.act(() => {
+    ghost?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(canvasBlock(container, ctaId)?.getAttribute("data-menu-block-selected")).toBe("true");
+
+  // Defense-in-depth: a stray dual hide-rule <style> placed BEFORE the canvas
+  // force-show cannot display:none the ghost (later source order wins the tie).
+  React.act(() => {
+    canvasFrame(container).insertAdjacentHTML(
+      "afterbegin",
+      `<style>[data-menu-document-canvas="true"] [data-menu-block-id="${ctaId}"],[data-menu-document-canvas="true"] [data-block-id="${ctaId}"]{display:none}</style>`
+    );
+  });
+  expect(getComputedStyle(canvasBlock(container, ctaId)!).display).not.toBe("none");
+
+  cleanup();
+});
+
+test("canvas ghost tracks the device: mobile-only override hides only on Mobile", async () => {
+  const doc = seedDocument((d) => {
+    const cta = d.sections[0]!.blocks.find((b) => b.type === "cta-button")!;
+    (cta as { responsive?: unknown }).responsive = { mobile: { visibility: { visible: false } } };
+  });
+  const ctaId = ctaBlockId(doc);
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  // Desktop: visible (no ghost).
+  expect(canvasBlock(container, ctaId)?.getAttribute("data-menu-block-ghost")).toBeNull();
+  switchDevice(container, "Mobile");
+  // Mobile: the override hides it ⇒ ghost.
+  expect(canvasBlock(container, ctaId)?.getAttribute("data-menu-block-ghost")).toBe("true");
+
+  cleanup();
+});
+
+test("brand text: text-mode-only Input (maxLength), writes props.text, empty deletes the key, canvas chain never shows menu name", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  selectBlockRow(container, "Brand");
+  const input = () =>
+    container.querySelector('input[aria-label="Brand text"]') as HTMLInputElement | null;
+  expect(input()).toBeTruthy();
+  expect(input()?.maxLength).toBe(MENU_BRAND_TEXT_MAX_LENGTH);
+
+  // Image mode hides the Brand text input.
+  clickSegmented(container, "Mode", "image");
+  expect(container.querySelector('input[aria-label="Brand text"]')).toBeNull();
+  clickSegmented(container, "Mode", "text");
+
+  // Typing writes props.text; the canvas brand anchor renders it.
+  setInputValue(container, "Brand text", "Acme Co");
+  clickButton(container, "Save");
+  await flush();
+  const typedBrand = readLastSavedDocument()?.sections[0]?.blocks.find((b) => b.type === "brand");
+  expect(typedBrand?.props.text).toBe("Acme Co");
+  expect(canvasFrame(container).querySelector(".site-header-brand")?.textContent).toBe("Acme Co");
+
+  // Clearing DELETES the key (sparse) — the doc round-trips textless.
+  setInputValue(container, "Brand text", "");
+  clickButton(container, "Save");
+  await flush();
+  const clearedBrand = readLastSavedDocument()?.sections[0]?.blocks.find((b) => b.type === "brand");
+  expect(Object.prototype.hasOwnProperty.call(clearedBrand?.props ?? {}, "text")).toBe(false);
+
+  // With no text and no site name, the canvas shows the placeholder — NEVER the
+  // menu name ("Main menu").
+  expect(canvasFrame(container).querySelector(".site-header-brand")?.textContent).toBe("Site name");
+  expect(canvasFrame(container).querySelector(".site-header-brand")?.textContent).not.toBe(
+    "Main menu"
+  );
+
+  cleanup();
+});
+
+test("brand canvas falls back to the real site name when no brand text is set", async () => {
+  settingsState.payload = { "site.name": "Live Site Name" };
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  expect(canvasFrame(container).querySelector(".site-header-brand")?.textContent).toBe(
+    "Live Site Name"
+  );
+  cleanup();
+});
+
+test("device-scoped controls: Mobile menu is Mobile-only, Dropdown direction is Desktop/Tablet-only, both write the BASE", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  const hasControl = (label: string) =>
+    Array.from(container.querySelectorAll('[role="group"]')).some(
+      (group) => group.getAttribute("aria-label") === label
+    );
+
+  // Desktop: Dropdown direction present, Mobile menu absent.
+  expect(hasControl("Dropdown direction")).toBe(true);
+  expect(hasControl("Mobile menu")).toBe(false);
+  // Neither device-defining control renders a responsive badge/Reset.
+  expect(container.querySelector('[data-menu-responsive-reset="Dropdown direction"]')).toBeNull();
+
+  // Editing Dropdown direction on Desktop writes the BASE (no responsive record).
+  clickSegmented(container, "Dropdown direction", "top");
+  clickButton(container, "Save");
+  await flush();
+  let saved = readLastSavedDocument();
+  let nav = saved?.sections[0]?.blocks.find((b) => b.type === "nav-items");
+  expect(nav?.props.dropdownDirection).toBe("top");
+  expect(JSON.stringify(saved)).not.toContain('"responsive"');
+
+  // Tablet: still Desktop/Tablet-only control.
+  switchDevice(container, "Tablet");
+  expect(hasControl("Dropdown direction")).toBe(true);
+  expect(hasControl("Mobile menu")).toBe(false);
+
+  // Mobile: Mobile menu present, Dropdown direction absent; editing writes BASE.
+  switchDevice(container, "Mobile");
+  expect(hasControl("Mobile menu")).toBe(true);
+  expect(hasControl("Dropdown direction")).toBe(false);
+  clickSegmented(container, "Mobile menu", "inline");
+  clickButton(container, "Save");
+  await flush();
+  saved = readLastSavedDocument();
+  nav = saved?.sections[0]?.blocks.find((b) => b.type === "nav-items");
+  expect(nav?.props.mobileMode).toBe("inline");
+  // Base write — NO mobileMode/dropdownDirection in any responsive record.
+  expect(JSON.stringify(saved?.sections[0]?.responsive ?? {})).not.toContain("mobileMode");
+  expect(JSON.stringify(saved?.sections[0]?.responsive ?? {})).not.toContain("dropdownDirection");
+
+  cleanup();
+});
+
+test("tablet visibility fork writes responsive.tablet.visibility for a native block", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Tablet");
+  selectBlockRow(container, "Brand"); // native block — no flat toggle on Desktop
+  setToggle(container, "Visible on tablet", false);
+  clickButton(container, "Save");
+  await flush();
+  const saved = readLastSavedDocument();
+  const brand = saved?.sections[0]?.blocks.find((b) => b.type === "brand");
+  expect(brand?.responsive?.tablet?.visibility).toEqual({ visible: false });
+  expect(brand?.responsive?.mobile).toBeUndefined();
+  cleanup();
+});
+
+test("cta Size + Open-in-new-tab write props and visibly change the canvas preview; preview click selects without navigating", async () => {
+  const doc = seedDocument();
+  const ctaId = ctaBlockId(doc);
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  // The canvas renders the REAL button leaf (page renderer), default size md.
+  const ctaAnchor = () => canvasBlock(container, ctaId)?.querySelector("a") as HTMLElement | null;
+  expect(ctaAnchor()?.className).toContain("px-5 py-3"); // md
+  expect(ctaAnchor()?.getAttribute("target")).toBeNull();
+
+  selectBlockRow(container, "Button");
+  clickSegmented(container, "Size", "lg");
+  setToggle(container, "Open in new tab", true);
+
+  // Visible effect on canvas (not just control presence).
+  expect(ctaAnchor()?.className).toContain("px-6 py-4"); // lg
+  expect(ctaAnchor()?.getAttribute("target")).toBe("_blank");
+
+  clickButton(container, "Save");
+  await flush();
+  const cta = readLastSavedDocument()?.sections[0]?.blocks.find((b) => b.type === "cta-button");
+  expect(cta?.props.size).toBe("lg");
+  expect(cta?.props.target).toBe("blank");
+
+  // Clicking the cta preview SELECTS the block (no navigation away).
+  const href = window.location.href;
+  React.act(() => {
+    ctaAnchor()?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
+  });
+  expect(window.location.href).toBe(href);
+  expect(canvasBlock(container, ctaId)?.getAttribute("data-menu-block-selected")).toBe("true");
+
+  cleanup();
+});
+
+test("divider canvas preview renders the real leaf frame (data-block-id) — the '—' literal is gone; inspector copy mentions the separator", async () => {
+  const doc = seedDocument((d) => {
+    d.sections[0]!.blocks.push(createDefaultMenuBlock("divider"));
+  });
+  const dividerId = doc.sections[0]!.blocks.find((b) => b.type === "divider")!.id;
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  const dividerBlock = canvasBlock(container, dividerId);
+  expect(dividerBlock?.querySelector("[data-block-id]")).toBeTruthy();
+  expect(dividerBlock?.textContent).not.toContain("—");
+
+  selectBlockRow(container, "Divider");
+  expect(container.textContent).toContain("vertical separator");
+
+  cleanup();
+});
+
+test("spacer canvas preview KEEPS the fixed-24px selectable stub (no PageBlockFrame)", async () => {
+  const doc = seedDocument((d) => {
+    d.sections[0]!.blocks.push(createDefaultMenuBlock("spacer"));
+  });
+  const spacerId = doc.sections[0]!.blocks.find((b) => b.type === "spacer")!.id;
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  const spacerBlock = canvasBlock(container, spacerId);
+  const stub = spacerBlock?.querySelector("span[aria-hidden='true']") as HTMLElement | null;
+  expect(stub?.style.width).toBe("24px");
+  expect(spacerBlock?.querySelector("[data-block-id]")).toBeNull(); // NOT a real leaf frame
+
+  React.act(() => {
+    spacerBlock?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+  expect(canvasBlock(container, spacerId)?.getAttribute("data-menu-block-selected")).toBe("true");
+
+  cleanup();
+});
+
+test("recursive NavItemsPreview renders grandchildren inside .site-nav-sublist .site-nav-sublist; parent label once", async () => {
+  menusClientState.items = [
+    {
+      id: "grp",
+      label: "Products",
+      href: "#",
+      pageId: null,
+      parentId: null,
+      orderIndex: 0,
+      children: [
+        {
+          id: "sub",
+          label: "Software",
+          href: "#",
+          pageId: null,
+          parentId: "grp",
+          orderIndex: 0,
+          children: [
+            {
+              id: "leaf",
+              label: "CMS",
+              href: "/cms",
+              pageId: null,
+              parentId: "sub",
+              orderIndex: 0,
+              children: [],
+            },
+          ],
+        },
+      ],
+    },
+  ] as unknown as typeof menusClientState.items;
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  const frame = canvasFrame(container);
+  const grandchild = frame.querySelector(".site-nav-sublist .site-nav-sublist a");
+  expect(grandchild?.textContent).toBe("CMS");
+  const productsCount = Array.from(frame.querySelectorAll(".site-nav-link")).filter(
+    (node) => node.textContent === "Products"
+  ).length;
+  expect(productsCount).toBe(1);
+
+  cleanup();
 });

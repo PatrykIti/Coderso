@@ -305,26 +305,27 @@ function MenuDocumentCanvas({ doc, device, items, navLabel, siteName,
 ```ts
 // module const, appended AFTER the builder CSS (source order ⇒ wins ties):
 const MENU_CANVAS_GHOST_CSS = [
-  // dim + FORCE-SHOW the ghost: the shared branch rules may carry
-  // `[data-menu-block-id="X"]{display:none}` hide rules — the ghost must
-  // beat them (equal (0,2,0) specificity, later source order) so a hidden
-  // block stays selectable:
+  // dim + FORCE-SHOW the ghost (DEFENSE IN DEPTH: per 502-02 the preview
+  // builder emits NO `[data-menu-block-id="X"]{display:none}` hide rules,
+  // but should a stray hide rule ever reach the canvas <style>, the ghost
+  // must beat it — equal (0,2,0) specificity, later source order — so a
+  // hidden block stays selectable):
   `[data-menu-document-canvas="true"] [data-menu-block-ghost="true"]{display:block;opacity:.4}`,
   // leaf frames inside a ghost carry data-block-id (PageBlockFrame, §5) and
-  // are matched by the same dual hide rule — revert them to UA display:
+  // would be matched by the same stray dual hide rule — revert them to UA display:
   `[data-menu-document-canvas="true"] [data-menu-block-ghost="true"] [data-block-id]{display:revert}`,
 ].join("\n");
 ```
 
-**Interface note (502-02, normative preference):** the CLEAN division is for
-`buildMenuDocumentPreviewCss` to stop emitting the visibility hide rules
-(canvas visibility presentation is owned by this ghost; the front builder keeps
-them). The ghost CSS above is deliberately self-sufficient EITHER WAY (it
-force-shows only `data-menu-block-ghost` subtrees), so landing order does not
-matter — but the implementing agents must reconcile: if 502-02 drops the
-preview hide rules, keep the force-show rules anyway (defense in depth) and
-assert in the vitest suite that a hidden block's ghost has non-`none` computed
-display on canvas.
+**Interface note (502-02, NORMATIVE strip):** per the 502-02 contract (pinned
+there by tests — "preview builders contain NO hide rule"),
+`buildMenuDocumentPreviewCss` emits NO visibility hide rule for ANY device;
+canvas visibility presentation is owned by this ghost, and the front builder
+(`buildMenuDocumentCss`) keeps its hide rules unchanged. The force-show rules
+above are kept anyway as explicitly labeled DEFENSE IN DEPTH — they force-show
+only `data-menu-block-ghost` subtrees and are inert against a compliant
+builder — and the vitest suite must assert that a hidden block's ghost has
+non-`none` computed display on canvas.
 
 **Palette threading:** add `palette={sitePalette}` to ALL FIVE
 `ColorSwatchControl`s — surface `:649`, border `:661`, link `:1069`, hover
@@ -598,7 +599,7 @@ in the closure docs.
 | Needs | From | Contract consumed here |
 |---|---|---|
 | `MenuResponsiveBreakpoint = "tablet"\|"mobile"`, breakpoint-generic resolve/patch/clear/read helpers, `brand.props.text`, device-defining write-reject + stored-read migration (mobileMode hoist-then-prune, dropdownDirection prune-only) | 502-01 | §4/§5/§6 call signatures above |
-| Real tablet preview branch in `buildMenuDocumentPreviewCss(doc, "tablet")`; divider context rules keyed on `data-block-id`; nested-sublist + canvas hover rules; disclosure preview un-hide; (preferred) preview branch WITHOUT visibility hide rules | 502-02 | §3 ghost CSS is self-sufficient either way; §7 divider preview relies on the `data-block-id` context rules; §8 relies on the nested rules for reachability |
+| Real tablet preview branch in `buildMenuDocumentPreviewCss(doc, "tablet")`; divider context rules keyed on `data-block-id`; nested-sublist + canvas hover rules; disclosure preview un-hide; NORMATIVE preview strip — NO visibility hide rules for any device | 502-02 | §3 ghost owns canvas visibility on top of the strip (force-show rules kept as defense in depth); §7 divider preview relies on the `data-block-id` context rules; §8 relies on the nested rules for reachability |
 | Front brand chain (`props.text` → `siteName` → null) and recursive `SiteNavItem` markup/classes | 502-03 | §6 canvas chain and §8 class names mirror it — canvas ≡ front |
 
 This file (and `MenuAppearancePanel.tsx`, `tokenCss.ts`, `PageEditor.tsx`, the
@@ -649,8 +650,11 @@ Extend `tests/vitest/ui/menu-design-editor.test.tsx` (jsdom, real
    `data-menu-block-ghost="true"` + the Hidden badge and STAYS selectable
    (click selects); a mobile-only override-hidden block ghosts on Mobile; a
    visible-on-neither block ghosts on BOTH devices; ghost computed/inline
-   display is not `none` even when the injected preview CSS contains a hide
-   rule for its id (inject a doc that produces one).
+   display is not `none` even when a synthetic hide-rule `<style>` for its
+   id is injected alongside `MENU_CANVAS_GHOST_CSS` (defense-in-depth pin:
+   the real builder emits no hide rule per 502-02, so hand-craft the
+   `[data-menu-block-id="X"],[data-block-id="X"]{display:none}` rule — no
+   doc can produce one).
 3. **Brand:** text-mode panel shows the "Brand text" Input (image mode does
    not) with `maxLength` === `MENU_BRAND_TEXT_MAX_LENGTH` (assert against
    the imported constant, not a literal 120); typing writes `props.text`;
