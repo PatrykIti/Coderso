@@ -553,7 +553,10 @@ const renderPreviewItem = (item: NavigationItem, key: string) => {
         <a className="site-nav-link" href={item.href}
            onClick={(event) => event.preventDefault()}>{item.label}</a>
       ) : (
-        <span className="site-nav-link site-nav-group-label">{item.label}</span>
+        // tabIndex={0} is NORMATIVE (502-03 mirror + parent keyboard contract /
+        // smoke scenario 7): 502-02's canvas :focus-within rule can only open
+        // the sublist if this linkless span is keyboard-focusable.
+        <span className="site-nav-link site-nav-group-label" tabIndex={0}>{item.label}</span>
       )}
       {children.length > 0 ? (
         <ul className="site-nav-sublist">

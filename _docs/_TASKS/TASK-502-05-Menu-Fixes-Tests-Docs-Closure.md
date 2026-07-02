@@ -15,8 +15,9 @@
 Closure of TASK-502: consolidate the full vitest + bun regression matrix for
 the seven menu-design fixes (brand text chain, tablet cascade, device-defining
 controls, canvas site tokens, divider separators, visibility ghost + cta
-options, recursive nested submenus), execute the **golden re-freeze protocol**
-(§2.3) and verify the byte-identity guards, run all gates, run the
+options, recursive nested submenus), VERIFY the **golden re-freeze executed
+by 502-02** against the §2.3 protocol (rule-by-rule) and the byte-identity
+guards, run all gates, run the
 owner-mandated **≥5-scenario real-flow smoke** (§3.2 — VISIBLE EFFECT
 assertions, never control presence), and close docs/changelog/board.
 
@@ -260,6 +261,12 @@ test("front visibility unchanged: flat-hidden leaf absent from DOM; hide-on-tabl
 
 #### 2.3 Golden re-freeze protocol (CONSCIOUS — the one allowed byte delta)
 
+(The re-freeze itself is OWNED by 502-02 and lands exactly ONCE with its
+code — 502-02 Acceptance 6; restated here as the verification checklist.
+502-05 does NOT edit the golden arrays: it audits the delta rule-by-rule —
+exact added strings, no removed/reordered member — and records it in the
+changelog; 502-05 fills any gap found.)
+
 The frozen goldens (`GOLDEN_*` rule arrays :161-201, byte pin :225, preview
 pin :228) captured pre-501 output. 502-02's nested-sublist structural rules
 are emitted for every doc with a nav-items block — the golden `buildDoc()`
@@ -270,7 +277,8 @@ rules. Resolve it explicitly, not silently:
    (`siteShellCss.test.ts` — zero-line `git diff`); the mobile-only-doc
    tablet-branch absence (§2.2); divider rules absent without a divider
    block; the FRONT mobile disclosure `display:none` rule.
-2. **Conscious re-freeze (exactly once, reviewed rule-by-rule):** extend
+2. **Conscious re-freeze (executed exactly once BY 502-02 with its code;
+   VERIFIED here rule-by-rule):** 502-02 extends
    `GOLDEN_DESKTOP_RULES` (the desktop-shared array — its composition into
    `GOLDEN_FRONT_CSS` + `GOLDEN_PREVIEW_DESKTOP_CSS` carries the delta to the
    front ≥640 branch and the desktop/tablet previews automatically) by ONLY
@@ -296,11 +304,11 @@ rules. Resolve it explicitly, not silently:
    nesting block and 502-03's hover markup land in one commit — parent
    Sequencing pin, normative in both siblings); if the halves ever land
    apart anyway, VERIFY 502-03 deleted any interim `details[open]` line
-   before freezing — a `details[open]`/`.site-nav-group[open]` member in the
-   frozen arrays is a FAIL. The re-frozen arrays become the post-502 pin.
-   The closure checklist records the exact added rule strings in the
-   changelog — any OTHER diff line in the golden arrays (including any
-   REMOVED or reordered member) is a FAIL.
+   before 502-02's freeze — a `details[open]`/`.site-nav-group[open]` member
+   in the frozen arrays is a FAIL. The arrays re-frozen by 502-02 become the
+   post-502 pin. The closure checklist records the exact added rule strings
+   in the changelog — any OTHER diff line in the golden arrays (including
+   any REMOVED or reordered member) is a FAIL.
 3. The equal-override no-delta pin (:272) and the drawer pin (:108) stay
    green UNEDITED.
 
@@ -468,7 +476,8 @@ root `bun run test:bun` green (wizard-reset caveat).
 `wide` unknown-key rejection (replacing tablet — reject-unknown coverage may
 not shrink); the drawer pin (:108); the equal-override no-delta pin (:272);
 the scoped-CSS assertions; `buildSiteShellCss(null)` (:40-41). Golden edits
-ONLY per the §2.3 re-freeze protocol.
+ONLY by 502-02 per the §2.3 re-freeze protocol (502-05 verifies, never edits
+the golden arrays).
 
 **Typecheck the test tree:** root `bunx tsc -p tsconfig.json --noEmit` — core
 `lint:types` (and `gates:coderso`) exclude `tests/**`.

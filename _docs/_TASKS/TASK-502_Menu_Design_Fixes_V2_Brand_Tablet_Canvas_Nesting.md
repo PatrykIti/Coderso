@@ -242,8 +242,10 @@ const MENU_NAV_DEVICE_DEFINING_KEYS = ["mobileMode", "dropdownDirection"] as con
 //     `${scope} .site-nav-item:hover>.site-nav-sublist,` +
 //     `${scope} .site-nav-item:focus-within>.site-nav-sublist{display:grid}`
 //   level-1 keeps top:100%/bottom:100% (respecting dropdownDirection);
-//   nested fly-out:
+//   nested fly-out (direction-AWARE — matches 502-02 §5, golden-pinned in
+//   502-05 §2.3):
 //     `${scope} .site-nav-sublist .site-nav-sublist{left:100%;top:0;bottom:auto}`
+//     (`bottom:0;top:auto` when dropdownDirection === "top")
 //     `${scope} .site-nav-sublist>li{position:relative}`
 //   mobile branch: NO sublist hide and NO un-hide — the base sheet's
 //   `.site-nav-sublist{display:grid}` (siteShellCss.ts:151) plus the
