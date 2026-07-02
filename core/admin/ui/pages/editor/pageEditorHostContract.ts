@@ -175,7 +175,7 @@ export type PageEditorHostCanvasChromeProps = {
  * issuance, the settings sheet, and assistant surface advertisement.
  */
 export type PageEditorHost = {
-  mode: "page" | "page-template" | "menu";
+  mode: "page" | "page-template";
   resourceLabel: string;
   settingsLabel: string;
   previewTitle: string;

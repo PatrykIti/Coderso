@@ -1,7 +1,12 @@
 import { PageDocumentRender } from "../services/pages/pageRendererV2";
 import type { PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
 import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBindingContract";
-import { SiteFooter, SiteHeaderNav, type SiteShellRenderProps } from "./siteShell";
+import {
+  SiteFooter,
+  SiteHeaderMenuDocumentRender,
+  SiteHeaderNav,
+  type SiteShellRenderProps,
+} from "./siteShell";
 
 export type PageTemplatePropsV2 = {
   title: string;
@@ -29,7 +34,14 @@ export function DefaultRuntimePageShellV2({
 }: PageTemplatePropsV2) {
   return (
     <>
-      {siteShell?.navigation ? (
+      {siteShell?.navigationDocument ? (
+        <SiteHeaderMenuDocumentRender
+          document={siteShell.navigationDocument}
+          navigation={siteShell.navigation}
+          siteName={siteName}
+          breakpoint={previewDevice}
+        />
+      ) : siteShell?.navigation ? (
         <SiteHeaderNav
           navigation={siteShell.navigation}
           siteName={siteName}

@@ -1,6 +1,10 @@
 import { expect, test } from "vitest";
 
-import { menuCreateSchema, menuUpdateSchema } from "../../../core/server/validation/menuSchemas";
+import {
+  menuCreateSchema,
+  menuItemsSchema,
+  menuUpdateSchema,
+} from "../../../core/server/validation/menuSchemas";
 import { validate } from "../../../core/server/validation/schemaValidator";
 
 test("menuCreateSchema accepts draft and published lifecycle status", () => {
@@ -59,6 +63,58 @@ test("menuUpdateSchema rejects unknown fields", () => {
     validate(menuUpdateSchema, {
       status: "draft",
       visibility: "public",
+    })
+  ).toThrow("Invalid payload");
+});
+
+test("menuUpdateSchema accepts a document object or null (TASK-499-02)", () => {
+  // Deep validation is owned server-side by normalizeMenuDocumentV2ForWrite;
+  // the route schema only gates the passthrough shape.
+  expect(() =>
+    validate(menuUpdateSchema, {
+      document: { schemaVersion: 1, sections: [] },
+    })
+  ).not.toThrow();
+  expect(() => validate(menuUpdateSchema, { document: null })).not.toThrow();
+  // A non-object/non-null document is rejected at the schema boundary.
+  expect(() => validate(menuUpdateSchema, { document: "nope" })).toThrow("Invalid payload");
+  // The additionalProperties:false guard still rejects unknown sibling keys.
+  expect(() =>
+    validate(menuUpdateSchema, { document: { schemaVersion: 1, sections: [] }, bogus: true })
+  ).toThrow("Invalid payload");
+});
+
+test("menuItemsSchema accepts openInNewTab/variant on per-item settings (TASK-499-01)", () => {
+  expect(() =>
+    validate(menuItemsSchema, {
+      items: [
+        {
+          label: "Sign up",
+          href: "/signup",
+          settings: { visibility: "all", openInNewTab: true, variant: "button" },
+        },
+      ],
+    })
+  ).not.toThrow();
+});
+
+test("menuItemsSchema still rejects unknown per-item settings keys (additionalProperties:false)", () => {
+  expect(() =>
+    validate(menuItemsSchema, {
+      items: [
+        {
+          label: "Sign up",
+          href: "/signup",
+          settings: { unknownFlag: true },
+        },
+      ],
+    })
+  ).toThrow("Invalid payload");
+
+  // The variant enum is closed.
+  expect(() =>
+    validate(menuItemsSchema, {
+      items: [{ label: "X", href: "/x", settings: { variant: "ghost" } }],
     })
   ).toThrow("Invalid payload");
 });

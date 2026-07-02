@@ -25,6 +25,10 @@
  */
 
 import type { PageBlockV2 } from "../pages/pageDocumentV2";
+// Type-only import (erased at compile time ⇒ NO runtime cycle): menuDocumentV2
+// imports the appearance runtime validators FROM this module, so the reverse
+// edge MUST stay type-only (TASK-499-02 §5).
+import type { MenuDocumentV2 } from "./menuDocumentV2";
 
 export const MENU_APPEARANCE_INVALID = "menu_appearance_invalid" as const;
 
@@ -93,9 +97,12 @@ export type MenuAppearance = {
 export type MenuSettings = {
   appearance?: MenuAppearance;
   extras?: PageBlockV2[];
+  /** menuDocumentV2 draft (TASK-499-02); validated by `normalizeMenuDocumentV2ForWrite`. */
+  document?: MenuDocumentV2;
   published?: {
     appearance?: MenuAppearance;
     extras?: PageBlockV2[];
+    document?: MenuDocumentV2;
   };
 };
 
@@ -142,6 +149,14 @@ const normalizeColor = (value: unknown): string | null => {
   const trimmed = value.trim();
   return MENU_APPEARANCE_COLOR_PATTERN.test(trimmed) ? trimmed : null;
 };
+
+/**
+ * Public, additive re-export of the token-backed color validator so
+ * `menuDocumentV2` shares the SAME color contract without duplicating the
+ * regex (TASK-499-02 §2). Returns the trimmed value on a valid token-backed
+ * color shape, else `null`.
+ */
+export const normalizeMenuColorValue = (value: unknown): string | null => normalizeColor(value);
 
 const normalizeNumber = (field: MenuAppearanceNumberField, value: unknown): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;

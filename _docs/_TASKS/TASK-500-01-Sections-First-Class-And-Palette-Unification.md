@@ -30,8 +30,13 @@ vocabulary**. Concretely (Scope item 1 of the parent):
    (`field-group` + `columns` — the two nesting containers 500-02 targets — and
    `record-header` + `rich-text`). Do NOT drop `field-group`/`columns` creation
    (that would make them UNCREATABLE and gut 500-02's nesting feature, leaving it
-   no containers to nest into). If the searchable command palette survives, it
-   MIRRORS that same canonical kind set **+ "Add section"**, not a divergent set.
+   no containers to nest into). **The VISIBLE chip grid stays at the prototype's
+   EXACTLY 9 chips** (`grid-cols-3`, `CustomScreenEditorPreview.tsx:234-246`, the
+   owner-declared canonical look) — the container/composite kinds are exposed
+   through the searchable command palette (Search), NOT added as visible chips.
+   The single canonical constant feeds BOTH surfaces: the grid renders only the 9
+   primary chips, the command palette exposes the full canonical set **+ "Add
+   section"**, not a divergent set. Do NOT grow the visible grid to 13.
 
 Do NOT regress TASK-498 look parity, the presentation-override editing surface, the
 Bun-free vitest boundary, `ScreenDocumentV1 schemaVersion:1`, or definition v4.
@@ -142,14 +147,17 @@ export function moveScreenSection(
 }
 
 // Delete a section; return the removed record so the host can prune its bindings.
-// Non-destructive: allowed to reach zero sections — ensureSectionForInsert re-seeds
-// on the next add and the "Add section" affordance is always visible.
+// LAST-SECTION RULE (deterministic, per parent epic): if only ONE section remains,
+// removeScreenSection NO-OPS — returns { document: unchanged, removed: null }. The
+// document always keeps at least one section for the canvas to steer insertion into;
+// there is no zero-sections editor state and no lazy re-seed.
 export function removeScreenSection(
   document: ScreenDocumentV1,
   sectionId: string
 ): { document: ScreenDocumentV1; removed: ScreenSectionV1 | null } {
   const removed = document.sections.find((s) => s.id === sectionId) ?? null;
   if (!removed) return { document, removed: null };
+  if (document.sections.length <= 1) return { document, removed: null }; // last-section no-op
   return {
     document: { ...document, sections: document.sections.filter((s) => s.id !== sectionId) },
     removed,
@@ -184,12 +192,12 @@ reject-unknown gate on SAVE is unchanged and remains the hard boundary.
 
 ### B — Palette unification
 
-1. **`ScreenBlockLibrary.tsx`** — promote the palette to an EXPORTED canonical KIND
-   constant so BOTH the chip grid AND the command palette read the exact same set
-   (single source of truth). The canonical set is the 9 chips PLUS the
-   container/composite kinds `field-group`/`columns` (and `record-header`/`rich-text`)
-   the command palette is the SOLE creation surface for today — so unifying does NOT
-   drop them:
+1. **`ScreenBlockLibrary.tsx`** — export the canonical KIND set as a single source of
+   truth, but keep the two SURFACES distinct: the VISIBLE chip grid stays at the
+   prototype's 9, while the container/composite kinds ride the command palette only.
+   `SCREEN_PALETTE_CHIPS` stays the 9 grid chips (the local `PALETTE_CHIPS` becomes
+   `= SCREEN_PALETTE_CHIPS`, grid UNCHANGED); the container/composite kinds are a
+   SEPARATE exported list; the full canonical set is their composition:
 
 ```ts
 export type ScreenPaletteChip = {
@@ -197,32 +205,44 @@ export type ScreenPaletteChip = {
   icon: ComponentType<{ className?: string }>;
   kind: ScreenBlockKind;
 };
-// Canonical kind vocabulary = single source of truth for BOTH the chip grid and the
-// command palette: the existing 9 chips PLUS the container/composite kinds (field-group
-// /columns are 500-02's nesting targets; record-header/rich-text are real
-// createScreenBlock kinds — screenDocumentOps.ts:140/155/170/194).
+// The prototype's 9 VISIBLE chips (grid-cols-3 — CustomScreenEditorPreview.tsx:234-246,
+// verified). This is EXACTLY what the chip grid renders; do NOT add chips here.
 export const SCREEN_PALETTE_CHIPS: readonly ScreenPaletteChip[] = [
   /* the existing 9: heading/text/field/stat/divider/image/related-list/tabs/button */
+];
+// Container/composite kinds the command palette is the SOLE creation surface for today.
+// They are NOT visible chips (adding them would grow the grid to 13 and depart from the
+// canonical 9-chip prototype look); they surface ONLY through the searchable command
+// palette so field-group/columns stay creatable for 500-02 (record-header/rich-text are
+// real createScreenBlock kinds — screenDocumentOps.ts:140/155/170/194).
+export const SCREEN_PALETTE_COMMANDS: readonly ScreenPaletteChip[] = [
   { label: "Record header", icon: PanelTop,       kind: "record-header" },
   { label: "Field group",   icon: Layers,         kind: "field-group" },
   { label: "Two columns",   icon: LayoutPanelTop, kind: "columns" },
   { label: "Help text",     icon: Type,           kind: "rich-text" },
 ];
-// PALETTE_CHIPS local const becomes `= SCREEN_PALETTE_CHIPS`; the chip grid now renders
-// the full canonical set. (Equivalent per the parent: keep the 9 chips + a same-constant
-// "Structure/Blocks" group — but ONE constant must feed both surfaces; do NOT reduce
-// creation to only the 9 chips.)
+// Full canonical KIND vocabulary = single source of truth for the command palette.
+// The grid reads SCREEN_PALETTE_CHIPS (the 9); the palette reads the full set below.
+export const SCREEN_CANONICAL_KINDS: readonly ScreenPaletteChip[] = [
+  ...SCREEN_PALETTE_CHIPS,
+  ...SCREEN_PALETTE_COMMANDS,
+];
+// local PALETTE_CHIPS const becomes `= SCREEN_PALETTE_CHIPS`; the chip grid is UNCHANGED
+// (still exactly the prototype's 9). The container/composite kinds route to the command
+// palette via SCREEN_CANONICAL_KINDS — do NOT render them as visible chips.
 ```
 
-2. **`ScreenAuthoringCanvas.tsx`** — rebuild `commandGroups` from the SAME canonical
-   constant and drop ONLY the FIELDS group (the container/composite BLOCKS kinds stay):
+2. **`ScreenAuthoringCanvas.tsx`** — rebuild `commandGroups` from the FULL canonical
+   set (`SCREEN_CANONICAL_KINDS` = 9 chips + container/composite kinds) and drop ONLY
+   the FIELDS group (the container/composite BLOCKS kinds stay). The command palette is
+   where the container/composite kinds surface — the visible chip grid stays at 9:
 
 ```ts
 const commandGroups = useMemo<AuthoringCommandGroup[]>(() => [
   {
     id: "blocks",
     label: "Blocks",
-    commands: SCREEN_PALETTE_CHIPS.map((chip) => ({   // canonical set: 9 chips + field-group/columns/record-header/rich-text
+    commands: SCREEN_CANONICAL_KINDS.map((chip) => ({ // full canonical set: 9 chips + field-group/columns/record-header/rich-text
       id: chip.kind,
       label: chip.label,
       description: screenBlockLabels[chip.kind],
@@ -266,6 +286,16 @@ verbatim (`CustomScreenEditorPreview.tsx:222-228`: dashed `rounded-2xl` card, `P
 
 Thread new OPTIONAL props into `ScreenRuntimeRenderer` and render chrome only in
 `mode === "builder"` when the section is selected (keeps preview/entry byte-identical).
+Section selection continues to flow through the existing `onSelectSection` prop. Note the
+canvas `selectTarget` ALREADY clears the block selection on a section click — its section
+branch calls `onSelectBlock(null)` (→ `handleSelectBlock(null)` → `setSelectedId(null)`,
+`CustomScreenEditorPage.tsx:315-320`) BEFORE `onSelectSection` fires
+(`ScreenAuthoringCanvas.tsx:266-268`), so `resolveSelectedSlotTarget` returns `undefined`
+and the `selectedSectionId` steering already wins through the current canvas path. The
+HOST handler for it (design E `handleSelectSection`) ALSO clears `setSelectedId(null)`, as
+explicit defense-in-depth to make the host handler self-contained (correct even if a
+caller ever invokes `onSelectSection` outside `selectTarget`) — NOT as the mechanism that
+enables steering.
 
 ```ts
 // ScreenRuntimeRenderer props (additive, optional — preview/entry unaffected):
@@ -285,6 +315,22 @@ Replace the plain builder title `<div>` (`:1041-1043`) with a chrome row:
   `data-screen-section-delete`. `aria-label`s: "Rename section", "Move section up",
   "Move section down", "Delete section".
 
+  **REQUIRED — rename input MUST stop keydown/click from bubbling to the section.**
+  The rename `<input>` renders INSIDE the same `<section>` whose `onKeyDown`
+  (`ScreenRuntimeRenderer.tsx:1026-1036`, verified) calls `event.preventDefault()` +
+  `event.stopPropagation()` + `onSelectSection(section.id)` for `Enter` or `" "` when
+  `isInteractive`. Left unguarded, that handler (a) SWALLOWS the space bar — its
+  `preventDefault()` stops a space character from ever reaching the field — and (b) on
+  `Enter` RE-SELECTS the section via `onSelectSection` on top of committing the rename.
+  So the rename `<input>` MUST call `event.stopPropagation()` in its OWN `onKeyDown`
+  (and `onClick`) so `Space`/`Enter` reach the field and `Enter` commits the rename
+  WITHOUT re-triggering the section select. (Equivalently, the section `onKeyDown` may
+  early-return when `event.target` is the rename input; the input-level
+  `stopPropagation` is the preferred, self-contained form and mirrors the button
+  cluster's guard.) This is the toolbar-wide-`preventDefault` class of real-input bug
+  the codebase has hit before — synthetic `fireEvent` RTL tests pass regardless, so it
+  must be pinned by the real-input assertion below.
+
 `ScreenAuthoringCanvas` passes these props straight through to the two
 `ScreenRuntimeRenderer` usages (builder canvas render) and adds `onAddSection` to its
 prop type, forwarding the dashed button + the palette command.
@@ -297,6 +343,11 @@ const handleAddBlock = (type: ScreenBlockKind, field?: ContentField) => {
   const current = definitionRef.current;
   const created = createScreenBlock({ type, field: field?.name, label: field?.label,
     relationTarget: field?.relation?.target });
+  // A selected container (via selectedId) still takes precedence over the section
+  // fallback. That is safe because selectedId is ALREADY cleared whenever a section is
+  // clicked on the canvas (selectTarget's section branch → onSelectBlock(null) →
+  // handleSelectBlock(null) → setSelectedId(null)); handleSelectSection clears it too as
+  // defense-in-depth. So no stale container in another section can hijack the insert.
   const containerTarget = resolveSelectedSlotTarget(current.editorView.document);
   const nextDocument = containerTarget
     ? addScreenBlock(current.editorView.document, created.block, containerTarget) // unchanged
@@ -309,6 +360,18 @@ const handleAddBlock = (type: ScreenBlockKind, field?: ContentField) => {
     bindings: [...current.editorView.bindings, ...created.bindings] });
   setSelectedId(created.block.id);
   setSelectedSectionId(findBlockSectionId(nextDocument, created.block.id));
+};
+
+// Defense-in-depth. The canvas selectTarget already clears the block selection on a
+// section click (its section branch calls onSelectBlock(null) → handleSelectBlock(null)
+// → setSelectedId(null), ScreenAuthoringCanvas.tsx:266-268), so steering already works
+// through the current canvas path. This handler ALSO clears setSelectedId(null) so the
+// host handler is self-contained regardless of caller (correct even if onSelectSection
+// is ever invoked outside selectTarget). Replace the bare `onSelectSection=
+// {setSelectedSectionId}` wiring (CustomScreenEditorPage.tsx:762) with this handler.
+const handleSelectSection = (sectionId: string | null) => {
+  setSelectedSectionId(sectionId);
+  setSelectedId(null); // defense-in-depth: keep the host handler self-contained
 };
 
 const handleAddSection = () => {
@@ -336,19 +399,25 @@ const handleMoveSection = (sectionId: string, direction: "up" | "down") => {
 const handleDeleteSection = (sectionId: string) => {
   const current = definitionRef.current;
   const { document, removed } = removeScreenSection(current.editorView.document, sectionId);
-  if (!removed) return;
+  if (!removed) return; // last-section no-op (or unknown id) — nothing deleted, selection intact
   // Prune bindings for EVERY block in the removed section subtree.
   let bindings = current.editorView.bindings;
   removed.blocks.forEach((block) => {
     bindings = removeScreenBindingsForBlockTree(bindings, block);
   });
   updateEditorView({ document, bindings });
-  if (selectedSectionId === sectionId) setSelectedSectionId(document.sections[0]?.id ?? null);
+  // A delete only happens when ≥2 sections existed, so the doc still has ≥1 section here.
+  if (selectedSectionId === sectionId) setSelectedSectionId(document.sections[0].id);
   if (selectedId && !findScreenBlockById(document, selectedId)) setSelectedId(null);
 };
 ```
 
-Pass `onAddSection={handleAddSection}`, `onRenameSection={handleRenameSection}`,
+Pass `onSelectSection={handleSelectSection}` (REPLACING the bare
+`onSelectSection={setSelectedSectionId}` at `CustomScreenEditorPage.tsx:762` — a
+self-contained host handler that also clears `selectedId`, defense-in-depth for any
+caller that invokes `onSelectSection` without going through the canvas `selectTarget`
+block-clear; steering itself already works via that block-clear),
+`onAddSection={handleAddSection}`, `onRenameSection={handleRenameSection}`,
 `onMoveSection={handleMoveSection}`, `onDeleteSection={handleDeleteSection}` into
 `ScreenAuthoringCanvas`. Import `addScreenSection`, `renameScreenSection`,
 `moveScreenSection`, `removeScreenSection`, `appendScreenBlockToSection` from
@@ -368,12 +437,13 @@ EDIT core/services/customScreens/screenDocumentOps.ts
        + appendScreenBlockToSection (500-01 targeting foundation; 500-02 supersedes)
        + clampIndex helper
 EDIT core/admin/ui/custom-screens/ScreenBlockLibrary.tsx
-       export SCREEN_PALETTE_CHIPS (+ ScreenPaletteChip type) = canonical KIND set (9 chips
-       PLUS field-group/columns/record-header/rich-text); local PALETTE_CHIPS = it (single
-       source of truth for BOTH the chip grid and the command palette; do NOT reduce to 9)
+       export SCREEN_PALETTE_CHIPS (the prototype's 9 grid chips, UNCHANGED) + SCREEN_PALETTE_COMMANDS
+       (container/composite kinds: field-group/columns/record-header/rich-text) + SCREEN_CANONICAL_KINDS
+       (their composition) + ScreenPaletteChip type; local PALETTE_CHIPS = SCREEN_PALETTE_CHIPS. The
+       VISIBLE grid stays at EXACTLY 9 (do NOT grow to 13); container/composite kinds ride the command palette only
 EDIT core/admin/ui/custom-screens/ScreenAuthoringCanvas.tsx
-       onAddSection prop; commandGroups from SCREEN_PALETTE_CHIPS + "Add section", ONLY the FIELDS
-       group removed (field-group/columns/record-header/rich-text stay creatable — 500-02 nesting targets);
+       onAddSection prop; commandGroups from SCREEN_CANONICAL_KINDS + "Add section", ONLY the FIELDS
+       group removed (field-group/columns/record-header/rich-text stay creatable via the palette — 500-02 nesting targets);
        dashed button onClick → onAddSection; forward onRename/onMove/onDeleteSection to the renderer
 EDIT core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx
        optional onRenameSection/onMoveSection/onDeleteSection; builder section chrome when selected
@@ -399,7 +469,9 @@ new suites run in the **Vitest (Bun-free)** lane. Shapes:
 - `moveScreenSection`: swaps adjacent sections; `"up"` on index 0 and `"down"` on the
   last index are BOUNDARY NO-OPS (document unchanged); unknown id → unchanged.
 - `removeScreenSection`: removes the named section, returns `removed` with its blocks;
-  allowed to reach `sections.length === 0`; unknown id → `{ removed: null }`.
+  the LAST-SECTION rule — deleting the only remaining section NO-OPS, returns
+  `removed: null`, and leaves exactly one section so the doc never reaches zero sections;
+  unknown id → `{ removed: null }`.
 - `appendScreenBlockToSection`: appends to the named section (not `sections[0]` when a
   DIFFERENT section is named); unknown/null `sectionId` fails soft to the first section;
   empty-doc path re-seeds via `ensureSectionForInsert`.
@@ -409,17 +481,41 @@ new suites run in the **Vitest (Bun-free)** lane. Shapes:
   increases the `data-screen-section-id` count by 1 and does NOT open the command
   palette. (Regression-guards the old `setCommandOpen` behaviour — flag any existing
   test that asserted the palette opened.)
-- **Insertion targets the selected section:** with ≥2 sections, select the 2nd, click a
-  palette chip → the new block appears under the 2nd section's
-  `data-screen-section-id`, NOT the first.
+- **Insertion targets the selected section (steering path):** with ≥2 sections and NO
+  container selected (the fresh path), select the 2nd section, click a palette chip → the
+  new block appears under the 2nd section's `data-screen-section-id`, NOT the first. This
+  is the core steering assertion; it exercises `appendScreenBlockToSection` consulting
+  `selectedSectionId` and would fail on the old `sections[0]`-only default regardless of
+  any block-clear.
+- **Section select clears the block selection (invariant):** directly selecting a section
+  clears `selectedId` (assert via host state / that the Inspect body no longer targets the
+  previously selected block), keeping `handleSelectSection` self-contained. Be explicit in
+  the test comment that this invariant ALSO holds with the bare `setSelectedSectionId`
+  setter, because the canvas `selectTarget` section branch already calls
+  `onSelectBlock(null)` before `onSelectSection` — so this guards the block-clear
+  invariant, it does NOT distinguish the two setter implementations.
 - **Rename / reorder / delete chrome:** selecting a section shows
   `data-screen-section-rename` + move/delete controls; rename updates the title;
   `data-screen-section-move-up`/`-down` reorder; `data-screen-section-delete` removes
   the section and (assert via host) prunes bindings for its blocks.
+- **Rename input survives real-input keys (regression guard for the section-`onKeyDown`
+  swallow):** with a section selected, type a value CONTAINING a space into
+  `data-screen-section-rename` (per-character `keyDown` on the input, not a single
+  synthetic `change`) and assert the space is PRESERVED in the field value (the section
+  `onKeyDown` `preventDefault()` did NOT swallow it), then press `Enter` and assert the
+  rename COMMITS (`onRenameSection` fires with the typed value) WITHOUT re-selecting the
+  section (`onSelectSection` is NOT called by that `Enter`, and the section stays the
+  active target) — i.e. NOT merely a synthetic `blur`. This pins the input-level
+  `stopPropagation` required in design D.
+- **Visible chip grid stays at 9 (look parity):** assert the `Add block` chip grid
+  renders EXACTLY the prototype's 9 chips (heading/text/field/stat/divider/image/
+  related-list/tabs/button) — the container/composite kinds are NOT rendered as visible
+  chips (the grid does NOT grow to 13).
 - **Palette unification:** open the command palette → assert it lists exactly the
-  canonical kind set (9 chips + `field-group`/`columns`/`record-header`/`rich-text`) +
-  "Add section" and has NO per-field commands / no "Fields" group. Explicitly assert
-  `field-group` and `columns` remain creatable (they are 500-02's nesting targets).
+  full canonical kind set (9 chips + `field-group`/`columns`/`record-header`/`rich-text`)
+  + "Add section" and has NO per-field commands / no "Fields" group. Explicitly assert
+  `field-group` and `columns` remain creatable via the command palette (they are 500-02's
+  nesting targets).
 
 Full gate per the parent: `bun --cwd core lint`, `bun --cwd core lint:types`,
 `bun --cwd core test:bun`, full vitest, the repo gate alias, and a real-input playwright
@@ -440,11 +536,14 @@ intended delta; update any suite that asserted the old palette-opening button).
    never forced into `sections[0]`.
 4. One canonical kind vocabulary sourced from a single constant: the canonical set is
    the 9 chips PLUS the container/composite kinds (`field-group`/`columns` +
-   `record-header`/`rich-text`); the command palette (if present) lists that same set +
-   "Add section"; ONLY the FIELDS group is gone; `field-group`/`columns` stay creatable
-   so 500-02 has containers to nest into.
-5. Deleting a section prunes its blocks' bindings; the document may reach zero
-   sections and the "Add section" affordance re-seeds on the next add.
+   `record-header`/`rich-text`). The VISIBLE chip grid still renders EXACTLY the
+   prototype's 9 chips (`grid-cols-3`, look parity preserved — NOT grown to 13); the
+   container/composite kinds surface through the command palette, which lists the full
+   canonical set + "Add section"; ONLY the FIELDS group is gone; `field-group`/`columns`
+   stay creatable via the palette so 500-02 has containers to nest into.
+5. Deleting a section prunes its blocks' bindings; the LAST-SECTION rule holds —
+   deleting the only remaining section NO-OPS (returns `removed: null`), so the document
+   always keeps at least one section and never reaches a zero-sections editor state.
 6. No regression: TASK-498 look parity, presentation-override editing, Bun-free vitest
    boundary, `schemaVersion:1`, definition v4, and stored-V4 byte-stability all hold;
    no schema key added, no route/RBAC change; all gates green + playwright smoke.

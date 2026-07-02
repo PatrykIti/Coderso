@@ -71,6 +71,10 @@ test("menu schemas accept design fields on update only", () => {
   expect(() => validate(menuUpdateSchema, { extras: [createPageBlockV2("button")] })).not.toThrow();
   expect(() => validate(menuUpdateSchema, { extras: null })).not.toThrow();
   expect(() =>
+    validate(menuUpdateSchema, { document: { schemaVersion: 1, sections: [] } })
+  ).not.toThrow();
+  expect(() => validate(menuUpdateSchema, { document: null })).not.toThrow();
+  expect(() =>
     validate(menuCreateSchema, {
       name: "Primary",
       location: null,
@@ -151,6 +155,100 @@ testIfDb(
     expect(updated.settings).toEqual({
       extras: [block],
     });
+  },
+  dbTestTimeoutMs
+);
+
+const routeMenuDocument = () => ({
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "sec-route-menu-bar",
+      type: "menu-bar" as const,
+      name: "Menu bar",
+      layout: { surfaceColor: "#0f172a" },
+      blocks: [{ id: "blk-route-nav", type: "nav-items" as const, props: { itemGap: 12 } }],
+    },
+  ],
+});
+
+testIfDb(
+  "PATCH /menus/:id round-trips a document without dropping a co-present appearance",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Document ${randomUUID()}`,
+      location: `route-document-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    const document = routeMenuDocument();
+    const updated = (await handler({
+      params: { id: menu.id },
+      query: {},
+      body: { appearance: { surfaceColor: "#0f172a" }, document },
+    })) as typeof menus.$inferSelect;
+
+    // Per-key merge: both keys ride the envelope, neither is dropped.
+    expect(updated.settings).toEqual({
+      appearance: { surfaceColor: "#0f172a" },
+      document,
+    });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id persists a document-ONLY body through the menus.settings envelope",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Document Only ${randomUUID()}`,
+      location: `route-document-only-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    const document = routeMenuDocument();
+    const updated = (await handler({
+      params: { id: menu.id },
+      query: {},
+      body: { document },
+    })) as typeof menus.$inferSelect;
+
+    expect(updated.settings).toEqual({ document });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps an invalid document to a 400 menu_document_invalid ApiError with a path",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Document Invalid ${randomUUID()}`,
+      location: `route-document-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            schemaVersion: 1,
+            sections: [{ type: "footer", name: "x", layout: {}, blocks: [] }],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({ path: "document.sections[0].type" });
+    }
   },
   dbTestTimeoutMs
 );

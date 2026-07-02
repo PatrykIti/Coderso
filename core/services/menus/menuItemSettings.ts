@@ -1,16 +1,6 @@
-export const menuVisibilityOptions = [
-  "all",
-  "logged_in",
-  "logged_out",
-] as const;
+export const menuVisibilityOptions = ["all", "logged_in", "logged_out"] as const;
 
-export const menuBadgeToneOptions = [
-  "default",
-  "accent",
-  "success",
-  "warning",
-  "danger",
-] as const;
+export const menuBadgeToneOptions = ["default", "accent", "success", "warning", "danger"] as const;
 
 export type MenuItemVisibility = (typeof menuVisibilityOptions)[number];
 export type MenuItemBadgeTone = (typeof menuBadgeToneOptions)[number];
@@ -20,11 +10,18 @@ export type MenuItemBadge = {
   tone: MenuItemBadgeTone;
 };
 
+export const menuItemVariantOptions = ["link", "button"] as const;
+export type MenuItemVariant = (typeof menuItemVariantOptions)[number];
+
 export type MenuItemSettings = {
   visibility?: MenuItemVisibility;
   badge?: MenuItemBadge;
   description?: string;
   icon?: string;
+  /** Open the front link in a new tab (`target="_blank" rel="noopener"`). */
+  openInNewTab?: boolean;
+  /** Front render affordance: default `"link"`; `"button"` = the §3 Button source. */
+  variant?: MenuItemVariant;
 };
 
 export type ResolvedMenuItemSettings = {
@@ -32,10 +29,11 @@ export type ResolvedMenuItemSettings = {
   badge: MenuItemBadge | null;
   description: string | null;
   icon: string | null;
+  openInNewTab: boolean;
+  variant: MenuItemVariant;
 };
 
-const hasOwn = (value: object, key: string) =>
-  Object.prototype.hasOwnProperty.call(value, key);
+const hasOwn = (value: object, key: string) => Object.prototype.hasOwnProperty.call(value, key);
 
 const toTrimmedString = (value: unknown) => {
   if (typeof value !== "string") return null;
@@ -83,6 +81,15 @@ export function normalizeMenuItemSettings(value: unknown): MenuItemSettings {
     settings.icon = icon;
   }
 
+  // Fail-soft, drop-unknown: only persist the non-default values so every
+  // existing item's stored settings byte-shape is unchanged.
+  if (source.openInNewTab === true) {
+    settings.openInNewTab = true;
+  }
+  if (source.variant === "button") {
+    settings.variant = "button";
+  }
+
   return settings;
 }
 
@@ -93,6 +100,8 @@ export function resolveMenuItemSettings(value: unknown): ResolvedMenuItemSetting
     badge: normalized.badge ?? null,
     description: normalized.description ?? null,
     icon: normalized.icon ?? null,
+    openInNewTab: normalized.openInNewTab ?? false,
+    variant: normalized.variant ?? "link",
   };
 }
 
@@ -101,6 +110,8 @@ export function hasMenuItemSettings(value: MenuItemSettings) {
   if (value.badge) return true;
   if (value.description) return true;
   if (value.icon) return true;
+  if (value.openInNewTab) return true;
+  if (value.variant && value.variant !== "link") return true;
   return false;
 }
 
@@ -130,6 +141,15 @@ export function isResolvedMenuItemSettings(value: unknown): value is ResolvedMen
     return false;
   }
   if (record.icon !== null && typeof record.icon !== "string") {
+    return false;
+  }
+  if (hasOwn(record, "openInNewTab") && typeof record.openInNewTab !== "boolean") {
+    return false;
+  }
+  if (
+    hasOwn(record, "variant") &&
+    !menuItemVariantOptions.includes(record.variant as MenuItemVariant)
+  ) {
     return false;
   }
   return hasOwn(record, "visibility") && hasOwn(record, "badge");

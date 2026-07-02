@@ -65,7 +65,7 @@ fit).
 ```
 # --- 500-01: sections first-class + palette unification ---
 tests/vitest/customScreens/screen-document-sections.test.ts        # NEW (500-01) — section CRUD ops
-tests/vitest/ui-integration/screen-editor-sections.test.tsx        # NEW (500-01) — "Add section" creates a section; select/rename/reorder/delete chrome; palette mirrors 9 chips + "Add section", NO FIELDS group
+tests/vitest/ui-integration/screen-editor-sections.test.tsx        # NEW (500-01) — "Add section" creates a section; select/rename/reorder/delete chrome; palette mirrors the FULL canonical set (9 chips + field-group/columns/record-header/rich-text) + "Add section", NO FIELDS group
 
 # --- 500-02: insertion targeting + interactivity (the core) ---
 tests/vitest/customScreens/screen-document-insertion.test.ts       # NEW (500-02) — addScreenBlockAt / moveScreenBlockTo / findScreenBlockLocation
@@ -80,7 +80,7 @@ tests/vitest/custom-screen/custom-screen-runtime-renderer.test.tsx  # EDIT — u
                                                                     #   (actual path: tests/vitest/ui-integration/custom-screen-runtime-renderer.test.tsx)
 
 # --- PRESERVED invariants (500-05 asserts these DO NOT move) ---
-tests/vitest/customScreens/screenDocumentOps.test.ts               # EXISTING ops suite — legacy addScreenBlock/moveScreenBlock still pass (thin wrappers or migrated call sites; sections[0]-only append GONE but the exported name/signature contract the suite imports stays honoured)
+tests/vitest/customScreens/screenDocumentOps.test.ts               # EXISTING ops suite — imports removeScreenBlock/createScreenBlock/duplicateScreenBlockWithBindings only (NOT add/moveScreenBlock; the old grep hits were the "re-moveScreenBlock" substring). Legacy addScreenBlock/moveScreenBlock are CURRENTLY untested (zero coverage anywhere under tests/vitest/), so the together-green guarantee for their preservation/removal rests SOLELY on the NEW 500-02 screen-document-insertion.test.ts (addScreenBlockAt/moveScreenBlockTo) plus whatever thin-wrapper assertions 500-02 adds — not on this ops suite; sections[0]-only append is GONE
 tests/vitest/customScreens/customScreenService.test.ts             # normalize round-trip; reject-unknown; stored-V4 read byte-stable
 tests/vitest/customScreens/customScreenBackfill.test.ts            # read-repair / backfill path untouched
 tests/vitest/customScreens/screenEntryPresentationOverrides.test.ts # TASK-498 presentation-override surface unregressed
@@ -130,7 +130,7 @@ it("selection + selectedSectionId FOLLOW the inserted/moved block")
 
 # --- Palette unification (screen-editor-sections.test.tsx, owned by 500-01) ---
 it("'Add section' (data-screen-add-section) CREATES a section — does NOT call setCommandOpen")
-it("the command palette (if kept) exposes EXACTLY the 9 canonical kinds + 'Add section'")
+it("the command palette exposes the FULL canonical kind set — the 9 chips PLUS field-group/columns/record-header/rich-text — + 'Add section'; field-group/columns stay creatable for 500-02 nesting")
 it("the palette has NO FIELDS group (field is the Field chip + inspector bind)")
 
 # --- Toggle dedupe (canvas-editor-panel-toggle-dedupe.test.tsx, owned by 500-03) ---

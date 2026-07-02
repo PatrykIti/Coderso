@@ -51,6 +51,12 @@ export type NavigationItemMeta = {
   } | null;
   description: string | null;
   icon: string | null;
+  /**
+   * Front render affordance (TASK-499-01). Present ONLY for the non-default
+   * `"button"` source; the default `"link"` is omitted so existing menu→nav
+   * `meta` byte-shapes stay unchanged.
+   */
+  variant?: "link" | "button";
 };
 
 export type NavigationLogo = {

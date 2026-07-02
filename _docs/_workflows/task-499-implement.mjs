@@ -9,6 +9,7 @@ export const meta = {
     { title: "499-03" },
     { title: "499-05" },
     { title: "Post-audit" },
+    { title: "Smoke" },
   ],
 };
 
@@ -247,10 +248,44 @@ if (hm.length > 0) {
   );
 }
 
+// ---- Phase 7: runtime smoke (playwright-cli DOM/console/computed-style — scriptable gate) ----
+phase("Smoke");
+const SMOKE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["pass", "serverUp", "observations", "consoleErrors", "screenshots"],
+  properties: {
+    pass: { type: "boolean" },
+    serverUp: { type: "boolean" },
+    observations: { type: "array", items: { type: "string" } },
+    consoleErrors: { type: "number" },
+    screenshots: { type: "array", items: { type: "string" } },
+    failures: { type: "array", items: { type: "string" } },
+  },
+};
+const smoke = await agent(
+  "Runtime SMOKE of the implemented TASK-499 Menu editor on the live dev server, using playwright-cli with a NAMED session (so you do NOT clash with any other browser): prefix EVERY command with `playwright-cli -s=wf499smoke`. Do NOT judge visuals from screenshots (you only get text) — assert DOM markers, computed styles, and console errors, and SAVE screenshots to " +
+    ROOT +
+    "/_docs/_workflows/_smoke/ for the human reviewer.\nSteps (from " +
+    ROOT +
+    ", load .env for creds: `set -a && . ./.env; set +a`):\n1. Health: `curl -s -o /dev/null -w '%{http_code}' http://coderso-a.localhost:5173/admin/`. If not 200, return pass:false serverUp:false observations=['dev server down — start coderso-dev-core-host'].\n2. `playwright-cli -s=wf499smoke open http://coderso-a.localhost:5173/admin/menus`. If the page shows 'Sign in', fill input[type=email]=$ADMIN_EMAIL + input[type=password]=$ADMIN_PASSWORD and click the Sign in button; re-goto /admin/menus.\n3. Discover a menu id (eval the hrefs of a[href*='/admin/menus/']). Open the ITEMS editor at /admin/menus/<id>. Assert via eval: a three-pane editor frame is present (a bordered card with a chrome bar + left rail + canvas + right inspector); NO element uses the legacy dark panel (querySelectorAll('[class*=slate-950]').length === 0); the MenuItemRow is COMPACT (no h-9/w-9 letter-avatar box, no 'Sub-item of' text); console error count === 0. Screenshot to _smoke/menu-items-light.png.\n4. Toggle dark mode (button aria-label ~ /dark mode/i); assert getComputedStyle of the frame card background is a dark color (NOT white/#fff) and querySelectorAll('[class*=bg-white]').length === 0. Screenshot _smoke/menu-items-dark.png. Toggle back to light.\n5. Open the DESIGN tab /admin/menus/<id>/design. Assert the shared CanvasEditor builder shell renders (NOT the bg-slate-950 legacy dark panel), and Undo/Redo + a device switcher + a Hide/Show panel control are present. Screenshot _smoke/menu-design.png.\n6. `playwright-cli -s=wf499smoke close`.\nReturn {pass (true iff serverUp AND all DOM assertions held AND consoleErrors===0), serverUp, observations[] (one line per assertion with its result), consoleErrors, screenshots[] (paths saved), failures[] (any assertion that did not hold)}. Be truthful — report what actually rendered, not what should.",
+  { label: "smoke:499", phase: "Smoke", schema: SMOKE_SCHEMA }
+);
+log(
+  "Smoke: " +
+    (smoke && smoke.pass ? "PASS" : "needs human review") +
+    " (serverUp=" +
+    (smoke && smoke.serverUp) +
+    ", consoleErrors=" +
+    (smoke && smoke.consoleErrors) +
+    ")"
+);
+
 return {
   menuVitest: gate05,
   menuBun: bunG && bunG.pass,
   rootTsc: tcRoot && tcRoot.pass,
   auditHighMed: hm.length,
   auditFindings: findings,
+  smoke,
 };

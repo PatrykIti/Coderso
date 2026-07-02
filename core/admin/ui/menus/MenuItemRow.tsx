@@ -95,7 +95,10 @@ export function MenuItemRow({
   const settings = normalizeMenuItemSettings(item.settings);
   const hasMetadataBadge = Boolean(settings.badge);
   const hasRestrictedVisibility = Boolean(settings.visibility) && settings.visibility !== "all";
-  const nestedHint = depth > 0 && item.parentLabel ? `Sub-item of ${item.parentLabel}` : null;
+  // TASK-499-01: compact row (mono link subline) — the redundant text
+  // "Sub-item of X" hint is dropped; `pl-8` + the CornerDownRight below are the
+  // only nesting cue, matching the prototype.
+  const linkSubline = item.pageTitle ? `Page: ${item.pageTitle}` : item.href || "Missing link";
   const toneClass =
     settings.badge?.tone === "accent"
       ? "border-info/30 bg-info-soft text-info"
@@ -141,7 +144,7 @@ export function MenuItemRow({
       ) : null}
       <button
         type="button"
-        className="flex h-12 w-12 shrink-0 cursor-grab items-center justify-center self-center rounded-md border bg-muted/40 text-muted-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&_svg]:pointer-events-none"
+        className="flex shrink-0 cursor-grab items-center self-center rounded-md text-muted-foreground active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         draggable
         aria-label={`Drag ${label}`}
         title={`Drag ${label}`}
@@ -153,11 +156,7 @@ export function MenuItemRow({
         }}
         onDragEnd={(event) => onDragEnd?.(event)}
       >
-        <GripVertical
-          aria-hidden="true"
-          focusable="false"
-          className="h-4 w-4 pointer-events-none"
-        />
+        <GripVertical aria-hidden="true" focusable="false" className="size-4" />
       </button>
       {depth > 0 ? (
         <CornerDownRight
@@ -169,14 +168,10 @@ export function MenuItemRow({
       ) : null}
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left"
+        className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-left"
         draggable={false}
         aria-label={`Open menu item details for ${label}`}
-        title={
-          nestedHint
-            ? `Open menu item details for ${label}. ${nestedHint}.`
-            : `Open menu item details for ${label}.`
-        }
+        title={`Open menu item details for ${label}.`}
         onClick={(event) => onSelect?.(item, event.timeStamp)}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
@@ -185,33 +180,12 @@ export function MenuItemRow({
           }
         }}
       >
-        <div
-          className={cn(
-            "pointer-events-none flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground",
-            item.status === "error" && "border border-destructive bg-card text-destructive"
-          )}
-        >
-          {item.status === "error" ? (
-            <AlertTriangle className="h-4 w-4" />
-          ) : (
-            <span className="text-xs font-semibold">{label[0] ?? "?"}</span>
-          )}
-        </div>
-        <div className="pointer-events-none flex-1">
-          <div className="text-sm font-semibold">{label}</div>
-          <div className="text-xs text-muted-foreground">
-            {settings.description
-              ? settings.description
-              : item.pageTitle
-                ? `Page: ${item.pageTitle}`
-                : item.href || "Missing link"}
-          </div>
-          {nestedHint ? (
-            <div className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-              <span aria-hidden="true">↳</span>
-              <span>{nestedHint}</span>
-            </div>
-          ) : null}
+        {item.status === "error" ? (
+          <AlertTriangle className="pointer-events-none size-4 shrink-0 text-destructive" />
+        ) : null}
+        <div className="pointer-events-none min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{label}</div>
+          <div className="truncate font-mono text-xs text-muted-foreground">{linkSubline}</div>
         </div>
         {hasMetadataBadge ? (
           <Badge variant="outline" className={cn("pointer-events-none", toneClass)}>

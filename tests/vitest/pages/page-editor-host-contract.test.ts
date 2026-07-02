@@ -16,8 +16,10 @@ const reusableEditorFiles = [
 ];
 
 test("host contract remains type-only and accepts current editor modes", () => {
-  const modes: Array<PageEditorHost["mode"]> = ["page", "page-template", "menu"];
-  expect(modes).toEqual(["page", "page-template", "menu"]);
+  // TASK-499-03: the menu design host no longer routes through PageEditor, so
+  // the `mode` union is narrowed to the page + page-template hosts only.
+  const modes: Array<PageEditorHost["mode"]> = ["page", "page-template"];
+  expect(modes).toEqual(["page", "page-template"]);
 });
 
 test("toolbar labels resolve from type copy instead of user-authored content", () => {

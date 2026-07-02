@@ -5,7 +5,8 @@
 **Category:** Admin UI / Content (Menus) / Visual Refresh
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 (admin redesign tokens + shared primitives)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-499
 
 ---

@@ -5,7 +5,8 @@
 **Category:** Services / Content (Menus) / Schema / Persistence
 **Estimated Effort:** Large
 **Dependencies:** TASK-458-02 (`normalizeMenuAppearance`), TASK-458-03 (`menuNavExtras`), TASK-455 (site shell envelope)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-499
 
 ---

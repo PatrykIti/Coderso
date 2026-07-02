@@ -3,6 +3,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db/client";
 import { menuItems, menus, pages } from "../../db/schema";
 import { normalizeMenuItemSettings } from "./menuItemSettings";
+import { isEmptyMenuDocument, normalizeMenuDocumentV2ForWrite } from "./menuDocumentV2";
 import { normalizeMenuNavExtras } from "./menuNavExtras";
 import { normalizeMenuAppearance, type MenuSettings } from "./normalizeMenuAppearance";
 import {
@@ -34,6 +35,16 @@ export type UpdateMenuInput = {
    * carry the appearance exactly like items.
    */
   appearance?: unknown;
+  /**
+   * Menu design document (TASK-499-02): validated through
+   * `normalizeMenuDocumentV2ForWrite` (throws machine-readable
+   * `menu_document_invalid`), persisted next to the appearance/extras in the
+   * `menus.settings` envelope under the `document` key. `null` or an empty
+   * document clears the slot back to the legacy/default look; `undefined`
+   * leaves it untouched. Document updates merge per key, so the appearance and
+   * extras keys are never dropped.
+   */
+  document?: unknown;
   /**
    * Nav extras blocks (TASK-458-03): validated through
    * `normalizeMenuNavExtras` (throws machine-readable
@@ -168,6 +179,9 @@ const readMenuDesignState = (envelope: Record<string, unknown>): Record<string, 
   if (hasOwn(envelope, "extras")) {
     state.extras = envelope.extras;
   }
+  if (hasOwn(envelope, "document")) {
+    state.document = envelope.document;
+  }
   return state;
 };
 
@@ -179,7 +193,7 @@ const readMenuDesignState = (envelope: Record<string, unknown>): Record<string, 
  */
 const mergeMenuSettingsEnvelope = (
   stored: unknown,
-  input: Pick<UpdateMenuInput, "appearance" | "extras">,
+  input: Pick<UpdateMenuInput, "appearance" | "extras" | "document">,
   options?: { seedPublishedSnapshot?: boolean }
 ): MenuSettings | null => {
   const envelope: Record<string, unknown> = isPlainObject(stored) ? { ...stored } : {};
@@ -201,6 +215,18 @@ const mergeMenuSettingsEnvelope = (
       envelope.extras = extras;
     }
   }
+  if (input.document !== undefined) {
+    if (input.document === null) {
+      delete envelope.document;
+    } else {
+      const document = normalizeMenuDocumentV2ForWrite(input.document);
+      if (isEmptyMenuDocument(document)) {
+        delete envelope.document;
+      } else {
+        envelope.document = document;
+      }
+    }
+  }
   return Object.keys(envelope).length > 0 ? (envelope as MenuSettings) : null;
 };
 
@@ -216,7 +242,8 @@ const publishMenuSettingsEnvelope = (stored: unknown): MenuSettings | null => {
 
 export async function updateMenu(menuId: string, input: UpdateMenuInput) {
   const patch: Partial<typeof menus.$inferInsert> = {};
-  const changesDesign = input.appearance !== undefined || input.extras !== undefined;
+  const changesDesign =
+    input.appearance !== undefined || input.extras !== undefined || input.document !== undefined;
   const publishes = input.status === "published";
   const existing = changesDesign || publishes ? await getMenu(menuId) : null;
   if ((changesDesign || publishes) && !existing) return null;
@@ -232,7 +259,11 @@ export async function updateMenu(menuId: string, input: UpdateMenuInput) {
     patch.status = status;
     patch.publishedAt = status === "published" ? new Date() : null;
   }
-  if (input.appearance !== undefined || input.extras !== undefined) {
+  if (
+    input.appearance !== undefined ||
+    input.extras !== undefined ||
+    input.document !== undefined
+  ) {
     patch.settings = mergeMenuSettingsEnvelope(existing?.settings, input, {
       seedPublishedSnapshot: existing?.status === "published",
     });

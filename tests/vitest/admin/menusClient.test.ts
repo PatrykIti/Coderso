@@ -11,6 +11,7 @@ import {
   listMenusCached,
   moveMenuToDraft,
   publishMenu,
+  updateMenu,
   type MenuSummary,
 } from "../../../core/admin/services/menusClient";
 import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
@@ -111,10 +112,7 @@ test("listMenusCached reads from local storage", async () => {
   try {
     resetCaches();
     const cached = [makeMenuSummary()];
-    storage.setItem(
-      cacheKeys.menusList,
-      JSON.stringify({ value: cached, savedAt: Date.now() })
-    );
+    storage.setItem(cacheKeys.menusList, JSON.stringify({ value: cached, savedAt: Date.now() }));
 
     const result = await listMenusCached();
     expect(result).toEqual(cached);
@@ -148,10 +146,7 @@ test("listMenusCached ignores expired in-memory list cache", async () => {
   (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
 
   try {
-    storage.setItem(
-      cacheKeys.menusList,
-      JSON.stringify({ value: stale, savedAt: Date.now() })
-    );
+    storage.setItem(cacheKeys.menusList, JSON.stringify({ value: stale, savedAt: Date.now() }));
     expect(await listMenusCached()).toEqual(stale);
 
     vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list + 1000));
@@ -318,12 +313,48 @@ test("publishMenu and moveMenuToDraft send lifecycle PATCH requests with CSRF", 
     expect(JSON.parse(calls[1]?.init?.body as string)).toEqual({
       status: "published",
     });
-    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe(
-      "csrf-token"
-    );
+    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
     expect(JSON.parse(calls[2]?.init?.body as string)).toEqual({
       status: "draft",
     });
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("updateMenu forwards the menuDocumentV2 document on the PATCH body (TASK-499-03)", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const responses = [
+    jsonResponse({ token: "csrf-token" }),
+    jsonResponse(makeMenuSummary({ status: "draft", publishedAt: null })),
+  ];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return responses.shift() ?? jsonResponse(makeMenuSummary());
+  };
+
+  const document = {
+    schemaVersion: 1,
+    sections: [
+      {
+        id: "sec-1",
+        type: "menu-bar",
+        name: "Menu bar",
+        layout: {},
+        blocks: [{ id: "blk-1", type: "nav-items", props: {} }],
+      },
+    ],
+  };
+
+  try {
+    await updateMenu("menu-1", { document });
+
+    expect(calls[1]?.input).toBe("/admin/api/menus/menu-1");
+    expect(calls[1]?.init?.method).toBe("PATCH");
+    expect(JSON.parse(calls[1]?.init?.body as string)).toEqual({ document });
+    expect(new Headers(calls[1]?.init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
   } finally {
     globalThis.fetch = originalFetch;
   }

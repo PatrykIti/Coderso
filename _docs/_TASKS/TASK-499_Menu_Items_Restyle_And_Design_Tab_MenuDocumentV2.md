@@ -5,7 +5,8 @@
 **Category:** Admin UI / Content (Menus) / Navigation / Visual Refresh / Page Builder
 **Estimated Effort:** Large
 **Dependencies:** TASK-006 (menus), TASK-455 (site shell), TASK-458-02/03 (menu appearance + nav extras), TASK-479 (admin redesign), TASK-495/496 (shared `CanvasEditor` builder chrome)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 
 ---
 

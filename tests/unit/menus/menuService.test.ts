@@ -18,6 +18,10 @@ import {
   resolvePublishedMenuAppearance,
 } from "../../../core/services/menus/normalizeMenuAppearance";
 import {
+  MENU_DOCUMENT_INVALID,
+  resolvePublishedMenuDocument,
+} from "../../../core/services/menus/menuDocumentV2";
+import {
   assertNoCycles,
   buildMenuTree,
   type MenuItemRecord,
@@ -322,6 +326,114 @@ testIfDb(
     await expect(updateMenu(createdMenuId, { appearance: { unknownField: true } })).rejects.toThrow(
       MENU_APPEARANCE_INVALID
     );
+
+    const stored = await getMenuWithItems(createdMenuId);
+    expect(stored?.menu.settings).toBeNull();
+
+    await cleanupMenu(createdMenuId);
+    createdMenuId = undefined;
+  }
+);
+
+const sampleMenuDocument = () => ({
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "sec-menu-bar",
+      type: "menu-bar" as const,
+      name: "Menu bar",
+      layout: { surfaceColor: "#0f172a" },
+      blocks: [
+        { id: "blk-nav", type: "nav-items" as const, props: { linkColor: "var(--color-primary)" } },
+      ],
+    },
+  ],
+});
+
+testIfDb(
+  "updateMenu merges a document per key without dropping a co-present appearance",
+  async () => {
+    const menu = await createMenu({
+      name: `Document-Merge-${randomUUID()}`,
+      location: `document-merge-${randomUUID()}`,
+    });
+
+    createdMenuId = menu?.id;
+    if (!createdMenuId) throw new Error("menu_missing");
+
+    // Seed an appearance first, then a document — the document merge must not
+    // drop the appearance key already in the envelope.
+    await updateMenu(createdMenuId, { appearance: { surfaceColor: "#111827" } });
+    const document = sampleMenuDocument();
+    const merged = await updateMenu(createdMenuId, { document });
+    expect(merged?.settings).toEqual({
+      appearance: { surfaceColor: "#111827" },
+      document,
+    });
+
+    // Publishing snapshots the document under `published` alongside appearance.
+    const published = await publishMenu(createdMenuId);
+    expect(published?.settings).toEqual({
+      appearance: { surfaceColor: "#111827" },
+      document,
+      published: { appearance: { surfaceColor: "#111827" }, document },
+    });
+    expect(resolvePublishedMenuDocument(published?.settings)?.sections[0]?.blocks[0]?.type).toBe(
+      "nav-items"
+    );
+
+    // Clearing the document removes only that key, leaving appearance intact.
+    const cleared = await updateMenu(createdMenuId, { document: null });
+    expect(cleared?.settings).toEqual({
+      appearance: { surfaceColor: "#111827" },
+      published: { appearance: { surfaceColor: "#111827" }, document },
+    });
+
+    await cleanupMenu(createdMenuId);
+    createdMenuId = undefined;
+  }
+);
+
+testIfDb("updateMenu persists a document-ONLY PATCH (guards the merge gate at :235)", async () => {
+  const menu = await createMenu({
+    name: `Document-Only-${randomUUID()}`,
+    location: `document-only-${randomUUID()}`,
+  });
+
+  createdMenuId = menu?.id;
+  if (!createdMenuId) throw new Error("menu_missing");
+  expect(menu?.settings).toBeNull();
+
+  // A PATCH carrying ONLY `document` (no appearance/extras) must still compute
+  // patch.settings and persist the document — a silent-drop failure mode with
+  // no compile error if the merge gate is left unedited.
+  const document = sampleMenuDocument();
+  const updated = await updateMenu(createdMenuId, { document });
+  expect(updated?.settings).toEqual({ document });
+
+  await cleanupMenu(createdMenuId);
+  createdMenuId = undefined;
+});
+
+testIfDb(
+  "updateMenu rejects an invalid document with menu_document_invalid and persists nothing",
+  async () => {
+    const menu = await createMenu({
+      name: `Document-Invalid-${randomUUID()}`,
+      location: `document-invalid-${randomUUID()}`,
+    });
+
+    createdMenuId = menu?.id;
+    if (!createdMenuId) throw new Error("menu_missing");
+
+    await expect(
+      updateMenu(createdMenuId, {
+        document: {
+          schemaVersion: 1,
+          sections: [{ type: "footer", name: "x", layout: {}, blocks: [] }],
+        },
+      })
+    ).rejects.toThrow(MENU_DOCUMENT_INVALID);
 
     const stored = await getMenuWithItems(createdMenuId);
     expect(stored?.menu.settings).toBeNull();

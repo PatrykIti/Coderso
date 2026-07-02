@@ -1,10 +1,13 @@
 import {
+  FileText,
+  FolderTree,
   Layers,
   Link as LinkIcon,
+  Newspaper,
   Paintbrush,
-  PlusCircle,
   Save,
   SlidersHorizontal,
+  SquareMousePointer,
   Upload,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -13,7 +16,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
@@ -33,9 +36,10 @@ import {
 } from "@/services/menusClient";
 import { getCachedPages, listPagesCached, type PageSummary } from "@/services/pagesClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
-import { SplitShell } from "@/ui/layouts/SplitShell";
+import { AdminShell } from "@/ui/layouts/AdminShell";
+import { EditorFrame, EditorRailGroup, EditorRailItem } from "@/ui/shared/EditorFrame";
 import { MenuItemDeleteDialog } from "@/ui/menus/MenuItemDeleteDialog";
-import { MenuItemDrawer, type MenuItemDraft } from "@/ui/menus/MenuItemDrawer";
+import { MenuItemInspector, type MenuItemDraft } from "@/ui/menus/MenuItemDrawer";
 import { resolveMenuId } from "@/ui/menus/routeParams";
 import { MenuTree } from "@/ui/menus/MenuTree";
 import type { MenuDropIntent } from "@/ui/menus/menuDnD";
@@ -43,7 +47,48 @@ import type { MenuItemDisplay } from "@/ui/menus/types";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { normalizeMenuItemSettings } from "../../../services/menus/menuItemSettings";
+import {
+  normalizeMenuItemSettings,
+  type MenuItemSettings,
+} from "../../../services/menus/menuItemSettings";
+
+type MenuAddSource = "page" | "custom-link" | "button";
+
+function MenuAddItemsRail({
+  onAdd,
+  pageCount,
+}: {
+  onAdd: (source: MenuAddSource) => void;
+  pageCount: number;
+}) {
+  return (
+    <EditorRailGroup label="Add items">
+      <EditorRailItem
+        icon={<FileText />}
+        onClick={() => onAdd("page")}
+        disabled={pageCount === 0}
+        title={pageCount === 0 ? "Create a page first" : undefined}
+      >
+        Pages
+      </EditorRailItem>
+      <EditorRailItem icon={<LinkIcon />} onClick={() => onAdd("custom-link")}>
+        Custom link
+      </EditorRailItem>
+      <EditorRailItem icon={<SquareMousePointer />} onClick={() => onAdd("button")}>
+        Button
+      </EditorRailItem>
+      {/* Posts / Categories carry no post/category FK on the menu item model
+          (pageId XOR href), so they are DEFERRED rather than faked — rendered
+          as real dimmed, aria-disabled, "Coming soon" controls. */}
+      <EditorRailItem icon={<Newspaper />} disabled title="Coming soon">
+        Posts
+      </EditorRailItem>
+      <EditorRailItem icon={<FolderTree />} disabled title="Coming soon">
+        Categories
+      </EditorRailItem>
+    </EditorRailGroup>
+  );
+}
 
 const createTempId = () => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
@@ -381,7 +426,10 @@ export function MenuEditorPage() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const media = window.matchMedia("(min-width: 1024px)");
+    // TASK-499-01: aligned to the frame's `xl` inspector breakpoint so the
+    // mobile Sheet auto-opens across the WHOLE `< xl` range (no 1024–1279 dead
+    // band where the inline inspector is CSS-hidden AND the Sheet never opens).
+    const media = window.matchMedia("(min-width: 1280px)");
     const update = () => setIsLargeScreen(media.matches);
     update();
     media.addEventListener("change", update);
@@ -554,19 +602,31 @@ export function MenuEditorPage() {
     }
   };
 
-  const handleAddItem = () => {
+  const handleAddItem = (source: MenuAddSource = pages.length ? "page" : "custom-link") => {
     if (!menuId) return;
-    const defaultLinkType = pages.length > 0 ? "page" : "url";
-    const defaultPageId = pages[0]?.id ?? "";
-    const newItem: MenuItemRecord = {
+    const base = {
       id: createTempId(),
-      label: "New item",
-      href: defaultLinkType === "url" ? "" : null,
-      pageId: defaultLinkType === "page" ? defaultPageId : null,
       parentId: null,
       orderIndex: items.filter((item) => item.parentId === null).length,
-      settings: { visibility: "all" },
+      settings: { visibility: "all" } as MenuItemSettings,
     };
+    const newItem: MenuItemRecord =
+      source === "page"
+        ? {
+            ...base,
+            label: pages[0]?.title ?? "New page link",
+            href: null,
+            pageId: pages[0]?.id ?? "",
+          }
+        : source === "button"
+          ? {
+              ...base,
+              label: "Button",
+              href: "",
+              pageId: null,
+              settings: { ...base.settings, variant: "button" },
+            }
+          : { ...base, label: "Custom link", href: "", pageId: null };
     setItems((prev) => [...prev, newItem]);
     setActiveItemId(newItem.id);
     setIsDirty(true);
@@ -729,21 +789,6 @@ export function MenuEditorPage() {
     }
   };
 
-  const rightPanel = activeItem ? (
-    <MenuItemDrawer
-      item={activeItem}
-      pages={pages}
-      parentOptions={parentOptions}
-      disabledParentIds={disabledParentIds}
-      onClose={() => {
-        setDetailsOpen(false);
-        setActiveItemId(null);
-      }}
-      onSave={handleSaveItem}
-      onDelete={handleRequestDeleteItem}
-    />
-  ) : null;
-
   const title = originalMenu?.name ?? "Menu Editor";
   const menuStatus = originalMenu?.status ?? "draft";
   const isPublished = menuStatus === "published";
@@ -753,11 +798,58 @@ export function MenuEditorPage() {
     status: menuStatus,
   });
   const missingMenuState = !isLoading && !originalMenu;
+  const rootCount = items.filter((item) => item.parentId === null).length;
+
+  // Menu-level settings shown in the inspector empty state (no active item):
+  // the relocated Menu name + Theme location guidance (carried VERBATIM so the
+  // editor-side location guidance test stays green).
+  const menuSettingsSlot = (
+    <div className="flex h-full flex-col">
+      <div className="mb-3 text-sm font-semibold">Menu settings</div>
+      <div className="space-y-2">
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Menu name</label>
+        <Input
+          value={menuName}
+          onChange={(event) => setMenuName(event.target.value)}
+          placeholder="Main Menu"
+        />
+      </div>
+      <div className="mt-4 space-y-2">
+        <label className="text-xs font-semibold uppercase text-muted-foreground">
+          Theme location
+        </label>
+        <Input
+          value={menuLocation}
+          onChange={(event) => setMenuLocation(event.target.value)}
+          placeholder="primary"
+          aria-describedby="menu-location-help menu-location-state"
+        />
+        <p id="menu-location-help" className="text-xs text-muted-foreground">
+          Slot key used by the theme or Navigation widget, for example <code>primary</code> or{" "}
+          <code>footer</code>. Leave empty for menus that are not mounted in a theme slot yet.
+        </p>
+        <p id="menu-location-state" className="text-xs text-muted-foreground">
+          {locationState}
+        </p>
+      </div>
+    </div>
+  );
+
+  const inspectorNode = (
+    <MenuItemInspector
+      activeItem={activeItem}
+      pages={pages}
+      parentOptions={parentOptions}
+      disabledParentIds={disabledParentIds}
+      onChange={handleSaveItem}
+      onDelete={handleRequestDeleteItem}
+      menuSettingsSlot={menuSettingsSlot}
+    />
+  );
 
   return (
-    <SplitShell
+    <AdminShell
       activeHref="/admin/menus"
-      rightPanel={isLargeScreen ? rightPanel : undefined}
       breadcrumbs={["Content", "Menus", title]}
       topbarActions={
         originalMenu || canSave ? (
@@ -901,55 +993,15 @@ export function MenuEditorPage() {
         ) : null}
 
         {!isLoading && originalMenu ? (
-          <div className="flex flex-col gap-6">
-            <Card className="border-border/60">
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Theme location
-                  </label>
-                  <Input
-                    value={menuLocation}
-                    onChange={(event) => setMenuLocation(event.target.value)}
-                    placeholder="primary"
-                    aria-describedby="menu-location-help menu-location-state"
-                  />
-                  <p id="menu-location-help" className="text-xs text-muted-foreground">
-                    Slot key used by the theme or Navigation widget, for example{" "}
-                    <code>primary</code> or <code>footer</code>. Leave empty for menus that are not
-                    mounted in a theme slot yet.
-                  </p>
-                  <p id="menu-location-state" className="text-xs text-muted-foreground">
-                    {locationState}
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-xs font-semibold uppercase text-muted-foreground">
-                    Menu name
-                  </label>
-                  <Input
-                    value={menuName}
-                    onChange={(event) => setMenuName(event.target.value)}
-                    placeholder="Main Menu"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/60">
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-semibold">Menu Structure</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Drag from the grip handle to reorder. Drop near the top or bottom of a row for
-                      same-level placement, or through the middle to create a sub-menu.
-                    </p>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={handleAddItem}>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add Item
-                  </Button>
+          <EditorFrame
+            title="Menu editor"
+            toolbar={<Badge variant="outline">{`${rootCount} items`}</Badge>}
+            left={<MenuAddItemsRail onAdd={handleAddItem} pageCount={pages.length} />}
+            right={inspectorNode}
+            canvas={
+              <Card className="mx-auto max-w-xl p-4 shadow-card">
+                <div className="mb-3 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {title}
                 </div>
                 {displayTree.length === 0 ? (
                   <div className="rounded-xl border border-dashed bg-muted/20 px-6 py-8 text-center text-sm text-muted-foreground">
@@ -965,20 +1017,19 @@ export function MenuEditorPage() {
                     onMove={handleMove}
                   />
                 )}
-                {/* Dashed add-item affordance ported from the prototype menu
-                    editor canvas. Wired to the same real add handler as the
-                    header "Add Item" button — presentation only. */}
+                {/* Dashed add-item affordance ported from the prototype canvas.
+                    Inserts a custom link (href), the same real add path. */}
                 <button
                   type="button"
-                  onClick={handleAddItem}
+                  onClick={() => handleAddItem("custom-link")}
                   data-menu-add-item="dashed"
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+                  className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
                 >
                   <LinkIcon className="size-4" /> Add menu item
                 </button>
-              </CardContent>
-            </Card>
-          </div>
+              </Card>
+            }
+          />
         ) : null}
 
         {!isLoading && !originalMenu && !error ? (
@@ -1005,7 +1056,7 @@ export function MenuEditorPage() {
           <SheetDescription className="sr-only">
             Edit the selected menu item settings.
           </SheetDescription>
-          {rightPanel}
+          {inspectorNode}
         </SheetContent>
       </Sheet>
 
@@ -1020,6 +1071,6 @@ export function MenuEditorPage() {
         }}
         onConfirm={handleConfirmDeleteItem}
       />
-    </SplitShell>
+    </AdminShell>
   );
 }

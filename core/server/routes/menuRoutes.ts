@@ -7,6 +7,7 @@ import {
   updateMenu,
   type MenuItemInput,
 } from "../../services/menus/menuService";
+import { MENU_DOCUMENT_INVALID, isMenuDocumentError } from "../../services/menus/menuDocumentV2";
 import { MENU_NAV_EXTRAS_INVALID, isMenuNavExtrasError } from "../../services/menus/menuNavExtras";
 import {
   MENU_APPEARANCE_INVALID,
@@ -46,6 +47,14 @@ const mapMenuError = (error: unknown) => {
   if (isMenuNavExtrasError(error)) {
     return new ApiError(MENU_NAV_EXTRAS_INVALID, "Menu nav extras invalid", 400, {
       field: error.field,
+    });
+  }
+  // `MenuDocumentError` carries a `path` (not a `field`), so without this
+  // explicit branch it would fall through to the `instanceof Error` message
+  // switch (no match) ⇒ a generic 500 instead of the intended 400 (§7).
+  if (isMenuDocumentError(error)) {
+    return new ApiError(MENU_DOCUMENT_INVALID, "Menu document invalid", 400, {
+      path: error.path,
     });
   }
   if (
@@ -166,6 +175,7 @@ export function registerMenuRoutes(router: Router, deps: MenuRouteDeps) {
         status?: "draft" | "published";
         appearance?: unknown;
         extras?: unknown;
+        document?: unknown;
       };
       const updated = await updateMenu(ctx.params.id, body);
       if (!updated) throw new Error("menu_not_found");

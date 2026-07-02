@@ -214,17 +214,26 @@ function sameSiblingList(
 Notes: (a) removal happens first, so a same-list downward reorder is off by one against the
 pre-removal rendered list; step (3) above (decrement when the removed block's original index
 < the target index in the SAME resolved list) is the required correction — clampIndex does
-NOT do it. Equivalently the canvas may compute the drop index against the POST-removal list
-before calling; the op still applies the guard so either host path is 1:1. (b) The move
+NOT do it. This is the SINGLE canonical contract: the canvas ALWAYS reports the gap index
+against the PRE-removal rendered list, and `moveScreenBlockTo` is the sole owner of the
+removal-first decrement. Do NOT also pre-subtract on the canvas side against a POST-removal
+list — because the op ALWAYS decrements in the same-list downward case, a post-removal canvas
+index would be decremented a SECOND time and land one slot too early (traced: `[A,B,C,D,E]`
+moving `A` before `D` → pre-removal canvas index `3` → op decrements to `2` → `[B,C,A,D,E]`
+correct; a post-removal index `2` → op decrements to `1` → `[B,A,C,D,E]` wrong). (b) The move
 preserves `removed.id` and its whole subtree, so
 `ScreenFieldBinding.blockId` references never dangle — no binding mutation needed
 (contrast with `duplicateScreenBlockWithBindings`, which DOES remap because it clones).
 
 ### 5. Legacy shims (non-destructive)
 
-Keep `addScreenBlock` and `moveScreenBlock` exported so existing tests/imports keep
-compiling; reimplement them as thin wrappers so `sections[0]`-only insertion is GONE at
-the single-source level:
+Keep `addScreenBlock` and `moveScreenBlock` exported so existing tests/imports **and the
+Bun-lane assistant caller** keep compiling; reimplement them as thin wrappers so
+`sections[0]`-only insertion is GONE at the single-source (editor host) level. The second
+production caller is `core/services/assistant/actionExecutorService.ts`, with FOUR sites that
+must keep working through the delegating shims: `addScreenBlock(document, block)` no-target ⇒
+`sections[0]` append (`:1259`), `addScreenBlock(..., { parentId, slotId })` (`:1595`, `:4347`),
+and `moveScreenBlock(...)` up/down (`:1655`, `:4400`):
 
 ```ts
 // non-destructive: same signatures, delegate to the new ops.
@@ -233,7 +242,7 @@ export function addScreenBlock(document, block, target?: { parentId: string; slo
     document,
     block,
     target
-      ? { kind: "slot-end", sectionId: findScreenSectionOfBlock(document, target.parentId) ?? "", parentId: target.parentId, slotId: target.slotId }
+      ? { kind: "slot-end", sectionId: findScreenBlockLocation(document, target.parentId)?.sectionId ?? "", parentId: target.parentId, slotId: target.slotId }
       : { kind: "section-end", sectionId: document.sections[0]?.id ?? "" } // ensureSectionForInsert re-seeds if empty
   );
 }
@@ -241,8 +250,13 @@ export function addScreenBlock(document, block, target?: { parentId: string; slo
 // moveScreenBlockTo with the adjacent index; keep the existing boundary no-op semantics.
 ```
 
-(The leaf may instead migrate all call sites and delete the shims — either way document
-the choice in 500-05; `sections[0]`-only insertion must be unreachable afterward.)
+(The leaf may instead migrate ALL call sites — including the four `actionExecutorService.ts`
+sites above — and delete the shims; that path MUST catalogue and migrate those uncatalogued
+assistant sites too, or it breaks the Bun lane. Either way document the choice in 500-05. Scope
+the "`sections[0]`-only insertion is unreachable" guarantee to the **interactive editor host**
+(`CustomScreenEditorPage`): the assistant no-target path (`:1259`) has no `selectedSection`
+concept and legitimately still appends to `sections[0]` via the delegating shim — expected, not
+a regression.)
 
 ### 6. Host wiring — `CustomScreenEditorPage.tsx`
 
@@ -299,9 +313,21 @@ Keep `handleMoveBlock(up|down)` for keyboard/button reorder (re-expressed over
 `moveScreenBlockTo` with the adjacent index, or left on `moveScreenBlock`). Selection +
 `selectedSectionId` always FOLLOW the inserted/moved block.
 
-### 7. Canvas affordances — `ScreenAuthoringCanvas.tsx`
+### 7. Canvas affordances — `ScreenRuntimeRenderer.tsx` (builder path) + `ScreenAuthoringCanvas.tsx` (prop threading)
 
-New props (forwarded from the host), added to `ScreenAuthoringCanvasProps` (`:49-81`):
+`ScreenAuthoringCanvas.tsx` does NOT itself render any block cards, sections, or slots — it
+embeds a SINGLE `<ScreenRuntimeRenderer mode="builder">` (`ScreenAuthoringCanvas.tsx:485`).
+Every corner-tag selectable card (`wrap()` + `Badge`, `ScreenRuntimeRenderer.tsx:313-360`),
+every section (`section.blocks.map`, `:988-1056`), and every per-slot drop target
+(`renderSlots` with `data-screen-runtime-slot` + `Empty {slotId}`, `:208-231`; tabs empty
+slots `:805-822`) lives INSIDE `ScreenRuntimeRenderer.tsx`. The affordances below are
+therefore interleaved into that component's **builder path**, gated on `mode === "builder"`
+so `mode === "preview"` and `mode === "entry"` render byte-identically (untouched). Reuse the
+existing `data-screen-runtime-slot` markers and the `renderBuilderActions(block)` hook already
+threaded through the renderer.
+
+New props (forwarded from the host through `ScreenAuthoringCanvasProps` (`:49-81`) into the
+embedded `<ScreenRuntimeRenderer>`):
 
 ```ts
 onAddBlockAt?: (type: ScreenBlockKind, target: ScreenInsertTarget, field?: ContentField) => void; // optional direct path
@@ -310,25 +336,37 @@ onDragMove: (blockId: string, target: ScreenInsertTarget) => void;
 insertPoint: ScreenInsertTarget | null;                          // to highlight the armed slot/gap
 ```
 
-Rendering (layered onto the existing selectable corner-tag card, NOT a rewrite):
+Rendering (layered onto the existing selectable corner-tag card in the builder path, NOT a
+rewrite):
 
-- **Before/after gaps.** Between every sibling card render a thin hover "＋ insert here"
-  gap that calls `onSetInsertPoint({ kind: "section-index"|"slot-index", …, index })` with
-  the gap's index (before = current index, after = index+1). The armed gap gets a visible
-  ring; the next palette/`Field` chip click inserts there.
-- **Per-slot drop zones.** For every container (`field-group` `content`; `columns`
-  `left`/`right`; `tabs` `tab-*`) render an explicit labeled empty-slot drop target so an
-  author can aim ANY nested slot at arbitrary depth (recursion already exists via
-  `buildBlockLayerNodes`, `:93-116` — reuse that walk for the render tree).
-- **Drag handles.** Each block card is `draggable`; on drop over a gap/slot the canvas
-  resolves a `ScreenInsertTarget` from the drop position and calls
-  `onDragMove(draggedId, target)`. Because `moveScreenBlockTo` removes the node FIRST, a
+- **Before/after gaps.** In `section.blocks.map` (`:988-1056`) and inside every slot's
+  `blocks.map` / tabs `slotBlocks.map` (`renderSlots` `:208-231`, tabs `:805-822`), between
+  every sibling card render a thin hover "＋ insert here" gap that calls
+  `onSetInsertPoint({ kind: "section-index"|"slot-index", …, index })` with the gap's index
+  (before = current index, after = index+1). The armed gap gets a visible ring; the next
+  palette/`Field` chip click inserts there. Builder-only (`mode === "builder"`).
+- **Per-slot drop zones.** The existing `renderSlots`/tabs empty-slot placeholders
+  (`Empty {slotId}`, `:208-231` / `:805-822`) already tag each slot with
+  `data-screen-runtime-slot`; in the builder path turn them into explicit labeled drop
+  targets — and add equivalent drop targets alongside NON-empty slots too — so an author can
+  aim ANY nested slot (`field-group` `content`; `columns` `left`/`right`; `tabs` `tab-*`) at
+  arbitrary depth. Recursion is already inherent to `renderBlock`/`renderSlots` (they recurse
+  into nested containers), so NO new walker is needed. (Do NOT reuse `buildBlockLayerNodes`
+  (`ScreenAuthoringCanvas.tsx:93-116`) for this — that walker builds the `AuthoringLayerNode[]`
+  tree for the layers side-rail (`AuthoringLayersPanel`, labels prefixed `slotId: label`), not
+  the canvas card render.)
+- **Drag handles.** Each `wrap()` card (`:313-360`) is `draggable` in the builder path; on
+  drop over a gap/slot the renderer resolves a `ScreenInsertTarget` from the drop position and
+  calls `onDragMove(draggedId, target)`. Because `moveScreenBlockTo` removes the node FIRST, a
   same-list DOWNWARD move (removed block sits before the target gap) is off by one against
   the pre-removal rendered list — `clampIndex` does NOT fix this (it only bounds `[0, len]`).
-  `moveScreenBlockTo` applies the required decrement (see §4 step 3); alternatively the canvas
-  may compute the gap index against the POST-removal list before reporting it. Either way the
-  drop lands 1:1 (e.g. moving `item[0]` before `item[3]` in a 5-list yields `[1,2,item0,3,4]`,
-  not `[1,2,3,item0,4]`). Use native HTML5 DnD (dataTransfer
+  The canvas ALWAYS reports the gap index against the PRE-removal rendered list and
+  `moveScreenBlockTo` is the SOLE owner of the removal-first decrement (see §4 step 3). Do NOT
+  also pre-subtract on the canvas side against a POST-removal list: the op already decrements
+  unconditionally in this case, so a post-removal index would be decremented twice and land one
+  slot too early. With the single canonical path the drop lands 1:1 (e.g. moving `item[0]`
+  before `item[3]` in a 5-list yields `[1,2,item0,3,4]`, not `[1,2,3,item0,4]`). Use native
+  HTML5 DnD (dataTransfer
   carries `blockId`) to stay dependency-free and Bun-free-testable via fireEvent.
 - A container that is currently being dragged suppresses its own inner drop zones (visual
   reinforcement of the cycle guard; the op is the real guard).
@@ -461,7 +499,9 @@ synthetic-only pass.
 ```
 EDIT core/services/customScreens/screenDocumentOps.ts          (ScreenInsertTarget, addScreenBlockAt, moveScreenBlockTo, findScreenBlockLocation, resolveInsertList, clampIndex, sameSiblingList same-list decrement helper; addScreenBlock/moveScreenBlock become non-destructive shims)
 EDIT core/admin/ui/custom-screens/CustomScreenEditorPage.tsx   (insertPoint state, resolveInsertTarget, handleAddBlock rewrite, handleDragMove; drop resolveSelectedSlotTarget)
-EDIT core/admin/ui/custom-screens/ScreenAuthoringCanvas.tsx    (before/after gaps, per-slot drop zones, draggable cards, onSetInsertPoint/onDragMove props)
+EDIT core/admin/ui/custom-screens/ScreenRuntimeRenderer.tsx    (builder path ONLY, mode === "builder": before/after gaps in section.blocks.map :988-1056 + slot/tabs blocks.map :208-231/:805-822, per-slot drop zones on the existing data-screen-runtime-slot placeholders, draggable wrap() cards :313-360 + native DnD → onSetInsertPoint/onDragMove; preview/entry paths untouched)
+EDIT core/admin/ui/custom-screens/ScreenAuthoringCanvas.tsx    (add onSetInsertPoint/onDragMove/insertPoint to ScreenAuthoringCanvasProps :49-81 and thread them into the embedded <ScreenRuntimeRenderer mode="builder"> :485; NOT the affordance render site)
+EDIT core/services/assistant/actionExecutorService.ts          (ONLY if the delete-shims path is taken: migrate the 4 addScreenBlock/moveScreenBlock sites — :1259 no-target, :1595/:4347 slot-target, :1655/:4400 move — off the removed shims; default non-destructive shim path leaves this file untouched)
 EDIT core/admin/ui/custom-screens/ScreenBlockInspector.tsx     (optional "Insert into" slot picker for a selected container)
 ADD  tests/vitest/customScreens/screen-document-insertion.test.ts
 ADD  tests/vitest/ui-integration/screen-editor-insertion-targeting.test.tsx

@@ -5,7 +5,8 @@
 **Category:** Front Renderer / Site Shell / Content (Menus)
 **Estimated Effort:** Large
 **Dependencies:** TASK-499-02 (menuDocumentV2 + `resolvePublishedMenuDocument`), TASK-455 (site shell), TASK-458-02 (`buildSiteShellCss` byte-identity)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-499
 
 ---

@@ -372,9 +372,22 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
   // when a shell part actually renders. The stylesheet is built from the
   // published menu's appearance; a null/legacy appearance reproduces the
   // pre-appearance stylesheet byte-identically (TASK-458-02).
-  const hasSiteShell = Boolean(siteShell?.navigation || siteShell?.footerDocument);
+  // A document menu (TASK-499-04) reuses the base `.site-header*` layout sheet,
+  // so a ZERO-ITEM document menu (mapped `navigation === null`) must STILL emit
+  // it — gate on `navigationDocument` too. When a document is active the base
+  // layout is emitted with a NULL appearance so residual legacy appearance props
+  // (e.g. sticky on a migrated menu) never bleed under the custom menu; the
+  // document's own appearance rides its scoped `menuDocumentCss` sheet instead.
+  const hasSiteShell = Boolean(
+    siteShell?.navigation || siteShell?.navigationDocument || siteShell?.footerDocument
+  );
   const inlineCssWithShell = hasSiteShell
-    ? [inlineCss, buildSiteShellCss(siteShell?.navigationAppearance ?? null)]
+    ? [
+        inlineCss,
+        buildSiteShellCss(
+          siteShell?.navigationDocument ? null : (siteShell?.navigationAppearance ?? null)
+        ),
+      ]
         .filter(Boolean)
         .join("\n")
     : inlineCss;

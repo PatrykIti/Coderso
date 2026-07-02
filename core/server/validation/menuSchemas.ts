@@ -24,6 +24,10 @@ export const menuUpdateSchema = {
     // schema + button/image allowlist, machine-readable
     // `menu_nav_extras_invalid`); `null` clears the slot (TASK-458-03).
     extras: { type: ["array", "null"] },
+    // Deep validation is owned by `normalizeMenuDocumentV2ForWrite` (menu
+    // section/block schema, machine-readable `menu_document_invalid`); `null`
+    // or an empty document clears the slot (TASK-499-02).
+    document: { type: ["object", "null"] },
   },
   additionalProperties: false,
 };
@@ -64,6 +68,11 @@ export const menuItemsSchema = {
               },
               description: { type: "string" },
               icon: { type: "string" },
+              // TASK-499-01: additive fail-soft per-item link affordances
+              // (mirrors how visibility/badge were added). Deep re-validation
+              // is still owned by `normalizeMenuItemSettings` (drop-unknown).
+              openInNewTab: { type: "boolean" },
+              variant: { enum: ["link", "button"] },
             },
           },
         },

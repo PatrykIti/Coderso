@@ -230,8 +230,27 @@ route handler, no service module).
 - `tests/vitest/ui-integration/canvas-editor/canvas-editor.test.tsx` — shell slot/behaviour
   tests (`:95`,`:110`,`:186`) unchanged; the shell contract (controlled read-only, reopen
   chip only when `!panelOpen`) is preserved by this subtask.
-- All other `page-editor-*` suites (v2-flow, floating-panel) stay green — the refactor
-  cannot reach Pages behaviour beyond removing the one duplicate closer.
+**Must update — the one currently-passing suite that asserts the removed button's presence:**
+
+- `tests/vitest/ui/page-editor-v2-flow.test.tsx` — test *"PageEditor toolbar panel icons
+  expose metadata tooltips and toggle a single subpanel"* (`:3409`) asserts the **presence**
+  of the removed Pages closer: the label array at `:3435`
+  (`for (const label of ["Hide options panel", "Collapse toolbar", "Duplicate section"])`)
+  expects each control's `data-slot` to be `"tooltip-trigger"`, and the removed builder
+  closer renders exactly `aria-label="Hide options panel"` (via
+  `toolbarActionTooltips.hidePanel` → `hidePanel.label`). Once the else-arm is replaced with
+  `null`, `querySelector` returns null and `expect(undefined).toBe("tooltip-trigger")`
+  **fails**. Update: **drop `"Hide options panel"` from the `:3435` array** (keep
+  `"Collapse toolbar"` and `"Duplicate section"`, which survive), and revise the `:3432`–`:3434`
+  comment (which currently records the TASK-495-02 decision this removal reverses — *"the
+  builder chrome (page host) replaces the legacy drag handle with a header 'Hide options
+  panel' close button"*) to note the closer was removed by TASK-500-03. Do NOT weaken the
+  two `"Collapse toolbar"`/`"Duplicate section"` assertions.
+
+- All other `page-editor-*` suites (floating-panel, and the rest of v2-flow) stay green —
+  the refactor cannot reach Pages behaviour beyond removing the one duplicate closer; the
+  single `page-editor-v2-flow.test.tsx` presence-assertion above is the lone exception and is
+  updated in lockstep with the removal.
 
 **Gate:** `bun --cwd core lint`, `bun --cwd core lint:types`, `bun --cwd core test:bun`,
 full vitest, the repo gate alias, and a real-input playwright smoke on `:5173==200`

@@ -8,12 +8,7 @@ import {
   useRef,
   useState,
 } from "react";
-import type {
-  CSSProperties,
-  KeyboardEvent as ReactKeyboardEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactNode,
-} from "react";
+import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import {
   ArrowDown,
   ArrowLeft,
@@ -24,7 +19,6 @@ import {
   Clipboard,
   ClipboardPaste,
   Eye,
-  GripVertical,
   History,
   Layers,
   Maximize2,
@@ -217,7 +211,6 @@ import {
   setSectionVisibleForBreakpoint,
 } from "../../../services/pages/pageEditorMutationActions";
 import {
-  clampToolbarOffset,
   hasAnyResponsiveOverride,
   hasPathValue,
   hasResponsiveOverride,
@@ -519,14 +512,6 @@ const coerceControlFieldValue = (control: PageEditorControlDefinition, value: st
   return value;
 };
 
-// Round-3 friction A: the floating toolbar anchors `bottom-6` (24px) over the
-// canvas, so its measured height plus the anchor offset plus breathing room is
-// reserved as scroll clearance below the canvas content. Without it, targets
-// under the expanded panel (ghost "Add block" tiles, blocks at the bottom of
-// short pages) could never be scrolled clear and clicks landed on the panel
-// until the selection was cleared with Escape.
-const TOOLBAR_CANVAS_CLEARANCE_GAP = 24 + 16;
-
 const isEditableShortcutTarget = (target: EventTarget | null) => {
   if (typeof HTMLElement === "undefined" || !(target instanceof HTMLElement)) return false;
   const tagName = target.tagName.toLowerCase();
@@ -809,13 +794,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     editorHost.appearancePanel ? "host-appearance" : "content"
   );
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false);
-  const [toolbarDragging, setToolbarDragging] = useState(false);
-  const [toolbarOffset, setToolbarOffset] = useState({ x: 0, y: 0 });
-  const toolbarDragRef = useRef({ startX: 0, startY: 0, baseX: 0, baseY: 0 });
   const toolbarElementRef = useRef<HTMLDivElement | null>(null);
-  // Measured floating-toolbar footprint (height + anchor + gap) reserved as
-  // canvas scroll clearance while the toolbar is visible (round-3 friction A).
-  const [toolbarCanvasClearance, setToolbarCanvasClearance] = useState(0);
   const [deleteSelectionTarget, setDeleteSelectionTarget] = useState<ToolbarDeleteTarget | null>(
     null
   );
@@ -952,39 +931,21 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
   // A section/block selection exists, so the floating control panel has content
   // to host; the chrome panel toggle (panelOpen) decides whether it is shown.
   const hasFloatingPanelSelection = Boolean(selectedSection && resolvedSelectedSection);
-  // Mirrors the floating toolbar render condition; drives the canvas scroll
-  // clearance that keeps canvas targets reachable under the toolbar.
-  const floatingToolbarVisible = hasFloatingPanelSelection && panelOpen;
-  // TASK-495-02 scope gate: the prototype covers page + page-template only. The
-  // menu visual designer stays on the legacy dark bottom-center draggable
-  // toolbar (drag + clearance plumbing, topbarActions in the global top bar);
-  // page + page-template adopt the new builder chrome (PageHeader + sub-toolbar
-  // + light right-pinned panel).
-  const useLegacyChrome = editorHost.mode === "menu";
-  const useBuilderChrome = !useLegacyChrome;
-  const panelTone: "dark" | "light" = useLegacyChrome ? "dark" : "light";
-  const panelTokens =
-    panelTone === "dark"
-      ? {
-          headerBorder: "border-white/10",
-          label: "text-slate-400",
-          chip: "bg-white/10",
-          scopePill: "bg-sky-400/15 text-sky-200",
-          subPanelBg: "bg-white/5 text-slate-100",
-          subHeaderBorder: "border-white/10",
-          subTitle: "text-slate-200",
-          subDesc: "text-slate-400",
-        }
-      : {
-          headerBorder: "border-border",
-          label: "text-muted-foreground",
-          chip: "bg-muted text-muted-foreground",
-          scopePill: "bg-primary-soft text-primary-soft-foreground",
-          subPanelBg: "bg-muted/40 text-foreground",
-          subHeaderBorder: "border-border",
-          subTitle: "text-foreground",
-          subDesc: "text-muted-foreground",
-        };
+  // TASK-499-03: the menu design host no longer routes through PageEditor, so the
+  // legacy dark bottom-center draggable chrome is retired. Pages + page-templates
+  // are the only hosts and always use the builder chrome (PageHeader + sub-toolbar
+  // + light right-pinned panel through the shared CanvasEditor shell). The panel
+  // tone is always light; these are the light control-chrome tokens.
+  const panelTokens = {
+    headerBorder: "border-border",
+    label: "text-muted-foreground",
+    chip: "bg-muted text-muted-foreground",
+    scopePill: "bg-primary-soft text-primary-soft-foreground",
+    subPanelBg: "bg-muted/40 text-foreground",
+    subHeaderBorder: "border-border",
+    subTitle: "text-foreground",
+    subDesc: "text-muted-foreground",
+  };
   const selectedBlock =
     selectedBlockPath && selectedSection
       ? getPageBlockAtPath(selectedSection, selectedBlockPath)
@@ -2000,58 +1961,6 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     setDocumentDraft,
   ]);
 
-  const startToolbarDrag = useCallback(
-    (event: ReactPointerEvent<HTMLButtonElement>) => {
-      event.preventDefault();
-      toolbarDragRef.current = {
-        startX: event.clientX,
-        startY: event.clientY,
-        baseX: toolbarOffset.x,
-        baseY: toolbarOffset.y,
-      };
-      setToolbarDragging(true);
-    },
-    [toolbarOffset]
-  );
-
-  useEffect(() => {
-    if (!toolbarDragging || typeof window === "undefined") return undefined;
-    const handlePointerMove = (event: PointerEvent) => {
-      const drag = toolbarDragRef.current;
-      setToolbarOffset({
-        x: clampToolbarOffset(drag.baseX + event.clientX - drag.startX, -360, 360),
-        y: clampToolbarOffset(drag.baseY + event.clientY - drag.startY, -260, 260),
-      });
-    };
-    const handlePointerUp = () => setToolbarDragging(false);
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-    return () => {
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [toolbarDragging]);
-
-  // Round-3 friction A: while the floating toolbar is visible, reserve its
-  // measured footprint as bottom scroll clearance on the canvas scroller.
-  // Targets that sit under the expanded panel (ghost "Add block" tiles,
-  // blocks near the bottom of short pages) stay reachable by scrolling — a
-  // single click then acts without first deselecting via Escape. The
-  // ResizeObserver fires on observe and on every expand/collapse/panel-switch
-  // resize, so the clearance always tracks the live toolbar height.
-  useEffect(() => {
-    if (!floatingToolbarVisible || typeof ResizeObserver === "undefined") return undefined;
-    const element = toolbarElementRef.current;
-    if (!element) return undefined;
-    const observer = new ResizeObserver(() => {
-      setToolbarCanvasClearance(
-        Math.ceil(element.getBoundingClientRect().height) + TOOLBAR_CANVAS_CLEARANCE_GAP
-      );
-    });
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [floatingToolbarVisible]);
-
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -2592,106 +2501,20 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     },
   });
 
-  const topbarActions = (
-    <div className="flex items-center gap-2">
-      <DeviceSwitcher value={device} onChange={setDevice} />
-      <Button
-        type="button"
-        variant={panelOpen ? "soft" : "ghost"}
-        size="sm"
-        onClick={() => setPanelOpen((open) => !open)}
-        aria-label={panelOpen ? "Hide panel" : "Show panel"}
-        aria-pressed={panelOpen}
-      >
-        <PanelRight className="h-4 w-4" />
-        Panel
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => setLayersOpen((open) => !open)}
-      >
-        <Layers className="h-4 w-4" />
-        Layers
-      </Button>
-      <Button type="button" variant="ghost" size="sm" onClick={() => setSettingsOpen(true)}>
-        <Settings2 className="h-4 w-4" />
-        {editorHost.settingsLabel}
-      </Button>
-      {revisionsHost ? (
-        <Button type="button" variant="ghost" size="sm" onClick={openRevisions}>
-          <History className="h-4 w-4" />
-          History
-        </Button>
-      ) : null}
-      {editorHost.preview ? (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={previewLoading || !page}
-          onClick={handlePreview}
-        >
-          <Eye className="h-4 w-4" />
-          Preview
-        </Button>
-      ) : null}
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        disabled={isSaving || !page}
-        onClick={handleSaveDraft}
-      >
-        <Save className="h-4 w-4" />
-        {isSaving ? "Saving..." : "Save"}
-      </Button>
-      {editorHost.publish ? (
-        <Button type="button" size="sm" disabled={isPublishing || !page} onClick={handlePublish}>
-          {isPublishing ? "Publishing..." : "Publish"}
-        </Button>
-      ) : null}
-    </div>
-  );
-
   return (
     <EditorShell
       breadcrumbs={
-        useLegacyChrome ? (
-          // Menu (legacy) keeps the full breadcrumb: resourceLabel · title ·
-          // StatusBadge · Unsaved pill in the global top bar.
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{editorHost.resourceLabel}</span>
-            <span className="text-sm font-semibold">{page?.title ?? settingsTitle}</span>
-            <StatusBadge status={page?.status ?? "draft"} />
-            {hasUnsavedChanges ? (
-              <Badge variant="warning" className="text-[10px] font-semibold uppercase">
-                Unsaved
-              </Badge>
-            ) : null}
-          </div>
-        ) : (
-          // Builder chrome: top-bar breadcrumb is resourceLabel · title only.
-          // The StatusBadge + Unsaved pill relocate to the page-builder
-          // sub-toolbar (Step 3).
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-muted-foreground">{editorHost.resourceLabel}</span>
-            <span className="text-sm font-semibold">{page?.title ?? settingsTitle}</span>
-          </div>
-        )
+        // Builder chrome: top-bar breadcrumb is resourceLabel · title only.
+        // The StatusBadge + Unsaved pill live in the page-builder sub-toolbar.
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{editorHost.resourceLabel}</span>
+          <span className="text-sm font-semibold">{page?.title ?? settingsTitle}</span>
+        </div>
       }
-      // Builder chrome drains the global top bar; the actions move to the
-      // in-content PageHeader + sub-toolbar. Menu keeps the legacy topbarActions.
-      topbarActions={useLegacyChrome ? topbarActions : undefined}
       centerScroll={false}
       contentClassName="h-full"
     >
-      <div
-        className={`relative flex h-full min-h-0 flex-col ${
-          useLegacyChrome ? "bg-dotted" : "bg-background"
-        }`}
-      >
+      <div className="relative flex h-full min-h-0 flex-col bg-background">
         {error ? (
           <Alert variant="destructive" className="m-4">
             <AlertTitle>Page editor error</AlertTitle>
@@ -2787,47 +2610,20 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         {(() => {
           const canvasBody = (
             <>
-              {/* TASK-495-03 P4b: the BUILDER relocates this device-context strip OUT
-              of the relative canvas region (into the card chrome, above the
-              region — see the builder branch below) so the floating rail's
-              `top-4` measures from the dotted scroller top and lands ~16px
-              inside the dots (proto parity). The MENU keeps it here as the
-              region's first child (P4a: with its `border-b` divider) so the menu
-              body stays byte-identical. The `data-page-editor-canvas-context`
-              hook lives on exactly one rendered copy per path. */}
-              {!useBuilderChrome ? (
-                <div
-                  className="flex items-center justify-center border-b border-border bg-muted/40 px-4 py-2 text-[11px] font-semibold uppercase text-muted-foreground"
-                  data-page-editor-canvas-context={device}
-                >
-                  {device === "desktop"
-                    ? `${deviceScopeReadout("desktop")} · base view`
-                    : `${deviceScopeReadout(device)} · override context`}
-                </div>
-              ) : null}
-
+              {/* TASK-495-03 P4b: the builder relocates the device-context strip
+              into the card chrome (above the region — the shared CanvasEditor
+              shell's `deviceContext` slot) so the floating rail's `top-4`
+              measures from the dotted scroller top and lands ~16px inside the
+              dots (proto parity). */}
               <div
-                className={`min-h-0 flex-1 overflow-auto overscroll-contain p-6 ${
-                  useBuilderChrome ? "bg-dotted lg:p-8" : ""
-                }`}
+                className="min-h-0 flex-1 overflow-auto overscroll-contain bg-dotted p-6 lg:p-8"
                 data-page-editor-canvas-scroller="true"
-                // MENU (legacy): reserved floating-toolbar clearance — the bottom
-                // padding guarantees scroll room past the toolbar, and the CSS
-                // variable feeds the scroll-margin-bottom rule (globals.css) so
-                // scroll-into-view lands canvas targets above the panel.
-                // BUILDER: the right rail no longer covers the bottom; reserve RIGHT
+                // The right rail no longer covers the bottom; reserve RIGHT
                 // padding instead so the centered frame is not occluded by the overlay.
                 style={
-                  useLegacyChrome
-                    ? floatingToolbarVisible && toolbarCanvasClearance > 0
-                      ? ({
-                          paddingBottom: toolbarCanvasClearance,
-                          "--page-editor-toolbar-clearance": `${toolbarCanvasClearance}px`,
-                        } as CSSProperties)
-                      : undefined
-                    : panelOpen && hasFloatingPanelSelection
-                      ? ({ paddingRight: 300 } as CSSProperties) // 280 rail + ~20 inset
-                      : undefined
+                  panelOpen && hasFloatingPanelSelection
+                    ? ({ paddingRight: 300 } as CSSProperties) // 280 rail + ~20 inset
+                    : undefined
                 }
                 onClick={() => selectSection(null)}
               >
@@ -2991,12 +2787,9 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             </>
           );
 
-          // TASK-496-01: the floating-panel BODY, shared by the legacy (menu)
-          // rail wrapper (rendered inline in the menu branch below) and the
-          // builder shell's `panel` slot. Only the body is shared — the OUTER
-          // positioning div differs per chrome (menu = inline draggable dark
-          // panel; builder = the shell-supplied right rail) — so the body still
-          // reads `useLegacyChrome` for its own per-control arms.
+          // TASK-496-01: the floating-panel BODY rendered into the shared
+          // CanvasEditor shell's `panel` slot (the builder right rail). The
+          // shell owns the OUTER positioning div; this is body-only chrome.
           const railBody =
             selectedSection && resolvedSelectedSection ? (
               <>
@@ -3007,27 +2800,13 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                 never collide with the scope pill (owner finding #3). The
                 builder rail re-stacks the head vertically to fit 280px.
               */}
-                <div
-                  className={
-                    useLegacyChrome ? "flex flex-wrap items-center gap-2" : "flex flex-col gap-2"
-                  }
-                  data-page-editor-toolbar-row="head"
-                >
-                  {useLegacyChrome ? (
-                    <ToolbarIconButton
-                      tooltip={toolbarActionTooltips.drag}
-                      onPointerDown={startToolbarDrag}
-                    >
-                      <GripVertical className="h-4 w-4" />
-                    </ToolbarIconButton>
-                  ) : (
-                    <ToolbarIconButton
-                      tooltip={toolbarActionTooltips.hidePanel}
-                      onClick={() => setPanelOpen(false)}
-                    >
-                      <PanelRight className="h-4 w-4" />
-                    </ToolbarIconButton>
-                  )}
+                <div className="flex flex-col gap-2" data-page-editor-toolbar-row="head">
+                  <ToolbarIconButton
+                    tooltip={toolbarActionTooltips.hidePanel}
+                    onClick={() => setPanelOpen(false)}
+                  >
+                    <PanelRight className="h-4 w-4" />
+                  </ToolbarIconButton>
                   <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
                     <PanelTop className={`h-4 w-4 ${panelTokens.label}`} />
                     <span className="truncate text-sm font-semibold">{toolbarTargetLabel}</span>
@@ -3065,26 +2844,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                     </ToolbarIconButton>
                     {!toolbarCollapsed ? (
                       <>
-                        {/* Undo/Redo live in the panel only for the legacy (menu)
-                        chrome; the builder relocates them to the sub-toolbar. */}
-                        {useLegacyChrome ? (
-                          <>
-                            <ToolbarIconButton
-                              tooltip={toolbarActionTooltips.undo}
-                              disabled={!canUndoEditorChange}
-                              onClick={undoEditorChange}
-                            >
-                              <Undo2 className="h-4 w-4" />
-                            </ToolbarIconButton>
-                            <ToolbarIconButton
-                              tooltip={toolbarActionTooltips.redo}
-                              disabled={!canRedoEditorChange}
-                              onClick={redoEditorChange}
-                            >
-                              <Redo2 className="h-4 w-4" />
-                            </ToolbarIconButton>
-                          </>
-                        ) : null}
+                        {/* Undo/Redo live in the sub-toolbar (builder chrome), not
+                        in the floating panel. */}
                         <ToolbarIconButton
                           tooltip={toolbarActionTooltips.copySelection}
                           onClick={() => void copySelectedFragment()}
@@ -3320,7 +3081,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
           // the previously inlined builder rail + reopen.
           const builderRail =
             selectedSection && resolvedSelectedSection ? (
-              <EditorControlToneContext.Provider value={panelTone}>
+              <EditorControlToneContext.Provider value="light">
                 {railBody}
               </EditorControlToneContext.Provider>
             ) : null;
@@ -3338,7 +3099,7 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             </button>
           ) : null;
 
-          return useBuilderChrome ? (
+          return (
             // BUILDER (page + page-template): route the proven chrome through the
             // shared `CanvasEditor` shell. The PageHeader, sub-toolbar control
             // cluster, device-context strip, canvas body, floating rail + reopen
@@ -3495,59 +3256,6 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
               }}
               reopenAffordance={builderReopen}
             />
-          ) : (
-            // MENU (legacy): flat body — the SAME shared canvas body with NO card,
-            // NO in-content PageHeader, NO sub-toolbar, plus the legacy draggable
-            // dark rail + bottom-right reopen chip rendered inline (byte-identical
-            // to today; the menu never routes through the shared shell).
-            <>
-              {canvasBody}
-              {panelOpen && selectedSection && resolvedSelectedSection ? (
-                <EditorControlToneContext.Provider value={panelTone}>
-                  <div
-                    ref={toolbarElementRef}
-                    className={
-                      useLegacyChrome
-                        ? "absolute bottom-6 left-1/2 z-30 w-[min(760px,calc(100%-2rem))] rounded-2xl bg-slate-950 p-2 text-white shadow-2xl"
-                        : "absolute right-4 top-4 z-30 flex max-h-[calc(100%-2rem)] w-[min(280px,calc(100%-2rem))] flex-col overflow-hidden rounded-2xl border border-border bg-popover p-2 text-foreground shadow-pop"
-                    }
-                    // MENU: draggable transform. BUILDER: no transform (the right rail
-                    // is pinned, not dragged — see the drag/clearance reconciliation).
-                    style={
-                      useLegacyChrome
-                        ? {
-                            transform: `translateX(calc(-50% + ${toolbarOffset.x}px)) translateY(${toolbarOffset.y}px)`,
-                          }
-                        : undefined
-                    }
-                    aria-label={`${toolbarTargetLabel} tools`}
-                    data-page-editor-floating-toolbar="true"
-                    data-page-editor-toolbar-collapsed={toolbarCollapsed ? "true" : "false"}
-                    // Drag-state hook only exists on the legacy (menu) draggable panel.
-                    data-page-editor-toolbar-dragging={
-                      useLegacyChrome ? (toolbarDragging ? "true" : "false") : undefined
-                    }
-                  >
-                    {railBody}
-                  </div>
-                </EditorControlToneContext.Provider>
-              ) : null}
-              {!panelOpen && hasFloatingPanelSelection ? (
-                // Reopen affordance when the sole control panel is hidden (mirrors the
-                // shared CanvasEditor "Show panel" button). Restores panelOpen only.
-                // MENU keeps it bottom-right (mirrors the legacy bottom panel).
-                <button
-                  type="button"
-                  onClick={() => setPanelOpen(true)}
-                  className={`absolute z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary ${
-                    useLegacyChrome ? "bottom-6 right-6" : "right-4 top-4"
-                  }`}
-                  aria-label="Show panel"
-                >
-                  <SlidersHorizontal className="size-3.5" /> Show panel
-                </button>
-              ) : null}
-            </>
           );
         })()}
 

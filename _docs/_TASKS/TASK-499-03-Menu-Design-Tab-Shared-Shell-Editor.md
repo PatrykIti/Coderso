@@ -5,7 +5,8 @@
 **Category:** Admin UI / Content (Menus) / Page Builder / Visual Refresh
 **Estimated Effort:** Large
 **Dependencies:** TASK-499-02 (menuDocumentV2), TASK-499-04 (`core/site/menuDocumentCss.ts` — the device-forced `buildMenuDocumentPreviewCss` the in-canvas preview consumes, §2), TASK-496-01 (`CanvasEditor` shared shell), TASK-479 (control primitives)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-01
 **Parent Task:** TASK-499
 
 ---
