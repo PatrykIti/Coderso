@@ -29,10 +29,12 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1209 for the next changelog entry.
+assistant policy coverage fix. Use 1211 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1210 | 2026-07-02 | TASK-501 Menu per-device overrides, orientation & block visibility | Admin UI/Content (Menus)/Navigation/Page Builder/Responsive/QA/Docs/Task Board |
+| 1209 | 2026-07-02 | TASK-500 Screen builder — sections, insertion targeting and editor UX | Admin UI/Custom Screens/Screen Builder/Page-Builder UX/QA/Docs/Task Board |
 | 1208 | 2026-07-01 | TASK-499 Menu items restyle and Design tab (menuDocumentV2) | Admin UI/Content (Menus)/Navigation/Page Builder/Visual Refresh/QA/Docs/Task Board |
 | 1207 | 2026-07-01 | TASK-498 Custom-screen data-oriented builder and look parity | Custom Screens/Admin UI/Screen Builder/Screen Model/Relations/Visual Refresh/QA/Docs/Task Board |
 | 1206 | 2026-06-30 | TASK-497 Posts list and editor prototype-parity restyle | Admin UI/Content (Posts)/Visual Refresh/QA/Docs/Task Board |

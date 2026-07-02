@@ -6,7 +6,8 @@
 **Category:** Admin UI / Custom Screens / Pages / Shared Editor Shell
 **Estimated Effort:** Small
 **Dependencies:** TASK-496-01 (shared `CanvasEditor` shell), TASK-496-02 (Screens on the shell), TASK-495-03 (Pages builder chrome). Independent of 500-01/02/04 — can land in parallel.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

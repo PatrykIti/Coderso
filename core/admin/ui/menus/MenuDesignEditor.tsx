@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useReducer, useState, type ReactNode }
 import {
   ArrowDown,
   ArrowUp,
+  EyeOff,
   PanelRight,
   Plus,
   Redo2,
   Rocket,
+  RotateCcw,
   Save,
   SlidersHorizontal,
   Trash2,
@@ -15,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import {
@@ -31,17 +34,25 @@ import { PageHeader } from "@/ui/shared/PageHeader";
 import { resolveStoredMenuNavExtras } from "../../../services/menus/menuNavExtras";
 import {
   buildMenuDocumentV2FromLegacy,
+  clearMenuBlockVisibilityOverride,
+  clearMenuSectionOverride,
   createDefaultMenuBlock,
   createDefaultMenuDocumentV2,
   deleteMenuBlock,
   findMenuBlock,
   insertMenuBlock,
+  patchMenuSectionForDevice,
+  readMenuSectionOverrideValue,
   reorderMenuBlock,
+  resolveMenuBlockVisibleForDevice,
+  resolveMenuSectionAppearanceForDevice,
   resolveStoredMenuDocument,
+  setMenuBlockVisibleForDevice,
   type MenuBarLayout,
   type MenuBlockType,
   type MenuBlockV2,
   type MenuDocumentV2,
+  type NavItemsProps,
 } from "../../../services/menus/menuDocumentV2";
 import {
   menuAppearanceAlignments,
@@ -49,6 +60,7 @@ import {
   menuAppearanceFontWeights,
   menuAppearanceMobileModes,
   menuAppearanceNumberRanges,
+  menuAppearanceOrientations,
   menuAppearanceShadows,
   menuAppearanceTextTransforms,
   resolveStoredMenuAppearance,
@@ -72,7 +84,13 @@ import {
   SliderControl,
   ToggleSwitch,
 } from "../pages/editorControls";
-import { EditorControlToneContext } from "../pages/editorControls/controlChrome";
+import {
+  EditorControlToneContext,
+  editorControlFocusClassFor,
+  editorGhostButtonClassFor,
+  editorPanelOptionActiveClass,
+  useEditorControlTone,
+} from "../pages/editorControls/controlChrome";
 import { CanvasEditor } from "../shared/CanvasEditor";
 
 /**
@@ -89,6 +107,18 @@ import { CanvasEditor } from "../shared/CanvasEditor";
  * edit, undo, and redo never read a stale document from a nested setState
  * closure. History is bounded (menu-scoped) and host-owned, so regressions stay
  * on the menu surface and cannot reach the Pages editor.
+ *
+ * Per-device overrides (TASK-501-03): APPEARANCE writers are device-forked —
+ * with the DeviceSwitcher on Mobile, `setLayoutField`/`setNavField` write a
+ * SPARSE `responsive.mobile` record via `patchMenuSectionForDevice` and the
+ * per-block visibility toggle writes `setMenuBlockVisibleForDevice`; Desktop
+ * AND Tablet write the flat base (tablet overrides deferred). Panels display
+ * RESOLVED values (`resolveMenuSectionAppearanceForDevice`) while the
+ * `MenuResponsiveControlShell` badge compares against the BASE record and
+ * offers an explicit Reset (`clearMenuSectionOverride` — prune-on-clear, no
+ * auto-remove-on-equality). Content writes (`patchBlock`) stay FLAT and
+ * badge-less on every device. All writes remain event-handler dispatches into
+ * the history atom — no setState-in-effect.
  *
  * The Pages **Layers** overlay is intentionally scoped out and served by the
  * "Blocks" list in `MenuBarPanel` (select + reorder + remove over the single
@@ -212,6 +242,10 @@ const textTransformLabels: Record<string, string> = {
   capitalize: "Capitalize",
 };
 const shadowLabels: Record<string, string> = { none: "None", sm: "Soft", md: "Strong" };
+const orientationLabels: Record<string, string> = {
+  horizontal: "Horizontal",
+  vertical: "Vertical",
+};
 const dropdownDirectionLabels: Record<string, string> = { bottom: "Below", top: "Above" };
 const mobileModeLabels: Record<string, string> = { disclosure: "Collapsed", inline: "Inline" };
 const FONT_WEIGHT_INHERIT = "inherit" as const;
@@ -253,6 +287,120 @@ function SelectableBlock({
       )}
     >
       {children}
+    </div>
+  );
+}
+
+// --- responsive control shell (TASK-501-03) ----------------------------------
+
+/**
+ * Tablet is BASE-mapped for menus (TASK-501 parent scoping decision — tablet
+ * overrides are DEFERRED; the canvas maps tablet⇒desktop) — the ONE deliberate
+ * divergence from the Pages `ResponsiveControlShell`, where tablet is an
+ * override breakpoint. Encoded in this single predicate used by badge +
+ * writers + visibility controls.
+ */
+const isMenuOverrideDevice = (device: PageBreakpoint): device is "mobile" => device === "mobile";
+
+type MenuResponsiveBadgeState = "base" | "override" | "inherited";
+
+const menuResponsiveBadgeDescription = (state: MenuResponsiveBadgeState): string =>
+  state === "base"
+    ? "Editing the base value (applies to every device)."
+    : state === "override"
+      ? "Mobile override — this value replaces the desktop value below 640px."
+      : "Inherited from desktop. Edit to create a mobile override.";
+
+function MenuResponsiveStateBadge({ state }: { state: MenuResponsiveBadgeState }) {
+  const tone = useEditorControlTone();
+  const isLight = tone === "light";
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          tabIndex={0}
+          data-menu-responsive-badge={state}
+          className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${editorControlFocusClassFor(
+            tone
+          )} ${
+            state === "override"
+              ? isLight
+                ? editorPanelOptionActiveClass
+                : "bg-sky-400/20 text-sky-200"
+              : isLight
+                ? "bg-muted text-muted-foreground"
+                : "bg-white/10 text-slate-400"
+          }`}
+        >
+          {state === "base" ? "Base" : state === "override" ? "Override" : "Inherited"}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
+        {menuResponsiveBadgeDescription(state)}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * Port of the Pages `ResponsiveControlShell` idiom (module-private to
+ * `PageEditor.tsx`, so ported — not imported — with menu-scoped data
+ * attributes): wraps every device-forkable APPEARANCE control with a
+ * Base/Override/Inherited badge plus an explicit Reset affordance on Mobile.
+ * `override` MUST be computed from the BASE record
+ * (`readMenuSectionOverrideValue` / the raw block responsive record), never
+ * from resolved values — explicit Reset only, NO auto-remove-on-equality.
+ * Content controls (brand/cta/utility) are deliberately NOT wrapped: the
+ * badge's presence itself communicates "this control forks per device".
+ */
+function MenuResponsiveControlShell({
+  device,
+  override,
+  label,
+  onReset,
+  children,
+}: {
+  device: PageBreakpoint;
+  /** Computed from the BASE record by the caller, never from resolved values. */
+  override: boolean;
+  /** Control label used in the reset affordance accessible name + data hook. */
+  label: string;
+  onReset: () => void;
+  children: ReactNode;
+}) {
+  const tone = useEditorControlTone();
+  const state: MenuResponsiveBadgeState = !isMenuOverrideDevice(device)
+    ? "base"
+    : override
+      ? "override"
+      : "inherited";
+  return (
+    <div className="grid min-w-0 gap-1" data-menu-responsive-field={state}>
+      {children}
+      <div className="flex min-h-6 items-center justify-between gap-2">
+        <MenuResponsiveStateBadge state={state} />
+        {state === "override" ? (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                aria-label={`Reset ${label} to inherited`}
+                data-menu-responsive-reset={label}
+                className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-semibold transition-colors ${editorGhostButtonClassFor(
+                  tone
+                )} ${editorControlFocusClassFor(tone)}`}
+                onClick={onReset}
+              >
+                <RotateCcw className="h-3 w-3" />
+                Reset
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" sideOffset={6} className="max-w-[240px]">
+              Remove the mobile override and inherit the desktop value.
+            </TooltipContent>
+          </Tooltip>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -415,19 +563,23 @@ function MenuDocumentCanvas({
 
 type UpdateDoc = (updater: (doc: MenuDocumentV2) => MenuDocumentV2) => void;
 
+/**
+ * Device-forked layout writer (TASK-501-03): Desktop/Tablet write the base
+ * `section.layout`; Mobile writes the SPARSE `responsive.mobile.layout`
+ * override. `patchMenuSectionForDevice` honors `undefined` ⇒
+ * delete-key-from-target on BOTH device paths (base-key delete on
+ * desktop/tablet; override-leaf delete + prune chain on mobile — never an own
+ * `undefined` key), matching the previous flat delete-on-undefined semantics.
+ */
 const setLayoutField =
-  (updateDoc: UpdateDoc) =>
+  (updateDoc: UpdateDoc, device: PageBreakpoint) =>
   <K extends keyof MenuBarLayout>(field: K, value: MenuBarLayout[K] | undefined) => {
     updateDoc((doc) => {
       const section = doc.sections[0];
       if (!section) return doc;
-      const nextLayout: MenuBarLayout = { ...section.layout };
-      if (value === undefined) delete nextLayout[field];
-      else nextLayout[field] = value;
-      return {
-        ...doc,
-        sections: doc.sections.map((s, index) => (index === 0 ? { ...s, layout: nextLayout } : s)),
-      };
+      return patchMenuSectionForDevice(doc, section.id, device, "layout", {
+        [field]: value,
+      } as MenuBarLayout);
     });
   };
 
@@ -445,6 +597,7 @@ const patchBlock =
 
 function MenuBarPanel({
   doc,
+  device,
   updateDoc,
   onSelectBlock,
   onAddBlock,
@@ -452,17 +605,33 @@ function MenuBarPanel({
   onMoveBlock,
 }: {
   doc: MenuDocumentV2;
+  device: PageBreakpoint;
   updateDoc: UpdateDoc;
   onSelectBlock: (id: string) => void;
   onAddBlock: (type: MenuBlockType) => void;
   onRemoveBlock: (id: string) => void;
   onMoveBlock: (id: string, dir: "up" | "down") => void;
 }) {
-  const layout: MenuBarLayout = doc.sections[0]?.layout ?? {};
-  const blocks = doc.sections[0]?.blocks ?? [];
-  const setField = setLayoutField(updateDoc);
+  const section = doc.sections[0];
+  // Panels DISPLAY resolved values (base merged with the mobile override)…
+  const layout: MenuBarLayout = section
+    ? resolveMenuSectionAppearanceForDevice(section, device).layout
+    : {};
+  const blocks = section?.blocks ?? [];
+  const setField = setLayoutField(updateDoc, device);
   const setColor = (field: "surfaceColor" | "borderColor") => (value: string | null) =>
     setField(field, value === null ? "transparent" : value);
+  // …while override DETECTION reads the raw BASE record (Pages split).
+  const layoutOverride = (key: keyof MenuBarLayout) =>
+    section !== undefined &&
+    readMenuSectionOverrideValue(section, "mobile", "layout", key) !== undefined;
+  const resetLayout = (key: keyof MenuBarLayout) => () =>
+    updateDoc((current) => {
+      const target = current.sections[0];
+      return target
+        ? clearMenuSectionOverride(current, target.id, "mobile", "layout", key)
+        : current;
+    });
 
   return (
     <div className="flex flex-col gap-4" data-menu-bar-panel="true">
@@ -471,62 +640,118 @@ function MenuBarPanel({
           Menu bar
         </p>
         <div className="grid gap-3">
-          <ColorSwatchControl
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("surfaceColor")}
             label="Surface color"
-            value={toSwatchValue(layout.surfaceColor ?? SHELL_APPEARANCE_DEFAULTS.surfaceColor)}
-            onChange={setColor("surfaceColor")}
-          />
-          <ColorSwatchControl
+            onReset={resetLayout("surfaceColor")}
+          >
+            <ColorSwatchControl
+              label="Surface color"
+              value={toSwatchValue(layout.surfaceColor ?? SHELL_APPEARANCE_DEFAULTS.surfaceColor)}
+              onChange={setColor("surfaceColor")}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("borderColor")}
             label="Border color"
-            value={toSwatchValue(layout.borderColor ?? SHELL_APPEARANCE_DEFAULTS.borderColor)}
-            onChange={setColor("borderColor")}
-          />
-          <SegmentedControl
+            onReset={resetLayout("borderColor")}
+          >
+            <ColorSwatchControl
+              label="Border color"
+              value={toSwatchValue(layout.borderColor ?? SHELL_APPEARANCE_DEFAULTS.borderColor)}
+              onChange={setColor("borderColor")}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("alignment")}
             label="Alignment"
-            value={layout.alignment ?? SHELL_APPEARANCE_DEFAULTS.alignment}
-            options={menuAppearanceAlignments}
-            optionLabels={alignmentLabels}
-            onChange={(next) => setField("alignment", next as MenuBarLayout["alignment"])}
-          />
-          <SliderControl
+            onReset={resetLayout("alignment")}
+          >
+            <SegmentedControl
+              label="Alignment"
+              value={layout.alignment ?? SHELL_APPEARANCE_DEFAULTS.alignment}
+              options={menuAppearanceAlignments}
+              optionLabels={alignmentLabels}
+              onChange={(next) => setField("alignment", next as MenuBarLayout["alignment"])}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("paddingX")}
             label="Horizontal padding"
-            value={layout.paddingX ?? SHELL_APPEARANCE_DEFAULTS.paddingX}
-            min={menuAppearanceNumberRanges.paddingX.min}
-            max={menuAppearanceNumberRanges.paddingX.max}
-            step={1}
-            unit="px"
-            onChange={(next) => setField("paddingX", next)}
-          />
-          <SliderControl
+            onReset={resetLayout("paddingX")}
+          >
+            <SliderControl
+              label="Horizontal padding"
+              value={layout.paddingX ?? SHELL_APPEARANCE_DEFAULTS.paddingX}
+              min={menuAppearanceNumberRanges.paddingX.min}
+              max={menuAppearanceNumberRanges.paddingX.max}
+              step={1}
+              unit="px"
+              onChange={(next) => setField("paddingX", next)}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("paddingY")}
             label="Vertical padding"
-            value={layout.paddingY ?? SHELL_APPEARANCE_DEFAULTS.paddingY}
-            min={menuAppearanceNumberRanges.paddingY.min}
-            max={menuAppearanceNumberRanges.paddingY.max}
-            step={1}
-            unit="px"
-            onChange={(next) => setField("paddingY", next)}
-          />
-          <SliderControl
+            onReset={resetLayout("paddingY")}
+          >
+            <SliderControl
+              label="Vertical padding"
+              value={layout.paddingY ?? SHELL_APPEARANCE_DEFAULTS.paddingY}
+              min={menuAppearanceNumberRanges.paddingY.min}
+              max={menuAppearanceNumberRanges.paddingY.max}
+              step={1}
+              unit="px"
+              onChange={(next) => setField("paddingY", next)}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("borderWidth")}
             label="Border width"
-            value={layout.borderWidth ?? SHELL_APPEARANCE_DEFAULTS.borderWidth}
-            min={menuAppearanceNumberRanges.borderWidth.min}
-            max={menuAppearanceNumberRanges.borderWidth.max}
-            step={1}
-            unit="px"
-            onChange={(next) => setField("borderWidth", next)}
-          />
-          <SegmentedControl
+            onReset={resetLayout("borderWidth")}
+          >
+            <SliderControl
+              label="Border width"
+              value={layout.borderWidth ?? SHELL_APPEARANCE_DEFAULTS.borderWidth}
+              min={menuAppearanceNumberRanges.borderWidth.min}
+              max={menuAppearanceNumberRanges.borderWidth.max}
+              step={1}
+              unit="px"
+              onChange={(next) => setField("borderWidth", next)}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("shadow")}
             label="Shadow"
-            value={layout.shadow ?? SHELL_APPEARANCE_DEFAULTS.shadow}
-            options={menuAppearanceShadows}
-            optionLabels={shadowLabels}
-            onChange={(next) => setField("shadow", next as MenuBarLayout["shadow"])}
-          />
-          <ToggleSwitch
+            onReset={resetLayout("shadow")}
+          >
+            <SegmentedControl
+              label="Shadow"
+              value={layout.shadow ?? SHELL_APPEARANCE_DEFAULTS.shadow}
+              options={menuAppearanceShadows}
+              optionLabels={shadowLabels}
+              onChange={(next) => setField("shadow", next as MenuBarLayout["shadow"])}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={layoutOverride("sticky")}
             label="Sticky header"
-            value={layout.sticky ?? SHELL_APPEARANCE_DEFAULTS.sticky}
-            onChange={(next) => setField("sticky", next)}
-          />
+            onReset={resetLayout("sticky")}
+          >
+            <ToggleSwitch
+              label="Sticky header"
+              value={layout.sticky ?? SHELL_APPEARANCE_DEFAULTS.sticky}
+              onChange={(next) => setField("sticky", next)}
+            />
+          </MenuResponsiveControlShell>
         </div>
       </div>
 
@@ -569,6 +794,16 @@ function MenuBarPanel({
               >
                 {MENU_BLOCK_LABELS[block.type]}
               </button>
+              {resolveMenuBlockVisibleForDevice(block, device) === false ? (
+                // Discoverability: a CSS-hidden canvas block stays reachable
+                // here — pure render derivation from doc + device (no state).
+                <EyeOff
+                  role="img"
+                  aria-label={`Hidden on ${DEVICE_LABELS[device]}`}
+                  data-menu-block-hidden={block.id}
+                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                />
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
@@ -608,28 +843,65 @@ function MenuBarPanel({
 
 function MenuBlockPanel({
   block,
+  doc,
+  device,
   updateDoc,
   onRemove,
   onMove,
 }: {
   block: MenuBlockV2;
+  doc: MenuDocumentV2;
+  device: PageBreakpoint;
   updateDoc: UpdateDoc;
   onRemove: () => void;
   onMove: (dir: "up" | "down") => void;
 }) {
+  // patchBlock stays FLAT and device-invariant: content writes (brand/cta/
+  // utility label/href/variant/logo) are NOT device-forked by contract.
   const patch = patchBlock(updateDoc);
 
-  const setNavField = <K extends keyof MenuAppearance>(
-    field: K,
-    value: MenuAppearance[K] | undefined
-  ) =>
-    patch(block.id, (current) => {
-      if (current.type !== "nav-items") return current;
-      const nextProps: MenuAppearance = { ...current.props };
-      if (value === undefined) delete nextProps[field];
-      else nextProps[field] = value;
-      return { ...current, props: nextProps };
+  const section = doc.sections[0];
+  // Resolved nav appearance for DISPLAY (base merged with the mobile override;
+  // base navProps = the FIRST nav-items block's props, mirroring the CSS
+  // pipeline's collectMenuAppearance binding).
+  const navProps: NavItemsProps = section
+    ? resolveMenuSectionAppearanceForDevice(section, device).navProps
+    : {};
+  // Override detection reads the raw BASE record, never the resolved merge.
+  const navOverride = (key: keyof NavItemsProps) =>
+    section !== undefined &&
+    readMenuSectionOverrideValue(section, "mobile", "navProps", key) !== undefined;
+  const resetNav = (key: keyof NavItemsProps) => () =>
+    updateDoc((current) => {
+      const target = current.sections[0];
+      return target
+        ? clearMenuSectionOverride(current, target.id, "mobile", "navProps", key)
+        : current;
     });
+  /**
+   * Device-forked nav appearance writer: Desktop/Tablet ⇒ the FIRST nav-items
+   * block's base props; Mobile ⇒ sparse `responsive.mobile.navProps`.
+   * NORMATIVE (501-01 §3): `patchMenuSectionForDevice` targets the FIRST
+   * nav-items block regardless of which nav-items block is selected — the
+   * section-level override record can only represent one nav-items block.
+   * `undefined` ⇒ delete-key-from-target on both device paths (the sole
+   * emitter today is fontWeight "Theme").
+   */
+  const setNavField = <K extends keyof NavItemsProps>(
+    field: K,
+    value: NavItemsProps[K] | undefined
+  ) =>
+    updateDoc((current) => {
+      const target = current.sections[0];
+      if (!target) return current;
+      return patchMenuSectionForDevice(current, target.id, device, "navProps", {
+        [field]: value,
+      } as NavItemsProps);
+    });
+
+  const visibleOnDevice = resolveMenuBlockVisibleForDevice(block, device);
+  const visibilityOverride =
+    isMenuOverrideDevice(device) && block.responsive?.mobile?.visibility !== undefined;
 
   return (
     <div className="flex flex-col gap-4" data-menu-block-panel={block.type}>
@@ -666,86 +938,200 @@ function MenuBlockPanel({
         </Button>
       </div>
 
-      {block.type === "nav-items" ? (
-        <div className="grid gap-3">
-          <SliderControl
-            label="Item gap"
-            value={block.props.itemGap ?? SHELL_APPEARANCE_DEFAULTS.itemGap}
-            min={menuAppearanceNumberRanges.itemGap.min}
-            max={menuAppearanceNumberRanges.itemGap.max}
-            step={1}
-            unit="px"
-            onChange={(next) => setNavField("itemGap", next)}
-          />
-          <SliderControl
-            label="Font size"
-            value={block.props.fontSize ?? FONT_SIZE_FALLBACK}
-            min={menuAppearanceNumberRanges.fontSize.min}
-            max={menuAppearanceNumberRanges.fontSize.max}
-            step={1}
-            unit="px"
-            onChange={(next) => setNavField("fontSize", next)}
-          />
-          <SegmentedControl
-            label="Font weight"
-            value={block.props.fontWeight ? String(block.props.fontWeight) : FONT_WEIGHT_INHERIT}
-            options={fontWeightOptions}
-            optionLabels={fontWeightLabels}
+      {isMenuOverrideDevice(device) ? (
+        // Mobile: EVERY block type gets a per-device visibility override
+        // toggle (writes the sparse block responsive record).
+        <MenuResponsiveControlShell
+          device={device}
+          override={visibilityOverride}
+          label="Visible on mobile"
+          onReset={() =>
+            updateDoc((current) => clearMenuBlockVisibilityOverride(current, block.id, "mobile"))
+          }
+        >
+          <ToggleSwitch
+            label="Visible on mobile"
+            value={visibleOnDevice}
             onChange={(next) =>
-              setNavField(
-                "fontWeight",
-                next === FONT_WEIGHT_INHERIT
-                  ? undefined
-                  : (Number(next) as MenuAppearanceFontWeight)
+              updateDoc((current) =>
+                setMenuBlockVisibleForDevice(current, block.id, "mobile", next)
               )
             }
           />
-          <SegmentedControl
+        </MenuResponsiveControlShell>
+      ) : block.type === "cta-button" || block.type === "divider" || block.type === "spacer" ? (
+        // Desktop/Tablet: LEAF blocks only get the FLAT visibility toggle
+        // (native blocks carry no flat visibility slot by schema). The inlined
+        // three-type check mirrors the module-private MENU_LEAF_BLOCK_TYPES;
+        // a vitest divergence guard pins the lists against schema drift.
+        // Composable with the mobile override: flat visible:false + mobile
+        // override true = "show only on mobile".
+        <ToggleSwitch
+          label="Visible"
+          value={block.visibility?.visible ?? true}
+          onChange={(next) =>
+            updateDoc((current) => setMenuBlockVisibleForDevice(current, block.id, device, next))
+          }
+        />
+      ) : null}
+
+      {block.type === "nav-items" ? (
+        <div className="grid gap-3">
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("orientation")}
+            label="Orientation"
+            onReset={resetNav("orientation")}
+          >
+            <SegmentedControl
+              label="Orientation"
+              value={navProps.orientation ?? "horizontal"}
+              options={menuAppearanceOrientations}
+              optionLabels={orientationLabels}
+              onChange={(next) => setNavField("orientation", next as NavItemsProps["orientation"])}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("itemGap")}
+            label="Item gap"
+            onReset={resetNav("itemGap")}
+          >
+            <SliderControl
+              label="Item gap"
+              value={navProps.itemGap ?? SHELL_APPEARANCE_DEFAULTS.itemGap}
+              min={menuAppearanceNumberRanges.itemGap.min}
+              max={menuAppearanceNumberRanges.itemGap.max}
+              step={1}
+              unit="px"
+              onChange={(next) => setNavField("itemGap", next)}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("fontSize")}
+            label="Font size"
+            onReset={resetNav("fontSize")}
+          >
+            <SliderControl
+              label="Font size"
+              value={navProps.fontSize ?? FONT_SIZE_FALLBACK}
+              min={menuAppearanceNumberRanges.fontSize.min}
+              max={menuAppearanceNumberRanges.fontSize.max}
+              step={1}
+              unit="px"
+              onChange={(next) => setNavField("fontSize", next)}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("fontWeight")}
+            label="Font weight"
+            onReset={resetNav("fontWeight")}
+          >
+            <SegmentedControl
+              label="Font weight"
+              value={navProps.fontWeight ? String(navProps.fontWeight) : FONT_WEIGHT_INHERIT}
+              options={fontWeightOptions}
+              optionLabels={fontWeightLabels}
+              onChange={(next) =>
+                setNavField(
+                  "fontWeight",
+                  next === FONT_WEIGHT_INHERIT
+                    ? undefined
+                    : (Number(next) as MenuAppearanceFontWeight)
+                )
+              }
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("textTransform")}
             label="Text transform"
-            value={block.props.textTransform ?? SHELL_APPEARANCE_DEFAULTS.textTransform}
-            options={menuAppearanceTextTransforms}
-            optionLabels={textTransformLabels}
-            onChange={(next) =>
-              setNavField("textTransform", next as MenuAppearance["textTransform"])
-            }
-          />
-          <ColorSwatchControl
+            onReset={resetNav("textTransform")}
+          >
+            <SegmentedControl
+              label="Text transform"
+              value={navProps.textTransform ?? SHELL_APPEARANCE_DEFAULTS.textTransform}
+              options={menuAppearanceTextTransforms}
+              optionLabels={textTransformLabels}
+              onChange={(next) =>
+                setNavField("textTransform", next as MenuAppearance["textTransform"])
+              }
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("linkColor")}
             label="Link color"
-            value={toSwatchValue(block.props.linkColor ?? SHELL_APPEARANCE_DEFAULTS.linkColor)}
-            onChange={(value) => setNavField("linkColor", value === null ? "transparent" : value)}
-          />
-          <ColorSwatchControl
+            onReset={resetNav("linkColor")}
+          >
+            <ColorSwatchControl
+              label="Link color"
+              value={toSwatchValue(navProps.linkColor ?? SHELL_APPEARANCE_DEFAULTS.linkColor)}
+              onChange={(value) => setNavField("linkColor", value === null ? "transparent" : value)}
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("linkHoverColor")}
             label="Link hover color"
-            value={toSwatchValue(
-              block.props.linkHoverColor ?? SHELL_APPEARANCE_DEFAULTS.linkHoverColor
-            )}
-            onChange={(value) =>
-              setNavField("linkHoverColor", value === null ? "transparent" : value)
-            }
-          />
-          <ColorSwatchControl
+            onReset={resetNav("linkHoverColor")}
+          >
+            <ColorSwatchControl
+              label="Link hover color"
+              value={toSwatchValue(
+                navProps.linkHoverColor ?? SHELL_APPEARANCE_DEFAULTS.linkHoverColor
+              )}
+              onChange={(value) =>
+                setNavField("linkHoverColor", value === null ? "transparent" : value)
+              }
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("linkActiveColor")}
             label="Link active color"
-            value={toSwatchValue(block.props.linkActiveColor ?? "transparent")}
-            onChange={(value) =>
-              setNavField("linkActiveColor", value === null ? "transparent" : value)
-            }
-          />
-          <SegmentedControl
+            onReset={resetNav("linkActiveColor")}
+          >
+            <ColorSwatchControl
+              label="Link active color"
+              value={toSwatchValue(navProps.linkActiveColor ?? "transparent")}
+              onChange={(value) =>
+                setNavField("linkActiveColor", value === null ? "transparent" : value)
+              }
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("dropdownDirection")}
             label="Dropdown direction"
-            value={block.props.dropdownDirection ?? SHELL_APPEARANCE_DEFAULTS.dropdownDirection}
-            options={menuAppearanceDropdownDirections}
-            optionLabels={dropdownDirectionLabels}
-            onChange={(next) =>
-              setNavField("dropdownDirection", next as MenuAppearance["dropdownDirection"])
-            }
-          />
-          <SegmentedControl
+            onReset={resetNav("dropdownDirection")}
+          >
+            <SegmentedControl
+              label="Dropdown direction"
+              value={navProps.dropdownDirection ?? SHELL_APPEARANCE_DEFAULTS.dropdownDirection}
+              options={menuAppearanceDropdownDirections}
+              optionLabels={dropdownDirectionLabels}
+              onChange={(next) =>
+                setNavField("dropdownDirection", next as MenuAppearance["dropdownDirection"])
+              }
+            />
+          </MenuResponsiveControlShell>
+          <MenuResponsiveControlShell
+            device={device}
+            override={navOverride("mobileMode")}
             label="Mobile menu"
-            value={block.props.mobileMode ?? SHELL_APPEARANCE_DEFAULTS.mobileMode}
-            options={menuAppearanceMobileModes}
-            optionLabels={mobileModeLabels}
-            onChange={(next) => setNavField("mobileMode", next as MenuAppearance["mobileMode"])}
-          />
+            onReset={resetNav("mobileMode")}
+          >
+            <SegmentedControl
+              label="Mobile menu"
+              value={navProps.mobileMode ?? SHELL_APPEARANCE_DEFAULTS.mobileMode}
+              options={menuAppearanceMobileModes}
+              optionLabels={mobileModeLabels}
+              onChange={(next) => setNavField("mobileMode", next as MenuAppearance["mobileMode"])}
+            />
+          </MenuResponsiveControlShell>
         </div>
       ) : null}
 
@@ -1069,7 +1455,14 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
               </Button>
             </>
           }
-          deviceContext={{ value: device, label: DEVICE_LABELS[device] }}
+          deviceContext={{
+            value: device,
+            // Scope cue: Mobile edits write sparse overrides; Desktop/Tablet
+            // edit the base (tablet deferred — base-mapped, TASK-501).
+            label: isMenuOverrideDevice(device)
+              ? `${DEVICE_LABELS[device]} (overrides)`
+              : `${DEVICE_LABELS[device]} (base)`,
+          }}
           panelOpen={panelOpen}
           onPanelOpenChange={setPanelOpen}
           panelPosition="right"
@@ -1109,6 +1502,8 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                 {selectedBlock ? (
                   <MenuBlockPanel
                     block={selectedBlock}
+                    doc={doc}
+                    device={device}
                     updateDoc={updateDoc}
                     onRemove={() => removeMenuBlock(selectedBlock.id)}
                     onMove={(dir) => moveMenuBlock(selectedBlock.id, dir)}
@@ -1116,6 +1511,7 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                 ) : (
                   <MenuBarPanel
                     doc={doc}
+                    device={device}
                     updateDoc={updateDoc}
                     onSelectBlock={setSelectedId}
                     onAddBlock={addMenuBlock}

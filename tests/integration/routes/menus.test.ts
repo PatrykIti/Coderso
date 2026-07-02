@@ -220,6 +220,118 @@ testIfDb(
   dbTestTimeoutMs
 );
 
+// --- TASK-501-04: responsive document persistence through the same envelope ---
+
+const routeResponsiveMenuDocument = () => {
+  const document = routeMenuDocument();
+  return {
+    ...document,
+    sections: [
+      {
+        ...document.sections[0]!,
+        responsive: {
+          mobile: {
+            layout: { paddingY: 4 },
+            navProps: { orientation: "vertical" as const, itemGap: 16 },
+          },
+        },
+        blocks: [
+          document.sections[0]!.blocks[0]!,
+          {
+            id: "blk-route-cta",
+            type: "cta-button" as const,
+            props: {
+              label: "Go",
+              href: "/go",
+              target: "self" as const,
+              variant: "primary" as const,
+              size: "md" as const,
+            },
+            visibility: { visible: true },
+            responsive: { mobile: { visibility: { visible: false } } },
+          },
+        ],
+      },
+    ],
+  };
+};
+
+testIfDb(
+  "PATCH /menus/:id document carrying responsive persists per-key without dropping appearance/extras",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Responsive ${randomUUID()}`,
+      location: `route-responsive-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    const extras = [createPageBlockV2("button", { id: "blk-route-extra" })];
+    // Seed sibling envelope keys first, then PATCH the document ALONE.
+    await handler({
+      params: { id: menu.id },
+      query: {},
+      body: { appearance: { surfaceColor: "#0f172a" }, extras },
+    });
+
+    const document = routeResponsiveMenuDocument();
+    const updated = (await handler({
+      params: { id: menu.id },
+      query: {},
+      body: { document },
+    })) as typeof menus.$inferSelect;
+
+    // Per-key merge: the responsive document rides in verbatim (sparse records
+    // preserved, nothing injected) and the sibling keys survive untouched.
+    expect(updated.settings).toEqual({
+      appearance: { surfaceColor: "#0f172a" },
+      extras,
+      document,
+    });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps an invalid responsive key to a 400 menu_document_invalid ApiError with a path",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Responsive Invalid ${randomUUID()}`,
+      location: `route-responsive-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    const document = routeMenuDocument();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            ...document,
+            sections: [
+              {
+                ...document.sections[0]!,
+                // Tablet is DEFERRED (mobile-only v1): reject-unknown must fire.
+                responsive: { tablet: { layout: { paddingY: 4 } } },
+              },
+            ],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({ path: "document.sections[0].responsive.tablet" });
+    }
+  },
+  dbTestTimeoutMs
+);
+
 testIfDb(
   "PATCH /menus/:id maps an invalid document to a 400 menu_document_invalid ApiError with a path",
   async () => {

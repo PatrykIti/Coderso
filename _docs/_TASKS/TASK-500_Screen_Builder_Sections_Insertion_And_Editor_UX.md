@@ -5,7 +5,8 @@
 **Category:** Admin UI / Custom Screens / Screen Builder / Page-Builder UX
 **Estimated Effort:** Large
 **Dependencies:** TASK-496-02 (Screens on the shared `CanvasEditor` shell), TASK-498 (data-oriented builder + look parity — SHIPPED), TASK-479 (soft/violet redesign)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

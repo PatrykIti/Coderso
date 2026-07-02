@@ -7,7 +7,8 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-498 (data-oriented builder + look parity — SHIPPED). Gates
 TASK-500-02 (a real, selectable section is the target `addScreenBlockAt` steers into).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

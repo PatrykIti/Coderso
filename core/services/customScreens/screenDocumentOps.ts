@@ -390,22 +390,212 @@ const ensureSectionForInsert = (document: ScreenDocumentV1): ScreenDocumentV1 =>
   };
 };
 
+// TASK-500-02: a single deterministic insert target. NOT part of the stored
+// document shape (no schema change); purely an argument to the ops below.
+// `sectionId` is carried on the slot kinds too so the host can keep
+// `selectedSectionId` in sync without a second lookup; the ops locate the
+// parent container globally (ids are document-unique per normalizeUniqueIds)
+// so a mismatched `sectionId` still resolves — deterministic and forgiving.
+export type ScreenInsertTarget =
+  | { kind: "section-end"; sectionId: string }
+  | { kind: "section-index"; sectionId: string; index: number }
+  | { kind: "slot-end"; sectionId: string; parentId: string; slotId: string }
+  | { kind: "slot-index"; sectionId: string; parentId: string; slotId: string; index: number };
+
+export type ScreenBlockLocation = {
+  sectionId: string;
+  parentId: string | null; // null ⇒ block is a top-level child of the section
+  slotId: string | null; // null ⇒ top-level (or a children[] child of parentId)
+  index: number; // index within its sibling list
+};
+
+// Deterministic pre-order traversal: for each section, walk section.blocks
+// (parentId=null, slotId=null); for every block, check the block itself, then
+// its slots in key order (parentId=block.id, slotId=key), then children[]
+// (parentId=block.id, slotId=null). Returns the FIRST match, null when absent.
+export function findScreenBlockLocation(
+  document: ScreenDocumentV1,
+  blockId: string
+): ScreenBlockLocation | null {
+  const walkList = (
+    blocks: ScreenBlockV1[],
+    sectionId: string,
+    parentId: string | null,
+    slotId: string | null
+  ): ScreenBlockLocation | null => {
+    for (let index = 0; index < blocks.length; index += 1) {
+      const block = blocks[index]!;
+      if (block.id === blockId) return { sectionId, parentId, slotId, index };
+      if (block.slots) {
+        for (const [key, items] of Object.entries(block.slots)) {
+          const match = walkList(items, sectionId, block.id, key);
+          if (match) return match;
+        }
+      }
+      if (block.children) {
+        const match = walkList(block.children, sectionId, block.id, null);
+        if (match) return match;
+      }
+    }
+    return null;
+  };
+  for (const section of document.sections) {
+    const match = walkList(section.blocks, section.id, null, null);
+    if (match) return match;
+  }
+  return null;
+}
+
+// internal — resolve the sibling list a target names, returning a write closure
+// so add/move splice into the SAME list the target describes. Returns null when
+// the section/parent/slot cannot be resolved (⇒ caller triggers fail-soft).
+type SiblingResolution = {
+  list: ScreenBlockV1[];
+  write: (next: ScreenBlockV1[]) => ScreenDocumentV1;
+};
+
+const resolveInsertList = (
+  document: ScreenDocumentV1,
+  target: ScreenInsertTarget
+): SiblingResolution | null => {
+  if (target.kind === "section-end" || target.kind === "section-index") {
+    const section = document.sections.find((item) => item.id === target.sectionId);
+    if (!section) return null;
+    return {
+      list: section.blocks,
+      write: (next) => ({
+        ...document,
+        sections: document.sections.map((item) =>
+          item.id === section.id ? { ...item, blocks: next } : item
+        ),
+      }),
+    };
+  }
+  const parent = findScreenBlockById(document, target.parentId);
+  const list = parent?.slots?.[target.slotId];
+  if (!list) return null;
+  return {
+    list,
+    write: (next) => ({
+      ...document,
+      sections: document.sections.map((section) => ({
+        ...section,
+        blocks: visitBlocks(section.blocks, (current) =>
+          current.id === target.parentId
+            ? { ...current, slots: { ...(current.slots ?? {}), [target.slotId]: next } }
+            : current
+        ),
+      })),
+    }),
+  };
+};
+
+// TASK-500-02: targeted insert — clamped index, FAIL-SOFT on an unresolvable
+// target (falls back to the FIRST section's end; never throws in the editor
+// path — normalizeScreenDocumentV1 on save stays the strict gate).
+export function addScreenBlockAt(
+  document: ScreenDocumentV1,
+  block: ScreenBlockV1,
+  target: ScreenInsertTarget
+): ScreenDocumentV1 {
+  const nextDocument = ensureSectionForInsert(document);
+  const resolution = resolveInsertList(nextDocument, target);
+  if (!resolution) {
+    // Terminating recursion: sections[0] always resolves after ensureSectionForInsert.
+    return addScreenBlockAt(nextDocument, block, {
+      kind: "section-end",
+      sectionId: nextDocument.sections[0]!.id,
+    });
+  }
+  const rawIndex =
+    target.kind === "section-index" || target.kind === "slot-index"
+      ? target.index
+      : resolution.list.length;
+  const index = clampIndex(rawIndex, 0, resolution.list.length);
+  return resolution.write([
+    ...resolution.list.slice(0, index),
+    block,
+    ...resolution.list.slice(index),
+  ]);
+}
+
+// internal — true when a pre-removal location and an index-kind target name the
+// SAME sibling list (same section top-level, or same parent+slot). Gates the
+// removal-first index decrement in moveScreenBlockTo.
+const sameSiblingList = (origin: ScreenBlockLocation, target: ScreenInsertTarget): boolean => {
+  if (target.kind === "section-index") {
+    return origin.parentId === null && origin.sectionId === target.sectionId;
+  }
+  if (target.kind === "slot-index") {
+    return origin.parentId === target.parentId && origin.slotId === target.slotId;
+  }
+  return false;
+};
+
+// TASK-500-02: cross-section/slot MOVE — removal-first, cycle-guarded, and the
+// SAME node is re-inserted (same id ⇒ bindings keyed by blockId stay valid; a
+// move, NOT a clone — contrast duplicateScreenBlockWithBindings which remaps).
+// This op is the SOLE owner of the same-sibling-list downward index DECREMENT:
+// the canvas ALWAYS reports the gap index against the PRE-removal rendered list
+// and must NOT pre-subtract (the op already decrements; doing both lands one
+// slot too early). Cycle/unknown-block ⇒ returns the ORIGINAL document
+// (referential equality so the host can `===` to skip a dirty mark).
+export function moveScreenBlockTo(
+  document: ScreenDocumentV1,
+  blockId: string,
+  target: ScreenInsertTarget
+): ScreenDocumentV1 {
+  // 1) Locate + detach the node WITHOUT losing it.
+  const { document: stripped, removed } = removeScreenBlock(document, blockId);
+  if (!removed) return document; // unknown block ⇒ no-op
+
+  // 2) CYCLE GUARD: refuse to drop a container into its own subtree.
+  if (target.kind === "slot-end" || target.kind === "slot-index") {
+    const subtreeIds = new Set(collectScreenBlockIds(removed));
+    if (subtreeIds.has(target.parentId)) return document; // no-op, ORIGINAL doc
+  }
+
+  // 3) SAME-LIST DOWNWARD ADJUSTMENT: removal happened FIRST, so an index-kind
+  //    target naming the SAME sibling list the block left is shifted by one
+  //    whenever the removed block sat BEFORE that index. clampIndex only bounds
+  //    [0, len] — it does NOT decrement — so this step is REQUIRED.
+  let adjusted = target;
+  if (target.kind === "section-index" || target.kind === "slot-index") {
+    const origin = findScreenBlockLocation(document, blockId); // PRE-removal location
+    if (origin && sameSiblingList(origin, target) && origin.index < target.index) {
+      adjusted = { ...target, index: target.index - 1 };
+    }
+  }
+
+  // 4) Re-insert the SAME node; fail-soft/clamp handled by addScreenBlockAt
+  //    against the STRIPPED doc.
+  return addScreenBlockAt(stripped, removed, adjusted);
+}
+
+// TASK-500-02 legacy shim (NON-DESTRUCTIVE — existing tests and the Bun-lane
+// assistant caller `actionExecutorService.ts` keep importing this).
+// - No target: delegates to addScreenBlockAt (section-end of the first section;
+//   ensureSectionForInsert re-seeds an empty doc) — identical legacy semantics.
+//   The interactive editor host no longer calls this path (it resolves a
+//   ScreenInsertTarget), so "always sections[0]" is gone at the host level; the
+//   assistant no-target path legitimately still appends to sections[0].
+// - With {parentId, slotId}: legacy semantics are PRESERVED verbatim (append
+//   into parent.slots[slotId], CREATING the slot when absent; an unknown
+//   parentId leaves the tree structurally unchanged). The assistant's
+//   buildCustomScreenBlockAddPreview detects "target not found" via
+//   isDeepStrictEqual on the returned document, so this branch must NOT adopt
+//   addScreenBlockAt's fail-soft fallback (it would silently insert into the
+//   first section instead of surfacing the conflict).
 export function addScreenBlock(
   document: ScreenDocumentV1,
   block: ScreenBlockV1,
   target?: { parentId: string; slotId: string }
 ): ScreenDocumentV1 {
   if (!target) {
-    const nextDocument = ensureSectionForInsert(document);
-    const [firstSection, ...remainingSections] = nextDocument.sections;
-    if (!firstSection) return nextDocument;
-    return {
-      ...nextDocument,
-      sections: [
-        { ...firstSection, blocks: [...firstSection.blocks, block] },
-        ...remainingSections,
-      ],
-    };
+    return addScreenBlockAt(document, block, {
+      kind: "section-end",
+      sectionId: document.sections[0]?.id ?? "",
+    });
   }
   return {
     ...document,
@@ -450,6 +640,99 @@ export function updateScreenSection(
       if (typeof patch === "function") return patch(section);
       return { ...section, ...patch, data: patch.data ?? section.data };
     }),
+  };
+}
+
+// TASK-500-01: sections as first-class, top-level only (sections CANNOT nest —
+// ScreenSectionV1 lives flat in ScreenDocumentV1.sections). All editor-path
+// helpers below FAIL SOFT (unknown ids no-op or fall back); the strict
+// reject-unknown normalizers on SAVE stay the hard gate.
+const clampIndex = (n: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, Number.isFinite(n) ? Math.floor(n) : max));
+
+// Create + insert a real top-level section. atIndex clamps to [0, sections.length];
+// default appends. Reuses createScreenSection (seeds data.title from label).
+export function addScreenSection(
+  document: ScreenDocumentV1,
+  input: { label?: string; atIndex?: number } = {}
+): { document: ScreenDocumentV1; sectionId: string } {
+  const section = createScreenSection({ label: input.label ?? "Section" });
+  const sections = [...document.sections];
+  const at = clampIndex(input.atIndex ?? sections.length, 0, sections.length);
+  sections.splice(at, 0, section);
+  return { document: { ...document, sections }, sectionId: section.id };
+}
+
+// Rename: set BOTH label and data.title (the renderer prefers data.title).
+// Empty/blank label falls back to "Section"; unknown id no-ops via updateScreenSection.
+export function renameScreenSection(
+  document: ScreenDocumentV1,
+  sectionId: string,
+  label: string
+): ScreenDocumentV1 {
+  const clean = label.trim() || "Section";
+  return updateScreenSection(document, sectionId, (section) => ({
+    ...section,
+    label: clean,
+    data: { ...section.data, title: clean },
+  }));
+}
+
+// Reorder one section up/down; clamp at ends → boundary no-op (mirrors
+// moveScreenBlock's guard). Unknown id → unchanged document.
+export function moveScreenSection(
+  document: ScreenDocumentV1,
+  sectionId: string,
+  direction: "up" | "down"
+): ScreenDocumentV1 {
+  const index = document.sections.findIndex((section) => section.id === sectionId);
+  if (index === -1) return document;
+  const target = direction === "up" ? index - 1 : index + 1;
+  if (target < 0 || target >= document.sections.length) return document; // boundary no-op
+  const sections = [...document.sections];
+  [sections[index], sections[target]] = [sections[target]!, sections[index]!];
+  return { ...document, sections };
+}
+
+// Delete a section; return the removed record so the host can prune its bindings.
+// LAST-SECTION RULE (deterministic): with only ONE section left this NO-OPS —
+// returns { document: unchanged, removed: null }. The document always keeps at
+// least one section for the canvas to steer insertion into; there is no
+// zero-sections editor state and no lazy re-seed.
+export function removeScreenSection(
+  document: ScreenDocumentV1,
+  sectionId: string
+): { document: ScreenDocumentV1; removed: ScreenSectionV1 | null } {
+  const removed = document.sections.find((section) => section.id === sectionId) ?? null;
+  if (!removed) return { document, removed: null };
+  if (document.sections.length <= 1) return { document, removed: null }; // last-section no-op
+  return {
+    document: {
+      ...document,
+      sections: document.sections.filter((section) => section.id !== sectionId),
+    },
+    removed,
+  };
+}
+
+// TASK-500-01 minimal targeting foundation (500-02 REPLACES this with
+// addScreenBlockAt + the ScreenInsertTarget union). Appends `block` to the named
+// section's top-level blocks; unknown/null sectionId FAILS SOFT to the first
+// section (never throws in the editor path). This kills "always sections[0]".
+export function appendScreenBlockToSection(
+  document: ScreenDocumentV1,
+  sectionId: string | null,
+  block: ScreenBlockV1
+): ScreenDocumentV1 {
+  const base = ensureSectionForInsert(document); // reuse existing empty-doc guard
+  const exists = sectionId ? base.sections.some((section) => section.id === sectionId) : false;
+  const targetId = exists ? sectionId : (base.sections[0]?.id ?? null);
+  if (!targetId) return base;
+  return {
+    ...base,
+    sections: base.sections.map((section) =>
+      section.id === targetId ? { ...section, blocks: [...section.blocks, block] } : section
+    ),
   };
 }
 

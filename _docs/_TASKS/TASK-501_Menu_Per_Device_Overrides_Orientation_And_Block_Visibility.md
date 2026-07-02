@@ -5,7 +5,8 @@
 **Category:** Admin UI / Content (Menus) / Navigation / Page Builder / Responsive
 **Estimated Effort:** Large
 **Dependencies:** TASK-499 (menuDocumentV2 + Design tab + `menuDocumentCss.ts`), TASK-458-02 (`normalizeMenuAppearance`), Pages responsive-override machinery as the UX reference (`pageEditorMutationActions.ts`, `PageEditor.tsx` ResponsiveControlShell)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 
@@ -156,8 +157,10 @@ clearMenuBlockVisibilityOverride(doc, blockId, "mobile"): MenuDocumentV2;
 // :134 — hiding the ANCESTOR sidesteps specificity entirely); leaf blocks
 // keep PageBlockFrame's existing data-block-id (no new wrapper — avoids
 // DOM-shape drift, see 501-02 §4 "Dual selector rationale"). Blocks visible
-// on NEITHER device stay render-skipped (today's flat gating, byte-unchanged);
-// blocks with a responsive visibility record are ALWAYS DOM-rendered and
+// on NEITHER device stay render-skipped even when they carry a responsive
+// visibility record (501-02 §5's render-if-visible-anywhere rule; no-record
+// flat gating stays byte-unchanged); blocks with a responsive visibility
+// record are DOM-rendered whenever visible on AT LEAST ONE device and
 // gated per branch via the doc-scoped DUAL attribute selector — EVERY
 // selector in the comma list carries the `${header}` prefix (comma lists do
 // NOT inherit it; the sheet has no shadow scoping, so a bare attribute
@@ -198,10 +201,10 @@ ADD  tests (501-04; see Testing Requirements)
 
 | ID | Title | File | Status |
 |---|---|---|---|
-| TASK-501-01 | menuDocumentV2 Responsive Contract | TASK-501-01-MenuDocumentV2-Responsive-Contract.md | ⏳ To Do |
-| TASK-501-02 | Menu CSS Responsive Emission | TASK-501-02-Menu-CSS-Responsive-Emission.md | ⏳ To Do |
-| TASK-501-03 | Design Editor Device-Forked Controls | TASK-501-03-Design-Editor-Device-Forked-Controls.md | ⏳ To Do |
-| TASK-501-04 | Menu Responsive Tests, Docs, Closure | TASK-501-04-Menu-Responsive-Tests-Docs-Closure.md | ⏳ To Do |
+| TASK-501-01 | menuDocumentV2 Responsive Contract | TASK-501-01-MenuDocumentV2-Responsive-Contract.md | ✅ Done |
+| TASK-501-02 | Menu CSS Responsive Emission | TASK-501-02-Menu-CSS-Responsive-Emission.md | ✅ Done |
+| TASK-501-03 | Design Editor Device-Forked Controls | TASK-501-03-Design-Editor-Device-Forked-Controls.md | ✅ Done |
+| TASK-501-04 | Menu Responsive Tests, Docs, Closure | TASK-501-04-Menu-Responsive-Tests-Docs-Closure.md | ✅ Done |
 
 - **501-01 (keystone)** — the schema: sparse `responsive.mobile` records on
   `MenuSectionV2` (layout/navProps) + `MenuBlockV2` (visibility, all block
@@ -227,7 +230,7 @@ ADD  tests (501-04; see Testing Requirements)
   and their inputs UNwrapped on every device.
 - **501-04** — closure: full vitest + bun matrices, byte-identity guards,
   playwright smoke (canvas + :3000 real mobile viewport), docs + changelog
-  (next free number, expected 1209) + README/board/Statistics.
+  (next free number — CLOSED as 1210; 1209 was consumed by the parallel TASK-500) + README/board/Statistics.
 
 **Sequencing / land order:** 501-01 (model keystone) → 501-02 (CSS) → 501-03
 (editor) → 501-04 (closure). 501-02 AND 501-03 both depend on 501-01; 501-03
@@ -274,8 +277,11 @@ route/endpoint/RBAC/migration — the document rides the existing validated
    the Design canvas; switching back to Desktop shows the unchanged base.
 2. **Front matches at a real mobile viewport** — `:3000` at ≤639px width shows
    the mobile-overridden appearance + visibility (playwright, real viewport);
-   ≥640px shows the untouched desktop look. Desktop output for a menu with NO
-   overrides is byte-identical to pre-TASK-501.
+   ≥640px shows the untouched desktop look. Desktop CSS
+   (`buildMenuDocumentCss` / `buildMenuDocumentPreviewCss`) for a menu with
+   NO overrides is byte-identical to pre-TASK-501; markup is unchanged except
+   the inert `data-menu-block-id` attributes stamped on menu-native wrappers
+   (501-02 §5).
 3. **Reset restores inheritance** — the per-control Reset removes the mobile
    override (record pruned from the stored document), the badge flips
    Override → Inherited, and the canvas re-inherits the desktop value live.
@@ -335,7 +341,7 @@ trusting admin-API responses.
 
 ## Documentation Updates Required
 
-- `_docs/_CHANGELOG/` entry on closure (next free number, expected 1209),
+- `_docs/_CHANGELOG/` entry on closure (next free number — CLOSED as 1210; 1209 was consumed by the parallel TASK-500),
   linking TASK-501 + all four subtasks.
 - Cross-link the responsive contract from the menuDocumentV2 notes added by
   TASK-499 (PAGE_MODEL/site-shell docs).

@@ -2801,12 +2801,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                 builder rail re-stacks the head vertically to fit 280px.
               */}
                 <div className="flex flex-col gap-2" data-page-editor-toolbar-row="head">
-                  <ToolbarIconButton
-                    tooltip={toolbarActionTooltips.hidePanel}
-                    onClick={() => setPanelOpen(false)}
-                  >
-                    <PanelRight className="h-4 w-4" />
-                  </ToolbarIconButton>
+                  {/* TASK-500-03: the redundant in-panel PanelRight "Hide options
+                      panel" closer was removed — the sub-toolbar Hide/Show toggle
+                      and the "Show panel" reopen chip are the SOLE panel controls
+                      (single hide surface, Screens parity). */}
                   <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
                     <PanelTop className={`h-4 w-4 ${panelTokens.label}`} />
                     <span className="truncate text-sm font-semibold">{toolbarTargetLabel}</span>

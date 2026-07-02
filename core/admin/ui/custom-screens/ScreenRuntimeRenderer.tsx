@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { AlertTriangle, Image as ImageIcon } from "lucide-react";
+import { Fragment, useState, type DragEvent as ReactDragEvent, type ReactNode } from "react";
+import { AlertTriangle, Image as ImageIcon, MoveDown, MoveUp, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -14,6 +14,7 @@ import type {
 import {
   screenBlockLabels,
   type ScreenBlockKind,
+  type ScreenInsertTarget,
 } from "../../../services/customScreens/screenDocumentOps";
 import type { RelatedEntrySummary } from "../../../services/customScreens/relatedEntryResolver";
 import type {
@@ -43,6 +44,22 @@ type ScreenRuntimeRendererProps = {
   selectedBlockId?: string | null;
   onSelectSection?: (sectionId: string) => void;
   onSelectBlock?: (blockId: string) => void;
+  // TASK-500-01: builder-only section chrome (rename / move / delete). All three
+  // are OPTIONAL and consumed only in mode==="builder" when the section is
+  // selected — the preview/entry render paths stay byte-identical.
+  onRenameSection?: (sectionId: string, label: string) => void;
+  onMoveSection?: (sectionId: string, direction: "up" | "down") => void;
+  onDeleteSection?: (sectionId: string) => void;
+  // TASK-500-02: builder-only insertion targeting + drag-to-position. All three
+  // are OPTIONAL and consumed only in mode==="builder" — the preview/entry
+  // render paths stay byte-identical. `insertPoint` highlights the armed
+  // gap/slot; `onSetInsertPoint` arms/disarms it (one-shot, host-owned);
+  // `onDragMove` fires when a native-DnD drop resolves a ScreenInsertTarget.
+  // The canvas ALWAYS reports gap indices against the PRE-removal rendered
+  // list — moveScreenBlockTo is the sole owner of the removal-first decrement.
+  insertPoint?: ScreenInsertTarget | null;
+  onSetInsertPoint?: (target: ScreenInsertTarget | null) => void;
+  onDragMove?: (blockId: string, target: ScreenInsertTarget) => void;
   onFieldChange?: (field: string, value: unknown) => void;
   onTitleChange?: (value: string) => void;
   onSlugChange?: (value: string) => void;
@@ -205,29 +222,31 @@ const resolveMediaSrc = (value: unknown): string | null => {
 const bindingAllowsWrite = (binding: ScreenFieldBinding | null | undefined) =>
   binding?.mode === "write" || binding?.mode === "readwrite";
 
-const renderSlots = (
-  slots: Record<string, ScreenBlockV1[]> | undefined,
-  renderBlock: (block: ScreenBlockV1) => ReactNode,
-  options?: { columns?: boolean }
-) => {
-  if (!slots) return null;
-  const entries = Object.entries(slots);
-  if (entries.length === 0) return null;
-  return (
-    <div className={options?.columns ? "grid gap-4 md:grid-cols-2" : "space-y-4"}>
-      {entries.map(([slotId, blocks]) => (
-        <div key={slotId} className="min-w-0 space-y-3" data-screen-runtime-slot={slotId}>
-          {blocks.length > 0 ? (
-            blocks.map((block) => renderBlock(block))
-          ) : (
-            <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
-              Empty {slotId}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
+// TASK-500-02: the render context threaded through the block recursion so slot
+// affordances know which section they sit in (ScreenInsertTarget carries the
+// sectionId) and whether the subtree belongs to the block being dragged
+// (`suppressed` hides its inner gaps/drop zones — visual reinforcement of the
+// moveScreenBlockTo cycle guard; the op is the real guard).
+type RenderBlockContext = {
+  sectionId: string;
+  suppressed: boolean;
+  // TASK-500 post-audit: the before/after ScreenInsertTargets of THIS block's
+  // position in its parent list (builder only). The card body uses them as a
+  // midpoint-resolved drop target so dropping ON a card lands before/after that
+  // card instead of silently falling through to the section's end.
+  dropTargets?: { before: ScreenInsertTarget; after: ScreenInsertTarget };
+};
+
+// internal — armed-gap highlight equality for ScreenInsertTarget.
+const insertTargetsEqual = (a: ScreenInsertTarget, b: ScreenInsertTarget): boolean => {
+  if (a.kind !== b.kind) return false;
+  if (a.kind === "section-end" || a.kind === "section-index") {
+    if (a.sectionId !== b.sectionId) return false;
+    return a.kind === "section-index" && b.kind === "section-index" ? a.index === b.index : true;
+  }
+  if (b.kind !== "slot-end" && b.kind !== "slot-index") return false;
+  if (a.parentId !== b.parentId || a.slotId !== b.slotId) return false;
+  return a.kind === "slot-index" && b.kind === "slot-index" ? a.index === b.index : true;
 };
 
 export function ScreenRuntimeRenderer({
@@ -244,6 +263,12 @@ export function ScreenRuntimeRenderer({
   selectedBlockId,
   onSelectSection,
   onSelectBlock,
+  onRenameSection,
+  onMoveSection,
+  onDeleteSection,
+  insertPoint,
+  onSetInsertPoint,
+  onDragMove,
   onFieldChange,
   onTitleChange,
   onSlugChange,
@@ -251,6 +276,218 @@ export function ScreenRuntimeRenderer({
   enableInlineFieldEditing = false,
   emptyMessage,
 }: ScreenRuntimeRendererProps) {
+  // TASK-500-02: id of the card being natively dragged (builder-only) —
+  // suppresses that block's OWN inner drop zones while it is in flight. Set and
+  // cleared exclusively from DnD event handlers (no setState-in-effect).
+  const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
+  // TASK-500 post-audit (drag drop feedback): the ScreenInsertTarget the drag is
+  // currently hovering. CSS `:hover` does NOT apply while a native HTML5 drag is
+  // in flight, so this state drives the visible "where will it land" highlight —
+  // dragover sets it (innermost zone wins via stopPropagation), dragleave clears
+  // it only when it still points at the leaving zone, drop/dragend always clear.
+  const [dragHoverTarget, setDragHoverTarget] = useState<ScreenInsertTarget | null>(null);
+  const setDragHover = (target: ScreenInsertTarget) =>
+    setDragHoverTarget((prev) => (prev && insertTargetsEqual(prev, target) ? prev : target));
+  const clearDragHover = (target: ScreenInsertTarget) =>
+    setDragHoverTarget((prev) => (prev && insertTargetsEqual(prev, target) ? null : prev));
+  const isDragHover = (target: ScreenInsertTarget) =>
+    dragHoverTarget ? insertTargetsEqual(dragHoverTarget, target) : false;
+  const canInsert = mode === "builder" && Boolean(onSetInsertPoint);
+  const canDrag = mode === "builder" && Boolean(onDragMove);
+
+  // Shared native-DnD drop wiring: dataTransfer carries the dragged block id as
+  // text/plain; a drop resolves the ScreenInsertTarget of the zone it landed on.
+  const dropHandlers = (target: ScreenInsertTarget) =>
+    canDrag
+      ? {
+          onDragOver: (event: ReactDragEvent) => {
+            event.preventDefault();
+            // The INNERMOST zone claims the hover highlight — outer zones
+            // (container card midpoint / section body) must not override it.
+            event.stopPropagation();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+            setDragHover(target);
+          },
+          onDragLeave: () => clearDragHover(target),
+          onDrop: (event: ReactDragEvent) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const blockId = event.dataTransfer?.getData("text/plain");
+            setDraggingBlockId(null);
+            setDragHoverTarget(null);
+            if (blockId) onDragMove?.(blockId, target);
+          },
+        }
+      : {};
+
+  // Thin hover "＋ insert here" gap between siblings (builder-only). Click arms
+  // (or disarms) the one-shot insert point; a drop moves the dragged block to
+  // the gap's PRE-removal index (the op owns the same-list decrement).
+  const renderInsertGap = (
+    target: Extract<ScreenInsertTarget, { kind: "section-index" | "slot-index" }>
+  ) => {
+    if (!canInsert) return null;
+    const armed = insertPoint ? insertTargetsEqual(insertPoint, target) : false;
+    // TASK-500 post-audit: `:hover` never fires during a native drag, so while a
+    // block is in flight EVERY gap force-reveals at reduced opacity and the one
+    // the drag is over (directly, or resolved from a card-body midpoint) gets
+    // the full ring — the author can SEE where the drop will land.
+    const dragHover = isDragHover(target);
+    const dragging = draggingBlockId !== null;
+    return (
+      <button
+        type="button"
+        aria-label="Insert here"
+        data-screen-insert-gap="true"
+        data-insert-kind={target.kind}
+        data-insert-section={target.sectionId}
+        data-insert-parent={target.kind === "slot-index" ? target.parentId : undefined}
+        data-insert-slot={target.kind === "slot-index" ? target.slotId : undefined}
+        data-insert-index={target.index}
+        data-armed={armed ? "true" : "false"}
+        data-drag-hover={dragHover ? "true" : undefined}
+        className={cn(
+          "group/gap relative z-10 -my-2 flex h-4 w-full items-center justify-center rounded-md transition",
+          armed
+            ? "bg-primary/10 ring-1 ring-primary"
+            : dragHover
+              ? "bg-primary/10 opacity-100 ring-2 ring-primary"
+              : dragging
+                ? "bg-primary/5 opacity-60"
+                : "opacity-0 hover:bg-primary/5 hover:opacity-100 focus-visible:opacity-100"
+        )}
+        onClick={(event) => {
+          event.stopPropagation();
+          onSetInsertPoint?.(armed ? null : target);
+        }}
+        {...dropHandlers(target)}
+      >
+        <span className="pointer-events-none text-[10px] font-medium text-primary">
+          ＋ insert here
+        </span>
+      </button>
+    );
+  };
+
+  // Container slot lists (field-group / columns). Preview/entry render the
+  // exact pre-TASK-500-02 markup; the builder path layers per-slot drop zones,
+  // sibling gaps, and an armable empty-slot target onto the SAME structure
+  // (`data-screen-runtime-slot` markers kept). `renderChild` is passed in to
+  // avoid mutual use-before-define with renderBlock.
+  const renderSlots = (
+    block: ScreenBlockV1,
+    renderChild: (child: ScreenBlockV1, childCtx: RenderBlockContext) => ReactNode,
+    ctx: RenderBlockContext,
+    options?: { columns?: boolean }
+  ) => {
+    const slots = block.slots;
+    if (!slots) return null;
+    const entries = Object.entries(slots);
+    if (entries.length === 0) return null;
+    const showAffordances = mode === "builder" && !ctx.suppressed;
+    return (
+      <div className={options?.columns ? "grid gap-4 md:grid-cols-2" : "space-y-4"}>
+        {entries.map(([slotId, blocks]) => {
+          const slotEndTarget: ScreenInsertTarget = {
+            kind: "slot-end",
+            sectionId: ctx.sectionId,
+            parentId: block.id,
+            slotId,
+          };
+          const armed =
+            canInsert && insertPoint ? insertTargetsEqual(insertPoint, slotEndTarget) : false;
+          const slotDragHover = showAffordances && isDragHover(slotEndTarget);
+          const childDropTargets = (
+            index: number
+          ): RenderBlockContext["dropTargets"] | undefined =>
+            showAffordances
+              ? {
+                  before: {
+                    kind: "slot-index",
+                    sectionId: ctx.sectionId,
+                    parentId: block.id,
+                    slotId,
+                    index,
+                  },
+                  after: {
+                    kind: "slot-index",
+                    sectionId: ctx.sectionId,
+                    parentId: block.id,
+                    slotId,
+                    index: index + 1,
+                  },
+                }
+              : undefined;
+          return (
+            <div
+              key={slotId}
+              className="min-w-0 space-y-3"
+              data-screen-runtime-slot={slotId}
+              {...(showAffordances ? dropHandlers(slotEndTarget) : {})}
+            >
+              {blocks.length > 0 ? (
+                showAffordances ? (
+                  <>
+                    {blocks.map((child, index) => (
+                      <Fragment key={child.id}>
+                        {renderInsertGap({
+                          kind: "slot-index",
+                          sectionId: ctx.sectionId,
+                          parentId: block.id,
+                          slotId,
+                          index,
+                        })}
+                        {renderChild(child, { ...ctx, dropTargets: childDropTargets(index) })}
+                      </Fragment>
+                    ))}
+                    {renderInsertGap({
+                      kind: "slot-index",
+                      sectionId: ctx.sectionId,
+                      parentId: block.id,
+                      slotId,
+                      index: blocks.length,
+                    })}
+                  </>
+                ) : (
+                  // Strip the CONTAINER's own dropTargets — a child card must
+                  // never inherit its parent's before/after position.
+                  blocks.map((child) => renderChild(child, { ...ctx, dropTargets: undefined }))
+                )
+              ) : showAffordances && canInsert ? (
+                // Builder-only: the empty placeholder becomes an explicit,
+                // armable labeled drop target (same look, same "Empty {slotId}"
+                // copy) so the author can aim ANY nested slot at depth.
+                <button
+                  type="button"
+                  data-screen-slot-dropzone={slotId}
+                  data-insert-parent={block.id}
+                  data-armed={armed ? "true" : "false"}
+                  data-drag-hover={slotDragHover ? "true" : undefined}
+                  className={cn(
+                    "w-full rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-left text-sm text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground",
+                    armed && "border-primary ring-1 ring-primary",
+                    !armed && slotDragHover && "border-primary bg-primary/10 text-foreground"
+                  )}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSetInsertPoint?.(armed ? null : slotEndTarget);
+                  }}
+                  {...dropHandlers(slotEndTarget)}
+                >
+                  Empty {slotId}
+                </button>
+              ) : (
+                <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
+                  Empty {slotId}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   const presentationOverrideMap = new Map<string, string>();
   const blocksWithPresentationOverrides = new Set<string>();
   for (const override of presentationOverrides) {
@@ -280,9 +517,15 @@ export function ScreenRuntimeRenderer({
   const readMediaPresentationValue = (blockId: string) =>
     readPresentationOverride(blockId, "mediaAssetId") ?? readPresentationOverride(blockId, "image");
 
-  const renderBlock = (block: ScreenBlockV1): ReactNode => {
+  const renderBlock = (block: ScreenBlockV1, ctx: RenderBlockContext): ReactNode => {
     const selected = selectedBlockId === block.id;
     const isInteractive = mode !== "preview" && Boolean(onSelectBlock);
+    // TASK-500-02: a dragged container suppresses its OWN inner drop zones
+    // (children inherit `suppressed`); the op-level cycle guard is the real guard.
+    const childCtx: RenderBlockContext = {
+      sectionId: ctx.sectionId,
+      suppressed: ctx.suppressed || draggingBlockId === block.id,
+    };
     // TASK-498-01 A2: in builder mode a block renders as a corner-tag card
     // (`rounded-2xl bg-card p-5` + the selection border), mirroring the prototype
     // Section (CustomScreenEditorPreview.tsx:28-56) — NOT the old uppercase type
@@ -310,6 +553,20 @@ export function ScreenRuntimeRenderer({
             )
     );
 
+    // TASK-500 post-audit: dropping on a block CARD BODY (the most natural drag
+    // target) resolves to before/after THAT card by vertical midpoint instead of
+    // silently bubbling to the section-end dropzone. Inner gaps/slots still win
+    // (their dragover/drop stopPropagation), and a suppressed subtree (the
+    // dragged container's own children) exposes no card targets.
+    const cardDropTargets = canDrag && !ctx.suppressed ? ctx.dropTargets : undefined;
+    const resolveCardDropTarget = (
+      event: ReactDragEvent,
+      targets: NonNullable<RenderBlockContext["dropTargets"]>
+    ) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      return event.clientY < rect.top + rect.height / 2 ? targets.before : targets.after;
+    };
+
     const wrap = (content: ReactNode) => (
       <div
         key={block.id}
@@ -322,6 +579,50 @@ export function ScreenRuntimeRenderer({
         data-selected={selected ? "true" : "false"}
         role={isInteractive ? "button" : undefined}
         tabIndex={isInteractive ? 0 : undefined}
+        // TASK-500-02: builder cards are native-DnD drag sources. stopPropagation
+        // keeps a nested card's drag from being hijacked by its container card.
+        draggable={canDrag ? true : undefined}
+        onDragStart={
+          canDrag
+            ? (event) => {
+                event.stopPropagation();
+                event.dataTransfer?.setData("text/plain", block.id);
+                if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+                setDraggingBlockId(block.id);
+              }
+            : undefined
+        }
+        onDragEnd={
+          canDrag
+            ? () => {
+                setDraggingBlockId(null);
+                setDragHoverTarget(null);
+              }
+            : undefined
+        }
+        onDragOver={
+          cardDropTargets
+            ? (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+                setDragHover(resolveCardDropTarget(event, cardDropTargets));
+              }
+            : undefined
+        }
+        onDrop={
+          cardDropTargets
+            ? (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const blockId = event.dataTransfer?.getData("text/plain");
+                const target = resolveCardDropTarget(event, cardDropTargets);
+                setDraggingBlockId(null);
+                setDragHoverTarget(null);
+                if (blockId) onDragMove?.(blockId, target);
+              }
+            : undefined
+        }
         onClick={
           isInteractive
             ? (event) => {
@@ -573,7 +874,7 @@ export function ScreenRuntimeRenderer({
               <p className="text-sm text-muted-foreground">{readText(block.data, "description")}</p>
             ) : null}
           </div>
-          {renderSlots(block.slots, renderBlock)}
+          {renderSlots(block, renderBlock, childCtx)}
         </section>
       );
     }
@@ -581,7 +882,7 @@ export function ScreenRuntimeRenderer({
     if (block.type === "columns") {
       return wrap(
         <div className={cn("p-4", mode === "preview" && "rounded-xl border bg-card")}>
-          {renderSlots(block.slots, renderBlock, { columns: true })}
+          {renderSlots(block, renderBlock, childCtx, { columns: true })}
         </div>
       );
     }
@@ -721,8 +1022,16 @@ export function ScreenRuntimeRenderer({
       const label = readText(block.data, "label", "Image");
       const fit = readText(block.data, "fit", "cover");
       const bound = binding ? readBindingPathValue(values, binding.field) : undefined;
-      const src = readMediaPresentationValue(block.id) ?? resolveMediaSrc(bound);
-      if (mode !== "builder" && src) {
+      // TASK-500-04: authored static src (schema already scheme-checked on save).
+      // Resolution order preserves override-first precedence: per-entry media/presentation
+      // override → bound field value → authored static src → labeled placeholder.
+      const staticSrc = readText(block.data, "src");
+      const src =
+        readMediaPresentationValue(block.id) ?? resolveMediaSrc(bound) ?? (staticSrc || null);
+      // Builder mirrors heading: a bound image keeps the {{ label }} token; an unbound
+      // image with an authored static src previews the real image.
+      const showImage = Boolean(src) && (mode !== "builder" || (!binding && Boolean(staticSrc)));
+      if (showImage && src) {
         return wrap(
           <div className={cn("px-4 py-3", mode === "preview" && "rounded-xl border bg-card")}>
             <img
@@ -809,10 +1118,98 @@ export function ScreenRuntimeRenderer({
             {tabs.map((tab, index) => {
               const tabId = typeof tab.id === "string" ? tab.id : `tab-${index + 1}`;
               const slotBlocks = block.slots?.[tabId] ?? [];
+              // TASK-500-02 (builder only): each tab slot mirrors the renderSlots
+              // affordances — per-slot drop zone + sibling gaps + armable empty
+              // placeholder; preview/entry markup stays byte-identical.
+              const showAffordances = mode === "builder" && !childCtx.suppressed;
+              const tabEndTarget: ScreenInsertTarget = {
+                kind: "slot-end",
+                sectionId: childCtx.sectionId,
+                parentId: block.id,
+                slotId: tabId,
+              };
+              const tabArmed =
+                canInsert && insertPoint ? insertTargetsEqual(insertPoint, tabEndTarget) : false;
+              const tabDragHover = showAffordances && isDragHover(tabEndTarget);
+              const tabChildDropTargets = (
+                childIndex: number
+              ): RenderBlockContext["dropTargets"] | undefined =>
+                showAffordances
+                  ? {
+                      before: {
+                        kind: "slot-index",
+                        sectionId: childCtx.sectionId,
+                        parentId: block.id,
+                        slotId: tabId,
+                        index: childIndex,
+                      },
+                      after: {
+                        kind: "slot-index",
+                        sectionId: childCtx.sectionId,
+                        parentId: block.id,
+                        slotId: tabId,
+                        index: childIndex + 1,
+                      },
+                    }
+                  : undefined;
               return (
-                <div key={tabId} className="space-y-3" data-screen-runtime-tab={tabId}>
+                <div
+                  key={tabId}
+                  className="space-y-3"
+                  data-screen-runtime-tab={tabId}
+                  {...(showAffordances ? dropHandlers(tabEndTarget) : {})}
+                >
                   {slotBlocks.length > 0 ? (
-                    slotBlocks.map((child) => renderBlock(child))
+                    showAffordances ? (
+                      <>
+                        {slotBlocks.map((child, childIndex) => (
+                          <Fragment key={child.id}>
+                            {renderInsertGap({
+                              kind: "slot-index",
+                              sectionId: childCtx.sectionId,
+                              parentId: block.id,
+                              slotId: tabId,
+                              index: childIndex,
+                            })}
+                            {renderBlock(child, {
+                              ...childCtx,
+                              dropTargets: tabChildDropTargets(childIndex),
+                            })}
+                          </Fragment>
+                        ))}
+                        {renderInsertGap({
+                          kind: "slot-index",
+                          sectionId: childCtx.sectionId,
+                          parentId: block.id,
+                          slotId: tabId,
+                          index: slotBlocks.length,
+                        })}
+                      </>
+                    ) : (
+                      slotBlocks.map((child) =>
+                        renderBlock(child, { ...childCtx, dropTargets: undefined })
+                      )
+                    )
+                  ) : showAffordances && canInsert ? (
+                    <button
+                      type="button"
+                      data-screen-slot-dropzone={tabId}
+                      data-insert-parent={block.id}
+                      data-armed={tabArmed ? "true" : "false"}
+                      data-drag-hover={tabDragHover ? "true" : undefined}
+                      className={cn(
+                        "w-full rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-left text-sm text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground",
+                        tabArmed && "border-primary ring-1 ring-primary",
+                        !tabArmed && tabDragHover && "border-primary bg-primary/10 text-foreground"
+                      )}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onSetInsertPoint?.(tabArmed ? null : tabEndTarget);
+                      }}
+                      {...dropHandlers(tabEndTarget)}
+                    >
+                      Empty {typeof tab.label === "string" && tab.label ? tab.label : tabId}
+                    </button>
                   ) : (
                     <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-4 text-sm text-muted-foreground">
                       Empty {typeof tab.label === "string" && tab.label ? tab.label : tabId}
@@ -976,8 +1373,18 @@ export function ScreenRuntimeRenderer({
     );
   };
 
-  const hasBlocks = document.sections.some((section) => section.blocks.length > 0);
-  if (!hasBlocks) {
+  // TASK-500 post-audit (sections first-class in the empty document): a brand-new
+  // screen normalizes to ZERO sections, and "Add section" must produce a VISIBLE,
+  // selectable frame (rename/move/delete chrome + section-end drop zone) even
+  // before the first block exists. Builder mode therefore only shows the generic
+  // empty message when there are no sections at all; preview/entry keep the
+  // original all-blocks-empty gate so their markup stays byte-identical
+  // (TASK-498 look parity).
+  const showEmptyMessage =
+    mode === "builder"
+      ? document.sections.length === 0
+      : !document.sections.some((section) => section.blocks.length > 0);
+  if (showEmptyMessage) {
     return (
       <div className="rounded-xl border border-dashed bg-background/40 px-8 py-16 text-center text-sm text-muted-foreground">
         {emptyMessage ?? "Add screen blocks to compose this view."}
@@ -990,6 +1397,11 @@ export function ScreenRuntimeRenderer({
       {document.sections.map((section) => {
         const selected = selectedSectionId === section.id;
         const isInteractive = mode === "builder" && Boolean(onSelectSection);
+        const sectionEndTarget: ScreenInsertTarget = {
+          kind: "section-end",
+          sectionId: section.id,
+        };
+        const sectionDragHover = mode === "builder" && isDragHover(sectionEndTarget);
         const title =
           typeof section.data.title === "string" && section.data.title.trim()
             ? section.data.title.trim()
@@ -1036,15 +1448,150 @@ export function ScreenRuntimeRenderer({
             }
           >
             {mode === "builder" ? (
-              // TASK-498-01 A3: builder section header is the human title only —
-              // no `font-mono section.id` debug string.
-              <div className="mb-3 text-xs font-semibold uppercase text-muted-foreground">
-                {title}
-              </div>
+              // Chrome shows only when the SECTION ITSELF is the active target
+              // (a selected block keeps the plain title — its own chrome wins).
+              selected &&
+              !selectedBlockId &&
+              (onRenameSection || onMoveSection || onDeleteSection) ? (
+                // TASK-500-01: selected-section chrome — inline rename input +
+                // move/delete cluster. Rendered ONLY in builder mode when the
+                // section is selected, so unselected builder + preview/entry
+                // stay byte-identical (TASK-498 look parity).
+                <div className="mb-3 flex items-center gap-1.5">
+                  {onRenameSection ? (
+                    <input
+                      key={`${section.id}-${title}`}
+                      type="text"
+                      defaultValue={title}
+                      aria-label="Rename section"
+                      data-screen-section-rename="true"
+                      className="h-7 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      // REQUIRED (real-input bug guard): the parent <section>
+                      // onKeyDown preventDefault()s Space (swallowing it) and
+                      // re-selects on Enter. Stop propagation HERE so Space/Enter
+                      // reach the field and Enter commits the rename WITHOUT
+                      // re-triggering the section select.
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => {
+                        event.stopPropagation();
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          onRenameSection(section.id, event.currentTarget.value);
+                        }
+                      }}
+                      onBlur={(event) => onRenameSection(section.id, event.currentTarget.value)}
+                    />
+                  ) : (
+                    <div className="min-w-0 flex-1 truncate text-xs font-semibold uppercase text-muted-foreground">
+                      {title}
+                    </div>
+                  )}
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    {onMoveSection ? (
+                      <>
+                        <button
+                          type="button"
+                          aria-label="Move section up"
+                          data-screen-section-move-up="true"
+                          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onMoveSection(section.id, "up");
+                          }}
+                        >
+                          <MoveUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label="Move section down"
+                          data-screen-section-move-down="true"
+                          className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onMoveSection(section.id, "down");
+                          }}
+                        >
+                          <MoveDown className="h-3.5 w-3.5" />
+                        </button>
+                      </>
+                    ) : null}
+                    {onDeleteSection ? (
+                      <button
+                        type="button"
+                        aria-label="Delete section"
+                        data-screen-section-delete="true"
+                        className="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-destructive"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onDeleteSection(section.id);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : (
+                // TASK-498-01 A3: builder section header is the human title only —
+                // no `font-mono section.id` debug string.
+                <div className="mb-3 text-xs font-semibold uppercase text-muted-foreground">
+                  {title}
+                </div>
+              )
             ) : null}
-            <div className="space-y-4">
+            <div
+              className={cn(
+                "space-y-4",
+                // Drag feedback: the section body lights up when the in-flight
+                // drop would append to THIS section's end.
+                sectionDragHover && "rounded-lg bg-primary/5 ring-1 ring-primary/50"
+              )}
+              // TASK-500-02 (builder only): the section body is a drop target —
+              // dropping anywhere that no inner gap/slot/card claimed appends to
+              // the section's end (inner zones stopPropagation their own drops).
+              {...(mode === "builder"
+                ? {
+                    "data-screen-section-dropzone": section.id,
+                    "data-drag-hover": sectionDragHover ? "true" : undefined,
+                    ...dropHandlers(sectionEndTarget),
+                  }
+                : {})}
+            >
               {section.blocks.length > 0 ? (
-                section.blocks.map((block) => renderBlock(block))
+                mode === "builder" && canInsert ? (
+                  <>
+                    {section.blocks.map((block, index) => (
+                      <Fragment key={block.id}>
+                        {renderInsertGap({
+                          kind: "section-index",
+                          sectionId: section.id,
+                          index,
+                        })}
+                        {renderBlock(block, {
+                          sectionId: section.id,
+                          suppressed: false,
+                          dropTargets: {
+                            before: { kind: "section-index", sectionId: section.id, index },
+                            after: {
+                              kind: "section-index",
+                              sectionId: section.id,
+                              index: index + 1,
+                            },
+                          },
+                        })}
+                      </Fragment>
+                    ))}
+                    {renderInsertGap({
+                      kind: "section-index",
+                      sectionId: section.id,
+                      index: section.blocks.length,
+                    })}
+                  </>
+                ) : (
+                  section.blocks.map((block) =>
+                    renderBlock(block, { sectionId: section.id, suppressed: false })
+                  )
+                )
               ) : (
                 <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
                   Empty section

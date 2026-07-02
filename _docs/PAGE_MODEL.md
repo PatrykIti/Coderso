@@ -1045,6 +1045,22 @@ optional capabilities and ships the menu DESIGN view on top of them:
 - **`mode`** gains `"menu"` (still inert — all behavior rides the explicit
   host fields).
 
+> **STALE (superseded by TASK-499 / TASK-501 — see "menuDocumentV2 Document
+> Contract" below).** The menu design view described in the bullets that
+> follow (the `PageEditorHost`-seam editor, `MenuAppearancePanel.tsx`,
+> `settings.menuAppearance` on the page document, and the
+> `menuDesignDocument.ts` adapter) is the PRE-TASK-499 architecture. TASK-499
+> replaced it with a dedicated `menuDocumentV2` contract persisted in the
+> `menus.settings` envelope (`document` draft + `published.document`
+> snapshot) and a `CanvasEditor`-shell Design tab
+> (`core/admin/ui/menus/MenuDesignEditor.tsx`); TASK-501 added per-device
+> (mobile) overrides, nav orientation, and per-block visibility on top. The
+> host-capability seam notes above (palette scoping, optional `preview`,
+> `appearancePanel`, `canvasChrome`, `mode:"menu"`) remain accurate for the
+> `PageEditor` host contract itself. The nav-extras bullet's envelope
+> semantics (`extras`, `menuNavExtras.ts`, per-key merge, published snapshot)
+> are still live.
+
 The menu design view (`/menus/:id/design`, `menus:read`, "Design" button in
 the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
 
@@ -1091,6 +1107,90 @@ the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
   the editor's draft-save-first coherence step and copies that draft to
   `menus.settings.published`; menus issue no preview tokens — the live canvas
   IS the preview.
+
+## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501
+
+The Design tab of a menu edits a dedicated document contract owned by
+`core/services/menus/menuDocumentV2.ts` (NOT a Page v2 document). It persists
+in the freeform `menus.settings` jsonb envelope as the top-level `document`
+draft key and is copied to `settings.published.document` on publish; the front
+renders the PUBLISHED snapshot only (`resolvePublishedMenuDocument`,
+fail-closed to `null` ⇒ the default `SiteHeaderNav` + byte-identical
+`buildSiteShellCss` look). No dedicated endpoint/RBAC/migration — the document
+rides the validated `PATCH /menus/:id` (`menuUpdateSchema` allows
+`document: object|null`; service-side strict validation maps to a 400
+`menu_document_invalid` `ApiError` with the offending `path`).
+
+**Document shape** (`MENU_DOCUMENT_SCHEMA_VERSION = 1`):
+`{ schemaVersion: 1, sections: MenuSectionV2[] }` with at most 2 sections
+(`menu-bar` renders; `menu-drawer` is a reserved type with zero editor/front
+support — the front renders `sections[0]` only). A `menu-bar` section carries
+`layout: MenuBarLayout` (the menu-bar subset of `MenuAppearance`) and up to 12
+blocks: menu-native types (`nav-items`, `brand`, `search`, `account`,
+`language`) plus page-leaf reuses (`cta-button`, `divider`, `spacer`) that
+ride the Page v2 leaf validators. `nav-items` props are the `NavItemsProps`
+appearance subset — including `orientation: "horizontal" | "vertical"`
+(TASK-501; enum-validated in `normalizeMenuAppearance`, default `"horizontal"`
+emits NO CSS). Writes go through `normalizeMenuDocumentV2ForWrite`
+(schema-first, reject-unknown, throws `MenuDocumentError` with `path`); stored
+reads go through `normalizeStoredMenuDocumentV2ForRead`, which is FAIL-CLOSED:
+any invalid stored member degrades the WHOLE document to empty (designed blast
+radius, asserted in `tests/vitest/services/menu-document-v2.test.ts`) — which
+is why every new persisted key must be added to the section/block key
+allowlists consciously.
+
+**Responsive overrides (TASK-501, mobile-only v1; tablet DEFERRED):**
+
+- `MenuSectionV2.responsive?: { mobile?: { layout?, navProps? } }` — a SPARSE
+  record holding ONLY explicitly edited keys, lazily created by
+  `patchMenuSectionForDevice` (desktop AND tablet write the BASE; the editor
+  badge shows "Base" on tablet). Resolve-for-display =
+  `resolveMenuSectionAppearanceForDevice` (base merged with the override;
+  mobile inherits DESKTOP). Override detection reads the RAW record
+  (`readMenuSectionOverrideValue`), never the merge. Explicit Reset only
+  (`clearMenuSectionOverride` — NO auto-remove-on-equality); empty
+  `group`/`mobile`/`responsive` parents are pruned on clear and on write.
+- `MenuBlockV2.responsive?: { mobile?: { visibility?: { visible: boolean } } }`
+  on ALL block types (native and leaf) — "hide on mobile" for any block,
+  "show only on mobile" for leaves (flat `visibility.visible:false` +
+  mobile `visible:true`). Flat leaf visibility WITHOUT a responsive record
+  keeps the legacy render-skip semantics byte-unchanged. Helpers:
+  `resolveMenuBlockVisibleForDevice` / `setMenuBlockVisibleForDevice`
+  (mobile ⇒ override; desktop ⇒ flat, leaf-only) /
+  `clearMenuBlockVisibilityOverride`.
+- Legacy documents WITHOUT `responsive` round-trip byte-identically; unknown
+  breakpoint (`tablet` today) / group / prop keys are rejected on write.
+
+**CSS emission** (`core/site/menuDocumentCss.ts`): ONE shared
+`buildMenuRuleSets` feeds both `buildMenuDocumentCss` (front sheet — base
+rules + desktop `min-width:640px` + mobile `max-width:639px` branches) and
+`buildMenuDocumentPreviewCss(doc, device)` (canvas flatten, no `@media`;
+tablet maps to the DESKTOP branch). All rules are scoped under
+`[data-site-menu-doc="true"]` (every comma-list selector member carries the
+prefix). Mobile override deltas emit per-GROUP (a triggered group re-emits all
+its declarations with explicit/neutral values) AFTER the `mobileMode`
+disclosure/inline rules so overrides win by source order. Orientation
+`vertical` emits `.site-nav-list{flex-direction:column;align-items:stretch}`
+in the branch where it resolves. Per-device visibility is CSS-gated: blocks
+visible on at least one device stay DOM-rendered (menu-native wrappers are
+stamped with inert `data-menu-block-id` — for `nav-items` on the `<nav>`
+landmark ancestor, never `.site-nav-list`; leaf frames keep `PageBlockFrame`'s
+`data-block-id`) and hidden per branch via the doc-scoped dual selector
+`[data-menu-block-id="X"],[data-block-id="X"]{display:none}`; blocks visible
+on NEITHER device stay render-skipped. A document with NO overrides emits
+byte-identical CSS to pre-TASK-501 (pinned in
+`tests/unit/site/menu-document-render.test.tsx`).
+
+**Editor** (`core/admin/ui/menus/MenuDesignEditor.tsx`): the DeviceSwitcher
+forks the appearance writers — Mobile edits write the sparse override, Desktop
+(and deferred Tablet) write the base — from event handlers only. Every
+appearance control is wrapped in `MenuResponsiveControlShell`
+(Base/Override/Inherited badge + `data-menu-responsive-reset` Reset), panels
+show RESOLVED values, the canvas scope cue reads "Mobile (overrides)" /
+"Tablet (base)" / "Desktop (base)", and per-block visibility shows the flat
+"Visible" toggle for leaves on Desktop and the "Visible on mobile" override
+toggle on Mobile. Content writes (brand/cta/utility props) stay FLAT on every
+device.
 
 ## Revisions And Autosave
 

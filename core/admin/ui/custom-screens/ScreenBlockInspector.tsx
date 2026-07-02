@@ -27,6 +27,12 @@ type ScreenBlockInspectorProps = {
   // shape; the prop is retained (type-stable) but its sub-value no longer routes.
   panel?: "all" | "content" | "binding" | "layout" | "style" | "visibility";
   showBlockActions?: boolean;
+  // TASK-500-02 (optional): "Insert into" slot picker for a selected container.
+  // Arms a slot-end insert point on the host (keyboard-first parity with the
+  // canvas drop zones — those remain the primary surface). The inspector stays
+  // dumb: the canvas builds the full ScreenInsertTarget from (parentId, slotId).
+  onArmSlotInsert?: (parentId: string, slotId: string) => void;
+  armedInsertSlotId?: string | null;
   onPatchBlock: (blockId: string, patch: Partial<ScreenBlockV1>) => void;
   onPatchBlockData: (blockId: string, patch: Record<string, unknown>) => void;
   onPatchBinding: (
@@ -288,6 +294,8 @@ export function ScreenBlockInspector({
   bindings,
   fields,
   showBlockActions = true,
+  onArmSlotInsert,
+  armedInsertSlotId = null,
   onPatchBlock,
   onPatchBlockData,
   onPatchBinding,
@@ -573,6 +581,13 @@ export function ScreenBlockInspector({
             filterTypes={["media"]}
             bindMode="read"
           />
+          <InspectorRow label="Image URL">
+            <Input
+              value={readString(selectedBlock.data.src)}
+              onChange={(event) => patchData({ src: event.target.value })}
+              placeholder="https://… or /media/… — used when no field is bound"
+            />
+          </InspectorRow>
           <EnumRow
             label="Fit"
             value={readEnum(selectedBlock.data.fit, "cover")}
@@ -679,6 +694,29 @@ export function ScreenBlockInspector({
             </InspectorRow>
           ) : null}
         </>
+      ) : null}
+
+      {selectedBlock.slots && Object.keys(selectedBlock.slots).length > 0 && onArmSlotInsert ? (
+        // TASK-500-02: optional convenience — pick which slot of the selected
+        // container the NEXT insert targets (slot-end). The canvas drop zones
+        // and gaps stay the primary insertion surface.
+        <InspectorRow label="Insert into">
+          <Select
+            value={armedInsertSlotId ?? undefined}
+            onValueChange={(slotId) => onArmSlotInsert(selectedBlock.id, slotId)}
+          >
+            <SelectTrigger data-screen-insert-into="true">
+              <SelectValue placeholder="Choose a slot" />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.keys(selectedBlock.slots).map((slotId) => (
+                <SelectItem key={slotId} value={slotId}>
+                  {slotId}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </InspectorRow>
       ) : null}
 
       {selectedBlock.type === "legacy-widget" ? (

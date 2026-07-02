@@ -7,7 +7,8 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-498 (data-oriented builder + look parity — SHIPPED). Independent of
 500-01/02/03 (isolated schema + inspector + renderer fix; can land in parallel).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

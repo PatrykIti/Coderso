@@ -5,7 +5,8 @@
 **Category:** Front Renderer / Site Shell / Content (Menus) / Responsive
 **Estimated Effort:** Medium-Large
 **Dependencies:** TASK-501-01 (`responsive` records + `resolveMenuSectionAppearanceForDevice` / `resolveMenuBlockVisibleForDevice` + `orientation` enum), TASK-499-04 (`menuDocumentCss.ts` + `SiteHeaderMenuDocumentRender`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 **Parent Task:** TASK-501
 
 ---
@@ -337,7 +338,12 @@ the editor UI vitest).
 - **Orientation:** base `"vertical"` ⇒
   `.site-nav-list{flex-direction:column;align-items:stretch}` in the base
   rules (front AND canvas, both devices); default/absent ⇒ the string
-  `flex-direction:column` absent from the whole sheet.
+  `.site-nav-list{flex-direction:column` (the orientation rule's
+  selector + leading declaration) absent from the whole sheet — NOT the bare
+  substring `flex-direction:column`, which the mobileMode disclosure-open
+  rule (`:133`, selector `[open]~.site-nav-list`, leading `display:flex`)
+  legitimately emits under the default `mobileMode:"disclosure"` (see §3
+  interplay note).
 - **mobileMode override:** `responsive.mobile.navProps.mobileMode:"inline"`
   over base `"disclosure"` ⇒ the mobile branch emits the inline pair
   (`:135-139` shapes), not the disclosure triple.

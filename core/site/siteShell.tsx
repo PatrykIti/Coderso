@@ -1,4 +1,9 @@
-import type { MenuBlockV2, MenuDocumentV2 } from "../services/menus/menuDocumentV2";
+import {
+  hasMenuBlockVisibilityOverride,
+  resolveMenuBlockVisibleForDevice,
+  type MenuBlockV2,
+  type MenuDocumentV2,
+} from "../services/menus/menuDocumentV2";
 import type { MenuAppearance } from "../services/menus/normalizeMenuAppearance";
 import { sanitizeAuthoringLinkHref } from "../services/pages/pageAuthoringSanitizers";
 import type { PageBlockV2, PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
@@ -257,8 +262,28 @@ const menuLeafToPageBlock = (block: MenuBlockV2): PageBlockV2 =>
     type: MENU_LEAF_TO_PAGE_TYPE[block.type as keyof typeof MENU_LEAF_TO_PAGE_TYPE],
     props: block.props,
     style: "style" in block ? block.style : undefined,
-    visibility: ("visibility" in block && block.visibility) || { visible: true },
+    // TASK-501-02: a responsive visibility override hands gating to the
+    // per-branch CSS hide rules (`buildMenuDocumentCss`) — the frame must NOT
+    // skip, so a show-only-on-mobile leaf (flat `visible:false` + mobile
+    // `visible:true`) renders its frame and the DESKTOP branch hide rule keeps
+    // it invisible ≥640px. Blocks without an override keep the flat
+    // render-time semantics byte-unchanged.
+    visibility: hasMenuBlockVisibilityOverride(block)
+      ? { visible: true }
+      : ("visibility" in block && block.visibility) || { visible: true },
   }) as PageBlockV2;
+
+/**
+ * TASK-501-02 render gate: a block WITH a responsive visibility override is
+ * DOM-rendered whenever it is visible on AT LEAST ONE device (the per-branch
+ * CSS hide rules gate it per viewport); visible-on-neither blocks render no
+ * markup and emit no CSS. Blocks without an override keep the legacy path
+ * unchanged.
+ */
+const shouldRenderMenuBlock = (block: MenuBlockV2): boolean =>
+  !hasMenuBlockVisibilityOverride(block) ||
+  resolveMenuBlockVisibleForDevice(block, "desktop") ||
+  resolveMenuBlockVisibleForDevice(block, "mobile");
 
 const MENU_UTILITY_DEFAULT_LABEL: Record<"search" | "account" | "language", string> = {
   search: "Search",
@@ -266,10 +291,24 @@ const MENU_UTILITY_DEFAULT_LABEL: Record<"search" | "account" | "language", stri
   language: "Language",
 };
 
-const NavItemsRender = ({ items, label }: { items: NavigationItem[]; label: string }) => {
+const NavItemsRender = ({
+  items,
+  label,
+  blockId,
+}: {
+  items: NavigationItem[];
+  label: string;
+  /** TASK-501-02: inert visibility hook stamped on the `<nav>` LANDMARK (the ancestor above `.site-nav-list`). */
+  blockId: string;
+}) => {
   if (items.length === 0) return null;
   return (
-    <nav className="site-nav" aria-label={label.trim() || "Site navigation"} data-site-nav="true">
+    <nav
+      className="site-nav"
+      aria-label={label.trim() || "Site navigation"}
+      data-site-nav="true"
+      data-menu-block-id={blockId}
+    >
       <details className="site-nav-disclosure" data-site-nav-disclosure="true">
         <summary>Menu</summary>
       </details>
@@ -302,14 +341,14 @@ const BrandRender = ({
       visibility: { visible: true },
     } as PageBlockV2;
     return (
-      <a className="site-header-brand" href={href}>
+      <a className="site-header-brand" href={href} data-menu-block-id={block.id}>
         <PageBlockContent block={imageBlock} />
       </a>
     );
   }
   if (!siteName) return null;
   return (
-    <a className="site-header-brand" href={href}>
+    <a className="site-header-brand" href={href} data-menu-block-id={block.id}>
       {siteName}
     </a>
   );
@@ -322,7 +361,11 @@ const MenuUtilityRender = ({
 }) => {
   const label = block.props.label?.trim() || MENU_UTILITY_DEFAULT_LABEL[block.type];
   return (
-    <span className="site-nav-utility" data-site-nav-utility={block.type}>
+    <span
+      className="site-nav-utility"
+      data-site-nav-utility={block.type}
+      data-menu-block-id={block.id}
+    >
       {label}
     </span>
   );
@@ -351,10 +394,12 @@ export function SiteHeaderMenuDocumentRender({
     >
       <style>{buildMenuDocumentCss(document)}</style>
       <div className="site-header-inner">
-        {blocks.map((block) => {
+        {blocks.filter(shouldRenderMenuBlock).map((block) => {
           switch (block.type) {
             case "nav-items":
-              return <NavItemsRender key={block.id} items={items} label={navLabel} />;
+              return (
+                <NavItemsRender key={block.id} items={items} label={navLabel} blockId={block.id} />
+              );
             case "brand":
               return <BrandRender key={block.id} block={block} siteName={siteName} />;
             case "search":

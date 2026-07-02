@@ -49,16 +49,23 @@ import { resolveCustomScreenId } from "./routeParams";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import {
-  addScreenBlock,
+  addScreenBlockAt,
+  addScreenSection,
   createScreenBlock,
   duplicateScreenBlockWithBindings,
   findScreenBlockById,
+  findScreenBlockLocation,
   getFirstScreenBlockId,
   moveScreenBlock,
+  moveScreenBlockTo,
+  moveScreenSection,
   removeScreenBindingsForBlockTree,
   removeScreenBlock,
+  removeScreenSection,
+  renameScreenSection,
   updateScreenBlock,
   type ScreenBlockKind,
+  type ScreenInsertTarget,
 } from "../../../services/customScreens/screenDocumentOps";
 import {
   useCustomScreenPreviewRecordState,
@@ -180,6 +187,12 @@ export function CustomScreenEditorPage() {
   // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
   // (the shell only READS it; the toolbar toggle + reopen chip flip it directly).
   const [panelOpen, setPanelOpen] = useState(true);
+  // TASK-500-02: the explicit insertion point the author armed on the canvas
+  // (a before/after gap or a slot drop zone). ONE-SHOT: consumed (cleared) by
+  // the next insert; a drag-move also clears it (indices may be stale after
+  // the document reshuffles — the ops fail soft, but a stale point would
+  // silently redirect the next insert).
+  const [insertPoint, setInsertPoint] = useState<ScreenInsertTarget | null>(null);
   const definitionRef = useRef(definition);
 
   const selectedContentType = useMemo(
@@ -364,15 +377,41 @@ export function CustomScreenEditorPage() {
     });
   }, [hasUnsavedChanges, isCreateMode, refreshScreen, screenId]);
 
-  const resolveSelectedSlotTarget = (
+  // TASK-500-02: resolve the ScreenInsertTarget an insert should use. Priority:
+  // (a) the explicit armed insertion point (before/after gap or slot drop zone)
+  // (b) the selected container's derived default slot end (field-group→content,
+  //     columns→left, else first slot key) — safe because selectedId is cleared
+  //     whenever a section is clicked (selectTarget section branch +
+  //     handleSelectSection defense-in-depth), so no stale container in another
+  //     section can hijack the insert
+  // (c) the selected section's end
+  // (d) the first section's end.
+  const resolveInsertTarget = (
     document: CustomScreenDefinition["editorView"]["document"]
-  ) => {
+  ): ScreenInsertTarget => {
+    if (insertPoint) return insertPoint;
     const selected = findScreenBlockById(document, selectedId);
-    if (!selected?.slots) return undefined;
-    if (selected.type === "field-group") return { parentId: selected.id, slotId: "content" };
-    if (selected.type === "columns") return { parentId: selected.id, slotId: "left" };
-    const slotId = Object.keys(selected.slots)[0];
-    return slotId ? { parentId: selected.id, slotId } : undefined;
+    if (selected?.slots) {
+      const slotId =
+        selected.type === "field-group"
+          ? "content"
+          : selected.type === "columns"
+            ? "left"
+            : Object.keys(selected.slots)[0];
+      if (slotId) {
+        const location = findScreenBlockLocation(document, selected.id);
+        return {
+          kind: "slot-end",
+          sectionId: location?.sectionId ?? selectedSectionId ?? "",
+          parentId: selected.id,
+          slotId,
+        };
+      }
+    }
+    return {
+      kind: "section-end",
+      sectionId: selectedSectionId ?? document.sections[0]?.id ?? "",
+    };
   };
 
   const handleAddBlock = (type: ScreenBlockKind, field?: ContentField) => {
@@ -385,14 +424,93 @@ export function CustomScreenEditorPage() {
       // seed `data.target` (the field NAME alone carries no relation metadata).
       relationTarget: field?.relation?.target,
     });
-    const target = resolveSelectedSlotTarget(current.editorView.document);
-    const nextDocument = addScreenBlock(current.editorView.document, created.block, target);
+    // TASK-500-02: author-directed insertion — addScreenBlockAt clamps indices
+    // and fails soft on an unknown target (never throws in the editor path).
+    const target = resolveInsertTarget(current.editorView.document);
+    const nextDocument = addScreenBlockAt(current.editorView.document, created.block, target);
     updateEditorView({
       document: nextDocument,
       bindings: [...current.editorView.bindings, ...created.bindings],
     });
     setSelectedId(created.block.id);
     setSelectedSectionId(findBlockSectionId(nextDocument, created.block.id));
+    setInsertPoint(null); // consume the one-shot point
+  };
+
+  // TASK-500-02: drag-to-position — the canvas reports {blockId, target} once a
+  // drop resolves. moveScreenBlockTo owns the cycle guard + the same-list
+  // removal-first index decrement; a no-op (cycle/unknown block) returns the
+  // ORIGINAL document so `===` skips the dirty mark.
+  const handleDragMove = (blockId: string, target: ScreenInsertTarget) => {
+    const current = definitionRef.current;
+    const nextDocument = moveScreenBlockTo(current.editorView.document, blockId, target);
+    if (nextDocument === current.editorView.document) return;
+    updateEditorView({ document: nextDocument });
+    setSelectedId(blockId);
+    setSelectedSectionId(findBlockSectionId(nextDocument, blockId));
+    setInsertPoint(null);
+  };
+
+  // TASK-500-01: section CRUD host handlers (pure ops → updateEditorView →
+  // existing PATCH on save; no other pathway changes).
+  const handleAddSection = () => {
+    const current = definitionRef.current;
+    const selectedIndex = current.editorView.document.sections.findIndex(
+      (section) => section.id === selectedSectionId
+    );
+    const atIndex = selectedIndex >= 0 ? selectedIndex + 1 : undefined; // insert AFTER selected
+    const { document, sectionId } = addScreenSection(current.editorView.document, { atIndex });
+    updateEditorView({ document });
+    setSelectedId(null); // a section, not a block, is now the active target
+    setSelectedSectionId(sectionId);
+  };
+
+  // TASK-500 post-audit (spurious dirty state): the canvas rename input commits
+  // on EVERY blur, and renameScreenSection always returns new objects even for
+  // an identical label — so the host must no-op an unchanged commit itself or a
+  // mere focus+blur marks the document dirty (unsaved-changes chip + suppressed
+  // remote refresh / "Updated in another tab" alert).
+  const handleRenameSection = (sectionId: string, label: string) => {
+    const document = definitionRef.current.editorView.document;
+    const section = document.sections.find((item) => item.id === sectionId);
+    if (!section) return; // unknown id — fail soft, nothing to dirty
+    const clean = label.trim() || "Section"; // mirror renameScreenSection's normalization
+    if (section.label === clean && section.data.title === clean) return; // unchanged — no dirty mark
+    updateEditorView({ document: renameScreenSection(document, sectionId, clean) });
+  };
+
+  const handleMoveSection = (sectionId: string, direction: "up" | "down") => {
+    const current = definitionRef.current.editorView.document;
+    const nextDocument = moveScreenSection(current, sectionId, direction);
+    // Boundary/unknown-id no-op returns the SAME document reference (same
+    // pattern as handleDragMove) — skip the update so no dirty mark is set.
+    if (nextDocument === current) return;
+    updateEditorView({ document: nextDocument });
+  };
+
+  const handleDeleteSection = (sectionId: string) => {
+    const current = definitionRef.current;
+    const { document, removed } = removeScreenSection(current.editorView.document, sectionId);
+    if (!removed) return; // last-section no-op (or unknown id) — nothing deleted, selection intact
+    // Prune bindings for EVERY block in the removed section subtree.
+    let bindings = current.editorView.bindings;
+    removed.blocks.forEach((block) => {
+      bindings = removeScreenBindingsForBlockTree(bindings, block);
+    });
+    updateEditorView({ document, bindings });
+    // A delete only happens when ≥2 sections existed, so the doc still has ≥1 section here.
+    if (selectedSectionId === sectionId) setSelectedSectionId(document.sections[0]?.id ?? null);
+    if (selectedId && !findScreenBlockById(document, selectedId)) setSelectedId(null);
+  };
+
+  // TASK-500-01 defense-in-depth: the canvas selectTarget already clears the
+  // block selection on a section click (its section branch calls
+  // onSelectBlock(null) before onSelectSection), so steering already works
+  // through the canvas path. This handler ALSO clears setSelectedId(null) so it
+  // is self-contained regardless of caller.
+  const handleSelectSection = (sectionId: string | null) => {
+    setSelectedSectionId(sectionId);
+    setSelectedId(null);
   };
 
   const handleMoveBlock = (blockId: string, direction: "up" | "down") => {
@@ -759,9 +877,16 @@ export function CustomScreenEditorPage() {
                   settingsPanel={screenSettingsPanel}
                   selectedSectionId={selectedSectionId}
                   selectedBlockId={selectedId}
-                  onSelectSection={setSelectedSectionId}
+                  onSelectSection={handleSelectSection}
                   onSelectBlock={handleSelectBlock}
+                  onAddSection={handleAddSection}
+                  onRenameSection={handleRenameSection}
+                  onMoveSection={handleMoveSection}
+                  onDeleteSection={handleDeleteSection}
                   onAddBlock={handleAddBlock}
+                  insertPoint={insertPoint}
+                  onSetInsertPoint={setInsertPoint}
+                  onDragMove={handleDragMove}
                   onPatchBlock={handlePatchBlock}
                   onPatchBlockData={handlePatchBlockData}
                   onPatchBinding={handlePatchBinding}

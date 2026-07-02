@@ -5,7 +5,8 @@
 **Category:** Testing / Documentation / Content (Menus) / Responsive
 **Estimated Effort:** Medium
 **Dependencies:** TASK-501-01 (responsive contract), TASK-501-02 (CSS emission), TASK-501-03 (device-forked editor)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 **Parent Task:** TASK-501
 
 ---
@@ -25,7 +26,7 @@ against `PageBlockFrame`'s null-return on `visibility.visible:false`,
 
 - **Goal:** every suite in §1 green together; legacy menu documents provably
   untouched; `buildSiteShellCss(null)` byte-identity changes by ZERO lines;
-  changelog **1209** + README board/Statistics closed.
+  changelog **1210** (1209 was consumed by the parallel TASK-500) + README board/Statistics closed.
 - **Out of scope:** new behavior. 501-01/02/03 ship their own unit coverage
   (incl. the guard tests named above) with their code; this subtask ADDS the
   cross-cutting tests below (route persistence, editor flow, emission shape),
@@ -179,7 +180,7 @@ test("Tablet edit writes the BASE and the badge reads 'Base' (tablet deferred)",
 test("panel shows RESOLVED values on mobile (override 4 displayed, not base 12); badge = Override; un-edited control badge = Inherited", () => {});
 test("data-menu-responsive-reset clears the override: record pruned from the PATCHed doc, control re-shows the base value, badge flips to Inherited", () => {});
 test("orientation SegmentedControl in the nav-items panel: horizontal|vertical; vertical on mobile writes responsive.mobile.navProps.orientation", () => {});
-test("per-block visibility toggle renders ONLY on mobile; toggling CTA off writes blocks[i].responsive.mobile.visibility.visible:false (flat leaf visibility untouched)", () => {});
+test("per-block visibility controls fork by device (501-03 §6): the MOBILE override toggle ('Visible on mobile', shell-wrapped) renders only when device=mobile — toggling CTA off writes blocks[i].responsive.mobile.visibility.visible:false (flat leaf visibility untouched); on Desktop/Tablet leaf blocks (cta-button/divider/spacer) show the flat 'Visible' toggle (writes flat visibility.visible) and native blocks show none", () => {});
 test("no setState-in-effect: all device-forked writes fire from event handlers (act() produces no update-warnings; assert console.error spy clean)", () => {});
 ```
 
@@ -244,8 +245,9 @@ closure checklist. `buildSiteShellCss(null)` byte-identity (:40-41) green.
 ```
 bun --cwd core lint
 bun --cwd core lint:types
+bunx tsc -p tsconfig.json --noEmit  # REPO ROOT — core lint:types does NOT typecheck tests/** (root tsconfig.json:22-23); this subtask's deliverable IS test code
 bun run test:vitest                 # full vitest lane, log-clean (happy-dom)
-bun --cwd core test:bun             # bun lane (DB gate — wizard reset caveat)
+bun run test:bun                    # REPO ROOT bun lane (package.json:26; DB gate — wizard reset caveat). core has NO test:bun script; do NOT substitute `bun --cwd core test` — it is a no-op `echo core test` that passes green while running zero tests
 bun run gates:coderso               # repo gate alias (package.json:70)
 
 # Playwright smoke (Acceptance 1-3 of the parent; real mouse/keyboard, memory: local-cms-run-and-test):
@@ -272,17 +274,25 @@ bun run gates:coderso               # repo gate alias (package.json:70)
 
 ### 4. Closure
 
-- Changelog: `_docs/_CHANGELOG/1209-2026-MM-DD-task-501-menu-per-device-overrides-orientation-and-block-visibility.md`
+- Changelog: `_docs/_CHANGELOG/1210-2026-07-02-task-501-menu-per-device-overrides-orientation-and-block-visibility.md`
   (1208 is the last used number — re-verify "next free" at closing time; link
   TASK-501 + all four subtasks). State explicitly: no new public endpoint, no
   RBAC change, no migration (`document` rides `PATCH /menus/:id`,
   `menuSchemas.ts:30` unchanged); tablet DEFERRED (editor writes base);
   menu-drawer still unimplemented BY DESIGN (overrides+visibility replace it);
   both byte-identity pins green; whole-doc fail-closed blast radius asserted.
-- Cross-link the responsive contract (sparse `responsive.mobile`, resolve
-  cascade mobile-inherits-desktop, explicit clear+prune) from the
-  menuDocumentV2 notes added by TASK-499 (`_docs/PAGE_MODEL.md` / site-shell
-  docs) — extend, don't duplicate.
+- Permanent docs: NO menuDocumentV2 notes exist yet — TASK-499 shipped
+  (changelog 1208) WITHOUT adding them (verified: zero
+  menuDocumentV2/buildMenuDocumentCss/MENU_SECTION_KEYS hits in non-task,
+  non-changelog `_docs/*.md`), so there is nothing to "extend". ADD a
+  menuDocumentV2 subsection to `_docs/PAGE_MODEL.md`'s menu design section
+  (~:1045-1095) covering the document contract (TASK-499 doc-debt paid here)
+  PLUS the new responsive contract (sparse `responsive.mobile`, resolve
+  cascade mobile-inherits-desktop, explicit clear+prune, per-device block
+  visibility). The surrounding text still describes the PRE-499 architecture
+  (`MenuAppearancePanel.tsx`, `settings.menuAppearance`,
+  `menuDesignDocument.ts` adapter) — stale-mark or update it in the SAME
+  edit; do not bolt the responsive contract onto that stale section as-is.
 - Flip TASK-501 + all subtasks to ✅ Done in `_docs/_TASKS/README.md` board
   **+ Statistics** (closing agent only; single edit for board+stats).
 - Record residuals honestly (expected: tablet breakpoint = additive key-list
@@ -303,13 +313,19 @@ green AND log-clean.
 `tests/integration/routes/menus.test.ts`,
 `tests/unit/site/menu-document-render.test.tsx`,
 `tests/unit/pages/siteShellCss.test.ts` (zero-line diff). Full
-`bun --cwd core test:bun` green.
+root `bun run test:bun` (package.json:26) green.
 
 **Must-not-weaken:** the existing write-strict/fail-closed/leaf-reuse describes
 (menu-document-v2.test.ts :41-288), the menu-drawer front pin
 (menu-document-render.test.tsx:105), the scoped-CSS assertions (:121/:134),
 and the `buildSiteShellCss(null)` pin (siteShellCss.test.ts:40-41) stay green
 without edits (except the additive `data-menu-block-id` golden extension).
+
+**Typecheck the test tree:** root `bunx tsc -p tsconfig.json --noEmit` must
+pass — `bun --cwd core lint:types` (also what `gates:coderso` runs,
+`scripts/coderso-release-gates.ts:45`) covers core/ only and EXCLUDES
+`tests/**`, which root `tsconfig.json:22-23` includes (precedent:
+TASK-496-03 closure gates).
 
 Plus gates + real-input playwright smoke per §3 — measured live at a real
 mobile viewport, not synthetic-only.
@@ -318,7 +334,10 @@ mobile viewport, not synthetic-only.
 
 ## Documentation Updates Required
 
-- `_docs/_CHANGELOG/` entry **1209** (verify next free at closing time).
-- Responsive-contract cross-link in the TASK-499 menuDocumentV2 docs
-  (`_docs/PAGE_MODEL.md` / site-shell notes).
+- `_docs/_CHANGELOG/` entry **1210** (1209 was consumed by the parallel TASK-500; verified at closing time).
+- `_docs/PAGE_MODEL.md`: NEW menuDocumentV2 subsection in the menu design
+  section (document contract + responsive contract) — see §4. No TASK-499
+  notes exist to extend (TASK-499 doc-debt); the surrounding pre-499 text
+  (`MenuAppearancePanel`/`menuDesignDocument`) needs a stale-marker or
+  update in the same edit.
 - `_docs/_TASKS/README.md` board + Statistics on closure (closing agent only).

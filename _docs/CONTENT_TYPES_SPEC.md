@@ -560,7 +560,7 @@ allow-list; out-of-range/invalid values fall back to the listed default.
 | `text` | `content`, `tone`, `label` | `tone ∈ default\|muted` |
 | `stat` | `label`, `format`, `trend`, `deltaField`, `field` | `format ∈ number\|percent\|money`; `trend ∈ auto\|up\|down\|flat`; bound → propPath `value`, `mode:"read"` |
 | `divider` | `variant`, `label` | `variant ∈ line\|space\|label` |
-| `image` | `label`, `fit`, `ratio`, `field` | `fit ∈ cover\|contain`; bound → propPath `src`, `mode:"read"` |
+| `image` | `label`, `fit`, `ratio`, `field`, `src` | `fit ∈ cover\|contain`; bound → propPath `src`, `mode:"read"`; static `src` OPTIONAL + scheme-validated (TASK-500-04, see below) |
 | `related-list` | `label`, `target`, `displayField`, `variant`, `limit`, `field` | `variant ∈ checklist\|activity\|cards`; `limit` clamped `1..50`; bound → propPath **`items`**, `mode:"read"` |
 | `tabs` | `label`, `tabs` | `tabs = [{ id, label }]` with ids matching `slots` keys |
 | `button` | `label`, `action`, `variant`, `href`, `field` | `action ∈ link\|publish\|custom`; `variant ∈ primary\|secondary\|ghost`; bound → propPath `href` |
@@ -598,6 +598,93 @@ a pure function:
   (`relatedEntriesMapEqual`) to avoid a resolve→setState loop.
 - The **published entries list** (`CustomScreenEntriesTable`, a native column table) is out of
   scope — related-list renders only in the entry + preview surfaces.
+
+## Custom Screen entry-view builder — sections, insertion targeting & static image src (TASK-500)
+
+TASK-500 makes the screen builder's **behaviour** author-directed on top of TASK-498's
+look parity. All ops live in `core/services/customScreens/screenDocumentOps.ts`
+(Bun-free, pure) and mutate the in-memory `editorView.document` client-side; persistence
+stays the EXISTING custom-screen definition PATCH under existing RBAC. **No new public
+endpoint, no RBAC change, no DB migration, no `ScreenDocumentV1.schemaVersion` bump
+(stays `1`), definition stays v4.** Editor-path ops FAIL-SOFT (unknown ids no-op or fall
+back — they never throw); the strict reject-unknown normalizers on SAVE remain the hard
+gate.
+
+### Section CRUD ops (TASK-500-01)
+
+Sections are first-class, top-level only (sections cannot nest):
+
+- `addScreenSection(document, { label?, atIndex? }) → { document, sectionId }` — creates
+  a real, empty, named top-level section via `createScreenSection` (stable
+  `createId("section")` id, seeds `data.title` from the label); `atIndex` clamps to
+  `[0, sections.length]`, default appends.
+- `renameScreenSection(document, sectionId, label) → document` — sets **both** `label`
+  and `data.title` (the renderer prefers `data.title`); blank label falls back to
+  `"Section"`; unknown id no-ops.
+- `moveScreenSection(document, sectionId, "up" | "down") → document` — reorders one
+  step; a move past a boundary is a NO-OP; unknown id no-ops.
+- `removeScreenSection(document, sectionId) → { document, removed }` — returns the
+  removed `ScreenSectionV1` so the host can prune its block bindings
+  (`removeScreenBindingsForBlockTree` per removed block). **LAST-SECTION RULE:** with
+  only one section left this NO-OPS (`removed: null`) — the document never reaches zero
+  sections, so the canvas always has an insertion target.
+- `appendScreenBlockToSection(document, sectionId | null, block) → document` — 500-01's
+  minimal targeting foundation (append to the NAMED section, fail-soft to the first);
+  superseded by `addScreenBlockAt` for interactive insertion.
+
+### Insertion-target contract (TASK-500-02)
+
+One deterministic target union replaces "always append to `sections[0]`":
+
+```ts
+export type ScreenInsertTarget =
+  | { kind: "section-end"; sectionId: string }                              // selected section
+  | { kind: "section-index"; sectionId: string; index: number }             // before/after a top-level block
+  | { kind: "slot-end"; sectionId: string; parentId: string; slotId: string }        // into a nested slot
+  | { kind: "slot-index"; sectionId: string; parentId: string; slotId: string; index: number };
+```
+
+- `addScreenBlockAt(document, block, target) → document` — resolves the sibling list the
+  target names (section top-level or a nested container slot at arbitrary depth —
+  `field-group.content` / `columns.left|right` / `tabs.tab-N`), clamps the index to
+  `[0, len]`, splices the block in. Unresolvable `sectionId`/`parentId`/`slotId` ⇒
+  FAIL-SOFT fallback to `section-end` of the first section (never throws).
+- `moveScreenBlockTo(document, blockId, target) → document` — removal-first cross-section
+  / cross-slot MOVE that re-inserts the SAME node (**move-not-clone**: the block id is
+  preserved, so bindings keyed by `blockId` stay valid with no rewrite). **CYCLE GUARD:**
+  a slot target inside the moved block's own subtree returns the ORIGINAL document
+  (referential no-op). Same-sibling-list downward moves decrement the PRE-removal index
+  inside the op — callers must NOT pre-subtract.
+- `findScreenBlockLocation(document, blockId) → { sectionId, parentId, slotId, index } | null`
+  — deterministic pre-order walk (section blocks, then each block's slots in key order,
+  then `children[]`); powers before/after affordances and the cycle guard.
+- Legacy `addScreenBlock` / `moveScreenBlock` remain exported as NON-DESTRUCTIVE shims
+  (the Bun-lane assistant `actionExecutorService.ts` still imports them). The no-target
+  `addScreenBlock` delegates to `addScreenBlockAt` (first-section end); the
+  `{ parentId, slotId }` branch keeps legacy semantics verbatim (the assistant detects
+  "target not found" via deep-equality on the returned document, so it must NOT adopt
+  the fail-soft fallback).
+
+Creation surface: ONE canonical kind vocabulary = the 9 `ScreenBlockLibrary` chips
+(Heading/Text/Field/Stat/Divider/Image/Related list/Tabs/Button) PLUS the
+container/composite kinds (`field-group`, `columns`, `record-header`, `rich-text`). The
+command palette mirrors that full set + "Add section" (which CREATES a section); only
+the redundant per-field FIELDS group was removed (a field = the Field chip + inspector
+bind).
+
+### Image static `src` (TASK-500-04)
+
+The image kind's `data` allow-list gains an OPTIONAL `src`
+(`["label","fit","ratio","field","src"]`), making image consistent with the other
+static kinds. `normalizeScreenImageSrc` accepts only relative paths (`/…`) and
+`http://`/`https://` URLs; everything else (`javascript:`, `data:`, `blob:`, `file:`,
+bare tokens, non-strings) normalizes to `""` (dropped, never throws) — reject-unknown on
+other keys stays intact, and a stored V4 image WITHOUT `src` round-trips byte-stable.
+Renderer resolution order on entry/preview (override-first precedence preserved):
+per-entry media/presentation override → bound `field` src → static `data.src` → labeled
+placeholder. The rejected alternative — marking image "requires a bound field"
+(builder-only affordance, no schema change) — was declined because it would keep image
+the single kind unable to carry authored static content.
 
 ## API
 

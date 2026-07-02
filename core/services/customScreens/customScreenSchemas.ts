@@ -402,7 +402,7 @@ const screenBlockDataAllowedKeys: Record<string, readonly string[]> = {
   text: ["content", "tone", "label"],
   stat: ["label", "format", "trend", "deltaField", "field"],
   divider: ["variant", "label"],
-  image: ["label", "fit", "ratio", "field"],
+  image: ["label", "fit", "ratio", "field", "src"],
   "related-list": ["label", "target", "displayField", "variant", "limit", "field"],
   tabs: ["label", "tabs"],
   button: ["label", "action", "variant", "href", "field"],
@@ -417,6 +417,20 @@ const coerceScreenEnum = <T extends string>(
 const clampScreenInt = (value: unknown, fallback: number, min: number, max: number): number => {
   const n = typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : fallback;
   return Math.min(max, Math.max(min, n));
+};
+
+// TASK-500-04: static <img src> for the image kind — relative paths + http(s) only.
+// Everything else (javascript:, data:, blob:, file:, vbscript:, bare tokens, non-strings)
+// normalizes to "" (dropped, NEVER throws) so a stored value can never reach <img src>
+// with an unsafe scheme (write-path defense-in-depth). NOT a navigational href
+// (button.href) — so no mailto:/tel:. Idempotent: a safe value round-trips byte-stable.
+const safeImageSrcPrefixes = ["/", "http://", "https://"] as const;
+const normalizeScreenImageSrc = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const lower = trimmed.toLowerCase();
+  return safeImageSrcPrefixes.some((prefix) => lower.startsWith(prefix)) ? trimmed : "";
 };
 
 const normalizeScreenBlockData = (type: string, value: unknown): Record<string, unknown> => {
@@ -447,6 +461,9 @@ const normalizeScreenBlockData = (type: string, value: unknown): Record<string, 
       break;
     case "image":
       if ("fit" in data) data.fit = coerceScreenEnum(data.fit, ["cover", "contain"], "cover");
+      // TASK-500-04: optional static src — absent key is a no-op (stored-V4 byte-stable);
+      // unsafe/blank values coerce to "" (fail-soft, never throws).
+      if ("src" in data) data.src = normalizeScreenImageSrc(data.src);
       break;
     case "related-list":
       if ("variant" in data)

@@ -6,7 +6,8 @@
 **Priority:** High
 **Category:** Admin UI / Custom Screens / Screen Builder / Page-Builder UX
 **Estimated Effort:** Large
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 

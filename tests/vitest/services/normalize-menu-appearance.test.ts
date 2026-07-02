@@ -158,6 +158,49 @@ describe("normalizeMenuAppearance rejects", () => {
   });
 });
 
+describe("menu appearance orientation (TASK-501-01)", () => {
+  const expectFieldError = (value: unknown, field: string) => {
+    try {
+      normalizeMenuAppearance(value);
+      throw new Error(`expected ${field} to be rejected`);
+    } catch (error) {
+      expect(isMenuAppearanceError(error)).toBe(true);
+      expect((error as MenuAppearanceError).field).toBe(field);
+    }
+  };
+
+  test("accepts horizontal and vertical", () => {
+    expect(normalizeMenuAppearance({ orientation: "horizontal" })).toEqual({
+      orientation: "horizontal",
+    });
+    expect(normalizeMenuAppearance({ orientation: "vertical" })).toEqual({
+      orientation: "vertical",
+    });
+  });
+
+  test("rejects non-enum orientation values with the offending field", () => {
+    expectFieldError({ orientation: "diagonal" }, "orientation");
+    expectFieldError({ orientation: 42 }, "orientation");
+    expectFieldError({ orientation: {} }, "orientation");
+    expectFieldError({ orientation: true }, "orientation");
+  });
+
+  test("sanitize drops bad orientation values and keeps valid ones", () => {
+    expect(sanitizeMenuAppearance({ orientation: "vertical", itemGap: 8 })).toEqual({
+      orientation: "vertical",
+      itemGap: 8,
+    });
+    expect(sanitizeMenuAppearance({ orientation: "diagonal", itemGap: 8 })).toEqual({ itemGap: 8 });
+  });
+
+  test("absent orientation stays absent after round-trip (default is CSS-build-time only)", () => {
+    const roundTripped = normalizeMenuAppearance(normalizeMenuAppearance({ itemGap: 8 }));
+    expect(roundTripped).toEqual({ itemGap: 8 });
+    expect("orientation" in roundTripped).toBe(false);
+    expect("orientation" in sanitizeMenuAppearance({ itemGap: 8 })).toBe(false);
+  });
+});
+
 describe("sanitizeMenuAppearance (fail-closed render path)", () => {
   test("keeps valid fields, drops invalid and unknown ones, never throws", () => {
     expect(

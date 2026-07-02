@@ -232,6 +232,163 @@ test("bound image renders a placeholder Token in builder and an <img> in entry",
   }
 });
 
+// TASK-500-04: static image `src` — resolution order stays override → bound → static;
+// unbound image with an authored static src renders it; empty image keeps the placeholder.
+const staticImageBlock: ScreenBlockV1 = {
+  id: "image-static",
+  type: "image",
+  data: { label: "Logo", fit: "contain", src: "/media/logo.png" },
+};
+
+test("unbound image with a static src renders an <img> in entry AND preview", () => {
+  for (const mode of ["entry", "preview"] as const) {
+    const view = render([staticImageBlock], mode);
+    try {
+      const img = view.container.querySelector('[data-screen-block-id="image-static"] img');
+      expect(img?.getAttribute("src")).toBe("/media/logo.png");
+      expect(img?.getAttribute("alt")).toBe("Logo");
+    } finally {
+      view.cleanup();
+    }
+  }
+});
+
+test("image with NEITHER a src NOR a binding still shows the labeled placeholder", () => {
+  const block: ScreenBlockV1 = {
+    id: "image-empty",
+    type: "image",
+    data: { label: "Cover", fit: "cover" },
+  };
+  for (const mode of ["entry", "preview"] as const) {
+    const view = render([block], mode);
+    try {
+      const el = view.container.querySelector('[data-screen-block-id="image-empty"]');
+      expect(el?.querySelector("img")).toBeNull();
+      expect(el?.textContent).toContain("Cover");
+    } finally {
+      view.cleanup();
+    }
+  }
+});
+
+test("per-entry media override and bound field value take precedence over the static src", () => {
+  const block: ScreenBlockV1 = {
+    id: "image-1",
+    type: "image",
+    data: { label: "Cover", fit: "cover", field: "cover", src: "/media/static.png" },
+  };
+  const binding: ScreenFieldBinding = {
+    id: "image-1-src",
+    blockId: "image-1",
+    propPath: "src",
+    source: "entry",
+    field: "cover",
+    mode: "read",
+  };
+
+  // Bound field value beats the authored static src.
+  const boundView = render([block], "entry", [binding], { cover: "https://cdn.example/bound.png" });
+  try {
+    const img = boundView.container.querySelector('[data-screen-block-id="image-1"] img');
+    expect(img?.getAttribute("src")).toBe("https://cdn.example/bound.png");
+  } finally {
+    boundView.cleanup();
+  }
+
+  // Per-entry presentation override beats BOTH the bound value and the static src.
+  const overrideView = render(
+    [block],
+    "entry",
+    [binding],
+    { cover: "https://cdn.example/bound.png" },
+    {
+      presentationOverrides: [
+        { blockId: "image-1", propPath: "image", value: "https://cdn.example/override.png" },
+      ],
+    }
+  );
+  try {
+    const img = overrideView.container.querySelector('[data-screen-block-id="image-1"] img');
+    expect(img?.getAttribute("src")).toBe("https://cdn.example/override.png");
+  } finally {
+    overrideView.cleanup();
+  }
+});
+
+test("builder: bound image keeps the {{ label }} token; static-src image previews the <img>; empty image keeps the icon placeholder", () => {
+  const boundBlock: ScreenBlockV1 = {
+    id: "image-bound",
+    type: "image",
+    data: { label: "Cover", fit: "cover", field: "cover", src: "/media/static.png" },
+  };
+  const binding: ScreenFieldBinding = {
+    id: "image-bound-src",
+    blockId: "image-bound",
+    propPath: "src",
+    source: "entry",
+    field: "cover",
+    mode: "read",
+  };
+  const emptyBlock: ScreenBlockV1 = {
+    id: "image-empty",
+    type: "image",
+    data: { label: "Cover", fit: "cover" },
+  };
+
+  const view = render([boundBlock, staticImageBlock, emptyBlock], "builder", [binding], {
+    cover: "https://cdn.example/bound.png",
+  });
+  try {
+    const bound = view.container.querySelector('[data-screen-block-id="image-bound"]');
+    expect(bound?.textContent).toContain("{{ Cover }}");
+    expect(bound?.querySelector("img")).toBeNull();
+
+    const staticEl = view.container.querySelector('[data-screen-block-id="image-static"]');
+    expect(staticEl?.querySelector("img")?.getAttribute("src")).toBe("/media/logo.png");
+
+    const empty = view.container.querySelector('[data-screen-block-id="image-empty"]');
+    expect(empty?.querySelector("img")).toBeNull();
+    expect(empty?.textContent).toContain("Cover");
+    expect(empty?.textContent).not.toContain("{{");
+  } finally {
+    view.cleanup();
+  }
+});
+
+// TASK-500-04 static-kind regression annotation: unbound heading / text / divider / button
+// still render their authored static content on entry (locks in that only `image` changed).
+test("unbound heading/text/divider/button still render authored content in entry mode", () => {
+  const blocks: ScreenBlockV1[] = [
+    { id: "h-static", type: "heading", data: { label: "H", text: "Static Title", level: 2 } },
+    { id: "t-static", type: "text", data: { label: "T", content: "Static copy", tone: "default" } },
+    { id: "d-static", type: "divider", data: { label: "Or", variant: "label" } },
+    {
+      id: "b-static",
+      type: "button",
+      data: { label: "Go", action: "link", variant: "primary", href: "https://example.com" },
+    },
+  ];
+  const view = render(blocks, "entry");
+  try {
+    expect(
+      view.container.querySelector('[data-screen-block-id="h-static"]')?.textContent
+    ).toContain("Static Title");
+    expect(
+      view.container.querySelector('[data-screen-block-id="t-static"]')?.textContent
+    ).toContain("Static copy");
+    expect(
+      view.container.querySelector('[data-screen-block-id="d-static"]')?.textContent
+    ).toContain("Or");
+    expect(
+      view.container.querySelector(
+        '[data-screen-block-id="b-static"] a[href="https://example.com"]'
+      )
+    ).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("button renders its label as a CTA", () => {
   const block: ScreenBlockV1 = {
     id: "button-1",

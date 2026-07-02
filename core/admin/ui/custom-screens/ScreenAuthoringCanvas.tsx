@@ -1,18 +1,15 @@
 import {
   Copy,
   Layers,
-  LayoutPanelTop,
   ListPlus,
   MoveDown,
   MoveUp,
-  PanelRight,
   PanelTop,
   Plus,
   Search,
   Settings2,
   SlidersHorizontal,
   Trash2,
-  Type,
 } from "lucide-react";
 import { useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
@@ -34,10 +31,11 @@ import {
   findScreenBlockById,
   screenBlockLabels,
   type ScreenBlockKind,
+  type ScreenInsertTarget,
 } from "../../../services/customScreens/screenDocumentOps";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import { ScreenBlockInspector } from "./ScreenBlockInspector";
-import { ScreenBlockLibrary } from "./ScreenBlockLibrary";
+import { SCREEN_CANONICAL_KINDS, ScreenBlockLibrary } from "./ScreenBlockLibrary";
 import { ScreenPanelToggleRail } from "./ScreenPanelToggleRail";
 import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
 
@@ -67,7 +65,19 @@ type ScreenAuthoringCanvasProps = {
   selectedBlockId: string | null;
   onSelectSection: (sectionId: string | null) => void;
   onSelectBlock: (blockId: string | null) => void;
+  // TASK-500-01: section CRUD flows from the canvas chrome to the host handlers.
+  onAddSection: () => void;
+  onRenameSection: (sectionId: string, label: string) => void;
+  onMoveSection: (sectionId: string, direction: "up" | "down") => void;
+  onDeleteSection: (sectionId: string) => void;
   onAddBlock: (type: ScreenBlockKind, field?: ContentField) => void;
+  // TASK-500-02: insertion targeting + drag-to-position. The canvas does NOT
+  // render the affordances itself — it threads these into the embedded
+  // <ScreenRuntimeRenderer mode="builder"> (the sole card/section/slot render
+  // site) and into the inspector's optional "Insert into" slot picker.
+  insertPoint: ScreenInsertTarget | null;
+  onSetInsertPoint: (target: ScreenInsertTarget | null) => void;
+  onDragMove: (blockId: string, target: ScreenInsertTarget) => void;
   onPatchBlock: (blockId: string, patch: Partial<ScreenBlockV1>) => void;
   onPatchBlockData: (blockId: string, patch: Record<string, unknown>) => void;
   onPatchBinding: (
@@ -174,7 +184,14 @@ export function ScreenAuthoringCanvas({
   selectedBlockId,
   onSelectSection,
   onSelectBlock,
+  onAddSection,
+  onRenameSection,
+  onMoveSection,
+  onDeleteSection,
   onAddBlock,
+  insertPoint,
+  onSetInsertPoint,
+  onDragMove,
   onPatchBlock,
   onPatchBlockData,
   onPatchBinding,
@@ -201,55 +218,40 @@ export function ScreenAuthoringCanvas({
       ? { kind: "section", id: selectedSectionId }
       : null;
   const layerNodes = useMemo(() => buildLayerNodes(document), [document]);
+  // TASK-500-01: the command palette mirrors the FULL canonical kind set
+  // (SCREEN_CANONICAL_KINDS = the 9 grid chips + field-group/columns/
+  // record-header/rich-text) + a Structure "Add section" command. ONLY the
+  // redundant per-field FIELDS group was removed — a field is added by the
+  // `Field` chip and its bound field chosen in the inspector; `fields` stays a
+  // prop (still feeds ScreenBlockLibrary + the inspector).
   const commandGroups = useMemo<AuthoringCommandGroup[]>(
     () => [
       {
-        id: "layout",
+        id: "blocks",
         label: "Blocks",
+        commands: SCREEN_CANONICAL_KINDS.map((chip) => ({
+          id: chip.kind,
+          label: chip.label,
+          description: screenBlockLabels[chip.kind],
+          icon: chip.icon,
+          run: () => onAddBlock(chip.kind),
+        })),
+      },
+      {
+        id: "structure",
+        label: "Structure",
         commands: [
           {
-            id: "record-header",
-            label: "Record header",
-            description: "Title-focused header bound to the active record.",
-            icon: PanelTop,
-            run: () => onAddBlock("record-header"),
-          },
-          {
-            id: "field-group",
-            label: "Field group",
-            description: "Group related fields in one section.",
-            icon: Layers,
-            run: () => onAddBlock("field-group"),
-          },
-          {
-            id: "columns",
-            label: "Two columns",
-            description: "Split fields into primary and secondary columns.",
-            icon: LayoutPanelTop,
-            run: () => onAddBlock("columns"),
-          },
-          {
-            id: "rich-text",
-            label: "Help text",
-            description: "Static guidance shared by every record.",
-            icon: Type,
-            run: () => onAddBlock("rich-text"),
+            id: "add-section",
+            label: "Add section",
+            description: "Create a new top-level section.",
+            icon: Plus,
+            run: () => onAddSection(),
           },
         ],
       },
-      {
-        id: "fields",
-        label: "Fields",
-        commands: fields.map((field) => ({
-          id: `field:${field.name}`,
-          label: field.label,
-          description: `${field.name} · ${field.type}`,
-          icon: ListPlus,
-          run: () => onAddBlock("field", field),
-        })),
-      },
     ],
-    [fields, onAddBlock]
+    [onAddBlock, onAddSection]
   );
   const filteredGroups = useMemo(
     () => filterGroups(commandGroups, commandQuery),
@@ -335,6 +337,26 @@ export function ScreenAuthoringCanvas({
         fields={fields}
         panel="all"
         showBlockActions={false}
+        // TASK-500-02: optional "Insert into" slot picker — arms a slot-end
+        // insert point on the selected container (keyboard-first parity with
+        // the canvas drop zones). The canvas builds the full target so the
+        // inspector stays dumb about sections.
+        armedInsertSlotId={
+          insertPoint &&
+          (insertPoint.kind === "slot-end" || insertPoint.kind === "slot-index") &&
+          selectedBlock &&
+          insertPoint.parentId === selectedBlock.id
+            ? insertPoint.slotId
+            : null
+        }
+        onArmSlotInsert={(parentId, slotId) =>
+          onSetInsertPoint({
+            kind: "slot-end",
+            sectionId: findBlockSectionId(document, parentId) ?? document.sections[0]?.id ?? "",
+            parentId,
+            slotId,
+          })
+        }
         onPatchBlock={onPatchBlock}
         onPatchBlockData={onPatchBlockData}
         onPatchBinding={onPatchBinding}
@@ -353,16 +375,11 @@ export function ScreenAuthoringCanvas({
   const railBody = (
     <div className="flex min-h-0 flex-col gap-2">
       <div className="flex flex-col gap-2" data-screen-rail-head="true">
+        {/* TASK-500-03: the redundant in-panel PanelRight "Hide panel" closer was
+            removed — the host-supplied top-toolbar toggle (`panelToggle`) and the
+            `reopenAffordance` chip are the SOLE panel controls (single hide
+            surface, Pages parity). */}
         <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Hide panel"
-            onClick={() => onPanelOpenChange(false)}
-          >
-            <PanelRight className="h-4 w-4" />
-          </Button>
           <div className="flex min-w-0 flex-1 items-center gap-2 px-1">
             <PanelTop className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="truncate text-sm font-semibold">
@@ -490,7 +507,13 @@ export function ScreenAuthoringCanvas({
                 mode="builder"
                 selectedSectionId={selectedSectionId}
                 selectedBlockId={selectedBlockId}
+                insertPoint={insertPoint}
+                onSetInsertPoint={onSetInsertPoint}
+                onDragMove={onDragMove}
                 onSelectSection={(sectionId) => selectTarget({ kind: "section", id: sectionId })}
+                onRenameSection={onRenameSection}
+                onMoveSection={onMoveSection}
+                onDeleteSection={onDeleteSection}
                 onSelectBlock={(blockId) =>
                   selectTarget({
                     kind: "block",
@@ -501,15 +524,15 @@ export function ScreenAuthoringCanvas({
                 }
                 emptyMessage="Use Insert or the command palette to add screen blocks."
               />
-              {/* A6: prototype dashed "Add section" affordance
-                  (CustomScreenEditorPreview.tsx:223-228). No section-create prop is
-                  exposed to this component yet, so it opens the existing block/section
-                  command palette (the existing add path). */}
+              {/* A6 → TASK-500-01: prototype dashed "Add section" affordance
+                  (CustomScreenEditorPreview.tsx:223-228). It now CREATES a real,
+                  empty, named top-level section via the host handler — it no
+                  longer opens the command palette. */}
               <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setCommandOpen(true);
+                  onAddSection();
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-4 text-sm font-medium text-muted-foreground transition-colors hover:border-ring/50 hover:text-foreground"
                 data-screen-add-section="true"

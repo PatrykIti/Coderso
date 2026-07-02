@@ -4,8 +4,11 @@ import {
   Braces,
   Columns3,
   Image as ImageIcon,
+  Layers,
+  LayoutPanelTop,
   List,
   Minus,
+  PanelTop,
   Square,
   Type,
 } from "lucide-react";
@@ -51,16 +54,22 @@ function PaletteChip({
   );
 }
 
-// 9 data-block chips (prototype order + icons, CustomScreenEditorPreview.tsx:234-246).
-// The 9-chip grid is the SOLE insert surface — a field/bound block is inserted by its
-// chip and its specific bound field is chosen afterward via the Inspect inspector's
-// Bound-field control (there is no per-field palette list). TASK-498-02 extends the
-// `ScreenBlockKind` set + insert wiring, so every chip is now live.
-const PALETTE_CHIPS: Array<{
+// TASK-500-01: one canonical KIND vocabulary sourced from this module. The two
+// SURFACES stay distinct — the VISIBLE chip grid renders EXACTLY the prototype's
+// 9 chips, while the container/composite kinds ride the searchable command
+// palette only (SCREEN_CANONICAL_KINDS = the composition of both).
+export type ScreenPaletteChip = {
   label: string;
   icon: ComponentType<{ className?: string }>;
   kind: ScreenBlockKind;
-}> = [
+};
+
+// The prototype's 9 VISIBLE chips (prototype order + icons, grid-cols-3 —
+// CustomScreenEditorPreview.tsx:234-246). This is EXACTLY what the chip grid
+// renders; do NOT add chips here (the grid must not grow to 13). A field/bound
+// block is inserted by its chip and its specific bound field is chosen afterward
+// via the Inspect inspector's Bound-field control (no per-field palette list).
+export const SCREEN_PALETTE_CHIPS: readonly ScreenPaletteChip[] = [
   { label: "Heading", icon: Type, kind: "heading" },
   { label: "Text", icon: AlignLeft, kind: "text" },
   { label: "Field", icon: Braces, kind: "field" },
@@ -71,6 +80,28 @@ const PALETTE_CHIPS: Array<{
   { label: "Tabs", icon: Columns3, kind: "tabs" },
   { label: "Button", icon: Square, kind: "button" },
 ];
+
+// Container/composite kinds the command palette is the SOLE creation surface for
+// today. They are NOT visible chips (adding them would grow the grid to 13 and
+// depart from the canonical 9-chip prototype look); they surface ONLY through the
+// searchable command palette so field-group/columns stay creatable for
+// TASK-500-02's nesting (record-header/rich-text are real createScreenBlock kinds).
+export const SCREEN_PALETTE_COMMANDS: readonly ScreenPaletteChip[] = [
+  { label: "Record header", icon: PanelTop, kind: "record-header" },
+  { label: "Field group", icon: Layers, kind: "field-group" },
+  { label: "Two columns", icon: LayoutPanelTop, kind: "columns" },
+  { label: "Help text", icon: Type, kind: "rich-text" },
+];
+
+// Full canonical KIND vocabulary = single source of truth for the command palette.
+// The grid reads SCREEN_PALETTE_CHIPS (the 9); the palette reads this full set.
+export const SCREEN_CANONICAL_KINDS: readonly ScreenPaletteChip[] = [
+  ...SCREEN_PALETTE_CHIPS,
+  ...SCREEN_PALETTE_COMMANDS,
+];
+
+// The chip grid is UNCHANGED — still exactly the prototype's 9.
+const PALETTE_CHIPS = SCREEN_PALETTE_CHIPS;
 
 export function ScreenBlockLibrary({ onAddBlock }: ScreenBlockLibraryProps) {
   return (

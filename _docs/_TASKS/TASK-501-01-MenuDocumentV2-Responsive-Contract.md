@@ -6,7 +6,8 @@
 **Category:** Services / Content (Menus) / Schema / Responsive
 **Estimated Effort:** Medium
 **Dependencies:** TASK-499-02 (menuDocumentV2 shipped), TASK-458-02 (`normalizeMenuAppearance`); Pages reference: `pageDocumentV2.ts` resolve/clear (:3220-3327), `pageEditorMutationActions.ts` device-forked patchers (:93-227), `pageEditorState.ts` override readers (:31-54)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 
@@ -386,7 +387,7 @@ export function resolveMenuBlockVisibleForDevice(block: MenuBlockV2, device: Men
   return block.responsive?.mobile?.visibility?.visible ?? desktopVisible;
 }
 
-/** 501-02 render rule input: a block with any visibility override is ALWAYS DOM-rendered and CSS-gated per branch. */
+/** Input to 501-02 §5's render-if-visible-anywhere gate (shouldRenderMenuBlock): a block with a visibility override is DOM-rendered whenever visible on AT LEAST ONE device and CSS-gated per branch; visible-on-neither blocks stay render-skipped even with an override. */
 export const hasMenuBlockVisibilityOverride = (block: MenuBlockV2): boolean =>
   block.responsive?.mobile?.visibility !== undefined;
 

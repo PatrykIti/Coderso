@@ -52,6 +52,7 @@ export const menuAppearanceTextTransforms = ["none", "uppercase", "capitalize"] 
 export const menuAppearanceShadows = ["none", "sm", "md"] as const;
 export const menuAppearanceDropdownDirections = ["bottom", "top"] as const;
 export const menuAppearanceMobileModes = ["disclosure", "inline"] as const;
+export const menuAppearanceOrientations = ["horizontal", "vertical"] as const;
 
 export type MenuAppearanceAlignment = (typeof menuAppearanceAlignments)[number];
 export type MenuAppearanceFontWeight = (typeof menuAppearanceFontWeights)[number];
@@ -59,6 +60,7 @@ export type MenuAppearanceTextTransform = (typeof menuAppearanceTextTransforms)[
 export type MenuAppearanceShadow = (typeof menuAppearanceShadows)[number];
 export type MenuAppearanceDropdownDirection = (typeof menuAppearanceDropdownDirections)[number];
 export type MenuAppearanceMobileMode = (typeof menuAppearanceMobileModes)[number];
+export type MenuAppearanceOrientation = (typeof menuAppearanceOrientations)[number];
 
 /**
  * Every field is optional; an absent field falls back to the current
@@ -88,6 +90,8 @@ export type MenuAppearance = {
   sticky?: boolean;
   dropdownDirection?: MenuAppearanceDropdownDirection;
   mobileMode?: MenuAppearanceMobileMode;
+  /** Nav list flow. Default `"horizontal"`; the default emits NO CSS (TASK-501-02). */
+  orientation?: MenuAppearanceOrientation;
 };
 
 /**
@@ -191,6 +195,7 @@ const fieldNormalizers: FieldNormalizers = {
   sticky: normalizeBoolean,
   dropdownDirection: (value) => normalizeEnum(menuAppearanceDropdownDirections, value),
   mobileMode: (value) => normalizeEnum(menuAppearanceMobileModes, value),
+  orientation: (value) => normalizeEnum(menuAppearanceOrientations, value),
 };
 
 const isKnownField = (key: string): key is keyof MenuAppearance =>

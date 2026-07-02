@@ -3429,14 +3429,17 @@ test("PageEditor toolbar panel icons expose metadata tooltips and toggle a singl
       expect(button?.getAttribute("data-slot")).toBe("tooltip-trigger");
       expect(button?.hasAttribute("title")).toBe(false);
     }
-    // TASK-495-02: the builder chrome (page host) replaces the legacy drag
-    // handle with a header "Hide options panel" close button; both are
-    // ToolbarIconButton tooltip-triggers.
-    for (const label of ["Hide options panel", "Collapse toolbar", "Duplicate section"]) {
+    // TASK-495-02 added a header "Hide options panel" close button in place of
+    // the legacy drag handle; TASK-500-03 removed that redundant closer again —
+    // the sub-toolbar Hide/Show toggle is the sole hide surface. The surviving
+    // head-row actions are still ToolbarIconButton tooltip-triggers.
+    for (const label of ["Collapse toolbar", "Duplicate section"]) {
       expect(
         view.container.querySelector(`button[aria-label="${label}"]`)?.getAttribute("data-slot")
       ).toBe("tooltip-trigger");
     }
+    // The removed TASK-500-03 closer must not resurface.
+    expect(view.container.querySelector('button[aria-label="Hide options panel"]')).toBeNull();
 
     // Focus (keyboard hover) reveals the metadata description in the tooltip.
     const layoutButton = view.container.querySelector('button[aria-label="Layout panel"]');

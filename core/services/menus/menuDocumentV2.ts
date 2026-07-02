@@ -37,13 +37,22 @@ import {
  * `null` ⇒ the legacy appearance+extras look).
  *
  * Menu-native blocks (`nav-items`/`brand`/`search`/`account`/`language`) carry
- * NO block `style`/`visibility`: their appearance flows entirely through the
- * validated menu-bar `layout` + nav-items appearance props, so per-block
+ * NO FLAT block `style`/`visibility`: their appearance flows entirely through
+ * the validated menu-bar `layout` + nav-items appearance props, so per-block
  * style/visibility would be redundant AND unvalidatable (the page
  * `normalizeBlockStyle`/`normalizeBlockVisibility` validators are
  * module-private and MUST NOT be deep-imported). Only the reused leaf blocks
  * (`cta-button`/`divider`/`spacer`) carry style/visibility, validated for free
  * by the page block pipeline.
+ *
+ * Per-device overrides (TASK-501-01): sections carry a SPARSE
+ * `responsive.mobile.{layout,navProps}` record; EVERY block type (menu-native
+ * included) carries a sparse `responsive.mobile.visibility` record. The block
+ * record is document-level render/CSS gating owned by THIS contract — it does
+ * NOT touch the page visibility pipeline. Records store only edited keys, are
+ * lazily created, pruned when empty, and removed by explicit Reset only
+ * (never auto-removed on equality). Mobile inherits the DESKTOP base; tablet
+ * is DEFERRED — tablet reads/writes address the base, like desktop.
  *
  * This module is Bun-free and import-side-effect free (Vitest lane).
  */
@@ -93,10 +102,32 @@ const NAV_ITEMS_PROP_KEYS = [
   "linkActiveColor",
   "dropdownDirection",
   "mobileMode",
+  "orientation",
 ] as const satisfies readonly (keyof MenuAppearance)[];
 
 export type MenuBarLayout = Pick<MenuAppearance, (typeof MENU_BAR_LAYOUT_KEYS)[number]>;
 export type NavItemsProps = Pick<MenuAppearance, (typeof NAV_ITEMS_PROP_KEYS)[number]>;
+
+// --- per-device override vocabulary (TASK-501-01; tablet DEFERRED) -----------
+
+export const MENU_RESPONSIVE_BREAKPOINT_KEYS = ["mobile"] as const;
+export type MenuResponsiveBreakpoint = (typeof MENU_RESPONSIVE_BREAKPOINT_KEYS)[number];
+const MENU_SECTION_OVERRIDE_GROUP_KEYS = ["layout", "navProps"] as const;
+export type MenuSectionOverrideGroup = (typeof MENU_SECTION_OVERRIDE_GROUP_KEYS)[number];
+
+/** Editor device kind. Desktop AND tablet address the base (canvas maps tablet⇒desktop). */
+export type MenuDeviceKind = "desktop" | "tablet" | "mobile";
+
+export type MenuSectionOverride = {
+  /** SPARSE — edited keys only. */
+  layout?: MenuBarLayout;
+  /** SPARSE — edited keys only (incl. orientation). */
+  navProps?: NavItemsProps;
+};
+export type MenuSectionResponsive = { mobile?: MenuSectionOverride };
+
+export type MenuBlockOverride = { visibility?: { visible: boolean } };
+export type MenuBlockResponsive = { mobile?: MenuBlockOverride };
 
 export type BrandProps = {
   mode: "text" | "image";
@@ -110,15 +141,21 @@ export type MenuUtilityProps = {
 };
 
 export type MenuBlockV2 =
-  | { id: string; type: "nav-items"; props: NavItemsProps }
-  | { id: string; type: "brand"; props: BrandProps }
-  | { id: string; type: "search" | "account" | "language"; props: MenuUtilityProps }
+  | { id: string; type: "nav-items"; props: NavItemsProps; responsive?: MenuBlockResponsive }
+  | { id: string; type: "brand"; props: BrandProps; responsive?: MenuBlockResponsive }
+  | {
+      id: string;
+      type: "search" | "account" | "language";
+      props: MenuUtilityProps;
+      responsive?: MenuBlockResponsive;
+    }
   | {
       id: string;
       type: "cta-button";
       props: Record<string, unknown>;
       style?: PageBlockStyleV2;
       visibility?: PageBlockVisibilityV2;
+      responsive?: MenuBlockResponsive;
     }
   | {
       id: string;
@@ -126,6 +163,7 @@ export type MenuBlockV2 =
       props: Record<string, unknown>;
       style?: PageBlockStyleV2;
       visibility?: PageBlockVisibilityV2;
+      responsive?: MenuBlockResponsive;
     };
 
 export type MenuSectionV2 = {
@@ -134,6 +172,7 @@ export type MenuSectionV2 = {
   name: string;
   layout: MenuBarLayout;
   blocks: MenuBlockV2[];
+  responsive?: MenuSectionResponsive;
 };
 
 export type MenuDocumentV2 = {
@@ -233,6 +272,76 @@ const normalizeMenuBarLayout = (value: unknown, path: string): MenuBarLayout =>
 
 const normalizeNavItemsProps = (value: unknown, path: string): NavItemsProps =>
   normalizeAppearanceSubset(value, NAV_ITEMS_PROP_KEYS, path) as NavItemsProps;
+
+// --- responsive override write normalizers (reject-unknown, prune-empty) ----
+
+const normalizeMenuSectionResponsive = (
+  value: unknown,
+  path: string
+): MenuSectionResponsive | undefined => {
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  const out: MenuSectionResponsive = {};
+  for (const [key, raw] of Object.entries(value)) {
+    if (!(MENU_RESPONSIVE_BREAKPOINT_KEYS as readonly string[]).includes(key)) {
+      throw new MenuDocumentError(`${path}.${key}`); // "desktop"/"tablet"/junk ⇒ reject
+    }
+    if (raw === undefined || raw === null) continue;
+    if (!isPlainObject(raw)) throw new MenuDocumentError(`${path}.${key}`);
+    const override: MenuSectionOverride = {};
+    for (const groupKey of Object.keys(raw)) {
+      if (!(MENU_SECTION_OVERRIDE_GROUP_KEYS as readonly string[]).includes(groupKey)) {
+        throw new MenuDocumentError(`${path}.${key}.${groupKey}`); // "style"/"blocks"/… ⇒ reject
+      }
+    }
+    if (raw.layout !== undefined && raw.layout !== null) {
+      // Reuses the SAME subset normalizer as the base ⇒ same reject-unknown
+      // + color/number/enum validation (raw stored input never reaches CSS).
+      const layout = normalizeMenuBarLayout(raw.layout, `${path}.${key}.layout`);
+      if (Object.keys(layout).length > 0) override.layout = layout; // prune empty
+    }
+    if (raw.navProps !== undefined && raw.navProps !== null) {
+      const navProps = normalizeNavItemsProps(raw.navProps, `${path}.${key}.navProps`);
+      if (Object.keys(navProps).length > 0) override.navProps = navProps; // prune empty
+    }
+    if (Object.keys(override).length > 0) out[key as MenuResponsiveBreakpoint] = override;
+  }
+  return Object.keys(out).length > 0 ? out : undefined; // empty ⇒ NEVER persisted
+};
+
+const MENU_BLOCK_VISIBILITY_OVERRIDE_KEYS = ["visible"] as const;
+
+const normalizeMenuBlockResponsive = (
+  value: unknown,
+  path: string
+): MenuBlockResponsive | undefined => {
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  const out: MenuBlockResponsive = {};
+  for (const [key, raw] of Object.entries(value)) {
+    if (!(MENU_RESPONSIVE_BREAKPOINT_KEYS as readonly string[]).includes(key)) {
+      throw new MenuDocumentError(`${path}.${key}`);
+    }
+    if (raw === undefined || raw === null) continue;
+    if (!isPlainObject(raw)) throw new MenuDocumentError(`${path}.${key}`);
+    for (const groupKey of Object.keys(raw)) {
+      // "props"/"style" here ⇒ reject: menu block overrides carry ONLY visibility.
+      if (groupKey !== "visibility") throw new MenuDocumentError(`${path}.${key}.${groupKey}`);
+    }
+    if (raw.visibility === undefined || raw.visibility === null) continue;
+    if (!isPlainObject(raw.visibility)) throw new MenuDocumentError(`${path}.${key}.visibility`);
+    for (const vKey of Object.keys(raw.visibility)) {
+      if (!(MENU_BLOCK_VISIBILITY_OVERRIDE_KEYS as readonly string[]).includes(vKey)) {
+        throw new MenuDocumentError(`${path}.${key}.visibility.${vKey}`);
+      }
+    }
+    const visible = raw.visibility.visible;
+    if (visible === undefined || visible === null) continue; // empty record ⇒ pruned
+    if (typeof visible !== "boolean") {
+      throw new MenuDocumentError(`${path}.${key}.visibility.visible`);
+    }
+    out[key as MenuResponsiveBreakpoint] = { visibility: { visible } };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+};
 
 const BRAND_PROP_KEYS = ["mode", "href", "image"] as const;
 
@@ -361,8 +470,13 @@ const normalizeBrandImage = (
 
 // --- block / section normalizers --------------------------------------------
 
-const MENU_NATIVE_BLOCK_KEYS = ["id", "type", "props"];
-const MENU_LEAF_BLOCK_KEYS = ["id", "type", "props", "style", "visibility"];
+// "responsive" added by TASK-501-01 — the stored read is fail-closed
+// (normalizeStoredMenuDocumentV2ForRead delegates to the strict writer);
+// removing/forgetting this entry degrades every saved responsive document to
+// empty (silent data loss).
+const MENU_NATIVE_BLOCK_KEYS = ["id", "type", "props", "responsive"];
+// "responsive" added by TASK-501-01 — same fail-closed read trap as above.
+const MENU_LEAF_BLOCK_KEYS = ["id", "type", "props", "style", "visibility", "responsive"];
 
 const assertBlockKeys = (
   value: Record<string, unknown>,
@@ -393,19 +507,28 @@ const normalizeMenuBlock = (
   const blockType = type as MenuBlockType;
   const id = readMenuBlockId(value, "blk");
 
-  // Reject-unknown at the block level: menu-native blocks carry NO style/
-  // visibility, only reused leaf blocks do.
+  // Reject-unknown at the block level: menu-native blocks carry NO FLAT style/
+  // visibility, only reused leaf blocks do (both carry the menu-validated
+  // `responsive` visibility record).
   assertBlockKeys(
     value,
     isMenuNativeBlockType(blockType) ? MENU_NATIVE_BLOCK_KEYS : MENU_LEAF_BLOCK_KEYS,
     path
   );
 
+  // Validated by the MENU contract (never the page pipeline) for every block
+  // type; emitted spread-if-present so legacy blocks round-trip byte-identically.
+  const responsive =
+    value.responsive === undefined || value.responsive === null
+      ? undefined
+      : normalizeMenuBlockResponsive(value.responsive, `${path}.responsive`);
+
   if (blockType === "nav-items") {
     return {
       id,
       type: "nav-items",
       props: normalizeNavItemsProps(value.props ?? {}, `${path}.props`),
+      ...(responsive ? { responsive } : {}),
     };
   }
   if (blockType === "brand") {
@@ -413,6 +536,7 @@ const normalizeMenuBlock = (
       id,
       type: "brand",
       props: normalizeBrandProps(value.props ?? {}, mode, `${path}.props`),
+      ...(responsive ? { responsive } : {}),
     };
   }
   if (blockType === "search" || blockType === "account" || blockType === "language") {
@@ -420,23 +544,32 @@ const normalizeMenuBlock = (
       id,
       type: blockType,
       props: normalizeMenuUtilityProps(value.props ?? {}, `${path}.props`),
+      ...(responsive ? { responsive } : {}),
     };
   }
   if (isMenuLeafBlockType(blockType)) {
     const pageType = MENU_LEAF_PAGE_TYPES[blockType];
-    const leaf = normalizeThroughPageLeaf({ ...value, id }, pageType, mode, path);
+    // Strip `responsive` before wrapping: the PAGE block schema accepts a
+    // WIDER `responsive` shape (props/style per breakpoint) that would
+    // silently launder page-shaped overrides past the menu contract above.
+    const { responsive: _rawResponsive, ...leafInput } = value;
+    const leaf = normalizeThroughPageLeaf({ ...leafInput, id }, pageType, mode, path);
     return {
       id,
       type: blockType,
       props: leaf.props,
       style: leaf.style,
       visibility: leaf.visibility,
+      ...(responsive ? { responsive } : {}),
     };
   }
   throw new MenuDocumentError(`${path}.type`);
 };
 
-const MENU_SECTION_KEYS = ["id", "type", "name", "layout", "blocks"];
+// "responsive" added by TASK-501-01 — the stored read is fail-closed;
+// removing/forgetting this entry degrades every saved responsive document to
+// empty (silent data loss).
+const MENU_SECTION_KEYS = ["id", "type", "name", "layout", "blocks", "responsive"];
 
 const normalizeMenuSection = (
   value: unknown,
@@ -466,7 +599,13 @@ const normalizeMenuSection = (
   const blocks = rawBlocks.map((block, index) =>
     normalizeMenuBlock(block, `${path}.blocks[${index}]`, mode)
   );
-  return { id, type: sectionType, name, layout, blocks };
+  // Spread-if-present: legacy documents WITHOUT `responsive` normalize to
+  // byte-identical objects (no `responsive` member ever materializes).
+  const responsive =
+    value.responsive === undefined || value.responsive === null
+      ? undefined
+      : normalizeMenuSectionResponsive(value.responsive, `${path}.responsive`);
+  return { id, type: sectionType, name, layout, blocks, ...(responsive ? { responsive } : {}) };
 };
 
 // --- write / read / resolvers -----------------------------------------------
@@ -594,6 +733,256 @@ export function reorderMenuBlock(
   if (!moved) return doc;
   blocks.splice(target, 0, moved);
   return withFirstSectionBlocks(doc, blocks);
+}
+
+// --- per-device resolve / read / patch / clear helpers (TASK-501-01) --------
+// All immutable and tolerant (missing id/override ⇒ identity return); consumed
+// by the CSS builder (501-02) and the Design editor's event handlers (501-03).
+
+const isMobileDevice = (device: MenuDeviceKind): device is "mobile" => device === "mobile";
+// desktop AND tablet ⇒ base, everywhere below (tablet deferred; canvas maps tablet⇒desktop).
+
+const mapMenuSection = (
+  doc: MenuDocumentV2,
+  sectionId: string,
+  fn: (section: MenuSectionV2) => MenuSectionV2
+): MenuDocumentV2 => {
+  const index = doc.sections.findIndex((section) => section.id === sectionId);
+  if (index === -1) return doc;
+  return {
+    ...doc,
+    sections: doc.sections.map((section, i) => (i === index ? fn(section) : section)),
+  };
+};
+
+const mapMenuBlock = (
+  doc: MenuDocumentV2,
+  blockId: string,
+  fn: (block: MenuBlockV2) => MenuBlockV2
+): MenuDocumentV2 => {
+  let found = false;
+  const sections = doc.sections.map((section) => {
+    const index = section.blocks.findIndex((block) => block.id === blockId);
+    if (index === -1) return section;
+    found = true;
+    return {
+      ...section,
+      blocks: section.blocks.map((block, i) => (i === index ? fn(block) : block)),
+    };
+  });
+  return found ? { ...doc, sections } : doc;
+};
+
+/**
+ * Resolve-for-display/CSS: desktop/tablet = the base; mobile = base merged
+ * with the sparse `responsive.mobile` override (mobile inherits DESKTOP).
+ * The nav base is the FIRST `nav-items` block's props (mirrors
+ * `collectMenuAppearance`'s `.find()` binding in `menuDocumentCss.ts`).
+ */
+export function resolveMenuSectionAppearanceForDevice(
+  section: MenuSectionV2,
+  device: MenuDeviceKind
+): { layout: MenuBarLayout; navProps: NavItemsProps } {
+  const navBlock = section.blocks.find((block) => block.type === "nav-items");
+  const baseNavProps: NavItemsProps = navBlock?.type === "nav-items" ? navBlock.props : {};
+  if (!isMobileDevice(device)) {
+    return { layout: { ...section.layout }, navProps: { ...baseNavProps } };
+  }
+  const override = section.responsive?.mobile;
+  return {
+    layout: { ...section.layout, ...(override?.layout ?? {}) }, // mobile inherits desktop base
+    navProps: { ...baseNavProps, ...(override?.navProps ?? {}) },
+  };
+}
+
+/** Badge/Reset detection — reads the RAW override (undefined = inherited), never the merge. */
+export function readMenuSectionOverrideValue(
+  section: MenuSectionV2,
+  breakpoint: MenuResponsiveBreakpoint,
+  group: MenuSectionOverrideGroup,
+  key: keyof MenuAppearance
+): unknown {
+  const record = section.responsive?.[breakpoint]?.[group];
+  return record && Object.prototype.hasOwnProperty.call(record, key)
+    ? (record as MenuAppearance)[key]
+    : undefined;
+}
+
+/**
+ * Device-forked writer. desktop/tablet ⇒ base (group "layout" ⇒
+ * `section.layout`; group "navProps" ⇒ the FIRST nav-items block's props ONLY
+ * — NORMATIVE: matches the readers above and `collectMenuAppearance`, and the
+ * section-level `responsive.mobile.navProps` record can only represent ONE
+ * nav-items block; additional nav-items blocks are left untouched). mobile ⇒
+ * lazily-created SPARSE `responsive.mobile[group]`. `patch` values MUST be
+ * valid `MenuAppearance` values OR `undefined`: an `undefined` patch value
+ * means DELETE-KEY-FROM-TARGET (base-key delete on desktop/tablet; override
+ * leaf delete + prune chain on mobile) — never an own `undefined` key, which
+ * would break legacy byte-identity and `readMenuSectionOverrideValue`'s
+ * hasOwnProperty detection. The write normalizer re-validates on save. NO
+ * auto-remove-on-equality — an override exists until cleared.
+ */
+export function patchMenuSectionForDevice(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  device: MenuDeviceKind,
+  group: MenuSectionOverrideGroup,
+  patch: MenuBarLayout | NavItemsProps
+): MenuDocumentV2 {
+  const applyPatch = <T extends Record<string, unknown>>(target: T): T => {
+    const next: Record<string, unknown> = { ...target };
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === undefined)
+        delete next[key]; // delete-on-undefined — never an own undefined key
+      else next[key] = value;
+    }
+    return next as T;
+  };
+  return mapMenuSection(doc, sectionId, (section) => {
+    if (!isMobileDevice(device)) {
+      if (group === "layout") {
+        return {
+          ...section,
+          layout: applyPatch(section.layout as Record<string, unknown>) as MenuBarLayout,
+        };
+      }
+      const navIndex = section.blocks.findIndex((block) => block.type === "nav-items");
+      if (navIndex === -1) return section; // no nav-items block ⇒ identity
+      return {
+        ...section,
+        blocks: section.blocks.map((block, i) =>
+          i === navIndex && block.type === "nav-items"
+            ? {
+                ...block,
+                props: applyPatch(block.props as Record<string, unknown>) as NavItemsProps,
+              }
+            : block
+        ),
+      };
+    }
+    const mobile = section.responsive?.mobile ?? {};
+    const nextGroup = applyPatch((mobile[group] ?? {}) as Record<string, unknown>);
+    const { [group]: _g, ...restMobile } = mobile;
+    const nextMobile = (
+      Object.keys(nextGroup).length > 0 ? { ...restMobile, [group]: nextGroup } : restMobile
+    ) as MenuSectionOverride;
+    const { mobile: _m, ...restResponsive } = section.responsive ?? {};
+    const responsive: MenuSectionResponsive =
+      Object.keys(nextMobile).length > 0
+        ? { ...restResponsive, mobile: nextMobile }
+        : restResponsive;
+    const next: MenuSectionV2 = { ...section, responsive };
+    // Prune chain to the byte-identical legacy shape, same as clearMenuSectionOverride.
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+/**
+ * Explicit Reset: delete ONE override key, prune empty group ⇒ empty
+ * breakpoint ⇒ empty `responsive` (port of `clearResponsiveOverride`,
+ * `pageDocumentV2.ts`). Missing override ⇒ identity.
+ */
+export function clearMenuSectionOverride(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  breakpoint: MenuResponsiveBreakpoint,
+  group: MenuSectionOverrideGroup,
+  key: keyof MenuAppearance
+): MenuDocumentV2 {
+  return mapMenuSection(doc, sectionId, (section) => {
+    const record = section.responsive?.[breakpoint]?.[group];
+    if (!record || !Object.prototype.hasOwnProperty.call(record, key)) return section;
+    const { [key]: _removed, ...restGroup } = record as Record<string, unknown>;
+    const { [group]: _g, ...restOverride } = section.responsive![breakpoint]!;
+    const override = (
+      Object.keys(restGroup).length > 0 ? { ...restOverride, [group]: restGroup } : restOverride
+    ) as MenuSectionOverride;
+    const { [breakpoint]: _b, ...restResponsive } = section.responsive!;
+    const responsive: MenuSectionResponsive =
+      Object.keys(override).length > 0
+        ? { ...restResponsive, [breakpoint]: override }
+        : restResponsive;
+    const next: MenuSectionV2 = { ...section, responsive };
+    // Prune to the byte-identical legacy shape (no empty responsive member).
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+/** desktop/tablet = flat leaf visibility (`visibility?.visible ?? true`; native blocks ⇒ true); mobile = override ?? desktop value. */
+export function resolveMenuBlockVisibleForDevice(
+  block: MenuBlockV2,
+  device: MenuDeviceKind
+): boolean {
+  const desktopVisible = "visibility" in block ? (block.visibility?.visible ?? true) : true;
+  if (!isMobileDevice(device)) return desktopVisible;
+  return block.responsive?.mobile?.visibility?.visible ?? desktopVisible;
+}
+
+/**
+ * Input to the render-if-visible-anywhere gate (501-02): a block with a
+ * visibility override is DOM-rendered whenever visible on AT LEAST ONE device
+ * and CSS-gated per branch; visible-on-neither blocks stay render-skipped.
+ */
+export const hasMenuBlockVisibilityOverride = (block: MenuBlockV2): boolean =>
+  block.responsive?.mobile?.visibility !== undefined;
+
+/**
+ * mobile ⇒ `responsive.mobile.visibility` (any block type, incl. menu-native);
+ * desktop/tablet ⇒ FLAT `visibility`, LEAF blocks only (native blocks carry no
+ * flat visibility by contract — documented no-op for them on desktop/tablet).
+ * Mirrors `setBlockVisibleForBreakpoint` (`pageEditorMutationActions.ts`).
+ */
+export function setMenuBlockVisibleForDevice(
+  doc: MenuDocumentV2,
+  blockId: string,
+  device: MenuDeviceKind,
+  visible: boolean
+): MenuDocumentV2 {
+  return mapMenuBlock(doc, blockId, (block) => {
+    if (!isMobileDevice(device)) {
+      // Direct discriminant comparisons (not the type-guard helper) so the
+      // union narrows to the leaf members that carry flat `visibility`.
+      if (block.type === "cta-button" || block.type === "divider" || block.type === "spacer") {
+        return { ...block, visibility: { visible } };
+      }
+      return block; // menu-native on desktop/tablet ⇒ documented no-op
+    }
+    return {
+      ...block,
+      responsive: {
+        ...(block.responsive ?? {}),
+        mobile: { ...(block.responsive?.mobile ?? {}), visibility: { visible } },
+      },
+    };
+  });
+}
+
+/**
+ * Explicit reset; prunes empty `mobile` ⇒ empty `responsive` ⇒ deletes the
+ * member (port of `clearBlockResponsiveOverride`, `pageDocumentV2.ts`).
+ * Missing override ⇒ identity.
+ */
+export function clearMenuBlockVisibilityOverride(
+  doc: MenuDocumentV2,
+  blockId: string,
+  breakpoint: MenuResponsiveBreakpoint
+): MenuDocumentV2 {
+  return mapMenuBlock(doc, blockId, (block) => {
+    const record = block.responsive?.[breakpoint];
+    if (!record || record.visibility === undefined) return block;
+    const { visibility: _removed, ...restOverride } = record;
+    const { [breakpoint]: _b, ...restResponsive } = block.responsive!;
+    const responsive =
+      Object.keys(restOverride).length > 0
+        ? { ...restResponsive, [breakpoint]: restOverride }
+        : restResponsive;
+    const next: MenuBlockV2 = { ...block, responsive };
+    // Prune to the byte-identical legacy shape (no empty responsive member).
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
 }
 
 // --- legacy adapter ---------------------------------------------------------

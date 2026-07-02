@@ -6,7 +6,8 @@
 **Category:** Admin UI / Content (Menus) / Responsive
 **Estimated Effort:** Medium
 **Dependencies:** TASK-501-01 (resolve/patch/clear helpers + `orientation` enum — hard dependency), TASK-501-02 (`buildMenuDocumentPreviewCss` responsive flatten for the in-canvas mobile preview — its builder API must be merged before the canvas work here is verifiable)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-02
 
 ---
 
