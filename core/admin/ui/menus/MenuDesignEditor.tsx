@@ -590,7 +590,13 @@ function ControlDefaultHint({
 }) {
   if (isSet || !section) return null;
   const { value, sourceLabel } = resolveMenuControlDefault(section, device, level, propKey);
-  if (value === undefined && sourceLabel === "Not set") return null;
+  // TASK-507 FIX B: any resolved default value of `undefined` hides the hint. The
+  // gated present-only numerics (indicatorThickness, itemDividerWidth, transitionMs,
+  // hoverLift, containerPaddingX/Y, navPillRadius/PaddingX/PaddingY) intentionally
+  // resolve to { value: undefined, sourceLabel: "Off" | "Not applied" } PRECISELY so
+  // the hint is HIDDEN — the prior stricter guard (also requiring "Not set") RENDERED
+  // them, producing mixed messaging (thumb at range.min while the hint said "Off").
+  if (value === undefined) return null;
   return (
     <span
       data-menu-control-default-hint={propKey}

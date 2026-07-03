@@ -1231,8 +1231,9 @@ test("TASK-506-05: fully-styled front sheet carries the exact B1–B5 selectors 
     `${SCOPE} .site-nav-list > .site-nav-item:not(:last-child){border-inline-end:2px dashed #cccccc}`,
     // B1 level-1 dropdown HORIZONTAL divider (dedicated single-member selector):
     `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li:not(:last-child){border-block-end:2px dotted #cccccc}`,
-    // B2 level-0 indicator ::before bar (grow ⇒ scaleX):
-    `${SCOPE} .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#ff0000;transform:scaleX(0);transform-origin:left;transition:transform 200ms}`,
+    // B2 level-0 indicator ::before bar (grow ⇒ scaleX) — TASK-507 A.1 scopes it to
+    // the TOP-BAR-only selector (no dropdown-link leak); A.2 resets opacity:1 at rest:
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#ff0000;transform:scaleX(0);opacity:1;transform-origin:left;transition:transform 200ms}`,
     // B3 caret suppressed at level 1 + flyout slide rest state:
     `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link::after{content:none}`,
     `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{opacity:0;transform:translateY(-6px);transition:opacity 150ms,transform 150ms,display 150ms allow-discrete}`,

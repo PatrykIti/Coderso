@@ -496,6 +496,16 @@ const LEVEL_LINK_SELECTORS: Record<NavLevelStyleLevel, string> = {
   2: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist .site-nav-link`,
 };
 
+// Level-0 B2 chrome (indicator ::before bar + hover-lift/underline) must NOT ride
+// the cascade-root `.site-nav-link` (which matches links at ALL depths, so a
+// level-0-only indicator/lift/underline would leak onto every dropdown link and a
+// deeper `indicator:"none"` early-returns and cannot cancel it) — anchor it to the
+// TOP-BAR direct link only. linkColor/fontSize/hover-background and the
+// `indicatorLinkDecls` transition+position:relative stay cascade-root by design
+// (TASK-504 inheritance); ONLY the NEW B2 chrome is scoped here (TASK-507 A.1).
+const TOP_BAR_LINK_SELECTOR =
+  `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-link` as const;
+
 const LEVEL_CONTAINER_SELECTORS: Record<NavLevelStyleLevel, string> = {
   // Two-member group: the level-1 sublist itself AND its nested sublists, so
   // level-1 chrome cascades into deeper containers.
@@ -572,10 +582,15 @@ const indicatorAndHoverRules = (sel: string, s: NavLevelStyle | NavChromeStyle):
     const th = s.indicatorThickness ?? 2;
     const dur = s.transitionMs ?? 150;
     const color = s.indicatorColor ?? "currentColor";
+    // Reset BOTH axes at rest (TASK-507 A.2): LEVEL_LINK_SELECTORS are
+    // descendant-anchored, so a shallower grow `::before{…scaleX(0)…}` reaches a
+    // deeper non-grow `::before` (and vice-versa). Declaring only the active axis
+    // would let the stale inherited one persist (a deeper non-grow bar stuck at
+    // `scaleX(0)` → invisible). Emitting `opacity:1`/`transform:none` neutralizes it.
     const rest =
       s.indicatorGrow === true
-        ? `content:"";position:absolute;left:0;${edge};height:${th}px;width:100%;background:${color};transform:scaleX(0);transform-origin:left;transition:transform ${dur}ms`
-        : `content:"";position:absolute;left:0;${edge};height:${th}px;width:100%;background:${color};opacity:0;transition:opacity ${dur}ms`;
+        ? `content:"";position:absolute;left:0;${edge};height:${th}px;width:100%;background:${color};transform:scaleX(0);opacity:1;transform-origin:left;transition:transform ${dur}ms`
+        : `content:"";position:absolute;left:0;${edge};height:${th}px;width:100%;background:${color};opacity:0;transform:none;transition:opacity ${dur}ms`;
     out.push(`${sel}::before{${rest}}`);
     const on = s.indicatorGrow === true ? `transform:scaleX(1)` : `opacity:1`;
     out.push(
@@ -938,13 +953,15 @@ const shallowEqualChrome = (
 };
 
 /**
- * Level-0 chrome emitter (mirror of `navLevelRules`). LINK-level B2
- * (indicator/hover/lift/transition) is all-width and rides the mobile `linkOnly`
- * branch; the pill (B4), top-bar divider (B1) and caret toggle/rotate (B3) are
- * ≥640-only (omitted when `linkOnly`). The level-0 link selector `.site-nav-link`
- * is the cascade ROOT (matches links at ALL depths) — deeper level rules win by
- * specificity. NO flyoutAnimation at level 0 (the top bar is never a revealed
- * sublist). Present-only ⇒ ZERO bytes when unauthored.
+ * Level-0 chrome emitter (mirror of `navLevelRules`). The `indicatorLinkDecls`
+ * transition + `position:relative` stay on the cascade-ROOT `.site-nav-link`
+ * (matches links at ALL depths — harmless anchors that deeper levels reuse); the
+ * B2 CHROME (indicator ::before bar + hover-lift/underline) is scoped to
+ * TOP_BAR_LINK_SELECTOR so it applies to depth-0 links ONLY and never leaks onto
+ * dropdown links (TASK-507 A.1). B2 is all-width (rides the mobile `linkOnly`
+ * branch); the pill (B4), top-bar divider (B1) and caret toggle/rotate (B3) are
+ * ≥640-only (omitted when `linkOnly`). NO flyoutAnimation at level 0 (the top bar
+ * is never a revealed sublist). Present-only ⇒ ZERO bytes when unauthored.
  */
 const navChromeRules = (
   chrome: NavChromeStyle | undefined,
@@ -955,8 +972,10 @@ const navChromeRules = (
   const linkSel = `${menuDocScope} .site-nav-link`;
   const rules: string[] = [];
   const linkDecls = indicatorLinkDecls(chrome);
-  if (linkDecls.length) rules.push(`${linkSel}{${linkDecls.join(";")}}`);
-  rules.push(...indicatorAndHoverRules(linkSel, chrome)); // B2 — all-width
+  if (linkDecls.length) rules.push(`${linkSel}{${linkDecls.join(";")}}`); // transition + position:relative stay cascade-root
+  // B2 chrome (::before bar + hover-lift/underline) is TOP-BAR-ONLY so a level-0
+  // indicator/lift/underline never leaks onto dropdown links (TASK-507 A.1).
+  rules.push(...indicatorAndHoverRules(TOP_BAR_LINK_SELECTOR, chrome));
   if (options?.linkOnly) return rules;
   const pill = pillRule(chrome); // B4
   if (pill) rules.push(pill);

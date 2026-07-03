@@ -22,6 +22,7 @@ import {
  */
 
 const SCOPE = `[data-site-menu-doc="true"]`;
+const TOP_BAR_LINK = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-link`;
 const L1_LINK = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-link`;
 const L2_LINK = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist .site-nav-link`;
 const L1_CONTAINER = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist, ${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist`;
@@ -469,10 +470,14 @@ describe("TASK-506-02 modern bundle emission goldens (§7)", () => {
         },
       })
     );
+    // TASK-507 A.1: the transition + position:relative stay cascade-root
+    // `.site-nav-link` (harmless anchors), but the B2 ::before bar + hover-lift/
+    // underline are scoped to the TOP-BAR-only selector so they never leak onto
+    // dropdown links. TASK-507 A.2: the grow rest-block resets `opacity:1` too.
     const relative = `${SCOPE} .site-nav-link{transition:color 200ms,background 200ms,transform 200ms;position:relative}`;
-    const bar = `${SCOPE} .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#123456;transform:scaleX(0);transform-origin:left;transition:transform 200ms}`;
-    const shown = `${SCOPE} .site-nav-link:hover::before,${SCOPE} .site-nav-link:focus-visible::before,${SCOPE} .site-nav-link:where([aria-current="page"])::before{transform:scaleX(1)}`;
-    const lift = `${SCOPE} .site-nav-link:hover,${SCOPE} .site-nav-link:focus-visible{text-decoration:underline;transform:translateY(-4px)}`;
+    const bar = `${TOP_BAR_LINK}::before{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#123456;transform:scaleX(0);opacity:1;transform-origin:left;transition:transform 200ms}`;
+    const shown = `${TOP_BAR_LINK}:hover::before,${TOP_BAR_LINK}:focus-visible::before,${TOP_BAR_LINK}:where([aria-current="page"])::before{transform:scaleX(1)}`;
+    const lift = `${TOP_BAR_LINK}:hover,${TOP_BAR_LINK}:focus-visible{text-decoration:underline;transform:translateY(-4px)}`;
     for (const rule of [relative, bar, shown, lift]) {
       expect(sharedBranchOf(css)).toContain(rule);
       // link-level ⇒ ALSO re-emits into the <640 mobile bucket (mobile inherits desktop).
@@ -480,18 +485,79 @@ describe("TASK-506-02 modern bundle emission goldens (§7)", () => {
     }
   });
 
-  test("B2 non-grow indicator uses opacity (not scaleX)", () => {
+  test("B2 non-grow indicator uses opacity (not scaleX) and resets transform:none at rest (TASK-507 A.2)", () => {
     const css = buildMenuDocumentCss(
       buildDoc({
         navProps: { navChrome: { indicator: "underline", indicatorColor: "#111111" } },
       })
     );
     expect(css).toContain(
-      `${SCOPE} .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:#111111;opacity:0;transition:opacity 150ms}`
+      `${TOP_BAR_LINK}::before{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:#111111;opacity:0;transform:none;transition:opacity 150ms}`
     );
     expect(css).toContain(
-      `${SCOPE} .site-nav-link:hover::before,${SCOPE} .site-nav-link:focus-visible::before,${SCOPE} .site-nav-link:where([aria-current="page"])::before{opacity:1}`
+      `${TOP_BAR_LINK}:hover::before,${TOP_BAR_LINK}:focus-visible::before,${TOP_BAR_LINK}:where([aria-current="page"])::before{opacity:1}`
     );
+  });
+
+  test("B2 (TASK-507 A.1) level-0 indicator does NOT leak onto dropdown links: no bare `.site-nav-link::before` and no `.site-nav-sublist` indicator from navChrome", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          navChrome: {
+            indicator: "underline",
+            indicatorColor: "#123456",
+            hoverUnderline: true,
+            hoverLift: 4,
+          },
+        },
+      })
+    );
+    // The cascade-root `.site-nav-link::before` (which matches ALL depths) must
+    // NEVER carry the level-0 bar — only the TOP-BAR-scoped selector does.
+    expect(css).not.toContain(`${SCOPE} .site-nav-link::before`);
+    // navChrome authored ONLY level 0 ⇒ no level-1/2 sublist link indicator emitted.
+    expect(css).not.toContain(`${L1_LINK}::before`);
+    expect(css).not.toContain(`${L2_LINK}::before`);
+    // The top-bar bar + hover-lift/underline ARE emitted, top-bar-scoped.
+    expect(css).toContain(`${TOP_BAR_LINK}::before{`);
+    expect(css).toContain(
+      `${TOP_BAR_LINK}:hover,${TOP_BAR_LINK}:focus-visible{text-decoration:underline;transform:translateY(-4px)}`
+    );
+  });
+
+  test("B2 (TASK-507 A.2) EVERY indicator rest-block resets BOTH axes — grow adds opacity:1, non-grow adds transform:none, at level 1 and level 2", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          levelStyles: {
+            1: { indicator: "underline", indicatorColor: "#aaa", indicatorGrow: true },
+            2: { indicator: "overline", indicatorColor: "#bbb" }, // non-grow
+          },
+        },
+      })
+    );
+    // level-1 grow rest-block carries `opacity:1` alongside `transform:scaleX(0)`.
+    expect(css).toContain(
+      `${L1_LINK}::before{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:#aaa;transform:scaleX(0);opacity:1;transform-origin:left;transition:transform 150ms}`
+    );
+    // level-2 non-grow rest-block carries `transform:none` alongside `opacity:0`.
+    expect(css).toContain(
+      `${L2_LINK}::before{content:"";position:absolute;left:0;top:0;height:2px;width:100%;background:#bbb;opacity:0;transform:none;transition:opacity 150ms}`
+    );
+  });
+
+  test("B2 (TASK-507 A.1) per-device chrome delta emits the indicator bar on the TOP-BAR-only selector (front↔canvas parity)", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: { navChrome: { indicator: "underline", indicatorColor: "#111" } },
+        navResponsive: {
+          tablet: { navProps: { navChrome: { indicator: "underline", indicatorColor: "#222" } } },
+        },
+      })
+    );
+    // tablet delta re-emits the bar on the top-bar-only selector, never the root.
+    expect(tabletBlockOf(css)).toContain(`${TOP_BAR_LINK}::before{`);
+    expect(tabletBlockOf(css)).not.toContain(`${SCOPE} .site-nav-link::before`);
   });
 
   // B3 — caret toggle/rotate + flyout animation -------------------------------

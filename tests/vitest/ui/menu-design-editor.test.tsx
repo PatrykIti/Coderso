@@ -2043,6 +2043,66 @@ test("F2 isSet trap: a Desktop base value must NOT suppress the Mobile 'Inherite
   cleanup();
 });
 
+test("TASK-507 FIX B: gated present-only numerics render NO default hint when unset", async () => {
+  // The gated present-only numerics resolve to { value: undefined, sourceLabel:
+  // "Off" | "Not applied" } precisely so the hint is HIDDEN — the range thumb sits
+  // at range.min and NO mixed-messaging "Off"/"Not applied" text renders below it.
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Level 0 (navChrome) gated numerics — unset ⇒ hidden.
+  for (const key of [
+    "navPillRadius",
+    "navPillPaddingX",
+    "navPillPaddingY",
+    "itemDividerWidth",
+    "indicatorThickness",
+    "transitionMs",
+    "hoverLift",
+  ]) {
+    expect(findHint(container, key), `level-0 ${key} hint must be hidden`).toBeNull();
+  }
+
+  // Level 1 (levelStyles) gated numerics — unset ⇒ hidden (incl. container padding).
+  clickSegmented(container, "Nesting level", "1");
+  for (const key of [
+    "containerPaddingX",
+    "containerPaddingY",
+    "itemDividerWidth",
+    "indicatorThickness",
+    "transitionMs",
+    "hoverLift",
+  ]) {
+    expect(findHint(container, key), `level-1 ${key} hint must be hidden`).toBeNull();
+  }
+
+  cleanup();
+});
+
+test("TASK-507 FIX B: no rendered default hint ever contains 'undefined'", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  const assertNoUndefined = () => {
+    for (const node of container.querySelectorAll("[data-menu-control-default-hint]")) {
+      expect(node.textContent ?? "").not.toContain("undefined");
+      expect(node.getAttribute("data-menu-control-default-source") ?? "").not.toContain(
+        "undefined"
+      );
+    }
+  };
+
+  assertNoUndefined();
+  clickSegmented(container, "Nesting level", "1");
+  assertNoUndefined();
+  clickSegmented(container, "Nesting level", "2");
+  assertNoUndefined();
+
+  cleanup();
+});
+
 test("B1–B5 controls write the Desktop BASE per level (with correct level gating)", async () => {
   const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
   await flush();
