@@ -18,6 +18,16 @@ import {
   customScreenUpdateSchema,
 } from "../validation/customScreenSchemas";
 
+// TASK-505-01 (Item B): lightweight carrier so a residual hard-400 (genuinely-malformed
+// binding) MAY surface the offending field name(s) on ApiError.details.fields — the user
+// message string stays byte-frozen (mapCustomScreenError keys on error.message). In practice
+// malformed bindings carry no field name; field-orphans are pruned to a 200 warning, not a 400.
+export class CustomScreenDefinitionError extends Error {
+  constructor(public fields?: string[]) {
+    super("custom_screen_definition_invalid");
+  }
+}
+
 export type CustomScreenRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
 export type CustomScreenRouteDeps = {
@@ -41,12 +51,15 @@ export const mapCustomScreenError = (error: unknown) => {
       return new ApiError("custom_screen_invalid", "Custom screen payload is invalid", 400);
     case "custom_screen_status_invalid":
       return new ApiError("custom_screen_status_invalid", "Custom screen status is invalid", 400);
-    case "custom_screen_definition_invalid":
+    case "custom_screen_definition_invalid": {
+      const fields = error instanceof CustomScreenDefinitionError ? error.fields : undefined;
       return new ApiError(
         "custom_screen_definition_invalid",
-        "Custom screen definition is invalid",
-        400
+        "Custom screen definition is invalid", // BYTE-FROZEN — field names ride error.details
+        400,
+        fields?.length ? { fields } : undefined
       );
+    }
     case "custom_screen_legacy_write_unsupported":
       return new ApiError(
         "custom_screen_legacy_write_unsupported",

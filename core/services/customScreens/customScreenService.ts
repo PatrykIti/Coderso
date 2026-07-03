@@ -16,6 +16,8 @@ import {
   type CustomScreenDefinitionVersion,
   normalizeCustomScreenSidebarConfig,
   type CustomScreenStatus,
+  type CustomScreenBindingWarning,
+  type ScreenBindingWarningSink,
 } from "./customScreenSchemas";
 import { resolveCustomScreenCapabilities, type CustomScreenCapabilities } from "./capabilities";
 
@@ -35,6 +37,23 @@ export type CustomScreenRecord = {
   capabilities: CustomScreenCapabilities;
   createdAt: Date;
   updatedAt: Date;
+  // TASK-505-01 (Item B): transient binding-GC warnings surfaced on the PATCH 200 response
+  // record — computed at normalize time, NEVER persisted (stored-V4 bytes unaffected). 505-03
+  // renders "Removed bindings for deleted field(s): …". Absent when nothing was pruned.
+  warnings?: CustomScreenBindingWarning[];
+};
+
+// De-dupe field names in source order; drop an empty warning bucket.
+const buildBindingWarnings = (sink: ScreenBindingWarningSink): CustomScreenBindingWarning[] => {
+  const warnings: CustomScreenBindingWarning[] = [];
+  const dedupe = (fields: string[]) => [...new Set(fields)];
+  if (sink.removedFieldOrphans.length > 0) {
+    warnings.push({ code: "binding_field_removed", fields: dedupe(sink.removedFieldOrphans) });
+  }
+  if (sink.removedBlockOrphans.length > 0) {
+    warnings.push({ code: "binding_block_removed", fields: dedupe(sink.removedBlockOrphans) });
+  }
+  return warnings;
 };
 
 export type CustomScreenCreateInput = {
@@ -236,6 +255,8 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
       ? baseDefinition.schemaVersion
       : normalizeCustomScreenSchemaVersion(input.schemaVersion);
   const rawInput = input as Record<string, unknown>;
+  // TASK-505-01 (Item B): collect pruned binding-orphan field names on Save (transient).
+  const sink: ScreenBindingWarningSink = { removedFieldOrphans: [], removedBlockOrphans: [] };
   const definition = normalizeCustomScreenDefinitionForWrite(
     input.definition !== undefined ||
       input.schemaVersion !== undefined ||
@@ -250,7 +271,8 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
       : {
           definition: baseDefinition,
         },
-    { contentType }
+    { contentType },
+    sink
   );
   const sidebar = normalizeCustomScreenSidebarConfig({
     showInSidebar: input.showInSidebar !== undefined ? input.showInSidebar : existing.showInSidebar,
@@ -284,7 +306,11 @@ export async function updateCustomScreen(id: string, input: CustomScreenUpdateIn
     .returning();
 
   if (!row) return null;
-  return mapRow(row, { contentType });
+  const warnings = buildBindingWarnings(sink);
+  return {
+    ...mapRow(row, { contentType }),
+    ...(warnings.length > 0 ? { warnings } : {}),
+  };
 }
 
 export async function deleteCustomScreen(id: string) {

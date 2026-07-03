@@ -32,9 +32,10 @@ import {
   screenBlockLabels,
   type ScreenBlockKind,
   type ScreenInsertTarget,
+  type ScreenSectionPatch,
 } from "../../../services/customScreens/screenDocumentOps";
 import type { ContentField } from "../content-types/SchemaBuilder";
-import { ScreenBlockInspector } from "./ScreenBlockInspector";
+import { ScreenBlockInspector, ScreenSectionInspector } from "./ScreenBlockInspector";
 import { SCREEN_CANONICAL_KINDS, ScreenBlockLibrary } from "./ScreenBlockLibrary";
 import { ScreenPanelToggleRail } from "./ScreenPanelToggleRail";
 import { ScreenRuntimeRenderer } from "./ScreenRuntimeRenderer";
@@ -80,6 +81,10 @@ type ScreenAuthoringCanvasProps = {
   onDragMove: (blockId: string, target: ScreenInsertTarget) => void;
   onPatchBlock: (blockId: string, patch: Partial<ScreenBlockV1>) => void;
   onPatchBlockData: (blockId: string, patch: Record<string, unknown>) => void;
+  // TASK-505-03 (Item A): section-layout write (the new `style` channel). The
+  // canvas resolves the selected section and threads the host handler through
+  // the ScreenSectionInspector.
+  onPatchSection: (sectionId: string, patch: ScreenSectionPatch) => void;
   onPatchBinding: (
     blockId: string,
     propPath: string,
@@ -194,6 +199,7 @@ export function ScreenAuthoringCanvas({
   onDragMove,
   onPatchBlock,
   onPatchBlockData,
+  onPatchSection,
   onPatchBinding,
   onMove,
   onDuplicate,
@@ -206,6 +212,10 @@ export function ScreenAuthoringCanvas({
   const [commandOpen, setCommandOpen] = useState(false);
   const [commandQuery, setCommandQuery] = useState("");
   const selectedBlock = findScreenBlockById(document, selectedBlockId);
+  // TASK-505-03 (Item A): a section-only selection resolves to the section
+  // inspector (block selection still wins — a selected block's section is edited
+  // via the block path).
+  const selectedSection = document.sections.find((s) => s.id === selectedSectionId) ?? null;
   const resolvedSelectedSectionId =
     findBlockSectionId(document, selectedBlockId) ?? selectedSectionId;
   const selection: AuthoringSelectionTarget | null = selectedBlockId
@@ -268,6 +278,10 @@ export function ScreenAuthoringCanvas({
     if (target.kind === "section") {
       onSelectBlock(null);
       onSelectSection(target.id);
+      // TASK-505-03 (Item A): parity with the block branch @below — selecting a
+      // section forces the Inspect body so the section-layout controls show on
+      // click (was: a section-only selection left the seeded palette showing).
+      setActivePanel("inspect");
       return;
     }
     onSelectSection(target.sectionId);
@@ -316,7 +330,9 @@ export function ScreenAuthoringCanvas({
       description: "Edit the selected block's bound field, content, and background.",
       icon: SlidersHorizontal,
       active: activePanel === "inspect",
-      disabled: !selectedBlock,
+      // TASK-505-03 (Item A): Inspect is now reachable for a section-only
+      // selection too (the section-layout inspector), not just a block.
+      disabled: !selectedBlock && !selectedSection,
       onSelect: () => setActivePanel("inspect"),
     },
   ];
@@ -330,7 +346,7 @@ export function ScreenAuthoringCanvas({
       <ScreenBlockLibrary fields={fields} onAddBlock={onAddBlock} />
     ) : activePanel === "layers" ? (
       <AuthoringLayersPanel nodes={layerNodes} selection={selection} onSelect={selectTarget} />
-    ) : (
+    ) : selectedBlock ? (
       <ScreenBlockInspector
         selectedBlock={selectedBlock}
         bindings={bindings}
@@ -363,6 +379,16 @@ export function ScreenAuthoringCanvas({
         onMove={onMove}
         onDuplicate={onDuplicate}
         onDelete={onDelete}
+      />
+    ) : (
+      // TASK-505-03 (Item A): a section-only selection routes to the section
+      // inspector (Columns + gap). The block inspector's own `!selectedBlock`
+      // early-return stays untouched — this fork keeps the two paths distinct.
+      <ScreenSectionInspector
+        section={selectedSection}
+        onPatchSection={(patch) =>
+          selectedSection ? onPatchSection(selectedSection.id, patch) : undefined
+        }
       />
     );
 

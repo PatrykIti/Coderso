@@ -798,7 +798,10 @@ export function MenuEditorPage() {
     status: menuStatus,
   });
   const missingMenuState = !isLoading && !originalMenu;
-  const rootCount = items.filter((item) => item.parentId === null).length;
+  // TASK-504-04 §9 (defect B3): the badge conveys the TOTAL item count (a 4-item
+  // nested menu with 1 root previously mislabeled "1 items" — wrong count AND
+  // wrong plural). Count every item + pluralize.
+  const itemCount = items.length;
 
   // Menu-level settings shown in the inspector empty state (no active item):
   // the relocated Menu name + Theme location guidance (carried VERBATIM so the
@@ -995,7 +998,9 @@ export function MenuEditorPage() {
         {!isLoading && originalMenu ? (
           <EditorFrame
             title="Menu editor"
-            toolbar={<Badge variant="outline">{`${rootCount} items`}</Badge>}
+            toolbar={
+              <Badge variant="outline">{`${itemCount} ${itemCount === 1 ? "item" : "items"}`}</Badge>
+            }
             left={<MenuAddItemsRail onAdd={handleAddItem} pageCount={pages.length} />}
             right={inspectorNode}
             canvas={

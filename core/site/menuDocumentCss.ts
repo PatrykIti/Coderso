@@ -1,9 +1,14 @@
 import {
   hasMenuBlockVisibilityOverride,
   resolveMenuBlockVisibleForDevice,
+  resolveMenuBrandStyleForDevice,
   resolveMenuSectionAppearanceForDevice,
+  type BrandStyle,
   type MenuDeviceKind,
   type MenuDocumentV2,
+  type NavLevelStyle,
+  type NavLevelStyles,
+  type NavLevelStyleLevel,
 } from "../services/menus/menuDocumentV2";
 import {
   sanitizeMenuAppearance,
@@ -80,6 +85,25 @@ const MENU_SHADOW_CSS: Record<Exclude<MenuAppearanceShadow, "none">, string> = {
   sm: "0 1px 2px rgba(15,23,42,.1)",
   md: "0 8px 24px rgba(15,23,42,.12)",
 };
+
+/**
+ * Level-container shadow: reuses `MENU_SHADOW_CSS` verbatim; `"none"` emits an
+ * explicit `box-shadow:none` so an authored no-shadow beats the base chrome
+ * (`siteShellCss.ts:157` / canvas baseline) on the doc scope.
+ */
+const shadowCss = (s: MenuAppearanceShadow): string => (s === "none" ? "none" : MENU_SHADOW_CSS[s]);
+
+/**
+ * Base-sheet link box fallbacks (`siteShellCss.ts:144` = `padding:8px 12px;
+ * border-radius:6px`) used ONLY to COMPLETE the `padding` shorthand when a
+ * single axis is authored, and to supply the neutral value in the tablet/mobile
+ * link-box delta. These are NOT resolution seeds — the cheap-win keys carry NO
+ * `MENU_APPEARANCE_DEFAULTS`/`SHELL_APPEARANCE_DEFAULTS` entry (present-only), so
+ * an unauthored padding/radius resolves to `undefined` and emits ZERO bytes.
+ */
+const SHELL_DEFAULT_LINK_PX = 12;
+const SHELL_DEFAULT_LINK_PY = 8;
+const SHELL_DEFAULT_LINK_RADIUS = 6;
 
 /**
  * Shell defaults extended with the menu-only `orientation` field (TASK-501-01).
@@ -231,10 +255,23 @@ const MENU_RULE_GROUPS: readonly MenuRuleGroup[] = [
     delta: (a) => `${menuDocScope} .site-nav-link{color:${a.linkColor};${totalTypographyCss(a)}}`,
   },
   {
-    // 6. hover
-    fields: ["linkHoverColor"],
-    base: (a) => `${hoverSelector}{background:${a.linkHoverColor}}`,
-    delta: (a) => `${hoverSelector}{background:${a.linkHoverColor}}`,
+    // 6. hover (extended with hover-TEXT color, TASK-504-02 §4). `linkHoverTextColor`
+    // carries NO resolution default (present-only) so it is `undefined` when
+    // unauthored — the `!= null` gate then emits background-only (byte-identical).
+    // The delta reverts an unset hover-text to the RESOLVED base `linkColor` (NOT
+    // `"inherit"`) so a per-device hover-background override never silently
+    // regresses a custom-`linkColor` doc's hover text (mirrors the active-group
+    // precedent below).
+    fields: ["linkHoverColor", "linkHoverTextColor"],
+    base: (a) => {
+      const decls = [
+        `background:${a.linkHoverColor}`,
+        a.linkHoverTextColor != null ? `color:${a.linkHoverTextColor}` : null,
+      ].filter(Boolean);
+      return `${hoverSelector}{${decls.join(";")}}`;
+    },
+    delta: (a) =>
+      `${hoverSelector}{background:${a.linkHoverColor};color:${a.linkHoverTextColor != null ? a.linkHoverTextColor : a.linkColor}}`,
   },
   {
     // 7. active — a null revert matches hover (visually identical to the
@@ -254,6 +291,30 @@ const MENU_RULE_GROUPS: readonly MenuRuleGroup[] = [
     },
     delta: (a) =>
       `${menuDocScope} .site-nav-group>summary{color:${a.linkColor};${totalTypographyCss(a)}}`,
+  },
+  {
+    // 9. link box (per-link padding + radius, TASK-504-02 §3). Separate from
+    // group 5 (typography) so a device delta re-emits ONLY the box, not
+    // color/font. PRESENT-ONLY base: these keys carry NO resolution default
+    // (NOT in MENU_APPEARANCE_DEFAULTS/SHELL_APPEARANCE_DEFAULTS), so an
+    // unauthored doc resolves them to `undefined` ⇒ base returns `null` ⇒ ZERO
+    // bytes ⇒ the base-sheet `padding:8px 12px;border-radius:6px`
+    // (siteShellCss.ts:144) stays the effective default and no-override docs are
+    // byte-identical. `padding` is a shorthand needing BOTH axes: emit when
+    // EITHER is authored, completing the other axis from the local base-sheet
+    // fallback (SHELL_DEFAULT_LINK_*, NOT a resolution seed).
+    fields: ["linkPaddingX", "linkPaddingY", "linkRadius"],
+    base: (a) => {
+      const decls = [
+        a.linkPaddingX != null || a.linkPaddingY != null
+          ? `padding:${a.linkPaddingY ?? SHELL_DEFAULT_LINK_PY}px ${a.linkPaddingX ?? SHELL_DEFAULT_LINK_PX}px`
+          : null,
+        a.linkRadius != null ? `border-radius:${a.linkRadius}px` : null,
+      ].filter(Boolean);
+      return decls.length ? `${menuDocScope} .site-nav-link{${decls.join(";")}}` : null;
+    },
+    delta: (a) =>
+      `${menuDocScope} .site-nav-link{padding:${a.linkPaddingY ?? SHELL_DEFAULT_LINK_PY}px ${a.linkPaddingX ?? SHELL_DEFAULT_LINK_PX}px;border-radius:${a.linkRadius ?? SHELL_DEFAULT_LINK_RADIUS}px}`,
   },
 ];
 
@@ -381,6 +442,246 @@ const collectMenuDividerRules = (doc: MenuDocumentV2): string[] => {
   return rules;
 };
 
+// --- TASK-504-02 §1 brand block styling -------------------------------------
+// Present-only: an absent (pruned) `style` emits ZERO bytes. Mirrors
+// `collectMenuDividerRules` — loop `sections[0].blocks`, escape the block id,
+// key on the `[data-menu-block-id]` stamp the brand `<a>` carries on the front
+// (`siteShell.tsx:414,428`). Text decls land on the `<a>`; image decls on its
+// descendant `<img>`. Values are pre-validated (token-backed colors, clamped
+// numbers, mapped enums) by 504-01.
+
+const brandStyleDecls = (style: BrandStyle): string[] =>
+  [
+    style.fontSize != null ? `font-size:${style.fontSize}px` : null,
+    style.fontWeight != null ? `font-weight:${style.fontWeight}` : null,
+    style.color != null ? `color:${style.color}` : null,
+    style.textTransform != null ? `text-transform:${style.textTransform}` : null,
+    style.letterSpacing != null ? `letter-spacing:${style.letterSpacing}px` : null,
+  ].filter((d): d is string => d !== null);
+
+const brandImageDecls = (style: BrandStyle): string[] =>
+  [
+    style.height != null ? `height:${style.height}px` : null,
+    style.maxWidth != null ? `max-width:${style.maxWidth}px` : null,
+  ].filter((d): d is string => d !== null);
+
+const collectMenuBrandRules = (doc: MenuDocumentV2): string[] => {
+  const rules: string[] = [];
+  for (const block of doc.sections[0]?.blocks ?? []) {
+    if (block.type !== "brand") continue;
+    const style = block.props.style; // pruned-empty ⇒ undefined by 504-01
+    if (!style) continue; // absent ⇒ ZERO bytes
+    const esc = escapeAuthoringCssString(block.id);
+    const key = `${menuDocScope} [data-menu-block-id="${esc}"]`;
+    const textDecls = brandStyleDecls(style);
+    if (textDecls.length) rules.push(`${key}{${textDecls.join(";")}}`);
+    const imgDecls = brandImageDecls(style);
+    if (imgDecls.length) rules.push(`${key} img{${imgDecls.join(";")};width:auto}`);
+  }
+  return rules;
+};
+
+// --- TASK-504-02 §2 per-nesting-level nav styling ---------------------------
+// Level 0 = the EXISTING flat `${menuDocScope} .site-nav-link` group-5 base (the
+// cascade ROOT reaching links at ALL depths) — NEVER re-emitted here. Only
+// levels 1 and 2 have depth selectors. Selectors are DELIBERATELY
+// descendant-anchored so a deeper level is ALSO matched by every shallower
+// level's rule and wins its OWN present keys by specificity + source order —
+// the true "inherits level N-1" cascade, pure CSS, no runtime merge.
+
+const LEVEL_LINK_SELECTORS: Record<NavLevelStyleLevel, string> = {
+  1: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-link`,
+  2: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist .site-nav-link`,
+};
+
+const LEVEL_CONTAINER_SELECTORS: Record<NavLevelStyleLevel, string> = {
+  // Two-member group: the level-1 sublist itself AND its nested sublists, so
+  // level-1 chrome cascades into deeper containers.
+  1: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist, ${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist`,
+  // Anchored (0,5,0) form (NOT the short `.site-nav-sublist .site-nav-sublist`
+  // (0,3,0)) so a level-2 container override TIES level-1's reach selector and
+  // wins by source order (emitted after level 1).
+  2: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist`,
+};
+
+/** Link typography/box decls for ONE level (present-only, sparse). `gap` is NOT
+ *  here — the link is `display:block`, so `gap` lands on the CONTAINER. */
+const levelLinkDecls = (s: NavLevelStyle): string[] =>
+  [
+    s.linkColor != null ? `color:${s.linkColor}` : null,
+    s.fontSize != null ? `font-size:${s.fontSize}px` : null,
+    s.fontWeight != null ? `font-weight:${s.fontWeight}` : null,
+    s.paddingX != null || s.paddingY != null
+      ? `padding:${s.paddingY ?? SHELL_DEFAULT_LINK_PY}px ${s.paddingX ?? SHELL_DEFAULT_LINK_PX}px`
+      : null,
+    s.radius != null ? `border-radius:${s.radius}px` : null,
+  ].filter((d): d is string => d !== null);
+
+/** Hover/active state rules for ONE level (separate state-pseudo selectors). */
+const levelStateRules = (level: NavLevelStyleLevel, s: NavLevelStyle): string[] => {
+  const sel = LEVEL_LINK_SELECTORS[level];
+  const out: string[] = [];
+  const hoverDecls = [
+    s.linkHoverColor != null ? `background:${s.linkHoverColor}` : null,
+    s.linkHoverTextColor != null ? `color:${s.linkHoverTextColor}` : null,
+  ].filter((d): d is string => d !== null);
+  if (hoverDecls.length) out.push(`${sel}:hover,${sel}:focus-visible{${hoverDecls.join(";")}}`);
+  if (s.linkActiveColor != null) out.push(`${sel}:active{background:${s.linkActiveColor}}`);
+  return out;
+};
+
+/** Submenu-container chrome for levels >= 1 (present-only). `gap` rides the
+ *  container (the sublist is `display:grid`), spacing that level's dropdown. */
+const levelContainerDecls = (s: NavLevelStyle): string[] => {
+  const border =
+    s.borderColor != null || s.borderWidth != null
+      ? `border:${s.borderWidth ?? 1}px solid ${s.borderColor ?? "rgba(15,23,42,.12)"}`
+      : null;
+  return [
+    s.background != null ? `background:${s.background}` : null,
+    border,
+    s.radius != null ? `border-radius:${s.radius}px` : null,
+    s.shadow != null ? `box-shadow:${shadowCss(s.shadow)}` : null,
+    s.minWidth != null ? `min-width:${s.minWidth}px` : null,
+    s.gap != null ? `gap:${s.gap}px` : null,
+  ].filter((d): d is string => d !== null);
+};
+
+const NAV_LEVELS: readonly NavLevelStyleLevel[] = [1, 2];
+
+/**
+ * Per-level rule emitter. Splits by field class per the parent contract
+ * (TASK-504 §(2) + "Exact depth selectors"): the level LINK typography +
+ * hover/active state is all-width (rides `desktopShared` AND re-emits into the
+ * <640 mobile bucket for the "mobile inherits desktop" invariant), while the
+ * submenu CONTAINER chrome (background/border/radius/shadow/min-width/gap) is
+ * ≥640-ONLY — folded into `desktopShared`. `linkOnly` (mobile branch) OMITS the
+ * container decls: below 640 the nav is inline (the base sheet strips the
+ * dropdown chrome, `siteShellCss.ts`), so re-emitting a level container's
+ * background/border/min-width there would PAINT on the inline nested list (a
+ * level `minWidth` can overflow a narrow viewport) — a genuine leak, NOT the
+ * harmless present-only no-op the contract intends. Full mode
+ * (`desktopShared`/tablet, ≥640) keeps the container chrome.
+ */
+const navLevelRules = (
+  levelStyles: NavLevelStyles | undefined,
+  options?: { linkOnly?: boolean }
+): string[] => {
+  if (!levelStyles) return []; // absent ⇒ ZERO bytes
+  const rules: string[] = [];
+  for (const lvl of NAV_LEVELS) {
+    const s = levelStyles[lvl];
+    if (!s) continue;
+    const linkDecls = levelLinkDecls(s);
+    if (linkDecls.length) rules.push(`${LEVEL_LINK_SELECTORS[lvl]}{${linkDecls.join(";")}}`);
+    rules.push(...levelStateRules(lvl, s));
+    if (options?.linkOnly) continue; // container chrome is ≥640-only (parent contract)
+    const contDecls = levelContainerDecls(s);
+    if (contDecls.length) rules.push(`${LEVEL_CONTAINER_SELECTORS[lvl]}{${contDecls.join(";")}}`);
+  }
+  return rules;
+};
+
+// --- TASK-504-02 §4 current-page rule ---------------------------------------
+// Present-only: colored by the EXISTING `linkActiveColor` (no new model key).
+// `:where()` contributes 0 specificity so the rule stays at the flat base link
+// level — deliberately the LOWEST-priority tint (level/hover rules still win).
+// FRONT-ONLY effect: the canvas stamps no `aria-current`, so it matches nothing
+// there (the stamp lands via 504-03).
+const currentPageRule = (a: ResolvedMenuAppearance): string[] =>
+  a.linkActiveColor !== null
+    ? [`${menuDocScope} .site-nav-link:where([aria-current="page"]){color:${a.linkActiveColor}}`]
+    : [];
+
+// --- TASK-504-02 §5 per-device brand + level deltas -------------------------
+// The nested brand `style` / `levelStyles` records are NOT flat
+// `ResolvedMenuAppearance` scalars, so `collectDeltaRules` cannot carry them.
+// The Pages cascade (tablet/mobile each inherit DESKTOP; mobile NEVER inherits
+// tablet) is owned by 504-01's exported resolvers — this module only DIFFS
+// their output vs the desktop base to decide which delta rules to emit. The
+// resolvers return `{}` (never undefined) for an unstyled target, so the diff
+// helpers treat `{}`/`undefined` as equal ⇒ an unstyled block/level ⇒ ZERO bytes.
+
+const BRAND_STYLE_COMPARE_KEYS: readonly (keyof BrandStyle)[] = [
+  "fontSize",
+  "fontWeight",
+  "color",
+  "textTransform",
+  "letterSpacing",
+  "height",
+  "maxWidth",
+];
+
+const shallowEqualStyle = (resolved: BrandStyle, base: BrandStyle | undefined): boolean => {
+  const other = base ?? {};
+  return BRAND_STYLE_COMPARE_KEYS.every((k) => resolved[k] === other[k]);
+};
+
+const NAV_LEVEL_STYLE_COMPARE_KEYS: readonly (keyof NavLevelStyle)[] = [
+  "linkColor",
+  "linkHoverColor",
+  "linkHoverTextColor",
+  "linkActiveColor",
+  "fontSize",
+  "fontWeight",
+  "gap",
+  "paddingX",
+  "paddingY",
+  "background",
+  "borderColor",
+  "borderWidth",
+  "radius",
+  "shadow",
+  "minWidth",
+];
+
+const shallowEqualLevel = (a: NavLevelStyle, b: NavLevelStyle): boolean =>
+  NAV_LEVEL_STYLE_COMPARE_KEYS.every((k) => a[k] === b[k]);
+
+const deepEqualLevelStyles = (
+  a: NavLevelStyles | undefined,
+  b: NavLevelStyles | undefined
+): boolean => {
+  const la = a ?? {};
+  const lb = b ?? {};
+  return NAV_LEVELS.every((lvl) => shallowEqualLevel(la[lvl] ?? {}, lb[lvl] ?? {}));
+};
+
+/** Brand device deltas: emit the §1 rules but ONLY when the device-resolved
+ *  style DIFFERS from the desktop base. Rides `tabletDelta` / `mobile`. */
+const collectBrandDeltaRules = (doc: MenuDocumentV2, device: MenuDeviceKind): string[] => {
+  const rules: string[] = [];
+  for (const block of doc.sections[0]?.blocks ?? []) {
+    if (block.type !== "brand") continue;
+    const resolved = resolveMenuBrandStyleForDevice(block, device); // 504-01 export ({}-safe)
+    if (shallowEqualStyle(resolved, block.props.style)) continue; // no diff ⇒ no rule
+    const esc = escapeAuthoringCssString(block.id);
+    const key = `${menuDocScope} [data-menu-block-id="${esc}"]`;
+    const textDecls = brandStyleDecls(resolved);
+    if (textDecls.length) rules.push(`${key}{${textDecls.join(";")}}`);
+    const imgDecls = brandImageDecls(resolved);
+    if (imgDecls.length) rules.push(`${key} img{${imgDecls.join(";")};width:auto}`);
+  }
+  return rules;
+};
+
+/** Level device deltas: TOTAL re-emit of `navLevelRules` on the device-resolved
+ *  `levelStyles`, but ONLY when it DIFFERS from desktop (later source order
+ *  wins). The cascade is the ONE authoritative resolver — no local merge clone. */
+const collectLevelDeltaRules = (doc: MenuDocumentV2, device: MenuDeviceKind): string[] => {
+  const section = doc.sections[0];
+  if (!section) return [];
+  const navBlock = section.blocks.find((block) => block.type === "nav-items");
+  if (!navBlock || navBlock.type !== "nav-items") return [];
+  const resolved = resolveMenuSectionAppearanceForDevice(section, device).navProps.levelStyles;
+  if (deepEqualLevelStyles(resolved, navBlock.props.levelStyles)) return []; // no diff
+  // Mobile (<640) is inline ⇒ container chrome is ≥640-only (see navLevelRules):
+  // a mobile-specific level delta re-emits ONLY link typography + state, never
+  // the container, so a per-device container override cannot leak onto the
+  // inline nested list. Tablet (≥640) keeps the full container chrome.
+  return navLevelRules(resolved, { linkOnly: device === "mobile" });
+};
+
 /**
  * Fixed nesting block for 502-03's recursive markup (`li.site-nav-item` with
  * its own link/label + a DIRECT-child `ul.site-nav-sublist` per level; NO
@@ -440,21 +741,50 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
   const base = resolveMenuAppearanceForDevice(doc, "desktop");
   const tabletResolved = resolveMenuAppearanceForDevice(doc, "tablet");
   const mobileResolved = resolveMenuAppearanceForDevice(doc, "mobile");
+  // DESKTOP-base level styles (nested — read directly off the first nav-items
+  // block, NOT the flat MenuAppearance). Present-only ⇒ undefined when unset.
+  const navBlock = doc.sections[0]?.blocks.find((block) => block.type === "nav-items");
+  const baseLevelStyles: NavLevelStyles | undefined =
+    navBlock?.type === "nav-items" ? navBlock.props.levelStyles : undefined;
   // Byte-identical to the pre-501 base emission for every document, plus the
-  // per-divider context rules (device-independent, appended last).
+  // per-divider context rules, the present-only brand rules, and the present-only
+  // current-page tint (all device-independent, all ZERO bytes when unauthored).
   const baseRules = [
     ...MENU_RULE_GROUPS.map((group) => group.base(base)).filter(
       (rule): rule is string => rule !== null
     ),
     ...collectMenuDividerRules(doc),
+    ...collectMenuBrandRules(doc), // §1 brand — device-independent; per-device via §5
+    ...currentPageRule(base), // §4 current-page tint (present-only)
   ];
   // Shared >=640 rules (desktop AND tablet): dropdownRule reads the BASE
-  // (device-defining), nesting rules are structural.
-  const desktopShared = [dropdownRule(base), ...navNestingRules(base)];
-  const tabletDelta = collectDeltaRules(tabletResolved, base);
+  // (device-defining), nesting rules are structural. Level chrome/link BASE folds
+  // in AFTER nesting so it beats the structural `.site-nav-sublist` rules + base
+  // sheet chrome on source order.
+  const desktopShared = [
+    dropdownRule(base),
+    ...navNestingRules(base),
+    ...navLevelRules(baseLevelStyles), // §2 level base (link + container)
+  ];
+  const tabletDelta = [
+    ...collectDeltaRules(tabletResolved, base), // scalar deltas (incl. §3 box, §4 hover-text)
+    ...collectBrandDeltaRules(doc, "tablet"), // §5 brand delta
+    ...collectLevelDeltaRules(doc, "tablet"), // §5 level delta
+  ];
   const mobileRules = [
     ...mobileModeRules(mobileResolved), // FIRST — overrides win source order after it
     ...collectDeltaRules(mobileResolved, base), // mobile diffs vs DESKTOP (ignores tablet)
+    ...collectBrandDeltaRules(doc, "mobile"), // §5 brand delta
+    // Desktop-BASE level LINK typography must reach the inline <640 view too
+    // ('mobile inherits desktop' HARD-INVARIANT): the mobile front branch does
+    // NOT spread desktopShared, so re-emit the base level LINK rules here.
+    // `linkOnly` OMITS the submenu CONTAINER chrome — that is ≥640-only (folded
+    // into desktopShared per the parent contract); re-emitting it here would
+    // leak background/border/min-width onto the inline nested list (the base
+    // sheet strips that chrome at <640). Present-only ⇒ ZERO bytes when unset
+    // (no-override byte-identity holds).
+    ...navLevelRules(baseLevelStyles, { linkOnly: true }),
+    ...collectLevelDeltaRules(doc, "mobile"), // §5 mobile-specific level override on top
   ];
   // Canvas-only sim-open: the front's [open] disclosure rule (same declarations
   // as mobileModeRules :267) so the Mobile canvas previews the OPENED list.
@@ -555,6 +885,23 @@ const buildCanvasStructuralBaseline = (device: PageBreakpoint): string[] => {
 };
 
 /**
+ * Canvas-only force-open for the selected nav level (TASK-504-02 §6). Sublists
+ * are `display:none` until `:hover`/`:focus-within` (`navNestingRules`), and a
+ * level-2 sublist nests INSIDE a level-1 sublist that is itself closed — so the
+ * whole ancestor chain (levels 1..N) is opened CUMULATIVELY, not just depth N.
+ * Emitted LAST by the preview builder so it wins the closed `display:none`.
+ */
+const previewForceOpenLevel = (level: NavLevelStyleLevel): string[] => {
+  const rules = [
+    `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}`,
+  ];
+  if (level >= 2) {
+    rules.push(`${menuDocScope} .site-nav-sublist .site-nav-sublist{display:grid}`);
+  }
+  return rules;
+};
+
+/**
  * ADMIN-CANVAS builder: device-forced scoped sheet. The Design canvas constrains
  * the frame width per the selected `DeviceSwitcher` breakpoint, but `@media`
  * queries respond to the real admin viewport, so the responsive branch is
@@ -570,7 +917,11 @@ const buildCanvasStructuralBaseline = (device: PageBreakpoint): string[] => {
  * viewport variant above. Prepends the structural baseline that the front gets
  * from the base site-shell sheet — document rules follow, so they win.
  */
-export function buildMenuDocumentPreviewCss(doc: MenuDocumentV2, device: PageBreakpoint): string {
+export function buildMenuDocumentPreviewCss(
+  doc: MenuDocumentV2,
+  device: PageBreakpoint,
+  forceOpenLevel?: NavLevelStyleLevel
+): string {
   const sets = buildMenuRuleSetsForDocument(doc);
   const branch =
     device === "mobile"
@@ -578,5 +929,12 @@ export function buildMenuDocumentPreviewCss(doc: MenuDocumentV2, device: PageBre
       : device === "tablet"
         ? [...sets.desktopShared, ...sets.tabletDelta] // REAL tablet branch (was: desktop map)
         : sets.desktopShared;
-  return [...buildCanvasStructuralBaseline(device), ...sets.base, ...branch].join("\n");
+  // Canvas-only: when the editor selects a level >= 1, force the whole ancestor
+  // chain (levels 1..N) open so the author SEES the styled depth. Emitted LAST so
+  // it beats navNestingRules' closed `display:none` on source order. Precedent =
+  // previewMobileOpen. `undefined` ⇒ zero extra bytes (preview byte-identical).
+  const forceOpen = forceOpenLevel ? previewForceOpenLevel(forceOpenLevel) : [];
+  return [...buildCanvasStructuralBaseline(device), ...sets.base, ...branch, ...forceOpen].join(
+    "\n"
+  );
 }

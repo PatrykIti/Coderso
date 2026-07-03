@@ -824,6 +824,148 @@ copy the author kept intentionally.
 `variant` "Background" row); `useScreenEntryPreferences` is local-only v1, with
 `userSettingsClient` cross-device sync deferred.
 
+## Custom Screen section column layout & binding integrity (TASK-505)
+
+TASK-505 adds section columns and a binding-integrity GC on top of TASK-498/500/503
+**without** a schema migration: document `schemaVersion` stays `1`, the editor-view
+definition stays **v4**, and stored-V4 docs round-trip **byte-identically**. No new
+endpoint, RBAC bucket, or persisted column is introduced.
+
+### Section style channel — `ScreenSectionStyleV1` (TASK-505-01)
+
+A **new** dedicated `style?: ScreenSectionStyleV1` channel on `ScreenSectionV1`
+(precedent: the TASK-503 block `style` channel). The dead `section.layout`
+(`WidgetLayout`) field is left **untouched** — retyping it to a reject-unknown enum
+shape would throw `custom_screen_definition_invalid` on legacy docs that carry a
+`WidgetLayout` object, so a new channel is used instead.
+
+```ts
+export type ScreenSectionStyleV1 = {
+  columns?: ScreenSectionColumnPreset; // absent → vertical stack (unchanged)
+  columnGap?: number;                  // clamped int px 0..64 (SCREEN_SECTION_COLUMN_GAP_CLAMP)
+};
+
+export const screenSectionColumnPresets = [
+  "1", "2", "3", "4",
+  "1-1", "1-2", "2-1", "1-3", "3-1", "2-3", "3-2",
+  "1-1-1", "1-1-1-1",
+] as const;
+```
+
+- **Preset → `grid-template-columns` fr map** (`screenSectionColumnTemplate`, the single
+  source of truth exported by `customScreenSchemas.ts`; the renderer imports it):
+  `"1"`→`1fr`, `"2"`→`1fr 1fr`, `"3"`→`1fr 1fr 1fr`, `"4"`→`1fr 1fr 1fr 1fr`,
+  `"1-1"`→`1fr 1fr`, `"1-2"`→`1fr 2fr`, `"2-1"`→`2fr 1fr`, `"1-3"`→`1fr 3fr`,
+  **`"3-1"`→`3fr 1fr`** (the owner's `3/4 : 1/4`), `"2-3"`→`2fr 3fr`, `"3-2"`→`3fr 2fr`,
+  `"1-1-1"`→`1fr 1fr 1fr`, `"1-1-1-1"`→`1fr 1fr 1fr 1fr`.
+- **`normalizeScreenSectionStyle`** mirrors `normalizeScreenBlockStyle`: **coerce-not-throw
+  VALUES** (junk `columns` → `"1"` = single-column stack; `columnGap` clamped/floored to
+  0..64), **reject-unknown KEY throws** `custom_screen_definition_invalid`, and
+  **prune-empty → `undefined`** (an empty / all-junk style persists nothing). Mirrored in
+  the Ajv `screenSectionV1Schema` `style` sub-schema (`additionalProperties:false`,
+  `columns` = preset enum, `columnGap` = integer 0..64). `"style"` is added to the
+  `normalizeScreenSection` allow-list and to `ScreenSectionPatch`.
+- **Auto-flow cell assignment (TASK-505-02).** The one shared renderer block-list
+  container becomes `display:grid` with `gridTemplateColumns` = the preset template and
+  `gap` = `columnGap ?? 16`px. **Each block = one grid cell**, filled left-to-right in DOM
+  order — zero new per-block state. In the builder the **inter-block** insert-gap
+  interleave is **suppressed** when gridded; only the section-start/end insert-gaps remain,
+  each a **full-row** `grid-column: 1 / -1` affordance that never steals a cell. The
+  gridded-builder branch still passes per-card `dropTargets`, so card-midpoint DnD survives.
+- **Absent-style byte-stability.** An unset `columns` keeps the exact `space-y-4` vertical
+  stack — **byte-identical DOM to pre-505**, no inline `grid` style, no `style` key injected
+  on normalize.
+- **Per-block `width` stays a within-cell fraction.** TASK-503 `style.width` (`w-1/2` etc.)
+  is half of the **cell**, never a column span (no double meaning). Per-block
+  `columnSpan`/`columnStart` is **deferred**.
+- **The "Bathrooms: 2" recipe.** Section `columns: "3-1"` + a Text block "Bathrooms" (a 503
+  clearable label) + the bound field-value block; auto-flow places them label-left /
+  value-right on one row. No new block kind, no binding change.
+
+### Binding-integrity GC (TASK-505-01, Item B)
+
+A screen whose bindings referenced a **deleted content-type field** (field-orphan) or a
+**removed block** (block-orphan) was previously a permanently **un-saveable** dead-end —
+`normalizeScreenFieldBinding` threw `custom_screen_definition_invalid` and the route mapped
+it to an opaque static 400 with no field name. TASK-505 makes it **recoverable**:
+
+- **Decision (recorded): a missing-content-type-field binding is PRUNED + per-field-flagged
+  (recoverable), NOT a hard 400.** On the write/normalize path, field-orphans are collected
+  into a mutable **sink** (`normalizeScreenFieldBinding`/`normalizeScreenFieldBindings`) and
+  pruned instead of thrown; block-orphans are pruned **inline** against the already-computed
+  live-block-id set in both `normalizeCustomScreenEditorViewDefinitionV4` and the separate
+  `normalizeCustomScreenListRowTemplate` (the list-row template's independent binding set —
+  the SECOND dead-end). The `ForRead` twins prune silently via a discard sink (correctness
+  cleanup: preserve the authored document instead of discarding the whole editor view).
+- **Field-name surfacing on the SUCCESS path.** The pruned names ride the PATCH **200**
+  response body as a transient `warnings` array
+  (`[{ code: "binding_field_removed", fields: [...] }, { code: "binding_block_removed", fields: [...] }]`),
+  computed at normalize time and **never persisted** (stored-V4 bytes unaffected). The
+  editor renders it as a clear per-field notice ("Removed bindings for deleted field(s): …").
+  The `custom_screen_definition_invalid` 400 branch and `mapCustomScreenError`'s exact-message
+  switch stay **byte-unchanged** — field names are NOT injected into `error.message`; the
+  residual 400 fires only for **structurally-malformed** bindings (non-record, no `blockId`,
+  bad `source`/`mode`), which carry no field name.
+- **`reconcileScreenBindings` (`screenDocumentOps.ts`)** — a **pure, deterministic,
+  idempotent, non-destructive** helper that prunes bindings whose `blockId` matches no live
+  block, preserving source order of survivors and returning `{ bindings, removedBlockOrphans }`.
+  It is shipped as an available helper for a future delete-site adopter; **delete-site wiring
+  is DEFERRED** (adopted by no 505 subtask). The saveability guarantee is the **normalize-time
+  write safety-net** above, which prunes block-orphans on every Save regardless of which delete
+  handler ran. The narrow `removeScreenBindingsForBlockTree` helper is retained. To avoid a
+  `schemas→ops→schemas` circular import, `reconcileScreenBindings` is **not** imported into
+  `customScreenSchemas.ts`; the schema-file prune is an inline filter over the block-id set
+  already in scope.
+- **Sink-only signature discipline.** `normalizeCustomScreenDefinitionForWrite` and
+  `normalizeCustomScreenEditorViewDefinitionV4` **keep their existing return types**; the sink
+  is threaded as an optional final parameter (no return-type widening) so the three assistant
+  callers and the internal read/assistant caller compile unchanged (verified by root `tsc`).
+
+**Deferred residuals (recorded, not silent gaps):** per-block `columnSpan`/`columnStart`
+(a later `ScreenBlockStyleV1.span`/`start`); a visual column-ratio picker / SegmentedControl
+(v1 uses the plain `EnumRow`); custom (non-preset) fr ratios; responsive per-breakpoint
+column counts; nested-section grids; `reconcileScreenBindings` delete-site wiring.
+
+## Menu Design tab — brand style & per-level styling authoring (TASK-504)
+
+The menuDocumentV2 Design tab (`core/admin/ui/menus/MenuDesignEditor.tsx`) adds a
+deep-styling authoring surface on the EXISTING validated `PATCH /menus/:id`
+document write path (no new endpoint/RBAC/migration; no `schemaVersion` bump). The
+document contract + CSS emission are specified in `PAGE_MODEL.md` (menuDocumentV2
+section); this is the authoring/UX surface.
+
+- **Mode-gated brand style controls.** The brand block panel exposes style controls
+  gated by `block.props.mode`: text mode ⇒ `fontSize`/`fontWeight`/`color`/
+  `textTransform`/`letterSpacing`; image mode ⇒ `height`/`maxWidth` (reusing
+  `ColorSwatchControl`/`SliderControl`/`SegmentedControl`). Writes merge into
+  `brand.props.style` via the flat `patchBlock` helper, leaving `mode`/`href`/`text`
+  intact. Image-mode brand renders a real resolved `<img>` (defect B1 fix) on both
+  canvas and front.
+- **Level SegmentedControl (0 / 1 / 2).** At the top of the nav-items panel a Level
+  control REBINDS the SAME control set to the selected level's record: Level 0 writes
+  the existing nav base (`props` scalars, NO `levelStyles`); Level 1/2 write
+  `props.levelStyles[N]` (link typography/state + submenu container chrome). A
+  **Base / Override / Inherited** badge (reusing the `MenuResponsiveControlShell`
+  badge pattern) reads "Base" at Level 0, "Inherited (inherits level N-1)" for a level
+  with no own value, and "Override" once a field is set — matching the pure-CSS-cascade
+  inheritance (level 1 inherits level 0, level 2 inherits level 1 where unset).
+- **Device-forked writes + per-breakpoint Reset.** Both brand AND level controls fork
+  on Tablet AND Mobile (Desktop ⇒ base; Tablet/Mobile ⇒ a SPARSE
+  `responsive.{device}` override), following the Pages cascade (mobile ≠ tablet). The
+  underlying mutators are dedicated helpers (`patchMenuBrandStyleForDevice` /
+  `clearMenuBrandStyleOverride` for brand; a nested-path `patchMenuSectionForDevice`
+  variant + nested raw-read for `navProps.levelStyles[N][field]`) — the flat/
+  visibility-only helpers cannot reach these paths. The `data-menu-responsive-reset`
+  Reset prunes the stored responsive record verbatim (DEEP prune chain), flipping the
+  badge back to Inherited. All writes fire from event handlers (no setState-in-effect).
+- **Canvas force-open preview.** Selecting a Level ≥1 threads the selected level into
+  `MenuDocumentCanvas → buildMenuDocumentPreviewCss`, which force-opens the WHOLE
+  ancestor chain up to that depth (levels 1..N, appended LAST) so the author SEES the
+  level they are styling; selecting Level 0 clears it. The font-size slider is
+  DISPLAY-only for the inherited value (shows `16` as inherited/base, distinct from an
+  explicit `15`, and writes nothing on mount). The Menu editor header items badge shows
+  the TOTAL nested item count with correct plural.
+
 ## API
 
 Admin API w `CMS_API.md`:

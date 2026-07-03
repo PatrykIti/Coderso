@@ -284,6 +284,221 @@ testIfDb(
   }
 );
 
+// TASK-505-01 Item A — section-style channel over the real PATCH write path.
+const buildSectionStyleDefinition = (style?: Record<string, unknown>): CustomScreenDefinition => {
+  const base = buildDefinition();
+  const section = base.editorView.document.sections[0];
+  return {
+    ...base,
+    editorView: {
+      ...base.editorView,
+      document: {
+        ...base.editorView.document,
+        sections: [{ ...section, ...(style ? { style } : {}) }],
+      },
+    },
+  } as CustomScreenDefinition;
+};
+
+testIfDb(
+  "TASK-505-01 PATCH /custom-screens/:id persists a valid section style and round-trips byte-stable",
+  async () => {
+    const screen = await seedBoundScreen();
+    const style = { columns: "3-1", columnGap: 24 };
+
+    const updated = (await patchScreenDefinition(
+      screen.id,
+      buildSectionStyleDefinition(style)
+    )) as Awaited<ReturnType<typeof getCustomScreen>>;
+    expect(updated?.definition.editorView.document.sections[0]?.style).toEqual(style);
+
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.definition.editorView.document.sections[0]?.style).toEqual(style);
+  }
+);
+
+testIfDb(
+  "TASK-505-01 PATCH /custom-screens/:id with an unknown section-style key rejects 400 (store untouched)",
+  async () => {
+    const screen = await seedBoundScreen();
+    await expect(
+      patchScreenDefinition(screen.id, buildSectionStyleDefinition({ columns: "2", rows: 3 }))
+    ).rejects.toMatchObject({ status: 400 });
+
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.definition.editorView.document.sections[0]?.style).toBeUndefined();
+  }
+);
+
+// TASK-505-01 Item B — binding-GC recovery: a binding to a field absent from the content
+// type is PRUNED to a saveable 200 with the field name surfaced as a transient warning.
+const buildOrphanBindingDefinition = (): CustomScreenDefinition => {
+  const base = buildDefinition();
+  return {
+    ...base,
+    editorView: {
+      ...base.editorView,
+      bindings: [
+        ...base.editorView.bindings,
+        {
+          id: "field-1-orphan",
+          blockId: "field-1",
+          propPath: "sub",
+          source: "entry",
+          field: "bathrooms", // NOT in the content-type schema → orphan
+          mode: "readwrite",
+        },
+      ],
+    },
+  } as CustomScreenDefinition;
+};
+
+testIfDb(
+  "TASK-505-01 PATCH /custom-screens/:id prunes a field-orphan binding to a saveable 200 + surfaces the field name",
+  async () => {
+    const screen = await seedBoundScreen();
+
+    const updated = (await patchScreenDefinition(
+      screen.id,
+      buildOrphanBindingDefinition()
+    )) as Awaited<ReturnType<typeof getCustomScreen>> & {
+      warnings?: { code: string; fields: string[] }[];
+    };
+
+    // Recoverable: saved (no 400); orphan pruned from the stored bytes; valid binding kept.
+    const storedFields = updated?.definition.editorView.bindings.map((b) => b.field);
+    expect(storedFields).toEqual(["name"]);
+    expect(updated?.warnings).toEqual([{ code: "binding_field_removed", fields: ["bathrooms"] }]);
+
+    // Independent read confirms the orphan is gone from the persisted definition.
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.definition.editorView.bindings.map((b) => b.field)).toEqual(["name"]);
+  }
+);
+
+// TASK-505-01 Item B — the SECOND binding dead-end: a listView.rowTemplate carrying BOTH a
+// block-orphan (blockId matching no live block in the row-template document) AND a since-deleted
+// field-orphan must SAVE (pruned inline in normalizeCustomScreenListRowTemplate) rather than
+// hard-400, with both removed field names surfaced on the transient warnings carry.
+const buildListRowOrphanDefinition = (): CustomScreenDefinition => {
+  const base = buildDefinition();
+  return {
+    ...base,
+    listView: {
+      ...base.listView,
+      rowTemplate: {
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: "row-section-1",
+              type: "section",
+              label: "Row",
+              data: { title: "Row" },
+              blocks: [
+                {
+                  id: "row-block-1",
+                  type: "field",
+                  data: { label: "Name", value: "" },
+                },
+              ],
+            },
+          ],
+        },
+        bindings: [
+          // block-orphan: no "ghost" block in the row-template document → pruned (field "name")
+          {
+            id: "row-ghost",
+            blockId: "ghost",
+            propPath: "value",
+            source: "entry",
+            field: "name",
+            mode: "readwrite",
+          },
+          // field-orphan: "bathrooms" absent from the content-type schema → pruned
+          {
+            id: "row-orphan-field",
+            blockId: "row-block-1",
+            propPath: "value",
+            source: "entry",
+            field: "bathrooms",
+            mode: "readwrite",
+          },
+        ],
+      },
+    },
+  } as CustomScreenDefinition;
+};
+
+testIfDb(
+  "TASK-505-01 PATCH /custom-screens/:id prunes list-row block- AND field-orphans to a saveable 200 + surfaces the field names",
+  async () => {
+    const screen = await seedBoundScreen();
+
+    const updated = (await patchScreenDefinition(
+      screen.id,
+      buildListRowOrphanDefinition()
+    )) as Awaited<ReturnType<typeof getCustomScreen>> & {
+      warnings?: { code: string; fields: string[] }[];
+    };
+
+    // The list-row template SAVED (no residual hard-400 dead-end) with BOTH orphans pruned.
+    expect(updated?.definition.listView.rowTemplate?.bindings ?? []).toEqual([]);
+    expect(updated?.warnings).toEqual([
+      { code: "binding_field_removed", fields: ["bathrooms"] },
+      { code: "binding_block_removed", fields: ["name"] },
+    ]);
+
+    // Independent read confirms the pruned row-template persisted.
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.definition.listView.rowTemplate?.bindings ?? []).toEqual([]);
+  }
+);
+
+testIfDb(
+  "TASK-505-01 PATCH /custom-screens/:id still 400s a genuinely-malformed binding (recovery is orphan-scoped only)",
+  async () => {
+    const screen = await seedBoundScreen();
+    const malformed = buildDefinition();
+    (malformed.editorView.bindings as Array<Record<string, unknown>>).push({
+      id: "malformed",
+      blockId: "field-1",
+      propPath: "value",
+      source: "remote", // not "entry" → structurally invalid, never pruned to a warning
+      field: "name",
+      mode: "readwrite",
+    });
+
+    await expect(patchScreenDefinition(screen.id, malformed)).rejects.toMatchObject({
+      status: 400,
+    });
+
+    // The store is untouched — only the seeded valid binding survives.
+    const reread = await getCustomScreen(screen.id);
+    expect(reread?.definition.editorView.bindings.map((b) => b.field)).toEqual(["name"]);
+  }
+);
+
+testIfDb(
+  "TASK-505-01 stored-V4 no-style + orphan-free definition round-trips byte-stable (no style key, no warnings)",
+  async () => {
+    const screen = await seedBoundScreen();
+
+    const updated = (await patchScreenDefinition(screen.id, buildDefinition())) as Awaited<
+      ReturnType<typeof getCustomScreen>
+    > & { warnings?: unknown };
+
+    // Absent section.style stays absent (no grid channel injected) and no GC warnings fire.
+    expect("style" in (updated?.definition.editorView.document.sections[0] ?? {})).toBe(false);
+    expect(updated?.warnings).toBeUndefined();
+    expect(updated?.definition.editorView.bindings.map((b) => b.field)).toEqual(["name"]);
+
+    const reread = await getCustomScreen(screen.id);
+    expect("style" in (reread?.definition.editorView.document.sections[0] ?? {})).toBe(false);
+    expect(reread?.definition.editorView.bindings.map((b) => b.field)).toEqual(["name"]);
+  }
+);
+
 test("PATCH custom screen entry overrides rejects unknown envelope keys before service work", async () => {
   const { router, routes } = makeRouter();
 

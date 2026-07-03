@@ -256,6 +256,13 @@ test("a new block lands in the SELECTED section, not sections[0] (steering path)
     selectSection(view.container, "section-2");
     await flush();
 
+    // TASK-505-03 (Item A): a canvas section-select now switches the rail to the
+    // section Inspector, so reopen the Insert palette before the chip insert.
+    // Steering itself is unchanged — the block still lands in the SELECTED
+    // section (selectedSectionId persists across the panel switch).
+    click(view.container.querySelector('button[aria-label="Insert"]'));
+    await flush();
+
     click(findButtonByText(view.container, "[data-screen-block-library]", "Heading"));
     await flush();
 
@@ -465,6 +472,11 @@ test("empty-document canvas: 'Add section' on a brand-new screen renders a visib
     selectSection(view.container, ids[0]!);
     await flush();
     expect(section()?.getAttribute("data-selected")).toBe("true");
+
+    // TASK-505-03 (Item A): the canvas section-select switched the rail to the
+    // section Inspector — reopen the Insert palette before the chip insert.
+    click(view.container.querySelector('button[aria-label="Insert"]'));
+    await flush();
 
     // ... and a chip insert steers INTO the selected empty section.
     click(findButtonByText(view.container, "[data-screen-block-library]", "Heading"));

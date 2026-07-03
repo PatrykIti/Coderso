@@ -9,11 +9,22 @@ import {
   type PageBlockV2,
   type PageBlockVisibilityV2,
 } from "../pages/pageDocumentV2";
-import { sanitizeAuthoringLinkHref } from "../pages/pageAuthoringSanitizers";
+import {
+  sanitizeAuthoringLinkHref,
+  sanitizeAuthoringMediaUrl,
+} from "../pages/pageAuthoringSanitizers";
 import {
   isMenuAppearanceError,
+  menuAppearanceFontWeights,
+  menuAppearanceShadows,
+  menuAppearanceTextTransforms,
   normalizeMenuAppearance,
+  normalizeMenuColorValue,
+  menuAppearanceNumberRanges,
   type MenuAppearance,
+  type MenuAppearanceFontWeight,
+  type MenuAppearanceShadow,
+  type MenuAppearanceTextTransform,
 } from "./normalizeMenuAppearance";
 
 /**
@@ -104,7 +115,9 @@ const MENU_BAR_LAYOUT_KEYS = [
   "sticky",
 ] as const satisfies readonly (keyof MenuAppearance)[];
 
-/** nav-items props = the `MenuAppearance` typography/link subset. */
+/** nav-items props = the `MenuAppearance` typography/link subset. The four
+ *  cheap-win scalars (TASK-504-01 §2a) are real `MenuAppearance` keys so the
+ *  `satisfies` still holds and they ride the scalar delta channel per-device. */
 const NAV_ITEMS_PROP_KEYS = [
   "itemGap",
   "fontSize",
@@ -116,10 +129,62 @@ const NAV_ITEMS_PROP_KEYS = [
   "dropdownDirection",
   "mobileMode",
   "orientation",
+  "linkPaddingX",
+  "linkPaddingY",
+  "linkRadius",
+  "linkHoverTextColor",
 ] as const satisfies readonly (keyof MenuAppearance)[];
 
 export type MenuBarLayout = Pick<MenuAppearance, (typeof MENU_BAR_LAYOUT_KEYS)[number]>;
-export type NavItemsProps = Pick<MenuAppearance, (typeof NAV_ITEMS_PROP_KEYS)[number]>;
+/** No longer a pure `Pick` — carries the non-appearance `levelStyles` member. */
+export type NavItemsProps = Pick<MenuAppearance, (typeof NAV_ITEMS_PROP_KEYS)[number]> & {
+  levelStyles?: NavLevelStyles;
+};
+
+// --- TASK-504-01 brand style + per-level nav style shapes --------------------
+
+/** Brand block styling. Text-mode keys style the `<a>`; image-mode keys size the
+ *  `<img>`. Sparse — only edited keys stored; empty ⇒ member omitted (legacy
+ *  byte-identity). Per-device on tablet + mobile via `MenuBlockOverride.style`. */
+export type BrandStyle = {
+  // text mode:
+  fontSize?: number; // BRAND_STYLE_NUMBER_RANGES.fontSize [10,48]
+  fontWeight?: MenuAppearanceFontWeight;
+  color?: string; // normalizeMenuColorValue (token-backed)
+  textTransform?: MenuAppearanceTextTransform;
+  letterSpacing?: number; // [-2,8] px — NEGATIVE allowed
+  // image mode:
+  height?: number; // [16,120] px
+  maxWidth?: number; // [40,400] px
+};
+
+/** Per-nesting-level nav styling. Link fields apply at every level; container
+ *  fields apply ONLY to the submenu chrome at levels >= 1 (ignored for level 0). */
+export type NavLevelStyle = {
+  linkColor?: string;
+  linkHoverColor?: string;
+  linkHoverTextColor?: string;
+  linkActiveColor?: string;
+  fontSize?: number;
+  fontWeight?: MenuAppearanceFontWeight;
+  gap?: number;
+  paddingX?: number;
+  paddingY?: number;
+  // submenu CONTAINER (levels >= 1 only):
+  background?: string;
+  borderColor?: string;
+  borderWidth?: number;
+  radius?: number;
+  shadow?: MenuAppearanceShadow;
+  minWidth?: number;
+};
+
+/** Level 0 = the EXISTING nav-items scalar base (NO new type). Level 2 = "level 2
+ *  AND deeper" (descendant selector in 504-02). The level key is NUMERIC — one
+ *  canonical representation shared by 504-02's selector maps and 504-04's editor.
+ *  Runtime object keys are still `"1"`/`"2"` strings (JSON-identical). */
+export type NavLevelStyleLevel = 1 | 2;
+export type NavLevelStyles = Partial<Record<NavLevelStyleLevel, NavLevelStyle>>;
 
 // --- per-device override vocabulary (TASK-501-01 + TASK-502-01: tablet) ------
 
@@ -152,7 +217,12 @@ export type MenuSectionOverride = {
 };
 export type MenuSectionResponsive = Partial<Record<MenuResponsiveBreakpoint, MenuSectionOverride>>;
 
-export type MenuBlockOverride = { visibility?: { visible: boolean } };
+/** Brand style is per-device; the block override carries an optional style delta
+ *  (tablet/mobile) alongside the existing visibility record (TASK-504-01 §5). */
+export type MenuBlockOverride = {
+  visibility?: { visible: boolean };
+  style?: BrandStyle;
+};
 export type MenuBlockResponsive = Partial<Record<MenuResponsiveBreakpoint, MenuBlockOverride>>;
 
 export type BrandProps = {
@@ -167,6 +237,8 @@ export type BrandProps = {
    * member here. Rendered as React text only (never reaches CSS).
    */
   text?: string;
+  /** Sparse brand styling (TASK-504-01 §3); absent ⇒ legacy byte-identity. */
+  style?: BrandStyle;
 };
 
 export type MenuUtilityProps = {
@@ -303,8 +375,19 @@ const normalizeAppearanceSubset = (
 const normalizeMenuBarLayout = (value: unknown, path: string): MenuBarLayout =>
   normalizeAppearanceSubset(value, MENU_BAR_LAYOUT_KEYS, path) as MenuBarLayout;
 
-const normalizeNavItemsProps = (value: unknown, path: string): NavItemsProps =>
-  normalizeAppearanceSubset(value, NAV_ITEMS_PROP_KEYS, path) as NavItemsProps;
+// CONSCIOUS nav-block fail-closed READ-trap extension: `levelStyles` is a
+// non-appearance member, so it is SPLIT off BEFORE the flat subset (an unhandled
+// `levelStyles` key would be REJECTED by normalizeAppearanceSubset and degrade
+// the doc). The flat scalar contract (reject-unknown, throw-on-bad-value) is
+// unchanged for every OTHER key.
+const normalizeNavItemsProps = (value: unknown, path: string): NavItemsProps => {
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  const { levelStyles: rawLevelStyles, ...scalars } = value;
+  const base = normalizeAppearanceSubset(scalars, NAV_ITEMS_PROP_KEYS, path) as NavItemsProps;
+  if (rawLevelStyles === undefined || rawLevelStyles === null) return base; // legacy byte-identity
+  const levelStyles = normalizeNavLevelStyles(rawLevelStyles, `${path}.levelStyles`);
+  return levelStyles ? { ...base, levelStyles } : base; // prune ⇒ no member
+};
 
 // --- responsive override write normalizers (reject-unknown, prune-empty) ----
 
@@ -402,6 +485,10 @@ const hoistMobileModeOverride = (responsive: unknown, rawBlocks: unknown[]): unk
 };
 
 const MENU_BLOCK_VISIBILITY_OVERRIDE_KEYS = ["visible"] as const;
+// CONSCIOUS fail-closed READ-trap extension (TASK-504-01 §5): "style" carries the
+// tablet/mobile brand style delta; forgetting it degrades every doc holding a
+// `responsive.{bp}.style` brand delta.
+const MENU_BLOCK_OVERRIDE_GROUP_KEYS = ["visibility", "style"] as const;
 
 const normalizeMenuBlockResponsive = (
   value: unknown,
@@ -416,22 +503,36 @@ const normalizeMenuBlockResponsive = (
     if (raw === undefined || raw === null) continue;
     if (!isPlainObject(raw)) throw new MenuDocumentError(`${path}.${key}`);
     for (const groupKey of Object.keys(raw)) {
-      // "props"/"style" here ⇒ reject: menu block overrides carry ONLY visibility.
-      if (groupKey !== "visibility") throw new MenuDocumentError(`${path}.${key}.${groupKey}`);
-    }
-    if (raw.visibility === undefined || raw.visibility === null) continue;
-    if (!isPlainObject(raw.visibility)) throw new MenuDocumentError(`${path}.${key}.visibility`);
-    for (const vKey of Object.keys(raw.visibility)) {
-      if (!(MENU_BLOCK_VISIBILITY_OVERRIDE_KEYS as readonly string[]).includes(vKey)) {
-        throw new MenuDocumentError(`${path}.${key}.visibility.${vKey}`);
+      // "props"/junk ⇒ reject: menu block overrides carry ONLY visibility + style.
+      if (!(MENU_BLOCK_OVERRIDE_GROUP_KEYS as readonly string[]).includes(groupKey)) {
+        throw new MenuDocumentError(`${path}.${key}.${groupKey}`);
       }
     }
-    const visible = raw.visibility.visible;
-    if (visible === undefined || visible === null) continue; // empty record ⇒ pruned
-    if (typeof visible !== "boolean") {
-      throw new MenuDocumentError(`${path}.${key}.visibility.visible`);
+    const override: MenuBlockOverride = {};
+    // CONTROL-FLOW CONVERSION (§5): the two source `continue`s become conditional
+    // NON-ASSIGNMENT so the `style` branch + final assign always run — a
+    // ported-verbatim `continue` on empty `visible` would silently DROP a valid
+    // brand `style` delta (fail-closed data-loss). Asserted in tests.
+    if (raw.visibility !== undefined && raw.visibility !== null) {
+      if (!isPlainObject(raw.visibility)) throw new MenuDocumentError(`${path}.${key}.visibility`);
+      for (const vKey of Object.keys(raw.visibility)) {
+        if (!(MENU_BLOCK_VISIBILITY_OVERRIDE_KEYS as readonly string[]).includes(vKey)) {
+          throw new MenuDocumentError(`${path}.${key}.visibility.${vKey}`);
+        }
+      }
+      const visible = raw.visibility.visible;
+      if (visible !== undefined && visible !== null) {
+        if (typeof visible !== "boolean") {
+          throw new MenuDocumentError(`${path}.${key}.visibility.visible`);
+        }
+        override.visibility = { visible };
+      } // empty `visible` ⇒ skip ONLY this assign, FALL THROUGH to style
     }
-    out[key as MenuResponsiveBreakpoint] = { visibility: { visible } };
+    if (raw.style !== undefined && raw.style !== null) {
+      const style = normalizeBrandStyle(raw.style, `${path}.${key}.style`);
+      if (style) override.style = style; // prune empty
+    }
+    if (Object.keys(override).length > 0) out[key as MenuResponsiveBreakpoint] = override;
   }
   return Object.keys(out).length > 0 ? out : undefined;
 };
@@ -441,8 +542,206 @@ export const MENU_BRAND_TEXT_MAX_LENGTH = 120 as const;
 
 // CONSCIOUS key-list extension (fail-closed read trap: BRAND_PROP_KEYS gates
 // BOTH write and stored read; forgetting a key would degrade every saved doc
-// carrying that member to empty on read — asserted in tests).
-const BRAND_PROP_KEYS = ["mode", "href", "image", "text"] as const;
+// carrying that member to empty on read — asserted in tests). "style" added by
+// TASK-504-01 — a forgotten "style" degrades every brand-styled doc to empty.
+const BRAND_PROP_KEYS = ["mode", "href", "image", "text", "style"] as const;
+
+// --- TASK-504-01 brand style + per-level style normalizers ------------------
+
+const BRAND_STYLE_KEYS = [
+  "fontSize",
+  "fontWeight",
+  "color",
+  "textTransform",
+  "letterSpacing",
+  "height",
+  "maxWidth",
+] as const;
+
+// reject-unknown OUTER level keys (RAW string keys off Object.keys — the wire form):
+const NAV_LEVEL_KEYS = ["1", "2"] as const;
+// NUMERIC iteration/assignment (NavLevelStyleLevel):
+const NAV_LEVEL_STYLE_LEVELS = [1, 2] as const satisfies readonly NavLevelStyleLevel[];
+const NAV_LEVEL_STYLE_KEYS = [
+  "linkColor",
+  "linkHoverColor",
+  "linkHoverTextColor",
+  "linkActiveColor",
+  "fontSize",
+  "fontWeight",
+  "gap",
+  "paddingX",
+  "paddingY",
+  "background",
+  "borderColor",
+  "borderWidth",
+  "radius",
+  "shadow",
+  "minWidth",
+] as const;
+
+// NEW LOCAL clamp tables (NOT added to menuAppearanceNumberRanges): (a) brand
+// "fontSize" COLLIDES (appearance 10..32 vs brand 10..48); (b) letterSpacing/
+// height/maxWidth/minWidth/radius are not appearance concepts. Both EXPORTED for
+// the 504-04 editor slider bounds.
+export const BRAND_STYLE_NUMBER_RANGES = {
+  fontSize: { min: 10, max: 48 },
+  letterSpacing: { min: -2, max: 8 }, // NEGATIVE min — the reason it can't reuse the shared table
+  height: { min: 16, max: 120 },
+  maxWidth: { min: 40, max: 400 },
+} as const;
+
+export const NAV_LEVEL_NUMBER_RANGES = {
+  fontSize: { min: 10, max: 32 },
+  gap: { min: 0, max: 32 },
+  paddingX: { min: 0, max: 40 },
+  paddingY: { min: 0, max: 32 },
+  borderWidth: { min: 0, max: 8 },
+  radius: { min: 0, max: 32 },
+  minWidth: { min: 80, max: 480 },
+} as const;
+
+/** Editor slider-bound convenience alias for the LEVEL-0 nav-link scalars
+ *  (control-facing keys `paddingX`/`paddingY`/`radius`, re-mapped from the shared
+ *  `menuAppearanceNumberRanges`). Bounds only — the level-0 WRITE target is still
+ *  the `linkPaddingX`/`linkPaddingY`/`linkRadius` scalar; this alias is never a
+ *  write key. Exported for 504-04. */
+export const NAV_LINK_NUMBER_RANGES = {
+  paddingX: menuAppearanceNumberRanges.linkPaddingX,
+  paddingY: menuAppearanceNumberRanges.linkPaddingY,
+  radius: menuAppearanceNumberRanges.linkRadius,
+} as const;
+
+/** Local clamp (table-agnostic mirror of clampMenuAppearanceNumber). Returns null
+ *  for non-finite ⇒ caller OMITS the key (sparse fail-soft value policy). */
+const clampLocalNumber = (range: { min: number; max: number }, value: unknown): number | null =>
+  typeof value === "number" && Number.isFinite(value)
+    ? Math.min(range.max, Math.max(range.min, Math.round(value)))
+    : null;
+
+const normalizeEnumLocal = <T>(options: readonly T[], value: unknown): T | null =>
+  options.includes(value as T) ? (value as T) : null;
+
+/**
+ * VALUE-handling policy (CONSCIOUS): KEYS reject-unknown (throw
+ * MenuDocumentError), but VALUES fail-soft (a bad color/number/enum is OMITTED,
+ * NOT thrown — mirrors normalizeMenuColorValue's null-drop). This intentionally
+ * differs from the flat normalizeAppearanceSubset (which throws on bad scalar
+ * values); asserted by tests so it can never regress silently.
+ */
+const normalizeBrandStyle = (value: unknown, path: string): BrandStyle | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isPlainObject(value)) throw new MenuDocumentError(path); // structural throw
+  for (const key of Object.keys(value)) {
+    // reject-unknown KEYS
+    if (!(BRAND_STYLE_KEYS as readonly string[]).includes(key)) {
+      throw new MenuDocumentError(`${path}.${key}`);
+    }
+  }
+  const out: BrandStyle = {};
+  const num = (k: keyof typeof BRAND_STYLE_NUMBER_RANGES) => {
+    const v = clampLocalNumber(BRAND_STYLE_NUMBER_RANGES[k], value[k]);
+    if (v !== null) out[k] = v; // value fail-soft omit
+  };
+  if (value.fontSize !== undefined && value.fontSize !== null) num("fontSize");
+  if (value.letterSpacing !== undefined && value.letterSpacing !== null) num("letterSpacing");
+  if (value.height !== undefined && value.height !== null) num("height");
+  if (value.maxWidth !== undefined && value.maxWidth !== null) num("maxWidth");
+  if (value.fontWeight !== undefined && value.fontWeight !== null) {
+    const w = normalizeEnumLocal(menuAppearanceFontWeights, value.fontWeight);
+    if (w !== null) out.fontWeight = w;
+  }
+  if (value.textTransform !== undefined && value.textTransform !== null) {
+    const t = normalizeEnumLocal(menuAppearanceTextTransforms, value.textTransform);
+    if (t !== null) out.textTransform = t;
+  }
+  if (value.color !== undefined && value.color !== null) {
+    const c = normalizeMenuColorValue(value.color);
+    if (c !== null) out.color = c;
+  }
+  return Object.keys(out).length > 0 ? out : undefined; // PRUNE empty ⇒ omit member
+};
+
+const NAV_LEVEL_STYLE_COLOR_KEYS = [
+  "linkColor",
+  "linkHoverColor",
+  "linkHoverTextColor",
+  "linkActiveColor",
+  "background",
+  "borderColor",
+] as const;
+const NAV_LEVEL_STYLE_NUMBER_KEYS = [
+  "fontSize",
+  "gap",
+  "paddingX",
+  "paddingY",
+  "borderWidth",
+  "radius",
+  "minWidth",
+] as const;
+
+const normalizeNavLevelStyle = (value: unknown, path: string): NavLevelStyle | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  for (const key of Object.keys(value)) {
+    // reject-unknown STYLE keys
+    if (!(NAV_LEVEL_STYLE_KEYS as readonly string[]).includes(key)) {
+      throw new MenuDocumentError(`${path}.${key}`);
+    }
+  }
+  const out: NavLevelStyle = {};
+  for (const k of NAV_LEVEL_STYLE_COLOR_KEYS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    const c = normalizeMenuColorValue(value[k]);
+    if (c !== null) out[k] = c; // value fail-soft omit
+  }
+  for (const k of NAV_LEVEL_STYLE_NUMBER_KEYS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    const n = clampLocalNumber(NAV_LEVEL_NUMBER_RANGES[k], value[k]);
+    if (n !== null) out[k] = n;
+  }
+  if (value.fontWeight !== undefined && value.fontWeight !== null) {
+    const w = normalizeEnumLocal(menuAppearanceFontWeights, value.fontWeight);
+    if (w !== null) out.fontWeight = w;
+  }
+  if (value.shadow !== undefined && value.shadow !== null) {
+    const s = normalizeEnumLocal(menuAppearanceShadows, value.shadow);
+    if (s !== null) out.shadow = s;
+  }
+  return Object.keys(out).length > 0 ? out : undefined; // prune empty level
+};
+
+const normalizeNavLevelStyles = (value: unknown, path: string): NavLevelStyles | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  for (const key of Object.keys(value)) {
+    // reject-unknown LEVEL keys ("0"/"3"/junk)
+    if (!(NAV_LEVEL_KEYS as readonly string[]).includes(key)) {
+      throw new MenuDocumentError(`${path}.${key}`);
+    }
+  }
+  const out: NavLevelStyles = {};
+  for (const level of NAV_LEVEL_STYLE_LEVELS) {
+    const raw = (value as Record<string, unknown>)[level]; // value[1] ⇒ "1" at runtime
+    if (raw === undefined || raw === null) continue;
+    const style = normalizeNavLevelStyle(raw, `${path}.${level}`);
+    if (style) out[level] = style; // prune empty level
+  }
+  return Object.keys(out).length > 0 ? out : undefined; // prune empty record ⇒ omit
+};
+
+/**
+ * Brand IMAGE src resolver (TASK-504-01 §3a, B1 model half; SINGLE home). Takes
+ * the NORMALIZED brand `image` shape (the page image-leaf props
+ * `{ assetId, src, alt, caption, fit }`) and returns the resolvable `src` (or
+ * null when absent/unresolvable), reusing the SAME `sanitizeAuthoringMediaUrl`
+ * the image leaf uses to derive its `src` (`pageRendererV2.tsx` renderImage). Do
+ * NOT re-implement in 504-03/504-04 — they IMPORT this.
+ */
+export function resolveBrandImageSrc(image: BrandProps["image"]): string | null {
+  if (!isPlainObject(image)) return null;
+  return sanitizeAuthoringMediaUrl(image.src) ?? null;
+}
 
 const normalizeBrandProps = (
   value: unknown,
@@ -484,6 +783,11 @@ const normalizeBrandProps = (
   }
   if (value.image !== undefined && value.image !== null) {
     props.image = normalizeBrandImage(value.image, mode, `${path}.image`);
+  }
+  if (value.style !== undefined && value.style !== null) {
+    // null tolerated as absent; sparse ⇒ omit when pruned (legacy byte-identity).
+    const style = normalizeBrandStyle(value.style, `${path}.style`);
+    if (style) props.style = style;
   }
   return props;
 };
@@ -907,6 +1211,22 @@ const mapMenuBlock = (
  * props (mirrors `collectMenuAppearance`'s `.find()` binding in
  * `menuDocumentCss.ts`).
  */
+/** Deep-merge a levelStyles delta over the base (per level, per field). Scalars
+ *  stay shallow (the caller spreads them); ONLY levelStyles needs the deep merge
+ *  so a device override never wholesale-REPLACES a base level. */
+const mergeNavLevelStyles = (
+  base: NavLevelStyles | undefined,
+  delta: NavLevelStyles | undefined
+): NavLevelStyles | undefined => {
+  if (!base && !delta) return undefined;
+  const out: NavLevelStyles = {};
+  for (const level of NAV_LEVEL_STYLE_LEVELS) {
+    const merged = { ...(base?.[level] ?? {}), ...(delta?.[level] ?? {}) };
+    if (Object.keys(merged).length > 0) out[level] = merged;
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+};
+
 export function resolveMenuSectionAppearanceForDevice(
   section: MenuSectionV2,
   device: MenuDeviceKind
@@ -915,12 +1235,20 @@ export function resolveMenuSectionAppearanceForDevice(
   const baseNavProps: NavItemsProps = navBlock?.type === "nav-items" ? navBlock.props : {};
   const bp = menuDeviceBreakpoint(device);
   if (bp === null) {
+    // desktop: base unchanged (includes levelStyles verbatim).
     return { layout: { ...section.layout }, navProps: { ...baseNavProps } };
   }
   const override = section.responsive?.[bp]; // ONLY the device's own record
+  // Scalars keep the existing shallow per-key merge; levelStyles is deep-merged
+  // per level per field so an override field wins while unset fields inherit desktop.
+  const { levelStyles: baseLevels, ...baseScalars } = baseNavProps;
+  const { levelStyles: overrideLevels, ...overrideScalars } = override?.navProps ?? {};
+  const navProps: NavItemsProps = { ...baseScalars, ...overrideScalars };
+  const mergedLevels = mergeNavLevelStyles(baseLevels, overrideLevels);
+  if (mergedLevels) navProps.levelStyles = mergedLevels; // omit when empty
   return {
     layout: { ...section.layout, ...(override?.layout ?? {}) }, // inherits desktop base
-    navProps: { ...baseNavProps, ...(override?.navProps ?? {}) },
+    navProps,
   };
 }
 
@@ -1121,6 +1449,249 @@ export function clearMenuBlockVisibilityOverride(
         : restResponsive;
     const next: MenuBlockV2 = { ...block, responsive };
     // Prune to the byte-identical legacy shape (no empty responsive member).
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+// --- TASK-504-01 per-device brand style helpers -----------------------------
+// desktop ⇒ brand.props.style; tablet/mobile ⇒ their OWN sparse
+// responsive[bp].style delta over the DESKTOP base (mobile never reads tablet).
+
+/** Resolve the brand style for a device (desktop = base; tablet/mobile = base ⊕
+ *  own delta, field-level cascade). Returns {} when unstyled. */
+export function resolveMenuBrandStyleForDevice(
+  block: MenuBlockV2,
+  device: MenuDeviceKind
+): BrandStyle {
+  const base = block.type === "brand" ? (block.props.style ?? {}) : {};
+  const bp = menuDeviceBreakpoint(device);
+  if (bp === null) return { ...base };
+  return { ...base, ...(block.responsive?.[bp]?.style ?? {}) };
+}
+
+/** Badge/Reset RAW read — undefined = inherited (hasOwnProperty, never the merge). */
+export function readMenuBrandStyleOverrideValue(
+  block: MenuBlockV2,
+  breakpoint: MenuResponsiveBreakpoint,
+  key: keyof BrandStyle
+): unknown {
+  const record = block.responsive?.[breakpoint]?.style;
+  return record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+export const hasMenuBrandStyleOverride = (
+  block: MenuBlockV2,
+  breakpoint?: MenuResponsiveBreakpoint
+): boolean =>
+  breakpoint !== undefined
+    ? block.responsive?.[breakpoint]?.style !== undefined
+    : MENU_RESPONSIVE_BREAKPOINT_KEYS.some((bp) => block.responsive?.[bp]?.style !== undefined);
+
+/**
+ * Device-forked writer. desktop ⇒ brand.props.style; tablet/mobile ⇒ own sparse
+ * responsive[bp].style. An `undefined` patch value ⇒ DELETE that key (never an
+ * own undefined key). Non-brand block ⇒ identity. Full prune chain: empty style
+ * ⇒ drop style; empty override ⇒ drop breakpoint; empty responsive ⇒ delete
+ * member (byte-identical legacy shape).
+ */
+export function patchMenuBrandStyleForDevice(
+  doc: MenuDocumentV2,
+  blockId: string,
+  device: MenuDeviceKind,
+  patch: Partial<BrandStyle>
+): MenuDocumentV2 {
+  const applyPatch = (target: BrandStyle): BrandStyle => {
+    const next: Record<string, unknown> = { ...target };
+    for (const [key, value] of Object.entries(patch)) {
+      if (value === undefined) delete next[key];
+      else next[key] = value;
+    }
+    return next as BrandStyle;
+  };
+  return mapMenuBlock(doc, blockId, (block) => {
+    if (block.type !== "brand") return block; // non-brand ⇒ identity
+    const bp = menuDeviceBreakpoint(device);
+    if (bp === null) {
+      const nextStyle = applyPatch(block.props.style ?? {});
+      const nextProps: BrandProps = { ...block.props };
+      if (Object.keys(nextStyle).length > 0) nextProps.style = nextStyle;
+      else delete nextProps.style;
+      return { ...block, props: nextProps };
+    }
+    const record = block.responsive?.[bp] ?? {};
+    const nextStyle = applyPatch(record.style ?? {});
+    const { style: _s, ...restRecord } = record;
+    const nextRecord = (
+      Object.keys(nextStyle).length > 0 ? { ...restRecord, style: nextStyle } : restRecord
+    ) as MenuBlockOverride;
+    const { [bp]: _b, ...restResponsive } = block.responsive ?? {};
+    const responsive: MenuBlockResponsive =
+      Object.keys(nextRecord).length > 0 ? { ...restResponsive, [bp]: nextRecord } : restResponsive;
+    const next: MenuBlockV2 = { ...block, responsive };
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+/** Explicit Reset: delete ONE brand-style key, prune style ⇒ override ⇒ responsive. */
+export function clearMenuBrandStyleOverride(
+  doc: MenuDocumentV2,
+  blockId: string,
+  breakpoint: MenuResponsiveBreakpoint,
+  key: keyof BrandStyle
+): MenuDocumentV2 {
+  return mapMenuBlock(doc, blockId, (block) => {
+    const record = block.responsive?.[breakpoint];
+    const style = record?.style;
+    if (!style || !Object.prototype.hasOwnProperty.call(style, key)) return block;
+    const { [key]: _removed, ...restStyle } = style;
+    const { style: _s, ...restOverride } = record;
+    const nextRecord = (
+      Object.keys(restStyle).length > 0 ? { ...restOverride, style: restStyle } : restOverride
+    ) as MenuBlockOverride;
+    const { [breakpoint]: _b, ...restResponsive } = block.responsive!;
+    const responsive: MenuBlockResponsive =
+      Object.keys(nextRecord).length > 0
+        ? { ...restResponsive, [breakpoint]: nextRecord }
+        : restResponsive;
+    const next: MenuBlockV2 = { ...block, responsive };
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+// --- TASK-504-01 per-device nav-LEVEL style helpers (levels 1/2 only) --------
+// Level 0 reuses the EXISTING patchMenuSectionForDevice / clearMenuSectionOverride
+// / readMenuSectionOverrideValue on the scalar navProps group (writing the
+// linkPaddingX/linkPaddingY/linkRadius/itemGap BASE scalars, NOT NavLevelStyle
+// keys — see §2a). desktop ⇒ the FIRST nav-items block props.levelStyles[level];
+// tablet/mobile ⇒ section responsive[bp].navProps.levelStyles[level].
+
+/** Single-level resolver 504-04's per-level control display consumes (the
+ *  level-scoped analogue of resolveMenuSectionAppearanceForDevice). Returns {}
+ *  when the level is unstyled; mobile never reads tablet. */
+export function resolveMenuNavLevelStyle(
+  section: MenuSectionV2,
+  device: MenuDeviceKind,
+  level: NavLevelStyleLevel
+): NavLevelStyle {
+  const navBlock = section.blocks.find((b) => b.type === "nav-items");
+  const base = navBlock?.type === "nav-items" ? (navBlock.props.levelStyles?.[level] ?? {}) : {};
+  const bp = menuDeviceBreakpoint(device);
+  if (bp === null) return { ...base };
+  return { ...base, ...(section.responsive?.[bp]?.navProps?.levelStyles?.[level] ?? {}) };
+}
+
+/** RAW read for a level field's override (badge/Reset) — hasOwnProperty. */
+export function readMenuNavLevelStyleOverrideValue(
+  section: MenuSectionV2,
+  breakpoint: MenuResponsiveBreakpoint,
+  level: NavLevelStyleLevel,
+  key: keyof NavLevelStyle
+): unknown {
+  const record = section.responsive?.[breakpoint]?.navProps?.levelStyles?.[level];
+  return record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+const applyNavLevelPatch = (
+  target: NavLevelStyle,
+  patch: Partial<NavLevelStyle>
+): NavLevelStyle => {
+  const next: Record<string, unknown> = { ...target };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined) delete next[key];
+    else next[key] = value;
+  }
+  return next as NavLevelStyle;
+};
+
+/** Set a levelStyles record on a navProps group, pruning the empty level. */
+const withNavLevel = (
+  navProps: NavItemsProps,
+  level: NavLevelStyleLevel,
+  nextLevel: NavLevelStyle
+): NavItemsProps => {
+  const { levelStyles = {}, ...rest } = navProps;
+  const { [level]: _l, ...restLevels } = levelStyles;
+  const nextLevelStyles: NavLevelStyles =
+    Object.keys(nextLevel).length > 0 ? { ...restLevels, [level]: nextLevel } : restLevels;
+  const next: NavItemsProps = { ...rest };
+  if (Object.keys(nextLevelStyles).length > 0) next.levelStyles = nextLevelStyles;
+  return next;
+};
+
+/**
+ * Device-forked writer for ONE level's fields. desktop ⇒ the FIRST nav-items
+ * block props.levelStyles[level] (matches the .find() binding used by resolve +
+ * collectMenuAppearance); tablet/mobile ⇒ section responsive[bp].navProps
+ * .levelStyles[level]. delete-on-undefined + DEEP prune: field ⇒ level ⇒
+ * levelStyles ⇒ navProps ⇒ override ⇒ responsive.
+ */
+export function patchMenuNavLevelStyleForDevice(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  device: MenuDeviceKind,
+  level: NavLevelStyleLevel,
+  patch: Partial<NavLevelStyle>
+): MenuDocumentV2 {
+  return mapMenuSection(doc, sectionId, (section) => {
+    const bp = menuDeviceBreakpoint(device);
+    if (bp === null) {
+      const navIndex = section.blocks.findIndex((block) => block.type === "nav-items");
+      if (navIndex === -1) return section; // no nav-items block ⇒ identity
+      return {
+        ...section,
+        blocks: section.blocks.map((block, i) => {
+          if (i !== navIndex || block.type !== "nav-items") return block;
+          const nextLevel = applyNavLevelPatch(block.props.levelStyles?.[level] ?? {}, patch);
+          return { ...block, props: withNavLevel(block.props, level, nextLevel) };
+        }),
+      };
+    }
+    const record = section.responsive?.[bp] ?? {};
+    const navProps = record.navProps ?? {};
+    const nextLevel = applyNavLevelPatch(navProps.levelStyles?.[level] ?? {}, patch);
+    const nextNavProps = withNavLevel(navProps, level, nextLevel);
+    const { navProps: _n, ...restRecord } = record;
+    const nextRecord = (
+      Object.keys(nextNavProps).length > 0 ? { ...restRecord, navProps: nextNavProps } : restRecord
+    ) as MenuSectionOverride;
+    const { [bp]: _b, ...restResponsive } = section.responsive ?? {};
+    const responsive: MenuSectionResponsive =
+      Object.keys(nextRecord).length > 0 ? { ...restResponsive, [bp]: nextRecord } : restResponsive;
+    const next: MenuSectionV2 = { ...section, responsive };
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+/** Explicit Reset for one level field; full DEEP prune chain to legacy shape. */
+export function clearMenuNavLevelStyleOverride(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  breakpoint: MenuResponsiveBreakpoint,
+  level: NavLevelStyleLevel,
+  key: keyof NavLevelStyle
+): MenuDocumentV2 {
+  return mapMenuSection(doc, sectionId, (section) => {
+    const record = section.responsive?.[breakpoint];
+    const levelStyle = record?.navProps?.levelStyles?.[level];
+    if (!levelStyle || !Object.prototype.hasOwnProperty.call(levelStyle, key)) return section;
+    const { [key]: _removed, ...restLevel } = levelStyle;
+    const nextNavProps = withNavLevel(record!.navProps ?? {}, level, restLevel as NavLevelStyle);
+    const { navProps: _n, ...restOverride } = record!;
+    const nextRecord = (
+      Object.keys(nextNavProps).length > 0
+        ? { ...restOverride, navProps: nextNavProps }
+        : restOverride
+    ) as MenuSectionOverride;
+    const { [breakpoint]: _b, ...restResponsive } = section.responsive!;
+    const responsive: MenuSectionResponsive =
+      Object.keys(nextRecord).length > 0
+        ? { ...restResponsive, [breakpoint]: nextRecord }
+        : restResponsive;
+    const next: MenuSectionV2 = { ...section, responsive };
     if (Object.keys(responsive).length === 0) delete next.responsive;
     return next;
   });

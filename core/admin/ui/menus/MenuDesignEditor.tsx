@@ -3,6 +3,7 @@ import {
   useEffect,
   useMemo,
   useReducer,
+  useRef,
   useState,
   type CSSProperties,
   type ReactNode,
@@ -28,6 +29,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
+import { getCachedMedia, listMediaCached, type MediaRecord } from "@/services/mediaClient";
 import {
   getCachedMenuDetail,
   getMenuWithItemsCached,
@@ -43,26 +45,42 @@ import { resolveStoredMenuNavExtras } from "../../../services/menus/menuNavExtra
 import {
   buildMenuDocumentV2FromLegacy,
   clearMenuBlockVisibilityOverride,
+  clearMenuBrandStyleOverride,
+  clearMenuNavLevelStyleOverride,
   clearMenuSectionOverride,
   createDefaultMenuBlock,
   createDefaultMenuDocumentV2,
   deleteMenuBlock,
   findMenuBlock,
   insertMenuBlock,
+  patchMenuBrandStyleForDevice,
+  patchMenuNavLevelStyleForDevice,
   patchMenuSectionForDevice,
+  readMenuBrandStyleOverrideValue,
+  readMenuNavLevelStyleOverrideValue,
   readMenuSectionOverrideValue,
   reorderMenuBlock,
+  resolveBrandImageSrc,
   resolveMenuBlockVisibleForDevice,
+  resolveMenuBrandStyleForDevice,
+  resolveMenuNavLevelStyle,
   resolveMenuSectionAppearanceForDevice,
   resolveStoredMenuDocument,
   setMenuBlockVisibleForDevice,
+  BRAND_STYLE_NUMBER_RANGES,
   MENU_BRAND_TEXT_MAX_LENGTH,
+  NAV_LEVEL_NUMBER_RANGES,
+  NAV_LINK_NUMBER_RANGES,
+  type BrandStyle,
   type MenuBarLayout,
   type MenuBlockType,
   type MenuBlockV2,
   type MenuDocumentV2,
   type MenuResponsiveBreakpoint,
+  type MenuSectionV2,
   type NavItemsProps,
+  type NavLevelStyle,
+  type NavLevelStyleLevel,
 } from "../../../services/menus/menuDocumentV2";
 import {
   menuAppearanceAlignments,
@@ -278,7 +296,12 @@ const fontWeightLabels: Record<string, string> = {
   "600": "Semibold",
   "700": "Bold",
 };
-const FONT_SIZE_FALLBACK = 15;
+// TASK-504-04 §8 (defect B2): an UNSET nav `fontSize` emits `font-size:inherit`,
+// which the theme resolves to ~16px (menuDocumentCss.ts) — NOT the misleading
+// explicit 15 the slider showed before. The slider now displays this true
+// inherited size at the unset position + an "Inherited" hint so unset (16) reads
+// distinctly from an EXPLICIT 16. DISPLAY only — CSS emission is unchanged.
+const NAV_FONT_SIZE_INHERITED = 16;
 const toSwatchValue = (value: string) => (value === "transparent" ? "" : value);
 
 // --- selectable canvas ------------------------------------------------------
@@ -574,11 +597,26 @@ function MenuBlockPreview({
         (typeof block.props.text === "string" ? block.props.text.trim() : "") ||
         siteName ||
         "Site name";
+      // TASK-504-04 §7 (defect B1): resolve the brand image `src` through the
+      // SINGLE shared resolver (menuDocumentV2) — the SAME shape the front
+      // MenuBrandRender consumes — and render a REAL <img> (not the "Logo" text).
+      // The <img> is SIZED by 504-02's `[data-menu-block-id] img{}` rule, which
+      // reaches it because §3 stamps `data-menu-block-id` on this <a>. GUARD on a
+      // resolved src so an image-mode brand with NO logo falls through to text.
+      const resolvedSrc =
+        block.props.mode === "image" ? resolveBrandImageSrc(block.props.image) : null;
       return (
-        <a className="site-header-brand" href={href} onClick={(event) => event.preventDefault()}>
-          {block.props.mode === "image" && block.props.image
-            ? String(block.props.image.alt ?? "") || "Logo"
-            : text}
+        <a
+          className="site-header-brand"
+          href={href}
+          onClick={(event) => event.preventDefault()}
+          data-menu-block-id={block.id}
+        >
+          {block.props.mode === "image" && resolvedSrc ? (
+            <img src={resolvedSrc} alt={String(block.props.image?.alt ?? "")} />
+          ) : (
+            text
+          )}
         </a>
       );
     }
@@ -627,6 +665,7 @@ function MenuDocumentCanvas({
   tokenVariables,
   selectedId,
   onSelect,
+  forceOpenLevel,
 }: {
   doc: MenuDocumentV2;
   device: PageBreakpoint;
@@ -638,8 +677,15 @@ function MenuDocumentCanvas({
   tokenVariables: CSSProperties;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** TASK-504-04 §6: CUMULATIVE force-open depth (1 ⇒ open depth 1; 2 ⇒ open
+   * depths 1 AND 2) so the sublist level being styled is revealed sim-open on
+   * the canvas. `undefined` ⇒ byte-identical to today (no sim-open rule). */
+  forceOpenLevel?: NavLevelStyleLevel;
 }) {
-  const css = useMemo(() => buildMenuDocumentPreviewCss(doc, device), [doc, device]);
+  const css = useMemo(
+    () => buildMenuDocumentPreviewCss(doc, device, forceOpenLevel),
+    [doc, device, forceOpenLevel]
+  );
   const blocks = doc.sections[0]?.blocks ?? [];
   return (
     <div
@@ -969,6 +1015,400 @@ function MenuBarPanel({
   );
 }
 
+// --- TASK-504-04 brand + per-level control sets ------------------------------
+
+/**
+ * Level-inheritance badge (orthogonal to the device Base/Override/Inherited
+ * badge): does THIS level explicitly set the field, or does it inherit level
+ * N-1 via the pure CSS cascade (504-02 emits level 0 → 1 → 2, each only its own
+ * overrides)? Reuses the `MenuResponsiveStateBadge` pill chrome.
+ */
+function NavLevelInheritBadge({
+  level,
+  overridden,
+}: {
+  level: NavLevelStyleLevel;
+  overridden: boolean;
+}) {
+  const tone = useEditorControlTone();
+  const isLight = tone === "light";
+  return (
+    <span
+      data-menu-level-field={overridden ? "override" : "inherited"}
+      className={`self-start rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase ${
+        overridden
+          ? isLight
+            ? editorPanelOptionActiveClass
+            : "bg-sky-400/20 text-sky-200"
+          : isLight
+            ? "bg-muted text-muted-foreground"
+            : "bg-white/10 text-slate-400"
+      }`}
+    >
+      {overridden ? "This level" : `Inherits level ${level - 1}`}
+    </span>
+  );
+}
+
+/**
+ * Brand logo picker (defect B1): resolves the picked library asset id to its
+ * URL and stores it as `brand.props.image.src` — the SAME `{src}`-resolvable
+ * shape `resolveBrandImageSrc` (front + canvas) reads. Mirrors the Pages
+ * `ToolbarMediaUrlField`: the stored contract is a URL, never a bare asset id
+ * (a bare id never resolves to a `src`, so the logo would never render). The
+ * media-list load is a data-fetch effect (NOT setState-from-props), matching the
+ * existing item-load effect + the Pages pattern.
+ */
+function BrandLogoPicker({ block, updateDoc }: { block: MenuBlockV2; updateDoc: UpdateDoc }) {
+  const patch = patchBlock(updateDoc);
+  const currentSrc =
+    block.type === "brand" && typeof block.props.image?.src === "string"
+      ? block.props.image.src
+      : "";
+  const [assets, setAssets] = useState<readonly MediaRecord[] | null>(() => getCachedMedia());
+  const requestRef = useRef(0);
+  const selectedAssetId = currentSrc
+    ? (assets?.find((asset) => asset.url === currentSrc)?.id ?? null)
+    : null;
+
+  useEffect(() => {
+    if (!currentSrc || assets) return;
+    let active = true;
+    listMediaCached()
+      .then((items) => {
+        if (active) setAssets(items);
+      })
+      .catch(() => {
+        // The picker dialog owns media load errors; the stored value is kept.
+      });
+    return () => {
+      active = false;
+    };
+  }, [assets, currentSrc]);
+
+  const writeSrc = (url: string | null) =>
+    patch(block.id, (current) => {
+      if (current.type !== "brand") return current;
+      if (!url) {
+        const { image: _removed, ...rest } = current.props;
+        return { ...current, props: rest };
+      }
+      return {
+        ...current,
+        props: { ...current.props, image: { ...(current.props.image ?? {}), src: url } },
+      };
+    });
+
+  const handlePickerChange = (next: unknown) => {
+    if (typeof next !== "string" || next.length === 0) {
+      writeSrc(null);
+      return;
+    }
+    requestRef.current += 1;
+    const requestId = requestRef.current;
+    void listMediaCached()
+      .then((items) => {
+        if (requestId !== requestRef.current) return;
+        setAssets(items);
+        const match = items.find((item) => item.id === next);
+        if (match) writeSrc(match.url);
+      })
+      .catch(() => {
+        // Resolution failed: never write an asset id into the src URL path.
+      });
+  };
+
+  return (
+    <MediaPickerControl
+      label="Logo image"
+      accept={["image/*"]}
+      value={selectedAssetId}
+      onChange={handlePickerChange}
+    />
+  );
+}
+
+/**
+ * Brand style controls, mode-gated + device-forked (§3). Text mode ⇒ font size /
+ * weight / color / transform / letter-spacing; image mode ⇒ height / max-width.
+ * Every control is wrapped by `MenuResponsiveControlShell` (device Base/Override/
+ * Inherited badge + per-breakpoint Reset). Values are RESOLVED for display; the
+ * override badge reads the RAW responsive record. A control at its default omits
+ * the key (sparse — legacy byte-identity), so a "Theme" font weight DELETES it.
+ */
+function BrandStyleControls({
+  block,
+  device,
+  palette,
+  updateDoc,
+}: {
+  block: MenuBlockV2;
+  device: PageBreakpoint;
+  palette: readonly PageEditorColorSwatch[];
+  updateDoc: UpdateDoc;
+}) {
+  if (block.type !== "brand") return null;
+  const brandStyle = resolveMenuBrandStyleForDevice(block, device);
+  const brandOverride = (key: keyof BrandStyle) =>
+    isMenuOverrideDevice(device) &&
+    readMenuBrandStyleOverrideValue(block, device, key) !== undefined;
+  const setBrand = <K extends keyof BrandStyle>(key: K, value: BrandStyle[K] | undefined) =>
+    updateDoc((current) =>
+      patchMenuBrandStyleForDevice(current, block.id, device, {
+        [key]: value,
+      } as Partial<BrandStyle>)
+    );
+  const resetBrand = (key: keyof BrandStyle) => () =>
+    updateDoc((current) =>
+      isMenuOverrideDevice(device)
+        ? clearMenuBrandStyleOverride(current, block.id, device, key)
+        : current
+    );
+  const brandStyleControl = (key: keyof BrandStyle, label: string, node: ReactNode) => (
+    <MenuResponsiveControlShell
+      device={device}
+      override={brandOverride(key)}
+      label={label}
+      onReset={resetBrand(key)}
+    >
+      {node}
+    </MenuResponsiveControlShell>
+  );
+
+  return block.props.mode === "text" ? (
+    <>
+      {brandStyleControl(
+        "fontSize",
+        "Brand font size",
+        <SliderControl
+          label="Brand font size"
+          value={brandStyle.fontSize ?? BRAND_STYLE_NUMBER_RANGES.fontSize.min}
+          min={BRAND_STYLE_NUMBER_RANGES.fontSize.min}
+          max={BRAND_STYLE_NUMBER_RANGES.fontSize.max}
+          step={1}
+          unit="px"
+          onChange={(next) => setBrand("fontSize", next)}
+        />
+      )}
+      {brandStyleControl(
+        "fontWeight",
+        "Brand font weight",
+        <SegmentedControl
+          label="Brand font weight"
+          value={brandStyle.fontWeight ? String(brandStyle.fontWeight) : FONT_WEIGHT_INHERIT}
+          options={fontWeightOptions}
+          optionLabels={fontWeightLabels}
+          onChange={(next) =>
+            setBrand(
+              "fontWeight",
+              next === FONT_WEIGHT_INHERIT ? undefined : (Number(next) as MenuAppearanceFontWeight)
+            )
+          }
+        />
+      )}
+      {brandStyleControl(
+        "color",
+        "Brand color",
+        <ColorSwatchControl
+          label="Brand color"
+          palette={palette}
+          value={toSwatchValue(brandStyle.color ?? "inherit")}
+          onChange={(value) => setBrand("color", value === null ? undefined : value)}
+        />
+      )}
+      {brandStyleControl(
+        "textTransform",
+        "Brand text transform",
+        <SegmentedControl
+          label="Brand text transform"
+          value={brandStyle.textTransform ?? "none"}
+          options={menuAppearanceTextTransforms}
+          optionLabels={textTransformLabels}
+          onChange={(next) => setBrand("textTransform", next as BrandStyle["textTransform"])}
+        />
+      )}
+      {brandStyleControl(
+        "letterSpacing",
+        "Letter spacing",
+        <SliderControl
+          label="Letter spacing"
+          value={brandStyle.letterSpacing ?? 0}
+          min={BRAND_STYLE_NUMBER_RANGES.letterSpacing.min}
+          max={BRAND_STYLE_NUMBER_RANGES.letterSpacing.max}
+          step={1}
+          unit="px"
+          onChange={(next) => setBrand("letterSpacing", next)}
+        />
+      )}
+    </>
+  ) : (
+    <>
+      {brandStyleControl(
+        "height",
+        "Logo height",
+        <SliderControl
+          label="Logo height"
+          value={brandStyle.height ?? BRAND_STYLE_NUMBER_RANGES.height.min}
+          min={BRAND_STYLE_NUMBER_RANGES.height.min}
+          max={BRAND_STYLE_NUMBER_RANGES.height.max}
+          step={1}
+          unit="px"
+          onChange={(next) => setBrand("height", next)}
+        />
+      )}
+      {brandStyleControl(
+        "maxWidth",
+        "Logo max width",
+        <SliderControl
+          label="Logo max width"
+          value={brandStyle.maxWidth ?? BRAND_STYLE_NUMBER_RANGES.maxWidth.max}
+          min={BRAND_STYLE_NUMBER_RANGES.maxWidth.min}
+          max={BRAND_STYLE_NUMBER_RANGES.maxWidth.max}
+          step={1}
+          unit="px"
+          onChange={(next) => setBrand("maxWidth", next)}
+        />
+      )}
+    </>
+  );
+}
+
+/**
+ * Per-level nav control set (§4), bound to `levelStyles[level]` (level 1/2 only;
+ * level 0 stays the existing nav base). Writes ride the dedicated 504-01 nested
+ * per-device helpers (desktop ⇒ props.levelStyles; tablet/mobile ⇒ the sparse
+ * `responsive[bp].navProps.levelStyles`). Two badge axes: the device axis
+ * (`MenuResponsiveControlShell`) + the level axis (`NavLevelInheritBadge`).
+ * Inheritance is pure CSS cascade — NO runtime merge here; each control writes
+ * ONLY its own level's field.
+ */
+function NavLevelControls({
+  section,
+  device,
+  level,
+  palette,
+  updateDoc,
+}: {
+  section: MenuSectionV2 | undefined;
+  device: PageBreakpoint;
+  level: NavLevelStyleLevel;
+  palette: readonly PageEditorColorSwatch[];
+  updateDoc: UpdateDoc;
+}) {
+  const levelStyle: NavLevelStyle = section ? resolveMenuNavLevelStyle(section, device, level) : {};
+  const levelOverride = (key: keyof NavLevelStyle) =>
+    section !== undefined &&
+    isMenuOverrideDevice(device) &&
+    readMenuNavLevelStyleOverrideValue(section, device, level, key) !== undefined;
+  const setLevel = <K extends keyof NavLevelStyle>(key: K, value: NavLevelStyle[K] | undefined) =>
+    updateDoc((current) => {
+      const target = current.sections[0];
+      return target
+        ? patchMenuNavLevelStyleForDevice(current, target.id, device, level, {
+            [key]: value,
+          } as Partial<NavLevelStyle>)
+        : current;
+    });
+  const resetLevel = (key: keyof NavLevelStyle) => () =>
+    updateDoc((current) => {
+      const target = current.sections[0];
+      return target && isMenuOverrideDevice(device)
+        ? clearMenuNavLevelStyleOverride(current, target.id, device, level, key)
+        : current;
+    });
+  const levelControl = (key: keyof NavLevelStyle, label: string, node: ReactNode) => (
+    <MenuResponsiveControlShell
+      device={device}
+      override={levelOverride(key)}
+      label={label}
+      onReset={resetLevel(key)}
+    >
+      <div className="grid gap-1">
+        {node}
+        <NavLevelInheritBadge level={level} overridden={levelStyle[key] !== undefined} />
+      </div>
+    </MenuResponsiveControlShell>
+  );
+  const swatch = (key: keyof NavLevelStyle, label: string) => (
+    <ColorSwatchControl
+      label={label}
+      palette={palette}
+      value={toSwatchValue((levelStyle[key] as string | undefined) ?? "inherit")}
+      onChange={(value) => setLevel(key, value === null ? undefined : (value as never))}
+    />
+  );
+  const slider = (key: keyof typeof NAV_LEVEL_NUMBER_RANGES, label: string) => (
+    <SliderControl
+      label={label}
+      value={(levelStyle[key] as number | undefined) ?? NAV_LEVEL_NUMBER_RANGES[key].min}
+      min={NAV_LEVEL_NUMBER_RANGES[key].min}
+      max={NAV_LEVEL_NUMBER_RANGES[key].max}
+      step={1}
+      unit="px"
+      onChange={(next) => setLevel(key, next as never)}
+    />
+  );
+  return (
+    <>
+      {levelControl("linkColor", "Link color", swatch("linkColor", "Link color"))}
+      {levelControl(
+        "linkHoverColor",
+        "Hover background",
+        swatch("linkHoverColor", "Hover background")
+      )}
+      {levelControl("linkHoverTextColor", "Hover text", swatch("linkHoverTextColor", "Hover text"))}
+      {levelControl(
+        "linkActiveColor",
+        "Active background",
+        swatch("linkActiveColor", "Active background")
+      )}
+      {levelControl("fontSize", "Font size", slider("fontSize", "Font size"))}
+      {levelControl(
+        "fontWeight",
+        "Font weight",
+        <SegmentedControl
+          label="Font weight"
+          value={levelStyle.fontWeight ? String(levelStyle.fontWeight) : FONT_WEIGHT_INHERIT}
+          options={fontWeightOptions}
+          optionLabels={fontWeightLabels}
+          onChange={(next) =>
+            setLevel(
+              "fontWeight",
+              next === FONT_WEIGHT_INHERIT ? undefined : (Number(next) as MenuAppearanceFontWeight)
+            )
+          }
+        />
+      )}
+      {levelControl("gap", "Item gap", slider("gap", "Item gap"))}
+      {levelControl("paddingX", "Link padding X", slider("paddingX", "Link padding X"))}
+      {levelControl("paddingY", "Link padding Y", slider("paddingY", "Link padding Y"))}
+      <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Dropdown container
+      </p>
+      {levelControl(
+        "background",
+        "Container background",
+        swatch("background", "Container background")
+      )}
+      {levelControl("borderColor", "Border color", swatch("borderColor", "Border color"))}
+      {levelControl("borderWidth", "Border width", slider("borderWidth", "Border width"))}
+      {levelControl("radius", "Corner radius", slider("radius", "Corner radius"))}
+      {levelControl(
+        "shadow",
+        "Shadow",
+        <SegmentedControl
+          label="Shadow"
+          value={levelStyle.shadow ?? "none"}
+          options={menuAppearanceShadows}
+          optionLabels={shadowLabels}
+          onChange={(next) => setLevel("shadow", next as NavLevelStyle["shadow"])}
+        />
+      )}
+      {levelControl("minWidth", "Min width", slider("minWidth", "Min width"))}
+    </>
+  );
+}
+
 function MenuBlockPanel({
   block,
   doc,
@@ -978,6 +1418,8 @@ function MenuBlockPanel({
   updateDoc,
   onRemove,
   onMove,
+  navLevel,
+  onNavLevelChange,
 }: {
   block: MenuBlockV2;
   doc: MenuDocumentV2;
@@ -989,6 +1431,10 @@ function MenuBlockPanel({
   updateDoc: UpdateDoc;
   onRemove: () => void;
   onMove: (dir: "up" | "down") => void;
+  /** TASK-504-04 §4: the selected nesting level (0 = nav base; 1/2 = levelStyles).
+   * Owned by the top-level component so the canvas force-open stays in sync. */
+  navLevel: 0 | 1 | 2;
+  onNavLevelChange: (level: 0 | 1 | 2) => void;
 }) {
   // patchBlock stays FLAT and device-invariant: content writes (brand/cta/
   // utility label/href/variant/logo/size/target) are NOT device-forked.
@@ -1003,11 +1449,15 @@ function MenuBlockPanel({
     : {};
   // Override detection reads the raw BASE record for the CURRENT override
   // breakpoint (tablet OR mobile), never the resolved merge, never desktop.
-  const navOverride = (key: keyof NavItemsProps) =>
+  // TASK-504-01: `NavItemsProps` widened with the non-appearance `levelStyles`
+  // member, so its keyof no longer ⊆ `keyof MenuAppearance`. These closures only
+  // ever handle FLAT scalar overrides (levelStyles rides the dedicated 504-01
+  // nav-level helpers), so they are annotated `keyof MenuAppearance` directly.
+  const navOverride = (key: keyof MenuAppearance) =>
     section !== undefined &&
     isMenuOverrideDevice(device) &&
     readMenuSectionOverrideValue(section, device, "navProps", key) !== undefined;
-  const resetNav = (key: keyof NavItemsProps) => () =>
+  const resetNav = (key: keyof MenuAppearance) => () =>
     updateDoc((current) => {
       const target = current.sections[0];
       return target && isMenuOverrideDevice(device)
@@ -1129,165 +1579,274 @@ function MenuBlockPanel({
 
       {block.type === "nav-items" ? (
         <div className="grid gap-3">
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("orientation")}
-            label="Orientation"
-            onReset={resetNav("orientation")}
-          >
-            <SegmentedControl
-              label="Orientation"
-              value={navProps.orientation ?? "horizontal"}
-              options={menuAppearanceOrientations}
-              optionLabels={orientationLabels}
-              onChange={(next) => setNavField("orientation", next as NavItemsProps["orientation"])}
-            />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("itemGap")}
-            label="Item gap"
-            onReset={resetNav("itemGap")}
-          >
-            <SliderControl
-              label="Item gap"
-              value={navProps.itemGap ?? SHELL_APPEARANCE_DEFAULTS.itemGap}
-              min={menuAppearanceNumberRanges.itemGap.min}
-              max={menuAppearanceNumberRanges.itemGap.max}
-              step={1}
-              unit="px"
-              onChange={(next) => setNavField("itemGap", next)}
-            />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("fontSize")}
-            label="Font size"
-            onReset={resetNav("fontSize")}
-          >
-            <SliderControl
-              label="Font size"
-              value={navProps.fontSize ?? FONT_SIZE_FALLBACK}
-              min={menuAppearanceNumberRanges.fontSize.min}
-              max={menuAppearanceNumberRanges.fontSize.max}
-              step={1}
-              unit="px"
-              onChange={(next) => setNavField("fontSize", next)}
-            />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("fontWeight")}
-            label="Font weight"
-            onReset={resetNav("fontWeight")}
-          >
-            <SegmentedControl
-              label="Font weight"
-              value={navProps.fontWeight ? String(navProps.fontWeight) : FONT_WEIGHT_INHERIT}
-              options={fontWeightOptions}
-              optionLabels={fontWeightLabels}
-              onChange={(next) =>
-                setNavField(
-                  "fontWeight",
-                  next === FONT_WEIGHT_INHERIT
-                    ? undefined
-                    : (Number(next) as MenuAppearanceFontWeight)
-                )
-              }
-            />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("textTransform")}
-            label="Text transform"
-            onReset={resetNav("textTransform")}
-          >
-            <SegmentedControl
-              label="Text transform"
-              value={navProps.textTransform ?? SHELL_APPEARANCE_DEFAULTS.textTransform}
-              options={menuAppearanceTextTransforms}
-              optionLabels={textTransformLabels}
-              onChange={(next) =>
-                setNavField("textTransform", next as MenuAppearance["textTransform"])
-              }
-            />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("linkColor")}
-            label="Link color"
-            onReset={resetNav("linkColor")}
-          >
-            <ColorSwatchControl
-              label="Link color"
-              palette={palette}
-              value={toSwatchValue(navProps.linkColor ?? SHELL_APPEARANCE_DEFAULTS.linkColor)}
-              onChange={(value) => setNavField("linkColor", value === null ? "transparent" : value)}
-            />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("linkHoverColor")}
-            label="Hover background"
-            onReset={resetNav("linkHoverColor")}
-          >
-            {/* Copy fix (bug 4 secondary): the emission is a state-only
+          <SegmentedControl
+            label="Nesting level"
+            value={String(navLevel)}
+            options={["0", "1", "2"]}
+            optionLabels={{ "0": "Level 0", "1": "Level 1", "2": "Level 2+" }}
+            onChange={(next) => onNavLevelChange(Number(next) as 0 | 1 | 2)}
+          />
+          {navLevel === 0 ? (
+            <>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("orientation")}
+                label="Orientation"
+                onReset={resetNav("orientation")}
+              >
+                <SegmentedControl
+                  label="Orientation"
+                  value={navProps.orientation ?? "horizontal"}
+                  options={menuAppearanceOrientations}
+                  optionLabels={orientationLabels}
+                  onChange={(next) =>
+                    setNavField("orientation", next as NavItemsProps["orientation"])
+                  }
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("itemGap")}
+                label="Item gap"
+                onReset={resetNav("itemGap")}
+              >
+                <SliderControl
+                  label="Item gap"
+                  value={navProps.itemGap ?? SHELL_APPEARANCE_DEFAULTS.itemGap}
+                  min={menuAppearanceNumberRanges.itemGap.min}
+                  max={menuAppearanceNumberRanges.itemGap.max}
+                  step={1}
+                  unit="px"
+                  onChange={(next) => setNavField("itemGap", next)}
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("fontSize")}
+                label="Font size"
+                onReset={resetNav("fontSize")}
+              >
+                <div className="grid gap-1">
+                  <SliderControl
+                    label="Font size"
+                    // TASK-504-04 §8 (defect B2): at the UNSET position show the TRUE
+                    // inherited size (16, `font-size:inherit` resolution) — not the
+                    // misleading explicit 15 — and flag it inherited below so unset
+                    // reads distinctly from an explicit 16. DISPLAY-only: onChange
+                    // still writes an explicit value; unset emits nothing.
+                    value={navProps.fontSize ?? NAV_FONT_SIZE_INHERITED}
+                    min={menuAppearanceNumberRanges.fontSize.min}
+                    max={menuAppearanceNumberRanges.fontSize.max}
+                    step={1}
+                    unit="px"
+                    onChange={(next) => setNavField("fontSize", next)}
+                  />
+                  {navProps.fontSize === undefined ? (
+                    <span
+                      data-menu-font-size-inherited="true"
+                      className="text-[10px] font-medium text-muted-foreground"
+                    >
+                      Inherited from theme ({NAV_FONT_SIZE_INHERITED}px)
+                    </span>
+                  ) : null}
+                </div>
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("fontWeight")}
+                label="Font weight"
+                onReset={resetNav("fontWeight")}
+              >
+                <SegmentedControl
+                  label="Font weight"
+                  value={navProps.fontWeight ? String(navProps.fontWeight) : FONT_WEIGHT_INHERIT}
+                  options={fontWeightOptions}
+                  optionLabels={fontWeightLabels}
+                  onChange={(next) =>
+                    setNavField(
+                      "fontWeight",
+                      next === FONT_WEIGHT_INHERIT
+                        ? undefined
+                        : (Number(next) as MenuAppearanceFontWeight)
+                    )
+                  }
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("textTransform")}
+                label="Text transform"
+                onReset={resetNav("textTransform")}
+              >
+                <SegmentedControl
+                  label="Text transform"
+                  value={navProps.textTransform ?? SHELL_APPEARANCE_DEFAULTS.textTransform}
+                  options={menuAppearanceTextTransforms}
+                  optionLabels={textTransformLabels}
+                  onChange={(next) =>
+                    setNavField("textTransform", next as MenuAppearance["textTransform"])
+                  }
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("linkColor")}
+                label="Link color"
+                onReset={resetNav("linkColor")}
+              >
+                <ColorSwatchControl
+                  label="Link color"
+                  palette={palette}
+                  value={toSwatchValue(navProps.linkColor ?? SHELL_APPEARANCE_DEFAULTS.linkColor)}
+                  onChange={(value) =>
+                    setNavField("linkColor", value === null ? "transparent" : value)
+                  }
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("linkHoverColor")}
+                label="Hover background"
+                onReset={resetNav("linkHoverColor")}
+              >
+                {/* Copy fix (bug 4 secondary): the emission is a state-only
                 background pill (menuDocumentCss linkHoverColor), NOT link color. */}
-            <ColorSwatchControl
-              label="Hover background"
+                <ColorSwatchControl
+                  label="Hover background"
+                  palette={palette}
+                  value={toSwatchValue(
+                    navProps.linkHoverColor ?? SHELL_APPEARANCE_DEFAULTS.linkHoverColor
+                  )}
+                  onChange={(value) =>
+                    setNavField("linkHoverColor", value === null ? "transparent" : value)
+                  }
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("linkActiveColor")}
+                label="Active background"
+                onReset={resetNav("linkActiveColor")}
+              >
+                <ColorSwatchControl
+                  label="Active background"
+                  palette={palette}
+                  value={toSwatchValue(navProps.linkActiveColor ?? "transparent")}
+                  onChange={(value) =>
+                    setNavField("linkActiveColor", value === null ? "transparent" : value)
+                  }
+                />
+              </MenuResponsiveControlShell>
+              {/* TASK-504-04 §4b: hover TEXT color, distinct from the hover
+              BACKGROUND control above (504-02 emits `.site-nav-link:hover{color}`).
+              Present-only: `null` (default) OMITS `linkHoverTextColor`. */}
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("linkHoverTextColor")}
+                label="Hover text"
+                onReset={resetNav("linkHoverTextColor")}
+              >
+                <ColorSwatchControl
+                  label="Hover text"
+                  palette={palette}
+                  value={toSwatchValue(navProps.linkHoverTextColor ?? "inherit")}
+                  onChange={(value) =>
+                    setNavField("linkHoverTextColor", value === null ? undefined : value)
+                  }
+                />
+              </MenuResponsiveControlShell>
+              {/* TASK-504-04 §5 cheap wins: per-link padding + radius (base scalars,
+              present-only via the shared delta channel). */}
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("linkPaddingX")}
+                label="Link padding X"
+                onReset={resetNav("linkPaddingX")}
+              >
+                <SliderControl
+                  label="Link padding X"
+                  value={navProps.linkPaddingX ?? NAV_LINK_NUMBER_RANGES.paddingX.min}
+                  min={NAV_LINK_NUMBER_RANGES.paddingX.min}
+                  max={NAV_LINK_NUMBER_RANGES.paddingX.max}
+                  step={1}
+                  unit="px"
+                  onChange={(next) => setNavField("linkPaddingX", next)}
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("linkPaddingY")}
+                label="Link padding Y"
+                onReset={resetNav("linkPaddingY")}
+              >
+                <SliderControl
+                  label="Link padding Y"
+                  value={navProps.linkPaddingY ?? NAV_LINK_NUMBER_RANGES.paddingY.min}
+                  min={NAV_LINK_NUMBER_RANGES.paddingY.min}
+                  max={NAV_LINK_NUMBER_RANGES.paddingY.max}
+                  step={1}
+                  unit="px"
+                  onChange={(next) => setNavField("linkPaddingY", next)}
+                />
+              </MenuResponsiveControlShell>
+              <MenuResponsiveControlShell
+                device={device}
+                override={navOverride("linkRadius")}
+                label="Link radius"
+                onReset={resetNav("linkRadius")}
+              >
+                <SliderControl
+                  label="Link radius"
+                  value={navProps.linkRadius ?? NAV_LINK_NUMBER_RANGES.radius.min}
+                  min={NAV_LINK_NUMBER_RANGES.radius.min}
+                  max={NAV_LINK_NUMBER_RANGES.radius.max}
+                  step={1}
+                  unit="px"
+                  onChange={(next) => setNavField("linkRadius", next)}
+                />
+              </MenuResponsiveControlShell>
+              {device !== "mobile" ? (
+                // Device-DEFINING (base-writing, NOT overridable): dropdowns exist
+                // only >=640px (sublists collapse inline on mobile), so a mobile
+                // override would be dead data. Rendered on Desktop/Tablet only, NOT
+                // wrapped in MenuResponsiveControlShell — no badge, no Reset.
+                <SegmentedControl
+                  label="Dropdown direction"
+                  value={navProps.dropdownDirection ?? SHELL_APPEARANCE_DEFAULTS.dropdownDirection}
+                  options={menuAppearanceDropdownDirections}
+                  optionLabels={dropdownDirectionLabels}
+                  onChange={(next) =>
+                    setNavBaseField(
+                      "dropdownDirection",
+                      next as MenuAppearance["dropdownDirection"]
+                    )
+                  }
+                />
+              ) : null}
+              {device === "mobile" ? (
+                // Device-DEFINING (base-writing): mobileMode chooses how the mobile
+                // viewport behaves — it IS the mobile design, not an override of a
+                // desktop value. Rendered on Mobile only; no badge, no Reset.
+                <SegmentedControl
+                  label="Mobile menu"
+                  value={navProps.mobileMode ?? SHELL_APPEARANCE_DEFAULTS.mobileMode}
+                  options={menuAppearanceMobileModes}
+                  optionLabels={mobileModeLabels}
+                  onChange={(next) =>
+                    setNavBaseField("mobileMode", next as MenuAppearance["mobileMode"])
+                  }
+                />
+              ) : null}
+            </>
+          ) : (
+            <NavLevelControls
+              section={section}
+              device={device}
+              level={navLevel}
               palette={palette}
-              value={toSwatchValue(
-                navProps.linkHoverColor ?? SHELL_APPEARANCE_DEFAULTS.linkHoverColor
-              )}
-              onChange={(value) =>
-                setNavField("linkHoverColor", value === null ? "transparent" : value)
-              }
+              updateDoc={updateDoc}
             />
-          </MenuResponsiveControlShell>
-          <MenuResponsiveControlShell
-            device={device}
-            override={navOverride("linkActiveColor")}
-            label="Active background"
-            onReset={resetNav("linkActiveColor")}
-          >
-            <ColorSwatchControl
-              label="Active background"
-              palette={palette}
-              value={toSwatchValue(navProps.linkActiveColor ?? "transparent")}
-              onChange={(value) =>
-                setNavField("linkActiveColor", value === null ? "transparent" : value)
-              }
-            />
-          </MenuResponsiveControlShell>
-          {device !== "mobile" ? (
-            // Device-DEFINING (base-writing, NOT overridable): dropdowns exist
-            // only >=640px (sublists collapse inline on mobile), so a mobile
-            // override would be dead data. Rendered on Desktop/Tablet only, NOT
-            // wrapped in MenuResponsiveControlShell — no badge, no Reset.
-            <SegmentedControl
-              label="Dropdown direction"
-              value={navProps.dropdownDirection ?? SHELL_APPEARANCE_DEFAULTS.dropdownDirection}
-              options={menuAppearanceDropdownDirections}
-              optionLabels={dropdownDirectionLabels}
-              onChange={(next) =>
-                setNavBaseField("dropdownDirection", next as MenuAppearance["dropdownDirection"])
-              }
-            />
-          ) : null}
-          {device === "mobile" ? (
-            // Device-DEFINING (base-writing): mobileMode chooses how the mobile
-            // viewport behaves — it IS the mobile design, not an override of a
-            // desktop value. Rendered on Mobile only; no badge, no Reset.
-            <SegmentedControl
-              label="Mobile menu"
-              value={navProps.mobileMode ?? SHELL_APPEARANCE_DEFAULTS.mobileMode}
-              options={menuAppearanceMobileModes}
-              optionLabels={mobileModeLabels}
-              onChange={(next) =>
-                setNavBaseField("mobileMode", next as MenuAppearance["mobileMode"])
-              }
-            />
-          ) : null}
+          )}
         </div>
       ) : null}
 
@@ -1349,25 +1908,18 @@ function MenuBlockPanel({
             />
           </label>
           {block.props.mode === "image" ? (
-            <MediaPickerControl
-              label="Logo image"
-              accept={["image/*"]}
-              value={block.props.image?.assetId ?? null}
-              onChange={(value) =>
-                patch(block.id, (current) =>
-                  current.type === "brand"
-                    ? {
-                        ...current,
-                        props: {
-                          ...current.props,
-                          image: { ...(current.props.image ?? {}), assetId: value },
-                        },
-                      }
-                    : current
-                )
-              }
-            />
+            // TASK-504-04 §7 (defect B1): resolve the picked asset to its URL and
+            // store `image.src` — the shape `resolveBrandImageSrc` reads (a bare
+            // `assetId` never resolved, so the logo never rendered).
+            <BrandLogoPicker block={block} updateDoc={updateDoc} />
           ) : null}
+          {/* TASK-504-04 §3: mode-gated brand style controls (device-forked). */}
+          <BrandStyleControls
+            block={block}
+            device={device}
+            palette={palette}
+            updateDoc={updateDoc}
+          />
         </div>
       ) : null}
 
@@ -1487,6 +2039,10 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [device, setDevice] = useState<PageBreakpoint>("desktop");
+  // TASK-504-04 §1: the nesting level being styled (0 = nav base; 1/2 =
+  // levelStyles). Lives here (beside device/selectedId) so BOTH the panel (sets
+  // it) and the canvas (force-open consumes it) stay in sync.
+  const [navLevel, setNavLevel] = useState<0 | 1 | 2>(0);
   const [panelOpen, setPanelOpen] = useState(true);
   const [items, setItems] = useState<NavigationItem[]>([]);
   const [menuName, setMenuName] = useState(initial?.menu.name ?? "Menu design");
@@ -1537,6 +2093,14 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
 
   const selectedBlock = findMenuBlock(doc, selectedId);
   const navLabel = menuName;
+
+  // TASK-504-04 §1: neutralize a stale level for a non-nav selection as a PURE
+  // derivation (no setState-in-effect) — the raw `navLevel` persists so
+  // re-selecting nav-items restores the author's last level. `forceOpenLevel`
+  // sim-opens the canvas ONLY for a nav level >= 1.
+  const navLevelActive: 0 | 1 | 2 = selectedBlock?.type === "nav-items" ? navLevel : 0;
+  const forceOpenLevel: NavLevelStyleLevel | undefined =
+    navLevelActive >= 1 ? (navLevelActive as NavLevelStyleLevel) : undefined;
 
   const addMenuBlock = (type: MenuBlockType) =>
     updateDoc((current) => insertMenuBlock(current, createDefaultMenuBlock(type)));
@@ -1727,6 +2291,7 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                   tokenVariables={canvasSiteTokenVariables}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
+                  forceOpenLevel={forceOpenLevel}
                 />
               </div>
             </div>
@@ -1744,6 +2309,8 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
                     updateDoc={updateDoc}
                     onRemove={() => removeMenuBlock(selectedBlock.id)}
                     onMove={(dir) => moveMenuBlock(selectedBlock.id, dir)}
+                    navLevel={navLevel}
+                    onNavLevelChange={setNavLevel}
                   />
                 ) : (
                   <MenuBarPanel

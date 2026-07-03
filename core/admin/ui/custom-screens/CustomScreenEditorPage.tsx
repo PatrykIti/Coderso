@@ -64,8 +64,10 @@ import {
   removeScreenSection,
   renameScreenSection,
   updateScreenBlock,
+  updateScreenSection,
   type ScreenBlockKind,
   type ScreenInsertTarget,
+  type ScreenSectionPatch,
 } from "../../../services/customScreens/screenDocumentOps";
 import {
   useCustomScreenPreviewRecordState,
@@ -92,6 +94,76 @@ const findBlockSectionId = (document: ScreenDocumentV1, blockId: string | null) 
   return (
     document.sections.find((section) => blockTreeContains(section.blocks, blockId))?.id ?? null
   );
+};
+
+// TASK-505-03 (Item B): client-side orphan detection for the binding-recovery
+// affordance. Mirrors the 505-01 server predicates so client + server agree on
+// what is prunable (no surprise divergence), and — crucially — is NON-destructive
+// to valid bindings (source order preserved, orphans-only).
+type ScreenBindingOrphans = {
+  blockOrphans: ScreenFieldBinding[]; // blockId matches NO live block in the document
+  fieldOrphans: ScreenFieldBinding[]; // field ROOT missing from the content type (+ system)
+};
+
+// System roots the binding validator always allows (mirror the server allow-set).
+const SCREEN_SYSTEM_FIELD_ROOTS = new Set([
+  "title",
+  "slug",
+  "status",
+  "createdAt",
+  "updatedAt",
+  "publishedAt",
+]);
+
+export const detectScreenBindingOrphans = (
+  document: ScreenDocumentV1,
+  bindings: readonly ScreenFieldBinding[],
+  fields: ReadonlyArray<{ name: string }>
+): ScreenBindingOrphans => {
+  const liveIds = new Set<string>();
+  const walk = (blocks: readonly ScreenBlockV1[]) =>
+    blocks.forEach((block) => {
+      liveIds.add(block.id);
+      if (block.children) walk(block.children);
+      if (block.slots) Object.values(block.slots).forEach(walk);
+    });
+  document.sections.forEach((section) => walk(section.blocks));
+  // Server parity (customScreenSchemas.ts): getAllowedBindingFieldRoots returns
+  // `null` when the content type has NO schema properties, and the binding
+  // normalizer then SKIPS field-root validation entirely — a schemaless content
+  // type legitimately allows ANY field name. So field-root orphan detection MUST
+  // be allow-all when `fields` is empty; flagging here would falsely mark valid
+  // entry bindings and let the one-click prune DESTROY them (data-loss trap).
+  const allowAllFields = fields.length === 0;
+  const allowedRoots = new Set<string>([
+    ...SCREEN_SYSTEM_FIELD_ROOTS,
+    ...fields.map((field) => field.name),
+  ]);
+  const blockOrphans: ScreenFieldBinding[] = [];
+  const fieldOrphans: ScreenFieldBinding[] = [];
+  for (const binding of bindings) {
+    if (!liveIds.has(binding.blockId)) {
+      blockOrphans.push(binding);
+      continue;
+    }
+    if (allowAllFields) continue; // schemaless type → server allows every field root
+    const root = binding.field.split(".")[0] ?? binding.field; // dotted-path root
+    if (!allowedRoots.has(root)) fieldOrphans.push(binding);
+  }
+  return { blockOrphans, fieldOrphans };
+};
+
+// De-dupe binding field roots for a readable recovery message.
+export const uniqueFieldNames = (
+  bindings: readonly ScreenFieldBinding[] | readonly string[]
+): string[] => {
+  const seen = new Set<string>();
+  for (const item of bindings) {
+    const field = typeof item === "string" ? item : item.field;
+    const root = field.split(".")[0] ?? field;
+    if (root) seen.add(root);
+  }
+  return [...seen];
 };
 
 const resolveInitialSelection = (document: ScreenDocumentV1) => {
@@ -182,6 +254,10 @@ export function CustomScreenEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // TASK-505-03 (Item B3): a NON-blocking, success-adjacent notice naming the
+  // field(s) the 505-01 save-path GC pruned (read off the returned record's
+  // transient `warnings`). Cleared by markDirty alongside setError(null).
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
@@ -260,6 +336,7 @@ export function CustomScreenEditorPage() {
   const markDirty = useCallback(() => {
     setHasUnsavedChanges(true);
     setError(null);
+    setSaveNotice(null);
   }, []);
 
   const updateDefinition = useCallback(
@@ -288,6 +365,33 @@ export function CustomScreenEditorPage() {
     },
     [updateDefinition]
   );
+
+  // TASK-505-03 (Item B2): proactive orphan detection over the live editor state.
+  // Gives the user a recovery path BEFORE hitting Save — the previously-opaque
+  // un-saveable dead-end becomes a one-click fix. Suppressed until the content
+  // type resolves so a transient empty `contentFields` can't false-flag valid
+  // field bindings (block-orphans don't depend on `contentFields`, so they stay
+  // accurate throughout).
+  const bindingOrphans = useMemo(
+    () =>
+      selectedContentType
+        ? detectScreenBindingOrphans(screenDocument, screenBindings, contentFields)
+        : { blockOrphans: [], fieldOrphans: [] },
+    [selectedContentType, screenDocument, screenBindings, contentFields]
+  );
+  const orphanCount = bindingOrphans.blockOrphans.length + bindingOrphans.fieldOrphans.length;
+
+  const handleRemoveOrphanBindings = () => {
+    const current = definitionRef.current;
+    const orphanIds = new Set(
+      [...bindingOrphans.blockOrphans, ...bindingOrphans.fieldOrphans].map((binding) => binding.id)
+    );
+    if (orphanIds.size === 0) return;
+    updateEditorView({
+      document: current.editorView.document, // document unchanged — bindings-only prune
+      bindings: current.editorView.bindings.filter((binding) => !orphanIds.has(binding.id)),
+    });
+  };
 
   const applyScreen = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
@@ -559,6 +663,16 @@ export function CustomScreenEditorPage() {
     });
   };
 
+  // TASK-505-03 (Item A): section-layout write — mirrors handlePatchBlock. The
+  // `style` key rides the same `definition` PATCH envelope (no new persisted key
+  // beyond 505-01's document contract; schemaVersion unchanged).
+  const handlePatchSection = (sectionId: string, patch: ScreenSectionPatch) => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: updateScreenSection(current.editorView.document, sectionId, patch),
+    });
+  };
+
   const handlePatchBlockData = (blockId: string, patch: Record<string, unknown>) => {
     const current = definitionRef.current;
     updateEditorView({
@@ -629,6 +743,7 @@ export function CustomScreenEditorPage() {
 
     setIsSaving(true);
     setError(null);
+    setSaveNotice(null);
     const payload = {
       name: trimmedName,
       contentTypeId,
@@ -638,19 +753,44 @@ export function CustomScreenEditorPage() {
       definition,
     };
 
+    // TASK-505-03 (Item B3): surface the field(s) the 505-01 save-path GC pruned.
+    // The returned record carries a TRANSIENT `warnings` (computed at normalize
+    // time, NOT persisted); reading it directly avoids any client-side diff.
+    const applySavedRecord = (record: CustomScreenRecord) => {
+      const prunedFields = uniqueFieldNames(
+        (record.warnings ?? [])
+          .filter((warning) => warning.code === "binding_field_removed")
+          .flatMap((warning) => warning.fields)
+      );
+      applyScreen(record);
+      setSaveNotice(
+        prunedFields.length > 0
+          ? `Removed binding(s) for deleted field(s): ${prunedFields.join(", ")}.`
+          : null
+      );
+    };
+
     try {
       if (isCreateMode) {
         const created = await createCustomScreen(payload);
-        applyScreen(created);
+        applySavedRecord(created);
         navigate(`/advanced/custom-screens/${encodeURIComponent(created.id)}`);
       } else if (screenId) {
         const updated = await updateCustomScreen(screenId, payload);
-        applyScreen(updated);
+        applySavedRecord(updated);
       }
       setRemoteUpdatePending(false);
     } catch (err) {
       if (isApiClientError(err)) {
-        setError(err.message);
+        // TASK-505-03 (Item B4): the residual malformed-binding 400 keeps its
+        // byte-frozen `err.message`; append any field name(s) that ride the
+        // response DETAIL (`err.details.fields`, from 505-01) when present.
+        const detailFields = (err.details as { fields?: string[] } | undefined)?.fields;
+        setError(
+          detailFields?.length
+            ? `${err.message} (field(s): ${detailFields.join(", ")})`
+            : err.message
+        );
       } else {
         setError("Failed to save custom screen.");
       }
@@ -830,12 +970,45 @@ export function CustomScreenEditorPage() {
               hasUnsavedChanges={hasUnsavedChanges}
               isCreateMode={isCreateMode}
             >
-              {error || remoteUpdatePending ? (
+              {/* TASK-505-03 (Item B2/B3): the outer gate is widened beyond
+                  `error || remoteUpdatePending` so the amber orphan notice (no
+                  current error on the reopen path) and the post-save pruned-field
+                  notice (no error on a clean save) actually mount. The per-notice
+                  inner gates still decide which Alert shows. */}
+              {error || remoteUpdatePending || orphanCount > 0 || saveNotice ? (
                 <div className="shrink-0 space-y-3 px-6 pt-4">
                   {error ? (
                     <Alert variant="destructive">
                       <AlertTitle>Custom screen error</AlertTitle>
                       <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {orphanCount > 0 ? (
+                    <Alert data-screen-orphan-notice="true">
+                      <AlertTitle>Orphaned field bindings</AlertTitle>
+                      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span>
+                          {orphanCount} binding(s) reference{" "}
+                          {bindingOrphans.fieldOrphans.length > 0
+                            ? `deleted field(s): ${uniqueFieldNames(bindingOrphans.fieldOrphans).join(", ")}`
+                            : "removed blocks"}
+                          . They block saving until removed.
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRemoveOrphanBindings}
+                          data-screen-remove-orphans="true"
+                        >
+                          Remove orphaned bindings
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {saveNotice ? (
+                    <Alert data-screen-save-notice="true">
+                      <AlertTitle>Binding cleanup</AlertTitle>
+                      <AlertDescription>{saveNotice}</AlertDescription>
                     </Alert>
                   ) : null}
                   {remoteUpdatePending ? (
@@ -888,6 +1061,7 @@ export function CustomScreenEditorPage() {
                   onSetInsertPoint={setInsertPoint}
                   onDragMove={handleDragMove}
                   onPatchBlock={handlePatchBlock}
+                  onPatchSection={handlePatchSection}
                   onPatchBlockData={handlePatchBlockData}
                   onPatchBinding={handlePatchBinding}
                   onMove={handleMoveBlock}

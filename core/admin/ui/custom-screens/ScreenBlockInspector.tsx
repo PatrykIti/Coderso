@@ -16,11 +16,15 @@ import {
   screenBlockAligns,
   screenBlockWidths,
   screenImageRatios,
+  screenSectionColumnPresets,
   SCREEN_BLOCK_MIN_HEIGHT_CLAMP,
+  SCREEN_SECTION_COLUMN_GAP_CLAMP,
   type CustomScreenBindingMode,
   type ScreenBlockStyleV1,
   type ScreenBlockV1,
   type ScreenFieldBinding,
+  type ScreenSectionStyleV1,
+  type ScreenSectionV1,
 } from "../../../services/customScreens/customScreenSchemas";
 import { PAGE_BLOCK_BOX_SPACING_CLAMP } from "../../../services/pages/pageDocumentV2";
 import type { ContentField } from "../content-types/SchemaBuilder";
@@ -293,6 +297,131 @@ export const buildStylePatch = (
   }
   return Object.keys(next).length > 0 ? next : undefined;
 };
+
+// TASK-505-03 (Item A): SECTION-layout authoring (`ScreenSectionStyleV1`, a NEW
+// channel shipped by 505-01 — NOT the dead `section.layout` field). Mirrors
+// buildStylePatch: updateScreenSection REPLACES the `style` key wholesale
+// (screenDocumentOps.ts:631 spreads the patch), so we read the CURRENT
+// section.style, apply ONE edit, hand back the FULL merged object, and prune
+// empty → undefined so an UNSET section stays byte-identical through save
+// (absent style === today's vertical `space-y-4` stack).
+
+// Sentinel for "no columns" — absent columns === today's vertical stack. Picking
+// it PRUNES the key (mirrors SCREEN_ALIGN_DEFAULT_OPTION @:227).
+export const SCREEN_SECTION_COLUMNS_DEFAULT_OPTION = "__stack__";
+
+export type ScreenSectionStyleEdit =
+  | { kind: "columns"; value: string } // sentinel / unknown preset → prune key
+  | { kind: "columnGap"; value: string }; // "" / non-finite → prune; else floor+clamp 0..64
+
+export const buildSectionLayoutPatch = (
+  current: ScreenSectionStyleV1 | undefined,
+  edit: ScreenSectionStyleEdit
+): ScreenSectionStyleV1 | undefined => {
+  const next: ScreenSectionStyleV1 = { ...(current ?? {}) };
+  switch (edit.kind) {
+    case "columns": {
+      if (
+        edit.value === SCREEN_SECTION_COLUMNS_DEFAULT_OPTION ||
+        !(screenSectionColumnPresets as readonly string[]).includes(edit.value)
+      ) {
+        delete next.columns;
+      } else {
+        next.columns = edit.value as ScreenSectionStyleV1["columns"];
+      }
+      break;
+    }
+    case "columnGap": {
+      const parsed = Number(edit.value);
+      if (edit.value.trim() === "" || !Number.isFinite(parsed)) {
+        delete next.columnGap;
+      } else {
+        next.columnGap = clampTo(
+          parsed,
+          SCREEN_SECTION_COLUMN_GAP_CLAMP.min,
+          SCREEN_SECTION_COLUMN_GAP_CLAMP.max
+        );
+      }
+      break;
+    }
+  }
+  return Object.keys(next).length > 0 ? next : undefined;
+};
+
+// Human-labelled Columns options. `value` stays the raw preset (loss-free
+// round-trip); the label maps the fr intent for the author.
+const screenSectionColumnOptions: ReadonlyArray<{ value: string; label: string }> = [
+  { value: SCREEN_SECTION_COLUMNS_DEFAULT_OPTION, label: "Stacked (default)" },
+  { value: "1", label: "1 column" },
+  { value: "2", label: "2 equal" },
+  { value: "3", label: "3 equal" },
+  { value: "4", label: "4 equal" },
+  { value: "1-1", label: "2 · equal (1:1)" },
+  { value: "1-2", label: "2 · 1:2" },
+  { value: "2-1", label: "2 · 2:1" },
+  { value: "1-3", label: "2 · 1:3 (¼ · ¾)" },
+  { value: "3-1", label: "2 · 3:1 (¾ · ¼)" },
+  { value: "2-3", label: "2 · 2:3" },
+  { value: "3-2", label: "2 · 3:2" },
+  { value: "1-1-1", label: "3 · equal" },
+  { value: "1-1-1-1", label: "4 · equal" },
+];
+
+/**
+ * TASK-505-03 (Item A): the SECTION inspector, a distinct co-located component
+ * shown when `selectedSectionId && !selectedBlockId` (the block inspector's
+ * `!selectedBlock` early-return stays untouched — no section/block branch
+ * tangling). Renders ONLY the section-layout group (Columns + gap). Reads
+ * default to the sentinel/blank so an unset section shows "Stacked" + empty gap
+ * and writes NOTHING until the user changes a control (byte-stable).
+ */
+export function ScreenSectionInspector({
+  section,
+  onPatchSection,
+}: {
+  section: ScreenSectionV1 | null;
+  onPatchSection: (patch: { style?: ScreenSectionStyleV1 | undefined }) => void;
+}) {
+  if (!section) {
+    return (
+      <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
+        Select a section on the canvas to edit its column layout.
+      </div>
+    );
+  }
+  const commitLayout = (edit: ScreenSectionStyleEdit) =>
+    onPatchSection({ style: buildSectionLayoutPatch(section.style, edit) });
+
+  return (
+    <div className="flex flex-col gap-4" data-screen-section-layout-group="true">
+      <EnumRow
+        label="Columns"
+        value={section.style?.columns ?? SCREEN_SECTION_COLUMNS_DEFAULT_OPTION}
+        options={screenSectionColumnOptions}
+        onChange={(value) => commitLayout({ kind: "columns", value })}
+      />
+      <InspectorRow label="Column gap (px)">
+        <Input
+          type="number"
+          inputMode="numeric"
+          min={SCREEN_SECTION_COLUMN_GAP_CLAMP.min}
+          max={SCREEN_SECTION_COLUMN_GAP_CLAMP.max}
+          value={section.style?.columnGap ?? ""}
+          placeholder="16"
+          data-screen-section-gap="true"
+          // Gap only takes visible effect once columns is set (renderer default
+          // 16 @505-02); authoring it while stacked is harmless (pruned/ignored)
+          // — do NOT disable it.
+          onChange={(event) => commitLayout({ kind: "columnGap", value: event.target.value })}
+        />
+      </InspectorRow>
+      <p className="text-xs text-muted-foreground">
+        Blocks flow left-to-right into the columns in canvas order. Pick “Stacked” to return to a
+        single vertical column.
+      </p>
+    </div>
+  );
+}
 
 const boxSideLabels: ReadonlyArray<[ScreenBoxSide, string]> = [
   ["top", "Top"],

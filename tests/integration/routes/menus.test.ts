@@ -454,6 +454,223 @@ testIfDb(
   dbTestTimeoutMs
 );
 
+// --- TASK-504-05 §2.1: brand.props.style + navProps.levelStyles + per-device
+// (responsive.{tablet,mobile}) brand/level overrides proven at the route boundary.
+// Service-layer accept/reject/prune coverage lives in menu-document-v2.test.ts; the
+// route is a thin delegate, so these assert the verbatim round-trip through the
+// menus.settings envelope (without dropping co-present appearance/extras) and the
+// path-tagged ApiError-400 mapping for the two new key families actually reach the wire.
+
+const routeBrandLevelMenuDocument = () => ({
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "sec-route-menu-bar",
+      type: "menu-bar" as const,
+      name: "Menu bar",
+      layout: { surfaceColor: "#0f172a" },
+      // Per-device LEVEL overrides on the SECTION responsive (navProps.levelStyles),
+      // resolved vs DESKTOP (Pages cascade; mobile ≠ tablet) — each a sparse record.
+      responsive: {
+        tablet: { navProps: { levelStyles: { 1: { fontSize: 18 } } } },
+        mobile: { navProps: { levelStyles: { 1: { fontSize: 12 } } } },
+      },
+      blocks: [
+        {
+          id: "blk-route-brand",
+          type: "brand" as const,
+          // brand.props.style (text-mode) + per-device BRAND style overrides on the
+          // BLOCK responsive (responsive[bp].style) — the conscious BRAND_PROP_KEYS +
+          // normalizeMenuBlockResponsive "style" widenings must round-trip verbatim.
+          props: {
+            mode: "text" as const,
+            href: "/",
+            text: "Acme",
+            style: { fontSize: 22, color: "#111111" },
+          },
+          responsive: {
+            tablet: { style: { fontSize: 18 } },
+            mobile: { style: { fontSize: 14 } },
+          },
+        },
+        {
+          id: "blk-route-nav",
+          type: "nav-items" as const,
+          // navProps.levelStyles (split off the flat NAV_ITEMS_PROP_KEYS subset) with
+          // level-1 link + CONTAINER chrome and a sparse level-2.
+          props: {
+            itemGap: 12,
+            linkColor: "#111111",
+            levelStyles: {
+              1: {
+                linkColor: "#111111",
+                fontSize: 14,
+                background: "#ffffff",
+                borderWidth: 2,
+                radius: 8,
+                minWidth: 200,
+                shadow: "md" as const,
+              },
+              2: { linkColor: "#222222" },
+            },
+          },
+        },
+      ],
+    },
+  ],
+});
+
+testIfDb(
+  "PATCH /menus/:id round-trips brand.props.style + navProps.levelStyles + responsive.{tablet,mobile} brand/level overrides WITHOUT dropping appearance/extras",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Brand Level ${randomUUID()}`,
+      location: `route-brand-level-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const patch = getPatchHandler();
+    const extras = [createPageBlockV2("button", { id: "blk-route-extra" })];
+    // Seed sibling envelope keys first, then PATCH the document ALONE.
+    await patch({
+      params: { id: menu.id },
+      query: {},
+      body: { appearance: { surfaceColor: "#0f172a" }, extras },
+    });
+
+    const document = routeBrandLevelMenuDocument();
+    await patch({ params: { id: menu.id }, query: {}, body: { document } });
+
+    // Round-trip through GET: brand style + levelStyles + both per-device records
+    // ride verbatim (sparse, nothing injected) and the sibling keys survive untouched.
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings).toEqual({
+      appearance: { surfaceColor: "#0f172a" },
+      extras,
+      document,
+    });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps an invalid brand-style key to a 400 menu_document_invalid ApiError with the brand style path; store untouched",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Brand Style Invalid ${randomUUID()}`,
+      location: `route-brand-style-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            schemaVersion: 1,
+            sections: [
+              {
+                id: "sec-route-menu-bar",
+                type: "menu-bar",
+                name: "Menu bar",
+                layout: {},
+                // brand at blocks[0]; an unknown key INSIDE props.style rejects one
+                // level deeper than the block props (reject-unknown at the style key).
+                blocks: [
+                  {
+                    id: "blk-route-brand",
+                    type: "brand",
+                    props: { mode: "text", href: "/", style: { bogus: 1 } },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({
+        path: "document.sections[0].blocks[0].props.style.bogus",
+      });
+    }
+
+    // Store untouched: the pre-PATCH menu still carries no document.
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings ?? {}).toEqual({});
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps an invalid level key (navProps.levelStyles.3) to a 400 menu_document_invalid ApiError with the level path; store untouched",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Level Invalid ${randomUUID()}`,
+      location: `route-level-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            schemaVersion: 1,
+            sections: [
+              {
+                id: "sec-route-menu-bar",
+                type: "menu-bar",
+                name: "Menu bar",
+                layout: {},
+                // nav at blocks[0]; level "3" is not a member of the {1,2} cap —
+                // reject-unknown OUTER level key fires with the levelStyles path.
+                blocks: [
+                  {
+                    id: "blk-route-nav",
+                    type: "nav-items",
+                    props: { levelStyles: { 3: { linkColor: "#111111" } } },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({
+        path: "document.sections[0].blocks[0].props.levelStyles.3",
+      });
+    }
+
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings ?? {}).toEqual({});
+  },
+  dbTestTimeoutMs
+);
+
 testIfDb(
   "PATCH /menus/:id maps an invalid document to a 400 menu_document_invalid ApiError with a path",
   async () => {

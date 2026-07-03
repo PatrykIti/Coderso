@@ -28,7 +28,7 @@ export type ScreenBlockPatch = Partial<
 >;
 
 export type ScreenSectionPatch = Partial<
-  Pick<ScreenSectionV1, "label" | "data" | "layout" | "visibility">
+  Pick<ScreenSectionV1, "label" | "data" | "layout" | "visibility" | "style">
 >;
 
 const slugify = (value: string) =>
@@ -1000,4 +1000,38 @@ export function removeScreenBindingsForBlockTree(
   if (!block) return bindings;
   const removedIds = new Set(collectScreenBlockIds(block));
   return bindings.filter((binding) => !removedIds.has(binding.blockId));
+}
+
+// TASK-505-01 (Item B): binding-integrity GC. Prune bindings whose blockId matches NO live
+// block anywhere in the document (any orphan class, not just an explicitly-fed removed
+// subtree — the broader superset of removeScreenBindingsForBlockTree). Pure, deterministic
+// (source order preserved), idempotent, and non-destructive to valid bindings.
+//
+// Shipped as an AVAILABLE helper for a future delete-site adopter; delete-SITE wiring is
+// DEFERRED (adopted by no TASK-505 subtask). The Save-time saveability guarantee is the
+// normalize-time write safety-net inside customScreenSchemas.ts (kept in-file to preserve the
+// schemas←ops import layering — this helper is NOT imported there). Reports block-orphans
+// only; field-orphans (field missing from the content type) are reported by the separate
+// normalizeScreenFieldBindings sink in customScreenSchemas.ts, not here.
+export type ScreenBindingReconcileResult = {
+  bindings: ScreenFieldBinding[]; // pruned, source order preserved (deterministic)
+  removedBlockOrphans: string[]; // binding.field[] whose blockId had no live block
+};
+
+export function reconcileScreenBindings(
+  document: ScreenDocumentV1,
+  bindings: ScreenFieldBinding[]
+): ScreenBindingReconcileResult {
+  const liveIds = new Set(
+    document.sections.flatMap((section) =>
+      section.blocks.flatMap((block) => collectScreenBlockIds(block))
+    )
+  );
+  const kept: ScreenFieldBinding[] = [];
+  const removedBlockOrphans: string[] = [];
+  for (const binding of bindings) {
+    if (liveIds.has(binding.blockId)) kept.push(binding);
+    else removedBlockOrphans.push(binding.field);
+  }
+  return { bindings: kept, removedBlockOrphans };
 }

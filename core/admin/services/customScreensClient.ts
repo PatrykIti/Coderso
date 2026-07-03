@@ -21,6 +21,7 @@ import {
   getCustomScreenEditorViewBindings,
   getCustomScreenEditorViewBlocks,
   normalizeCustomScreenDefinitionForRead,
+  type CustomScreenBindingWarning,
   type CustomScreenCollectionRole,
   type CustomScreenDefinition,
 } from "../../services/customScreens/customScreenSchemas";
@@ -74,6 +75,13 @@ export type CustomScreenRecord = {
   capabilities?: CustomScreenCapabilities;
   createdAt: string;
   updatedAt: string;
+  // TASK-505-03 (Item B3): TRANSIENT binding-GC warnings the server (505-01)
+  // attaches to the PATCH 200 response when the save-path GC pruned orphaned
+  // bindings — computed at normalize time, NEVER persisted. Type-only carry so
+  // the raw returned record typechecks in the editor (`isCustomScreenRecord`
+  // ignores extra keys; `normalizeCustomScreenRecord` spreads `...item`;
+  // `updateCustomScreen` returns the raw record → the field survives to the UI).
+  warnings?: CustomScreenBindingWarning[];
 };
 
 export type CustomScreenCreateInput = {

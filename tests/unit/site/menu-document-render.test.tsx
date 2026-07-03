@@ -106,6 +106,76 @@ test("SiteHeaderMenuDocumentRender golden: menu-bar + brand + nav-items(nesting)
   expect(html).toContain('href="/signup"');
 });
 
+// --- TASK-504-03: aria-current stamp + brand IMAGE (defect B1) ----------------
+
+test("TASK-504-03: no activePath ⇒ menu-document markup byte-identical (zero aria-current)", () => {
+  const withoutProp = renderToString(
+    <SiteHeaderMenuDocumentRender document={buildDoc()} navigation={navigation} siteName="Acme" />
+  );
+  const withNull = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDoc()}
+      navigation={navigation}
+      siteName="Acme"
+      activePath={null}
+    />
+  );
+  expect(withNull).toBe(withoutProp);
+  expect(withoutProp).not.toContain('aria-current="page"');
+});
+
+test("TASK-504-03: activePath render adds EXACTLY one aria-current; only-delta is the attribute; CSS unchanged", () => {
+  const base = renderToString(
+    <SiteHeaderMenuDocumentRender document={buildDoc()} navigation={navigation} siteName="Acme" />
+  );
+  const active = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDoc()}
+      navigation={navigation}
+      siteName="Acme"
+      activePath="/services"
+    />
+  );
+  expect((active.match(/aria-current="page"/g) ?? []).length).toBe(1);
+  expect(active).toMatch(/href="\/services"[^>]*aria-current="page"/);
+  // The ONLY markup change vs the no-stamp render is the added attribute — the
+  // scoped `<style>` (buildMenuDocumentCss) block is inside `base`/`active` and
+  // is proven identical by the strip-equality below (this subtask emits NO CSS).
+  expect(active.replace(/ aria-current="page"/g, "")).toBe(base);
+});
+
+test("TASK-504-03: brand image mode renders a resolved <img> (defect B1), not the dashed placeholder", () => {
+  const doc: MenuDocumentV2 = {
+    schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
+    sections: [
+      {
+        id: "sec_bar",
+        type: "menu-bar",
+        name: "Menu bar",
+        layout: {},
+        blocks: [
+          {
+            id: "blk_brand",
+            type: "brand",
+            props: {
+              mode: "image",
+              href: "/",
+              image: { src: "https://cdn.example.com/logo.png", alt: "Acme" },
+            },
+          } as never,
+        ],
+      },
+    ],
+  };
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender document={doc} navigation={null} siteName="Acme" />
+  );
+  expect(html).toContain("<img");
+  expect(html).toContain("https://cdn.example.com/logo.png");
+  // The <a> carries the block-id hook that 504-02's `img{}` rule sizes.
+  expect(html).toContain('data-menu-block-id="blk_brand"');
+});
+
 test("nav-items honors openInNewTab ⇒ target=_blank rel=noopener noreferrer + button variant", () => {
   const html = renderToString(
     <SiteHeaderMenuDocumentRender document={buildDoc()} navigation={navigation} siteName="Acme" />

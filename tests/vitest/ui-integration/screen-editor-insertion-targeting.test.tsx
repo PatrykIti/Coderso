@@ -276,6 +276,12 @@ test("a palette insert lands in the SELECTED (non-first) section and selection f
     selectSection(view.container, "section-2");
     await flush();
 
+    // TASK-505-03 (Item A): a canvas section-select now switches the rail to the
+    // section Inspector — reopen the Insert palette before the chip insert. The
+    // steering (block lands in the SELECTED section) is unchanged.
+    click(view.container.querySelector('button[aria-label="Insert"]'));
+    await flush();
+
     click(findChip(view.container, "Text"));
     await flush();
 

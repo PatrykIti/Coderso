@@ -103,6 +103,46 @@ describe("normalizeMenuAppearance clamps", () => {
   });
 });
 
+describe("menu appearance nav-link cheap-win scalars (TASK-504-01 §2a)", () => {
+  test("linkPaddingX/linkPaddingY/linkRadius clamp via the shared table", () => {
+    expect(menuAppearanceNumberRanges.linkPaddingX).toEqual({ min: 0, max: 40 });
+    expect(menuAppearanceNumberRanges.linkPaddingY).toEqual({ min: 0, max: 32 });
+    expect(menuAppearanceNumberRanges.linkRadius).toEqual({ min: 0, max: 32 });
+    expect(normalizeMenuAppearance({ linkPaddingX: 999 }).linkPaddingX).toBe(40);
+    expect(normalizeMenuAppearance({ linkPaddingX: -5 }).linkPaddingX).toBe(0);
+    expect(normalizeMenuAppearance({ linkPaddingY: 999 }).linkPaddingY).toBe(32);
+    expect(normalizeMenuAppearance({ linkRadius: 12.6 }).linkRadius).toBe(13);
+  });
+
+  test("linkHoverTextColor is token-validated + nullable (unset ⇒ dropped)", () => {
+    expect(
+      normalizeMenuAppearance({ linkHoverTextColor: "var(--color-primary)" }).linkHoverTextColor
+    ).toBe("var(--color-primary)");
+    expect(normalizeMenuAppearance({ linkHoverTextColor: "#abcdef" }).linkHoverTextColor).toBe(
+      "#abcdef"
+    );
+    expect("linkHoverTextColor" in normalizeMenuAppearance({ linkHoverTextColor: null })).toBe(
+      false
+    );
+  });
+
+  test("bad cheap-win values reject with the offending field", () => {
+    const expectFieldError = (value: unknown, field: string) => {
+      try {
+        normalizeMenuAppearance(value);
+        throw new Error(`expected ${field} to be rejected`);
+      } catch (error) {
+        expect(isMenuAppearanceError(error)).toBe(true);
+        expect((error as MenuAppearanceError).field).toBe(field);
+      }
+    };
+    expectFieldError({ linkPaddingX: "12" }, "linkPaddingX");
+    expectFieldError({ linkRadius: Number.NaN }, "linkRadius");
+    expectFieldError({ linkHoverTextColor: "red" }, "linkHoverTextColor");
+    expectFieldError({ linkHoverTextColor: "url(javascript:alert(1))" }, "linkHoverTextColor");
+  });
+});
+
 describe("normalizeMenuAppearance rejects", () => {
   const expectFieldError = (value: unknown, field: string) => {
     try {

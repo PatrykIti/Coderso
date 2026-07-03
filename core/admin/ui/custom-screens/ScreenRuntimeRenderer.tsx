@@ -14,6 +14,7 @@ import { InlineEditWrapper, selectionBorder } from "@/ui/authoring";
 import { FieldRenderer } from "@/ui/entries/FieldRenderer";
 import {
   normalizeScreenImageSrc,
+  screenSectionColumnTemplate, // TASK-505-02 (value): preset → grid-template-columns fr map (505-01 owns it)
   type ScreenBlockStyleV1,
   type ScreenBlockV1,
   type ScreenDocumentV1,
@@ -181,6 +182,11 @@ const screenImageRatioClass: Record<string, string> = {
   "16/9": "aspect-video",
   "3/2": "aspect-[3/2]",
 };
+
+// TASK-505-02: default gap for a gridded section = 16px == the space-y-4 vertical
+// rhythm (1rem), so switching a section from stack→grid at gap-default reads as
+// the same density. (Renderer-local; 505-01 owns the preset → grid-template map.)
+const SCREEN_SECTION_COLUMN_GAP_DEFAULT = 16;
 
 // TASK-503-02 A: inline box CSS from the VALIDATED style record. Values arrive
 // already clamped as ints (503-01 validator); the renderer still type-guards
@@ -387,7 +393,8 @@ export function ScreenRuntimeRenderer({
   // (or disarms) the one-shot insert point; a drop moves the dragged block to
   // the gap's PRE-removal index (the op owns the same-list decrement).
   const renderInsertGap = (
-    target: Extract<ScreenInsertTarget, { kind: "section-index" | "slot-index" }>
+    target: Extract<ScreenInsertTarget, { kind: "section-index" | "slot-index" }>,
+    options?: { fullRow?: boolean } // TASK-505-02: section-start/end gaps span the row in a gridded section
   ) => {
     if (!canInsert) return null;
     const armed = insertPoint ? insertTargetsEqual(insertPoint, target) : false;
@@ -419,6 +426,10 @@ export function ScreenRuntimeRenderer({
                 ? "bg-primary/5 opacity-60"
                 : "opacity-0 hover:bg-primary/5 hover:opacity-100 focus-visible:opacity-100"
         )}
+        // TASK-505-02: in a gridded section the section-start/end gaps span the
+        // whole row so they never consume a column cell (which would push the
+        // following block onto its own row and break side-by-side columns).
+        style={options?.fullRow ? { gridColumn: "1 / -1" } : undefined}
         onClick={(event) => {
           event.stopPropagation();
           onSetInsertPoint?.(armed ? null : target);
@@ -1556,6 +1567,14 @@ export function ScreenRuntimeRenderer({
           sectionId: section.id,
         };
         const sectionDragHover = mode === "builder" && isDragHover(sectionEndTarget);
+        // TASK-505-02: grid emission is decided ONCE here and threaded to the
+        // container + the section-index insert-gaps. Absent columns → gridded=false
+        // → nothing changes (byte-identical to today's space-y-4 vertical stack).
+        const sectionColumns = section.style?.columns;
+        const gridTemplate = sectionColumns
+          ? screenSectionColumnTemplate[sectionColumns]
+          : undefined;
+        const gridded = gridTemplate !== undefined;
         const title =
           typeof section.data.title === "string" && section.data.title.trim()
             ? section.data.title.trim()
@@ -1707,11 +1726,23 @@ export function ScreenRuntimeRenderer({
             ) : null}
             <div
               className={cn(
-                "space-y-4",
+                // TASK-505-02: gridded → CSS grid (auto-flow cells, DOM order);
+                // unset columns → the exact "space-y-4" stack as before (byte-identical).
+                gridded ? "grid" : "space-y-4",
                 // Drag feedback: the section body lights up when the in-flight
                 // drop would append to THIS section's end.
                 sectionDragHover && "rounded-lg bg-primary/5 ring-1 ring-primary/50"
               )}
+              // TASK-505-02: inline grid track/gap ONLY when gridded — absent-style
+              // emits no `style` attr, so stored-V4 docs round-trip byte-identically.
+              style={
+                gridded
+                  ? {
+                      gridTemplateColumns: gridTemplate,
+                      gap: section.style?.columnGap ?? SCREEN_SECTION_COLUMN_GAP_DEFAULT,
+                    }
+                  : undefined
+              }
               // TASK-500-02 (builder only): the section body is a drop target —
               // dropping anywhere that no inner gap/slot/card claimed appends to
               // the section's end (inner zones stopPropagation their own drops).
@@ -1728,11 +1759,22 @@ export function ScreenRuntimeRenderer({
                   <>
                     {section.blocks.map((block, index) => (
                       <Fragment key={block.id}>
-                        {renderInsertGap({
-                          kind: "section-index",
-                          sectionId: section.id,
-                          index,
-                        })}
+                        {/* TASK-505-02: in a gridded section the INTER-block gaps
+                            would each steal a full row and force every block onto
+                            its own row (breaking side-by-side columns), so only the
+                            section-start gap (index 0) is rendered here, full-row;
+                            between-cell reorder/insert rides the per-card
+                            before/after dropTargets below (cardDropTargets).
+                            Non-gridded sections keep a gap at every index (as today). */}
+                        {(!gridded || index === 0) &&
+                          renderInsertGap(
+                            {
+                              kind: "section-index",
+                              sectionId: section.id,
+                              index,
+                            },
+                            { fullRow: gridded }
+                          )}
                         {renderBlock(block, {
                           sectionId: section.id,
                           suppressed: false,
@@ -1747,11 +1789,14 @@ export function ScreenRuntimeRenderer({
                         })}
                       </Fragment>
                     ))}
-                    {renderInsertGap({
-                      kind: "section-index",
-                      sectionId: section.id,
-                      index: section.blocks.length,
-                    })}
+                    {renderInsertGap(
+                      {
+                        kind: "section-index",
+                        sectionId: section.id,
+                        index: section.blocks.length,
+                      },
+                      { fullRow: gridded }
+                    )}
                   </>
                 ) : (
                   section.blocks.map((block) =>
@@ -1759,7 +1804,12 @@ export function ScreenRuntimeRenderer({
                   )
                 )
               ) : (
-                <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
+                <div
+                  className="rounded-xl border border-dashed bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground"
+                  // TASK-505-02: a gridded but empty section centers the message
+                  // across the row instead of stuffing it into cell 1.
+                  style={gridded ? { gridColumn: "1 / -1" } : undefined}
+                >
                   Empty section
                 </div>
               )}

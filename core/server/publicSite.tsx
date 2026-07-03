@@ -865,6 +865,13 @@ const renderPublicPageHtmlInternal = async (
     previewDevice?: DeviceTarget;
     themeName?: string;
     runtimeSearchParams?: URLSearchParams;
+    /**
+     * TASK-504-03: normalized request path (`normalizeSitePath(url.pathname)`),
+     * passed ONLY on the public PAGE render callers so the menu-document header
+     * can stamp `aria-current="page"`. Absent on preview/page-template renders ⇒
+     * `activePath` null ⇒ no stamp.
+     */
+    requestPath?: string | null;
   }
 ): Promise<PublicHtmlRenderResult> => {
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
@@ -970,6 +977,7 @@ const renderPublicPageHtmlInternal = async (
       responsiveCss,
       siteShell,
       siteName,
+      activePath: options?.requestPath ?? null,
       renderBodyScripts,
     }),
     cacheable: preparedRuntime.cacheable,
@@ -1674,6 +1682,7 @@ export async function handlePublicRequest(req: Request) {
       const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
         themeName,
         runtimeSearchParams: url.searchParams,
+        requestPath: slugPath,
       });
       const homepageTtlSeconds = resolveRenderCacheTtl(result);
       if (shouldUseCache && homepageTtlSeconds > 0) {
@@ -1722,6 +1731,7 @@ export async function handlePublicRequest(req: Request) {
   const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
     themeName,
     runtimeSearchParams: url.searchParams,
+    requestPath: slugPath,
   });
   const pageTtlSeconds = resolveRenderCacheTtl(result);
   if (shouldUseCache && pageTtlSeconds > 0) {

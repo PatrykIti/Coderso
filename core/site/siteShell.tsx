@@ -1,6 +1,7 @@
 import {
   MENU_RESPONSIVE_BREAKPOINT_KEYS,
   hasMenuBlockVisibilityOverride,
+  resolveBrandImageSrc,
   resolveMenuBlockVisibleForDevice,
   type MenuBlockV2,
   type MenuDocumentV2,
@@ -108,6 +109,56 @@ const isPubliclyVisibleNavigationItem = (item: NavigationItem) =>
 
 const hasRealHref = (href: string) => href.trim().length > 0 && href.trim() !== "#";
 
+/**
+ * TASK-504-03: normalize an href/path to a comparable root-relative pathname, or
+ * null when it cannot participate in current-page matching. SSR has no reliable
+ * request origin, so ONLY root-relative internal paths ("/...") match — external
+ * URLs, "#", mailto:, tel:, and protocol-relative hrefs never mark active
+ * (conscious, mirrors the client widget's same-origin guard).
+ */
+export const normalizeNavPath = (raw: string): string | null => {
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed === "#") return null;
+  if (trimmed.startsWith("//")) return null; // protocol-relative (//host) ⇒ external ⇒ never active
+  if (!trimmed.startsWith("/")) return null; // external / anchor / scheme ⇒ never active
+  const pathOnly = trimmed.split(/[?#]/, 1)[0] ?? trimmed; // drop query + fragment
+  const noTrailing = pathOnly.replace(/\/+$/, "");
+  return noTrailing === "" ? "/" : noTrailing;
+};
+
+/**
+ * TASK-504-03: resolve the single winning current-page href across the RENDERED
+ * item tree. Walks the SAME filtered tree `SiteNavItem` renders (publicly-visible
+ * + renderable), so a hidden/non-rendered item can never win and orphan the
+ * stamp. `pathname` match: current === target OR current startsWith `${target}/`
+ * (root "/" only matches current "/"); longest matching target wins (most
+ * specific). Returns the normalized winning path (compared by `SiteNavLink`), or
+ * null when `activePath` is absent.
+ */
+export const resolveMenuActiveHref = (
+  items: NavigationItem[],
+  activePath: string | null | undefined
+): string | null => {
+  if (!activePath) return null; // absent ⇒ no stamp (byte-identical)
+  const current = normalizeNavPath(activePath) ?? "/";
+  let best: string | null = null;
+  const visit = (list: NavigationItem[]) => {
+    for (const item of list) {
+      if (!isPubliclyVisibleNavigationItem(item)) continue; // subtree hidden (flatten parity)
+      if (!isRenderableNavItem(item)) continue; // never produces markup
+      const target = normalizeNavPath(item.href);
+      if (target) {
+        const matches =
+          target === "/" ? current === "/" : current === target || current.startsWith(`${target}/`);
+        if (matches && (best === null || target.length > best.length)) best = target;
+      }
+      if (item.children?.length) visit(item.children);
+    }
+  };
+  visit(items);
+  return best;
+};
+
 type SiteNavInteraction = "details" | "hover";
 
 /**
@@ -139,8 +190,16 @@ const siteNavButtonStyle = {
   textDecoration: "none",
 } as const;
 
-const SiteNavLink = ({ item }: { item: NavigationItem }) => {
+const SiteNavLink = ({
+  item,
+  activeHref,
+}: {
+  item: NavigationItem;
+  /** TASK-504-03: winning current-page path; default undefined ⇒ no stamp ⇒ legacy byte-identical. */
+  activeHref?: string | null;
+}) => {
   const isButton = item.meta?.variant === "button";
+  const isCurrent = activeHref != null && normalizeNavPath(item.href) === activeHref;
   return (
     <a
       className="site-nav-link"
@@ -150,6 +209,7 @@ const SiteNavLink = ({ item }: { item: NavigationItem }) => {
       href={item.href}
       target={item.target === "blank" ? "_blank" : undefined}
       rel={item.target === "blank" ? "noopener noreferrer" : undefined}
+      aria-current={isCurrent ? "page" : undefined}
     >
       {item.label}
     </a>
@@ -159,9 +219,12 @@ const SiteNavLink = ({ item }: { item: NavigationItem }) => {
 const SiteNavItem = ({
   item,
   interaction = "details", // fail-safe default: works with the frozen base sheet alone
+  activeHref,
 }: {
   item: NavigationItem;
   interaction?: SiteNavInteraction;
+  /** TASK-504-03: forwarded to this item's link AND recursive children; default undefined ⇒ no stamp. */
+  activeHref?: string | null;
 }) => {
   // Filter-then-recurse: an invisible item hides its WHOLE subtree (flatten
   // parity), and non-renderable descendants never produce empty markup.
@@ -173,7 +236,7 @@ const SiteNavItem = ({
     if (!hasRealHref(item.href)) return null; // unchanged leaf semantics
     return (
       <li className="site-nav-item">
-        <SiteNavLink item={item} />
+        <SiteNavLink item={item} activeHref={activeHref} />
       </li>
     );
   }
@@ -187,11 +250,16 @@ const SiteNavItem = ({
         // Conscious trade-off: the "label exactly once" guarantee is a
         // hover-mode property; details mode trades it for parent reachability.
         <li className="site-nav-item">
-          <SiteNavLink item={item} />
+          <SiteNavLink item={item} activeHref={activeHref} />
         </li>
       ) : null}
       {children.map((child, index) => (
-        <SiteNavItem key={`${child.label}-${index}`} item={child} interaction={interaction} />
+        <SiteNavItem
+          key={`${child.label}-${index}`}
+          item={child}
+          interaction={interaction}
+          activeHref={activeHref}
+        />
       ))}
     </ul>
   );
@@ -216,7 +284,7 @@ const SiteNavItem = ({
   return (
     <li className="site-nav-item" data-site-nav-group="true">
       {hasRealHref(item.href) ? (
-        <SiteNavLink item={item} />
+        <SiteNavLink item={item} activeHref={activeHref} />
       ) : (
         // BOTH classes (502-02 Coordination): link color/typography/caret rules
         // target `.site-nav-link`, so group labels style with no new selectors.
@@ -365,11 +433,14 @@ const NavItemsRender = ({
   items,
   label,
   blockId,
+  activeHref,
 }: {
   items: NavigationItem[];
   label: string;
   /** TASK-501-02: inert visibility hook stamped on the `<nav>` LANDMARK (the ancestor above `.site-nav-list`). */
   blockId: string;
+  /** TASK-504-03: winning current-page path forwarded into the recursive nav tree; null ⇒ no stamp. */
+  activeHref?: string | null;
 }) => {
   if (items.length === 0) return null;
   return (
@@ -384,7 +455,12 @@ const NavItemsRender = ({
       </details>
       <ul className="site-nav-list" data-site-nav-list="true">
         {items.map((item, index) => (
-          <SiteNavItem key={`${item.label}-${index}`} item={item} interaction="hover" />
+          <SiteNavItem
+            key={`${item.label}-${index}`}
+            item={item}
+            interaction="hover"
+            activeHref={activeHref}
+          />
         ))}
       </ul>
     </nav>
@@ -403,11 +479,19 @@ const BrandRender = ({
   // seam so no unsafe scheme (`javascript:`/`data:`/`vbscript:`) can ever be
   // SSR-emitted into the public header anchor.
   const href = sanitizeAuthoringLinkHref(block.props.href) ?? "/";
-  if (block.props.mode === "image" && block.props.image) {
+  // TASK-504-03 (defect B1): resolve the brand image `src` through the SINGLE
+  // shared resolver (menuDocumentV2). GUARD on a resolved src so an image-mode
+  // brand with NO logo falls through to the text/site-name fallback instead of
+  // rendering the empty dashed placeholder that ballooned the header. The <img>
+  // is SIZED by 504-02's `[data-menu-block-id] img{}` rule (height/max-width);
+  // this subtask emits NO CSS.
+  const brandImage = block.props.image;
+  const resolvedSrc = resolveBrandImageSrc(brandImage);
+  if (block.props.mode === "image" && resolvedSrc) {
     const imageBlock = {
       id: block.id,
       type: "image",
-      props: block.props.image,
+      props: brandImage,
       visibility: { visible: true },
     } as PageBlockV2;
     return (
@@ -452,6 +536,7 @@ export function SiteHeaderMenuDocumentRender({
   document,
   navigation,
   siteName,
+  activePath,
 }: {
   document: MenuDocumentV2;
   /** The SAME mapped item tree `SiteHeaderNav` uses; `null` at zero items. */
@@ -459,9 +544,16 @@ export function SiteHeaderMenuDocumentRender({
   siteName?: string | null;
   /** Accepted for parity with the preview seam; the front uses viewport CSS. */
   breakpoint?: PageBreakpoint;
+  /**
+   * TASK-504-03: the current request path (front only; `null` in preview/canvas).
+   * Resolved against the RENDERED item tree to stamp `aria-current="page"` on the
+   * winning link; absent/null ⇒ zero stamps ⇒ byte-identical menu-document render.
+   */
+  activePath?: string | null;
 }) {
   const items = (navigation?.items ?? []).filter(isPubliclyVisibleNavigationItem);
   const navLabel = navigation?.label ?? "Site navigation";
+  const activeHref = resolveMenuActiveHref(items, activePath);
   const blocks = document.sections[0]?.blocks ?? [];
 
   return (
@@ -475,7 +567,13 @@ export function SiteHeaderMenuDocumentRender({
           switch (block.type) {
             case "nav-items":
               return (
-                <NavItemsRender key={block.id} items={items} label={navLabel} blockId={block.id} />
+                <NavItemsRender
+                  key={block.id}
+                  items={items}
+                  label={navLabel}
+                  blockId={block.id}
+                  activeHref={activeHref}
+                />
               );
             case "brand":
               return <BrandRender key={block.id} block={block} siteName={siteName} />;

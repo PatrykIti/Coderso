@@ -3,8 +3,11 @@ import { expect, test } from "vitest";
 import {
   createScreenBlock,
   duplicateScreenBlockWithBindings,
+  reconcileScreenBindings,
   removeScreenBindingsForBlockTree,
   removeScreenBlock,
+  removeScreenSection,
+  updateScreenSection,
 } from "../../../core/services/customScreens/screenDocumentOps";
 import type {
   ScreenDocumentV1,
@@ -128,4 +131,96 @@ test("duplicateScreenBlockWithBindings clones nested bindings onto cloned block 
     mode: "readwrite",
   });
   expect(result.bindings[1]?.blockId).not.toBe("field-1");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-505-01 Item A: ScreenSectionPatch "style" round-trip + empty prune
+// ---------------------------------------------------------------------------
+
+test("TASK-505-01 updateScreenSection round-trips a style patch and can clear it", () => {
+  const withStyle = updateScreenSection(document, "section-1", {
+    style: { columns: "3-1", columnGap: 24 },
+  });
+  expect(withStyle.sections[0]?.style).toEqual({ columns: "3-1", columnGap: 24 });
+  // A 505-03 "clear" patch prunes to absent (undefined) — spread verbatim by updateScreenSection.
+  const cleared = updateScreenSection(withStyle, "section-1", { style: undefined });
+  expect(cleared.sections[0]?.style).toBeUndefined();
+});
+
+// ---------------------------------------------------------------------------
+// TASK-505-01 Item B: reconcileScreenBindings GC helper
+// ---------------------------------------------------------------------------
+
+const reconcileDoc: ScreenDocumentV1 = {
+  schemaVersion: 1,
+  sections: [
+    {
+      id: "section-1",
+      type: "section",
+      data: {},
+      blocks: [
+        { id: "block-a", type: "field", data: {} },
+        {
+          id: "group-1",
+          type: "field-group",
+          data: {},
+          slots: { content: [{ id: "block-b", type: "field", data: {} }] },
+        },
+      ],
+    },
+    // Second section so removeScreenSection("section-1") is not a last-section no-op.
+    { id: "section-2", type: "section", data: {}, blocks: [] },
+  ],
+};
+
+const reconcileBindings: ScreenFieldBinding[] = [
+  {
+    id: "b1",
+    blockId: "block-a",
+    propPath: "value",
+    source: "entry",
+    field: "alpha",
+    mode: "read",
+  },
+  { id: "b2", blockId: "ghost", propPath: "value", source: "entry", field: "beta", mode: "read" },
+  {
+    id: "b3",
+    blockId: "block-b",
+    propPath: "value",
+    source: "entry",
+    field: "gamma",
+    mode: "read",
+  },
+];
+
+test("TASK-505-01 reconcileScreenBindings prunes block-orphans, preserves valid order, reports fields", () => {
+  const result = reconcileScreenBindings(reconcileDoc, reconcileBindings);
+  expect(result.bindings.map((b) => b.field)).toEqual(["alpha", "gamma"]); // source order kept
+  expect(result.removedBlockOrphans).toEqual(["beta"]);
+});
+
+test("TASK-505-01 reconcileScreenBindings is idempotent + non-destructive to a valid set", () => {
+  const once = reconcileScreenBindings(reconcileDoc, reconcileBindings);
+  const twice = reconcileScreenBindings(reconcileDoc, once.bindings);
+  expect(twice.bindings).toEqual(once.bindings);
+  expect(twice.removedBlockOrphans).toEqual([]);
+  // A fully-valid set passes through byte-identical.
+  const validOnly = reconcileBindings.filter((b) => b.blockId !== "ghost");
+  const clean = reconcileScreenBindings(reconcileDoc, validOnly);
+  expect(clean.bindings).toEqual(validOnly);
+  expect(clean.removedBlockOrphans).toEqual([]);
+});
+
+test("TASK-505-01 reconcileScreenBindings after removeScreenBlock prunes exactly the dead subtree", () => {
+  const { document: stripped } = removeScreenBlock(reconcileDoc, "group-1");
+  const result = reconcileScreenBindings(stripped, reconcileBindings);
+  expect(result.bindings.map((b) => b.field)).toEqual(["alpha"]);
+  expect(result.removedBlockOrphans).toEqual(["beta", "gamma"]);
+});
+
+test("TASK-505-01 reconcileScreenBindings after removeScreenSection prunes the whole section", () => {
+  const { document: stripped } = removeScreenSection(reconcileDoc, "section-1");
+  const result = reconcileScreenBindings(stripped, reconcileBindings);
+  expect(result.bindings).toEqual([]);
+  expect(result.removedBlockOrphans).toEqual(["alpha", "beta", "gamma"]);
 });

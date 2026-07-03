@@ -135,6 +135,7 @@ export type ScreenSectionV1 = {
   data: Record<string, unknown>;
   layout?: WidgetBlock["layout"];
   visibility?: WidgetBlock["visibility"];
+  style?: ScreenSectionStyleV1;
   blocks: ScreenBlockV1[];
 };
 
@@ -497,6 +498,97 @@ const normalizeScreenBlockStyle = (value: unknown): ScreenBlockStyleV1 | undefin
   return Object.keys(style).length > 0 ? style : undefined;
 };
 
+// TASK-505-01: section-level style channel — a NEW additive channel on ScreenSectionV1
+// (does NOT reuse the dead `layout` field; retyping `layout` to an enum-validated shape
+// would THROW on legacy WidgetLayout docs — not byte-safe). Mirrors ScreenBlockStyleV1
+// exactly: enums coerce, ints clamp (coerce-not-throw), only unknown KEYS throw.
+// `columns` absent → today's vertical `space-y-4` stack (byte-identical DOM).
+export const screenSectionColumnPresets = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "1-1",
+  "1-2",
+  "2-1",
+  "1-3",
+  "3-1",
+  "2-3",
+  "3-2",
+  "1-1-1",
+  "1-1-1-1",
+] as const;
+export type ScreenSectionColumnPreset = (typeof screenSectionColumnPresets)[number];
+
+export const SCREEN_SECTION_COLUMN_GAP_CLAMP = { min: 0, max: 64 } as const;
+
+export type ScreenSectionStyleV1 = {
+  columns?: ScreenSectionColumnPreset; // absent → vertical stack (unchanged)
+  columnGap?: number; // clamped int px 0..64
+};
+
+const screenSectionStyleAllowedKeys = ["columns", "columnGap"] as const;
+
+// Preset → grid-template-columns fr-ratio map. EXPORTED as the single source of truth;
+// 505-02 renderer emits `gridTemplateColumns: screenSectionColumnTemplate[preset]`.
+// Owner's `3/4 : 1/4` = "3-1" → "3fr 1fr"; `1/4 : 3/4` = "1-3" → "1fr 3fr".
+export const screenSectionColumnTemplate: Record<ScreenSectionColumnPreset, string> = {
+  "1": "1fr",
+  "2": "1fr 1fr",
+  "3": "1fr 1fr 1fr",
+  "4": "1fr 1fr 1fr 1fr",
+  "1-1": "1fr 1fr",
+  "1-2": "1fr 2fr",
+  "2-1": "2fr 1fr",
+  "1-3": "1fr 3fr",
+  "3-1": "3fr 1fr",
+  "2-3": "2fr 3fr",
+  "3-2": "3fr 2fr",
+  "1-1-1": "1fr 1fr 1fr",
+  "1-1-1-1": "1fr 1fr 1fr 1fr",
+};
+
+// absent/null/non-record → undefined (no throw, byte-stable); unknown style KEY throws;
+// values coerce/clamp; empty ({} / all-junk) prunes to undefined so it NEVER persists.
+const normalizeScreenSectionStyle = (value: unknown): ScreenSectionStyleV1 | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isRecord(value)) return undefined;
+  rejectUnknownKeys(value, screenSectionStyleAllowedKeys); // unknown KEY → invalid
+  const style: ScreenSectionStyleV1 = {
+    ...(value.columns !== undefined
+      ? { columns: coerceScreenEnum(value.columns, screenSectionColumnPresets, "1") }
+      : {}),
+    ...(value.columnGap !== undefined
+      ? {
+          columnGap: clampScreenInt(
+            value.columnGap,
+            SCREEN_SECTION_COLUMN_GAP_CLAMP.min, // fallback = min (junk → 0)
+            SCREEN_SECTION_COLUMN_GAP_CLAMP.min,
+            SCREEN_SECTION_COLUMN_GAP_CLAMP.max
+          ),
+        }
+      : {}),
+  };
+  return Object.keys(style).length > 0 ? style : undefined;
+};
+
+// TASK-505-01 (Item B): transient, NEVER-persisted binding-GC warning surfaced on the
+// PATCH 200 response record (505-03 renders it). Declared + exported HERE (single
+// declaring file); customScreenService.ts only re-exposes it on the returned record.
+export type CustomScreenBindingWarning = {
+  code: "binding_field_removed" | "binding_block_removed";
+  fields: string[]; // offending content-type field name(s), source order, de-duped
+};
+
+// TASK-505-01 (Item B): an OPTIONAL, caller-supplied mutable out-param threaded top-down
+// through the WRITE normalizers. Pruned orphan field names accumulate by SIDE-EFFECT — no
+// normalizer changes its return type. The service reads it AFTER the call (B5). ForRead
+// variants pass a DISCARD instance to prune silently (optional read-repair cleanup).
+export type ScreenBindingWarningSink = {
+  removedFieldOrphans: string[];
+  removedBlockOrphans: string[];
+};
+
 // TASK-500-04: static <img src> for the image kind — relative paths + http(s) only.
 // Everything else (javascript:, data:, blob:, file:, vbscript:, bare tokens, non-strings)
 // normalizes to "" (dropped, NEVER throws) so a stored value can never reach <img src>
@@ -690,11 +782,21 @@ const createDefaultScreenSection = (
 
 const normalizeScreenSection = (value: unknown, index: number): ScreenSectionV1 => {
   if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
-  rejectUnknownKeys(value, ["id", "type", "label", "data", "layout", "visibility", "blocks"]);
+  rejectUnknownKeys(value, [
+    "id",
+    "type",
+    "label",
+    "data",
+    "layout",
+    "visibility",
+    "style",
+    "blocks",
+  ]);
   const id = normalizePath(value.id ?? `section-${index + 1}`);
   const type = normalizeText(value.type) ?? "section";
   if (type !== "section") throw new Error("custom_screen_definition_invalid");
   const label = normalizeText(value.label);
+  const style = normalizeScreenSectionStyle(value.style);
   if (value.blocks !== undefined && !Array.isArray(value.blocks)) {
     throw new Error("custom_screen_definition_invalid");
   }
@@ -709,6 +811,7 @@ const normalizeScreenSection = (value: unknown, index: number): ScreenSectionV1 
     ...(value.visibility !== undefined
       ? { visibility: normalizeJsonValue(value.visibility) as WidgetBlock["visibility"] }
       : {}),
+    ...(style ? { style } : {}),
     blocks: normalizeUniqueIds(
       (value.blocks ?? []).map((item, blockIndex) => normalizeScreenBlock(item, blockIndex))
     ),
@@ -811,11 +914,17 @@ export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocument
   };
 }
 
+// TASK-505-01 (Item B): a missing-content-type-field binding (fieldRoot ∉ live schema) is
+// PRUNED + recorded when a `sink` is threaded (write=warn, ForRead=discard — both non-fatal
+// → recoverable Save), returning null to signal "drop me". Only when NO sink is threaded does
+// the field-orphan case keep the bare throw. Genuinely-malformed bindings (non-record, no
+// blockId, bad source/mode, unknown KEY) STILL throw regardless of the sink.
 const normalizeScreenFieldBinding = (
   value: unknown,
   index: number,
-  context?: CustomScreenDefinitionContext
-): ScreenFieldBinding => {
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
+): ScreenFieldBinding | null => {
   if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(value, ["id", "blockId", "widgetId", "propPath", "source", "field", "mode"]);
   const blockId = normalizeText(value.blockId) ?? normalizeText(value.widgetId);
@@ -825,7 +934,11 @@ const normalizeScreenFieldBinding = (
   const fieldRoot = field.split(".")[0] ?? field;
   const allowedFieldRoots = getAllowedBindingFieldRoots(context);
   if (allowedFieldRoots && !allowedFieldRoots.has(fieldRoot)) {
-    throw new Error("custom_screen_definition_invalid");
+    if (sink) {
+      sink.removedFieldOrphans.push(field); // PRUNE + record (write=warn / ForRead=discarded)
+      return null;
+    }
+    throw new Error("custom_screen_definition_invalid"); // only when NO sink is threaded
   }
   const source = normalizeText(value.source) ?? "entry";
   if (source !== "entry") throw new Error("custom_screen_definition_invalid");
@@ -842,12 +955,15 @@ const normalizeScreenFieldBinding = (
 
 export function normalizeScreenFieldBindings(
   value: unknown,
-  context?: CustomScreenDefinitionContext
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
 ): ScreenFieldBinding[] {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) throw new Error("custom_screen_definition_invalid");
   return normalizeUniqueIds(
-    value.map((item, index) => normalizeScreenFieldBinding(item, index, context))
+    value
+      .map((item, index) => normalizeScreenFieldBinding(item, index, context, sink))
+      .filter((binding): binding is ScreenFieldBinding => binding !== null)
   );
 }
 
@@ -1270,14 +1386,29 @@ const assertScreenFieldBindingsTargetDocument = (
   }
 };
 
+// TASK-505-01 (Item B): the SECOND (independent) binding dead-end — the list-view
+// row-template binding set. Threads the SAME shared `sink` (field-orphans via
+// normalizeScreenFieldBindings) and REPLACES the fatal block-orphan gate
+// (assertScreenFieldBindingsTargetDocument) with an INLINE prune against the already-computed
+// schemas-local Set — no import from screenDocumentOps.ts (would invert the schemas←ops layer).
 const normalizeCustomScreenListRowTemplate = (
   input: unknown,
-  context?: CustomScreenDefinitionContext
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
 ): CustomScreenListRowTemplate => {
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
   rejectUnknownKeys(input, ["document", "bindings"]);
   const document = normalizeScreenDocumentV1(input.document);
-  const bindings = normalizeScreenFieldBindings(input.bindings, context);
+  const bindings = normalizeScreenFieldBindings(input.bindings, context, sink);
+  if (sink) {
+    const blockIds = collectScreenDocumentBlockIds(document);
+    const kept: ScreenFieldBinding[] = [];
+    for (const binding of bindings) {
+      if (blockIds.size === 0 || blockIds.has(binding.blockId)) kept.push(binding);
+      else sink.removedBlockOrphans.push(binding.field);
+    }
+    return { document, bindings: kept };
+  }
   assertScreenFieldBindingsTargetDocument(document, bindings);
   return { document, bindings };
 };
@@ -1288,7 +1419,12 @@ const normalizeCustomScreenListRowTemplateForRead = (
   context?: CustomScreenDefinitionContext
 ): CustomScreenListRowTemplate => {
   try {
-    return normalizeCustomScreenListRowTemplate(input, context);
+    // Pass a DISCARD sink so field-/block-orphans prune silently (read-repair cleanup) —
+    // preserves the authored row template instead of the whole-template try/catch fallback.
+    return normalizeCustomScreenListRowTemplate(input, context, {
+      removedFieldOrphans: [],
+      removedBlockOrphans: [],
+    });
   } catch {
     return fallback;
   }
@@ -1296,7 +1432,8 @@ const normalizeCustomScreenListRowTemplateForRead = (
 
 export function normalizeCustomScreenListViewDefinition(
   input: unknown,
-  context?: CustomScreenDefinitionContext
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
 ): CustomScreenListViewDefinition {
   if (input === undefined || input === null) {
     return buildDefaultListViewDefinition(context?.contentType);
@@ -1356,7 +1493,7 @@ export function normalizeCustomScreenListViewDefinition(
   const rowTemplate =
     input.rowTemplate === undefined || input.rowTemplate === null
       ? fallbackRowTemplate
-      : normalizeCustomScreenListRowTemplate(input.rowTemplate, context);
+      : normalizeCustomScreenListRowTemplate(input.rowTemplate, context, sink);
 
   return {
     columns,
@@ -1430,7 +1567,8 @@ const collectScreenBlockIds = (document: ScreenDocumentV1) => {
 
 export function normalizeCustomScreenEditorViewDefinitionV4(
   input: unknown,
-  context?: CustomScreenDefinitionContext
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
 ): CustomScreenEditorViewDefinitionV4 {
   if (input === undefined || input === null) {
     return {
@@ -1447,8 +1585,23 @@ export function normalizeCustomScreenEditorViewDefinitionV4(
   const interactionMode = normalizeText(input.interactionMode) ?? "inline";
   if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
   const document = normalizeScreenDocumentV1(input.document);
-  const bindings = normalizeScreenFieldBindings(input.bindings, context);
+  const bindings = normalizeScreenFieldBindings(input.bindings, context, sink);
   const blockIds = collectScreenBlockIds(document);
+  // TASK-505-01 (Item B): when a sink is threaded, PRUNE block-orphans inline (recoverable
+  // Save) instead of hard-throwing; no reconcileScreenBindings import (schemas←ops layering).
+  if (sink) {
+    const kept: ScreenFieldBinding[] = [];
+    for (const binding of bindings) {
+      if (blockIds.size === 0 || blockIds.has(binding.blockId)) kept.push(binding);
+      else sink.removedBlockOrphans.push(binding.field);
+    }
+    return {
+      document,
+      bindings: kept,
+      saveMode: "entry",
+      interactionMode: "inline",
+    };
+  }
   if (blockIds.size > 0 && bindings.some((binding) => !blockIds.has(binding.blockId))) {
     throw new Error("custom_screen_definition_invalid");
   }
@@ -1462,7 +1615,7 @@ export function normalizeCustomScreenEditorViewDefinitionV4(
 
 export function normalizeCustomScreenEditorViewDefinitionV4ForRead(
   input: unknown,
-  context?: CustomScreenDefinitionContext
+  _context?: CustomScreenDefinitionContext
 ): CustomScreenEditorViewDefinitionV4 {
   if (input === undefined || input === null) {
     return {
@@ -1479,14 +1632,26 @@ export function normalizeCustomScreenEditorViewDefinitionV4ForRead(
   const interactionMode = normalizeText(input.interactionMode) ?? "inline";
   if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
   const document = normalizeScreenDocumentV1ForRead(input.document);
-  const bindings = normalizeScreenFieldBindings(input.bindings, context);
+  // TASK-505-01/03 (Item B) — read-path RETAINS field-orphans so recovery UX can NAME them.
+  // A field-orphan (binding → LIVE block, but its content-type field was deleted AFTER save)
+  // is created by an EXTERNAL schema change, never re-saved, so it can only surface on
+  // reopen. We therefore normalize bindings WITHOUT content-type context (skips field-root
+  // validation → the orphan is kept, not pruned, not thrown) so the editor's
+  // detectScreenBindingOrphans can raise the amber "Orphaned field bindings" notice naming
+  // the dead field (505-03 Acceptance #5/#6, 505-04 SMOKE #4/#5). The WRITE path still prunes
+  // field-orphans on Save (recoverable Save + post-save `binding_field_removed` warning).
+  // Block-orphans (binding → a block that no longer exists) CANNOT be persisted — the write
+  // path prunes them on Save — and a dead blockId can never render, so they are dropped on
+  // read (structural, context-independent) exactly as before. Genuinely-malformed bindings
+  // still throw here and fall through to the outer read-repair.
+  const bindings = normalizeScreenFieldBindings(input.bindings);
   const blockIds = collectScreenBlockIds(document);
-  if (blockIds.size > 0 && bindings.some((binding) => !blockIds.has(binding.blockId))) {
-    throw new Error("custom_screen_definition_invalid");
-  }
+  const keptBindings = bindings.filter(
+    (binding) => blockIds.size === 0 || blockIds.has(binding.blockId)
+  );
   return {
     document,
-    bindings,
+    bindings: keptBindings,
     saveMode: "entry",
     interactionMode: "inline",
   };
@@ -1713,7 +1878,8 @@ export function normalizeCustomScreenDefinitionForWrite(
     listView?: unknown;
     editorView?: unknown;
   } = {},
-  context?: CustomScreenDefinitionContext
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
 ): CustomScreenDefinition {
   if (input.blocks !== undefined || input.bindings !== undefined) {
     throw new Error("custom_screen_legacy_write_unsupported");
@@ -1760,8 +1926,8 @@ export function normalizeCustomScreenDefinitionForWrite(
   rejectUnknownKeys(rawInput, ["schemaVersion", "listView", "editorView"]);
   return {
     schemaVersion: 4,
-    listView: normalizeCustomScreenListViewDefinition(rawInput.listView, context),
-    editorView: normalizeCustomScreenEditorViewDefinitionV4(rawInput.editorView, context),
+    listView: normalizeCustomScreenListViewDefinition(rawInput.listView, context, sink),
+    editorView: normalizeCustomScreenEditorViewDefinitionV4(rawInput.editorView, context, sink),
   };
 }
 
@@ -2275,6 +2441,22 @@ const screenBlockV1Schema = {
   additionalProperties: false,
 } as const;
 
+// TASK-505-01: Ajv mirror of ScreenSectionStyleV1 — references the SAME exported constants
+// as normalizeScreenSectionStyle (zero drift). Rejects out-of-range gap / unknown key at the
+// route edge (additionalProperties:false); stored docs read through the coercing normalizer.
+const screenSectionStyleV1Schema = {
+  type: "object",
+  properties: {
+    columns: { enum: screenSectionColumnPresets },
+    columnGap: {
+      type: "integer",
+      minimum: SCREEN_SECTION_COLUMN_GAP_CLAMP.min,
+      maximum: SCREEN_SECTION_COLUMN_GAP_CLAMP.max,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
 const screenSectionV1Schema = {
   type: "object",
   required: ["id", "type", "data", "blocks"],
@@ -2285,6 +2467,7 @@ const screenSectionV1Schema = {
     data: { type: "object" },
     layout: { type: "object" },
     visibility: { type: "object" },
+    style: screenSectionStyleV1Schema,
     blocks: {
       type: "array",
       maxItems: 500,

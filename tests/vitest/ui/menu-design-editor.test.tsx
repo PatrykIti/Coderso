@@ -1516,3 +1516,345 @@ test("recursive NavItemsPreview renders grandchildren inside .site-nav-sublist .
 
   cleanup();
 });
+
+// --- TASK-504-04: brand style, per-level styling, cheap wins, B1/B2 ----------
+
+const hasGroup = (container: ParentNode, label: string) =>
+  Array.from(container.querySelectorAll('[role="group"]')).some(
+    (group) => group.getAttribute("aria-label") === label
+  );
+
+/** Click the first non-transparent palette swatch inside a color-swatch group. */
+const clickFirstSwatch = (container: ParentNode, groupLabel: string) => {
+  const group = Array.from(container.querySelectorAll('[role="group"]')).find(
+    (entry) =>
+      entry.getAttribute("aria-label") === groupLabel &&
+      entry.closest('[data-page-editor-control="color-swatch"]')
+  );
+  expect(group, `swatch group "${groupLabel}"`).toBeTruthy();
+  const swatch = Array.from(group!.querySelectorAll("[data-page-editor-color-swatch]")).find(
+    (button) => button.getAttribute("data-page-editor-color-swatch") !== "transparent"
+  );
+  expect(swatch, `a palette swatch in "${groupLabel}"`).toBeTruthy();
+  React.act(() => {
+    swatch?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
+const brandBlock = (doc?: SavedMenuDocument) =>
+  doc?.sections[0]?.blocks.find((b) => b.type === "brand") as
+    | (SavedMenuBlock & {
+        responsive?: {
+          tablet?: { style?: Record<string, unknown> };
+          mobile?: { style?: Record<string, unknown> };
+        };
+      })
+    | undefined;
+const navBlock = (doc?: SavedMenuDocument) =>
+  doc?.sections[0]?.blocks.find((b) => b.type === "nav-items") as SavedMenuBlock | undefined;
+
+test("brand style controls are mode-gated and write props.style (base, sparse)", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Brand");
+
+  // Text mode ⇒ typography controls present; image-only controls absent.
+  expect(hasGroup(container, "Brand font weight")).toBe(true);
+  expect(sliderValue(container, "Brand font size")).toBeTruthy();
+  expect(sliderValue(container, "Logo height")).toBeUndefined();
+
+  // Switch to image ⇒ typography controls disappear, image controls appear.
+  clickSegmented(container, "Mode", "image");
+  expect(hasGroup(container, "Brand font weight")).toBe(false);
+  expect(sliderValue(container, "Brand font size")).toBeUndefined();
+  expect(sliderValue(container, "Logo height")).toBeTruthy();
+  expect(sliderValue(container, "Logo max width")).toBeTruthy();
+  clickSegmented(container, "Mode", "text");
+
+  // A base write lands ONLY the touched key in brand.props.style.
+  setSliderValue(container, "Brand font size", "30");
+  clickButton(container, "Save");
+  await flush();
+  const brand = brandBlock(readLastSavedDocument());
+  expect(brand?.props.style).toEqual({ fontSize: 30 });
+  expect(readLastSavedDocument()?.sections[0]?.responsive).toBeUndefined();
+
+  cleanup();
+});
+
+test("brand font weight 'Theme' DELETES style.fontWeight (prunes empty style)", async () => {
+  seedDocument((doc) => {
+    const brand = doc.sections[0]!.blocks.find((b) => b.type === "brand");
+    if (brand?.type === "brand") brand.props.style = { fontWeight: 600 };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Brand");
+
+  clickSegmented(container, "Brand font weight", "inherit");
+  clickButton(container, "Save");
+  await flush();
+  const brand = brandBlock(readLastSavedDocument());
+  expect(Object.prototype.hasOwnProperty.call(brand?.props ?? {}, "style")).toBe(false);
+
+  cleanup();
+});
+
+test("Level SegmentedControl rebinds the nav control set to levelStyles[N]", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Level 0 = the existing nav base (Orientation present, no container heading).
+  expect(hasGroup(container, "Orientation")).toBe(true);
+  expect(container.textContent).not.toContain("Dropdown container");
+
+  // Level 1 ⇒ the level control set (base scalars gone, container controls in).
+  clickSegmented(container, "Nesting level", "1");
+  expect(hasGroup(container, "Orientation")).toBe(false);
+  expect(container.textContent).toContain("Dropdown container");
+  setSliderValue(container, "Font size", "20");
+  clickButton(container, "Save");
+  await flush();
+  let nav = navBlock(readLastSavedDocument());
+  expect((nav?.props.levelStyles as Record<string, { fontSize?: number }>)?.[1]?.fontSize).toBe(20);
+  // The level write never touches the base scalar.
+  expect(nav?.props.fontSize).toBeUndefined();
+
+  // Level 2 writes levelStyles[2], never levelStyles[1].
+  clickSegmented(container, "Nesting level", "2");
+  setSliderValue(container, "Corner radius", "12");
+  clickButton(container, "Save");
+  await flush();
+  nav = navBlock(readLastSavedDocument());
+  expect((nav?.props.levelStyles as Record<string, { radius?: number }>)?.[2]?.radius).toBe(12);
+
+  cleanup();
+});
+
+test("NavLevelInheritBadge tracks per-field override ('This level' vs 'Inherits level 0')", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.levelStyles = { 1: { linkColor: "#ff0000" } };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  const overridden = findMenuResponsiveField(container, "Link color").querySelector(
+    "[data-menu-level-field]"
+  );
+  expect(overridden?.getAttribute("data-menu-level-field")).toBe("override");
+  expect(overridden?.textContent).toBe("This level");
+
+  const inherited = findMenuResponsiveField(container, "Font size").querySelector(
+    "[data-menu-level-field]"
+  );
+  expect(inherited?.getAttribute("data-menu-level-field")).toBe("inherited");
+  expect(inherited?.textContent).toBe("Inherits level 0");
+
+  cleanup();
+});
+
+test("device-forked brand style write ⇒ responsive.mobile.style (Override badge)", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Brand");
+
+  setSliderValue(container, "Brand font size", "28");
+  clickButton(container, "Save");
+  await flush();
+  const brand = brandBlock(readLastSavedDocument());
+  expect(brand?.responsive?.mobile?.style).toEqual({ fontSize: 28 });
+  expect(brand?.props.style).toBeUndefined();
+  expect(
+    findMenuResponsiveField(container, "Brand font size").querySelector(
+      '[data-menu-responsive-badge="override"]'
+    )
+  ).toBeTruthy();
+
+  cleanup();
+});
+
+test("device-forked level write ⇒ responsive.mobile.navProps.levelStyles[1]", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  setSliderValue(container, "Font size", "22");
+  clickButton(container, "Save");
+  await flush();
+  const override = readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps
+    ?.levelStyles as Record<string, { fontSize?: number }> | undefined;
+  expect(override?.[1]?.fontSize).toBe(22);
+  // Base props untouched (mobile did NOT inherit into the base).
+  expect(navBlock(readLastSavedDocument())?.props.levelStyles).toBeUndefined();
+
+  cleanup();
+});
+
+test("Reset prunes the stored brand-style responsive record verbatim", async () => {
+  seedDocument((doc) => {
+    const brand = doc.sections[0]!.blocks.find((b) => b.type === "brand");
+    if (brand?.type === "brand") brand.responsive = { mobile: { style: { fontSize: 28 } } };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Brand");
+
+  clickSelector(container, '[data-menu-responsive-reset="Brand font size"]');
+  clickButton(container, "Save");
+  await flush();
+  const brand = brandBlock(readLastSavedDocument());
+  expect(brand?.responsive).toBeUndefined();
+  expect(JSON.stringify(readLastSavedDocument())).not.toContain('"responsive"');
+
+  cleanup();
+});
+
+test("cheap-win level-0 controls: Link padding/radius + 'Hover text' distinct from 'Hover background'", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Two DISTINCT hover controls.
+  expect(hasGroup(container, "Hover text")).toBe(true);
+  expect(hasGroup(container, "Hover background")).toBe(true);
+  // Per-link padding + radius sliders present.
+  expect(sliderValue(container, "Link padding X")).toBeTruthy();
+  expect(sliderValue(container, "Link padding Y")).toBeTruthy();
+  expect(sliderValue(container, "Link radius")).toBeTruthy();
+
+  setSliderValue(container, "Link padding X", "20");
+  clickButton(container, "Save");
+  await flush();
+  const nav = navBlock(readLastSavedDocument());
+  expect(nav?.props.linkPaddingX).toBe(20);
+  // Untouched hover-text default OMITS the key (present-only, sparse).
+  expect(Object.prototype.hasOwnProperty.call(nav?.props ?? {}, "linkHoverTextColor")).toBe(false);
+
+  // Setting a hover-text color writes linkHoverTextColor (distinct from linkHoverColor).
+  clickFirstSwatch(container, "Hover text");
+  clickButton(container, "Save");
+  await flush();
+  expect(navBlock(readLastSavedDocument())?.props.linkHoverTextColor).toBeTruthy();
+
+  cleanup();
+});
+
+test("canvas force-open threads the selected level (cumulative) into the preview CSS", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  const styleText = () => canvasFrame(container).querySelector("style")?.textContent ?? "";
+
+  // Level 0 ⇒ NO force-open rule (byte-identical preview).
+  expect(styleText()).not.toContain(
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}"
+  );
+
+  // Level 1 ⇒ depth-1 sim-open only.
+  clickSegmented(container, "Nesting level", "1");
+  expect(styleText()).toContain(
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}"
+  );
+  expect(styleText()).not.toContain(".site-nav-sublist .site-nav-sublist{display:grid}");
+
+  // Level 2 ⇒ CUMULATIVE (depth 1 AND depth 2 open).
+  clickSegmented(container, "Nesting level", "2");
+  expect(styleText()).toContain(
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}"
+  );
+  expect(styleText()).toContain(".site-nav-sublist .site-nav-sublist{display:grid}");
+
+  cleanup();
+});
+
+test("brand IMAGE mode renders a real <img> (resolved src) on the canvas, stamped with data-menu-block-id (B1)", async () => {
+  seedDocument((doc) => {
+    const brand = doc.sections[0]!.blocks.find((b) => b.type === "brand");
+    if (brand?.type === "brand") {
+      brand.props.mode = "image";
+      brand.props.image = { src: "https://cdn.test/logo.png", alt: "Acme logo" };
+    }
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  const anchor = canvasFrame(container).querySelector(".site-header-brand") as HTMLElement;
+  const img = anchor.querySelector("img");
+  expect(img?.getAttribute("src")).toBe("https://cdn.test/logo.png");
+  expect(anchor.textContent).not.toContain("Logo");
+  // §3 stamp: the rule reaches the <a> (and its <img>).
+  expect(anchor.getAttribute("data-menu-block-id")).toBeTruthy();
+
+  cleanup();
+});
+
+test("brand image mode with NO logo falls back to text (no broken <img>)", async () => {
+  settingsState.payload = { "site.name": "Fallback Site" };
+  seedDocument((doc) => {
+    const brand = doc.sections[0]!.blocks.find((b) => b.type === "brand");
+    if (brand?.type === "brand") brand.props.mode = "image";
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+
+  const anchor = canvasFrame(container).querySelector(".site-header-brand") as HTMLElement;
+  expect(anchor.querySelector("img")).toBeNull();
+  expect(anchor.textContent).toBe("Fallback Site");
+
+  cleanup();
+});
+
+test("nav font-size UNSET shows the inherited value (16), distinct from an explicit 15 (B2)", async () => {
+  const first = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(first.container, "Navigation items");
+  // Unset ⇒ shows 16 (the theme-inherited size) + an "Inherited" hint.
+  expect(sliderValue(first.container, "Font size")).toBe("16");
+  expect(first.container.querySelector('[data-menu-font-size-inherited="true"]')).toBeTruthy();
+  first.cleanup();
+
+  menusClientState.reset();
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.fontSize = 15;
+  });
+  const second = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(second.container, "Navigation items");
+  // Explicit 15 ⇒ shows 15, NO inherited hint.
+  expect(sliderValue(second.container, "Font size")).toBe("15");
+  expect(second.container.querySelector('[data-menu-font-size-inherited="true"]')).toBeNull();
+  second.cleanup();
+});
+
+test("no setState-in-effect: brand/level/device flows emit no React act/update warnings", async () => {
+  const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Brand");
+  clickSegmented(container, "Mode", "image");
+  clickSegmented(container, "Mode", "text");
+  setSliderValue(container, "Brand font size", "24");
+  switchDevice(container, "Mobile");
+  // Deselect (canvas scroller) so the block rows return, then pick nav-items.
+  clickSelector(container, '[data-menu-design-canvas-scroller="true"]');
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+  clickSegmented(container, "Nesting level", "0");
+  await flush();
+
+  const warnings = errorSpy.mock.calls
+    .map((call) => String(call[0]))
+    .filter((message) => /not wrapped in act|state update|Warning:/i.test(message));
+  expect(warnings).toEqual([]);
+  errorSpy.mockRestore();
+  cleanup();
+});

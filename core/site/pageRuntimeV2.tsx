@@ -23,6 +23,11 @@ export type PageTemplatePropsV2 = {
   siteShell?: SiteShellRenderProps | null;
   /** Site name for the shell header brand link. */
   siteName?: string | null;
+  /**
+   * TASK-504-03: current request path (front only; `null`/absent in preview) —
+   * forwarded ONLY into the document-header branch to stamp `aria-current`.
+   */
+  activePath?: string | null;
 };
 
 export function DefaultRuntimePageShellV2({
@@ -31,6 +36,7 @@ export function DefaultRuntimePageShellV2({
   runtimeDataByBlockId,
   siteShell,
   siteName,
+  activePath,
 }: PageTemplatePropsV2) {
   return (
     <>
@@ -40,6 +46,7 @@ export function DefaultRuntimePageShellV2({
           navigation={siteShell.navigation}
           siteName={siteName}
           breakpoint={previewDevice}
+          activePath={activePath}
         />
       ) : siteShell?.navigation ? (
         <SiteHeaderNav

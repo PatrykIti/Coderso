@@ -72,6 +72,19 @@ export type MenuAppearance = {
   linkColor?: string;
   linkHoverColor?: string;
   linkActiveColor?: string;
+  /**
+   * Nav-link cheap-win scalars (TASK-504-01 §2a). Sparse-optional like every
+   * other member (NOT `| null`) so `NavItemsProps = Pick<MenuAppearance, …>`
+   * stays all-optional. They carry NO resolution default — NOT seeded into
+   * `MENU_APPEARANCE_DEFAULTS`/`SHELL_APPEARANCE_DEFAULTS` (parent §4(a)/(b));
+   * they resolve to `undefined` when unauthored and 504-02 emits them
+   * PRESENT-ONLY (zero bytes when unset ⇒ no-override byte-identity holds).
+   */
+  linkPaddingX?: number;
+  linkPaddingY?: number;
+  linkRadius?: number;
+  /** Hover TEXT color (distinct from `linkHoverColor` = hover BACKGROUND). */
+  linkHoverTextColor?: string;
   /** Gap between top-level nav items, px. */
   itemGap?: number;
   /** Header bar vertical padding, px. */
@@ -116,6 +129,12 @@ export const menuAppearanceNumberRanges = {
   paddingX: { min: 0, max: 64 },
   fontSize: { min: 10, max: 32 },
   borderWidth: { min: 0, max: 8 },
+  // Nav-link cheap-win scalars (TASK-504-01 §2a) — first-class shared-table
+  // clamps (they ARE appearance concepts riding the scalar delta channel,
+  // unlike the local Brand*/NavLevel* ranges in menuDocumentV2.ts).
+  linkPaddingX: { min: 0, max: 40 },
+  linkPaddingY: { min: 0, max: 32 },
+  linkRadius: { min: 0, max: 32 },
 } as const;
 
 type MenuAppearanceNumberField = keyof typeof menuAppearanceNumberRanges;
@@ -182,6 +201,10 @@ const fieldNormalizers: FieldNormalizers = {
   linkColor: normalizeColor,
   linkHoverColor: normalizeColor,
   linkActiveColor: normalizeColor,
+  linkPaddingX: (value) => normalizeNumber("linkPaddingX", value),
+  linkPaddingY: (value) => normalizeNumber("linkPaddingY", value),
+  linkRadius: (value) => normalizeNumber("linkRadius", value),
+  linkHoverTextColor: normalizeColor,
   itemGap: (value) => normalizeNumber("itemGap", value),
   paddingY: (value) => normalizeNumber("paddingY", value),
   paddingX: (value) => normalizeNumber("paddingX", value),

@@ -1108,7 +1108,7 @@ the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
   `menus.settings.published`; menus issue no preview tokens — the live canvas
   IS the preview.
 
-## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502
+## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504
 
 The Design tab of a menu edits a dedicated document contract owned by
 `core/services/menus/menuDocumentV2.ts` (NOT a Page v2 document). It persists
@@ -1286,6 +1286,86 @@ cta panel adds a "Size" SegmentedControl + "Open in new tab" toggle rendered
 via the real leaf through a local `canvasMenuLeafToPageBlock` replica
 (visibility forced true); the divider renders the real leaf frame (no literal
 "—"); `NavItemsPreview` is recursive (grandchildren reachable, never dropped).
+
+**Styling depth — brand style, per-level styling & cheap wins (TASK-504,
+per-device):** No `schemaVersion` bump, no new route/RBAC/migration; nothing
+new enters the base sheet (`buildSiteShellCss(null)` byte-identical), and
+no-override docs stay byte-identical on both CSS builders — all new styling
+ONLY overrides the hardcoded base from the `[data-site-menu-doc]` doc scope by
+later source order.
+
+- **`BrandStyle` (`brand.props.style`):** text-mode `fontSize`/`fontWeight`/
+  `color`/`textTransform`/`letterSpacing` + image-mode `height`/`maxWidth`,
+  validated by `normalizeBrandStyle` (reject-unknown KEYS with `path`; bad
+  VALUES fail-SOFT → omitted, sparse; prune-empty ⇒ legacy brand byte-identical).
+  NEW local clamp table `BRAND_STYLE_NUMBER_RANGES`: `fontSize [10,48]`,
+  `letterSpacing [-2,8]` (NEGATIVE allowed — distinct from the nav `10..32`),
+  `height [16,120]`, `maxWidth [40,400]`. `"style"` is the CONSCIOUS widening of
+  `BRAND_PROP_KEYS`; its READ trap is asserted by round-trip. Brand IMAGE mode
+  resolves its `<img>` src via the exported `resolveBrandImageSrc` (single home;
+  front + canvas import it) sized by `height`/`maxWidth` (defect B1 fix).
+- **`NavLevelStyle` / `NavItemsProps.levelStyles` (`{ 1?, 2? }`):** per-level
+  link typography + state (`linkColor`/`linkHoverColor`/`linkHoverTextColor`/
+  `linkActiveColor`/`fontSize`/`fontWeight`/`gap`/`paddingX`/`paddingY`) + submenu
+  CONTAINER chrome for levels ≥1 (`background`/`borderColor`/`borderWidth`/
+  `radius`/`shadow`/`minWidth`). Cap at **levels 0 / 1 / 2+**: level 0 = the
+  EXISTING flat `.site-nav-link` base (NO new type, NOT re-emitted), `1` = first
+  dropdown, `2` = "level 2 AND deeper" via a descendant selector. `NAV_LEVEL_NUMBER_RANGES`:
+  `fontSize [10,32]`, `gap [0,32]`, `paddingX [0,40]`, `paddingY [0,32]`,
+  `borderWidth [0,8]`, `radius [0,32]`, `minWidth [80,480]`. `normalizeNavItemsProps`
+  SPLITS `levelStyles` off the raw props BEFORE the flat `NAV_ITEMS_PROP_KEYS`
+  subset check and validates it via `normalizeNavLevelStyles` (reject-unknown
+  OUTER level keys — only `"1"`/`"2"` — and per-level style keys); `"levelStyles"`
+  is NOT added to `NAV_ITEMS_PROP_KEYS` (that const stays `... satisfies readonly
+  (keyof MenuAppearance)[]`) — the carrier type widens to `Pick<…> & { levelStyles? }`.
+  Its READ trap is asserted by round-trip (whole-doc blast radius).
+- **Inheritance is PURE CSS cascade + source order (no runtime merge):** emit
+  level 0, then 1, then 2, each only its own present overrides. Exact depth
+  selectors (`${scope}` = `[data-site-menu-doc="true"]`):
+  - Level 1 link: `${scope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-link`
+  - Level 1 container: `${scope} … > .site-nav-sublist, ${scope} … > .site-nav-sublist .site-nav-sublist`
+  - Level 2 link: `${scope} … > .site-nav-sublist .site-nav-sublist .site-nav-link`
+  - Level 2 container: the ANCHORED `${scope} … > .site-nav-sublist .site-nav-sublist`
+    (NOT the short `.site-nav-sublist .site-nav-sublist`).
+  The DESCENDANT combinators are deliberate: because the level-1 selectors also
+  reach deeper links/containers, "level 2 inherits level 1 where unset" holds by
+  cascade, and the specificity ordering L0 < L1 < L2 (and the anchored level-2
+  container tying level-1's reach + winning by source order) makes deeper levels
+  override. The strict-CHILD form (`… > .site-nav-sublist > li > .site-nav-link`)
+  is REJECTED — it would make level 2 inherit level 0 instead of level 1.
+- **Sublist chrome** (the level ≥1 CONTAINER fields) OVERRIDES the hardcoded
+  base `.site-nav-sublist` chrome from the doc scope only; the base sheet is
+  untouched.
+- **Cheap wins:** per-link `linkPaddingX`/`linkPaddingY`/`linkRadius` group on
+  `.site-nav-link`, a hover TEXT color (`linkHoverTextColor` on
+  `.site-nav-link:hover`), and a current-page rule
+  `:where([aria-current="page"])` colored by the EXISTING `linkActiveColor`.
+  These four keys are first-class `MenuAppearance` vocabulary (so they ride
+  `collectDeltaRules` per-device FREE) but carry **NO resolution default** (NOT
+  seeded into `MENU_APPEARANCE_DEFAULTS`/`SHELL_APPEARANCE_DEFAULTS`) — emission
+  is PRESENT-ONLY (each rule-group `base()` returns `null` unless authored) so a
+  no-override doc gains ZERO new doc-sheet bytes. `aria-current="page"` is stamped
+  FRONT-only: `activePath` is threaded `SiteHeaderMenuDocumentRender →
+  NavItemsRender → SiteNavItem → SiteNavLink` (server-component-safe; producer
+  wired via `renderPublicPageHtmlInternal` `requestPath`); the canvas preview
+  stamps none (no route concept).
+- **Per-device (tablet + mobile) brand & level channel:** brand `style` overrides
+  ride the BLOCK responsive (`responsive[bp].style`; `normalizeMenuBlockResponsive`'s
+  group-key gate widened to accept `"style"`, the READ twin of the `BRAND_PROP_KEYS`
+  widening); level styles ride the SECTION responsive
+  (`responsive[bp].navProps.levelStyles`). Both follow the Pages cascade (tablet
+  AND mobile inherit DESKTOP; mobile ≠ tablet). Level LINK typography + brand base
+  fold into the all-width base (mobile inherits desktop); level CONTAINER chrome
+  folds into the ≥640 shared bucket (a harmless present-only no-op below 640 where
+  the nav is inline). Neither dimension rides the scalar `collectDeltaRules`
+  channel — each uses its OWN parallel resolve-and-diff vs DESKTOP into the bounded
+  tablet `@media (min-width:640px) and (max-width:1023px)` and mobile
+  `@media (max-width:639px)` buckets. Dedicated NEW helpers back the writes/resets
+  (`patchMenuBrandStyleForDevice`/`clearMenuBrandStyleOverride`; a nested-path
+  `patchMenuSectionForDevice` variant + nested raw-read with a DEEP prune chain)
+  — the flat/visibility-only helpers cannot reach the nested paths. The canvas
+  `buildMenuDocumentPreviewCss` force-open opens the WHOLE ancestor chain
+  (levels 1..N) for the selected level, appended LAST (the single canvas-only add).
 
 ## Revisions And Autosave
 

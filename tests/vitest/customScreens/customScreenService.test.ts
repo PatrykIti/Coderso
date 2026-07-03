@@ -516,6 +516,126 @@ test("updateCustomScreen rejects an unknown style key with custom_screen_definit
   expect(mockDb.state.lastUpdateValues).toBeNull();
 });
 
+test("TASK-505-01 updateCustomScreen accepts a section-style V4 definition and preserves it", async () => {
+  const styledDefinition = makeV4Definition("field-1");
+  const styledSection = styledDefinition.editorView.document.sections[0] as Record<string, unknown>;
+  styledSection.style = { columns: "3-1", columnGap: 24 };
+
+  mockDb.state.selectRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1") }),
+  ];
+  mockDb.state.updateRows = [createRow({ schemaVersion: 4, definition: styledDefinition })];
+
+  const result = await updateCustomScreen("screen-1", { definition: styledDefinition });
+
+  // The real write normalizer preserves the validated section style (only db is mocked).
+  const writtenSection = (
+    mockDb.state.lastUpdateValues?.definition as {
+      editorView: { document: { sections: Array<Record<string, unknown>> } };
+    }
+  ).editorView.document.sections[0];
+  expect(writtenSection?.style).toEqual({ columns: "3-1", columnGap: 24 });
+  expect(result?.definition.editorView.document.sections[0]?.style).toEqual({
+    columns: "3-1",
+    columnGap: 24,
+  });
+});
+
+test("TASK-505-01 updateCustomScreen runs the normalize-time GC safety net: a block-orphan binding is pruned on write and its field name is surfaced", async () => {
+  const orphanDefinition = makeV4Definition("field-1");
+  orphanDefinition.editorView.bindings = [
+    ...orphanDefinition.editorView.bindings,
+    {
+      id: "ghost-binding",
+      blockId: "ghost", // no live block in the document → block-orphan
+      propPath: "value",
+      source: "entry",
+      field: "beds",
+      mode: "readwrite",
+    },
+  ];
+
+  mockDb.state.selectRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1") }),
+  ];
+  mockDb.state.updateRows = [
+    createRow({ schemaVersion: 4, definition: makeV4Definition("field-1") }),
+  ];
+
+  const result = await updateCustomScreen("screen-1", { definition: orphanDefinition });
+
+  // The write safety-net inside normalizeCustomScreenEditorViewDefinitionV4 pruned the
+  // block-orphan instead of hard-throwing custom_screen_definition_invalid.
+  const writtenBindings = (
+    mockDb.state.lastUpdateValues?.definition as {
+      editorView: { bindings: Array<{ blockId: string; field: string }> };
+    }
+  ).editorView.bindings;
+  expect(writtenBindings.map((b) => b.blockId)).toEqual(["field-1"]);
+  // The pruned field name surfaces on the transient PATCH-200 warnings carry.
+  expect(result?.warnings).toEqual([{ code: "binding_block_removed", fields: ["beds"] }]);
+});
+
+test("TASK-505-01 a stored block-orphan definition READS non-fatally (getCustomScreen resolves, no throw)", async () => {
+  const storedDefinition = makeV4Definition("field-1");
+  storedDefinition.editorView.bindings = [
+    ...storedDefinition.editorView.bindings,
+    {
+      id: "ghost-binding",
+      blockId: "ghost",
+      propPath: "value",
+      source: "entry",
+      field: "beds",
+      mode: "readwrite",
+    },
+  ];
+
+  mockDb.state.selectRows = [createRow({ schemaVersion: 4, definition: storedDefinition })];
+
+  // normalizeCustomScreenDefinitionForRead's read-repair prunes the orphan silently — the
+  // screen OPENS (200/non-null) rather than 400ing; recovery/saveability is the write path's job.
+  const result = await getCustomScreen("screen-1");
+  expect(result).not.toBeNull();
+  expect(result?.definition.editorView.document.sections[0]?.blocks[0]?.id).toBe("field-1");
+});
+
+test("TASK-505-03 a stored field-orphan RETAINS the binding on read (real getCustomScreen, active content-type context) so the reopen recovery notice can name it", async () => {
+  // Regression guard for the read-vs-recovery contradiction: field-orphans (binding →
+  // LIVE block, but the content-type field was deleted AFTER save) are created by an
+  // EXTERNAL schema change and never re-saved, so they can ONLY surface on reopen. If the
+  // server read path pruned them (as an earlier draft did), CustomScreenEditorPage's
+  // detectScreenBindingOrphans would see nothing and the amber "Orphaned field bindings"
+  // notice (505-03 Acceptance #5/#6) could never fire in production. The row carries a real
+  // `schema` so loadContentTypesById resolves an ACTIVE context (allowed roots = {title}) —
+  // "bathrooms" is a genuine field-orphan under that context, yet the read must KEEP it.
+  const storedDefinition = makeV4Definition("field-1");
+  storedDefinition.editorView.bindings = [
+    ...storedDefinition.editorView.bindings,
+    {
+      id: "orphan-binding",
+      blockId: "field-1", // LIVE block → this is a FIELD-orphan, not a block-orphan
+      propPath: "value",
+      source: "entry",
+      field: "bathrooms", // not on the (title-only) content-type schema
+      mode: "readwrite",
+    },
+  ];
+
+  mockDb.state.selectRows = [
+    createRow({
+      schemaVersion: 4,
+      definition: storedDefinition,
+      schema: { properties: { title: { type: "string" } } },
+    }),
+  ];
+
+  const result = await getCustomScreen("screen-1");
+  expect(result).not.toBeNull();
+  // The orphan survives the read (unpruned) so the editor can detect + NAME it; the WRITE
+  // path prunes it on Save (recoverable Save + post-save binding_field_removed warning).
+  expect(result?.definition.editorView.bindings.map((b) => b.field)).toContain("bathrooms");
+});
+
 test("deleteCustomScreen returns the normalized deleted record or null", async () => {
   mockDb.state.deleteRows = [createRow()];
 
