@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 329 tasks
+- **To Do:** 335 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2792 tasks
 
@@ -101,6 +101,12 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-508 | Menu Nesting Forms + Flyout Fix | High | Large | Same architecture family as 504/505/506/507 (menuDocumentV2 doc contract + doc-scoped CSS via the ONE shared `buildMenuRuleSetsForDocument` + `MenuDesignEditor`). REQ1: real dropdown-container default hints (180px/6px, never `0`/undefined) + per-level link alignment (center dropdown text). REQ2: REPLACE the inert `allow-discrete`/`@starting-style` flyout with a robust visibility/opacity/transform reveal that ACTUALLY animates (zero-JS reachability kept). REQ3: BOTH a unified submenu DIRECTION `right/down/up/left` across all nested depths AND an accordion inline mode (`submenuMode`). Reject-unknown, byte-identity, present-only, per-device. NO schemaVersion bump/route/RBAC/migration. 5 subtasks (01–05). |
+| TASK-508-01 | Menu Model — Align, Direction & Accordion | High | Large | Sole writer of `menuDocumentV2.ts`: `linkAlign` on `NavLevelStyle`; `submenuDirection`+`submenuMode` on `NavChromeStyle`; base-sheet mirror consts (180/6); R1(a) `resolveNavKeyThemeDefault` fix for `minWidth`/`containerPaddingX/Y` (+ remove the pad keys from the gated "Not applied" list); allowlist/enum-partition/`NAV_CHROME_DEFAULTS` extensions + fail-closed READ-trap round-trips. |
+| TASK-508-02 | Menu CSS — Flyout, Direction & Accordion | High | Large | Sole writer of `menuDocumentCss.ts`: `linkAlign` `text-align` emission + compare-keys; robust `flyoutAnimRule` rewrite (visibility/opacity/transform, drop `@starting-style`/`allow-discrete`) + `previewForceOpenLevel` `visibility:visible`; `submenuDirection` two-rule all-four-offset emitter (level-1 precise + anchored (0,5,0)); accordion emitter (vertical stack + `position:static` + indent); present-only, per-device, `linkOnly` split. |
+| TASK-508-03 | Front & Preview Parity | High | Medium | Sole writer of `siteShell.tsx` (expected ZERO changes): assert the recursive nav structure already supports every new field, `buildSiteShellCss(null)` + no-override doc render byte-identity; land any proven-necessary hook here. |
+| TASK-508-04 | Design Editor — Align, Direction & Accordion Controls | High | Large | Sole writer of `MenuDesignEditor.tsx`: per-level `linkAlign` seg; nav-global `submenuDirection`+`submenuMode` SegmentedControls in the level-0 nav-base panel; label maps. R1(a) needs no editor edit (model fix auto-fixes hint+thumb). Canvas force-open consumes 508-02 preview emission. |
+| TASK-508-05 | Menu Nesting Forms — Tests, Docs & Closure | Medium | Medium | Vitest (round-trip/reject-unknown/R1(a) provider/CSS emission goldens/editor) + Bun (menus routes + menu-document-render byte-identity + siteShellCss ZERO-line diff) + the ≥5-scenario SMOKE (perceptible flyout motion, "down everywhere" cohesive column, accordion push-down block, centered text, correct 180/6 default hints, cross-device+publish parity); PAGE_MODEL/CONTENT_TYPES docs; changelog (next free — 1217); board/Statistics closure. |
 | TASK-480 | Dashboard Widgets & Configurable Panels | High | Very Large | FULL feature (sibling to TASK-479-07): configurable dashboard panels built from CMS data sources. 6 subtasks (01–06) + 18 leaves. |
 | TASK-480-01 | Feature-Completeness Audit & Widget Product Spec | High | Medium | Audit which admin screens are stub/partial vs complete + the dashboard-widget product spec. 2 leaves. |
 | TASK-480-02 | Widget & Data-Source Contract | High | Large | Schema-first widget/layout types + data-source registry over `dashboardService`. 3 leaves. |
