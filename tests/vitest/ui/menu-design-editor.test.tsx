@@ -879,8 +879,13 @@ test("Reset removes the override, prunes empty records, and re-inherits the desk
   const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
   await flush();
 
-  // No Reset affordance on Desktop (base scope).
-  expect(container.querySelector('[data-menu-responsive-reset="Horizontal padding"]')).toBeNull();
+  // TASK-506-04 F1: Desktop now shows the BASE Reset-to-default when the base
+  // record carries a value (this assertion flip is OWNED by 506-04, not a 504
+  // regression). The device (mobile) Reset behaviour below is unchanged.
+  const desktopReset = container.querySelector('[data-menu-responsive-reset="Horizontal padding"]');
+  expect(desktopReset?.getAttribute("data-menu-responsive-reset-kind")).toBe("base");
+  expect(desktopReset?.getAttribute("aria-label")).toBe("Reset Horizontal padding to default");
+  expect(desktopReset?.textContent).toContain("Reset to default");
 
   switchDevice(container, "Mobile");
   clickSelector(container, '[data-menu-responsive-reset="Horizontal padding"]');
@@ -1755,22 +1760,26 @@ test("canvas force-open threads the selected level (cumulative) into the preview
 
   // Level 0 ⇒ NO force-open rule (byte-identical preview).
   expect(styleText()).not.toContain(
-    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}"
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}"
   );
 
   // Level 1 ⇒ depth-1 sim-open only.
   clickSegmented(container, "Nesting level", "1");
   expect(styleText()).toContain(
-    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}"
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}"
   );
-  expect(styleText()).not.toContain(".site-nav-sublist .site-nav-sublist{display:grid}");
+  expect(styleText()).not.toContain(
+    ".site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}"
+  );
 
   // Level 2 ⇒ CUMULATIVE (depth 1 AND depth 2 open).
   clickSegmented(container, "Nesting level", "2");
   expect(styleText()).toContain(
-    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}"
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}"
   );
-  expect(styleText()).toContain(".site-nav-sublist .site-nav-sublist{display:grid}");
+  expect(styleText()).toContain(
+    ".site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}"
+  );
 
   cleanup();
 });
@@ -1856,5 +1865,277 @@ test("no setState-in-effect: brand/level/device flows emit no React act/update w
     .filter((message) => /not wrapped in act|state update|Warning:/i.test(message));
   expect(warnings).toEqual([]);
   errorSpy.mockRestore();
+  cleanup();
+});
+
+// --- TASK-506-04: F1 base Reset, F2 default hint, B1–B5 modern controls -------
+
+const findReset = (container: ParentNode, label: string) =>
+  container.querySelector(`[data-menu-responsive-reset="${label}"]`);
+const findHint = (container: ParentNode, key: string) =>
+  container.querySelector(`[data-menu-control-default-hint="${key}"]`);
+const sliderReadout = (container: ParentNode, label: string) =>
+  container
+    .querySelector(`input[data-page-editor-slider="${label}"]`)
+    ?.closest('[data-page-editor-control="slider"]')
+    ?.querySelector("output")?.textContent;
+const seededNavChrome = (doc?: SavedMenuDocument) =>
+  navBlock(doc)?.props.navChrome as Record<string, unknown> | undefined;
+const seededLevelStyles = (doc?: SavedMenuDocument) =>
+  navBlock(doc)?.props.levelStyles as Record<string, Record<string, unknown>> | undefined;
+
+test("F1 base Reset renders on a DESKTOP-BASE per-level field and clears it byte-clean", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.levelStyles = { 1: { linkColor: "#ff0000" } };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  const reset = findReset(container, "Link color");
+  expect(reset?.getAttribute("data-menu-responsive-reset-kind")).toBe("base");
+  expect(reset?.getAttribute("aria-label")).toBe("Reset Link color to default");
+  expect(reset?.textContent).toContain("Reset to default");
+
+  clickSelector(container, '[data-menu-responsive-reset="Link color"]');
+  clickButton(container, "Save");
+  await flush();
+  // The emptied level record prunes back to the legacy no-levelStyles shape.
+  expect(navBlock(readLastSavedDocument())?.props.levelStyles).toBeUndefined();
+
+  cleanup();
+});
+
+test("F1 base Reset clears a level-0 navChrome field (Pill radius) to byte-clean", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.navChrome = { navPillRadius: 12 };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  const reset = findReset(container, "Pill radius");
+  expect(reset?.getAttribute("data-menu-responsive-reset-kind")).toBe("base");
+  clickSelector(container, '[data-menu-responsive-reset="Pill radius"]');
+  clickButton(container, "Save");
+  await flush();
+  expect(seededNavChrome(readLastSavedDocument())).toBeUndefined();
+
+  cleanup();
+});
+
+test("F1 base Reset clears a nav-base scalar and a brand field; absent when unset", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.linkPaddingX = 20;
+    const brand = doc.sections[0]!.blocks.find((b) => b.type === "brand");
+    if (brand?.type === "brand") brand.props.style = { fontSize: 28 };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Authored base scalar ⇒ base Reset; an unset sibling ⇒ no Reset at all.
+  expect(
+    findReset(container, "Link padding X")?.getAttribute("data-menu-responsive-reset-kind")
+  ).toBe("base");
+  expect(findReset(container, "Link radius")).toBeNull();
+  clickSelector(container, '[data-menu-responsive-reset="Link padding X"]');
+
+  clickSelector(container, '[data-menu-design-canvas-scroller="true"]'); // deselect
+  selectBlockRow(container, "Brand");
+  expect(
+    findReset(container, "Brand font size")?.getAttribute("data-menu-responsive-reset-kind")
+  ).toBe("base");
+  clickSelector(container, '[data-menu-responsive-reset="Brand font size"]');
+  clickButton(container, "Save");
+  await flush();
+  const saved = readLastSavedDocument();
+  expect(Object.prototype.hasOwnProperty.call(navBlock(saved)?.props ?? {}, "linkPaddingX")).toBe(
+    false
+  );
+  expect(Object.prototype.hasOwnProperty.call(brandBlock(saved)?.props ?? {}, "style")).toBe(false);
+
+  cleanup();
+});
+
+test("F1 on tablet/mobile still shows the device Reset (kind override), never the base branch", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Navigation items");
+  setSliderValue(container, "Link padding X", "10");
+  const reset = findReset(container, "Link padding X");
+  expect(reset?.getAttribute("data-menu-responsive-reset-kind")).toBe("override");
+
+  cleanup();
+});
+
+test("F2 hint shows the RESOLVED default (Inherits level 0) + slider thumb, not range.min", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.fontSize = 18;
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  // Level-1 fontSize is unset ⇒ inherits the level-0 base (18), NOT range.min (10).
+  expect(findHint(container, "fontSize")?.textContent).toContain("Inherits level 0");
+  expect(sliderValue(container, "Font size")).toBe("18");
+
+  // Setting the own record hides the hint.
+  setSliderValue(container, "Font size", "22");
+  expect(findHint(container, "fontSize")).toBeNull();
+
+  cleanup();
+});
+
+test("F2 hint shows a theme/base default at level 0 and disappears once set", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  expect(findHint(container, "itemGap")?.textContent).toContain("Default");
+  setSliderValue(container, "Item gap", "14");
+  expect(findHint(container, "itemGap")).toBeNull();
+
+  cleanup();
+});
+
+test("F2 nav-base link sliders: unset thumb shows the RESOLVED default (12/8/6), never range.min (0)", async () => {
+  // Fresh doc: linkPaddingX/Y/radius are all UNSET. The thumb must sit at the
+  // resolved theme default (MENU_SHELL_DEFAULT_LINK_PX/PY/RADIUS = 12/8/6), matching
+  // the F2 hint rendered below, NOT the misleading NAV_LINK_NUMBER_RANGES min (0).
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  expect(sliderValue(container, "Link padding X")).toBe("12");
+  expect(sliderValue(container, "Link padding Y")).toBe("8");
+  expect(sliderValue(container, "Link radius")).toBe("6");
+  // The hint below each corroborates the same resolved default.
+  expect(findHint(container, "linkPaddingX")?.textContent).toContain("Default 12px");
+  expect(findHint(container, "linkPaddingY")?.textContent).toContain("Default 8px");
+  expect(findHint(container, "linkRadius")?.textContent).toContain("Default 6px");
+
+  cleanup();
+});
+
+test("F2 isSet trap: a Desktop base value must NOT suppress the Mobile 'Inherited from desktop' hint", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.linkPaddingX = 20;
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Navigation items");
+
+  // Desktop base = 20, no mobile override ⇒ the hint MUST still render (isSet uses
+  // the override reader ALONE, not `hasBaseValue || override`).
+  expect(findHint(container, "linkPaddingX")?.textContent).toContain("Inherited from desktop");
+
+  cleanup();
+});
+
+test("B1–B5 controls write the Desktop BASE per level (with correct level gating)", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Level 0: pill + caret present, flyoutAnimation + container padding + placement absent.
+  expect(container.querySelector('input[data-page-editor-slider="Pill radius"]')).toBeTruthy();
+  expect(hasGroup(container, "Flyout animation")).toBe(false);
+  expect(
+    container.querySelector('input[data-page-editor-slider="Container padding X"]')
+  ).toBeNull();
+  expect(hasGroup(container, "Submenu placement")).toBe(false);
+  setSliderValue(container, "Pill radius", "16");
+  clickSegmented(container, "Show caret", "off");
+
+  // Level 1: flyoutAnimation + container padding present, pill absent, placement absent.
+  clickSegmented(container, "Nesting level", "1");
+  expect(container.querySelector('input[data-page-editor-slider="Pill radius"]')).toBeNull();
+  expect(hasGroup(container, "Flyout animation")).toBe(true);
+  expect(
+    container.querySelector('input[data-page-editor-slider="Container padding X"]')
+  ).toBeTruthy();
+  expect(hasGroup(container, "Submenu placement")).toBe(false);
+  clickSegmented(container, "Item divider", "on");
+  clickSegmented(container, "Divider style", "dashed");
+  clickSegmented(container, "Indicator", "underline");
+  clickSegmented(container, "Flyout animation", "fade");
+  setSliderValue(container, "Container padding X", "10");
+  // transitionMs uses the "ms" unit.
+  expect(sliderReadout(container, "Transition")?.endsWith("ms")).toBe(true);
+
+  // Level 2: submenu placement present (level-2 only).
+  clickSegmented(container, "Nesting level", "2");
+  expect(hasGroup(container, "Submenu placement")).toBe(true);
+  clickSegmented(container, "Submenu placement", "bottom");
+
+  clickButton(container, "Save");
+  await flush();
+  const saved = readLastSavedDocument();
+  expect(seededNavChrome(saved)).toMatchObject({ navPillRadius: 16, showCaret: false });
+  const levels = seededLevelStyles(saved)!;
+  expect(levels[1]).toMatchObject({
+    itemDividerShow: true,
+    itemDividerStyle: "dashed",
+    indicator: "underline",
+    flyoutAnimation: "fade",
+    containerPaddingX: 10,
+  });
+  expect(levels[2]).toMatchObject({ submenuPlacement: "bottom" });
+
+  cleanup();
+});
+
+test("B-controls fork per device (Mobile ⇒ sparse override) and the Default sentinel clears", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  clickSegmented(container, "Indicator", "overline");
+  clickButton(container, "Save");
+  await flush();
+  const override = (
+    readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps as
+      | { levelStyles?: Record<string, Record<string, unknown>> }
+      | undefined
+  )?.levelStyles;
+  expect(override?.[1]).toEqual({ indicator: "overline" });
+  // Base props untouched by the mobile fork.
+  expect(navBlock(readLastSavedDocument())?.props.levelStyles).toBeUndefined();
+
+  // The "Default" sentinel clears the field ⇒ present-only zero bytes (record pruned).
+  clickSegmented(container, "Indicator", "inherit");
+  clickButton(container, "Save");
+  await flush();
+  expect(readLastSavedDocument()?.sections[0]?.responsive).toBeUndefined();
+
+  cleanup();
+});
+
+test("canvas force-open threads the selected level so the styled sublist is revealed", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "2");
+
+  const style = canvasFrame(container).querySelector("style")?.textContent ?? "";
+  // 506-02's previewForceOpenLevel opens AND neutralizes the level-2 sublist so
+  // the fade/slide flyout is visible on canvas.
+  expect(style).toContain(
+    ".site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}"
+  );
+
   cleanup();
 });

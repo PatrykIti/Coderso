@@ -671,6 +671,215 @@ testIfDb(
   dbTestTimeoutMs
 );
 
+// --- TASK-506-05 §2.1: modern per-level (levelStyles B1–B5) + level-0 navChrome
+// sub-record + per-device (responsive.mobile.navProps) deltas proven at the route
+// boundary. Model-layer accept/reject/prune for every new key lives in
+// menu-document-v2.test.ts; the route is a thin delegate, so these assert the
+// verbatim round-trip through the menus.settings envelope (sibling appearance/extras
+// + flat nav scalars never dropped) and that reject-unknown for the two NEW key
+// families (levelStyles.<n>.<modern> + navChrome.<key>) reaches the wire as a
+// path-tagged 400 menu_document_invalid with the store left untouched.
+
+const routeModernMenuDocument = () => ({
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "sec-route-menu-bar",
+      type: "menu-bar" as const,
+      name: "Menu bar",
+      layout: { surfaceColor: "#0f172a" },
+      // Per-device delta on the SECTION responsive carrying BOTH new sub-records
+      // (navChrome + levelStyles modern key), resolved vs DESKTOP.
+      responsive: {
+        mobile: {
+          navProps: {
+            navChrome: { navPillRadius: 12 },
+            levelStyles: { 1: { itemDividerShow: true } },
+          },
+        },
+      },
+      blocks: [
+        {
+          id: "blk-route-nav",
+          type: "nav-items" as const,
+          props: {
+            // Flat scalar sibling that must survive alongside the sub-records.
+            itemGap: 12,
+            // Modern per-level keys (B1 divider, B2 indicator, B3 caret, B5 placement).
+            levelStyles: {
+              1: {
+                fontSize: 14,
+                itemDividerShow: true,
+                itemDividerColor: "#abcdef",
+                indicator: "underline" as const,
+                showCaret: true,
+              },
+              2: { submenuPlacement: "bottom" as const },
+            },
+            // Level-0 navChrome sub-record (B4 pill + B2 indicator).
+            navChrome: {
+              navPillBackground: "#eeeeee",
+              navPillRadius: 24,
+              indicator: "overline" as const,
+            },
+          },
+        },
+      ],
+    },
+  ],
+});
+
+testIfDb(
+  "PATCH /menus/:id round-trips modern per-level + navChrome + per-device deltas WITHOUT dropping siblings",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Modern ${randomUUID()}`,
+      location: `route-modern-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const patch = getPatchHandler();
+    const extras = [createPageBlockV2("button", { id: "blk-route-extra" })];
+    // Seed sibling envelope keys first, then PATCH the document ALONE.
+    await patch({
+      params: { id: menu.id },
+      query: {},
+      body: { appearance: { surfaceColor: "#0f172a" }, extras },
+    });
+
+    const document = routeModernMenuDocument();
+    await patch({ params: { id: menu.id }, query: {}, body: { document } });
+
+    // Round-trip through GET: levelStyles modern keys + navChrome + the per-device
+    // delta ride verbatim (sparse, nothing injected); sibling envelope keys survive.
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings).toEqual({
+      appearance: { surfaceColor: "#0f172a" },
+      extras,
+      document,
+    });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps an invalid per-level modern key to a 400 menu_document_invalid ApiError with the levelStyles path; store untouched",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Level Modern Invalid ${randomUUID()}`,
+      location: `route-level-modern-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            schemaVersion: 1,
+            sections: [
+              {
+                id: "sec-route-menu-bar",
+                type: "menu-bar",
+                name: "Menu bar",
+                layout: {},
+                // Unknown key INSIDE levelStyles.1 rejects one level deeper than the
+                // outer level key (reject-unknown at the modern-key position).
+                blocks: [
+                  {
+                    id: "blk-route-nav",
+                    type: "nav-items",
+                    props: { levelStyles: { 1: { bogus: 1 } } },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({
+        path: "document.sections[0].blocks[0].props.levelStyles.1.bogus",
+      });
+    }
+
+    // Store untouched: the pre-PATCH menu still carries no document.
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings ?? {}).toEqual({});
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps an invalid navChrome key to a 400 menu_document_invalid ApiError with the navChrome path; store untouched",
+  async () => {
+    const menu = await createMenu({
+      name: `Route NavChrome Invalid ${randomUUID()}`,
+      location: `route-navchrome-invalid-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            schemaVersion: 1,
+            sections: [
+              {
+                id: "sec-route-menu-bar",
+                type: "menu-bar",
+                name: "Menu bar",
+                layout: {},
+                // Unknown key INSIDE the navChrome sub-record — its OWN allowlist
+                // fires with the navChrome path (distinct family from levelStyles).
+                blocks: [
+                  {
+                    id: "blk-route-nav",
+                    type: "nav-items",
+                    props: { navChrome: { bogus: 1 } },
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({
+        path: "document.sections[0].blocks[0].props.navChrome.bogus",
+      });
+    }
+
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings ?? {}).toEqual({});
+  },
+  dbTestTimeoutMs
+);
+
 testIfDb(
   "PATCH /menus/:id maps an invalid document to a 400 menu_document_invalid ApiError with a path",
   async () => {

@@ -1108,7 +1108,7 @@ the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
   `menus.settings.published`; menus issue no preview tokens — the live canvas
   IS the preview.
 
-## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504
+## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504 / TASK-506
 
 The Design tab of a menu edits a dedicated document contract owned by
 `core/services/menus/menuDocumentV2.ts` (NOT a Page v2 document). It persists
@@ -1366,6 +1366,84 @@ later source order.
   — the flat/visibility-only helpers cannot reach the nested paths. The canvas
   `buildMenuDocumentPreviewCss` force-open opens the WHOLE ancestor chain
   (levels 1..N) for the selected level, appended LAST (the single canvas-only add).
+
+**Modern styling — base reset, visible defaults & 5 bundles (TASK-506,
+per-level + per-device):** Same invariants — no `schemaVersion` bump, no new
+route/RBAC/migration, `buildSiteShellCss(null)` byte-identical, no-override docs
+byte-identical on both CSS builders, PRESENT-ONLY emission from the doc scope.
+
+- **F1 base-record reset.** The desktop `bp===null` branch of every
+  `patch*ForDevice` helper already deletes-on-`undefined` + prunes to the legacy
+  byte-stable shape, so F1 is a thin named API over it: `clearMenuSectionBase`
+  (flat level-0 scalar/layout), `clearMenuNavLevelStyleBase` (per-level 1/2),
+  `clearMenuNavChromeBase` (dedicated — prunes `props.navChrome`→`props`, NOT the
+  flat scalar wrapper), `clearMenuBrandStyleBase` (prunes `props.style`→`props`).
+  **A base reset of the last authored field round-trips byte-identical to a
+  never-authored doc** (asserted per surface at the model AND render layer).
+  `MENU_NAV_DEVICE_DEFINING_KEYS` (`mobileMode`/`dropdownDirection`) are EXCLUDED
+  (they carry resolution defaults). Raw base readers
+  (`readMenuNavLevelStyleBaseValue` / `readMenuSectionBaseValue` /
+  `readMenuNavChromeBaseValue` / `readMenuBrandStyleBaseValue`) feed the editor's
+  `hasBaseValue` predicate so Reset shows on any control with an explicit OWN value.
+- **F2 resolved-default provider.** `resolveMenuControlDefault(section, device,
+  level, key) → { value, sourceLabel }` (section-only, 4-param; `level` ∈
+  `0 | 1 | 2 | "base"`) is the SINGLE model source the editor reads — it never
+  hardcodes a default and an unset slider shows the RESOLVED value, not
+  `range.min`. It is a FULL CASCADE WALK, not a single hop: tablet/mobile unset
+  RECURSES through the provider on `"desktop"` (label kept "Inherited from
+  desktop") so a compound device×level-unset case can never surface `(undefined)`;
+  an unset level N (1/2) walks shallower LEVELS, then the level-0 nav-base/navChrome
+  value, then the theme/base default; gated present-only numerics (indicator/divider/
+  pill sizes) return `{ value: undefined, sourceLabel: "Off"/"Not applied" }` (never
+  `range.min`); the modern enum/bool defaults read the EXPORTED `NAV_CHROME_DEFAULTS`
+  (`submenuPlacement:"right"`, `showCaret:true`, `indicator:"none"`,
+  `flyoutAnimation:"none"`, …) mirroring today's implicit CSS. Exported model consts
+  `MENU_SHELL_DEFAULT_LINK_{PX,PY,RADIUS}` (12/8/6) + `NAV_FONT_SIZE_INHERITED` (16)
+  keep it self-contained (no CSS/editor import cycle).
+- **Level-0 home = Option B: `NavItemsProps.navChrome`.** A NEW sub-record parallel
+  to `levelStyles`, split off in `normalizeNavItemsProps` BEFORE the flat
+  `NAV_ITEMS_PROP_KEYS` subset, with its own `NAV_CHROME_KEYS` reject-unknown
+  allowlist + partitions + `NAV_CHROME_NUMBER_RANGES` + prune-empty-to-legacy, and a
+  FULL parallel helper family (`patchMenuNavChromeForDevice` / `resolveMenuNavChrome`
+  / `readMenuNavChrome{Override,Base}Value` / `clearMenuNavChromeBase` +
+  `collectChromeDeltaRules` in the CSS layer). `MenuAppearance` / `BRAND_PROP_KEYS` /
+  `NAV_ITEMS_PROP_KEYS` unchanged. It holds B4 pill + the level-0 variants of
+  B1/B2/B3 — NOT `flyoutAnimation` (a levels-≥1 CONTAINER field; writing it under
+  navChrome reject-unknown throws).
+- **The 5 modern bundles** (per-level on `NavLevelStyle` 1/2 + per-device):
+  - **B1 item separators** — orientation-aware: level-0 top bar ⇒ VERTICAL
+    `border-inline-end` on `.site-nav-list > .site-nav-item:not(:last-child)`;
+    dropdown (levels ≥ 1) ⇒ HORIZONTAL `border-block-end` on the dedicated
+    single-member `… > .site-nav-sublist > li:not(:last-child)`. Fields
+    `itemDivider{Show,Color,Width(1..8),Style(solid|dashed|dotted)}`.
+  - **B2 indicator** — a `::before` bar (caret keeps `::after`, so they coexist on
+    group parents) with `position:relative` added to the link;
+    `indicator(none|underline|overline)`/`indicatorColor`/`indicatorThickness(1..6)`/
+    `indicatorGrow` (`scaleX` vs `opacity` reveal) shown on `:hover`/`:focus-visible`/
+    `:where([aria-current="page"])`; plus `hoverUnderline`, `transitionMs(0..400)`,
+    `hoverLift(0..8)`. Link-level ⇒ re-emits at mobile.
+  - **B3 caret + flyout** — `showCaret:false` suppresses the caret `::after`
+    (`content:none`); `caretRotateOnOpen` rotates 180° on `:hover`/`:focus-within`;
+    `flyoutAnimation(none|fade|slide)` reveals via `opacity`(+`transform`) with
+    `transition:…,display …ms allow-discrete` + a matching `@starting-style` block,
+    layered OVER (never replacing) the `display:none→grid` toggle — zero-JS
+    reachability preserved, NO `visibility`. Canvas force-open neutralizes the rest
+    state (`display:grid;opacity:1;transform:none`).
+  - **B4 pill + dropdown padding** — level-0 `navPill{Background,Radius(0..40),
+    PaddingX(0..40),PaddingY(0..32)}` on `.site-nav-list`; levels ≥ 1
+    `containerPaddingX(0..40)`/`containerPaddingY(0..32)` on the container selector
+    (≥640-only).
+  - **B5 nested placement** — `submenuPlacement(right|bottom|left)` on LEVEL 2 only,
+    emitted on the anchored (0,5,0) `LEVEL_CONTAINER_SELECTORS[2]` selector with
+    all-four-offset resets (right=`left:100%;right:auto;top:0;bottom:auto`,
+    bottom=`left:0;top:100%;…`, left=`right:100%;left:auto;top:0;…`), preserving the
+    504 specificity and the base `dropdownDirection` first-dropdown rule. Its
+    per-device tablet override rides a STANDALONE delta (≥640-only, never mobile).
+- **Per-device deltas** mirror 504: `collectLevelDeltaRules` (levelStyles) +
+  `collectChromeDeltaRules` (navChrome) diff vs DESKTOP with the ≥640-only vs
+  all-width `linkOnly` split. Every new per-level key ∈ `NAV_LEVEL_STYLE_COMPARE_KEYS`
+  and every navChrome key ∈ the navChrome compare list — else the per-device delta
+  silently drops (fail-closed trap, asserted by test).
 
 ## Revisions And Autosave
 

@@ -374,8 +374,11 @@ describe("canvas force-open (§6)", () => {
   const doc = buildDoc({
     navProps: { levelStyles: { 1: { linkColor: "#111" }, 2: { linkColor: "#222" } } },
   });
-  const L1_OPEN = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}`;
-  const L2_OPEN = `${SCOPE} .site-nav-sublist .site-nav-sublist{display:grid}`;
+  // TASK-506-02: force-open now ALSO neutralizes the B3 flyoutAnimation closed rest
+  // (`opacity:1;transform:none`) and the level-2 rule uses the anchored (0,5,0) form
+  // so it ties flyoutAnimRule(2)'s hidden selector (short (0,3,0) would lose).
+  const L1_OPEN = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}`;
+  const L2_OPEN = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}`;
 
   test("level 1 opens ONLY the level-1 sublist, LAST", () => {
     const css = buildMenuDocumentPreviewCss(doc, "desktop", 1);
@@ -400,5 +403,310 @@ describe("canvas force-open (§6)", () => {
     // NEVER the unconditional force-open rules.
     expect(buildMenuDocumentCss(doc)).not.toContain(L1_OPEN);
     expect(buildMenuDocumentCss(doc)).not.toContain(L2_OPEN);
+  });
+});
+
+// --- §7 TASK-506 modern bundles — per-bundle emission goldens --------------
+// Closure (506-05) gap-fill: positive exact-string goldens for B1–B5 that the
+// vitest lane was missing (siblings covered force-open + byte-identity; these pin
+// the emitted selectors themselves). Every string is captured verbatim from the
+// live builder. Present-only + doc-scope + front↔canvas parity are re-asserted.
+
+describe("TASK-506-02 modern bundle emission goldens (§7)", () => {
+  // B1 — item separators, orientation-aware -----------------------------------
+  test("B1 level-0 (navChrome) top-bar emits a VERTICAL divider (border-inline-end) on :not(:last-child); ≥640-only", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          navChrome: {
+            itemDividerShow: true,
+            itemDividerColor: "#cccccc",
+            itemDividerWidth: 2,
+            itemDividerStyle: "dashed",
+          },
+        },
+      })
+    );
+    const rule = `${SCOPE} .site-nav-list > .site-nav-item:not(:last-child){border-inline-end:2px dashed #cccccc}`;
+    expect(sharedBranchOf(css)).toContain(rule);
+    // container-level (≥640-only): NOT re-emitted into the <640 mobile bucket.
+    expect(mobileBranchOf(css)).not.toContain("border-inline-end");
+  });
+
+  test("B1 level-1 dropdown emits a HORIZONTAL divider (border-block-end) on the dedicated single-member selector", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          levelStyles: {
+            1: {
+              itemDividerShow: true,
+              itemDividerColor: "#cccccc",
+              itemDividerWidth: 2,
+              itemDividerStyle: "solid",
+            },
+          },
+        },
+      })
+    );
+    const rule = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li:not(:last-child){border-block-end:2px solid #cccccc}`;
+    expect(sharedBranchOf(css)).toContain(rule);
+  });
+
+  // B2 — indicator + hover/lift/transition ------------------------------------
+  test("B2 indicator emits a ::before bar (grow ⇒ scaleX) shown on :hover/:focus-visible/[aria-current]; link gets position:relative; re-emits at mobile (link-level)", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          navChrome: {
+            indicator: "underline",
+            indicatorColor: "#123456",
+            indicatorThickness: 3,
+            indicatorGrow: true,
+            hoverUnderline: true,
+            transitionMs: 200,
+            hoverLift: 4,
+          },
+        },
+      })
+    );
+    const relative = `${SCOPE} .site-nav-link{transition:color 200ms,background 200ms,transform 200ms;position:relative}`;
+    const bar = `${SCOPE} .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#123456;transform:scaleX(0);transform-origin:left;transition:transform 200ms}`;
+    const shown = `${SCOPE} .site-nav-link:hover::before,${SCOPE} .site-nav-link:focus-visible::before,${SCOPE} .site-nav-link:where([aria-current="page"])::before{transform:scaleX(1)}`;
+    const lift = `${SCOPE} .site-nav-link:hover,${SCOPE} .site-nav-link:focus-visible{text-decoration:underline;transform:translateY(-4px)}`;
+    for (const rule of [relative, bar, shown, lift]) {
+      expect(sharedBranchOf(css)).toContain(rule);
+      // link-level ⇒ ALSO re-emits into the <640 mobile bucket (mobile inherits desktop).
+      expect(mobileBranchOf(css)).toContain(rule);
+    }
+  });
+
+  test("B2 non-grow indicator uses opacity (not scaleX)", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: { navChrome: { indicator: "underline", indicatorColor: "#111111" } },
+      })
+    );
+    expect(css).toContain(
+      `${SCOPE} .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:2px;width:100%;background:#111111;opacity:0;transition:opacity 150ms}`
+    );
+    expect(css).toContain(
+      `${SCOPE} .site-nav-link:hover::before,${SCOPE} .site-nav-link:focus-visible::before,${SCOPE} .site-nav-link:where([aria-current="page"])::before{opacity:1}`
+    );
+  });
+
+  // B3 — caret toggle/rotate + flyout animation -------------------------------
+  test("B3 showCaret:false suppresses the caret ::after (content:none) for that level", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 1: { showCaret: false } } } })
+    );
+    expect(css).toContain(
+      `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link::after{content:none}`
+    );
+  });
+
+  test("B3 caretRotateOnOpen rotates the caret 180deg on :hover/:focus-within", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 1: { caretRotateOnOpen: true } } } })
+    );
+    expect(css).toContain(
+      `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link::after{display:inline-block;transform:rotate(0);transition:transform 150ms}`
+    );
+    expect(css).toContain(
+      `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"]:hover > .site-nav-link::after,${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"]:focus-within > .site-nav-link::after{transform:rotate(180deg)}`
+    );
+  });
+
+  test("B3 flyoutAnimation:slide emits rest opacity+transform, shown opacity:1, and a matching @starting-style with `display …ms allow-discrete` (NO visibility); display:none→grid toggle stays", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 1: { flyoutAnimation: "slide" } } } })
+    );
+    const rest = `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{opacity:0;transform:translateY(-6px);transition:opacity 150ms,transform 150ms,display 150ms allow-discrete}`;
+    const shown = `${SCOPE} .site-nav-list > .site-nav-item:hover > .site-nav-sublist,${SCOPE} .site-nav-list > .site-nav-item:focus-within > .site-nav-sublist{opacity:1;transform:translateY(0);transition:opacity 150ms,transform 150ms,display 150ms allow-discrete}`;
+    const starting = `@starting-style{${SCOPE} .site-nav-list > .site-nav-item:hover > .site-nav-sublist,${SCOPE} .site-nav-list > .site-nav-item:focus-within > .site-nav-sublist{opacity:0;transform:translateY(-6px)}}`;
+    expect(css).toContain(rest);
+    expect(css).toContain(shown);
+    expect(css).toContain(starting);
+    expect(css).not.toContain("visibility");
+    // reachability: the base display:none→grid open toggle is NOT removed.
+    expect(css).toContain(
+      `${SCOPE} .site-nav-item:hover>.site-nav-sublist,${SCOPE} .site-nav-item:focus-within>.site-nav-sublist{display:grid}`
+    );
+  });
+
+  // B4 — pill nav + dropdown padding ------------------------------------------
+  test("B4 pill emits on .site-nav-list (bg/radius/padding = py px); ≥640-only", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          navChrome: {
+            navPillBackground: "#eeeeee",
+            navPillRadius: 24,
+            navPillPaddingX: 12,
+            navPillPaddingY: 8,
+          },
+        },
+      })
+    );
+    expect(sharedBranchOf(css)).toContain(
+      `${SCOPE} .site-nav-list{background:#eeeeee;border-radius:24px;padding:8px 12px}`
+    );
+  });
+
+  test("B4 dropdown container padding emits on the container selector (≥640-only, absent from the mobile linkOnly bucket)", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: { levelStyles: { 1: { containerPaddingX: 20, containerPaddingY: 16 } } },
+      })
+    );
+    expect(sharedBranchOf(css)).toContain(
+      `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist, ${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{padding:16px 20px}`
+    );
+    expect(mobileBranchOf(css)).not.toContain("padding:16px 20px");
+  });
+
+  // B5 — nested submenu placement on the anchored (0,5,0) selector ------------
+  test("B5 placement emits all-four-offset resets on the anchored (0,5,0) selector; right|bottom|left distinct; base dropdownDirection rule intact", () => {
+    const rightCss = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 2: { submenuPlacement: "right" } } } })
+    );
+    const bottomCss = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 2: { submenuPlacement: "bottom" } } } })
+    );
+    const leftCss = buildMenuDocumentCss(
+      buildDoc({ navProps: { levelStyles: { 2: { submenuPlacement: "left" } } } })
+    );
+    expect(rightCss).toContain(`${L2_CONTAINER}{left:100%;right:auto;top:0;bottom:auto}`);
+    expect(bottomCss).toContain(`${L2_CONTAINER}{left:0;top:100%;right:auto;bottom:auto}`);
+    expect(leftCss).toContain(`${L2_CONTAINER}{right:100%;left:auto;top:0;bottom:auto}`);
+    // the base first-dropdown direction rule (short selector) stays present.
+    expect(bottomCss).toContain(`${SCOPE} .site-nav-sublist{top:100%;bottom:auto}`);
+  });
+
+  // Present-only + doc-scope + parity -----------------------------------------
+  test("present-only: an unauthored doc emits ZERO bytes for EVERY new bundle", () => {
+    const css = buildMenuDocumentCss(buildDoc());
+    for (const marker of [
+      "border-inline-end",
+      "border-block-end",
+      "::before",
+      "scaleX",
+      "allow-discrete",
+      "@starting-style",
+      "content:none",
+      "rotate(180deg)",
+      "background:#eeeeee",
+      "padding:16px 20px",
+      "right:auto",
+    ]) {
+      expect(css).not.toContain(marker);
+    }
+  });
+
+  test("front↔canvas parity: every representative modern rule appears in BOTH buildMenuDocumentCss and buildMenuDocumentPreviewCss", () => {
+    const styled = buildDoc({
+      navProps: {
+        navChrome: {
+          navPillBackground: "#eeeeee",
+          navPillRadius: 24,
+          navPillPaddingX: 12,
+          navPillPaddingY: 8,
+        },
+        levelStyles: {
+          1: {
+            itemDividerShow: true,
+            itemDividerColor: "#cccccc",
+            itemDividerWidth: 2,
+            itemDividerStyle: "solid",
+          },
+          2: { submenuPlacement: "bottom" },
+        },
+      },
+    });
+    const front = buildMenuDocumentCss(styled);
+    const canvas = buildMenuDocumentPreviewCss(styled, "desktop");
+    for (const rule of [
+      `${SCOPE} .site-nav-list{background:#eeeeee;border-radius:24px;padding:8px 12px}`,
+      `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li:not(:last-child){border-block-end:2px solid #cccccc}`,
+      `${L2_CONTAINER}{left:0;top:100%;right:auto;bottom:auto}`,
+    ]) {
+      expect(front).toContain(rule);
+      expect(canvas).toContain(rule);
+    }
+  });
+
+  // Per-device deltas ---------------------------------------------------------
+  test("per-device navChrome delta: tablet navPillRadius (container ≥640) + mobile indicator (link) diff vs desktop; mobile ≠ tablet", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          navChrome: { navPillRadius: 24, indicator: "underline", indicatorColor: "#111111" },
+        },
+        navResponsive: {
+          tablet: { navProps: { navChrome: { navPillRadius: 32 } } },
+          mobile: { navProps: { navChrome: { indicatorColor: "#ff0000" } } },
+        },
+      })
+    );
+    expect(tabletBlockOf(css)).toContain(`${SCOPE} .site-nav-list{border-radius:32px}`);
+    // container-level (pill radius) NEVER leaks into the mobile bucket:
+    expect(mobileBranchOf(css)).not.toContain("border-radius:32px");
+    // link-level indicator override re-emits at mobile with the mobile color:
+    expect(mobileBranchOf(css)).toContain("background:#ff0000");
+  });
+
+  test("B5 per-device is a STANDALONE delta (≥640-only, never mobile): a tablet-only level-2 placement (base unset) rewrites on the anchored selector inside the tablet block; ABSENT from mobile", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navResponsive: {
+          tablet: { navProps: { levelStyles: { 2: { submenuPlacement: "left" } } } },
+        },
+      })
+    );
+    expect(tabletBlockOf(css)).toContain(`${L2_CONTAINER}{right:100%;left:auto;top:0;bottom:auto}`);
+    // never in the mobile branch (submenuPlacement is ≥640-only):
+    expect(mobileBranchOf(css)).not.toContain(`${L2_CONTAINER}{`);
+  });
+
+  test("B5 per-device diff-gated: a tablet level-2 placement IDENTICAL to base emits ZERO placement bytes", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: { levelStyles: { 2: { submenuPlacement: "bottom" } } },
+        navResponsive: {
+          tablet: { navProps: { levelStyles: { 2: { submenuPlacement: "bottom" } } } },
+        },
+      })
+    );
+    expect(tabletBlockOf(css)).not.toContain("top:100%");
+  });
+
+  test("doc-scope: no UNSCOPED modern selector leaks (every bundle rule sits under the doc scope)", () => {
+    const css = buildMenuDocumentCss(
+      buildDoc({
+        navProps: {
+          navChrome: {
+            navPillBackground: "#eeeeee",
+            indicator: "underline",
+            indicatorColor: "#111111",
+            itemDividerShow: true,
+            itemDividerColor: "#ccc",
+            itemDividerWidth: 2,
+          },
+          levelStyles: {
+            1: { flyoutAnimation: "fade", containerPaddingX: 20, containerPaddingY: 16 },
+            2: { submenuPlacement: "bottom" },
+          },
+        },
+      })
+    );
+    for (const line of css.split("\n")) {
+      if (
+        /border-inline-end|border-block-end|::before|scaleX|allow-discrete|content:none|rotate\(180deg\)|background:#eeeeee|padding:16px 20px/.test(
+          line
+        )
+      ) {
+        // scoped either directly (selector starts with SCOPE) or inside @starting-style{SCOPE …}.
+        expect(line.includes(SCOPE)).toBe(true);
+      }
+    }
   });
 });

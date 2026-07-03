@@ -3,7 +3,11 @@ import { renderToString } from "react-dom/server";
 
 import {
   MENU_DOCUMENT_SCHEMA_VERSION,
+  clearMenuNavChromeBase,
+  clearMenuNavLevelStyleBase,
   createDefaultMenuBlock,
+  patchMenuNavChromeForDevice,
+  patchMenuNavLevelStyleForDevice,
   type MenuDocumentV2,
 } from "../../../core/services/menus/menuDocumentV2";
 import {
@@ -993,4 +997,281 @@ test("TASK-502-03 render gate: show-only-on-tablet block is in the DOM; visible-
 
   // A no-override doc keeps byte-identical flat semantics.
   expect(buildMenuDocumentCss(buildDoc())).toBe(GOLDEN_FRONT_CSS);
+});
+
+// --- TASK-506-03: front & preview parity — no-markup-change + byte-identity ---
+// The five 506 bundles (B1–B5) + the two foundations (F1/F2) are PURE CSS from
+// the doc-scoped sheet on EXISTING markup hooks — `siteShell.tsx` gains ZERO new
+// markup/class/aria. These regression tests pin the required hooks + prove that
+// styling a doc changes ONLY the emitted `<style>`, never the rendered DOM.
+
+// Strip the doc-scoped <style>…</style> block so markup can be compared alone.
+const stripStyle = (html: string) => html.replace(/<style>[\s\S]*?<\/style>/g, "");
+
+// Style ALL five bundles across levels 0/1/2 + a per-device (tablet/mobile)
+// override — reuses 506-01's patch helpers so the shape matches a real authored
+// doc. It touches ONLY styling props (levelStyles / navChrome), never markup.
+const buildStyledDoc = (): MenuDocumentV2 => {
+  let doc = buildDoc();
+  const secId = doc.sections[0]!.id;
+  doc = patchMenuNavChromeForDevice(doc, secId, "desktop", {
+    navPillBackground: "#eeeeee",
+    navPillRadius: 12,
+    navPillPaddingX: 8,
+    navPillPaddingY: 4,
+    itemDividerShow: true,
+    itemDividerColor: "#cccccc",
+    itemDividerWidth: 2,
+    itemDividerStyle: "dashed",
+    indicator: "underline",
+    indicatorColor: "#ff0000",
+    indicatorThickness: 3,
+    indicatorGrow: true,
+    hoverUnderline: true,
+    transitionMs: 200,
+    hoverLift: 4,
+    showCaret: false,
+    caretRotateOnOpen: true,
+  });
+  for (const lvl of [1, 2] as const) {
+    doc = patchMenuNavLevelStyleForDevice(doc, secId, "desktop", lvl, {
+      itemDividerShow: true,
+      itemDividerColor: "#cccccc",
+      itemDividerWidth: 2,
+      itemDividerStyle: "dotted",
+      indicator: "overline",
+      indicatorColor: "#0000ff",
+      indicatorThickness: 2,
+      indicatorGrow: true,
+      hoverUnderline: true,
+      transitionMs: 150,
+      hoverLift: 3,
+      showCaret: false,
+      caretRotateOnOpen: true,
+      flyoutAnimation: "slide",
+      containerPaddingX: 10,
+      containerPaddingY: 8,
+      ...(lvl === 2 ? { submenuPlacement: "bottom" as const } : {}),
+    });
+  }
+  doc = patchMenuNavLevelStyleForDevice(doc, secId, "tablet", 2, { submenuPlacement: "left" });
+  doc = patchMenuNavChromeForDevice(doc, secId, "mobile", { indicatorColor: "#00ff00" });
+  return doc;
+};
+
+test("TASK-506-03: front markup carries every hook B1–B5 rely on (linked + linkless groups, nested depth)", () => {
+  // A DEDICATED level-2 fixture (threeLevelNav) — NOT the shared one-level
+  // `navigation` (which gives every group parent an href, so it never reaches
+  // the linkless span branch and yields exactly ONE sublist).
+  const linked = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDoc()}
+      navigation={threeLevelNav}
+      siteName="Acme"
+    />
+  );
+  // B1 separators: every level has `li.site-nav-item` (`:not(:last-child)` is the
+  // CSS side). B3 caret + zero-JS open: linked group parent = a direct
+  // `a.site-nav-link` child of `li[data-site-nav-group="true"]`.
+  expect(linked).toMatch(
+    /<li class="site-nav-item" data-site-nav-group="true"><a class="site-nav-link"/
+  );
+  // Nested sublist depth ≥ 2 for the level-2 tree (B4 container padding / B5 placement).
+  expect((linked.match(/<ul class="site-nav-sublist">/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  // .site-nav-list present EXACTLY once per nav-items block; block-id on the <nav>.
+  expect((linked.match(/class="site-nav-list"/g) ?? []).length).toBe(1);
+  expect(linked).toMatch(/<nav[^>]+data-menu-block-id="blk_nav"/);
+
+  // The linkless (`#`) group variant carries BOTH classes + tabindex="0"
+  // (B2 ::before hits `.site-nav-link`; B3 :focus-within reach needs tabindex).
+  const linkless = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDoc()}
+      navigation={linklessGroupNav}
+      siteName="Acme"
+    />
+  );
+  expect(linkless).toMatch(/<span class="site-nav-link site-nav-group-label"[^>]*tabindex="0"/);
+});
+
+test("TASK-506-03: shared `navigation`/`buildDoc()` fixtures stay byte-pinned (immutability guard)", () => {
+  // The markup golden (@66) + aria-current byte-identity tests are pinned to the
+  // CURRENT shared `navigation` shape. Mutating it to reach the linkless/nested
+  // hooks (use the dedicated threeLevelNav/linklessGroupNav fixtures instead)
+  // would break the very byte-identity guards this subtask protects. Pin: one
+  // real-href child per group, exactly one nesting level, no linkless (`#`) parent.
+  expect(navigation.items).toHaveLength(3);
+  const services = navigation.items.find((i) => i.label === "Services");
+  expect(services?.children).toHaveLength(1);
+  expect(services?.children?.[0]?.children ?? []).toHaveLength(0); // no grandchild
+  for (const item of navigation.items) {
+    expect(item.href).not.toBe("#"); // no linkless parent in the shared fixture
+  }
+  // The no-override doc still emits byte-identical CSS (present-only 506).
+  expect(buildMenuDocumentCss(buildDoc())).toBe(GOLDEN_FRONT_CSS);
+});
+
+test("TASK-506-03: styling B1–B5 changes ONLY the <style> block — rendered markup is byte-identical", () => {
+  // Same navigation tree, styled vs un-styled doc: the DOM must not move a byte;
+  // 506 lives entirely in the doc-scoped <style>. Uses the level-2 tree so group
+  // + nested-sublist markup participates in the comparison.
+  const plain = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDoc()}
+      navigation={threeLevelNav}
+      siteName="Acme"
+    />
+  );
+  const styled = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildStyledDoc()}
+      navigation={threeLevelNav}
+      siteName="Acme"
+    />
+  );
+  // Sanity: the styled doc DID emit new bytes into its scoped sheet…
+  expect(styled).not.toBe(plain);
+  // …but with the <style> stripped, the markup is identical (CSS-only styling).
+  expect(stripStyle(styled)).toBe(stripStyle(plain));
+});
+
+test("TASK-506-03: a fully-styled 506 doc adds NO new markup/class/aria vs the un-styled doc", () => {
+  const plain = stripStyle(
+    renderToString(
+      <SiteHeaderMenuDocumentRender document={buildDoc()} navigation={navigation} siteName="Acme" />
+    )
+  );
+  const styled = stripStyle(
+    renderToString(
+      <SiteHeaderMenuDocumentRender
+        document={buildStyledDoc()}
+        navigation={navigation}
+        siteName="Acme"
+      />
+    )
+  );
+  expect(styled).toBe(plain);
+  // None of the 506 CSS-only field names leak into rendered markup as attributes.
+  for (const marker of [
+    "itemDivider",
+    "indicator",
+    "navPill",
+    "flyoutAnimation",
+    "submenuPlacement",
+  ]) {
+    expect(styled).not.toContain(marker);
+  }
+});
+
+test("TASK-506-03: aria-current stays front-only + byte-identical under 506 styling", () => {
+  // Null/absent activePath ⇒ zero stamps ⇒ byte-identical, EVEN for a styled doc
+  // (the 504-03 stamp is orthogonal to 506 chrome).
+  const styled = buildStyledDoc();
+  const noProp = renderToString(
+    <SiteHeaderMenuDocumentRender document={styled} navigation={navigation} siteName="Acme" />
+  );
+  const withNull = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={styled}
+      navigation={navigation}
+      siteName="Acme"
+      activePath={null}
+    />
+  );
+  expect(withNull).toBe(noProp);
+  // The styled doc's <style> legitimately carries the B2 `:where([aria-current="page"])`
+  // hook, so assert on the MARKUP (style stripped): zero stamps when activePath is null.
+  expect(stripStyle(noProp)).not.toContain('aria-current="page"');
+  // A real activePath adds EXACTLY the attribute in the MARKUP (the CSS hook count
+  // is constant across renders — the only markup delta is the stamped attribute).
+  const active = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={styled}
+      navigation={navigation}
+      siteName="Acme"
+      activePath="/services"
+    />
+  );
+  const activeMarkup = stripStyle(active);
+  expect((activeMarkup.match(/aria-current="page"/g) ?? []).length).toBe(1);
+  expect(activeMarkup.replace(/ aria-current="page"/g, "")).toBe(stripStyle(noProp));
+});
+
+test("TASK-506-03: frozen base sheet `buildSiteShellCss(null)` carries ZERO 506 chrome", () => {
+  // All 506 visuals emit ONLY from the doc-scoped sheet; the head base sheet is
+  // untouched (siteShellCss.ts ZERO edits). (siteShellCss.test.ts holds the full
+  // byte-identity golden; this is the in-suite 506 guard.)
+  const base = buildSiteShellCss(null);
+  for (const marker of [
+    "border-inline-end",
+    "::before",
+    "navPill",
+    "allow-discrete",
+    "@starting-style",
+    "scaleX",
+    'li[data-site-nav-group="true"]',
+    ".site-nav-sublist .site-nav-sublist",
+  ]) {
+    expect(base).not.toContain(marker);
+  }
+});
+
+// --- TASK-506-05: per-bundle emission goldens (front @media builder) ---------
+// Closure guard: the fully-styled doc's front sheet carries the EXACT B1–B5
+// selectors, every one appears in the canvas flatten too (ONE shared builder,
+// front↔canvas never diverge), and a no-override doc emits ZERO of them.
+
+test("TASK-506-05: fully-styled front sheet carries the exact B1–B5 selectors + front↔canvas parity", () => {
+  const front = buildMenuDocumentCss(buildStyledDoc());
+  const canvas = buildMenuDocumentPreviewCss(buildStyledDoc(), "desktop");
+  const golden = [
+    // B4 pill (level-0 chrome on .site-nav-list):
+    `${SCOPE} .site-nav-list{background:#eeeeee;border-radius:12px;padding:4px 8px}`,
+    // B1 level-0 top-bar VERTICAL divider:
+    `${SCOPE} .site-nav-list > .site-nav-item:not(:last-child){border-inline-end:2px dashed #cccccc}`,
+    // B1 level-1 dropdown HORIZONTAL divider (dedicated single-member selector):
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li:not(:last-child){border-block-end:2px dotted #cccccc}`,
+    // B2 level-0 indicator ::before bar (grow ⇒ scaleX):
+    `${SCOPE} .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#ff0000;transform:scaleX(0);transform-origin:left;transition:transform 200ms}`,
+    // B3 caret suppressed at level 1 + flyout slide rest state:
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link::after{content:none}`,
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{opacity:0;transform:translateY(-6px);transition:opacity 150ms,transform 150ms,display 150ms allow-discrete}`,
+    // B5 level-2 nested placement on the anchored (0,5,0) selector:
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{left:0;top:100%;right:auto;bottom:auto}`,
+  ];
+  for (const rule of golden) {
+    expect(front).toContain(rule);
+    expect(canvas).toContain(rule);
+  }
+  // NO `visibility` anywhere (B3 reachability contract).
+  expect(front).not.toContain("visibility");
+  // Present-only: an unstyled doc emits none of these markers.
+  const plain = buildMenuDocumentCss(buildDoc());
+  for (const marker of [
+    "border-inline-end",
+    "border-block-end",
+    "::before",
+    "allow-discrete",
+    "content:none",
+    "background:#eeeeee",
+  ]) {
+    expect(plain).not.toContain(marker);
+  }
+});
+
+test("TASK-506-05: F1 base-reset ⇒ CSS sheet byte-identical to the never-had-it sheet", () => {
+  const secId = buildDoc().sections[0]!.id;
+  // author a DESKTOP-BASE per-level field, then clear it via the F1 base-clear:
+  const authored = patchMenuNavLevelStyleForDevice(buildDoc(), secId, "desktop", 1, {
+    containerPaddingX: 24,
+  });
+  expect(buildMenuDocumentCss(authored)).not.toBe(buildMenuDocumentCss(buildDoc()));
+  const cleared = clearMenuNavLevelStyleBase(authored, secId, 1, "containerPaddingX");
+  expect(buildMenuDocumentCss(cleared)).toBe(buildMenuDocumentCss(buildDoc()));
+  // navChrome base-reset restores the default sheet too:
+  const authoredChrome = patchMenuNavChromeForDevice(buildDoc(), secId, "desktop", {
+    navPillRadius: 20,
+  });
+  const clearedChrome = clearMenuNavChromeBase(authoredChrome, secId, "navPillRadius");
+  expect(buildMenuDocumentCss(clearedChrome)).toBe(buildMenuDocumentCss(buildDoc()));
 });

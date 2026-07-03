@@ -966,6 +966,47 @@ section); this is the authoring/UX surface.
   explicit `15`, and writes nothing on mount). The Menu editor header items badge shows
   the TOTAL nested item count with correct plural.
 
+## Menu Design tab — base reset, visible defaults & 5 modern bundles (TASK-506)
+
+TASK-506 extends the same Design tab with the two owner-reported UX foundations and
+five modern styling bundles (same EXISTING `PATCH /menus/:id` write path; no new
+endpoint/RBAC/migration; no `schemaVersion` bump). Document contract + CSS emission
+are in `PAGE_MODEL.md` (menuDocumentV2 section); this is the authoring surface.
+
+- **F1 — "Reset to default" on every control with an explicit own value.** The
+  `MenuResponsiveControlShell` Reset button (`data-menu-responsive-reset`) now renders
+  whenever the control's OWN record carries an explicit value — on the DESKTOP BASE as
+  well as tablet/mobile overrides (before, it showed ONLY for a device override, so a
+  desktop-base value could never be cleared). Tooltip copy forks per branch ("Reset to
+  default" on base vs "Remove the {device} override…" on a device). The base branch
+  calls the model base-clear (`clearMenu*Base`) which deletes the field and prunes
+  empty records so the doc returns byte-identical to a never-authored doc; the device
+  branch keeps pruning the responsive record. `hasBaseValue` is derived from the RAW
+  own record (never the resolved value), so an inherited-but-unset control shows NO
+  Reset. `mobileMode`/`dropdownDirection` are out of the base-reset surface.
+- **F2 — visible resolved default under every control.** A single reusable
+  `<ControlDefaultHint data-menu-control-default>` renders under every unset
+  numeric/enum/color control, showing the RESOLVED effective value + its SOURCE
+  ("Inherited from theme (16px)", "Inherits level 0 (14px)", "Default 8px",
+  "Inherited from desktop", or "Default (Right)"/"Default (On)" for the modern
+  enum/bool fields) — never the misleading `range.min`. The hint reads
+  `resolveMenuControlDefault` from the model, never a hardcoded editor constant, so a
+  change to the shell/link defaults flows through automatically.
+- **The 5 modern bundles** (per-level 0/1/2 + per-device tablet/mobile, gated by
+  level): **B1** separator controls (show toggle / color swatch / width slider / style
+  segmented) — orientation-aware, vertical on the top bar, horizontal in dropdowns;
+  **B2** indicator (segmented none|underline|overline / color / thickness / grow toggle
+  / hover-underline toggle / transition slider / hover-lift slider); **B3** caret
+  (show toggle / rotate-on-open toggle / flyout-animation segmented none|fade|slide —
+  levels ≥ 1 only); **B4** pill controls (`navPillBackground`/`Radius`/`PaddingX`/
+  `PaddingY`) ONLY on the Level-0 (nav-base) panel writing `navChrome`, plus dropdown
+  container padding (`containerPaddingX/Y`) on Level 1/2; **B5** `submenuPlacement`
+  segmented (right|bottom|left) ONLY on Level 2. Clamp ranges: divider width `1..8`,
+  indicator thickness `1..6`, transition `0..400ms`, hover-lift `0..8`, container/pill
+  padding `0..40`/`0..32`, pill radius `0..40`. All controls fork per device (Desktop ⇒
+  base, Tablet/Mobile ⇒ a SPARSE override) and expose F1 Reset + F2 hint; selecting a
+  Level ≥ 1 threads the force-open level into the canvas so the depth is visible.
+
 ## API
 
 Admin API w `CMS_API.md`:

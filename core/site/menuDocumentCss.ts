@@ -2,10 +2,12 @@ import {
   hasMenuBlockVisibilityOverride,
   resolveMenuBlockVisibleForDevice,
   resolveMenuBrandStyleForDevice,
+  resolveMenuNavChrome,
   resolveMenuSectionAppearanceForDevice,
   type BrandStyle,
   type MenuDeviceKind,
   type MenuDocumentV2,
+  type NavChromeStyle,
   type NavLevelStyle,
   type NavLevelStyles,
   type NavLevelStyleLevel,
@@ -504,10 +506,186 @@ const LEVEL_CONTAINER_SELECTORS: Record<NavLevelStyleLevel, string> = {
   2: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist`,
 };
 
+// --- TASK-506-02 modern styling emitters (present-only; ZERO bytes when unset) ---
+// Every generator returns null/[] for an absent field, so an unauthored doc is
+// byte-identical (Hard Invariant 2). All values arrive pre-validated/clamped/
+// enum-mapped from 506-01's normalizers — 506-02 does no re-validation.
+
+// ── B1 item separators (orientation-aware) ──────────────────────────────────
+/** Shared border shorthand builder for the B1 divider. `itemDividerShow!==true`
+ *  ⇒ null ⇒ ZERO bytes. The `?? 1|solid|currentColor` fallbacks fire ONLY when
+ *  the feature is explicitly ON (documented cheap-win), so byte-identity holds. */
+const dividerCss = (s: NavLevelStyle | NavChromeStyle): string | null =>
+  s.itemDividerShow === true
+    ? `${s.itemDividerWidth ?? 1}px ${s.itemDividerStyle ?? "solid"} ${s.itemDividerColor ?? "currentColor"}`
+    : null;
+
+/** Level-0 top-bar divider BETWEEN items. Horizontal bar ⇒ VERTICAL rule
+ *  (`border-inline-end`); `orientation:vertical` bar ⇒ HORIZONTAL rule
+ *  (`border-block-end`). ≥640-only (folded into desktopShared, excluded from the
+ *  mobile linkOnly branch — the <640 nav is a forced flex-column so the desktop
+ *  `border-inline-end` would paint on the wrong axis). */
+const level0DividerRule = (
+  chrome: NavChromeStyle,
+  orientation: MenuAppearanceOrientation
+): string | null => {
+  const v = dividerCss(chrome);
+  if (v == null) return null;
+  const side = orientation === "vertical" ? "border-block-end" : "border-inline-end";
+  return `${menuDocScope} .site-nav-list > .site-nav-item:not(:last-child){${side}:${v}}`;
+};
+
+// Dedicated SINGLE-member per-level item selectors for the dropdown divider —
+// NEVER concatenate `> li` onto the two-member LEVEL_CONTAINER_SELECTORS[1] (that
+// comma group would land the divider on the wrong depth AND the container).
+const LEVEL_DROPDOWN_ITEM_SELECTORS: Record<NavLevelStyleLevel, string> = {
+  1: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist > li:not(:last-child)`,
+  2: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist > li:not(:last-child)`,
+};
+/** Dropdown (levels ≥1, vertical stack) ⇒ always HORIZONTAL rule
+ *  (`border-block-end`). ≥640-only (emitted below the linkOnly guard). */
+const levelDropdownDividerRule = (lvl: NavLevelStyleLevel, s: NavLevelStyle): string | null => {
+  const v = dividerCss(s);
+  if (v == null) return null;
+  return `${LEVEL_DROPDOWN_ITEM_SELECTORS[lvl]}{border-block-end:${v}}`;
+};
+
+// ── B2 indicator + hover chrome (LINK-level, all-width) ──────────────────────
+/** LINK `{}` decls folded into the level/chrome link block: the transition (for
+ *  hover-lift + grow + color) + `position:relative` to anchor the ::before bar. */
+const indicatorLinkDecls = (s: NavLevelStyle | NavChromeStyle): string[] => {
+  const out: string[] = [];
+  if (s.transitionMs != null)
+    out.push(
+      `transition:color ${s.transitionMs}ms,background ${s.transitionMs}ms,transform ${s.transitionMs}ms`
+    );
+  if (s.indicator != null && s.indicator !== "none") out.push(`position:relative`);
+  return out;
+};
+/** The indicator bar (::BEFORE — the caret owns ::after @712) + its shown state +
+ *  hoverUnderline/hoverLift extras. Bar hidden at rest, revealed on
+ *  :hover/:focus-visible/[aria-current=page] via scaleX (grow) or opacity. */
+const indicatorAndHoverRules = (sel: string, s: NavLevelStyle | NavChromeStyle): string[] => {
+  const out: string[] = [];
+  if (s.indicator != null && s.indicator !== "none") {
+    const edge = s.indicator === "overline" ? "top:0" : "bottom:0";
+    const th = s.indicatorThickness ?? 2;
+    const dur = s.transitionMs ?? 150;
+    const color = s.indicatorColor ?? "currentColor";
+    const rest =
+      s.indicatorGrow === true
+        ? `content:"";position:absolute;left:0;${edge};height:${th}px;width:100%;background:${color};transform:scaleX(0);transform-origin:left;transition:transform ${dur}ms`
+        : `content:"";position:absolute;left:0;${edge};height:${th}px;width:100%;background:${color};opacity:0;transition:opacity ${dur}ms`;
+    out.push(`${sel}::before{${rest}}`);
+    const on = s.indicatorGrow === true ? `transform:scaleX(1)` : `opacity:1`;
+    out.push(
+      `${sel}:hover::before,${sel}:focus-visible::before,${sel}:where([aria-current="page"])::before{${on}}`
+    );
+  }
+  const hoverDecls = [
+    s.hoverUnderline === true ? `text-decoration:underline` : null,
+    s.hoverLift != null ? `transform:translateY(-${s.hoverLift}px)` : null,
+  ].filter((d): d is string => d !== null);
+  if (hoverDecls.length) out.push(`${sel}:hover,${sel}:focus-visible{${hoverDecls.join(";")}}`);
+  return out;
+};
+
+// ── B3 caret toggle + rotate + flyout animation ─────────────────────────────
+// The caret @712 is emitted UNCONDITIONALLY for ALL groups; B3 emits per-level
+// OVERRIDES keyed to the level's group-parent link (higher specificity than @712,
+// emitted after ⇒ wins). ` > .site-nav-link` (with spaces) so caretRotateRule can
+// strip it back to the <li>.
+const GROUP_CARET_SELECTORS: Record<0 | 1 | 2, string> = {
+  0: `${menuDocScope} .site-nav-list > li[data-site-nav-group="true"] > .site-nav-link`,
+  1: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link`,
+  2: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link`,
+};
+const caretToggleRule = (lvl: 0 | 1 | 2, s: NavLevelStyle | NavChromeStyle): string | null =>
+  s.showCaret === false ? `${GROUP_CARET_SELECTORS[lvl]}::after{content:none}` : null;
+const caretRotateRule = (lvl: 0 | 1 | 2, s: NavLevelStyle | NavChromeStyle): string[] => {
+  if (s.caretRotateOnOpen !== true) return [];
+  const caret = GROUP_CARET_SELECTORS[lvl]; // …> .site-nav-link
+  const g = caret.replace(" > .site-nav-link", ""); // the group <li>
+  const dur = s.transitionMs ?? 150;
+  // @712's ::after is a non-replaced INLINE box (no display) — `transform` is
+  // silently ignored there, so ALSO emit a transformable resting state
+  // (display:inline-block + rotate(0) + transition) so the open rotate applies AND
+  // animates. Emitting rest HERE keeps @712 byte-identical when this is off.
+  return [
+    `${caret}::after{display:inline-block;transform:rotate(0);transition:transform ${dur}ms}`,
+    `${g}:hover > .site-nav-link::after,${g}:focus-within > .site-nav-link::after{transform:rotate(180deg)}`,
+  ];
+};
+// flyoutAnimation: layer an opacity(+transform) reveal OVER the display:none→grid
+// toggle @701/@703 (NEVER replace it — that is the zero-JS reachability contract).
+// Made to ACTUALLY interpolate on open via `transition-behavior:allow-discrete` on
+// the display transition + a matching `@starting-style` (a plain opacity transition
+// off display:none snaps and is cosmetically inert on open). Each level targets its
+// OWN single precise sublist + the parent li that toggles it — NEVER the two-member
+// LEVEL_CONTAINER_SELECTORS[1] (which would strand the nested level-2 sublist hidden).
+const flyoutAnimRule = (lvl: NavLevelStyleLevel, s: NavLevelStyle): string[] => {
+  if (s.flyoutAnimation == null || s.flyoutAnimation === "none") return [];
+  const target =
+    lvl === 1
+      ? {
+          sub: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist`,
+          openParent: `${menuDocScope} .site-nav-list > .site-nav-item`,
+        }
+      : {
+          sub: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist`,
+          openParent: `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist > .site-nav-item`,
+        };
+  const { sub, openParent } = target;
+  const dur = s.transitionMs ?? 150;
+  const rest = s.flyoutAnimation === "slide" ? "opacity:0;transform:translateY(-6px)" : "opacity:0";
+  const open = s.flyoutAnimation === "slide" ? "opacity:1;transform:translateY(0)" : "opacity:1";
+  const txn =
+    s.flyoutAnimation === "slide"
+      ? `transition:opacity ${dur}ms,transform ${dur}ms,display ${dur}ms allow-discrete`
+      : `transition:opacity ${dur}ms,display ${dur}ms allow-discrete`;
+  const shownSel = `${openParent}:hover > .site-nav-sublist,${openParent}:focus-within > .site-nav-sublist`;
+  return [
+    `${sub}{${rest};${txn}}`,
+    `${shownSel}{${open};${txn}}`,
+    `@starting-style{${shownSel}{${rest}}}`,
+  ];
+};
+
+// ── B4 pill (level-0 wrapper on .site-nav-list) ─────────────────────────────
+const pillRule = (chrome: NavChromeStyle): string | null => {
+  const decls = [
+    chrome.navPillBackground != null ? `background:${chrome.navPillBackground}` : null,
+    chrome.navPillRadius != null ? `border-radius:${chrome.navPillRadius}px` : null,
+    chrome.navPillPaddingX != null || chrome.navPillPaddingY != null
+      ? `padding:${chrome.navPillPaddingY ?? 0}px ${chrome.navPillPaddingX ?? 0}px`
+      : null,
+  ].filter((d): d is string => d !== null);
+  return decls.length ? `${menuDocScope} .site-nav-list{${decls.join(";")}}` : null;
+};
+// (B4 dropdown INNER padding for levels ≥1 rides levelContainerDecls below.)
+
+// ── B5 nested submenu placement (LEVEL-2 nested sublist ONLY) ────────────────
+// Rewrites the hardcoded @707 always-RIGHT nested flyout. Emitted SOLELY on the
+// anchored (0,5,0) LEVEL_CONTAINER_SELECTORS[2] (read off the level-2 style) so it
+// TIES the 504 reach + wins by source order; NEVER on LEVEL_CONTAINER_SELECTORS[1]
+// (that would clobber dropdownRule @325's first-dropdown top|bottom axis). Every
+// decl resets ALL FOUR offsets, else an undeclared offset inherits @707's
+// `left:100%`/direction `top|bottom` ⇒ a double-anchor stretch.
+const submenuPlacementRule = (s: NavLevelStyle | undefined): string | null => {
+  if (!s || s.submenuPlacement == null) return null;
+  const pos =
+    s.submenuPlacement === "bottom"
+      ? "left:0;top:100%;right:auto;bottom:auto"
+      : s.submenuPlacement === "left"
+        ? "right:100%;left:auto;top:0;bottom:auto"
+        : "left:100%;right:auto;top:0;bottom:auto"; // right (default)
+  return `${LEVEL_CONTAINER_SELECTORS[2]}{${pos}}`;
+};
+
 /** Link typography/box decls for ONE level (present-only, sparse). `gap` is NOT
  *  here — the link is `display:block`, so `gap` lands on the CONTAINER. */
-const levelLinkDecls = (s: NavLevelStyle): string[] =>
-  [
+const levelLinkDecls = (s: NavLevelStyle): string[] => {
+  const decls = [
     s.linkColor != null ? `color:${s.linkColor}` : null,
     s.fontSize != null ? `font-size:${s.fontSize}px` : null,
     s.fontWeight != null ? `font-weight:${s.fontWeight}` : null,
@@ -516,6 +694,10 @@ const levelLinkDecls = (s: NavLevelStyle): string[] =>
       : null,
     s.radius != null ? `border-radius:${s.radius}px` : null,
   ].filter((d): d is string => d !== null);
+  // B2 (TASK-506): the indicator transition + `position:relative` fold into the
+  // SAME link `{}` block (present-only ⇒ nothing when unauthored). All-width.
+  return [...decls, ...indicatorLinkDecls(s)];
+};
 
 /** Hover/active state rules for ONE level (separate state-pseudo selectors). */
 const levelStateRules = (level: NavLevelStyleLevel, s: NavLevelStyle): string[] => {
@@ -544,6 +726,12 @@ const levelContainerDecls = (s: NavLevelStyle): string[] => {
     s.shadow != null ? `box-shadow:${shadowCss(s.shadow)}` : null,
     s.minWidth != null ? `min-width:${s.minWidth}px` : null,
     s.gap != null ? `gap:${s.gap}px` : null,
+    // B4 (TASK-506) dropdown INNER padding — container-level, distinct from the
+    // per-LINK paddingX/Y. Unset axis completes to 0 (author fully controls). ≥640
+    // only (this fn is called below the linkOnly guard in navLevelRules).
+    s.containerPaddingX != null || s.containerPaddingY != null
+      ? `padding:${s.containerPaddingY ?? 0}px ${s.containerPaddingX ?? 0}px`
+      : null,
   ].filter((d): d is string => d !== null);
 };
 
@@ -575,9 +763,20 @@ const navLevelRules = (
     const linkDecls = levelLinkDecls(s);
     if (linkDecls.length) rules.push(`${LEVEL_LINK_SELECTORS[lvl]}{${linkDecls.join(";")}}`);
     rules.push(...levelStateRules(lvl, s));
+    // B2 (TASK-506) indicator bar + shown state + hover extras — LINK-level ⇒
+    // all-width (re-emits at mobile via the linkOnly path too).
+    rules.push(...indicatorAndHoverRules(LEVEL_LINK_SELECTORS[lvl], s));
     if (options?.linkOnly) continue; // container chrome is ≥640-only (parent contract)
     const contDecls = levelContainerDecls(s);
     if (contDecls.length) rules.push(`${LEVEL_CONTAINER_SELECTORS[lvl]}{${contDecls.join(";")}}`);
+    // B1/B3 (TASK-506) CONTAINER-ish structural — ≥640-only (the flyout/dropdown
+    // only exists there). B5 placement is NOT here (standalone, level-2 only).
+    const dropdownDivider = levelDropdownDividerRule(lvl, s);
+    if (dropdownDivider) rules.push(dropdownDivider);
+    const caretToggle = caretToggleRule(lvl, s);
+    if (caretToggle) rules.push(caretToggle);
+    rules.push(...caretRotateRule(lvl, s));
+    rules.push(...flyoutAnimRule(lvl, s));
   }
   return rules;
 };
@@ -617,6 +816,12 @@ const shallowEqualStyle = (resolved: BrandStyle, base: BrandStyle | undefined): 
   return BRAND_STYLE_COMPARE_KEYS.every((k) => resolved[k] === other[k]);
 };
 
+// 506-02 is the sole writer of this list (506-01 supplies the key SET in its
+// closure note). EVERY new NavLevelStyle key MUST be here or `collectLevelDeltaRules`
+// silently never emits a per-device override of it (a live cross-subtask guard —
+// test #4 fails on a missing key). B5 `submenuPlacement` IS listed (it makes the
+// diff fire) but its base rule lives OUTSIDE navLevelRules, so its actual tablet
+// re-emit is the standalone `submenuPlacementDeltaRule` — see that note.
 const NAV_LEVEL_STYLE_COMPARE_KEYS: readonly (keyof NavLevelStyle)[] = [
   "linkColor",
   "linkHoverColor",
@@ -633,6 +838,24 @@ const NAV_LEVEL_STYLE_COMPARE_KEYS: readonly (keyof NavLevelStyle)[] = [
   "radius",
   "shadow",
   "minWidth",
+  // TASK-506 modern fields (B1/B2/B3/B4 ride navLevelRules; B5 is standalone):
+  "itemDividerShow",
+  "itemDividerColor",
+  "itemDividerWidth",
+  "itemDividerStyle",
+  "indicator",
+  "indicatorColor",
+  "indicatorThickness",
+  "indicatorGrow",
+  "hoverUnderline",
+  "transitionMs",
+  "hoverLift",
+  "showCaret",
+  "caretRotateOnOpen",
+  "flyoutAnimation",
+  "containerPaddingX",
+  "containerPaddingY",
+  "submenuPlacement",
 ];
 
 const shallowEqualLevel = (a: NavLevelStyle, b: NavLevelStyle): boolean =>
@@ -680,6 +903,103 @@ const collectLevelDeltaRules = (doc: MenuDocumentV2, device: MenuDeviceKind): st
   // the container, so a per-device container override cannot leak onto the
   // inline nested list. Tablet (≥640) keeps the full container chrome.
   return navLevelRules(resolved, { linkOnly: device === "mobile" });
+};
+
+// --- TASK-506-02 level-0 navChrome emission + per-device delta --------------
+// 506-02 is the sole writer of this navChrome compare list (mirrors
+// NAV_LEVEL_STYLE_COMPARE_KEYS; 506-01 supplies the key set). navChrome has NO
+// flyoutAnimation / submenuPlacement (both are levels-≥1 NavLevelStyle fields).
+const NAV_CHROME_COMPARE_KEYS: readonly (keyof NavChromeStyle)[] = [
+  "navPillBackground",
+  "navPillRadius",
+  "navPillPaddingX",
+  "navPillPaddingY",
+  "itemDividerShow",
+  "itemDividerColor",
+  "itemDividerWidth",
+  "itemDividerStyle",
+  "indicator",
+  "indicatorColor",
+  "indicatorThickness",
+  "indicatorGrow",
+  "hoverUnderline",
+  "transitionMs",
+  "hoverLift",
+  "showCaret",
+  "caretRotateOnOpen",
+];
+
+const shallowEqualChrome = (
+  resolved: NavChromeStyle,
+  base: NavChromeStyle | undefined
+): boolean => {
+  const other = base ?? {};
+  return NAV_CHROME_COMPARE_KEYS.every((k) => resolved[k] === other[k]);
+};
+
+/**
+ * Level-0 chrome emitter (mirror of `navLevelRules`). LINK-level B2
+ * (indicator/hover/lift/transition) is all-width and rides the mobile `linkOnly`
+ * branch; the pill (B4), top-bar divider (B1) and caret toggle/rotate (B3) are
+ * ≥640-only (omitted when `linkOnly`). The level-0 link selector `.site-nav-link`
+ * is the cascade ROOT (matches links at ALL depths) — deeper level rules win by
+ * specificity. NO flyoutAnimation at level 0 (the top bar is never a revealed
+ * sublist). Present-only ⇒ ZERO bytes when unauthored.
+ */
+const navChromeRules = (
+  chrome: NavChromeStyle | undefined,
+  orientation: MenuAppearanceOrientation,
+  options?: { linkOnly?: boolean }
+): string[] => {
+  if (!chrome) return []; // absent ⇒ ZERO bytes
+  const linkSel = `${menuDocScope} .site-nav-link`;
+  const rules: string[] = [];
+  const linkDecls = indicatorLinkDecls(chrome);
+  if (linkDecls.length) rules.push(`${linkSel}{${linkDecls.join(";")}}`);
+  rules.push(...indicatorAndHoverRules(linkSel, chrome)); // B2 — all-width
+  if (options?.linkOnly) return rules;
+  const pill = pillRule(chrome); // B4
+  if (pill) rules.push(pill);
+  const divider = level0DividerRule(chrome, orientation); // B1
+  if (divider) rules.push(divider);
+  const caretToggle = caretToggleRule(0, chrome); // B3
+  if (caretToggle) rules.push(caretToggle);
+  rules.push(...caretRotateRule(0, chrome)); // B3
+  return rules;
+};
+
+/** navChrome device deltas: TOTAL re-emit on the device-resolved navChrome, but
+ *  ONLY when it DIFFERS from desktop base (later source order wins). Mobile is
+ *  `linkOnly` (pill/divider/caret are ≥640-only). Mirrors `collectLevelDeltaRules`. */
+const collectChromeDeltaRules = (doc: MenuDocumentV2, device: MenuDeviceKind): string[] => {
+  const section = doc.sections[0];
+  if (!section) return [];
+  const navBlock = section.blocks.find((block) => block.type === "nav-items");
+  if (!navBlock || navBlock.type !== "nav-items") return [];
+  const resolved = resolveMenuNavChrome(section, device); // 506-01 export ({}-safe)
+  if (shallowEqualChrome(resolved, navBlock.props.navChrome)) return []; // no diff
+  const orientation = resolveMenuAppearanceForDevice(doc, device).orientation;
+  return navChromeRules(resolved, orientation, { linkOnly: device === "mobile" });
+};
+
+/**
+ * B5 standalone tablet delta. `submenuPlacement` is in NAV_LEVEL_STYLE_COMPARE_KEYS
+ * (so `deepEqualLevelStyles` sees the diff), but its BASE rule
+ * (`submenuPlacementRule`) lives OUTSIDE `navLevelRules`, so `collectLevelDeltaRules`
+ * re-emits IDENTICAL level-2 link/container rules and NO placement rewrite. This
+ * standalone emitter closes that gap: gate on a real level-2 placement diff so an
+ * unchanged doc emits ZERO bytes. NEVER mobile (nested flyout is ≥640-only).
+ */
+const submenuPlacementDeltaRule = (doc: MenuDocumentV2, device: "tablet"): string | null => {
+  const section = doc.sections[0];
+  if (!section) return null;
+  const navBlock = section.blocks.find((block) => block.type === "nav-items");
+  if (!navBlock || navBlock.type !== "nav-items") return null;
+  const resolvedL2 = resolveMenuSectionAppearanceForDevice(section, device).navProps
+    .levelStyles?.[2];
+  const baseL2 = navBlock.props.levelStyles?.[2];
+  if ((resolvedL2?.submenuPlacement ?? null) === (baseL2?.submenuPlacement ?? null)) return null;
+  return submenuPlacementRule(resolvedL2);
 };
 
 /**
@@ -746,6 +1066,9 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
   const navBlock = doc.sections[0]?.blocks.find((block) => block.type === "nav-items");
   const baseLevelStyles: NavLevelStyles | undefined =
     navBlock?.type === "nav-items" ? navBlock.props.levelStyles : undefined;
+  // DESKTOP-base level-0 chrome (TASK-506, Option B). Present-only ⇒ undefined.
+  const baseNavChrome: NavChromeStyle | undefined =
+    navBlock?.type === "nav-items" ? navBlock.props.navChrome : undefined;
   // Byte-identical to the pre-501 base emission for every document, plus the
   // per-divider context rules, the present-only brand rules, and the present-only
   // current-page tint (all device-independent, all ZERO bytes when unauthored).
@@ -761,15 +1084,25 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
   // (device-defining), nesting rules are structural. Level chrome/link BASE folds
   // in AFTER nesting so it beats the structural `.site-nav-sublist` rules + base
   // sheet chrome on source order.
+  const basePlacement = submenuPlacementRule(baseLevelStyles?.[2]); // TASK-506 B5
   const desktopShared = [
     dropdownRule(base),
     ...navNestingRules(base),
-    ...navLevelRules(baseLevelStyles), // §2 level base (link + container)
+    ...navLevelRules(baseLevelStyles), // §2 level base (link + container) + TASK-506 B1/B2/B3/B4 levels 1/2
+    // TASK-506 level-0 chrome (B1 divider / B2 indicator / B3 caret / B4 pill).
+    ...navChromeRules(baseNavChrome, base.orientation),
+    // TASK-506 B5 nested placement — LEVEL-2 only, on the anchored (0,5,0) sel.
+    ...(basePlacement ? [basePlacement] : []),
   ];
+  const tabletPlacement = submenuPlacementDeltaRule(doc, "tablet"); // TASK-506 B5 carve-out
   const tabletDelta = [
     ...collectDeltaRules(tabletResolved, base), // scalar deltas (incl. §3 box, §4 hover-text)
     ...collectBrandDeltaRules(doc, "tablet"), // §5 brand delta
-    ...collectLevelDeltaRules(doc, "tablet"), // §5 level delta
+    ...collectLevelDeltaRules(doc, "tablet"), // §5 level delta (+ TASK-506 B1/B2/B3/B4)
+    ...collectChromeDeltaRules(doc, "tablet"), // TASK-506 level-0 chrome delta
+    // B5: standalone level-2 placement delta — NOT carried by collectLevelDeltaRules
+    // (its base rule is outside navLevelRules), so re-emit here (gated on a diff).
+    ...(tabletPlacement ? [tabletPlacement] : []),
   ];
   const mobileRules = [
     ...mobileModeRules(mobileResolved), // FIRST — overrides win source order after it
@@ -785,6 +1118,10 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
     // (no-override byte-identity holds).
     ...navLevelRules(baseLevelStyles, { linkOnly: true }),
     ...collectLevelDeltaRules(doc, "mobile"), // §5 mobile-specific level override on top
+    // TASK-506 level-0 chrome: base LINK B2 bits must reach the inline <640 view
+    // (mobile inherits desktop); pill/divider/caret are ≥640-only ⇒ linkOnly.
+    ...navChromeRules(baseNavChrome, base.orientation, { linkOnly: true }),
+    ...collectChromeDeltaRules(doc, "mobile"), // mobile-specific chrome override (linkOnly)
   ];
   // Canvas-only sim-open: the front's [open] disclosure rule (same declarations
   // as mobileModeRules :267) so the Mobile canvas previews the OPENED list.
@@ -892,11 +1229,20 @@ const buildCanvasStructuralBaseline = (device: PageBreakpoint): string[] => {
  * Emitted LAST by the preview builder so it wins the closed `display:none`.
  */
 const previewForceOpenLevel = (level: NavLevelStyleLevel): string[] => {
+  // TASK-506 B3: force-open ALSO neutralizes the flyoutAnimation closed rest state
+  // (`opacity:0`/transform) so the animated flyout is VISIBLE on the canvas, not
+  // open-but-invisible. Each neutralize rule MATCHES its B3 hidden rule's
+  // specificity so it ties + wins on source order (emitted LAST).
   const rules = [
-    `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid}`,
+    `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}`,
   ];
   if (level >= 2) {
-    rules.push(`${menuDocScope} .site-nav-sublist .site-nav-sublist{display:grid}`);
+    // ANCHORED (0,5,0) — MUST match flyoutAnimRule(2)'s nested hidden selector; the
+    // short (0,3,0) `.site-nav-sublist .site-nav-sublist` would LOSE to it regardless
+    // of order, leaving a level-2 flyoutAnimation flyout open-but-invisible.
+    rules.push(
+      `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}`
+    );
   }
   return rules;
 };

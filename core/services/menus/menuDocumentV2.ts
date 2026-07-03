@@ -26,6 +26,13 @@ import {
   type MenuAppearanceShadow,
   type MenuAppearanceTextTransform,
 } from "./normalizeMenuAppearance";
+// F2 resolved-default provider reads the shell theme defaults as the SINGLE
+// non-hardcoded source (parent §506-01 / F2). `SHELL_APPEARANCE_DEFAULTS` is a
+// pure validated value table (no CSS, no side effects); importing it here is
+// NON-CYCLIC — siteShellCss imports normalizeMenuAppearance/pages, never this
+// module. The three per-link defaults (12/8/6) are NOT in that table, so they are
+// re-declared below as EXPORTED model consts (single source for 506-02/506-04).
+import { SHELL_APPEARANCE_DEFAULTS } from "../../site/siteShellCss";
 
 /**
  * menuDocumentV2 — the menu Design tab's composable document (TASK-499-02).
@@ -136,9 +143,11 @@ const NAV_ITEMS_PROP_KEYS = [
 ] as const satisfies readonly (keyof MenuAppearance)[];
 
 export type MenuBarLayout = Pick<MenuAppearance, (typeof MENU_BAR_LAYOUT_KEYS)[number]>;
-/** No longer a pure `Pick` — carries the non-appearance `levelStyles` member. */
+/** No longer a pure `Pick` — carries the non-appearance `levelStyles` +
+ *  `navChrome` (TASK-506 level-0 home) members. */
 export type NavItemsProps = Pick<MenuAppearance, (typeof NAV_ITEMS_PROP_KEYS)[number]> & {
   levelStyles?: NavLevelStyles;
+  navChrome?: NavChromeStyle;
 };
 
 // --- TASK-504-01 brand style + per-level nav style shapes --------------------
@@ -177,6 +186,59 @@ export type NavLevelStyle = {
   radius?: number;
   shadow?: MenuAppearanceShadow;
   minWidth?: number;
+  // --- TASK-506 modern styling (present-only; CSS emission is 506-02) ---------
+  // B1 item separators (orientation-aware emission is 506-02's job):
+  itemDividerShow?: boolean;
+  itemDividerColor?: string; // normalizeMenuColorValue
+  itemDividerWidth?: number; // 1..8
+  itemDividerStyle?: "solid" | "dashed" | "dotted";
+  // B2 indicator + hover:
+  indicator?: "none" | "underline" | "overline";
+  indicatorColor?: string; // color
+  indicatorThickness?: number; // 1..6
+  indicatorGrow?: boolean;
+  hoverUnderline?: boolean;
+  transitionMs?: number; // 0..400
+  hoverLift?: number; // 0..8
+  // B3 caret + flyout (levels >= 1 parents; flyoutAnimation is levels 1/2 ONLY):
+  showCaret?: boolean;
+  caretRotateOnOpen?: boolean;
+  flyoutAnimation?: "none" | "fade" | "slide";
+  // B4 dropdown inner padding (container, levels >= 1):
+  containerPaddingX?: number; // 0..40
+  containerPaddingY?: number; // 0..32
+  // B5 nested placement (level 2):
+  submenuPlacement?: "right" | "bottom" | "left";
+};
+
+/**
+ * TASK-506 level-0 home (Option B). A NEW nav-items sub-record parallel to
+ * `levelStyles`, holding the level-0 variants of B1/B2/B3 + the B4 pill. It is
+ * NOT a `MenuAppearance` key set (so it cannot ride `NAV_ITEMS_PROP_KEYS`) — it
+ * gets its own reject-unknown allowlist + prune + device helper family.
+ * NO `flyoutAnimation` here: that is a levels-≥1 CONTAINER field (NavLevelStyle
+ * 1/2 ONLY); the top bar is never a revealed sublist.
+ */
+export type NavChromeStyle = {
+  // B4 pill (level-0 wrapper on .site-nav-list):
+  navPillBackground?: string; // color
+  navPillRadius?: number; // 0..40
+  navPillPaddingX?: number; // 0..40
+  navPillPaddingY?: number; // 0..32
+  // level-0 variants of B1/B2/B3 (same field names/semantics as NavLevelStyle):
+  itemDividerShow?: boolean;
+  itemDividerColor?: string;
+  itemDividerWidth?: number;
+  itemDividerStyle?: "solid" | "dashed" | "dotted";
+  indicator?: "none" | "underline" | "overline";
+  indicatorColor?: string;
+  indicatorThickness?: number;
+  indicatorGrow?: boolean;
+  hoverUnderline?: boolean;
+  transitionMs?: number;
+  hoverLift?: number;
+  showCaret?: boolean;
+  caretRotateOnOpen?: boolean;
 };
 
 /** Level 0 = the EXISTING nav-items scalar base (NO new type). Level 2 = "level 2
@@ -382,11 +444,22 @@ const normalizeMenuBarLayout = (value: unknown, path: string): MenuBarLayout =>
 // unchanged for every OTHER key.
 const normalizeNavItemsProps = (value: unknown, path: string): NavItemsProps => {
   if (!isPlainObject(value)) throw new MenuDocumentError(path);
-  const { levelStyles: rawLevelStyles, ...scalars } = value;
+  // TASK-506: split BOTH non-appearance members (`levelStyles` + `navChrome`) off
+  // BEFORE the flat subset — either would be REJECTED by normalizeAppearanceSubset
+  // and degrade the doc. Reused verbatim by the responsive write path, so navChrome
+  // flows through the SAME reject-unknown per-device (no separate allowlist needed).
+  const { levelStyles: rawLevelStyles, navChrome: rawNavChrome, ...scalars } = value;
   const base = normalizeAppearanceSubset(scalars, NAV_ITEMS_PROP_KEYS, path) as NavItemsProps;
-  if (rawLevelStyles === undefined || rawLevelStyles === null) return base; // legacy byte-identity
-  const levelStyles = normalizeNavLevelStyles(rawLevelStyles, `${path}.levelStyles`);
-  return levelStyles ? { ...base, levelStyles } : base; // prune ⇒ no member
+  let next: NavItemsProps = base;
+  if (rawLevelStyles !== undefined && rawLevelStyles !== null) {
+    const levelStyles = normalizeNavLevelStyles(rawLevelStyles, `${path}.levelStyles`);
+    if (levelStyles) next = { ...next, levelStyles }; // prune ⇒ no member
+  }
+  if (rawNavChrome !== undefined && rawNavChrome !== null) {
+    const navChrome = normalizeNavChrome(rawNavChrome, `${path}.navChrome`);
+    if (navChrome) next = { ...next, navChrome }; // prune ⇒ no member
+  }
+  return next; // absent BOTH ⇒ bare base (legacy byte-identity)
 };
 
 // --- responsive override write normalizers (reject-unknown, prune-empty) ----
@@ -578,6 +651,25 @@ const NAV_LEVEL_STYLE_KEYS = [
   "radius",
   "shadow",
   "minWidth",
+  // TASK-506 modern fields (each MUST also land in exactly one value partition
+  // below — a key here handled by no branch is silently DROPPED):
+  "itemDividerShow",
+  "itemDividerColor",
+  "itemDividerWidth",
+  "itemDividerStyle",
+  "indicator",
+  "indicatorColor",
+  "indicatorThickness",
+  "indicatorGrow",
+  "hoverUnderline",
+  "transitionMs",
+  "hoverLift",
+  "showCaret",
+  "caretRotateOnOpen",
+  "flyoutAnimation",
+  "containerPaddingX",
+  "containerPaddingY",
+  "submenuPlacement",
 ] as const;
 
 // NEW LOCAL clamp tables (NOT added to menuAppearanceNumberRanges): (a) brand
@@ -599,7 +691,64 @@ export const NAV_LEVEL_NUMBER_RANGES = {
   borderWidth: { min: 0, max: 8 },
   radius: { min: 0, max: 32 },
   minWidth: { min: 80, max: 480 },
+  // TASK-506 modern numeric fields (levels 1/2 + level-0 navChrome share bounds):
+  itemDividerWidth: { min: 1, max: 8 }, // B1
+  indicatorThickness: { min: 1, max: 6 }, // B2
+  transitionMs: { min: 0, max: 400 }, // B2
+  hoverLift: { min: 0, max: 8 }, // B2
+  containerPaddingX: { min: 0, max: 40 }, // B4 (levels >= 1)
+  containerPaddingY: { min: 0, max: 32 }, // B4 (levels >= 1)
 } as const;
+
+// TASK-506 fresh local enum option arrays (mirror menuAppearanceFontWeights usage).
+const ITEM_DIVIDER_STYLES = ["solid", "dashed", "dotted"] as const;
+const NAV_INDICATOR_KINDS = ["none", "underline", "overline"] as const;
+const FLYOUT_ANIMATIONS = ["none", "fade", "slide"] as const;
+const SUBMENU_PLACEMENTS = ["right", "bottom", "left"] as const;
+
+// TASK-506 level-0 pill ranges (navChrome-only keys) + the level-0 variants of the
+// shared numeric fields (same bounds as the level table above).
+export const NAV_CHROME_NUMBER_RANGES = {
+  navPillRadius: { min: 0, max: 40 },
+  navPillPaddingX: { min: 0, max: 40 },
+  navPillPaddingY: { min: 0, max: 32 },
+  itemDividerWidth: { min: 1, max: 8 },
+  indicatorThickness: { min: 1, max: 6 },
+  transitionMs: { min: 0, max: 400 },
+  hoverLift: { min: 0, max: 8 },
+} as const;
+
+/**
+ * TASK-506 F2 modern-fields effective defaults. The single non-hardcoded source
+ * for the enum/bool B1–B5 fields' resolved-default hint (`resolveMenuControlDefault`
+ * reads it; 506-02 mirrors it for present-only CSS emission; 506-04's
+ * `ControlDefaultHint` imports it). These mirror today's implicit CSS behaviour
+ * (caret always-on, nested flyout flies right, pure display toggle). NOTE:
+ * `flyoutAnimation` is a levels-1/2 NavLevelStyle field (never a navChrome key)
+ * but its effective-default VALUE lives here for the level-1/2 hint, exactly like
+ * the level-2-only `submenuPlacement`. The GATED present-only NUMERICS are
+ * DELIBERATELY absent (unset ⇒ no element ⇒ no meaningful resolved number). */
+export const NAV_CHROME_DEFAULTS = {
+  submenuPlacement: "right",
+  indicator: "none",
+  flyoutAnimation: "none",
+  showCaret: true,
+  caretRotateOnOpen: false,
+  indicatorGrow: false,
+  hoverUnderline: false,
+  itemDividerShow: false,
+  itemDividerStyle: "solid",
+} as const;
+
+/**
+ * TASK-506 F2 theme / base-sheet default source consts. Re-declared here (the
+ * model layer stays self-contained) as the SINGLE source 506-02/506-04 import.
+ * Mirrors `SHELL_DEFAULT_LINK_*` (`menuDocumentCss.ts:104-106`) +
+ * `NAV_FONT_SIZE_INHERITED` (the editor const `MenuDesignEditor.tsx:304`). */
+export const MENU_SHELL_DEFAULT_LINK_PX = 12 as const;
+export const MENU_SHELL_DEFAULT_LINK_PY = 8 as const;
+export const MENU_SHELL_DEFAULT_LINK_RADIUS = 6 as const;
+export const NAV_FONT_SIZE_INHERITED = 16 as const;
 
 /** Editor slider-bound convenience alias for the LEVEL-0 nav-link scalars
  *  (control-facing keys `paddingX`/`paddingY`/`radius`, re-mapped from the shared
@@ -669,6 +818,9 @@ const NAV_LEVEL_STYLE_COLOR_KEYS = [
   "linkActiveColor",
   "background",
   "borderColor",
+  // TASK-506:
+  "itemDividerColor",
+  "indicatorColor",
 ] as const;
 const NAV_LEVEL_STYLE_NUMBER_KEYS = [
   "fontSize",
@@ -678,6 +830,28 @@ const NAV_LEVEL_STYLE_NUMBER_KEYS = [
   "borderWidth",
   "radius",
   "minWidth",
+  // TASK-506 (bounds in NAV_LEVEL_NUMBER_RANGES):
+  "itemDividerWidth",
+  "indicatorThickness",
+  "transitionMs",
+  "hoverLift",
+  "containerPaddingX",
+  "containerPaddingY",
+] as const;
+// TASK-506: the FIRST boolean partition on nav styling (none existed before).
+const NAV_LEVEL_STYLE_BOOL_KEYS = [
+  "itemDividerShow",
+  "indicatorGrow",
+  "hoverUnderline",
+  "showCaret",
+  "caretRotateOnOpen",
+] as const;
+// TASK-506 enum partition (mirror the shadow branch — fail-soft omit on bad value).
+const NAV_LEVEL_STYLE_ENUM_FIELDS = [
+  ["itemDividerStyle", ITEM_DIVIDER_STYLES],
+  ["indicator", NAV_INDICATOR_KINDS],
+  ["flyoutAnimation", FLYOUT_ANIMATIONS],
+  ["submenuPlacement", SUBMENU_PLACEMENTS],
 ] as const;
 
 const normalizeNavLevelStyle = (value: unknown, path: string): NavLevelStyle | undefined => {
@@ -708,6 +882,17 @@ const normalizeNavLevelStyle = (value: unknown, path: string): NavLevelStyle | u
     const s = normalizeEnumLocal(menuAppearanceShadows, value.shadow);
     if (s !== null) out.shadow = s;
   }
+  // TASK-506 enum branches (fail-soft omit on bad value):
+  for (const [k, options] of NAV_LEVEL_STYLE_ENUM_FIELDS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    const e = normalizeEnumLocal(options, value[k]);
+    if (e !== null) (out as Record<string, unknown>)[k] = e;
+  }
+  // TASK-506 boolean partition (typeof===boolean, non-boolean ⇒ fail-soft OMIT):
+  for (const k of NAV_LEVEL_STYLE_BOOL_KEYS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    if (typeof value[k] === "boolean") (out as Record<string, unknown>)[k] = value[k];
+  }
   return Object.keys(out).length > 0 ? out : undefined; // prune empty level
 };
 
@@ -728,6 +913,85 @@ const normalizeNavLevelStyles = (value: unknown, path: string): NavLevelStyles |
     if (style) out[level] = style; // prune empty level
   }
   return Object.keys(out).length > 0 ? out : undefined; // prune empty record ⇒ omit
+};
+
+// --- TASK-506 level-0 navChrome sub-record (Option B) ------------------------
+// CONSCIOUS fail-closed READ-trap allowlist: a forgotten key degrades every stored
+// doc carrying a navChrome member to empty on read (round-trip test per key). NO
+// `flyoutAnimation` — it is a levels-≥1 NavLevelStyle field (writing it under
+// navChrome reject-unknown throws).
+const NAV_CHROME_KEYS = [
+  "navPillBackground",
+  "navPillRadius",
+  "navPillPaddingX",
+  "navPillPaddingY",
+  "itemDividerShow",
+  "itemDividerColor",
+  "itemDividerWidth",
+  "itemDividerStyle",
+  "indicator",
+  "indicatorColor",
+  "indicatorThickness",
+  "indicatorGrow",
+  "hoverUnderline",
+  "transitionMs",
+  "hoverLift",
+  "showCaret",
+  "caretRotateOnOpen",
+] as const;
+const NAV_CHROME_COLOR_KEYS = ["navPillBackground", "itemDividerColor", "indicatorColor"] as const;
+const NAV_CHROME_NUMBER_KEYS = [
+  "navPillRadius",
+  "navPillPaddingX",
+  "navPillPaddingY",
+  "itemDividerWidth",
+  "indicatorThickness",
+  "transitionMs",
+  "hoverLift",
+] as const;
+const NAV_CHROME_ENUM_FIELDS = [
+  ["itemDividerStyle", ITEM_DIVIDER_STYLES],
+  ["indicator", NAV_INDICATOR_KINDS],
+] as const;
+const NAV_CHROME_BOOL_KEYS = [
+  "itemDividerShow",
+  "indicatorGrow",
+  "hoverUnderline",
+  "showCaret",
+  "caretRotateOnOpen",
+] as const;
+
+// Same VALUE policy as normalizeNavLevelStyle (KEYS throw reject-unknown; VALUES
+// fail-soft OMIT). Numbers clamp over NAV_CHROME_NUMBER_RANGES; empty ⇒ pruned.
+const normalizeNavChrome = (value: unknown, path: string): NavChromeStyle | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isPlainObject(value)) throw new MenuDocumentError(path);
+  for (const key of Object.keys(value)) {
+    if (!(NAV_CHROME_KEYS as readonly string[]).includes(key)) {
+      throw new MenuDocumentError(`${path}.${key}`); // reject-unknown KEY
+    }
+  }
+  const out: NavChromeStyle = {};
+  for (const k of NAV_CHROME_COLOR_KEYS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    const c = normalizeMenuColorValue(value[k]);
+    if (c !== null) (out as Record<string, unknown>)[k] = c;
+  }
+  for (const k of NAV_CHROME_NUMBER_KEYS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    const n = clampLocalNumber(NAV_CHROME_NUMBER_RANGES[k], value[k]);
+    if (n !== null) (out as Record<string, unknown>)[k] = n;
+  }
+  for (const [k, options] of NAV_CHROME_ENUM_FIELDS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    const e = normalizeEnumLocal(options, value[k]);
+    if (e !== null) (out as Record<string, unknown>)[k] = e;
+  }
+  for (const k of NAV_CHROME_BOOL_KEYS) {
+    if (value[k] === undefined || value[k] === null) continue;
+    if (typeof value[k] === "boolean") (out as Record<string, unknown>)[k] = value[k];
+  }
+  return Object.keys(out).length > 0 ? out : undefined; // prune empty ⇒ no member
 };
 
 /**
@@ -1240,12 +1504,19 @@ export function resolveMenuSectionAppearanceForDevice(
   }
   const override = section.responsive?.[bp]; // ONLY the device's own record
   // Scalars keep the existing shallow per-key merge; levelStyles is deep-merged
-  // per level per field so an override field wins while unset fields inherit desktop.
-  const { levelStyles: baseLevels, ...baseScalars } = baseNavProps;
-  const { levelStyles: overrideLevels, ...overrideScalars } = override?.navProps ?? {};
+  // per level per field; navChrome shallow-merges base⊕override (like the scalars)
+  // so an override field wins while unset fields inherit desktop.
+  const { levelStyles: baseLevels, navChrome: baseChrome, ...baseScalars } = baseNavProps;
+  const {
+    levelStyles: overrideLevels,
+    navChrome: overrideChrome,
+    ...overrideScalars
+  } = override?.navProps ?? {};
   const navProps: NavItemsProps = { ...baseScalars, ...overrideScalars };
   const mergedLevels = mergeNavLevelStyles(baseLevels, overrideLevels);
   if (mergedLevels) navProps.levelStyles = mergedLevels; // omit when empty
+  const mergedChrome = { ...(baseChrome ?? {}), ...(overrideChrome ?? {}) };
+  if (Object.keys(mergedChrome).length > 0) navProps.navChrome = mergedChrome; // omit when empty
   return {
     layout: { ...section.layout, ...(override?.layout ?? {}) }, // inherits desktop base
     navProps,
@@ -1695,6 +1966,430 @@ export function clearMenuNavLevelStyleOverride(
     if (Object.keys(responsive).length === 0) delete next.responsive;
     return next;
   });
+}
+
+// --- TASK-506 per-device level-0 navChrome helpers (Option B) ----------------
+// desktop ⇒ FIRST nav-items block props.navChrome; tablet/mobile ⇒ section
+// responsive[bp].navProps.navChrome (own sparse delta over the DESKTOP base;
+// mobile never reads tablet). Mirrors the levelStyles family exactly.
+
+/** Set/delete navChrome on a navProps group, pruning the empty member (mirror
+ *  withNavLevel). */
+const withNavChrome = (navProps: NavItemsProps, nextChrome: NavChromeStyle): NavItemsProps => {
+  const { navChrome: _c, ...rest } = navProps;
+  const next: NavItemsProps = { ...rest };
+  if (Object.keys(nextChrome).length > 0) next.navChrome = nextChrome;
+  return next;
+};
+
+const applyNavChromePatch = (
+  target: NavChromeStyle,
+  patch: Partial<NavChromeStyle>
+): NavChromeStyle => {
+  const next: Record<string, unknown> = { ...target };
+  for (const [key, value] of Object.entries(patch)) {
+    if (value === undefined)
+      delete next[key]; // delete-on-undefined
+    else next[key] = value;
+  }
+  return next as NavChromeStyle;
+};
+
+/** Single resolver 506-04's level-0 control display consumes. Returns {} when
+ *  unstyled; mobile never reads tablet. */
+export function resolveMenuNavChrome(
+  section: MenuSectionV2,
+  device: MenuDeviceKind
+): NavChromeStyle {
+  const navBlock = section.blocks.find((b) => b.type === "nav-items");
+  const base = navBlock?.type === "nav-items" ? (navBlock.props.navChrome ?? {}) : {};
+  const bp = menuDeviceBreakpoint(device);
+  if (bp === null) return { ...base };
+  return { ...base, ...(section.responsive?.[bp]?.navProps?.navChrome ?? {}) };
+}
+
+/** RAW read for a navChrome field's device override (badge/Reset) — hasOwnProperty. */
+export function readMenuNavChromeOverrideValue(
+  section: MenuSectionV2,
+  breakpoint: MenuResponsiveBreakpoint,
+  key: keyof NavChromeStyle
+): unknown {
+  const record = section.responsive?.[breakpoint]?.navProps?.navChrome;
+  return record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+/** RAW read for a navChrome field's BASE value (F1 hasBaseValue predicate). */
+export function readMenuNavChromeBaseValue(
+  section: MenuSectionV2,
+  key: keyof NavChromeStyle
+): unknown {
+  const navBlock = section.blocks.find((b) => b.type === "nav-items");
+  const record = navBlock?.type === "nav-items" ? navBlock.props.navChrome : undefined;
+  return record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+/**
+ * Device-forked writer for level-0 navChrome. desktop ⇒ the FIRST nav-items
+ * block props.navChrome (matches the .find() binding used by resolve +
+ * collectMenuAppearance); tablet/mobile ⇒ section responsive[bp].navProps
+ * .navChrome. delete-on-undefined + DEEP prune: field ⇒ navChrome ⇒ navProps ⇒
+ * override ⇒ responsive.
+ */
+export function patchMenuNavChromeForDevice(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  device: MenuDeviceKind,
+  patch: Partial<NavChromeStyle>
+): MenuDocumentV2 {
+  return mapMenuSection(doc, sectionId, (section) => {
+    const bp = menuDeviceBreakpoint(device);
+    if (bp === null) {
+      const navIndex = section.blocks.findIndex((block) => block.type === "nav-items");
+      if (navIndex === -1) return section; // no nav-items block ⇒ identity
+      return {
+        ...section,
+        blocks: section.blocks.map((block, i) => {
+          if (i !== navIndex || block.type !== "nav-items") return block;
+          const nextChrome = applyNavChromePatch(block.props.navChrome ?? {}, patch);
+          return { ...block, props: withNavChrome(block.props, nextChrome) };
+        }),
+      };
+    }
+    const record = section.responsive?.[bp] ?? {};
+    const navProps = record.navProps ?? {};
+    const nextChrome = applyNavChromePatch(navProps.navChrome ?? {}, patch);
+    const nextNavProps = withNavChrome(navProps, nextChrome);
+    const { navProps: _n, ...restRecord } = record;
+    const nextRecord = (
+      Object.keys(nextNavProps).length > 0 ? { ...restRecord, navProps: nextNavProps } : restRecord
+    ) as MenuSectionOverride;
+    const { [bp]: _b, ...restResponsive } = section.responsive ?? {};
+    const responsive: MenuSectionResponsive =
+      Object.keys(nextRecord).length > 0 ? { ...restResponsive, [bp]: nextRecord } : restResponsive;
+    const next: MenuSectionV2 = { ...section, responsive };
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+/** Explicit Reset for one navChrome field on tablet/mobile; DEEP prune to legacy shape. */
+export function clearMenuNavChromeOverride(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  breakpoint: MenuResponsiveBreakpoint,
+  key: keyof NavChromeStyle
+): MenuDocumentV2 {
+  return mapMenuSection(doc, sectionId, (section) => {
+    const record = section.responsive?.[breakpoint];
+    const chrome = record?.navProps?.navChrome;
+    if (!chrome || !Object.prototype.hasOwnProperty.call(chrome, key)) return section;
+    const { [key]: _removed, ...restChrome } = chrome;
+    const nextNavProps = withNavChrome(record!.navProps ?? {}, restChrome as NavChromeStyle);
+    const { navProps: _n, ...restOverride } = record!;
+    const nextRecord = (
+      Object.keys(nextNavProps).length > 0
+        ? { ...restOverride, navProps: nextNavProps }
+        : restOverride
+    ) as MenuSectionOverride;
+    const { [breakpoint]: _b, ...restResponsive } = section.responsive!;
+    const responsive: MenuSectionResponsive =
+      Object.keys(nextRecord).length > 0
+        ? { ...restResponsive, [breakpoint]: nextRecord }
+        : restResponsive;
+    const next: MenuSectionV2 = { ...section, responsive };
+    if (Object.keys(responsive).length === 0) delete next.responsive;
+    return next;
+  });
+}
+
+// --- TASK-506 F1 base-record reset (desktop-branch delete + prune wrappers) ---
+// Thin named API over the existing patch*ForDevice desktop `bp===null` branches
+// (which already delete-on-undefined + prune to the legacy byte-stable shape).
+// No new prune logic. EXCLUDES MENU_NAV_DEVICE_DEFINING_KEYS (they carry
+// resolution defaults, written to base on every device — never base-reset).
+
+/** Clear ONE flat level-0 scalar / layout base key (byte-stable legacy shape). */
+export function clearMenuSectionBase(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  group: MenuSectionOverrideGroup,
+  key: keyof MenuAppearance
+): MenuDocumentV2 {
+  return patchMenuSectionForDevice(doc, sectionId, "desktop", group, {
+    [key]: undefined,
+  } as unknown as NavItemsProps);
+}
+
+/** Clear ONE per-level (1/2) base field. */
+export function clearMenuNavLevelStyleBase(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  level: NavLevelStyleLevel,
+  key: keyof NavLevelStyle
+): MenuDocumentV2 {
+  return patchMenuNavLevelStyleForDevice(doc, sectionId, "desktop", level, { [key]: undefined });
+}
+
+/** Clear ONE level-0 navChrome base field (prunes props.navChrome → props). */
+export function clearMenuNavChromeBase(
+  doc: MenuDocumentV2,
+  sectionId: string,
+  key: keyof NavChromeStyle
+): MenuDocumentV2 {
+  return patchMenuNavChromeForDevice(doc, sectionId, "desktop", { [key]: undefined });
+}
+
+/** Clear ONE brand-style base field (prunes props.style → props). */
+export function clearMenuBrandStyleBase(
+  doc: MenuDocumentV2,
+  blockId: string,
+  key: keyof BrandStyle
+): MenuDocumentV2 {
+  return patchMenuBrandStyleForDevice(doc, blockId, "desktop", { [key]: undefined });
+}
+
+/** RAW base read for a per-level (1/2) field (F1 hasBaseValue predicate). */
+export function readMenuNavLevelStyleBaseValue(
+  section: MenuSectionV2,
+  level: NavLevelStyleLevel,
+  key: keyof NavLevelStyle
+): unknown {
+  const navBlock = section.blocks.find((b) => b.type === "nav-items");
+  const record = navBlock?.type === "nav-items" ? navBlock.props.levelStyles?.[level] : undefined;
+  return record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+/** RAW base read for a flat level-0 scalar / layout field (F1 hasBaseValue predicate). */
+export function readMenuSectionBaseValue(
+  section: MenuSectionV2,
+  group: MenuSectionOverrideGroup,
+  key: keyof MenuAppearance
+): unknown {
+  if (group === "layout") {
+    return Object.prototype.hasOwnProperty.call(section.layout, key)
+      ? (section.layout as Record<string, unknown>)[key]
+      : undefined;
+  }
+  const navBlock = section.blocks.find((b) => b.type === "nav-items");
+  const record = navBlock?.type === "nav-items" ? navBlock.props : undefined;
+  return record && Object.prototype.hasOwnProperty.call(record, key)
+    ? (record as Record<string, unknown>)[key]
+    : undefined;
+}
+
+/** RAW base read for a brand-style field (F1 hasBaseValue predicate). */
+export function readMenuBrandStyleBaseValue(block: MenuBlockV2, key: keyof BrandStyle): unknown {
+  const record = block.type === "brand" ? block.props.style : undefined;
+  return record && Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+// --- TASK-506 F2 resolved-default provider (single model source of truth) -----
+
+export type MenuControlDefault = {
+  value: number | string | boolean | undefined;
+  sourceLabel: string;
+};
+
+/** level param vocabulary: 0 = level-0 nav scalar/navChrome; 1|2 = NavLevelStyle;
+ *  "base" = brand OR layout scalar (a DISTINCT source domain, never a level-0 nav key). */
+export type MenuControlDefaultLevel = 0 | 1 | 2 | "base";
+
+// Gated present-only numerics: unset ⇒ NO element exists ⇒ NO meaningful resolved
+// number; range.min is FORBIDDEN here (the exact misleading 0/80 bug F2 kills).
+const MENU_GATED_PRESENT_ONLY_OFF_KEYS = [
+  "itemDividerWidth",
+  "indicatorThickness",
+  "transitionMs",
+  "hoverLift",
+] as const;
+const MENU_GATED_PRESENT_ONLY_NOT_APPLIED_KEYS = [
+  "containerPaddingX",
+  "containerPaddingY",
+  "navPillRadius",
+  "navPillPaddingX",
+  "navPillPaddingY",
+] as const;
+
+// Level-style field name ⇒ level-0 nav-base SCALAR name (the analogous cascade key).
+const NAV_LEVEL_TO_BASE_SCALAR: Record<string, keyof MenuAppearance> = {
+  paddingX: "linkPaddingX",
+  paddingY: "linkPaddingY",
+  radius: "linkRadius",
+  gap: "itemGap",
+};
+
+const isMenuLayoutKey = (key: string): boolean =>
+  (MENU_BAR_LAYOUT_KEYS as readonly string[]).includes(key);
+
+const humanizeControlValue = (value: unknown): string =>
+  typeof value === "boolean"
+    ? value
+      ? "On"
+      : "Off"
+    : typeof value === "string"
+      ? value.charAt(0).toUpperCase() + value.slice(1)
+      : String(value);
+
+/** Value + unit for the "Inherits level N (…)" / device labels. */
+const formatControlValue = (key: string, value: unknown): string => {
+  if (typeof value === "number") return `${value}${key === "transitionMs" ? "ms" : "px"}`;
+  if (typeof value === "boolean") return value ? "On" : "Off";
+  return String(value);
+};
+
+/** Terminal theme / base-sheet default for a nav (level 0/1/2) key (case 3). */
+const resolveNavKeyThemeDefault = (key: string): MenuControlDefault => {
+  if (key === "fontSize")
+    return {
+      value: NAV_FONT_SIZE_INHERITED,
+      sourceLabel: `Inherited from theme (${NAV_FONT_SIZE_INHERITED}px)`,
+    };
+  if (key === "paddingX" || key === "linkPaddingX")
+    return {
+      value: MENU_SHELL_DEFAULT_LINK_PX,
+      sourceLabel: `Default ${MENU_SHELL_DEFAULT_LINK_PX}px`,
+    };
+  if (key === "paddingY" || key === "linkPaddingY")
+    return {
+      value: MENU_SHELL_DEFAULT_LINK_PY,
+      sourceLabel: `Default ${MENU_SHELL_DEFAULT_LINK_PY}px`,
+    };
+  if (key === "radius" || key === "linkRadius")
+    return {
+      value: MENU_SHELL_DEFAULT_LINK_RADIUS,
+      sourceLabel: `Default ${MENU_SHELL_DEFAULT_LINK_RADIUS}px`,
+    };
+  if ((MENU_GATED_PRESENT_ONLY_OFF_KEYS as readonly string[]).includes(key))
+    return { value: undefined, sourceLabel: "Off" };
+  if ((MENU_GATED_PRESENT_ONLY_NOT_APPLIED_KEYS as readonly string[]).includes(key))
+    return { value: undefined, sourceLabel: "Not applied" };
+  if (Object.prototype.hasOwnProperty.call(NAV_CHROME_DEFAULTS, key)) {
+    const value = (NAV_CHROME_DEFAULTS as Record<string, string | boolean>)[key];
+    return { value, sourceLabel: `Default (${humanizeControlValue(value)})` };
+  }
+  if (key === "gap" || key === "itemGap")
+    return {
+      value: SHELL_APPEARANCE_DEFAULTS.itemGap,
+      sourceLabel: `Default ${SHELL_APPEARANCE_DEFAULTS.itemGap}px`,
+    };
+  // Other enums/colors with no declared default ⇒ present-only, no hint value.
+  return { value: undefined, sourceLabel: "Not set" };
+};
+
+/** Terminal theme default for a "base" (brand OR layout) key (case 4). */
+const resolveBaseKeyThemeDefault = (key: string): MenuControlDefault => {
+  if (isMenuLayoutKey(key)) {
+    const value = (SHELL_APPEARANCE_DEFAULTS as Record<string, unknown>)[key];
+    if (typeof value === "number") return { value, sourceLabel: `Default ${value}px` };
+    if (value === undefined || value === null) return { value: undefined, sourceLabel: "Not set" };
+    return {
+      value: value as string | boolean,
+      sourceLabel: `Default (${humanizeControlValue(value)})`,
+    };
+  }
+  // Brand key: KEY-based from the shell defaults where present; most brand keys
+  // (color/letterSpacing/height/maxWidth) have NO theme default ⇒ present-only.
+  const value = (SHELL_APPEARANCE_DEFAULTS as Record<string, unknown>)[key];
+  if (value === undefined || value === null) return { value: undefined, sourceLabel: "Not set" };
+  if (typeof value === "number") return { value, sourceLabel: `Inherited from theme (${value}px)` };
+  return {
+    value: value as string | boolean,
+    sourceLabel: `Default (${humanizeControlValue(value)})`,
+  };
+};
+
+/** Read the level-0 nav-base value (scalar OR navChrome) for the analogous key. */
+const readNavBaseAnalogValue = (section: MenuSectionV2, key: string): unknown => {
+  const navBlock = section.blocks.find((b) => b.type === "nav-items");
+  if (navBlock?.type !== "nav-items") return undefined;
+  const props = navBlock.props;
+  if ((NAV_CHROME_KEYS as readonly string[]).includes(key)) {
+    const chrome = props.navChrome;
+    return chrome && Object.prototype.hasOwnProperty.call(chrome, key)
+      ? (chrome as Record<string, unknown>)[key]
+      : undefined;
+  }
+  const scalarKey = NAV_LEVEL_TO_BASE_SCALAR[key] ?? key;
+  return Object.prototype.hasOwnProperty.call(props, scalarKey)
+    ? (props as Record<string, unknown>)[scalarKey]
+    : undefined;
+};
+
+/** Desktop's OWN authored value at the given level (the base a device inherits). */
+const readOwnDesktopValue = (
+  section: MenuSectionV2,
+  level: MenuControlDefaultLevel,
+  key: string
+): unknown => {
+  if (level === "base") {
+    // Layout is section-scoped (reachable); brand is BLOCK-scoped (NOT reachable).
+    return isMenuLayoutKey(key)
+      ? readMenuSectionBaseValue(section, "layout", key as keyof MenuAppearance)
+      : undefined;
+  }
+  if (level === 0) return readNavBaseAnalogValue(section, key);
+  const resolved = resolveMenuNavLevelStyle(section, "desktop", level);
+  return (resolved as Record<string, unknown>)[key];
+};
+
+/**
+ * Returns the EFFECTIVE value + human source label for an UNSET control so the
+ * editor never hardcodes defaults. Section-only (4-param): 506-04 computes each
+ * brand control's `isSet` at its call site (brand is block-scoped) and passes it
+ * in. NEVER emits CSS / mutates the doc — pure read/derivation.
+ */
+export function resolveMenuControlDefault(
+  section: MenuSectionV2,
+  device: MenuDeviceKind,
+  level: MenuControlDefaultLevel,
+  key: string
+): MenuControlDefault {
+  const bp = menuDeviceBreakpoint(device);
+  // Case 1 — tablet/mobile with the field unset on THIS device ⇒ inherit RESOLVED
+  // desktop at the SAME level (device override was already ruled out — the editor
+  // only calls this for an unset control).
+  if (bp !== null) {
+    const own = readOwnDesktopValue(section, level, key);
+    if (own !== undefined)
+      return { value: own as MenuControlDefault["value"], sourceLabel: "Inherited from desktop" };
+    // Brand "base" desktop value is block-scoped ⇒ unreachable from `section`
+    // ⇒ present-only, NO misleading "Inherited from desktop".
+    if (level === "base" && !isMenuLayoutKey(key))
+      return { value: undefined, sourceLabel: "Not set" };
+    // Desktop unset at this level ⇒ RECURSE the desktop cascade (case 2/3/4). Reuse
+    // its resolved value but keep the device-inherit label; a still-undefined
+    // desktop value stays undefined (never "Inherited from desktop (undefined)").
+    const walked = resolveMenuControlDefault(section, "desktop", level, key);
+    return walked.value === undefined
+      ? { value: undefined, sourceLabel: walked.sourceLabel }
+      : { value: walked.value, sourceLabel: "Inherited from desktop" };
+  }
+
+  // Desktop.
+  if (level === "base") return resolveBaseKeyThemeDefault(key); // case 4
+  if (level === 0) return resolveNavKeyThemeDefault(key); // case 3
+
+  // Case 2 — level N (1/2) unset ⇒ FULL CASCADE WALK of shallower LEVELS (the walk
+  // lives here because resolveMenuNavLevelStyle does NOT self-fall-back a level).
+  for (let l = level - 1; l >= 1; l -= 1) {
+    const resolved = resolveMenuNavLevelStyle(section, "desktop", l as NavLevelStyleLevel);
+    const value = (resolved as Record<string, unknown>)[key];
+    if (value !== undefined)
+      return {
+        value: value as MenuControlDefault["value"],
+        sourceLabel: `Inherits level ${l} (${formatControlValue(key, value)})`,
+      };
+  }
+  // All shallower NavLevelStyle levels unset ⇒ fall through to the LEVEL-0
+  // nav-base/navChrome value (the real next cascade stop).
+  const navBaseValue = readNavBaseAnalogValue(section, key);
+  if (navBaseValue !== undefined)
+    return {
+      value: navBaseValue as MenuControlDefault["value"],
+      sourceLabel: `Inherits level 0 (${formatControlValue(key, navBaseValue)})`,
+    };
+  // Level 0 also unset ⇒ theme / base-sheet default.
+  return resolveNavKeyThemeDefault(key);
 }
 
 // --- legacy adapter ---------------------------------------------------------

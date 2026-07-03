@@ -366,6 +366,26 @@ export function SiteHeaderNav({
 }
 
 /**
+ * TASK-506 front-hook contract (ASSERTED no-change — see TASK-506-03). The five
+ * 506 modern-styling bundles (B1 separators, B2 indicator/hover/lift, B3
+ * caret/flyout-animation, B4 pill + dropdown padding, B5 nested placement) and
+ * the two foundations (F1 base-reset, F2 visible-default) are PURE CSS emitted
+ * from the doc-scoped `buildMenuDocumentCss` sheet on the EXISTING markup hooks
+ * below — 506 adds NO new markup, class, or aria attribute here. Do NOT "clean
+ * up" any of these load-bearing hooks:
+ *   li.site-nav-item[:not(:last-child)]         — B1 separators, every level
+ *   li[data-site-nav-group="true"]              — B3 caret target + :hover/:focus-within zero-JS open
+ *   a.site-nav-link / span.site-nav-link.site-nav-group-label[tabIndex=0]
+ *                                               — B2 ::before bar, B3 :focus-within reach
+ *   ul.site-nav-sublist (nested)                — B4 container padding, B5 placement
+ *   .site-nav-list                              — B4 pill wrapper
+ *   .site-nav-link:where([aria-current="page"]) — B2 indicator-on-current (504-03 stamp)
+ * Every 506-02 rule keys ONLY off these selectors (verified: the sole non-hook
+ * selector in the emitted sheet is the pre-existing doc-scope root). If a future
+ * bundle ever needs a data-attr hook it lands HERE (sole writer) present-only
+ * (undefined ⇒ attribute absent ⇒ byte-identical) AND mirrors into
+ * `renderPreviewNavItem` (MenuDesignEditor.tsx). See TASK-506-03.
+ *
  * TASK-499-04: document-driven menu header. Analogous to `SiteHeaderNav` but
  * composed from a published `menuDocumentV2`: it renders the first (`menu-bar`)
  * section's blocks in order and its OWN scoped appearance sheet
