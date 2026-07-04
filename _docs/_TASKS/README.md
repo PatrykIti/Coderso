@@ -80,7 +80,7 @@ Task board for project work. Keep task files and this board in sync.
 
 - **To Do:** 329 tasks
 - **In Progress:** 5 tasks
-- **Done:** 2798 tasks
+- **Done:** 2799 tasks
 
 > TASK-479 (25 subtasks 05–29 + 92 leaves) and TASK-480 (umbrella + 6 subtasks +
 > 18 leaves) were broken down 2026-06-27. The table below lists the
@@ -101,7 +101,6 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
-| TASK-480 | Dashboard Widgets & Configurable Panels | High | Very Large | FULL feature (sibling to TASK-479-07): configurable dashboard panels built from CMS data sources. 6 subtasks (01–06) + 18 leaves. |
 | TASK-480-01 | Feature-Completeness Audit & Widget Product Spec | High | Medium | Audit which admin screens are stub/partial vs complete + the dashboard-widget product spec. 2 leaves. |
 | TASK-480-02 | Widget & Data-Source Contract | High | Large | Schema-first widget/layout types + data-source registry over `dashboardService`. 3 leaves. |
 | TASK-480-03 | Layout Persistence & API | High | Large | Per-user `dashboard_layouts` table + internal admin routes (RBAC `dashboard:write`/CSRF) + cache. 5 leaves. |
@@ -158,6 +157,7 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-509 | Security Strict Pass + Settings Test Isolation | High | Medium | Done (2026-07-04): `bun run scan:security:strict` GREEN (0 bun-audit HIGH, 0 trivy HIGH/CRITICAL, 0 semgrep blocking, gitleaks clean). A: self-scoped the `settingsService` "site shell reference keys accept nullable id strings" case (resets both keys to null via `setSetting` at start; no prod change, sibling cases/`cleanupKeys`/`afterAll` untouched). B: `nodemailer ^7.0.11→^9.0.1` (+@types ^8.0.1) + root `overrides` `ws ^8.21.0`/`undici ^7.28.0`/`vite ^8.0.16`/`sigstore ^4.1.1` via `bun install`. C: SHA-pinned all 27 `uses:` in coderso-pr-gates.yml + 9 in release.yml (codeql upload-sarif subpath kept). No route/RBAC/migration/schema change. Owner-approved posture recorded (owner/reason/expiry). Changelog 1218. feature/visual, in-place. |
 | TASK-508 | Menu Nesting Forms + Flyout Fix | High | Large | Done (2026-07-03): three owner-reported gaps closed on the same architecture family as 504/505/506/507 (menuDocumentV2 doc contract + doc-scoped CSS via the ONE shared `buildMenuRuleSetsForDocument` + `MenuDesignEditor`), on the existing validated `PATCH /menus/:id` envelope (NO new endpoint/RBAC/migration, NO schemaVersion bump). R1: corrected dropdown-container default hints ("Default 180px"/"Default 6px", never `0`/undefined; base-sheet consts MIRRORED into the model, hint/thumb-only) + per-level `linkAlign` (`text-align` centering, per-device). R2: REPLACED the cosmetically-inert `allow-discrete`/`@starting-style` flyout with a robust visibility+opacity+transform reveal that ACTUALLY animates on open AND close (zero-JS `:hover`/`:focus-within` reachability kept via `visibility:hidden` parity). R3a: unified nav-global `submenuDirection` (`right/down/up/left`, incl. up) across ALL nested depths, two-rule all-four-offset emitter (base-only). R3b: nav-global `submenuMode` accordion inline in-flow block (`position:static`+vertical stack+indent, base-only). All present-only + doc-scoped; `buildSiteShellCss(null)` + no-override docs byte-identical. Gates green (lint, types, root tsc, vitest, bun menu suites). Changelog 1217. 5 subtasks (01–05). |
 | TASK-508-01 | Menu Model — Align, Direction & Accordion | High | Large | Done (2026-07-03): sole writer of `menuDocumentV2.ts`: `linkAlign` on `NavLevelStyle`; `submenuDirection`+`submenuMode` on `NavChromeStyle`; base-sheet mirror consts (`MENU_SHELL_SUBLIST_MIN_WIDTH=180`/`MENU_SHELL_SUBLIST_PADDING=6`); R1(a) `resolveNavKeyThemeDefault` fix for `minWidth`/`containerPaddingX/Y` (+ removed the pad keys from the gated "Not applied" list; navPill* stay gated); `NAV_LINK_ALIGNS`/`SUBMENU_DIRECTIONS`/`SUBMENU_MODES` + allowlist/enum-partition/`NAV_CHROME_DEFAULTS` extensions + per-key fail-closed READ-trap round-trips. |
 | TASK-508-02 | Menu CSS — Flyout, Direction & Accordion | High | Large | Done (2026-07-03): sole writer of `menuDocumentCss.ts`: `linkAlign` `text-align` emission + `NAV_LEVEL_STYLE_COMPARE_KEYS`; robust `flyoutAnimRule` rewrite (visibility/opacity/transform, dropped `@starting-style`/`allow-discrete`/`display`-in-transition) + `previewForceOpenLevel` `visibility:visible`; `submenuDirection` two-rule all-four-offset emitter (level-1 precise (0,4,0) + anchored (0,5,0)) before `submenuPlacementRule`; accordion emitter (vertical stack + `position:static` + indent, R2-gated-off); base-only chrome (unchanged `NAV_CHROME_COMPARE_KEYS`); present-only, per-device `linkOnly` split. |
