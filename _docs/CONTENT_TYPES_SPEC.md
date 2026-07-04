@@ -1007,6 +1007,42 @@ are in `PAGE_MODEL.md` (menuDocumentV2 section); this is the authoring surface.
   base, Tablet/Mobile ⇒ a SPARSE override) and expose F1 Reset + F2 hint; selecting a
   Level ≥ 1 threads the force-open level into the canvas so the depth is visible.
 
+## Menu Design tab — nesting forms: centering, perceptible flyout, direction & accordion (TASK-508)
+
+TASK-508 closes three owner-reported gaps on the same Design tab, all present-only and
+doc-scoped (no `schemaVersion` bump; `buildSiteShellCss(null)` + no-override docs
+byte-identical):
+
+- **Corrected container default hints (R1a).** The dropdown-container controls
+  (`minWidth`, `containerPaddingX`, `containerPaddingY`) now surface the REAL effective
+  base-sheet defaults — **"Default 180px"** / **"Default 6px"** — and the slider thumbs
+  sit at 180 / 6, instead of the misleading `undefined`/`0`/`range.min` they showed
+  before. The level-0 pill sliders (`navPillRadius`/`navPillPaddingX`/`navPillPaddingY`)
+  stay hint-gated (the pill has no base-sheet default). Hint/thumb-only — no CSS change.
+- **Link alignment (R1b).** A per-level `linkAlign` segmented control (`left|center|right`)
+  on the dropdown levels (1/2) emits `text-align` on the link. Because the link fills the
+  ≥180px container, `center` centers the label — the "auto-padding to center" the owner
+  asked for. Per-device (Desktop ⇒ base, Mobile/Tablet ⇒ a SPARSE override), per-level.
+- **Perceptible flyout (R2).** The `flyoutAnimation` fade/slide now ACTUALLY animates on
+  open AND close (visibility+opacity+transform reveal), replacing the previously inert
+  `allow-discrete`/`@starting-style` approach; keyboard `:focus-within` still opens the
+  sublist and its links stay fully interactive.
+- **Unified submenu direction (R3a).** ONE nav-global `submenuDirection` segmented control
+  (`right|down|up|left`, now including **up**) in the Level-0 (nav-base) panel, applied
+  CONSISTENTLY across ALL nested depths — choosing "down" yields one cohesive downward
+  column. **Base-only** (one switch drives every device ≥640, NO per-device fork; a
+  granular level-2 `submenuPlacement` still wins).
+- **Accordion inline mode (R3b).** A nav-global `submenuMode` segmented control
+  (`flyout|accordion`) in the Level-0 panel. Accordion renders the whole menu as one
+  in-flow vertical block (`position:static`, indented, pushing siblings/content down),
+  keyboard-reachable; flyout is the default and a flyout-mode doc emits ZERO accordion
+  bytes. **Base-only**, no per-device fork.
+
+`submenuDirection`/`submenuMode` live on `navChrome` (nav-global, base-only, rendered as
+unwrapped SegmentedControls with no device fork / Reset badge); `linkAlign` lives on
+`NavLevelStyle` (per-level, per-device). Enums are validated schema-first (reject-unknown
+key ⇒ 400 with path; bad enum value fails soft).
+
 ## API
 
 Admin API w `CMS_API.md`:

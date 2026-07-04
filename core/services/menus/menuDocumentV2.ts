@@ -209,6 +209,9 @@ export type NavLevelStyle = {
   containerPaddingY?: number; // 0..32
   // B5 nested placement (level 2):
   submenuPlacement?: "right" | "bottom" | "left";
+  // TASK-508-01 R1(b) link alignment (text-align on the LINK; applies at every
+  // level via LEVEL_LINK_SELECTORS in 508-02). Per-device (rides the level cascade).
+  linkAlign?: "left" | "center" | "right";
 };
 
 /**
@@ -239,6 +242,11 @@ export type NavChromeStyle = {
   hoverLift?: number;
   showCaret?: boolean;
   caretRotateOnOpen?: boolean;
+  // TASK-508-01 R3a/R3b nav-GLOBAL submenu form (governs EVERY flyout depth incl.
+  // level 1). BASE-ONLY structural keys — NOT per-device (no NAV_CHROME_COMPARE_KEYS
+  // entry); a per-device override would be dead data (508-02 emits only from base).
+  submenuDirection?: "right" | "down" | "up" | "left"; // level-1 first dropdown AND level-2/3+ nested
+  submenuMode?: "flyout" | "accordion"; // default flyout (present-only; accordion opt-in)
 };
 
 /** Level 0 = the EXISTING nav-items scalar base (NO new type). Level 2 = "level 2
@@ -670,6 +678,8 @@ const NAV_LEVEL_STYLE_KEYS = [
   "containerPaddingX",
   "containerPaddingY",
   "submenuPlacement",
+  // TASK-508-01 R1(b) (value partition: NAV_LEVEL_STYLE_ENUM_FIELDS):
+  "linkAlign",
 ] as const;
 
 // NEW LOCAL clamp tables (NOT added to menuAppearanceNumberRanges): (a) brand
@@ -705,6 +715,10 @@ const ITEM_DIVIDER_STYLES = ["solid", "dashed", "dotted"] as const;
 const NAV_INDICATOR_KINDS = ["none", "underline", "overline"] as const;
 const FLYOUT_ANIMATIONS = ["none", "fade", "slide"] as const;
 const SUBMENU_PLACEMENTS = ["right", "bottom", "left"] as const;
+// TASK-508-01 fresh enum option arrays (mirror SUBMENU_PLACEMENTS above).
+const NAV_LINK_ALIGNS = ["left", "center", "right"] as const; // R1(b) NavLevelStyle.linkAlign
+const SUBMENU_DIRECTIONS = ["right", "down", "up", "left"] as const; // R3a navChrome.submenuDirection
+const SUBMENU_MODES = ["flyout", "accordion"] as const; // R3b navChrome.submenuMode
 
 // TASK-506 level-0 pill ranges (navChrome-only keys) + the level-0 variants of the
 // shared numeric fields (same bounds as the level table above).
@@ -738,6 +752,12 @@ export const NAV_CHROME_DEFAULTS = {
   hoverUnderline: false,
   itemDividerShow: false,
   itemDividerStyle: "solid",
+  // TASK-508-01 HINT-ONLY entries (NAV_CHROME_DEFAULTS is the level-agnostic hint
+  // provider, NOT chrome-only — resolveNavKeyThemeDefault's hasOwnProperty branch
+  // serves levels 1/2 too). NEVER read by CSS emission ⇒ byte-safe / present-only.
+  linkAlign: "left", // R1(b) level-1/2 dropdown link align hint (Default (Left))
+  submenuDirection: "down", // R3a recommended unified direction hint (Default (Down))
+  submenuMode: "flyout", // R3b default mode hint (Default (Flyout))
 } as const;
 
 /**
@@ -749,6 +769,12 @@ export const MENU_SHELL_DEFAULT_LINK_PX = 12 as const;
 export const MENU_SHELL_DEFAULT_LINK_PY = 8 as const;
 export const MENU_SHELL_DEFAULT_LINK_RADIUS = 6 as const;
 export const NAV_FONT_SIZE_INHERITED = 16 as const;
+/** TASK-508-01 R1(a): base-sheet mirror of `.site-nav-sublist{min-width:180px;
+ *  padding:6px}` (siteShellCss.ts:151). The sublist container ALWAYS paints these
+ *  regardless of override, so the effective UNSET value genuinely IS 180 / 6 —
+ *  surfacing them in the hint is honest, not misleading. Do NOT edit siteShellCss.ts. */
+export const MENU_SHELL_SUBLIST_MIN_WIDTH = 180 as const;
+export const MENU_SHELL_SUBLIST_PADDING = 6 as const;
 
 /** Editor slider-bound convenience alias for the LEVEL-0 nav-link scalars
  *  (control-facing keys `paddingX`/`paddingY`/`radius`, re-mapped from the shared
@@ -852,6 +878,8 @@ const NAV_LEVEL_STYLE_ENUM_FIELDS = [
   ["indicator", NAV_INDICATOR_KINDS],
   ["flyoutAnimation", FLYOUT_ANIMATIONS],
   ["submenuPlacement", SUBMENU_PLACEMENTS],
+  // TASK-508-01 R1(b) — fail-soft OMIT on bad value via the shared enum loop:
+  ["linkAlign", NAV_LINK_ALIGNS],
 ] as const;
 
 const normalizeNavLevelStyle = (value: unknown, path: string): NavLevelStyle | undefined => {
@@ -938,6 +966,9 @@ const NAV_CHROME_KEYS = [
   "hoverLift",
   "showCaret",
   "caretRotateOnOpen",
+  // TASK-508-01 R3a/R3b nav-global submenu form (value partition: NAV_CHROME_ENUM_FIELDS):
+  "submenuDirection",
+  "submenuMode",
 ] as const;
 const NAV_CHROME_COLOR_KEYS = ["navPillBackground", "itemDividerColor", "indicatorColor"] as const;
 const NAV_CHROME_NUMBER_KEYS = [
@@ -952,6 +983,9 @@ const NAV_CHROME_NUMBER_KEYS = [
 const NAV_CHROME_ENUM_FIELDS = [
   ["itemDividerStyle", ITEM_DIVIDER_STYLES],
   ["indicator", NAV_INDICATOR_KINDS],
+  // TASK-508-01 R3a/R3b (fail-soft OMIT on bad value via the shared enum loop):
+  ["submenuDirection", SUBMENU_DIRECTIONS],
+  ["submenuMode", SUBMENU_MODES],
 ] as const;
 const NAV_CHROME_BOOL_KEYS = [
   "itemDividerShow",
@@ -2202,9 +2236,11 @@ const MENU_GATED_PRESENT_ONLY_OFF_KEYS = [
   "transitionMs",
   "hoverLift",
 ] as const;
+// TASK-508-01 R1(a): containerPaddingX/Y REMOVED — the sublist container has a REAL
+// base-sheet default (6px), surfaced via the explicit branches in
+// resolveNavKeyThemeDefault. The level-0 pill (navPillRadius/PaddingX/PaddingY) genuinely
+// has NO base-sheet default when unset (no element painted) ⇒ stays gated "Not applied".
 const MENU_GATED_PRESENT_ONLY_NOT_APPLIED_KEYS = [
-  "containerPaddingX",
-  "containerPaddingY",
   "navPillRadius",
   "navPillPaddingX",
   "navPillPaddingY",
@@ -2258,6 +2294,19 @@ const resolveNavKeyThemeDefault = (key: string): MenuControlDefault => {
     return {
       value: MENU_SHELL_DEFAULT_LINK_RADIUS,
       sourceLabel: `Default ${MENU_SHELL_DEFAULT_LINK_RADIUS}px`,
+    };
+  // TASK-508-01 R1(a): real base-sheet defaults for the dropdown CONTAINER controls
+  // (siteShellCss.ts:151 `.site-nav-sublist{min-width:180px;padding:6px}`). Hint/thumb
+  // only — CSS emission (levelContainerDecls, 508-02) stays present-only on the STORED value.
+  if (key === "minWidth")
+    return {
+      value: MENU_SHELL_SUBLIST_MIN_WIDTH,
+      sourceLabel: `Default ${MENU_SHELL_SUBLIST_MIN_WIDTH}px`,
+    };
+  if (key === "containerPaddingX" || key === "containerPaddingY")
+    return {
+      value: MENU_SHELL_SUBLIST_PADDING,
+      sourceLabel: `Default ${MENU_SHELL_SUBLIST_PADDING}px`,
     };
   if ((MENU_GATED_PRESENT_ONLY_OFF_KEYS as readonly string[]).includes(key))
     return { value: undefined, sourceLabel: "Off" };

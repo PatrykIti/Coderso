@@ -10,6 +10,8 @@ import {
   MENU_SHELL_DEFAULT_LINK_PX,
   MENU_SHELL_DEFAULT_LINK_PY,
   MENU_SHELL_DEFAULT_LINK_RADIUS,
+  MENU_SHELL_SUBLIST_MIN_WIDTH,
+  MENU_SHELL_SUBLIST_PADDING,
   NAV_CHROME_DEFAULTS,
   NAV_CHROME_NUMBER_RANGES,
   NAV_FONT_SIZE_INHERITED,
@@ -1948,6 +1950,110 @@ describe("TASK-506-01 fail-closed READ-trap round-trip (navChrome new keys)", ()
   });
 });
 
+// ============================================================================
+// TASK-508-01 — linkAlign (NavLevelStyle) + submenuDirection/submenuMode (navChrome)
+// ============================================================================
+
+describe("TASK-508-01 fail-closed READ-trap round-trip (new keys)", () => {
+  // R1(b): linkAlign on BOTH dropdown levels (survives read, siblings intact).
+  test.each([1, 2] as const)("levelStyles.%s.linkAlign round-trips write→read", (level) => {
+    const input = doc([
+      navBlock({ levelStyles: { [level]: { linkAlign: "center", fontSize: 16 } } }),
+    ]);
+    const out = normalizeMenuDocumentV2ForWrite(input);
+    expect(navLevelStyleOf(out, level)).toEqual({ linkAlign: "center", fontSize: 16 });
+    // idempotent stored read ⇒ no silent whole-record degrade:
+    expect(normalizeStoredMenuDocumentV2ForRead(out)).toEqual(out);
+    expect(normalizeMenuDocumentV2ForWrite(out)).toEqual(out);
+  });
+
+  // R3a/R3b: submenuDirection + submenuMode on navChrome (base-only nav-global keys).
+  test.each([
+    ["submenuDirection", "up"],
+    ["submenuDirection", "left"],
+    ["submenuMode", "accordion"],
+  ] as const)("navChrome.%s=%s round-trips write→read without dropping siblings", (key, value) => {
+    const input = doc([navBlock({ navChrome: { [key]: value, showCaret: true } })]);
+    const out = normalizeMenuDocumentV2ForWrite(input);
+    expect(navChromeOf(out)).toEqual({ [key]: value, showCaret: true });
+    expect(normalizeStoredMenuDocumentV2ForRead(out)).toEqual(out);
+    expect(normalizeMenuDocumentV2ForWrite(out)).toEqual(out);
+  });
+
+  test("submenuDirection + submenuMode coexist on one navChrome record", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([navBlock({ navChrome: { submenuDirection: "down", submenuMode: "flyout" } })])
+    );
+    expect(navChromeOf(out)).toEqual({ submenuDirection: "down", submenuMode: "flyout" });
+    expect(normalizeStoredMenuDocumentV2ForRead(out)).toEqual(out);
+  });
+});
+
+describe("TASK-508-01 reject-unknown KEY throws with exact path", () => {
+  test("unknown key under levelStyles still throws (linkAlign allowlist did not widen the guard)", () => {
+    expectDocError(
+      () =>
+        normalizeMenuDocumentV2ForWrite(doc([navBlock({ levelStyles: { 1: { bogusAlign: 1 } } })])),
+      "document.sections[0].blocks[0].props.levelStyles.1.bogusAlign"
+    );
+  });
+  test("unknown key under navChrome still throws", () => {
+    expectDocError(
+      () => normalizeMenuDocumentV2ForWrite(doc([navBlock({ navChrome: { submenuFoo: "down" } })])),
+      "document.sections[0].blocks[0].props.navChrome.submenuFoo"
+    );
+  });
+});
+
+describe("TASK-508-01 fail-soft VALUE omit (bad enum ⇒ OMIT, siblings survive, prune-empty)", () => {
+  test("linkAlign:'top' OMITTED, sibling survives", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([navBlock({ levelStyles: { 1: { linkAlign: "top", fontSize: 16 } } })])
+    );
+    expect(navLevelStyleOf(out, 1)).toEqual({ fontSize: 16 });
+  });
+  test("submenuDirection:'sideways' / submenuMode:'drawer' OMITTED, sibling survives", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([
+        navBlock({
+          navChrome: { submenuDirection: "sideways", submenuMode: "drawer", showCaret: true },
+        }),
+      ])
+    );
+    expect(navChromeOf(out)).toEqual({ showCaret: true });
+  });
+  test("a navChrome carrying ONLY bad new values prunes to undefined (byte-identical to never-set)", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([navBlock({ navChrome: { submenuDirection: "sideways", submenuMode: "drawer" } })])
+    );
+    expect(navChromeOf(out)).toBeUndefined();
+    expect(
+      "navChrome" in (firstBlock(out) as Extract<MenuBlockV2, { type: "nav-items" }>).props
+    ).toBe(false);
+  });
+  test("a levelStyle carrying ONLY a bad linkAlign prunes to undefined", () => {
+    const out = normalizeMenuDocumentV2ForWrite(
+      doc([navBlock({ levelStyles: { 1: { linkAlign: "top" } } })])
+    );
+    expect(navLevelStyleOf(out, 1)).toBeUndefined();
+  });
+});
+
+describe("TASK-508-01 no schemaVersion bump + legacy byte-identity", () => {
+  test("schemaVersion stays 1 after normalization", () => {
+    const out = normalizeMenuDocumentV2ForWrite(doc([navBlock({ itemGap: 8 })]));
+    expect(out.schemaVersion).toBe(MENU_DOCUMENT_SCHEMA_VERSION);
+    expect(MENU_DOCUMENT_SCHEMA_VERSION).toBe(1);
+  });
+  test("a legacy doc WITHOUT any new field normalizes byte-unchanged", () => {
+    const legacy = normalizeMenuDocumentV2ForWrite(
+      doc([navBlock({ itemGap: 8, levelStyles: { 1: { fontSize: 16 } } })])
+    );
+    expect(normalizeMenuDocumentV2ForWrite(legacy)).toEqual(legacy);
+    expect(normalizeStoredMenuDocumentV2ForRead(legacy)).toEqual(legacy);
+  });
+});
+
 describe("TASK-506-01 reject-unknown KEY throws with exact path", () => {
   test("base navChrome unknown key", () => {
     expectDocError(
@@ -2210,20 +2316,68 @@ describe("TASK-506-01 F2 resolveMenuControlDefault source labels", () => {
     );
   });
 
+  test("TASK-508-01 R3a/R3b/R1(b): new-enum hint entries resolve from NAV_CHROME_DEFAULTS", () => {
+    const s = sectionOf();
+    // R3a submenuDirection + R3b submenuMode are navChrome (level-0) keys:
+    expect(resolveMenuControlDefault(s, "desktop", 0, "submenuDirection")).toEqual({
+      value: "down",
+      sourceLabel: "Default (Down)",
+    });
+    expect(resolveMenuControlDefault(s, "desktop", 0, "submenuMode")).toEqual({
+      value: "flyout",
+      sourceLabel: "Default (Flyout)",
+    });
+    // R1(b) linkAlign is a LEVEL key — NAV_CHROME_DEFAULTS serves it via the
+    // level-agnostic hasOwnProperty branch (levels 1/2 fall through to it):
+    expect(resolveMenuControlDefault(s, "desktop", 1, "linkAlign")).toEqual({
+      value: "left",
+      sourceLabel: "Default (Left)",
+    });
+    expect(resolveMenuControlDefault(s, "desktop", 2, "linkAlign")).toEqual({
+      value: "left",
+      sourceLabel: "Default (Left)",
+    });
+  });
+
   test("GATED present-only numerics ⇒ value undefined + Off/Not applied (NEVER range.min)", () => {
     const s = sectionOf();
     expect(resolveMenuControlDefault(s, "desktop", 1, "indicatorThickness")).toEqual({
       value: undefined,
       sourceLabel: "Off",
     });
-    expect(resolveMenuControlDefault(s, "desktop", 1, "containerPaddingX")).toEqual({
-      value: undefined,
-      sourceLabel: "Not applied",
-    });
+    // TASK-508-01 R1(a): containerPaddingX/Y are NO LONGER gated — asserted in the
+    // "R1(a) real container defaults" test below. The level-0 PILL numerics stay gated
+    // (no base-sheet default when unset — no element painted):
+    for (const key of ["navPillRadius", "navPillPaddingX", "navPillPaddingY"]) {
+      expect(resolveMenuControlDefault(s, "desktop", 0, key)).toEqual({
+        value: undefined,
+        sourceLabel: "Not applied",
+      });
+    }
     // and definitely not the misleading range.min:
     expect(resolveMenuControlDefault(s, "desktop", 1, "itemDividerWidth").value).not.toBe(
       NAV_LEVEL_NUMBER_RANGES.itemDividerWidth.min
     );
+  });
+
+  test("TASK-508-01 R1(a): container controls resolve REAL base-sheet defaults (180 / 6), NOT 'Not applied'", () => {
+    const s = sectionOf();
+    // minWidth ⇒ 180px (mirrors .site-nav-sublist{min-width:180px}):
+    expect(resolveMenuControlDefault(s, "desktop", 1, "minWidth")).toEqual({
+      value: MENU_SHELL_SUBLIST_MIN_WIDTH,
+      sourceLabel: `Default ${MENU_SHELL_SUBLIST_MIN_WIDTH}px`,
+    });
+    // containerPaddingX/Y ⇒ 6px (mirrors .site-nav-sublist{padding:6px}):
+    for (const key of ["containerPaddingX", "containerPaddingY"]) {
+      const r = resolveMenuControlDefault(s, "desktop", 1, key);
+      expect(r).toEqual({
+        value: MENU_SHELL_SUBLIST_PADDING,
+        sourceLabel: `Default ${MENU_SHELL_SUBLIST_PADDING}px`,
+      });
+      // no longer the misleading "Not applied" / undefined thumb:
+      expect(r.sourceLabel).not.toBe("Not applied");
+      expect(r.value).not.toBeUndefined();
+    }
   });
 
   test("level 2 unset WITH level 1 SET ⇒ Inherits level 1 (resolved number)", () => {

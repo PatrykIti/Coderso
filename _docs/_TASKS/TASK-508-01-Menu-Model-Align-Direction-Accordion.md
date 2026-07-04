@@ -7,7 +7,8 @@
 **Category:** Admin UI / Content (Menus) / Navigation / Model Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-499 (menuDocumentV2 model + `MenuDocumentError` reject-unknown), TASK-501 (per-device `responsive.{tablet,mobile}`), TASK-504 (`NavLevelStyle`/`NavLevelStyles` per-nesting-level styling, level 1/2 numeric ranges), TASK-506 (`NavChromeStyle` level-0 sub-record + its full parallel allowlist/enum/defaults family, `resolveMenuControlDefault{value,sourceLabel}`, `flyoutAnimation`/`submenuPlacement`/`containerPaddingX/Y`/`minWidth`), TASK-507 (`ControlDefaultHint` `value===undefined ⇒ null` guard — so a hint needs a REAL resolved value to display).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-03
 
 ---
 

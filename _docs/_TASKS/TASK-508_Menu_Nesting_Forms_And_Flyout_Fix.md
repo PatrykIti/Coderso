@@ -7,7 +7,8 @@
 **Category:** Admin UI / Content (Menus) / Navigation / Page Builder / Responsive
 **Estimated Effort:** Large
 **Dependencies:** TASK-499 (menuDocumentV2 + Design tab + `menuDocumentCss.ts`), TASK-501 (per-device `responsive.{tablet,mobile}` records, `MenuResponsiveControlShell`, dual-selector doc-scoped emission), TASK-504 (`NavItemsProps.levelStyles` per-nesting-level styling, the exact 1/2 descendant depth selectors, per-device brand+level resolvers, `aria-current` current-page stamp), TASK-505 (sibling architecture family), TASK-506 (level-0 `navChrome` sub-record + its full parallel helper family, `resolveMenuControlDefault{value,sourceLabel}`, B1–B5 modern bundles incl. `flyoutAnimation` / `submenuPlacement` / `containerPaddingX/Y` / `minWidth`), TASK-507 (top-bar-scoped level-0 indicator + `ControlDefaultHint` `value===undefined ⇒ null` guard). Rides the existing validated `PATCH /menus/:id` write path.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-03
 
 ---
 
@@ -136,11 +137,11 @@ app's CSRF/session envelope; this task neither loosens nor adds an auth path.
 
 | ID | Title | File | Status |
 |----|-------|------|--------|
-| TASK-508-01 | Menu Model — Align, Direction & Accordion | `TASK-508-01-Menu-Model-Align-Direction-Accordion.md` | ⏳ To Do |
-| TASK-508-02 | Menu CSS — Flyout, Direction & Accordion | `TASK-508-02-Menu-CSS-Flyout-Direction-Accordion.md` | ⏳ To Do |
-| TASK-508-03 | Front & Preview Parity | `TASK-508-03-Front-And-Preview-Parity.md` | ⏳ To Do |
-| TASK-508-04 | Design Editor — Align, Direction & Accordion Controls | `TASK-508-04-Design-Editor-Align-Direction-Accordion-Controls.md` | ⏳ To Do |
-| TASK-508-05 | Menu Nesting Forms — Tests, Docs & Closure | `TASK-508-05-Menu-Nesting-Forms-Tests-Docs-Closure.md` | ⏳ To Do |
+| TASK-508-01 | Menu Model — Align, Direction & Accordion | `TASK-508-01-Menu-Model-Align-Direction-Accordion.md` | ✅ Done |
+| TASK-508-02 | Menu CSS — Flyout, Direction & Accordion | `TASK-508-02-Menu-CSS-Flyout-Direction-Accordion.md` | ✅ Done |
+| TASK-508-03 | Front & Preview Parity | `TASK-508-03-Front-And-Preview-Parity.md` | ✅ Done |
+| TASK-508-04 | Design Editor — Align, Direction & Accordion Controls | `TASK-508-04-Design-Editor-Align-Direction-Accordion-Controls.md` | ✅ Done |
+| TASK-508-05 | Menu Nesting Forms — Tests, Docs & Closure | `TASK-508-05-Menu-Nesting-Forms-Tests-Docs-Closure.md` | ✅ Done |
 
 ### Land order & single-writer ownership (strictly sequential — each lands green before the next opens)
 
@@ -173,15 +174,28 @@ app's CSRF/session envelope; this task neither loosens nor adds an auth path.
    previews depth-1 open (else the R3a/R3b direction/accordion/animation effects are invisible
    while the author operates those very level-0 controls) + rewrites the @2634-2637 comment; it
    consumes 508-02's `previewForceOpenLevel` `visibility:visible` emission unchanged (no CSS
-   edit). The @1755-1784 editor-test resync is SPLIT by byte-introducer: **508-02** owns the
-   L1/L2 `visibility:visible` fold-in @1768/@1777/@1780; **508-04** owns the level-0 invert
-   @1762 + the depth-2 re-string @1771-1773 — each `expect` pinned to exactly one subtask.
+   edit). The `tests/vitest/ui/menu-design-editor.test.tsx:1755-1784` editor-test resync is
+   SPLIT by byte-introducer (all anchors below are lines in that TEST file, NOT
+   `MenuDesignEditor.tsx` whose 1755-1784 is unrelated `setNavField`/`setNavBaseField`
+   production code): **508-02** owns the L1/L2 `visibility:visible` fold-in @1768/@1777/@1780 —
+   PLUS the depth-2 `toContain` @2196 in the SEPARATE "…styled sublist is revealed" test
+   @2187-2201 (FOUR force-open `toContain`s total: @1768/@1777/@1780 + @2196); **508-04** owns
+   the level-0 invert @1762 + the depth-2 re-string @1771-1773 — each `expect` pinned to
+   exactly one subtask.
 5. **508-05 (closure)** — tests (Vitest + Bun), the **≥5-scenario SMOKE**, docs, changelog,
    board/Statistics.
 
-Single-writer map: **`menuDocumentV2.ts` = 508-01**, **`menuDocumentCss.ts` = 508-02**,
-**`siteShell.tsx` = 508-03**, **`MenuDesignEditor.tsx` = 508-04**, **tests/docs/closure =
-508-05**. No file has two owners. 508-02/03/04 all depend on 508-01; 508-04 additionally
+Single-writer map (governs the PRODUCTION deliverables): **`menuDocumentV2.ts` = 508-01**,
+**`menuDocumentCss.ts` = 508-02**, **`siteShell.tsx` = 508-03**, **`MenuDesignEditor.tsx` =
+508-04**, **tests/docs/closure = 508-05**. Every production file has exactly one owner. The
+sole exception is the TEST file `tests/vitest/ui/menu-design-editor.test.tsx`, whose
+force-open region @1755-1784 (+ the @2187-2201 sibling test) is CO-OWNED at `expect`-
+granularity by 508-02 (visibility fold-in), 508-04 (level-0 invert + depth-2 re-string, and
+the new R1(b)/R3a/R3b force-open assertions) and 508-01 (the R1(a) hint-region assertions)
+in strict land order — each individual `expect` is pinned to exactly one subtask and
+sequential landing prevents collision. **508-05 does NOT author any `menu-design-editor.test.tsx`
+assertion — it only VERIFIES the R1(a)/`linkAlign`/direction cases land green** (its §1.3 is a
+verification checklist, restating sibling-owned tests, not a second author). 508-02/03/04 all depend on 508-01; 508-04 additionally
 consumes 508-02's `buildMenuDocumentPreviewCss` emission for the in-canvas preview, so
 508-02's builder API merges before 508-04's canvas work.
 
@@ -591,9 +605,14 @@ requested).
 - `core/admin/ui/menus/MenuDesignEditor.tsx` — R1(b) `linkAlign` per-level `seg`; R3a/R3b
   nav-global `submenuDirection` + `submenuMode` SegmentedControls in the level-0 nav-base panel;
   option-label maps; **R2 §2b — widen `forceOpenLevel` @2639-2640 so a Level-0 nav selection
-  previews depth-1 (+ rewrite the @2634-2637 comment)**, and the @1755-1784 editor-test resync
-  is split by byte-introducer (508-04 owns the level-0 invert @1762 + depth-2 re-string
-  @1771-1773; **508-02** owns the L1/L2 `visibility:visible` fold-in @1768/@1777/@1780). R1(a)
+  previews depth-1 (+ rewrite the @2634-2637 comment)**, and the
+  `tests/vitest/ui/menu-design-editor.test.tsx:1755-1784` editor-test resync is split by
+  byte-introducer (all anchors are lines in that TEST file, NOT this production file, whose
+  1755-1784 is unrelated `setNavField` code; 508-04 owns the level-0 invert @1762 + depth-2
+  re-string @1771-1773; **508-02** owns the L1/L2 `visibility:visible` fold-in
+  @1768/@1777/@1780 — plus the depth-2 `toContain` @2196 in the SEPARATE "…styled sublist is
+  revealed" test @2187-2201, i.e. FOUR force-open `toContain`s @1768/@1777/@1780 + @2196).
+  R1(a)
   needs no editor edit (model fix auto-fixes hint + thumb). (508-04)
 - tests + docs + changelog + board/Statistics. (508-05)
 </content>

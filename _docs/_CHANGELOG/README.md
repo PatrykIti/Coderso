@@ -29,10 +29,11 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1217 for the next changelog entry.
+assistant policy coverage fix. Use 1218 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1217 | 2026-07-03 | TASK-508 Menu Nesting Forms & Flyout Fix — container default hints (180/6), per-level linkAlign centering, perceptible visibility+opacity+transform flyout, unified submenuDirection (right/down/up/left) & accordion submenuMode | Admin UI/Content (Menus)/Navigation/Page Builder/Site Front/Responsive/QA/Docs/Task Board |
 | 1216 | 2026-07-03 | TASK-507 Menu Indicator Scope & Hint Alignment — top-bar-only B2 chrome scope, dual-axis rest reset, ControlDefaultHint value===undefined guard (2 TASK-506 LOW residuals) | Site Front/Admin UI/Content (Menus)/Navigation/Responsive/QA/Docs/Task Board |
 | 1215 | 2026-07-03 | TASK-506 Menu Modern Styling — base reset, visible defaults & 5 modern bundles (separators, indicator, caret/flyout, pill, nested placement) | Admin UI/Content (Menus)/Navigation/Page Builder/Site Front/Responsive/QA/Docs/Task Board |
 | 1214 | 2026-07-03 | TASK-505 Screens Section Columns & Binding Integrity — section style channel, auto-flow grid, binding-GC recovery | Admin UI/Custom Screens/Screen Builder/Schema/Binding Integrity/QA/Docs/Task Board |

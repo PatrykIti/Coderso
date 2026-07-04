@@ -6,7 +6,8 @@
 **Category:** Testing / Documentation / Content (Menus) / Navigation / Site Shell / Responsive
 **Estimated Effort:** Medium
 **Dependencies:** TASK-508-01 (model — `linkAlign` on `NavLevelStyle`; `submenuDirection` + `submenuMode` on `NavChromeStyle`; the base-sheet mirror consts `MENU_SHELL_SUBLIST_MIN_WIDTH=180` / `MENU_SHELL_SUBLIST_PADDING=6`; the R1(a) `resolveNavKeyThemeDefault` fix + removal of `containerPaddingX/Y` from `MENU_GATED_PRESENT_ONLY_NOT_APPLIED_KEYS`; all allowlist / enum-partition / `NAV_CHROME_DEFAULTS` extensions), TASK-508-02 (CSS — R1(b) `linkAlign` emission + `NAV_LEVEL_STYLE_COMPARE_KEYS`; R2 robust `flyoutAnimRule` rewrite + `previewForceOpenLevel` `visibility:visible`; R3a `submenuDirection` two-rule emitter + R3b accordion emitter, both **base-only** reading `baseNavChrome` — `NAV_CHROME_COMPARE_KEYS` UNCHANGED, no tablet delta for these two keys), TASK-508-03 (front & preview parity — expected ZERO `siteShell.tsx` changes + byte-identity pins), TASK-508-04 (editor — R1(b) `linkAlign` per-level `seg`; R3a/R3b nav-global `submenuDirection` + `submenuMode` SegmentedControls in the level-0 nav-base panel; option-label maps). Rides the existing validated `PATCH /menus/:id` write path.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-03
 **Parent Task:** TASK-508
 
 ---
@@ -171,22 +172,33 @@ subtask fills any gap found at closure and adds the cross-cutting round-trip ide
 pins.)
 
 ```ts
-// Fixtures (module-scope helpers, reuse the suite's existing doc builders):
-const legacyNavDoc = () => validMenuBarDoc();          // no navChrome, no linkAlign
-const levelAlignDoc = () => withNavProps({
-  levelStyles: { 1: { linkAlign: "center" }, 2: { linkAlign: "right" } },
-});
-const navChromeFormsDoc = () => withNavProps({          // nav-global R3a/R3b home
-  navChrome: { submenuDirection: "down", submenuMode: "accordion" },
-});
-const perDeviceAlignDoc = () => ({                      // linkAlign override on tablet + mobile
-  ...levelAlignDoc(),
-  sections: [{ ...section,
-    responsive: {
+// Fixtures — build on the suite's REAL module-scope helper `doc(blocks, extra?)`
+// (menu-document-v2.test.ts:75 → { schemaVersion, sections: [section(blocks, extra)] };
+// `section` @67 = { type:"menu-bar", name:"Menu bar", layout:{}, blocks, ...extra }).
+// BASE levelStyles / navChrome live under the nav-items block props
+// (sections[0].blocks[N].props.levelStyles / .props.navChrome); per-device overrides
+// live at sections[0].responsive.{device}.navProps.levelStyles, injected via `extra`.
+// (No `validMenuBarDoc` / `withNavProps` helper exists — do NOT reach for them.)
+const legacyNavDoc = () =>                               // no navChrome, no linkAlign
+  doc([{ id: "blk-nav", type: "nav-items", props: {} }]);
+const levelAlignDoc = () =>
+  doc([{ id: "blk-nav", type: "nav-items", props: {
+    levelStyles: { 1: { linkAlign: "center" }, 2: { linkAlign: "right" } },
+  } }]);
+const navChromeFormsDoc = () =>                          // nav-global R3a/R3b home
+  doc([{ id: "blk-nav", type: "nav-items", props: {
+    navChrome: { submenuDirection: "down", submenuMode: "accordion" },
+  } }]);
+const perDeviceAlignDoc = () =>                          // linkAlign override on tablet + mobile
+  doc(
+    [{ id: "blk-nav", type: "nav-items", props: {
+      levelStyles: { 1: { linkAlign: "center" }, 2: { linkAlign: "right" } },
+    } }],
+    { responsive: {
       mobile: { navProps: { levelStyles: { 1: { linkAlign: "left" } } } },   // LINK-partition ⇒ re-emits at mobile
       tablet: { navProps: { levelStyles: { 1: { linkAlign: "right" } } } },
-    } }],
-});
+    } },
+  );
 
 describe("normalizeNavLevelStyle — linkAlign accept / reject / sparse / prune", () => {
   test("accepts linkAlign on levels 1 and 2; sparse (present keys only)", () => {});
@@ -262,7 +274,12 @@ describe("menuDocumentV2 per-device linkAlign overrides (sparse + prune)", () =>
 // never sees the new keys). 508 adds ZERO MenuAppearance churn.
 ```
 
-#### 1.3 `tests/vitest/ui/menu-design-editor.test.tsx` — extend (R1 hint + R1(b) seg + R3 controls)
+#### 1.3 `tests/vitest/ui/menu-design-editor.test.tsx` — VERIFY (R1 hint + R1(b) seg + R3 controls)
+
+(The R1(a) hint-region assertions are OWNED by 508-01 and the R1(b)/R3a/R3b editor
+assertions are OWNED by 508-04 — both land with their code. Restated here as the
+verification checklist; 508-05 authors NONE of these `expect`s — it confirms they land
+green at closure and fills any gap found, without re-writing a sibling-owned assertion.)
 
 ```ts
 // Reuse the suite's mount + updateMenu-spy harness. All writes asserted via the

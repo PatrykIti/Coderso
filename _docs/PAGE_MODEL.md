@@ -1108,7 +1108,7 @@ the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
   `menus.settings.published`; menus issue no preview tokens — the live canvas
   IS the preview.
 
-## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504 / TASK-506
+## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504 / TASK-506 / TASK-508
 
 The Design tab of a menu edits a dedicated document contract owned by
 `core/services/menus/menuDocumentV2.ts` (NOT a Page v2 document). It persists
@@ -1424,11 +1424,11 @@ byte-identical on both CSS builders, PRESENT-ONLY emission from the doc scope.
     `hoverLift(0..8)`. Link-level ⇒ re-emits at mobile.
   - **B3 caret + flyout** — `showCaret:false` suppresses the caret `::after`
     (`content:none`); `caretRotateOnOpen` rotates 180° on `:hover`/`:focus-within`;
-    `flyoutAnimation(none|fade|slide)` reveals via `opacity`(+`transform`) with
-    `transition:…,display …ms allow-discrete` + a matching `@starting-style` block,
-    layered OVER (never replacing) the `display:none→grid` toggle — zero-JS
-    reachability preserved, NO `visibility`. Canvas force-open neutralizes the rest
-    state (`display:grid;opacity:1;transform:none`).
+    `flyoutAnimation(none|fade|slide)` reveals the sublist. **(TASK-508 R2 rewrote
+    this reveal — see the TASK-508 subsection below: the old
+    `display …ms allow-discrete` + `@starting-style` machinery was cosmetically inert
+    and is GONE; the reveal now drives visible motion with `visibility`+`opacity`
+    +`transform`.)**
   - **B4 pill + dropdown padding** — level-0 `navPill{Background,Radius(0..40),
     PaddingX(0..40),PaddingY(0..32)}` on `.site-nav-list`; levels ≥ 1
     `containerPaddingX(0..40)`/`containerPaddingY(0..32)` on the container selector
@@ -1444,6 +1444,66 @@ byte-identical on both CSS builders, PRESENT-ONLY emission from the doc scope.
   all-width `linkOnly` split. Every new per-level key ∈ `NAV_LEVEL_STYLE_COMPARE_KEYS`
   and every navChrome key ∈ the navChrome compare list — else the per-device delta
   silently drops (fail-closed trap, asserted by test).
+
+**Nesting forms — link centering, perceptible flyout, unified direction & accordion
+(TASK-508).** Same doc-scoped `buildMenuRuleSetsForDocument` family; present-only,
+no `schemaVersion` bump, `buildSiteShellCss(null)` + no-override docs byte-identical.
+
+- **R1(a) corrected container default hints (model-only).** The base sheet always
+  paints `.site-nav-sublist{min-width:180px;padding:6px}`, mirrored into
+  `menuDocumentV2.ts` as `MENU_SHELL_SUBLIST_MIN_WIDTH=180` /
+  `MENU_SHELL_SUBLIST_PADDING=6` (NOT into `MenuAppearance`/`SHELL_APPEARANCE_DEFAULTS`
+  — keeps the base sheet untouched). `resolveNavKeyThemeDefault` now returns the REAL
+  defaults: `minWidth ⇒ {180,"Default 180px"}`, `containerPaddingX/Y ⇒ {6,"Default 6px"}`
+  (removed from `MENU_GATED_PRESENT_ONLY_NOT_APPLIED_KEYS`), so the editor hint + slider
+  thumb read 180/6 instead of `undefined`/`range.min`. The level-0 pill controls
+  (`navPillRadius`/`navPillPaddingX/Y`) STAY gated. **Hint/thumb-only** — CSS emission
+  (`levelContainerDecls`, present-only on the STORED value) is unchanged.
+- **R1(b) `NavLevelStyle.linkAlign` (`left|center|right`).** Emits `text-align` on the
+  dropdown link (`LEVEL_LINK_SELECTORS[lvl]`); since `.site-nav-link` is `display:block`
+  filling the `min-width:180px` container, `center` centers the label. Present-only,
+  per-device (∈ `NAV_LEVEL_STYLE_COMPARE_KEYS` + re-emits at mobile via `linkOnly`),
+  levels 1/2.
+- **R2 robust `flyoutAnimRule` (the confirmed BUG fix).** The reveal now drives visible
+  motion with visibility+opacity+transform: at REST the sublist is overridden to
+  `display:grid;visibility:hidden;opacity:0` (+`transform:translateY(-6px)` for slide) on
+  the NON-`:hover` sublist selectors; SHOWN on `:hover`/`:focus-within` it is
+  `visibility:visible;opacity:1;transform:none`; the transition is
+  `opacity ${dur}ms[,transform ${dur}ms],visibility 0s linear ${dur}ms` — the delayed
+  `visibility` on close keeps the box visible + interactive through the fade/slide-out
+  (so CLOSE animates), `visibility 0s` on open makes it interactive from frame 0.
+  `visibility:hidden` = exact reachability parity with `display:none` (non-focusable,
+  non-clickable, a11y-hidden) ⇒ zero-JS hover/focus-within reachability preserved; the
+  `display:none→grid` toggle (`navNestingRules`) is byte-unchanged (its display:grid-on-hover
+  is now redundant-but-harmless). NO `@starting-style`/`allow-discrete`/`display`-in-transition.
+  Present-only: unset/`"none"` ⇒ early-return `[]` ⇒ byte-identical. `previewForceOpenLevel`
+  emits `display:grid;visibility:visible;opacity:1;transform:none` on the (0,4,0) level-1
+  AND anchored (0,5,0) level-2 selectors so the canvas force-open reveals the flyout.
+- **R3a `NavChromeStyle.submenuDirection` (`right|down|up|left`).** One nav-global control
+  applying CONSISTENTLY across ALL nested depths. Emitted as TWO rules in `desktopShared`
+  reading `baseNavChrome` — rule A on the precise first-dropdown selector (0,4,0) and
+  rule B on the anchored (0,5,0) `LEVEL_CONTAINER_SELECTORS[2]` — each resetting ALL FOUR
+  offsets (`down⇒left:0;top:100%;right:auto;bottom:auto`, `up⇒left:0;bottom:100%;top:auto;
+  right:auto`, `right⇒left:100%;top:0;right:auto;bottom:auto`, `left⇒right:100%;top:0;
+  left:auto;bottom:auto`) to avoid a double-anchor stretch. Emitted BEFORE
+  `submenuPlacementRule` so a granular level-2 `submenuPlacement` still WINS (coexistence
+  precedence). ≥640-only; **base-only** (like `dropdownDirection`: NOT in
+  `NAV_CHROME_COMPARE_KEYS`, tablet inherits via the flatten — a per-device override is
+  dead data). Unset ⇒ ZERO bytes ⇒ `dropdownDirection`/`submenuPlacement` byte-identical.
+- **R3b `NavChromeStyle.submenuMode` (`flyout|accordion`).** Accordion renders sublists
+  IN-FLOW under a vertical top bar as one downward block: `.site-nav-list{flex-direction:
+  column;align-items:stretch}` + `.site-nav-sublist{position:static;box-shadow:none;
+  border:0;min-width:0}` + `.site-nav-sublist{padding-left:16px}`, revealed via the SAME
+  untouched `display:none→grid` hover/focus-within toggle (zero-JS). ≥640-only,
+  `desktopShared`, base-only (NOT in `NAV_CHROME_COMPARE_KEYS`). Flyout is the default +
+  present-only: a flyout-mode doc emits ZERO accordion bytes; accordion gates the R2
+  flyout reveal OFF (no `visibility:hidden` over static content).
+- **Reject-unknown / value partitions.** Each new key joins its allowlist
+  (`linkAlign → NAV_LEVEL_STYLE_KEYS`; `submenuDirection`/`submenuMode → NAV_CHROME_KEYS`)
+  + exactly one value partition (`NAV_LINK_ALIGNS`/`SUBMENU_DIRECTIONS`/`SUBMENU_MODES`) +
+  a `NAV_CHROME_DEFAULTS` hint entry (the level-agnostic hint provider also serves the
+  levels-1/2 `linkAlign` hint). Bad enum VALUE fails soft (OMITTED); unknown KEY throws
+  `MenuDocumentError`+path. `core/site/siteShell.tsx` needs ZERO markup change.
 
 ## Revisions And Autosave
 

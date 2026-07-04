@@ -765,6 +765,78 @@ testIfDb(
   dbTestTimeoutMs
 );
 
+// --- TASK-508-05 §2.1: linkAlign (per-level + per-device) + navChrome
+// submenuDirection/submenuMode round-trip verbatim through the wire, per-key,
+// without dropping co-present appearance/extras or the 506 sibling sub-records.
+const routeNestingFormsDocument = () => ({
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "sec-route-menu-bar",
+      type: "menu-bar" as const,
+      name: "Menu bar",
+      layout: {},
+      // Per-device linkAlign deltas (per-device cascade; mobile ≠ tablet).
+      responsive: {
+        tablet: { navProps: { levelStyles: { 1: { linkAlign: "right" as const } } } },
+        mobile: { navProps: { levelStyles: { 1: { linkAlign: "left" as const } } } },
+      },
+      blocks: [
+        {
+          id: "blk-route-nav",
+          type: "nav-items" as const,
+          props: {
+            itemGap: 12,
+            // R1(b) per-level link alignment on BOTH dropdown levels.
+            levelStyles: {
+              1: { linkAlign: "center" as const, fontSize: 14 },
+              2: { linkAlign: "right" as const },
+            },
+            // R3a/R3b nav-global base-only direction + mode.
+            navChrome: {
+              submenuDirection: "down" as const,
+              submenuMode: "accordion" as const,
+            },
+          },
+        },
+      ],
+    },
+  ],
+});
+
+testIfDb(
+  "PATCH /menus/:id round-trips linkAlign + navChrome.submenuDirection + submenuMode + per-device linkAlign deltas WITHOUT dropping appearance/extras (per-key merge)",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Nesting Forms ${randomUUID()}`,
+      location: `route-nesting-forms-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const patch = getPatchHandler();
+    const extras = [createPageBlockV2("button", { id: "blk-route-extra" })];
+    await patch({
+      params: { id: menu.id },
+      query: {},
+      body: { appearance: { surfaceColor: "#0f172a" }, extras },
+    });
+
+    const document = routeNestingFormsDocument();
+    await patch({ params: { id: menu.id }, query: {}, body: { document } });
+
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings).toEqual({
+      appearance: { surfaceColor: "#0f172a" },
+      extras,
+      document,
+    });
+  },
+  dbTestTimeoutMs
+);
+
 testIfDb(
   "PATCH /menus/:id maps an invalid per-level modern key to a 400 menu_document_invalid ApiError with the levelStyles path; store untouched",
   async () => {

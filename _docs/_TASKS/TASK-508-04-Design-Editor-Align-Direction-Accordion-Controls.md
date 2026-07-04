@@ -7,7 +7,8 @@
 **Category:** Admin UI / Content (Menus) / Navigation / Page Builder / Responsive
 **Estimated Effort:** Medium
 **Dependencies:** TASK-508-01 (model keystone — `NavLevelStyle.linkAlign`, `NavChromeStyle.submenuDirection`/`submenuMode`, the `NAV_LINK_ALIGNS`/`SUBMENU_DIRECTIONS`/`SUBMENU_MODES` enum arrays + allowlists + `NAV_CHROME_DEFAULTS` hint entries, and the R1(a) `resolveNavKeyThemeDefault` container-default fix — ALL land before this subtask opens), TASK-508-02 (CSS — this subtask's in-canvas preview consumes 508-02's `buildMenuDocumentPreviewCss` / `previewForceOpenLevel` `visibility:visible` update for the direction/accordion/animation preview). Rides the existing validated `PATCH /menus/:id` write path.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-03
 
 ---
 
@@ -17,7 +18,7 @@
 co-author of `tests/vitest/ui/menu-design-editor.test.tsx`** bounded to the @1762/@1771 edits
 + the new R1(b)/R3a/R3b/force-open assertions per the byte-introducer split in §2b/Testing (the
 R1(a) @2069-2078 loop and the L1/L2 force-open `toContain`s @1768/@1777/@1780 — plus the
-depth-2 @2197 in the separate `…styled sublist is revealed` test — are NOT this subtask's;
+depth-2 @2196 in the separate `…styled sublist is revealed` test — are NOT this subtask's;
 they are 508-01/508-02-owned per the splits below). Land order (from the parent board): 508-01 → 508-02 → 508-03 → **508-04** →
 508-05. This subtask opens only after 508-01 (model) and 508-02 (CSS builder API +
 `previewForceOpenLevel` update) are green, because:
@@ -338,18 +339,18 @@ const forceOpenLevel: NavLevelStyleLevel | undefined =
     `toContain`s pin the pre-Req2 bytes verbatim — in "canvas force-open threads the selected
     level (cumulative)" (@1755-1784): the **Level-1 @1768** and **Level-2 @1777/@1780**; AND in the
     SEPARATE test "canvas force-open threads the selected level so the styled sublist is revealed"
-    (@2187-2201): the depth-2 **@2197** at Nesting level 2 (same short unanchored form as @1780).
+    (@2187-2201): the depth-2 **@2196** at Nesting level 2 (same short unanchored form as @1780).
     508-02's `previewForceOpenLevel`
     change (menuDocumentCss.ts @1256/@1263 → `display:grid;visibility:visible;opacity:1;transform:none`)
     turns ALL FOUR RED. Because land order is 01→02→03→04 and **508-03 gates BETWEEN 508-02 and
-    508-04**, 508-02 MUST re-string these FOUR `toContain`s (@1768, @1777, @1780, @2197) to the
+    508-04**, 508-02 MUST re-string these FOUR `toContain`s (@1768, @1777, @1780, @2196) to the
     visibility-inclusive form in the
     SAME atomic unit that changes `previewForceOpenLevel` (alongside the goldens it already resyncs
     in `tests/vitest/site/menu-document-css.test.ts`), so BOTH editor tests are GREEN when 508-03
     gates. If 508-04 owned them instead, the editor tests would sit RED across 508-03's gate —
     violating the each-subtask-green invariant. **Cross-subtask note (RESOLVED):** 508-02 extends its
     paired-golden carve-out to include these FOUR `menu-design-editor.test.tsx` force-open
-    `toContain`s (@1768 L1 depth-1, @1777 L2 depth-1, @1780 L2 depth-2, @2197 L2 depth-2 in the
+    `toContain`s (@1768 L1 depth-1, @1777 L2 depth-1, @1780 L2 depth-2, @2196 L2 depth-2 in the
     second test) as the fourth carve-out file
     in its "Paired golden-test resync (MANDATORY)" block, so the force-open re-string is pinned
     to EXACTLY 508-02 (no red window, no double-write collision). (Board may instead land
@@ -467,7 +468,7 @@ touch that test region.
   `.site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}` (the "depth-2 absent
   at level 1" guard). A SIXTH pre-Req2 reference lives in a SEPARATE named test "canvas force-open
   threads the selected level so the styled sublist is revealed" (@2187-2201): the depth-2 `toContain`
-  @2197 (`.site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}` at Nesting
+  @2196 (`.site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}` at Nesting
   level 2), which 508-02's fold turns RED identically to @1780 — so it rides the SAME 508-02
   re-string carve-out (below), NOT 508-04. TWO independent byte changes break/degrade these, and each is OWNED by the
   subtask that INTRODUCES its bytes (the each-subtask-green invariant forbids fixing a break one
@@ -478,10 +479,10 @@ touch that test region.
      (menuDocumentCss.ts @1256) and, anchored (0,5,0) for depth-2,
      `.site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}`
      (@1263). This turns the Level-1 @1768 and Level-2 @1777/@1780 `toContain`s RED — AND the
-     depth-2 @2197 `toContain` in the separate "…styled sublist is revealed" test (@2187-2201),
+     depth-2 @2196 `toContain` in the separate "…styled sublist is revealed" test (@2187-2201),
      whose short unanchored form the fold makes unemittable identically to @1780. Because land
      order is 01→02→03→04 and **508-03 gates BETWEEN 508-02 and 508-04**, 508-02 MUST re-string
-     those FOUR `toContain`s (@1768, @1777, @1780, @2197) to the visibility-inclusive form in the SAME atomic unit as its
+     those FOUR `toContain`s (@1768, @1777, @1780, @2196) to the visibility-inclusive form in the SAME atomic unit as its
      `previewForceOpenLevel` change (extending the paired-golden carve-out it already applies in
      `tests/vitest/site/menu-document-css.test.ts` to cover these `menu-design-editor.test.tsx`
      assertions) so BOTH editor tests are GREEN under 508-03's gate. Leaving them for 508-04 would sit

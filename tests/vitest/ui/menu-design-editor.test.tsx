@@ -1758,27 +1758,35 @@ test("canvas force-open threads the selected level (cumulative) into the preview
   selectBlockRow(container, "Navigation items");
   const styleText = () => canvasFrame(container).querySelector("style")?.textContent ?? "";
 
-  // Level 0 ⇒ NO force-open rule (byte-identical preview).
-  expect(styleText()).not.toContain(
-    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}"
+  // TASK-508 §2b: Level 0 has no sublist of its own, so a nav-items selection now
+  // previews the FIRST dropdown (depth 1) OPEN — the level-0 canvas is INTENTIONALLY
+  // no longer byte-identical to the unforced preview, so the nav-global
+  // submenuDirection/submenuMode/animation effects are visible while the author tunes
+  // them on the Level-0 tab. R2 folds `visibility:visible` into the neutralize.
+  expect(styleText()).toContain(
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}"
   );
 
-  // Level 1 ⇒ depth-1 sim-open only.
+  // Level 1 ⇒ depth-1 sim-open only. TASK-508 R2 folds `visibility:visible` into the
+  // force-open rest neutralize (else the animated flyout previews open-but-invisible).
   clickSegmented(container, "Nesting level", "1");
   expect(styleText()).toContain(
-    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}"
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}"
   );
+  // TASK-508 §2b: depth-2 stays ABSENT at level 1. Re-strung to the anchored (0,5,0)
+  // visibility-inclusive form 508-02 actually emits (the short pre-Req2 substring is
+  // unemittable after the visibility fold ⇒ would degrade to a silent tautology).
   expect(styleText()).not.toContain(
-    ".site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}"
+    ".site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}"
   );
 
-  // Level 2 ⇒ CUMULATIVE (depth 1 AND depth 2 open).
+  // Level 2 ⇒ CUMULATIVE (depth 1 AND depth 2 open). TASK-508 R2: visibility:visible fold.
   clickSegmented(container, "Nesting level", "2");
   expect(styleText()).toContain(
-    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}"
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}"
   );
   expect(styleText()).toContain(
-    ".site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}"
+    ".site-nav-sublist .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}"
   );
 
   cleanup();
@@ -2064,17 +2072,31 @@ test("TASK-507 FIX B: gated present-only numerics render NO default hint when un
     expect(findHint(container, key), `level-0 ${key} hint must be hidden`).toBeNull();
   }
 
-  // Level 1 (levelStyles) gated numerics — unset ⇒ hidden (incl. container padding).
+  // Level 1 (levelStyles) gated numerics — unset ⇒ hidden.
+  // TASK-508-01 R1(a): containerPaddingX/Y are NO LONGER gated (they carry a REAL
+  // base-sheet default) and are asserted POSITIVELY below — removed from this loop.
   clickSegmented(container, "Nesting level", "1");
-  for (const key of [
-    "containerPaddingX",
-    "containerPaddingY",
-    "itemDividerWidth",
-    "indicatorThickness",
-    "transitionMs",
-    "hoverLift",
-  ]) {
+  for (const key of ["itemDividerWidth", "indicatorThickness", "transitionMs", "hoverLift"]) {
     expect(findHint(container, key), `level-1 ${key} hint must be hidden`).toBeNull();
+  }
+
+  cleanup();
+});
+
+test("TASK-508-01 R1(a): unset dropdown-container controls render REAL base-sheet default hints (180 / 6)", async () => {
+  // The R1(a) resolver fix makes minWidth resolve { value:180, "Default 180px" } and
+  // containerPaddingX/Y resolve { value:6, "Default 6px" } — so (507 guard) the hint
+  // now legitimately RENDERS (value !== undefined) and the thumb sits at 180 / 6.
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  expect(findHint(container, "minWidth")?.textContent, "level-1 minWidth hint").toContain(
+    "Default 180px"
+  );
+  for (const key of ["containerPaddingX", "containerPaddingY"]) {
+    expect(findHint(container, key)?.textContent, `level-1 ${key} hint`).toContain("Default 6px");
   }
 
   cleanup();
@@ -2192,10 +2214,239 @@ test("canvas force-open threads the selected level so the styled sublist is reve
 
   const style = canvasFrame(container).querySelector("style")?.textContent ?? "";
   // 506-02's previewForceOpenLevel opens AND neutralizes the level-2 sublist so
-  // the fade/slide flyout is visible on canvas.
+  // the fade/slide flyout is visible on canvas — TASK-508 R2 folds in visibility:visible.
   expect(style).toContain(
-    ".site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}"
+    ".site-nav-sublist .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}"
   );
+
+  cleanup();
+});
+
+// ---------------------------------------------------------------------------
+// TASK-508-04 — R1(b) link alignment, R3a/R3b nav-global direction + mode,
+// R2 level-0 canvas force-open. Every control writes a validated enum token or
+// `undefined` (clear); a seed→display round-trip catches the fail-closed READ trap.
+// ---------------------------------------------------------------------------
+
+const segmentedOption = (container: ParentNode, label: string, option: string) => {
+  const group = Array.from(
+    container.querySelectorAll('[data-page-editor-control="segmented"] [role="group"]')
+  ).find((entry) => entry.getAttribute("aria-label") === label);
+  return group?.querySelector(`[data-page-editor-segmented-option="${option}"]`) ?? null;
+};
+
+test("R1(b) linkAlign seg renders for dropdown levels 1 & 2, absent from level 0", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Level 0 (top bar) ⇒ no per-level link alignment (out of scope).
+  expect(hasGroup(container, "Link alignment")).toBe(false);
+  clickSegmented(container, "Nesting level", "1");
+  expect(hasGroup(container, "Link alignment")).toBe(true);
+  clickSegmented(container, "Nesting level", "2");
+  expect(hasGroup(container, "Link alignment")).toBe(true);
+
+  cleanup();
+});
+
+test("R1(b) linkAlign writes center on the Desktop BASE per level and Default clears it", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  clickSegmented(container, "Link alignment", "center");
+  clickButton(container, "Save");
+  await flush();
+  expect(seededLevelStyles(readLastSavedDocument())?.[1]).toMatchObject({ linkAlign: "center" });
+  // Base write only — no responsive member.
+  expect(JSON.stringify(readLastSavedDocument()?.sections[0]?.responsive ?? {})).not.toContain(
+    "linkAlign"
+  );
+
+  // The "Default" sentinel clears it ⇒ present-only zero bytes (record prunes clean).
+  clickSegmented(container, "Link alignment", "inherit");
+  clickButton(container, "Save");
+  await flush();
+  expect(seededLevelStyles(readLastSavedDocument())).toBeUndefined();
+
+  cleanup();
+});
+
+test("R1(b) linkAlign forks per device (Mobile ⇒ sparse override + Reset), base untouched", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  clickSegmented(container, "Link alignment", "right");
+  // Override device ⇒ the MenuResponsiveControlShell Reset appears (kind override).
+  expect(
+    findReset(container, "Link alignment")?.getAttribute("data-menu-responsive-reset-kind")
+  ).toBe("override");
+  clickButton(container, "Save");
+  await flush();
+  const override = (
+    readLastSavedDocument()?.sections[0]?.responsive?.mobile?.navProps as
+      | { levelStyles?: Record<string, Record<string, unknown>> }
+      | undefined
+  )?.levelStyles;
+  expect(override?.[1]).toEqual({ linkAlign: "right" });
+  // Desktop base never mutated by the mobile fork; tablet never inherits mobile.
+  expect(navBlock(readLastSavedDocument())?.props.levelStyles).toBeUndefined();
+
+  cleanup();
+});
+
+test("R1(b) a stored linkAlign survives the read/normalize round-trip (fail-closed READ trap)", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.levelStyles = { 1: { linkAlign: "center" } };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  clickSegmented(container, "Nesting level", "1");
+
+  // If `linkAlign` were missing from NAV_LEVEL_STYLE_KEYS the stored record would be
+  // dropped on read and the seg would show "Default" instead of the seeded "center".
+  expect(segmentedOption(container, "Link alignment", "center")?.getAttribute("aria-pressed")).toBe(
+    "true"
+  );
+
+  cleanup();
+});
+
+test("R3a submenuDirection renders in the level-0 panel (Right/Down/Up/Left + Default), writes base", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  // Level-0 nav-base panel ⇒ the nav-global "Open direction" is present with Up.
+  expect(hasGroup(container, "Open direction")).toBe(true);
+  for (const opt of ["inherit", "right", "down", "up", "left"]) {
+    expect(
+      segmentedOption(container, "Open direction", opt),
+      `Open direction option ${opt}`
+    ).toBeTruthy();
+  }
+  // Unset ⇒ the "Default" (inherit) segment is selected (base-only, no badge/Reset).
+  expect(
+    segmentedOption(container, "Open direction", "inherit")?.getAttribute("aria-pressed")
+  ).toBe("true");
+  expect(findReset(container, "Open direction")).toBeNull();
+
+  clickSegmented(container, "Open direction", "down");
+  clickButton(container, "Save");
+  await flush();
+  expect(seededNavChrome(readLastSavedDocument())).toMatchObject({ submenuDirection: "down" });
+
+  cleanup();
+});
+
+test("R3a submenuDirection 'up' round-trips through the stored read", async () => {
+  seedDocument((doc) => {
+    const nav = doc.sections[0]!.blocks.find((b) => b.type === "nav-items");
+    if (nav?.type === "nav-items") nav.props.navChrome = { submenuDirection: "up" };
+  });
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+  expect(segmentedOption(container, "Open direction", "up")?.getAttribute("aria-pressed")).toBe(
+    "true"
+  );
+
+  cleanup();
+});
+
+test("R3b submenuMode renders in the level-0 panel (Flyout/Accordion + Default), writes base + clears", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  selectBlockRow(container, "Navigation items");
+
+  expect(hasGroup(container, "Submenu mode")).toBe(true);
+  for (const opt of ["inherit", "flyout", "accordion"]) {
+    expect(
+      segmentedOption(container, "Submenu mode", opt),
+      `Submenu mode option ${opt}`
+    ).toBeTruthy();
+  }
+  expect(findReset(container, "Submenu mode")).toBeNull();
+
+  clickSegmented(container, "Submenu mode", "accordion");
+  clickButton(container, "Save");
+  await flush();
+  expect(seededNavChrome(readLastSavedDocument())).toMatchObject({ submenuMode: "accordion" });
+
+  // Default clears it ⇒ present-only zero bytes (navChrome prunes clean).
+  clickSegmented(container, "Submenu mode", "inherit");
+  clickButton(container, "Save");
+  await flush();
+  expect(seededNavChrome(readLastSavedDocument())).toBeUndefined();
+
+  cleanup();
+});
+
+test("R3a/R3b are BASE-only on Tablet (write props.navChrome, no responsive.tablet, no Reset) and hidden on Mobile", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Tablet");
+  selectBlockRow(container, "Navigation items");
+
+  // Structural keys still render on Tablet but as base-DEFINING unwrapped controls.
+  expect(hasGroup(container, "Open direction")).toBe(true);
+  expect(findReset(container, "Open direction")).toBeNull();
+  expect(findReset(container, "Submenu mode")).toBeNull();
+
+  clickSegmented(container, "Open direction", "up");
+  clickSegmented(container, "Submenu mode", "accordion");
+  clickButton(container, "Save");
+  await flush();
+  const saved = readLastSavedDocument();
+  // The edits land on the BASE navChrome even though the active device is Tablet
+  // (NO tablet-delta emitter exists ⇒ a responsive.tablet override would be DEAD DATA).
+  expect(seededNavChrome(saved)).toMatchObject({
+    submenuDirection: "up",
+    submenuMode: "accordion",
+  });
+  expect(JSON.stringify(saved?.sections[0]?.responsive ?? {})).not.toContain("submenuDirection");
+  expect(JSON.stringify(saved?.sections[0]?.responsive ?? {})).not.toContain("submenuMode");
+
+  cleanup();
+});
+
+test("R3a/R3b are hidden on Mobile (flyout/accordion are >=640-only)", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  switchDevice(container, "Mobile");
+  selectBlockRow(container, "Navigation items");
+
+  expect(hasGroup(container, "Open direction")).toBe(false);
+  expect(hasGroup(container, "Submenu mode")).toBe(false);
+
+  cleanup();
+});
+
+test("R2 §2b: a Level-0 nav selection force-opens the FIRST dropdown in the canvas", async () => {
+  const { container, cleanup } = mount(<MenuDesignEditorPage menuId="menu-1" />);
+  await flush();
+  const styleText = () => canvasFrame(container).querySelector("style")?.textContent ?? "";
+  const depth1Open =
+    ".site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}";
+
+  // No nav selection ⇒ nothing forced (undefined force-open).
+  expect(styleText()).not.toContain(depth1Open);
+
+  // Nav-items selected on the Level-0 tab ⇒ depth-1 previews OPEN so the author sees
+  // the nav-global direction/mode/animation effects while editing them on Level 0.
+  selectBlockRow(container, "Navigation items");
+  expect(styleText()).toContain(depth1Open);
+
+  // Deselecting (non-nav) drops the force-open again.
+  clickSelector(container, '[data-menu-design-canvas-scroller="true"]');
+  expect(styleText()).not.toContain(depth1Open);
 
   cleanup();
 });

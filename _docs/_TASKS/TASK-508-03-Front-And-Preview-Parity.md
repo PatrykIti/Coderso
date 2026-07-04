@@ -7,7 +7,8 @@
 **Category:** Admin UI / Content (Menus) / Navigation / Page Builder / Responsive
 **Estimated Effort:** Small
 **Dependencies:** TASK-508-01 (model keystone: `linkAlign` / `submenuDirection` / `submenuMode` + allowlists + R1(a) hint fix — must land green first), TASK-508-02 (CSS emission: robust `flyoutAnimRule`, `submenuDirection` two-rule emitter, accordion emitter, `linkAlign` in `levelLinkDecls`, `previewForceOpenLevel` `visibility:visible` — the front consumes its `buildMenuDocumentCss` output). Also TASK-499/501/502/504/506/507 (the front render seam + doc-scoped sheet contract).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-03
 
 ---
 
@@ -95,11 +96,18 @@ reachability-safe with ZERO markup change because:
 
 **Front-side assertion (this subtask):** render a menu-document header with
 `flyoutAnimation:"slide"` and assert the emitted `<style>` (from `buildMenuDocumentCss`, @584)
-carries the R2 keyframe states against the EXISTING reveal selector 508-02 actually emits —
-L1 `${menuDocScope} .site-nav-list > .site-nav-item:hover > .site-nav-sublist` (and the matching
-`:focus-within > .site-nav-sublist` form), L2 `${menuDocScope} .site-nav-list > .site-nav-item >
-.site-nav-sublist > .site-nav-item:hover > .site-nav-sublist` — plus the `.site-nav-link` /
-`.site-nav-sublist` hooks it targets. NOTE: the reveal fires on the sublist-bearing group `<li>`,
+carries the R2 keyframe states against the TWO DISTINCT selectors 508-02 actually emits
+(`flyoutAnimRule`, `menuDocumentCss.ts` @641-667) — the REST keyframe and the SHOWN keyframe do
+NOT share a selector:
+- REST keyframe (`display:grid;visibility:hidden;opacity:0` [+`transform:translateY(-6px)` for
+  slide]) rides the NON-`:hover` `sub` selector — L1 `${menuDocScope} .site-nav-list >
+  .site-nav-item > .site-nav-sublist` (@646), L2 `${menuDocScope} .site-nav-list > .site-nav-item
+  > .site-nav-sublist .site-nav-sublist` (@650);
+- SHOWN keyframe (`visibility:visible;opacity:1;transform:none`) rides ONLY `shownSel` =
+  `${openParent}:hover > .site-nav-sublist,${openParent}:focus-within > .site-nav-sublist` (@661);
+- plus the `.site-nav-link` / `.site-nav-sublist` hooks it targets.
+
+NOTE: the reveal fires on the sublist-bearing group `<li>`,
 which DOES carry `data-site-nav-group="true"`, but `flyoutAnimRule` (508-02, `menuDocumentCss.ts`
 @641-667) emits the bare `.site-nav-item` child-combinator chain shown above — NOT the
 attribute-qualified `[data-site-nav-group="true"]` form — so any coherence assertion must match
@@ -219,14 +227,19 @@ selectors, add the MINIMAL hook here, obeying:
   (b) the `.site-nav-list`/`.site-nav-item[data-site-nav-group]`/`.site-nav-link`|group-label
   span[tabindex=0]/`.site-nav-sublist` hooks are all present; (c) `data-site-menu-doc="true"`
   scope stamp present; (d) `flyoutAnimation:"slide"` render — the `<style>` body carries the R2
-  keyframe states (`display:grid;visibility:hidden;opacity:0` rest / `visibility:visible;opacity:1;
-  transform:none` shown) targeting the EXISTING group-`<li>` reveal — the rest `display:grid` is
+  keyframe states on the TWO DISTINCT selectors 508-02 emits: the REST keyframe
+  (`display:grid;visibility:hidden;opacity:0` [+`transform:translateY(-6px)` for slide]) on the
+  NON-`:hover` `sub` selector `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist`
+  (L1) / `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist`
+  (L2), and the SHOWN keyframe (`visibility:visible;opacity:1;transform:none`) on the
+  `:hover`/`:focus-within > .site-nav-sublist` reveal selector — the rest `display:grid` is
   load-bearing: it OVERRIDES `navNestingRules`' closed `.site-nav-sublist{display:none}`
   (`menuDocumentCss.ts` @1040), and a `display:none` box CANNOT interpolate opacity/transform
   (the reveal would snap), so this assertion locks perceptible motion at render time rather than
-  green-lighting an inert `display:none` implementation — emitted as the bare
-  `${menuDocScope} .site-nav-list > .site-nav-item:hover`/`:focus-within > .site-nav-sublist`
-  child-combinator chain (NOT the `[data-site-nav-group="true"]` attribute form), with
+  green-lighting an inert `display:none` implementation — both emitted as bare `.site-nav-item`
+  child-combinator chains (NOT the `[data-site-nav-group="true"]` attribute form; assert the rest
+  decls against the NON-hover `sub` rule block and the shown decls against the `:hover`/
+  `:focus-within` rule block — never the rest keyframe inside the `:hover` block), with
   NO `@starting-style`/`allow-discrete`/`display …ms` bytes (front-side reachability + motion
   coherence, NOT a bare transition-string check); (e) accordion + direction + linkAlign set
   together render the SAME tree (no markup perturbation), and a flyout-mode doc's `<style>`
@@ -281,16 +294,19 @@ Rolled into 508-05's closure (this subtask contributes the front-parity note):
    rules A/B, accordion, R2 flyout) targets a node the front markup renders — coherence guard
    green, no dangling selector.
 3. **R2 reachability + perceptibility preserved.** With `flyoutAnimation` set, the `<style>`
-   carries the `display:grid;visibility:hidden;opacity:0` rest state (the `display:grid` OVERRIDES
+   carries the `display:grid;visibility:hidden;opacity:0` rest state on the NON-`:hover` `sub`
+   selector `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist` (L1) /
+   `... .site-nav-sublist .site-nav-sublist` (L2) (the `display:grid` OVERRIDES
    `navNestingRules`' closed `.site-nav-sublist{display:none}` @1040 — EXACTLY the declaration that
    makes fade/slide perceptible, since a `display:none` box cannot interpolate opacity/transform
-   and would snap) and the `visibility`-based reveal on the EXISTING group-`<li>`
-   hover/focus-within trigger — emitted as
+   and would snap), and the `visibility:visible;opacity:1;transform:none` SHOWN state on the
+   EXISTING group-`<li>` hover/focus-within reveal — emitted as
    the bare `${menuDocScope} .site-nav-list > .site-nav-item:hover`/`:focus-within >
    .site-nav-sublist` child-combinator chain (the group `<li>` carries `data-site-nav-group` but
-   `flyoutAnimRule` does NOT attribute-qualify the selector; assert the emitted string, not the
-   attribute form); keyboard focus-within still opens the sublist (the `span[tabIndex=0]` hook
-   unchanged).
+   `flyoutAnimRule` does NOT attribute-qualify the selector; assert the rest decls against the
+   NON-hover `sub` rule and the shown decls against the `:hover`/`:focus-within` rule — never the
+   rest keyframe inside the `:hover` block); keyboard focus-within still opens the sublist (the
+   `span[tabIndex=0]` hook unchanged).
 4. **Byte-identity.** `buildSiteShellCss(null)` unchanged (`siteShellCss.ts` + its test ZERO
    edits); no-override menu-document render byte-identical.
 5. **Parity contract enumerated for 508-04** (mirror hook — none needed; force-open sim shows

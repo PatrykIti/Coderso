@@ -11,6 +11,7 @@ import {
   type MenuDocumentV2,
 } from "../../../core/services/menus/menuDocumentV2";
 import {
+  SITE_MENU_DOC_ATTRIBUTE,
   buildMenuDocumentCss,
   buildMenuDocumentPreviewCss,
 } from "../../../core/site/menuDocumentCss";
@@ -1234,9 +1235,10 @@ test("TASK-506-05: fully-styled front sheet carries the exact B1–B5 selectors 
     // B2 level-0 indicator ::before bar (grow ⇒ scaleX) — TASK-507 A.1 scopes it to
     // the TOP-BAR-only selector (no dropdown-link leak); A.2 resets opacity:1 at rest:
     `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-link::before{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:#ff0000;transform:scaleX(0);opacity:1;transform-origin:left;transition:transform 200ms}`,
-    // B3 caret suppressed at level 1 + flyout slide rest state:
+    // B3 caret suppressed at level 1 + TASK-508 R2 flyout slide rest state
+    // (perceptible visibility+opacity+transform; NO allow-discrete/@starting-style):
     `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist > li[data-site-nav-group="true"] > .site-nav-link::after{content:none}`,
-    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{opacity:0;transform:translateY(-6px);transition:opacity 150ms,transform 150ms,display 150ms allow-discrete}`,
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;visibility:hidden;opacity:0;transform:translateY(-6px);transition:opacity 150ms,transform 150ms,visibility 0s linear 150ms}`,
     // B5 level-2 nested placement on the anchored (0,5,0) selector:
     `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{left:0;top:100%;right:auto;bottom:auto}`,
   ];
@@ -1244,8 +1246,11 @@ test("TASK-506-05: fully-styled front sheet carries the exact B1–B5 selectors 
     expect(front).toContain(rule);
     expect(canvas).toContain(rule);
   }
-  // NO `visibility` anywhere (B3 reachability contract).
-  expect(front).not.toContain("visibility");
+  // TASK-508 R2: the authored-flyout doc now LEGITIMATELY emits `visibility` (the
+  // perceptible reveal) — the byte-identity `visibility` guard moves to the unstyled
+  // `plain` doc below, and the inert allow-discrete/@starting-style are gone entirely.
+  expect(front).not.toContain("allow-discrete");
+  expect(front).not.toContain("@starting-style");
   // Present-only: an unstyled doc emits none of these markers.
   const plain = buildMenuDocumentCss(buildDoc());
   for (const marker of [
@@ -1255,6 +1260,7 @@ test("TASK-506-05: fully-styled front sheet carries the exact B1–B5 selectors 
     "allow-discrete",
     "content:none",
     "background:#eeeeee",
+    "visibility",
   ]) {
     expect(plain).not.toContain(marker);
   }
@@ -1275,4 +1281,210 @@ test("TASK-506-05: F1 base-reset ⇒ CSS sheet byte-identical to the never-had-i
   });
   const clearedChrome = clearMenuNavChromeBase(authoredChrome, secId, "navPillRadius");
   expect(buildMenuDocumentCss(clearedChrome)).toBe(buildMenuDocumentCss(buildDoc()));
+});
+
+// --- TASK-508-03: front & preview parity — no-markup-hook proof + R2 coherence ---
+// The three TASK-508 fields (`linkAlign`, `submenuDirection`, `submenuMode`) and
+// the R2 robust flyout rewrite are PURE doc-scoped CSS on the EXISTING recursive
+// `.site-nav-*` markup — `siteShell.tsx` gains ZERO new markup/class/attr/aria.
+// These regressions lock: (1) markup byte-identity, (2) every hook the 508
+// selectors need is rendered, (3) the R2 perceptible reveal states ride the two
+// DISTINCT (non-`:hover` rest / `:hover`+`:focus-within` shown) selectors, and
+// (4) present-only zero-byte emission (flyout-mode ⇒ no accordion/direction bytes;
+// accordion ⇒ flyout R2 gated off). See TASK-508-03-Front-And-Preview-Parity.md.
+
+// Extract the doc-scoped <style> body (the 508-02-owned sheet) for CSS assertions.
+const extractStyle = (html: string): string => html.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? "";
+
+const SEC = "sec_bar";
+
+// A doc carrying ALL new fields (accordion + direction + per-level linkAlign).
+const buildDeckedDoc = (): MenuDocumentV2 => {
+  let doc = patchMenuNavChromeForDevice(buildDoc(), SEC, "desktop", {
+    submenuDirection: "down",
+    submenuMode: "accordion",
+  });
+  doc = patchMenuNavLevelStyleForDevice(doc, SEC, "desktop", 1, { linkAlign: "center" });
+  doc = patchMenuNavLevelStyleForDevice(doc, SEC, "desktop", 2, { linkAlign: "center" });
+  return doc;
+};
+
+// A FLYOUT-mode (default) doc with direction + linkAlign + animated flyout — used
+// for the R2 keyframe coherence (accordion gates R2 off, so R2 needs flyout mode).
+const buildFlyoutDeckedDoc = (): MenuDocumentV2 => {
+  let doc = patchMenuNavChromeForDevice(buildDoc(), SEC, "desktop", { submenuDirection: "down" });
+  doc = patchMenuNavLevelStyleForDevice(doc, SEC, "desktop", 1, {
+    linkAlign: "center",
+    flyoutAnimation: "slide",
+  });
+  doc = patchMenuNavLevelStyleForDevice(doc, SEC, "desktop", 2, {
+    linkAlign: "center",
+    flyoutAnimation: "slide",
+  });
+  return doc;
+};
+
+test("TASK-508-03: an all-fields (linkAlign+direction+accordion) doc adds NO new markup/class/aria", () => {
+  // Same nav tree, decked vs no-override doc: the DOM must not move a byte —
+  // every TASK-508 field lives entirely in the doc-scoped <style>.
+  const htmlBase = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDoc()}
+      navigation={threeLevelNav}
+      siteName="Acme"
+    />
+  );
+  const htmlDeck = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDeckedDoc()}
+      navigation={threeLevelNav}
+      siteName="Acme"
+    />
+  );
+  // Sanity: the decked doc DID emit new bytes into its scoped sheet…
+  expect(htmlDeck).not.toBe(htmlBase);
+  // …but with the <style> stripped, the markup is byte-identical.
+  expect(stripStyle(htmlDeck)).toBe(stripStyle(htmlBase));
+  // None of the TASK-508 field names / CSS tokens leak into rendered markup.
+  const markup = stripStyle(htmlDeck);
+  for (const marker of [
+    "linkAlign",
+    "submenuDirection",
+    "submenuMode",
+    "text-align",
+    "position:static",
+    "accordion",
+  ]) {
+    expect(markup).not.toContain(marker);
+  }
+});
+
+test("TASK-508-03: the front carries every hook the 508 selectors target + the doc-scope stamp", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDeckedDoc()}
+      navigation={threeLevelNav}
+      siteName="Acme"
+    />
+  );
+  // linkAlign → .site-nav-link; direction/R2 → .site-nav-list > .site-nav-item >
+  // .site-nav-sublist (+ nested); accordion → .site-nav-list / .site-nav-sublist.
+  expect(html).toContain('class="site-nav-list" data-site-nav-list="true"');
+  expect(html).toMatch(/<li class="site-nav-item" data-site-nav-group="true">/);
+  expect(html).toContain('class="site-nav-sublist"');
+  expect((html.match(/<ul class="site-nav-sublist">/g) ?? []).length).toBeGreaterThanOrEqual(2);
+  // R2/direction reveal fires on the group <li>'s trigger — linked (a.site-nav-link)…
+  expect(html).toMatch(
+    /<li class="site-nav-item" data-site-nav-group="true"><a class="site-nav-link"/
+  );
+  // …and the doc-scope stamp so the 508-02 sheet applies.
+  expect(html).toContain(`${SITE_MENU_DOC_ATTRIBUTE}="true"`);
+  // …and a linkless (`#`) group exposes the focusable span[tabindex=0] :focus-within hook.
+  const linkless = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={buildDoc()}
+      navigation={linklessGroupNav}
+      siteName="Acme"
+    />
+  );
+  expect(linkless).toMatch(/<span class="site-nav-link site-nav-group-label"[^>]*tabindex="0"/);
+});
+
+test("TASK-508-03: R2 flyout reveal — rest states ride the NON-:hover sub selectors, shown state the :hover/:focus-within reveal (perceptible; no @starting-style/allow-discrete)", () => {
+  const css = extractStyle(
+    renderToString(
+      <SiteHeaderMenuDocumentRender
+        document={buildFlyoutDeckedDoc()}
+        navigation={threeLevelNav}
+        siteName="Acme"
+      />
+    )
+  );
+  // REST (display:grid;visibility:hidden;opacity:0 + slide transform) on the L1
+  // NON-`:hover` `sub` selector — display:grid OVERRIDES navNestingRules' closed
+  // `.site-nav-sublist{display:none}`, so opacity/transform can interpolate.
+  expect(css).toContain(
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;visibility:hidden;opacity:0;transform:translateY(-6px);transition:opacity 150ms,transform 150ms,visibility 0s linear 150ms}`
+  );
+  // REST on the DISTINCT L2 anchored (0,5,0) `sub` selector (never strands level-2).
+  expect(css).toContain(
+    `${SCOPE} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{display:grid;visibility:hidden;opacity:0;transform:translateY(-6px);transition:opacity 150ms,transform 150ms,visibility 0s linear 150ms}`
+  );
+  // SHOWN (visibility:visible;opacity:1;transform:none) rides ONLY the `:hover` /
+  // `:focus-within > .site-nav-sublist` reveal selector — NOT the rest `sub` selector.
+  expect(css).toContain(
+    `${SCOPE} .site-nav-list > .site-nav-item:hover > .site-nav-sublist,${SCOPE} .site-nav-list > .site-nav-item:focus-within > .site-nav-sublist{visibility:visible;opacity:1;transform:none;transition:opacity 150ms,transform 150ms,visibility 0s}`
+  );
+  // The inert display-swap-bridge approach is gone entirely (never animated close).
+  expect(css).not.toContain("@starting-style");
+  expect(css).not.toContain("allow-discrete");
+});
+
+test("TASK-508-03: no dangling selector — every nav class hook the emitted sheet references is rendered in the front markup", () => {
+  // Front↔CSS coherence: gather EVERY `.site-nav-*` class token the doc-scoped
+  // sheet uses (decls never contain a class selector) and assert each resolves to
+  // a class actually rendered by SiteHeaderMenuDocumentRender. Covers R2, direction,
+  // accordion, and linkAlign selectors in ONE guard (both docs, flyout + accordion).
+  for (const doc of [buildFlyoutDeckedDoc(), buildDeckedDoc()]) {
+    const html = renderToString(
+      <SiteHeaderMenuDocumentRender document={doc} navigation={threeLevelNav} siteName="Acme" />
+    );
+    const markup = stripStyle(html);
+    const hooks = new Set(
+      [...extractStyle(html).matchAll(/\.site-nav-[a-z0-9-]+/g)].map((m) => m[0].slice(1))
+    );
+    expect(hooks.size).toBeGreaterThan(0);
+    for (const hook of hooks) expect(markup).toContain(hook); // e.g. "site-nav-sublist"
+  }
+});
+
+test("TASK-508-03: present-only — a flyout-mode doc emits ZERO accordion/direction-free bytes, an accordion doc gates the R2 flyout OFF", () => {
+  // Flyout mode (default) with animated flyout + linkAlign but submenuMode unset ⇒
+  // NO accordion bytes (no `position:static`, no accordion vertical-bar rule).
+  const flyoutCss = extractStyle(
+    renderToString(
+      <SiteHeaderMenuDocumentRender
+        document={patchMenuNavLevelStyleForDevice(buildDoc(), SEC, "desktop", 1, {
+          flyoutAnimation: "slide",
+          linkAlign: "center",
+        })}
+        navigation={threeLevelNav}
+        siteName="Acme"
+      />
+    )
+  );
+  expect(flyoutCss).not.toContain("position:static");
+  expect(flyoutCss).not.toContain(
+    `${SCOPE} .site-nav-list{flex-direction:column;align-items:stretch}`
+  );
+  // …but it DID author linkAlign + the R2 perceptible reveal (sanity the doc is live).
+  expect(flyoutCss).toContain("text-align:center");
+  expect(flyoutCss).toContain("visibility:hidden");
+
+  // Accordion mode ⇒ in-flow block bytes present AND the flyout R2 reveal gated OFF
+  // (an accordion sublist must not reserve in-flow space while `visibility:hidden`).
+  const accordionDoc = patchMenuNavChromeForDevice(
+    patchMenuNavLevelStyleForDevice(buildDoc(), SEC, "desktop", 1, { flyoutAnimation: "slide" }),
+    SEC,
+    "desktop",
+    { submenuMode: "accordion" }
+  );
+  const accordionCss = extractStyle(
+    renderToString(
+      <SiteHeaderMenuDocumentRender
+        document={accordionDoc}
+        navigation={threeLevelNav}
+        siteName="Acme"
+      />
+    )
+  );
+  expect(accordionCss).toContain(
+    `${SCOPE} .site-nav-list{flex-direction:column;align-items:stretch}`
+  );
+  expect(accordionCss).toContain(
+    `${SCOPE} .site-nav-sublist{position:static;box-shadow:none;border:0;min-width:0}`
+  );
+  expect(accordionCss).toContain(`${SCOPE} .site-nav-sublist{padding-left:16px}`);
+  // R2 flyout gated OFF: no perceptible-flyout visibility rest state in accordion mode.
+  expect(accordionCss).not.toContain("visibility:hidden");
 });

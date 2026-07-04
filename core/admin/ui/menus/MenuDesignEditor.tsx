@@ -329,6 +329,32 @@ const submenuPlacementLabels: Record<string, string> = {
   bottom: "Below",
   left: "Left",
 };
+// TASK-508 R1(b) — per-level dropdown link ALIGNMENT (levels 1/2). STORED tokens
+// only; the `seg` helper prepends the "inherit"⇒"Default" sentinel. Byte-parity
+// with menuDocumentV2's NAV_LINK_ALIGNS (same order + literals) so the segmented
+// token the editor writes is the model's accepted enum (never fail-soft-dropped).
+const LINK_ALIGN_OPTIONS = ["left", "center", "right"] as const;
+const linkAlignLabels: Record<string, string> = {
+  left: "Left",
+  center: "Center",
+  right: "Right",
+};
+// TASK-508 R3a — nav-global submenu DIRECTION (governs EVERY flyout depth: the
+// level-1 first dropdown AND level-2/3+ nested). Byte-parity with SUBMENU_DIRECTIONS.
+const SUBMENU_DIRECTION_OPTIONS = ["right", "down", "up", "left"] as const;
+const submenuDirectionLabels: Record<string, string> = {
+  right: "Right",
+  down: "Down",
+  up: "Up",
+  left: "Left",
+};
+// TASK-508 R3b — nav-global submenu MODE (flyout overlay vs in-flow accordion).
+// Byte-parity with SUBMENU_MODES.
+const SUBMENU_MODE_OPTIONS = ["flyout", "accordion"] as const;
+const submenuModeLabels: Record<string, string> = {
+  flyout: "Flyout",
+  accordion: "Accordion",
+};
 const FONT_WEIGHT_INHERIT = "inherit" as const;
 const fontWeightOptions = [FONT_WEIGHT_INHERIT, ...menuAppearanceFontWeights.map((w) => String(w))];
 const fontWeightLabels: Record<string, string> = {
@@ -592,7 +618,7 @@ function ControlDefaultHint({
   const { value, sourceLabel } = resolveMenuControlDefault(section, device, level, propKey);
   // TASK-507 FIX B: any resolved default value of `undefined` hides the hint. The
   // gated present-only numerics (indicatorThickness, itemDividerWidth, transitionMs,
-  // hoverLift, containerPaddingX/Y, navPillRadius/PaddingX/PaddingY) intentionally
+  // hoverLift, navPillRadius/PaddingX/PaddingY) intentionally
   // resolve to { value: undefined, sourceLabel: "Off" | "Not applied" } PRECISELY so
   // the hint is HIDDEN — the prior stricter guard (also requiring "Not set") RENDERED
   // them, producing mixed messaging (thumb at range.min while the hint said "Off").
@@ -1618,6 +1644,13 @@ function NavLevelControls({
         "Container padding Y",
         slider("containerPaddingY", "Container padding Y")
       )}
+      {/* TASK-508 R1(b) — center dropdown text within the >=180px container.
+          Present-only, per-level (1/2), per-device via the same setLevel fork. */}
+      {levelControl(
+        "linkAlign",
+        "Link alignment",
+        seg("linkAlign", "Link alignment", LINK_ALIGN_OPTIONS, linkAlignLabels)
+      )}
       {level === 2 ? (
         <>
           <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -1924,6 +1957,43 @@ function MenuBlockPanel({
       options={["inherit", ...options]}
       optionLabels={{ inherit: "Default", ...labels }}
       onChange={(next) => setChromeField(key, next === "inherit" ? undefined : (next as never))}
+    />
+  );
+  // TASK-508 R3a/R3b — BASE-only writer for the structural nav-GLOBAL keys
+  // (submenuDirection / submenuMode). These are >=640 structural axes with NO
+  // tablet-delta emitter in menuDocumentCss (collectChromeDeltaRules re-runs
+  // navChromeRules, which carries ZERO direction/accordion bytes), so a device
+  // override would be DEAD DATA behind a misleading badge/Reset. Hardcode
+  // device:"desktop" so the BASE navChrome record is written on ANY active device
+  // (like dropdownDirection @setNavBaseField). Clearing to "inherit" ⇒ undefined ⇒
+  // present-only ⇒ ZERO bytes (the CSS resolver falls back to the model default).
+  const setChromeBaseField = <K extends keyof NavChromeStyle>(
+    key: K,
+    value: NavChromeStyle[K] | undefined
+  ) =>
+    updateDoc((current) => {
+      const target = current.sections[0];
+      return target
+        ? patchMenuNavChromeForDevice(current, target.id, "desktop", {
+            [key]: value,
+          } as Partial<NavChromeStyle>)
+        : current;
+    });
+  const chromeBaseSeg = (
+    key: keyof NavChromeStyle,
+    label: string,
+    options: readonly string[],
+    labels: Record<string, string>
+  ) => (
+    <SegmentedControl
+      label={label}
+      value={
+        (section ? (readMenuNavChromeBaseValue(section, key) as string | undefined) : undefined) ??
+        "inherit"
+      }
+      options={["inherit", ...options]}
+      optionLabels={{ inherit: "Default", ...labels }}
+      onChange={(next) => setChromeBaseField(key, next === "inherit" ? undefined : (next as never))}
     />
   );
   const chromeToggle = (key: keyof NavChromeStyle, label: string) => (
@@ -2373,6 +2443,33 @@ function MenuBlockPanel({
                   }
                 />
               ) : null}
+              {device !== "mobile" ? (
+                // TASK-508 R3a/R3b — nav-GLOBAL structural axes. Dropdowns + the
+                // flyout<->accordion choice only apply >=640px (sublists collapse
+                // inline on mobile), so — exactly like Dropdown direction above —
+                // these are Desktop/Tablet-only AND base-DEFINING: both write the
+                // BASE navChrome (the CSS submenuDirection/accordion emitters read
+                // baseNavChrome in desktopShared; there is NO tablet-delta emitter).
+                // Unwrapped (no shell/badge/Reset) — one authored value drives every
+                // device >=640; "everything opens down" / "accordion" is ONE switch.
+                <>
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Submenu
+                  </p>
+                  {chromeBaseSeg(
+                    "submenuDirection",
+                    "Open direction",
+                    SUBMENU_DIRECTION_OPTIONS,
+                    submenuDirectionLabels
+                  )}
+                  {chromeBaseSeg(
+                    "submenuMode",
+                    "Submenu mode",
+                    SUBMENU_MODE_OPTIONS,
+                    submenuModeLabels
+                  )}
+                </>
+              ) : null}
             </>
           ) : (
             <NavLevelControls
@@ -2633,11 +2730,18 @@ export function MenuDesignEditor({ menuId }: { menuId: string }) {
 
   // TASK-504-04 §1: neutralize a stale level for a non-nav selection as a PURE
   // derivation (no setState-in-effect) — the raw `navLevel` persists so
-  // re-selecting nav-items restores the author's last level. `forceOpenLevel`
-  // sim-opens the canvas ONLY for a nav level >= 1.
+  // re-selecting nav-items restores the author's last level.
+  // TASK-508 §2b: for a nav-items selection, `forceOpenLevel` sim-opens the canvas
+  // at the SELECTED depth for levels 1/2, and — since Level 0 has no sublist of its
+  // own — previews the FIRST dropdown (depth 1) on the Level-0 tab too, so the
+  // nav-global submenuDirection/submenuMode/animation effects are VISIBLE while the
+  // author edits those very level-0 controls (else the reposition / accordion
+  // push-down / flyout motion are all invisible). Non-nav selections force nothing.
   const navLevelActive: 0 | 1 | 2 = selectedBlock?.type === "nav-items" ? navLevel : 0;
   const forceOpenLevel: NavLevelStyleLevel | undefined =
-    navLevelActive >= 1 ? (navLevelActive as NavLevelStyleLevel) : undefined;
+    selectedBlock?.type === "nav-items"
+      ? ((navLevelActive >= 1 ? navLevelActive : 1) as NavLevelStyleLevel)
+      : undefined;
 
   const addMenuBlock = (type: MenuBlockType) =>
     updateDoc((current) => insertMenuBlock(current, createDefaultMenuBlock(type)));

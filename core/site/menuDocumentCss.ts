@@ -631,13 +631,23 @@ const caretRotateRule = (lvl: 0 | 1 | 2, s: NavLevelStyle | NavChromeStyle): str
     `${g}:hover > .site-nav-link::after,${g}:focus-within > .site-nav-link::after{transform:rotate(180deg)}`,
   ];
 };
-// flyoutAnimation: layer an opacity(+transform) reveal OVER the display:none→grid
-// toggle @701/@703 (NEVER replace it — that is the zero-JS reachability contract).
-// Made to ACTUALLY interpolate on open via `transition-behavior:allow-discrete` on
-// the display transition + a matching `@starting-style` (a plain opacity transition
-// off display:none snaps and is cosmetically inert on open). Each level targets its
-// OWN single precise sublist + the parent li that toggles it — NEVER the two-member
-// LEVEL_CONTAINER_SELECTORS[1] (which would strand the nested level-2 sublist hidden).
+// flyoutAnimation (TASK-508 R2): a PERCEPTIBLE reveal driven by
+// visibility+opacity+transform, layered OVER the display:none→grid toggle
+// (@1040/@1042 — NEVER replaced; that is the zero-JS reachability contract).
+// At REST the sublist is forced `display:grid` (rest spec 0,4,0 (L1)/0,5,0 (L2)
+// beats navNestingRules' 0,2,0 `.site-nav-sublist{display:none}`) so the box is
+// ALWAYS laid out — opacity/transform can then interpolate in EVERY engine (a
+// display:none box has no box to fade). It is hidden via `visibility:hidden`:
+// exact reachability parity with display:none (non-focusable, non-clickable,
+// a11y-hidden). `:hover`/`:focus-within` flips it `visibility:visible` + fully
+// interactive from frame 0 (`visibility 0s` no-delay on SHOWN). The `visibility 0s
+// linear ${dur}ms` on the REST rule DELAYS the hide until AFTER the fade/slide-out
+// on CLOSE — the trick that makes CLOSE animate. NO @starting-style / allow-discrete
+// / `display`-in-transition (the old approach was silently dropped pre-Chrome116/
+// Safari17.4/FF129 and never animated close). Each level targets its OWN single
+// precise sublist + the parent li that toggles it — NEVER the two-member
+// LEVEL_CONTAINER_SELECTORS[1] (which would strand the nested level-2 sublist hidden;
+// the level-2 `sub` is the anchored (0,5,0) form).
 const flyoutAnimRule = (lvl: NavLevelStyleLevel, s: NavLevelStyle): string[] => {
   if (s.flyoutAnimation == null || s.flyoutAnimation === "none") return [];
   const target =
@@ -652,18 +662,18 @@ const flyoutAnimRule = (lvl: NavLevelStyleLevel, s: NavLevelStyle): string[] => 
         };
   const { sub, openParent } = target;
   const dur = s.transitionMs ?? 150;
-  const rest = s.flyoutAnimation === "slide" ? "opacity:0;transform:translateY(-6px)" : "opacity:0";
-  const open = s.flyoutAnimation === "slide" ? "opacity:1;transform:translateY(0)" : "opacity:1";
-  const txn =
-    s.flyoutAnimation === "slide"
-      ? `transition:opacity ${dur}ms,transform ${dur}ms,display ${dur}ms allow-discrete`
-      : `transition:opacity ${dur}ms,display ${dur}ms allow-discrete`;
+  const slide = s.flyoutAnimation === "slide";
+  // REST: laid-out-but-hidden; `visibility 0s linear ${dur}ms` delays hide until the
+  // fade/slide-out finishes on CLOSE.
+  const restDecls = slide
+    ? `display:grid;visibility:hidden;opacity:0;transform:translateY(-6px);transition:opacity ${dur}ms,transform ${dur}ms,visibility 0s linear ${dur}ms`
+    : `display:grid;visibility:hidden;opacity:0;transition:opacity ${dur}ms,visibility 0s linear ${dur}ms`;
+  // SHOWN: `visibility 0s` (no delay) ⇒ interactive from frame 0 on OPEN.
+  const shownDecls = slide
+    ? `visibility:visible;opacity:1;transform:none;transition:opacity ${dur}ms,transform ${dur}ms,visibility 0s`
+    : `visibility:visible;opacity:1;transition:opacity ${dur}ms,visibility 0s`;
   const shownSel = `${openParent}:hover > .site-nav-sublist,${openParent}:focus-within > .site-nav-sublist`;
-  return [
-    `${sub}{${rest};${txn}}`,
-    `${shownSel}{${open};${txn}}`,
-    `@starting-style{${shownSel}{${rest}}}`,
-  ];
+  return [`${sub}{${restDecls}}`, `${shownSel}{${shownDecls}}`]; // NO @starting-style/allow-discrete/display-in-transition
 };
 
 // ── B4 pill (level-0 wrapper on .site-nav-list) ─────────────────────────────
@@ -697,6 +707,62 @@ const submenuPlacementRule = (s: NavLevelStyle | undefined): string | null => {
   return `${LEVEL_CONTAINER_SELECTORS[2]}{${pos}}`;
 };
 
+// ── TASK-508 R3a: nav-GLOBAL submenu direction (right|down|up|left) ───────────
+// Applies CONSISTENTLY across ALL nested depths (level-1 first dropdown AND
+// level-2/3+ nested), so "down everywhere" is ONE cohesive downward column.
+// Present-only: unset ⇒ [] ⇒ dropdownDirection + per-level submenuPlacement behave
+// EXACTLY as today (byte-identity). When set, rule A (0,4,0 first-dropdown selector)
+// supersedes dropdownRule's 0,2,0 axis, and rule B on the anchored (0,5,0)
+// LEVEL_CONTAINER_SELECTORS[2] ties the nested reach + wins by source order. Reset
+// ALL FOUR offsets per rule (else an undeclared offset inherits @1046's `left:100%`
+// ⇒ double-anchor stretch). down→bottom, up→top. Base-only (read from baseNavChrome
+// in desktopShared, ≥640-only like dropdownRule; NOT in NAV_CHROME_COMPARE_KEYS).
+type SubmenuDirection = NonNullable<NavChromeStyle["submenuDirection"]>;
+
+const FIRST_DROPDOWN_SELECTOR =
+  `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist` as const; // (0,4,0)
+
+const directionOffsets = (dir: SubmenuDirection): string =>
+  dir === "down"
+    ? "left:0;top:100%;right:auto;bottom:auto"
+    : dir === "up"
+      ? "left:0;bottom:100%;top:auto;right:auto"
+      : dir === "right"
+        ? "left:100%;top:0;right:auto;bottom:auto"
+        : "right:100%;top:0;left:auto;bottom:auto"; // "left"
+
+const submenuDirectionRules = (chrome: NavChromeStyle | undefined): string[] => {
+  if (!chrome || chrome.submenuDirection == null) return [];
+  const pos = directionOffsets(chrome.submenuDirection);
+  return [
+    `${FIRST_DROPDOWN_SELECTOR}{${pos}}`, // rule A — level-1 first dropdown (0,4,0)
+    `${LEVEL_CONTAINER_SELECTORS[2]}{${pos}}`, // rule B — nested ≥2 (anchored 0,5,0)
+  ];
+};
+
+// ── TASK-508 R3b: submenuMode = accordion (in-flow block) ────────────────────
+// Present-only: submenuMode !== "accordion" ⇒ [] ⇒ byte-identical (flyout is the
+// default). Renders the whole menu as ONE downward in-flow column: a vertical top
+// bar + `position:static` sublists that push siblings/content DOWN. Reachability is
+// UNCHANGED — navNestingRules' display:none→grid hover/focus-within toggle still
+// reveals the (now in-flow) sublist (do NOT touch @1040/@1042). Emitted AFTER the
+// flyout/direction rules in desktopShared so `position:static` wins + neutralizes
+// the absolute offsets (an absolute offset on a static box is inert). Base-only,
+// ≥640-only (mobile is already a column via the base sheet).
+const accordionRules = (chrome: NavChromeStyle | undefined): string[] => {
+  if (chrome?.submenuMode !== "accordion") return [];
+  return [
+    // 1. Vertical top bar (REUSE the orientation:vertical decls @245-246 verbatim):
+    //    a horizontal bar can't cohesively push a static sublist down.
+    `${menuDocScope} .site-nav-list{flex-direction:column;align-items:stretch}`,
+    // 2. In-flow sublists — override the base sheet's position:absolute
+    //    (siteShellCss.ts:157) so sublists expand in place; drop floating chrome.
+    `${menuDocScope} .site-nav-sublist{position:static;box-shadow:none;border:0;min-width:0}`,
+    // 3. Indent per depth (mirror the mobile inline indent siteShellCss.ts:171).
+    `${menuDocScope} .site-nav-sublist{padding-left:16px}`,
+  ];
+};
+
 /** Link typography/box decls for ONE level (present-only, sparse). `gap` is NOT
  *  here — the link is `display:block`, so `gap` lands on the CONTAINER. */
 const levelLinkDecls = (s: NavLevelStyle): string[] => {
@@ -708,6 +774,10 @@ const levelLinkDecls = (s: NavLevelStyle): string[] => {
       ? `padding:${s.paddingY ?? SHELL_DEFAULT_LINK_PY}px ${s.paddingX ?? SHELL_DEFAULT_LINK_PX}px`
       : null,
     s.radius != null ? `border-radius:${s.radius}px` : null,
+    // TASK-508 R1(b): link text alignment. `.site-nav-link` is display:block filling
+    // the ≥180px container, so `text-align:center` centers the label (present-only,
+    // per-device, all-width — rides the mobile linkOnly re-emit too).
+    s.linkAlign != null ? `text-align:${s.linkAlign}` : null,
   ].filter((d): d is string => d !== null);
   // B2 (TASK-506): the indicator transition + `position:relative` fold into the
   // SAME link `{}` block (present-only ⇒ nothing when unauthored). All-width.
@@ -768,7 +838,7 @@ const NAV_LEVELS: readonly NavLevelStyleLevel[] = [1, 2];
  */
 const navLevelRules = (
   levelStyles: NavLevelStyles | undefined,
-  options?: { linkOnly?: boolean }
+  options?: { linkOnly?: boolean; skipFlyoutAnim?: boolean }
 ): string[] => {
   if (!levelStyles) return []; // absent ⇒ ZERO bytes
   const rules: string[] = [];
@@ -791,7 +861,10 @@ const navLevelRules = (
     const caretToggle = caretToggleRule(lvl, s);
     if (caretToggle) rules.push(caretToggle);
     rules.push(...caretRotateRule(lvl, s));
-    rules.push(...flyoutAnimRule(lvl, s));
+    // TASK-508 R3b: accordion mode is in-flow + naturally visible, so the flyout
+    // reveal (whose R2 rest forces display:grid;visibility:hidden) is GATED OFF —
+    // else the accordion sublist reserves in-flow space but is invisible at rest.
+    if (!options?.skipFlyoutAnim) rules.push(...flyoutAnimRule(lvl, s));
   }
   return rules;
 };
@@ -837,7 +910,7 @@ const shallowEqualStyle = (resolved: BrandStyle, base: BrandStyle | undefined): 
 // test #4 fails on a missing key). B5 `submenuPlacement` IS listed (it makes the
 // diff fire) but its base rule lives OUTSIDE navLevelRules, so its actual tablet
 // re-emit is the standalone `submenuPlacementDeltaRule` — see that note.
-const NAV_LEVEL_STYLE_COMPARE_KEYS: readonly (keyof NavLevelStyle)[] = [
+export const NAV_LEVEL_STYLE_COMPARE_KEYS: readonly (keyof NavLevelStyle)[] = [
   "linkColor",
   "linkHoverColor",
   "linkHoverTextColor",
@@ -871,6 +944,9 @@ const NAV_LEVEL_STYLE_COMPARE_KEYS: readonly (keyof NavLevelStyle)[] = [
   "containerPaddingX",
   "containerPaddingY",
   "submenuPlacement",
+  // TASK-508 R1(b): per-device link alignment — MUST be here or collectLevelDeltaRules
+  // silently never emits a per-device linkAlign override (cross-subtask guard test #4).
+  "linkAlign",
 ];
 
 const shallowEqualLevel = (a: NavLevelStyle, b: NavLevelStyle): boolean =>
@@ -913,18 +989,24 @@ const collectLevelDeltaRules = (doc: MenuDocumentV2, device: MenuDeviceKind): st
   if (!navBlock || navBlock.type !== "nav-items") return [];
   const resolved = resolveMenuSectionAppearanceForDevice(section, device).navProps.levelStyles;
   if (deepEqualLevelStyles(resolved, navBlock.props.levelStyles)) return []; // no diff
+  // TASK-508 R3b: recompute the accordion gate from the base doc (submenuMode is
+  // base-only — no per-device delta) so the tablet re-emit (linkOnly:false, which
+  // fires flyoutAnimRule) ALSO skips flyout when accordion — else a per-device tablet
+  // flyoutAnimation on a level would emit its display:grid;visibility:hidden rest and
+  // leave the accordion sublist reserving space but invisible on tablet.
+  const accordion = navBlock.props.navChrome?.submenuMode === "accordion";
   // Mobile (<640) is inline ⇒ container chrome is ≥640-only (see navLevelRules):
   // a mobile-specific level delta re-emits ONLY link typography + state, never
   // the container, so a per-device container override cannot leak onto the
   // inline nested list. Tablet (≥640) keeps the full container chrome.
-  return navLevelRules(resolved, { linkOnly: device === "mobile" });
+  return navLevelRules(resolved, { linkOnly: device === "mobile", skipFlyoutAnim: accordion });
 };
 
 // --- TASK-506-02 level-0 navChrome emission + per-device delta --------------
 // 506-02 is the sole writer of this navChrome compare list (mirrors
 // NAV_LEVEL_STYLE_COMPARE_KEYS; 506-01 supplies the key set). navChrome has NO
 // flyoutAnimation / submenuPlacement (both are levels-≥1 NavLevelStyle fields).
-const NAV_CHROME_COMPARE_KEYS: readonly (keyof NavChromeStyle)[] = [
+export const NAV_CHROME_COMPARE_KEYS: readonly (keyof NavChromeStyle)[] = [
   "navPillBackground",
   "navPillRadius",
   "navPillPaddingX",
@@ -942,7 +1024,18 @@ const NAV_CHROME_COMPARE_KEYS: readonly (keyof NavChromeStyle)[] = [
   "hoverLift",
   "showCaret",
   "caretRotateOnOpen",
+  // TASK-508: submenuDirection/submenuMode are intentionally EXCLUDED — they are
+  // STRUCTURAL, base-only keys (read from baseNavChrome in desktopShared, no
+  // tablet-delta emitter). Adding them here would fabricate DEAD tablet-override
+  // data behind a misleading badge/Reset. See STRUCTURAL_BASE_ONLY_CHROME_KEYS.
 ];
+
+// TASK-508 R3a/R3b: the two nav-global structural keys that are base-only (emitted
+// solely from baseNavChrome in desktopShared, ≥640-only, like dropdownDirection).
+// The 508-05 compare-key coverage guard EXEMPTS these from NAV_CHROME_COMPARE_KEYS
+// and separately asserts they are ABSENT from it (a later accidental dead-data delta
+// addition is thereby caught).
+export const STRUCTURAL_BASE_ONLY_CHROME_KEYS = ["submenuDirection", "submenuMode"] as const;
 
 const shallowEqualChrome = (
   resolved: NavChromeStyle,
@@ -1104,12 +1197,22 @@ const buildMenuRuleSetsForDocument = (doc: MenuDocumentV2): MenuRuleSets => {
   // in AFTER nesting so it beats the structural `.site-nav-sublist` rules + base
   // sheet chrome on source order.
   const basePlacement = submenuPlacementRule(baseLevelStyles?.[2]); // TASK-506 B5
+  // TASK-508 R3b: accordion gate (recomputed in collectLevelDeltaRules for the tablet
+  // seam too — see there). Gates flyoutAnimRule OFF in BOTH the desktopShared AND the
+  // tablet-delta re-emit paths (flyoutAnimation IS per-device forkable @NAV_LEVEL_STYLE_
+  // COMPARE_KEYS, so gating only desktopShared would leave a tablet-delta gap).
+  const accordion = baseNavChrome?.submenuMode === "accordion";
   const desktopShared = [
     dropdownRule(base),
     ...navNestingRules(base),
-    ...navLevelRules(baseLevelStyles), // §2 level base (link + container) + TASK-506 B1/B2/B3/B4 levels 1/2
+    ...navLevelRules(baseLevelStyles, { skipFlyoutAnim: accordion }), // §2 level base + TASK-506 B1/B2/B3/B4 levels 1/2 (R3b gates flyout)
     // TASK-506 level-0 chrome (B1 divider / B2 indicator / B3 caret / B4 pill).
     ...navChromeRules(baseNavChrome, base.orientation),
+    // TASK-508 R3a: nav-global direction — AFTER the legacy axes so it supersedes
+    // them, BEFORE B5 so a granular level-2 submenuPlacement still wins (emitted last).
+    ...submenuDirectionRules(baseNavChrome),
+    // TASK-508 R3b: accordion in-flow block — position:static wins + neutralizes offsets.
+    ...accordionRules(baseNavChrome),
     // TASK-506 B5 nested placement — LEVEL-2 only, on the anchored (0,5,0) sel.
     ...(basePlacement ? [basePlacement] : []),
   ];
@@ -1248,19 +1351,19 @@ const buildCanvasStructuralBaseline = (device: PageBreakpoint): string[] => {
  * Emitted LAST by the preview builder so it wins the closed `display:none`.
  */
 const previewForceOpenLevel = (level: NavLevelStyleLevel): string[] => {
-  // TASK-506 B3: force-open ALSO neutralizes the flyoutAnimation closed rest state
-  // (`opacity:0`/transform) so the animated flyout is VISIBLE on the canvas, not
-  // open-but-invisible. Each neutralize rule MATCHES its B3 hidden rule's
-  // specificity so it ties + wins on source order (emitted LAST).
+  // TASK-506 B3 + TASK-508 R2: force-open ALSO neutralizes the flyoutAnimation closed
+  // rest state (`visibility:hidden;opacity:0`/transform) so the animated flyout is
+  // VISIBLE on the canvas, not open-but-invisible. Each neutralize rule MATCHES its
+  // rest rule's specificity so it ties + wins on source order (emitted LAST).
   const rules = [
-    `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;opacity:1;transform:none}`,
+    `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}`,
   ];
   if (level >= 2) {
     // ANCHORED (0,5,0) — MUST match flyoutAnimRule(2)'s nested hidden selector; the
     // short (0,3,0) `.site-nav-sublist .site-nav-sublist` would LOSE to it regardless
     // of order, leaving a level-2 flyoutAnimation flyout open-but-invisible.
     rules.push(
-      `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{display:grid;opacity:1;transform:none}`
+      `${menuDocScope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-sublist{display:grid;visibility:visible;opacity:1;transform:none}`
     );
   }
   return rules;
