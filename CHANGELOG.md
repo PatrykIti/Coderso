@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.7.0] - 2026-07-04
+### Added
+- Soft‑Violet admin redesign; Pages Editor V2 inline editing + mark/color toolbars; Custom Screens V4 data‑oriented builder, record‑detail overrides, section column presets; Menu Design tab with per‑device overrides, per‑level + brand styling, modern styling bundles (separators, underline indicator, caret/flyout animation, pill nav, dropdown padding), unified directional submenu placement (right/down/up/left) and an accordion inline mode; per‑control reset‑to‑default and visible resolved‑default hints.
+
+### Changed
+- Menu CSS unified through one doc‑scoped `buildMenuRuleSetsForDocument`; admin shell/editor chrome restyled to prototype parity; dependency bumps (`nodemailer` 9, `ws`/`undici`/`vite`/`sigstore` overrides); all GitHub Actions pinned to commit SHAs; semgrep timeout raised for full large‑file coverage.
+
+### Fixed
+- Flyout submenu animation now visibly animates (was cosmetically inert); level‑0 indicator no longer leaks onto dropdown links; dropdown container default hints (180/6) and text centering; `settingsService` nullable‑id test self‑isolation (no more smoke‑DB flake); various menu/screens/pages editor drift and render fixes (498–508).
+
+### Removed
+- Legacy Custom Screen columns (migration `0062`); legacy authoring paths superseded by V4.
+
+### Security
+- Cleared 8 `bun audit` HIGH + 6 `trivy` HIGH/CRITICAL CVEs and 36 semgrep mutable‑action‑tag findings; CI actions SHA‑pinned; semgrep SAST coverage gap on large files closed; `scan:security:strict` GREEN.
 ## [1.6.1] - 2026-06-15
 ### Added
 - Reusable browser-safe Page authoring modules under `core/admin/ui/pages/editor/` (canvas, floating toolbar, layers, command/template picker, host contract) and pure state/mutation helpers under `core/services/pages/`, enabling future non-Page-v2 CMS surfaces to mount the authoring shell. Planning docs for TASK-467 (admin bundle hardening) and TASK-468 (custom screens canvas rewrite).
