@@ -1,46 +1,17 @@
+import { Blocks, LayoutGrid, Link2, PanelLeft, Plus } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { EmptyState } from "@/ui/shared/EmptyState";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import { CustomScreenRowActions } from "./CustomScreenRowActions";
 import type { CustomScreenListRow } from "./customScreenListModel";
-
-const statusStyles = {
-  active: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-} as const;
-
-const statusLabels = {
-  active: "Active",
-  draft: "Draft",
-} as const;
-
-const sidebarStateLabels = {
-  visible: "Visible",
-  configured_after_activation: "Configured after activation",
-  requires_editor_setup: "Requires editor setup",
-  hidden: "Not shown",
-} as const;
-
-const formatDate = (value: string) => {
-  try {
-    return new Date(value).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  } catch {
-    return value;
-  }
-};
+import { buildCustomScreenWorkspacePath } from "./routeParams";
 
 export type CustomScreenTableProps = {
   items: CustomScreenListRow[];
@@ -54,8 +25,19 @@ export type CustomScreenTableProps = {
   onActivate: (id: string) => void;
   onMoveToDraft: (id: string) => void;
   onDelete: (id: string) => void;
+  onCreate?: () => void;
 };
 
+/**
+ * TASK-479-14-L01: Custom Screen management list restyled to the prototype's
+ * soft card grid (`_docs/_PROTOTYPE/src/pages/advanced/CustomScreensPage.tsx`).
+ * Each screen renders as a `rounded-2xl` card showing a generic screen icon, the
+ * shared StatusBadge, an "In sidebar" badge for published (sidebar-visible)
+ * screens, block/binding counts, and Edit / Open(Entries) actions. The card view
+ * keeps every existing list behaviour: per-card selection (Checkbox), the bulk
+ * select-all control, and the row-actions menu (activate / move to draft /
+ * delete). Presentation only — all data comes from the real list model.
+ */
 export function CustomScreenTable({
   items,
   emptyMessage,
@@ -68,116 +50,62 @@ export function CustomScreenTable({
   onActivate,
   onMoveToDraft,
   onDelete,
+  onCreate,
 }: CustomScreenTableProps) {
+  if (items.length === 0) {
+    return (
+      <EmptyState
+        icon={<LayoutGrid />}
+        title={emptyMessage ? "No screens match your filters" : "Build your first screen"}
+        description={
+          emptyMessage ??
+          "Compose admin surfaces from blocks bound to your content, then publish them to the sidebar."
+        }
+        action={
+          emptyMessage || !onCreate ? undefined : (
+            <Button className="gap-1.5" onClick={onCreate}>
+              <Plus className="size-4" /> New screen
+            </Button>
+          )
+        }
+      />
+    );
+  }
+
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
-            <TableHead className="w-10 pl-4">
-              <Checkbox
-                aria-label="Select all custom screens"
-                checked={isIndeterminate ? "indeterminate" : isAllSelected}
-                onCheckedChange={() => onToggleAll?.()}
-              />
-            </TableHead>
-            <TableHead className="min-w-[14rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Screen
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
-              Status
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
-              Content type
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
-              Mode
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
-              Sidebar
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground 2xl:table-cell">
-              Updated
-            </TableHead>
-            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
-                {emptyMessage ?? "No custom screens yet."}
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {items.map((row) => {
-            const screen = row.screen;
-            const isSelected = selectedIds.includes(screen.id);
-            const sidebarLabel = sidebarStateLabels[row.sidebarShortcutState];
-            return (
-              <TableRow key={screen.id} className={isSelected ? "bg-muted/30" : undefined}>
-                <TableCell className="pl-4">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
+        <Checkbox
+          aria-label="Select all custom screens"
+          checked={isIndeterminate ? "indeterminate" : isAllSelected}
+          onCheckedChange={() => onToggleAll?.()}
+        />
+        <span>Select all</span>
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((row) => {
+          const screen = row.screen;
+          const isSelected = selectedIds.includes(screen.id);
+          const inSidebar = row.sidebarShortcutState === "visible";
+          return (
+            <Card
+              key={screen.id}
+              data-selected={isSelected ? "true" : "false"}
+              className="flex h-full flex-col gap-0 p-5 py-5 transition-all hover:-translate-y-0.5 hover:shadow-card data-[selected=true]:ring-2 data-[selected=true]:ring-primary/40"
+            >
+              <header className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3">
                   <Checkbox
                     aria-label={`Select ${screen.name}`}
                     checked={isSelected}
                     onCheckedChange={() => onToggleScreen?.(screen.id)}
                   />
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <AdminLink
-                      href={`/advanced/custom-screens/${encodeURIComponent(screen.id)}`}
-                      prefetch
-                      className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                      aria-label={`Edit custom screen: ${screen.name}`}
-                    >
-                      {screen.name}
-                    </AdminLink>
-                    {screen.sidebarLabel ? (
-                      <span className="text-xs text-muted-foreground break-words">
-                        Sidebar label: {screen.sidebarLabel}
-                      </span>
-                    ) : null}
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                      <Badge variant="outline" className={statusStyles[screen.status]}>
-                        {statusLabels[screen.status]}
-                      </Badge>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span>{row.contentTypeLabel}</span>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span>{sidebarLabel}</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <Badge variant="outline" className={statusStyles[screen.status]}>
-                    {statusLabels[screen.status]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                  <span title={row.contentTypeSlug ?? screen.contentTypeId}>
-                    {row.contentTypeLabel}
+                  <span className="flex size-12 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                    <LayoutGrid className="size-6" />
                   </span>
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                  {row.modeLabel}
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                  <div className="flex flex-col">
-                    <span>{sidebarLabel}</span>
-                    {row.sidebarShortcutLabel ? (
-                      <span className="text-xs text-muted-foreground/80">
-                        {row.sidebarShortcutLabel}
-                      </span>
-                    ) : null}
-                  </div>
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground 2xl:table-cell">
-                  {formatDate(row.updatedAt)}
-                </TableCell>
-                <TableCell className="w-12 pr-4 text-right">
+                </div>
+                <div className="flex items-center gap-1">
+                  <StatusBadge status={screen.status} />
                   <CustomScreenRowActions
                     id={screen.id}
                     status={screen.status}
@@ -186,12 +114,64 @@ export function CustomScreenTable({
                     onMoveToDraft={() => onMoveToDraft(screen.id)}
                     onDelete={() => onDelete(screen.id)}
                   />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+                </div>
+              </header>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="font-display text-[15px] font-semibold text-foreground">
+                  {screen.name}
+                </span>
+                {inSidebar ? (
+                  <Badge variant="success" className="gap-1">
+                    <PanelLeft className="size-3" /> In sidebar
+                  </Badge>
+                ) : null}
+              </div>
+
+              <div className="mt-1 text-xs text-muted-foreground">{row.contentTypeLabel}</div>
+              {screen.sidebarLabel ? (
+                <div className="mt-0.5 break-words text-xs text-muted-foreground">
+                  Sidebar label: {screen.sidebarLabel}
+                </div>
+              ) : null}
+
+              <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Blocks className="size-3.5" /> {screen.blocks.length} blocks
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Link2 className="size-3.5" /> {screen.bindings.length} bindings
+                </span>
+              </div>
+
+              <Separator className="my-4" />
+
+              <footer className="mt-auto flex items-center gap-2">
+                <AdminLink
+                  href={`/advanced/custom-screens/${encodeURIComponent(screen.id)}`}
+                  prefetch
+                  className="flex-1"
+                  aria-label={`Edit custom screen: ${screen.name}`}
+                >
+                  <Button variant="outline" size="sm" className="w-full">
+                    Edit
+                  </Button>
+                </AdminLink>
+                <AdminLink
+                  href={buildCustomScreenWorkspacePath({ screenId: screen.id })}
+                  prefetch
+                  className="flex-1"
+                  aria-label={`Open ${screen.name} records`}
+                >
+                  <Button variant="soft" size="sm" className="w-full">
+                    {inSidebar ? "Open" : "Entries"}
+                  </Button>
+                </AdminLink>
+              </footer>
+            </Card>
+          );
+        })}
+      </div>
     </div>
   );
 }

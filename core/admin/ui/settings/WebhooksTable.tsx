@@ -26,26 +26,24 @@ export type WebhookRow = {
   };
 };
 
+// TASK-479-28-L05: token-driven status/delivery tints (no raw emerald/slate/rose).
 const statusClasses: Record<WebhookStatus, string> = {
-  active: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  inactive: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+  active: "border-transparent bg-success-soft text-success",
+  inactive: "border-transparent bg-muted text-muted-foreground",
 };
 
-const deliveryMeta: Record<
-  DeliveryStatus,
-  { icon: typeof CheckCircle2; className: string }
-> = {
+const deliveryMeta: Record<DeliveryStatus, { icon: typeof CheckCircle2; className: string }> = {
   success: {
     icon: CheckCircle2,
-    className: "text-emerald-500",
+    className: "text-success",
   },
   pending: {
     icon: Clock3,
-    className: "text-slate-400",
+    className: "text-muted-foreground",
   },
   failed: {
     icon: AlertCircle,
-    className: "text-rose-500",
+    className: "text-destructive",
   },
 };
 
@@ -65,7 +63,7 @@ export function WebhooksTable({
   busyId,
 }: WebhooksTableProps) {
   return (
-    <div className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
@@ -101,71 +99,74 @@ export function WebhooksTable({
             </TableRow>
           ) : (
             items.map((webhook) => {
-            const delivery = deliveryMeta[webhook.lastDelivery.status];
-            const DeliveryIcon = delivery.icon;
-            const isBusy = busyId === webhook.id;
+              const delivery = deliveryMeta[webhook.lastDelivery.status];
+              const DeliveryIcon = delivery.icon;
+              const isBusy = busyId === webhook.id;
 
-            return (
-              <TableRow key={webhook.id} className="hover:bg-muted/30">
-                <TableCell className="px-6 py-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                    <Link2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">{webhook.url}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  <div className="flex flex-wrap gap-1.5">
-                    {webhook.events.map((event) => (
-                      <Badge
-                        key={event}
-                        variant="outline"
-                        className="border-blue-500/20 bg-blue-500/10 text-[10px] font-semibold uppercase text-blue-600"
+              return (
+                <TableRow key={webhook.id} className="hover:bg-muted/30">
+                  <TableCell className="px-6 py-4">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                      <Link2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="truncate">{webhook.url}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {webhook.events.map((event) => (
+                        <Badge
+                          key={event}
+                          variant="outline"
+                          className="border-transparent bg-info-soft text-info text-[10px] font-semibold uppercase"
+                        >
+                          {event}
+                        </Badge>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4">
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        "text-[10px] font-semibold uppercase",
+                        statusClasses[webhook.status]
+                      )}
+                    >
+                      {webhook.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <DeliveryIcon className={cn("h-4 w-4", delivery.className)} />
+                      {webhook.lastDelivery.label}
+                    </div>
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-label="Edit webhook"
+                        onClick={() => onEdit?.(webhook)}
+                        disabled={isBusy}
                       >
-                        {event}
-                      </Badge>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="px-6 py-4">
-                  <Badge
-                    variant="outline"
-                    className={cn("text-[10px] font-semibold uppercase", statusClasses[webhook.status])}
-                  >
-                    {webhook.status}
-                  </Badge>
-                </TableCell>
-                <TableCell className="px-6 py-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <DeliveryIcon className={cn("h-4 w-4", delivery.className)} />
-                    {webhook.lastDelivery.label}
-                  </div>
-                </TableCell>
-                <TableCell className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      aria-label="Edit webhook"
-                      onClick={() => onEdit?.(webhook)}
-                      disabled={isBusy}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-rose-500 hover:text-rose-600"
-                      aria-label="Delete webhook"
-                      onClick={() => onDelete?.(webhook)}
-                      disabled={isBusy}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="text-destructive hover:text-destructive"
+                        aria-label="Delete webhook"
+                        onClick={() => onDelete?.(webhook)}
+                        disabled={isBusy}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
           )}
         </TableBody>
       </Table>

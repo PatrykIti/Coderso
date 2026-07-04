@@ -5,32 +5,29 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Remediate the Image-block findings from `_docs/AUDIT/image-2026-06-10.md`. The
-runtime path is real, but the block still exposes raw URL entry instead of a
-media picker and inherits the same segmented/swatch/toggle drift as the rest of
-the editor. Ownership boundary: the shared media-picker widget primitive is
-implemented by TASK-421-02-L02, the segmented/toggle/slider/swatch primitives
-by TASK-421-02-L01/L02, and the per-block image panel adoption by
-TASK-421-03-L02 — this family only verifies that the Image target adopts those
-shared surfaces after TASK-421 lands and closes image-specific residue. The
-audit's empty Responsive panel finding (image-2026-06-10.md:54-57) is owned by
-TASK-425; this family only verifies the image target once TASK-425 lands.
+runtime path is real, and the closed TASK-421/TASK-425 foundations now provide
+the shared media picker, dedicated segmented/swatch/toggle/slider widgets, and
+responsive panel content. This family verifies that the Image target adopts
+those shared surfaces and that the existing truthful renderer path stays
+covered; it no longer owns a raw-URL media picker migration.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-440-01: Image source/control contract freeze.
-- [ ] TASK-440-01-L01: Verify image source entry resolves through the shared
+- [x] TASK-440-01: Image source/control contract freeze.
+- [x] TASK-440-01-L01: Verify image source entry resolves through the shared
       TASK-421 media-picker path and that the image panels render the shared
-      TASK-421 widgets.
-- [ ] TASK-440-02: Validation, docs, and closure.
+      TASK-421 widgets, including `fit` runtime truthfulness.
+- [x] TASK-440-02: Validation, docs, and closure.
 
 ---
 
@@ -46,4 +43,3 @@ TASK-425; this family only verifies the image target once TASK-425 lands.
 ## Documentation Updates Required
 
 - `_docs/_TASKS/README.md`
-

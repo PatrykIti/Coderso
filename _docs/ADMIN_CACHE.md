@@ -235,12 +235,39 @@ Consumers subscribe and revalidate when matching keys change.
 6. On true invalidation or explicit refresh, use `force: true` in background.
 
 ### Editors
-1. Hydrate from cache.
-2. Revalidate in background.
-3. If a remote update arrives and there are unsaved changes:
+1. Hydrate from cache when a detail cache exists.
+2. Treat cached detail as provisional on mount.
+3. Revalidate in background.
+4. If a remote update arrives and there are unsaved changes:
    - Do not overwrite.
    - Show a “remote update” hint.
    - Allow manual refresh to apply the latest data.
+
+### Page Editor Detail Mounts
+The shared Page Editor v2 host contract verifies detail cache on every mounted
+resource (TASK-454):
+
+- Pages and Page Templates may render `pages:detail:<id>` or
+  `pageTemplates:detail:<id>` immediately, then run one forced detail read with
+  `{ force: true }`.
+- Timestamp-authoritative hosts apply the forced detail only when the editor is
+  clean and the server `updatedAt` is strictly newer than the loaded detail.
+  Same, older, or unparsable timestamps fail closed.
+- Menu Design uses an explicit clean forced-replace mode because its editor
+  adapter does not yet expose a reliable menu `updatedAt`; replacement is still
+  blocked while the editor is dirty.
+- Forced read failures keep the current editor view and surface bounded inline
+  copy instead of blanking the document.
+- Page Editor dirty state and pending recoverable autosaves register the shared
+  admin dirty-navigation guard. Admin SPA navigation, popstate, and hard
+  browser navigation require confirmation while blocked. Confirming navigation
+  discards only local editor state; it does not delete server autosave
+  revisions.
+- Pages check existing autosave revisions after the fresh detail baseline is
+  known. A newer autosave revision shows a recovery prompt with restore,
+  discard, and keep-current actions; recovery uses the existing internal
+  revision routes and does not silently promote autosave data into
+  `currentData`.
 
 ### Settings
 Settings uses a dedicated redacted cache because raw settings payloads can
@@ -309,7 +336,7 @@ Clients update caches and broadcast events on:
 - Assistant execution cache event coverage:
   - `content-type.upsert`, `content-type.field.add`, `content-type.delete` -> `contentTypes:list`, touched `contentTypes:detail:<id>`
   - `entry.*` -> `entries:list:all`, `entries:list:<typeSlug>`, touched `entries:detail:<typeSlug>:<id>`
-  - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>`
+  - `custom-screen.*` -> `customScreens:list`, touched `customScreens:detail:<id>` through the lightweight `customScreensCache` helpers; assistant browser code must not import the full Custom Screens client only to invalidate caches
   - `page.*` -> `pages:list`, touched `pages:detail:<id>`
   - `detail-page.upsert` -> `detailPages:list`, `detailPages:list:contentType:<contentTypeId>`, touched `detailPages:detail:<id>`
   - `form.*` -> `forms:list`, touched `forms:detail:<id>`
@@ -482,6 +509,9 @@ Clients update caches and broadcast events on:
   `compositionKey` metadata from the persisted custom-screen owner seam. Cache
   readers must treat missing legacy values as `null` and must not synthesize
   alternate canonical-screen metadata in browser storage.
+- Cached Custom Screen definitions are V4 normalized payloads. Fresh admin
+  writes use `definition` only; legacy `blocks` / `bindings` are read-migration
+  inputs and are not stored in browser caches as active write state.
 - `useCustomScreens()` follows the shared mount policy:
   - cache present -> `{ force: false, background: true }`,
   - cache missing -> `{ force: true, background: false }`,
@@ -524,6 +554,19 @@ Clients update caches and broadcast events on:
   `entriesClient`; no Custom Screens-specific entry cache is introduced, and the
   screen-owned records workspace no longer hydrates or opens `EntryCreateDrawer`
   as a parallel create path.
+- Per-record presentation overrides use the separate
+  `customScreens:entryOverrides:<screenId>:<entryId>` detail cache key, with
+  bounded dynamic key segments from `cacheKeys.customScreenEntryOverrides`.
+  `CustomScreenEntryEditor` hydrates this cache independently from entry content
+  data, revalidates the internal override route in the background, and passes
+  draft overrides to the renderer for render-only merge.
+- `replaceScreenEntryOverrides()` patches the local override cache from the
+  server response and broadcasts an `update` cache-bus event for the scoped
+  override key. `invalidateScreenEntryOverrides()` clears the scoped cache and
+  broadcasts `invalidate`.
+- Override cache-bus events refresh the presentation draft only when it is clean.
+  Dirty presentation drafts keep local edits, set a presentation-specific
+  remote-update warning, and do not overwrite unsaved entry content changes.
 
 ### Forms list/detail cache note
 

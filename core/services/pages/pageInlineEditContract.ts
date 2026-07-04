@@ -1,4 +1,5 @@
 import { dangerousHtmlContentTagSet } from "../posts/editor/postRichTextHtmlUtils";
+import { sanitizeAuthoringRichTextHtml } from "./pageAuthoringSanitizers";
 import { pageBlockPropKeys, type PageBlockType, type PageBlockV2 } from "./pageDocumentV2";
 
 /**
@@ -35,6 +36,8 @@ export type InlineEditableTarget = {
   multiline: boolean;
   /** Required fields (`allowEmpty: false`) keep the previous value on empty commits. */
   allowEmpty: boolean;
+  /** Rich targets preserve allowlisted markup through the shared rich-text sanitizer. */
+  preserveMarkup?: boolean;
 };
 
 const INDEXED_WILDCARD_SUFFIX = ".*";
@@ -65,8 +68,9 @@ const defineInlineEditableTargets = (
  * The frozen inline-editable map (TASK-422-01 contract). Anything not listed
  * here is panel-only. `text.text` is the only multiline target; the optional
  * `quote.cite` and `statistic.caption` fields are the only ones that may
- * commit empty. While `text.format === "rich"` has no real rich rendering
- * (TASK-438), rich text blocks still commit plain text through this contract.
+ * commit empty. `text.format === "rich"` uses the same target with
+ * `preserveMarkup: true` at resolution time so rich inline commits use the
+ * shared rich-text sanitizer instead of the plain-text markup stripper.
  */
 export const inlineEditableTargets: readonly InlineEditableTarget[] = defineInlineEditableTargets([
   { blockType: "heading", propPath: "text", multiline: false, allowEmpty: false },
@@ -111,6 +115,11 @@ export function resolveInlineEditTarget(
     if (target.blockType !== block.type) continue;
 
     if (target.propPath === propPath) {
+      if (block.type === "text" && propPath === "text" && block.props.format === "rich") {
+        return typeof block.props[propPath] === "string"
+          ? Object.freeze({ ...target, preserveMarkup: true })
+          : null;
+      }
       return typeof block.props[propPath] === "string" ? target : null;
     }
 
@@ -292,6 +301,18 @@ export function sanitizeInlineText(target: InlineEditableTarget, raw: string): s
 }
 
 /**
+ * Sanitizes raw rich canvas HTML through the Page authoring rich-text contract:
+ * line endings and control characters are normalized first, then the shared
+ * allowlist keeps safe inline markup and drops dangerous elements/content.
+ * This path never calls `stripInlineMarkup`.
+ */
+export function sanitizeInlineRichText(_target: InlineEditableTarget, raw: string): string {
+  const normalizedLineEndings = raw.replace(/\r\n?/g, "\n").replace(/[\u2028\u2029]/g, "\n");
+  const cleaned = removeControlCharacters(normalizedLineEndings);
+  return sanitizeAuthoringRichTextHtml(cleaned).trim();
+}
+
+/**
  * Applies the empty-commit policy on top of sanitization: required targets
  * (`allowEmpty: false`) keep the previous stored value when the sanitized
  * commit is empty, so an empty inline commit can never blank a required prop
@@ -302,7 +323,9 @@ export function commitInlineText(
   previous: string,
   raw: string
 ): string {
-  const next = sanitizeInlineText(target, raw);
+  const next = target.preserveMarkup
+    ? sanitizeInlineRichText(target, raw)
+    : sanitizeInlineText(target, raw);
   if (next.length === 0 && !target.allowEmpty) return previous;
   return next;
 }

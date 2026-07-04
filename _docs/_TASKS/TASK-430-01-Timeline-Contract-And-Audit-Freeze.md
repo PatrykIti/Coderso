@@ -6,24 +6,25 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Freeze the Timeline remediation contract from
-`_docs/AUDIT/timeline-2026-06-10.md`: current timeline variants resolve only to
-marker classes plus generic utility tweaks (`items-center`/`content-start` in
-`pageSectionTemplateClass`) with no timeline-specific layout, the published
-section still behaves like generic heading/text content, and this subtask
-explicitly consumes the matching Responsive-tab closure from `TASK-425`.
+`_docs/AUDIT/timeline-2026-06-10.md`: Timeline variants needed a truthful
+published structure beyond marker classes. The closed contract keeps existing
+child blocks, wraps them as timeline items with markers, floors `horizontal`
+to a three-column grid, and explicitly consumes the matching Responsive-tab
+closure from `TASK-425`.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-430-01-L01: Timeline runtime layout and dedicated controls.
+- [x] TASK-430-01-L01: Timeline runtime layout and dedicated controls.
 
 ---
 
@@ -39,3 +40,9 @@ explicitly consumes the matching Responsive-tab closure from `TASK-425`.
 ## Documentation Updates Required
 
 - `_docs/PAGE_MODEL.md`
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

@@ -1,20 +1,24 @@
 import {
   Columns2,
   Filter,
+  List,
   MapPin,
   MoreHorizontal,
   PanelsTopLeft,
   Pencil,
+  PenLine,
   Plus,
   Search,
   Trash2,
   Upload,
+  Workflow,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -31,14 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -75,9 +71,11 @@ const formatDate = (value: string) => {
   }
 };
 
-const statusStyles: Record<MenuSummary["status"], string> = {
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
+// Token-driven Badge variants (not raw emerald/slate) so :root.dark recolors —
+// matches the shared StatusBadge mapping (published→success, draft→secondary).
+const statusVariant: Record<MenuSummary["status"], "success" | "secondary"> = {
+  published: "success",
+  draft: "secondary",
 };
 
 const statusLabels: Record<MenuSummary["status"], string> = {
@@ -140,18 +138,18 @@ export function filterMenus(
   });
 }
 
-type MenuListTableProps = {
-  items: MenuSummary[];
-  emptyMessage?: string;
-  selectedIds: string[];
-  isAllSelected: boolean;
-  isIndeterminate: boolean;
-  onToggleAll: () => void;
+type MenuCardCallbacks = {
   onToggleMenu: (id: string) => void;
   onEdit: (id: string) => void;
   onPublish: (id: string) => void;
   onUnpublish: (id: string) => void;
   onDelete: (id: string) => void;
+};
+
+type MenuCardGridProps = MenuCardCallbacks & {
+  items: MenuSummary[];
+  emptyMessage?: string;
+  selectedIds: string[];
 };
 
 function MenuRowActions({
@@ -197,121 +195,94 @@ function MenuRowActions({
   );
 }
 
-function MenuListTable({
-  items,
-  emptyMessage,
-  selectedIds,
-  isAllSelected,
-  isIndeterminate,
-  onToggleAll,
+function MenuCard({
+  item,
+  isSelected,
   onToggleMenu,
   onEdit,
   onPublish,
   onUnpublish,
   onDelete,
-}: MenuListTableProps) {
+}: { item: MenuSummary; isSelected: boolean } & MenuCardCallbacks) {
+  // Route shapes are unchanged: the editor + design hrefs stay `/menus/:id`
+  // and `/menus/:id/design`. AdminLink resolves the canonical admin prefix.
+  const href = `/menus/${encodeURIComponent(item.id)}`;
+  const designHref = `/menus/${encodeURIComponent(item.id)}/design`;
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-      <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
-            <TableHead className="w-10 pl-4">
-              <Checkbox
-                aria-label="Select all menus"
-                checked={isIndeterminate ? "indeterminate" : isAllSelected}
-                onCheckedChange={() => onToggleAll()}
-              />
-            </TableHead>
-            <TableHead className="min-w-[12rem] text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Menu
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
-              Status
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
-              Location
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
-              Published
-            </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
-              Created
-            </TableHead>
-            <TableHead className="w-12 pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Actions
-            </TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {items.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                {emptyMessage ?? "No menus yet. Create your first menu to get started."}
-              </TableCell>
-            </TableRow>
-          ) : null}
-          {items.map((item) => {
-            const href = `/menus/${encodeURIComponent(item.id)}`;
-            const isSelected = selectedIds.includes(item.id);
-            return (
-              <TableRow key={item.id} className={isSelected ? "bg-muted/30" : undefined}>
-                <TableCell className="pl-4">
-                  <Checkbox
-                    aria-label={`Select ${item.name}`}
-                    checked={isSelected}
-                    onCheckedChange={() => onToggleMenu(item.id)}
-                  />
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <AdminLink
-                      href={href}
-                      prefetch
-                      className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                      aria-label={`Open menu editor for ${item.name}`}
-                    >
-                      {item.name}
-                    </AdminLink>
-                    <span className="break-all text-xs text-muted-foreground">
-                      {item.location ?? "Not assigned"}
-                    </span>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                      <Badge variant="outline" className={statusStyles[item.status]}>
-                        {statusLabels[item.status]}
-                      </Badge>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span>Created {formatDate(item.createdAt)}</span>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  <Badge variant="outline" className={statusStyles[item.status]}>
-                    {statusLabels[item.status]}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
-                  {item.location ?? "Not assigned"}
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                  {item.publishedAt ? formatDate(item.publishedAt) : "—"}
-                </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                  {formatDate(item.createdAt)}
-                </TableCell>
-                <TableCell className="w-12 pr-4 text-right">
-                  <MenuRowActions
-                    status={item.status}
-                    onEdit={() => onEdit(item.id)}
-                    onPublish={() => onPublish(item.id)}
-                    onUnpublish={() => onUnpublish(item.id)}
-                    onDelete={() => onDelete(item.id)}
-                  />
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
+    <Card className="flex flex-col gap-0 rounded-2xl p-5 transition-all hover:shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Checkbox
+            aria-label={`Select ${item.name}`}
+            checked={isSelected}
+            onCheckedChange={() => onToggleMenu(item.id)}
+          />
+          <span className="flex size-11 items-center justify-center rounded-2xl bg-primary-soft text-primary-soft-foreground">
+            <List className="size-5" />
+          </span>
+          <div className="min-w-0">
+            <AdminLink
+              href={href}
+              prefetch
+              className="block truncate font-display text-[15px] font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+              aria-label={`Open menu editor for ${item.name}`}
+            >
+              {item.name}
+            </AdminLink>
+            <div className="text-xs text-muted-foreground">
+              {item.publishedAt
+                ? `Updated ${formatDate(item.publishedAt)}`
+                : `Created ${formatDate(item.createdAt)}`}
+            </div>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Badge variant="soft">{item.location ?? "Not assigned"}</Badge>
+          <Badge variant={statusVariant[item.status]}>{statusLabels[item.status]}</Badge>
+        </div>
+      </div>
+
+      <div className="mt-5 flex items-center gap-2">
+        <AdminLink href={href} prefetch className="flex-1">
+          <Button variant="soft" size="sm" className="w-full gap-1.5">
+            <PenLine className="size-4" /> Edit
+          </Button>
+        </AdminLink>
+        <AdminLink href={designHref} prefetch className="flex-1">
+          <Button variant="outline" size="sm" className="w-full gap-1.5">
+            <Workflow className="size-4" /> Design
+          </Button>
+        </AdminLink>
+        <MenuRowActions
+          status={item.status}
+          onEdit={() => onEdit(item.id)}
+          onPublish={() => onPublish(item.id)}
+          onUnpublish={() => onUnpublish(item.id)}
+          onDelete={() => onDelete(item.id)}
+        />
+      </div>
+    </Card>
+  );
+}
+
+function MenuCardGrid({ items, emptyMessage, selectedIds, ...callbacks }: MenuCardGridProps) {
+  if (items.length === 0) {
+    return (
+      <div className="rounded-2xl border bg-card/60 p-10 text-center text-sm text-muted-foreground">
+        {emptyMessage ?? "No menus yet. Create your first menu to get started."}
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {items.map((item) => (
+        <MenuCard
+          key={item.id}
+          item={item}
+          isSelected={selectedIds.includes(item.id)}
+          {...callbacks}
+        />
+      ))}
     </div>
   );
 }
@@ -708,23 +679,36 @@ export function MenuListPage() {
         />
 
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-soft">
             Loading menus...
           </div>
         ) : (
-          <MenuListTable
-            items={pagination.visibleRows}
-            emptyMessage={items.length > 0 ? "No menus match your current filters." : undefined}
-            selectedIds={visibleSelectedIds}
-            isAllSelected={isAllSelected}
-            isIndeterminate={isIndeterminate}
-            onToggleAll={handleToggleAll}
-            onToggleMenu={handleToggleMenu}
-            onEdit={handleEdit}
-            onPublish={handlePublish}
-            onUnpublish={handleUnpublish}
-            onDelete={handleDelete}
-          />
+          <div className="flex flex-col gap-4">
+            {pagination.visibleRows.length > 0 ? (
+              <div className="flex items-center gap-2 px-1">
+                {/* Select-all relocated from the old table header so the bulk
+                    bar keeps working after the card-grid restyle. */}
+                <Checkbox
+                  aria-label="Select all menus"
+                  checked={isIndeterminate ? "indeterminate" : isAllSelected}
+                  onCheckedChange={() => handleToggleAll()}
+                />
+                <span className="text-xs font-medium text-muted-foreground">
+                  {selectedCount > 0 ? `${selectedCount} selected` : "Select all"}
+                </span>
+              </div>
+            ) : null}
+            <MenuCardGrid
+              items={pagination.visibleRows}
+              emptyMessage={items.length > 0 ? "No menus match your current filters." : undefined}
+              selectedIds={visibleSelectedIds}
+              onToggleMenu={handleToggleMenu}
+              onEdit={handleEdit}
+              onPublish={handlePublish}
+              onUnpublish={handleUnpublish}
+              onDelete={handleDelete}
+            />
+          </div>
         )}
         <ListPaginationFooter resourceLabel="menus" pagination={pagination} isLoading={isLoading} />
       </div>

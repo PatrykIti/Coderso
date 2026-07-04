@@ -44,7 +44,9 @@ function FieldPreview({
       }}
       className={cn(
         "group relative rounded-xl border p-4 transition",
-        selected ? "border-primary/40 bg-primary/5" : "border-transparent hover:border-border/70"
+        selected
+          ? "border-transparent bg-primary-soft/40 ring-2 ring-primary"
+          : "border-transparent hover:border-border/70"
       )}
     >
       <div className="absolute -left-10 top-1/2 hidden -translate-y-1/2 opacity-0 transition group-hover:opacity-100 lg:flex">

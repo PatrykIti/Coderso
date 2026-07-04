@@ -19,6 +19,7 @@ import {
 } from "./operationPolicy/safetyPolicy";
 import { redactAssistantUnsafeText } from "./assistantRedaction";
 import { inferContentTypeFieldAdditions } from "./contentTypeFieldInference";
+import { normalizeCustomScreenDefinitionForWrite } from "../customScreens/customScreenSchemas";
 
 const readString = (value: unknown) =>
   typeof value === "string" && value.trim() ? value.trim() : null;
@@ -683,8 +684,7 @@ const buildCreateActionForItem = (
         "status",
         "showInSidebar",
         "sidebarLabel",
-        "blocks",
-        "bindings",
+        "definition",
       ])
     ) {
       return null;
@@ -692,9 +692,11 @@ const buildCreateActionForItem = (
     const name = readRequiredTextField(item, "name");
     const contentTypeSlug = readRequiredTextField(item, "contentTypeSlug");
     const status = readCreateStatus(item, "status", ["draft", "active"] as const, "draft");
-    const blocks = readRecordArrayField(item, "blocks", []);
-    const bindings = readRecordArrayField(item, "bindings", []);
-    if (!name || !contentTypeSlug || status === null || blocks === null || bindings === null) {
+    const definitionInput = readRecordField(item, "definition", {});
+    const definition = definitionInput
+      ? normalizeCustomScreenDefinitionForWrite({ definition: definitionInput })
+      : null;
+    if (!name || !contentTypeSlug || status === null || !definition) {
       return null;
     }
     return {
@@ -708,8 +710,7 @@ const buildCreateActionForItem = (
         status,
         showInSidebar: readOptionalBooleanField(item, "showInSidebar", false),
         sidebarLabel: readOptionalTextField(item, "sidebarLabel"),
-        blocks,
-        bindings,
+        definition,
       },
     };
   }
@@ -1039,15 +1040,15 @@ const buildActionForExactTarget = (
   }
   if (draft.resourceKind === "custom-screen" && draft.operation === "update") {
     const policyField = findPolicyFieldForDraft(draft);
-    if (policyField?.action?.type === "custom-screen.widget.patch") {
-      if (!isPolicyActionExecutable(draft, "custom-screen.widget.patch")) return null;
+    if (policyField?.action?.type === "custom-screen.block.patch") {
+      if (!isPolicyActionExecutable(draft, "custom-screen.block.patch")) return null;
       const patch = readBlockPatch(draft);
       if (!patch) return null;
       return {
-        id: actionId("custom-screen.widget.patch", patch.blockId),
-        type: "custom-screen.widget.patch",
+        id: actionId("custom-screen.block.patch", patch.blockId),
+        type: "custom-screen.block.patch",
         title: `Patch ${target.label}`,
-        description: "Patch selected custom screen widget block data.",
+        description: "Patch selected custom screen block data.",
         input: {
           id: target.id,
           name: target.label,

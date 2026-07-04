@@ -25,6 +25,9 @@ test("PostsListPage renders shell and loading state", () => {
 
   expect(html).toContain("Posts");
   expect(html).toContain("New");
+  // TASK-497-01: header copy + create-button relabel.
+  expect(html).toContain("New post");
+  expect(html).toContain("Write, schedule, and publish blog posts");
   expect(html).toContain("Loading posts");
 });
 

@@ -94,8 +94,6 @@ const createScreenFixture = async (input: {
     status: input.status,
     showInSidebar: input.showInSidebar,
     sidebarLabel: input.showInSidebar ? input.name : null,
-    blocks: [],
-    bindings: [],
   });
   input.cleanup.add(`custom-screen:${screen.id}`, async () => {
     await deleteCustomScreen(screen.id).catch(() => undefined);

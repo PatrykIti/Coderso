@@ -67,9 +67,11 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
     // TASK-456: "form" joined the catalog (form authoring enablement).
     // TASK-457: "collection" joined the catalog (collection authoring).
     // TASK-459-02: "filters" joined the catalog (visitor filters block).
+    // TASK-471: "badge" joined the catalog (badge authoring enablement).
     expect(editorInsertableBlockTypes).toEqual([
       "heading",
       "text",
+      "badge",
       "button",
       "image",
       "video",

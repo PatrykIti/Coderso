@@ -43,6 +43,7 @@ export const resolveCustomScreenModeLabel = (screen: CustomScreenRecord) => {
   const capabilities =
     screen.capabilities ??
     resolveCustomScreenCapabilities({
+      definition: screen.definition,
       blocks: screen.blocks,
       bindings: screen.bindings,
     });
@@ -259,6 +260,16 @@ const readEntryFieldValue = (input: {
   input.source === "system"
     ? readSystemEntryField(input.entry, input.field)
     : input.entry.data?.[input.field];
+
+export const resolveEntryColumnRawValue = (input: {
+  entry: EntrySummary;
+  column: CustomScreenListColumn;
+}) =>
+  readEntryFieldValue({
+    entry: input.entry,
+    source: input.column.source,
+    field: input.column.field,
+  });
 
 const normalizeFilterToken = (value: unknown): string | null => {
   if (value === undefined || value === null || value === "") return null;

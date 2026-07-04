@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock, Search } from "lucide-react";
+import { Search } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { EmptyState } from "@/ui/shared/EmptyState";
 import { isApiClientError } from "@/services/apiClient";
 import {
   DEFAULT_SEARCH_DATE_RANGE,
@@ -231,23 +231,23 @@ export function SearchPage() {
   const renderResults = (filter: ContentFilter) => {
     if (!shouldSearch) {
       return (
-        <Card className="items-center border-dashed py-8 text-center">
-          <p className="text-sm text-muted-foreground">Type at least 2 characters to search.</p>
-        </Card>
+        <EmptyState
+          icon={<Search />}
+          title="Type at least 2 characters to search."
+          description="Search across pages, content, media, and people."
+        />
       );
     }
     if (loading) {
-      return (
-        <Card className="items-center border-dashed py-8 text-center">
-          <p className="text-sm text-muted-foreground">Searching...</p>
-        </Card>
-      );
+      return <EmptyState icon={<Search />} title="Searching..." />;
     }
     if (error) {
       return (
-        <Card className="items-center border-dashed py-8 text-center">
-          <p className="text-sm text-destructive">Search failed. Try again.</p>
-        </Card>
+        <EmptyState
+          icon={<Search />}
+          title="Search failed. Try again."
+          className="border-destructive/30"
+        />
       );
     }
     return (
@@ -272,161 +272,132 @@ export function SearchPage() {
 
   return (
     <AdminShell activeHref="/admin/search" showSearch={false} breadcrumbs={["Search"]}>
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]">
-          <Card className="gap-4 py-5">
-            <div className="space-y-4 px-6">
-              <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  Recent Searches
-                </p>
-                <div className="max-h-40 overflow-y-auto pr-2">
-                  <div className="space-y-2">
-                    {recentError ? <p className="text-xs text-destructive">{recentError}</p> : null}
-                    {recentSearches.length === 0 && !recentError ? (
-                      <p className="text-xs text-muted-foreground">No recent searches yet.</p>
-                    ) : null}
-                    {recentSearches.map((item) => (
-                      <button
-                        key={item}
-                        type="button"
-                        className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted-foreground transition hover:bg-muted/40 hover:text-foreground"
-                        onClick={() => setQuery(item)}
-                      >
-                        <Clock className="h-4 w-4 text-muted-foreground/70" />
-                        <span className="font-medium">{item}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+      <div className="mx-auto w-full max-w-2xl">
+        {/* Centered search hero */}
+        <header className="mb-8 text-center">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground">
+            Search
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Find anything across pages, content, media, and people.
+          </p>
+        </header>
 
-              <Separator />
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search pages, content, media, users…"
+            className="h-12 rounded-2xl pl-12 pr-16 text-base shadow-card"
+          />
+          <kbd className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 rounded-lg border border-border bg-muted px-2 py-1 font-mono text-xs text-muted-foreground">
+            ⌘K
+          </kbd>
+        </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Filters
-                  </p>
-                  <Button variant="ghost" size="xs" onClick={() => setCategorySelection([])}>
-                    Clear
-                  </Button>
-                </div>
+        {/* Recent searches chip row (binds to the existing recentSearches state) */}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-xs font-medium text-muted-foreground">Recent</span>
+          {recentError ? <span className="text-xs text-destructive">{recentError}</span> : null}
+          {suggestionItems.map((item) => (
+            <Badge
+              key={item}
+              variant="outline"
+              className="cursor-pointer hover:bg-muted"
+              onClick={() => setQuery(item)}
+            >
+              {item}
+            </Badge>
+          ))}
+        </div>
 
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Date Range
-                  </p>
-                  <Select
-                    value={dateRange}
-                    onValueChange={(value) => setDateRange(normalizeSearchDateRange(value))}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Date range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="last-7-days">Last 7 days</SelectItem>
-                      <SelectItem value="last-30-days">Last 30 days</SelectItem>
-                      <SelectItem value="last-12-months">Last 12 months</SelectItem>
-                      <SelectItem value="all-time">All time</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                    Category
-                  </p>
-                  <div className="space-y-2">
-                    {categories.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">{categoryHelper}</p>
-                    ) : (
-                      categories.map((category) => (
-                        <label
-                          key={category.id}
-                          className="flex items-center gap-2 text-sm text-muted-foreground"
-                        >
-                          <Checkbox
-                            checked={activeCategorySelection.includes(category.id)}
-                            onCheckedChange={(checked) => {
-                              setCategorySelection((prev) => {
-                                if (!checked) {
-                                  return prev.filter((id) => id !== category.id);
-                                }
-                                return [...prev, category.id];
-                              });
-                            }}
-                          />
-                          <span>{category.label}</span>
-                          <span className="ml-auto text-xs text-muted-foreground">
-                            {category.count}
-                          </span>
-                        </label>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          <div className="space-y-6">
-            <Card className="gap-4 py-4">
-              <div className="relative px-6">
-                <Search className="absolute left-10 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Search for pages, entries, files, or users..."
-                  className="h-14 rounded-2xl bg-muted/40 pl-12 pr-20 text-base font-medium"
-                />
-                <Badge
-                  variant="outline"
-                  className="absolute right-10 top-1/2 -translate-y-1/2 text-[10px] uppercase tracking-wide"
-                >
-                  Cmd K
-                </Badge>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 px-6 text-xs text-muted-foreground">
-                <span>Try:</span>
-                {suggestionItems.map((item) => (
-                  <Button
-                    key={item}
-                    variant="ghost"
-                    size="xs"
-                    className="h-6 px-2 text-xs font-medium"
-                    onClick={() => setQuery(item)}
-                  >
-                    {item}
-                  </Button>
-                ))}
-              </div>
-            </Card>
-
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Content Type
+        {/* Filters — relocated Date Range + Category controls (wiring preserved) */}
+        <Card className="mt-4 gap-4 p-4">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Filters
+            </p>
+            <Button variant="ghost" size="xs" onClick={() => setCategorySelection([])}>
+              Clear
+            </Button>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Date Range
               </p>
-              <Tabs
-                value={contentFilter}
-                onValueChange={(value) => setContentFilter(value as ContentFilter)}
-                className="space-y-4"
+              <Select
+                value={dateRange}
+                onValueChange={(value) => setDateRange(normalizeSearchDateRange(value))}
               >
-                <TabsList variant="line">
-                  {contentFilters.map((filter) => (
-                    <TabsTrigger key={filter.value} value={filter.value}>
-                      {filter.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-                {contentFilters.map((filter) => (
-                  <TabsContent key={filter.value} value={filter.value}>
-                    {renderResults(filter.value)}
-                  </TabsContent>
-                ))}
-              </Tabs>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Date range" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="last-7-days">Last 7 days</SelectItem>
+                  <SelectItem value="last-30-days">Last 30 days</SelectItem>
+                  <SelectItem value="last-12-months">Last 12 months</SelectItem>
+                  <SelectItem value="all-time">All time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Category
+              </p>
+              <div className="space-y-2">
+                {categories.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{categoryHelper}</p>
+                ) : (
+                  categories.map((category) => (
+                    <label
+                      key={category.id}
+                      className="flex items-center gap-2 text-sm text-muted-foreground"
+                    >
+                      <Checkbox
+                        checked={activeCategorySelection.includes(category.id)}
+                        onCheckedChange={(checked) => {
+                          setCategorySelection((prev) => {
+                            if (!checked) {
+                              return prev.filter((id) => id !== category.id);
+                            }
+                            return [...prev, category.id];
+                          });
+                        }}
+                      />
+                      <span>{category.label}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {category.count}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
           </div>
+        </Card>
+
+        {/* Grouped results */}
+        <div className="mt-6 space-y-3">
+          <Tabs
+            value={contentFilter}
+            onValueChange={(value) => setContentFilter(value as ContentFilter)}
+            className="space-y-4"
+          >
+            <TabsList variant="line">
+              {contentFilters.map((filter) => (
+                <TabsTrigger key={filter.value} value={filter.value}>
+                  {filter.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {contentFilters.map((filter) => (
+              <TabsContent key={filter.value} value={filter.value}>
+                {renderResults(filter.value)}
+              </TabsContent>
+            ))}
+          </Tabs>
         </div>
       </div>
     </AdminShell>

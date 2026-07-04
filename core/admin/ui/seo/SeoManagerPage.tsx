@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Filter, Search, SearchCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Filter, Gauge, Search, SearchCheck } from "lucide-react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -17,6 +17,8 @@ import {
   type SeoDocumentItem,
 } from "@/services/seoClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { SeoAuditDialog } from "./SeoAuditDialog";
@@ -164,6 +166,26 @@ export function SeoManagerPage() {
     return Math.round(total / auditedItems.length);
   }, [items]);
 
+  // TASK-479-26-L02: stat row derived from the loaded SeoItem[] (real fields only —
+  // no fabricated deltas, no "Indexed pages" which has no backing DTO field).
+  const seoStats = useMemo(() => {
+    const scores = items.map((item) => item.score);
+    const avg = scores.length
+      ? Math.round(scores.reduce((sum, score) => sum + score, 0) / scores.length)
+      : 0;
+    return {
+      avg,
+      issues: items.reduce(
+        (count, item) =>
+          count + (item.analysisStatus === "attention" ? item.analysisNotes.length : 0),
+        0
+      ),
+      optimized: items.filter((item) => item.metaStatus === "optimized").length,
+      warnings: items.filter((item) => item.metaStatus === "short" || item.metaStatus === "missing")
+        .length,
+    };
+  }, [items]);
+
   const hasAuditRun = items.some((item) => item.lastAuditAt);
   const scanLabel = isAuditing
     ? "Global Scan: Running"
@@ -250,43 +272,36 @@ export function SeoManagerPage() {
   return (
     <AdminShell activeHref="/admin/seo" showSearch={false} breadcrumbs={["Admin", "SEO Manager"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-3xl font-semibold tracking-tight">SEO Manager</h1>
-              <Badge
-                variant="secondary"
-                className="text-[10px] font-semibold uppercase tracking-wide"
-              >
+        <PageHeader
+          title="SEO Manager"
+          description="Monitor page metadata, SEO scores, and quick fixes in one place."
+          icon={<Gauge />}
+          actions={
+            <>
+              <Badge variant="soft" className="text-[10px] font-semibold uppercase tracking-wide">
                 {scanLabel}
               </Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Monitor page metadata, SEO scores, and quick fixes in one place.
-            </p>
-          </div>
-          <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search pages..."
-                className="pl-9"
-              />
-            </div>
-            <Button
-              className="gap-2"
-              onClick={() => setAuditDialogOpen(true)}
-              disabled={isAuditing}
-            >
-              <SearchCheck className="h-4 w-4" />
-              Run Full Audit
-            </Button>
-          </div>
+              <Button
+                className="gap-1.5"
+                onClick={() => setAuditDialogOpen(true)}
+                disabled={isAuditing}
+              >
+                <SearchCheck className="size-4" />
+                Run Full Audit
+              </Button>
+            </>
+          }
+        />
+
+        {/* Stat row — derived from the loaded SEO items (real fields only). */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatCard label="Avg. score" value={`${seoStats.avg}/100`} icon={<Gauge />} />
+          <StatCard label="Issues" value={seoStats.issues} icon={<AlertTriangle />} />
+          <StatCard label="Optimized pages" value={seoStats.optimized} icon={<CheckCircle2 />} />
+          <StatCard label="Warnings" value={seoStats.warnings} icon={<AlertTriangle />} />
         </div>
 
-        <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-3 shadow-soft lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {filterOptions.map((option) => (
               <Button
@@ -309,11 +324,19 @@ export function SeoManagerPage() {
               <Filter className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="outline" className="text-xs">
-              {filteredItems.length} pages
-            </Badge>
-            <span>Last scan: {lastScanLabel}</span>
+          <div className="flex flex-1 items-center justify-end gap-3">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search pages…"
+                className="pl-9"
+              />
+            </div>
+            <span className="hidden whitespace-nowrap text-xs text-muted-foreground sm:inline">
+              {filteredItems.length} pages · {lastScanLabel}
+            </span>
           </div>
         </div>
 

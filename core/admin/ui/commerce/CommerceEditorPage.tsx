@@ -2,6 +2,7 @@ import { ArrowLeft, PanelLeft, PanelRight, Save, Send, Trash2 } from "lucide-rea
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
@@ -209,9 +210,15 @@ export function CommerceEditorPage() {
     <CommerceCollectionsPanel
       collections={collections}
       selectedIds={draft.collectionIds}
-      mediaIdsText={draft.mediaIdsText}
+      status={draft.status}
+      pricingAmount={draft.pricingAmount}
+      pricingCompareAtAmount={draft.pricingCompareAtAmount}
+      pricingCurrency={draft.pricingCurrency}
+      publishButtonLabel={publishButtonLabel}
+      isSaving={isSaving}
       onToggleCollection={toggleCollection}
-      onMediaIdsChange={(value) => patchDraft({ mediaIdsText: value })}
+      onStatusChange={(status) => patchDraft({ status })}
+      onPublish={() => handleSave(publishTargetStatus)}
     />
   );
 
@@ -236,19 +243,22 @@ export function CommerceEditorPage() {
       rightPanel={rightPanel}
       breadcrumbs={["Coderso", "Commerce", isCreateMode ? "New product" : draft.title || "Editor"]}
     >
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4 lg:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 lg:p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {isCreateMode ? "New product" : "Edit product"}
-            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="font-display text-2xl font-semibold tracking-tight">
+                {isCreateMode ? "New product" : "Edit product"}
+              </h1>
+              {hasUnsavedChanges ? <Badge variant="soft">Unsaved changes</Badge> : null}
+            </div>
             <p className="text-sm text-muted-foreground">
               Configure product identity, pricing, stock, and collection assignments.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
-              variant="outline"
+              variant="ghost"
               className="gap-2 lg:hidden"
               onClick={() => setMobileContextOpen(true)}
             >
@@ -256,7 +266,7 @@ export function CommerceEditorPage() {
               Context
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               className="gap-2 lg:hidden"
               onClick={() => setMobileDetailsOpen(true)}
             >
@@ -264,7 +274,7 @@ export function CommerceEditorPage() {
               Details
             </Button>
             <Button
-              variant="outline"
+              variant="ghost"
               className="gap-2"
               onClick={() => navigate("/advanced/commerce")}
             >

@@ -6,7 +6,14 @@ export function toCssVariables(tokens: DesignTokens) {
   return `:root{${entries.join(";")};}`;
 }
 
-export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
+/**
+ * Emit the admin-theme `--admin-*` (+ `--font-*`/`--text-*`) variables as a CSS
+ * block. The `selector` defaults to `:root` (the light block); pass `:root.dark`
+ * to emit the parallel DARK block from the SAME injected style so the chrome —
+ * which reads `--admin-*` directly — recolors in dark and wins source order over
+ * `globals.css` (see TASK-479-05-L01 dark-mode decision).
+ */
+export function toAdminThemeCssVariables(tokens: AdminThemeTokens, selector: string = ":root") {
   const entries = [
     `--admin-base-bg:${tokens.base.bg}`,
     `--admin-base-surface:${tokens.base.surface}`,
@@ -26,6 +33,8 @@ export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
     `--admin-button-outline-hover-text:${tokens.buttons.outline.hoverText}`,
     `--admin-button-ghost-hover-bg:${tokens.buttons.ghost.hoverBg}`,
     `--admin-button-ghost-hover-text:${tokens.buttons.ghost.hoverText}`,
+    `--admin-primary-soft:${tokens.primarySoft.bg}`,
+    `--admin-primary-soft-text:${tokens.primarySoft.text}`,
     `--admin-input-bg:${tokens.inputs.bg}`,
     `--admin-input-border:${tokens.inputs.border}`,
     `--admin-input-text:${tokens.inputs.text}`,
@@ -36,6 +45,10 @@ export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
     `--admin-sidebar-active-bg:${tokens.sidebar.activeBg}`,
     `--admin-sidebar-active-text:${tokens.sidebar.activeText}`,
     `--admin-sidebar-hover-bg:${tokens.sidebar.hoverBg}`,
+    `--admin-sidebar-muted:${tokens.sidebar.muted}`,
+    `--admin-sidebar-accent:${tokens.sidebar.accent}`,
+    `--admin-sidebar-accent-foreground:${tokens.sidebar.accentForeground}`,
+    `--admin-sidebar-border:${tokens.sidebar.border}`,
     `--admin-topbar-bg:${tokens.topbar.bg}`,
     `--admin-topbar-text:${tokens.topbar.text}`,
     `--admin-topbar-border:${tokens.topbar.border}`,
@@ -52,9 +65,20 @@ export function toAdminThemeCssVariables(tokens: AdminThemeTokens) {
     `--admin-state-success:${tokens.state.success}`,
     `--admin-state-warning:${tokens.state.warning}`,
     `--admin-state-danger:${tokens.state.danger}`,
+    `--admin-state-info:${tokens.state.info}`,
+    `--admin-state-success-foreground:${tokens.state.successForeground}`,
+    `--admin-state-warning-foreground:${tokens.state.warningForeground}`,
+    `--admin-state-danger-foreground:${tokens.state.dangerForeground}`,
+    `--admin-state-info-foreground:${tokens.state.infoForeground}`,
+    `--admin-state-success-soft:${tokens.state.successSoft}`,
+    `--admin-state-warning-soft:${tokens.state.warningSoft}`,
+    `--admin-state-info-soft:${tokens.state.infoSoft}`,
+    `--admin-shadow-soft:${tokens.effects.shadowSoft}`,
+    `--admin-shadow-card:${tokens.effects.shadowCard}`,
+    `--admin-shadow-pop:${tokens.effects.shadowPop}`,
   ];
 
-  return `:root{${entries.join(";")};}`;
+  return `${selector}{${entries.join(";")};}`;
 }
 
 /**
@@ -71,6 +95,8 @@ export function toPageTypographyCssVariableMap(tokens: DesignTokens): Record<str
   return {
     "--font-sans": tokens.typography.sans,
     "--font-display": tokens.typography.display,
+    "--text-2xs": tokens.typography["2xs"],
+    "--text-xs": tokens.typography.xs,
     "--text-sm": tokens.typography.sm,
     "--text-md": tokens.typography.md,
     "--text-lg": tokens.typography.lg,
@@ -79,6 +105,58 @@ export function toPageTypographyCssVariableMap(tokens: DesignTokens): Record<str
     "--text-3xl": tokens.typography["3xl"],
     "--text-4xl": tokens.typography["4xl"],
     "--text-5xl": tokens.typography["5xl"],
+  };
+}
+
+/**
+ * CSS variable map for the Page V2 editor canvas frame: the site typography vars
+ * PLUS the three NEUTRAL page-color vars (`--color-bg`/`-surface`/`-text`).
+ *
+ * The admin shell's Tailwind `@theme` (`core/admin/styles/globals.css`) already
+ * maps the BRAND `--color-primary`/`-secondary`/`-accent`/`-border` (from the
+ * admin theme) globally, so those resolve inside the canvas — but it does NOT
+ * define the site neutral `--color-bg`/`-surface`/`-text`, so a block color set
+ * to a neutral token would render nothing in-editor (it works on the front,
+ * which emits all seven on `:root` via {@link toCssVariableMap}). We emit only
+ * the three missing neutrals so neutral block colors are WYSIWYG in-editor.
+ *
+ * Brand `--color-*` are intentionally OMITTED: re-emitting them on the canvas
+ * frame would override editor chrome that consumes them (e.g. `ring-primary`,
+ * borders). No `core/admin/ui/pages` chrome consumes `--color-bg/-surface/-text`,
+ * so emitting these three is chrome-safe.
+ */
+export function toPageCanvasColorCssVariableMap(tokens: DesignTokens): Record<string, string> {
+  return {
+    ...toPageTypographyCssVariableMap(tokens),
+    "--color-bg": tokens.neutrals.bg,
+    "--color-surface": tokens.neutrals.surface,
+    "--color-text": tokens.neutrals.text,
+  };
+}
+
+/**
+ * CSS variable map for the Menu Design editor canvas frame: site typography
+ * vars PLUS ALL SEVEN `--color-*` (primary/secondary/accent/bg/surface/border/
+ * text). Unlike the page canvas map (which keeps the brand `--color-*` OFF the
+ * frame because page chrome consumes `--color-primary`), the menu doc CSS
+ * references the brand vars too — swatches store
+ * `var(--color-primary|secondary|accent|border)` and the section
+ * Surface/Border rules paint onto the scope root — while the admin `@theme`
+ * maps those brand names to ADMIN colors, so leaving them unpainted leaks the
+ * admin beige into the menu preview (bug 4). The menu canvas therefore repaints
+ * all seven and pins its own chrome instead (the `SelectableBlock` selection
+ * ring is re-pointed off `--color-primary` onto an `--admin-*` var).
+ */
+export function toMenuCanvasColorCssVariableMap(tokens: DesignTokens): Record<string, string> {
+  return {
+    ...toPageTypographyCssVariableMap(tokens),
+    "--color-primary": tokens.colors.primary,
+    "--color-secondary": tokens.colors.secondary,
+    "--color-accent": tokens.colors.accent,
+    "--color-bg": tokens.neutrals.bg,
+    "--color-surface": tokens.neutrals.surface,
+    "--color-text": tokens.neutrals.text,
+    "--color-border": tokens.neutrals.border,
   };
 }
 
@@ -144,6 +222,8 @@ export function toAdminThemeCssVariableMap(tokens: AdminThemeTokens): Record<str
     "--admin-button-outline-hover-text": tokens.buttons.outline.hoverText,
     "--admin-button-ghost-hover-bg": tokens.buttons.ghost.hoverBg,
     "--admin-button-ghost-hover-text": tokens.buttons.ghost.hoverText,
+    "--admin-primary-soft": tokens.primarySoft.bg,
+    "--admin-primary-soft-text": tokens.primarySoft.text,
     "--admin-input-bg": tokens.inputs.bg,
     "--admin-input-border": tokens.inputs.border,
     "--admin-input-text": tokens.inputs.text,
@@ -154,6 +234,10 @@ export function toAdminThemeCssVariableMap(tokens: AdminThemeTokens): Record<str
     "--admin-sidebar-active-bg": tokens.sidebar.activeBg,
     "--admin-sidebar-active-text": tokens.sidebar.activeText,
     "--admin-sidebar-hover-bg": tokens.sidebar.hoverBg,
+    "--admin-sidebar-muted": tokens.sidebar.muted,
+    "--admin-sidebar-accent": tokens.sidebar.accent,
+    "--admin-sidebar-accent-foreground": tokens.sidebar.accentForeground,
+    "--admin-sidebar-border": tokens.sidebar.border,
     "--admin-topbar-bg": tokens.topbar.bg,
     "--admin-topbar-text": tokens.topbar.text,
     "--admin-topbar-border": tokens.topbar.border,
@@ -170,5 +254,16 @@ export function toAdminThemeCssVariableMap(tokens: AdminThemeTokens): Record<str
     "--admin-state-success": tokens.state.success,
     "--admin-state-warning": tokens.state.warning,
     "--admin-state-danger": tokens.state.danger,
+    "--admin-state-info": tokens.state.info,
+    "--admin-state-success-foreground": tokens.state.successForeground,
+    "--admin-state-warning-foreground": tokens.state.warningForeground,
+    "--admin-state-danger-foreground": tokens.state.dangerForeground,
+    "--admin-state-info-foreground": tokens.state.infoForeground,
+    "--admin-state-success-soft": tokens.state.successSoft,
+    "--admin-state-warning-soft": tokens.state.warningSoft,
+    "--admin-state-info-soft": tokens.state.infoSoft,
+    "--admin-shadow-soft": tokens.effects.shadowSoft,
+    "--admin-shadow-card": tokens.effects.shadowCard,
+    "--admin-shadow-pop": tokens.effects.shadowPop,
   };
 }

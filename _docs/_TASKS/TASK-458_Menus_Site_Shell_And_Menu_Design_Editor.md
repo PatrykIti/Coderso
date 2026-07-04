@@ -5,8 +5,9 @@
 **Category:** Menus / Admin UI / Public Runtime / Page Editor V2
 **Estimated Effort:** Very Large
 **Dependencies:** None (consumes the shipped TASK-455 site shell and the TASK-421 floating-panel control primitives)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-13
+**Completed:** 2026-06-18
 
 ---
 
@@ -100,7 +101,7 @@ editor).
       the SITE_SHELL_CSS parameterization bridge.
 - [x] TASK-458-03: Menu design editor canvas, host palette restriction
       mechanism, appearance floating panel, and nav extras slot.
-- [ ] TASK-458-04: Validation, live smoke, and closure.
+- [x] TASK-458-04: Validation, live smoke, and closure.
 
 ## Progress Notes
 
@@ -109,6 +110,15 @@ editor).
   typecheck, DB reachability, release gates, and docs updates. Parent remains
   open until TASK-458-04 records the live dev-host Playwright smoke for
   restyle -> publish, Settings shell removal, and restricted menu palette.
+- 2026-06-18: Closed after fresh `coderso-dev-core-host` +
+  `playwright-cli` verification. Evidence:
+  `.tmp/task-458-459-live-audit-result.json` passed with `failedChecks: []`
+  for the Menus Site shell dialog, Settings shell-card removal, restricted
+  menu palette, draft-private public shell before publish, published shell
+  rendering, invalid extras rejection, and restoration of the original shell
+  setting. Supplemental
+  `.tmp/task-458-page-editor-catalog-result.json` passed for the regular Page
+  editor full insert catalog in the same live stack.
 
 ---
 

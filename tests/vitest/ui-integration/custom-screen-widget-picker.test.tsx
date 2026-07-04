@@ -38,9 +38,9 @@ const createScreenRecord = (): CustomScreenRecord => ({
   compositionKey: null,
   showInSidebar: true,
   sidebarLabel: "Projects",
-  schemaVersion: 3,
+  schemaVersion: 4,
   definition: {
-    schemaVersion: 3,
+    schemaVersion: 4,
     listView: {
       columns: [],
       filters: [],
@@ -50,7 +50,10 @@ const createScreenRecord = (): CustomScreenRecord => ({
     editorView: {
       saveMode: "entry" as const,
       interactionMode: "inline" as const,
-      blocks: [],
+      document: {
+        schemaVersion: 1 as const,
+        sections: [],
+      },
       bindings: [],
     },
   },
@@ -131,14 +134,8 @@ const flush = async () => {
   });
 };
 
-const findButton = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("button")).find((button) =>
-    button.textContent?.includes(text)
-  ) as HTMLButtonElement | undefined;
-
-const countExactTextNodes = (container: ParentNode, text: string) =>
-  Array.from(container.querySelectorAll("*")).filter((node) => node.textContent?.trim() === text)
-    .length;
+const findButtonByLabel = (container: ParentNode, label: string) =>
+  container.querySelector(`button[aria-label="${label}"]`) as HTMLButtonElement | null;
 
 beforeEach(() => {
   currentScreenRecord = createScreenRecord();
@@ -150,23 +147,31 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-test("Editor View picker exposes only admin-editor-view screen widgets", async () => {
+test("entry-view builder palette exposes screen blocks without page widgets", async () => {
   const view = mount("/admin/advanced/custom-screens/screen-1");
 
   try {
     await flush();
 
+    // TASK-498-01: the List/Editor toggle is gone — the entry-view builder is
+    // always on. Open the Insert palette from the (relocated) category rail.
     React.act(() => {
-      findButton(view.container, "Editor View")?.dispatchEvent(
+      findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
     });
     await flush();
 
-    expect(view.container.textContent).toContain("Screen Record Header");
-    expect(view.container.textContent).toContain("Screen Field Value");
-    expect(view.container.textContent).toContain("Screen Field Group");
-    expect(view.container.textContent).toContain("Screen Two Column");
+    expect(view.container.textContent).toContain("Screen Blocks");
+    // The Insert subpanel mounts in the shared `CanvasEditor` docked panel.
+    expect(view.container.querySelector("[data-screen-editor-panel]")).not.toBeNull();
+    // A1: the 9-chip PaletteChip grid replaces the old per-field list. Assert the
+    // rendered chip labels (they render as static text regardless of which kinds
+    // TASK-498-02 has wired yet).
+    expect(view.container.textContent).toContain("Heading");
+    expect(view.container.textContent).toContain("Field");
+    expect(view.container.textContent).toContain("Stat");
+    expect(view.container.textContent).toContain("Related list");
     expect(view.container.textContent).not.toContain("Hero");
     expect(view.container.textContent).not.toContain("Feature Grid");
   } finally {
@@ -174,25 +179,35 @@ test("Editor View picker exposes only admin-editor-view screen widgets", async (
   }
 });
 
-test("Editor View keeps legacy selected widgets editable without exposing them in the picker", async () => {
+test("entry-view builder keeps legacy blocks visible without exposing page widgets in the library", async () => {
   const baseScreen = createScreenRecord();
   currentScreenRecord = {
     ...baseScreen,
     definition: {
       ...baseScreen.definition!,
-      schemaVersion: 3,
       editorView: {
         ...baseScreen.definition!.editorView,
-        blocks: [
-          {
-            id: "hero-1",
-            type: "hero",
-            variant: "centered",
-            data: {
-              headline: "Legacy hero",
+        document: {
+          schemaVersion: 1 as const,
+          sections: [
+            {
+              id: "section-1",
+              type: "section",
+              data: { title: "Details" },
+              blocks: [
+                {
+                  id: "hero-1",
+                  type: "legacy-widget",
+                  legacyWidgetType: "hero",
+                  variant: "centered",
+                  data: {
+                    headline: "Legacy hero",
+                  },
+                },
+              ],
             },
-          },
-        ],
+          ],
+        },
       },
     },
     blocks: [
@@ -213,29 +228,22 @@ test("Editor View keeps legacy selected widgets editable without exposing them i
     await flush();
 
     React.act(() => {
-      findButton(view.container, "Editor View")?.dispatchEvent(
+      findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
     });
     await flush();
 
-    React.act(() => {
-      findButton(view.container, "Selected Widget")?.dispatchEvent(
-        new MouseEvent("click", { bubbles: true })
-      );
-    });
-    await flush();
-
-    expect(view.container.textContent).toContain("Hero");
-    expect(countExactTextNodes(view.container, "Hero")).toBe(1);
-    expect(view.container.textContent).toContain("Screen Record Header");
+    expect(view.container.textContent).toContain("Legacy block placeholder");
+    expect(view.container.textContent).toContain("hero");
+    expect(view.container.textContent).toContain("Heading");
     expect(view.container.textContent).not.toContain("Feature Grid");
   } finally {
     view.cleanup();
   }
 });
 
-test("Editor View picker stays empty until a content type is selected", async () => {
+test("entry-view builder palette renders without a selected content type", async () => {
   currentScreenRecord = {
     ...createScreenRecord(),
     contentTypeId: "",
@@ -247,15 +255,18 @@ test("Editor View picker stays empty until a content type is selected", async ()
     await flush();
 
     React.act(() => {
-      findButton(view.container, "Editor View")?.dispatchEvent(
+      findButtonByLabel(view.container, "Insert")?.dispatchEvent(
         new MouseEvent("click", { bubbles: true })
       );
     });
     await flush();
 
-    expect(view.container.textContent).toContain("No components match this search.");
-    expect(view.container.textContent).not.toContain("Screen Record Header");
-    expect(view.container.textContent).not.toContain("Screen Field Value");
+    // A1: the 9-chip palette is the sole insert surface — there is no per-field
+    // "Fields" list, so no content-type-dependent field placeholder renders. The
+    // chip labels render regardless of content-type selection.
+    expect(view.container.textContent).toContain("Heading");
+    expect(view.container.textContent).toContain("Field");
+    expect(view.container.textContent).not.toContain("Feature Grid");
   } finally {
     view.cleanup();
   }

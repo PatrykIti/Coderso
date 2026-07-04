@@ -330,6 +330,14 @@ export const getPageBlockSiblingMoveTarget = (
   return { listPath: parent.listPath, index: parent.index + offset };
 };
 
+export const getPageBlockAfterInsertTarget = (
+  path: PageBlockPath
+): PageBlockInsertTarget | null => {
+  const parent = getParentListPath(path);
+  if (!parent.listPath) return null;
+  return { listPath: parent.listPath, index: parent.index + 1 };
+};
+
 /**
  * How the siblings of the block at `path` are laid out by the shared renderer
  * (owner finding #6). Pass a breakpoint-resolved section so responsive

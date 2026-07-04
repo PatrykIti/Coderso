@@ -4,6 +4,9 @@ import Ajv from "ajv";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
+  PAGE_TEXT_MARK_MAX,
+  applyBlockTextMark,
+  removeBlockTextMark,
   clearResponsiveOverride,
   clearBlockResponsiveOverride,
   createPageDocumentId,
@@ -13,6 +16,8 @@ import {
   isPageDocumentError,
   isLegacyOrVersionlessPageDocument,
   normalizePageDocumentV2ForWrite,
+  normalizeBlockTextColorMarks,
+  normalizeBlockTextMarks,
   normalizeStoredPageDocumentV2ForRead,
   pageBlockCapabilities,
   pageBlockDefaultProps,
@@ -422,10 +427,13 @@ describe("PageDocumentV2", () => {
       textColor: " #111827 ",
       background: null,
       backgroundType: "color",
+      backgroundImage: " /media/hero.jpg ",
       opacity: 2,
       radius: 99,
       shadow: "lg",
       borderColor: " #e2e8f0 ",
+      borderWidth: 99,
+      borderStyle: "dashed",
       padding: { top: 12, right: 999, bottom: -5, left: 4 },
       margin: { top: 8 },
     };
@@ -438,11 +446,14 @@ describe("PageDocumentV2", () => {
       textColor: "#111827",
       background: null,
       backgroundType: "color",
+      backgroundImage: "/media/hero.jpg",
       opacity: 1,
       radius: 64,
       shadow: "lg",
       borderColor: "#e2e8f0",
-      padding: { top: 12, right: 160, bottom: 0, left: 4 },
+      borderWidth: 12,
+      borderStyle: "dashed",
+      padding: { top: 12, right: 240, bottom: 0, left: 4 },
       margin: { top: 8 },
     });
   });
@@ -451,7 +462,7 @@ describe("PageDocumentV2", () => {
     const document = buildDocument();
     document.sections[0]!.blocks[0]!.style = {
       fontFamily: "display",
-      fontSize: "2xl",
+      fontSize: "xs",
       fontWeight: "bold",
       lineHeight: 99,
       letterSpacing: -99,
@@ -468,7 +479,7 @@ describe("PageDocumentV2", () => {
 
     expect(normalized.sections[0]?.blocks[0]?.style).toEqual({
       fontFamily: "display",
-      fontSize: "2xl",
+      fontSize: "xs",
       fontWeight: "bold",
       lineHeight: 2.5,
       letterSpacing: -2,
@@ -525,6 +536,212 @@ describe("PageDocumentV2", () => {
     }
   });
 
+  test("normalizes text marks with clamped ranges and same-type conflict removal", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.props = {
+      text: "Hello world",
+      level: "h1",
+      align: "left",
+      marks: [
+        { type: "color", from: 0, to: 5, color: "#ef4444" },
+        { type: "color", from: 3, to: 8, color: "#22c55e" },
+        { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+        { type: "bold", from: 0, to: 5 },
+        { type: "italic", from: 1, to: 99 },
+        { type: "link", from: 6, to: 99, href: "/safe" },
+        { type: "color", from: 6, to: 99, color: "#0f172a" },
+      ],
+    };
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+
+    expect(normalized.sections[0]?.blocks[0]?.props.marks).toEqual([
+      { type: "bold", from: 0, to: 5 },
+      { type: "color", from: 0, to: 5, color: "#ef4444" },
+      { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+      { type: "italic", from: 1, to: 11 },
+      { type: "link", from: 6, to: 11, href: "/safe" },
+      { type: "color", from: 6, to: 11, color: "#0f172a" },
+    ]);
+  });
+
+  test("text marks fail closed for unsafe shapes and stay base-only", () => {
+    const badColor = buildDocument();
+    badColor.sections[0]!.blocks[0]!.props = {
+      text: "Hello world",
+      level: "h1",
+      align: "left",
+      marks: [{ type: "color", from: 0, to: 5, color: "url(javascript:alert(1))" }],
+    };
+    expect(() => normalizePageDocumentV2ForWrite(badColor)).toThrow(
+      "Invalid sections.0.blocks.0.props.marks.0.color."
+    );
+
+    const badLink = buildDocument();
+    badLink.sections[0]!.blocks[0]!.props = {
+      text: "Hello world",
+      level: "h1",
+      align: "left",
+      marks: [{ type: "link", from: 0, to: 5, href: "javascript:alert(1)" }],
+    };
+    expect(() => normalizePageDocumentV2ForWrite(badLink)).toThrow(
+      "Invalid sections.0.blocks.0.props.marks.0.href."
+    );
+
+    const responsiveMarks = buildDocument();
+    responsiveMarks.sections[0]!.blocks[0]!.responsive = {
+      mobile: {
+        props: {
+          marks: [{ type: "color", from: 0, to: 5, color: "#ef4444" }],
+        },
+      },
+    };
+    expect(() => normalizePageDocumentV2ForWrite(responsiveMarks)).toThrow(
+      "Text marks are base-only at sections.0.blocks.0.responsive.mobile.props.marks."
+    );
+
+    expect(
+      normalizeBlockTextMarks("Hello", [
+        { type: "color", from: 0, to: 2, color: "#ef4444" },
+        { type: "script", from: 2, to: 4, color: "#22c55e" },
+        { type: "link", from: 2, to: 4, href: "javascript:alert(1)" },
+        { type: "highlight", from: 2, to: 4, color: "var(--color-surface)" },
+        { type: "color", from: 4, to: 5, color: "expression(alert(1))" },
+      ])
+    ).toEqual([
+      { type: "color", from: 0, to: 2, color: "#ef4444" },
+      { type: "highlight", from: 2, to: 4, color: "var(--color-surface)" },
+    ]);
+  });
+
+  test("applyBlockTextMark replaces a different color over the same range and toggles an identical one (TASK-476-01)", () => {
+    const text = "Build with Coderso";
+    // Apply color A to a fragment.
+    const blue = applyBlockTextMark(text, [], {
+      type: "color",
+      from: 11,
+      to: 18,
+      color: "#2563eb",
+    });
+    expect(blue).toEqual([{ type: "color", from: 11, to: 18, color: "#2563eb" }]);
+
+    // Apply a DIFFERENT color over the same range -> replace in one call (not clear).
+    const orange = applyBlockTextMark(text, blue, {
+      type: "color",
+      from: 11,
+      to: 18,
+      color: "#ea580c",
+    });
+    expect(orange).toEqual([{ type: "color", from: 11, to: 18, color: "#ea580c" }]);
+
+    // Apply the SAME color over the same range -> toggle off.
+    const cleared = applyBlockTextMark(text, orange, {
+      type: "color",
+      from: 11,
+      to: 18,
+      color: "#ea580c",
+    });
+    expect(cleared).toEqual([]);
+
+    // Bold remains a pure toggle (value-less).
+    const bold = applyBlockTextMark(text, [], { type: "bold", from: 0, to: 5 });
+    expect(bold).toEqual([{ type: "bold", from: 0, to: 5 }]);
+    expect(applyBlockTextMark(text, bold, { type: "bold", from: 0, to: 5 })).toEqual([]);
+
+    // A different-type mark on the same range is retained alongside (no value-coupling).
+    const colored = applyBlockTextMark(text, [], {
+      type: "color",
+      from: 0,
+      to: 5,
+      color: "#2563eb",
+    });
+    const withHighlight = applyBlockTextMark(text, colored, {
+      type: "highlight",
+      from: 0,
+      to: 5,
+      color: "var(--color-accent)",
+    });
+    expect(withHighlight).toEqual([
+      { type: "color", from: 0, to: 5, color: "#2563eb" },
+      { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+    ]);
+  });
+
+  test("removeBlockTextMark strips only the link mark over the range and keeps other marks (TASK-478-02)", () => {
+    const text = "Build with Coderso";
+    // A linked + colored + bold fragment over the SAME range.
+    const marks = [
+      { type: "link" as const, from: 11, to: 18, href: "/old" },
+      { type: "color" as const, from: 11, to: 18, color: "#2563eb" },
+      { type: "bold" as const, from: 11, to: 18 },
+    ];
+
+    const unlinked = removeBlockTextMark(text, marks, { type: "link", from: 11, to: 18 });
+
+    // The link mark is gone; color + bold are untouched (normalized order: bold,
+    // then color).
+    expect(unlinked).toEqual([
+      { type: "bold", from: 11, to: 18 },
+      { type: "color", from: 11, to: 18, color: "#2563eb" },
+    ]);
+    expect(unlinked.some((mark) => mark.type === "link")).toBe(false);
+  });
+
+  test("removeBlockTextMark splits a partially overlapping link and preserves the outside slices (TASK-478-02)", () => {
+    const text = "abcdefghij"; // length 10
+    const marks = [{ type: "link" as const, from: 0, to: 10, href: "/whole" }];
+
+    // Remove the MIDDLE [3, 6): the two ends stay linked with the same href.
+    const split = removeBlockTextMark(text, marks, { type: "link", from: 3, to: 6 });
+    expect(split).toEqual([
+      { type: "link", from: 0, to: 3, href: "/whole" },
+      { type: "link", from: 6, to: 10, href: "/whole" },
+    ]);
+
+    // Removing a prefix slice [0, 4) keeps only the tail.
+    expect(removeBlockTextMark(text, marks, { type: "link", from: 0, to: 4 })).toEqual([
+      { type: "link", from: 4, to: 10, href: "/whole" },
+    ]);
+  });
+
+  test("removeBlockTextMark is a no-op for a non-overlapping range or absent mark type (TASK-478-02)", () => {
+    const text = "Build with Coderso";
+    const marks = [{ type: "link" as const, from: 0, to: 5, href: "/x" }];
+
+    // No overlap -> unchanged.
+    expect(removeBlockTextMark(text, marks, { type: "link", from: 11, to: 18 })).toEqual([
+      { type: "link", from: 0, to: 5, href: "/x" },
+    ]);
+    // Removing a type that is not present -> unchanged.
+    expect(removeBlockTextMark(text, marks, { type: "bold", from: 0, to: 5 })).toEqual([
+      { type: "link", from: 0, to: 5, href: "/x" },
+    ]);
+  });
+
+  test("text mark compatibility helper and mark count stay bounded", () => {
+    expect(
+      normalizeBlockTextColorMarks("Hello", [
+        { type: "color", from: 0, to: 2, color: "#ef4444" },
+        { type: "bold", from: 0, to: 2 },
+      ])
+    ).toEqual([
+      { type: "bold", from: 0, to: 2 },
+      { type: "color", from: 0, to: 2, color: "#ef4444" },
+    ]);
+
+    const marks = normalizeBlockTextColorMarks(
+      "abcdefghijklmnopqrstuvwxyz",
+      Array.from({ length: PAGE_TEXT_MARK_MAX + 4 }, (_, index) => ({
+        type: "color",
+        from: index,
+        to: index + 1,
+        color: "#ef4444",
+      }))
+    );
+
+    expect(marks).toHaveLength(PAGE_TEXT_MARK_MAX);
+  });
+
   test(
     "JSON schema accepts typography tokens plus nulls and rejects unknown tokens",
     { timeout: AJV_COMPILE_TEST_TIMEOUT_MS },
@@ -535,10 +752,22 @@ describe("PageDocumentV2", () => {
       const valid = buildDocument();
       valid.sections[0]!.blocks[0]!.style = {
         fontFamily: "sans",
-        fontSize: "lg",
+        fontSize: "2xs",
         fontWeight: "semibold",
         lineHeight: 1.4,
         letterSpacing: 0.5,
+      };
+      valid.sections[0]!.blocks[0]!.props = {
+        text: "Schema marked",
+        level: "h2",
+        align: "left",
+        marks: [
+          { type: "color", from: 0, to: 6, color: "var(--color-primary)" },
+          { type: "highlight", from: 0, to: 6, color: "#fef3c7" },
+          { type: "bold", from: 0, to: 6 },
+          { type: "italic", from: 1, to: 5 },
+          { type: "link", from: 0, to: 6, href: "/safe" },
+        ],
       };
       expect(validate(valid)).toBe(true);
 
@@ -630,6 +859,20 @@ describe("PageDocumentV2", () => {
         id: "blk_group",
         props: { direction: "row", wrap: true, gap: -5 },
       }),
+      createPageBlockV2("badge", {
+        id: "blk_badge",
+        props: {
+          text: "  New  ",
+          variant: "solid",
+          size: "2xs",
+          shape: "rounded",
+          weight: "bold",
+          background: "#ef4444",
+          textColor: "#ffffff",
+          icon: "check",
+          iconPosition: "end",
+        },
+      }),
     ];
 
     const normalized = normalizePageDocumentV2ForWrite(document);
@@ -650,6 +893,63 @@ describe("PageDocumentV2", () => {
       direction: "row",
       wrap: true,
       gap: 0,
+    });
+    expect(normalized.sections[0]?.blocks[6]?.props).toEqual({
+      text: "New",
+      variant: "solid",
+      size: "2xs",
+      shape: "rounded",
+      weight: "bold",
+      background: "#ef4444",
+      textColor: "#ffffff",
+      icon: "check",
+      iconPosition: "end",
+    });
+  });
+
+  test("badge block defaults and fail-closed props are native Page V2 props", () => {
+    expect(pageBlockDefaultProps.badge).toEqual({
+      text: "Badge",
+      variant: "soft",
+      size: "sm",
+      shape: "pill",
+      weight: "semibold",
+      background: null,
+      textColor: null,
+      icon: null,
+      iconPosition: "start",
+    });
+    expect(createPageBlockV2("badge").props).toEqual(pageBlockDefaultProps.badge);
+
+    const document = buildDocument();
+    document.sections[0]!.blocks = [
+      {
+        id: "blk_badge_unsafe",
+        type: "badge",
+        props: {
+          text: "Unsafe",
+          variant: "soft",
+          size: "sm",
+          shape: "pill",
+          weight: "semibold",
+          background: "url(javascript:alert(1))",
+          textColor: "#ffffff",
+          icon: "not-in-allowlist",
+          iconPosition: "start",
+        },
+        visibility: { visible: true },
+      },
+    ];
+
+    expect(() => normalizePageDocumentV2ForWrite(document)).toThrow(
+      "Invalid sections.0.blocks.0.props.background."
+    );
+
+    const storedRead = normalizeStoredPageDocumentV2ForRead(document);
+    expect(storedRead.sections[0]?.blocks[0]?.props).toMatchObject({
+      background: null,
+      textColor: "#ffffff",
+      icon: null,
     });
   });
 

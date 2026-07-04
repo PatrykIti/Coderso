@@ -129,6 +129,7 @@ import {
   mapMenuNodesToNavigationItems,
 } from "../services/navigation/navigationMenuMapping";
 import type { MenuWithItems } from "../services/menus/menuService";
+import { resolvePublishedMenuDocument } from "../services/menus/menuDocumentV2";
 import { resolvePublishedMenuNavExtras } from "../services/menus/menuNavExtras";
 import { resolvePublishedMenuAppearance } from "../services/menus/normalizeMenuAppearance";
 import {
@@ -835,6 +836,14 @@ const resolveSiteShellRenderProps = async (): Promise<SiteShellRenderProps> => {
       navigationExtras: shell.navigation
         ? resolvePublishedMenuNavExtras(shell.navigation.menu.settings)
         : null,
+      // Published menu design document (TASK-499-04); present ⇒ the front renders
+      // the custom menu, null/absent/empty ⇒ default SiteHeaderNav. Read from the
+      // RAW MenuWithItems (`shell.navigation`), which is truthy whenever a
+      // published menu exists (even a ZERO-ITEM menu) — distinct from the MAPPED
+      // navigation below, which is null at zero items. Fail-closed to null.
+      navigationDocument: shell.navigation
+        ? resolvePublishedMenuDocument(shell.navigation.menu.settings)
+        : null,
       footerDocument: shell.footerDocument,
     };
   } catch (error) {
@@ -843,6 +852,7 @@ const resolveSiteShellRenderProps = async (): Promise<SiteShellRenderProps> => {
       navigation: null,
       navigationAppearance: null,
       navigationExtras: null,
+      navigationDocument: null,
       footerDocument: null,
     };
   }
@@ -855,6 +865,13 @@ const renderPublicPageHtmlInternal = async (
     previewDevice?: DeviceTarget;
     themeName?: string;
     runtimeSearchParams?: URLSearchParams;
+    /**
+     * TASK-504-03: normalized request path (`normalizeSitePath(url.pathname)`),
+     * passed ONLY on the public PAGE render callers so the menu-document header
+     * can stamp `aria-current="page"`. Absent on preview/page-template renders ⇒
+     * `activePath` null ⇒ no stamp.
+     */
+    requestPath?: string | null;
   }
 ): Promise<PublicHtmlRenderResult> => {
   const { inlineCss, cssHref, devModuleScripts } = await resolvePublicStyles();
@@ -960,6 +977,7 @@ const renderPublicPageHtmlInternal = async (
       responsiveCss,
       siteShell,
       siteName,
+      activePath: options?.requestPath ?? null,
       renderBodyScripts,
     }),
     cacheable: preparedRuntime.cacheable,
@@ -1664,6 +1682,7 @@ export async function handlePublicRequest(req: Request) {
       const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
         themeName,
         runtimeSearchParams: url.searchParams,
+        requestPath: slugPath,
       });
       const homepageTtlSeconds = resolveRenderCacheTtl(result);
       if (shouldUseCache && homepageTtlSeconds > 0) {
@@ -1712,6 +1731,7 @@ export async function handlePublicRequest(req: Request) {
   const result = await renderPublicPageHtmlInternal(page as PublicPageData, {
     themeName,
     runtimeSearchParams: url.searchParams,
+    requestPath: slugPath,
   });
   const pageTtlSeconds = resolveRenderCacheTtl(result);
   if (shouldUseCache && pageTtlSeconds > 0) {

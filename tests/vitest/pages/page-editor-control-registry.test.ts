@@ -22,7 +22,14 @@ import {
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   isPageTypographyCapableBlockType,
   pageBackgroundTypes,
+  pageBadgeIconPositions,
+  pageBadgeIcons,
+  pageBadgeShapes,
+  pageBadgeSizes,
+  pageBadgeVariants,
+  pageBadgeWeights,
   pageBlockCapabilities,
+  pageBlockBorderStyles,
   pageBlockDefaultProps,
   pageBlockPropKeys,
   pageBlockTypes,
@@ -85,10 +92,13 @@ const validBlockPaths = new Set([
   "style.textColor",
   "style.background",
   "style.backgroundType",
+  "style.backgroundImage",
   "style.opacity",
   "style.radius",
   "style.shadow",
   "style.borderColor",
+  "style.borderWidth",
+  "style.borderStyle",
   "style.padding.top",
   "style.padding.right",
   "style.padding.bottom",
@@ -104,6 +114,13 @@ const pathKey = (path: readonly string[]) => path.join(".");
 
 const ownerOptionSets = new Set<readonly string[]>([
   pageBackgroundTypes,
+  pageBadgeIconPositions,
+  pageBadgeIcons,
+  pageBadgeShapes,
+  pageBadgeSizes,
+  pageBadgeVariants,
+  pageBadgeWeights,
+  pageBlockBorderStyles,
   pageBlockWidths,
   pageButtonSizes,
   pageButtonTargets,
@@ -183,8 +200,14 @@ describe("page editor control registry", () => {
       pageUniversalBlockControls.find((control) => control.id === "block.style.backgroundType")
     ).toMatchObject({ input: "select", options: pageBackgroundTypes });
     expect(
+      pageUniversalBlockControls.find((control) => control.id === "block.style.backgroundImage")
+    ).toMatchObject({ input: "media" });
+    expect(
       pageUniversalBlockControls.find((control) => control.id === "block.style.shadow")
     ).toMatchObject({ input: "select", options: pageShadowTokens });
+    expect(
+      pageUniversalBlockControls.find((control) => control.id === "block.style.borderStyle")
+    ).toMatchObject({ input: "segmented", options: pageBlockBorderStyles });
   });
 
   test("section and block capability coverage is complete", () => {
@@ -283,13 +306,14 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("insertable block catalog is frozen to the audited 17 blocks (TASK-456 form + TASK-457 collection + TASK-459-02 filters promotions)", () => {
+  test("insertable block catalog is frozen to the audited 18 blocks (TASK-471-04 badge addition)", () => {
     const insertableBlocks = pageBlockTypes.filter(
       (type) => pageBlockCapabilities[type].editorInsertable
     );
     expect(insertableBlocks).toEqual([
       "heading",
       "text",
+      "badge",
       "button",
       "image",
       "video",
@@ -620,6 +644,54 @@ describe("page editor control registry", () => {
         }
       }
     }
+
+    expect(pageBlockControlRegistry.badge.map((control) => control.id)).toEqual([
+      "block.badge.props.text",
+      "block.badge.props.variant",
+      "block.badge.props.size",
+      "block.badge.props.shape",
+      "block.badge.props.weight",
+      "block.badge.props.background",
+      "block.badge.props.textColor",
+      "block.badge.props.icon",
+      "block.badge.props.iconPosition",
+    ]);
+    expect(
+      pageBlockControlRegistry.badge.find((control) => control.id.endsWith(".variant"))
+    ).toMatchObject({
+      input: "segmented",
+      options: pageBadgeVariants,
+    });
+    expect(
+      pageBlockControlRegistry.badge.find((control) => control.id.endsWith(".size"))
+    ).toMatchObject({
+      input: "segmented",
+      options: pageBadgeSizes,
+    });
+    expect(
+      pageBlockControlRegistry.badge.find((control) => control.id.endsWith(".shape"))
+    ).toMatchObject({
+      input: "segmented",
+      options: pageBadgeShapes,
+    });
+    expect(
+      pageBlockControlRegistry.badge.find((control) => control.id.endsWith(".weight"))
+    ).toMatchObject({
+      input: "segmented",
+      options: pageBadgeWeights,
+    });
+    expect(
+      pageBlockControlRegistry.badge.find((control) => control.id.endsWith(".icon"))
+    ).toMatchObject({
+      input: "select",
+      options: pageBadgeIcons,
+    });
+    expect(
+      pageBlockControlRegistry.badge.find((control) => control.id.endsWith(".iconPosition"))
+    ).toMatchObject({
+      input: "segmented",
+      options: pageBadgeIconPositions,
+    });
 
     const allControls = [
       ...pageUniversalSectionControls,

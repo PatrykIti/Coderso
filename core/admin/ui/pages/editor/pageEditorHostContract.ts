@@ -29,6 +29,38 @@ export type PageEditorResourceDetail = {
   author?: PageEditorResourceAuthor | null;
 };
 
+export type PageEditorHostLoadOptions = {
+  force?: boolean;
+};
+
+export type PageEditorHostFreshnessMode = "updatedAt" | "forced-clean-replace";
+
+// Stale, same-timestamp, or malformed cached records fail closed for hosts
+// whose detail payload owns an authoritative updatedAt timestamp.
+export const isNewerPageDetailTimestamp = (candidate: string, loaded: string): boolean => {
+  const candidateMs = Date.parse(candidate);
+  const loadedMs = Date.parse(loaded);
+  if (Number.isNaN(candidateMs) || Number.isNaN(loadedMs)) return false;
+  return candidateMs > loadedMs;
+};
+
+export const shouldApplyFreshPageEditorDetail = ({
+  current,
+  fresh,
+  isDirty,
+  mode,
+}: {
+  current: PageEditorResourceDetail | null;
+  fresh: PageEditorResourceDetail;
+  isDirty: boolean;
+  mode: PageEditorHostFreshnessMode;
+}) => {
+  if (isDirty) return false;
+  if (!current) return true;
+  if (mode === "forced-clean-replace") return true;
+  return isNewerPageDetailTimestamp(fresh.updatedAt, current.updatedAt);
+};
+
 export type PageEditorPreviewProbeFailureReason =
   | "unreachable"
   | "http_error"
@@ -143,7 +175,7 @@ export type PageEditorHostCanvasChromeProps = {
  * issuance, the settings sheet, and assistant surface advertisement.
  */
 export type PageEditorHost = {
-  mode: "page" | "page-template" | "menu";
+  mode: "page" | "page-template";
   resourceLabel: string;
   settingsLabel: string;
   previewTitle: string;
@@ -152,7 +184,11 @@ export type PageEditorHost = {
   assistantSurface: boolean;
   detailCacheKey: (id: string) => string;
   getCachedDetail: (id: string) => PageEditorResourceDetail | null;
-  loadDetail: (id: string) => Promise<PageEditorResourceDetail | null>;
+  freshnessMode?: PageEditorHostFreshnessMode;
+  loadDetail: (
+    id: string,
+    options?: PageEditorHostLoadOptions
+  ) => Promise<PageEditorResourceDetail | null>;
   saveDocument: (id: string, document: PageDocumentV2) => Promise<PageEditorResourceDetail>;
   autosaveDocument?: (id: string, document: PageDocumentV2) => Promise<unknown>;
   publish?: (

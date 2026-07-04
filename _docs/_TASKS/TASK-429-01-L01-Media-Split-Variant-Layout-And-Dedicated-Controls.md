@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Large
 **Dependencies:** TASK-429-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -28,9 +29,9 @@ media-split-specific registry entries.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -40,12 +41,10 @@ media-split-specific registry entries.
 // NOT section.layout.variant, and resolves through the shared resolver.
 const template = resolvePageSectionTemplate(section); // core/services/pages/pageSectionTemplates.ts
 
-// Existing behavior in core/services/pages/pageRendererV2.tsx — do NOT
-// re-implement: pageSectionTemplateColumns gives non-default media-split
-// variants 2 columns (md:grid-cols-2 via pageSectionGridClass);
-// pageSectionTemplateClass adds items-center for "horizontal" plus the
-// per-variant marker class on the inner content div (contentClassName);
-// the outer <section> keeps the static sectionClassName.
+// Existing behavior — do NOT re-implement: resolvePageSectionTemplateColumns
+// gives non-default media-split variants 2 columns (md:grid-cols-2 via
+// pageSectionGridClass). Add the missing semantic media/content grouping on
+// the inner content div; the outer <section> keeps the static sectionClassName.
 //
 // New work: extend the media-split handling in pageRendererV2.tsx so the
 // published section renders media beside content — e.g. a media slot with
@@ -122,3 +121,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

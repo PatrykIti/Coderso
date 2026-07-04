@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-424, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -14,9 +15,8 @@
 
 Freeze the CTA remediation contract from `_docs/AUDIT/cta-2026-06-10.md`,
 recording the real no-op mechanism: `full-width` already resolves to inline
-`maxWidth: "none"` via the special-case at
-`core/services/pages/pageRendererV2.tsx:143`, while `pageSectionTemplateClass`
-(`pageRendererV2.tsx:206-207`) collapses all CTA variant classes and
+`maxWidth: "none"` via the `toPageSectionStyle` special-case, while
+`pageSectionTemplateClass` previously collapsed all CTA variant classes and
 `fallbackVariant: "centered"` (`core/services/pages/pageSectionTemplates.ts:92-97`)
 makes `centered` render identically to `default`. Define the target published
 rendering for each of `default`/`centered`/`full-width` — `centered` must show a
@@ -29,7 +29,7 @@ Responsive-tab closure hand-off to `TASK-425`.
 
 ## Sub-Tasks
 
-- [ ] TASK-435-01-L01: CTA variant layout and dedicated controls.
+- [x] TASK-435-01-L01: CTA variant layout and dedicated controls.
 
 ---
 
@@ -46,3 +46,9 @@ Responsive-tab closure hand-off to `TASK-425`.
 
 - `_docs/PAGE_MODEL.md`
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

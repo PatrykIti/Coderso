@@ -5,34 +5,30 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-424, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Remediation family for the Testimonials section based on
-`_docs/AUDIT/testimonials-2026-06-10.md`. Testimonials already switches runtime
-marker classes correctly, but `cards` and `grid` currently resolve to identical
-published geometry — both hit `Math.max(columns, 3)` in
-`pageSectionTemplateColumns` (`core/services/pages/pageRendererV2.tsx:181-188`,
-so `md:grid-cols-3`) and both emit `auto-rows-fr` (`:210`/`:212`), with only the
-unconsumed `page-section-template-testimonials-<variant>` marker (`:199`)
-differing — so the follow-up report flags the variant-to-front mapping. The
-inspector remains entirely native, the audit also flags an empty Responsive tab,
-and the section still needs an explicit closure pass around the
-cards/grid/default contract: `cards` must gain a visibly distinct published
-surface versus `grid`.
+`_docs/AUDIT/testimonials-2026-06-10.md`. Testimonials already had the shared
+three-column floor through `resolvePageSectionTemplateColumns`, but `cards`
+needed a visibly distinct published surface versus `grid`. The completed
+remediation keeps the column contract, wraps testimonial child blocks with card
+surfaces for `cards`, preserves flat grid rendering for `grid`, and closes the
+shared dedicated-control/Responsive-tab findings.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-434-01: Testimonials variant/control contract freeze.
-- [ ] TASK-434-01-L01: Give `cards` a distinct published surface versus `grid`,
+- [x] TASK-434-01: Testimonials variant/control contract freeze.
+- [x] TASK-434-01-L01: Give `cards` a distinct published surface versus `grid`,
       preserve working variant markers/default-column behavior, and adopt the
       shared dedicated controls.
-- [ ] TASK-434-02: Validation, docs, and closure.
+- [x] TASK-434-02: Validation, docs, and closure.
 
 ---
 
@@ -50,3 +46,9 @@ surface versus `grid`.
 
 - `_docs/_TASKS/README.md`
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

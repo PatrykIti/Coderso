@@ -1,5 +1,6 @@
-import { Badge } from "@/components/ui/badge";
 import type { CommerceProductRecord } from "@/services/commerceClient";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
+
 import type { CommerceProductDraft } from "../commerceEditorModel";
 
 type CommerceContextPanelProps = {
@@ -7,12 +8,6 @@ type CommerceContextPanelProps = {
   draft: CommerceProductDraft;
   product: CommerceProductRecord | null;
   hasUnsavedChanges: boolean;
-};
-
-const statusStyles: Record<string, string> = {
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  archived: "bg-amber-500/10 text-amber-600 border-amber-500/20",
 };
 
 const formatDateTime = (value: string | null) => {
@@ -39,7 +34,7 @@ export function CommerceContextPanel({
   return (
     <div className="flex h-full min-h-0 flex-col gap-4 p-4">
       <div>
-        <h2 className="text-sm font-semibold">Product context</h2>
+        <h2 className="font-display text-sm font-semibold">Product context</h2>
         <p className="text-xs text-muted-foreground">
           {isCreateMode
             ? "New product draft. Save to create an ID and runtime slug."
@@ -47,30 +42,21 @@ export function CommerceContextPanel({
         </p>
       </div>
 
-      <div className="space-y-3 rounded-md border bg-muted/30 p-3">
+      <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-3">
         <div className="flex items-center justify-between">
           <span className="text-xs uppercase text-muted-foreground">Status</span>
-          <Badge
-            variant="outline"
-            className={statusStyles[draft.status] ?? statusStyles.draft}
-          >
-            {draft.status}
-          </Badge>
+          <StatusBadge status={draft.status} />
         </div>
         <div className="flex items-center justify-between">
           <span className="text-xs uppercase text-muted-foreground">Changes</span>
-          <span className="text-xs text-foreground">
-            {hasUnsavedChanges ? "Unsaved" : "Saved"}
-          </span>
+          <span className="text-xs text-foreground">{hasUnsavedChanges ? "Unsaved" : "Saved"}</span>
         </div>
       </div>
 
-      <div className="space-y-3 rounded-md border bg-muted/30 p-3 text-xs">
+      <div className="space-y-3 rounded-2xl border border-border bg-muted/30 p-3 text-xs">
         <div className="flex items-center justify-between gap-2">
           <span className="uppercase text-muted-foreground">Product ID</span>
-          <span className="truncate font-mono text-foreground">
-            {product?.id ?? "Not created"}
-          </span>
+          <span className="truncate font-mono text-foreground">{product?.id ?? "Not created"}</span>
         </div>
         <div className="flex items-center justify-between gap-2">
           <span className="uppercase text-muted-foreground">Updated</span>

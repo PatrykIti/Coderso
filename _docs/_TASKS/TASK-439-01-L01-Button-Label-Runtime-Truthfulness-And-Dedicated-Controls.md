@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-439-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -19,36 +20,36 @@ and fix the accent application so the button visibly consumes
 (`_docs/AUDIT/_cross-parity-2026-06-10.md` Public runtime note;
 `_docs/AUDIT/_FOLLOWUP_REPORT_2026-06-10.md` §3.8) observed computed
 slate/transparent at accent `#00ff00` even though the CSS-var wiring exists in
-source (`core/services/pages/pageRendererV2.tsx:126` emission, `:758`
-consumption); root-causing why the variable does not take effect (style
-emission, CSS delivery of the arbitrary-value class, specificity) is part of
-this leaf. TASK-426 (Hero) delegates the accent->button binding fix here and
-only re-verifies the hero-side accent flow after this leaf lands. Inline-edit
-machinery is owned by TASK-422; this leaf only registers/verifies the button
-label target against the TASK-422 contract.
+source. The closed path emits the section accent in
+`core/services/pages/pageRendererV2.tsx:255-268` and consumes it in the button
+branch at `pageRendererV2.tsx:1427-1448`. TASK-426 (Hero) delegates the
+accent->button binding fix here and only re-verifies the hero-side accent flow
+after this leaf lands. Inline-edit machinery is owned by TASK-422; this leaf
+only verifies the existing button label target against the TASK-422 contract.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```tsx
-// Inline label edit: register/verify the button label target in the
+// Inline label edit: verify the existing button label target in the
 // TASK-422-owned inline-edit contract
-// (core/services/pages/pageInlineEditContract.ts — new module, created by TASK-422).
+// (core/services/pages/pageInlineEditContract.ts, owned by TASK-422).
 const buttonControls = getPageEditorControlsForTarget({ kind: "block", type: "button" });
-// core/services/pages/pageEditorControlRegistry.ts:508
+// core/services/pages/pageEditorControlRegistry.ts:870-890; button rows
+// pageEditorControlRegistry.ts:653-673.
 // Editor surface: controls render through RegistryControlField
-// (core/admin/ui/pages/PageEditor.tsx ~2524-2614) using the shared TASK-421 widgets;
+// in PageEditor using the shared TASK-421 widgets;
 // this leaf verifies the button panel renders them, it does not re-implement them.
 // Published front: the `case "button"` branch of renderPageBlockContent
-// (core/services/pages/pageRendererV2.tsx:753-766) must visibly apply
-// var(--coderso-section-accent) emitted by toPageSectionStyle (pageRendererV2.tsx:126).
+// (core/services/pages/pageRendererV2.tsx:1427-1448) visibly applies
+// var(--coderso-section-accent) emitted by toPageSectionStyle.
 ```
 
 Owner files:
@@ -78,12 +79,11 @@ Expected data flow:
 Error handling:
 
 - `target` stays enum-clamped to `pageButtonTargets`
-  (`core/services/pages/pageDocumentV2.ts:1311`) and the renderer keeps
-  `rel="noreferrer"` for `blank` (`pageRendererV2.tsx:761-762`); `href` is
-  currently an unvalidated nullable string rendered raw
-  (`pageRendererV2.tsx:754,760`) — keep schema-owned persistence and do not
-  weaken it. Adding href scheme validation would be a separate scope decision,
-  not assumed existing behavior.
+  (`core/services/pages/pageDocumentV2.ts:2103-2104`) and the renderer keeps
+  `rel="noreferrer"` for `blank` (`pageRendererV2.tsx:1442-1444`). `href` is
+  sanitized with `sanitizeAuthoringLinkHref` and falls back to `"#"`
+  (`pageRendererV2.tsx:1427-1428`) before rendering; keep schema-owned
+  persistence and do not weaken it.
 - Empty required labels fall back to the current valid value.
 
 Regression-test shape:
@@ -111,6 +111,19 @@ Regression-test shape:
 - Button runtime/render coverage as needed.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
+
+## Completion Notes
+
+- Final read-only drift pass flagged that the first implementation still
+  relied on Tailwind arbitrary CSS-var classes and did not satisfy this leaf's
+  computed-style proof requirement.
+- The closure fix moved Button primary/secondary/ghost/link accent surfaces to
+  inline styles (`backgroundColor`, `borderColor`, `color`) that consume
+  `var(--coderso-section-accent,#0d9488)`, so the visible accent no longer
+  depends on generated CSS asset coverage.
+- `playwright-cli` smoke on 2026-06-16 verified the minimal published-style
+  path computes `backgroundColor` to `rgb(0, 255, 0)` when the parent emits
+  `--coderso-section-accent:#00ff00`.
 
 
 

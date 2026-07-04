@@ -1,3 +1,4 @@
+import { CheckCircle2, ListChecks, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -20,6 +21,8 @@ import {
 } from "@/services/formsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
@@ -108,17 +111,16 @@ export function FormActionLogsPage() {
     });
   }, [formId, refresh]);
 
-  const stats = useMemo(() => {
-    return runs.reduce(
-      (acc, run) => {
-        if (run.status === "success") acc.success += 1;
-        if (run.status === "failed") acc.failed += 1;
-        if (run.status === "skipped") acc.skipped += 1;
-        return acc;
-      },
-      { success: 0, failed: 0, skipped: 0 }
-    );
-  }, [runs]);
+  // Stat band — pure render-time derivation from `runs` already in state. The
+  // real FormActionRunStatus enum is success | failed | skipped.
+  const stats = useMemo(
+    () => ({
+      total: runs.length,
+      succeeded: runs.filter((run) => run.status === "success").length,
+      failed: runs.filter((run) => run.status === "failed").length,
+    }),
+    [runs]
+  );
 
   const retryRun = async (runId: string) => {
     setIsRetrying(runId);
@@ -144,7 +146,7 @@ export function FormActionLogsPage() {
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
         <PageHeader
           title="Form action logs"
-          description="Review action execution and retry failed runs."
+          description="Automation runs triggered by this form's submissions."
           actions={
             <div className="flex gap-2">
               <Button
@@ -163,22 +165,13 @@ export function FormActionLogsPage() {
           }
         />
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border bg-card px-4 py-3 text-sm">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Success</p>
-            <p className="text-xl font-semibold text-foreground">{stats.success}</p>
-          </div>
-          <div className="rounded-lg border bg-card px-4 py-3 text-sm">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Failed</p>
-            <p className="text-xl font-semibold text-destructive">{stats.failed}</p>
-          </div>
-          <div className="rounded-lg border bg-card px-4 py-3 text-sm">
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Skipped</p>
-            <p className="text-xl font-semibold text-foreground">{stats.skipped}</p>
-          </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard label="Runs" value={String(stats.total)} icon={<ListChecks />} />
+          <StatCard label="Succeeded" value={String(stats.succeeded)} icon={<CheckCircle2 />} />
+          <StatCard label="Failed" value={String(stats.failed)} icon={<XCircle />} />
         </div>
 
-        <div className="flex items-center justify-between gap-3 rounded-lg border bg-card px-4 py-3">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border bg-card px-4 py-3 shadow-soft">
           <div>
             <p className="text-sm font-medium text-foreground">Filter status</p>
             <p className="text-xs text-muted-foreground">Narrow down runs by execution status.</p>
@@ -209,7 +202,7 @@ export function FormActionLogsPage() {
           </Alert>
         ) : null}
 
-        <div className="overflow-hidden rounded-xl border bg-card">
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-card">
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
@@ -243,17 +236,7 @@ export function FormActionLogsPage() {
                       <p className="text-xs text-muted-foreground">{run.actionType}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          run.status === "success"
-                            ? "bg-emerald-100 text-emerald-800"
-                            : run.status === "failed"
-                              ? "bg-rose-100 text-rose-800"
-                              : "bg-slate-100 text-slate-700"
-                        }`}
-                      >
-                        {run.status}
-                      </span>
+                      <StatusBadge status={run.status} />
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{run.attempt}</td>
                     <td className="px-4 py-3 text-muted-foreground">

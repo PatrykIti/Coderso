@@ -6,7 +6,8 @@
 **Category:** Documentation + QA + Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-336-01, TASK-336-02, TASK-336-03, TASK-336-04, TASK-336-05, TASK-336-06, TASK-336-07, TASK-336-08, TASK-336-09, TASK-336-10, TASK-336-11, TASK-336-12, TASK-336-13, TASK-336-14, TASK-336-15, TASK-336-16, TASK-336-18
-**Status:** To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-18
 
 ---
 
@@ -20,26 +21,61 @@ This is not an implementation catch-all. If any widget still has unresolved
 ownership, CSS, fixture, or one-time Wizard issues, create or reopen the
 specific implementation task before closing this leaf.
 
+## Completion Notes
+
+Completed 2026-06-18 as a docs/board closure correction.
+
+The original page-builder-specific 38-widget closure wording is now historical
+because `TASK-417` moved Pages to section/block documents. The family is still
+closed as `Done`, not `Superseded`, because widget editor contracts remain live
+for retained non-Page widget surfaces until their dedicated migration/removal
+tasks land.
+
+Closure evidence is inherited from the completed physical leaves:
+
+- `TASK-336-16` closed the one-time Wizard lifecycle and daily-work tabs.
+- `TASK-336-18` gave all remaining in-scope widgets strict v2 contracts and
+  routed drift to `TASK-336-19`.
+- `TASK-336-19` closed the final strict widget-contract smoke with
+  `adminFailures=0`, `publicFailures=0`, `fixtureGaps=0`, and
+  `metadataGaps=0`.
+
+Fresh read-only closure audit on 2026-06-18 confirmed that Pages v2 no longer
+depends on legacy widget blocks, but widget systems remain active for Custom
+Screens, detail/template compatibility, the direct Widget Library route, and
+runtime/catalog compatibility. Future removal of active legacy widget surfaces
+is owned by `TASK-468-07-L02`.
+
+## Validation Notes
+
+Current closure correction validation:
+
+- `git diff --check`
+
+Implementation and browser smoke evidence remains the already-recorded
+`TASK-336-19` final strict widget-contract smoke; this docs-only correction did
+not rerun the historical 38-widget Playwright suite.
+
 ## Sub-Tasks
 
-- [ ] Switch 38-widget editor contract validation from soft migration posture
+- [x] Switch 38-widget editor contract validation from soft migration posture
   to strict test coverage.
-- [ ] Run the full 38-widget Playwright CLI admin smoke.
-- [ ] Run the frontend CSS/overflow smoke for all available fixture pages.
-- [ ] Confirm every widget has a documented mode ownership contract.
-- [ ] Confirm TASK-336-18 covered every remaining page-builder widget not owned
+- [x] Run the full 38-widget Playwright CLI admin smoke.
+- [x] Run the frontend CSS/overflow smoke for all available fixture pages.
+- [x] Confirm every widget has a documented mode ownership contract.
+- [x] Confirm TASK-336-18 covered every remaining page-builder widget not owned
   by earlier implementation leaves.
-- [ ] Confirm every temporary duplicate writable allowlist entry is removed or
+- [x] Confirm every temporary duplicate writable allowlist entry is removed or
   has a new follow-up task.
-- [ ] Update `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md`
+- [x] Update `_docs/PLAYWRIGHT/REPORT_WIDGET_CONTRACT_REAUDIT_2026_05_23.md`
   with final closure state or create a final replacement report.
-- [ ] Update `_docs/WIDGETS.md` and affected `_docs/_WIDGETS/*` files.
-- [ ] Update `_docs/_TASKS/README.md` board rows and statistics.
-- [ ] Add changelog entry in `_docs/_CHANGELOG/` and update changelog index.
-- [ ] Confirm each completed physical leaf has changelog/index coverage unless
+- [x] Update `_docs/WIDGETS.md` and affected `_docs/_WIDGETS/*` files.
+- [x] Update `_docs/_TASKS/README.md` board rows and statistics.
+- [x] Add changelog entry in `_docs/_CHANGELOG/` and update changelog index.
+- [x] Confirm each completed physical leaf has changelog/index coverage unless
   an approved family-level changelog policy is recorded.
-- [ ] Record Claude consultation summary used during the family.
-- [ ] Run final validation commands and record exact results.
+- [x] Record Claude consultation summary used during the family.
+- [x] Run final validation commands and record exact results.
 
 ## Files to Change
 

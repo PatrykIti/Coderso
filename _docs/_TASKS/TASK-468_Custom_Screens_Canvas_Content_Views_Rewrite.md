@@ -5,7 +5,9 @@
 **Category:** Admin UI / Custom Screens / Content Modeling / Architecture
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-464, TASK-467
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-20
+**Completed:** 2026-06-22
 
 ---
 
@@ -33,48 +35,99 @@ Target state:
 
 - `custom_screens.definition` is the source of truth.
 - `schemaVersion: 4` owns `ScreenDocumentV1`.
+- `custom_screens.content_type_id` remains the canonical content type link;
+  V4 definitions must not persist a duplicate `contentTypeId`/`dataContext`
+  mirror inside `definition`.
 - `ScreenDocumentV1.sections[]`, `ScreenSectionV1`, and `ScreenBlockV1` are screen-specific data
   structures, not Page v2 objects.
 - Screen blocks bind to custom content fields through explicit
   `ScreenBlockBinding` records.
-- List, record preview, and entry editing views render through a screen runtime,
-  not through the generic widget runtime.
+- Existing tabular record lists remain the active list UX for this family.
+  Card/compact list presentation modes are out of scope unless a later task
+  reopens them.
+- Record preview and entry editing views render through a screen runtime, not
+  through the generic widget runtime.
+- Entry detail mode is field-editing only: no section/block add, move,
+  duplicate, delete, or widget editing controls may appear in the entry canvas.
 - The old `custom-screen-builder` widget surface is fully removed after
   migration and validation.
 
+## 2026-06-20 Drift Reconciliation
+
+- Roadmap drift corrected: TASK-468 is not greenfield. V3 Custom Screens already
+  exist across schemas, services, routes, admin UI, widget bridges, assistant
+  previews, and tests.
+- User scope clarified: the records list stays table-only and unchanged; the V4
+  work targets the screen detail builder and entry-detail field editing canvas.
+- Persistence clarified: builder canvas changes mutate the screen definition;
+  entry-detail floating panel changes mutate the selected entry fields through
+  the existing entry payload path.
+- First implementation slice landed V4 definition normalization, V1/V2/V3 read
+  migration to V4, compatibility `blocks`/`bindings` projections, V4-aware
+  service/client capabilities, and entry canvas removal of widget edit buttons.
+
+## 2026-06-21 Active Surface Cutover
+
+- Custom Screen Editor View now uses native `ScreenDocumentV1` blocks through a
+  screen block library, screen runtime canvas, and screen block inspector.
+  Active authoring no longer imports Page builder `WidgetPicker`, `BlockList`,
+  `BlockSettings`, `FieldBindingPanel`, page block utils, or widget registry
+  contracts.
+- Record preview and entry-detail editing render through `ScreenRuntimeRenderer`
+  from V4 documents and `ScreenFieldBinding` records. Writable bindings map to
+  the existing content entry field controls and save payloads; entry detail mode
+  remains field-only with no section/block builder controls.
+- The records list remains the existing table workflow. Legacy migrated widgets
+  render as non-writable placeholders until TASK-468-07-L02 removes the retained
+  compatibility surface.
+
+## 2026-06-21 Corrective Neutral Authoring Repair
+
+- A follow-up audit found TASK-468-04 and TASK-468-05 were closed before
+  TASK-468-03 existed in source. The corrective pass added the missing neutral
+  authoring shell and rewired Custom Screen Editor View plus record entry detail
+  to consume it through screen-specific adapters.
+- `ScreenDocumentV1.sections[]` now contains `ScreenSectionV1` objects with
+  nested `blocks[]`. Existing flat block-array V4 documents are repaired on
+  read into the default section and strict writes save the sectioned shape.
+- Persistent per-record presentation overrides are explicitly deferred to
+  TASK-473 because `content_entries.data` is content-type validated and must not
+  carry hidden style/image override fields.
+
 ## Sub-Tasks
 
-- [ ] TASK-468-01: Contract freeze, drift audit, and migration decision record.
+- [x] TASK-468-01: Contract freeze, drift audit, and migration decision record.
   - [ ] TASK-468-01-L01: Current State Inventory And Drift Freeze.
   - [ ] TASK-468-01-L02: V4 Contract Decision Record And Validation Plan.
-- [ ] TASK-468-02: Screen document V4 service contract and migration adapters.
+- [x] TASK-468-02: Screen document V4 service contract and migration adapters.
   - [ ] TASK-468-02-L01: Screen Document Domain Owner.
   - [ ] TASK-468-02-L02: Legacy V1-V3 Read Migration Adapters.
   - [ ] TASK-468-02-L03: V4 Service Mapping And Route Validation.
   - [ ] TASK-468-02-L04: V4 Write Transition And Compatibility Guards.
-- [ ] TASK-468-03: Neutral authoring shell extraction for screen canvas reuse.
-  - [ ] TASK-468-03-L01: Authoring Inventory And Boundary Guards.
-  - [ ] TASK-468-03-L02: Neutral Canvas Frame And Selection Primitives.
-  - [ ] TASK-468-03-L03: Neutral Toolbar Layers And Command Shell.
-  - [ ] TASK-468-03-L04: Page Adapter Parity Validation.
-- [ ] TASK-468-04: Custom Screen canvas editor cutover.
-  - [ ] TASK-468-04-L01: V4 Editor Client And Local Model.
-  - [ ] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
-  - [ ] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
-  - [ ] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
-  - [ ] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
-- [ ] TASK-468-05: Screen runtime, records list, and entry editing cutover.
-  - [ ] TASK-468-05-L01: Screen Runtime Renderer.
-  - [ ] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
-  - [ ] TASK-468-05-L03: Records List Presentation Modes.
-  - [ ] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
-  - [ ] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
-- [ ] TASK-468-06: Assistant active-surface and cache cutover.
+- [x] TASK-468-03: Neutral authoring shell extraction for screen canvas reuse.
+  - [x] TASK-468-03-L01: Authoring Inventory And Boundary Guards.
+  - [x] TASK-468-03-L02: Neutral Canvas Frame And Selection Primitives.
+  - [x] TASK-468-03-L03: Neutral Toolbar Layers And Command Shell.
+  - [x] TASK-468-03-L04: Page Adapter Parity Validation.
+- [x] TASK-468-04: Custom Screen canvas editor cutover.
+  - [x] TASK-468-04-L01: V4 Editor Client And Local Model.
+  - [x] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
+  - [x] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
+  - [x] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
+  - [x] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
+- [x] TASK-468-05: Screen runtime, records list, and entry editing cutover.
+  - [x] TASK-468-05-L01: Screen Runtime Renderer.
+  - [x] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
+  - [x] TASK-468-05-L03: Records List Presentation Modes. Superseded by
+    table-only scope correction.
+  - [x] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
+  - [x] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
+- [x] TASK-468-06: Assistant active-surface and cache cutover.
   - [ ] TASK-468-06-L01: Assistant V4 Action Schemas Registry And Mapper.
   - [ ] TASK-468-06-L02: V4 Active Surface Context Hydration.
   - [ ] TASK-468-06-L03: Assistant Executor Policy Dry Run And Undo.
   - [ ] TASK-468-06-L04: Assistant Client Cache And Regression Coverage.
-- [ ] TASK-468-07: Legacy removal, DB cleanup, docs, and closure validation.
+- [x] TASK-468-07: Legacy removal, DB cleanup, docs, and closure validation.
   - [ ] TASK-468-07-L01: V4 Backfill Verification Migration.
   - [ ] TASK-468-07-L02: Legacy Widget Surface And Bridge Removal.
   - [ ] TASK-468-07-L03: Drop Legacy Blocks Bindings Columns.
@@ -175,8 +228,8 @@ Forbidden closure criteria:
    `ScreenDocumentV1`.
 2. Screens expose a flexible section/block canvas for custom content data without
    accepting Page v2 `sections[]`.
-3. Screen editor, record list, and entry editing no longer depend on arbitrary
-   widget runtime rendering.
+3. Screen editor and entry editing no longer depend on arbitrary widget runtime
+   rendering; the record list keeps the existing table UX.
 4. Existing V1/V2/V3 screen rows migrate deterministically or render safe
    placeholders for unsupported legacy widgets until final cleanup.
 5. Legacy `custom-screen-builder` widgets, active fallback paths, and duplicated
@@ -184,3 +237,21 @@ Forbidden closure criteria:
    the closure task.
 6. Assistant actions and active-surface summaries use screen sections, blocks,
    bindings, and writable field names instead of widget-block patch semantics.
+
+## V4 Completion Evidence - 2026-06-22
+
+- The TASK-468 family is closed with all physical descendants terminal and the
+  task-board/changelog indexes synchronized.
+- Custom Screen writes now accept only V4 `definition` payloads, while legacy
+  V1/V2/V3 rows remain migratable on read and through the V4 backfill.
+- Migrations `0061_custom_screen_v4_backfill.sql` and
+  `0062_drop_custom_screen_legacy_columns.sql` backfill V4 definitions, switch
+  the default schema version to 4, and remove legacy `blocks` / `bindings`
+  storage.
+- Assistant, blueprint, active-surface, undo, operation-policy, and cache
+  contracts now use V4 section/block/binding/list-view actions. The retired
+  `custom-screen.widget.patch` action remains covered only as a rejected legacy
+  input.
+- Final validation evidence is recorded in
+  `TASK-468-07-L04-Docs-Changelog-Board-And-Final-Validation.md` and changelog
+  entry `1189-2026-06-22-task-468-v4-custom-screen-completion.md`.

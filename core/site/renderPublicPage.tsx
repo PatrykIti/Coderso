@@ -62,6 +62,12 @@ export type PublicPageV2RuntimeRenderOptions = Omit<
   siteShell?: SiteShellRenderProps | null;
   siteName?: string | null;
   /**
+   * TASK-504-03: current request path threaded from `publicSite.tsx` (front page
+   * renders only; `null`/absent in preview) so the menu-document header can stamp
+   * `aria-current="page"` on the active nav link. Forwarded to `templateProps`.
+   */
+  activePath?: string | null;
+  /**
    * V2 body-script emission seam (TASK-459-02): the registry-rendered runtime
    * scripts appended before `</body>`, exactly like the legacy WidgetBlock
    * path. `publicSite.tsx` provides it only when the prepared runtime
@@ -347,6 +353,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     responsiveCss,
     siteShell,
     siteName,
+    activePath,
     renderBodyScripts,
   } = options;
 
@@ -366,15 +373,29 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     runtimeDataByBlockId,
     siteShell,
     siteName,
+    activePath: activePath ?? null,
   };
 
   // The shell ships no client JS; its CSS rides the inline style block only
   // when a shell part actually renders. The stylesheet is built from the
   // published menu's appearance; a null/legacy appearance reproduces the
   // pre-appearance stylesheet byte-identically (TASK-458-02).
-  const hasSiteShell = Boolean(siteShell?.navigation || siteShell?.footerDocument);
+  // A document menu (TASK-499-04) reuses the base `.site-header*` layout sheet,
+  // so a ZERO-ITEM document menu (mapped `navigation === null`) must STILL emit
+  // it — gate on `navigationDocument` too. When a document is active the base
+  // layout is emitted with a NULL appearance so residual legacy appearance props
+  // (e.g. sticky on a migrated menu) never bleed under the custom menu; the
+  // document's own appearance rides its scoped `menuDocumentCss` sheet instead.
+  const hasSiteShell = Boolean(
+    siteShell?.navigation || siteShell?.navigationDocument || siteShell?.footerDocument
+  );
   const inlineCssWithShell = hasSiteShell
-    ? [inlineCss, buildSiteShellCss(siteShell?.navigationAppearance ?? null)]
+    ? [
+        inlineCss,
+        buildSiteShellCss(
+          siteShell?.navigationDocument ? null : (siteShell?.navigationAppearance ?? null)
+        ),
+      ]
         .filter(Boolean)
         .join("\n")
     : inlineCss;

@@ -6,11 +6,14 @@ import {
   createPageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
 import {
+  composeAuthoringGradientCss,
   escapeAuthoringCssString,
+  normalizeAuthoringSafeHref,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
+  sanitizeAuthoringRichTextHtml,
 } from "../../../core/services/pages/pageAuthoringSanitizers";
 
 test("authoring URL sanitizers keep current safe hrefs and reject scriptable protocols", () => {
@@ -41,8 +44,23 @@ test("authoring URL sanitizers keep current safe hrefs and reject scriptable pro
   expect(sanitizeAuthoringMediaUrl("#inline-fragment")).toBeNull();
 });
 
+test("Page authoring safe href helper is neutral and option scoped", () => {
+  expect(normalizeAuthoringSafeHref("/pricing", { allowRelative: true })).toBe("/pricing");
+  expect(normalizeAuthoringSafeHref("#hero", { allowHash: true })).toBe("#hero");
+  expect(normalizeAuthoringSafeHref("https://example.com", { allowHttp: true })).toBe(
+    "https://example.com"
+  );
+  expect(normalizeAuthoringSafeHref("/pricing")).toBeUndefined();
+  expect(normalizeAuthoringSafeHref("#hero")).toBeUndefined();
+  expect(normalizeAuthoringSafeHref("https://example.com")).toBeUndefined();
+  expect(normalizeAuthoringSafeHref("//evil.example", { allowHttp: true })).toBeUndefined();
+  expect(normalizeAuthoringSafeHref("javascript:alert(1)", { allowHttp: true })).toBeUndefined();
+});
+
 test("authoring CSS sanitizers keep safe color and gradient values fail closed", () => {
   expect(sanitizeAuthoringCssColor("#0d9488")).toBe("#0d9488");
+  expect(sanitizeAuthoringCssColor("var(--color-primary)")).toBe("var(--color-primary)");
+  expect(sanitizeAuthoringCssColor("var(--color-danger)")).toBeNull();
   expect(sanitizeAuthoringCssColor("rgba(13, 148, 136, 0.35)")).toBe("rgba(13, 148, 136, 0.35)");
   expect(sanitizeAuthoringCssBackground("linear-gradient(90deg, #000, #fff)")).toBe(
     "linear-gradient(90deg, #000, #fff)"
@@ -53,12 +71,59 @@ test("authoring CSS sanitizers keep safe color and gradient values fail closed",
   expect(sanitizeAuthoringCssBackground("linear-gradient(90deg, #000, </style>)")).toBeNull();
 });
 
+test("gradient composer orders stops, clamps values, and rejects unsafe colors", () => {
+  expect(
+    composeAuthoringGradientCss({
+      kind: "linear",
+      angle: 999,
+      stops: [
+        { color: "var(--color-accent)", position: 100 },
+        { color: "#0f172a", position: -10 },
+        { color: "url(javascript:alert(1))", position: 50 },
+      ],
+    })
+  ).toBe("linear-gradient(360deg, #0f172a 0%, var(--color-accent) 100%)");
+
+  expect(
+    composeAuthoringGradientCss({
+      kind: "radial",
+      angle: 45,
+      stops: [
+        { color: "#fff", position: 25 },
+        { color: "var(--color-surface)", position: 75 },
+      ],
+    })
+  ).toBe("radial-gradient(#fff 25%, var(--color-surface) 75%)");
+
+  expect(
+    composeAuthoringGradientCss({
+      kind: "linear",
+      angle: 45,
+      stops: [{ color: "url(javascript:alert(1))", position: 0 }],
+    })
+  ).toBeNull();
+});
+
 test("authoring CSS string escaping prevents style element breakout", () => {
   const escaped = escapeAuthoringCssString('"></style><script>alert(1)</script>');
   expect(escaped).toContain('\\"');
   expect(escaped).toContain("\\3c /style\\3e ");
   expect(escaped).not.toContain("</style>");
   expect(escaped).not.toContain("<script>");
+});
+
+test("authoring rich text sanitizer keeps safe inline markup and rejects active content", () => {
+  const sanitized = sanitizeAuthoringRichTextHtml(
+    '<p>Hello <strong>rich</strong> <a href="/safe" onclick="alert(1)">safe</a><script>alert(1)</script><a href="javascript:alert(1)">bad</a></p>'
+  );
+
+  expect(sanitized).toContain("<strong>rich</strong>");
+  expect(sanitized).toContain('<a href="/safe" rel="nofollow noreferrer">safe</a>');
+  expect(sanitized).toContain("bad");
+  expect(sanitized).not.toContain("onclick");
+  expect(sanitized).not.toContain("<script");
+  expect(sanitized).not.toContain("alert(1)");
+  expect(sanitized).not.toContain("javascript:");
 });
 
 test("Page v2 normalizers sanitize URL and style fields before persistence", () => {

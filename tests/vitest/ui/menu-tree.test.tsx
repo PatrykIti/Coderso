@@ -121,7 +121,10 @@ test("MenuTree renders nested hierarchy hints for child items", () => {
 
   try {
     expect(view.container.querySelector('[data-menu-depth="1"]')).not.toBeNull();
-    expect(view.container.textContent).toContain("Sub-item of Home");
+    // TASK-499-01: the "Sub-item of X" text hint is dropped; nesting is now
+    // conveyed by depth indent + the CornerDownRight affordance (asserted via
+    // data-menu-nested-indent in menu-item-row.test.tsx).
+    expect(view.container.querySelector("[data-menu-nested-indent]")).not.toBeNull();
   } finally {
     view.cleanup();
   }

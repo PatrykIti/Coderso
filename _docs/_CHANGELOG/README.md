@@ -14,7 +14,7 @@ Project Change Log.
 - Changelog numbers 1034-1090 are consumed by the 31-05 Admin Tools,
   Admin UI, TASK-361 through TASK-398 widget remediation waves, and the
   2026-06-03 assistant policy coverage fix.
-Ordinary new entries continue at 1174.
+Ordinary new entries continue at 1195.
 
 ## Entry format (minimum)
 - Title line with No. and short title.
@@ -29,10 +29,51 @@ Ordinary new entries continue at 1174.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1174 for the next changelog entry.
+assistant policy coverage fix. Use 1219 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1218 | 2026-07-04 | TASK-509 Security Strict Pass & Settings Test Isolation — scan:security:strict GREEN (nodemailer 9 bump + ws/undici/vite/sigstore overrides + full GitHub Actions SHA pinning) + self-scoped settingsService nullable-id fixture | Security/Dependencies/CI/GitHub Actions/Testing/QA/Docs/Task Board |
+| 1217 | 2026-07-03 | TASK-508 Menu Nesting Forms & Flyout Fix — container default hints (180/6), per-level linkAlign centering, perceptible visibility+opacity+transform flyout, unified submenuDirection (right/down/up/left) & accordion submenuMode | Admin UI/Content (Menus)/Navigation/Page Builder/Site Front/Responsive/QA/Docs/Task Board |
+| 1216 | 2026-07-03 | TASK-507 Menu Indicator Scope & Hint Alignment — top-bar-only B2 chrome scope, dual-axis rest reset, ControlDefaultHint value===undefined guard (2 TASK-506 LOW residuals) | Site Front/Admin UI/Content (Menus)/Navigation/Responsive/QA/Docs/Task Board |
+| 1215 | 2026-07-03 | TASK-506 Menu Modern Styling — base reset, visible defaults & 5 modern bundles (separators, indicator, caret/flyout, pill, nested placement) | Admin UI/Content (Menus)/Navigation/Page Builder/Site Front/Responsive/QA/Docs/Task Board |
+| 1214 | 2026-07-03 | TASK-505 Screens Section Columns & Binding Integrity — section style channel, auto-flow grid, binding-GC recovery | Admin UI/Custom Screens/Screen Builder/Schema/Binding Integrity/QA/Docs/Task Board |
+| 1213 | 2026-07-03 | TASK-504 Menu Styling Depth — brand style, per-nesting-level styling & cheap wins | Admin UI/Content (Menus)/Navigation/Site Front/Responsive/QA/Docs/Task Board |
+| 1212 | 2026-07-02 | TASK-503 Screens Polish V2 — block style channel, clearable labels, clean entry view, drag handle & image residuals | Admin UI/Custom Screens/Screen Builder/Entry View/QA/Docs/Task Board |
+| 1211 | 2026-07-02 | TASK-502 Menu design fixes V2 — brand text, tablet cascade, canvas WYSIWYG & nested submenus | Admin UI/Content (Menus)/Navigation/Site Front/Responsive/QA/Docs/Task Board |
+| 1210 | 2026-07-02 | TASK-501 Menu per-device overrides, orientation & block visibility | Admin UI/Content (Menus)/Navigation/Page Builder/Responsive/QA/Docs/Task Board |
+| 1209 | 2026-07-02 | TASK-500 Screen builder — sections, insertion targeting and editor UX | Admin UI/Custom Screens/Screen Builder/Page-Builder UX/QA/Docs/Task Board |
+| 1208 | 2026-07-01 | TASK-499 Menu items restyle and Design tab (menuDocumentV2) | Admin UI/Content (Menus)/Navigation/Page Builder/Visual Refresh/QA/Docs/Task Board |
+| 1207 | 2026-07-01 | TASK-498 Custom-screen data-oriented builder and look parity | Custom Screens/Admin UI/Screen Builder/Screen Model/Relations/Visual Refresh/QA/Docs/Task Board |
+| 1206 | 2026-06-30 | TASK-497 Posts list and editor prototype-parity restyle | Admin UI/Content (Posts)/Visual Refresh/QA/Docs/Task Board |
+| 1205 | 2026-06-30 | TASK-496 Shared editor-chrome shell and Screens adoption | Pages/Custom Screens/Admin UI/Architecture/Cleanup/Docs/Task Board |
+| 1204 | 2026-06-30 | TASK-495 Page/Template editor and Top-Bar prototype parity | Pages/Page Templates/Admin UI/Page Builder/QA/Docs/Task Board |
+| 1199 | 2026-06-27 | TASK-477-02 Page Editor block-level swatch preview accuracy | Pages/Admin UI/Theme/QA/Docs/Task Board |
+| 1198 | 2026-06-26 | TASK-477-01 Page Editor inline color swatch accuracy and picker | Pages/Admin UI/QA/Docs/Task Board |
+| 1197 | 2026-06-26 | TASK-476-02 Page Editor live in-edit mark feedback | Pages/Admin UI/QA/Docs/Task Board |
+| 1196 | 2026-06-26 | TASK-476-01 Page Editor mark re-color replacement | Pages/Admin UI/QA/Docs/Task Board |
+| 1195 | 2026-06-25 | TASK-475 Page Editor inline mark toolbar real-input fixes | Pages/Admin UI/QA/Docs/Task Board |
+| 1194 | 2026-06-25 | TASK-473 record detail overrides closure | Custom Screens/Admin UI/Cache/Docs/QA/Task Board |
+| 1193 | 2026-06-24 | TASK-474 Custom Screen authoring parity and inline editing | Custom Screens/Admin UI/Schema/Docs/QA/Task Board |
+| 1192 | 2026-06-24 | TASK-473 Custom Screen presentation overrides foundation | Custom Screens/API/DB/Docs/QA/Task Board |
+| 1191 | 2026-06-23 | TASK-472 Page Editor V2 authoring controls backlog | Pages/Admin UI/Renderer/Security/QA/Task Board |
+| 1190 | 2026-06-22 | TASK-471 Page Editor authoring controls | Pages/Admin UI/Renderer/Security/QA/Task Board |
+| 1189 | 2026-06-22 | TASK-468 V4 Custom Screen completion | Custom Screens/Assistant/DB/Widgets/Cache/Docs/QA |
+| 1188 | 2026-06-21 | TASK-468 neutral authoring corrective repair | Custom Screens/Admin UI/Authoring/Schema/QA/Task Board |
+| 1187 | 2026-06-21 | TASK-468 screen canvas runtime cutover | Custom Screens/Admin UI/Runtime/QA/Task Board |
+| 1186 | 2026-06-20 | TASK-468 V4 definition slice | Custom Screens/Admin UI/Service/Schema/QA/Task Board |
+| 1185 | 2026-06-20 | TASK-470 drift reconciliation | Pages/Public Runtime/Renderer/QA/Task Board/Audit |
+| 1184 | 2026-06-20 | TASK-469 rich inline edit fidelity | Pages/Admin UI/Rich Text/Sanitization/QA/Task Board/Audit |
+| 1183 | 2026-06-19 | TASK-470 Image fit and video title render wiring closure | Pages/Public Runtime/Renderer/QA/Task Board/Closure Audit |
+| 1182 | 2026-06-18 | TASK-459 Visitor catalog closure | Listings/Public Runtime/Pages/Search/Performance/QA/Task Board |
+| 1181 | 2026-06-18 | TASK-458 Menus site shell closure | Menus/Admin UI/Public Runtime/QA/Task Board |
+| 1180 | 2026-06-18 | TASK-336 widget contract historical closure | Widgets/Task Board/Docs/Closure Audit |
+| 1179 | 2026-06-17 | TASK-454 Page Editor draft recovery and cache hardening | Pages/Admin UI/Cache/Revisions/Navigation/QA/Docs |
+| 1178 | 2026-06-16 | TASK-426..436 Phase 3B post-audit coverage | Pages/Public Runtime/QA/Docs/Post-Implementation Audit |
+| 1177 | 2026-06-16 | TASK-426..436 Pages editor Phase 3B section closure | Pages/Public Runtime/Admin UI/QA/Docs/Task Contracts |
+| 1176 | 2026-06-16 | TASK-438/440/441/445 post-implementation Phase 3a drift | Pages Runtime/Admin UI/Docs/Drift Audit |
+| 1175 | 2026-06-16 | TASK-437..450 Phase 3a drift pass | Pages Runtime/Admin UI/CSS/Docs/Task Contracts/Drift Audit |
+| 1174 | 2026-06-16 | TASK-437..450 Pages editor Phase 3a block closure | Pages/Admin UI/Public Runtime/QA/Docs/Drift Audit |
 | 1173 | 2026-06-14 | TASK-466 Page full-width section background bleed | Pages/Public Runtime/Admin Preview/QA/Docs |
 | 1172 | 2026-06-14 | TASK-464 Page Editor modular reuse and security | Pages/Admin UI/Architecture/Security/QA/Docs |
 | 1171 | 2026-06-14 | TASK-465 Page route validation memory hardening | Pages/Templates/API/Performance/QA |

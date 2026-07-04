@@ -5,7 +5,7 @@ const tokenGroups = {
   neutrals: ["bg", "surface", "border", "text"],
   spacing: ["xs", "sm", "md", "lg", "xl", "2xl"],
   radius: ["sm", "md", "lg", "xl"],
-  typography: ["sans", "display", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
+  typography: ["sans", "display", "2xs", "xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
 } as const;
 
 type TokenGroupName = keyof typeof tokenGroups;

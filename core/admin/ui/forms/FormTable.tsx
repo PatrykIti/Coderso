@@ -1,3 +1,5 @@
+import { ClipboardList } from "lucide-react";
+
 import {
   Table,
   TableBody,
@@ -9,25 +11,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import type { FormRecord } from "@/services/formsClient";
 import { FormRowActions } from "./FormRowActions";
 
-const statusStyles: Record<string, string> = {
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  archived: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-};
-
-const statusLabels: Record<string, string> = {
-  published: "Published",
-  draft: "Draft",
-  archived: "Archived",
-};
-
-const accessStyles: Record<string, string> = {
-  public: "bg-sky-500/10 text-sky-600 border-sky-500/20",
-  internal: "bg-violet-500/10 text-violet-600 border-violet-500/20",
+// Access is not a domain "status" enum, so it keeps a small local badge — but
+// driven by semantic token variants (no raw palette classes), so dark mode and
+// the violet accent recolor correctly.
+const accessBadgeVariant: Record<string, "info" | "soft"> = {
+  public: "info",
+  internal: "soft",
 };
 
 const accessLabels: Record<string, string> = {
@@ -81,7 +75,7 @@ export function FormTable({
   onDelete,
 }: FormTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-soft">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
@@ -129,51 +123,40 @@ export function FormTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col">
-                    <AdminLink
-                      href={`/advanced/forms/${encodeURIComponent(form.id)}`}
-                      prefetch
-                      className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                      aria-label={`Edit form: ${form.name}`}
-                    >
-                      {form.name}
-                    </AdminLink>
-                    <span className="text-xs text-muted-foreground">
-                      {form.description ?? "No description yet"}
+                  <div className="flex items-start gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                      <ClipboardList className="size-4" />
                     </span>
-                    <span className="text-xs text-muted-foreground break-all">/{form.slug}</span>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                      <Badge
-                        variant="outline"
-                        className={statusStyles[form.status] ?? statusStyles.draft}
+                    <div className="flex min-w-0 flex-col">
+                      <AdminLink
+                        href={`/advanced/forms/${encodeURIComponent(form.id)}`}
+                        prefetch
+                        className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                        aria-label={`Edit form: ${form.name}`}
                       >
-                        {statusLabels[form.status] ?? form.status}
-                      </Badge>
-                      <span className="text-muted-foreground/60">•</span>
-                      <Badge
-                        variant="outline"
-                        className={accessStyles[form.submissionAccess] ?? accessStyles.public}
-                      >
-                        {accessLabels[form.submissionAccess] ?? form.submissionAccess}
-                      </Badge>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span>{formatDate(form.updatedAt)}</span>
+                        {form.name}
+                      </AdminLink>
+                      <span className="text-xs text-muted-foreground">
+                        {form.description ?? "No description yet"}
+                      </span>
+                      <span className="text-xs text-muted-foreground break-all">/{form.slug}</span>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                        <StatusBadge status={form.status} />
+                        <span className="text-muted-foreground/60">•</span>
+                        <Badge variant={accessBadgeVariant[form.submissionAccess] ?? "info"}>
+                          {accessLabels[form.submissionAccess] ?? form.submissionAccess}
+                        </Badge>
+                        <span className="text-muted-foreground/60">•</span>
+                        <span>{formatDate(form.updatedAt)}</span>
+                      </div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="hidden px-4 md:table-cell">
-                  <Badge
-                    variant="outline"
-                    className={statusStyles[form.status] ?? statusStyles.draft}
-                  >
-                    {statusLabels[form.status] ?? form.status}
-                  </Badge>
+                  <StatusBadge status={form.status} />
                 </TableCell>
                 <TableCell className="hidden px-4 lg:table-cell">
-                  <Badge
-                    variant="outline"
-                    className={accessStyles[form.submissionAccess] ?? accessStyles.public}
-                  >
+                  <Badge variant={accessBadgeVariant[form.submissionAccess] ?? "info"}>
                     {accessLabels[form.submissionAccess] ?? form.submissionAccess}
                   </Badge>
                 </TableCell>

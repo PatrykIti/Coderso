@@ -125,6 +125,9 @@ export const resolvePageSectionTemplateColumns = (
   const columns = template.section.layout.columns;
   if (template.template === "hero" && template.variant === "split") return 2;
   if (template.template === "media-split" && template.variant !== "default") return 2;
+  if (template.template === "timeline" && template.variant === "horizontal") {
+    return Math.max(columns, 3);
+  }
   if (
     (template.template === "feature-grid" ||
       template.template === "gallery" ||

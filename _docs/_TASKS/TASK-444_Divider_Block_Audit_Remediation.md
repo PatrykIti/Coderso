@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Small
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,10 +21,10 @@ visibility.
 
 ## Sub-Tasks
 
-- [ ] TASK-444-01: Divider control contract freeze.
-- [ ] TASK-444-01-L01: Adopt dedicated tone/style/visibility controls without
+- [x] TASK-444-01: Divider control contract freeze.
+- [x] TASK-444-01-L01: Adopt dedicated tone/style/visibility controls without
       regressing the current runtime output.
-- [ ] TASK-444-02: Validation, docs, and closure.
+- [x] TASK-444-02: Validation, docs, and closure.
 
 ---
 

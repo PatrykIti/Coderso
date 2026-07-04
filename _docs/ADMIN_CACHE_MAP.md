@@ -143,8 +143,17 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `collectionRole` / `compositionKey` from the custom-screen owner seam for
     later workspace resolution; legacy cached rows normalize missing values to
     `null`
+  - Data shape: cached custom screen rows use `schemaVersion: 4` plus V4
+    `definition`; legacy `blocks` / `bindings` are read-migration inputs and
+    are not active browser write state.
   - Mutations: `createCustomScreen`, `updateCustomScreen`,
     `deleteCustomScreen`
+  - Assistant mutations: `custom-screen.upsert`, `custom-screen.update`,
+    `custom-screen.delete`, `custom-screen.section.add`,
+    `custom-screen.block.add`, `custom-screen.block.patch`,
+    `custom-screen.block.move`, `custom-screen.block.remove`,
+    `custom-screen.binding.set`, and `custom-screen.list-view.patch` invalidate
+    the same list/detail keys through lightweight cache helpers.
   - Cache bus: `customScreens:list`, `contentTypes:list` for label projection
   - Prefetch: `/advanced/custom-screens` warms both `customScreens:list` and
     `contentTypes:list`
@@ -157,15 +166,23 @@ This file maps admin UI surfaces to their implementation files and the cached AP
     `CustomScreenEntryEditor.tsx`, `CustomScreenEntryCanvas.tsx`
   - Cached APIs: `getCustomScreenCached`, `getCachedCustomScreen`,
     `listCustomScreensCached`, `listContentTypesCached`, `listEntriesCached`,
-    `getEntryCached`
+    `getEntryCached`, `getScreenEntryOverridesCached`,
+    `getCachedScreenEntryOverrides`
   - Preview owner: `customScreenPreviewData.ts` reuses
     `entries:list:<typeSlug>` for cached-first first-record hydration in both
     the builder canvas and the preview dialog
   - Mutations: `updateCustomScreen`, `createEntry`, `updateEntry`,
-    `deleteEntry`
+    `deleteEntry`, `replaceScreenEntryOverrides`,
+    `invalidateScreenEntryOverrides`
   - Cache bus: `customScreens:list`, `customScreens:detail:<id>`,
     `contentTypes:list`, `entries:list:<typeSlug>`,
-    `entries:detail:<typeSlug>:<entryId>`
+    `entries:detail:<typeSlug>:<entryId>`,
+    `customScreens:entryOverrides:<screenId>:<entryId>` for presentation
+    override cache updates and invalidation
+  - Record presentation: `CustomScreenEntryEditor.tsx` hydrates entry content
+    and per-record presentation overrides independently. Content edits continue
+    through `entriesClient`; text/media presentation saves use
+    `PATCH /admin/api/custom-screens/:screenId/entries/:entryId/overrides`.
   - Prefetch: `/advanced/custom-screens/:screenId/entries` warms screen,
     content type list, and the assigned entries list. Detail routes warm the
     entry detail cache except for `entries/new`.

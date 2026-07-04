@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -23,11 +24,11 @@ after that owner lands.
 
 ## Sub-Tasks
 
-- [ ] TASK-446-01: Statistic text/control and toolbar contract freeze.
-- [ ] TASK-446-01-L01: Adopt inline-edit and dedicated controls and verify
+- [x] TASK-446-01: Statistic text/control and toolbar contract freeze.
+- [x] TASK-446-01-L01: Adopt inline-edit and dedicated controls and verify
       the toolbar-label fallback (owned by TASK-451-02-L01) for statistic
       blocks.
-- [ ] TASK-446-02: Validation, docs, and closure.
+- [x] TASK-446-02: Validation, docs, and closure.
 
 ---
 

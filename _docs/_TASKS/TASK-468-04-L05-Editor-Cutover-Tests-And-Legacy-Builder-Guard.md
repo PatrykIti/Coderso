@@ -6,7 +6,8 @@
 **Category:** Admin UI / Custom Screens / Cutover Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-04-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -15,6 +16,12 @@
 Close the editor cutover by proving the active Custom Screen editor no longer
 uses the legacy widget builder surface. This leaf adds regression tests and
 bundle/import guards before runtime and record editing work begins.
+
+2026-06-21 corrective closure: added source-boundary tests for neutral
+authoring, active Custom Screen canvas modules, and Page Editor reverse imports.
+The focused Vitest suite now covers the floating Insert panel, sectioned V4 save
+shape, read repair for flat V4 documents, and active editor avoidance of Page
+builder/runtime widget code.
 
 ## Sub-Tasks
 

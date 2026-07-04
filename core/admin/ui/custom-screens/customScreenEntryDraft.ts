@@ -3,7 +3,10 @@ import type { ContentTypeSummary } from "@/services/contentTypesClient";
 import type { EntryDetail, EntryPayload } from "@/services/entriesClient";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import type { ContentField } from "@/ui/content-types/SchemaBuilder";
-import type { CustomScreenEditorViewDefinition } from "../../../services/customScreens/customScreenSchemas";
+import type {
+  CustomScreenEditorViewDefinition,
+  CustomScreenEditorViewDefinitionV4,
+} from "../../../services/customScreens/customScreenSchemas";
 import { collectWritableBindingFields } from "../../../services/customScreens/bindingResolver";
 
 export type CustomScreenEntryDraft = {
@@ -14,6 +17,8 @@ export type CustomScreenEntryDraft = {
   originalData: Record<string, unknown>;
   fieldErrors: Record<string, string>;
 };
+
+type RuntimeEditorView = CustomScreenEditorViewDefinition | CustomScreenEditorViewDefinitionV4;
 
 type ApiValidationDetail = {
   instancePath?: string;
@@ -50,15 +55,25 @@ function fallbackValueForField(field: ContentField) {
 }
 
 export function collectEditorViewWritableFields(
-  editorView: CustomScreenEditorViewDefinition,
+  editorView: RuntimeEditorView,
   contentType: ContentTypeSummary
 ) {
   const schemaFields = fieldsFromSchema(contentType.schema).map((field) => field.name);
   const allowed = new Set(schemaFields);
-  const configured = collectWritableBindingFields(editorView.bindings, {
-    blocks: editorView.blocks,
-    fallbackToModeOnly: false,
-  }).filter((field) => allowed.has(field));
+  const configuredFields =
+    "document" in editorView
+      ? Array.from(
+          new Set(
+            editorView.bindings
+              .filter((binding) => binding.mode === "write" || binding.mode === "readwrite")
+              .map((binding) => binding.field)
+          )
+        )
+      : collectWritableBindingFields(editorView.bindings, {
+          blocks: editorView.blocks,
+          fallbackToModeOnly: false,
+        });
+  const configured = configuredFields.filter((field) => allowed.has(field));
   return configured;
 }
 
@@ -79,7 +94,7 @@ export function buildSchemaDefaultData(input: {
 
 export function buildInitialEntryDraft(input: {
   contentType: ContentTypeSummary;
-  editorView: CustomScreenEditorViewDefinition;
+  editorView: RuntimeEditorView;
 }): CustomScreenEntryDraft {
   const editableFields = collectEditorViewWritableFields(input.editorView, input.contentType);
   return {
@@ -97,7 +112,7 @@ export function buildInitialEntryDraft(input: {
 
 export function hydrateEditorViewDraft(input: {
   contentType: ContentTypeSummary;
-  editorView: CustomScreenEditorViewDefinition;
+  editorView: RuntimeEditorView;
   entry: EntryDetail;
 }): CustomScreenEntryDraft {
   const editableFields = collectEditorViewWritableFields(input.editorView, input.contentType);

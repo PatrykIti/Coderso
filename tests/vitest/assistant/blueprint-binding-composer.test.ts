@@ -116,11 +116,12 @@ test("catalog family custom-screen actions carry binding and canonical metadata"
 
   expect(action?.input.collectionRole).toBe("canonical-admin-screen");
   expect(action?.input.compositionKey).toBe(HOUSE_PROJECTS_CATALOG_PRESET.key);
-  expect(action?.input.bindings).toContainEqual({
+  expect(action?.input.definition.editorView.bindings).toContainEqual({
     id: "binding-house-projects-catalog-header-title",
-    widgetId: "house-projects-catalog-header",
+    blockId: "house-projects-catalog-header",
     propPath: "title",
     field: "title",
     mode: "read",
+    source: "entry",
   });
 });

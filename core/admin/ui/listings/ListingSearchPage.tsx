@@ -1,7 +1,10 @@
+import { Info, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -11,6 +14,7 @@ import {
 } from "@/services/listingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 
 export function ListingSearchPage() {
   const [query, setQuery] = useState("");
@@ -57,21 +61,41 @@ export function ListingSearchPage() {
         <PageHeader
           title="Search"
           description="Preview global public search behavior used by search-box widgets."
+          icon={<Search />}
+          actions={<Badge variant="soft">Beta</Badge>}
         />
 
-        <section className="rounded-xl border border-border/70 bg-card/50 p-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">What this preview searches</p>
-          <p className="mt-1">
-            Indexed now: <code>pages.title</code>, <code>pages.slug</code>,
-            <code> entries.title</code>, <code>entries.slug</code>, and
-            <code> entries.data.title</code>.
-          </p>
-          <p className="mt-1">
-            Not indexed yet: full widget/page body content rendered on frontend.
-          </p>
-        </section>
+        <Card className="flex flex-row items-start gap-3 rounded-2xl bg-primary-soft/50 p-4 text-sm text-muted-foreground">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card text-primary-soft-foreground">
+            <Info className="size-4" />
+          </span>
+          <div className="min-w-0 space-y-1">
+            <p className="font-medium text-foreground">What this preview searches</p>
+            <p>
+              Indexed now: <code>pages.title</code>, <code>pages.slug</code>,
+              <code> entries.title</code>, <code>entries.slug</code>, and
+              <code> entries.data.title</code>.
+            </p>
+            <p>Not indexed yet: full widget/page body content rendered on frontend.</p>
+          </div>
+        </Card>
 
-        <section className="space-y-4 rounded-xl border border-border/70 bg-card/50 p-4">
+        <Card className="gap-0 rounded-2xl py-0">
+          <div className="px-5 py-4">
+            <div className="mb-3 text-sm font-medium text-foreground">Search preview</div>
+            <div className="relative max-w-xl">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <div className="flex h-11 w-full cursor-not-allowed items-center rounded-2xl border border-border bg-muted/50 pl-10 pr-3 text-sm text-muted-foreground shadow-soft">
+                {query || "Search…"}
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Non-interactive preview of how the search box renders on the front end.
+            </p>
+          </div>
+        </Card>
+
+        <SectionCard bodyClassName="space-y-4">
           <div className="grid gap-3 md:grid-cols-[2fr_120px_auto] md:items-end">
             <div className="space-y-2">
               <p className="text-sm font-medium">Query</p>
@@ -95,20 +119,20 @@ export function ListingSearchPage() {
           </div>
 
           <div className="grid gap-3 md:grid-cols-3">
-            <label className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2 text-sm">
+            <label className="flex items-center justify-between rounded-2xl border border-border bg-card px-3 py-2.5 text-sm shadow-soft">
               <span>Pages</span>
               <Switch checked={usePages} onCheckedChange={setUsePages} />
             </label>
-            <label className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2 text-sm">
+            <label className="flex items-center justify-between rounded-2xl border border-border bg-card px-3 py-2.5 text-sm shadow-soft">
               <span>Entries</span>
               <Switch checked={useEntries} onCheckedChange={setUseEntries} />
             </label>
-            <label className="flex items-center justify-between rounded-md border border-border/70 bg-background/60 px-3 py-2 text-sm">
+            <label className="flex items-center justify-between rounded-2xl border border-border bg-card px-3 py-2.5 text-sm shadow-soft">
               <span>Posts</span>
               <Switch checked={usePosts} onCheckedChange={setUsePosts} />
             </label>
           </div>
-        </section>
+        </SectionCard>
 
         {error ? (
           <Alert variant="destructive">
@@ -118,7 +142,7 @@ export function ListingSearchPage() {
         ) : null}
 
         {payload ? (
-          <section className="space-y-4 rounded-xl border border-border/70 bg-card/50 p-4">
+          <SectionCard bodyClassName="space-y-4">
             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>Resolved query:</span>
               <code>{payload.query || "(empty)"}</code>
@@ -135,7 +159,7 @@ export function ListingSearchPage() {
                 payload.items.map((item) => (
                   <article
                     key={item.id}
-                    className="rounded-md border border-border/70 bg-background/60 px-3 py-2"
+                    className="rounded-xl border border-border bg-card px-3 py-2.5 shadow-soft"
                   >
                     <p className="text-sm font-semibold">{item.title}</p>
                     <p className="text-xs text-muted-foreground">
@@ -145,7 +169,7 @@ export function ListingSearchPage() {
                 ))
               )}
             </div>
-          </section>
+          </SectionCard>
         ) : null}
       </div>
     </AdminShell>

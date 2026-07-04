@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
 import type {
   ExportIncludeOption,
   ExportRequest,
@@ -22,10 +21,6 @@ type ExportCard = {
   title: string;
   description: string;
   icon: typeof Database;
-  iconClassName: string;
-  checkboxClassName: string;
-  buttonVariant?: "default" | "secondary" | "outline";
-  buttonClassName?: string;
   options: ExportOption[];
 };
 
@@ -35,9 +30,6 @@ const exportCards: ExportCard[] = [
     title: "Site Settings",
     description: "Core site configuration",
     icon: Database,
-    iconClassName: "bg-primary/10 text-primary",
-    checkboxClassName: "data-[state=checked]:bg-primary data-[state=checked]:border-primary",
-    buttonVariant: "default",
     options: [{ id: "settings", label: "Settings values", defaultChecked: true }],
   },
   {
@@ -45,11 +37,6 @@ const exportCards: ExportCard[] = [
     title: "Navigation Menus",
     description: "Menu records and items",
     icon: Menu,
-    iconClassName: "bg-amber-500/10 text-amber-500",
-    checkboxClassName: "data-[state=checked]:bg-amber-500 data-[state=checked]:border-amber-500",
-    buttonVariant: "default",
-    buttonClassName:
-      "bg-slate-900 text-white hover:bg-slate-900/90 dark:bg-white dark:text-slate-900",
     options: [
       { id: "menus", label: "Menu records", defaultChecked: true },
       { id: "menu-items", label: "Menu items", defaultChecked: true },
@@ -60,12 +47,6 @@ const exportCards: ExportCard[] = [
     title: "Theme Configuration",
     description: "Public and admin themes",
     icon: Palette,
-    iconClassName: "bg-emerald-500/10 text-emerald-600",
-    checkboxClassName:
-      "data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500",
-    buttonVariant: "default",
-    buttonClassName:
-      "bg-slate-900 text-white hover:bg-slate-900/90 dark:bg-white dark:text-slate-900",
     options: [
       { id: "theme-profiles", label: "Theme profiles", defaultChecked: true },
       { id: "theme-routes", label: "Theme routes", defaultChecked: true },
@@ -78,11 +59,6 @@ const exportCards: ExportCard[] = [
     title: "Redirect Rules",
     description: "URL redirect records",
     icon: GitBranch,
-    iconClassName: "bg-rose-500/10 text-rose-600",
-    checkboxClassName: "data-[state=checked]:bg-rose-500 data-[state=checked]:border-rose-500",
-    buttonVariant: "default",
-    buttonClassName:
-      "bg-slate-900 text-white hover:bg-slate-900/90 dark:bg-white dark:text-slate-900",
     options: [{ id: "redirects", label: "Redirect rules", defaultChecked: true }],
   },
 ];
@@ -137,22 +113,17 @@ export function ExportCards({ onExport, exportingTargets }: ExportCardsProps) {
   };
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
       {exportCards.map((card) => {
         const Icon = card.icon;
         const selected = selectedOptions[card.id] ?? [];
         const isExporting = exportingTargets.includes(card.id);
         return (
-          <Card key={card.id} className="border-border/60">
+          <Card key={card.id} className="rounded-2xl border-border shadow-soft">
             <CardContent className="flex h-full flex-col gap-6">
               <div className="flex items-center gap-3">
-                <div
-                  className={cn(
-                    "flex h-11 w-11 items-center justify-center rounded-xl",
-                    card.iconClassName
-                  )}
-                >
-                  <Icon className="h-5 w-5" />
+                <div className="flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                  <Icon className="size-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-semibold">{card.title}</h3>
@@ -170,7 +141,6 @@ export function ExportCards({ onExport, exportingTargets }: ExportCardsProps) {
                       onCheckedChange={(checked) =>
                         updateOption(card.id, option.id, checked === true)
                       }
-                      className={card.checkboxClassName}
                     />
                     <span className="transition-colors group-hover:text-foreground">
                       {option.label}
@@ -180,8 +150,7 @@ export function ExportCards({ onExport, exportingTargets }: ExportCardsProps) {
               </div>
               <div className="mt-auto flex items-center gap-2 pt-2">
                 <Button
-                  className={cn("flex-1", card.buttonClassName)}
-                  variant={card.buttonVariant}
+                  className="flex-1"
                   disabled={isExporting || selected.length === 0}
                   onClick={() => onExport({ target: card.id, include: selected })}
                 >
@@ -190,12 +159,12 @@ export function ExportCards({ onExport, exportingTargets }: ExportCardsProps) {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-9 w-9"
+                  className="size-9"
                   aria-label={`${card.title} advanced export options unavailable`}
                   title="Advanced export options are not available for this export target."
                   disabled
                 >
-                  <ChevronDown className="h-4 w-4" />
+                  <ChevronDown className="size-4" />
                 </Button>
               </div>
             </CardContent>

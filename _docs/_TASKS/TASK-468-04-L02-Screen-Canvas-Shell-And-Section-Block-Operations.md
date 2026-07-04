@@ -6,7 +6,8 @@
 **Category:** Admin UI / Custom Screens / Canvas
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-04-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -15,6 +16,11 @@
 Build the Custom Screen authoring canvas over the neutral authoring primitives.
 This leaf owns screen section/block insertion, reorder, duplicate, delete,
 selection, and adapter mapping for `ScreenDocumentV1`.
+
+2026-06-21 corrective closure: `ScreenDocumentV1` now owns real
+`ScreenSectionV1` containers, `screenDocumentOps` traverses section blocks and
+nested slots, and `ScreenAuthoringCanvas` adapts the document to neutral
+authoring canvas, layers, command, toolbar, and insertion primitives.
 
 ## Sub-Tasks
 

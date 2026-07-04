@@ -1361,7 +1361,8 @@ test("PostsListPage filters by tag, ignores unrelated cache refreshes, skips can
 
     React.act(() => {
       buttons()
-        .find((button) => button.textContent === "New")
+        // TASK-497-01: Posts create button relabeled "New" → "New post".
+        .find((button) => button.textContent === "New post")
         ?.click();
     });
 
@@ -1595,7 +1596,8 @@ test("PostsListPage opens drawer via sheet controls, creates with navigation, an
 
     React.act(() => {
       buttons()
-        .find((button) => button.textContent === "New")
+        // TASK-497-01: Posts create button relabeled "New" → "New post".
+        .find((button) => button.textContent === "New post")
         ?.click();
       setInputValue(titleInput() ?? undefined, "Launch Memo");
     });
@@ -1710,10 +1712,12 @@ test("PageListPage and PostsListPage drive create, preview, publish, duplicate, 
 
     await React.act(async () => {
       buttons()
+        // Pages list create button (unchanged "New").
         .find((button) => button.textContent === "New")
         ?.click();
       buttons()
-        .filter((button) => button.textContent === "New")[1]
+        // TASK-497-01: Posts create button relabeled "New" → "New post".
+        .find((button) => button.textContent === "New post")
         ?.click();
       buttons()
         .find((button) => button.textContent === "edit-page-row")

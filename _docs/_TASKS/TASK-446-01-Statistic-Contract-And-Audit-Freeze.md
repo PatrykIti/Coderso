@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -22,7 +23,7 @@ family only verifies the `Statistic tools` fallback once the owner lands.
 
 ## Sub-Tasks
 
-- [ ] TASK-446-01-L01: Statistic inline-edit, toolbar labeling, and dedicated
+- [x] TASK-446-01-L01: Statistic inline-edit, toolbar labeling, and dedicated
       controls.
 
 ---

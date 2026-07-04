@@ -18,7 +18,7 @@ describe("post editor layout state", () => {
       detailsOpen: false,
       detailsTab: "document",
       focusMode: false,
-      leftRailMode: "outline",
+      leftRailMode: "blocks",
       focusRestore: null,
     });
   });
@@ -146,6 +146,23 @@ describe("post editor layout state", () => {
     expect(closed.leftRailMode).toBe("list-view");
   });
 
+  test("transitions left rail mode blocks -> outline -> list-view", () => {
+    const initial = createPostEditorLayoutState();
+    expect(initial.leftRailMode).toBe("blocks");
+
+    const toOutline = postEditorLayoutReducer(initial, {
+      type: "set_left_rail_mode",
+      mode: "outline",
+    });
+    expect(toOutline.leftRailMode).toBe("outline");
+
+    const toListView = postEditorLayoutReducer(toOutline, {
+      type: "set_left_rail_mode",
+      mode: "list-view",
+    });
+    expect(toListView.leftRailMode).toBe("list-view");
+  });
+
   test("normalizes post editor preferences from legacy payload", () => {
     const normalized = normalizePostEditorPreferences({
       focusModeOnOpen: true,
@@ -156,12 +173,8 @@ describe("post editor layout state", () => {
     expect(normalized.focusModeOnOpen).toBe(true);
     expect(normalized.compactSidePanels).toBe(true);
     expect(normalized.showOutlineHints).toBe(false);
-    expect(normalized.editorDensity).toBe(
-      DEFAULT_POST_EDITOR_PREFERENCES.editorDensity
-    );
-    expect(normalized.showKeyboardHints).toBe(
-      DEFAULT_POST_EDITOR_PREFERENCES.showKeyboardHints
-    );
+    expect(normalized.editorDensity).toBe(DEFAULT_POST_EDITOR_PREFERENCES.editorDensity);
+    expect(normalized.showKeyboardHints).toBe(DEFAULT_POST_EDITOR_PREFERENCES.showKeyboardHints);
     expect(normalized.defaultInspectorTab).toBe(
       DEFAULT_POST_EDITOR_PREFERENCES.defaultInspectorTab
     );

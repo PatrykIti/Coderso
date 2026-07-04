@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Migration
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-02-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,11 +19,11 @@ runtime rendering in the new screen runtime.
 
 ## Sub-Tasks
 
-- [ ] Map screen legacy widgets to V4 blocks.
-- [ ] Convert widget bindings to `ScreenBlockBinding`.
-- [ ] Convert unsupported legacy widgets to placeholders.
-- [ ] Preserve list-view configuration.
-- [ ] Add migration tests for every legacy version.
+- [x] Map screen legacy widgets to V4 blocks.
+- [x] Convert widget bindings to `ScreenBlockBinding`.
+- [x] Convert unsupported legacy widgets to placeholders.
+- [x] Preserve list-view configuration.
+- [x] Add migration tests for every legacy version.
 
 ## Files To Change
 

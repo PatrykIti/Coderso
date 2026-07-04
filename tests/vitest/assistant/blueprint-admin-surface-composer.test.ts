@@ -7,9 +7,7 @@ import {
 import { buildCatalogFamilyPlan } from "../../../core/services/assistant/blueprints/catalogFamilyBlueprint";
 import { HOUSE_PROJECTS_CATALOG_PRESET } from "../../../core/services/assistant/blueprints/catalogFamilyPresets";
 import type { AssistantCustomScreenUpsertAction } from "../../../core/services/assistant/actionPlanTypes";
-import { getWidget } from "../../../core/widgets/registry";
-import { ensureRuntimeWidgetsRegistered } from "../../../core/widgets/runtime";
-import type { WidgetBlock } from "../../../core/widgets/types";
+import type { ScreenBlockV1 } from "../../../core/services/customScreens/customScreenSchemas";
 
 const contentSchema = {
   type: "object",
@@ -39,9 +37,9 @@ const baseInput = {
   groups: [],
 } satisfies BlueprintAdminSurfaceCompositionInput;
 
-const collectBlocks = (blocks: WidgetBlock[]) => {
-  const collected: WidgetBlock[] = [];
-  const visit = (items: WidgetBlock[]) => {
+const collectBlocks = (blocks: ScreenBlockV1[]) => {
+  const collected: ScreenBlockV1[] = [];
+  const visit = (items: ScreenBlockV1[]) => {
     items.forEach((block) => {
       collected.push(block);
       if (block.slots) {
@@ -111,7 +109,7 @@ test("composeAdminSurface merges admin groups into deterministic screen blocks",
   expect(surface.bindings).toEqual([]);
   expect(surface.blocks.map((block) => block.id)).toEqual(["projects-header", "projects-columns"]);
   const columns = surface.blocks[1];
-  expect(columns?.type).toBe("screen-two-column");
+  expect(columns?.type).toBe("columns");
   expect(columns?.slots?.left?.map((block) => block.id)).toEqual(["projects-facts-group"]);
   expect(columns?.slots?.right?.map((block) => block.id)).toEqual(["projects-workflow-group"]);
   expect(columns?.slots?.left?.[0]?.slots?.content?.map((block) => block.id)).toEqual([
@@ -126,9 +124,9 @@ test("composeAdminSurface preserves the current catalog screen block shape", () 
   const action = plan.actions.find(
     (entry): entry is AssistantCustomScreenUpsertAction => entry.type === "custom-screen.upsert"
   );
-  const blocks = action?.input.blocks as WidgetBlock[] | undefined;
+  const blocks = action?.input.definition.editorView.document.sections[0]?.blocks;
 
-  expect(blocks?.map((block) => block.type)).toEqual(["screen-record-header", "screen-two-column"]);
+  expect(blocks?.map((block) => block.type)).toEqual(["record-header", "columns"]);
   expect(blocks?.[0]).toMatchObject({
     id: "house-projects-catalog-header",
     data: {
@@ -254,14 +252,9 @@ test("composeAdminSurface keeps generated blocks inside the custom-screen-builde
     ],
   });
 
-  ensureRuntimeWidgetsRegistered();
   const generatedTypes = collectBlocks(surface.blocks).map((block) => block.type);
-  expect(generatedTypes).toEqual([
-    "screen-record-header",
-    "screen-field-group",
-    "screen-field-value",
-  ]);
-  generatedTypes.forEach((type) => {
-    expect(getWidget(type)?.surfaces).toContain("custom-screen-builder");
-  });
+  expect(generatedTypes).toEqual(["record-header", "field-group", "field"]);
+  expect(generatedTypes).not.toEqual(
+    expect.arrayContaining(["screen-record-header", "screen-field-group", "screen-field-value"])
+  );
 });

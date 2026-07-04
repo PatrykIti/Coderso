@@ -19,6 +19,10 @@ import { ColorSwatchControl } from "../../../core/admin/ui/pages/editorControls/
 import {
   editorDarkButtonClass,
   editorDarkGhostButtonClass,
+  editorPanelButtonClass,
+  editorPanelGhostButtonClass,
+  editorPanelInputClass,
+  editorPanelSegmentTrackClass,
 } from "../../../core/admin/ui/pages/editorControls/controlChrome";
 import { MediaPickerControl } from "../../../core/admin/ui/pages/editorControls/MediaPickerControl";
 import { SegmentedControl } from "../../../core/admin/ui/pages/editorControls/SegmentedControl";
@@ -26,7 +30,6 @@ import { SliderControl } from "../../../core/admin/ui/pages/editorControls/Slide
 import { SliderStepperControl } from "../../../core/admin/ui/pages/editorControls/SliderStepperControl";
 import { ToggleSwitch } from "../../../core/admin/ui/pages/editorControls/ToggleSwitch";
 import { getPageEditorColorPalette } from "../../../core/services/pages/pageEditorControlUiModel";
-import { DEFAULT_TOKENS } from "../../../core/services/theme/tokenTypes";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -343,7 +346,7 @@ test("SliderStepperControl disables steppers at the clamp edges", () => {
 test("ColorSwatchControl renders token swatches, native picker, and hex affordance", () => {
   const onChange = vi.fn();
   const container = render(
-    <ColorSwatchControl label="Accent" value={DEFAULT_TOKENS.colors.accent} onChange={onChange} />
+    <ColorSwatchControl label="Accent" value="var(--color-accent)" onChange={onChange} />
   );
 
   const swatches = Array.from(
@@ -360,7 +363,34 @@ test("ColorSwatchControl renders token swatches, native picker, and hex affordan
   expect(container.querySelector("[data-page-editor-color-hex]")).toBeTruthy();
 
   click(swatches.find((swatch) => swatch.dataset.pageEditorColorSwatch === "primary"));
-  expect(onChange).toHaveBeenCalledWith(DEFAULT_TOKENS.colors.primary);
+  expect(onChange).toHaveBeenCalledWith("var(--color-primary)");
+});
+
+test("ColorSwatchControl previews the passed (live-token) palette, not the default (TASK-477-02)", () => {
+  // A custom palette stands in for the live site palette threaded from PageEditor;
+  // the swatch must preview the palette's previewValue, not a hardcoded default.
+  const palette = [
+    {
+      id: "accent",
+      label: "Accent",
+      value: "var(--color-accent)",
+      previewValue: "var(--test-accent)",
+    },
+  ];
+  const container = render(
+    <ColorSwatchControl
+      label="Text color"
+      value=""
+      palette={palette}
+      allowTransparent={false}
+      allowCustom={false}
+      onChange={vi.fn()}
+    />
+  );
+
+  const swatch = container.querySelector<HTMLElement>('[data-page-editor-color-swatch="accent"]');
+  expect(swatch).toBeTruthy();
+  expect(swatch?.getAttribute("style") ?? "").toContain("var(--test-accent)");
 });
 
 test("ColorSwatchControl keeps unknown values as a non-mutating custom state", () => {
@@ -438,7 +468,7 @@ test("ColorSwatchControl hides the transparent swatch when allowTransparent is f
   const container = render(
     <ColorSwatchControl
       label="Accent"
-      value={DEFAULT_TOKENS.colors.accent}
+      value="var(--color-accent)"
       onChange={() => {}}
       allowTransparent={false}
     />
@@ -450,7 +480,7 @@ test("ColorSwatchControl without custom affordance renders preset swatches only"
   const container = render(
     <ColorSwatchControl
       label="Tone"
-      value={DEFAULT_TOKENS.neutrals.surface}
+      value="var(--color-surface)"
       onChange={() => {}}
       allowCustom={false}
     />
@@ -485,4 +515,39 @@ test("MediaPickerControl wraps the shared MediaPicker and never offers a bare UR
   expect(typeof mediaPickerState.lastProps?.onChange).toBe("function");
   (mediaPickerState.lastProps?.onChange as (value: unknown) => void)("asset-456");
   expect(onChange).toHaveBeenCalledWith("asset-456");
+});
+
+test("control primitives relight to the light panel tokens when tone='light' (TASK-495-02)", () => {
+  // The threaded `tone` defaults to "dark" (asserted above with no prop); the
+  // builder right rail mounts these same primitives with tone="light", which
+  // must swap in the editorPanel* light siblings so they stay legible on the
+  // light bg-popover surface.
+  const mediaContainer = render(
+    <MediaPickerControl label="Source" value="asset-1" onChange={vi.fn()} tone="light" />
+  );
+  expect(mediaContainer.querySelector('[data-page-editor-media-control="Source"]')).toBeTruthy();
+  expect(mediaPickerState.lastProps).toMatchObject({
+    triggerButtonClassName: editorPanelButtonClass,
+    removeButtonClassName: editorPanelGhostButtonClass,
+  });
+
+  const segmentedContainer = render(
+    <SegmentedControl
+      label="Align"
+      value="left"
+      options={["left", "center", "right"]}
+      onChange={vi.fn()}
+      tone="light"
+    />
+  );
+  expect(segmentedContainer.querySelector('[role="group"]')?.className).toContain(
+    editorPanelSegmentTrackClass
+  );
+
+  const swatchContainer = render(
+    <ColorSwatchControl label="Accent" value="#aabbcc" onChange={vi.fn()} tone="light" />
+  );
+  expect(
+    swatchContainer.querySelector<HTMLElement>("[data-page-editor-color-hex]")?.className
+  ).toContain(editorPanelInputClass);
 });

@@ -6,7 +6,8 @@
 **Category:** Assistant / Custom Screens / Action Contracts
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-05-L05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,16 +19,16 @@ presentation, and field mappings through strict validation.
 
 ## Sub-Tasks
 
-- [ ] Add V4 assistant action schemas for create section, insert block, patch
+- [x] Add V4 assistant action schemas for create section, insert block, patch
   block props, patch binding, reorder block, remove block, and patch list view.
-- [ ] Register V4 actions in the assistant action registry.
-- [ ] Add mapping from assistant action payloads to screen document operation
+- [x] Register V4 actions in the assistant action registry.
+- [x] Add mapping from assistant action payloads to screen document operation
   helpers.
-- [ ] Reject legacy widget patch actions for V4 screens.
-- [ ] Flip existing custom-screen widget-patch acceptance/planner tests to assert
+- [x] Reject legacy widget patch actions for V4 screens.
+- [x] Flip existing custom-screen widget-patch acceptance/planner tests to assert
   `custom-screen.widget.patch` is rejected for V4 screens and replaced by V4
   section, block, binding, and list-view actions.
-- [ ] Convert assistant blueprint/custom-screen generation to V4 screen documents
+- [x] Convert assistant blueprint/custom-screen generation to V4 screen documents
   without legacy screen widget ids.
 
 ## Files To Change

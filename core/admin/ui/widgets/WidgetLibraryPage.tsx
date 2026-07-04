@@ -91,29 +91,21 @@ const categoryMeta: Record<WidgetCategoryId, { label: string; preview: WidgetPre
 };
 
 function PreviewFrame({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div
-      className={cn("h-full w-full rounded-lg border bg-background/80 p-3 shadow-sm", className)}
-    >
-      {children}
-    </div>
-  );
+  // TASK-479-22-L01: ported from the prototype WidgetPreview frame — a warm muted
+  // tile with no hard border/shadow (soft & friendly look), recolored via tokens.
+  return <div className={cn("h-full w-full rounded-xl bg-muted p-3", className)}>{children}</div>;
 }
 
 function renderPreview(kind: WidgetPreview) {
+  // Same WidgetPreview union arms as before — only the inner skeleton blocks are
+  // restyled to the prototype's `bg-muted-foreground/{10..30}` tints + rounded tiles.
   switch (kind) {
     case "grid":
       return (
-        <PreviewFrame className="p-2">
-          <div className="grid h-full grid-cols-3 gap-2">
-            {Array.from({ length: 3 }).map((_, index) => (
-              <div
-                key={`grid-${index}`}
-                className="flex flex-col gap-2 rounded-md border bg-background p-2"
-              >
-                <div className="h-3 w-3 rounded-full bg-muted" />
-                <div className="h-1 w-full rounded bg-muted/60" />
-              </div>
+        <PreviewFrame>
+          <div className="grid h-full grid-cols-3 grid-rows-2 gap-1.5">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div key={`grid-${index}`} className="rounded-md bg-muted-foreground/15" />
             ))}
           </div>
         </PreviewFrame>
@@ -122,23 +114,20 @@ function renderPreview(kind: WidgetPreview) {
       return (
         <PreviewFrame>
           <div className="flex h-full flex-col gap-2">
-            <div className="h-2 w-1/3 rounded bg-muted" />
-            <div className="h-6 w-full rounded border bg-muted/30" />
-            <div className="mt-auto h-4 w-full rounded bg-primary/70" />
+            <div className="h-2 w-1/3 rounded bg-muted-foreground/25" />
+            <div className="h-6 w-full rounded-md bg-muted-foreground/10" />
+            <div className="mt-auto h-4 w-full rounded-md bg-muted-foreground/30" />
           </div>
         </PreviewFrame>
       );
     case "media":
       return (
-        <PreviewFrame className="p-2">
+        <PreviewFrame>
           <div className="flex h-full gap-2">
             {Array.from({ length: 2 }).map((_, index) => (
-              <div
-                key={`media-${index}`}
-                className="flex flex-1 flex-col gap-2 rounded-md border bg-background p-2"
-              >
-                <div className="flex-1 rounded bg-muted/60" />
-                <div className="h-1 w-full rounded bg-muted/50" />
+              <div key={`media-${index}`} className="flex flex-1 flex-col gap-1.5">
+                <div className="flex-1 rounded-md bg-muted-foreground/20" />
+                <div className="h-1.5 w-full rounded bg-muted-foreground/15" />
               </div>
             ))}
           </div>
@@ -148,10 +137,10 @@ function renderPreview(kind: WidgetPreview) {
       return (
         <PreviewFrame className="flex items-center justify-center">
           <div className="flex flex-col items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-              <Play className="h-4 w-4 text-muted-foreground" />
+            <div className="flex size-10 items-center justify-center rounded-full bg-muted-foreground/20">
+              <Play className="size-4 text-muted-foreground" />
             </div>
-            <div className="h-1 w-16 rounded bg-muted/60" />
+            <div className="h-1.5 w-16 rounded bg-muted-foreground/15" />
           </div>
         </PreviewFrame>
       );
@@ -159,41 +148,51 @@ function renderPreview(kind: WidgetPreview) {
       return (
         <PreviewFrame>
           <div className="flex h-full flex-col gap-2">
-            <div className="h-2 w-full rounded bg-muted/60" />
-            <div className="h-2 w-full rounded bg-muted/60" />
-            <div className="h-2 w-3/4 rounded bg-muted/60" />
+            <div className="h-2 w-full rounded bg-muted-foreground/15" />
+            <div className="h-2 w-full rounded bg-muted-foreground/15" />
+            <div className="h-2 w-3/4 rounded bg-muted-foreground/15" />
           </div>
         </PreviewFrame>
       );
     case "pricing":
       return (
         <PreviewFrame>
-          <div className="flex h-full flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <div className="h-2 w-1/4 rounded bg-muted" />
-              <div className="h-2 w-1/4 rounded bg-muted" />
-            </div>
-            <div className="mt-auto h-2 w-full rounded bg-muted/60" />
+          <div className="grid h-full grid-cols-3 gap-1.5">
+            {[0, 1, 2].map((index) => (
+              <div
+                key={`pricing-${index}`}
+                className={cn(
+                  "flex flex-col gap-1 rounded-md p-1.5",
+                  index === 1 ? "bg-muted-foreground/15" : "bg-muted-foreground/10"
+                )}
+              >
+                <div className="h-1.5 w-3/4 rounded bg-muted-foreground/30" />
+                <div className="h-3 w-1/2 rounded bg-muted-foreground/25" />
+                <div className="mt-auto h-2.5 rounded bg-muted-foreground/20" />
+              </div>
+            ))}
           </div>
         </PreviewFrame>
       );
     case "banner":
       return (
-        <PreviewFrame className="flex items-center justify-center border-primary/20 bg-primary/5">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-primary/50">
-            Banner
-          </span>
+        <PreviewFrame className="flex items-center justify-center">
+          <div className="flex w-full flex-col items-center gap-2">
+            <div className="h-2 w-1/2 rounded bg-muted-foreground/25" />
+            <div className="h-1.5 w-1/3 rounded bg-muted-foreground/15" />
+            <div className="mt-1 h-4 w-16 rounded-md bg-muted-foreground/30" />
+          </div>
         </PreviewFrame>
       );
     case "hero":
     default:
       return (
         <PreviewFrame>
-          <div className="flex h-full flex-col gap-2">
-            <div className="h-2 w-1/2 rounded bg-muted" />
-            <div className="h-1 w-full rounded bg-muted/60" />
-            <div className="h-1 w-2/3 rounded bg-muted/60" />
-            <div className="mt-auto h-4 w-16 rounded bg-primary/30" />
+          <div className="flex h-full flex-col gap-1.5">
+            <div className="h-2 w-1/2 rounded bg-muted-foreground/25" />
+            <div className="h-1.5 w-full rounded bg-muted-foreground/15" />
+            <div className="h-1.5 w-2/3 rounded bg-muted-foreground/15" />
+            <div className="mt-auto h-4 w-16 rounded-md bg-muted-foreground/30" />
           </div>
         </PreviewFrame>
       );
@@ -755,7 +754,7 @@ export function WidgetLibraryPage() {
             </>
           }
         />
-        <div className="rounded-xl border bg-card p-4 shadow-sm">
+        <div className="rounded-2xl border bg-card p-4 shadow-soft">
           <span className="sr-only">
             Available widget library sections:{" "}
             {sectionOptions.map((option) => option.label).join(", ")}
@@ -786,7 +785,7 @@ export function WidgetLibraryPage() {
             <Badge variant="secondary">
               {pagination.totalItems} {resourceLabel}
             </Badge>
-            <div className="flex items-center rounded-lg border bg-background p-1 shadow-sm">
+            <div className="flex items-center rounded-xl border bg-card p-1 shadow-soft">
               <Button
                 type="button"
                 variant={view === "table" ? "secondary" : "ghost"}
@@ -855,12 +854,12 @@ export function WidgetLibraryPage() {
           ) : (
             <div
               className={cn(
-                "grid gap-6",
-                "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+                "grid gap-4",
+                "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
               )}
             >
               {pagination.visibleRows.length === 0 ? (
-                <div className="col-span-full rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+                <div className="col-span-full rounded-2xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
                   No items match your search.
                 </div>
               ) : (

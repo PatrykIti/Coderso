@@ -6,21 +6,23 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Freeze the Video-block remediation contract from
-`_docs/AUDIT/video-2026-06-10.md`, especially the shift from raw URL entry and
-yes/no selects to the shared media/toggle control surfaces.
+`_docs/AUDIT/video-2026-06-10.md`, preserving the now-closed shift onto the
+shared media/toggle control surfaces and keeping this family scoped to
+video-specific runtime truthfulness.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-441-01-L01: Video media picker, toggle controls, and runtime guard.
+- [x] TASK-441-01-L01: Video media picker, toggle controls, and runtime guard.
 
 ---
 
@@ -36,4 +38,3 @@ yes/no selects to the shared media/toggle control surfaces.
 ## Documentation Updates Required
 
 - `_docs/PAGE_MODEL.md` if Video source semantics change
-

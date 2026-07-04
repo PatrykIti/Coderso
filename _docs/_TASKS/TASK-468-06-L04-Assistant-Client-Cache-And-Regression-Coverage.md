@@ -6,7 +6,8 @@
 **Category:** Assistant / Admin Cache / Regression Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-06-L03, TASK-467-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -19,15 +20,15 @@ path fixed by TASK-467.
 
 ## Sub-Tasks
 
-- [ ] Wire assistant mutation success to lightweight Custom Screen cache
+- [x] Wire assistant mutation success to lightweight Custom Screen cache
   invalidation helpers.
-- [ ] Do not start this leaf until TASK-467-01 has landed
+- [x] Do not start this leaf until TASK-467-01 has landed
   `core/admin/services/customScreensCache.ts`,
   `clearCustomScreensCacheLightweight`, and invalidator registration.
-- [ ] Ensure active-surface cache refreshes after screen and entry mutations.
-- [ ] Add regression tests proving assistant client imports do not pull the full
+- [x] Ensure active-surface cache refreshes after screen and entry mutations.
+- [x] Add regression tests proving assistant client imports do not pull the full
   custom screen editor client into lightweight bundles.
-- [ ] Run admin bundle checks and record evidence in TASK-468-06.
+- [x] Run admin bundle checks and record evidence in TASK-468-06.
 
 ## Files To Change
 

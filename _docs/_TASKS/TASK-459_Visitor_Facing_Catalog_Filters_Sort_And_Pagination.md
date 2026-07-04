@@ -5,8 +5,9 @@
 **Category:** Pages / Public Runtime / Listings / Search / Performance
 **Estimated Effort:** Very Large
 **Dependencies:** None (consumes the shipped TASK-457 collection block authoring)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-13
+**Completed:** 2026-06-18
 
 ---
 
@@ -122,7 +123,7 @@ sections, not a monolithic section type.
       template style consumption.
 - [x] TASK-459-04: DB pushdown, jsonb indexes, corpus-wide facet counts, and
       filtered-request caching.
-- [ ] TASK-459-05: Validation, live catalog demo, and closure.
+- [x] TASK-459-05: Validation, live catalog demo, and closure.
 
 ## Progress Notes
 
@@ -130,8 +131,15 @@ sections, not a monolithic section type.
   complete with alias-aware filters, legacy filters-pair normalization,
   pagination/list route wiring, DB pushdown/index artifacts, option-A
   param-aware cache hardening, targeted suites, perf gate, release gates,
-  EXPLAIN evidence, and docs updates. Parent remains open until TASK-459-05
-  records the live dev-host Playwright catalog demo with pretty URLs.
+  EXPLAIN evidence, and docs updates. At that point, the parent stayed open
+  until TASK-459-05 recorded the live dev-host Playwright catalog demo with
+  pretty URLs.
+- 2026-06-18: TASK-459-05 closure validation completed. Fresh verification
+  covered lint/types, root `tsc`, full Vitest, targeted Bun listing/runtime
+  suites, query-builder tests, perf gate, `bun run gates:coderso`, dev DB
+  listing indexes, and live `coderso-dev-core-host` + `playwright-cli`
+  catalog smoke evidence for filters, sort, pagination, shareable pretty URLs,
+  no-JS/mobile fallback, draft invisibility, and detail routes.
 
 ---
 

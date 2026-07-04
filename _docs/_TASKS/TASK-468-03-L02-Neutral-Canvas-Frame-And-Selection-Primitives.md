@@ -6,7 +6,8 @@
 **Category:** Admin UI / Authoring Architecture
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-03-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -15,6 +16,11 @@
 Extract the canvas frame, selection state, drag/drop shell, and viewport chrome
 from Page Editor into neutral authoring primitives. The new primitives must be
 document-agnostic and receive all domain behavior through adapters.
+
+2026-06-21 completion: added `AuthoringCanvasFrame`,
+`authoringSelection`, and `AuthoringInsertionZone` as domain-neutral UI
+primitives. Screen-specific selection and mutations remain in
+`ScreenAuthoringCanvas` and `screenDocumentOps`.
 
 ## Sub-Tasks
 

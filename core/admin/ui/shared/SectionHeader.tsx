@@ -1,11 +1,18 @@
+import { type ReactNode } from "react";
+
 import { cn } from "@/lib/utils";
 
 type SectionHeaderProps = {
-  title: string;
-  action?: React.ReactNode;
+  title: ReactNode;
+  action?: ReactNode;
   className?: string;
 };
 
+/**
+ * TASK-479-06-L02: rethemed to the soft/violet look — the heading now matches
+ * the `SectionCard` header type scale (`font-display text-[15px]`). API
+ * unchanged (title/action/className); `title` widened to `ReactNode`.
+ */
 export function SectionHeader({ title, action, className }: SectionHeaderProps) {
   return (
     <div
@@ -14,7 +21,7 @@ export function SectionHeader({ title, action, className }: SectionHeaderProps) 
         className
       )}
     >
-      <h2 className="text-lg font-semibold">{title}</h2>
+      <h2 className="font-display text-[15px] font-semibold">{title}</h2>
       {action}
     </div>
   );

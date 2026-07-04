@@ -25,6 +25,10 @@
  */
 
 import type { PageBlockV2 } from "../pages/pageDocumentV2";
+// Type-only import (erased at compile time ⇒ NO runtime cycle): menuDocumentV2
+// imports the appearance runtime validators FROM this module, so the reverse
+// edge MUST stay type-only (TASK-499-02 §5).
+import type { MenuDocumentV2 } from "./menuDocumentV2";
 
 export const MENU_APPEARANCE_INVALID = "menu_appearance_invalid" as const;
 
@@ -48,6 +52,7 @@ export const menuAppearanceTextTransforms = ["none", "uppercase", "capitalize"] 
 export const menuAppearanceShadows = ["none", "sm", "md"] as const;
 export const menuAppearanceDropdownDirections = ["bottom", "top"] as const;
 export const menuAppearanceMobileModes = ["disclosure", "inline"] as const;
+export const menuAppearanceOrientations = ["horizontal", "vertical"] as const;
 
 export type MenuAppearanceAlignment = (typeof menuAppearanceAlignments)[number];
 export type MenuAppearanceFontWeight = (typeof menuAppearanceFontWeights)[number];
@@ -55,6 +60,7 @@ export type MenuAppearanceTextTransform = (typeof menuAppearanceTextTransforms)[
 export type MenuAppearanceShadow = (typeof menuAppearanceShadows)[number];
 export type MenuAppearanceDropdownDirection = (typeof menuAppearanceDropdownDirections)[number];
 export type MenuAppearanceMobileMode = (typeof menuAppearanceMobileModes)[number];
+export type MenuAppearanceOrientation = (typeof menuAppearanceOrientations)[number];
 
 /**
  * Every field is optional; an absent field falls back to the current
@@ -66,6 +72,19 @@ export type MenuAppearance = {
   linkColor?: string;
   linkHoverColor?: string;
   linkActiveColor?: string;
+  /**
+   * Nav-link cheap-win scalars (TASK-504-01 §2a). Sparse-optional like every
+   * other member (NOT `| null`) so `NavItemsProps = Pick<MenuAppearance, …>`
+   * stays all-optional. They carry NO resolution default — NOT seeded into
+   * `MENU_APPEARANCE_DEFAULTS`/`SHELL_APPEARANCE_DEFAULTS` (parent §4(a)/(b));
+   * they resolve to `undefined` when unauthored and 504-02 emits them
+   * PRESENT-ONLY (zero bytes when unset ⇒ no-override byte-identity holds).
+   */
+  linkPaddingX?: number;
+  linkPaddingY?: number;
+  linkRadius?: number;
+  /** Hover TEXT color (distinct from `linkHoverColor` = hover BACKGROUND). */
+  linkHoverTextColor?: string;
   /** Gap between top-level nav items, px. */
   itemGap?: number;
   /** Header bar vertical padding, px. */
@@ -84,6 +103,8 @@ export type MenuAppearance = {
   sticky?: boolean;
   dropdownDirection?: MenuAppearanceDropdownDirection;
   mobileMode?: MenuAppearanceMobileMode;
+  /** Nav list flow. Default `"horizontal"`; the default emits NO CSS (TASK-501-02). */
+  orientation?: MenuAppearanceOrientation;
 };
 
 /**
@@ -93,9 +114,12 @@ export type MenuAppearance = {
 export type MenuSettings = {
   appearance?: MenuAppearance;
   extras?: PageBlockV2[];
+  /** menuDocumentV2 draft (TASK-499-02); validated by `normalizeMenuDocumentV2ForWrite`. */
+  document?: MenuDocumentV2;
   published?: {
     appearance?: MenuAppearance;
     extras?: PageBlockV2[];
+    document?: MenuDocumentV2;
   };
 };
 
@@ -105,6 +129,12 @@ export const menuAppearanceNumberRanges = {
   paddingX: { min: 0, max: 64 },
   fontSize: { min: 10, max: 32 },
   borderWidth: { min: 0, max: 8 },
+  // Nav-link cheap-win scalars (TASK-504-01 §2a) — first-class shared-table
+  // clamps (they ARE appearance concepts riding the scalar delta channel,
+  // unlike the local Brand*/NavLevel* ranges in menuDocumentV2.ts).
+  linkPaddingX: { min: 0, max: 40 },
+  linkPaddingY: { min: 0, max: 32 },
+  linkRadius: { min: 0, max: 32 },
 } as const;
 
 type MenuAppearanceNumberField = keyof typeof menuAppearanceNumberRanges;
@@ -143,6 +173,14 @@ const normalizeColor = (value: unknown): string | null => {
   return MENU_APPEARANCE_COLOR_PATTERN.test(trimmed) ? trimmed : null;
 };
 
+/**
+ * Public, additive re-export of the token-backed color validator so
+ * `menuDocumentV2` shares the SAME color contract without duplicating the
+ * regex (TASK-499-02 §2). Returns the trimmed value on a valid token-backed
+ * color shape, else `null`.
+ */
+export const normalizeMenuColorValue = (value: unknown): string | null => normalizeColor(value);
+
 const normalizeNumber = (field: MenuAppearanceNumberField, value: unknown): number | null => {
   if (typeof value !== "number" || !Number.isFinite(value)) return null;
   return clampMenuAppearanceNumber(field, value);
@@ -163,6 +201,10 @@ const fieldNormalizers: FieldNormalizers = {
   linkColor: normalizeColor,
   linkHoverColor: normalizeColor,
   linkActiveColor: normalizeColor,
+  linkPaddingX: (value) => normalizeNumber("linkPaddingX", value),
+  linkPaddingY: (value) => normalizeNumber("linkPaddingY", value),
+  linkRadius: (value) => normalizeNumber("linkRadius", value),
+  linkHoverTextColor: normalizeColor,
   itemGap: (value) => normalizeNumber("itemGap", value),
   paddingY: (value) => normalizeNumber("paddingY", value),
   paddingX: (value) => normalizeNumber("paddingX", value),
@@ -176,6 +218,7 @@ const fieldNormalizers: FieldNormalizers = {
   sticky: normalizeBoolean,
   dropdownDirection: (value) => normalizeEnum(menuAppearanceDropdownDirections, value),
   mobileMode: (value) => normalizeEnum(menuAppearanceMobileModes, value),
+  orientation: (value) => normalizeEnum(menuAppearanceOrientations, value),
 };
 
 const isKnownField = (key: string): key is keyof MenuAppearance =>

@@ -73,15 +73,15 @@ export function CollectionReadinessChecklist({ summary }: CollectionReadinessChe
   const readyCount = items.filter((item) => item.ready).length;
 
   return (
-    <section className="rounded-lg border bg-card p-5">
+    <section className="rounded-2xl border bg-card p-5 shadow-soft">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">Readiness</h2>
+          <h2 className="font-display text-base font-semibold">Readiness</h2>
           <p className="text-sm text-muted-foreground">
             {readyCount} of {items.length} canonical resources linked
           </p>
         </div>
-        <Badge variant={readyCount === items.length ? "default" : "outline"}>
+        <Badge variant={readyCount === items.length ? "success" : "warning"}>
           {readyCount === items.length ? "Ready" : "Needs attention"}
         </Badge>
       </div>
@@ -92,7 +92,7 @@ export function CollectionReadinessChecklist({ summary }: CollectionReadinessChe
           return (
             <div
               key={item.resource}
-              className="flex min-w-0 items-center justify-between gap-3 rounded-lg border bg-background p-3"
+              className="flex min-w-0 items-center justify-between gap-3 rounded-xl border bg-background p-3"
             >
               <div className="flex min-w-0 items-center gap-3">
                 {item.ready ? (
@@ -109,7 +109,7 @@ export function CollectionReadinessChecklist({ summary }: CollectionReadinessChe
                   ) : null}
                 </div>
               </div>
-              <Badge variant={item.ready ? "default" : "outline"}>
+              <Badge variant={item.ready ? "success" : "outline"}>
                 {item.ready ? "Ready" : "Open"}
               </Badge>
             </div>

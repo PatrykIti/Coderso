@@ -2,6 +2,7 @@
 @import "./post-content.css";
 
 @source "../**/*.{ts,tsx}";
+@source "../../services/pages/**/*.{ts,tsx}";
 @source "../../widgets/**/*.{ts,tsx}";
 
 @theme {

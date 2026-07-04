@@ -135,7 +135,7 @@ test("collectWritableBindingFields returns unique write targets", () => {
   expect(collectWritableBindingFields(bindings)).toEqual(["title", "score"]);
 });
 
-test("widget-aware write helpers only expose screen-field-value.value as writable", () => {
+test("widget-aware write helpers retire screen widget write contracts", () => {
   const screenBindings: CustomScreenBinding[] = [
     {
       id: "header-title",
@@ -171,13 +171,13 @@ test("widget-aware write helpers only expose screen-field-value.value as writabl
       contracts,
       fallbackToModeOnly: false,
     })
-  ).toBe(true);
+  ).toBe(false);
   expect(
     isBindingWriteAllowed(screenBindings[1]!, {
       contracts,
       fallbackToModeOnly: false,
     })
-  ).toBe(true);
+  ).toBe(false);
   expect(
     isBindingWriteAllowed(screenBindings[2]!, {
       contracts,
@@ -189,7 +189,7 @@ test("widget-aware write helpers only expose screen-field-value.value as writabl
       contracts,
       fallbackToModeOnly: false,
     })
-  ).toEqual(["title", "headline"]);
+  ).toEqual([]);
 });
 
 test("sanitizeUnsupportedWriteBindings downgrades stale screen-widget write modes to read", () => {
@@ -228,11 +228,11 @@ test("sanitizeUnsupportedWriteBindings downgrades stale screen-widget write mode
   ).toEqual([
     expect.objectContaining({
       id: "header-title",
-      mode: "readwrite",
+      mode: "read",
     }),
     expect.objectContaining({
       id: "field-value",
-      mode: "readwrite",
+      mode: "read",
     }),
     expect.objectContaining({
       id: "legacy-hero",

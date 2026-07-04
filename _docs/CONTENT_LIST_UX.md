@@ -211,9 +211,9 @@ Gdy zaznaczysz wpisy na liscie:
   `EntryCreateDrawer` in the active V3 flow.
 - Screens without writable editor bindings stay out of sidebar shortcuts and
   show an upgrade-required state if a records route is opened directly.
-- `writable editor bindings` here means widget-aware write-capable targets
-  (currently `screen-field-value.value` plus a writable schema/system field),
-  not any arbitrary legacy `readwrite` binding on a preserved fallback block.
+- `writable editor bindings` here means V4 screen-owned write-capable targets
+  such as `field.value` plus a writable schema/system field, not any arbitrary
+  legacy `readwrite` binding on a preserved fallback block.
 
 ## Forms parity
 

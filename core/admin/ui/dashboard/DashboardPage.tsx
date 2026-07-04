@@ -1,32 +1,49 @@
-import { Database, FileText, HardDrive, RefreshCw } from "lucide-react";
+import { Database, FileText, Image, RefreshCw, Users } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { getDashboardData } from "@/services/dashboardClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { Donut } from "@/ui/shared/Charts";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { PageHeader } from "@/ui/shared/PageHeader";
-import { SectionHeader } from "@/ui/shared/SectionHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 import { RecentEditsTable } from "@/ui/dashboard/RecentEditsTable";
 import { SecurityStatusCard } from "@/ui/dashboard/SecurityStatusCard";
 import { SiteHealthCard } from "@/ui/dashboard/SiteHealthCard";
 import { StatCard } from "@/ui/dashboard/StatCard";
-import type { DashboardPayload } from "../../../services/dashboard/dashboardTypes";
+import type {
+  DashboardPayload,
+  DashboardSecuritySummary,
+  DashboardStorageSummary,
+  DashboardTotals,
+} from "../../../services/dashboard/dashboardTypes";
 
-const formatBytes = (value: number) => {
-  if (value <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = value;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex += 1;
-  }
-  const rounded = size >= 10 ? Math.round(size) : Math.round(size * 10) / 10;
-  return `${rounded} ${units[unitIndex]}`;
+const EMPTY_TOTALS: DashboardTotals = { pages: 0, entries: 0, media: 0, users: 0 };
+const EMPTY_STORAGE: DashboardStorageSummary = {
+  usedBytes: 0,
+  limitBytes: null,
+  usedPercent: null,
 };
+const EMPTY_SECURITY: DashboardSecuritySummary = { status: "ok", issues: 0, checks: [] };
+
+// Content-breakdown segments map 1:1 to the four real `totals` fields. Each
+// carries the chart color (token var) + legend dot (token utility) so the donut
+// and its legend stay in lockstep with no fabricated percentages.
+const CONTENT_SEGMENTS = [
+  { key: "pages", label: "Pages", color: "var(--primary)", dot: "bg-primary" },
+  { key: "entries", label: "Entries", color: "var(--info)", dot: "bg-info" },
+  { key: "media", label: "Media", color: "var(--success)", dot: "bg-success" },
+  { key: "users", label: "Users", color: "var(--warning)", dot: "bg-warning" },
+] as const satisfies ReadonlyArray<{
+  key: keyof DashboardTotals;
+  label: string;
+  color: string;
+  dot: string;
+}>;
 
 export function DashboardPage() {
   const [data, setData] = useState<DashboardPayload | null>(null);
@@ -74,59 +91,58 @@ export function DashboardPage() {
   }, []);
 
   const cards = useMemo(() => {
-    const totals = data?.totals ?? { pages: 0, entries: 0, media: 0 };
-    const storage = data?.storage ?? {
-      usedBytes: 0,
-      usedPercent: null as number | null,
-    };
-
+    const totals = data?.totals ?? EMPTY_TOTALS;
     return [
       {
         label: "Pages",
         value: totals.pages.toLocaleString("en-US"),
-        icon: <FileText className="h-5 w-5" />,
-        accent: "primary" as const,
+        icon: <FileText className="size-5" />,
       },
       {
         label: "Entries",
         value: totals.entries.toLocaleString("en-US"),
-        icon: <Database className="h-5 w-5" />,
-        accent: "success" as const,
+        icon: <Database className="size-5" />,
       },
       {
-        label: "Storage Used",
-        value:
-          storage.usedPercent === null
-            ? formatBytes(storage.usedBytes)
-            : `${storage.usedPercent}%`,
-        delta: storage.usedPercent === null ? "No quota configured" : undefined,
-        icon: <HardDrive className="h-5 w-5" />,
-        accent: "warning" as const,
+        label: "Media",
+        value: totals.media.toLocaleString("en-US"),
+        icon: <Image className="size-5" />,
+      },
+      {
+        label: "Users",
+        value: totals.users.toLocaleString("en-US"),
+        icon: <Users className="size-5" />,
       },
     ];
   }, [data]);
 
+  const totals = data?.totals ?? EMPTY_TOTALS;
+  const donutSegments = CONTENT_SEGMENTS.map((segment) => ({
+    label: segment.label,
+    value: totals[segment.key],
+    color: segment.color,
+  }));
+  const donutTotal = donutSegments.reduce((sum, segment) => sum + segment.value, 0);
+
   return (
     <AdminShell activeHref="/admin">
-      <div className="mx-auto flex max-w-6xl flex-col gap-8">
+      <div className="mx-auto flex max-w-6xl flex-col gap-4">
         <PageHeader
           title="Dashboard"
           description="Welcome back, Admin. Here's what's happening today."
           actions={
-            <div className="flex items-center gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setIsLoading(true);
-                  setError(null);
-                  void refresh();
-                }}
-                disabled={isLoading}
-              >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Refresh
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsLoading(true);
+                setError(null);
+                void refresh();
+              }}
+              disabled={isLoading}
+            >
+              <RefreshCw className="mr-2 size-4" />
+              Refresh
+            </Button>
           }
         />
 
@@ -137,65 +153,67 @@ export function DashboardPage() {
           </Alert>
         ) : null}
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map((card) => (
-            <StatCard
-              key={card.label}
-              label={card.label}
-              value={card.value}
-              delta={card.delta}
-              accent={card.accent}
-              icon={card.icon}
-            />
+            <StatCard key={card.label} label={card.label} value={card.value} icon={card.icon} />
           ))}
         </div>
 
         {isLoading ? (
-          <div className="rounded-xl border border-dashed bg-muted/30 p-8 text-center text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-dashed border-border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
             Loading dashboard...
           </div>
         ) : null}
 
-        <div className="grid gap-6 lg:grid-cols-3" aria-busy={isLoading}>
-          <Card className="border-border/60 lg:col-span-2">
-            <CardHeader className="flex items-center justify-between">
-              <SectionHeader
-                title="Recent Edits"
-                action={null}
-              />
-            </CardHeader>
-            <CardContent>
-              <RecentEditsTable items={data?.recentEdits ?? []} />
-            </CardContent>
-          </Card>
+        <div aria-busy={isLoading} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <SectionCard
+            className="lg:col-span-2"
+            title="Recent Edits"
+            padded={false}
+            bodyClassName="p-0"
+            action={
+              <Button asChild variant="ghost" size="sm">
+                <AdminLink href="/pages" prefetch>
+                  All pages
+                </AdminLink>
+              </Button>
+            }
+          >
+            <RecentEditsTable items={data?.recentEdits ?? []} />
+          </SectionCard>
 
-          <div className="flex flex-col gap-6">
-            <SiteHealthCard
-              storage={
-                data?.storage ?? {
-                  usedBytes: 0,
-                  limitBytes: null,
-                  usedPercent: null,
-                }
-              }
-              security={
-                data?.security ?? {
-                  status: "ok",
-                  issues: 0,
-                  checks: [],
-                }
-              }
-            />
-            <SecurityStatusCard
-              summary={
-                data?.security ?? {
-                  status: "ok",
-                  issues: 0,
-                  checks: [],
-                }
-              }
-            />
-          </div>
+          <SectionCard title="Content breakdown" description="By type">
+            <div className="flex flex-col items-center">
+              <div className="relative">
+                <Donut segments={donutSegments} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="font-display text-2xl font-semibold">
+                    {donutTotal.toLocaleString("en-US")}
+                  </span>
+                  <span className="text-xs text-muted-foreground">items</span>
+                </div>
+              </div>
+              <div className="mt-4 grid w-full grid-cols-2 gap-2 text-sm">
+                {CONTENT_SEGMENTS.map((segment) => (
+                  <div key={segment.key} className="flex items-center gap-2">
+                    <span className={cn("size-2.5 rounded-full", segment.dot)} />
+                    <span className="text-muted-foreground">{segment.label}</span>
+                    <span className="ml-auto font-medium">
+                      {totals[segment.key].toLocaleString("en-US")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <SiteHealthCard
+            storage={data?.storage ?? EMPTY_STORAGE}
+            security={data?.security ?? EMPTY_SECURITY}
+          />
+          <SecurityStatusCard summary={data?.security ?? EMPTY_SECURITY} />
         </div>
       </div>
     </AdminShell>

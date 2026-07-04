@@ -1,0 +1,208 @@
+import { ChevronDown, ExternalLink, Hexagon } from "lucide-react";
+import { useState } from "react";
+
+import { footerItems, navSections, type NavItem } from "@/nav/navConfig";
+import { Link, usePath } from "@/lib/router";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/cn";
+
+// Collect every internal nav target once, then resolve the active item by the
+// LONGEST matching prefix — so a published screen highlights its own item, not
+// the broader "Screens" entry whose path is also a prefix.
+const NAV_TOS: string[] = navSections.flatMap((section) => [
+  ...(section.items?.map((i) => i.to) ?? []),
+  ...(section.group?.items.map((i) => i.to) ?? []),
+  ...(section.itemsAfterGroup?.map((i) => i.to) ?? []),
+]);
+
+const resolveActiveTo = (path: string): string | null => {
+  let best: string | null = null;
+  for (const to of NAV_TOS) {
+    if (/^https?:/.test(to)) continue;
+    const match = to === "/" ? path === "/" : path === to || path.startsWith(`${to}/`);
+    if (match && (!best || to.length > best.length)) best = to;
+  }
+  return best;
+};
+
+function NavLink({
+  item,
+  active,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.to}
+      onClick={onNavigate}
+      className={cn(
+        "group flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+        active
+          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+          : "text-sidebar-foreground hover:bg-accent hover:text-foreground",
+      )}
+    >
+      <Icon
+        className={cn(
+          "size-4.5 shrink-0 transition-colors",
+          active ? "text-primary" : "text-sidebar-muted group-hover:text-foreground",
+        )}
+      />
+      <span className="truncate">{item.label}</span>
+      {item.badge ? (
+        <Badge variant="soft" className="ml-auto px-1.5 py-0 text-[10px]">
+          {item.badge}
+        </Badge>
+      ) : null}
+    </Link>
+  );
+}
+
+export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
+  const path = usePath();
+  const activeTo = resolveActiveTo(path);
+  const [advancedOpen, setAdvancedOpen] = useState(true);
+
+  return (
+    <div className="flex h-full flex-col bg-sidebar">
+      {/* Site identity */}
+      <div className="px-3 pt-3.5">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2.5 rounded-xl border border-transparent px-2.5 py-2 text-left transition-colors hover:bg-accent"
+        >
+          <span className="flex size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-soft">
+            <Hexagon className="size-5 fill-current" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate font-display text-sm font-semibold leading-tight">
+              Acme Studio
+            </span>
+            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+              <ExternalLink className="size-3 shrink-0" />
+              <span className="truncate">acmestudio.com</span>
+            </span>
+          </span>
+          <ChevronDown className="size-4 text-muted-foreground" />
+        </button>
+      </div>
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4">
+        {navSections.map((section) => (
+          <div key={section.title} className="mb-5">
+            <div className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-muted">
+              {section.title}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              {section.items?.map((item) => (
+                <NavLink
+                  key={item.to}
+                  item={item}
+                  active={item.to === activeTo}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+
+            {section.group ? (
+              <div className="mt-1">
+                <button
+                  type="button"
+                  onClick={() => setAdvancedOpen((v) => !v)}
+                  className="flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-accent hover:text-foreground"
+                >
+                  <section.group.icon className="size-4.5 shrink-0 text-sidebar-muted" />
+                  <span>{section.group.label}</span>
+                  <ChevronDown
+                    className={cn(
+                      "ml-auto size-4 text-sidebar-muted transition-transform",
+                      advancedOpen ? "" : "-rotate-90",
+                    )}
+                  />
+                </button>
+                {advancedOpen ? (
+                  <div className="mt-0.5 ml-3.5 flex flex-col gap-0.5 border-l border-sidebar-border pl-2.5">
+                    {section.group.items.map((item) => {
+                      const active = item.to === activeTo;
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={onNavigate}
+                          className={cn(
+                            "group flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] font-medium transition-colors",
+                            active
+                              ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                              : "text-sidebar-foreground hover:bg-accent hover:text-foreground",
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              "size-4 shrink-0",
+                              active ? "text-primary" : "text-sidebar-muted group-hover:text-foreground",
+                            )}
+                          />
+                          <span className="truncate">{item.label}</span>
+                          {item.badge ? (
+                            <span className="ml-auto text-[10px] font-medium text-primary-soft-foreground">
+                              {item.badge}
+                            </span>
+                          ) : null}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+
+            {/* Published custom screens — first-class entries in the sidebar */}
+            {section.itemsAfterGroup && section.itemsAfterGroup.length > 0 ? (
+              <div className="mt-3">
+                <div className="mb-1 flex items-center gap-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+                  Published screens
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  {section.itemsAfterGroup.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      item={item}
+                      active={item.to === activeTo}
+                      onNavigate={onNavigate}
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div className="border-t border-sidebar-border p-3">
+        <div className="mb-2 flex items-center gap-1.5 px-3 py-1 text-xs text-muted-foreground">
+          <Hexagon className="size-3.5 shrink-0" />
+          <span>Coderso 1.0</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {footerItems.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            >
+              <item.icon className="size-3.5" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}

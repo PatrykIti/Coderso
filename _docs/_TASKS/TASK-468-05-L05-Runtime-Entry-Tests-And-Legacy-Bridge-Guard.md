@@ -6,7 +6,8 @@
 **Category:** Admin UI / Custom Screens / Cutover Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-05-L04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-21
 
 ---
 
@@ -15,6 +16,10 @@
 Close the runtime and entry-editing cutover by proving active record list,
 record preview, and entry editing routes no longer use the legacy widget bridge.
 This leaf also records validation evidence before assistant and cleanup work.
+
+2026-06-21 corrective closure: record entry tests now assert the floating Value
+panel path, absence of builder block buttons in record mode, and active-surface
+hydration from sectioned V4 documents.
 
 ## Sub-Tasks
 

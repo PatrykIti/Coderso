@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Contract / Validation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -21,12 +22,12 @@ context only.
 
 ## Sub-Tasks
 
-- [ ] Freeze canonical type names and versioning rationale.
-- [ ] Define `CustomScreenListViewDefinitionV4`.
-- [ ] Define `ScreenSectionLayoutV1`, `ScreenBlockPropsByType`, ids, limits,
+- [x] Freeze canonical type names and versioning rationale.
+- [x] Define `CustomScreenListViewDefinitionV4`.
+- [x] Define `ScreenSectionLayoutV1`, `ScreenBlockPropsByType`, ids, limits,
   and binding rules.
-- [ ] Define strict rejection cases for Page v2 payloads and legacy writes.
-- [ ] Record validation lanes for every later leaf.
+- [x] Define strict rejection cases for Page v2 payloads and legacy writes.
+- [x] Record validation lanes for every later leaf.
 
 ## Files To Change
 

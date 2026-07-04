@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-446-01, TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -15,45 +16,46 @@
 Adopt the shared inline-edit and dedicated control paths for Statistic and
 verify the toolbar label reads `Statistic tools` instead of transient default
 content like `0 tools`. Toolbar-label derivation is owned by TASK-451-02-L01
-via `resolveToolbarTargetLabel(target, { fallbackToTypeName: true })` (new
-helper, to be created in `core/admin/ui/pages/PageEditor.tsx`); this leaf only
-verifies the statistic fallback after that owner lands. Inline-edit
+via `resolveToolbarTargetLabel` in
+`core/admin/ui/pages/editor/pageEditorOptions.ts`; this leaf only verifies the
+statistic fallback. Inline-edit
 entry/commit machinery is owned by TASK-422
 (`core/services/pages/pageInlineEditContract.ts` targets map plus the shared
-canvas contenteditable flow); this leaf only registers the statistic
-value/label/caption targets in `inlineEditableTargets` and verifies behavior.
+canvas contenteditable flow); this leaf only verifies the existing statistic
+value/label/caption targets in `inlineEditableTargets`.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```tsx
 // Toolbar label: derivation owned by TASK-451-02-L01
-// (resolveToolbarTargetLabel(target, { fallbackToTypeName: true }) in
-// core/admin/ui/pages/PageEditor.tsx). This leaf only verifies the fallback
-// once the owner lands:
+// (resolveToolbarTargetLabel in core/admin/ui/pages/editor/pageEditorOptions.ts).
+// This leaf verifies the existing fallback:
 expect(floatingToolbar.getAttribute("aria-label")).toBe("Statistic tools");
 
-// Inline edit: machinery owned by TASK-422. Register/verify the statistic
+// Inline edit: machinery owned by TASK-422. Verify the existing statistic
 // value/label/caption targets in the TASK-422-owned inlineEditableTargets map
 // (core/services/pages/pageInlineEditContract.ts).
 
 // Dedicated controls: verify the statistic panels render the shared TASK-421
 // widgets resolved via getPageEditorControlsForTarget(...)
-// (core/services/pages/pageEditorControlRegistry.ts:508) and rendered through
-// RegistryControlField in core/admin/ui/pages/PageEditor.tsx.
+// (core/services/pages/pageEditorControlRegistry.ts:870-890) and rendered
+// through PageEditor.
 ```
 
 Owner files:
 
 - `core/admin/ui/pages/PageEditor.tsx` (verify-only: toolbar-label fallback is
-  owned by TASK-451-02-L01; inline-edit machinery is owned by TASK-422)
+  consumed here; inline-edit machinery is owned by TASK-422)
+- `core/admin/ui/pages/editor/pageEditorOptions.ts` (verify-only:
+  `resolveToolbarTargetLabel`)
 - `core/services/pages/pageEditorControlRegistry.ts` (verify-only: statistic
   control entries resolved through `getPageEditorControlsForTarget`)
 - `core/services/pages/pageRendererV2.tsx` (verify-only: published statistic

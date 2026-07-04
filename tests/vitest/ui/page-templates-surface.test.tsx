@@ -4,6 +4,7 @@ import { expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 import type { PageEditorHost } from "../../../core/admin/ui/pages/PageEditor";
+import type { PageDocumentV2 } from "../../../core/services/pages/pageDocumentV2";
 
 const templateSummary = {
   id: "tpl-1",
@@ -110,9 +111,11 @@ test(
       path: "/admin/advanced/page-templates",
     });
 
-    expect(html).toContain(
-      "No page templates yet. Create one to reuse section stacks across pages."
-    );
+    // TASK-479-23-L01: the empty state is the shared EmptyState primitive
+    // (title + description), so the copy is split across nodes — assert both
+    // parts rather than the pre-restyle single contiguous sentence.
+    expect(html).toContain("No page templates yet");
+    expect(html).toContain("Create one to reuse section stacks across pages.");
   }
 );
 
@@ -203,5 +206,41 @@ test(
     // The cached template is published, so the published pill is the active one.
     expect(html).toMatch(/aria-pressed="true"[^>]*data-page-editor-segmented-option="published"/);
     expect(html).toMatch(/aria-pressed="false"[^>]*data-page-editor-segmented-option="draft"/);
+  }
+);
+
+test(
+  "Template editor surfaces an always-visible propagation note via canvasChrome",
+  { timeout: 30000 },
+  async () => {
+    capturedHosts.length = 0;
+    const { PageTemplateEditorPage } =
+      await import("../../../core/admin/ui/pages/templates/PageTemplateEditorPage");
+
+    renderAdminUi(<PageTemplateEditorPage templateId="tpl-1" />, {
+      path: "/admin/advanced/page-templates/tpl-1",
+    });
+
+    // TASK-479-23-L02: the propagation note is rendered by the host
+    // `canvasChrome` seam (above the canvas sections), NOT buried in the settings
+    // sheet. The shared PageEditor is stubbed here, so the note is verified
+    // through the seam directly (mirroring how renderSettings is exercised).
+    const host = capturedHosts.at(-1);
+    expect(host?.canvasChrome).toBeTypeOf("function");
+
+    const document = {
+      schemaVersion: 2,
+      breakpoints: [],
+      seo: {},
+      settings: {},
+      sections: [],
+    } as unknown as PageDocumentV2;
+    const html = renderAdminUi(<>{host?.canvasChrome?.({ document, device: "desktop" })}</>, {
+      path: "/admin/advanced/page-templates/tpl-1",
+    });
+
+    expect(html).toMatch(/every page (using|that uses) it/i);
+    // Honesty guard: generic copy, never a fabricated page count.
+    expect(html).not.toMatch(/updates \d+ pages/i);
   }
 );

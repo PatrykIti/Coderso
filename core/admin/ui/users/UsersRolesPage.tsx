@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { UserPlus, UserCog } from "lucide-react";
+import { MailPlus, UserCheck, UserCog, UserPlus, Users } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import {
   createAdminRole,
@@ -27,6 +28,7 @@ import {
 import { SplitShell } from "@/ui/layouts/SplitShell";
 import { useAdminAuth } from "@/ui/contexts/AdminAuthContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
 import { SectionHeader } from "@/ui/shared/SectionHeader";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 
@@ -118,6 +120,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("any");
+  const [tab, setTab] = useState<"members" | "invitations">("members");
   const [selectedUserId, setSelectedUserId] = useState(initialUserId);
   const [selectedRoleId, setSelectedRoleId] = useState("");
   const [pendingSelectUserId, setPendingSelectUserId] = useState<string | null>(null);
@@ -269,6 +272,33 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
       return matchesQuery && matchesRole && matchesStatus;
     });
   }, [canReadRoles, query, roleFilter, statusFilter, users]);
+
+  // TASK-479-27-L01: render-time derivations only — counts/tab splits come from
+  // the real `users` array (UserStatus is "active" | "inactive" | "pending"); no
+  // new fetch, no setState-in-effect, no fabricated deltas.
+  const memberCount = useMemo(
+    () => users.filter((user) => user.status !== "pending").length,
+    [users]
+  );
+  const inviteCount = useMemo(
+    () => users.filter((user) => user.status === "pending").length,
+    [users]
+  );
+  const userStats = useMemo(
+    () => ({
+      total: users.length,
+      active: users.filter((user) => user.status === "active").length,
+      pending: inviteCount,
+    }),
+    [users, inviteCount]
+  );
+  const visibleUsers = useMemo(
+    () =>
+      filteredUsers.filter((user) =>
+        tab === "invitations" ? user.status === "pending" : user.status !== "pending"
+      ),
+    [filteredUsers, tab]
+  );
 
   const selectedUser = useMemo(() => {
     const pendingUser = pendingSelectUserId
@@ -754,6 +784,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
         <PageHeader
           title="Users & Roles"
           description="Manage team access, roles, and platform permissions."
+          icon={<Users />}
           actions={
             <div className="flex items-center gap-2">
               {readOnly ? (
@@ -812,6 +843,27 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
         ) : null}
         {canReadUsers ? (
           <>
+            <Tabs value={tab} onValueChange={(value) => setTab(value as "members" | "invitations")}>
+              <TabsList variant="line">
+                <TabsTrigger value="members">
+                  Members
+                  <Badge variant="soft">{memberCount}</Badge>
+                </TabsTrigger>
+                <TabsTrigger value="invitations">
+                  Invitations
+                  <Badge variant="soft">{inviteCount}</Badge>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+              <StatCard label="Total users" value={String(userStats.total)} icon={<Users />} />
+              <StatCard label="Active" value={String(userStats.active)} icon={<UserCheck />} />
+              <StatCard
+                label="Pending invites"
+                value={String(userStats.pending)}
+                icon={<MailPlus />}
+              />
+            </div>
             <UserFilters
               query={query}
               roleFilter={canReadRoles ? roleFilter : "all"}
@@ -824,7 +876,7 @@ export function UsersRolesPage({ permissions }: UsersRolesPageProps) {
               onStatusChange={setStatusFilter}
             />
             <UserList
-              items={filteredUsers}
+              items={visibleUsers}
               roles={roles}
               selectedId={selectedUser?.id}
               protectedIds={protectedUserIds}

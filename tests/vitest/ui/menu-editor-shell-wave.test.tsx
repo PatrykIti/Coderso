@@ -86,9 +86,54 @@ vi.mock("@/ui/menus/MenuTree", () => ({
   MenuTree: () => <div>Menu tree</div>,
 }));
 
-vi.mock("@/ui/menus/MenuItemDrawer", () => ({
-  MenuItemDrawer: () => <div>Menu item drawer</div>,
-}));
+// The always-on inspector reuses MenuItemForm's Radix Select controls; mock the
+// Select to a native <select> (as the sibling form suite does) so the inline
+// inspector renders cleanly in happy-dom.
+vi.mock("@/components/ui/select", () => {
+  const flattenText = (value: React.ReactNode): string =>
+    React.Children.toArray(value)
+      .map((child) => {
+        if (typeof child === "string" || typeof child === "number") return String(child);
+        if (React.isValidElement(child)) {
+          return flattenText((child.props as { children?: React.ReactNode }).children);
+        }
+        return "";
+      })
+      .join("")
+      .trim();
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
+    React.Children.toArray(value).flatMap((child) => {
+      if (!React.isValidElement(child)) return [];
+      const props = child.props as { value?: string; children?: React.ReactNode };
+      if (typeof props.value === "string") {
+        return [{ value: props.value, label: flattenText(props.children) }];
+      }
+      return collectOptions(props.children);
+    });
+  return {
+    Select: ({
+      children,
+      onValueChange,
+      value,
+    }: {
+      children: React.ReactNode;
+      onValueChange?: (value: string) => void;
+      value?: string;
+    }) => (
+      <select value={value} onChange={(event) => onValueChange?.(event.target.value)}>
+        {collectOptions(children).map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    ),
+    SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    SelectItem: ({ children }: { children: React.ReactNode; value: string }) => <>{children}</>,
+    SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+    SelectValue: () => null,
+  };
+});
 
 vi.mock("sonner", () => ({
   toast: {
@@ -180,13 +225,56 @@ test("MenuEditorPage renders editor-side location guidance", async () => {
     expect(view.container.textContent).toContain("Theme location");
     expect(view.container.textContent).toContain("Slot key used by the theme or Navigation widget");
     expect(view.container.textContent).toContain("Assigned to the primary theme slot.");
-    expect(view.container.textContent).toContain("Published");
+    // TASK-479-10-L02: the header live-status badge is now the shared
+    // token-driven StatusBadge (published -> success soft variant), which emits
+    // lowercase status text styled with a `capitalize` CSS class (visually
+    // "Published") instead of the old hardcoded emerald pill.
+    expect(view.container.textContent?.toLowerCase()).toContain("published");
     expect(view.container.textContent).toContain("Move to Draft");
     expect(view.container.textContent).toContain("Save changes");
-    expect(view.container.querySelector("header")?.textContent).toContain("Published");
-    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-emerald-500/10");
+    expect(view.container.querySelector("header")?.textContent?.toLowerCase()).toContain(
+      "published"
+    );
+    expect(view.container.querySelector("header")?.innerHTML).toContain('data-variant="success"');
     expect(view.container.textContent).not.toContain("All changes saved");
     expect(view.container.textContent).not.toContain("Back to menus");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("MenuEditorPage renders the always-on inspector with the Open-in-new-tab switch and Display-as control", async () => {
+  const view = mount();
+
+  try {
+    await flush();
+
+    // Add + select a custom-link item; the always-on "Item settings" inspector
+    // (shared by the inline pane AND the mobile Sheet) surfaces the
+    // "Open in new tab" Switch and the "Display as" variant control — proving
+    // openInNewTab/variant are editable (they live in the inspector wrapper,
+    // NOT in MenuItemForm).
+    await React.act(async () => {
+      clickButton(view.container, "Custom link");
+    });
+
+    // PRIMARY fields (prototype default): the "Open in new tab" Switch is
+    // surfaced without any disclosure.
+    expect(view.container.querySelector('[role="switch"]')).not.toBeNull();
+    expect(view.container.textContent).toContain("Open in new tab");
+    expect(view.container.textContent).toContain("Item settings");
+
+    // TASK-499-01 §4: "Display as" (variant) is demoted into the default-closed
+    // "Advanced" disclosure — still editable, just collapsed by default. Open it
+    // to prove the control is reachable.
+    expect(view.container.textContent).toContain("Advanced");
+    expect(view.container.textContent).not.toContain("Display as");
+
+    await React.act(async () => {
+      clickButton(view.container, "Advanced");
+    });
+
+    expect(view.container.textContent).toContain("Display as");
   } finally {
     view.cleanup();
   }
@@ -222,10 +310,15 @@ test("MenuEditorPage clears foreground loading when pages cache exists without m
     expect(view.container.textContent).toContain("test2");
     expect(view.container.textContent).toContain("Theme location");
     expect(view.container.textContent).toContain("Not assigned to a theme slot.");
-    expect(view.container.textContent).toContain("Draft");
-    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-amber-100");
+    // TASK-479-10-L02: draft status now renders via the shared StatusBadge
+    // (draft -> secondary soft variant; lowercase text + `capitalize` CSS).
+    expect(view.container.textContent?.toLowerCase()).toContain("draft");
+    expect(view.container.querySelector("header")?.innerHTML).toContain('data-variant="secondary"');
     expect(view.container.textContent).toContain("Publish");
-    expect(view.container.textContent).toContain("Menu Structure");
+    // TASK-499-01: the "Menu Structure" Card heading is gone (the three-pane
+    // frame chrome replaces it); the frame surfaces the "Menu editor" title and
+    // the empty-canvas copy is preserved.
+    expect(view.container.textContent).toContain("Menu editor");
     expect(view.container.textContent).toContain("No items yet. Add your first link.");
     expect(view.container.textContent).not.toContain("Loading menu settings");
   } finally {
@@ -244,8 +337,10 @@ test("MenuEditorPage shows success feedback after saving metadata", async () => 
       setInputValue(nameInput, "Primary Nav");
     });
 
+    // TASK-479-10-L02: the "Unsaved changes" pill is now the token-driven
+    // warning Badge variant (soft) instead of the old hardcoded rose pill.
     expect(view.container.querySelector("header")?.textContent).toContain("Unsaved changes");
-    expect(view.container.querySelector("header")?.innerHTML).toContain("bg-rose-100");
+    expect(view.container.querySelector("header")?.innerHTML).toContain('data-variant="warning"');
 
     await React.act(async () => {
       Array.from(view.container.querySelectorAll("button"))
@@ -331,7 +426,10 @@ test("MenuEditorPage publishes after metadata and item changes are saved", async
     const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
     await React.act(async () => {
-      clickButton(view.container, "Add Item");
+      // TASK-499-01: the untyped "Add Item" header button is replaced by the
+      // typed "Add items" rail. Drive the lifecycle via the "Pages" rail item,
+      // which inserts a VALID pageId item (label = page title "Home").
+      clickButton(view.container, "Pages");
       setInputValue(nameInput, "Primary Nav");
     });
 
@@ -348,7 +446,7 @@ test("MenuEditorPage publishes after metadata and item changes are saved", async
       "menu-1",
       expect.arrayContaining([
         expect.objectContaining({
-          label: "New item",
+          label: "Home",
           pageId: "page-1",
           parentId: null,
         }),
@@ -393,7 +491,7 @@ test("MenuEditorPage does not publish when item save fails", async () => {
     const nameInput = view.container.querySelector('input[placeholder="Main Menu"]');
 
     await React.act(async () => {
-      clickButton(view.container, "Add Item");
+      clickButton(view.container, "Pages");
       setInputValue(nameInput, "Primary Nav");
     });
 

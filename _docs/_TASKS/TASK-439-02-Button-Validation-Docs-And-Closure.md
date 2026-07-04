@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / QA
 **Estimated Effort:** Medium
 **Dependencies:** TASK-439-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -19,9 +20,9 @@ docs/board/changelog synchronization.
 
 ## Sub-Tasks
 
-- [ ] Run the targeted validation set and capture final evidence.
-- [ ] Synchronize the owned docs, task-board rows, and changelog coverage.
-- [ ] Split any residual drift into explicit follow-up tasks before closure if needed.
+- [x] Run the targeted validation set and capture final evidence.
+- [x] Synchronize the owned docs, task-board rows, and changelog coverage.
+- [x] Split any residual drift into explicit follow-up tasks before closure if needed.
 
 ## Implementation Pseudocode
 
@@ -44,10 +45,19 @@ Validation commands:
 - `bun --cwd core lint:types`
 - `coderso-dev-core-host` plus `playwright-cli` Button smoke.
 
+## Completion Notes
+
+- Button closure includes the final read-only drift finding that class-string
+  checks did not prove section accent truthfulness. The renderer now emits the
+  accent-consuming Button visual surface as inline styles instead of relying
+  on Tailwind arbitrary classes.
+- `playwright-cli` computed-style smoke on 2026-06-16 verified the published
+  accent mechanism with `--coderso-section-accent:#00ff00`; the rendered button
+  background computed to `rgb(0, 255, 0)`.
+
 ---
 
 ## Documentation Updates Required
 
 - `_docs/_TASKS/README.md`
 - `_docs/_CHANGELOG/` entry on completion
-

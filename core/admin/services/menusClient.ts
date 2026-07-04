@@ -211,6 +211,12 @@ export async function updateMenu(
     appearance?: MenuAppearance | null;
     /** Nav extras blocks; `null`/empty clears the slot. */
     extras?: PageBlockV2[] | null;
+    /**
+     * menuDocumentV2 draft (TASK-499-03). Forwarded verbatim on the existing
+     * `PATCH /menus/:id` body; the service validates + merges it per-key.
+     * `null`/emptied clears the `document` envelope key back to the legacy look.
+     */
+    document?: unknown;
   }
 ) {
   const updated = await apiRequest<MenuSummary>(

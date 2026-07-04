@@ -1,7 +1,12 @@
 import { PageDocumentRender } from "../services/pages/pageRendererV2";
 import type { PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
 import type { PageRuntimeDataByBlockId } from "../services/pages/pageRuntimeBindingContract";
-import { SiteFooter, SiteHeaderNav, type SiteShellRenderProps } from "./siteShell";
+import {
+  SiteFooter,
+  SiteHeaderMenuDocumentRender,
+  SiteHeaderNav,
+  type SiteShellRenderProps,
+} from "./siteShell";
 
 export type PageTemplatePropsV2 = {
   title: string;
@@ -18,6 +23,11 @@ export type PageTemplatePropsV2 = {
   siteShell?: SiteShellRenderProps | null;
   /** Site name for the shell header brand link. */
   siteName?: string | null;
+  /**
+   * TASK-504-03: current request path (front only; `null`/absent in preview) —
+   * forwarded ONLY into the document-header branch to stamp `aria-current`.
+   */
+  activePath?: string | null;
 };
 
 export function DefaultRuntimePageShellV2({
@@ -26,10 +36,19 @@ export function DefaultRuntimePageShellV2({
   runtimeDataByBlockId,
   siteShell,
   siteName,
+  activePath,
 }: PageTemplatePropsV2) {
   return (
     <>
-      {siteShell?.navigation ? (
+      {siteShell?.navigationDocument ? (
+        <SiteHeaderMenuDocumentRender
+          document={siteShell.navigationDocument}
+          navigation={siteShell.navigation}
+          siteName={siteName}
+          breakpoint={previewDevice}
+          activePath={activePath}
+        />
+      ) : siteShell?.navigation ? (
         <SiteHeaderNav
           navigation={siteShell.navigation}
           siteName={siteName}

@@ -7,13 +7,9 @@ import { afterEach, expect, test, vi } from "vitest";
 import { DocumentInspector } from "../../../core/admin/ui/posts/editor/inspector/DocumentInspector";
 
 vi.mock("@/components/ui/badge", () => ({
-  Badge: ({
-    children,
-    className,
-  }: {
-    children: React.ReactNode;
-    className?: string;
-  }) => <span className={className}>{children}</span>,
+  Badge: ({ children, className }: { children: React.ReactNode; className?: string }) => (
+    <span className={className}>{children}</span>
+  ),
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -73,9 +69,7 @@ vi.mock("@/components/ui/select", () => {
       .join("")
       .trim();
 
-  const collectOptions = (
-    value: React.ReactNode
-  ): Array<{ value: string; label: string }> =>
+  const collectOptions = (value: React.ReactNode): Array<{ value: string; label: string }> =>
     React.Children.toArray(value).flatMap((child) => {
       if (!React.isValidElement(child)) return [];
       if (typeof child.props.value === "string") {
@@ -283,7 +277,11 @@ test("DocumentInspector keeps advanced fields expanded and routes document callb
         { id: "cat-1", name: "Category One" },
         { id: "cat-2", name: "Category Two" },
       ]}
-      slugDisplay={{ label: "Public URL", value: "https://coderso.test/blog/hello-world", concrete: true }}
+      slugDisplay={{
+        label: "Public URL",
+        value: "https://coderso.test/blog/hello-world",
+        concrete: true,
+      }}
       updatedAt="2026-03-13T09:00:00.000Z"
       scheduledAt={null}
       publishedAt={null}
@@ -299,7 +297,9 @@ test("DocumentInspector keeps advanced fields expanded and routes document callb
   );
 
   try {
-    expect(view.container.textContent).toContain("Current category: Not assigned");
+    // TASK-497-02 (B7): the bg-muted/30 "Current category" summary box is dropped in the
+    // flat restyle; assert the kept "Category" InspectorRow label instead.
+    expect(view.container.textContent).toContain("Category");
 
     const selectsBeforeToggle = Array.from(view.container.querySelectorAll("select"));
     setSelectValue(selectsBeforeToggle[0], "cat-2");
@@ -319,15 +319,22 @@ test("DocumentInspector keeps advanced fields expanded and routes document callb
     });
 
     expect(view.container.textContent).not.toContain("Toggle");
-    expect(view.container.textContent).toContain("SEO fields completed: 0/3");
+    // TASK-497-02 (B7/B10): the SEO completion text is now the outline Badge "SEO 0/3".
+    expect(view.container.textContent).toContain("SEO 0/3");
     expect(view.container.textContent).toContain("Public URL:");
 
     const inputs = Array.from(view.container.querySelectorAll("input"));
     const textareas = Array.from(view.container.querySelectorAll("textarea"));
     const robotsSelect = Array.from(view.container.querySelectorAll("select"))[1];
 
-    setInputValue(inputs.find((input) => input.value === "Hello world"), "Updated title");
-    setInputValue(inputs.find((input) => input.value === "hello-world"), "updated-slug");
+    setInputValue(
+      inputs.find((input) => input.value === "Hello world"),
+      "Updated title"
+    );
+    setInputValue(
+      inputs.find((input) => input.value === "hello-world"),
+      "updated-slug"
+    );
     setTextareaValue(
       textareas.find((textarea) => textarea.placeholder === "Short summary for listings"),
       "Updated excerpt"
@@ -406,13 +413,14 @@ test("DocumentInspector renders timestamp fallbacks and disables danger action w
   );
 
   try {
-    expect(view.container.textContent).toContain("Archived");
+    // Status is rendered via the shared StatusBadge (TASK-479-09-L02), which emits
+    // the raw lowercase status text styled with a `capitalize` CSS class — so the
+    // DOM textContent is "archived" (visually "Archived"), not a literal label.
+    expect(view.container.textContent?.toLowerCase()).toContain("archived");
     expect(view.container.textContent).toContain("not-a-date");
     expect(view.container.textContent).toContain("Not set");
     expect(view.container.textContent).toContain("Moving to trash...");
-    expect(
-      view.container.querySelector("[data-media-picker-accept='image/*']")
-    ).toBeTruthy();
+    expect(view.container.querySelector("[data-media-picker-accept='image/*']")).toBeTruthy();
 
     const dangerButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
       button.textContent?.includes("Moving to trash")

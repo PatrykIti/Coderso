@@ -37,6 +37,7 @@ export type PageEditorColorSwatch = {
   id: string;
   label: string;
   value: string;
+  previewValue?: string;
 };
 
 export type PageEditorControlUiModel =
@@ -111,11 +112,27 @@ export const pageEditorOptionLabelCatalog: Readonly<Record<string, string>> = {
   gradient: "Gradient",
   image: "Image",
   video: "Video",
+  // Border styles
+  dashed: "Dashed",
+  dotted: "Dotted",
   // Button variants
   primary: "Primary",
   secondary: "Secondary",
   ghost: "Ghost",
   link: "Link",
+  // Badge variants, shapes, and icons
+  solid: "Solid",
+  soft: "Soft",
+  outline: "Outline",
+  pill: "Pill",
+  rounded: "Rounded",
+  square: "Square",
+  check: "Check",
+  sparkles: "Sparkles",
+  star: "Star",
+  zap: "Zap",
+  shield: "Shield",
+  heart: "Heart",
   // Text formats and alignment
   plain: "Plain",
   rich: "Rich text",
@@ -124,6 +141,8 @@ export const pageEditorOptionLabelCatalog: Readonly<Record<string, string>> = {
   // Typography tokens
   sans: "Sans",
   display: "Display",
+  "2xs": "XX-small",
+  xs: "X-small",
   xl: "XL",
   "2xl": "2XL",
   "3xl": "3XL",
@@ -206,13 +225,38 @@ export const getPageEditorOptionLabels = (
 export const getPageEditorColorPalette = (
   tokens: DesignTokens = DEFAULT_TOKENS
 ): readonly PageEditorColorSwatch[] => [
-  { id: "primary", label: "Primary", value: tokens.colors.primary },
-  { id: "secondary", label: "Secondary", value: tokens.colors.secondary },
-  { id: "accent", label: "Accent", value: tokens.colors.accent },
-  { id: "bg", label: "Background", value: tokens.neutrals.bg },
-  { id: "surface", label: "Surface", value: tokens.neutrals.surface },
-  { id: "border", label: "Border", value: tokens.neutrals.border },
-  { id: "text", label: "Text", value: tokens.neutrals.text },
+  {
+    id: "primary",
+    label: "Primary",
+    value: "var(--color-primary)",
+    previewValue: tokens.colors.primary,
+  },
+  {
+    id: "secondary",
+    label: "Secondary",
+    value: "var(--color-secondary)",
+    previewValue: tokens.colors.secondary,
+  },
+  {
+    id: "accent",
+    label: "Accent",
+    value: "var(--color-accent)",
+    previewValue: tokens.colors.accent,
+  },
+  { id: "bg", label: "Background", value: "var(--color-bg)", previewValue: tokens.neutrals.bg },
+  {
+    id: "surface",
+    label: "Surface",
+    value: "var(--color-surface)",
+    previewValue: tokens.neutrals.surface,
+  },
+  {
+    id: "border",
+    label: "Border",
+    value: "var(--color-border)",
+    previewValue: tokens.neutrals.border,
+  },
+  { id: "text", label: "Text", value: "var(--color-text)", previewValue: tokens.neutrals.text },
 ];
 
 const isSegmentedNumberRange = (clamp: { min: number; max: number }): boolean =>

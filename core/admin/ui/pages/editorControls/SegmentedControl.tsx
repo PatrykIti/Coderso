@@ -1,6 +1,14 @@
 import { useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 
-import { editorControlFocusClass, editorControlLabelClass } from "./controlChrome";
+import {
+  editorControlFocusClassFor,
+  editorControlLabelClassFor,
+  editorPanelSegmentActiveClass,
+  editorPanelSegmentIdleClass,
+  editorPanelSegmentTrackClass,
+  useEditorControlTone,
+  type EditorControlTone,
+} from "./controlChrome";
 
 export type SegmentedControlProps = {
   label: string;
@@ -10,6 +18,8 @@ export type SegmentedControlProps = {
   optionLabels?: Readonly<Record<string, string>>;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
   /**
    * Also emit `onChange` when the already-active option is clicked. Device-
    * scoped editor fields use this on tablet/mobile while the value is still
@@ -52,7 +62,9 @@ export const SegmentedControl = ({
   onChange,
   disabled = false,
   commitActiveOption = false,
+  tone,
 }: SegmentedControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
   const groupRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -85,12 +97,14 @@ export const SegmentedControl = ({
 
   return (
     <div className="grid min-w-0 gap-1" data-page-editor-control="segmented">
-      <span className={editorControlLabelClass}>{label}</span>
+      <span className={editorControlLabelClassFor(resolvedTone)}>{label}</span>
       <div
         ref={groupRef}
         role="group"
         aria-label={label}
-        className={`flex flex-nowrap snap-x gap-0.5 overflow-x-auto rounded-lg bg-white/10 p-0.5 ${segmentedScrollbarClass}`}
+        className={`flex flex-nowrap snap-x gap-0.5 overflow-x-auto rounded-lg p-0.5 ${
+          resolvedTone === "light" ? editorPanelSegmentTrackClass : "bg-white/10"
+        } ${segmentedScrollbarClass}`}
         onKeyDown={handleGroupKeyDown}
       >
         {options.map((option) => {
@@ -102,10 +116,16 @@ export const SegmentedControl = ({
               aria-pressed={active}
               data-page-editor-segmented-option={option}
               disabled={disabled}
-              className={`shrink-0 grow snap-start whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClass} ${
+              className={`shrink-0 grow snap-start whitespace-nowrap rounded-md px-2 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${editorControlFocusClassFor(
+                resolvedTone
+              )} ${
                 active
-                  ? "bg-white text-slate-950"
-                  : "text-slate-300 hover:bg-white/10 hover:text-white"
+                  ? resolvedTone === "light"
+                    ? editorPanelSegmentActiveClass
+                    : "bg-white text-slate-950"
+                  : resolvedTone === "light"
+                    ? editorPanelSegmentIdleClass
+                    : "text-slate-300 hover:bg-white/10 hover:text-white"
               }`}
               onFocus={(event) => scrollOptionIntoView(event.currentTarget)}
               onClick={() => {

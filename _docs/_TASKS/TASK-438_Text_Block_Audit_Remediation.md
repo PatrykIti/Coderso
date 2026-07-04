@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -25,12 +26,12 @@ label derivation fix is owned by TASK-451-02-L01; this family only verifies the
 
 ## Sub-Tasks
 
-- [ ] TASK-438-01: Text block content/toolbar/typography contract freeze,
+- [x] TASK-438-01: Text block content/toolbar/typography contract freeze,
       including reproducing `format:rich` rendering on HEAD.
-- [ ] TASK-438-01-L01: Adopt inline-edit and dedicated controls, verify
+- [x] TASK-438-01-L01: Adopt inline-edit and dedicated controls, verify
       toolbar labeling (owned by TASK-451-02-L01), and make `format:rich`
-      produce sanitized rich output.
-- [ ] TASK-438-02: Validation, docs, and closure.
+      produce sanitized rich output while staying panel-only for inline edit.
+- [x] TASK-438-02: Validation, docs, and closure.
 
 ---
 
@@ -47,4 +48,3 @@ label derivation fix is owned by TASK-451-02-L01; this family only verifies the
 
 - `_docs/PAGE_MODEL.md` if text format semantics change
 - `_docs/_TASKS/README.md`
-

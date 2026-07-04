@@ -11,7 +11,7 @@ test("post editor smoke: blocks mode renders canonical editor layout", () => {
   });
 
   expect(html).toContain("Editor settings");
-  expect(html).toContain("Document Outline");
+  expect(html).toContain('data-post-editor-region="secondary-sidebar"');
   expect(html).toContain("Preview");
 });
 
@@ -32,5 +32,5 @@ test("post editor smoke: shell action controls stay visible", () => {
 
   expect(html).toContain("Revisions");
   expect(html).toContain("Publish");
-  expect(html).toContain("Document Outline");
+  expect(html).toContain('data-post-editor-region="secondary-sidebar"');
 });

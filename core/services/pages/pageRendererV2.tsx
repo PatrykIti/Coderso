@@ -1,4 +1,5 @@
 import { createElement, type CSSProperties, type ReactNode } from "react";
+import { Check, Heart, Shield, Sparkles, Star, Zap, type LucideIcon } from "lucide-react";
 
 import { ContentListBlock } from "../../widgets/core/contentList";
 import { FormEmbedBlock, type FormEmbedData } from "../../widgets/core/formEmbed";
@@ -11,6 +12,14 @@ import {
 import {
   getPageBlockActiveSlotKeys,
   isPageTypographyCapableBlockType,
+  isPageTextMarkCapableBlockType,
+  normalizeBlockTextMarks,
+  pageBadgeIconPositions,
+  pageBadgeIcons,
+  pageBadgeShapes,
+  pageBadgeSizes,
+  pageBadgeVariants,
+  pageBadgeWeights,
   pageTypographyFontFamilyCssValues,
   pageTypographyFontSizeCssValues,
   pageTypographyFontWeightCssValues,
@@ -20,6 +29,7 @@ import {
   type PageBreakpoint,
   type PageDocumentV2,
   type PageSectionV2,
+  type PageTextMark,
 } from "./pageDocumentV2";
 import type { PageBlockPath } from "./pageBlockPaths";
 import {
@@ -56,6 +66,7 @@ import {
   sanitizeAuthoringCssColor,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
+  sanitizeAuthoringRichTextHtml,
 } from "./pageAuthoringSanitizers";
 
 export type PageRenderMode = "runtime" | "admin-preview";
@@ -110,16 +121,21 @@ export type PageBlockFrameRenderer = (input: {
 }) => ReactNode;
 
 /**
- * Admin-canvas hook (TASK-422-02): receives the exact text node a text-bearing
- * block paints (including renderer fallbacks) so the Page Editor can layer
- * inline editing on top of the same content the front renders. Runtime render
- * paths never provide it, so public output is unchanged. `propPath` follows
- * the `pageInlineEditContract` convention (`"text"`, `"label"`, `"items.0"`).
+ * Admin-canvas hook (TASK-422-02): receives the exact text source a
+ * text-bearing block paints (including renderer fallbacks) so the Page Editor
+ * can layer inline editing on top of the same content the front renders. Rich
+ * text can also pass sanitized React children for the idle canvas view while
+ * keeping plain-text commit semantics; block-rich children pass `display:
+ * "block"` so the canvas does not nest block elements inside inline wrappers.
+ * Runtime render paths never provide it, so public output is unchanged. `propPath` follows the
+ * `pageInlineEditContract` convention (`"text"`, `"label"`, `"items.0"`).
  */
 export type PageInlineTextRenderer = (input: {
   block: PageBlockV2;
   propPath: string;
   text: string;
+  children?: ReactNode;
+  display?: "inline" | "block";
 }) => ReactNode;
 
 /**
@@ -191,6 +207,112 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const toHrefTarget = (value: unknown) => (value === "blank" ? "_blank" : undefined);
 
+const readButtonVariant = (value: unknown) =>
+  value === "secondary" || value === "ghost" || value === "link" ? value : "primary";
+
+const readButtonSize = (value: unknown) => (value === "sm" || value === "lg" ? value : "md");
+
+const pageButtonSizeClass = (size: string, variant: string) => {
+  if (variant === "link") {
+    if (size === "sm") return "text-sm";
+    if (size === "lg") return "text-lg";
+    return "text-base";
+  }
+  if (size === "sm") return "px-3 py-2 text-sm";
+  if (size === "lg") return "px-6 py-4 text-base";
+  return "px-5 py-3 text-sm";
+};
+
+const pageButtonVariantClass = (variant: string) => {
+  if (variant === "secondary") {
+    return "border bg-transparent shadow-sm transition hover:opacity-90";
+  }
+  if (variant === "ghost") {
+    return "bg-transparent shadow-none transition hover:opacity-80";
+  }
+  if (variant === "link") {
+    return "bg-transparent underline underline-offset-4 shadow-none transition hover:opacity-80";
+  }
+  return "shadow-sm transition hover:opacity-90";
+};
+
+const pageBadgeIconMap: Record<(typeof pageBadgeIcons)[number], LucideIcon> = {
+  check: Check,
+  heart: Heart,
+  shield: Shield,
+  sparkles: Sparkles,
+  star: Star,
+  zap: Zap,
+};
+
+const readBadgeOption = <T extends string>(
+  value: unknown,
+  options: readonly T[],
+  fallback: T
+): T => (typeof value === "string" && options.includes(value as T) ? (value as T) : fallback);
+
+const readBadgeIcon = (value: unknown): (typeof pageBadgeIcons)[number] | null =>
+  typeof value === "string" && pageBadgeIcons.includes(value as (typeof pageBadgeIcons)[number])
+    ? (value as (typeof pageBadgeIcons)[number])
+    : null;
+
+const pageBadgeShapeClass = (shape: string) => {
+  if (shape === "square") return "rounded-none";
+  if (shape === "rounded") return "rounded-md";
+  return "rounded-full";
+};
+
+const pageBadgeSizeClass = (size: string) => {
+  if (size === "2xs") return "gap-1 px-1.5 py-0.5";
+  if (size === "xs") return "gap-1 px-2 py-0.5";
+  if (size === "md") return "gap-1.5 px-3 py-1";
+  return "gap-1.5 px-2.5 py-0.5";
+};
+
+const pageBadgeVariantClass = (variant: string) => {
+  if (variant === "outline") return "border bg-transparent";
+  if (variant === "solid") return "border border-transparent";
+  return "border border-transparent";
+};
+
+const pageBadgeVariantStyle = (
+  variant: string,
+  background: unknown,
+  textColor: unknown
+): PageBlockStyleProperties => {
+  const safeBackground = sanitizeAuthoringCssColor(background);
+  const safeTextColor = sanitizeAuthoringCssColor(textColor);
+  const accent = "var(--coderso-section-accent,#0d9488)";
+  if (variant === "solid") {
+    return {
+      backgroundColor: safeBackground ?? accent,
+      borderColor: safeBackground ?? accent,
+      color: safeTextColor ?? "#ffffff",
+    };
+  }
+  if (variant === "outline") {
+    return {
+      backgroundColor: safeBackground ?? "transparent",
+      borderColor: safeBackground ?? accent,
+      color: safeTextColor ?? accent,
+    };
+  }
+  return {
+    backgroundColor: safeBackground ?? "rgba(13, 148, 136, 0.12)",
+    borderColor: safeBackground ?? "rgba(13, 148, 136, 0.12)",
+    color: safeTextColor ?? accent,
+  };
+};
+
+const pageImageFitClass = (value: unknown) =>
+  value === "contain" ? "object-contain" : "object-cover";
+
+const pageDividerToneBorderColor = (value: unknown) => {
+  if (value === "muted") return "#cbd5e1";
+  if (value === "accent") return "var(--coderso-section-accent,#0d9488)";
+  return "#e2e8f0";
+};
+
 const toPageShadowValue = (shadow: PageBlockStyle["shadow"]) => {
   if (shadow === "sm") return "0 6px 20px rgba(15, 23, 42, 0.08)";
   if (shadow === "md") return "0 14px 40px rgba(15, 23, 42, 0.12)";
@@ -211,8 +333,34 @@ const toGradientBackground = (value: string | null | undefined) => {
   return safe && isSafeAuthoringCssGradient(safe) ? safe : undefined;
 };
 
+const scalePageSectionSpacing = (value: number, scale: number, minimum: number) =>
+  value <= 0 ? 0 : Math.max(minimum, Math.round(value * scale));
+
+const toPageSectionVariantSpacing = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate
+): PageSectionV2["spacing"] => {
+  if (
+    template.variant === "compact" &&
+    (template.template === "content" ||
+      template.template === "faq" ||
+      template.template === "timeline")
+  ) {
+    return {
+      ...section.spacing,
+      paddingTop: scalePageSectionSpacing(section.spacing.paddingTop, 0.55, 16),
+      paddingBottom: scalePageSectionSpacing(section.spacing.paddingBottom, 0.55, 16),
+      paddingLeft: scalePageSectionSpacing(section.spacing.paddingLeft, 0.75, 16),
+      paddingRight: scalePageSectionSpacing(section.spacing.paddingRight, 0.75, 16),
+      gap: scalePageSectionSpacing(section.spacing.gap, 0.6, 8),
+    };
+  }
+  return section.spacing;
+};
+
 export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProperties => {
   const template = resolvePageSectionTemplate(section);
+  const spacing = toPageSectionVariantSpacing(section, template);
   const accent = sanitizeAuthoringCssColor(section.style.accent);
   const backgroundColor =
     section.style.backgroundType === "color"
@@ -237,10 +385,10 @@ export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProp
           : section.style.shadow === "md"
             ? "0 14px 40px rgba(15, 23, 42, 0.12)"
             : "0 22px 60px rgba(15, 23, 42, 0.16)",
-    padding: `${section.spacing.paddingTop}px ${section.spacing.paddingRight}px ${section.spacing.paddingBottom}px ${section.spacing.paddingLeft}px`,
+    padding: `${spacing.paddingTop}px ${spacing.paddingRight}px ${spacing.paddingBottom}px ${spacing.paddingLeft}px`,
     maxWidth: template.variant === "full-width" ? "none" : `${section.layout.maxWidth}px`,
     margin: "0 auto",
-    gap: `${section.spacing.gap}px`,
+    gap: `${spacing.gap}px`,
   };
 };
 
@@ -280,8 +428,30 @@ const pageSectionTemplateClass = (template: ResolvedPageSectionTemplate) => {
   if (template.template === "hero" && template.variant === "full-width") {
     return `${marker} min-h-[420px] place-items-center text-center`;
   }
-  if (template.template === "hero" || template.template === "cta") {
+  if (template.template === "cta") {
+    if (template.variant === "full-width") {
+      return `${marker} min-h-[320px] place-items-center justify-items-center text-center`;
+    }
+    if (template.variant === "centered") {
+      return `${marker} place-items-center justify-items-center text-center`;
+    }
+    return `${marker} items-start justify-items-start text-left`;
+  }
+  if (template.template === "hero") {
     return `${marker} place-items-center text-center`;
+  }
+  if (template.template === "timeline") {
+    if (template.variant === "horizontal") return `${marker} auto-rows-fr items-start`;
+    if (template.variant === "compact") return `${marker} content-start`;
+    return `${marker} content-start`;
+  }
+  if (template.template === "gallery") {
+    if (template.variant === "cards") return `${marker} auto-rows-fr items-stretch`;
+    if (template.variant === "grid") return `${marker} auto-rows-fr`;
+  }
+  if (template.template === "testimonials") {
+    if (template.variant === "cards") return `${marker} auto-rows-fr items-stretch`;
+    if (template.variant === "grid") return `${marker} auto-rows-fr`;
   }
   if (template.variant === "compact") return `${marker} content-start`;
   if (template.variant === "cards") return `${marker} auto-rows-fr`;
@@ -302,11 +472,44 @@ export const pageBlockWidthClass = (width: PageBlockStyle["width"] | undefined) 
   return undefined;
 };
 
+export const isPageBlockSelfAligned = (align: PageBlockStyle["align"] | undefined) =>
+  align === "center" || align === "right";
+
+export const pageBlockEffectiveWidthClass = (style: PageBlockStyle | undefined) =>
+  isPageBlockSelfAligned(style?.align) ? "w-fit" : pageBlockWidthClass(style?.width);
+
 export const pageBlockAlignmentClass = (align: PageBlockStyle["align"] | undefined) => {
-  if (align === "center") return "justify-self-center";
-  if (align === "right") return "justify-self-end";
+  if (align === "center") return "justify-self-center mx-auto";
+  if (align === "right") return "justify-self-end ml-auto";
   if (align === "left") return "justify-self-start";
   return undefined;
+};
+
+const toPageBlockSelfAlignmentStyle = (
+  align: PageBlockStyle["align"] | undefined
+): PageBlockStyleProperties => {
+  if (align === "center") {
+    return { marginLeft: "auto", marginRight: "auto" };
+  }
+  if (align === "right") {
+    return { marginLeft: "auto" };
+  }
+  return {};
+};
+
+const toPageBlockMarginStyle = (style: PageBlockStyle): PageBlockStyleProperties => {
+  const selfAlignment = toPageBlockSelfAlignmentStyle(style.align);
+  if (!style.margin) return selfAlignment;
+  if (Object.keys(selfAlignment).length === 0) {
+    return { margin: toBoxSpacingValue(style.margin) };
+  }
+  return {
+    marginTop: `${style.margin.top ?? 0}px`,
+    marginRight: `${style.margin.right ?? 0}px`,
+    marginBottom: `${style.margin.bottom ?? 0}px`,
+    marginLeft: `${style.margin.left ?? 0}px`,
+    ...selfAlignment,
+  };
 };
 
 export const toPageSectionRenderProps = (
@@ -357,21 +560,36 @@ const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties =>
     style.backgroundType === "color" && style.background
       ? sanitizeAuthoringCssColor(style.background)
       : undefined;
+  const backgroundImageUrl =
+    style.backgroundType === "image" ? sanitizeAuthoringMediaUrl(style.backgroundImage) : null;
   const textColor = sanitizeAuthoringCssColor(style.textColor);
   const borderColor = sanitizeAuthoringCssColor(style.borderColor);
+  const borderStyle = style.borderStyle ?? (borderColor ? "solid" : undefined);
+  const borderWidth =
+    typeof style.borderWidth === "number" && Number.isFinite(style.borderWidth)
+      ? style.borderWidth
+      : borderColor
+        ? 1
+        : 0;
+  const hasBorder = borderStyle !== "none" && (Boolean(borderColor) || borderWidth > 0);
   return {
     "--coderso-block-text": textColor ?? undefined,
     "--coderso-block-surface": backgroundColor ?? undefined,
     backgroundColor: backgroundColor ?? undefined,
-    backgroundImage:
-      style.backgroundType === "gradient" ? toGradientBackground(style.background) : undefined,
+    backgroundImage: backgroundImageUrl
+      ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
+      : style.backgroundType === "gradient"
+        ? toGradientBackground(style.background)
+        : undefined,
+    backgroundSize: backgroundImageUrl ? "cover" : undefined,
+    backgroundPosition: backgroundImageUrl ? "center" : undefined,
     color: textColor ?? undefined,
     opacity: style.opacity,
     borderRadius: style.radius !== undefined ? `${style.radius}px` : undefined,
     boxShadow: toPageShadowValue(style.shadow),
     borderColor: borderColor ?? undefined,
-    borderStyle: borderColor ? "solid" : undefined,
-    borderWidth: borderColor ? "1px" : undefined,
+    borderStyle: hasBorder ? borderStyle : undefined,
+    borderWidth: hasBorder ? `${borderWidth}px` : undefined,
   };
 };
 
@@ -413,10 +631,10 @@ export const pageBlockTextDataAttributes = {
 
 /** Layout-affecting style surface that always stays on the block frame. */
 const toPageBlockLayoutStyle = (block: PageBlockV2): PageBlockStyleProperties => {
-  const style = block.style ?? {};
+  const style: PageBlockStyle = block.style ?? {};
   return {
     padding: toBoxSpacingValue(style.padding),
-    margin: toBoxSpacingValue(style.margin),
+    ...toPageBlockMarginStyle(style),
     textAlign: style.align,
   };
 };
@@ -440,6 +658,44 @@ export const toPageBlockElementStyle = (block: PageBlockV2): PageBlockStylePrope
   return { ...visual, ...toPageBlockTypographyStyle(block) };
 };
 
+const toPageButtonElementStyle = (
+  block: PageBlockV2,
+  variant: string
+): PageBlockStyleProperties => {
+  const style = toPageBlockElementStyle(block);
+  const definedStyle = Object.fromEntries(
+    Object.entries(style).filter(([, value]) => value !== undefined)
+  ) as PageBlockStyleProperties;
+  const accentColor = "var(--coderso-section-accent,#0d9488)";
+
+  if (variant === "primary") {
+    return {
+      backgroundColor: accentColor,
+      color: "var(--coderso-block-text,#ffffff)",
+      ...definedStyle,
+    };
+  }
+
+  if (variant === "secondary") {
+    return {
+      backgroundColor: "transparent",
+      borderColor: accentColor,
+      color: accentColor,
+      ...definedStyle,
+    };
+  }
+
+  if (variant === "ghost" || variant === "link") {
+    return {
+      backgroundColor: "transparent",
+      color: accentColor,
+      ...definedStyle,
+    };
+  }
+
+  return definedStyle;
+};
+
 export const pageBlockElementDataAttributes = {
   [PAGE_BLOCK_ELEMENT_ATTRIBUTE]: "true",
 } as const;
@@ -452,7 +708,7 @@ export const toPageBlockStyle = (block: PageBlockV2): PageBlockStyleProperties =
 export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => ({
   className: joinPageRenderClasses(
     "max-w-full",
-    pageBlockWidthClass(block.style?.width),
+    pageBlockEffectiveWidthClass(block.style),
     pageBlockAlignmentClass(block.style?.align)
   ),
   style: toPageBlockStyle(block),
@@ -470,12 +726,278 @@ const renderBlockText = (
   block: PageBlockV2,
   propPath: string,
   text: string,
-  context: PageBlockRenderContext
+  context: PageBlockRenderContext,
+  children?: ReactNode
 ): ReactNode =>
-  context.renderInlineText ? context.renderInlineText({ block, propPath, text }) : text;
+  context.renderInlineText
+    ? context.renderInlineText({ block, propPath, text, children })
+    : (children ?? text);
+
+const textMarkRenderRank: Record<PageTextMark["type"], number> = {
+  color: 0,
+  highlight: 1,
+  bold: 2,
+  italic: 3,
+  link: 4,
+};
+
+/**
+ * Deterministic, token-driven styling for an inline `link` mark so a linked run
+ * is visually obvious (underline + link color) on BOTH the front and the canvas.
+ * Renderer-applied only — the style is not stored in the mark, so it needs no
+ * schema/sanitizer change. The `--coderso-link` token follows the renderer's
+ * `--coderso-*` namespace and carries a hard fallback so the affordance is
+ * visible even where the var is undefined.
+ */
+const PAGE_TEXT_LINK_MARK_CLASS =
+  "underline underline-offset-2 text-[var(--coderso-link,#2563eb)] hover:opacity-80";
+
+const renderMarkedTextSegment = (
+  text: string,
+  marks: readonly PageTextMark[],
+  key: string,
+  isCanvas: boolean
+): ReactNode => {
+  const style: CSSProperties = {};
+  const link = marks.find(
+    (mark): mark is Extract<PageTextMark, { type: "link" }> => mark.type === "link"
+  );
+  const hasBold = marks.some((mark) => mark.type === "bold");
+  const hasItalic = marks.some((mark) => mark.type === "italic");
+  for (const mark of marks) {
+    if (mark.type === "color") style.color = mark.color;
+    if (mark.type === "highlight") style.backgroundColor = mark.color;
+  }
+
+  let node: ReactNode = text;
+  const styleTypes = marks
+    .filter((mark) => mark.type === "color" || mark.type === "highlight")
+    .map((mark) => mark.type)
+    .join(" ");
+  if (Object.keys(style).length > 0) {
+    node = (
+      <span key={`${key}-style`} data-page-text-mark={styleTypes} style={style}>
+        {node}
+      </span>
+    );
+  }
+  if (hasBold) {
+    node = <strong key={`${key}-bold`}>{node}</strong>;
+  }
+  if (hasItalic) {
+    node = <em key={`${key}-italic`}>{node}</em>;
+  }
+  if (link) {
+    // In the editor canvas a linked run is painted as a NON-navigating span so a
+    // click selects the fragment / sets the caret instead of opening the URL (and
+    // never fires the beforeunload navigation), letting the author click-to-edit a
+    // link (TASK-478-02). It keeps the same link affordance (underline + link
+    // color + `data-page-text-mark="link"`) so linked runs stay visually obvious
+    // and distinctly outlined. The front + preview (runtime mode) still render a
+    // real, navigable `<a href>` with the security `rel`.
+    node = isCanvas ? (
+      <span
+        key={`${key}-link`}
+        className={PAGE_TEXT_LINK_MARK_CLASS}
+        data-page-text-mark="link"
+        data-page-editor-link-noop="true"
+      >
+        {node}
+      </span>
+    ) : (
+      <a
+        key={`${key}-link`}
+        href={link.href}
+        className={PAGE_TEXT_LINK_MARK_CLASS}
+        data-page-text-mark="link"
+        rel="nofollow noreferrer"
+      >
+        {node}
+      </a>
+    );
+  }
+  return node;
+};
+
+const renderBlockTextMarks = (
+  block: PageBlockV2,
+  propPath: string,
+  text: string,
+  context: PageBlockRenderContext
+): ReactNode => {
+  if (propPath !== "text" || !isPageTextMarkCapableBlockType(block.type)) {
+    return renderBlockText(block, propPath, text, context);
+  }
+  const marks = normalizeBlockTextMarks(text, block.props.marks);
+  if (marks.length === 0) return renderBlockText(block, propPath, text, context);
+
+  const isCanvas = context.layoutMode === "canvas-device";
+  const boundaries = Array.from(
+    new Set([0, text.length, ...marks.flatMap((mark) => [mark.from, mark.to])])
+  ).sort((left, right) => left - right);
+  const children: ReactNode[] = [];
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    const from = boundaries[index]!;
+    const to = boundaries[index + 1]!;
+    if (to <= from) continue;
+    const segment = text.slice(from, to);
+    const activeMarks = marks
+      .filter((mark) => mark.from <= from && mark.to >= to)
+      .sort((left, right) => textMarkRenderRank[left.type] - textMarkRenderRank[right.type]);
+    children.push(
+      activeMarks.length > 0
+        ? renderMarkedTextSegment(segment, activeMarks, `mark-${index}-${from}-${to}`, isCanvas)
+        : segment
+    );
+  }
+  return renderBlockText(block, propPath, text, context, children);
+};
+
+const pageRichTextAllowedTags: ReadonlySet<string> = new Set([
+  "a",
+  "br",
+  "code",
+  "em",
+  "i",
+  "li",
+  "ol",
+  "p",
+  "strong",
+  "ul",
+]);
+
+const pageRichTextSelfClosingTags: ReadonlySet<string> = new Set(["br"]);
+
+const richTextStyledElementTags: ReadonlySet<string> = new Set(["li", "ol", "p", "ul"]);
+
+const toSanitizedRichTextElementProps = (
+  tagName: string,
+  rawAttrs: string,
+  key: number,
+  style: PageBlockStyleProperties
+): Record<string, string | number | CSSProperties> => {
+  const attrs = toSanitizedEmbedElementProps(tagName, rawAttrs, key);
+  if (!richTextStyledElementTags.has(tagName)) return attrs;
+  return {
+    ...attrs,
+    ...pageBlockTextDataAttributes,
+    style,
+  };
+};
+
+const renderRichTextRootText = (
+  text: string,
+  key: number,
+  style: PageBlockStyleProperties
+): ReactNode => (
+  <span key={key} style={style} {...pageBlockTextDataAttributes}>
+    {text}
+  </span>
+);
+
+const createSanitizedRichTextElement = (
+  frame: SanitizedEmbedElementFrame,
+  style: PageBlockStyleProperties
+) =>
+  createElement(
+    frame.tagName,
+    toSanitizedRichTextElementProps(frame.tagName, frame.rawAttrs, frame.key, style),
+    ...frame.children
+  );
+
+const renderSanitizedRichTextHtml = (
+  sanitizedHtml: string,
+  style: PageBlockStyleProperties
+): ReactNode[] => {
+  const roots: ReactNode[] = [];
+  const stack: SanitizedEmbedElementFrame[] = [];
+  let nextKey = 0;
+
+  const appendNode = (node: ReactNode) => {
+    const parent = stack.at(-1);
+    if (parent) {
+      parent.children.push(node);
+      return;
+    }
+    roots.push(node);
+  };
+
+  for (const token of tokenizeHtml(sanitizedHtml)) {
+    if (token.kind === "text") {
+      const text = decodeHtmlEntities(token.value);
+      if (stack.length > 0) {
+        appendNode(text);
+      } else if (text.length > 0) {
+        appendNode(renderRichTextRootText(text, nextKey++, style));
+      }
+      continue;
+    }
+    if (token.kind === "comment" || !pageRichTextAllowedTags.has(token.name)) continue;
+
+    if (token.closing) {
+      const current = stack.at(-1);
+      if (current?.tagName === token.name) {
+        stack.pop();
+        appendNode(createSanitizedRichTextElement(current, style));
+      }
+      continue;
+    }
+
+    if (token.selfClosing || pageRichTextSelfClosingTags.has(token.name)) {
+      appendNode(
+        createElement(
+          token.name,
+          toSanitizedRichTextElementProps(token.name, token.rawAttrs, nextKey++, style)
+        )
+      );
+      continue;
+    }
+
+    stack.push({ tagName: token.name, rawAttrs: token.rawAttrs, children: [], key: nextKey++ });
+  }
+
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (current) appendNode(createSanitizedRichTextElement(current, style));
+  }
+
+  return roots;
+};
+
+const renderTextBlock = (block: PageBlockV2, context: PageBlockRenderContext) => {
+  const className = joinPageRenderClasses(
+    block.props.format === "rich"
+      ? "prose max-w-none text-base leading-7 text-[var(--coderso-block-text,#334155)]"
+      : "text-base leading-7 text-[var(--coderso-block-text,#334155)]",
+    pageTextAlignClass(block.props.align)
+  );
+  const style = toPageBlockTypographyStyle(block);
+  if (block.props.format === "rich") {
+    const sanitizedHtml = sanitizeAuthoringRichTextHtml(block.props.text);
+    const richChildren = renderSanitizedRichTextHtml(sanitizedHtml, style);
+    return (
+      <div className={className}>
+        {context.renderInlineText
+          ? context.renderInlineText({
+              block,
+              propPath: "text",
+              text: readText(block.props.text),
+              children: richChildren,
+              display: "block",
+            })
+          : richChildren}
+      </div>
+    );
+  }
+  return (
+    <p className={className} style={style} {...pageBlockTextDataAttributes}>
+      {renderBlockTextMarks(block, "text", readText(block.props.text), context)}
+    </p>
+  );
+};
 
 const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
-  const text = renderBlockText(block, "text", readText(block.props.text, "Heading"), context);
+  const text = renderBlockTextMarks(block, "text", readText(block.props.text, "Heading"), context);
   const level = readText(block.props.level, "h2");
   // Typography contract: explicit tokens paint inline on the heading element
   // itself so they beat the baked level classes (text-5xl, font-semibold).
@@ -495,6 +1017,43 @@ const renderHeading = (block: PageBlockV2, context: PageBlockRenderContext) => {
   if (level === "h5") return <h5 {...textNodeProps}>{text}</h5>;
   if (level === "h6") return <h6 {...textNodeProps}>{text}</h6>;
   return <h2 {...textNodeProps}>{text}</h2>;
+};
+
+const renderBadgeBlock = (block: PageBlockV2) => {
+  const text = readText(block.props.text, "Badge");
+  const variant = readBadgeOption(block.props.variant, pageBadgeVariants, "soft");
+  const size = readBadgeOption(block.props.size, pageBadgeSizes, "sm");
+  const shape = readBadgeOption(block.props.shape, pageBadgeShapes, "pill");
+  const weight = readBadgeOption(block.props.weight, pageBadgeWeights, "semibold");
+  const iconPosition = readBadgeOption(block.props.iconPosition, pageBadgeIconPositions, "start");
+  const iconName = readBadgeIcon(block.props.icon);
+  const Icon = iconName ? pageBadgeIconMap[iconName] : null;
+  const style: PageBlockStyleProperties = {
+    ...pageBadgeVariantStyle(variant, block.props.background, block.props.textColor),
+    fontSize: pageTypographyFontSizeCssValues[size],
+    fontWeight: pageTypographyFontWeightCssValues[weight],
+  };
+  const icon = Icon ? <Icon className="h-[1em] w-[1em] shrink-0" aria-hidden="true" /> : null;
+
+  return (
+    <span
+      className={joinPageRenderClasses(
+        "inline-flex max-w-full items-center whitespace-nowrap leading-none",
+        pageBadgeVariantClass(variant),
+        pageBadgeShapeClass(shape),
+        pageBadgeSizeClass(size)
+      )}
+      data-page-badge="true"
+      data-page-badge-variant={variant}
+      data-page-badge-size={size}
+      data-page-badge-shape={shape}
+      style={style}
+    >
+      {icon && iconPosition === "start" ? icon : null}
+      <span className="min-w-0 truncate">{text}</span>
+      {icon && iconPosition === "end" ? icon : null}
+    </span>
+  );
 };
 
 const renderImage = (block: PageBlockV2) => {
@@ -519,7 +1078,7 @@ const renderImage = (block: PageBlockV2) => {
   return (
     <figure className="space-y-2">
       <img
-        className="w-full rounded object-cover"
+        className={joinPageRenderClasses("w-full rounded", pageImageFitClass(block.props.fit))}
         style={elementStyle}
         {...pageBlockElementDataAttributes}
         src={src}
@@ -1196,28 +1755,23 @@ export const renderPageBlockContent = (
     case "heading":
       return renderHeading(block, context);
     case "text":
-      return (
-        <p
-          className={joinPageRenderClasses(
-            "text-base leading-7 text-[var(--coderso-block-text,#334155)]",
-            pageTextAlignClass(block.props.align)
-          )}
-          style={toPageBlockTypographyStyle(block)}
-          {...pageBlockTextDataAttributes}
-        >
-          {renderBlockText(block, "text", readText(block.props.text), context)}
-        </p>
-      );
+      return renderTextBlock(block, context);
+    case "badge":
+      return renderBadgeBlock(block);
     case "button": {
       const href = sanitizeAuthoringLinkHref(block.props.href) ?? "#";
+      const variant = readButtonVariant(block.props.variant);
+      const size = readButtonSize(block.props.size);
       return (
         <a
           className={joinPageRenderClasses(
-            "inline-flex w-fit items-center justify-center rounded bg-[var(--coderso-section-accent,#0d9488)] px-5 py-3 text-sm font-semibold text-[var(--coderso-block-text,#ffffff)] shadow-sm transition hover:opacity-90"
+            "inline-flex w-fit items-center justify-center rounded font-semibold",
+            pageButtonSizeClass(size, variant),
+            pageButtonVariantClass(variant)
           )}
           // Style-target contract: the anchor IS the button the user styles,
           // so the visual style surface lands here, not on the block frame.
-          style={toPageBlockElementStyle(block)}
+          style={toPageButtonElementStyle(block, variant)}
           {...pageBlockElementDataAttributes}
           href={href}
           target={toHrefTarget(block.props.target)}
@@ -1231,12 +1785,18 @@ export const renderPageBlockContent = (
       return renderImage(block);
     case "video": {
       const src = sanitizeAuthoringMediaUrl(block.props.src) ?? "";
+      const title = readText(block.props.title);
+      const autoplay = readBoolean(block.props.autoplay, false);
       return src ? (
         <video
           className="w-full rounded"
           src={src}
+          title={title || undefined}
+          aria-label={title || undefined}
           controls
-          muted={readBoolean(block.props.muted, true)}
+          autoPlay={autoplay || undefined}
+          muted={readBoolean(block.props.muted, true) || autoplay}
+          playsInline={autoplay || undefined}
         />
       ) : (
         <div className="rounded border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
@@ -1250,30 +1810,45 @@ export const renderPageBlockContent = (
       // Card paints two text nodes; only explicitly set typography fields are
       // emitted, so unset fields keep each node's own baked scale.
       const cardTypography = toPageBlockTypographyStyle(block);
+      const image = sanitizeAuthoringMediaUrl(block.props.image);
+      const href = sanitizeAuthoringLinkHref(block.props.href);
+      const title = readText(block.props.title, "Card title");
+      const titleNode = href ? (
+        <a href={href} className="hover:underline">
+          {title}
+        </a>
+      ) : (
+        title
+      );
       return (
-        <article className="rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)] p-5 shadow-sm">
-          <h3
-            className="text-lg font-semibold text-[var(--coderso-block-text,#020617)]"
-            style={cardTypography}
-            {...pageBlockTextDataAttributes}
-          >
-            {readText(block.props.title, "Card title")}
-          </h3>
-          <p
-            className="mt-2 text-sm leading-6 text-[var(--coderso-block-text,#475569)]"
-            style={cardTypography}
-            {...pageBlockTextDataAttributes}
-          >
-            {readText(block.props.text)}
-          </p>
+        <article className="overflow-hidden rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)] shadow-sm">
+          {image ? <img className="aspect-video w-full object-cover" src={image} alt="" /> : null}
+          <div className="p-5">
+            <h3
+              className="text-lg font-semibold text-[var(--coderso-block-text,#020617)]"
+              style={cardTypography}
+              {...pageBlockTextDataAttributes}
+            >
+              {titleNode}
+            </h3>
+            <p
+              className="mt-2 text-sm leading-6 text-[var(--coderso-block-text,#475569)]"
+              style={cardTypography}
+              {...pageBlockTextDataAttributes}
+            >
+              {readText(block.props.text)}
+            </p>
+          </div>
         </article>
       );
     }
     case "divider":
       return (
         <hr
-          className="border-slate-200"
-          style={{ borderWidth: `${readNumber(block.props.thickness, 1)}px` }}
+          style={{
+            borderColor: pageDividerToneBorderColor(block.props.tone),
+            borderWidth: `${readNumber(block.props.thickness, 1)}px`,
+          }}
         />
       );
     case "spacer":
@@ -1315,7 +1890,7 @@ export const renderPageBlockContent = (
           style={toPageBlockTypographyStyle(block)}
           {...pageBlockTextDataAttributes}
         >
-          <p>{renderBlockText(block, "text", readText(block.props.text), context)}</p>
+          <p>{renderBlockTextMarks(block, "text", readText(block.props.text), context)}</p>
           {readText(block.props.cite) ? (
             <cite className="mt-3 block text-sm text-[var(--coderso-block-text,#64748b)]">
               {renderBlockText(block, "cite", readText(block.props.cite), context)}
@@ -1396,6 +1971,197 @@ const pageSectionContentDataAttributes = {
   [PAGE_SECTION_CONTENT_ATTRIBUTE]: "true",
 } as const;
 
+type PageSectionBlockRenderer = (block: PageBlockV2, index: number) => ReactNode;
+
+const pageSectionMediaBlockTypes = new Set<PageBlockV2["type"]>(["image", "video", "gallery"]);
+
+const isPageSectionMediaBlock = (block: PageBlockV2): boolean =>
+  pageSectionMediaBlockTypes.has(block.type);
+
+const renderMediaSplitPlaceholder = () => (
+  <div
+    className="flex min-h-56 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm font-medium text-slate-500"
+    data-page-media-split-empty="true"
+  >
+    Media
+  </div>
+);
+
+const wrapSectionTemplateBlock = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate,
+  block: PageBlockV2,
+  index: number,
+  rendered: ReactNode
+): ReactNode => {
+  if (!rendered) return rendered;
+
+  if (template.template === "timeline") {
+    return (
+      <div
+        key={`${section.id}-timeline-${block.id}`}
+        className={joinPageRenderClasses(
+          "relative min-w-0",
+          template.variant === "horizontal"
+            ? "grid gap-3 md:grid-rows-[auto_1fr]"
+            : "grid grid-cols-[auto_minmax(0,1fr)] gap-4",
+          template.variant === "compact" ? "py-2" : "py-3"
+        )}
+        data-page-timeline-item={index + 1}
+      >
+        <span
+          className={joinPageRenderClasses(
+            "mt-1 h-3 w-3 rounded-full ring-4 ring-white",
+            template.variant === "horizontal" ? "justify-self-center" : undefined
+          )}
+          style={{ backgroundColor: "var(--coderso-section-accent,#0d9488)" }}
+          data-page-timeline-marker="true"
+        />
+        <div
+          className={joinPageRenderClasses(
+            "min-w-0",
+            template.variant === "horizontal" ? "text-center" : undefined
+          )}
+          data-page-timeline-content="true"
+        >
+          {rendered}
+        </div>
+      </div>
+    );
+  }
+
+  if (template.template === "gallery") {
+    return (
+      <div
+        key={`${section.id}-gallery-${block.id}`}
+        className={joinPageRenderClasses(
+          "min-w-0",
+          template.variant === "cards"
+            ? "overflow-hidden rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+            : undefined
+        )}
+        data-page-gallery-section-item={index + 1}
+        data-page-gallery-section-variant={template.variant}
+      >
+        {rendered}
+      </div>
+    );
+  }
+
+  if (template.template === "faq") {
+    return (
+      <div
+        key={`${section.id}-faq-${block.id}`}
+        className={joinPageRenderClasses(
+          "min-w-0 rounded-lg border border-slate-200 bg-white",
+          template.variant === "compact" ? "px-4 py-3 shadow-none" : "p-5 shadow-sm"
+        )}
+        data-page-faq-item={index + 1}
+        data-page-faq-variant={template.variant}
+      >
+        {rendered}
+      </div>
+    );
+  }
+
+  if (template.template === "testimonials") {
+    return (
+      <div
+        key={`${section.id}-testimonial-${block.id}`}
+        className={joinPageRenderClasses(
+          "min-w-0",
+          template.variant === "cards"
+            ? "rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+            : undefined
+        )}
+        data-page-testimonial-item={index + 1}
+        data-page-testimonial-variant={template.variant}
+        {...(template.variant === "cards" ? { "data-page-testimonial-card": "true" } : {})}
+      >
+        {rendered}
+      </div>
+    );
+  }
+
+  return rendered;
+};
+
+const renderMediaSplitSectionChildren = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate,
+  blocks: readonly PageBlockV2[],
+  renderBlock: PageSectionBlockRenderer
+): ReactNode => {
+  const mediaBlocks: Array<{ block: PageBlockV2; index: number }> = [];
+  const contentBlocks: Array<{ block: PageBlockV2; index: number }> = [];
+
+  blocks.forEach((block, index) => {
+    (isPageSectionMediaBlock(block) ? mediaBlocks : contentBlocks).push({ block, index });
+  });
+
+  const mediaZone = (
+    <div
+      key={`${section.id}-media-zone`}
+      className="min-w-0 space-y-4"
+      data-page-media-split-zone="media"
+    >
+      {mediaBlocks.length > 0
+        ? mediaBlocks.map(({ block, index }) => renderBlock(block, index))
+        : renderMediaSplitPlaceholder()}
+    </div>
+  );
+  const contentZone = (
+    <div
+      key={`${section.id}-content-zone`}
+      className={joinPageRenderClasses(
+        "min-w-0 space-y-4",
+        template.variant === "horizontal" ? "self-center" : undefined
+      )}
+      data-page-media-split-zone="content"
+    >
+      {contentBlocks.map(({ block, index }) => renderBlock(block, index))}
+    </div>
+  );
+
+  return (
+    <div
+      className={joinPageRenderClasses(
+        "contents",
+        template.variant === "horizontal" ? "page-media-split-content-first" : undefined
+      )}
+      data-page-media-split={template.variant}
+    >
+      {template.variant === "horizontal" ? (
+        <>
+          {contentZone}
+          {mediaZone}
+        </>
+      ) : (
+        <>
+          {mediaZone}
+          {contentZone}
+        </>
+      )}
+    </div>
+  );
+};
+
+const renderTemplateSectionChildren = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate,
+  blocks: readonly PageBlockV2[],
+  renderBlock: PageSectionBlockRenderer,
+  renderRawBlock: PageSectionBlockRenderer
+): ReactNode => {
+  if (template.template === "media-split" && template.variant !== "default") {
+    return renderMediaSplitSectionChildren(section, template, blocks, renderRawBlock);
+  }
+
+  return blocks.map((block, index) =>
+    wrapSectionTemplateBlock(section, template, block, index, renderBlock(block, index))
+  );
+};
+
 export function PageSectionContent({
   section,
   emptyContent = defaultEmptySectionContent,
@@ -1432,6 +2198,7 @@ export function PageSectionContent({
   runtimeDataByBlockId?: PageRuntimeDataByBlockId;
 }) {
   const renderProps = toPageSectionRenderProps(section, { layoutMode });
+  const template = resolvePageSectionTemplate(section);
   const blocks = includeHiddenBlocks
     ? section.blocks
     : section.blocks.filter((block) => block.visibility.visible);
@@ -1445,6 +2212,16 @@ export function PageSectionContent({
     runtimeDataByBlockId,
     layoutMode,
   });
+  const renderBlockAtIndex = (block: PageBlockV2, index: number) =>
+    renderPageBlockWithFrame(block, blockRenderContext(index));
+  const renderWrappedBlockAtIndex = (block: PageBlockV2, index: number) =>
+    wrapSectionTemplateBlock(
+      section,
+      template,
+      block,
+      index,
+      renderPageBlockWithFrame(block, blockRenderContext(index))
+    );
   // Per-column composition (owner finding #5, round 3): when the section
   // composes 2+ columns AND at least one rendered root block carries a
   // `style.column` assignment, blocks render inside one wrapper stack per
@@ -1481,9 +2258,7 @@ export function PageSectionContent({
             data-page-section-column={columnIndex + 1}
             data-page-section-column-owner={section.id}
           >
-            {members.map(({ block, index }) =>
-              renderPageBlockWithFrame(block, blockRenderContext(index))
-            )}
+            {members.map(({ block, index }) => renderWrappedBlockAtIndex(block, index))}
             {renderSectionColumnTrailing?.({
               section,
               column: columnIndex + 1,
@@ -1493,7 +2268,13 @@ export function PageSectionContent({
         ))
       ) : blocks.length > 0 ? (
         <>
-          {blocks.map((block, index) => renderPageBlockWithFrame(block, blockRenderContext(index)))}
+          {renderTemplateSectionChildren(
+            section,
+            template,
+            blocks,
+            renderBlockAtIndex,
+            renderBlockAtIndex
+          )}
           {trailingContent}
         </>
       ) : (

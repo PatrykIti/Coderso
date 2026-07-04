@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-422, TASK-424, TASK-451-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -23,7 +24,7 @@ Toolbar-label derivation is owned by TASK-451-02-L01
 
 ## Sub-Tasks
 
-- [ ] TASK-447-01-L01: Quote inline-edit, toolbar labeling, and dedicated
+- [x] TASK-447-01-L01: Quote inline-edit, toolbar labeling, and dedicated
       controls.
 
 ---

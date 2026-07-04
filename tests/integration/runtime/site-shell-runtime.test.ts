@@ -13,6 +13,7 @@ import {
   seoDocuments,
   users,
 } from "../../../core/db/schema";
+import { createDefaultMenuDocumentV2 } from "../../../core/services/menus/menuDocumentV2";
 import {
   createMenu,
   publishMenu,
@@ -464,6 +465,99 @@ testIfDbWithOptions(
     expect(html).not.toContain(
       '[data-site-header="true"]{border-bottom:1px solid rgba(15,23,42,.08)}'
     );
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "a published menu item with settings.variant:button renders the button affordance; default items stay byte-identical (TASK-499-01)",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const token = randomUUID().slice(0, 8);
+    const fixture = await createPublishedPage(token);
+    const menu = await createMenu({ name: `Shell Menu ${token}` });
+    trackedMenuIds.add(menu.id);
+    await replaceMenuItems(menu.id, [
+      { id: randomUUID(), label: `Home ${token}`, href: "/" },
+      {
+        id: randomUUID(),
+        label: `Sign up ${token}`,
+        href: `/signup-${token}`,
+        settings: { variant: "button", openInNewTab: true },
+      },
+    ]);
+    await publishMenu(menu.id);
+    await setTestSetting(SITE_NAVIGATION_MENU_SETTING_KEY, menu.id);
+
+    const response = await requestPublicPath(fixture.slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    // The button item renders the server-rendered button affordance + new tab.
+    expect(html).toContain('data-site-nav-variant="button"');
+    expect(html).toContain(`href="/signup-${token}"`);
+    expect(html).toMatch(/href="\/signup-[^"]+"[^>]*target="_blank"/);
+    // The default link item carries NO variant marker (byte-identical to today).
+    expect(html).toContain(`data-site-nav-link="true" href="/"`);
+    expect(html).not.toMatch(new RegExp(`href="/"[^>]*data-site-nav-variant`));
+  },
+  { timeout: dbRuntimeTimeout }
+);
+
+testIfDbWithOptions(
+  "a published menu with a design document renders the custom menu with base layout CSS; clearing it falls back to the default nav (TASK-499-04)",
+  async () => {
+    resetRateLimitBuckets();
+    await setTestSetting("site.cacheTtlSeconds", 0);
+    await setTestSetting("site.contentRoutes", []);
+
+    const token = randomUUID().slice(0, 8);
+    const fixture = await createPublishedPage(token);
+    // createShellMenu seeds a nested item tree (Services > Consulting) + publishes.
+    const menu = await createShellMenu(token, { pageId: fixture.page.id });
+    await updateMenu(menu.id, { document: createDefaultMenuDocumentV2() });
+    await publishMenu(menu.id);
+    await setTestSetting(SITE_NAVIGATION_MENU_SETTING_KEY, menu.id);
+
+    const response = await requestPublicPath(fixture.slug);
+    expect(response.status).toBe(200);
+    const html = await response.text();
+
+    // The custom document render replaces the default nav.
+    expect(html).toContain('data-site-menu-doc="true"');
+    // It reuses the base .site-header* class names, so the base layout sheet
+    // (buildSiteShellCss(null)) MUST still be emitted in the head.
+    expect(html).toContain(buildSiteShellCss(null));
+    // The live item tree is bound into nav-items. TASK-502-03: the
+    // menu-document header renders in HOVER mode (details-FREE), so `Services`
+    // is NO longer a `<summary>` — it renders ONCE as its own link inside a
+    // `li[data-site-nav-group="true"]`, with the child in a nested sublist.
+    expect(html).toContain(`>Home ${token}</a>`);
+    expect(html).toContain('data-site-nav-group="true"');
+    expect(html).not.toContain(`<summary>Services ${token}</summary>`);
+    expect(html).toMatch(
+      new RegExp(
+        `<li class="site-nav-item" data-site-nav-group="true"><a class="site-nav-link"[^>]*href="/services-${token}"`
+      )
+    );
+    expect(html).toMatch(
+      new RegExp(`<ul class="site-nav-sublist">.*href="/services-${token}/consulting"`)
+    );
+
+    // Clearing the document falls back to today's default SiteHeaderNav.
+    await updateMenu(menu.id, { document: null });
+    await publishMenu(menu.id);
+    clearSiteCache();
+
+    const clearedResponse = await requestPublicPath(fixture.slug);
+    expect(clearedResponse.status).toBe(200);
+    const clearedHtml = await clearedResponse.text();
+    expect(clearedHtml).not.toContain('data-site-menu-doc="true"');
+    expect(clearedHtml).toContain('data-site-header="true"');
+    expect(clearedHtml).toContain(`>Home ${token}</a>`);
   },
   { timeout: dbRuntimeTimeout }
 );

@@ -103,6 +103,46 @@ describe("normalizeMenuAppearance clamps", () => {
   });
 });
 
+describe("menu appearance nav-link cheap-win scalars (TASK-504-01 §2a)", () => {
+  test("linkPaddingX/linkPaddingY/linkRadius clamp via the shared table", () => {
+    expect(menuAppearanceNumberRanges.linkPaddingX).toEqual({ min: 0, max: 40 });
+    expect(menuAppearanceNumberRanges.linkPaddingY).toEqual({ min: 0, max: 32 });
+    expect(menuAppearanceNumberRanges.linkRadius).toEqual({ min: 0, max: 32 });
+    expect(normalizeMenuAppearance({ linkPaddingX: 999 }).linkPaddingX).toBe(40);
+    expect(normalizeMenuAppearance({ linkPaddingX: -5 }).linkPaddingX).toBe(0);
+    expect(normalizeMenuAppearance({ linkPaddingY: 999 }).linkPaddingY).toBe(32);
+    expect(normalizeMenuAppearance({ linkRadius: 12.6 }).linkRadius).toBe(13);
+  });
+
+  test("linkHoverTextColor is token-validated + nullable (unset ⇒ dropped)", () => {
+    expect(
+      normalizeMenuAppearance({ linkHoverTextColor: "var(--color-primary)" }).linkHoverTextColor
+    ).toBe("var(--color-primary)");
+    expect(normalizeMenuAppearance({ linkHoverTextColor: "#abcdef" }).linkHoverTextColor).toBe(
+      "#abcdef"
+    );
+    expect("linkHoverTextColor" in normalizeMenuAppearance({ linkHoverTextColor: null })).toBe(
+      false
+    );
+  });
+
+  test("bad cheap-win values reject with the offending field", () => {
+    const expectFieldError = (value: unknown, field: string) => {
+      try {
+        normalizeMenuAppearance(value);
+        throw new Error(`expected ${field} to be rejected`);
+      } catch (error) {
+        expect(isMenuAppearanceError(error)).toBe(true);
+        expect((error as MenuAppearanceError).field).toBe(field);
+      }
+    };
+    expectFieldError({ linkPaddingX: "12" }, "linkPaddingX");
+    expectFieldError({ linkRadius: Number.NaN }, "linkRadius");
+    expectFieldError({ linkHoverTextColor: "red" }, "linkHoverTextColor");
+    expectFieldError({ linkHoverTextColor: "url(javascript:alert(1))" }, "linkHoverTextColor");
+  });
+});
+
 describe("normalizeMenuAppearance rejects", () => {
   const expectFieldError = (value: unknown, field: string) => {
     try {
@@ -155,6 +195,49 @@ describe("normalizeMenuAppearance rejects", () => {
     expectFieldError({ dropdownDirection: "auto" }, "dropdownDirection");
     expectFieldError({ mobileMode: "drawer" }, "mobileMode");
     expectFieldError({ sticky: "yes" }, "sticky");
+  });
+});
+
+describe("menu appearance orientation (TASK-501-01)", () => {
+  const expectFieldError = (value: unknown, field: string) => {
+    try {
+      normalizeMenuAppearance(value);
+      throw new Error(`expected ${field} to be rejected`);
+    } catch (error) {
+      expect(isMenuAppearanceError(error)).toBe(true);
+      expect((error as MenuAppearanceError).field).toBe(field);
+    }
+  };
+
+  test("accepts horizontal and vertical", () => {
+    expect(normalizeMenuAppearance({ orientation: "horizontal" })).toEqual({
+      orientation: "horizontal",
+    });
+    expect(normalizeMenuAppearance({ orientation: "vertical" })).toEqual({
+      orientation: "vertical",
+    });
+  });
+
+  test("rejects non-enum orientation values with the offending field", () => {
+    expectFieldError({ orientation: "diagonal" }, "orientation");
+    expectFieldError({ orientation: 42 }, "orientation");
+    expectFieldError({ orientation: {} }, "orientation");
+    expectFieldError({ orientation: true }, "orientation");
+  });
+
+  test("sanitize drops bad orientation values and keeps valid ones", () => {
+    expect(sanitizeMenuAppearance({ orientation: "vertical", itemGap: 8 })).toEqual({
+      orientation: "vertical",
+      itemGap: 8,
+    });
+    expect(sanitizeMenuAppearance({ orientation: "diagonal", itemGap: 8 })).toEqual({ itemGap: 8 });
+  });
+
+  test("absent orientation stays absent after round-trip (default is CSS-build-time only)", () => {
+    const roundTripped = normalizeMenuAppearance(normalizeMenuAppearance({ itemGap: 8 }));
+    expect(roundTripped).toEqual({ itemGap: 8 });
+    expect("orientation" in roundTripped).toBe(false);
+    expect("orientation" in sanitizeMenuAppearance({ itemGap: 8 })).toBe(false);
   });
 });
 

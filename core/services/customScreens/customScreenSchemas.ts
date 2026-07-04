@@ -1,6 +1,10 @@
 import type { WidgetBlock } from "../../widgets/types";
 import { ensureRuntimeWidgetsRegistered } from "../../widgets/runtime";
-import { normalizeWidgetBlocks } from "../../widgets/validator";
+import { normalizeWidgetBlock } from "../../widgets/validator";
+// TASK-503-01: block-level style channel reuses the exported page spacing clamp.
+// services→services import is the menuDocumentV2 precedent; the Bun-free boundary
+// bans only @/ui/pages imports. PAGE_BLOCK_BOX_SPACING_CLAMP = { min: 0, max: 240 }.
+import { PAGE_BLOCK_BOX_SPACING_CLAMP } from "../pages/pageDocumentV2";
 import {
   isBindingWriteModeSupported,
   resolveCustomScreenBindingContracts,
@@ -30,7 +34,7 @@ export const customScreenListFilterOperators = ["equals"] as const;
 export type CustomScreenBindingMode = (typeof customScreenBindingModes)[number];
 export type CustomScreenStatus = (typeof customScreenStatusValues)[number];
 export type CustomScreenCollectionRole = (typeof customScreenCollectionRoleValues)[number];
-export type CustomScreenDefinitionVersion = 1 | 2 | 3;
+export type CustomScreenDefinitionVersion = 1 | 2 | 3 | 4;
 export type CustomScreenListColumnSource = (typeof customScreenListColumnSources)[number];
 export type CustomScreenListFormatter = (typeof customScreenListFormatters)[number];
 export type CustomScreenSortDirection = (typeof customScreenSortDirections)[number];
@@ -40,6 +44,15 @@ export type CustomScreenBinding = {
   id: string;
   widgetId: string;
   propPath: string;
+  field: string;
+  mode: CustomScreenBindingMode;
+};
+
+export type ScreenFieldBinding = {
+  id: string;
+  blockId: string;
+  propPath: string;
+  source: "entry";
   field: string;
   mode: CustomScreenBindingMode;
 };
@@ -68,6 +81,11 @@ export type CustomScreenListFilter = {
   enabled: boolean;
 };
 
+export type CustomScreenListRowTemplate = {
+  document: ScreenDocumentV1;
+  bindings: ScreenFieldBinding[];
+};
+
 export type CustomScreenListViewDefinition = {
   columns: CustomScreenListColumn[];
   filters: CustomScreenListFilter[];
@@ -80,6 +98,7 @@ export type CustomScreenListViewDefinition = {
     publish: boolean;
     unpublish: boolean;
   };
+  rowTemplate?: CustomScreenListRowTemplate;
 };
 
 export type CustomScreenListViewDefinitionV2 = CustomScreenListViewDefinition & {
@@ -90,6 +109,44 @@ export type CustomScreenListViewDefinitionV2 = CustomScreenListViewDefinition & 
 export type CustomScreenEditorViewDefinition = {
   blocks: WidgetBlock[];
   bindings: CustomScreenBinding[];
+  saveMode: "entry";
+  interactionMode: "inline";
+};
+
+export type ScreenBlockV1 = {
+  id: string;
+  type: string;
+  label?: string;
+  variant?: string;
+  style?: ScreenBlockStyleV1;
+  data: Record<string, unknown>;
+  layout?: WidgetBlock["layout"];
+  visibility?: WidgetBlock["visibility"];
+  editor?: WidgetBlock["editor"];
+  legacyWidgetType?: string;
+  children?: ScreenBlockV1[];
+  slots?: Record<string, ScreenBlockV1[]>;
+};
+
+export type ScreenSectionV1 = {
+  id: string;
+  type: "section";
+  label?: string;
+  data: Record<string, unknown>;
+  layout?: WidgetBlock["layout"];
+  visibility?: WidgetBlock["visibility"];
+  style?: ScreenSectionStyleV1;
+  blocks: ScreenBlockV1[];
+};
+
+export type ScreenDocumentV1 = {
+  schemaVersion: 1;
+  sections: ScreenSectionV1[];
+};
+
+export type CustomScreenEditorViewDefinitionV4 = {
+  document: ScreenDocumentV1;
+  bindings: ScreenFieldBinding[];
   saveMode: "entry";
   interactionMode: "inline";
 };
@@ -110,7 +167,17 @@ export type CustomScreenDefinitionV3 = {
   editorView: CustomScreenEditorViewDefinition;
 };
 
-export type CustomScreenDefinition = CustomScreenDefinitionV3;
+export type CustomScreenDefinitionV4 = {
+  schemaVersion: 4;
+  listView: CustomScreenListViewDefinition;
+  editorView: CustomScreenEditorViewDefinitionV4;
+};
+
+export type CustomScreenDefinition = CustomScreenDefinitionV4;
+export type CustomScreenLegacyDefinition =
+  | CustomScreenDefinitionV1
+  | CustomScreenDefinitionV2
+  | CustomScreenDefinitionV3;
 
 export type CustomScreenSidebarConfig = {
   showInSidebar: boolean;
@@ -134,7 +201,7 @@ export type CustomScreenDefinitionContext = {
   } | null;
 };
 
-const supportedDefinitionVersions = new Set<CustomScreenDefinitionVersion>([1, 2, 3]);
+const supportedDefinitionVersions = new Set<CustomScreenDefinitionVersion>([1, 2, 3, 4]);
 const bindingModes = new Set<CustomScreenBindingMode>(customScreenBindingModes);
 const collectionRoles = new Set<CustomScreenCollectionRole>(customScreenCollectionRoleValues);
 const unsafePathSegments = new Set(["__proto__", "prototype", "constructor"]);
@@ -142,6 +209,7 @@ const columnSources = new Set<CustomScreenListColumnSource>(customScreenListColu
 const listFormatters = new Set<CustomScreenListFormatter>(customScreenListFormatters);
 const sortDirections = new Set<CustomScreenSortDirection>(customScreenSortDirections);
 const filterOperators = new Set<CustomScreenListFilterOperator>(customScreenListFilterOperators);
+export const defaultScreenSectionId = "section-default";
 const systemListFields = new Set([
   "title",
   "slug",
@@ -250,13 +318,773 @@ export function normalizeCustomScreenSchemaVersion(value: unknown): CustomScreen
   return value as CustomScreenDefinitionVersion;
 }
 
+const normalizeJsonValue = (value: unknown): unknown => {
+  if (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return value;
+  }
+  if (Array.isArray(value)) return value.map(normalizeJsonValue);
+  if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => {
+      if (unsafePathSegments.has(key)) throw new Error("custom_screen_definition_invalid");
+      return [key, normalizeJsonValue(item)];
+    })
+  );
+};
+
+const retiredScreenWidgetTypes = new Set([
+  "screen-record-header",
+  "screen-field-value",
+  "screen-field-group",
+  "screen-two-column",
+]);
+
+const normalizeLegacyScreenWidgetBlock = (value: unknown): WidgetBlock | null => {
+  if (!isRecord(value)) return null;
+  const type = normalizeText(value.type);
+  if (!type || !retiredScreenWidgetTypes.has(type)) return null;
+  const id = normalizeText(value.id);
+  if (!id) throw new Error("custom_screen_definition_invalid");
+  const data = normalizeJsonValue(value.data ?? {});
+  if (!isRecord(data)) throw new Error("custom_screen_definition_invalid");
+  const variant = normalizeText(value.variant);
+  const slots = isRecord(value.slots)
+    ? Object.fromEntries(
+        Object.entries(value.slots).map(([slotId, items]) => {
+          if (!Array.isArray(items)) return [slotId, []];
+          return [slotId, items.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? item)];
+        })
+      )
+    : undefined;
+  const children = Array.isArray(value.children)
+    ? value.children.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? item)
+    : undefined;
+
+  return {
+    id,
+    type,
+    ...(variant ? { variant } : {}),
+    data,
+    ...(isRecord(value.layout) ? { layout: value.layout as WidgetBlock["layout"] } : {}),
+    ...(isRecord(value.visibility)
+      ? { visibility: value.visibility as WidgetBlock["visibility"] }
+      : {}),
+    ...(isRecord(value.editor) ? { editor: value.editor as WidgetBlock["editor"] } : {}),
+    ...(children ? { children: children as WidgetBlock[] } : {}),
+    ...(slots ? { slots: slots as Record<string, WidgetBlock[]> } : {}),
+  };
+};
+
 export function normalizeCustomScreenBlocks(value: unknown): WidgetBlock[] {
   if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) {
     throw new Error("custom_screen_definition_invalid");
   }
   ensureRuntimeWidgetsRegistered();
-  return normalizeWidgetBlocks(value as WidgetBlock[]);
+  return value.map((item) => normalizeLegacyScreenWidgetBlock(item) ?? normalizeWidgetBlock(item));
+}
+
+const normalizeScreenData = (value: unknown): Record<string, unknown> => {
+  if (value === undefined || value === null) return {};
+  const normalized = normalizeJsonValue(value);
+  if (!isRecord(normalized)) throw new Error("custom_screen_definition_invalid");
+  return normalized;
+};
+
+// TASK-498-02 B0: per-kind, schema-first, reject-unknown `data` allow-lists for the
+// data-oriented block kinds. `"label"` is REQUIRED in EVERY kind (including heading +
+// tabs) because `createScreenBlock`'s base factory always seeds `data.label` and each
+// branch spreads it — omitting it would make normalizeScreenBlockData reject the
+// base-seeded label and throw `custom_screen_definition_invalid` on save. LEGACY kinds
+// (field / record-header / field-group / columns / rich-text / legacy-widget) are NOT
+// listed here and stay permissive, so stored V4 screens read back byte-stable.
+const screenBlockDataAllowedKeys: Record<string, readonly string[]> = {
+  heading: ["label", "text", "level", "align", "field"],
+  text: ["content", "tone", "label"],
+  stat: ["label", "format", "trend", "deltaField", "field"],
+  divider: ["variant", "label"],
+  image: ["label", "fit", "ratio", "field", "src"],
+  "related-list": ["label", "target", "displayField", "variant", "limit", "field"],
+  tabs: ["label", "tabs"],
+  button: ["label", "action", "variant", "href", "field"],
+};
+
+const coerceScreenEnum = <T extends string>(
+  value: unknown,
+  allowed: readonly T[],
+  fallback: T
+): T => (typeof value === "string" && allowed.includes(value as T) ? (value as T) : fallback);
+
+const clampScreenInt = (value: unknown, fallback: number, min: number, max: number): number => {
+  const n = typeof value === "number" && Number.isFinite(value) ? Math.floor(value) : fallback;
+  return Math.min(max, Math.max(min, n));
+};
+
+// TASK-503-01: block-level style channel — a validated, sparse, additive subset on
+// ScreenBlockV1. Consumed by the renderer (503-02 class maps + inline style) and the
+// inspector Layout group (503-03). Enums coerce, ints clamp (coerce-not-throw, the
+// screen module's value style); only unknown KEYS throw (rejectUnknownKeys).
+export const screenBlockWidths = ["auto", "full", "half", "third", "two-thirds"] as const;
+export const screenBlockAligns = ["start", "center", "end", "stretch"] as const;
+export const screenImageRatios = ["auto", "1/1", "4/3", "16/9", "3/2"] as const;
+export const SCREEN_BLOCK_MIN_HEIGHT_CLAMP = { min: 0, max: 640 } as const;
+export const screenBlockBoxSides = ["top", "right", "bottom", "left"] as const;
+
+export type ScreenBlockWidth = (typeof screenBlockWidths)[number];
+export type ScreenBlockAlign = (typeof screenBlockAligns)[number];
+export type ScreenImageRatio = (typeof screenImageRatios)[number];
+export type ScreenBlockBoxSpacingV1 = Partial<Record<(typeof screenBlockBoxSides)[number], number>>;
+export type ScreenBlockStyleV1 = {
+  width?: ScreenBlockWidth;
+  minHeight?: number; // clamped int px 0..640 — height as min-height, content-safe
+  margin?: ScreenBlockBoxSpacingV1; // per-side clamped ints, PAGE_BLOCK_BOX_SPACING_CLAMP
+  padding?: ScreenBlockBoxSpacingV1;
+  align?: ScreenBlockAlign;
+};
+
+const screenBlockStyleAllowedKeys = ["width", "minHeight", "margin", "padding", "align"] as const;
+
+// Per-side box spacing: junk container drops (never throws); an unknown SIDE key throws;
+// each present side clamps via the exported page clamp (non-number → min). Prunes empty.
+const normalizeScreenBlockBoxSpacing = (value: unknown): ScreenBlockBoxSpacingV1 | undefined => {
+  if (!isRecord(value)) return undefined;
+  rejectUnknownKeys(value, screenBlockBoxSides);
+  const out: ScreenBlockBoxSpacingV1 = {};
+  for (const side of screenBlockBoxSides) {
+    if (value[side] === undefined) continue;
+    out[side] = clampScreenInt(
+      value[side],
+      PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      PAGE_BLOCK_BOX_SPACING_CLAMP.max
+    );
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+};
+
+// absent/null/non-record → undefined (no throw, byte-stable); unknown style key throws;
+// values coerce/clamp; empty (all-junk / {}) prunes to undefined so it never persists.
+const normalizeScreenBlockStyle = (value: unknown): ScreenBlockStyleV1 | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isRecord(value)) return undefined;
+  rejectUnknownKeys(value, screenBlockStyleAllowedKeys);
+  const margin = normalizeScreenBlockBoxSpacing(value.margin);
+  const padding = normalizeScreenBlockBoxSpacing(value.padding);
+  const style: ScreenBlockStyleV1 = {
+    ...(value.width !== undefined
+      ? { width: coerceScreenEnum(value.width, screenBlockWidths, "auto") }
+      : {}),
+    ...(value.minHeight !== undefined
+      ? {
+          minHeight: clampScreenInt(
+            value.minHeight,
+            SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
+            SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
+            SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max
+          ),
+        }
+      : {}),
+    ...(margin ? { margin } : {}),
+    ...(padding ? { padding } : {}),
+    ...(value.align !== undefined
+      ? { align: coerceScreenEnum(value.align, screenBlockAligns, "start") }
+      : {}),
+  };
+  return Object.keys(style).length > 0 ? style : undefined;
+};
+
+// TASK-505-01: section-level style channel — a NEW additive channel on ScreenSectionV1
+// (does NOT reuse the dead `layout` field; retyping `layout` to an enum-validated shape
+// would THROW on legacy WidgetLayout docs — not byte-safe). Mirrors ScreenBlockStyleV1
+// exactly: enums coerce, ints clamp (coerce-not-throw), only unknown KEYS throw.
+// `columns` absent → today's vertical `space-y-4` stack (byte-identical DOM).
+export const screenSectionColumnPresets = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "1-1",
+  "1-2",
+  "2-1",
+  "1-3",
+  "3-1",
+  "2-3",
+  "3-2",
+  "1-1-1",
+  "1-1-1-1",
+] as const;
+export type ScreenSectionColumnPreset = (typeof screenSectionColumnPresets)[number];
+
+export const SCREEN_SECTION_COLUMN_GAP_CLAMP = { min: 0, max: 64 } as const;
+
+export type ScreenSectionStyleV1 = {
+  columns?: ScreenSectionColumnPreset; // absent → vertical stack (unchanged)
+  columnGap?: number; // clamped int px 0..64
+};
+
+const screenSectionStyleAllowedKeys = ["columns", "columnGap"] as const;
+
+// Preset → grid-template-columns fr-ratio map. EXPORTED as the single source of truth;
+// 505-02 renderer emits `gridTemplateColumns: screenSectionColumnTemplate[preset]`.
+// Owner's `3/4 : 1/4` = "3-1" → "3fr 1fr"; `1/4 : 3/4` = "1-3" → "1fr 3fr".
+export const screenSectionColumnTemplate: Record<ScreenSectionColumnPreset, string> = {
+  "1": "1fr",
+  "2": "1fr 1fr",
+  "3": "1fr 1fr 1fr",
+  "4": "1fr 1fr 1fr 1fr",
+  "1-1": "1fr 1fr",
+  "1-2": "1fr 2fr",
+  "2-1": "2fr 1fr",
+  "1-3": "1fr 3fr",
+  "3-1": "3fr 1fr",
+  "2-3": "2fr 3fr",
+  "3-2": "3fr 2fr",
+  "1-1-1": "1fr 1fr 1fr",
+  "1-1-1-1": "1fr 1fr 1fr 1fr",
+};
+
+// absent/null/non-record → undefined (no throw, byte-stable); unknown style KEY throws;
+// values coerce/clamp; empty ({} / all-junk) prunes to undefined so it NEVER persists.
+const normalizeScreenSectionStyle = (value: unknown): ScreenSectionStyleV1 | undefined => {
+  if (value === undefined || value === null) return undefined;
+  if (!isRecord(value)) return undefined;
+  rejectUnknownKeys(value, screenSectionStyleAllowedKeys); // unknown KEY → invalid
+  const style: ScreenSectionStyleV1 = {
+    ...(value.columns !== undefined
+      ? { columns: coerceScreenEnum(value.columns, screenSectionColumnPresets, "1") }
+      : {}),
+    ...(value.columnGap !== undefined
+      ? {
+          columnGap: clampScreenInt(
+            value.columnGap,
+            SCREEN_SECTION_COLUMN_GAP_CLAMP.min, // fallback = min (junk → 0)
+            SCREEN_SECTION_COLUMN_GAP_CLAMP.min,
+            SCREEN_SECTION_COLUMN_GAP_CLAMP.max
+          ),
+        }
+      : {}),
+  };
+  return Object.keys(style).length > 0 ? style : undefined;
+};
+
+// TASK-505-01 (Item B): transient, NEVER-persisted binding-GC warning surfaced on the
+// PATCH 200 response record (505-03 renders it). Declared + exported HERE (single
+// declaring file); customScreenService.ts only re-exposes it on the returned record.
+export type CustomScreenBindingWarning = {
+  code: "binding_field_removed" | "binding_block_removed";
+  fields: string[]; // offending content-type field name(s), source order, de-duped
+};
+
+// TASK-505-01 (Item B): an OPTIONAL, caller-supplied mutable out-param threaded top-down
+// through the WRITE normalizers. Pruned orphan field names accumulate by SIDE-EFFECT — no
+// normalizer changes its return type. The service reads it AFTER the call (B5). ForRead
+// variants pass a DISCARD instance to prune silently (optional read-repair cleanup).
+export type ScreenBindingWarningSink = {
+  removedFieldOrphans: string[];
+  removedBlockOrphans: string[];
+};
+
+// TASK-500-04: static <img src> for the image kind — relative paths + http(s) only.
+// Everything else (javascript:, data:, blob:, file:, vbscript:, bare tokens, non-strings)
+// normalizes to "" (dropped, NEVER throws) so a stored value can never reach <img src>
+// with an unsafe scheme (write-path defense-in-depth). NOT a navigational href
+// (button.href) — so no mailto:/tel:. Idempotent: a safe value round-trips byte-stable.
+const safeImageSrcPrefixes = ["/", "http://", "https://"] as const;
+// TASK-503-01: exported as the single source of truth — 503-02 builder-preview gate
+// and 503-03 inspector write filter enforce the same prefix filter pre-save.
+export const normalizeScreenImageSrc = (value: unknown): string => {
+  if (typeof value !== "string") return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const lower = trimmed.toLowerCase();
+  return safeImageSrcPrefixes.some((prefix) => lower.startsWith(prefix)) ? trimmed : "";
+};
+
+const normalizeScreenBlockData = (type: string, value: unknown): Record<string, unknown> => {
+  const data = normalizeScreenData(value); // existing JSON-safe normalize
+  const allowed = screenBlockDataAllowedKeys[type];
+  if (!allowed) return data; // legacy kinds: permissive (backward-compat)
+  rejectUnknownKeys(data, allowed); // throws "custom_screen_definition_invalid" on unknown keys
+  // Coerce enums / numerics to their allow-lists (no-op for already-valid stored data,
+  // so a valid new-kind block round-trips byte-stable).
+  switch (type) {
+    case "heading":
+      if ("level" in data) data.level = clampScreenInt(data.level, 2, 1, 3);
+      if ("align" in data)
+        data.align = coerceScreenEnum(data.align, ["left", "center", "right"], "left");
+      break;
+    case "text":
+      if ("tone" in data) data.tone = coerceScreenEnum(data.tone, ["default", "muted"], "default");
+      break;
+    case "stat":
+      if ("format" in data)
+        data.format = coerceScreenEnum(data.format, ["number", "percent", "money"], "number");
+      if ("trend" in data)
+        data.trend = coerceScreenEnum(data.trend, ["auto", "up", "down", "flat"], "auto");
+      break;
+    case "divider":
+      if ("variant" in data)
+        data.variant = coerceScreenEnum(data.variant, ["line", "space", "label"], "line");
+      break;
+    case "image":
+      if ("fit" in data) data.fit = coerceScreenEnum(data.fit, ["cover", "contain"], "cover");
+      // TASK-500-04: optional static src — absent key is a no-op (stored-V4 byte-stable);
+      // unsafe/blank values coerce to "" (fail-soft, never throws).
+      if ("src" in data) data.src = normalizeScreenImageSrc(data.src);
+      break;
+    case "related-list":
+      if ("variant" in data)
+        data.variant = coerceScreenEnum(
+          data.variant,
+          ["checklist", "activity", "cards"],
+          "checklist"
+        );
+      if ("limit" in data) data.limit = clampScreenInt(data.limit, 5, 1, 50);
+      break;
+    case "tabs":
+      if ("tabs" in data) {
+        const raw = Array.isArray(data.tabs) ? data.tabs : [];
+        data.tabs = raw
+          .filter((tab): tab is Record<string, unknown> => isRecord(tab))
+          .map((tab) => ({
+            id: typeof tab.id === "string" ? tab.id : "",
+            label: typeof tab.label === "string" ? tab.label : "",
+          }));
+      }
+      break;
+    case "button":
+      if ("action" in data)
+        data.action = coerceScreenEnum(data.action, ["link", "publish", "custom"], "link");
+      if ("variant" in data)
+        data.variant = coerceScreenEnum(data.variant, ["primary", "secondary", "ghost"], "primary");
+      break;
+    default:
+      break;
+  }
+  return data;
+};
+
+const screenBlockTypeFromWidgetType = (type: string) => {
+  switch (type) {
+    case "screen-field-value":
+      return "field";
+    case "screen-field-group":
+      return "field-group";
+    case "screen-record-header":
+      return "record-header";
+    case "screen-two-column":
+      return "columns";
+    default:
+      return "legacy-widget";
+  }
+};
+
+const widgetTypeFromScreenBlock = (block: ScreenBlockV1) => {
+  if (block.legacyWidgetType) return block.legacyWidgetType;
+  switch (block.type) {
+    case "field":
+      return "screen-field-value";
+    case "field-group":
+      return "screen-field-group";
+    case "record-header":
+      return "screen-record-header";
+    case "columns":
+      return "screen-two-column";
+    default:
+      return block.type;
+  }
+};
+
+const normalizeScreenBlock = (value: unknown, index: number): ScreenBlockV1 => {
+  if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(value, [
+    "id",
+    "type",
+    "label",
+    "variant",
+    "style",
+    "data",
+    "layout",
+    "visibility",
+    "editor",
+    "legacyWidgetType",
+    "children",
+    "slots",
+  ]);
+  const id = normalizePath(value.id ?? `block-${index + 1}`);
+  const type = normalizeText(value.type);
+  if (!type) throw new Error("custom_screen_definition_invalid");
+  const label = normalizeText(value.label);
+  const variant = normalizeText(value.variant);
+  const style = normalizeScreenBlockStyle(value.style);
+  const legacyWidgetType = normalizeText(value.legacyWidgetType);
+  const children = Array.isArray(value.children)
+    ? normalizeUniqueIds(
+        value.children.map((item, childIndex) => normalizeScreenBlock(item, childIndex))
+      )
+    : undefined;
+  const slots =
+    value.slots === undefined || value.slots === null
+      ? undefined
+      : isRecord(value.slots)
+        ? Object.fromEntries(
+            Object.entries(value.slots).map(([slotId, items]) => {
+              if (!normalizeText(slotId)) throw new Error("custom_screen_definition_invalid");
+              if (!Array.isArray(items)) throw new Error("custom_screen_definition_invalid");
+              return [
+                slotId,
+                normalizeUniqueIds(
+                  items.map((item, slotIndex) => normalizeScreenBlock(item, slotIndex))
+                ),
+              ];
+            })
+          )
+        : null;
+  if (slots === null) throw new Error("custom_screen_definition_invalid");
+
+  return {
+    id,
+    type,
+    ...(label ? { label } : {}),
+    ...(variant ? { variant } : {}),
+    ...(style ? { style } : {}),
+    data: normalizeScreenBlockData(type, value.data),
+    ...(value.layout !== undefined
+      ? { layout: normalizeJsonValue(value.layout) as WidgetBlock["layout"] }
+      : {}),
+    ...(value.visibility !== undefined
+      ? { visibility: normalizeJsonValue(value.visibility) as WidgetBlock["visibility"] }
+      : {}),
+    ...(value.editor !== undefined
+      ? { editor: normalizeJsonValue(value.editor) as WidgetBlock["editor"] }
+      : {}),
+    ...(legacyWidgetType ? { legacyWidgetType } : {}),
+    ...(children ? { children } : {}),
+    ...(slots ? { slots } : {}),
+  };
+};
+
+const createDefaultScreenSection = (
+  blocks: ScreenBlockV1[],
+  id = defaultScreenSectionId
+): ScreenSectionV1 => ({
+  id,
+  type: "section",
+  label: "Details",
+  data: { title: "Details" },
+  blocks,
+});
+
+const normalizeScreenSection = (value: unknown, index: number): ScreenSectionV1 => {
+  if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(value, [
+    "id",
+    "type",
+    "label",
+    "data",
+    "layout",
+    "visibility",
+    "style",
+    "blocks",
+  ]);
+  const id = normalizePath(value.id ?? `section-${index + 1}`);
+  const type = normalizeText(value.type) ?? "section";
+  if (type !== "section") throw new Error("custom_screen_definition_invalid");
+  const label = normalizeText(value.label);
+  const style = normalizeScreenSectionStyle(value.style);
+  if (value.blocks !== undefined && !Array.isArray(value.blocks)) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  return {
+    id,
+    type: "section",
+    ...(label ? { label } : {}),
+    data: normalizeScreenData(value.data),
+    ...(value.layout !== undefined
+      ? { layout: normalizeJsonValue(value.layout) as WidgetBlock["layout"] }
+      : {}),
+    ...(value.visibility !== undefined
+      ? { visibility: normalizeJsonValue(value.visibility) as WidgetBlock["visibility"] }
+      : {}),
+    ...(style ? { style } : {}),
+    blocks: normalizeUniqueIds(
+      (value.blocks ?? []).map((item, blockIndex) => normalizeScreenBlock(item, blockIndex))
+    ),
+  };
+};
+
+const sectionsLookLikeLegacyBlockArray = (sections: unknown[]) =>
+  sections.some((item) => isRecord(item) && !("blocks" in item));
+
+export function normalizeScreenDocumentV1(input: unknown): ScreenDocumentV1 {
+  if (input === undefined || input === null) return { schemaVersion: 1, sections: [] };
+  if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(input, ["schemaVersion", "sections"]);
+  const schemaVersion = input.schemaVersion ?? 1;
+  if (schemaVersion !== 1) throw new Error("custom_screen_definition_invalid");
+  if (input.sections !== undefined && !Array.isArray(input.sections)) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  return {
+    schemaVersion: 1,
+    sections: normalizeUniqueIds(
+      (input.sections ?? []).map((item, index) => normalizeScreenSection(item, index))
+    ),
+  };
+}
+
+// TASK-498-04: READ-PATH-ONLY block repair — remap a stored `actions` placeholder block
+// (dropped from the union and promoted to `button` in TASK-498-02) to the typed `button`
+// kind so old screens upgrade VISUALLY on read without a write/migration. Applied ONLY inside
+// the ...ForRead document normalizers, NEVER on the write path (`normalizeScreenDocumentV1` /
+// `normalizeScreenBlock`), so it cannot widen the write contract. The remapped `button` data is
+// intersected with the button allow-list so the per-kind reject-unknown normalizer cannot throw
+// on a stray legacy `actions` data key — the block reads back usable instead of falling through
+// to the neutral legacy placeholder. Non-`actions` records pass through byte-stable.
+const READ_REPAIR_BLOCK_TYPE: Record<string, string> = { actions: "button" };
+
+const repairLegacyScreenRecordForRead = (node: unknown): unknown => {
+  if (Array.isArray(node)) return node.map(repairLegacyScreenRecordForRead);
+  if (!isRecord(node)) return node;
+  const next: Record<string, unknown> = { ...node };
+  let changed = false;
+  const repairedType =
+    typeof node.type === "string" ? READ_REPAIR_BLOCK_TYPE[node.type] : undefined;
+  if (repairedType) {
+    next.type = repairedType;
+    const allowed = screenBlockDataAllowedKeys[repairedType];
+    if (allowed && isRecord(node.data)) {
+      next.data = Object.fromEntries(
+        Object.entries(node.data).filter(([key]) => allowed.includes(key))
+      );
+    }
+    changed = true;
+  }
+  for (const key of ["blocks", "children"] as const) {
+    if (Array.isArray(node[key])) {
+      next[key] = node[key].map(repairLegacyScreenRecordForRead);
+      changed = true;
+    }
+  }
+  if (isRecord(node.slots)) {
+    next.slots = Object.fromEntries(
+      Object.entries(node.slots).map(([slot, items]) => [
+        slot,
+        Array.isArray(items) ? items.map(repairLegacyScreenRecordForRead) : items,
+      ])
+    );
+    changed = true;
+  }
+  return changed ? next : node;
+};
+
+export function normalizeScreenDocumentV1ForRead(input: unknown): ScreenDocumentV1 {
+  if (input === undefined || input === null) return { schemaVersion: 1, sections: [] };
+  if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(input, ["schemaVersion", "sections"]);
+  const schemaVersion = input.schemaVersion ?? 1;
+  if (schemaVersion !== 1) throw new Error("custom_screen_definition_invalid");
+  if (input.sections !== undefined && !Array.isArray(input.sections)) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  const sections = repairLegacyScreenRecordForRead(input.sections ?? []) as unknown[];
+  if (sectionsLookLikeLegacyBlockArray(sections)) {
+    return {
+      schemaVersion: 1,
+      sections:
+        sections.length > 0
+          ? [
+              createDefaultScreenSection(
+                normalizeUniqueIds(sections.map((item, index) => normalizeScreenBlock(item, index)))
+              ),
+            ]
+          : [],
+    };
+  }
+  return {
+    schemaVersion: 1,
+    sections: normalizeUniqueIds(
+      sections.map((item, index) => normalizeScreenSection(item, index))
+    ),
+  };
+}
+
+// TASK-505-01 (Item B): a missing-content-type-field binding (fieldRoot ∉ live schema) is
+// PRUNED + recorded when a `sink` is threaded (write=warn, ForRead=discard — both non-fatal
+// → recoverable Save), returning null to signal "drop me". Only when NO sink is threaded does
+// the field-orphan case keep the bare throw. Genuinely-malformed bindings (non-record, no
+// blockId, bad source/mode, unknown KEY) STILL throw regardless of the sink.
+const normalizeScreenFieldBinding = (
+  value: unknown,
+  index: number,
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
+): ScreenFieldBinding | null => {
+  if (!isRecord(value)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(value, ["id", "blockId", "widgetId", "propPath", "source", "field", "mode"]);
+  const blockId = normalizeText(value.blockId) ?? normalizeText(value.widgetId);
+  if (!blockId) throw new Error("custom_screen_definition_invalid");
+  const propPath = normalizePath(value.propPath);
+  const field = normalizePath(value.field);
+  const fieldRoot = field.split(".")[0] ?? field;
+  const allowedFieldRoots = getAllowedBindingFieldRoots(context);
+  if (allowedFieldRoots && !allowedFieldRoots.has(fieldRoot)) {
+    if (sink) {
+      sink.removedFieldOrphans.push(field); // PRUNE + record (write=warn / ForRead=discarded)
+      return null;
+    }
+    throw new Error("custom_screen_definition_invalid"); // only when NO sink is threaded
+  }
+  const source = normalizeText(value.source) ?? "entry";
+  if (source !== "entry") throw new Error("custom_screen_definition_invalid");
+  const id = slugify(normalizeText(value.id) ?? `${blockId}-${propPath}`) || `binding-${index + 1}`;
+  return {
+    id,
+    blockId,
+    propPath,
+    source: "entry",
+    field,
+    mode: normalizeBindingMode(value.mode),
+  };
+};
+
+export function normalizeScreenFieldBindings(
+  value: unknown,
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
+): ScreenFieldBinding[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) throw new Error("custom_screen_definition_invalid");
+  return normalizeUniqueIds(
+    value
+      .map((item, index) => normalizeScreenFieldBinding(item, index, context, sink))
+      .filter((binding): binding is ScreenFieldBinding => binding !== null)
+  );
+}
+
+const migrateWidgetBlockToScreenBlock = (block: WidgetBlock): ScreenBlockV1 => {
+  const slots =
+    block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)
+      ? Object.fromEntries(
+          Object.entries(block.slots).map(([slotId, items]) => [
+            slotId,
+            Array.isArray(items) ? items.map(migrateWidgetBlockToScreenBlock) : [],
+          ])
+        )
+      : undefined;
+  const children = Array.isArray(block.children)
+    ? block.children.map(migrateWidgetBlockToScreenBlock)
+    : undefined;
+  const screenType = screenBlockTypeFromWidgetType(block.type);
+  return {
+    id: block.id,
+    type: screenType,
+    ...(typeof block.variant === "string" && block.variant.trim()
+      ? { variant: block.variant.trim() }
+      : {}),
+    data: normalizeScreenData(block.data ?? {}),
+    ...(block.layout ? { layout: block.layout } : {}),
+    ...(block.visibility ? { visibility: block.visibility } : {}),
+    ...(block.editor ? { editor: block.editor } : {}),
+    ...(screenType === "legacy-widget" ? { legacyWidgetType: block.type } : {}),
+    ...(children ? { children } : {}),
+    ...(slots ? { slots } : {}),
+  };
+};
+
+const projectScreenBlockToWidgetBlock = (block: ScreenBlockV1): WidgetBlock => {
+  const slots = block.slots
+    ? Object.fromEntries(
+        Object.entries(block.slots).map(([slotId, items]) => [
+          slotId,
+          items.map(projectScreenBlockToWidgetBlock),
+        ])
+      )
+    : undefined;
+  const children = block.children ? block.children.map(projectScreenBlockToWidgetBlock) : undefined;
+  return {
+    id: block.id,
+    type: widgetTypeFromScreenBlock(block),
+    ...(block.variant ? { variant: block.variant } : {}),
+    data: block.data,
+    ...(block.layout ? { layout: block.layout } : {}),
+    ...(block.visibility ? { visibility: block.visibility } : {}),
+    ...(block.editor ? { editor: block.editor } : {}),
+    ...(children ? { children } : {}),
+    ...(slots ? { slots } : {}),
+  };
+};
+
+const migrateCustomScreenBindingToScreenFieldBinding = (
+  binding: CustomScreenBinding
+): ScreenFieldBinding => ({
+  id: binding.id,
+  blockId: binding.widgetId,
+  propPath: binding.propPath,
+  source: "entry",
+  field: binding.field,
+  mode: binding.mode,
+});
+
+const migrateWidgetBlocksToScreenDocument = (blocks: WidgetBlock[]): ScreenDocumentV1 => ({
+  schemaVersion: 1,
+  sections:
+    blocks.length > 0
+      ? [createDefaultScreenSection(blocks.map(migrateWidgetBlockToScreenBlock))]
+      : [],
+});
+
+const projectScreenFieldBindingToCustomScreenBinding = (
+  binding: ScreenFieldBinding
+): CustomScreenBinding => ({
+  id: binding.id,
+  widgetId: binding.blockId,
+  propPath: binding.propPath,
+  field: binding.field,
+  mode: binding.mode,
+});
+
+export function getCustomScreenEditorViewBlocks(definition: CustomScreenDefinition): WidgetBlock[] {
+  return definition.editorView.document.sections.flatMap((section) =>
+    section.blocks.map(projectScreenBlockToWidgetBlock)
+  );
+}
+
+export function getCustomScreenEditorViewBindings(
+  definition: CustomScreenDefinition
+): CustomScreenBinding[] {
+  return definition.editorView.bindings.map(projectScreenFieldBindingToCustomScreenBinding);
+}
+
+export function getCustomScreenEditorViewCompat(
+  definition: CustomScreenDefinition
+): CustomScreenEditorViewDefinition {
+  return {
+    blocks: getCustomScreenEditorViewBlocks(definition),
+    bindings: getCustomScreenEditorViewBindings(definition),
+    saveMode: "entry",
+    interactionMode: "inline",
+  };
+}
+
+export function withCustomScreenEditorViewCompat(
+  definition: CustomScreenDefinition,
+  editorView: CustomScreenEditorViewDefinition
+): CustomScreenDefinition {
+  return {
+    ...definition,
+    editorView: {
+      document: migrateWidgetBlocksToScreenDocument(editorView.blocks),
+      bindings: editorView.bindings.map(migrateCustomScreenBindingToScreenFieldBinding),
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
 }
 
 export function normalizeCustomScreenBindings(
@@ -376,6 +1204,52 @@ const fieldFilter = (field: string, definition: unknown): CustomScreenListFilter
   enabled: true,
 });
 
+const rowTemplateBindingMode = (column: CustomScreenListColumn): CustomScreenBindingMode =>
+  column.source === "field" || column.field === "title" || column.field === "slug"
+    ? "readwrite"
+    : "read";
+
+export function buildDefaultListRowTemplate(
+  columns: readonly CustomScreenListColumn[]
+): CustomScreenListRowTemplate {
+  const visibleColumns = columns.filter((column) => column.visible !== false);
+  const blocks = visibleColumns.map((column) => ({
+    id: `row-cell-${slugify(column.id) || slugify(`${column.source}-${column.field}`)}`,
+    type: "field",
+    data: {
+      field: column.field,
+      label: column.label,
+      source: column.source,
+    },
+  }));
+
+  return {
+    document: {
+      schemaVersion: 1,
+      sections: [
+        {
+          id: "row-template",
+          type: "section",
+          label: "Row",
+          data: { title: "Row" },
+          blocks,
+        },
+      ],
+    },
+    bindings: visibleColumns.map((column) => {
+      const blockId = `row-cell-${slugify(column.id) || slugify(`${column.source}-${column.field}`)}`;
+      return {
+        id: `${blockId}-value`,
+        blockId,
+        propPath: "value",
+        source: "entry" as const,
+        field: column.field,
+        mode: rowTemplateBindingMode(column),
+      };
+    }),
+  };
+}
+
 const pickSchemaField = (properties: Record<string, unknown>, preferred: string[]) => {
   const keys = Object.keys(properties);
   return (
@@ -416,6 +1290,7 @@ export function buildDefaultListViewDefinition(
       publish: true,
       unpublish: true,
     },
+    rowTemplate: buildDefaultListRowTemplate(columns),
   };
 }
 
@@ -479,15 +1354,92 @@ const normalizeUniqueIds = <T extends { id: string }>(items: T[]) => {
   return items;
 };
 
+const collectScreenDocumentBlockIds = (document: ScreenDocumentV1) => {
+  const ids = new Set<string>();
+  const visit = (blocks: ScreenBlockV1[]) => {
+    blocks.forEach((block) => {
+      if (ids.has(block.id)) throw new Error("custom_screen_definition_invalid");
+      ids.add(block.id);
+      if (Array.isArray(block.children) && block.children.length > 0) {
+        visit(block.children);
+      }
+      if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+        Object.values(block.slots).forEach((items) => {
+          if (Array.isArray(items) && items.length > 0) {
+            visit(items);
+          }
+        });
+      }
+    });
+  };
+  document.sections.forEach((section) => visit(section.blocks));
+  return ids;
+};
+
+const assertScreenFieldBindingsTargetDocument = (
+  document: ScreenDocumentV1,
+  bindings: ScreenFieldBinding[]
+) => {
+  const blockIds = collectScreenDocumentBlockIds(document);
+  if (blockIds.size > 0 && bindings.some((binding) => !blockIds.has(binding.blockId))) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+};
+
+// TASK-505-01 (Item B): the SECOND (independent) binding dead-end — the list-view
+// row-template binding set. Threads the SAME shared `sink` (field-orphans via
+// normalizeScreenFieldBindings) and REPLACES the fatal block-orphan gate
+// (assertScreenFieldBindingsTargetDocument) with an INLINE prune against the already-computed
+// schemas-local Set — no import from screenDocumentOps.ts (would invert the schemas←ops layer).
+const normalizeCustomScreenListRowTemplate = (
+  input: unknown,
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
+): CustomScreenListRowTemplate => {
+  if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(input, ["document", "bindings"]);
+  const document = normalizeScreenDocumentV1(input.document);
+  const bindings = normalizeScreenFieldBindings(input.bindings, context, sink);
+  if (sink) {
+    const blockIds = collectScreenDocumentBlockIds(document);
+    const kept: ScreenFieldBinding[] = [];
+    for (const binding of bindings) {
+      if (blockIds.size === 0 || blockIds.has(binding.blockId)) kept.push(binding);
+      else sink.removedBlockOrphans.push(binding.field);
+    }
+    return { document, bindings: kept };
+  }
+  assertScreenFieldBindingsTargetDocument(document, bindings);
+  return { document, bindings };
+};
+
+const normalizeCustomScreenListRowTemplateForRead = (
+  input: unknown,
+  fallback: CustomScreenListRowTemplate,
+  context?: CustomScreenDefinitionContext
+): CustomScreenListRowTemplate => {
+  try {
+    // Pass a DISCARD sink so field-/block-orphans prune silently (read-repair cleanup) —
+    // preserves the authored row template instead of the whole-template try/catch fallback.
+    return normalizeCustomScreenListRowTemplate(input, context, {
+      removedFieldOrphans: [],
+      removedBlockOrphans: [],
+    });
+  } catch {
+    return fallback;
+  }
+};
+
 export function normalizeCustomScreenListViewDefinition(
   input: unknown,
-  context?: CustomScreenDefinitionContext
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
 ): CustomScreenListViewDefinition {
   if (input === undefined || input === null) {
     return buildDefaultListViewDefinition(context?.contentType);
   }
   if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
-  rejectUnknownKeys(input, ["columns", "filters", "defaultSort", "bulkActions"]);
+  rejectUnknownKeys(input, ["columns", "filters", "defaultSort", "bulkActions", "rowTemplate"]);
 
   const defaults = buildDefaultListViewDefinition(context?.contentType);
   const columns =
@@ -537,12 +1489,18 @@ export function normalizeCustomScreenListViewDefinition(
         };
       })()
     : defaults.bulkActions;
+  const fallbackRowTemplate = buildDefaultListRowTemplate(columns);
+  const rowTemplate =
+    input.rowTemplate === undefined || input.rowTemplate === null
+      ? fallbackRowTemplate
+      : normalizeCustomScreenListRowTemplate(input.rowTemplate, context, sink);
 
   return {
     columns,
     filters,
     defaultSort,
     bulkActions,
+    rowTemplate,
   };
 }
 
@@ -575,6 +1533,125 @@ export function normalizeCustomScreenEditorViewDefinition(
   return {
     blocks,
     bindings,
+    saveMode: "entry",
+    interactionMode: "inline",
+  };
+}
+
+const visitScreenBlocks = (blocks: ScreenBlockV1[], visitor: (block: ScreenBlockV1) => void) => {
+  blocks.forEach((block) => {
+    visitor(block);
+    if (Array.isArray(block.children) && block.children.length > 0) {
+      visitScreenBlocks(block.children, visitor);
+    }
+    if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
+      Object.values(block.slots).forEach((items) => {
+        if (Array.isArray(items) && items.length > 0) {
+          visitScreenBlocks(items, visitor);
+        }
+      });
+    }
+  });
+};
+
+const collectScreenBlockIds = (document: ScreenDocumentV1) => {
+  const ids = new Set<string>();
+  document.sections.forEach((section) => {
+    visitScreenBlocks(section.blocks, (block) => {
+      if (ids.has(block.id)) throw new Error("custom_screen_definition_invalid");
+      ids.add(block.id);
+    });
+  });
+  return ids;
+};
+
+export function normalizeCustomScreenEditorViewDefinitionV4(
+  input: unknown,
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
+): CustomScreenEditorViewDefinitionV4 {
+  if (input === undefined || input === null) {
+    return {
+      document: { schemaVersion: 1, sections: [] },
+      bindings: [],
+      saveMode: "entry",
+      interactionMode: "inline",
+    };
+  }
+  if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(input, ["document", "bindings", "saveMode", "interactionMode"]);
+  const saveMode = normalizeText(input.saveMode) ?? "entry";
+  if (saveMode !== "entry") throw new Error("custom_screen_definition_invalid");
+  const interactionMode = normalizeText(input.interactionMode) ?? "inline";
+  if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
+  const document = normalizeScreenDocumentV1(input.document);
+  const bindings = normalizeScreenFieldBindings(input.bindings, context, sink);
+  const blockIds = collectScreenBlockIds(document);
+  // TASK-505-01 (Item B): when a sink is threaded, PRUNE block-orphans inline (recoverable
+  // Save) instead of hard-throwing; no reconcileScreenBindings import (schemas←ops layering).
+  if (sink) {
+    const kept: ScreenFieldBinding[] = [];
+    for (const binding of bindings) {
+      if (blockIds.size === 0 || blockIds.has(binding.blockId)) kept.push(binding);
+      else sink.removedBlockOrphans.push(binding.field);
+    }
+    return {
+      document,
+      bindings: kept,
+      saveMode: "entry",
+      interactionMode: "inline",
+    };
+  }
+  if (blockIds.size > 0 && bindings.some((binding) => !blockIds.has(binding.blockId))) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  return {
+    document,
+    bindings,
+    saveMode: "entry",
+    interactionMode: "inline",
+  };
+}
+
+export function normalizeCustomScreenEditorViewDefinitionV4ForRead(
+  input: unknown,
+  _context?: CustomScreenDefinitionContext
+): CustomScreenEditorViewDefinitionV4 {
+  if (input === undefined || input === null) {
+    return {
+      document: { schemaVersion: 1, sections: [] },
+      bindings: [],
+      saveMode: "entry",
+      interactionMode: "inline",
+    };
+  }
+  if (!isRecord(input)) throw new Error("custom_screen_definition_invalid");
+  rejectUnknownKeys(input, ["document", "bindings", "saveMode", "interactionMode"]);
+  const saveMode = normalizeText(input.saveMode) ?? "entry";
+  if (saveMode !== "entry") throw new Error("custom_screen_definition_invalid");
+  const interactionMode = normalizeText(input.interactionMode) ?? "inline";
+  if (interactionMode !== "inline") throw new Error("custom_screen_definition_invalid");
+  const document = normalizeScreenDocumentV1ForRead(input.document);
+  // TASK-505-01/03 (Item B) — read-path RETAINS field-orphans so recovery UX can NAME them.
+  // A field-orphan (binding → LIVE block, but its content-type field was deleted AFTER save)
+  // is created by an EXTERNAL schema change, never re-saved, so it can only surface on
+  // reopen. We therefore normalize bindings WITHOUT content-type context (skips field-root
+  // validation → the orphan is kept, not pruned, not thrown) so the editor's
+  // detectScreenBindingOrphans can raise the amber "Orphaned field bindings" notice naming
+  // the dead field (505-03 Acceptance #5/#6, 505-04 SMOKE #4/#5). The WRITE path still prunes
+  // field-orphans on Save (recoverable Save + post-save `binding_field_removed` warning).
+  // Block-orphans (binding → a block that no longer exists) CANNOT be persisted — the write
+  // path prunes them on Save — and a dead blockId can never render, so they are dropped on
+  // read (structural, context-independent) exactly as before. Genuinely-malformed bindings
+  // still throw here and fall through to the outer read-repair.
+  const bindings = normalizeScreenFieldBindings(input.bindings);
+  const blockIds = collectScreenBlockIds(document);
+  const keptBindings = bindings.filter(
+    (binding) => blockIds.size === 0 || blockIds.has(binding.blockId)
+  );
+  return {
+    document,
+    bindings: keptBindings,
     saveMode: "entry",
     interactionMode: "inline",
   };
@@ -646,12 +1723,23 @@ const normalizeCustomScreenListViewDefinitionForRead = (
         unpublish: normalizeBoolean(input.bulkActions.unpublish, true),
       }
     : defaults.bulkActions;
+  const resolvedColumns = columns.length > 0 ? columns : defaults.columns;
+  const fallbackRowTemplate = buildDefaultListRowTemplate(resolvedColumns);
+  const rowTemplate =
+    input.rowTemplate === undefined || input.rowTemplate === null
+      ? fallbackRowTemplate
+      : normalizeCustomScreenListRowTemplateForRead(
+          input.rowTemplate,
+          fallbackRowTemplate,
+          context
+        );
 
   return {
-    columns: columns.length > 0 ? columns : defaults.columns,
+    columns: resolvedColumns,
     filters,
     defaultSort,
     bulkActions,
+    rowTemplate,
   };
 };
 
@@ -671,6 +1759,35 @@ export function migrateV1DefinitionToV3(
   };
 }
 
+export function migrateV3DefinitionToV4(
+  definition: CustomScreenDefinitionV3,
+  context?: CustomScreenDefinitionContext
+): CustomScreenDefinitionV4 {
+  const editorView = {
+    blocks: normalizeCustomScreenBlocks(definition.editorView.blocks),
+    bindings: normalizeCustomScreenBindingsForRead(definition.editorView.bindings, context),
+    saveMode: "entry" as const,
+    interactionMode: "inline" as const,
+  };
+  return {
+    schemaVersion: 4,
+    listView: normalizeCustomScreenListViewDefinitionForRead(definition.listView, context),
+    editorView: {
+      document: migrateWidgetBlocksToScreenDocument(editorView.blocks),
+      bindings: editorView.bindings.map(migrateCustomScreenBindingToScreenFieldBinding),
+      saveMode: "entry",
+      interactionMode: "inline",
+    },
+  };
+}
+
+export function migrateV1DefinitionToV4(
+  definition: CustomScreenDefinitionV1,
+  context?: CustomScreenDefinitionContext
+): CustomScreenDefinitionV4 {
+  return migrateV3DefinitionToV4(migrateV1DefinitionToV3(definition, context), context);
+}
+
 export function migrateV2DefinitionToV3(
   definition: CustomScreenDefinitionV2,
   context?: CustomScreenDefinitionContext
@@ -686,6 +1803,13 @@ export function migrateV2DefinitionToV3(
       interactionMode: "inline",
     },
   };
+}
+
+export function migrateV2DefinitionToV4(
+  definition: CustomScreenDefinitionV2,
+  context?: CustomScreenDefinitionContext
+): CustomScreenDefinitionV4 {
+  return migrateV3DefinitionToV4(migrateV2DefinitionToV3(definition, context), context);
 }
 
 export function normalizeCustomScreenDefinition(
@@ -707,15 +1831,18 @@ export function normalizeCustomScreenDefinition(
   const hasV2ListViewKeys =
     isRecord(rawInput.listView) &&
     ("rowClick" in rawInput.listView || "createMode" in rawInput.listView);
+  const hasV4EditorDocument = isRecord(rawInput.editorView) && "document" in rawInput.editorView;
   const version =
     "listView" in rawInput || "editorView" in rawInput
       ? hasV2ListViewKeys
         ? 2
-        : normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? 3)
+        : hasV4EditorDocument
+          ? 4
+          : normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? 3)
       : normalizeCustomScreenSchemaVersion(rawInput.schemaVersion);
 
   if (version === 1) {
-    return migrateV1DefinitionToV3(normalizeCustomScreenV1Definition(rawInput, context), context);
+    return migrateV1DefinitionToV4(normalizeCustomScreenV1Definition(rawInput, context), context);
   }
 
   if (version === 2) {
@@ -723,12 +1850,84 @@ export function normalizeCustomScreenDefinition(
   }
 
   rejectUnknownKeys(rawInput, ["schemaVersion", "listView", "editorView"]);
-  const schemaVersion = normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? 3);
-  if (schemaVersion !== 3) throw new Error("custom_screen_definition_invalid");
+  const schemaVersion = normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? version);
+  if (schemaVersion === 3) {
+    return migrateV3DefinitionToV4(
+      {
+        schemaVersion: 3,
+        listView: normalizeCustomScreenListViewDefinition(rawInput.listView, context),
+        editorView: normalizeCustomScreenEditorViewDefinition(rawInput.editorView, context),
+      },
+      context
+    );
+  }
+  if (schemaVersion !== 4) throw new Error("custom_screen_definition_invalid");
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     listView: normalizeCustomScreenListViewDefinition(rawInput.listView, context),
-    editorView: normalizeCustomScreenEditorViewDefinition(rawInput.editorView, context),
+    editorView: normalizeCustomScreenEditorViewDefinitionV4(rawInput.editorView, context),
+  };
+}
+
+export function normalizeCustomScreenDefinitionForWrite(
+  input: {
+    schemaVersion?: unknown;
+    blocks?: unknown;
+    bindings?: unknown;
+    definition?: unknown;
+    listView?: unknown;
+    editorView?: unknown;
+  } = {},
+  context?: CustomScreenDefinitionContext,
+  sink?: ScreenBindingWarningSink
+): CustomScreenDefinition {
+  if (input.blocks !== undefined || input.bindings !== undefined) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+  if (
+    input.schemaVersion !== undefined &&
+    normalizeCustomScreenSchemaVersion(input.schemaVersion) !== 4
+  ) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+
+  const rawInput =
+    input.definition !== undefined
+      ? input.definition
+      : {
+          ...(input.schemaVersion !== undefined ? { schemaVersion: input.schemaVersion } : {}),
+          ...(input.listView !== undefined ? { listView: input.listView } : {}),
+          ...(input.editorView !== undefined ? { editorView: input.editorView } : {}),
+        };
+  if (!isRecord(rawInput)) throw new Error("custom_screen_definition_invalid");
+  if ("contentTypeId" in rawInput) {
+    throw new Error("custom_screen_definition_invalid");
+  }
+  if ("blocks" in rawInput || "bindings" in rawInput) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+
+  const hasV4EditorDocument = isRecord(rawInput.editorView) && "document" in rawInput.editorView;
+  const hasLegacyEditorView =
+    isRecord(rawInput.editorView) &&
+    ("blocks" in rawInput.editorView || !("document" in rawInput.editorView));
+  const hasV2ListViewKeys =
+    isRecord(rawInput.listView) &&
+    ("rowClick" in rawInput.listView || "createMode" in rawInput.listView);
+  const version =
+    rawInput.schemaVersion === undefined && !("listView" in rawInput) && !("editorView" in rawInput)
+      ? 4
+      : normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? (hasV4EditorDocument ? 4 : 3));
+
+  if (version !== 4 || hasLegacyEditorView || hasV2ListViewKeys) {
+    throw new Error("custom_screen_legacy_write_unsupported");
+  }
+
+  rejectUnknownKeys(rawInput, ["schemaVersion", "listView", "editorView"]);
+  return {
+    schemaVersion: 4,
+    listView: normalizeCustomScreenListViewDefinition(rawInput.listView, context, sink),
+    editorView: normalizeCustomScreenEditorViewDefinitionV4(rawInput.editorView, context, sink),
   };
 }
 
@@ -744,6 +1943,26 @@ export function normalizeCustomScreenDefinitionForRead(
   context?: CustomScreenDefinitionContext
 ): CustomScreenDefinition {
   const rawInput = input.definition !== undefined ? input.definition : input;
+  if (isRecord(rawInput)) {
+    const hasV4EditorDocument = isRecord(rawInput.editorView) && "document" in rawInput.editorView;
+    if (hasV4EditorDocument) {
+      try {
+        const version = normalizeCustomScreenSchemaVersion(rawInput.schemaVersion ?? 4);
+        if (version !== 4) throw new Error("custom_screen_definition_invalid");
+        rejectUnknownKeys(rawInput, ["schemaVersion", "listView", "editorView"]);
+        return {
+          schemaVersion: 4,
+          listView: normalizeCustomScreenListViewDefinitionForRead(rawInput.listView, context),
+          editorView: normalizeCustomScreenEditorViewDefinitionV4ForRead(
+            rawInput.editorView,
+            context
+          ),
+        };
+      } catch {
+        // Fall through to the broader legacy read-repair path below.
+      }
+    }
+  }
   try {
     return normalizeCustomScreenDefinition(input, context);
   } catch {
@@ -852,7 +2071,7 @@ export function normalizeCustomScreenDefinitionForRead(
           }
         })();
 
-        return migrateV2DefinitionToV3(
+        return migrateV2DefinitionToV4(
           {
             schemaVersion: 2,
             listView: legacyListView,
@@ -866,7 +2085,7 @@ export function normalizeCustomScreenDefinitionForRead(
     try {
       return normalizeCustomScreenDefinition(input);
     } catch {
-      return migrateV1DefinitionToV3(
+      return migrateV1DefinitionToV4(
         normalizeCustomScreenV1Definition({
           schemaVersion: 1,
           blocks: input.blocks,
@@ -1120,8 +2339,208 @@ const customScreenV3DefinitionSchema = {
   additionalProperties: false,
 } as const;
 
+const screenFieldBindingSchema = {
+  type: "object",
+  required: ["blockId", "propPath", "source", "field"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 120 },
+    blockId: { type: "string", minLength: 1, maxLength: 160 },
+    propPath: {
+      type: "string",
+      minLength: 1,
+      maxLength: 160,
+      pattern: "^[a-zA-Z0-9_.-]+$",
+    },
+    source: { enum: ["entry"] },
+    field: {
+      type: "string",
+      minLength: 1,
+      maxLength: 160,
+      pattern: "^[a-zA-Z0-9_.-]+$",
+    },
+    mode: { enum: customScreenBindingModes },
+  },
+  additionalProperties: false,
+} as const;
+
+// TASK-503-01: Ajv mirror of ScreenBlockStyleV1 — references the SAME exported
+// constants as the normalizer (zero drift). The route layer REJECTS out-of-range /
+// float / unknown-key style payloads (additionalProperties: false); stored documents
+// read through the coercing normalizer. Both reference identical constants.
+const screenBlockBoxSpacingSchema = {
+  type: "object",
+  properties: {
+    top: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+    right: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+    bottom: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+    left: {
+      type: "integer",
+      minimum: PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+      maximum: PAGE_BLOCK_BOX_SPACING_CLAMP.max,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+const screenBlockStyleV1Schema = {
+  type: "object",
+  properties: {
+    width: { enum: screenBlockWidths },
+    minHeight: {
+      type: "integer",
+      minimum: SCREEN_BLOCK_MIN_HEIGHT_CLAMP.min,
+      maximum: SCREEN_BLOCK_MIN_HEIGHT_CLAMP.max,
+    },
+    margin: screenBlockBoxSpacingSchema,
+    padding: screenBlockBoxSpacingSchema,
+    align: { enum: screenBlockAligns },
+  },
+  additionalProperties: false,
+} as const;
+
+const screenBlockV1Schema = {
+  type: "object",
+  required: ["id", "type", "data"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 160 },
+    type: { type: "string", minLength: 1, maxLength: 160 },
+    label: { type: "string", minLength: 1, maxLength: 160 },
+    variant: { type: "string", minLength: 1, maxLength: 80 },
+    style: screenBlockStyleV1Schema,
+    data: { type: "object" },
+    layout: { type: "object" },
+    visibility: { type: "object" },
+    editor: { type: "object" },
+    legacyWidgetType: { type: "string", minLength: 1, maxLength: 160 },
+    children: {
+      type: "array",
+      maxItems: 500,
+      items: { type: "object" },
+    },
+    slots: {
+      type: "object",
+      additionalProperties: {
+        type: "array",
+        maxItems: 500,
+        items: { type: "object" },
+      },
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+// TASK-505-01: Ajv mirror of ScreenSectionStyleV1 — references the SAME exported constants
+// as normalizeScreenSectionStyle (zero drift). Rejects out-of-range gap / unknown key at the
+// route edge (additionalProperties:false); stored docs read through the coercing normalizer.
+const screenSectionStyleV1Schema = {
+  type: "object",
+  properties: {
+    columns: { enum: screenSectionColumnPresets },
+    columnGap: {
+      type: "integer",
+      minimum: SCREEN_SECTION_COLUMN_GAP_CLAMP.min,
+      maximum: SCREEN_SECTION_COLUMN_GAP_CLAMP.max,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+const screenSectionV1Schema = {
+  type: "object",
+  required: ["id", "type", "data", "blocks"],
+  properties: {
+    id: { type: "string", minLength: 1, maxLength: 160 },
+    type: { enum: ["section"] },
+    label: { type: "string", minLength: 1, maxLength: 160 },
+    data: { type: "object" },
+    layout: { type: "object" },
+    visibility: { type: "object" },
+    style: screenSectionStyleV1Schema,
+    blocks: {
+      type: "array",
+      maxItems: 500,
+      items: screenBlockV1Schema,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+const screenDocumentV1Schema = {
+  type: "object",
+  required: ["schemaVersion", "sections"],
+  properties: {
+    schemaVersion: { enum: [1] },
+    sections: {
+      type: "array",
+      maxItems: 120,
+      items: screenSectionV1Schema,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+const customScreenListRowTemplateSchema = {
+  type: "object",
+  required: ["document", "bindings"],
+  properties: {
+    document: screenDocumentV1Schema,
+    bindings: {
+      type: "array",
+      maxItems: 200,
+      items: screenFieldBindingSchema,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+const customScreenV4ListViewSchema = {
+  ...customScreenV3DefinitionSchema.properties.listView,
+  properties: {
+    ...customScreenV3DefinitionSchema.properties.listView.properties,
+    rowTemplate: customScreenListRowTemplateSchema,
+  },
+  additionalProperties: false,
+} as const;
+
+const customScreenV4DefinitionSchema = {
+  type: "object",
+  required: ["schemaVersion", "listView", "editorView"],
+  properties: {
+    schemaVersion: { enum: [4] },
+    listView: customScreenV4ListViewSchema,
+    editorView: {
+      type: "object",
+      required: ["document", "bindings", "saveMode", "interactionMode"],
+      properties: {
+        document: screenDocumentV1Schema,
+        bindings: {
+          type: "array",
+          maxItems: 200,
+          items: screenFieldBindingSchema,
+        },
+        saveMode: { enum: ["entry"] },
+        interactionMode: { enum: ["inline"] },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
 export const customScreenDefinitionSchema = {
-  oneOf: [customScreenV3DefinitionSchema],
+  ...customScreenV4DefinitionSchema,
 } as const;
 
 export const customScreenCreateSchema = {
@@ -1144,18 +2563,8 @@ export const customScreenCreateSchema = {
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
     },
-    schemaVersion: { enum: [1, 2, 3] },
+    schemaVersion: { enum: [4] },
     definition: customScreenDefinitionSchema,
-    blocks: {
-      type: "array",
-      maxItems: 500,
-      items: { type: "object" },
-    },
-    bindings: {
-      type: "array",
-      maxItems: 200,
-      items: customScreenBindingSchema,
-    },
   },
   additionalProperties: false,
 } as const;
@@ -1180,18 +2589,8 @@ export const customScreenUpdateSchema = {
     sidebarLabel: {
       anyOf: [{ type: "string", minLength: 1, maxLength: 160 }, { type: "null" }],
     },
-    schemaVersion: { enum: [1, 2, 3] },
+    schemaVersion: { enum: [4] },
     definition: customScreenDefinitionSchema,
-    blocks: {
-      type: "array",
-      maxItems: 500,
-      items: { type: "object" },
-    },
-    bindings: {
-      type: "array",
-      maxItems: 200,
-      items: customScreenBindingSchema,
-    },
   },
   additionalProperties: false,
 } as const;

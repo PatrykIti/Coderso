@@ -1,8 +1,10 @@
-import { RefreshCw } from "lucide-react";
+import { CalendarDays, Clock, Plus, RefreshCw, TrendingUp } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -41,6 +43,8 @@ import {
 } from "@/services/bookingClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
+import { StatCard } from "@/ui/shared/StatCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { BookingAvailabilityTab } from "./components/AvailabilityTab";
@@ -49,12 +53,17 @@ import { BookingResourcesTab } from "./components/ResourcesTab";
 import { BookingServicesTab } from "./components/ServicesTab";
 import { BookingSlotPreviewTab } from "./components/SlotPreviewTab";
 import {
+  groupReservationsByWeek,
+  isReservationToday,
   parseNumberInRange,
   parseOptionalNumber,
   parseTimeInput,
   readClientError,
   normalizeOptionalText,
+  resourceTone,
+  startOfWeek,
   toIsoFromLocal,
+  weekRangeLabel,
 } from "./bookingHelpers";
 import {
   defaultBlackoutFormState,
@@ -133,6 +142,11 @@ export function BookingPage() {
     Record<string, BookingReservationStatus>
   >({});
 
+  // TASK-479-17-L01: controlled tab so the "New booking" action can switch to
+  // the Reservations calendar. Initial value preserves the real default landing
+  // tab (resources) — no landing/behavior change.
+  const [activeTab, setActiveTab] = useState("resources");
+
   const patchResourceForm = useCallback((patch: Partial<ResourceFormState>) => {
     setResourceForm((current) => ({ ...current, ...patch }));
   }, []);
@@ -180,6 +194,24 @@ export function BookingPage() {
       scheduleDraft.isAvailable !== defaultDraft.isAvailable
     );
   }, [scheduleDraft]);
+
+  // TASK-479-17-L01: render-time derivations (no setState in effects) feeding the
+  // weekly calendar overview + stat row from REAL loaded state. `weekStart` is a
+  // stable lazy value; the grid/stats recompute when reservations/resources move.
+  const weekStart = useMemo(() => startOfWeek(new Date()), []);
+  const resourceOrder = useMemo(() => resources.map((item) => item.id), [resources]);
+  const weekColumns = useMemo(
+    () => groupReservationsByWeek(reservations, weekStart, resourceOrder),
+    [reservations, weekStart, resourceOrder]
+  );
+  const bookingStats = useMemo(() => {
+    const now = new Date();
+    return {
+      today: reservations.filter((reservation) => isReservationToday(reservation, now)).length,
+      upcoming: reservations.filter((reservation) => new Date(reservation.startsAt) > now).length,
+      resourceCount: resources.length,
+    };
+  }, [reservations, resources]);
 
   const refreshResources = useCallback(
     async (options?: { force?: boolean; background?: boolean }) => {
@@ -880,15 +912,22 @@ export function BookingPage() {
 
   return (
     <AdminShell activeHref="/admin/advanced/booking" breadcrumbs={["Coderso", "Booking"]}>
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
         <PageHeader
           title="Booking"
-          description="Configure resources, services, availability, blackout windows, and reservations."
+          description="A calendar view of appointments across your resources and services."
+          icon={<CalendarDays />}
           actions={
-            <Button className="gap-2" variant="outline" onClick={handleRefreshAll}>
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
+            <>
+              <Badge variant="soft">Beta</Badge>
+              <Button className="gap-2" variant="outline" onClick={handleRefreshAll}>
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+              <Button className="gap-1.5" onClick={() => setActiveTab("reservations")}>
+                <Plus className="size-4" /> New booking
+              </Button>
+            </>
           }
         />
 
@@ -899,13 +938,37 @@ export function BookingPage() {
           </Alert>
         ) : null}
 
-        <Tabs defaultValue="resources" className="space-y-4">
-          <TabsList className="flex h-auto flex-wrap gap-2">
-            <TabsTrigger value="resources">Resources</TabsTrigger>
-            <TabsTrigger value="services">Services</TabsTrigger>
-            <TabsTrigger value="availability">Availability</TabsTrigger>
-            <TabsTrigger value="reservations">Reservations</TabsTrigger>
-            <TabsTrigger value="slot-preview">Slot Preview</TabsTrigger>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <StatCard
+            label="Bookings today"
+            value={String(bookingStats.today)}
+            icon={<CalendarDays />}
+          />
+          <StatCard label="Upcoming" value={String(bookingStats.upcoming)} icon={<Clock />} />
+          <StatCard
+            label="Resources"
+            value={String(bookingStats.resourceCount)}
+            icon={<TrendingUp />}
+          />
+        </div>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className="h-auto flex-wrap rounded-full">
+            <TabsTrigger value="reservations" className="rounded-full">
+              Reservations
+            </TabsTrigger>
+            <TabsTrigger value="resources" className="rounded-full">
+              Resources
+            </TabsTrigger>
+            <TabsTrigger value="services" className="rounded-full">
+              Services
+            </TabsTrigger>
+            <TabsTrigger value="availability" className="rounded-full">
+              Availability
+            </TabsTrigger>
+            <TabsTrigger value="slot-preview" className="rounded-full">
+              Slot Preview
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="resources" className="space-y-4">
@@ -984,6 +1047,60 @@ export function BookingPage() {
           </TabsContent>
 
           <TabsContent value="reservations" className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-[200px_1fr]">
+              <Card className="h-fit p-5">
+                <div className="font-display text-[15px] font-semibold">
+                  Resources &amp; services
+                </div>
+                <div className="mt-4 flex flex-col gap-1">
+                  {resources.length === 0 ? (
+                    <p className="px-2 py-2 text-sm text-muted-foreground">No resources yet.</p>
+                  ) : (
+                    resources.map((resource) => (
+                      <div
+                        key={resource.id}
+                        className="flex items-center gap-2.5 rounded-xl px-2 py-2 text-sm transition-colors hover:bg-accent"
+                      >
+                        <span
+                          className={`size-2.5 rounded-full ${
+                            resourceTone(resource.id, resourceOrder).split(" ")[0]
+                          }`}
+                        />
+                        <span className="text-foreground">{resource.name}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Card>
+
+              <SectionCard title="This week" description={weekRangeLabel(weekStart)}>
+                <div className="grid grid-cols-7 gap-2">
+                  {weekColumns.map((column) => (
+                    <div key={column.isoDate} className="flex flex-col">
+                      <div className="flex items-baseline justify-between px-1 pb-2">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {column.label}
+                        </span>
+                        <span className="font-display text-sm font-semibold text-foreground">
+                          {column.date}
+                        </span>
+                      </div>
+                      <div className="flex min-h-40 flex-col gap-1.5 rounded-xl bg-muted/40 p-1.5">
+                        {column.blocks.map((block) => (
+                          <div key={block.id} className={`rounded-lg px-2 py-1.5 ${block.tone}`}>
+                            <div className="text-[11px] font-semibold tabular-nums">
+                              {block.time}
+                            </div>
+                            <div className="truncate text-xs">{block.name}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </SectionCard>
+            </div>
+
             <BookingReservationsTab
               reservations={reservations}
               reservationsLoading={reservationsLoading}

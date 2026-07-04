@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-434-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -23,17 +24,15 @@ markers/default layout path.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```tsx
-// Real mechanism today: pageSectionTemplateColumns (pageRendererV2.tsx:181-188) forces
-// Math.max(columns, 3) for BOTH grid and cards (-> md:grid-cols-3), and
-// pageSectionTemplateClass emits `auto-rows-fr` for both (:210/:212); only the marker
-// class `page-section-template-testimonials-<variant>` (:199) differs, with no CSS consumer.
+// Real mechanism today: resolvePageSectionTemplateColumns forces
+// Math.max(columns, 3) for BOTH grid and cards (-> md:grid-cols-3).
 // Fix: extend pageSectionTemplateClass / the testimonials render path so `cards` adds a
 // per-item card surface (padding/border/shadow) and `grid` stays flat. Variant resolution
 // stays on resolvePageSectionTemplate (pageSectionTemplates.ts:117 — full section object).
@@ -112,3 +111,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

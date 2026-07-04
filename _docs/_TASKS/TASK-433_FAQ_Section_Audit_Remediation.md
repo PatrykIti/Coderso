@@ -5,26 +5,28 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-424, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Remediation family for the FAQ section based on `_docs/AUDIT/faq-2026-06-10.md`.
-FAQ already inserts, renders, and changes compact layout truthfully on the
-front, so the remaining work is to convert its inspector to the dedicated
-control surface, close the empty Responsive-tab finding from the audit, and
-keep that truthful variant behavior guarded.
+The merged Phase 3B audit corrected the earlier premise: FAQ inserted and
+rendered, but `compact` still depended on generic marker/spacing behavior. The
+completed remediation adds compact spacing plus FAQ item wrappers, converts the
+inspector to the shared dedicated control surface, and consumes the TASK-425
+Responsive-tab closure.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-433-01: FAQ variant/control contract freeze.
-- [ ] TASK-433-01-L01: Preserve working compact runtime behavior while adopting
+- [x] TASK-433-01: FAQ variant/control contract freeze.
+- [x] TASK-433-01-L01: Preserve working compact runtime behavior while adopting
       the shared dedicated controls.
-- [ ] TASK-433-02: Validation, docs, and closure.
+- [x] TASK-433-02: Validation, docs, and closure.
 
 ---
 
@@ -42,3 +44,9 @@ keep that truthful variant behavior guarded.
 
 - `_docs/_TASKS/README.md`
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

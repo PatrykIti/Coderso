@@ -152,6 +152,11 @@ testIfDb("rejects unknown key", async () => {
 });
 
 testIfDb("site shell reference keys accept nullable id strings", async () => {
+  // Self-scoped precondition: this test owns its state, so it is deterministic
+  // regardless of prior pollution (e.g. the Playwright smoke assigning a site nav menu).
+  await setSetting("site.navigationMenuId", null);
+  await setSetting("site.footerTemplateId", null);
+
   const list = await listSettings();
   expect(list["site.navigationMenuId"]).toBeNull();
   expect(list["site.footerTemplateId"]).toBeNull();

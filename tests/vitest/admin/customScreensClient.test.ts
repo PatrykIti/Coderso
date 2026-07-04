@@ -6,12 +6,17 @@ import {
   clearCustomScreensCache,
   createCustomScreen,
   deleteCustomScreen,
+  getCachedScreenEntryOverrides,
   getCachedCustomScreens,
+  getScreenEntryOverridesCached,
+  invalidateScreenEntryOverrides,
   listCustomScreens,
   listCustomScreensCached,
+  replaceScreenEntryOverrides,
   updateCustomScreen,
   type CustomScreenRecord,
 } from "../../../core/admin/services/customScreensClient";
+import { subscribeCacheEvents } from "../../../core/admin/utils/cacheBus";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -51,6 +56,7 @@ const makeScreen = (overrides: Partial<CustomScreenRecord> = {}): CustomScreenRe
 
 afterEach(() => {
   clearCustomScreensCache();
+  invalidateScreenEntryOverrides("screen-1", "entry-1");
   vi.useRealTimers();
 });
 
@@ -198,8 +204,6 @@ test("custom screen mutations use CSRF and update cache", async () => {
     await createCustomScreen({
       name: "Catalog screen",
       contentTypeId: "ct-1",
-      blocks: [],
-      bindings: [],
     });
     await updateCustomScreen("created-screen", { status: "active" });
     expect(getCachedCustomScreens()?.[0]?.status).toBe("active");
@@ -212,5 +216,121 @@ test("custom screen mutations use CSRF and update cache", async () => {
     expect(csrfHeaders).toContain("csrf-token");
   } finally {
     globalThis.fetch = originalFetch;
+  }
+});
+
+test("screen entry override cache hydrates from local storage and respects TTL", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    return jsonResponse({
+      overrides: [{ blockId: "field-1", propPath: "textSize", value: "xl" }],
+    });
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-25T00:00:00.000Z"));
+    storage.setItem(
+      cacheKeys.customScreenEntryOverrides("screen-1", "entry-1"),
+      JSON.stringify({
+        value: [{ blockId: "field-1", propPath: "textSize", value: "lg" }],
+        savedAt: Date.now(),
+      })
+    );
+
+    const cached = await getScreenEntryOverridesCached("screen-1", "entry-1");
+    expect(cached).toEqual([{ blockId: "field-1", propPath: "textSize", value: "lg" }]);
+    expect(getCachedScreenEntryOverrides("screen-1", "entry-1")).toEqual(cached);
+    expect(calls).toHaveLength(0);
+
+    vi.setSystemTime(new Date(Date.now() + cacheTtlMs.detail + 1));
+    const refreshed = await getScreenEntryOverridesCached("screen-1", "entry-1");
+
+    expect(refreshed).toEqual([{ blockId: "field-1", propPath: "textSize", value: "xl" }]);
+    expect(calls[0]?.input).toBe("/admin/api/custom-screens/screen-1/entries/entry-1/overrides");
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("replaceScreenEntryOverrides uses CSRF, writes cache, and broadcasts update", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const events: Array<{ key: string; action: string }> = [];
+  const unsubscribe = subscribeCacheEvents((event) => {
+    events.push({ key: event.key, action: event.action });
+  });
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    if (url.endsWith("/custom-screens/screen-1/entries/entry-1/overrides")) {
+      return jsonResponse({
+        overrides: [
+          {
+            screenId: "screen-1",
+            entryId: "entry-1",
+            blockId: "field-1",
+            propPath: "tone",
+            value: "muted",
+            updatedBy: null,
+            createdAt: "2026-06-25T00:00:00.000Z",
+            updatedAt: "2026-06-25T00:00:00.000Z",
+          },
+        ],
+      });
+    }
+    return jsonResponse({}, 404);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCsrfToken();
+    const result = await replaceScreenEntryOverrides("screen-1", "entry-1", [
+      { blockId: "field-1", propPath: "tone", value: "muted" },
+    ]);
+
+    const patchCall = calls.find((call) =>
+      String(call.input).endsWith("/custom-screens/screen-1/entries/entry-1/overrides")
+    );
+    expect(patchCall?.init?.method).toBe("PATCH");
+    expect(new Headers(patchCall?.init?.headers).get("X-CSRF-Token")).toBe("csrf-token");
+    expect(patchCall?.init?.body).toBe(
+      JSON.stringify({ overrides: [{ blockId: "field-1", propPath: "tone", value: "muted" }] })
+    );
+    expect(result).toEqual([{ blockId: "field-1", propPath: "tone", value: "muted" }]);
+    expect(getCachedScreenEntryOverrides("screen-1", "entry-1")).toEqual(result);
+    expect(events).toEqual(
+      expect.arrayContaining([
+        {
+          key: cacheKeys.customScreenEntryOverrides("screen-1", "entry-1"),
+          action: "update",
+        },
+      ])
+    );
+  } finally {
+    unsubscribe();
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
   }
 });

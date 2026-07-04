@@ -29,7 +29,7 @@ export function ListingQueryFilters({
   onSourceChange,
 }: ListingQueryFiltersProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border bg-card/60 p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+    <div className="flex flex-col gap-3 rounded-2xl border bg-card p-3 shadow-soft lg:flex-row lg:items-center lg:justify-between">
       <div className="relative w-full lg:max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -43,9 +43,7 @@ export function ListingQueryFilters({
       <div className="flex flex-wrap items-center gap-2">
         <Select
           value={source}
-          onValueChange={(value) =>
-            onSourceChange(value as ListingQuerySourceFilter)
-          }
+          onValueChange={(value) => onSourceChange(value as ListingQuerySourceFilter)}
         >
           <SelectTrigger className="h-8 w-full sm:w-[180px]">
             <Filter className="h-3 w-3 text-muted-foreground" />

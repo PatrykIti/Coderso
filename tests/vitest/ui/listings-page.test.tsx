@@ -116,12 +116,14 @@ test("ListingEditorPage renders query builder panels in create mode", () => {
     path: "/admin/advanced/listings/new",
   });
 
+  // TASK-479-16-L02: editor restyled into a left Data/Filters rail + result-preview
+  // canvas + right inspector. The controls are the same; their section copy moved.
   expect(html).toContain("New listing query");
   expect(html).toContain("Source");
   expect(html).toContain("Filters");
-  expect(html).toContain("Sort and Pagination");
-  expect(html).toContain("Fields and Template");
-  expect(html).toContain("Live Preview");
+  expect(html).toContain("Sort");
+  expect(html).toContain("Fields (comma separated)");
+  expect(html).toContain("Bound query");
   expect(html).toContain("Save query");
 });
 

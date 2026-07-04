@@ -14,7 +14,7 @@ afterEach(() => {
 test("ensureRuntimeWidgetsRegistered re-registers core widgets after registry was cleared", () => {
   ensureRuntimeWidgetsRegistered();
   expect(getWidget("content-list")).not.toBeNull();
-  expect(getWidget("screen-record-header")).not.toBeNull();
+  expect(getWidget("screen-record-header")).toBeNull();
 
   clearWidgets();
 
@@ -24,45 +24,17 @@ test("ensureRuntimeWidgetsRegistered re-registers core widgets after registry wa
   ensureRuntimeWidgetsRegistered();
 
   expect(getWidget("content-list")).not.toBeNull();
-  expect(getWidget("screen-record-header")).not.toBeNull();
-  expect(getWidget("screen-two-column")).not.toBeNull();
+  expect(getWidget("screen-record-header")).toBeNull();
+  expect(getWidget("screen-two-column")).toBeNull();
 });
 
-test("runtime registry exposes the concrete admin-editor-view screen widget contract", () => {
+test("runtime registry retires legacy admin-editor-view screen widgets", () => {
   ensureRuntimeWidgetsRegistered();
 
-  expect(getWidget("screen-record-header")?.surfaces).toEqual([
-    "custom-screen-builder",
-    "admin-editor-view",
-  ]);
-  expect(getWidget("screen-record-header")?.dataAccess).toEqual({
-    source: "selected-entry",
-    modes: ["read", "write"],
-  });
-  expect(getWidget("screen-record-header")?.bindingTargets).toEqual([
-    expect.objectContaining({ propPath: "eyebrow", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "title", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "subtitle", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "description", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "badge", modes: ["read", "write"] }),
-  ]);
-  expect(getWidget("screen-field-value")?.dataAccess).toEqual({
-    source: "selected-entry",
-    modes: ["read", "write"],
-  });
-  expect(getWidget("screen-field-value")?.bindingTargets).toEqual([
-    expect.objectContaining({ propPath: "label", modes: ["read"] }),
-    expect.objectContaining({ propPath: "value", modes: ["read", "write"] }),
-    expect.objectContaining({ propPath: "helper", modes: ["read"] }),
-  ]);
-  expect(getWidget("screen-field-group")?.dataAccess).toEqual({
-    source: "selected-content-type",
-    modes: ["read"],
-  });
-  expect(getWidget("screen-two-column")?.dataAccess).toEqual({
-    source: "selected-content-type",
-    modes: ["read"],
-  });
+  expect(getWidget("screen-record-header")).toBeNull();
+  expect(getWidget("screen-field-value")).toBeNull();
+  expect(getWidget("screen-field-group")).toBeNull();
+  expect(getWidget("screen-two-column")).toBeNull();
 
   expect(
     listWidgetsForSurfaceContext({
@@ -76,10 +48,5 @@ test("runtime registry exposes the concrete admin-editor-view screen widget cont
       surface: "admin-editor-view",
       hasSelectedContentType: true,
     }).map((widget) => widget.type)
-  ).toEqual([
-    "screen-record-header",
-    "screen-field-value",
-    "screen-field-group",
-    "screen-two-column",
-  ]);
+  ).toEqual([]);
 });

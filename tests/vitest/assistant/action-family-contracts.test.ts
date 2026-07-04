@@ -94,10 +94,13 @@ test("menu seo media and surface expansion contracts declare domain permissions"
   expect(formAutomationContract.status).toBe("executable");
   expect(
     getAssistantActionFamilyContract("custom-screen.update").strictInput.notes.join(" ")
-  ).toContain("preserving unrelated config");
+  ).toContain("preserving the V4 definition");
   expect(
-    getAssistantActionFamilyContract("custom-screen.widget.patch").strictInput.notes.join(" ")
-  ).toContain("one existing custom screen widget block");
+    getAssistantActionFamilyContract("custom-screen.block.patch").strictInput.notes.join(" ")
+  ).toContain("one V4 custom screen block");
+  expect(
+    getAssistantActionFamilyContract("custom-screen.binding.set").strictInput.notes.join(" ")
+  ).toContain("V4 screen field binding");
   expect(getAssistantActionFamilyContract("form.delete").permissions.execute).toEqual([
     "forms:write",
   ]);

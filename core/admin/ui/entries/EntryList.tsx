@@ -18,12 +18,14 @@ import {
   listAllEntriesCached,
   updateEntryMetadata,
   type EntryListItem,
+  type EntryStatus,
 } from "@/services/entriesClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatusTabs } from "@/ui/shared/StatusTabs";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
@@ -292,6 +294,21 @@ export function EntryList() {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [entries]);
 
+  // Status tabs are derived at render from the already-loaded entries (no extra
+  // fetch, no sync setState in an effect); a tab click only flips the existing
+  // statusFilter. Tabs use the real EntryStatus enum + "all" — there is no
+  // "review" status, so the prototype's invented tab is dropped.
+  const statusTabs = useMemo(() => {
+    const by = (value: EntryStatus) => entries.filter((entry) => entry.status === value).length;
+    return [
+      { value: "all", label: "All", count: entries.length },
+      { value: "published", label: "Published", count: by("published") },
+      { value: "draft", label: "Drafts", count: by("draft") },
+      { value: "scheduled", label: "Scheduled", count: by("scheduled") },
+      { value: "archived", label: "Archived", count: by("archived") },
+    ];
+  }, [entries]);
+
   const filters = useMemo<EntryListFilters>(
     () => ({
       query: searchQuery,
@@ -485,7 +502,7 @@ export function EntryList() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Entries"
-          description="Manage content entries across all content types."
+          description="Every piece of structured content across your content types."
           actions={
             <>
               {selectedCount > 0 ? (
@@ -516,6 +533,7 @@ export function EntryList() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
+        <StatusTabs tabs={statusTabs} value={statusFilter} onValueChange={setStatusFilter} />
         <EntryFilters
           search={searchQuery}
           status={statusFilter}
@@ -536,7 +554,7 @@ export function EntryList() {
           onClear={handleClearFilters}
         />
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-card">
             Loading entries...
           </div>
         ) : (

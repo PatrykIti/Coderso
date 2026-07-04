@@ -6,67 +6,52 @@
 **Category:** Admin UI / Custom Screens / Records List
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-05-L01
-**Status:** ⏳ To Do
+**Status:** ⏭️ Superseded
+**Superseded Date:** 2026-06-20
+**Supersession Reason:** User scope correction keeps the existing tabular
+records list unchanged. Card/compact list presentation modes are out of scope
+for TASK-468.
 
 ---
 
 ## Overview
 
-Move Custom Screen record lists onto V4 list presentation configuration. The
-list must support professional admin views for custom content records while
-staying correlated to content type fields and existing entry routes.
+This leaf is superseded. TASK-468 keeps the existing Custom Screen records table
+unchanged and does not introduce table/card/compact presentation modes. V4 work
+continues in the screen detail builder, entry-detail field editing canvas, and
+compatibility projection around the current table list.
 
 ## Sub-Tasks
 
-- [ ] Define `CustomScreenListViewDefinitionV4` in the V4 contract owner.
-- [ ] Implement table/card/compact list presentation modes if they are part of
-  the accepted contract.
-- [ ] Map visible columns/cards to content type field summaries.
-- [ ] Handle missing fields, sorting, filtering, pagination, and empty states.
-- [ ] Add tests for list config normalization and rendered record lists.
+- [x] Preserve the existing table/list behavior.
+- [x] Remove card/compact presentation modes from accepted TASK-468 scope.
+- [ ] Keep current list config compatibility while V4 definition writes land.
 
 ## Files To Change
 
 | File | Required change |
 |---|---|
-| `core/services/customScreens/screenDocument.ts` | Own V4 list-view definition types/defaults. |
-| `core/admin/ui/custom-screens/ListViewDesigner.tsx` | Edit V4 list presentation config. |
-| `core/admin/ui/custom-screens/CustomScreenEntriesTable.tsx` | Render records from V4 list config. |
-| `core/admin/ui/custom-screens/customScreenListModel.ts` | Normalize/sort/filter list view model. |
-| `tests/vitest/customScreens/customScreenListModel.test.ts` | Pure list model coverage. |
-| `tests/vitest/ui-integration/custom-screens/*List*.test.tsx` | UI list coverage. |
+| Existing list files | Keep behavior unchanged except compatibility updates required by V4 definition projections. |
 
 ## Implementation Pseudocode
 
 ```ts
 export type CustomScreenListViewDefinitionV4 = {
-  schemaVersion: 1;
-  presentation: "table" | "cards" | "compact";
-  fields: Array<{ fieldName: string; label?: string; sortable?: boolean; width?: string }>;
-  defaultSort?: { fieldName: string; direction: "asc" | "desc" };
+  // Superseded in TASK-468. Existing CustomScreenListViewDefinition remains
+  // the table list contract for this family.
 };
-
-export function createScreenRecordListModel(input: ScreenRecordListInput) {
-  const fields = input.listView.fields.map((field) =>
-    resolveListField(field, input.contentType)
-  );
-  return applySortAndPagination({ fields, records: input.records, query: input.query });
-}
 ```
 
 Data flow:
 
-- Service/client loads V4 list view definition with content type metadata.
-- List model resolves configured fields against content type fields.
-- UI renders table/card/compact layouts and links records to the record
-  workspace route.
+- Service/client keeps loading the existing table list definition.
+- UI links records to the record workspace route without changing table
+  presentation.
 
 Error handling:
 
-- Missing list fields render repair hints in editor mode and omit unsafe columns
-  in runtime list mode.
-- Invalid sort fields fall back to deterministic default sort.
-- Pagination/filter state stays bounded and URL-safe.
+- Existing missing-field, sort, filter, pagination, and empty-state behavior is
+  preserved.
 
 Regression-test shape:
 
@@ -87,17 +72,15 @@ test("list view omits deleted field and keeps record actions", () => {
 - **CSRF expectations:** not required for read-only list requests; required for
   any inline mutations.
 - **Rate-limit bucket:** existing admin read bucket.
-- **Reject unknown validation:** list view definition rejects unknown
-  presentation, field, sort, filter, and pagination payload keys.
+- **Reject unknown validation:** existing list view definition reject-unknown
+  behavior is preserved.
 - **Anti-abuse controls:** no public write path.
 - **Secret handling:** list columns must not expose protected fields without the
   existing admin authorization model allowing them.
 
 ## Testing Requirements
 
-- `bun run test:vitest -- tests/vitest/customScreens/customScreenListModel.test.ts`
-- `bun run test:vitest -- tests/vitest/ui-integration/custom-screens`
-- Bun route tests if list query validation changes.
+- Existing list tests only if compatibility changes touch list behavior.
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `git diff --check`
@@ -109,6 +92,7 @@ test("list view omits deleted field and keeps record actions", () => {
 
 ## Acceptance Criteria
 
-1. V4 list configuration is schema-owned and normalized.
-2. Record lists render from content type field mappings, not widget blocks.
-3. Missing fields and invalid sort/filter state fail safely.
+1. No card/compact presentation mode code is added under TASK-468.
+2. Existing table list behavior remains unchanged while V4 definition writes
+   land.
+3. Any future list presentation redesign is split into a new task.

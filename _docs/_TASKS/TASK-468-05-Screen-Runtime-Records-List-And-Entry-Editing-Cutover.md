@@ -6,7 +6,9 @@
 **Category:** Custom Screens / Runtime / Entries
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-468-04
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-20
+**Completed:** 2026-06-21
 
 ---
 
@@ -17,13 +19,43 @@ Render Custom Screen list and entry-editing experiences from
 screen runtime that knows about content entry data, field metadata, readable
 blocks, writable controls, and professional record layouts.
 
+2026-06-20 scope correction:
+
+- The records list remains the existing table/list workflow. This task no
+  longer owns card/compact list presentation modes.
+- Entry detail mode is field-editing-only: clicking a field may open the field
+  panel and save entry data, but it must not expose section/block builder
+  controls.
+- First slice removed the widget edit button from `CustomScreenEntryCanvas` and
+  wired entry editor reads through V4 helper projections.
+
+2026-06-21 completion:
+
+- `CustomScreenPreview` and `CustomScreenEntryCanvas` now render
+  `ScreenDocumentV1` through `ScreenRuntimeRenderer`, not through
+  `WidgetRenderer` or `screenWidgetRenderBridge`.
+- Entry detail mode maps writable `ScreenFieldBinding` records to existing
+  field controls and entry payloads, while the record list remains the existing
+  table workflow.
+- Active-surface hydration reports native screen block types and V4 bindings;
+  legacy placeholders stay non-writable.
+
+2026-06-21 corrective closure:
+
+- Record entry detail now uses the neutral authoring canvas shell with a
+  floating Value panel. It does not expose add, move, duplicate, delete, block
+  library, builder settings, or a right Sheet in record mode.
+- Per-record text size, image, and style persistence remains out of scope and is
+  tracked by TASK-473.
+
 ## Sub-Tasks
 
-- [ ] TASK-468-05-L01: Screen Runtime Renderer.
-- [ ] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
-- [ ] TASK-468-05-L03: Records List Presentation Modes.
-- [ ] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
-- [ ] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
+- [x] TASK-468-05-L01: Screen Runtime Renderer.
+- [x] TASK-468-05-L02: Entry Field Controls And Draft Bridge.
+- [x] TASK-468-05-L03: Records List Presentation Modes. Superseded by the
+  table-only scope correction.
+- [x] TASK-468-05-L04: Record Workspace Routing Cache And Active Context.
+- [x] TASK-468-05-L05: Runtime Entry Tests And Legacy Bridge Guard.
 
 ## Files To Change
 

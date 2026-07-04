@@ -330,15 +330,15 @@ const normalizeCustomScreenBindingSummary = (
 ): AssistantCustomScreenBindingSummary | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
-  const widgetId = normalizeText(record.widgetId, 120);
+  const blockId = normalizeText(record.blockId, 120) ?? normalizeText(record.widgetId, 120);
   const field = normalizeText(record.field, 120);
   const propPath = normalizeText(record.propPath, 160);
   const mode = record.mode;
-  if (!widgetId || !field || !propPath) return null;
+  if (!blockId || !field || !propPath) return null;
   const normalizedMode: AssistantCustomScreenBindingSummary["mode"] =
     mode === "read" || mode === "write" || mode === "readwrite" ? mode : "readwrite";
   return {
-    widgetId,
+    blockId,
     field,
     propPath,
     mode: normalizedMode,

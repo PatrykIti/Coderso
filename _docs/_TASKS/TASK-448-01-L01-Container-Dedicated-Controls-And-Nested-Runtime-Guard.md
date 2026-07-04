@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-448-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -19,21 +20,31 @@ working nested-layout persistence and published runtime behavior.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```tsx
-renderBlockControls(getBlockControlsForType("container"));
-expect(renderPublishedContainer(block)).toContain('data-page-block="container"');
+// Container has no per-type rows; it still resolves universal block controls
+// through the real registry accessor.
+const containerControls = getPageEditorControlsForTarget({
+  kind: "block",
+  type: "container",
+}); // pageEditorControlRegistry.ts:870-890
+
+// Runtime guard: published nested output flows through PageDocumentRender /
+// renderPageBlockContent. Assert against renderer output, not fictional helpers.
+expect(html).toContain('data-page-block="container"'); // toPageBlockRenderProps, pageRendererV2.tsx:529-539
+expect(html).toContain('data-page-block-slot="children"'); // renderPageLayoutBlockContent, pageRendererV2.tsx:1256-1369
 ```
 
 Owner files:
 
 - `core/admin/ui/pages/PageEditor.tsx`
 - `core/services/pages/pageEditorControlRegistry.ts`
+- `core/services/pages/pageEditorControlUiModel.ts`
 - `core/services/pages/pageRendererV2.tsx`
 - `core/services/pages/pageDocumentV2.ts`
 

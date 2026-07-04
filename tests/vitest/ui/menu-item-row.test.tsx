@@ -58,14 +58,13 @@ test("MenuItemRow renders hierarchy hint and explicit action labels", () => {
   expect(html).toContain('aria-label="Drag About"');
   expect(html).toContain('draggable="true"');
   expect(html).toContain('draggable="false"');
-  expect(html).toContain("self-center");
-  expect(html).toContain("h-12");
-  expect(html).toContain("w-12");
-  expect(html).toContain("[&amp;_svg]:pointer-events-none");
+  // TASK-499-01 row fidelity reconciliation: the heavy grip-box dims, the
+  // letter avatar, and the redundant "Sub-item of X" text hint are compacted
+  // AWAY toward the prototype (bare size-4 grip, CornerDownRight + indent
+  // nesting cue, mono URL subline). Behavior/a11y markers below stay.
   expect(html).toContain("pointer-events-none");
   expect(html).toContain('aria-hidden="true"');
   expect(html).toContain('focusable="false"');
-  expect(html).toContain("Sub-item of Home");
   expect(html).toContain("Drop as sub-menu");
   expect(html).toContain('aria-label="Move up About"');
   expect(html).toContain('aria-label="Move down About"');
@@ -74,6 +73,25 @@ test("MenuItemRow renders hierarchy hint and explicit action labels", () => {
   expect(html).toContain('aria-label="Outdent About"');
   expect(html).toContain('aria-label="Open details for About"');
   expect(html).toContain('aria-label="Delete About"');
+});
+
+test("MenuItemRow renders the nested indent affordance only for child rows (TASK-479-10-L02)", () => {
+  const childHtml = renderAdminUi(<MenuItemRow item={item} depth={1} />);
+  expect(childHtml).toContain("data-menu-nested-indent");
+
+  const rootHtml = renderAdminUi(
+    <MenuItemRow item={{ ...item, parentId: null, parentLabel: null }} depth={0} />
+  );
+  expect(rootHtml).not.toContain("data-menu-nested-indent");
+});
+
+test("MenuItemRow marks the active row with the primary-soft selection hook (TASK-479-10-L02)", () => {
+  const activeHtml = renderAdminUi(<MenuItemRow item={item} depth={0} active />);
+  expect(activeHtml).toContain('data-menu-row-active="true"');
+  expect(activeHtml).toContain("bg-primary-soft/40");
+
+  const inactiveHtml = renderAdminUi(<MenuItemRow item={item} depth={0} />);
+  expect(inactiveHtml).not.toContain('data-menu-row-active="true"');
 });
 
 test("MenuItemRow renders before and after indicators as stable overlays", () => {

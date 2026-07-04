@@ -3,8 +3,12 @@ import type { RouteContext } from "../router";
 import {
   createCustomScreen,
   deleteCustomScreen,
+  getScreenEntryPresentationOverrides,
   getCustomScreen,
   listCustomScreens,
+  normalizeScreenEntryPresentationOverrideReplacePayload,
+  saveScreenEntryPresentationOverrides,
+  screenEntryPresentationOverrideReplaceSchema,
   updateCustomScreen,
   type CustomScreenCreateInput,
   type CustomScreenUpdateInput,
@@ -13,6 +17,16 @@ import {
   customScreenCreateSchema,
   customScreenUpdateSchema,
 } from "../validation/customScreenSchemas";
+
+// TASK-505-01 (Item B): lightweight carrier so a residual hard-400 (genuinely-malformed
+// binding) MAY surface the offending field name(s) on ApiError.details.fields — the user
+// message string stays byte-frozen (mapCustomScreenError keys on error.message). In practice
+// malformed bindings carry no field name; field-orphans are pruned to a 200 warning, not a 400.
+export class CustomScreenDefinitionError extends Error {
+  constructor(public fields?: string[]) {
+    super("custom_screen_definition_invalid");
+  }
+}
 
 export type CustomScreenRouteHandler = (ctx: RouteContext) => Promise<unknown> | unknown;
 
@@ -36,16 +50,39 @@ export const mapCustomScreenError = (error: unknown) => {
     case "custom_screen_invalid":
       return new ApiError("custom_screen_invalid", "Custom screen payload is invalid", 400);
     case "custom_screen_status_invalid":
-      return new ApiError(
-        "custom_screen_status_invalid",
-        "Custom screen status is invalid",
-        400
-      );
-    case "custom_screen_definition_invalid":
+      return new ApiError("custom_screen_status_invalid", "Custom screen status is invalid", 400);
+    case "custom_screen_definition_invalid": {
+      const fields = error instanceof CustomScreenDefinitionError ? error.fields : undefined;
       return new ApiError(
         "custom_screen_definition_invalid",
-        "Custom screen definition is invalid",
+        "Custom screen definition is invalid", // BYTE-FROZEN — field names ride error.details
+        400,
+        fields?.length ? { fields } : undefined
+      );
+    }
+    case "custom_screen_legacy_write_unsupported":
+      return new ApiError(
+        "custom_screen_legacy_write_unsupported",
+        "Custom screen writes must use the V4 definition contract",
         400
+      );
+    case "custom_screen_override_invalid":
+      return new ApiError(
+        "custom_screen_override_invalid",
+        "Custom screen presentation override payload is invalid",
+        400
+      );
+    case "custom_screen_override_not_found":
+      return new ApiError(
+        "custom_screen_override_not_found",
+        "Custom screen presentation override target was not found",
+        404
+      );
+    case "custom_screen_override_conflict":
+      return new ApiError(
+        "custom_screen_override_conflict",
+        "Custom screen presentation override targets must be unique",
+        409
       );
     default:
       return null;
@@ -63,71 +100,79 @@ const withCustomScreenErrors = async <T>(fn: () => Promise<T>) => {
   }
 };
 
-export function registerCustomScreenRoutes(
-  router: Router,
-  deps: CustomScreenRouteDeps
-) {
+export function registerCustomScreenRoutes(router: Router, deps: CustomScreenRouteDeps) {
   const { requirePermission, validate } = deps;
 
-  router.get(
-    "/custom-screens",
-    requirePermission("content:read"),
-    async () => {
-      return withCustomScreenErrors(async () => {
-        const items = await listCustomScreens();
-        return { items };
-      });
-    }
-  );
+  router.get("/custom-screens", requirePermission("content:read"), async () => {
+    return withCustomScreenErrors(async () => {
+      const items = await listCustomScreens();
+      return { items };
+    });
+  });
+
+  router.get("/custom-screens/:id", requirePermission("content:read"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      const screen = await getCustomScreen(ctx.params.id);
+      if (!screen) throw new Error("custom_screen_not_found");
+      return screen;
+    });
+  });
+
+  router.post("/custom-screens", requirePermission("content:write"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      validate(customScreenCreateSchema, ctx.body ?? {});
+      return createCustomScreen(ctx.body as CustomScreenCreateInput);
+    });
+  });
+
+  router.patch("/custom-screens/:id", requirePermission("content:write"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      validate(customScreenUpdateSchema, ctx.body ?? {});
+      const updated = await updateCustomScreen(ctx.params.id, ctx.body as CustomScreenUpdateInput);
+      if (!updated) throw new Error("custom_screen_not_found");
+      return updated;
+    });
+  });
 
   router.get(
-    "/custom-screens/:id",
+    "/custom-screens/:screenId/entries/:entryId/overrides",
     requirePermission("content:read"),
     async (ctx) => {
-      return withCustomScreenErrors(async () => {
-        const screen = await getCustomScreen(ctx.params.id);
-        if (!screen) throw new Error("custom_screen_not_found");
-        return screen;
-      });
-    }
-  );
-
-  router.post(
-    "/custom-screens",
-    requirePermission("content:write"),
-    async (ctx) => {
-      return withCustomScreenErrors(async () => {
-        validate(customScreenCreateSchema, ctx.body ?? {});
-        return createCustomScreen(ctx.body as CustomScreenCreateInput);
-      });
+      return withCustomScreenErrors(async () => ({
+        overrides: await getScreenEntryPresentationOverrides({
+          screenId: ctx.params.screenId,
+          entryId: ctx.params.entryId,
+        }),
+      }));
     }
   );
 
   router.patch(
-    "/custom-screens/:id",
+    "/custom-screens/:screenId/entries/:entryId/overrides",
     requirePermission("content:write"),
     async (ctx) => {
       return withCustomScreenErrors(async () => {
-        validate(customScreenUpdateSchema, ctx.body ?? {});
-        const updated = await updateCustomScreen(
-          ctx.params.id,
-          ctx.body as CustomScreenUpdateInput
-        );
-        if (!updated) throw new Error("custom_screen_not_found");
-        return updated;
+        validate(screenEntryPresentationOverrideReplaceSchema, ctx.body ?? {});
+        const body = normalizeScreenEntryPresentationOverrideReplacePayload(ctx.body ?? {});
+        const actorId = ctx.user?.id;
+        if (!actorId) throw new Error("custom_screen_override_invalid");
+        return {
+          overrides: await saveScreenEntryPresentationOverrides({
+            screenId: ctx.params.screenId,
+            entryId: ctx.params.entryId,
+            overrides: body.overrides,
+            actorId,
+          }),
+        };
       });
     }
   );
 
-  router.delete(
-    "/custom-screens/:id",
-    requirePermission("content:write"),
-    async (ctx) => {
-      return withCustomScreenErrors(async () => {
-        const deleted = await deleteCustomScreen(ctx.params.id);
-        if (!deleted) throw new Error("custom_screen_not_found");
-        return { ok: true };
-      });
-    }
-  );
+  router.delete("/custom-screens/:id", requirePermission("content:write"), async (ctx) => {
+    return withCustomScreenErrors(async () => {
+      const deleted = await deleteCustomScreen(ctx.params.id);
+      if (!deleted) throw new Error("custom_screen_not_found");
+      return { ok: true };
+    });
+  });
 }

@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Domain Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-468-01-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,11 +19,11 @@ validation without importing admin UI, DB clients, or runtime widget registries.
 
 ## Sub-Tasks
 
-- [ ] Add `core/services/customScreens/screenDocument.ts`.
-- [ ] Move V4 enums/defaults/normalizers into that owner.
-- [ ] Keep the module Bun-free and DB-free.
-- [ ] Add unit tests for valid/invalid V4 documents.
-- [ ] Export only stable helpers needed by service/admin/assistant code.
+- [x] Add `core/services/customScreens/screenDocument.ts`.
+- [x] Move V4 enums/defaults/normalizers into that owner.
+- [x] Keep the module Bun-free and DB-free.
+- [x] Add unit tests for valid/invalid V4 documents.
+- [x] Export only stable helpers needed by service/admin/assistant code.
 
 ## Files To Change
 

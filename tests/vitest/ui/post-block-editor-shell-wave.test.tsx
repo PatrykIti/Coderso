@@ -347,6 +347,8 @@ vi.mock("../../../core/admin/ui/posts/editor/inspector/PostDetailsSidebar", () =
 vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
   PostEditorLayout: ({
     header,
+    pageTitle,
+    pageActions,
     content,
     secondarySidebar,
     detailsSidebar,
@@ -354,6 +356,8 @@ vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
     onDetailsSidebarOpenChange,
   }: {
     header: React.ReactNode;
+    pageTitle: React.ReactNode;
+    pageActions: React.ReactNode;
     content: React.ReactNode;
     secondarySidebar: React.ReactNode;
     detailsSidebar: React.ReactNode;
@@ -361,6 +365,8 @@ vi.mock("../../../core/admin/ui/posts/editor/layout/PostEditorLayout", () => ({
     onDetailsSidebarOpenChange: (open: boolean) => void;
   }) => (
     <div>
+      <div>{pageTitle}</div>
+      <div>{pageActions}</div>
       <div>{header}</div>
       <div>{content}</div>
       <div>{secondarySidebar}</div>
@@ -399,22 +405,16 @@ vi.mock("../../../core/admin/ui/posts/editor/PostEditorCanvas", () => ({
 
 vi.mock("../../../core/admin/ui/posts/editor/PostEditorTopBar", () => ({
   PostEditorTopBar: ({
-    title,
     onClose,
     onOpenRevisions,
-    onPreview,
-    onPublish,
     onToggleInserter,
     onToggleOutline,
     onToggleDetails,
     onOpenSettings,
     onToggleFocusMode,
   }: {
-    title: string;
     onClose: () => void;
     onOpenRevisions: () => void;
-    onPreview: () => void;
-    onPublish: () => void;
     onToggleInserter: () => void;
     onToggleOutline: () => void;
     onToggleDetails: () => void;
@@ -422,18 +422,11 @@ vi.mock("../../../core/admin/ui/posts/editor/PostEditorTopBar", () => ({
     onToggleFocusMode: () => void;
   }) => (
     <div>
-      <span>{title}</span>
       <button type="button" onClick={onClose}>
         close-editor
       </button>
       <button type="button" onClick={onOpenRevisions}>
         open-revisions
-      </button>
-      <button type="button" onClick={onPreview}>
-        preview-post
-      </button>
-      <button type="button" onClick={onPublish}>
-        publish-post
       </button>
       <button type="button" onClick={onToggleInserter}>
         toggle-inserter
@@ -466,25 +459,6 @@ vi.mock("../../../core/admin/ui/posts/editor/PostRevisionDrawer", () => ({
       <span>{`revisions:${open ? "open" : "closed"}`}</span>
       <button type="button" onClick={() => onRestore("rev-1")}>
         restore-revision
-      </button>
-    </div>
-  ),
-}));
-
-vi.mock("../../../core/admin/ui/posts/editor/sidebars/PostInserterSidebar", () => ({
-  PostInserterSidebar: ({
-    onClose,
-    onInsertBlock,
-  }: {
-    onClose: () => void;
-    onInsertBlock: (type: string) => void;
-  }) => (
-    <div>
-      <button type="button" onClick={onClose}>
-        close-inserter
-      </button>
-      <button type="button" onClick={() => onInsertBlock("paragraph")}>
-        insert-paragraph
       </button>
     </div>
   ),
@@ -608,16 +582,16 @@ test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and setting
     const buttons = Array.from(view.container.querySelectorAll("button"));
 
     await React.act(async () => {
-      buttons.find((button) => button.textContent === "preview-post")?.click();
-      buttons.find((button) => button.textContent === "publish-post")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Open runtime preview")
+        ?.click();
+      buttons.find((button) => button.getAttribute("aria-label") === "Publish post")?.click();
       buttons.find((button) => button.textContent === "open-revisions")?.click();
       buttons.find((button) => button.textContent === "toggle-inserter")?.click();
       buttons.find((button) => button.textContent === "toggle-outline")?.click();
       buttons.find((button) => button.textContent === "toggle-details")?.click();
       buttons.find((button) => button.textContent === "open-settings")?.click();
       buttons.find((button) => button.textContent === "toggle-focus-mode")?.click();
-      buttons.find((button) => button.textContent === "close-inserter")?.click();
-      buttons.find((button) => button.textContent === "insert-paragraph")?.click();
       buttons.find((button) => button.textContent === "close-secondary-shell")?.click();
       buttons.find((button) => button.textContent === "close-details-shell")?.click();
       buttons.find((button) => button.textContent === "reset-preferences")?.click();
@@ -632,10 +606,6 @@ test("PostBlockEditorShell renders alerts and wires topbar, sidebar, and setting
     expect(postShellState.layout.setLeftRailMode).toHaveBeenCalledWith("outline");
     expect(postShellState.layout.openListView).toHaveBeenCalled();
     expect(postShellState.layout.toggleFocusMode).toHaveBeenCalled();
-    expect(postShellState.editor.insertBlock).toHaveBeenCalledWith("paragraph", {
-      source: "sidebar",
-      target: { mode: "after-selected" },
-    });
     expect(postShellState.layout.closeSecondarySidebar).toHaveBeenCalled();
     expect(postShellState.layout.closeDetails).toHaveBeenCalled();
     expect(postShellState.focusReturn).toHaveBeenCalled();
@@ -659,7 +629,7 @@ test("PostBlockEditorShell retries autosave and emits publish success toast thro
 
     await React.act(async () => {
       buttons.find((button) => button.textContent === "Retry now")?.click();
-      buttons.find((button) => button.textContent === "publish-post")?.click();
+      buttons.find((button) => button.getAttribute("aria-label") === "Publish post")?.click();
       await flushMicrotasks();
     });
 
@@ -684,7 +654,9 @@ test("PostBlockEditorShell emits update success and bounded failure toasts", asy
     const buttons = Array.from(updateView.container.querySelectorAll("button"));
 
     await React.act(async () => {
-      buttons.find((button) => button.textContent === "publish-post")?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Update published post")
+        ?.click();
       await flushMicrotasks();
     });
 
@@ -703,7 +675,7 @@ test("PostBlockEditorShell emits update success and bounded failure toasts", asy
     const buttons = Array.from(failureView.container.querySelectorAll("button"));
 
     await React.act(async () => {
-      buttons.find((button) => button.textContent === "publish-post")?.click();
+      buttons.find((button) => button.getAttribute("aria-label") === "Publish post")?.click();
       await flushMicrotasks();
     });
 
@@ -847,7 +819,7 @@ test("PostBlockEditorShell handles loading shell, details reopen, and cancelled 
     });
 
     expect(postShellState.layout.openDetailsForSelection).toHaveBeenCalledWith(false);
-    expect(postShellState.layout.setLeftRailMode).toHaveBeenCalledWith("outline");
+    expect(postShellState.layout.setLeftRailMode).toHaveBeenCalledWith("blocks");
     expect(postShellState.layout.openListView).toHaveBeenCalled();
     expect(postShellState.editor.moveToTrash).not.toHaveBeenCalled();
   } finally {
@@ -1152,7 +1124,7 @@ test("PostBlockEditorShell tolerates malformed stored layout fields and falls ba
       initialSecondarySidebar: "list-view",
       initialDetailsOpen: true,
       initialDetailsTab: "document",
-      initialLeftRailMode: "outline",
+      initialLeftRailMode: "blocks",
     });
   } finally {
     view.cleanup();

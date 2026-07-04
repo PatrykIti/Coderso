@@ -153,6 +153,7 @@ export const pageBlockRenderDefaults: Record<PageBlockType, PageBlockRenderDefau
       letterSpacing: 0,
     },
   },
+  badge: { ...frameRenderDefaults },
   button: {
     ...frameRenderDefaults,
     typography: { fontFamily: "sans", fontSize: "sm", fontWeight: "semibold", letterSpacing: 0 },

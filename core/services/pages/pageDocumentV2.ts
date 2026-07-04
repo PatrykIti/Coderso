@@ -50,6 +50,7 @@ export const pageSectionTypes = [
 export const pageBlockTypes = [
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -142,9 +143,16 @@ export const pageSectionAlignments = ["start", "center", "end", "stretch"] as co
 export const pageSectionJustify = ["start", "center", "end", "between"] as const;
 export const pageShadowTokens = ["none", "sm", "md", "lg"] as const;
 export const pageBackgroundTypes = ["none", "color", "gradient", "image", "video"] as const;
+export const pageBlockBorderStyles = ["none", "solid", "dashed", "dotted"] as const;
 export const pageButtonTargets = ["self", "blank"] as const;
 export const pageButtonVariants = ["primary", "secondary", "ghost", "link"] as const;
 export const pageButtonSizes = ["sm", "md", "lg"] as const;
+export const pageBadgeVariants = ["solid", "soft", "outline"] as const;
+export const pageBadgeSizes = ["2xs", "xs", "sm", "md"] as const;
+export const pageBadgeShapes = ["pill", "rounded", "square"] as const;
+export const pageBadgeWeights = ["normal", "medium", "semibold", "bold"] as const;
+export const pageBadgeIconPositions = ["start", "end"] as const;
+export const pageBadgeIcons = ["check", "sparkles", "star", "zap", "shield", "heart"] as const;
 export const pageTextFormats = ["plain", "rich"] as const;
 export const pageTextAlignments = ["left", "center", "right"] as const;
 export const pageHeadingLevels = ["h1", "h2", "h3", "h4", "h5", "h6"] as const;
@@ -166,7 +174,7 @@ export const pageBlockSlotKeys = [
  * Token-backed typography contract (TASK-424). Option tokens reference the
  * theme token stack (`DesignTokens.typography` in `core/services/theme/
  * tokenTypes.ts`, emitted as `--font-sans`/`--font-display` and
- * `--text-sm`...`--text-5xl` by `core/ui/theme/tokenCss.ts`). All typography
+ * `--text-2xs`...`--text-5xl` by `core/ui/theme/tokenCss.ts`). All typography
  * style fields are nullable and default to unset, so documents saved before
  * this contract render exactly as before (the baked utility classes stay the
  * fallback). The scale tops out at `5xl` (3rem = 48px), matching the baked h1
@@ -174,6 +182,8 @@ export const pageBlockSlotKeys = [
  */
 export const pageTypographyFontFamilies = ["sans", "display"] as const;
 export const pageTypographyFontSizes = [
+  "2xs",
+  "xs",
   "sm",
   "md",
   "lg",
@@ -188,6 +198,10 @@ export const pageTypographyFontWeights = ["normal", "medium", "semibold", "bold"
 export const PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP = { min: 1, max: 2.5 } as const;
 /** `letter-spacing` bounds in px for block typography. */
 export const PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP = { min: -2, max: 8 } as const;
+/** Block frame padding/margin bounds in px. */
+export const PAGE_BLOCK_BOX_SPACING_CLAMP = { min: 0, max: 240 } as const;
+/** Block border-width bounds in px. */
+export const PAGE_BLOCK_BORDER_WIDTH_CLAMP = { min: 0, max: 12 } as const;
 /**
  * Bounds for the section-column placement field (`style.column`, owner
  * finding #5 round 3). Mirrors the `layout.columns` clamp: a section never
@@ -208,6 +222,9 @@ export const pageTypographyCapableBlockTypes = [
   "statistic",
   "quote",
 ] as const;
+export const pageTextColorMarkCapableBlockTypes = ["heading", "text", "quote"] as const;
+export const pageTextMarkCapableBlockTypes = pageTextColorMarkCapableBlockTypes;
+export const PAGE_TEXT_MARK_MAX = 24 as const;
 export const PAGE_BLOCK_MAX_TREE_DEPTH = 4 as const;
 export const PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24 as const;
 
@@ -219,7 +236,14 @@ export type PageSectionAlignment = (typeof pageSectionAlignments)[number];
 export type PageSectionJustify = (typeof pageSectionJustify)[number];
 export type PageShadowToken = (typeof pageShadowTokens)[number];
 export type PageBackgroundType = (typeof pageBackgroundTypes)[number];
+export type PageBlockBorderStyle = (typeof pageBlockBorderStyles)[number];
 export type PageBlockWidth = (typeof pageBlockWidths)[number];
+export type PageBadgeVariant = (typeof pageBadgeVariants)[number];
+export type PageBadgeSize = (typeof pageBadgeSizes)[number];
+export type PageBadgeShape = (typeof pageBadgeShapes)[number];
+export type PageBadgeWeight = (typeof pageBadgeWeights)[number];
+export type PageBadgeIconPosition = (typeof pageBadgeIconPositions)[number];
+export type PageBadgeIcon = (typeof pageBadgeIcons)[number];
 export type PageColumnDistribution = (typeof pageColumnDistributions)[number];
 export type PageGroupDirection = (typeof pageGroupDirections)[number];
 export type PageBlockSlotKey = (typeof pageBlockSlotKeys)[number];
@@ -227,11 +251,51 @@ export type PageTypographyFontFamily = (typeof pageTypographyFontFamilies)[numbe
 export type PageTypographyFontSize = (typeof pageTypographyFontSizes)[number];
 export type PageTypographyFontWeight = (typeof pageTypographyFontWeights)[number];
 export type PageTypographyCapableBlockType = (typeof pageTypographyCapableBlockTypes)[number];
+export type PageTextColorMarkCapableBlockType = (typeof pageTextColorMarkCapableBlockTypes)[number];
+export type PageTextMarkCapableBlockType = PageTextColorMarkCapableBlockType;
+export type PageTextColorMark = {
+  type: "color";
+  from: number;
+  to: number;
+  color: string;
+};
+export type PageTextHighlightMark = {
+  type: "highlight";
+  from: number;
+  to: number;
+  color: string;
+};
+export type PageTextLinkMark = {
+  type: "link";
+  from: number;
+  to: number;
+  href: string;
+};
+export type PageTextStructuralMark = {
+  type: "bold" | "italic";
+  from: number;
+  to: number;
+};
+export type PageTextMark =
+  | PageTextColorMark
+  | PageTextHighlightMark
+  | PageTextLinkMark
+  | PageTextStructuralMark;
 
 export const isPageTypographyCapableBlockType = (
   type: PageBlockType
 ): type is PageTypographyCapableBlockType =>
   (pageTypographyCapableBlockTypes as readonly string[]).includes(type);
+
+export const isPageTextColorMarkCapableBlockType = (
+  type: PageBlockType
+): type is PageTextColorMarkCapableBlockType =>
+  (pageTextColorMarkCapableBlockTypes as readonly string[]).includes(type);
+
+export const isPageTextMarkCapableBlockType = (
+  type: PageBlockType
+): type is PageTextMarkCapableBlockType =>
+  (pageTextMarkCapableBlockTypes as readonly string[]).includes(type);
 
 /**
  * CSS values for typography tokens. Family and size tokens resolve through the
@@ -246,6 +310,8 @@ export const pageTypographyFontFamilyCssValues: Record<PageTypographyFontFamily,
 };
 
 export const pageTypographyFontSizeCssValues: Record<PageTypographyFontSize, string> = {
+  "2xs": `var(--text-2xs, ${DEFAULT_TOKENS.typography["2xs"]})`,
+  xs: `var(--text-xs, ${DEFAULT_TOKENS.typography.xs})`,
   sm: `var(--text-sm, ${DEFAULT_TOKENS.typography.sm})`,
   md: `var(--text-md, ${DEFAULT_TOKENS.typography.md})`,
   lg: `var(--text-lg, ${DEFAULT_TOKENS.typography.lg})`,
@@ -362,10 +428,13 @@ export type PageBlockStyleV2 = {
   textColor?: string | null;
   background?: string | null;
   backgroundType?: PageBackgroundType;
+  backgroundImage?: string | null;
   opacity?: number;
   radius?: number;
   shadow?: PageShadowToken;
   borderColor?: string | null;
+  borderWidth?: number;
+  borderStyle?: PageBlockBorderStyle;
   padding?: PageBoxSpacingV2;
   margin?: PageBoxSpacingV2;
   /** Token-backed typography (TASK-424); null/unset keeps the baked classes. */
@@ -457,10 +526,13 @@ const pageBlockStyleKeys = [
   "textColor",
   "background",
   "backgroundType",
+  "backgroundImage",
   "opacity",
   "radius",
   "shadow",
   "borderColor",
+  "borderWidth",
+  "borderStyle",
   "padding",
   "margin",
   "fontFamily",
@@ -517,8 +589,19 @@ const pageLayoutBlockSlots: Partial<Record<PageBlockType, readonly PageBlockSlot
 };
 
 export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
-  heading: ["text", "level", "align"],
-  text: ["text", "format", "align"],
+  heading: ["text", "level", "align", "marks"],
+  text: ["text", "format", "align", "marks"],
+  badge: [
+    "text",
+    "variant",
+    "size",
+    "shape",
+    "weight",
+    "background",
+    "textColor",
+    "icon",
+    "iconPosition",
+  ],
   button: ["label", "href", "target", "variant", "size"],
   image: ["assetId", "src", "alt", "caption", "fit"],
   video: ["assetId", "src", "title", "autoplay", "muted"],
@@ -544,7 +627,7 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   spacer: ["size"],
   statistic: ["value", "label", "caption"],
   icon: ["name", "label"],
-  quote: ["text", "cite"],
+  quote: ["text", "cite", "marks"],
   container: [],
   columns: ["count", "gap", "distribution"],
   group: ["direction", "wrap", "gap"],
@@ -608,6 +691,7 @@ export const pageSectionCapabilities = pageSectionTypes.reduce(
 const realRuntimeBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -631,6 +715,7 @@ const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"
 const editorInsertableBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -670,6 +755,7 @@ const insertableBlockTypes = editorInsertableBlockTypes;
 const assistantEmittableBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
+  "badge",
   "button",
   "image",
   "video",
@@ -739,6 +825,17 @@ export const createPageListItem = (label: string, href: string): PageListItemV2 
 export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown>> = {
   heading: { text: "Heading", level: "h2", align: "left" },
   text: { text: "Write the section copy here.", format: "plain", align: "left" },
+  badge: {
+    text: "Badge",
+    variant: "soft",
+    size: "sm",
+    shape: "pill",
+    weight: "semibold",
+    background: null,
+    textColor: null,
+    icon: null,
+    iconPosition: "start",
+  },
   button: { label: "Learn more", href: "/", target: "self", variant: "primary", size: "md" },
   image: { assetId: null, src: null, alt: "", caption: "", fit: "cover" },
   video: { assetId: null, src: null, title: "", autoplay: false, muted: true },
@@ -800,6 +897,57 @@ const stringSchema: RecordValue = { type: "string" };
 const nullableStringSchema: RecordValue = { type: ["string", "null"] };
 const booleanSchema: RecordValue = { type: "boolean" };
 const arraySchema: RecordValue = { type: "array" };
+const textMarksSchema: RecordValue = {
+  type: "array",
+  maxItems: PAGE_TEXT_MARK_MAX,
+  items: {
+    anyOf: [
+      {
+        type: "object",
+        required: ["type", "from", "to", "color"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "color" },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+          color: { type: "string" },
+        },
+      },
+      {
+        type: "object",
+        required: ["type", "from", "to", "color"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "highlight" },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+          color: { type: "string" },
+        },
+      },
+      {
+        type: "object",
+        required: ["type", "from", "to", "href"],
+        additionalProperties: false,
+        properties: {
+          type: { const: "link" },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+          href: { type: "string" },
+        },
+      },
+      {
+        type: "object",
+        required: ["type", "from", "to"],
+        additionalProperties: false,
+        properties: {
+          type: { enum: ["bold", "italic"] },
+          from: { type: "integer", minimum: 0 },
+          to: { type: "integer", minimum: 0 },
+        },
+      },
+    ],
+  },
+};
 
 /** List block items: plain strings or `{ label, href }` link items. */
 const listItemsSchema: RecordValue = {
@@ -884,12 +1032,26 @@ const pageFiltersAliasesJsonSchema: RecordValue = {
 };
 
 const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordValue => {
+  if (isPageTextMarkCapableBlockType(type) && key === "marks") return textMarksSchema;
   if (type === "heading" && key === "level")
     return { type: "string", enum: [...pageHeadingLevels] };
   if ((type === "heading" || type === "text") && key === "align") {
     return { type: "string", enum: [...pageTextAlignments] };
   }
   if (type === "text" && key === "format") return { type: "string", enum: [...pageTextFormats] };
+  if (type === "badge" && key === "variant")
+    return { type: "string", enum: [...pageBadgeVariants] };
+  if (type === "badge" && key === "size") return { type: "string", enum: [...pageBadgeSizes] };
+  if (type === "badge" && key === "shape") return { type: "string", enum: [...pageBadgeShapes] };
+  if (type === "badge" && key === "weight") return { type: "string", enum: [...pageBadgeWeights] };
+  if (type === "badge" && key === "iconPosition")
+    return { type: "string", enum: [...pageBadgeIconPositions] };
+  if (type === "badge" && (key === "background" || key === "textColor")) {
+    return nullableStringSchema;
+  }
+  if (type === "badge" && key === "icon") {
+    return { type: ["string", "null"], enum: [...pageBadgeIcons, null] };
+  }
   if (type === "button" && key === "target")
     return { type: "string", enum: [...pageButtonTargets] };
   if (type === "button" && key === "variant") {
@@ -960,7 +1122,12 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
 const pageBoxSpacingJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
-  properties: Object.fromEntries(pageBoxSpacingKeys.map((key) => [key, numericSchema(0, 160)])),
+  properties: Object.fromEntries(
+    pageBoxSpacingKeys.map((key) => [
+      key,
+      numericSchema(PAGE_BLOCK_BOX_SPACING_CLAMP.min, PAGE_BLOCK_BOX_SPACING_CLAMP.max),
+    ])
+  ),
 };
 
 const pageBlockStyleJsonSchema: RecordValue = {
@@ -976,10 +1143,16 @@ const pageBlockStyleJsonSchema: RecordValue = {
     textColor: { type: ["string", "null"] },
     background: { type: ["string", "null"] },
     backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
+    backgroundImage: { type: ["string", "null"] },
     opacity: numericSchema(0, 1),
     radius: numericSchema(0, 64),
     shadow: { type: "string", enum: [...pageShadowTokens] },
     borderColor: { type: ["string", "null"] },
+    borderWidth: numericSchema(
+      PAGE_BLOCK_BORDER_WIDTH_CLAMP.min,
+      PAGE_BLOCK_BORDER_WIDTH_CLAMP.max
+    ),
+    borderStyle: { type: "string", enum: [...pageBlockBorderStyles] },
     padding: pageBoxSpacingJsonSchema,
     margin: pageBoxSpacingJsonSchema,
     fontFamily: nullableEnumSchema(pageTypographyFontFamilies),
@@ -1011,12 +1184,22 @@ const blockPropsJsonSchemaForType = (type: PageBlockType): RecordValue => ({
   ),
 });
 
+const blockResponsivePropsJsonSchemaForType = (type: PageBlockType): RecordValue => ({
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    pageBlockPropKeys[type]
+      .filter((key) => key !== "marks")
+      .map((key) => [key, blockPropJsonSchemaForType(type, key)])
+  ),
+});
+
 const blockResponsiveJsonSchemaForType = (type: PageBlockType): RecordValue => {
   const overrideSchema: RecordValue = {
     type: "object",
     additionalProperties: false,
     properties: {
-      props: blockPropsJsonSchemaForType(type),
+      props: blockResponsivePropsJsonSchemaForType(type),
       style: pageBlockStyleJsonSchema,
       visibility: {
         type: "object",
@@ -1118,8 +1301,8 @@ const partialSectionSpacingJsonSchema: RecordValue = {
   properties: {
     paddingTop: numericSchema(0, 240),
     paddingBottom: numericSchema(0, 240),
-    paddingLeft: numericSchema(0, 160),
-    paddingRight: numericSchema(0, 160),
+    paddingLeft: numericSchema(0, 240),
+    paddingRight: numericSchema(0, 240),
     gap: numericSchema(0, 120),
   },
 };
@@ -1283,8 +1466,8 @@ export const pageDocumentV2JsonSchema: RecordValue = {
             properties: {
               paddingTop: { type: "number", minimum: 0, maximum: 240 },
               paddingBottom: { type: "number", minimum: 0, maximum: 240 },
-              paddingLeft: { type: "number", minimum: 0, maximum: 160 },
-              paddingRight: { type: "number", minimum: 0, maximum: 160 },
+              paddingLeft: { type: "number", minimum: 0, maximum: 240 },
+              paddingRight: { type: "number", minimum: 0, maximum: 240 },
               gap: { type: "number", minimum: 0, maximum: 120 },
             },
           },
@@ -1422,6 +1605,22 @@ const readNullableClampedNumber = (
   return Math.min(clamp.max, Math.max(clamp.min, value as number));
 };
 
+const readOptionalClampedNumber = (
+  value: unknown,
+  clamp: { readonly min: number; readonly max: number },
+  context: string,
+  mode: NormalizeMode
+): number | undefined => {
+  if (value === undefined) return undefined;
+  if (!Number.isFinite(value)) {
+    if (mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${context}.`, context);
+    }
+    return undefined;
+  }
+  return Math.min(clamp.max, Math.max(clamp.min, value as number));
+};
+
 const assertKnownKeys = (
   value: RecordValue,
   allowed: readonly string[],
@@ -1456,6 +1655,228 @@ const requireArray = (value: unknown, path: string, mode: NormalizeMode): unknow
   }
   return [];
 };
+
+const normalizeTextMarkIndex = (
+  value: unknown,
+  textLength: number,
+  path: string,
+  mode: NormalizeMode
+): number | null => {
+  if (!Number.isFinite(value)) {
+    if (mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+    }
+    return null;
+  }
+  const index = Math.trunc(value as number);
+  return Math.min(textLength, Math.max(0, index));
+};
+
+const textMarkAttributeKeys: Record<PageTextMark["type"], readonly string[]> = {
+  color: ["type", "from", "to", "color"],
+  highlight: ["type", "from", "to", "color"],
+  link: ["type", "from", "to", "href"],
+  bold: ["type", "from", "to"],
+  italic: ["type", "from", "to"],
+};
+
+const pageTextMarkTypeRank: Record<PageTextMark["type"], number> = {
+  bold: 0,
+  italic: 1,
+  link: 2,
+  color: 3,
+  highlight: 4,
+};
+
+const normalizeBlockTextMarksForMode = (
+  text: string,
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageTextMark[] => {
+  const input = requireArray(value ?? [], path, mode);
+  const textLength = text.length;
+  const candidates: PageTextMark[] = [];
+
+  for (const [index, rawMark] of input.entries()) {
+    const markPath = `${path}.${index}`;
+    if (!isRecord(rawMark)) {
+      if (mode === "write") {
+        throw new PageDocumentError("page_document_invalid", `Invalid ${markPath}.`, markPath);
+      }
+      continue;
+    }
+    const type = rawMark.type;
+    if (
+      type !== "color" &&
+      type !== "highlight" &&
+      type !== "link" &&
+      type !== "bold" &&
+      type !== "italic"
+    ) {
+      if (mode === "write") {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Invalid ${markPath}.type.`,
+          `${markPath}.type`
+        );
+      }
+      continue;
+    }
+    assertKnownKeys(rawMark, textMarkAttributeKeys[type], markPath, mode);
+    const from = normalizeTextMarkIndex(rawMark.from, textLength, `${markPath}.from`, mode);
+    const to = normalizeTextMarkIndex(rawMark.to, textLength, `${markPath}.to`, mode);
+    if (from === null || to === null || to <= from) continue;
+    if (type === "color" || type === "highlight") {
+      const color = sanitizeAuthoringCssColor(rawMark.color);
+      if (!color) {
+        if (mode === "write") {
+          throw new PageDocumentError(
+            "page_document_invalid",
+            `Invalid ${markPath}.color.`,
+            `${markPath}.color`
+          );
+        }
+        continue;
+      }
+      candidates.push({ type, from, to, color });
+      continue;
+    }
+    if (type === "link") {
+      const href = sanitizeAuthoringLinkHref(rawMark.href);
+      if (!href) {
+        if (mode === "write") {
+          throw new PageDocumentError(
+            "page_document_invalid",
+            `Invalid ${markPath}.href.`,
+            `${markPath}.href`
+          );
+        }
+        continue;
+      }
+      candidates.push({ type, from, to, href });
+      continue;
+    }
+    candidates.push({ type, from, to });
+  }
+
+  const result: PageTextMark[] = [];
+  const occupiedUntilByType = new Map<PageTextMark["type"], number>();
+  for (const mark of candidates.sort((left, right) =>
+    left.from === right.from
+      ? left.to === right.to
+        ? pageTextMarkTypeRank[left.type] - pageTextMarkTypeRank[right.type]
+        : left.to - right.to
+      : left.from - right.from
+  )) {
+    const occupiedUntil = occupiedUntilByType.get(mark.type) ?? 0;
+    if (mark.from < occupiedUntil) continue;
+    result.push(mark);
+    occupiedUntilByType.set(mark.type, mark.to);
+    if (result.length >= PAGE_TEXT_MARK_MAX) break;
+  }
+  return result;
+};
+
+export function normalizeBlockTextMarks(text: string, value: unknown): PageTextMark[] {
+  return normalizeBlockTextMarksForMode(text, value, "stored-read", "props.marks");
+}
+
+export function normalizeBlockTextColorMarks(text: string, value: unknown): PageTextMark[] {
+  return normalizeBlockTextMarks(text, value);
+}
+
+export type PageBlockTextMarkInput = {
+  type: PageTextMark["type"];
+  from: number;
+  to: number;
+  color?: string;
+  href?: string;
+};
+
+/**
+ * Apply a single inline text mark to a block's mark set and return the
+ * normalized result. Re-applying the IDENTICAL mark (same type, range, AND value)
+ * toggles it off; applying a DIFFERENT value over the same range REPLACES it (the
+ * old overlapping same-type mark is dropped and the new one added); marks of
+ * other types or non-overlapping ranges are retained. Value-awareness is what
+ * makes recoloring a fragment a single-click replace instead of a toggle-off then
+ * re-apply (TASK-476-01).
+ */
+export function applyBlockTextMark(
+  text: string,
+  currentMarks: unknown,
+  mark: PageBlockTextMarkInput
+): PageTextMark[] {
+  const existing = normalizeBlockTextMarks(text, currentMarks);
+  const isSameMarkValue = (entry: PageTextMark): boolean => {
+    if (entry.type !== mark.type) return false;
+    if (entry.type === "color" || entry.type === "highlight") return entry.color === mark.color;
+    if (entry.type === "link") return entry.href === mark.href;
+    return true;
+  };
+  const exactMatch = existing.some(
+    (entry) => entry.from === mark.from && entry.to === mark.to && isSameMarkValue(entry)
+  );
+  const retained = existing.filter((entry) => {
+    if (entry.type !== mark.type) return true;
+    if (exactMatch && entry.from === mark.from && entry.to === mark.to) return false;
+    return entry.to <= mark.from || entry.from >= mark.to;
+  });
+  if (exactMatch) return normalizeBlockTextMarks(text, retained);
+
+  const nextMark: PageTextMark =
+    mark.type === "color" || mark.type === "highlight"
+      ? { type: mark.type, from: mark.from, to: mark.to, color: mark.color ?? "" }
+      : mark.type === "link"
+        ? { type: "link", from: mark.from, to: mark.to, href: mark.href ?? "" }
+        : { type: mark.type, from: mark.from, to: mark.to };
+
+  return normalizeBlockTextMarks(text, [...retained, nextMark]);
+}
+
+export type PageBlockTextMarkRemoveInput = {
+  type: PageTextMark["type"];
+  from: number;
+  to: number;
+};
+
+/**
+ * Explicitly strip a single inline mark of `mark.type` over `[from, to)` and
+ * return the normalized result (audit M7 / TASK-478-02). Unlike
+ * {@link applyBlockTextMark} this never toggles or re-applies — it only removes.
+ * Behaviour over overlapping marks is precise:
+ *  - marks of a DIFFERENT type are untouched (an unlink keeps color/highlight/bold);
+ *  - a same-type mark fully inside `[from, to)` is dropped;
+ *  - a same-type mark that PARTIALLY overlaps is split so only the covered slice is
+ *    removed and the outside slices are preserved (with their value, e.g. the link
+ *    href), so unlinking the middle of a long link leaves the two ends linked.
+ */
+export function removeBlockTextMark(
+  text: string,
+  currentMarks: unknown,
+  mark: PageBlockTextMarkRemoveInput
+): PageTextMark[] {
+  const existing = normalizeBlockTextMarks(text, currentMarks);
+  const next: PageTextMark[] = [];
+  for (const entry of existing) {
+    // Different type, or no overlap with the removed range: keep as-is.
+    if (entry.type !== mark.type || entry.to <= mark.from || entry.from >= mark.to) {
+      next.push(entry);
+      continue;
+    }
+    // Preserve the slice before the removed range (carries the entry's value).
+    if (entry.from < mark.from) {
+      next.push({ ...entry, to: mark.from });
+    }
+    // Preserve the slice after the removed range.
+    if (entry.to > mark.to) {
+      next.push({ ...entry, from: mark.to });
+    }
+    // The slice inside `[from, to)` is dropped.
+  }
+  return normalizeBlockTextMarks(text, next);
+}
 
 const normalizeId = (value: unknown, prefix: string, index: number, mode: NormalizeMode) => {
   if (typeof value === "string" && value.trim().length > 0) return value.trim();
@@ -1696,10 +2117,10 @@ const normalizeSectionSpacing = (
     result.paddingBottom = readNumber(input.paddingBottom, defaultSpacing.paddingBottom, 0, 240);
   }
   if (!partial || input.paddingLeft !== undefined) {
-    result.paddingLeft = readNumber(input.paddingLeft, defaultSpacing.paddingLeft, 0, 160);
+    result.paddingLeft = readNumber(input.paddingLeft, defaultSpacing.paddingLeft, 0, 240);
   }
   if (!partial || input.paddingRight !== undefined) {
-    result.paddingRight = readNumber(input.paddingRight, defaultSpacing.paddingRight, 0, 160);
+    result.paddingRight = readNumber(input.paddingRight, defaultSpacing.paddingRight, 0, 240);
   }
   if (!partial || input.gap !== undefined) {
     result.gap = readNumber(input.gap, defaultSpacing.gap, 0, 120);
@@ -1781,6 +2202,9 @@ const normalizeBlockStyle = (
       mode
     );
   }
+  if (input.backgroundImage !== undefined) {
+    result.backgroundImage = readOptionalMediaUrl(input.backgroundImage) ?? null;
+  }
   if (input.opacity !== undefined) {
     result.opacity = readNumber(input.opacity, 1, 0, 1);
   }
@@ -1792,6 +2216,24 @@ const normalizeBlockStyle = (
   }
   if (input.borderColor !== undefined) {
     result.borderColor = readOptionalSafeColor(input.borderColor) ?? null;
+  }
+  if (input.borderWidth !== undefined) {
+    const width = readOptionalClampedNumber(
+      input.borderWidth,
+      PAGE_BLOCK_BORDER_WIDTH_CLAMP,
+      `${path}.borderWidth`,
+      mode
+    );
+    if (width !== undefined) result.borderWidth = width;
+  }
+  if (input.borderStyle !== undefined) {
+    result.borderStyle = normalizeEnum(
+      input.borderStyle,
+      pageBlockBorderStyles,
+      "none",
+      `${path}.borderStyle`,
+      mode
+    );
   }
   if (input.padding !== undefined) {
     const padding = normalizeBlockBoxSpacing(input.padding, mode, `${path}.padding`);
@@ -1854,7 +2296,12 @@ const normalizeBlockBoxSpacing = (
   const result: PageBoxSpacingV2 = {};
   for (const key of pageBoxSpacingKeys) {
     if (input[key] !== undefined) {
-      result[key] = readNumber(input[key], 0, 0, 160);
+      result[key] = readNumber(
+        input[key],
+        0,
+        PAGE_BLOCK_BOX_SPACING_CLAMP.min,
+        PAGE_BLOCK_BOX_SPACING_CLAMP.max
+      );
     }
   }
   return Object.keys(result).length > 0 ? result : undefined;
@@ -1890,8 +2337,13 @@ const normalizeBlockProps = (
   const result: Record<string, unknown> = partial ? {} : { ...defaults };
 
   for (const key of pageBlockPropKeys[type]) {
+    if (key === "marks") continue;
     if (input[key] !== undefined)
       result[key] = normalizeBlockProp(type, key, input[key], mode, `${path}.${key}`);
+  }
+  if (isPageTextMarkCapableBlockType(type) && input.marks !== undefined) {
+    const text = typeof result.text === "string" ? result.text : "";
+    result.marks = normalizeBlockTextMarksForMode(text, input.marks, mode, `${path}.marks`);
   }
 
   return result;
@@ -2100,6 +2552,32 @@ const normalizeBlockProp = (
   if (type === "text" && key === "format") {
     return normalizeEnum(value, pageTextFormats, "plain", path, mode);
   }
+  if (type === "badge" && key === "variant") {
+    return normalizeEnum(value, pageBadgeVariants, "soft", path, mode);
+  }
+  if (type === "badge" && key === "size") {
+    return normalizeEnum(value, pageBadgeSizes, "sm", path, mode);
+  }
+  if (type === "badge" && key === "shape") {
+    return normalizeEnum(value, pageBadgeShapes, "pill", path, mode);
+  }
+  if (type === "badge" && key === "weight") {
+    return normalizeEnum(value, pageBadgeWeights, "semibold", path, mode);
+  }
+  if (type === "badge" && key === "iconPosition") {
+    return normalizeEnum(value, pageBadgeIconPositions, "start", path, mode);
+  }
+  if (type === "badge" && (key === "background" || key === "textColor")) {
+    const color = readOptionalSafeColor(value);
+    if (value !== undefined && value !== null && color == null && mode === "write") {
+      throw new PageDocumentError("page_document_invalid", `Invalid ${path}.`, path);
+    }
+    return color ?? null;
+  }
+  if (type === "badge" && key === "icon") {
+    const icon = readOptionalText(value);
+    return icon && pageBadgeIcons.includes(icon as PageBadgeIcon) ? icon : null;
+  }
   if (type === "button" && key === "target") {
     return normalizeEnum(value, pageButtonTargets, "self", path, mode);
   }
@@ -2201,10 +2679,23 @@ const normalizeBlockResponsive = (
     if (input[breakpoint] === undefined) continue;
     const overrideInput = requireRecord(input[breakpoint], `${path}.${breakpoint}`, mode);
     assertKnownKeys(overrideInput, ["props", "style", "visibility"], `${path}.${breakpoint}`, mode);
+    let overridePropsInput = overrideInput.props;
+    if (isRecord(overridePropsInput) && overridePropsInput.marks !== undefined) {
+      if (mode === "write") {
+        throw new PageDocumentError(
+          "page_document_invalid",
+          `Text marks are base-only at ${path}.${breakpoint}.props.marks.`,
+          `${path}.${breakpoint}.props.marks`
+        );
+      }
+      const propsWithoutMarks = { ...overridePropsInput };
+      delete propsWithoutMarks.marks;
+      overridePropsInput = propsWithoutMarks;
+    }
     const props =
-      overrideInput.props === undefined
+      overridePropsInput === undefined
         ? undefined
-        : normalizeBlockProps(type, overrideInput.props, mode, `${path}.${breakpoint}.props`, true);
+        : normalizeBlockProps(type, overridePropsInput, mode, `${path}.${breakpoint}.props`, true);
     const style = normalizeBlockStyle(
       overrideInput.style,
       mode,

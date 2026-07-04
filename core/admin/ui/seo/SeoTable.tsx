@@ -1,7 +1,8 @@
-import { Pencil, Share2, ImageOff, Sparkles } from "lucide-react";
+import { FileText, Pencil, Share2, ImageOff, Sparkles } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -52,22 +53,18 @@ const metaStatusLabels: Record<SeoItem["metaStatus"], string> = {
   missing: "Missing",
 };
 
-const metaStatusStyles: Record<SeoItem["metaStatus"], string> = {
-  optimized: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  short: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-  missing: "bg-rose-500/10 text-rose-600 border-rose-500/20",
+const metaStatusVariants: Record<SeoItem["metaStatus"], "success" | "warning" | "destructive"> = {
+  optimized: "success",
+  short: "warning",
+  missing: "destructive",
 };
 
-const scoreTones = {
-  high: { bar: "bg-emerald-500", text: "text-emerald-600" },
-  mid: { bar: "bg-amber-500", text: "text-amber-600" },
-  low: { bar: "bg-rose-500", text: "text-rose-600" },
-} as const;
-
-function getScoreTone(score: number) {
-  if (score >= 80) return scoreTones.high;
-  if (score >= 50) return scoreTones.mid;
-  return scoreTones.low;
+// TASK-479-26-L02: token-driven score tone (real thresholds preserved: >=80
+// success, >=50 warning, else destructive).
+function getScoreToneClass(score: number) {
+  if (score >= 80) return "text-success";
+  if (score >= 50) return "text-warning";
+  return "text-destructive";
 }
 
 export function SeoTable({
@@ -79,7 +76,7 @@ export function SeoTable({
   emptyActionDisabled = false,
 }: SeoTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
@@ -118,32 +115,45 @@ export function SeoTable({
             </TableRow>
           ) : null}
           {items.map((item) => {
-            const tone = getScoreTone(item.score);
             const isActive = item.id === activeId;
             return (
               <TableRow
                 key={item.id}
                 className={cn(
                   "transition-colors",
-                  isActive ? "bg-primary/5 ring-1 ring-inset ring-primary/20" : "hover:bg-muted/40"
+                  isActive
+                    ? "bg-primary-soft/40 ring-1 ring-inset ring-primary/20"
+                    : "hover:bg-muted"
                 )}
               >
                 <TableCell>
-                  <div className="space-y-1">
-                    <p className="text-sm font-semibold text-foreground">{item.title}</p>
-                    <p className="text-xs text-muted-foreground">{item.path}</p>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-14 overflow-hidden rounded-full bg-muted">
-                      <div className={cn("h-full", tone.bar)} style={{ width: `${item.score}%` }} />
+                  <div className="flex items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      <FileText className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">{item.title}</p>
+                      <p className="truncate font-mono text-xs text-muted-foreground">
+                        {item.path}
+                      </p>
                     </div>
-                    <span className={cn("text-xs font-semibold", tone.text)}>{item.score}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={metaStatusStyles[item.metaStatus]}>
+                  <div className="flex items-center gap-2.5">
+                    <span
+                      className={cn(
+                        "w-7 text-sm font-semibold tabular-nums",
+                        getScoreToneClass(item.score)
+                      )}
+                    >
+                      {item.score}
+                    </span>
+                    <Progress value={item.score} className="w-20" />
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={metaStatusVariants[item.metaStatus]}>
                     {metaStatusLabels[item.metaStatus]}
                   </Badge>
                 </TableCell>
@@ -151,18 +161,18 @@ export function SeoTable({
                   {item.socialStatus === "ready" ? (
                     <div className="flex items-center gap-2">
                       <div className="flex -space-x-2">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full border bg-background text-sky-500">
-                          <Sparkles className="h-3.5 w-3.5" />
+                        <span className="flex size-7 items-center justify-center rounded-full border border-border bg-background text-info">
+                          <Sparkles className="size-3.5" />
                         </span>
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full border bg-background text-blue-500">
-                          <Share2 className="h-3.5 w-3.5" />
+                        <span className="flex size-7 items-center justify-center rounded-full border border-border bg-background text-primary">
+                          <Share2 className="size-3.5" />
                         </span>
                       </div>
                       <span className="text-xs text-muted-foreground">Preview ready</span>
                     </div>
                   ) : (
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <ImageOff className="h-4 w-4" />
+                      <ImageOff className="size-4" />
                       <span className="text-xs">Missing assets</span>
                     </div>
                   )}

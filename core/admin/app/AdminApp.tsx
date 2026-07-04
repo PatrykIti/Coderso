@@ -97,7 +97,10 @@ import {
   type SetupWizardValues,
 } from "@/ui/setup/setupWizardValidation";
 import { toAdminThemeCssVariables } from "../../ui/theme/tokenCss";
-import { DEFAULT_ADMIN_THEME_TOKENS } from "../../services/adminThemes/tokenTypes";
+import {
+  DEFAULT_ADMIN_THEME_TOKENS,
+  DEFAULT_ADMIN_THEME_TOKENS_DARK,
+} from "../../services/adminThemes/tokenTypes";
 import { mergeAdminThemeTokens } from "../../services/adminThemes/tokenUtils";
 import { assertAdminThemeTokens } from "../../services/adminThemes/tokenValidation";
 import {
@@ -433,7 +436,19 @@ export function AdminApp({ path }: AdminAppProps) {
   const [setupSaving, setSetupSaving] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [adminThemeTokens, setAdminThemeTokens] = useState(readStoredAdminThemeTokens);
-  const tokenCss = useMemo(() => toAdminThemeCssVariables(adminThemeTokens), [adminThemeTokens]);
+  // Emit BOTH the active profile's light `:root{--admin-*}` block AND the shared
+  // default dark `:root.dark{--admin-*}` block from the same injected style. The
+  // dark block is the dark mechanism (not a static globals `.dark`): the chrome
+  // reads `--admin-*` directly and the injected style wins source order, so
+  // toggling `<html class="dark">` (AdminColorModeToggle) recolors the whole
+  // shell. The profile (AdminThemeSwitcher) axis only re-emits the light block.
+  // See TASK-479-05-L01 / L06.
+  const tokenCss = useMemo(
+    () =>
+      toAdminThemeCssVariables(adminThemeTokens) +
+      toAdminThemeCssVariables(DEFAULT_ADMIN_THEME_TOKENS_DARK, ":root.dark"),
+    [adminThemeTokens]
+  );
   const assistantConfig = useMemo(
     () => ({
       enabled: settingsState.values.assistantEnabled,

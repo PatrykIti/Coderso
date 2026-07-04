@@ -91,6 +91,14 @@ const createSection = () =>
     ],
   });
 
+const stripSectionTemplateMarker = (className: string) =>
+  className
+    .replace(/page-section-template-\S+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const countMarkup = (markup: string, needle: string) => markup.split(needle).length - 1;
+
 test("section render props expose shared classes, styles, and data attributes", () => {
   const section = createSection();
   const renderProps = toPageSectionRenderProps(section);
@@ -151,6 +159,590 @@ test("section templates branch supported variants and fall back without mutating
   expect(renderToStaticMarkup(<PageSectionRender section={split} />)).toContain(
     'data-page-variant="split"'
   );
+});
+
+test("phase 3b section variants change published surfaces beyond marker classes", () => {
+  const contentDefault = createPageSectionV2("content", {
+    id: "sec-content-default",
+    variant: "default",
+    spacing: { paddingTop: 80, paddingRight: 40, paddingBottom: 80, paddingLeft: 40, gap: 30 },
+  });
+  const contentCompact = createPageSectionV2("content", {
+    id: "sec-content-compact",
+    variant: "compact",
+    spacing: contentDefault.spacing,
+  });
+  expect(toPageSectionRenderProps(contentCompact).style.padding).toBe("44px 30px 44px 30px");
+  expect(toPageSectionRenderProps(contentCompact).style.padding).not.toBe(
+    toPageSectionRenderProps(contentDefault).style.padding
+  );
+  expect(toPageSectionRenderProps(contentCompact).style.gap).toBe("18px");
+
+  const timelineDefault = createPageSectionV2("timeline", {
+    id: "sec-timeline-default",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+  });
+  const timelineHorizontal = createPageSectionV2("timeline", {
+    id: "sec-timeline-horizontal",
+    variant: "horizontal",
+    layout: timelineDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(timelineHorizontal).contentClassName)
+  ).toContain("md:grid-cols-3");
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(timelineHorizontal).contentClassName)
+  ).not.toBe(
+    stripSectionTemplateMarker(toPageSectionRenderProps(timelineDefault).contentClassName)
+  );
+
+  const faqDefault = createPageSectionV2("faq", {
+    id: "sec-faq-default",
+    variant: "default",
+    spacing: { paddingTop: 64, paddingRight: 40, paddingBottom: 64, paddingLeft: 40, gap: 24 },
+  });
+  const faqCompact = createPageSectionV2("faq", {
+    id: "sec-faq-compact",
+    variant: "compact",
+    spacing: faqDefault.spacing,
+  });
+  expect(toPageSectionRenderProps(faqCompact).style.gap).toBe("14px");
+  expect(toPageSectionRenderProps(faqCompact).style.padding).not.toBe(
+    toPageSectionRenderProps(faqDefault).style.padding
+  );
+
+  const ctaDefault = createPageSectionV2("cta", {
+    id: "sec-cta-default",
+    variant: "default",
+  });
+  const ctaCentered = createPageSectionV2("cta", {
+    id: "sec-cta-centered",
+    variant: "centered",
+  });
+  const ctaFullWidth = createPageSectionV2("cta", {
+    id: "sec-cta-full",
+    variant: "full-width",
+  });
+  const ctaDefaultClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps(ctaDefault).contentClassName
+  );
+  const ctaCenteredClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps(ctaCentered).contentClassName
+  );
+  // The CTA variants must stay VISUALLY distinct, not merely string-different:
+  // `default` is left-aligned while `centered` centers its content. A prior
+  // working-tree regression collapsed `default` onto the centered classes (only
+  // an inert `content-center` token differed), which a `.not.toBe` string check
+  // failed to catch — so assert the actual alignment tokens on each.
+  expect(ctaDefaultClass).toContain("text-left");
+  expect(ctaDefaultClass).not.toContain("text-center");
+  expect(ctaCenteredClass).toContain("text-center");
+  expect(ctaCenteredClass).not.toContain("text-left");
+  expect(ctaCenteredClass).not.toBe(ctaDefaultClass);
+  expect(toPageSectionRenderProps(ctaFullWidth).style.maxWidth).toBe("none");
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(ctaFullWidth).contentClassName)
+  ).toContain("min-h-[320px]");
+
+  const testimonialsCards = createPageSectionV2("testimonials", {
+    id: "sec-testimonials-cards",
+    variant: "cards",
+  });
+  const testimonialsGrid = createPageSectionV2("testimonials", {
+    id: "sec-testimonials-grid",
+    variant: "grid",
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(testimonialsCards).contentClassName)
+  ).not.toBe(
+    stripSectionTemplateMarker(toPageSectionRenderProps(testimonialsGrid).contentClassName)
+  );
+  const testimonialsDefault = createPageSectionV2("testimonials", {
+    id: "sec-testimonials-default",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+  });
+  const testimonialsDefaultClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps(testimonialsDefault).contentClassName
+  );
+  const testimonialsGridClass = stripSectionTemplateMarker(
+    toPageSectionRenderProps({
+      ...testimonialsGrid,
+      layout: testimonialsDefault.layout,
+    }).contentClassName
+  );
+  expect(testimonialsDefaultClass).not.toBe(testimonialsGridClass);
+  expect(testimonialsDefaultClass).not.toContain("md:grid-cols-3");
+  expect(testimonialsGridClass).toContain("md:grid-cols-3");
+});
+
+test("phase 3b guard sections keep real grid geometry beyond marker classes", () => {
+  const featureDefault = createPageSectionV2("feature-grid", {
+    id: "sec-feature-default",
+    variant: "default",
+    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+  });
+  const featureCards = createPageSectionV2("feature-grid", {
+    id: "sec-feature-cards",
+    variant: "cards",
+    layout: featureDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(featureCards).contentClassName)
+  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(featureDefault).contentClassName));
+  expect(toPageSectionRenderProps(featureCards).contentClassName).toContain("md:grid-cols-3");
+
+  const comparisonDefault = createPageSectionV2("comparison", {
+    id: "sec-comparison-default",
+    variant: "default",
+    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+  });
+  const comparisonGrid = createPageSectionV2("comparison", {
+    id: "sec-comparison-grid",
+    variant: "grid",
+    layout: comparisonDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(comparisonGrid).contentClassName)
+  ).not.toBe(
+    stripSectionTemplateMarker(toPageSectionRenderProps(comparisonDefault).contentClassName)
+  );
+  expect(toPageSectionRenderProps(comparisonGrid).contentClassName).toContain("md:grid-cols-2");
+
+  const customDefault = createPageSectionV2("custom", {
+    id: "sec-custom-default",
+    variant: "default",
+    layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+  });
+  const customGrid = createPageSectionV2("custom", {
+    id: "sec-custom-grid",
+    variant: "grid",
+    layout: customDefault.layout,
+  });
+  expect(
+    stripSectionTemplateMarker(toPageSectionRenderProps(customGrid).contentClassName)
+  ).not.toBe(stripSectionTemplateMarker(toPageSectionRenderProps(customDefault).contentClassName));
+  expect(toPageSectionRenderProps(customGrid).contentClassName).toContain("md:grid-cols-2");
+});
+
+test("phase 3b section templates add truthful structure around existing blocks", () => {
+  const mediaSplit = createPageSectionV2("media-split", {
+    id: "sec-media-split",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-media",
+        props: { src: "/studio.jpg", alt: "Studio" },
+      }),
+      createPageBlockV2("heading", {
+        id: "blk-copy",
+        props: { text: "Story", level: "h2", align: "left" },
+      }),
+    ],
+  });
+  const mediaHorizontal = createPageSectionV2("media-split", {
+    id: "sec-media-horizontal",
+    variant: "horizontal",
+    blocks: mediaSplit.blocks,
+  });
+  const splitHtml = renderToStaticMarkup(<PageSectionContent section={mediaSplit} />);
+  const horizontalHtml = renderToStaticMarkup(<PageSectionContent section={mediaHorizontal} />);
+  expect(splitHtml).toContain('data-page-media-split="split"');
+  expect(splitHtml.indexOf('data-page-media-split-zone="media"')).toBeLessThan(
+    splitHtml.indexOf('data-page-media-split-zone="content"')
+  );
+  expect(horizontalHtml).toContain('data-page-media-split="horizontal"');
+  expect(horizontalHtml.indexOf('data-page-media-split-zone="content"')).toBeLessThan(
+    horizontalHtml.indexOf('data-page-media-split-zone="media"')
+  );
+
+  const timelineHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("timeline", {
+        id: "sec-timeline-structure",
+        variant: "horizontal",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "blk-milestone-1",
+            props: { text: "Launch", level: "h3", align: "left" },
+          }),
+          createPageBlockV2("text", {
+            id: "blk-milestone-2",
+            props: { text: "Second milestone", format: "plain", align: "left" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(timelineHtml.match(/data-page-timeline-item=/g)).toHaveLength(2);
+  expect(timelineHtml.match(/data-page-timeline-marker="true"/g)).toHaveLength(2);
+
+  const galleryHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-structure",
+        variant: "cards",
+        blocks: [
+          createPageBlockV2("image", {
+            id: "blk-gallery-image",
+            props: { src: "/gallery.jpg", alt: "Gallery" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(galleryHtml).toContain('data-page-gallery-section-item="1"');
+  expect(galleryHtml).toContain('data-page-gallery-section-variant="cards"');
+
+  const faqHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("faq", {
+        id: "sec-faq-structure",
+        variant: "compact",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-faq-answer",
+            props: { text: "Answer", format: "plain", align: "left" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(faqHtml).toContain('data-page-faq-item="1"');
+  expect(faqHtml).toContain('data-page-faq-variant="compact"');
+
+  const testimonialsHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-structure",
+        variant: "cards",
+        blocks: [
+          createPageBlockV2("quote", {
+            id: "blk-testimonial",
+            props: { text: "Reliable product", cite: "Customer" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(testimonialsHtml).toContain('data-page-testimonial-card="true"');
+  expect(testimonialsHtml).toContain('data-page-testimonial-variant="cards"');
+});
+
+test("phase 3b media-split variants classify media, preserve default identity, and inherit media sanitizers", () => {
+  const mixedMedia = createPageSectionV2("media-split", {
+    id: "sec-media-split-mixed",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-copy",
+        props: { text: "Copy", format: "plain", align: "left" },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video",
+        props: { src: "/tour.mp4", title: "Tour", autoplay: false },
+      }),
+      createPageBlockV2("gallery", {
+        id: "blk-gallery",
+        props: {
+          items: [{ src: "/one.jpg", alt: "One" }],
+          layout: "grid",
+          columns: 1,
+          gap: 8,
+        },
+      }),
+    ],
+  });
+  const mixedHtml = renderToStaticMarkup(<PageSectionContent section={mixedMedia} />);
+  const mediaZoneStart = mixedHtml.indexOf('data-page-media-split-zone="media"');
+  const contentZoneStart = mixedHtml.indexOf('data-page-media-split-zone="content"');
+  expect(mediaZoneStart).toBeGreaterThan(-1);
+  expect(contentZoneStart).toBeGreaterThan(-1);
+  expect(mediaZoneStart).toBeLessThan(contentZoneStart);
+  const mediaZoneHtml = mixedHtml.slice(mediaZoneStart, contentZoneStart);
+  const contentZoneHtml = mixedHtml.slice(contentZoneStart);
+  expect(mediaZoneHtml).toContain('data-block-id="blk-video"');
+  expect(mediaZoneHtml).toContain('data-block-id="blk-gallery"');
+  expect(mediaZoneHtml).not.toContain('data-block-id="blk-copy"');
+  expect(contentZoneHtml).toContain('data-block-id="blk-copy"');
+
+  const noMedia = createPageSectionV2("media-split", {
+    id: "sec-media-split-empty-media",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-only-copy",
+        props: { text: "Only copy", level: "h2", align: "left" },
+      }),
+    ],
+  });
+  const noMediaHtml = renderToStaticMarkup(<PageSectionContent section={noMedia} />);
+  expect(noMediaHtml).toContain('data-page-media-split-empty="true"');
+
+  const defaultMediaSplit = createPageSectionV2("media-split", {
+    id: "sec-media-split-default",
+    variant: "default",
+    blocks: mixedMedia.blocks,
+  });
+  const defaultHtml = renderToStaticMarkup(<PageSectionContent section={defaultMediaSplit} />);
+  expect(defaultHtml).not.toContain("data-page-media-split-zone");
+  expect(defaultHtml).not.toContain("data-page-media-split-empty");
+
+  const unsafeMedia = createPageSectionV2("media-split", {
+    id: "sec-media-split-unsafe",
+    variant: "split",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-unsafe-media",
+        props: { src: "javascript:alert(1)", alt: "Unsafe" },
+      }),
+      createPageBlockV2("text", {
+        id: "blk-safe-copy",
+        props: { text: "Safe copy", format: "plain", align: "left" },
+      }),
+    ],
+  });
+  const unsafeHtml = renderToStaticMarkup(<PageSectionContent section={unsafeMedia} />);
+  expect(unsafeHtml).toContain('data-page-media-split-zone="media"');
+  expect(unsafeHtml).not.toContain("javascript:alert");
+});
+
+test("phase 3b wrapper variants expose default, grid, card, and index semantics", () => {
+  const galleryBlocks = [
+    createPageBlockV2("image", {
+      id: "blk-gallery-one",
+      props: { src: "/gallery-one.jpg", alt: "One" },
+    }),
+    createPageBlockV2("image", {
+      id: "blk-gallery-two",
+      props: { src: "/gallery-two.jpg", alt: "Two" },
+    }),
+  ];
+  const galleryCardsHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-cards-coverage",
+        variant: "cards",
+        blocks: galleryBlocks,
+      })}
+    />
+  );
+  expect(galleryCardsHtml).toContain('data-page-gallery-section-item="1"');
+  expect(galleryCardsHtml).toContain('data-page-gallery-section-item="2"');
+  expect(galleryCardsHtml).toContain("shadow-sm");
+  const galleryGridHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-grid-coverage",
+        variant: "grid",
+        blocks: galleryBlocks,
+      })}
+    />
+  );
+  const galleryDefaultHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("gallery", {
+        id: "sec-gallery-default-coverage",
+        variant: "default",
+        blocks: galleryBlocks,
+      })}
+    />
+  );
+  expect(galleryGridHtml).toContain('data-page-gallery-section-variant="grid"');
+  expect(galleryDefaultHtml).toContain('data-page-gallery-section-variant="default"');
+  expect(galleryGridHtml).not.toContain("shadow-sm");
+  expect(galleryDefaultHtml).not.toContain("shadow-sm");
+
+  const faqBlocks = [
+    createPageBlockV2("text", {
+      id: "blk-faq-one",
+      props: { text: "Answer one", format: "plain", align: "left" },
+    }),
+    createPageBlockV2("text", {
+      id: "blk-faq-two",
+      props: { text: "Answer two", format: "plain", align: "left" },
+    }),
+  ];
+  const faqDefaultHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("faq", {
+        id: "sec-faq-default-coverage",
+        variant: "default",
+        blocks: faqBlocks,
+      })}
+    />
+  );
+  const faqCompactHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("faq", {
+        id: "sec-faq-compact-coverage",
+        variant: "compact",
+        blocks: faqBlocks,
+      })}
+    />
+  );
+  expect(faqDefaultHtml).toContain('data-page-faq-item="1"');
+  expect(faqDefaultHtml).toContain('data-page-faq-item="2"');
+  expect(faqDefaultHtml).toContain("p-5 shadow-sm");
+  expect(faqCompactHtml).toContain("px-4 py-3 shadow-none");
+
+  const testimonialBlocks = [
+    createPageBlockV2("quote", {
+      id: "blk-testimonial-one",
+      props: { text: "First", cite: "A" },
+    }),
+    createPageBlockV2("quote", {
+      id: "blk-testimonial-two",
+      props: { text: "Second", cite: "B" },
+    }),
+  ];
+  const testimonialCardsHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-cards-coverage",
+        variant: "cards",
+        blocks: testimonialBlocks,
+      })}
+    />
+  );
+  const testimonialGridHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-grid-coverage",
+        variant: "grid",
+        blocks: testimonialBlocks,
+      })}
+    />
+  );
+  const testimonialDefaultHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("testimonials", {
+        id: "sec-testimonials-default-coverage",
+        variant: "default",
+        blocks: testimonialBlocks,
+      })}
+    />
+  );
+  expect(countMarkup(testimonialCardsHtml, 'data-page-testimonial-card="true"')).toBe(2);
+  expect(testimonialGridHtml).not.toContain('data-page-testimonial-card="true"');
+  expect(testimonialDefaultHtml).not.toContain('data-page-testimonial-card="true"');
+  expect(testimonialGridHtml).toContain('data-page-testimonial-variant="grid"');
+  expect(testimonialDefaultHtml).toContain('data-page-testimonial-variant="default"');
+});
+
+test("phase 3b wrapped template sections keep exactly one wrapper per block in column composition", () => {
+  const assignedBlocks = [
+    createPageBlockV2("text", {
+      id: "blk-assigned-one",
+      props: { text: "Assigned one", format: "plain", align: "left" },
+      style: { column: 1 },
+    }),
+    createPageBlockV2("text", {
+      id: "blk-assigned-two",
+      props: { text: "Assigned two", format: "plain", align: "left" },
+      style: { column: 2 },
+    }),
+  ];
+  const assertWrappedComposition = (
+    section: PageSectionV2,
+    itemAttribute: string,
+    expectedColumns: number
+  ) => {
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    expect(countMarkup(html, 'data-page-section-column="')).toBe(expectedColumns);
+    expect(countMarkup(html, `${itemAttribute}=`)).toBe(section.blocks.length);
+    expect(countMarkup(html, 'data-block-id="blk-assigned-one"')).toBe(1);
+    expect(countMarkup(html, 'data-block-id="blk-assigned-two"')).toBe(1);
+    return html;
+  };
+
+  const timelineHtml = assertWrappedComposition(
+    createPageSectionV2("timeline", {
+      id: "sec-timeline-composition-coverage",
+      variant: "horizontal",
+      layout: { columns: 1, align: "start", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-timeline-item",
+    3
+  );
+  expect(countMarkup(timelineHtml, 'data-page-timeline-marker="true"')).toBe(2);
+
+  assertWrappedComposition(
+    createPageSectionV2("gallery", {
+      id: "sec-gallery-composition-coverage",
+      variant: "cards",
+      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-gallery-section-item",
+    3
+  );
+
+  const faqHtml = assertWrappedComposition(
+    createPageSectionV2("faq", {
+      id: "sec-faq-composition-coverage",
+      variant: "compact",
+      layout: { columns: 2, align: "stretch", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-faq-item",
+    2
+  );
+  expect(faqHtml).toContain("px-4 py-3 shadow-none");
+
+  const testimonialsHtml = assertWrappedComposition(
+    createPageSectionV2("testimonials", {
+      id: "sec-testimonials-composition-coverage",
+      variant: "cards",
+      layout: { columns: 1, align: "stretch", justify: "start", maxWidth: 1080 },
+      blocks: assignedBlocks,
+    }),
+    "data-page-testimonial-item",
+    3
+  );
+  expect(countMarkup(testimonialsHtml, 'data-page-testimonial-card="true"')).toBe(2);
+});
+
+test("phase 3b leaves non-wrapped section families wrapper-free", () => {
+  const block = createPageBlockV2("text", {
+    id: "blk-identity",
+    props: { text: "Identity", format: "plain", align: "left" },
+  });
+  const sections = [
+    createPageSectionV2("hero", { id: "sec-hero-identity", variant: "centered", blocks: [block] }),
+    createPageSectionV2("content", {
+      id: "sec-content-identity",
+      variant: "compact",
+      blocks: [block],
+    }),
+    createPageSectionV2("feature-grid", {
+      id: "sec-feature-identity",
+      variant: "cards",
+      blocks: [block],
+    }),
+    createPageSectionV2("comparison", {
+      id: "sec-comparison-identity",
+      variant: "grid",
+      blocks: [block],
+    }),
+    createPageSectionV2("cta", { id: "sec-cta-identity", variant: "default", blocks: [block] }),
+    createPageSectionV2("custom", {
+      id: "sec-custom-identity",
+      variant: "grid",
+      blocks: [block],
+    }),
+  ];
+  for (const section of sections) {
+    const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+    expect(html).not.toContain("data-page-media-split-zone");
+    expect(html).not.toContain("data-page-timeline-item");
+    expect(html).not.toContain("data-page-gallery-section-item");
+    expect(html).not.toContain("data-page-faq-item");
+    expect(html).not.toContain("data-page-testimonial-item");
+    expect(countMarkup(html, 'data-block-id="blk-identity"')).toBe(1);
+  }
 });
 
 test("full-width section variants remove the outer section gutter so backgrounds fill the band", () => {
@@ -279,6 +871,8 @@ test("block render props expose shared classes, styles, and data attributes", ()
       radius: 18,
       shadow: "md",
       borderColor: "#334155",
+      borderWidth: 2,
+      borderStyle: "dotted",
       padding: { top: 4, right: 8, bottom: 12, left: 16 },
       margin: { top: 1, right: 2, bottom: 3, left: 4 },
     },
@@ -286,8 +880,10 @@ test("block render props expose shared classes, styles, and data attributes", ()
   const renderProps = toPageBlockRenderProps(block);
 
   expect(renderProps.className).toContain("max-w-full");
-  expect(renderProps.className).toContain("w-full");
+  expect(renderProps.className).toContain("w-fit");
+  expect(renderProps.className.split(/\s+/)).not.toContain("w-full");
   expect(renderProps.className).toContain("justify-self-center");
+  expect(renderProps.className).toContain("mx-auto");
   expect(renderProps.style).toMatchObject({
     "--coderso-block-text": "#111827",
     "--coderso-block-surface": "#fef3c7",
@@ -297,10 +893,13 @@ test("block render props expose shared classes, styles, and data attributes", ()
     borderRadius: "18px",
     boxShadow: "0 14px 40px rgba(15, 23, 42, 0.12)",
     borderColor: "#334155",
-    borderStyle: "solid",
-    borderWidth: "1px",
+    borderStyle: "dotted",
+    borderWidth: "2px",
     padding: "4px 8px 12px 16px",
-    margin: "1px 2px 3px 4px",
+    marginTop: "1px",
+    marginLeft: "auto",
+    marginBottom: "3px",
+    marginRight: "auto",
     textAlign: "center",
   });
   expect(renderProps.dataAttributes).toEqual({
@@ -316,6 +915,23 @@ test("block render props expose shared classes, styles, and data attributes", ()
   expect(html).toContain('data-page-block="heading"');
   expect(html).toContain('data-block-id="blk-styled-renderer"');
   expect(html).toContain("--coderso-block-text:#111827");
+});
+
+test("right-aligned media block boxes keep fit width and end alignment", () => {
+  const block = createPageBlockV2("image", {
+    id: "blk-right-image",
+    style: { width: "full", align: "right" },
+  });
+  const renderProps = toPageBlockRenderProps(block);
+
+  expect(renderProps.className).toContain("w-fit");
+  expect(renderProps.className.split(/\s+/)).not.toContain("w-full");
+  expect(renderProps.className).toContain("justify-self-end");
+  expect(renderProps.className).toContain("ml-auto");
+  expect(renderProps.style).toMatchObject({
+    marginLeft: "auto",
+    textAlign: "right",
+  });
 });
 
 test("button visual styles land on the anchor element, never the block frame", () => {
@@ -345,7 +961,10 @@ test("button visual styles land on the anchor element, never the block frame", (
   // Frame keeps ONLY layout-affecting style (spacing + text alignment).
   expect(toPageBlockRenderProps(block).style).toEqual({
     padding: "4px 0px 0px 0px",
-    margin: "0px 0px 6px 0px",
+    marginTop: "0px",
+    marginLeft: "auto",
+    marginBottom: "6px",
+    marginRight: "auto",
     textAlign: "center",
   });
 
@@ -368,7 +987,10 @@ test("button visual styles land on the anchor element, never the block frame", (
 
   // The frame keeps the layout surface and never paints the visual one.
   expect(frameTag).toContain("padding:4px 0px 0px 0px");
-  expect(frameTag).toContain("margin:0px 0px 6px 0px");
+  expect(frameTag).toContain("margin-top:0px");
+  expect(frameTag).toContain("margin-left:auto");
+  expect(frameTag).toContain("margin-bottom:6px");
+  expect(frameTag).toContain("margin-right:auto");
   expect(frameTag).toContain("text-align:center");
   expect(frameTag).not.toContain("background-color");
   expect(frameTag).not.toContain("border-radius");
@@ -393,7 +1015,6 @@ test("image visual styles land on the img element (or empty placeholder)", () =>
       }),
     ],
   });
-
   const html = renderToStaticMarkup(<PageSectionContent section={section} />);
   const imgTag = html.match(/<img[^>]*>/)?.[0] ?? "";
   const frameTag = html.match(/<div[^>]*data-block-id="blk-styled-image"[^>]*>/)?.[0] ?? "";
@@ -428,9 +1049,105 @@ test("gradient button backgrounds clear the variant background color inline", ()
   const anchorTag =
     renderToStaticMarkup(<PageSectionContent section={section} />).match(/<a[^>]*>/)?.[0] ?? "";
   expect(anchorTag).toContain("background-image:linear-gradient(90deg, #000000, #ffffff)");
-  // Inline transparent background-color keeps the variant accent class from
-  // bleeding through translucent gradient stops.
+  // Inline transparent background-color keeps the variant accent fallback
+  // from bleeding through translucent gradient stops.
   expect(anchorTag).toContain("background-color:transparent");
+});
+
+test("block image backgrounds render as escaped cover media and reject unsafe urls", () => {
+  const safeBlock = createPageBlockV2("heading", {
+    id: "blk-image-background",
+    props: { text: "Image background", level: "h2", align: "left" },
+    style: {
+      backgroundType: "image",
+      backgroundImage: '/uploads/hero "wide".jpg',
+      background: "#f8fafc",
+    },
+  });
+  expect(toPageBlockRenderProps(safeBlock).style).toMatchObject({
+    backgroundImage: 'url("/uploads/hero \\"wide\\".jpg")',
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+  });
+
+  const unsafeBlock = createPageBlockV2("heading", {
+    id: "blk-unsafe-background",
+    props: { text: "Unsafe background", level: "h2", align: "left" },
+    style: {
+      backgroundType: "image",
+      backgroundImage: "javascript:alert(1)",
+    },
+  });
+  expect(toPageBlockRenderProps(unsafeBlock).style.backgroundImage).toBeUndefined();
+});
+
+test("primary button section accent lands inline instead of relying on generated CSS", () => {
+  const section = createPageSectionV2("cta", {
+    id: "sec-button-accent",
+    style: {
+      background: "#ffffff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#00ff00",
+      radius: 0,
+      shadow: "none",
+    },
+    blocks: [
+      createPageBlockV2("button", {
+        id: "blk-primary-accent",
+        props: { label: "Accent", href: "/accent", target: "self", variant: "primary" },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionRender section={section} />);
+  const contentTag =
+    html.match(/<div[^>]*data-page-section-layout-mode="runtime"[^>]*>/)?.[0] ?? "";
+  const anchorTag = html.match(/<a[^>]*>/)?.[0] ?? "";
+
+  expect(contentTag).toContain("--coderso-section-accent:#00ff00");
+  expect(anchorTag).toContain("background-color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTag).toContain("color:var(--coderso-block-text,#ffffff)");
+  expect(anchorTag).not.toContain("bg-[var(--coderso-section-accent");
+});
+
+test("button variant and size props change the rendered anchor surface", () => {
+  const section = createPageSectionV2("cta", {
+    id: "sec-button-variants",
+    blocks: [
+      createPageBlockV2("button", {
+        id: "blk-secondary-small",
+        props: {
+          label: "Secondary",
+          href: "/secondary",
+          target: "self",
+          variant: "secondary",
+          size: "sm",
+        },
+      }),
+      createPageBlockV2("button", {
+        id: "blk-link-large",
+        props: { label: "Link", href: "/link", target: "self", variant: "link", size: "lg" },
+      }),
+    ],
+  });
+
+  const anchorTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<a[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(anchorTags[0]).toContain('href="/secondary"');
+  expect(anchorTags[0]).toContain("border-color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTags[0]).toContain("color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTags[0]).toContain("border");
+  expect(anchorTags[0]).toContain("px-3");
+  expect(anchorTags[0]).toContain("py-2");
+  expect(anchorTags[1]).toContain('href="/link"');
+  expect(anchorTags[1]).toContain("underline");
+  expect(anchorTags[1]).toContain("color:var(--coderso-section-accent,#0d9488)");
+  expect(anchorTags[1]).toContain("text-lg");
+  expect(anchorTags[1]).not.toContain("px-5");
 });
 
 test("typography style paints inline on the exact text node, not the block frame", () => {
@@ -442,7 +1159,7 @@ test("typography style paints inline on the exact text node, not the block frame
         props: { text: "Typo headline", level: "h1", align: "left" },
         style: {
           fontFamily: "display",
-          fontSize: "2xl",
+          fontSize: "xs",
           fontWeight: "normal",
           lineHeight: 1.2,
           letterSpacing: 0.5,
@@ -455,7 +1172,7 @@ test("typography style paints inline on the exact text node, not the block frame
   // Owner mapping: token values resolve through the theme CSS variables.
   expect(toPageBlockTypographyStyle(block)).toEqual({
     fontFamily: pageTypographyFontFamilyCssValues.display,
-    fontSize: pageTypographyFontSizeCssValues["2xl"],
+    fontSize: pageTypographyFontSizeCssValues.xs,
     fontWeight: pageTypographyFontWeightCssValues.normal,
     lineHeight: 1.2,
     letterSpacing: "0.5px",
@@ -474,7 +1191,7 @@ test("typography style paints inline on the exact text node, not the block frame
   // font-semibold, leading-tight) which remain as fallbacks.
   expect(headingTag).toContain('data-page-block-text="true"');
   expect(headingTag).toContain("font-family:var(--font-display");
-  expect(headingTag).toContain("font-size:var(--text-2xl");
+  expect(headingTag).toContain("font-size:var(--text-xs");
   expect(headingTag).toContain("font-weight:400");
   expect(headingTag).toContain("line-height:1.2");
   expect(headingTag).toContain("letter-spacing:0.5px");
@@ -482,6 +1199,174 @@ test("typography style paints inline on the exact text node, not the block frame
   expect(frameTag).not.toContain("font-family");
   expect(frameTag).not.toContain("font-size");
   expect(frameTag).not.toContain("letter-spacing");
+});
+
+test("text marks render safe inline elements and drop unsafe values", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-text-marks",
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-marked-heading",
+        props: {
+          text: "Hello world",
+          level: "h2",
+          align: "left",
+          marks: [
+            { type: "color", from: 0, to: 5, color: "#ef4444" },
+            { type: "highlight", from: 0, to: 5, color: "var(--color-accent)" },
+            { type: "bold", from: 0, to: 5 },
+            { type: "italic", from: 6, to: 11 },
+            { type: "link", from: 6, to: 11, href: "/world" },
+          ],
+        },
+      }),
+    ],
+  });
+  (section.blocks[0]!.props.marks as unknown[]).push(
+    { type: "color", from: 6, to: 11, color: "url(javascript:alert(1))" },
+    { type: "link", from: 0, to: 5, href: "javascript:alert(1)" }
+  );
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-page-text-mark="color highlight"');
+  expect(html).toContain('style="color:#ef4444;background-color:var(--color-accent)"');
+  expect(html).toContain("<strong");
+  expect(html).toContain("<em");
+  // The link mark renders a styled anchor (underline + link color token) while
+  // still carrying rel + the sanitized href.
+  expect(html).toMatch(
+    /<a href="\/world" class="[^"]*underline[^"]*" data-page-text-mark="link" rel="nofollow noreferrer">/
+  );
+  expect(html).toContain("<span");
+  expect(html).toContain(">Hello</span>");
+  expect(html).not.toContain("javascript");
+  expect(html).not.toContain("url(");
+});
+
+test("link mark renders a token-styled anchor with rel and sanitized href", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-link-mark",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-link-mark",
+        props: {
+          text: "Visit page now",
+          format: "plain",
+          align: "left",
+          marks: [{ type: "link", from: 6, to: 10, href: "/page" }],
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const anchor = /<a [^>]*href="\/page"[^>]*>/.exec(html)?.[0] ?? "";
+
+  // Visual affordance: a deterministic link class with an underline + link color
+  // token, applied on both front and canvas (renderer-applied, not stored).
+  expect(anchor).toContain("underline");
+  expect(anchor).toContain("var(--coderso-link,#2563eb)");
+  // Editor-only marker so linked runs can be outlined distinctly.
+  expect(anchor).toContain('data-page-text-mark="link"');
+  // Security contract is preserved: rel + the sanitized href.
+  expect(anchor).toContain('rel="nofollow noreferrer"');
+  expect(anchor).toContain('href="/page"');
+  expect(html).toContain(">page</a>");
+});
+
+test("link mark drops an unsafe href and renders no anchor", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-link-mark-unsafe",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-link-mark-unsafe",
+        props: {
+          text: "Click here",
+          format: "plain",
+          align: "left",
+          marks: [{ type: "link", from: 0, to: 5, href: "javascript:alert(1)" }],
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).not.toContain("<a");
+  expect(html).not.toContain("javascript");
+  expect(html).toContain("Click here");
+});
+
+test("link mark paints a non-navigating span in the canvas but a real anchor on the front (TASK-478-02)", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-link-canvas",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-link-canvas",
+        props: {
+          text: "Visit page now",
+          format: "plain",
+          align: "left",
+          marks: [{ type: "link", from: 6, to: 10, href: "/page" }],
+        },
+      }),
+    ],
+  });
+
+  // Front / preview (runtime layout): a real, navigable anchor with the security rel.
+  const frontHtml = renderToStaticMarkup(<PageSectionContent section={section} />);
+  expect(frontHtml).toMatch(/<a [^>]*href="\/page"[^>]*rel="nofollow noreferrer"[^>]*>/);
+
+  // Editor canvas: the linked run is a NON-navigating span (no <a>, no href) so a
+  // click selects the fragment instead of opening the URL / firing beforeunload.
+  // The link affordance (underline + link-color token + the mark marker) is kept.
+  const canvasHtml = renderToStaticMarkup(
+    <PageSectionContent section={section} layoutMode="canvas-device" />
+  );
+  expect(canvasHtml).not.toContain("<a");
+  expect(canvasHtml).not.toContain('href="/page"');
+  expect(canvasHtml).toContain('data-page-editor-link-noop="true"');
+  const noopSpan = /<span [^>]*data-page-editor-link-noop="true"[^>]*>/.exec(canvasHtml)?.[0] ?? "";
+  expect(noopSpan).toContain('data-page-text-mark="link"');
+  expect(noopSpan).toContain("underline");
+  expect(noopSpan).toContain("var(--coderso-link,#2563eb)");
+  expect(canvasHtml).toContain(">page</span>");
+});
+
+test("badge blocks render native safe pills with token-backed sizing", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-badge",
+    blocks: [
+      createPageBlockV2("badge", {
+        id: "blk-badge",
+        props: {
+          text: "Beta",
+          variant: "outline",
+          size: "2xs",
+          shape: "rounded",
+          weight: "bold",
+          background: "#ef4444",
+          textColor: "#111827",
+          icon: "not-in-allowlist",
+          iconPosition: "start",
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-page-badge="true"');
+  expect(html).toContain('data-page-badge-variant="outline"');
+  expect(html).toContain('data-page-badge-size="2xs"');
+  expect(html).toContain('data-page-badge-shape="rounded"');
+  expect(html).toContain("font-size:var(--text-2xs");
+  expect(html).toContain("font-weight:700");
+  expect(html).toContain("background-color:#ef4444");
+  expect(html).toContain("color:#111827");
+  expect(html).toContain(">Beta</span>");
+  expect(html).not.toContain("not-in-allowlist");
 });
 
 test("button typography lands on the anchor element with the visual surface", () => {
@@ -505,6 +1390,51 @@ test("button typography lands on the anchor element with the visual surface", ()
   expect(anchorTag).toContain("font-weight:700");
   expect(anchorTag).toContain("letter-spacing:1px");
   expect(frameTag).not.toContain("font-size");
+});
+
+test("rich text blocks render sanitized rich output instead of plain source", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-rich-text",
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-rich-text",
+        props: {
+          text: '<p>Hello <strong>rich</strong> <code>mono</code> <script>alert(1)</script><a href="javascript:alert(1)">bad</a> <a href="/safe">safe</a><br />Tail</p>',
+          format: "rich",
+          align: "center",
+        },
+        style: { fontFamily: "display", fontSize: "lg", fontWeight: "normal", lineHeight: 1.6 },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+  const paragraphTag = html.match(/<p[^>]*>/)?.[0] ?? "";
+  const strongTag = html.match(/<strong[^>]*>/)?.[0] ?? "";
+  const codeTag = html.match(/<code[^>]*>/)?.[0] ?? "";
+
+  expect(html).toContain("<strong");
+  expect(html).toContain(">rich</strong>");
+  expect(html).toContain("<code>mono</code>");
+  expect(html).toContain('href="/safe"');
+  expect(html).toContain('rel="nofollow noreferrer"');
+  expect(html).toContain("<br/>Tail");
+  expect(html).toContain("text-center");
+  expect(paragraphTag).toContain('data-page-block-text="true"');
+  expect(paragraphTag).toContain("font-family:var(--font-display");
+  expect(paragraphTag).toContain("font-size:var(--text-lg");
+  expect(paragraphTag).toContain("font-weight:400");
+  expect(paragraphTag).toContain("line-height:1.6");
+  expect(strongTag).not.toContain("style=");
+  expect(strongTag).not.toContain('data-page-block-text="true"');
+  expect(codeTag).not.toContain("style=");
+  expect(codeTag).not.toContain('data-page-block-text="true"');
+  expect(html.match(/<div[^>]*class="prose[^>]*>/)?.[0] ?? "").not.toContain(
+    'data-page-block-text="true"'
+  );
+  expect(html).not.toContain("<script");
+  expect(html).not.toContain("alert(1)");
+  expect(html).not.toContain("javascript:");
 });
 
 test("multi-text and flow blocks carry typography on every painted text node", () => {
@@ -543,6 +1473,75 @@ test("multi-text and flow blocks carry typography on every painted text node", (
   // p + blockquote + ul + 3 statistic nodes + card title + card body = 8.
   expect(html.match(/data-page-block-text="true"/g)).toHaveLength(8);
   expect(html.match(/font-size:var\(--text-sm/g)).toHaveLength(8);
+});
+
+test("card image and href props render on the public card output", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-card-runtime",
+    blocks: [
+      createPageBlockV2("card", {
+        id: "blk-card-linked",
+        props: {
+          title: "Case study",
+          text: "Detailed outcome.",
+          image: "https://cdn.example.test/card.jpg",
+          href: "/case-study",
+        },
+      }),
+      createPageBlockV2("card", {
+        id: "blk-card-unsafe",
+        props: {
+          title: "Unsafe",
+          text: "Sanitized.",
+          image: "javascript:alert(1)",
+          href: "javascript:alert(1)",
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('src="https://cdn.example.test/card.jpg"');
+  expect(html).toContain('href="/case-study"');
+  expect(html).toContain(">Case study</a>");
+  expect(html).not.toContain("javascript:");
+});
+
+test("image fit prop changes the rendered image object-fit class", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-image-fit",
+    blocks: [
+      createPageBlockV2("image", {
+        id: "blk-image-contain",
+        props: {
+          src: "https://cdn.example.test/contain.jpg",
+          alt: "Contain image",
+          fit: "contain",
+        },
+      }),
+      createPageBlockV2("image", {
+        id: "blk-image-cover",
+        props: {
+          src: "https://cdn.example.test/cover.jpg",
+          alt: "Cover image",
+          fit: "cover",
+        },
+      }),
+    ],
+  });
+
+  const imgTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<img[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(imgTags[0]).toContain('src="https://cdn.example.test/contain.jpg"');
+  expect(imgTags[0]).toContain("object-contain");
+  expect(imgTags[0]).not.toContain("object-cover");
+  expect(imgTags[1]).toContain('src="https://cdn.example.test/cover.jpg"');
+  expect(imgTags[1]).toContain("object-cover");
+  expect(imgTags[1]).not.toContain("object-contain");
 });
 
 test("unset typography keeps legacy markup free of inline font styles", () => {
@@ -740,6 +1739,144 @@ test("shared renderer provides safe inert states while rendering active layout s
   expect(html).not.toContain("form-private");
   expect(html).not.toContain("<script>");
   expect(html).not.toContain("alert(1)");
+});
+
+test("video autoplay prop reaches the rendered video with policy companions", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-video-autoplay",
+    blocks: [
+      createPageBlockV2("video", {
+        id: "blk-video-autoplay",
+        props: {
+          src: "https://cdn.example.test/intro.mp4",
+          title: "Intro",
+          autoplay: true,
+          muted: false,
+        },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video-manual",
+        props: {
+          src: "https://cdn.example.test/manual.mp4",
+          title: "Manual",
+          autoplay: false,
+          muted: false,
+        },
+      }),
+    ],
+  });
+
+  const videoTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<video[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(videoTags[0]).toContain("autoPlay");
+  expect(videoTags[0]).toContain("muted");
+  expect(videoTags[0]).toContain("playsInline");
+  expect(videoTags[0]).toContain('title="Intro"');
+  expect(videoTags[0]).toContain('aria-label="Intro"');
+  expect(videoTags[1]).not.toContain("autoPlay");
+  expect(videoTags[1]).not.toContain("playsInline");
+  expect(videoTags[1]).not.toContain("muted");
+  expect(videoTags[1]).toContain('title="Manual"');
+  expect(videoTags[1]).toContain('aria-label="Manual"');
+});
+
+test("video title stays off the inert placeholder when no safe source renders", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-video-placeholder-title",
+    blocks: [
+      createPageBlockV2("video", {
+        id: "blk-video-empty-src",
+        props: {
+          src: "",
+          title: "No source",
+          autoplay: false,
+          muted: true,
+        },
+      }),
+      createPageBlockV2("video", {
+        id: "blk-video-unsafe-src",
+        props: {
+          src: "javascript:alert(1)",
+          title: "Unsafe source",
+          autoplay: true,
+          muted: false,
+        },
+      }),
+    ],
+  });
+
+  const html = renderToStaticMarkup(<PageSectionContent section={section} />);
+
+  expect(html).toContain('data-block-id="blk-video-empty-src"');
+  expect(html).toContain('data-block-id="blk-video-unsafe-src"');
+  expect(html).toContain("Video");
+  expect(html).not.toContain("<video");
+  expect(html).not.toContain("No source");
+  expect(html).not.toContain("Unsafe source");
+  expect(html).not.toContain("title=");
+  expect(html).not.toContain("aria-label=");
+  expect(html).not.toContain("javascript:");
+  expect(html).not.toContain("alert(1)");
+});
+
+test("divider tone prop changes the rendered divider border style", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-divider-tone",
+    blocks: [
+      createPageBlockV2("divider", {
+        id: "blk-divider-accent",
+        props: { tone: "accent", thickness: 3 },
+      }),
+      createPageBlockV2("divider", {
+        id: "blk-divider-muted",
+        props: { tone: "muted", thickness: 2 },
+      }),
+      createPageBlockV2("divider", {
+        id: "blk-divider-neutral",
+        props: { tone: "neutral", thickness: 1 },
+      }),
+    ],
+  });
+
+  const hrTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(/<hr[^>]*>/g),
+    (match) => match[0]
+  );
+
+  expect(hrTags[0]).toContain("border-color:var(--coderso-section-accent,#0d9488)");
+  expect(hrTags[0]).toContain("border-width:3px");
+  expect(hrTags[0]).not.toContain("border-[var(--coderso-section-accent");
+  expect(hrTags[1]).toContain("border-color:#cbd5e1");
+  expect(hrTags[2]).toContain("border-color:#e2e8f0");
+});
+
+test("spacer size prop reaches the rendered inert spacer height", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-spacer-size",
+    blocks: [
+      createPageBlockV2("spacer", {
+        id: "blk-spacer-default",
+        props: {},
+      }),
+      createPageBlockV2("spacer", {
+        id: "blk-spacer-large",
+        props: { size: 72 },
+      }),
+    ],
+  });
+
+  const spacerTags = Array.from(
+    renderToStaticMarkup(<PageSectionContent section={section} />).matchAll(
+      /<div[^>]*aria-hidden="true"[^>]*>/g
+    ),
+    (match) => match[0]
+  );
+
+  expect(spacerTags[0]).toContain("height:32px");
+  expect(spacerTags[1]).toContain("height:72px");
 });
 
 test("form block renders a canvas-safe inert preview in canvas layout mode (TASK-456)", () => {
@@ -1288,6 +2425,14 @@ test("shared renderer remains inside the Bun-free Pages service boundary", () =>
 
   expect(source).toContain('from "./pageDocumentV2"');
   expect(source).not.toMatch(/@\/|db\/client|settingsService|pagesClient|server\/|core\/site/);
+});
+
+test("admin and site Tailwind entrypoints scan Pages service renderer classes", () => {
+  const adminCss = readFileSync("core/admin/styles/globals.css", "utf8");
+  const siteCss = readFileSync("core/site/styles/site.css", "utf8");
+
+  expect(adminCss).toContain('@source "../../services/pages/**/*.{ts,tsx}"');
+  expect(siteCss).toContain('@source "../../services/pages/**/*.{ts,tsx}"');
 });
 
 test("front render of multi-column grids keeps editor ghost affordances out of the markup", () => {

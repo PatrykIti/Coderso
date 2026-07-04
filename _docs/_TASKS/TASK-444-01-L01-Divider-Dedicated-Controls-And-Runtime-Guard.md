@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Small
 **Dependencies:** TASK-444-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -24,27 +25,28 @@ this leaf verifies the divider target after those land and owns only the
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```tsx
 // Controls: the real registry accessor is getPageEditorControlsForTarget
-// (core/services/pages/pageEditorControlRegistry.ts:508); divider rows (Tone
+// (core/services/pages/pageEditorControlRegistry.ts:870-890); divider rows (Tone
 // select over pageDividerTones, Thickness clamp 1..16) live at
-// pageEditorControlRegistry.ts:437-447. Verify they render through the shared
-// TASK-421 widgets in RegistryControlField (PageEditor.tsx ~2524-2614), with
+// pageEditorControlRegistry.ts:795-806. Verify they render through the shared
+// TASK-421 widgets in PageEditor, with
 // Tone as the dedicated segmented widget and Visible as a switch.
 const dividerControls = getPageEditorControlsForTarget({ kind: "block", type: "divider" });
 
 // Runtime guard: published divider output comes from the `case "divider"`
 // branch of renderPageBlockContent (core/services/pages/pageRendererV2.tsx
-// ~:798-804); assert against PageDocumentRender output in
+// :1508-1516); assert against PageDocumentRender output in
 // tests/vitest/pages/page-renderer-v2.test.tsx:
 expect(html).toContain("<hr");
 expect(html).toContain("border-width"); // thickness reaches the style attribute
+expect(html).toContain("border-color"); // tone reaches inline style, not a Tailwind arbitrary class
 ```
 
 Owner files:
@@ -65,6 +67,9 @@ Expected data flow:
 - Divider tone/style controls render through the shared TASK-421 dedicated
   widgets (conversion owned by TASK-421-02-L01/421-03-L02; this leaf verifies).
 - Published runtime keeps rendering a real divider element.
+- Accent tone paints through inline `borderColor` instead of a Tailwind
+  arbitrary class, so the runtime does not depend on generated utility
+  availability.
 
 Error handling:
 
@@ -73,7 +78,8 @@ Error handling:
 
 Regression-test shape:
 
-- UI coverage for dedicated controls and runtime coverage for divider output.
+- UI coverage for dedicated controls and runtime coverage for divider output,
+  including tone as an inline border-color style.
 
 ---
 

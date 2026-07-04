@@ -24,9 +24,9 @@ test("CustomScreenListPage renders shell and loading state", () => {
     path: "/admin/advanced/custom-screens",
   });
 
-  expect(html).toContain("Custom Screens");
-  expect(html).toContain("New");
-  expect(html).toContain("Loading custom screens");
+  expect(html).toContain("Screens");
+  expect(html).toContain("New screen");
+  expect(html).toContain("Loading screens");
   expect(html).toContain("Search custom screens");
 });
 
@@ -65,7 +65,7 @@ test("CustomScreenListPage renders cached screens without loading placeholder", 
     expect(html).toContain("Cached screen");
     expect(html).toContain("Sidebar label:");
     expect(html).toContain("Catalog");
-    expect(html).not.toContain("Loading custom screens");
+    expect(html).not.toContain("Loading screens");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;
@@ -81,14 +81,21 @@ test("CustomScreenEditorPage renders builder controls in create mode", () => {
   });
 
   expect(html).toContain("Save");
-  expect(html).toContain("Sidebar shortcut");
-  expect(html).toContain("Sidebar label");
-  expect(html).toContain("Screen name");
-  expect(html).toContain("List View");
-  expect(html).toContain("Editor View");
-  expect(html).toContain("Selected Column");
-  expect(html).toContain("Select a content type before configuring List View.");
+  // TASK-498-01: the List/Editor toggle + list-view editor surface are removed —
+  // the editor is the always-on entry-view builder.
+  expect(html).not.toContain("List View");
+  expect(html).not.toContain("Editor View");
+  expect(html).toContain('data-screen-authoring-canvas="true"');
+  // TASK-496-02: shared `CanvasEditor` shell sub-toolbar (panel toggle + light
+  // panel rail, relocated into the panel head) replaces the retired dark toolbar.
+  expect(html).toContain('data-screen-toolbar-rail="true"');
+  expect(html).toContain("Hide panel");
+  // Screen-level settings stay reachable via the entry-view rail's Settings
+  // category (aria-label="Settings"). The list-only "List settings" panel is gone.
+  expect(html).not.toContain('aria-label="List settings"');
+  expect(html).toContain('aria-label="Settings"');
   expect(html).toContain("Preview");
+  expect(html).not.toContain("Selected Column");
 });
 
 test("CustomScreenListPage renders list shell", () => {
@@ -96,8 +103,8 @@ test("CustomScreenListPage renders list shell", () => {
     path: "/admin/advanced/custom-screens",
   });
 
-  expect(html).toContain("Custom Screens");
-  expect(html).toContain("New");
+  expect(html).toContain("Screens");
+  expect(html).toContain("New screen");
 });
 
 test("CustomScreenEditorPage renders builder canvas and save action", () => {
@@ -106,8 +113,9 @@ test("CustomScreenEditorPage renders builder canvas and save action", () => {
   });
 
   expect(html).toContain("Save");
-  expect(html).toContain("List View");
-  expect(html).toContain("Editor View");
+  // TASK-498-01: List/Editor toggle removed.
+  expect(html).not.toContain("List View");
+  expect(html).not.toContain("Editor View");
   expect(html).toContain("Preview");
   expect(html).not.toContain("Open records");
   expect(html).not.toContain("Back to list");
@@ -204,7 +212,12 @@ test("CustomScreenEditorPage tolerates cached stale screen bindings on read", ()
 
     expect(html).toContain("Legacy Header Screen");
     expect(html).toContain("Preview");
-    expect(html).toContain("Selected Column");
+    // TASK-498-01: List/Editor toggle removed (entry-view builder only).
+    expect(html).not.toContain("List View");
+    // TASK-496-02: shared `CanvasEditor` shell sub-toolbar replaces the retired
+    // dark floating toolbar.
+    expect(html).toContain('data-screen-toolbar-rail="true"');
+    expect(html).not.toContain("Selected Column");
     expect(html).not.toContain("custom_screen_definition_invalid");
   } finally {
     if (originalLocal === undefined) {

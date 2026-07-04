@@ -131,6 +131,62 @@ Note (v2+):
 - `content_revisions` z duzymi JSONB moze szybko rosnac. Warto dodac pruning
   starych rewizji i/lub kompresje danych.
 
+## Custom Screens
+
+`custom_screens`
+- id (uuid, pk)
+- content_type_id (fk content_types)
+- name
+- status (draft|active|archived)
+- schema_version (int, default 4)
+- definition (jsonb, not null)
+- show_in_sidebar (boolean)
+- sidebar_label (nullable)
+- collection_role (nullable)
+- composition_key (nullable)
+- created_at
+- updated_at
+
+Rules:
+- `definition.schemaVersion=4` is the source of truth for Custom Screens.
+- `definition.listView` owns records-list columns, filters, default sort,
+  bulk-action visibility, and optional `rowTemplate` document + bindings for
+  inline row editing.
+- `definition.editorView.document` owns `ScreenDocumentV1.sections[]`; it is
+  not a Page v2 document.
+- `definition.editorView.bindings` maps `blockId + propPath` to content entry
+  fields or allowlisted system fields.
+- Legacy `blocks` and `bindings` columns were removed by TASK-468 after the V4
+  backfill; older payloads are migration inputs only, not active storage.
+
+`custom_screen_entry_presentation_overrides`
+- screen_id (fk custom_screens, cascade delete)
+- entry_id (fk content_entries, cascade delete)
+- block_id (text)
+- prop_path (text)
+- value (jsonb)
+- updated_by (fk users, set null)
+- created_at
+- updated_at
+
+Indexes:
+- unique `(screen_id, entry_id, block_id, prop_path)` keeps each record/block
+  presentation target deterministic.
+- `(screen_id, entry_id)` supports scoped override reads and replace writes.
+- `entry_id`, `updated_by`, and `updated_at` support cleanup/audit queries.
+
+Rules:
+- Overrides store presentation only, never content field values and never
+  provider credentials or protected settings.
+- Allowed `prop_path` values are bounded by the service contract:
+  `image`, `mediaAssetId`, `textSize`, `textEmphasis`, and `tone`.
+- Media override values are media asset UUIDs and must target media field
+  blocks; text/style values use bounded enum tokens.
+- Screen and entry deletes are handled by FK cascade.
+- Block/field drift is handled defensively at read time by skipping unresolved
+  rows, with cleanup helpers available to remove stale targets after definition
+  or schema changes.
+
 ## Preview
 
 `preview_tokens`

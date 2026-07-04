@@ -1168,7 +1168,7 @@ Public runtime safety:
 - runtime hydration: `resolvePostsFeedRuntimeData` (SSR, public runtime),
 - public output (`preview=false`) filtruje do `status=published`; preview moze pokazywac wszystkie statusy.
 
-## Coderso Custom Screens (workspace builder V3)
+## Coderso Custom Screens (workspace builder V4)
 
 Permissions (internal, routes in TASK-054-22-02): `content:read`, `content:write`
 
@@ -1181,9 +1181,9 @@ Custom screen payload (summary):
   "status": "draft",
   "showInSidebar": true,
   "sidebarLabel": "Katalog domow",
-  "schemaVersion": 3,
+  "schemaVersion": 4,
   "definition": {
-    "schemaVersion": 3,
+    "schemaVersion": 4,
     "listView": {
       "columns": [
         {
@@ -1218,23 +1218,86 @@ Custom screen payload (summary):
         "delete": true,
         "publish": true,
         "unpublish": true
+      },
+      "rowTemplate": {
+        "document": {
+          "schemaVersion": 1,
+          "sections": [
+            {
+              "id": "row-template",
+              "type": "section",
+              "label": "Row",
+              "data": { "title": "Row" },
+              "blocks": [
+                {
+                  "id": "row-cell-system-title",
+                  "type": "field",
+                  "data": {
+                    "field": "title",
+                    "label": "Record",
+                    "source": "system"
+                  }
+                },
+                {
+                  "id": "row-cell-field-projectstatus",
+                  "type": "field",
+                  "data": {
+                    "field": "projectStatus",
+                    "label": "Project status",
+                    "source": "field"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        "bindings": [
+          {
+            "id": "row-cell-system-title-value",
+            "blockId": "row-cell-system-title",
+            "propPath": "value",
+            "source": "entry",
+            "field": "title",
+            "mode": "readwrite"
+          },
+          {
+            "id": "row-cell-field-projectstatus-value",
+            "blockId": "row-cell-field-projectstatus",
+            "propPath": "value",
+            "source": "entry",
+            "field": "projectStatus",
+            "mode": "readwrite"
+          }
+        ]
       }
     },
     "editorView": {
       "saveMode": "entry",
       "interactionMode": "inline",
-      "blocks": [
-        {
-          "id": "field-1",
-          "type": "screen-field-value",
-          "data": {}
-        }
-      ],
+      "document": {
+        "schemaVersion": 1,
+        "sections": [
+          {
+            "id": "section-details",
+            "type": "section",
+            "label": "Details",
+            "data": { "title": "Details" },
+            "blocks": [
+              {
+                "id": "field-1",
+                "type": "field",
+                "data": { "label": "Project status" }
+              }
+            ]
+          }
+        ]
+      },
       "bindings": [
         {
           "id": "field-1-value",
-          "widgetId": "field-1",
+          "blockId": "field-1",
           "propPath": "value",
+          "source": "entry",
           "field": "projectStatus",
           "mode": "readwrite"
         }
@@ -1246,39 +1309,63 @@ Custom screen payload (summary):
 
 Notes:
 - `contentTypeId` pozostaje stanem rekordu `custom_screens.content_type_id`;
-  persisted `definition` odrzuca top-level `contentTypeId`.
-- `definition.schemaVersion=3` jest zrodlem prawdy dla aktywnego workspace
+  persisted `definition` odrzuca top-level `contentTypeId` i nie zapisuje
+  duplikatu `dataContext.contentTypeId`.
+- `definition.schemaVersion=4` jest zrodlem prawdy dla aktywnego workspace
   Custom Screens.
-- Legacy `schemaVersion`, `blocks`, i `bindings` pozostaja projekcjami
-  `definition.editorView` oraz kompatybilnoscia dla starszych rows.
-- V1/V2 rows bez gotowego V3 payloadu sa migrowane przy odczycie do V3:
+- Legacy root `schemaVersion`, `blocks`, i `bindings` sa read-only
+  compatibility inputs for older rows. Fresh create/update requests accept only
+  `schemaVersion: 4` plus V4 `definition`; legacy write attempts return
+  `custom_screen_legacy_write_unsupported`.
+- V1/V2/V3 rows bez gotowego V4 payloadu sa migrowane przy odczycie do V4:
   `listView` dostaje deterministyczne domyslne kolumny/filtry z wybranego
-  content type, a dawne `blocks`/`bindings` trafiaja do `editorView`.
+  content type, a dawne `blocks`/`bindings` trafiaja do
+  `editorView.document` + `editorView.bindings`.
 - `definition.listView` jest wlascicielem tabeli rekordow: system/field
-  columns, filters, `defaultSort`, i bulk action visibility.
+  columns, filters, `defaultSort`, bulk action visibility, and optional
+  `rowTemplate`. `rowTemplate` stores a row `ScreenDocumentV1` plus
+  `ScreenFieldBinding[]`; it is additive, rejects unknown keys, and is
+  backfilled from visible columns for legacy V1/V2/V3/V4 definitions that do
+  not carry it.
 - `definition.editorView` jest wlascicielem canvasa create/edit:
-  `blocks`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
-- `blocks` korzysta z kontraktu widget blocks i jest normalizowany przez widget schema.
-- builder insert library filtruje do admin surface `admin-editor-view`; public
-  page builder i widget library nadal uzywaja swoich powierzchni.
-- `bindings` mapuja `widgetId + propPath` do pola wybranego content type albo
+  `document`, `bindings`, `saveMode: "entry"`, i `interactionMode: "inline"`.
+- `document.sections[]` jest lista `ScreenSectionV1` containers:
+  `type: "section"`, `data`, opcjonalne `layout`/`visibility`, oraz
+  `blocks[]`. Strict V4 writes reject flat block arrays; read normalization can
+  wrap stale flat V4 arrays into a default section without destructive save.
+- `section.blocks[]` korzysta z screen-owned block types such as `field`,
+  `field-group`, `record-header`, `columns`, and `rich-text`; legacy widget
+  blocks are compatibility migration inputs only.
+- builder insert library pokazuje screen-owned blocks oraz pola wybranego
+  content type; public page builder i widget library nadal uzywaja swoich
+  powierzchni.
+- `bindings` mapuja `blockId + propPath` do pola wybranego content type albo
   do dozwolonych system fields.
-- Dla screen widgets kontrakt zapisuje tez widget-owned binding targets:
-  `screen-record-header` wystawia tylko read-only props
-  (`eyebrow`, `title`, `subtitle`, `description`, `badge`), a
-  `screen-field-value` pozwala na write-capable binding tylko dla `value`;
-  `label` i `helper` pozostaja read-only.
-- screen widget editor bundles nadal uzywaja wspolnego kontraktu
-  `wizard -> visual -> advanced`:
-  `wizard` ustawia wariant i glowna strukture, `visual` jest binding-aware dla
-  codziennej edycji tresci, a `advanced` trzyma alignment/tone oraz clearable
-  chrome tokens.
+- Dla V4 active surface binding targets sa screen-owned:
+  `record-header.title` moze czytac metadata wpisu, a `field.value` moze byc
+  `read`, `write`, albo `readwrite`. `field.label` i `field.helper` sa
+  wspolnymi parametrami layoutu zapisanymi w screen definition, nie danymi
+  pojedynczego wpisu.
+- Legacy `screen-*` widget editor bundles sa retired compatibility/migration
+  inputs; aktywny Editor View nie uzywa juz `WidgetPicker`, `BlockList`,
+  `BlockSettings`, `FieldBindingPanel`, `WidgetRenderer`, ani active widget
+  surface registration.
 - builder preview i read-only fragmenty record editora renderuja
-  `definition.editorView.blocks` przez wspolny screen-widget read bridge, wiec
-  ten sam payload blokow zasila preview dialog, nested layout widgets, i
-  readonly runtime record surface. Inline write pozostaje zachowaniem widgetow
-  takich jak `screen-field-value`, gdy `value` binding wskazuje writable field.
-- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `3`.
+  `editorView.document` przez screen runtime.
+- `List View` and `Editor View` use the neutral authoring canvas shell. List
+  elements, columns, hidden columns, insert, layers, content, binding, style,
+  and screen settings open as panels attached to the floating toolbar rather
+  than permanent rails or mobile Sheets.
+- Entry detail mode jest field-editing-only: writable bound record-header and
+  field values edit inline on the canvas and save existing entry fields; it does
+  not show a detached `Value` panel, add/move/delete operations, block library,
+  builder settings, ani right Sheet. Read-only/unbound bindings render no
+  editable affordance.
+- Persistent per-record presentation overrides are intentionally absent from the
+  Custom Screen definition payload and from `content_entries.data`. They are
+  stored in `custom_screen_entry_presentation_overrides` and accessed through
+  the internal override routes below.
+- `schemaVersion` jest wersjonowany; aktywna wersja workspace buildera to `4`.
 - `showInSidebar=true` + `status=active` + `supportsDedicatedEditor=true`
   pozwala pokazac screen jako shortcut po grupie `Coderso` w lewym menu admina.
 - `sidebarLabel` jest opcjonalny; przy braku UI uzywa `name`.
@@ -1290,16 +1377,16 @@ Notes:
   `active + showInSidebar + !supportsDedicatedEditor` -> requires editor setup,
   `draft + showInSidebar` -> configured after activation,
   otherwise -> not shown.
-- create drawer na liscie wysyla tylko istniejace pola create schema:
-  `name`, `contentTypeId`, `status`, `showInSidebar`, `sidebarLabel`,
-  `blocks`, `bindings`.
+- create drawer na liscie wysyla tylko pola V4 create schema:
+  `name`, `contentTypeId`, `status`, `showInSidebar`, `sidebarLabel`, and
+  optional V4 `definition`.
 - builder topbar uzywa `Preview`, `List View`, `Editor View`, i `Save`; aktywny
   runtime flow nie uzywa juz `Builder / Preview`, `Open records`, ani
   classic-editor / drawer branches.
 - `Preview` w builderze otwiera dedykowany dialog:
   - `List View` preview pokazuje zywy widok tabeli rekordow dla aktualnej
     konfiguracji z inline header reorder controls zachowanymi w canvasie,
-  - `Editor View` preview pokazuje widgetowy record surface w szerszym,
+  - `Editor View` preview pokazuje screen-block record surface w szerszym,
     Pages-like shell i startuje od desktop frame na first open,
   - `Editor View` preview oraz mounted builder canvas wspoldziela cached-first
     owner nad `entries:list:<typeSlug>`; przy braku rekordow albo cold-cache
@@ -1316,6 +1403,9 @@ Notes:
   - `POST /content/:type/entries`
   - `GET /content/:type/entries/:id`
   - `PATCH /content/:type/entries/:id`
+- Records-list inline row edits also use `PATCH /content/:type/entries/:id`;
+  successful commits preserve the existing `entries:list:<typeSlug>` and
+  `entries:detail:<typeSlug>:<entryId>` admin cache behavior.
 - admin UI routes for the workflow:
   - `/admin/advanced/custom-screens/:screenId/entries`
   - `/admin/advanced/custom-screens/:screenId/entries/:entryId`
@@ -1323,10 +1413,60 @@ Notes:
 - `New record` z records workspace zawsze otwiera
   `/admin/advanced/custom-screens/:screenId/entries/new`; active V3 runtime nie
   otwiera juz shared `EntryCreateDrawer`.
-- screen-owned record editor renderuje widgetowy layout jako glowny surface i
-  pozwala aktywowac widgety na canvasie, a prawy panel `Selected Element`
-  pokazuje bound field editors dla wybranego elementu.
+- screen-owned record editor renders the `ScreenDocumentV1` layout as the main
+  surface and edits only writable bound entry values inline.
 - `contentTypeId` z custom screen jest najpierw rozwiazywany do `content_types.slug`, dopiero potem uzywany przez powyzsze entry endpoints.
+
+### Custom Screen entry presentation overrides
+
+Internal admin endpoints:
+
+- `GET /admin/api/custom-screens/:screenId/entries/:entryId/overrides`
+  - Permission: `content:read`
+  - Response: `{ "overrides": [...] }`
+- `PATCH /admin/api/custom-screens/:screenId/entries/:entryId/overrides`
+  - Permission: `content:write`
+  - CSRF: required through the global admin write middleware
+  - Request envelope:
+
+```json
+{
+  "overrides": [
+    {
+      "blockId": "field-image",
+      "propPath": "image",
+      "value": "55555555-5555-4555-8555-555555555555"
+    },
+    {
+      "blockId": "field-title",
+      "propPath": "textSize",
+      "value": "lg"
+    }
+  ]
+}
+```
+
+Override contract:
+
+- `blockId` must resolve to a block in the current V4
+  `definition.editorView.document`.
+- `propPath` is a bounded presentation target only:
+  `image`, `mediaAssetId`, `textSize`, `textEmphasis`, or `tone`.
+- `image` / `mediaAssetId` values must be media asset UUIDs and only apply to
+  field blocks bound to media fields.
+- `textSize`, `textEmphasis`, and `tone` use bounded enum values owned by the
+  Custom Screen override service.
+- Writes replace the full `(screenId, entryId)` override set atomically and
+  never mutate `content_entries.data`.
+- Reads defensively skip rows whose screen block, field binding, prop path, or
+  value no longer resolves; cleanup helpers can remove skipped rows after
+  screen definition or content type field drift.
+
+Errors:
+
+- `custom_screen_override_invalid` -> HTTP 400
+- `custom_screen_override_not_found` -> HTTP 404
+- `custom_screen_override_conflict` -> HTTP 409
 
 ## Coderso Filters & Search (v2 beta)
 
@@ -1803,29 +1943,38 @@ Create payload (summary):
 {
   "name": "Catalog screen",
   "contentTypeId": "content-type-uuid",
-  "status": "draft",
+  "status": "active",
   "collectionRole": "canonical-admin-screen",
   "compositionKey": "catalog-screen",
-  "schemaVersion": 1,
-  "blocks": [
-    { "id": "section-1", "type": "section", "data": {} }
-  ],
-  "bindings": [
-    {
-      "id": "title",
-      "widgetId": "section-1",
-      "propPath": "title",
-      "field": "title",
-      "mode": "readwrite"
+  "schemaVersion": 4,
+  "definition": {
+    "schemaVersion": 4,
+    "listView": {
+      "columns": [],
+      "filters": [],
+      "defaultSort": { "field": "updatedAt", "direction": "desc" },
+      "bulkActions": { "delete": true, "publish": true, "unpublish": true }
+    },
+    "editorView": {
+      "saveMode": "entry",
+      "interactionMode": "inline",
+      "document": {
+        "schemaVersion": 1,
+        "sections": []
+      },
+      "bindings": []
     }
-  ]
+  }
 }
 ```
 
 Record shape (summary):
 - `id`, `name`, `contentTypeId`, `status`, `collectionRole`,
-  `compositionKey`, `schemaVersion`, `blocks`, `bindings`
+  `compositionKey`, `schemaVersion`, `definition`
 - `createdAt`, `updatedAt`
+- Read responses may still include derived legacy `blocks` / `bindings`
+  projections for old callers; create/update requests must not send those
+  fields.
 
 ---
 
@@ -1941,7 +2090,29 @@ Menu summary response includes:
   "location": "primary",
   "status": "published",
   "publishedAt": "2026-04-23T10:00:00.000Z",
-  "createdAt": "2026-04-22T10:00:00.000Z"
+  "createdAt": "2026-04-22T10:00:00.000Z",
+  "settings": {
+    "appearance": { "surfaceColor": "#ffffff", "itemGap": 12 },
+    "extras": [
+      {
+        "id": "blk-cta",
+        "type": "button",
+        "props": { "label": "Book now", "href": "/booking" },
+        "visibility": { "visible": true }
+      }
+    ],
+    "published": {
+      "appearance": { "surfaceColor": "#ffffff", "itemGap": 12 },
+      "extras": [
+        {
+          "id": "blk-cta",
+          "type": "button",
+          "props": { "label": "Book now", "href": "/booking" },
+          "visibility": { "visible": true }
+        }
+      ]
+    }
+  }
 }
 ```
 
@@ -1959,12 +2130,33 @@ create payloads include the key explicitly and may set it to `null`.
 Update menu payload:
 
 ```json
-{ "name": "Primary", "location": "primary", "status": "published" }
+{
+  "name": "Primary",
+  "location": "primary",
+  "status": "published",
+  "appearance": { "surfaceColor": "#ffffff", "itemGap": 12, "mobileMode": "disclosure" },
+  "extras": [
+    {
+      "id": "blk-cta",
+      "type": "button",
+      "props": { "label": "Book now", "href": "/booking" },
+      "visibility": { "visible": true }
+    }
+  ]
+}
 ```
 
 `PATCH /menus/:id` rejects empty payloads and unknown fields. Setting
 `status: "published"` sets `publishedAt`; setting `status: "draft"` clears it.
-Public runtime navigation resolves only published menus.
+Public runtime navigation resolves only published menus. `appearance` and
+`extras` are stored in the `menus.settings` envelope as draft menu design state;
+publishing snapshots that draft state under `settings.published` for public
+runtime rendering, so unpublished design edits do not leak to the front site.
+Set `appearance: null` or `extras: null` to clear those draft values. `extras`
+uses Page v2 block objects but only accepts the menu nav allowlist
+(`button`, `image`) and is capped by the menu extras contract. Invalid
+appearance or extras payloads map to `menu_appearance_invalid` or
+`menu_nav_extras_invalid` with a field path in `details.field`.
 
 Update menu items payload:
 
@@ -3521,8 +3713,8 @@ Stara rodzina `/assistant/site-builder/*` jest wycofana. Site-kit planning/execu
 `TASK-174-04-01` promuje `page.update` do executable typed action dla aktywnej strony; akcja edytuje title/slug/status/settings i zachowuje niepowiazane Page data.
 `TASK-174-04-02` historycznie rozszerzal `page.widget.patch`; po TASK-417 Page mutations ida przez `page.upsert` z `sections[]` albo metadata-only `page.update`.
 `TASK-174-04-03` promuje `widget-template.update` i `widget-template.block.patch` do executable typed actions dla aktywnego reusable widget template; page-instance vs reusable-template ambiguity zwraca `needs_input`.
-`TASK-174-04-04` promuje `custom-screen.update` i `custom-screen.widget.patch` do executable typed actions dla aktywnego custom screen; binding target jest rozpoznawany po `widgetId + propPath + field`, bez ujawniania entry payloadow.
-`TASK-190-06-01` przenosi kompozycje katalogowych admin review screens do `blueprintAdminSurfaceComposer`: helper sklada istniejace `screen-*` custom-screen blocks, waliduje referencje do pol content schema, odrzuca secret-like field refs i nadal zwraca obecny `custom-screen.upsert` `blocks` / `bindings` payload bez nowego layout DSL.
+`TASK-174-04-04` historycznie promowal `custom-screen.widget.patch`; po TASK-468 aktywne Custom Screen mutacje V4 ida przez `custom-screen.update` dla metadanych oraz `custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, i `custom-screen.list-view.patch` dla ekranu. Binding target jest rozpoznawany po `blockId + propPath + field`, bez ujawniania entry payloadow.
+`TASK-190-06-01` po TASK-468 sklada katalogowe admin review screens jako V4 `ScreenDocumentV1` sections/blocks w `definition`; helper waliduje referencje do pol content schema, odrzuca secret-like field refs i nie emituje legacy `screen-*` widget blocks ani `blocks` / `bindings` write payload.
 `TASK-190-06-02` przenosi binding composition do `blueprintBindingComposer` i rozszerza obecny custom-screen owner seam o top-level `collectionRole` / `compositionKey`; `custom-screen.upsert` oraz `custom-screen.update` moga przenosic te pola przez strict action schema, executor i `customScreenService` bez assistant-only metadata store.
 `TASK-174-04-05` promuje `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update` i `seo.document.update` do executable typed actions; wszystkie mutacje ida przez istniejace domain services i zachowuja unrelated fields/config.
 `TASK-190-05-03-05` promuje `detail-page.upsert` do executable typed action dla strict detail-page documents; execute przechodzi przez content-domain owner seam, odswieza `contentTypeSlug` z canonical content type, respektuje `DetailPageDocument.status` jako jedyny owner publish state, i nie przejmuje route-link ownership od `setting.content-route.upsert`.

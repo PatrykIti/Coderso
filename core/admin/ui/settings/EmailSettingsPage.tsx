@@ -448,14 +448,12 @@ export function EmailSettingsPage() {
             variant="outline"
             className={
               statusConfigured
-                ? "gap-2 border-emerald-200 bg-emerald-50 text-emerald-600"
-                : "gap-2 border-amber-200 bg-amber-50 text-amber-700"
+                ? "gap-2 border-transparent bg-success-soft text-success"
+                : "gap-2 border-transparent bg-warning-soft text-warning"
             }
           >
             <span
-              className={`h-2 w-2 rounded-full ${
-                statusConfigured ? "bg-emerald-500" : "bg-amber-500"
-              }`}
+              className={`h-2 w-2 rounded-full ${statusConfigured ? "bg-success" : "bg-warning"}`}
             />
             {statusConfigured ? "Connected" : "Needs setup"}
           </Badge>
@@ -464,7 +462,7 @@ export function EmailSettingsPage() {
     >
       <div className="flex min-h-full flex-col">
         <div className="flex-1">
-          <div className="border-b bg-background/70 px-6 py-4">
+          <div className="border-b border-border bg-card/70 px-6 py-4">
             <div className="space-y-1">
               <h1 className="text-2xl font-semibold">Email Settings</h1>
               <p className="text-sm text-muted-foreground">
@@ -542,8 +540,8 @@ export function EmailSettingsPage() {
                             variant="outline"
                             className={
                               settings?.resend.status === "connected"
-                                ? "border-emerald-200 text-emerald-600"
-                                : "border-amber-200 text-amber-700"
+                                ? "border-transparent bg-success-soft text-success"
+                                : "border-transparent bg-warning-soft text-warning"
                             }
                           >
                             {settings?.resend.status === "connected" ? "Connected" : "Needs key"}
@@ -657,8 +655,8 @@ export function EmailSettingsPage() {
                           variant="outline"
                           className={
                             statusConfigured
-                              ? "border-emerald-200 text-emerald-600"
-                              : "border-amber-200 text-amber-700"
+                              ? "border-transparent bg-success-soft text-success"
+                              : "border-transparent bg-warning-soft text-warning"
                           }
                         >
                           <CheckCircle2 className="h-3 w-3" />
@@ -668,7 +666,7 @@ export function EmailSettingsPage() {
                       <div className="h-2 rounded-full bg-muted">
                         <div
                           className={`h-full rounded-full ${
-                            statusConfigured ? "w-full bg-emerald-500" : "w-1/2 bg-amber-500"
+                            statusConfigured ? "w-full bg-success" : "w-1/2 bg-warning"
                           }`}
                         />
                       </div>
@@ -676,7 +674,7 @@ export function EmailSettingsPage() {
                       <div className="space-y-3">
                         {statusItems.map(({ title, description, icon: Icon }) => (
                           <div key={title} className="flex items-start gap-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-success-soft text-success">
                               <Icon className="h-4 w-4" />
                             </div>
                             <div>
@@ -699,13 +697,13 @@ export function EmailSettingsPage() {
                     </CardContent>
                   </Card>
 
-                  <Card className="border-blue-200/60 bg-blue-50/70">
+                  <Card className="border-transparent bg-info-soft">
                     <CardContent className="space-y-2 text-sm">
-                      <div className="flex items-center gap-2 text-blue-900">
+                      <div className="flex items-center gap-2 text-info">
                         <Info className="h-4 w-4 text-primary" />
                         <span className="font-semibold">Security Note</span>
                       </div>
-                      <p className="text-xs text-blue-700">
+                      <p className="text-xs text-info/90">
                         Store provider secrets only in protected settings screens. Delivery logs
                         show provider, status, and message IDs without credential payloads.
                       </p>
@@ -716,9 +714,9 @@ export function EmailSettingsPage() {
             </div>
           </div>
           {error ? <div className="px-6 pb-6 text-sm text-destructive">{error}</div> : null}
-          {success ? <div className="px-6 pb-6 text-sm text-emerald-600">{success}</div> : null}
+          {success ? <div className="px-6 pb-6 text-sm text-success">{success}</div> : null}
         </div>
-        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 z-10 border-t border-border bg-card/90 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Checkbox

@@ -974,8 +974,12 @@ test("ListingListPage deletes queries and shows action errors", async () => {
 
     const buttons = () => Array.from(view.container.querySelectorAll("button"));
     React.act(() => {
+      // TASK-479-16-L01: query records are cards now; delete is an icon button with
+      // an aria-label "Delete listing query: <name>".
       buttons()
-        .find((button) => button.textContent === "Delete")
+        .find((button) =>
+          (button.getAttribute("aria-label") ?? "").startsWith("Delete listing query")
+        )
         ?.click();
     });
     expect(listingsState.deleteQueryCalls).not.toContain("11111111-1111-4111-8111-111111111111");
@@ -1000,7 +1004,10 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
   try {
     await flush();
 
-    expect(view.container.textContent).toContain("Edit listing query");
+    // TASK-479-16-L02: editor header is the restyled PageHeader (title = query name)
+    // inside the rounded-2xl "Listing editor" frame; the ad-hoc "Edit listing query"
+    // heading was replaced.
+    expect(view.container.textContent).toContain("Listing editor");
     expect(view.container.textContent).toContain("Homepage listing");
     expect(listingsState.getDetailCalls).toContainEqual({ id: "query-1", force: true });
 
@@ -1098,7 +1105,10 @@ test("ListingEditorPage edits query state, previews normalized payload, discards
       pagination: { limit: 24, offset: 5 },
       fields: ["id", "title", "slug"],
     });
-    expect(view.container.textContent).toContain("1 matching row");
+    // TASK-479-16-L02: the canvas header shows the bound-query result count badge
+    // ("Bound query · N results"); the resolved rows stay inspectable in the cards.
+    expect(view.container.textContent).toContain("Bound query");
+    expect(view.container.textContent).toContain("1 results");
     expect(view.container.textContent).toContain("Preview row");
 
     clickButtonByText(view.container, "Discard");

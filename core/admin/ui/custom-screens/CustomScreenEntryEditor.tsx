@@ -1,13 +1,17 @@
-import { Save } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { RefreshCw, RotateCcw, Save, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -16,14 +20,19 @@ import {
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import {
+  getCachedScreenEntryOverrides,
   getCachedCustomScreen,
   getCustomScreenCached,
+  getScreenEntryOverridesCached,
+  replaceScreenEntryOverrides,
+  type CustomScreenEntryPresentationOverride,
   type CustomScreenRecord,
 } from "@/services/customScreensClient";
 import {
   createEntry,
   getCachedEntryDetail,
   getEntryCached,
+  listEntriesCached,
   updateEntry,
   type EntryDetail,
 } from "@/services/entriesClient";
@@ -33,17 +42,43 @@ import {
   setActiveAssistantSurfaceContext,
 } from "@/ui/assistant/activeSurfaceContext";
 import { EditorShell } from "@/ui/layouts/EditorShell";
-import { FieldRenderer } from "@/ui/entries/FieldRenderer";
+import { CanvasEditor } from "@/ui/shared/CanvasEditor";
+import { PageHeader } from "@/ui/shared/PageHeader";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
+import { MediaPicker } from "@/ui/media/MediaPicker";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { getRegisteredWidget } from "@/ui/widgets/registry";
+import {
+  normalizeCustomScreenDefinitionForRead,
+  type CustomScreenDefinition,
+  type CustomScreenEditorViewDefinitionV4,
+  type ScreenBlockV1,
+  type ScreenDocumentV1,
+  type ScreenFieldBinding,
+} from "../../../services/customScreens/customScreenSchemas";
+import {
+  screenEntryPresentationTextEmphasisValues,
+  screenEntryPresentationTextSizes,
+  screenEntryPresentationToneValues,
+  type ScreenEntryPresentationOverridePropPath,
+} from "../../../services/customScreens/screenEntryPresentationOverrideContract";
+import {
+  collectScreenDocumentBlocks,
+  findScreenBlockById,
+  getFirstScreenBlockId,
+} from "../../../services/customScreens/screenDocumentOps";
+import {
+  relatedEntriesMapEqual,
+  resolveRelatedEntries,
+  type RelatedEntrySummary,
+} from "../../../services/customScreens/relatedEntryResolver";
+import { readBindingPathValue } from "../../../services/utils/bindingPath";
 
 import { CustomScreenPreview } from "./CustomScreenPreview";
 import { CustomScreenEntryCanvas } from "./CustomScreenEntryCanvas";
+import { useScreenEntryPreferences } from "./hooks/useScreenEntryPreferences";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
 import { resolveCustomScreenEntryParams } from "./routeParams";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
-import { getWidgetBindings } from "../../../services/customScreens/bindingResolver";
 import type { ContentField } from "../content-types/SchemaBuilder";
 import {
   buildEditorViewCreatePayload,
@@ -55,65 +90,206 @@ import {
   type CustomScreenEntryDraft,
 } from "./customScreenEntryDraft";
 
-type DetailsTab = "record" | "element";
+const emptyScreenDocument: ScreenDocumentV1 = {
+  schemaVersion: 1,
+  sections: [],
+};
 
-const hasBlockId = (
-  blocks: Array<{ id: string; slots?: Record<string, unknown>; children?: unknown }>,
-  targetId: string
-): boolean =>
-  blocks.some((block) => {
-    if (block.id === targetId) return true;
-    const slotBlocks = block.slots
-      ? Object.values(block.slots).flatMap((value) =>
-          Array.isArray(value)
-            ? (value as Array<{ id: string; slots?: Record<string, unknown>; children?: unknown }>)
-            : []
-        )
-      : [];
-    const childBlocks = Array.isArray(block.children)
-      ? (block.children as Array<{
-          id: string;
-          slots?: Record<string, unknown>;
-          children?: unknown;
-        }>)
-      : [];
-    return hasBlockId([...slotBlocks, ...childBlocks], targetId);
+const emptyEditorView: CustomScreenEditorViewDefinitionV4 = {
+  document: emptyScreenDocument,
+  bindings: [],
+  saveMode: "entry",
+  interactionMode: "inline",
+};
+
+const resolveRuntimeDefinition = (screen: CustomScreenRecord): CustomScreenDefinition =>
+  normalizeCustomScreenDefinitionForRead({
+    definition: screen.definition,
+    schemaVersion: screen.schemaVersion,
+    blocks: screen.blocks,
+    bindings: screen.bindings,
   });
+
+const resolveRuntimeEditorView = (screen: CustomScreenRecord) =>
+  resolveRuntimeDefinition(screen).editorView;
+
+const resolveRuntimeDocument = (screen: CustomScreenRecord | null) =>
+  screen ? resolveRuntimeDefinition(screen).editorView.document : emptyScreenDocument;
+
+const resolveRuntimeBindings = (screen: CustomScreenRecord | null) =>
+  screen ? resolveRuntimeDefinition(screen).editorView.bindings : [];
 
 const preserveSelectedElementAcrossRefresh = (input: {
   selectedBlockId: string | null;
-  nextBlocks: Array<{ id: string; slots?: Record<string, unknown>; children?: unknown }>;
+  nextDocument: ScreenDocumentV1;
 }) => {
   if (!input.selectedBlockId) {
-    return input.nextBlocks[0]?.id ?? null;
+    return getFirstScreenBlockId(input.nextDocument);
   }
-  return hasBlockId(input.nextBlocks, input.selectedBlockId)
+  return findScreenBlockById(input.nextDocument, input.selectedBlockId)
     ? input.selectedBlockId
-    : (input.nextBlocks[0]?.id ?? null);
+    : getFirstScreenBlockId(input.nextDocument);
 };
 
-const findBlockById = <
-  T extends { id: string; slots?: Record<string, unknown>; children?: unknown },
->(
-  blocks: T[],
-  targetId: string | null
-): T | null => {
-  if (!targetId) return null;
-  for (const block of blocks) {
-    if (block.id === targetId) {
-      return block;
-    }
-    const slotBlocks = block.slots
-      ? Object.values(block.slots).flatMap((value) => (Array.isArray(value) ? (value as T[]) : []))
-      : [];
-    const childBlocks = Array.isArray(block.children) ? (block.children as T[]) : [];
-    const nestedMatch = findBlockById([...slotBlocks, ...childBlocks], targetId);
-    if (nestedMatch) {
-      return nestedMatch;
-    }
-  }
-  return null;
+const inheritPresentationValue = "__inherit__";
+const recordHeaderPresentationBindingPaths = new Set([
+  "title",
+  "eyebrow",
+  "subtitle",
+  "description",
+  "badge",
+]);
+const systemPresentationFieldNames = new Set([
+  "title",
+  "slug",
+  "status",
+  "createdAt",
+  "updatedAt",
+  "publishedAt",
+]);
+
+type PresentationTarget = {
+  block: ScreenBlockV1;
+  label: string;
+  supportsText: boolean;
+  mediaField: ContentField | null;
 };
+
+const presentationTextSizeOptions = screenEntryPresentationTextSizes.map((value) => ({
+  value,
+  label: value.toUpperCase(),
+}));
+
+const presentationTextEmphasisOptions = screenEntryPresentationTextEmphasisValues.map((value) => ({
+  value,
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+}));
+
+const presentationToneOptions = screenEntryPresentationToneValues.map((value) => ({
+  value,
+  label: value.charAt(0).toUpperCase() + value.slice(1),
+}));
+
+const presentationOverrideSort = (
+  left: CustomScreenEntryPresentationOverride,
+  right: CustomScreenEntryPresentationOverride
+) => {
+  const blockCompare = left.blockId.localeCompare(right.blockId);
+  return blockCompare === 0 ? left.propPath.localeCompare(right.propPath) : blockCompare;
+};
+
+const normalizePresentationOverrideOrder = (overrides: CustomScreenEntryPresentationOverride[]) =>
+  [...overrides].sort(presentationOverrideSort);
+
+const serializePresentationOverrides = (overrides: CustomScreenEntryPresentationOverride[]) =>
+  JSON.stringify(normalizePresentationOverrideOrder(overrides));
+
+const readString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+
+const findBinding = (bindings: ScreenFieldBinding[], blockId: string, propPath: string) =>
+  bindings.find((binding) => binding.blockId === blockId && binding.propPath === propPath) ?? null;
+
+const findContentField = (fields: ContentField[], fieldName: string) =>
+  fields.find((field) => field.name === fieldName) ?? null;
+
+const isResolvablePresentationField = (fields: ContentField[], fieldName: string) =>
+  systemPresentationFieldNames.has(fieldName) || Boolean(findContentField(fields, fieldName));
+
+const resolveFieldBlockFieldName = (block: ScreenBlockV1, bindings: ScreenFieldBinding[]) => {
+  const binding = findBinding(bindings, block.id, "value");
+  return binding?.field ?? readString(block.data.field);
+};
+
+const resolveBlockLabel = (block: ScreenBlockV1, fields: ContentField[]) => {
+  const dataLabel =
+    readString(block.data.label) ||
+    readString(block.data.title) ||
+    readString(block.data.content) ||
+    readString(block.label);
+  if (dataLabel) return dataLabel;
+  if (block.type === "field") {
+    const field = findContentField(fields, readString(block.data.field));
+    return field?.label ?? "Field";
+  }
+  if (block.type === "record-header") return "Record header";
+  if (block.type === "rich-text") return "Shared text";
+  return "Selected block";
+};
+
+const resolvePresentationTarget = (input: {
+  block: ScreenBlockV1 | null;
+  bindings: ScreenFieldBinding[];
+  fields: ContentField[];
+}): PresentationTarget | null => {
+  const { block, bindings, fields } = input;
+  if (!block) return null;
+
+  if (block.type === "rich-text") {
+    return {
+      block,
+      label: resolveBlockLabel(block, fields),
+      supportsText: true,
+      mediaField: null,
+    };
+  }
+
+  if (block.type === "record-header") {
+    const bindingsForHeader = bindings.filter(
+      (binding) =>
+        binding.blockId === block.id && recordHeaderPresentationBindingPaths.has(binding.propPath)
+    );
+    const bindingsResolvable = bindingsForHeader.every((binding) =>
+      isResolvablePresentationField(fields, binding.field)
+    );
+    if (!bindingsResolvable) return null;
+    return {
+      block,
+      label: resolveBlockLabel(block, fields),
+      supportsText: true,
+      mediaField: null,
+    };
+  }
+
+  if (block.type !== "field") return null;
+  const fieldName = resolveFieldBlockFieldName(block, bindings);
+  if (!fieldName || !isResolvablePresentationField(fields, fieldName)) return null;
+  const field = findContentField(fields, fieldName);
+  return {
+    block,
+    label: resolveBlockLabel(block, fields),
+    supportsText: true,
+    mediaField: field?.type === "media" ? field : null,
+  };
+};
+
+const upsertPresentationOverride = (
+  overrides: CustomScreenEntryPresentationOverride[],
+  blockId: string,
+  propPath: ScreenEntryPresentationOverridePropPath,
+  value: string | null
+) => {
+  const withoutTarget = overrides.filter((override) => {
+    if (override.blockId !== blockId) return true;
+    if (propPath === "mediaAssetId") {
+      return override.propPath !== "mediaAssetId" && override.propPath !== "image";
+    }
+    return override.propPath !== propPath;
+  });
+  if (!value) return normalizePresentationOverrideOrder(withoutTarget);
+  return normalizePresentationOverrideOrder([
+    ...withoutTarget,
+    {
+      blockId,
+      propPath,
+      value,
+    },
+  ]);
+};
+
+const removePresentationOverridesForBlock = (
+  overrides: CustomScreenEntryPresentationOverride[],
+  blockId: string
+) => overrides.filter((override) => override.blockId !== blockId);
 
 export function CustomScreenEntryEditor() {
   const { path, navigate } = useAdminRouter();
@@ -146,26 +322,24 @@ export function CustomScreenEntryEditor() {
     if (isCreateMode) {
       return buildInitialEntryDraft({
         contentType: initialContentType,
-        editorView: initialScreen.definition?.editorView ?? {
-          blocks: initialScreen.blocks,
-          bindings: initialScreen.bindings,
-          saveMode: "entry",
-          interactionMode: "inline",
-        },
+        editorView: resolveRuntimeEditorView(initialScreen),
       });
     }
     if (!initialEntry) return null;
     return hydrateEditorViewDraft({
       contentType: initialContentType,
-      editorView: initialScreen.definition?.editorView ?? {
-        blocks: initialScreen.blocks,
-        bindings: initialScreen.bindings,
-        saveMode: "entry",
-        interactionMode: "inline",
-      },
+      editorView: resolveRuntimeEditorView(initialScreen),
       entry: initialEntry,
     });
   }, [initialContentType, initialEntry, initialScreen, isCreateMode]);
+  const initialCachedPresentationOverrides = useMemo(
+    () =>
+      screenId && entryId && !isCreateMode
+        ? getCachedScreenEntryOverrides(screenId, entryId)
+        : null,
+    [entryId, isCreateMode, screenId]
+  );
+  const initialPresentationOverrides = initialCachedPresentationOverrides ?? [];
 
   const [screen, setScreen] = useState<CustomScreenRecord | null>(initialScreen);
   const [contentType, setContentType] = useState<ContentTypeSummary | null>(initialContentType);
@@ -188,9 +362,26 @@ export function CustomScreenEntryEditor() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const [activeDetailsTab, setActiveDetailsTab] = useState<DetailsTab>("record");
+  const [savedOverrides, setSavedOverrides] = useState<CustomScreenEntryPresentationOverride[]>(
+    initialPresentationOverrides
+  );
+  const [draftOverrides, setDraftOverrides] = useState<CustomScreenEntryPresentationOverride[]>(
+    initialPresentationOverrides
+  );
+  const [isPresentationLoading, setIsPresentationLoading] = useState(
+    () =>
+      !isCreateMode && Boolean(screenId && entryId) && initialCachedPresentationOverrides === null
+  );
+  const [isPresentationSaving, setIsPresentationSaving] = useState(false);
+  const [presentationError, setPresentationError] = useState<string | null>(null);
+  const [remotePresentationUpdatePending, setRemotePresentationUpdatePending] = useState(false);
   const [selectedRuntimeBlockId, setSelectedRuntimeBlockId] = useState<string | null>(null);
+  // TASK-503-03: per-user entry-view badge preference (localStorage, default OFF).
+  const { preferences: entryPreferences, setPreferences: setEntryPreferences } =
+    useScreenEntryPreferences();
+  // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
+  // (bottom-docked inline format/presentation panel).
+  const [panelOpen, setPanelOpen] = useState(true);
   const [relationTargets, setRelationTargets] = useState<Array<{ slug: string; name: string }>>(
     () =>
       (getCachedContentTypes() ?? []).map((item) => ({
@@ -200,46 +391,52 @@ export function CustomScreenEntryEditor() {
   );
 
   const schemaFieldNames = useMemo(() => new Set(fields.map((field) => field.name)), [fields]);
-  const readOnlyBindingCount = useMemo(
-    () => screen?.bindings.filter((binding) => binding.mode === "read").length ?? 0,
-    [screen]
-  );
   const screenCapabilities = useMemo(
     () =>
       screen?.capabilities ??
       resolveCustomScreenCapabilities({
-        definition: screen?.definition,
-        blocks: screen?.blocks,
-        bindings: screen?.bindings,
+        definition: screen ? resolveRuntimeDefinition(screen) : undefined,
       }),
     [screen]
   );
   const canEditInScreen = screenCapabilities.supportsDedicatedEditor;
-  const runtimeBlocks = useMemo(
-    () => screen?.definition?.editorView.blocks ?? screen?.blocks ?? [],
-    [screen]
-  );
-  const runtimeBindings = useMemo(
-    () => screen?.definition?.editorView.bindings ?? screen?.bindings ?? [],
-    [screen]
-  );
+  const runtimeDocument = useMemo(() => resolveRuntimeDocument(screen), [screen]);
+  const runtimeBindings = useMemo(() => resolveRuntimeBindings(screen), [screen]);
   const selectedRuntimeBlock = useMemo(
-    () => findBlockById(runtimeBlocks, selectedRuntimeBlockId),
-    [runtimeBlocks, selectedRuntimeBlockId]
-  );
-  const selectedRuntimeWidget = selectedRuntimeBlock
-    ? getRegisteredWidget(selectedRuntimeBlock.type)
-    : null;
-  const selectedRuntimeBindings = useMemo(
     () =>
-      selectedRuntimeBlock
-        ? getWidgetBindings(runtimeBindings, selectedRuntimeBlock.id, {
-            includeRead: true,
-            includeWrite: true,
-          })
-        : [],
-    [runtimeBindings, selectedRuntimeBlock]
+      selectedRuntimeBlockId ? findScreenBlockById(runtimeDocument, selectedRuntimeBlockId) : null,
+    [runtimeDocument, selectedRuntimeBlockId]
   );
+  const selectedPresentationTarget = useMemo(
+    () =>
+      resolvePresentationTarget({
+        block: selectedRuntimeBlock,
+        bindings: runtimeBindings,
+        fields,
+      }),
+    [fields, runtimeBindings, selectedRuntimeBlock]
+  );
+  const savedPresentationKey = useMemo(
+    () => serializePresentationOverrides(savedOverrides),
+    [savedOverrides]
+  );
+  const draftPresentationKey = useMemo(
+    () => serializePresentationOverrides(draftOverrides),
+    [draftOverrides]
+  );
+  const hasUnsavedPresentationChanges = savedPresentationKey !== draftPresentationKey;
+  const hasUnsavedPresentationChangesRef = useRef(hasUnsavedPresentationChanges);
+  const overrideCacheKey = useMemo(
+    () =>
+      screenId && entryId && !isCreateMode
+        ? cacheKeys.customScreenEntryOverrides(screenId, entryId)
+        : null,
+    [entryId, isCreateMode, screenId]
+  );
+
+  useEffect(() => {
+    hasUnsavedPresentationChangesRef.current = hasUnsavedPresentationChanges;
+  }, [hasUnsavedPresentationChanges]);
 
   useEffect(() => {
     if (!screen || !screenId || !entryId) {
@@ -250,14 +447,20 @@ export function CustomScreenEntryEditor() {
     setActiveAssistantSurfaceContext(
       buildCustomScreenAssistantSurface({
         screen,
-        blocks: runtimeBlocks,
+        blocks: runtimeDocument.sections.flatMap((section) => section.blocks),
         bindings: runtimeBindings,
         capabilities: screenCapabilities,
         selectedBlockId: selectedRuntimeBlockId,
         selectedEntryId: entryId,
         warnings: [
           ...(hasUnsavedChanges ? ["custom_screen_entry_has_unsaved_changes"] : []),
+          ...(hasUnsavedPresentationChanges
+            ? ["custom_screen_entry_presentation_has_unsaved_changes"]
+            : []),
           ...(remoteUpdatePending ? ["custom_screen_entry_remote_update_pending"] : []),
+          ...(remotePresentationUpdatePending
+            ? ["custom_screen_entry_presentation_remote_update_pending"]
+            : []),
         ],
       })
     );
@@ -268,11 +471,13 @@ export function CustomScreenEntryEditor() {
   }, [
     entryId,
     hasUnsavedChanges,
+    hasUnsavedPresentationChanges,
     remoteUpdatePending,
+    remotePresentationUpdatePending,
     screen,
     screenCapabilities,
     screenId,
-    runtimeBlocks,
+    runtimeDocument.sections,
     runtimeBindings,
     selectedRuntimeBlockId,
   ]);
@@ -284,12 +489,7 @@ export function CustomScreenEntryEditor() {
       nextEntry: EntryDetail | null
     ) => {
       const nextFields = fieldsFromSchema(nextContentType.schema);
-      const editorView = nextScreen.definition?.editorView ?? {
-        blocks: nextScreen.blocks,
-        bindings: nextScreen.bindings,
-        saveMode: "entry" as const,
-        interactionMode: "inline" as const,
-      };
+      const editorView = resolveRuntimeEditorView(nextScreen);
       const nextDraft = nextEntry
         ? hydrateEditorViewDraft({
             contentType: nextContentType,
@@ -312,16 +512,53 @@ export function CustomScreenEntryEditor() {
       setFieldErrors({});
       setHasUnsavedChanges(false);
       setRemoteUpdatePending(false);
-      const nextBlocks = nextScreen.definition?.editorView.blocks ?? nextScreen.blocks;
+      const nextDocument = resolveRuntimeDocument(nextScreen);
       setSelectedRuntimeBlockId((current) =>
         preserveSelectedElementAcrossRefresh({
           selectedBlockId: current,
-          nextBlocks,
+          nextDocument,
         })
       );
       setError(null);
     },
     []
+  );
+
+  const applyLoadedPresentationOverrides = useCallback(
+    (overrides: CustomScreenEntryPresentationOverride[], options?: { keepUnsaved?: boolean }) => {
+      if (options?.keepUnsaved && hasUnsavedPresentationChangesRef.current) {
+        setRemotePresentationUpdatePending(true);
+        return;
+      }
+      const ordered = normalizePresentationOverrideOrder(overrides);
+      setSavedOverrides(ordered);
+      setDraftOverrides(ordered);
+      setRemotePresentationUpdatePending(false);
+      setPresentationError(null);
+    },
+    []
+  );
+
+  const refreshPresentation = useCallback(
+    async (force = false, options?: { keepUnsaved?: boolean; background?: boolean }) => {
+      if (!screenId || !entryId || isCreateMode) return;
+      if (!options?.background) setIsPresentationLoading(true);
+      try {
+        const overrides = await getScreenEntryOverridesCached(screenId, entryId, { force });
+        applyLoadedPresentationOverrides(overrides, {
+          keepUnsaved: options?.keepUnsaved,
+        });
+      } catch (err) {
+        if (isApiClientError(err)) {
+          setPresentationError(err.message);
+        } else {
+          setPresentationError("Failed to load presentation overrides.");
+        }
+      } finally {
+        if (!options?.background) setIsPresentationLoading(false);
+      }
+    },
+    [applyLoadedPresentationOverrides, entryId, isCreateMode, screenId]
   );
 
   const refresh = useCallback(
@@ -421,6 +658,54 @@ export function CustomScreenEntryEditor() {
   }, [applyLoadedState, entryId, isCreateMode, screenId]);
 
   useEffect(() => {
+    let active = true;
+    const loadPresentationOverrides = async () => {
+      if (!screenId || !entryId || isCreateMode) {
+        if (!active) return;
+        setSavedOverrides([]);
+        setDraftOverrides([]);
+        setRemotePresentationUpdatePending(false);
+        setPresentationError(null);
+        setIsPresentationLoading(false);
+        return;
+      }
+
+      const cached = getCachedScreenEntryOverrides(screenId, entryId);
+      if (cached) {
+        if (!active) return;
+        applyLoadedPresentationOverrides(cached);
+        setIsPresentationLoading(false);
+      } else {
+        if (!active) return;
+        setSavedOverrides([]);
+        setDraftOverrides([]);
+        setIsPresentationLoading(true);
+      }
+
+      try {
+        const overrides = await getScreenEntryOverridesCached(screenId, entryId, { force: true });
+        if (!active) return;
+        applyLoadedPresentationOverrides(overrides, { keepUnsaved: true });
+      } catch (err) {
+        if (!active) return;
+        if (isApiClientError(err)) {
+          setPresentationError(err.message);
+        } else {
+          setPresentationError("Failed to load presentation overrides.");
+        }
+      } finally {
+        if (active) setIsPresentationLoading(false);
+      }
+    };
+
+    void Promise.resolve().then(loadPresentationOverrides);
+
+    return () => {
+      active = false;
+    };
+  }, [applyLoadedPresentationOverrides, entryId, isCreateMode, screenId]);
+
+  useEffect(() => {
     listContentTypesCached({ force: true })
       .then((items) =>
         setRelationTargets(items.map((item) => ({ slug: item.slug, name: item.name })))
@@ -431,6 +716,10 @@ export function CustomScreenEntryEditor() {
   useEffect(() => {
     if (!screenId || !entryId || !contentType) return undefined;
     return subscribeCacheEvents((event) => {
+      if (overrideCacheKey && event.key === overrideCacheKey) {
+        refreshPresentation(true, { keepUnsaved: true, background: true }).catch(() => undefined);
+        return;
+      }
       if (
         event.key === cacheKeys.customScreensList ||
         event.key === cacheKeys.customScreenDetail(screenId) ||
@@ -439,7 +728,15 @@ export function CustomScreenEntryEditor() {
         refresh(true, { keepUnsaved: true }).catch(() => undefined);
       }
     });
-  }, [contentType, entryId, isCreateMode, refresh, screenId]);
+  }, [
+    contentType,
+    entryId,
+    isCreateMode,
+    overrideCacheKey,
+    refresh,
+    refreshPresentation,
+    screenId,
+  ]);
 
   const handleFieldChange = (name: string, value: unknown) => {
     setValues((current) => ({ ...current, [name]: value }));
@@ -498,97 +795,76 @@ export function CustomScreenEntryEditor() {
     publishedAt: entry?.publishedAt ?? null,
   });
 
-  const renderSelectedBlockBindingEditor = () => {
-    if (!selectedRuntimeBlock) {
-      return (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          Click a widget on the canvas to inspect and edit its bound content fields.
-        </div>
+  // TASK-498-03 B3.4 — STABLE `values` source for the related-list precompute effect.
+  // buildPayloadData/buildCanvasFieldValues return a FRESH object every render; feeding
+  // that straight into the effect would loop (fresh values → effect → setState → re-render).
+  // Memoize the merged payload over its real inputs so the effect only re-runs when the
+  // underlying entry data actually changes. Fed to BOTH the canvas renderer AND the effect.
+  const canvasFieldValues = useMemo<Record<string, unknown>>(
+    () => buildCanvasFieldValues(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [originalData, editableFields, values, schemaFieldNames, title, slug, entry]
+  );
+
+  // TASK-498-03 B3.4 — OWNER host: precompute the related-list `relatedEntries` map for
+  // every related-list block in the document via the EXISTING entries-read
+  // (`listEntriesCached`, no new route). The SAME map feeds both `canEditInScreen`
+  // branches (editable canvas + read-only preview). Diff-guarded to avoid a setState loop.
+  const [relatedEntries, setRelatedEntries] = useState<Record<string, RelatedEntrySummary[]>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const blocks = collectScreenDocumentBlocks(runtimeDocument).filter(
+        (block) => block.type === "related-list"
       );
-    }
-
-    if (selectedRuntimeBindings.length === 0) {
-      return (
-        <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-          This widget has no bindings yet. Add them in the builder `Data` tab.
-        </div>
-      );
-    }
-
-    const systemFieldMap = new Map<string, { label: string; editable: boolean }>([
-      ["title", { label: "Title", editable: true }],
-      ["slug", { label: "Slug", editable: true }],
-      ["status", { label: "Status", editable: false }],
-      ["createdAt", { label: "Created", editable: false }],
-      ["updatedAt", { label: "Updated", editable: false }],
-      ["publishedAt", { label: "Published", editable: false }],
-    ]);
-
-    return (
-      <div className="space-y-3">
-        {selectedRuntimeBindings.map((binding) => {
-          const field = fields.find((item) => item.name === binding.field) ?? null;
-          const systemField = systemFieldMap.get(binding.field) ?? null;
-
-          if (field) {
-            return (
-              <div key={binding.id} className="rounded-lg border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {binding.propPath}
-                </p>
-                <p className="mb-3 text-sm font-medium">{field.label}</p>
-                <FieldRenderer
-                  field={field}
-                  value={values[binding.field]}
-                  onChange={(next: unknown) => handleFieldChange(binding.field, next)}
-                  relationTargets={relationTargets}
-                  display="compact"
-                />
-                {fieldErrors[binding.field] ? (
-                  <p className="mt-2 text-xs text-destructive">{fieldErrors[binding.field]}</p>
-                ) : null}
-              </div>
-            );
-          }
-
-          if (systemField?.editable) {
-            const value = binding.field === "title" ? title : slug;
-            const onChange = binding.field === "title" ? handleTitleChange : handleSlugChange;
-            return (
-              <div key={binding.id} className="rounded-lg border p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  {binding.propPath}
-                </p>
-                <p className="mb-3 text-sm font-medium">{systemField.label}</p>
-                <Input
-                  value={value}
-                  onChange={(event) => onChange(event.target.value)}
-                  className="h-9"
-                />
-                {fieldErrors[binding.field] ? (
-                  <p className="mt-2 text-xs text-destructive">{fieldErrors[binding.field]}</p>
-                ) : null}
-              </div>
-            );
-          }
-
-          return (
-            <div key={binding.id} className="rounded-lg border p-3">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                {binding.propPath}
-              </p>
-              <p className="mb-1 text-sm font-medium">{systemField?.label ?? binding.field}</p>
-              <p className="text-sm text-muted-foreground">
-                {String(
-                  (buildCanvasFieldValues() as Record<string, unknown>)[binding.field] ?? "—"
-                )}
-              </p>
-            </div>
+      if (blocks.length === 0) {
+        // block-GUARD: zero fetch when the document has no related-list block.
+        if (!cancelled) {
+          setRelatedEntries((current) => (Object.keys(current).length === 0 ? current : {}));
+        }
+        return;
+      }
+      const pairs = await Promise.all(
+        blocks.map(async (block) => {
+          const binding = runtimeBindings.find(
+            (bd) => bd.blockId === block.id && bd.propPath === "items"
           );
-        })}
-      </div>
-    );
-  };
+          if (!binding) return [block.id, [] as RelatedEntrySummary[]] as const;
+          const ids = readBindingPathValue(canvasFieldValues, binding.field) as
+            | string[]
+            | string
+            | null
+            | undefined;
+          const data = (block.data ?? {}) as {
+            displayField?: string;
+            limit?: number;
+            target?: string;
+          };
+          // DERIVE target from the bound relation field (authoritative); stored
+          // data.target is only a fallback. `(fields ?? [])` — fields is optional.
+          const target =
+            (fields ?? []).find((f) => f.name === binding.field)?.relation?.target ??
+            data.target ??
+            "";
+          const rows = await resolveRelatedEntries({
+            ids,
+            target,
+            displayField: data.displayField,
+            limit: data.limit,
+            readEntries: (t) => listEntriesCached(t),
+          });
+          return [block.id, rows] as const;
+        })
+      );
+      if (cancelled) return;
+      const next = Object.fromEntries(pairs) as Record<string, RelatedEntrySummary[]>;
+      setRelatedEntries((current) => (relatedEntriesMapEqual(current, next) ? current : next));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [runtimeDocument, runtimeBindings, canvasFieldValues, fields]);
 
   const handleSave = async () => {
     if (!contentType || !entryId) return;
@@ -622,12 +898,7 @@ export function CustomScreenEntryEditor() {
       setSlug(saved.slug);
       const savedDraft = hydrateEditorViewDraft({
         contentType,
-        editorView: screen?.definition?.editorView ?? {
-          blocks: screen?.blocks ?? [],
-          bindings: screen?.bindings ?? [],
-          saveMode: "entry",
-          interactionMode: "inline",
-        },
+        editorView: screen ? resolveRuntimeEditorView(screen) : emptyEditorView,
         entry: saved,
       });
       setValues(savedDraft.data);
@@ -661,68 +932,243 @@ export function CustomScreenEntryEditor() {
     }
   };
 
-  const detailsPanel = (
-    <Tabs
-      value={activeDetailsTab}
-      onValueChange={(next) => setActiveDetailsTab(next as DetailsTab)}
-      className="flex h-full flex-col p-6"
-    >
-      <TabsList variant="line" className="px-1">
-        <TabsTrigger value="record">Record</TabsTrigger>
-        <TabsTrigger value="element">Selected Element</TabsTrigger>
-      </TabsList>
-      <TabsContent value="record" className="mt-4 space-y-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium">Workspace details</p>
-          <p className="text-xs text-muted-foreground">
-            {canEditInScreen
-              ? "This record is edited directly through the screen-owned canvas."
-              : "This screen is not yet ready for the screen-owned editor workflow."}
-          </p>
+  const readSelectedPresentationOverride = (propPath: ScreenEntryPresentationOverridePropPath) => {
+    if (!selectedPresentationTarget) return null;
+    return (
+      draftOverrides.find(
+        (override) =>
+          override.blockId === selectedPresentationTarget.block.id && override.propPath === propPath
+      )?.value ?? null
+    );
+  };
+
+  const handleSelectedPresentationChange = (
+    propPath: ScreenEntryPresentationOverridePropPath,
+    value: string | null
+  ) => {
+    if (!selectedPresentationTarget) return;
+    setDraftOverrides((current) =>
+      upsertPresentationOverride(current, selectedPresentationTarget.block.id, propPath, value)
+    );
+    setPresentationError(null);
+  };
+
+  const handleClearSelectedPresentation = () => {
+    if (!selectedPresentationTarget) return;
+    setDraftOverrides((current) =>
+      removePresentationOverridesForBlock(current, selectedPresentationTarget.block.id)
+    );
+    setPresentationError(null);
+  };
+
+  const handleSavePresentation = async () => {
+    if (!screenId || !entryId || isCreateMode) return;
+    setIsPresentationSaving(true);
+    setPresentationError(null);
+    try {
+      const saved = await replaceScreenEntryOverrides(screenId, entryId, draftOverrides);
+      applyLoadedPresentationOverrides(saved);
+    } catch (err) {
+      if (isApiClientError(err)) {
+        setPresentationError(err.message);
+      } else {
+        setPresentationError("Failed to save presentation overrides.");
+      }
+    } finally {
+      setIsPresentationSaving(false);
+    }
+  };
+
+  const handleReloadPresentation = () => {
+    refreshPresentation(true).catch(() => undefined);
+  };
+
+  const selectedPresentationOverrideCount = selectedPresentationTarget
+    ? draftOverrides.filter((override) => override.blockId === selectedPresentationTarget.block.id)
+        .length
+    : 0;
+  const selectedTextSize = readSelectedPresentationOverride("textSize") ?? inheritPresentationValue;
+  const selectedTextEmphasis =
+    readSelectedPresentationOverride("textEmphasis") ?? inheritPresentationValue;
+  const selectedTone = readSelectedPresentationOverride("tone") ?? inheritPresentationValue;
+  const selectedMediaAssetId =
+    readSelectedPresentationOverride("mediaAssetId") ??
+    readSelectedPresentationOverride("image") ??
+    null;
+
+  const presentationPanel =
+    screen && canEditInScreen && !isCreateMode && selectedPresentationTarget ? (
+      <div
+        className="rounded-2xl border border-border bg-card p-4 shadow-soft"
+        data-custom-screen-entry-presentation-panel="true"
+      >
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold">Presentation</p>
+              <Badge variant="outline" className="text-[10px] uppercase">
+                {selectedPresentationTarget.label}
+              </Badge>
+              {hasUnsavedPresentationChanges ? (
+                <Badge variant="secondary" className="text-[10px] uppercase">
+                  Unsaved presentation
+                </Badge>
+              ) : null}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Overrides are scoped to this record and selected block.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              className="gap-2"
+              onClick={handleSavePresentation}
+              disabled={
+                isPresentationSaving || isPresentationLoading || !hasUnsavedPresentationChanges
+              }
+            >
+              <Save className="h-4 w-4" />
+              {isPresentationSaving ? "Saving..." : "Save presentation"}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={handleReloadPresentation}
+              disabled={isPresentationSaving || isPresentationLoading}
+            >
+              <RefreshCw className="h-4 w-4" />
+              Reload presentation
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="gap-2"
+              onClick={handleClearSelectedPresentation}
+              disabled={selectedPresentationOverrideCount === 0 || isPresentationSaving}
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear selected presentation
+            </Button>
+          </div>
         </div>
 
-        {!canEditInScreen ? (
-          <div className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-sm text-muted-foreground">
-            Use the builder to add writable screen widgets and bindings before using this record
-            route as the active editor flow.
-          </div>
-        ) : (
-          <>
-            <div className="space-y-2 rounded-lg border p-3">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Title
-              </label>
-              <Input value={title} onChange={(event) => handleTitleChange(event.target.value)} />
-            </div>
-            <div className="space-y-2 rounded-lg border p-3">
-              <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Slug
-              </label>
-              <Input value={slug} onChange={(event) => handleSlugChange(event.target.value)} />
-            </div>
-          </>
-        )}
+        {presentationError ? (
+          <Alert variant="destructive" className="mt-4">
+            <AlertTitle>Presentation error</AlertTitle>
+            <AlertDescription>{presentationError}</AlertDescription>
+          </Alert>
+        ) : null}
 
-        {readOnlyBindingCount > 0 ? (
-          <div className="rounded-lg border bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
-            {readOnlyBindingCount} binding{readOnlyBindingCount === 1 ? "" : "s"} are preview-only
-            and remain read-only in this screen workflow.
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {selectedPresentationTarget.supportsText ? (
+            <>
+              <div className="space-y-1" data-presentation-control="textSize">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Text size
+                </label>
+                <Select
+                  value={selectedTextSize}
+                  onValueChange={(next) =>
+                    handleSelectedPresentationChange(
+                      "textSize",
+                      next === inheritPresentationValue ? null : next
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Inherit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={inheritPresentationValue}>Inherit</SelectItem>
+                    {presentationTextSizeOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1" data-presentation-control="textEmphasis">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Emphasis
+                </label>
+                <Select
+                  value={selectedTextEmphasis}
+                  onValueChange={(next) =>
+                    handleSelectedPresentationChange(
+                      "textEmphasis",
+                      next === inheritPresentationValue ? null : next
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Inherit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={inheritPresentationValue}>Inherit</SelectItem>
+                    {presentationTextEmphasisOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1" data-presentation-control="tone">
+                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Tone
+                </label>
+                <Select
+                  value={selectedTone}
+                  onValueChange={(next) =>
+                    handleSelectedPresentationChange(
+                      "tone",
+                      next === inheritPresentationValue ? null : next
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Inherit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={inheritPresentationValue}>Inherit</SelectItem>
+                    {presentationToneOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        {selectedPresentationTarget.mediaField ? (
+          <div className="mt-4" data-presentation-control="mediaAssetId">
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Media override
+            </label>
+            <MediaPicker
+              value={selectedMediaAssetId}
+              onChange={(next) =>
+                handleSelectedPresentationChange(
+                  "mediaAssetId",
+                  typeof next === "string" && next.trim() ? next : null
+                )
+              }
+              multiple={false}
+              accept={selectedPresentationTarget.mediaField.media?.accept}
+            />
           </div>
         ) : null}
-      </TabsContent>
-      <TabsContent value="element" className="mt-4 space-y-4">
-        <div className="space-y-1">
-          <p className="text-sm font-medium">
-            {selectedRuntimeWidget?.title ?? "Selected element"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Click a widget on the canvas and use the pencil action to focus its bound content here.
-          </p>
-        </div>
-        {renderSelectedBlockBindingEditor()}
-      </TabsContent>
-    </Tabs>
-  );
+      </div>
+    ) : null;
 
   const screenRecordsHref = screenId
     ? `/advanced/custom-screens/${encodeURIComponent(screenId)}/entries`
@@ -757,7 +1203,7 @@ export function CustomScreenEntryEditor() {
               </Badge>
             ) : null}
             {hasUnsavedChanges ? (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800">
+              <span className="rounded-full bg-warning-soft px-2 py-0.5 text-[10px] font-semibold uppercase text-warning">
                 Unsaved changes
               </span>
             ) : null}
@@ -774,23 +1220,10 @@ export function CustomScreenEntryEditor() {
             ) : null}
           </div>
         }
+        variant="canvas"
       >
-        <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-6 py-3 backdrop-blur">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3">
-            <div className="space-y-1">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Screen-owned record editor
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {canEditInScreen
-                  ? "The canvas is the active editing surface for this record."
-                  : "This screen still needs writable bindings before it can replace legacy editing paths."}
-              </p>
-            </div>
-          </div>
-        </div>
-        <ScrollArea className="flex-1 min-h-0">
-          <div className="mx-auto flex max-w-5xl flex-col gap-6 px-6 py-8">
+        {error || remoteUpdatePending || remotePresentationUpdatePending || !canEditInScreen ? (
+          <div className="shrink-0 space-y-3 px-6 pt-4">
             {error ? (
               <Alert variant="destructive">
                 <AlertTitle>Custom screen record error</AlertTitle>
@@ -808,6 +1241,23 @@ export function CustomScreenEntryEditor() {
                 </AlertDescription>
               </Alert>
             ) : null}
+            {remotePresentationUpdatePending ? (
+              <Alert>
+                <AlertTitle>Presentation updated elsewhere</AlertTitle>
+                <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>New presentation changes are available for this record.</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={handleReloadPresentation}
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                    Reload presentation
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            ) : null}
             {!canEditInScreen ? (
               <Alert>
                 <AlertTitle>Workspace upgrade required</AlertTitle>
@@ -817,59 +1267,111 @@ export function CustomScreenEntryEditor() {
                 </AlertDescription>
               </Alert>
             ) : null}
-
-            {isLoading ? (
-              <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-                Loading custom screen record...
-              </div>
-            ) : screen && canEditInScreen ? (
-              <CustomScreenEntryCanvas
-                blocks={screen.definition?.editorView.blocks ?? screen.blocks}
-                bindings={screen.definition?.editorView.bindings ?? screen.bindings}
-                fieldValues={buildCanvasFieldValues()}
-                fieldErrors={fieldErrors}
-                fields={fields}
-                relationTargets={relationTargets}
-                onFieldChange={handleFieldChange}
-                onTitleChange={handleTitleChange}
-                onSlugChange={handleSlugChange}
-                selectedBlockId={selectedRuntimeBlockId}
-                onSelectBlock={(blockId) => {
-                  setSelectedRuntimeBlockId(blockId);
-                  setActiveDetailsTab("element");
-                }}
-                onEditBlock={(blockId) => {
-                  setSelectedRuntimeBlockId(blockId);
-                  setActiveDetailsTab("element");
-                  setDetailsOpen(true);
-                }}
-              />
-            ) : screen ? (
-              <CustomScreenPreview
-                blocks={screen.definition?.editorView.blocks ?? screen.blocks}
-                bindings={screen.definition?.editorView.bindings ?? screen.bindings}
-                data={buildPayloadData()}
-                emptyTitle="Editor upgrade required"
-                emptyMessage="Add writable screen widgets and bindings in the builder before using this route as the dedicated record editor."
-              />
-            ) : (
-              <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-                Screen record unavailable.
-              </div>
-            )}
           </div>
-        </ScrollArea>
-      </EditorShell>
+        ) : null}
 
-      <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent side="right" className="w-96 p-0">
-          <SheetTitle className="sr-only">Bound fields</SheetTitle>
-          <SheetDescription className="sr-only">
-            Edit the content fields mapped by this custom screen.
-          </SheetDescription>
-          <ScrollArea className="h-full">{detailsPanel}</ScrollArea>
-        </SheetContent>
-      </Sheet>
+        {isLoading ? (
+          <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
+            Loading custom screen record...
+          </div>
+        ) : screen && canEditInScreen ? (
+          <div className="flex min-h-0 flex-1 flex-col" data-custom-screen-entry-document="true">
+            <CanvasEditor
+              header={
+                <PageHeader
+                  className="mb-0 shrink-0 px-6 pb-3 pt-4"
+                  title={entry?.title?.trim() || (isCreateMode ? "New record" : "Record")}
+                  description={
+                    canEditInScreen
+                      ? "The canvas is the active editing surface for this record."
+                      : "This screen still needs writable bindings before it can replace legacy editing paths."
+                  }
+                />
+              }
+              title="Entry content"
+              badge={
+                hasUnsavedChanges ? (
+                  <Badge variant="warning" className="text-[10px] font-semibold uppercase">
+                    Unsaved
+                  </Badge>
+                ) : null
+              }
+              toolbar={
+                <label
+                  className="flex items-center gap-2 text-xs font-medium text-muted-foreground"
+                  data-screen-entry-metadata-toggle="true"
+                >
+                  <span>Field metadata</span>
+                  <Switch
+                    size="sm"
+                    checked={entryPreferences.showFieldMetadata}
+                    onCheckedChange={(checked) =>
+                      setEntryPreferences({
+                        ...entryPreferences,
+                        showFieldMetadata: checked,
+                      })
+                    }
+                    aria-label="Show field metadata"
+                  />
+                </label>
+              }
+              panelPosition="bottom"
+              panel={presentationPanel}
+              panelOpen={panelOpen}
+              onPanelOpenChange={setPanelOpen}
+              panelAriaLabel="Record presentation"
+              panelDataProps={{ "data-screen-editor-panel": "true" }}
+              canvas={
+                <div
+                  className="min-h-0 flex-1 overflow-auto overscroll-contain p-6 lg:p-8"
+                  data-screen-editor-canvas-scroller="true"
+                  style={panelOpen && presentationPanel ? { paddingBottom: 260 } : undefined}
+                  onClick={() => {
+                    setSelectedRuntimeBlockId(null);
+                  }}
+                >
+                  <div className="mx-auto w-full max-w-3xl">
+                    <CustomScreenEntryCanvas
+                      document={runtimeDocument}
+                      bindings={runtimeBindings}
+                      fieldValues={canvasFieldValues}
+                      fieldErrors={fieldErrors}
+                      fields={fields}
+                      relationTargets={relationTargets}
+                      relatedEntries={relatedEntries}
+                      onFieldChange={handleFieldChange}
+                      onTitleChange={handleTitleChange}
+                      onSlugChange={handleSlugChange}
+                      presentationOverrides={draftOverrides}
+                      selectedBlockId={selectedRuntimeBlockId}
+                      onSelectBlock={setSelectedRuntimeBlockId}
+                      showFieldMetadata={entryPreferences.showFieldMetadata}
+                    />
+                  </div>
+                </div>
+              }
+            />
+          </div>
+        ) : screen ? (
+          <div className="min-h-0 flex-1 overflow-auto px-6 py-8">
+            <div className="mx-auto max-w-5xl">
+              <CustomScreenPreview
+                document={runtimeDocument}
+                bindings={runtimeBindings}
+                data={buildPayloadData()}
+                fields={fields}
+                relatedEntries={relatedEntries}
+                emptyTitle="Editor upgrade required"
+                emptyMessage="Add writable screen blocks and bindings in the builder before using this route as the dedicated record editor."
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="mx-6 mb-6 rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-card">
+            Screen record unavailable.
+          </div>
+        )}
+      </EditorShell>
     </>
   );
 }

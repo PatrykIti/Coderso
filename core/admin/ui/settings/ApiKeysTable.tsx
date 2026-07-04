@@ -24,9 +24,10 @@ import { getScopeLabel } from "./apiKeyScopes";
 
 type ApiKeyStatus = "active" | "revoked";
 
+// TASK-479-28-L05: token-driven status tints (no raw emerald/rose palette).
 const statusStyles: Record<ApiKeyStatus, string> = {
-  active: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
-  revoked: "border-rose-500/30 bg-rose-500/10 text-rose-600",
+  active: "border-transparent bg-success-soft text-success",
+  revoked: "border-transparent bg-destructive/12 text-destructive",
 };
 
 const statusLabels: Record<ApiKeyStatus, string> = {
@@ -35,7 +36,7 @@ const statusLabels: Record<ApiKeyStatus, string> = {
 };
 
 const scopeBadgeClass =
-  "border-primary/20 bg-primary/10 text-primary text-[10px] font-semibold uppercase tracking-wide";
+  "border-transparent bg-primary-soft text-primary-soft-foreground text-[10px] font-semibold uppercase tracking-wide";
 
 type ApiKeysTableProps = {
   items: ApiKeyRecord[];
@@ -83,7 +84,7 @@ export function ApiKeysTable({
   onRevoke,
 }: ApiKeysTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
@@ -130,27 +131,19 @@ export function ApiKeysTable({
                 <TableRow key={key.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/60">
-                        <KeyRound className="h-4 w-4 text-muted-foreground" />
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                        <KeyRound className="h-4 w-4" />
                       </div>
                       <div>
-                        <span className="text-sm font-semibold text-foreground">
-                          {key.name}
-                        </span>
-                        <p className="text-xs text-muted-foreground">
-                          {key.prefix}...
-                        </p>
+                        <span className="text-sm font-semibold text-foreground">{key.name}</span>
+                        <p className="font-mono text-xs text-muted-foreground">{key.prefix}...</p>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1.5">
                       {key.scopes.map((scope) => (
-                        <Badge
-                          key={scope}
-                          variant="outline"
-                          className={scopeBadgeClass}
-                        >
+                        <Badge key={scope} variant="outline" className={scopeBadgeClass}>
                           {getScopeLabel(scope)}
                         </Badge>
                       ))}
@@ -183,10 +176,7 @@ export function ApiKeysTable({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem
-                          onClick={() => onCopy?.(key)}
-                          disabled={!canCopy}
-                        >
+                        <DropdownMenuItem onClick={() => onCopy?.(key)} disabled={!canCopy}>
                           <Copy className="h-4 w-4" />
                           {canCopy ? "Copy key" : "Copy key (generated once)"}
                         </DropdownMenuItem>

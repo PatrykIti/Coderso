@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { Copy, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import {
   Table,
@@ -20,11 +21,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { withAdminBasePath } from "@/utils/adminPaths";
 import type { ContentTypeSummary } from "@/services/contentTypesClient";
-
-const statusStyles = {
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-600 border-slate-500/20",
-};
 
 export type ContentTypeRow = ContentTypeSummary & {
   fieldCount: number;
@@ -95,18 +91,10 @@ export function ContentTypeTable({
                 onCheckedChange={() => onToggleAll?.()}
               />
             </TableHead>
-            <TableHead className="pl-4">
-              {renderSortableHead("name", "Name")}
-            </TableHead>
-            <TableHead>
-              {renderSortableHead("slug", "Slug")}
-            </TableHead>
-            <TableHead>
-              {renderSortableHead("fieldCount", "Fields")}
-            </TableHead>
-            <TableHead>
-              {renderSortableHead("status", "Status")}
-            </TableHead>
+            <TableHead className="pl-4">{renderSortableHead("name", "Name")}</TableHead>
+            <TableHead>{renderSortableHead("slug", "Slug")}</TableHead>
+            <TableHead>{renderSortableHead("fieldCount", "Fields")}</TableHead>
+            <TableHead>{renderSortableHead("status", "Status")}</TableHead>
             <TableHead className="pr-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Actions
             </TableHead>
@@ -153,21 +141,15 @@ export function ContentTypeTable({
                           Duplicate name
                         </Badge>
                       ) : null}
-                      <p className="text-xs text-muted-foreground">
-                        {type.fieldCount} fields
-                      </p>
+                      <p className="text-xs text-muted-foreground">{type.fieldCount} fields</p>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4 text-sm text-muted-foreground">
-                    {type.slug}
-                  </TableCell>
+                  <TableCell className="py-4 text-sm text-muted-foreground">{type.slug}</TableCell>
                   <TableCell className="py-4">
                     <Badge variant="outline">{type.fieldCount}</Badge>
                   </TableCell>
                   <TableCell className="py-4">
-                    <Badge variant="outline" className={statusStyles[type.status]}>
-                      {type.status}
-                    </Badge>
+                    <StatusBadge status={type.status} />
                   </TableCell>
                   <TableCell className="py-4 pr-4 text-right">
                     <DropdownMenu>
@@ -192,10 +174,7 @@ export function ContentTypeTable({
                           Duplicate
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          variant="destructive"
-                          onClick={() => onDelete?.(type)}
-                        >
+                        <DropdownMenuItem variant="destructive" onClick={() => onDelete?.(type)}>
                           <Trash2 className="h-4 w-4" />
                           Delete
                         </DropdownMenuItem>

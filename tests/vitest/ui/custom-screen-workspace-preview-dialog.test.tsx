@@ -2,7 +2,39 @@
 
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
+
+// TASK-498-03: the dialog now precomputes its OWN relatedEntries via the existing
+// entries-read. Mock only listEntriesCached; keep the rest of entriesClient real so the
+// list-preview path (buildCustomScreenPreviewEntries) is unaffected.
+const listEntriesCached = vi.fn(async (_typeSlug: string) => [
+  {
+    id: "task-1",
+    title: "Draft the brief",
+    slug: "draft-the-brief",
+    status: "draft",
+    updatedAt: "2026-06-01T00:00:00.000Z",
+    data: { priority: "high" },
+  },
+  {
+    id: "task-2",
+    title: "Review the PR",
+    slug: "review-the-pr",
+    status: "scheduled",
+    updatedAt: "2026-06-02T00:00:00.000Z",
+    data: { priority: "medium" },
+  },
+]);
+
+vi.mock("@/services/entriesClient", async () => {
+  const actual = await vi.importActual<typeof import("@/services/entriesClient")>(
+    "@/services/entriesClient"
+  );
+  return {
+    ...actual,
+    listEntriesCached: (typeSlug: string) => listEntriesCached(typeSlug),
+  };
+});
 
 import { CustomScreenWorkspacePreviewDialog } from "../../../core/admin/ui/custom-screens/CustomScreenWorkspacePreviewDialog";
 
@@ -28,9 +60,64 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+const flush = async () => {
+  await React.act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
+  listEntriesCached.mockClear();
 });
+
+const relatedFields = [
+  {
+    id: "f-tasks",
+    name: "relatedTasks",
+    type: "relation" as const,
+    label: "Related tasks",
+    relation: { target: "tasks", multiple: true },
+  },
+];
+
+const relatedListDocument = {
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "section-1",
+      type: "section" as const,
+      data: { title: "Details" },
+      blocks: [
+        {
+          id: "related-1",
+          type: "related-list" as const,
+          // stored data.target is STALE/empty on purpose — the host must derive from the
+          // bound relation field's relation.target instead.
+          data: {
+            label: "Tasks",
+            target: "",
+            variant: "checklist",
+            displayField: "priority",
+            limit: 5,
+          },
+        },
+      ],
+    },
+  ],
+};
+
+const relatedListBindings = [
+  {
+    id: "binding-items",
+    blockId: "related-1",
+    propPath: "items",
+    source: "entry" as const,
+    field: "relatedTasks",
+    mode: "read" as const,
+  },
+];
 
 const contentType = {
   id: "type-1",
@@ -74,7 +161,7 @@ test("CustomScreenWorkspacePreviewDialog renders list preview table", () => {
         defaultSort: { field: "updatedAt", direction: "desc" },
         bulkActions: { delete: true, publish: true, unpublish: true },
       }}
-      blocks={[]}
+      document={{ schemaVersion: 1, sections: [] }}
       bindings={[]}
       previewRecordState={{
         source: "fallback",
@@ -97,7 +184,7 @@ test("CustomScreenWorkspacePreviewDialog renders list preview table", () => {
   }
 });
 
-test("CustomScreenWorkspacePreviewDialog renders editor preview from widget bindings", () => {
+test("CustomScreenWorkspacePreviewDialog renders editor preview from screen bindings", () => {
   const view = mount(
     <CustomScreenWorkspacePreviewDialog
       open
@@ -110,28 +197,40 @@ test("CustomScreenWorkspacePreviewDialog renders editor preview from widget bind
         defaultSort: { field: "updatedAt", direction: "desc" },
         bulkActions: { delete: true, publish: true, unpublish: true },
       }}
-      blocks={[
-        {
-          id: "header-1",
-          type: "screen-record-header",
-          data: {
-            title: "Untitled record",
-            subtitle: "Preview subtitle",
+      document={{
+        schemaVersion: 1,
+        sections: [
+          {
+            id: "section-1",
+            type: "section",
+            data: { title: "Details" },
+            blocks: [
+              {
+                id: "header-1",
+                type: "record-header",
+                data: {
+                  title: "Untitled record",
+                  subtitle: "Preview subtitle",
+                },
+              },
+            ],
           },
-        },
-      ]}
+        ],
+      }}
       bindings={[
         {
           id: "binding-title",
-          widgetId: "header-1",
+          blockId: "header-1",
           propPath: "title",
+          source: "entry",
           field: "title",
           mode: "read",
         },
         {
           id: "binding-subtitle",
-          widgetId: "header-1",
+          blockId: "header-1",
           propPath: "subtitle",
+          source: "entry",
           field: "projectTitle",
           mode: "read",
         },
@@ -155,6 +254,89 @@ test("CustomScreenWorkspacePreviewDialog renders editor preview from widget bind
     expect(document.body.textContent).not.toContain("Untitled record");
     expect(document.body.querySelector('[data-preview-device="desktop"]')).not.toBeNull();
     expect(document.body.textContent).toContain("Previewing the first record from Projects.");
+    // No related-list block in this document → the precompute is block-guarded (no fetch).
+    expect(listEntriesCached).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("dialog precomputes its OWN relatedEntries from previewRecordState.data (not a no-op skeleton)", async () => {
+  const view = mount(
+    <CustomScreenWorkspacePreviewDialog
+      open
+      onOpenChange={() => undefined}
+      mode="editor-view"
+      contentType={contentType}
+      listView={{
+        columns: [],
+        filters: [],
+        defaultSort: { field: "updatedAt", direction: "desc" },
+        bulkActions: { delete: true, publish: true, unpublish: true },
+      }}
+      document={relatedListDocument}
+      bindings={relatedListBindings}
+      fields={relatedFields}
+      previewRecordState={{
+        source: "entry",
+        entryId: "entry-1",
+        note: "Previewing the first record from Projects.",
+        data: {
+          title: "Project title",
+          // the FIRST entry's relation IDs live in previewRecordState.data.
+          relatedTasks: ["task-1", "task-2"],
+        },
+      }}
+    />
+  );
+
+  try {
+    await flush();
+    // target is DERIVED from the bound field's relation.target ("tasks"), NOT stored data.target ("").
+    expect(listEntriesCached).toHaveBeenCalledWith("tasks");
+    // resolved rows render (not a perpetual skeleton).
+    expect(document.body.textContent).toContain("Draft the brief");
+    expect(document.body.textContent).toContain("Review the PR");
+    expect(document.body.textContent).not.toContain("Chip");
+    expect(document.body.querySelector('[data-screen-related-entry="task-1"]')).not.toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("dialog no-records fallback relation value coerces + looks up to the empty state (no crash)", async () => {
+  const view = mount(
+    <CustomScreenWorkspacePreviewDialog
+      open
+      onOpenChange={() => undefined}
+      mode="editor-view"
+      contentType={contentType}
+      listView={{
+        columns: [],
+        filters: [],
+        defaultSort: { field: "updatedAt", direction: "desc" },
+        bulkActions: { delete: true, publish: true, unpublish: true },
+      }}
+      document={relatedListDocument}
+      bindings={relatedListBindings}
+      fields={relatedFields}
+      previewRecordState={{
+        source: "fallback",
+        entryId: null,
+        fallbackReason: "no-records",
+        note: "No records exist for this content type yet. Preview is using schema fallback values.",
+        // customScreenPreviewData.ts:38 — the schema fallback relation value.
+        data: { title: "Project title", relatedTasks: ["Related item"] },
+      }}
+    />
+  );
+
+  try {
+    await flush();
+    // "Related item" coerces to [id], is looked up, misses → empty state (no throw).
+    // The empty-state label reads the block's own data.target (renderer-local).
+    expect(document.body.textContent).toContain("No related");
+    expect(document.body.textContent).not.toContain("Draft the brief");
   } finally {
     view.cleanup();
   }

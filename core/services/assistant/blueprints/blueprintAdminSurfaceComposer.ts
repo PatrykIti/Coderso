@@ -1,7 +1,7 @@
-import { getWidget } from "../../../widgets/registry";
-import { ensureRuntimeWidgetsRegistered } from "../../../widgets/runtime";
-import type { WidgetBlock } from "../../../widgets/types";
-import { normalizeCustomScreenDefinition } from "../../customScreens/customScreenSchemas";
+import {
+  normalizeScreenDocumentV1,
+  type ScreenBlockV1,
+} from "../../customScreens/customScreenSchemas";
 
 export type BlueprintAdminSurfaceColumn = "left" | "right";
 export type BlueprintAdminSurfaceFieldTone = "default" | "strong" | "muted";
@@ -41,7 +41,7 @@ export type BlueprintAdminSurfaceCompositionInput = {
 };
 
 export type BlueprintAdminSurfaceComposition = {
-  blocks: WidgetBlock[];
+  blocks: ScreenBlockV1[];
   bindings: [];
 };
 
@@ -100,9 +100,9 @@ const createBlock = (
   data: Record<string, unknown>,
   options?: {
     variant?: string;
-    slots?: Record<string, WidgetBlock[]>;
+    slots?: Record<string, ScreenBlockV1[]>;
   }
-): WidgetBlock => ({
+): ScreenBlockV1 => ({
   id: assertStableKey(id),
   type,
   ...(options?.variant ? { variant: options.variant } : {}),
@@ -167,7 +167,7 @@ const mergeGroups = (
 };
 
 const buildFieldBlock = (input: { surfaceKey: string; field: BlueprintAdminSurfaceField }) =>
-  createBlock(`${input.surfaceKey}-${input.field.key}`, "screen-field-value", {
+  createBlock(`${input.surfaceKey}-${input.field.key}`, "field", {
     label: input.field.label,
     value: input.field.placeholderValue ?? "0",
     helper: input.field.helper,
@@ -177,7 +177,7 @@ const buildFieldBlock = (input: { surfaceKey: string; field: BlueprintAdminSurfa
 const buildGroupBlock = (input: { surfaceKey: string; group: NormalizedAdminSurfaceGroup }) =>
   createBlock(
     `${input.surfaceKey}-${input.group.key}-group`,
-    "screen-field-group",
+    "field-group",
     {
       title: input.group.title,
       description: input.group.description,
@@ -194,28 +194,6 @@ const buildGroupBlock = (input: { surfaceKey: string; group: NormalizedAdminSurf
     }
   );
 
-const visitBlocks = (blocks: WidgetBlock[], visitor: (block: WidgetBlock) => void) => {
-  blocks.forEach((block) => {
-    visitor(block);
-    if (block.slots) {
-      Object.values(block.slots).forEach((items) => visitBlocks(items, visitor));
-    }
-    if (block.children) {
-      visitBlocks(block.children, visitor);
-    }
-  });
-};
-
-const assertCustomScreenBuilderSurface = (blocks: WidgetBlock[]) => {
-  ensureRuntimeWidgetsRegistered();
-  visitBlocks(blocks, (block) => {
-    const widget = getWidget(block.type);
-    if (!widget?.surfaces?.includes("custom-screen-builder")) {
-      fail("assistant_blueprint_admin_surface_widget_invalid");
-    }
-  });
-};
-
 export const composeAdminSurface = (
   input: BlueprintAdminSurfaceCompositionInput
 ): BlueprintAdminSurfaceComposition => {
@@ -228,7 +206,7 @@ export const composeAdminSurface = (
   const leftBlocks = groups.left.map((group) => buildGroupBlock({ surfaceKey: key, group }));
   const rightBlocks = groups.right.map((group) => buildGroupBlock({ surfaceKey: key, group }));
   const blocks = [
-    createBlock(`${key}-header`, "screen-record-header", {
+    createBlock(`${key}-header`, "record-header", {
       eyebrow: input.header.eyebrow,
       title: "Record overview",
       subtitle: input.header.subtitle,
@@ -240,7 +218,7 @@ export const composeAdminSurface = (
       ? [
           createBlock(
             `${key}-columns`,
-            "screen-two-column",
+            "columns",
             {
               leftTitle: input.columns.leftTitle,
               rightTitle: input.columns.rightTitle ?? "Secondary",
@@ -258,11 +236,16 @@ export const composeAdminSurface = (
       : leftBlocks),
   ];
 
-  assertCustomScreenBuilderSurface(blocks);
-  normalizeCustomScreenDefinition({
+  normalizeScreenDocumentV1({
     schemaVersion: 1,
-    blocks,
-    bindings: [],
+    sections: [
+      {
+        id: "section-default",
+        type: "section",
+        data: { title: "Details" },
+        blocks,
+      },
+    ],
   });
 
   return {

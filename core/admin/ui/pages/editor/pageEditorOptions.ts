@@ -85,6 +85,7 @@ export const sectionOptions: SectionOption[] = pageSectionTypes.flatMap((type) =
 export const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> = {
   heading: { label: "Heading", description: "Section title or subheading." },
   text: { label: "Text", description: "Paragraph copy." },
+  badge: { label: "Badge", description: "Compact label or status pill." },
   button: { label: "Button", description: "Clickable call to action." },
   image: { label: "Image", description: "Image from media or URL." },
   video: { label: "Video", description: "Embedded video from media or URL." },
@@ -182,6 +183,26 @@ export const toolbarActionTooltips = {
     label: "Close panel",
     description: "Close this panel; the toolbar stays open.",
   },
+  hidePanel: {
+    label: "Hide options panel",
+    description: "Hide the options panel; reopen it from the page-builder toolbar.",
+  },
+  undo: {
+    label: "Undo",
+    description: "Restore the previous edit in this editor session.",
+  },
+  redo: {
+    label: "Redo",
+    description: "Reapply the next edit in this editor session.",
+  },
+  copySelection: {
+    label: "Copy selection",
+    description: "Copy the selected block or section for this editor session.",
+  },
+  pasteSelection: {
+    label: "Paste",
+    description: "Insert the copied block or section near the current selection.",
+  },
   moveSectionUp: {
     label: "Move section up",
     description: "Move the selected section one position earlier.",
@@ -266,11 +287,6 @@ export const canvasDeviceFrameClassMap: Record<PageBreakpoint, string> = {
 /** "Tablet · 744px" readout used by the scope pill and the canvas context bar. */
 export const deviceScopeReadout = (device: PageBreakpoint) =>
   `${pageEditorDeviceMetadata[device].label} · ${pageEditorDeviceMetadata[device].width}px`;
-
-export const pageEditorStatusBadgeClassName = (status: string) =>
-  status === "published"
-    ? "rounded-full border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-600"
-    : "rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold uppercase text-amber-800";
 
 export type ToolbarLabelTarget =
   | { kind: "section"; type: PageSectionType }

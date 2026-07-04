@@ -9,11 +9,11 @@ test("PostBlockEditorShell renders Gutenberg-like frame", () => {
     path: "/admin/posts/post-1",
   });
 
-  expect(html).toContain("Document Outline");
-  expect(html).toContain("data-post-editor-outline-insert=\"true\"");
+  expect(html).toContain('data-post-editor-left-rail-tab="outline"');
+  expect(html).toContain('data-post-editor-outline-insert="true"');
   expect(html).toContain("Editor settings");
   expect(html).toContain("Publish");
   expect(html).toContain("Preview");
-  expect(html).toContain("data-post-editor-region=\"secondary-sidebar\"");
-  expect(html).toContain("List view");
+  expect(html).toContain('data-post-editor-region="secondary-sidebar"');
+  expect(html).toContain('data-post-editor-left-rail-tab="list-view"');
 });

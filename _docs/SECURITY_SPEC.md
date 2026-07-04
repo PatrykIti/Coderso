@@ -360,6 +360,9 @@ Rotacja klucza:
   CSS string escaping. Admin authoring modules, Page document normalizers,
   responsive CSS emission, and Page renderer sinks must reuse these helpers
   instead of accepting raw strings at render or persistence boundaries.
+- Page authoring link normalization is Page-owned through
+  `normalizeAuthoringSafeHref`; Page Editor canvas code must not import
+  widget-core helpers for link sanitization.
 - Link sinks (`href`, list item hrefs, button hrefs) allow safe relative,
   hash, `http:`, `https:`, `mailto:`, and `tel:` values only. Media sinks
   (`src`, `image`, `url`, gallery item sources, iframe source output from
@@ -368,9 +371,32 @@ Rotacja klucza:
 - CSS sinks (`style.background`, `backgroundImage`, block `textColor`,
   block/section accent, block border colors, responsive CSS custom property
   values) are normalized through color/background policies before persistence
-  and escaped before `url("...")` emission. `url(javascript:...)`,
-  expression-like CSS, protocol-relative media, and event-handler payloads are
-  fail-closed to `null` or the documented default.
+  and escaped before `url("...")` emission. Gradient authoring composes
+  linear/radial CSS from ordered sanitized stops and re-validates the final
+  string; arbitrary `url()`/function escapes are not accepted. Block background
+  images use the same media URL policy as section background images and paint
+  only escaped `url("...")` values. `url(javascript:...)`, expression-like CSS,
+  protocol-relative media, and event-handler payloads fail closed to `null` or
+  the documented default.
+- CSS color values may be raw safe colors or the explicit allowlisted site
+  tokens `var(--color-primary|secondary|accent|bg|surface|text|border)`.
+  Arbitrary `var()` expressions remain rejected.
+- Page text marks (`heading`/plain `text`/`quote` `props.marks`) stay as
+  bounded JSON ranges, not raw HTML. Color/highlight mark colors normalize
+  through the CSS color sanitizer; link mark hrefs normalize through the Page
+  authoring link sanitizer. Stored marks are re-normalized before render, and
+  the renderer emits only React `<strong>`, `<em>`, safe `<a rel="nofollow
+  noreferrer">`, or validated `<span>` segments without broadening the
+  rich-text `span/style` allowlist.
+- Page Editor clipboard paste treats every fragment as untrusted input. The
+  `coderso/page-fragment@v1` payload is browser/session local, is never a
+  persistence format, regenerates ids on paste, and re-runs Page document
+  normalization before insertion.
+- Native Page badge block colors (`props.background`, `props.textColor`) reuse
+  the same CSS color sanitizer, and badge icons are fixed allowlist tokens
+  (`check`, `sparkles`, `star`, `zap`, `shield`, `heart`) mapped to local
+  components. Unknown icons normalize to `null`; no dynamic component lookup or
+  string-evaluated icon render is allowed.
 - Renderers keep defense-in-depth sanitization even when upstream
   normalization already ran. New Page v2 render sinks must add regression
   coverage in the Vitest sanitizer/XSS suites and keep local Semgrep/security
@@ -527,7 +553,7 @@ Rotacja klucza:
   - `page.update` is internal-only, requires active page context plus `content:write` and `content:publish` for execute, revalidates page id/title/slug/status, and preserves unrelated Page v2 sections/settings,
   - active Page context is internal-only and read-only, revalidates page identity through `pageService`, and no longer hydrates widget-template references from Page data,
   - `widget-template.update` and `widget-template.block.patch` are internal-only, require active widget template context plus `widgets:write` for execute, revalidate template id/name/status/category where applicable, and preserve unrelated reusable template blocks/settings,
-  - `custom-screen.update` and `custom-screen.widget.patch` are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated blocks/bindings, persist canonical collection-link metadata only through `customScreenService`, and never expose raw entry values,
+  - `custom-screen.update` and V4 screen document actions (`custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, `custom-screen.list-view.patch`) are internal-only, require active custom screen context plus `content:write` for execute, revalidate screen id/name/status/content type where applicable, preserve unrelated sections/blocks/bindings/list settings, persist canonical collection-link metadata only through `customScreenService`, and never expose raw entry values,
   - counted multi-target CMS plans are allowed only when trusted context resolves the exact expected target count and every target maps to a strict typed action; mismatched, broad, or partially invalid bulk prompts return `needs_input`,
   - explicit multi-create CMS plans require locally validated `mutation.patch.items[]` definitions and reject secret-like keys before mapping to typed upsert/create actions,
   - assistant execution cache invalidation broadcasts only known admin cache keys derived from strict action inputs or sanitized `resourceId`; provider text, target labels, secrets, submissions, cookies, CSRF tokens, and arbitrary client cache keys are never broadcast,

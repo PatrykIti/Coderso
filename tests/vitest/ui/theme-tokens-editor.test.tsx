@@ -108,6 +108,8 @@ test("ThemeTokensEditor renders token summary and forwards draft and route chang
     typography: {
       sans: "Inter",
       display: "Space Grotesk",
+      "2xs": "0.625rem",
+      xs: "0.75rem",
       sm: "0.875rem",
       md: "1rem",
       lg: "1.125rem",

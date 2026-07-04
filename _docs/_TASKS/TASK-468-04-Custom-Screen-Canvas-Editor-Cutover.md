@@ -6,7 +6,9 @@
 **Category:** Admin UI / Custom Screens / Canvas Editor
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-468-03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Started:** 2026-06-20
+**Completed:** 2026-06-21
 
 ---
 
@@ -17,13 +19,41 @@ block canvas. The editor must let admins design professional backend views for
 custom content entries using field-aware blocks, layout sections, inspector
 controls, layers, and preview states.
 
+2026-06-20 first slice:
+
+- `CustomScreenEditorPage` now reads and saves through V4 helper projections
+  instead of assuming persisted `definition.editorView.blocks`.
+- Existing widget/page-builder UI remains a compatibility adapter until the
+  neutral authoring shell and screen-native canvas land.
+
+2026-06-21 completion:
+
+- `CustomScreenEditorPage` no longer uses `WidgetPicker`, `BlockList`,
+  `BlockSettings`, `FieldBindingPanel`, page-builder block utils, or widget
+  registry contracts for active Editor View authoring.
+- Added screen-native block library, runtime canvas, inspector, and
+  `screenDocumentOps` helpers for add, move, duplicate, delete, binding repair,
+  and V4 preview.
+- List View configuration remains unchanged and table-only.
+
+2026-06-21 corrective closure:
+
+- The initial closure was premature because TASK-468-03 neutral authoring
+  extraction did not yet exist. The corrective pass replaced the fixed Editor
+  View rails with `ScreenAuthoringCanvas` over `core/admin/ui/authoring/*`,
+  moved insert/layers/content/binding/style controls into floating canvas
+  panels, and kept List View rails unchanged.
+- Editor View saves strict sectioned `ScreenDocumentV1` documents; stale flat
+  V4 block arrays are read-repaired into the default section without destructive
+  writes.
+
 ## Sub-Tasks
 
-- [ ] TASK-468-04-L01: V4 Editor Client And Local Model.
-- [ ] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
-- [ ] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
-- [ ] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
-- [ ] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
+- [x] TASK-468-04-L01: V4 Editor Client And Local Model.
+- [x] TASK-468-04-L02: Screen Canvas Shell And Section Block Operations.
+- [x] TASK-468-04-L03: Field Palette Binding Inspector And Missing Field States.
+- [x] TASK-468-04-L04: Save Dirty State Cache And Preview Flow.
+- [x] TASK-468-04-L05: Editor Cutover Tests And Legacy Builder Guard.
 
 ## Files To Change
 

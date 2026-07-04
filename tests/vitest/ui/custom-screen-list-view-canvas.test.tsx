@@ -4,8 +4,10 @@ import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test } from "vitest";
 
+import { CustomScreenEditorPage } from "../../../core/admin/ui/custom-screens/CustomScreenEditorPage";
 import { ListViewCanvas } from "../../../core/admin/ui/custom-screens/ListViewCanvas";
 import type { CustomScreenListViewDefinition } from "../../../core/services/customScreens/customScreenSchemas";
+import { renderAdminUi } from "../../utils/adminRouterRender";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -109,6 +111,7 @@ function Harness() {
         ];
         setListView({ ...listView, columns: nextColumns });
       }}
+      showHiddenColumnsTray
     />
   );
 }
@@ -187,4 +190,25 @@ test("list view canvas reorders visible columns in the header and keeps hidden c
   } finally {
     view.cleanup();
   }
+});
+
+test("custom screen editor renders the entry-view builder and no List-view editor surface", () => {
+  const html = renderAdminUi(<CustomScreenEditorPage />, {
+    path: "/admin/advanced/custom-screens/new",
+  });
+
+  // TASK-498-01: the List-view EDITOR surface is removed — the editor is the
+  // always-on entry-view builder. It still renders through the shared
+  // `CanvasEditor` shell (dotted scroller + relocated ScreenPanelToggleRail +
+  // Hide/Show panel toggle).
+  expect(html).toContain('data-screen-editor-canvas-scroller="true"');
+  expect(html).toContain('data-screen-toolbar-rail="true"');
+  expect(html).toContain("Hide panel");
+  expect(html).toContain('data-screen-authoring-canvas="true"');
+  expect(html).not.toContain('data-editor-shell-left-panel="true"');
+  expect(html).not.toContain('data-editor-shell-right-panel="true"');
+  expect(html).not.toContain("Components");
+  // List-view editor markers are absent (no column inspector, no column selection).
+  expect(html).not.toContain("Selected Column");
+  expect(html).not.toContain("data-selected-column");
 });

@@ -250,12 +250,15 @@ vi.mock("@/ui/shared/PageHeader", () => ({
     title,
     description,
     actions,
+    icon,
   }: {
     title: string;
     description?: string;
     actions?: React.ReactNode;
+    icon?: React.ReactNode;
   }) => (
     <div>
+      {icon}
       <h1>{title}</h1>
       <p>{description}</p>
       {actions}
@@ -659,5 +662,46 @@ test("ThemesPage auto-activates the first profile and reports template/profile s
     expect(profileErrorView.container.textContent).toContain("Failed to save theme profile.");
   } finally {
     profileErrorView.cleanup();
+  }
+});
+
+test("ThemesPage renders the restyled chrome (preset row + live preview + profiles)", async () => {
+  const { ThemesPage } = await import("../../../core/admin/ui/themes/ThemesPage");
+  const view = mount(<ThemesPage />);
+
+  try {
+    await flush();
+
+    // PageHeader title (kept) + the new SectionCard live-preview + section headings.
+    expect(view.container.textContent).toContain("Admin UI Theme");
+    expect(view.container.textContent).toContain("Live preview");
+    expect(view.container.textContent).toContain("A snapshot of how your admin will look.");
+    expect(view.container.textContent).toContain("Profiles");
+    // Real preset/template card data still renders.
+    expect(view.container.textContent).toContain("Studio");
+    // The unchanged active-profile line is preserved.
+    expect(view.container.textContent).toContain("Active profile: Studio Active");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("ThemesPage live preview reflects the active profile tokens", async () => {
+  const { ThemesPage } = await import("../../../core/admin/ui/themes/ThemesPage");
+  const view = mount(<ThemesPage />);
+
+  try {
+    await flush();
+
+    // The REAL ThemeLivePreview paints --admin-* vars from the active template's
+    // resolved tokens (base.bg "#101010" → --admin-base-bg) on its root.
+    const root = Array.from(view.container.querySelectorAll<HTMLElement>("*")).find(
+      (element) => element.style.getPropertyValue("--admin-base-bg") === "#101010"
+    );
+    expect(root).toBeTruthy();
+    // Sidebar var also flows through from the active template.
+    expect(root?.style.getPropertyValue("--admin-sidebar-bg")).toBe("#161616");
+  } finally {
+    view.cleanup();
   }
 });

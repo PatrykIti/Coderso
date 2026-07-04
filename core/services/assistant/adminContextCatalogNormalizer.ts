@@ -26,8 +26,6 @@ import type {
   AssistantWidgetSlotSummary,
   AssistantWidgetSummary,
 } from "./adminContextTypes";
-import { collectWritableBindingFields } from "../customScreens/bindingResolver";
-import type { WidgetBlock } from "../../widgets/types";
 import { normalizeWidgetTemplateSettings } from "../widgets/widgetTemplateSettings";
 import { normalizePageCollectionLink } from "../pages/pageCollectionLink";
 
@@ -288,14 +286,14 @@ const normalizeCustomScreen = (
 
   const bindings = readRecordArray(value.bindings)
     .map((binding): AssistantCustomScreenBindingSummary | null => {
-      const widgetId = readString(binding.widgetId);
+      const blockId = readString(binding.blockId) ?? readString(binding.widgetId);
       const field = readString(binding.field);
       const propPath = readString(binding.propPath);
-      if (!widgetId || !field || !propPath || isSecretLike(field) || isSecretLike(propPath)) {
+      if (!blockId || !field || !propPath || isSecretLike(field) || isSecretLike(propPath)) {
         return null;
       }
       return {
-        widgetId,
+        blockId,
         field,
         propPath,
         mode: normalizeBindingMode(binding.mode),
@@ -303,13 +301,15 @@ const normalizeCustomScreen = (
     })
     .filter((binding): binding is AssistantCustomScreenBindingSummary => Boolean(binding))
     .sort((left, right) =>
-      `${left.widgetId}:${left.field}`.localeCompare(`${right.widgetId}:${right.field}`)
+      `${left.blockId}:${left.field}`.localeCompare(`${right.blockId}:${right.field}`)
     );
-  const blocks = Array.isArray(value.blocks) ? (value.blocks as WidgetBlock[]) : [];
-  const writableBindingFields = collectWritableBindingFields(bindings, {
-    blocks,
-    fallbackToModeOnly: blocks.length === 0,
-  }).sort((left, right) => left.localeCompare(right));
+  const writableBindingFields = Array.from(
+    new Set(
+      bindings
+        .filter((binding) => binding.mode === "write" || binding.mode === "readwrite")
+        .map((binding) => binding.field)
+    )
+  ).sort((left, right) => left.localeCompare(right));
 
   return {
     id,

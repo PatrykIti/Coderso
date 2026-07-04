@@ -5,34 +5,29 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-424, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
 ## Overview
 
 Remediation family for the CTA section based on `_docs/AUDIT/cta-2026-06-10.md`.
-The section inserts and renders, but CTA variants produce no visible difference
-on the published front. Real mechanism (not a pure data-only no-op):
-`full-width` already maps to inline `maxWidth: "none"` at
-`core/services/pages/pageRendererV2.tsx:143`, a real but class-invisible
-difference the audit run did not surface; the class-level no-op comes from
-`pageSectionTemplateClass` collapsing every hero/CTA variant to the same
-`place-items-center text-center` classes (`pageRendererV2.tsx:206-207`, with
-only the inert marker string differing), and `fallbackVariant: "centered"`
-(`core/services/pages/pageSectionTemplates.ts:92-97`) makes `centered` render
-identically to `default`. The audit also calls out an empty Responsive tab, and
-the entire inspector still lacks the dedicated control widgets expected by the
-redesign.
+The section inserts and renders, but CTA variants produced little visible
+difference on the published front. Real mechanism (not a pure data-only no-op):
+`full-width` already mapped to inline `maxWidth: "none"` through
+`toPageSectionStyle`, while `pageSectionTemplateClass` collapsed CTA alignment
+classes. The completed remediation keeps `full-width` at `max-width: none` and
+gives `default`/`centered`/`full-width` distinct alignment/min-height classes.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] TASK-435-01: CTA variant runtime contract and control ownership.
-- [ ] TASK-435-01-L01: Implement a visible published-front layout difference for
+- [x] TASK-435-01: CTA variant runtime contract and control ownership.
+- [x] TASK-435-01-L01: Implement a visible published-front layout difference for
       `centered`/`full-width` and adopt the shared dedicated controls.
-- [ ] TASK-435-02: Validation, docs, and closure.
+- [x] TASK-435-02: Validation, docs, and closure.
 
 ---
 
@@ -51,3 +46,9 @@ redesign.
 - `_docs/PAGE_MODEL.md`
 - `_docs/_TASKS/README.md`
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

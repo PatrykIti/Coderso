@@ -135,7 +135,7 @@ const clickByText = (container: HTMLElement, text: string) => {
 test("BackupsPage renders schedule and table", () => {
   const html = renderAdminUi(<BackupsPage />);
 
-  expect(html).toContain("Backup Schedule");
+  expect(html).toContain("Automatic backups");
   expect(html).toContain("Recent Backups");
   expect(html).toContain("Create");
 });

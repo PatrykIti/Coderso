@@ -44,6 +44,10 @@ const menuSettingsToMeta = (value: unknown): NavigationItemMeta => {
     badge: settings.badge,
     description: settings.description,
     icon: settings.icon,
+    // CONDITIONAL — carry ONLY the non-default "button" (mirrors the
+    // includeDefaultTarget `target` omission below). Every existing (link)
+    // item's `meta` byte-shape stays unchanged.
+    ...(settings.variant === "button" ? { variant: "button" as const } : {}),
   };
 };
 
@@ -69,11 +73,18 @@ export function mapMenuNodesToNavigationItems(
     const pagePath = readTrimmedString(node.pageId)
       ? pagePathById.get(readTrimmedString(node.pageId)!)
       : null;
+    const settings = resolveMenuItemSettings(node.settings);
 
     return {
       label: node.label,
       href: normalizeNavigationMenuHref(node.href ?? pagePath ?? "#"),
-      ...(options?.includeDefaultTarget ? { target: "self" as const } : {}),
+      // `openInNewTab` -> target "blank"; otherwise keep the back-compat
+      // includeDefaultTarget contract (default "self" only when requested).
+      ...(settings.openInNewTab
+        ? { target: "blank" as const }
+        : options?.includeDefaultTarget
+          ? { target: "self" as const }
+          : {}),
       meta: menuSettingsToMeta(node.settings),
       children:
         node.children.length > 0

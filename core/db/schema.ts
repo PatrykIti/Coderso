@@ -731,10 +731,8 @@ export const customScreens = pgTable(
     compositionKey: text("composition_key"),
     showInSidebar: boolean("show_in_sidebar").notNull().default(false),
     sidebarLabel: text("sidebar_label"),
-    schemaVersion: integer("schema_version").notNull().default(1),
-    definition: jsonb("definition"),
-    blocks: jsonb("blocks").notNull().default([]),
-    bindings: jsonb("bindings").notNull().default([]),
+    schemaVersion: integer("schema_version").notNull().default(4),
+    definition: jsonb("definition").notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -791,6 +789,36 @@ export const contentEntries = pgTable(
       t.publishedAt
     ),
     dataGinIdx: index("content_entries_data_gin_idx").using("gin", t.data.op("jsonb_path_ops")),
+  })
+);
+
+export const customScreenEntryPresentationOverrides = pgTable(
+  "custom_screen_entry_presentation_overrides",
+  {
+    screenId: uuid("screen_id")
+      .notNull()
+      .references(() => customScreens.id, { onDelete: "cascade" }),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => contentEntries.id, { onDelete: "cascade" }),
+    blockId: text("block_id").notNull(),
+    propPath: text("prop_path").notNull(),
+    value: jsonb("value").notNull(),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    scopeIdx: index("csepo_scope_idx").on(t.screenId, t.entryId),
+    entryIdx: index("csepo_entry_idx").on(t.entryId),
+    updatedByIdx: index("csepo_updated_by_idx").on(t.updatedBy),
+    updatedAtIdx: index("csepo_updated_at_idx").on(t.updatedAt),
+    targetUniqueIdx: uniqueIndex("csepo_target_unique_idx").on(
+      t.screenId,
+      t.entryId,
+      t.blockId,
+      t.propPath
+    ),
   })
 );
 

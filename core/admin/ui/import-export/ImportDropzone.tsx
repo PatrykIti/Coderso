@@ -38,32 +38,17 @@ const statusLabels: Record<ImportHistoryStatus, string> = {
   failed: "Failed",
 };
 
-const statusStyles: Record<ImportHistoryStatus, { badge: string; dot: string; bar: string }> = {
-  validating: {
-    badge: "border-primary/30 bg-primary/10 text-primary",
-    dot: "bg-primary",
-    bar: "bg-primary",
-  },
-  "preview-ready": {
-    badge: "border-blue-500/30 bg-blue-500/10 text-blue-600",
-    dot: "bg-blue-500",
-    bar: "bg-blue-500",
-  },
-  applying: {
-    badge: "border-primary/30 bg-primary/10 text-primary",
-    dot: "bg-primary",
-    bar: "bg-primary",
-  },
-  applied: {
-    badge: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
-    dot: "bg-emerald-500",
-    bar: "bg-emerald-500",
-  },
-  failed: {
-    badge: "border-rose-500/30 bg-rose-500/10 text-rose-600",
-    dot: "bg-rose-500",
-    bar: "bg-rose-500",
-  },
+type ImportStatusVariant = "soft" | "info" | "warning" | "success" | "destructive";
+
+const statusStyles: Record<
+  ImportHistoryStatus,
+  { variant: ImportStatusVariant; dot: string; bar: string }
+> = {
+  validating: { variant: "soft", dot: "bg-primary", bar: "bg-primary" },
+  "preview-ready": { variant: "info", dot: "bg-info", bar: "bg-info" },
+  applying: { variant: "warning", dot: "bg-warning", bar: "bg-warning" },
+  applied: { variant: "success", dot: "bg-success", bar: "bg-success" },
+  failed: { variant: "destructive", dot: "bg-destructive", bar: "bg-destructive" },
 };
 
 const maxImportFileSizeBytes = 50 * 1024 * 1024;
@@ -280,8 +265,8 @@ export function ImportDropzone() {
     <div className="space-y-8">
       <Card
         className={cn(
-          "border-dashed border-2 bg-card/60 py-10 text-center transition-colors hover:border-primary/40",
-          isDragging && "border-primary/50 bg-primary/5"
+          "rounded-2xl border-2 border-dashed border-border bg-muted/40 py-10 text-center transition-colors hover:border-primary/40",
+          isDragging && "border-primary/50 bg-primary-soft/40"
         )}
         onDragOver={(event) => {
           event.preventDefault();
@@ -291,8 +276,8 @@ export function ImportDropzone() {
         onDrop={handleDrop}
       >
         <CardContent className="flex flex-col items-center gap-4">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-            <UploadCloud className="h-8 w-8" />
+          <div className="flex size-14 items-center justify-center rounded-2xl bg-primary-soft text-primary-soft-foreground">
+            <UploadCloud className="size-6" />
           </div>
           <div className="space-y-1">
             <h3 className="text-lg font-semibold">Drop your files here</h3>
@@ -302,7 +287,7 @@ export function ImportDropzone() {
           </div>
           <Button
             variant="outline"
-            className="border-primary/20 bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"
+            className="border-primary/20 bg-primary-soft text-primary-soft-foreground hover:bg-primary hover:text-primary-foreground"
             onClick={handleBrowse}
             disabled={isPreviewing || isImporting}
           >
@@ -367,7 +352,7 @@ export function ImportDropzone() {
               ))}
             </div>
             {preview.warnings.length > 0 ? (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-700">
+              <div className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-xs text-warning">
                 <p className="font-semibold">Warnings</p>
                 <ul className="list-disc pl-4">
                   {preview.warnings.map((warning) => (
@@ -429,22 +414,16 @@ export function ImportDropzone() {
                     <TableRow key={item.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <FileJson className="h-4 w-4" />
+                          <div className="flex size-9 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+                            <FileJson className="size-4" />
                           </div>
-                          <span className="text-sm font-semibold">{item.fileName}</span>
+                          <span className="text-sm font-medium">{item.fileName}</span>
                         </div>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">{item.type}</TableCell>
                       <TableCell>
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "gap-2 text-[10px] uppercase tracking-widest",
-                            statusStyle.badge
-                          )}
-                        >
-                          <span className={cn("h-1.5 w-1.5 rounded-full", statusStyle.dot)} />
+                        <Badge variant={statusStyle.variant} className="gap-1.5">
+                          <span className={cn("size-1.5 rounded-full", statusStyle.dot)} />
                           {statusLabels[item.status]}
                         </Badge>
                       </TableCell>

@@ -388,7 +388,7 @@ export function AssistantSettingsPage({
             />
           </div>
         </div>
-        <div className="sticky bottom-0 z-10 border-t bg-background/90 px-6 py-4 backdrop-blur">
+        <div className="sticky bottom-0 z-10 border-t border-border bg-card/90 px-6 py-4 backdrop-blur">
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Checkbox

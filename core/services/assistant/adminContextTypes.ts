@@ -57,7 +57,7 @@ export type AssistantEntrySummary = {
 };
 
 export type AssistantCustomScreenBindingSummary = {
-  widgetId: string;
+  blockId: string;
   field: string;
   propPath: string;
   mode: "read" | "write" | "readwrite";

@@ -1,9 +1,10 @@
-import { ArrowLeft, Plus, RefreshCcw, Save, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { ArrowLeft, Image as ImageIcon, Plus, RefreshCcw, Save, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -27,6 +28,7 @@ import {
 } from "@/services/listingsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import {
@@ -35,7 +37,46 @@ import {
   listingSourceOptions,
 } from "./defaults";
 import { useListingTemplates } from "./hooks/useListingTemplates";
+import { sourceLabel } from "./listingQuerySummary";
 import { listingQueryToasts } from "./listingActionToasts";
+
+function RailGroup({
+  label,
+  action,
+  children,
+}: {
+  label: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="space-y-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="px-0.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </span>
+        {action}
+      </div>
+      <div className="space-y-3">{children}</div>
+    </div>
+  );
+}
+
+function InspectorRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+      {children}
+    </div>
+  );
+}
+
+const resolvePreviewRowTitle = (row: Record<string, unknown>, index: number): string => {
+  if (typeof row.title === "string" && row.title.trim()) return row.title;
+  if (typeof row.name === "string" && row.name.trim()) return row.name;
+  if (typeof row.slug === "string" && row.slug.trim()) return row.slug;
+  return `Row ${index + 1}`;
+};
 
 type QueryDraftSnapshot = {
   name: string;
@@ -380,48 +421,40 @@ export function ListingEditorPage() {
       breadcrumbs={["Coderso", "Listings", isCreateMode ? "New query" : name || "Editor"]}
     >
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="space-y-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {isCreateMode ? "New listing query" : "Edit listing query"}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Build filters, sorting, and fields, then preview the runtime payload.
-            </p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={() => navigate("/advanced/listings")}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to list
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={handleDiscard}
-              disabled={!hasUnsavedChanges}
-            >
-              <Trash2 className="h-4 w-4" />
-              Discard
-            </Button>
-            <Button
-              variant="outline"
-              className="gap-2"
-              onClick={runPreview}
-              disabled={isPreviewing}
-            >
-              <RefreshCcw className="h-4 w-4" />
-              {isPreviewing ? "Previewing..." : "Run preview"}
-            </Button>
-            <Button className="gap-2" onClick={handleSave} disabled={isSaving}>
-              <Save className="h-4 w-4" />
-              {isSaving ? "Saving..." : "Save query"}
-            </Button>
-          </div>
-        </div>
+        <PageHeader
+          breadcrumbs={[
+            { label: "Listings", href: "/advanced/listings" },
+            { label: isCreateMode ? "New query" : name || "Editor" },
+          ]}
+          title={isCreateMode ? "New listing query" : name || "Edit listing query"}
+          description="Build filters, sorting, and fields, then preview the runtime payload."
+          actions={
+            <>
+              {hasUnsavedChanges ? <Badge variant="warning">Unsaved changes</Badge> : null}
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => navigate("/advanced/listings")}
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to list
+              </Button>
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={handleDiscard}
+                disabled={!hasUnsavedChanges}
+              >
+                <Trash2 className="h-4 w-4" />
+                Discard
+              </Button>
+              <Button className="gap-2" onClick={handleSave} disabled={isSaving}>
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : "Save query"}
+              </Button>
+            </>
+          }
+        />
 
         {error ? (
           <Alert variant="destructive">
@@ -436,16 +469,22 @@ export function ListingEditorPage() {
           </Alert>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basics</CardTitle>
-                <CardDescription>Name and describe this query preset.</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">Name</span>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+          <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2.5">
+            <span className="text-sm font-medium">Listing editor</span>
+            <Badge variant={hasUnsavedChanges ? "warning" : "outline"}>
+              {`${isCreateMode ? "New query" : name || "Listing"} · ${
+                hasUnsavedChanges ? "draft" : "saved"
+              }`}
+            </Badge>
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-[17rem_minmax(0,1fr)_20rem]">
+            {/* LEFT RAIL — Data + Filters */}
+            <aside className="space-y-6 border-b border-border bg-muted/20 p-4 xl:border-b-0 xl:border-r">
+              <RailGroup label="Details">
+                <label className="block space-y-1.5 text-sm">
+                  <span className="text-xs font-medium text-muted-foreground">Name</span>
                   <Input
                     value={name}
                     onChange={(event) => {
@@ -455,8 +494,8 @@ export function ListingEditorPage() {
                     placeholder="Homepage featured cards"
                   />
                 </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">Description</span>
+                <label className="block space-y-1.5 text-sm">
+                  <span className="text-xs font-medium text-muted-foreground">Description</span>
                   <Textarea
                     value={description}
                     onChange={(event) => {
@@ -467,17 +506,11 @@ export function ListingEditorPage() {
                     placeholder="Optional context for editors."
                   />
                 </label>
-              </CardContent>
-            </Card>
+              </RailGroup>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Source</CardTitle>
-                <CardDescription>{sourceDescription}</CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4 md:grid-cols-2">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">Source type</span>
+              <RailGroup label="Data">
+                <label className="block space-y-1.5 text-sm">
+                  <span className="text-xs font-medium text-muted-foreground">Source</span>
                   <Select
                     value={query.source}
                     onValueChange={(value) => {
@@ -500,10 +533,11 @@ export function ListingEditorPage() {
                     </SelectContent>
                   </Select>
                 </label>
+                <p className="text-xs text-muted-foreground">{sourceDescription}</p>
 
                 {query.source === "entries" ? (
-                  <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium">Content type</span>
+                  <label className="block space-y-1.5 text-sm">
+                    <span className="text-xs font-medium text-muted-foreground">Content type</span>
                     <Select
                       value={query.sourceConfig.contentTypeId ?? ""}
                       onValueChange={(value) => {
@@ -532,8 +566,10 @@ export function ListingEditorPage() {
                 ) : null}
 
                 {query.source === "taxonomies" ? (
-                  <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium">Taxonomy ID (optional)</span>
+                  <label className="block space-y-1.5 text-sm">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Taxonomy ID (optional)
+                    </span>
                     <Input
                       value={query.sourceConfig.taxonomyId ?? ""}
                       onChange={(event) => {
@@ -552,8 +588,10 @@ export function ListingEditorPage() {
                 ) : null}
 
                 {query.source === "entries" || query.source === "posts" ? (
-                  <label className="grid gap-1.5 text-sm md:col-span-2">
-                    <span className="font-medium">Include drafts</span>
+                  <label className="block space-y-1.5 text-sm">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Include drafts
+                    </span>
                     <Select
                       value={query.sourceConfig.includeDrafts ? "yes" : "no"}
                       onValueChange={(value) => {
@@ -567,7 +605,7 @@ export function ListingEditorPage() {
                         markDirty();
                       }}
                     >
-                      <SelectTrigger className="w-40">
+                      <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -577,40 +615,36 @@ export function ListingEditorPage() {
                     </Select>
                   </label>
                 ) : null}
-              </CardContent>
-            </Card>
+              </RailGroup>
 
-            <Card>
-              <CardHeader className="flex-row items-center justify-between gap-3">
-                <div>
-                  <CardTitle>Filters</CardTitle>
-                  <CardDescription>Apply source-level constraints.</CardDescription>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    setQuery((prev) => ({
-                      ...prev,
-                      filters: [...prev.filters, { field: "", op: "eq", value: "" }],
-                    }));
-                    markDirty();
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                  Add filter
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-3">
+              <RailGroup
+                label="Filters"
+                action={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => {
+                      setQuery((prev) => ({
+                        ...prev,
+                        filters: [...prev.filters, { field: "", op: "eq", value: "" }],
+                      }));
+                      markDirty();
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add filter
+                  </Button>
+                }
+              >
                 {query.filters.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No filters yet.</p>
+                  <p className="text-xs text-muted-foreground">No filters yet.</p>
                 ) : null}
                 {query.filters.map((filter, index) => (
                   <div
                     key={`${filter.field}-${index}`}
-                    className="grid gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_180px_minmax(0,1fr)_auto]"
+                    className="space-y-2 rounded-xl border border-border bg-card p-3"
                   >
                     <Input
                       value={filter.field}
@@ -660,196 +694,207 @@ export function ListingEditorPage() {
                     </Button>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+              </RailGroup>
+            </aside>
 
-            <Card>
-              <CardHeader className="flex-row items-center justify-between gap-3">
-                <div>
-                  <CardTitle>Sort and Pagination</CardTitle>
-                  <CardDescription>Control item ordering and limits.</CardDescription>
+            {/* CANVAS — result preview grid */}
+            <div className="min-w-0 space-y-4 bg-dotted p-6">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="font-display text-lg font-semibold">{name || "Listing"}</div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="info">{`Bound query · ${previewTotal} results`}</Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={runPreview}
+                    disabled={isPreviewing}
+                  >
+                    <RefreshCcw className="h-4 w-4" />
+                    {isPreviewing ? "Previewing..." : "Run preview"}
+                  </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    setQuery((prev) => ({
-                      ...prev,
-                      sort: [...prev.sort, { field: "id", dir: "asc" }],
-                    }));
+              </div>
+
+              {previewRows.length === 0 ? (
+                <div className="flex min-h-[220px] flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-border bg-card/60 p-8 text-center text-sm text-muted-foreground">
+                  <span className="font-medium text-foreground">
+                    Preview payload will appear here.
+                  </span>
+                  <span>Run preview to inspect resolved rows for this query.</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {previewRows.map((row, index) => (
+                    <Card key={`preview-row-${index}`} className="gap-0 overflow-hidden py-0">
+                      <div className="flex aspect-[16/9] items-center justify-center bg-muted text-muted-foreground">
+                        <ImageIcon className="size-7" />
+                      </div>
+                      <div className="space-y-2 p-4">
+                        <div className="font-display text-sm font-semibold">
+                          {resolvePreviewRowTitle(row, index)}
+                        </div>
+                        <details className="text-xs text-muted-foreground">
+                          <summary className="cursor-pointer select-none">Inspect row</summary>
+                          <pre className="mt-2 max-h-48 overflow-auto rounded-lg border bg-muted/30 p-3 text-xs">
+                            {JSON.stringify(row, null, 2)}
+                          </pre>
+                        </details>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* RIGHT INSPECTOR — sort / pagination / fields / template */}
+            <aside className="space-y-5 border-t border-border bg-card p-4 xl:border-t-0 xl:border-l">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold">Inspector</span>
+                <Badge variant="soft">{sourceLabel(query.source)}</Badge>
+              </div>
+
+              <InspectorRow label="Sort">
+                <div className="space-y-2">
+                  {query.sort.map((sort, index) => (
+                    <div
+                      key={`${sort.field}-${index}`}
+                      className="space-y-2 rounded-xl border border-border bg-card p-3"
+                    >
+                      <Input
+                        value={sort.field}
+                        onChange={(event) => updateSort(index, { field: event.target.value })}
+                        placeholder="sort field"
+                      />
+                      <Select
+                        value={sort.dir}
+                        onValueChange={(value) =>
+                          updateSort(index, { dir: value as ListingSort["dir"] })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="asc">Ascending</SelectItem>
+                          <SelectItem value="desc">Descending</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setQuery((prev) => ({
+                            ...prev,
+                            sort: prev.sort.filter((_, itemIndex) => itemIndex !== index),
+                          }));
+                          markDirty();
+                        }}
+                        disabled={query.sort.length <= 1}
+                      >
+                        Remove
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full gap-1.5"
+                    onClick={() => {
+                      setQuery((prev) => ({
+                        ...prev,
+                        sort: [...prev.sort, { field: "id", dir: "asc" }],
+                      }));
+                      markDirty();
+                    }}
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add sort
+                  </Button>
+                </div>
+              </InspectorRow>
+
+              <div className="grid grid-cols-2 gap-3">
+                <InspectorRow label="Limit">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={query.pagination.limit}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value);
+                      setQuery((prev) => ({
+                        ...prev,
+                        pagination: {
+                          ...prev.pagination,
+                          limit: Number.isFinite(parsed) ? parsed : prev.pagination.limit,
+                        },
+                      }));
+                      markDirty();
+                    }}
+                  />
+                </InspectorRow>
+                <InspectorRow label="Offset">
+                  <Input
+                    type="number"
+                    min={0}
+                    max={5000}
+                    value={query.pagination.offset}
+                    onChange={(event) => {
+                      const parsed = Number(event.target.value);
+                      setQuery((prev) => ({
+                        ...prev,
+                        pagination: {
+                          ...prev.pagination,
+                          offset: Number.isFinite(parsed) ? parsed : prev.pagination.offset,
+                        },
+                      }));
+                      markDirty();
+                    }}
+                  />
+                </InspectorRow>
+              </div>
+
+              <InspectorRow label="Fields (comma separated)">
+                <Textarea
+                  value={fieldsText}
+                  onChange={(event) => {
+                    const fields = event.target.value
+                      .split(",")
+                      .map((field) => field.trim())
+                      .filter(Boolean);
+                    setQuery((prev) => ({ ...prev, fields }));
+                    markDirty();
+                  }}
+                  rows={3}
+                  placeholder="id, title, slug, status"
+                />
+              </InspectorRow>
+
+              <InspectorRow label="Template for preview context (optional)">
+                <Select
+                  value={selectedTemplateId || "__none__"}
+                  onValueChange={(value) => {
+                    setSelectedTemplateId(value === "__none__" ? "" : value);
                     markDirty();
                   }}
                 >
-                  <Plus className="h-4 w-4" />
-                  Add sort
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {query.sort.map((sort, index) => (
-                  <div
-                    key={`${sort.field}-${index}`}
-                    className="grid gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_160px_auto]"
-                  >
-                    <Input
-                      value={sort.field}
-                      onChange={(event) => updateSort(index, { field: event.target.value })}
-                      placeholder="sort field"
-                    />
-                    <Select
-                      value={sort.dir}
-                      onValueChange={(value) =>
-                        updateSort(index, { dir: value as ListingSort["dir"] })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="asc">Ascending</SelectItem>
-                        <SelectItem value="desc">Descending</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setQuery((prev) => ({
-                          ...prev,
-                          sort: prev.sort.filter((_, itemIndex) => itemIndex !== index),
-                        }));
-                        markDirty();
-                      }}
-                      disabled={query.sort.length <= 1}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                ))}
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium">Limit</span>
-                    <Input
-                      type="number"
-                      min={1}
-                      max={100}
-                      value={query.pagination.limit}
-                      onChange={(event) => {
-                        const parsed = Number(event.target.value);
-                        setQuery((prev) => ({
-                          ...prev,
-                          pagination: {
-                            ...prev.pagination,
-                            limit: Number.isFinite(parsed) ? parsed : prev.pagination.limit,
-                          },
-                        }));
-                        markDirty();
-                      }}
-                    />
-                  </label>
-                  <label className="grid gap-1.5 text-sm">
-                    <span className="font-medium">Offset</span>
-                    <Input
-                      type="number"
-                      min={0}
-                      max={5000}
-                      value={query.pagination.offset}
-                      onChange={(event) => {
-                        const parsed = Number(event.target.value);
-                        setQuery((prev) => ({
-                          ...prev,
-                          pagination: {
-                            ...prev.pagination,
-                            offset: Number.isFinite(parsed) ? parsed : prev.pagination.offset,
-                          },
-                        }));
-                        markDirty();
-                      }}
-                    />
-                  </label>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Fields and Template</CardTitle>
-                <CardDescription>
-                  Select fields returned by preview/runtime and choose template context.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="grid gap-4">
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">Fields (comma separated)</span>
-                  <Textarea
-                    value={fieldsText}
-                    onChange={(event) => {
-                      const fields = event.target.value
-                        .split(",")
-                        .map((field) => field.trim())
-                        .filter(Boolean);
-                      setQuery((prev) => ({ ...prev, fields }));
-                      markDirty();
-                    }}
-                    rows={3}
-                    placeholder="id, title, slug, status"
-                  />
-                </label>
-                <label className="grid gap-1.5 text-sm">
-                  <span className="font-medium">Template for preview context (optional)</span>
-                  <Select
-                    value={selectedTemplateId || "__none__"}
-                    onValueChange={(value) => {
-                      setSelectedTemplateId(value === "__none__" ? "" : value);
-                      markDirty();
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">No template selected</SelectItem>
-                      {templates.map((template) => (
-                        <SelectItem key={template.id} value={template.id}>
-                          {template.name} ({template.layout})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </label>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="xl:sticky xl:top-6">
-              <CardHeader>
-                <CardTitle>Live Preview</CardTitle>
-                <CardDescription>
-                  {previewTotal > 0
-                    ? `${previewTotal} matching row${previewTotal === 1 ? "" : "s"}`
-                    : "Run preview to inspect resolved rows."}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {previewRows.length === 0 ? (
-                  <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
-                    Preview payload will appear here.
-                  </div>
-                ) : null}
-                {previewRows.map((row, index) => (
-                  <pre
-                    key={`preview-row-${index}`}
-                    className="max-h-64 overflow-auto rounded-lg border bg-muted/30 p-3 text-xs"
-                  >
-                    {JSON.stringify(row, null, 2)}
-                  </pre>
-                ))}
-              </CardContent>
-            </Card>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select template" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No template selected</SelectItem>
+                    {templates.map((template) => (
+                      <SelectItem key={template.id} value={template.id}>
+                        {template.name} ({template.layout})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </InspectorRow>
+            </aside>
           </div>
         </div>
       </div>

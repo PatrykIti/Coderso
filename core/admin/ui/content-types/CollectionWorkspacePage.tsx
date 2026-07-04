@@ -1,9 +1,10 @@
-import { RefreshCcw } from "lucide-react";
+import { ArrowUpRight, RefreshCcw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -25,6 +26,7 @@ import {
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { buildDefaultRoute } from "@/ui/site/siteSettingsValidation";
+import { AdminLink } from "@/ui/shared/AdminLink";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
@@ -51,6 +53,8 @@ type DetailTemplateDeleteTarget = {
   id: string;
   label: string;
 };
+
+type WsTab = "entries" | "template" | "settings";
 
 const detailTemplateToasts = createListActionToastAdapter<"create" | "delete">({
   labels: {
@@ -123,6 +127,7 @@ export function CollectionWorkspacePage() {
   const [workspaceState, setWorkspaceState] = useState<WorkspaceState>(() =>
     emptyWorkspaceState(contentTypeId)
   );
+  const [tab, setTab] = useState<WsTab>("entries");
   const [isCreatingDetailTemplate, setIsCreatingDetailTemplate] = useState(false);
   const [pendingDetailTemplateDelete, setPendingDetailTemplateDelete] =
     useState<DetailTemplateDeleteTarget | null>(null);
@@ -345,7 +350,7 @@ export function CollectionWorkspacePage() {
           actions={
             <div className="flex items-center gap-2">
               {summary ? (
-                <Badge variant={summary.unresolved.length === 0 ? "default" : "outline"}>
+                <Badge variant={summary.unresolved.length === 0 ? "success" : "outline"}>
                   {summary.unresolved.length === 0 ? "Ready" : "Open"}
                 </Badge>
               ) : null}
@@ -387,13 +392,35 @@ export function CollectionWorkspacePage() {
         ) : null}
 
         {visibleState.isLoading ? (
-          <div className="rounded-lg border bg-card p-6 text-sm text-muted-foreground">
+          <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground shadow-soft">
             Loading collection workspace...
           </div>
         ) : null}
 
-        {summary ? (
+        <Tabs value={tab} onValueChange={(value) => setTab(value as WsTab)}>
+          <TabsList variant="line">
+            <TabsTrigger value="entries">Entries</TabsTrigger>
+            <TabsTrigger value="template">Detail template</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+        </Tabs>
+
+        {summary && tab === "entries" ? (
           <>
+            {summary.canonical.detailPage ? (
+              <div className="flex justify-end">
+                <AdminLink
+                  href={buildDetailTemplateEditorHref(
+                    summary.contentType.id,
+                    summary.canonical.detailPage.id
+                  )}
+                  prefetch
+                  className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                >
+                  Edit detail template <ArrowUpRight className="size-3.5" />
+                </AdminLink>
+              </div>
+            ) : null}
             <CollectionOverview
               summary={summary}
               isCreatingDetailTemplate={isCreatingDetailTemplate}
@@ -401,9 +428,20 @@ export function CollectionWorkspacePage() {
               onCreateDetailTemplate={() => void handleCreateDetailTemplate()}
               onDeleteDetailTemplate={handleRequestDetailTemplateDelete}
             />
-            <CollectionReadinessChecklist summary={summary} />
           </>
         ) : null}
+
+        {summary && tab === "template" ? (
+          <CollectionOverview
+            summary={summary}
+            isCreatingDetailTemplate={isCreatingDetailTemplate}
+            deletingDetailTemplateId={deletingDetailTemplateId}
+            onCreateDetailTemplate={() => void handleCreateDetailTemplate()}
+            onDeleteDetailTemplate={handleRequestDetailTemplateDelete}
+          />
+        ) : null}
+
+        {summary && tab === "settings" ? <CollectionReadinessChecklist summary={summary} /> : null}
       </div>
 
       <ConfirmActionDialog

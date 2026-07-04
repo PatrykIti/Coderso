@@ -1,4 +1,4 @@
-import { Eye, Save, Settings2 } from "lucide-react";
+import { Eye, Save, SlidersHorizontal } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,9 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -27,6 +25,9 @@ import {
 import {
   normalizeCustomScreenDefinitionForRead,
   type CustomScreenDefinition,
+  type ScreenBlockV1,
+  type ScreenDocumentV1,
+  type ScreenFieldBinding,
 } from "../../../services/customScreens/customScreenSchemas";
 import {
   getCachedContentTypes,
@@ -40,107 +41,148 @@ import {
 } from "@/ui/assistant/activeSurfaceContext";
 import { fieldsFromSchema } from "@/ui/content-types/schemaMapping";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
-import { listRegisteredWidgets, listRegisteredWidgetsForSurface } from "@/ui/widgets/registry";
 import { resolveCustomScreenCapabilities } from "../../../services/customScreens/capabilities";
 
 import { CustomScreenShell } from "./CustomScreenShell";
-import { FieldBindingPanel } from "./FieldBindingPanel";
-import { ListViewDesigner } from "./ListViewDesigner";
-import { ListViewCanvas } from "./ListViewCanvas";
-import { ListViewColumnInspector } from "./ListViewColumnInspector";
-import { ListViewElementLibrary } from "./ListViewElementLibrary";
 import { CustomScreenWorkspacePreviewDialog } from "./CustomScreenWorkspacePreviewDialog";
 import { resolveCustomScreenId } from "./routeParams";
+import { PageHeader } from "@/ui/shared/PageHeader";
 import { buildCustomScreenAssistantSurface } from "./assistantSurface";
-import { BlockList } from "@/ui/pages/builder/BlockList";
-import { BlockSettings } from "@/ui/pages/builder/BlockSettings";
-import { collectBookingFlowSummaries } from "@/ui/pages/builder/bookingFlowContext";
 import {
-  applyWidgetBlockPatch,
-  appendSlotBlock,
-  createBlock,
-  deleteBlockById,
-  duplicateBlock,
-  findBlockById,
-  getFirstBlockId,
-  moveBlockIntoSlot,
-  reorderBlocksAtPath,
-  updateBlockById,
-  type BlockPath,
-} from "@/ui/pages/builder/blockUtils";
-import { WidgetPicker } from "@/ui/pages/builder/WidgetPicker";
-import type { Block, WidgetEditorContext } from "@/ui/pages/builder/types";
-import {
-  buildListColumnFromOption,
-  getVisibleListColumns,
-  listSelectableListFields,
-} from "./customScreenListModel";
-import {
-  applyBindingsToBlocks,
-  sanitizeUnsupportedWriteBindings,
-  type CustomScreenBindingWidgetSource,
-} from "../../../services/customScreens/bindingResolver";
+  addScreenBlockAt,
+  addScreenSection,
+  createScreenBlock,
+  duplicateScreenBlockWithBindings,
+  findScreenBlockById,
+  findScreenBlockLocation,
+  getFirstScreenBlockId,
+  moveScreenBlock,
+  moveScreenBlockTo,
+  moveScreenSection,
+  removeScreenBindingsForBlockTree,
+  removeScreenBlock,
+  removeScreenSection,
+  renameScreenSection,
+  updateScreenBlock,
+  updateScreenSection,
+  type ScreenBlockKind,
+  type ScreenInsertTarget,
+  type ScreenSectionPatch,
+} from "../../../services/customScreens/screenDocumentOps";
 import {
   useCustomScreenPreviewRecordState,
   type CustomScreenPreviewRecordState,
 } from "./customScreenPreviewData";
+import { createScreenFieldBinding } from "./ScreenBlockInspector";
+import { ScreenAuthoringCanvas } from "./ScreenAuthoringCanvas";
+import type { ContentField } from "../content-types/SchemaBuilder";
 
 const normalizeText = (value: string) => value.trim();
-type EditorDetailsTab = "screen" | "data" | "widget";
 
-const resolveBindingState = (
-  bindings: CustomScreenDefinition["editorView"]["bindings"],
-  selectedBlockId: string | null,
-  propPath: string
-): "literal" | "bound" | "mixed" => {
-  const matching = bindings.filter(
-    (binding) => binding.widgetId === selectedBlockId && binding.propPath === propPath
+const blockTreeContains = (blocks: readonly ScreenBlockV1[], blockId: string): boolean =>
+  blocks.some(
+    (block) =>
+      block.id === blockId ||
+      (block.children ? blockTreeContains(block.children, blockId) : false) ||
+      (block.slots
+        ? Object.values(block.slots).some((slotBlocks) => blockTreeContains(slotBlocks, blockId))
+        : false)
   );
-  if (matching.length > 1) return "mixed";
-  return matching.length === 1 ? "bound" : "literal";
+
+const findBlockSectionId = (document: ScreenDocumentV1, blockId: string | null) => {
+  if (!blockId) return null;
+  return (
+    document.sections.find((section) => blockTreeContains(section.blocks, blockId))?.id ?? null
+  );
 };
 
-const collectBlockTypes = (blocks: Block[]): string[] => {
-  const result = new Set<string>();
+// TASK-505-03 (Item B): client-side orphan detection for the binding-recovery
+// affordance. Mirrors the 505-01 server predicates so client + server agree on
+// what is prunable (no surprise divergence), and — crucially — is NON-destructive
+// to valid bindings (source order preserved, orphans-only).
+type ScreenBindingOrphans = {
+  blockOrphans: ScreenFieldBinding[]; // blockId matches NO live block in the document
+  fieldOrphans: ScreenFieldBinding[]; // field ROOT missing from the content type (+ system)
+};
 
-  const visit = (items: Block[]) => {
-    items.forEach((block) => {
-      result.add(block.type);
-      if (Array.isArray(block.children) && block.children.length > 0) {
-        visit(block.children);
-      }
-      if (block.slots && typeof block.slots === "object" && !Array.isArray(block.slots)) {
-        Object.values(block.slots).forEach((slotItems) => {
-          if (Array.isArray(slotItems) && slotItems.length > 0) {
-            visit(slotItems as Block[]);
-          }
-        });
-      }
+// System roots the binding validator always allows (mirror the server allow-set).
+const SCREEN_SYSTEM_FIELD_ROOTS = new Set([
+  "title",
+  "slug",
+  "status",
+  "createdAt",
+  "updatedAt",
+  "publishedAt",
+]);
+
+export const detectScreenBindingOrphans = (
+  document: ScreenDocumentV1,
+  bindings: readonly ScreenFieldBinding[],
+  fields: ReadonlyArray<{ name: string }>
+): ScreenBindingOrphans => {
+  const liveIds = new Set<string>();
+  const walk = (blocks: readonly ScreenBlockV1[]) =>
+    blocks.forEach((block) => {
+      liveIds.add(block.id);
+      if (block.children) walk(block.children);
+      if (block.slots) Object.values(block.slots).forEach(walk);
     });
-  };
+  document.sections.forEach((section) => walk(section.blocks));
+  // Server parity (customScreenSchemas.ts): getAllowedBindingFieldRoots returns
+  // `null` when the content type has NO schema properties, and the binding
+  // normalizer then SKIPS field-root validation entirely — a schemaless content
+  // type legitimately allows ANY field name. So field-root orphan detection MUST
+  // be allow-all when `fields` is empty; flagging here would falsely mark valid
+  // entry bindings and let the one-click prune DESTROY them (data-loss trap).
+  const allowAllFields = fields.length === 0;
+  const allowedRoots = new Set<string>([
+    ...SCREEN_SYSTEM_FIELD_ROOTS,
+    ...fields.map((field) => field.name),
+  ]);
+  const blockOrphans: ScreenFieldBinding[] = [];
+  const fieldOrphans: ScreenFieldBinding[] = [];
+  for (const binding of bindings) {
+    if (!liveIds.has(binding.blockId)) {
+      blockOrphans.push(binding);
+      continue;
+    }
+    if (allowAllFields) continue; // schemaless type → server allows every field root
+    const root = binding.field.split(".")[0] ?? binding.field; // dotted-path root
+    if (!allowedRoots.has(root)) fieldOrphans.push(binding);
+  }
+  return { blockOrphans, fieldOrphans };
+};
 
-  visit(blocks);
-  return Array.from(result);
+// De-dupe binding field roots for a readable recovery message.
+export const uniqueFieldNames = (
+  bindings: readonly ScreenFieldBinding[] | readonly string[]
+): string[] => {
+  const seen = new Set<string>();
+  for (const item of bindings) {
+    const field = typeof item === "string" ? item : item.field;
+    const root = field.split(".")[0] ?? field;
+    if (root) seen.add(root);
+  }
+  return [...seen];
+};
+
+const resolveInitialSelection = (document: ScreenDocumentV1) => {
+  const blockId = getFirstScreenBlockId(document);
+  return {
+    blockId,
+    sectionId: findBlockSectionId(document, blockId) ?? document.sections[0]?.id ?? null,
+  };
 };
 
 const resolveScreenDefinition = (
   screen: CustomScreenRecord | null | undefined
 ): CustomScreenDefinition => {
-  const definition = normalizeCustomScreenDefinitionForRead({
+  return normalizeCustomScreenDefinitionForRead({
     definition: screen?.definition,
     schemaVersion: screen?.schemaVersion,
     blocks: screen?.blocks,
     bindings: screen?.bindings,
   });
-  return {
-    ...definition,
-    editorView: {
-      ...definition.editorView,
-      bindings: sanitizeUnsupportedWriteBindings(definition.editorView.bindings, {
-        blocks: definition.editorView.blocks as Block[],
-      }),
-    },
-  };
 };
 
 function PreviewStateNotice({
@@ -200,103 +242,47 @@ export function CustomScreenEditorPage() {
   const [definition, setDefinition] = useState<CustomScreenDefinition>(() =>
     resolveScreenDefinition(screen)
   );
-  const blocks = definition.editorView.blocks as Block[];
-  const bindings = definition.editorView.bindings;
-  const [selectedId, setSelectedId] = useState<string | null>(() =>
-    getFirstBlockId(resolveScreenDefinition(screen).editorView.blocks as Block[])
+  const screenDocument = definition.editorView.document;
+  const screenBindings = definition.editorView.bindings;
+  const [selectedId, setSelectedId] = useState<string | null>(
+    () => resolveInitialSelection(resolveScreenDefinition(screen).editorView.document).blockId
+  );
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(
+    () => resolveInitialSelection(resolveScreenDefinition(screen).editorView.document).sectionId
   );
   const [isLoading, setIsLoading] = useState(() => !isCreateMode && !screen);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // TASK-505-03 (Item B3): a NON-blocking, success-adjacent notice naming the
+  // field(s) the 505-01 save-path GC pruned (read off the returned record's
+  // transient `warnings`). Cleared by markDirty alongside setError(null).
+  const [saveNotice, setSaveNotice] = useState<string | null>(null);
   const [remoteUpdatePending, setRemoteUpdatePending] = useState(false);
-  const [mobileLibraryOpen, setMobileLibraryOpen] = useState(false);
-  const [mobileDetailsOpen, setMobileDetailsOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [activeBuilderTab, setActiveBuilderTab] = useState<"list-view" | "editor-view">(
-    "list-view"
-  );
-  const [activeEditorDetailsTab, setActiveEditorDetailsTab] = useState<EditorDetailsTab>("screen");
-  const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
-  const [selectedListColumnId, setSelectedListColumnId] = useState<string | null>(
-    () => resolveScreenDefinition(screen).listView.columns[0]?.id ?? null
-  );
+  // TASK-496-02: host-owned controlled flag for the shared `CanvasEditor` shell
+  // (the shell only READS it; the toolbar toggle + reopen chip flip it directly).
+  const [panelOpen, setPanelOpen] = useState(true);
+  // TASK-500-02: the explicit insertion point the author armed on the canvas
+  // (a before/after gap or a slot drop zone). ONE-SHOT: consumed (cleared) by
+  // the next insert; a drag-move also clears it (indices may be stale after
+  // the document reshuffles — the ops fail soft, but a stale point would
+  // silently redirect the next insert).
+  const [insertPoint, setInsertPoint] = useState<ScreenInsertTarget | null>(null);
   const definitionRef = useRef(definition);
-  const blocksRef = useRef(blocks);
 
   const selectedContentType = useMemo(
     () => contentTypes.find((type) => type.id === contentTypeId) ?? null,
     [contentTypeId, contentTypes]
   );
-  const screenWidgetRegistry = useMemo(() => {
-    if (!selectedContentType) return [];
-    return listRegisteredWidgetsForSurface({
-      surface: "admin-editor-view",
-      contentType: selectedContentType,
-    });
-  }, [selectedContentType]);
-  const allWidgetRegistry = useMemo(() => listRegisteredWidgets(), []);
-  const widgetRegistry = useMemo(() => {
-    const byType = new Map(screenWidgetRegistry.map((widget) => [widget.type, widget]));
-    collectBlockTypes(blocks).forEach((type) => {
-      const existing = byType.get(type);
-      if (existing) return;
-      const legacy = allWidgetRegistry.find((widget) => widget.type === type);
-      if (legacy) {
-        byType.set(legacy.type, legacy);
-      }
-    });
-    return Array.from(byType.values());
-  }, [allWidgetRegistry, blocks, screenWidgetRegistry]);
   const contentFields = useMemo(
     () => (selectedContentType ? fieldsFromSchema(selectedContentType.schema) : []),
     [selectedContentType]
   );
   const previewCapabilities = useMemo(
-    () => resolveCustomScreenCapabilities({ blocks, bindings }),
-    [bindings, blocks]
+    () => resolveCustomScreenCapabilities({ definition }),
+    [definition]
   );
-
-  const selectedBlock = findBlockById(blocks, selectedId);
-  const selectedWidget = selectedBlock
-    ? (widgetRegistry.find((item) => item.type === selectedBlock.type) ?? null)
-    : null;
-  const selectedWidgetSource = useMemo<CustomScreenBindingWidgetSource | null>(() => {
-    if (!selectedBlock) return null;
-    if (screenWidgetRegistry.some((widget) => widget.type === selectedBlock.type)) {
-      return "screen-registry";
-    }
-    if (allWidgetRegistry.some((widget) => widget.type === selectedBlock.type)) {
-      return "legacy-fallback";
-    }
-    return null;
-  }, [allWidgetRegistry, screenWidgetRegistry, selectedBlock]);
-  const selectedListColumn = useMemo(
-    () => definition.listView.columns.find((column) => column.id === selectedListColumnId) ?? null,
-    [definition.listView.columns, selectedListColumnId]
-  );
-  const bookingFlows = useMemo(() => collectBookingFlowSummaries(blocks), [blocks]);
-  const adminEditorWidgetContext = useMemo<WidgetEditorContext | undefined>(() => {
-    if (activeBuilderTab !== "editor-view" || !selectedBlock) return undefined;
-    return {
-      surface: "admin-editor-view",
-      bookingFlows,
-      jumpToBindingPropPath: (propPath: string) => {
-        setActiveEditorDetailsTab("data");
-        setFocusedBindingPropPath(propPath);
-      },
-      getBindingState: (propPath: string) => resolveBindingState(bindings, selectedId, propPath),
-    };
-  }, [activeBuilderTab, bindings, bookingFlows, selectedBlock, selectedId]);
-  const availableListFieldOptions = useMemo(() => {
-    if (!selectedContentType) return [];
-    const selectedKeys = new Set(
-      definition.listView.columns.map((column) => `${column.source}:${column.field}`)
-    );
-    return listSelectableListFields(selectedContentType).filter(
-      (option) => !selectedKeys.has(`${option.source}:${option.field}`)
-    );
-  }, [definition.listView.columns, selectedContentType]);
 
   useEffect(() => {
     if (isCreateMode || !screen || !screenId) {
@@ -314,11 +300,9 @@ export function CustomScreenEditorPage() {
           showInSidebar,
           sidebarLabel: sidebarLabel.trim() || null,
           definition,
-          blocks,
-          bindings,
         },
-        blocks,
-        bindings,
+        blocks: screenDocument.sections.flatMap((section) => section.blocks),
+        bindings: screenBindings,
         capabilities: previewCapabilities,
         selectedBlockId: selectedId,
         warnings: [
@@ -332,8 +316,6 @@ export function CustomScreenEditorPage() {
       clearActiveAssistantSurfaceContext();
     };
   }, [
-    bindings,
-    blocks,
     contentTypeId,
     definition,
     hasUnsavedChanges,
@@ -342,6 +324,8 @@ export function CustomScreenEditorPage() {
     previewCapabilities,
     remoteUpdatePending,
     screen,
+    screenBindings,
+    screenDocument.sections,
     screenId,
     selectedId,
     showInSidebar,
@@ -352,48 +336,67 @@ export function CustomScreenEditorPage() {
   const markDirty = useCallback(() => {
     setHasUnsavedChanges(true);
     setError(null);
+    setSaveNotice(null);
   }, []);
 
   const updateDefinition = useCallback(
     (next: CustomScreenDefinition) => {
       definitionRef.current = next;
-      blocksRef.current = next.editorView.blocks as Block[];
       setDefinition(next);
       markDirty();
     },
     [markDirty]
   );
 
-  const updateBlocks = useCallback(
-    (next: Block[]) => {
+  const updateEditorView = useCallback(
+    (next: {
+      document?: CustomScreenDefinition["editorView"]["document"];
+      bindings?: ScreenFieldBinding[];
+    }) => {
+      const current = definitionRef.current;
       updateDefinition({
-        ...definitionRef.current,
+        ...current,
         editorView: {
-          ...definitionRef.current.editorView,
-          blocks: next,
+          ...current.editorView,
+          document: next.document ?? current.editorView.document,
+          bindings: next.bindings ?? current.editorView.bindings,
         },
       });
     },
     [updateDefinition]
   );
 
-  const updateListView = useCallback(
-    (next: CustomScreenDefinition["listView"]) => {
-      updateDefinition({
-        ...definition,
-        listView: next,
-      });
-      if (!next.columns.some((column) => column.id === selectedListColumnId)) {
-        setSelectedListColumnId(next.columns[0]?.id ?? null);
-      }
-    },
-    [definition, selectedListColumnId, updateDefinition]
+  // TASK-505-03 (Item B2): proactive orphan detection over the live editor state.
+  // Gives the user a recovery path BEFORE hitting Save — the previously-opaque
+  // un-saveable dead-end becomes a one-click fix. Suppressed until the content
+  // type resolves so a transient empty `contentFields` can't false-flag valid
+  // field bindings (block-orphans don't depend on `contentFields`, so they stay
+  // accurate throughout).
+  const bindingOrphans = useMemo(
+    () =>
+      selectedContentType
+        ? detectScreenBindingOrphans(screenDocument, screenBindings, contentFields)
+        : { blockOrphans: [], fieldOrphans: [] },
+    [selectedContentType, screenDocument, screenBindings, contentFields]
   );
+  const orphanCount = bindingOrphans.blockOrphans.length + bindingOrphans.fieldOrphans.length;
+
+  const handleRemoveOrphanBindings = () => {
+    const current = definitionRef.current;
+    const orphanIds = new Set(
+      [...bindingOrphans.blockOrphans, ...bindingOrphans.fieldOrphans].map((binding) => binding.id)
+    );
+    if (orphanIds.size === 0) return;
+    updateEditorView({
+      document: current.editorView.document, // document unchanged — bindings-only prune
+      bindings: current.editorView.bindings.filter((binding) => !orphanIds.has(binding.id)),
+    });
+  };
 
   const applyScreen = useCallback((record: CustomScreenRecord) => {
     const nextDefinition = resolveScreenDefinition(record);
+    const nextSelection = resolveInitialSelection(nextDefinition.editorView.document);
     definitionRef.current = nextDefinition;
-    blocksRef.current = nextDefinition.editorView.blocks as Block[];
     setScreen(record);
     setName(record.name);
     setContentTypeId(record.contentTypeId);
@@ -401,9 +404,8 @@ export function CustomScreenEditorPage() {
     setShowInSidebar(record.showInSidebar ?? false);
     setSidebarLabel(record.sidebarLabel ?? "");
     setDefinition(nextDefinition);
-    setSelectedId(getFirstBlockId(nextDefinition.editorView.blocks as Block[]));
-    setFocusedBindingPropPath(null);
-    setSelectedListColumnId(nextDefinition.listView.columns[0]?.id ?? null);
+    setSelectedId(nextSelection.blockId);
+    setSelectedSectionId(nextSelection.sectionId);
     setHasUnsavedChanges(false);
   }, []);
 
@@ -427,9 +429,11 @@ export function CustomScreenEditorPage() {
     [applyScreen, isCreateMode, screenId]
   );
 
-  const handleSelectBlock = useCallback((id: string) => {
+  const handleSelectBlock = useCallback((id: string | null) => {
     setSelectedId(id);
-    setFocusedBindingPropPath(null);
+    if (id) {
+      setSelectedSectionId(findBlockSectionId(definitionRef.current.editorView.document, id));
+    }
   }, []);
 
   useEffect(() => {
@@ -477,116 +481,253 @@ export function CustomScreenEditorPage() {
     });
   }, [hasUnsavedChanges, isCreateMode, refreshScreen, screenId]);
 
-  const handleAddBlock = (type: string) => {
-    const nextBlock = createBlock(type);
-    updateBlocks([...blocks, nextBlock]);
-    setSelectedId(nextBlock.id);
-    setFocusedBindingPropPath(null);
+  // TASK-500-02: resolve the ScreenInsertTarget an insert should use. Priority:
+  // (a) the explicit armed insertion point (before/after gap or slot drop zone)
+  // (b) the selected container's derived default slot end (field-group→content,
+  //     columns→left, else first slot key) — safe because selectedId is cleared
+  //     whenever a section is clicked (selectTarget section branch +
+  //     handleSelectSection defense-in-depth), so no stale container in another
+  //     section can hijack the insert
+  // (c) the selected section's end
+  // (d) the first section's end.
+  const resolveInsertTarget = (
+    document: CustomScreenDefinition["editorView"]["document"]
+  ): ScreenInsertTarget => {
+    if (insertPoint) return insertPoint;
+    const selected = findScreenBlockById(document, selectedId);
+    if (selected?.slots) {
+      const slotId =
+        selected.type === "field-group"
+          ? "content"
+          : selected.type === "columns"
+            ? "left"
+            : Object.keys(selected.slots)[0];
+      if (slotId) {
+        const location = findScreenBlockLocation(document, selected.id);
+        return {
+          kind: "slot-end",
+          sectionId: location?.sectionId ?? selectedSectionId ?? "",
+          parentId: selected.id,
+          slotId,
+        };
+      }
+    }
+    return {
+      kind: "section-end",
+      sectionId: selectedSectionId ?? document.sections[0]?.id ?? "",
+    };
   };
 
-  const handleInsertIntoSlot = (parentId: string, slotId: string, type: string) => {
-    const nextBlock = createBlock(type);
-    updateBlocks(appendSlotBlock(blocks, parentId, slotId, nextBlock));
-    setSelectedId(nextBlock.id);
-    setFocusedBindingPropPath(null);
+  const handleAddBlock = (type: ScreenBlockKind, field?: ContentField) => {
+    const current = definitionRef.current;
+    const created = createScreenBlock({
+      type,
+      field: field?.name,
+      label: field?.label,
+      // TASK-498-02 B2: pass the relation target so the `related-list` factory can
+      // seed `data.target` (the field NAME alone carries no relation metadata).
+      relationTarget: field?.relation?.target,
+    });
+    // TASK-500-02: author-directed insertion — addScreenBlockAt clamps indices
+    // and fails soft on an unknown target (never throws in the editor path).
+    const target = resolveInsertTarget(current.editorView.document);
+    const nextDocument = addScreenBlockAt(current.editorView.document, created.block, target);
+    updateEditorView({
+      document: nextDocument,
+      bindings: [...current.editorView.bindings, ...created.bindings],
+    });
+    setSelectedId(created.block.id);
+    setSelectedSectionId(findBlockSectionId(nextDocument, created.block.id));
+    setInsertPoint(null); // consume the one-shot point
   };
 
-  const handleMoveIntoSlot = (blockId: string, parentId: string, slotId: string) => {
-    updateBlocks(moveBlockIntoSlot(blocks, blockId, parentId, slotId));
+  // TASK-500-02: drag-to-position — the canvas reports {blockId, target} once a
+  // drop resolves. moveScreenBlockTo owns the cycle guard + the same-list
+  // removal-first index decrement; a no-op (cycle/unknown block) returns the
+  // ORIGINAL document so `===` skips the dirty mark.
+  const handleDragMove = (blockId: string, target: ScreenInsertTarget) => {
+    const current = definitionRef.current;
+    const nextDocument = moveScreenBlockTo(current.editorView.document, blockId, target);
+    if (nextDocument === current.editorView.document) return;
+    updateEditorView({ document: nextDocument });
+    setSelectedId(blockId);
+    setSelectedSectionId(findBlockSectionId(nextDocument, blockId));
+    setInsertPoint(null);
   };
 
-  const handleMove = (path: BlockPath, from: number, to: number) => {
-    if (to < 0) return;
-    updateBlocks(reorderBlocksAtPath(blocks, path, from, to));
+  // TASK-500-01: section CRUD host handlers (pure ops → updateEditorView →
+  // existing PATCH on save; no other pathway changes).
+  const handleAddSection = () => {
+    const current = definitionRef.current;
+    const selectedIndex = current.editorView.document.sections.findIndex(
+      (section) => section.id === selectedSectionId
+    );
+    const atIndex = selectedIndex >= 0 ? selectedIndex + 1 : undefined; // insert AFTER selected
+    const { document, sectionId } = addScreenSection(current.editorView.document, { atIndex });
+    updateEditorView({ document });
+    setSelectedId(null); // a section, not a block, is now the active target
+    setSelectedSectionId(sectionId);
   };
 
-  const handleDuplicate = (id: string) => {
-    updateBlocks(duplicateBlock(blocks, id));
+  // TASK-500 post-audit (spurious dirty state): the canvas rename input commits
+  // on EVERY blur, and renameScreenSection always returns new objects even for
+  // an identical label — so the host must no-op an unchanged commit itself or a
+  // mere focus+blur marks the document dirty (unsaved-changes chip + suppressed
+  // remote refresh / "Updated in another tab" alert).
+  const handleRenameSection = (sectionId: string, label: string) => {
+    const document = definitionRef.current.editorView.document;
+    const section = document.sections.find((item) => item.id === sectionId);
+    if (!section) return; // unknown id — fail soft, nothing to dirty
+    const clean = label.trim() || "Section"; // mirror renameScreenSection's normalization
+    if (section.label === clean && section.data.title === clean) return; // unchanged — no dirty mark
+    updateEditorView({ document: renameScreenSection(document, sectionId, clean) });
   };
 
-  const handleDelete = (id: string) => {
-    const result = deleteBlockById(blocks, id);
-    if (!result.deleted) return;
-    updateBlocks(result.blocks);
-    if (selectedId && !findBlockById(result.blocks, selectedId)) {
-      setSelectedId(getFirstBlockId(result.blocks));
-      setFocusedBindingPropPath(null);
+  const handleMoveSection = (sectionId: string, direction: "up" | "down") => {
+    const current = definitionRef.current.editorView.document;
+    const nextDocument = moveScreenSection(current, sectionId, direction);
+    // Boundary/unknown-id no-op returns the SAME document reference (same
+    // pattern as handleDragMove) — skip the update so no dirty mark is set.
+    if (nextDocument === current) return;
+    updateEditorView({ document: nextDocument });
+  };
+
+  const handleDeleteSection = (sectionId: string) => {
+    const current = definitionRef.current;
+    const { document, removed } = removeScreenSection(current.editorView.document, sectionId);
+    if (!removed) return; // last-section no-op (or unknown id) — nothing deleted, selection intact
+    // Prune bindings for EVERY block in the removed section subtree.
+    let bindings = current.editorView.bindings;
+    removed.blocks.forEach((block) => {
+      bindings = removeScreenBindingsForBlockTree(bindings, block);
+    });
+    updateEditorView({ document, bindings });
+    // A delete only happens when ≥2 sections existed, so the doc still has ≥1 section here.
+    if (selectedSectionId === sectionId) setSelectedSectionId(document.sections[0]?.id ?? null);
+    if (selectedId && !findScreenBlockById(document, selectedId)) setSelectedId(null);
+  };
+
+  // TASK-500-01 defense-in-depth: the canvas selectTarget already clears the
+  // block selection on a section click (its section branch calls
+  // onSelectBlock(null) before onSelectSection), so steering already works
+  // through the canvas path. This handler ALSO clears setSelectedId(null) so it
+  // is self-contained regardless of caller.
+  const handleSelectSection = (sectionId: string | null) => {
+    setSelectedSectionId(sectionId);
+    setSelectedId(null);
+  };
+
+  const handleMoveBlock = (blockId: string, direction: "up" | "down") => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: moveScreenBlock(current.editorView.document, blockId, direction),
+    });
+  };
+
+  const handleDuplicateBlock = (blockId: string) => {
+    const current = definitionRef.current;
+    const result = duplicateScreenBlockWithBindings(
+      current.editorView.document,
+      current.editorView.bindings,
+      blockId
+    );
+    updateEditorView({
+      document: result.document,
+      bindings: result.bindings,
+    });
+    if (result.duplicatedBlockId) {
+      setSelectedId(result.duplicatedBlockId);
+      setSelectedSectionId(findBlockSectionId(result.document, result.duplicatedBlockId));
     }
   };
 
-  const handleChangeBlock = (next: Block) => {
-    updateBlocks(updateBlockById(blocks, next.id, () => next));
+  const handleDeleteBlock = (blockId: string) => {
+    const current = definitionRef.current;
+    const result = removeScreenBlock(current.editorView.document, blockId);
+    if (!result.removed) return;
+    updateEditorView({
+      document: result.document,
+      bindings: removeScreenBindingsForBlockTree(current.editorView.bindings, result.removed),
+    });
+    if (selectedId && !findScreenBlockById(result.document, selectedId)) {
+      const nextSelection = resolveInitialSelection(result.document);
+      setSelectedId(nextSelection.blockId);
+      setSelectedSectionId(nextSelection.sectionId);
+    }
   };
 
-  const handlePatchBlock = (
+  const handlePatchBlock = (blockId: string, patch: Partial<ScreenBlockV1>) => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: updateScreenBlock(current.editorView.document, blockId, patch),
+    });
+  };
+
+  // TASK-505-03 (Item A): section-layout write — mirrors handlePatchBlock. The
+  // `style` key rides the same `definition` PATCH envelope (no new persisted key
+  // beyond 505-01's document contract; schemaVersion unchanged).
+  const handlePatchSection = (sectionId: string, patch: ScreenSectionPatch) => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: updateScreenSection(current.editorView.document, sectionId, patch),
+    });
+  };
+
+  const handlePatchBlockData = (blockId: string, patch: Record<string, unknown>) => {
+    const current = definitionRef.current;
+    updateEditorView({
+      document: updateScreenBlock(current.editorView.document, blockId, (block) => ({
+        ...block,
+        data: {
+          ...block.data,
+          ...patch,
+        },
+      })),
+    });
+  };
+
+  const handlePatchBinding = (
     blockId: string,
-    patch: Parameters<typeof applyWidgetBlockPatch>[1]
+    propPath: string,
+    patch: Partial<Pick<ScreenFieldBinding, "field" | "mode">>
   ) => {
-    updateBlocks(
-      updateBlockById(blocksRef.current, blockId, (current) =>
-        applyWidgetBlockPatch(current, patch)
-      )
+    const current = definitionRef.current;
+    const existing = current.editorView.bindings.find(
+      (binding) => binding.blockId === blockId && binding.propPath === propPath
     );
-  };
-
-  const handleAddListColumn = (option: ReturnType<typeof listSelectableListFields>[number]) => {
-    const nextColumn = buildListColumnFromOption(option);
-    updateListView({
-      ...definition.listView,
-      columns: [...definition.listView.columns, nextColumn],
+    const fieldName = patch.field ?? existing?.field ?? "title";
+    const nextBinding = existing
+      ? {
+          ...existing,
+          ...patch,
+        }
+      : createScreenFieldBinding({
+          blockId,
+          propPath,
+          field: fieldName,
+          mode: patch.mode,
+        });
+    const nextBindings = existing
+      ? current.editorView.bindings.map((binding) =>
+          binding.id === existing.id ? nextBinding : binding
+        )
+      : [...current.editorView.bindings, nextBinding];
+    const matchingField = contentFields.find((field) => field.name === fieldName);
+    const nextDocument =
+      propPath === "value"
+        ? updateScreenBlock(current.editorView.document, blockId, (block) => ({
+            ...block,
+            data: {
+              ...block.data,
+              field: fieldName,
+              ...(matchingField ? { label: matchingField.label } : {}),
+            },
+          }))
+        : current.editorView.document;
+    updateEditorView({
+      document: nextDocument,
+      bindings: nextBindings,
     });
-    setSelectedListColumnId(nextColumn.id);
-  };
-
-  const handleMoveListColumn = (columnId: string, direction: "left" | "right") => {
-    const visibleColumns = getVisibleListColumns(definition.listView);
-    const visibleIds = visibleColumns.map((column) => column.id);
-    const currentVisibleIndex = visibleIds.indexOf(columnId);
-    if (currentVisibleIndex === -1) return;
-    const swapVisibleId =
-      direction === "left"
-        ? visibleIds[currentVisibleIndex - 1]
-        : visibleIds[currentVisibleIndex + 1];
-    if (!swapVisibleId) return;
-
-    const currentIndex = definition.listView.columns.findIndex((column) => column.id === columnId);
-    const swapIndex = definition.listView.columns.findIndex(
-      (column) => column.id === swapVisibleId
-    );
-    if (currentIndex === -1 || swapIndex === -1) return;
-    const nextColumns = [...definition.listView.columns];
-    [nextColumns[currentIndex], nextColumns[swapIndex]] = [
-      nextColumns[swapIndex]!,
-      nextColumns[currentIndex]!,
-    ];
-    updateListView({
-      ...definition.listView,
-      columns: nextColumns,
-    });
-  };
-
-  const handleChangeSelectedListColumn = (
-    patch: Partial<CustomScreenDefinition["listView"]["columns"][number]>
-  ) => {
-    if (!selectedListColumn) return;
-    updateListView({
-      ...definition.listView,
-      columns: definition.listView.columns.map((column) =>
-        column.id === selectedListColumn.id ? { ...column, ...patch } : column
-      ),
-    });
-  };
-
-  const handleRemoveSelectedListColumn = () => {
-    if (!selectedListColumn) return;
-    const nextColumns = definition.listView.columns.filter(
-      (column) => column.id !== selectedListColumn.id
-    );
-    updateListView({
-      ...definition.listView,
-      columns: nextColumns,
-    });
-    setSelectedListColumnId(nextColumns[0]?.id ?? null);
   };
 
   const handleSave = async () => {
@@ -602,6 +743,7 @@ export function CustomScreenEditorPage() {
 
     setIsSaving(true);
     setError(null);
+    setSaveNotice(null);
     const payload = {
       name: trimmedName,
       contentTypeId,
@@ -609,23 +751,46 @@ export function CustomScreenEditorPage() {
       showInSidebar,
       sidebarLabel: sidebarLabel.trim() || null,
       definition,
-      blocks: definition.editorView.blocks,
-      bindings: definition.editorView.bindings,
+    };
+
+    // TASK-505-03 (Item B3): surface the field(s) the 505-01 save-path GC pruned.
+    // The returned record carries a TRANSIENT `warnings` (computed at normalize
+    // time, NOT persisted); reading it directly avoids any client-side diff.
+    const applySavedRecord = (record: CustomScreenRecord) => {
+      const prunedFields = uniqueFieldNames(
+        (record.warnings ?? [])
+          .filter((warning) => warning.code === "binding_field_removed")
+          .flatMap((warning) => warning.fields)
+      );
+      applyScreen(record);
+      setSaveNotice(
+        prunedFields.length > 0
+          ? `Removed binding(s) for deleted field(s): ${prunedFields.join(", ")}.`
+          : null
+      );
     };
 
     try {
       if (isCreateMode) {
         const created = await createCustomScreen(payload);
-        applyScreen(created);
+        applySavedRecord(created);
         navigate(`/advanced/custom-screens/${encodeURIComponent(created.id)}`);
       } else if (screenId) {
         const updated = await updateCustomScreen(screenId, payload);
-        applyScreen(updated);
+        applySavedRecord(updated);
       }
       setRemoteUpdatePending(false);
     } catch (err) {
       if (isApiClientError(err)) {
-        setError(err.message);
+        // TASK-505-03 (Item B4): the residual malformed-binding 400 keeps its
+        // byte-frozen `err.message`; append any field name(s) that ride the
+        // response DETAIL (`err.details.fields`, from 505-01) when present.
+        const detailFields = (err.details as { fields?: string[] } | undefined)?.fields;
+        setError(
+          detailFields?.length
+            ? `${err.message} (field(s): ${detailFields.join(", ")})`
+            : err.message
+        );
       } else {
         setError("Failed to save custom screen.");
       }
@@ -633,24 +798,6 @@ export function CustomScreenEditorPage() {
       setIsSaving(false);
     }
   };
-
-  const libraryPanel =
-    activeBuilderTab === "list-view" ? (
-      <ListViewElementLibrary
-        options={availableListFieldOptions}
-        onAddColumn={handleAddListColumn}
-      />
-    ) : (
-      <WidgetPicker
-        widgets={screenWidgetRegistry}
-        onAdd={handleAddBlock}
-        draggable
-        onDragStart={(event, type) => {
-          event.dataTransfer.setData("widget-type", type);
-          event.dataTransfer.effectAllowed = "copy";
-        }}
-      />
-    );
 
   const screenSettingsPanel = (
     <div className="space-y-4">
@@ -751,275 +898,188 @@ export function CustomScreenEditorPage() {
     </div>
   );
 
-  const detailsPanel =
-    activeBuilderTab === "list-view" ? (
-      <Tabs key="list-view-details" defaultValue="screen" className="flex h-full flex-col">
-        <TabsList variant="line" className="px-1">
-          <TabsTrigger value="screen">Screen</TabsTrigger>
-          <TabsTrigger value="column">Selected Column</TabsTrigger>
-        </TabsList>
-        <TabsContent value="screen" className="mt-4 space-y-6">
-          {screenSettingsPanel}
-          <div className="rounded-xl border p-4">
-            <ListViewDesigner
-              contentType={selectedContentType}
-              value={definition.listView}
-              onChange={updateListView}
-            />
-          </div>
-        </TabsContent>
-        <TabsContent value="column" className="mt-4">
-          <ListViewColumnInspector
-            column={selectedListColumn}
-            onChange={handleChangeSelectedListColumn}
-            onRemove={handleRemoveSelectedListColumn}
-          />
-        </TabsContent>
-      </Tabs>
-    ) : (
-      <Tabs
-        key="editor-view-details"
-        value={activeEditorDetailsTab}
-        onValueChange={(next) => setActiveEditorDetailsTab(next as EditorDetailsTab)}
-        className="flex h-full flex-col"
-      >
-        <TabsList variant="line" className="px-1">
-          <TabsTrigger value="screen">Screen</TabsTrigger>
-          <TabsTrigger value="data">Data</TabsTrigger>
-          <TabsTrigger value="widget">Selected Widget</TabsTrigger>
-        </TabsList>
-        <TabsContent value="screen" className="mt-4">
-          {screenSettingsPanel}
-        </TabsContent>
-        <TabsContent value="data" className="mt-4">
-          <FieldBindingPanel
-            selectedBlock={selectedBlock}
-            selectedWidget={selectedWidget}
-            selectedWidgetSource={selectedWidgetSource}
-            value={bindings}
-            fields={contentFields}
-            focusedPropPath={focusedBindingPropPath}
-            onFocusedPropPathChange={setFocusedBindingPropPath}
-            onChange={(next) => {
-              updateDefinition({
-                ...definition,
-                editorView: {
-                  ...definition.editorView,
-                  bindings: next,
-                },
-              });
-            }}
-          />
-        </TabsContent>
-        <TabsContent value="widget" className="mt-4">
-          <BlockSettings
-            block={selectedBlock}
-            widget={selectedWidget ?? undefined}
-            onChange={handleChangeBlock}
-            onBlockPatch={
-              selectedBlock ? (patch) => handlePatchBlock(selectedBlock.id, patch) : undefined
-            }
-            editorContext={adminEditorWidgetContext}
-          />
-        </TabsContent>
-      </Tabs>
-    );
-
-  const showEmptyState = !isLoading && blocks.length === 0;
   const previewOwnerKey = selectedContentType?.slug ?? "no-content-type";
 
   return (
     <CustomScreenPreviewRecordOwner key={previewOwnerKey} contentType={selectedContentType}>
       {({ isLoading: previewDataLoading, previewRecordState }) => {
-        const editorPreviewBlocks = applyBindingsToBlocks(
-          blocks,
-          bindings,
-          previewRecordState.data
-        ) as Block[];
-
+        // TASK-498-01: the List/Editor view toggle is removed — the screen editor
+        // is now the entry-view BUILDER only. The header keeps Preview + Save; the
+        // in-content PageHeader still renders above the shared `CanvasEditor` shell
+        // (prototype CustomScreenEditorPreview.tsx:188-211).
+        const screenPageHeader = (
+          <PageHeader
+            className="mb-0 shrink-0 px-6 pb-3 pt-4"
+            title={name || (isCreateMode ? "New screen" : "Untitled")}
+            actions={
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() => setPreviewOpen(true)}
+                >
+                  <Eye className="h-4 w-4" />
+                  Preview
+                </Button>
+                <Button
+                  size="sm"
+                  className="gap-2"
+                  onClick={handleSave}
+                  disabled={isLoading || isSaving}
+                >
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </>
+            }
+          />
+        );
+        // Panel Hide/Show toggle (mirrors PageEditor) — the real consumer of
+        // setPanelOpen, so the controlled-shell setter is not a dead passthrough.
+        const screenPanelToggle = (
+          <Button
+            type="button"
+            variant={panelOpen ? "soft" : "ghost"}
+            size="sm"
+            onClick={() => setPanelOpen((open) => !open)}
+            aria-label={panelOpen ? "Hide panel" : "Show panel"}
+            aria-pressed={panelOpen}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {panelOpen ? "Hide panel" : "Show panel"}
+          </Button>
+        );
+        // Pages-parity reopen chip shown when the panel is hidden.
+        const screenReopen = (
+          <button
+            type="button"
+            onClick={() => setPanelOpen(true)}
+            aria-label="Show panel"
+            className="absolute right-4 top-4 z-30 flex items-center gap-1.5 rounded-xl border border-border bg-popover px-3 py-2 text-xs font-medium shadow-pop transition-colors hover:text-primary"
+          >
+            <SlidersHorizontal className="size-3.5" /> Show panel
+          </button>
+        );
         return (
           <>
             <CustomScreenShell
+              variant="canvas"
               name={name}
               status={status}
               hasUnsavedChanges={hasUnsavedChanges}
               isCreateMode={isCreateMode}
-              leftPanel={libraryPanel}
-              rightPanel={detailsPanel}
-              rightPanelClassName="p-6"
             >
-              <div className="sticky top-0 z-10 w-full border-b bg-background/80 px-4 py-3 backdrop-blur">
-                <div className="mx-auto flex w-full max-w-4xl flex-col gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setPreviewOpen(true)}
-                    >
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </Button>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="hidden items-center rounded-lg border bg-background p-1 shadow-sm sm:flex">
+              {/* TASK-505-03 (Item B2/B3): the outer gate is widened beyond
+                  `error || remoteUpdatePending` so the amber orphan notice (no
+                  current error on the reopen path) and the post-save pruned-field
+                  notice (no error on a clean save) actually mount. The per-notice
+                  inner gates still decide which Alert shows. */}
+              {error || remoteUpdatePending || orphanCount > 0 || saveNotice ? (
+                <div className="shrink-0 space-y-3 px-6 pt-4">
+                  {error ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>Custom screen error</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {orphanCount > 0 ? (
+                    <Alert data-screen-orphan-notice="true">
+                      <AlertTitle>Orphaned field bindings</AlertTitle>
+                      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span>
+                          {orphanCount} binding(s) reference{" "}
+                          {bindingOrphans.fieldOrphans.length > 0
+                            ? `deleted field(s): ${uniqueFieldNames(bindingOrphans.fieldOrphans).join(", ")}`
+                            : "removed blocks"}
+                          . They block saving until removed.
+                        </span>
                         <Button
-                          variant={activeBuilderTab === "list-view" ? "secondary" : "ghost"}
+                          variant="outline"
                           size="sm"
-                          className="gap-2"
-                          onClick={() => setActiveBuilderTab("list-view")}
+                          onClick={handleRemoveOrphanBindings}
+                          data-screen-remove-orphans="true"
                         >
-                          List View
+                          Remove orphaned bindings
                         </Button>
-                        <Button
-                          variant={activeBuilderTab === "editor-view" ? "secondary" : "ghost"}
-                          size="sm"
-                          className="gap-2"
-                          onClick={() => setActiveBuilderTab("editor-view")}
-                        >
-                          Editor View
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {saveNotice ? (
+                    <Alert data-screen-save-notice="true">
+                      <AlertTitle>Binding cleanup</AlertTitle>
+                      <AlertDescription>{saveNotice}</AlertDescription>
+                    </Alert>
+                  ) : null}
+                  {remoteUpdatePending ? (
+                    <Alert>
+                      <AlertTitle>Updated in another tab</AlertTitle>
+                      <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span>New changes are available. Refresh to load the latest version.</span>
+                        <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
+                          Refresh
                         </Button>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 sm:hidden"
-                        onClick={() =>
-                          setActiveBuilderTab((current) =>
-                            current === "list-view" ? "editor-view" : "list-view"
-                          )
-                        }
-                      >
-                        {activeBuilderTab === "list-view" ? "Editor View" : "List View"}
-                      </Button>
-                    </div>
-                    <Button
-                      size="sm"
-                      className="gap-2"
-                      onClick={handleSave}
-                      disabled={isLoading || isSaving}
-                    >
-                      <Save className="h-4 w-4" />
-                      {isSaving ? "Saving..." : "Save"}
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 lg:hidden">
-                    <Button variant="outline" size="sm" onClick={() => setMobileLibraryOpen(true)}>
-                      Components
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => setMobileDetailsOpen(true)}>
-                      Details
-                    </Button>
-                  </div>
+                      </AlertDescription>
+                    </Alert>
+                  ) : null}
                 </div>
-              </div>
-              <div className="mx-auto flex max-w-4xl flex-col gap-4 px-6 py-8">
-                {error ? (
-                  <Alert variant="destructive">
-                    <AlertTitle>Custom screen error</AlertTitle>
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                ) : null}
-                {remoteUpdatePending ? (
-                  <Alert>
-                    <AlertTitle>Updated in another tab</AlertTitle>
-                    <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                      <span>New changes are available. Refresh to load the latest version.</span>
-                      <Button variant="outline" size="sm" onClick={() => refreshScreen(true)}>
-                        Refresh
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                ) : null}
+              ) : null}
 
-                {isLoading ? (
-                  <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
-                    Loading custom screen...
-                  </div>
-                ) : activeBuilderTab === "list-view" ? (
-                  <ListViewCanvas
-                    contentType={selectedContentType}
-                    listView={definition.listView}
-                    selectedColumnId={selectedListColumnId}
-                    onSelectColumn={setSelectedListColumnId}
-                    onMoveColumn={handleMoveListColumn}
-                  />
-                ) : showEmptyState ? (
-                  <div className="mx-auto flex w-full flex-col items-center justify-center rounded-3xl border-2 border-dashed border-border/60 bg-background/40 px-10 py-16 text-center">
-                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border border-primary/30 bg-primary/5 text-primary">
-                      <Settings2 className="h-10 w-10" />
-                    </div>
-                    <h2 className="text-2xl font-semibold text-foreground">
-                      Build your custom screen
-                    </h2>
-                    <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-                      Add dedicated screen widgets from the library to compose the admin experience
-                      for this content type.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
+              {isLoading ? (
+                <div className="mx-6 mb-6 flex min-h-0 flex-1 items-center justify-center rounded-2xl border border-border bg-card text-sm text-muted-foreground shadow-card">
+                  Loading custom screen...
+                </div>
+              ) : (
+                <ScreenAuthoringCanvas
+                  document={screenDocument}
+                  bindings={screenBindings}
+                  fields={contentFields}
+                  values={previewRecordState.data}
+                  header={screenPageHeader}
+                  panelToggle={screenPanelToggle}
+                  reopenAffordance={screenReopen}
+                  panelOpen={panelOpen}
+                  onPanelOpenChange={setPanelOpen}
+                  previewNotice={
                     <PreviewStateNotice
                       contentType={selectedContentType}
                       previewRecordState={previewRecordState}
                       isLoading={previewDataLoading}
                     />
-                    <div
-                      className="w-full overflow-hidden rounded-xl border border-border/50 bg-background"
-                      onDragOver={(event) => {
-                        event.preventDefault();
-                      }}
-                      onDrop={(event) => {
-                        event.preventDefault();
-                        const type = event.dataTransfer.getData("widget-type");
-                        if (type) handleAddBlock(type);
-                      }}
-                    >
-                      <BlockList
-                        blocks={editorPreviewBlocks}
-                        className="p-4"
-                        widgetRegistry={widgetRegistry}
-                        selectedId={selectedId}
-                        onSelect={handleSelectBlock}
-                        onMove={handleMove}
-                        onDuplicate={handleDuplicate}
-                        onDelete={handleDelete}
-                        onInsert={handleInsertIntoSlot}
-                        onMoveToSlot={handleMoveIntoSlot}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
+                  }
+                  settingsPanel={screenSettingsPanel}
+                  selectedSectionId={selectedSectionId}
+                  selectedBlockId={selectedId}
+                  onSelectSection={handleSelectSection}
+                  onSelectBlock={handleSelectBlock}
+                  onAddSection={handleAddSection}
+                  onRenameSection={handleRenameSection}
+                  onMoveSection={handleMoveSection}
+                  onDeleteSection={handleDeleteSection}
+                  onAddBlock={handleAddBlock}
+                  insertPoint={insertPoint}
+                  onSetInsertPoint={setInsertPoint}
+                  onDragMove={handleDragMove}
+                  onPatchBlock={handlePatchBlock}
+                  onPatchSection={handlePatchSection}
+                  onPatchBlockData={handlePatchBlockData}
+                  onPatchBinding={handlePatchBinding}
+                  onMove={handleMoveBlock}
+                  onDuplicate={handleDuplicateBlock}
+                  onDelete={handleDeleteBlock}
+                />
+              )}
             </CustomScreenShell>
-
-            <Sheet open={mobileLibraryOpen} onOpenChange={setMobileLibraryOpen}>
-              <SheetContent side="left" className="w-80 p-0">
-                <SheetTitle className="sr-only">Widget library</SheetTitle>
-                <SheetDescription className="sr-only">
-                  Insert widgets into the custom screen layout.
-                </SheetDescription>
-                {libraryPanel}
-              </SheetContent>
-            </Sheet>
-
-            <Sheet open={mobileDetailsOpen} onOpenChange={setMobileDetailsOpen}>
-              <SheetContent side="right" className="w-96 p-6">
-                <SheetTitle className="sr-only">Screen details</SheetTitle>
-                <SheetDescription className="sr-only">
-                  Configure screen metadata and widget settings.
-                </SheetDescription>
-                {detailsPanel}
-              </SheetContent>
-            </Sheet>
 
             <CustomScreenWorkspacePreviewDialog
               open={previewOpen}
               onOpenChange={setPreviewOpen}
-              mode={activeBuilderTab}
+              mode="editor-view"
               contentType={selectedContentType}
               listView={definition.listView}
-              blocks={blocks}
-              bindings={bindings}
+              document={screenDocument}
+              bindings={screenBindings}
+              fields={contentFields}
               previewRecordState={previewRecordState}
               previewLoading={previewDataLoading}
             />

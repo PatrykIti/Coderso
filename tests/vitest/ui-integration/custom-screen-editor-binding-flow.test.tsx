@@ -3,9 +3,9 @@
 import React, { useMemo, useState } from "react";
 
 import { createRoot } from "react-dom/client";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
 
-import { FieldBindingPanel } from "../../../core/admin/ui/custom-screens/FieldBindingPanel";
+import { ScreenBlockInspector } from "../../../core/admin/ui/custom-screens/ScreenBlockInspector";
 import { BlockSettings } from "../../../core/admin/ui/pages/builder/BlockSettings";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../core/admin/components/ui/tabs";
 import { getRegisteredWidget } from "../../../core/admin/ui/widgets/registry";
@@ -51,9 +51,13 @@ function Harness() {
   const [activeInspectorTab, setActiveInspectorTab] = useState<"screen" | "data" | "widget">(
     "widget"
   );
-  const [focusedBindingPropPath, setFocusedBindingPropPath] = useState<string | null>(null);
+  // TASK-496-02: the standalone FieldBindingPanel (and its focusedPropPath wiring)
+  // is retired; the binding surface is covered by custom-screen-binding-panel.test
+  // through ScreenBlockInspector. This harness now only asserts that the BlockSettings
+  // widget tab exposes no legacy binding jump controls for retired screen widgets.
+  const [, setFocusedBindingPropPath] = useState<string | null>(null);
   const [block, setBlock] = useState<Block>(headerBlock);
-  const [bindings, setBindings] = useState<CustomScreenBinding[]>([
+  const [bindings] = useState<CustomScreenBinding[]>([
     {
       id: "binding-title",
       widgetId: "header-1",
@@ -88,25 +92,6 @@ function Harness() {
         <TabsTrigger value="data">Data</TabsTrigger>
         <TabsTrigger value="widget">Selected Widget</TabsTrigger>
       </TabsList>
-      <TabsContent value="data">
-        <FieldBindingPanel
-          selectedBlock={block}
-          selectedWidget={widget ?? null}
-          selectedWidgetSource="screen-registry"
-          value={bindings}
-          fields={[
-            {
-              id: "field-project-title",
-              name: "projectTitle",
-              type: "text",
-              label: "Project title",
-            },
-          ]}
-          focusedPropPath={focusedBindingPropPath}
-          onFocusedPropPathChange={setFocusedBindingPropPath}
-          onChange={setBindings}
-        />
-      </TabsContent>
       <TabsContent value="widget">
         <BlockSettings
           block={block}
@@ -123,24 +108,54 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("jump to binding switches into the Data tab and focuses the matching prop path", () => {
+test("retired screen widgets do not expose legacy binding jump controls", () => {
   const view = mount(<Harness />);
 
   try {
     const titleDataButton = view.container.querySelector('button[data-binding-prop-path="title"]');
-    expect(titleDataButton).not.toBeNull();
+    expect(titleDataButton).toBeNull();
+  } finally {
+    view.cleanup();
+  }
+});
 
-    React.act(() => {
-      titleDataButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    });
+test("ScreenBlockInspector renders the flat inline Layout group in place of the retired Background row", () => {
+  const onPatchBlock = vi.fn();
+  const view = mount(
+    <ScreenBlockInspector
+      selectedBlock={{
+        id: "field-1",
+        type: "field",
+        variant: "compact",
+        data: { label: "Title" },
+      }}
+      bindings={[]}
+      fields={[]}
+      panel="all"
+      showBlockActions={false}
+      onPatchBlock={onPatchBlock}
+      onPatchBlockData={vi.fn()}
+      onPatchBinding={vi.fn()}
+      onMove={vi.fn()}
+      onDuplicate={vi.fn()}
+      onDelete={vi.fn()}
+    />
+  );
 
-    const dataTabTrigger = Array.from(view.container.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Data")
-    );
-    expect(dataTabTrigger?.getAttribute("data-state")).toBe("active");
-    expect(
-      view.container.querySelector('[data-prop-path="title"][data-focused="true"]')
-    ).not.toBeNull();
+  try {
+    // TASK-503-03 (parent decision 1): the dead free-text "Background"
+    // (block.variant) row is REMOVED — the renderer never read block.variant.
+    // The block-level Layout group (Width/Align/Min height/Margin/Padding) is
+    // edited INLINE (no dialog) and replaces it. The `variant` key still
+    // round-trips through the schema; only the dead control is gone.
+    expect(view.container.textContent).not.toContain("Background");
+    expect(document.body.querySelector("[data-screen-style-dialog]")).toBeNull();
+    expect(view.container.textContent).not.toContain("Open style controls");
+
+    const layoutGroup = view.container.querySelector("[data-screen-layout-group]");
+    expect(layoutGroup).not.toBeNull();
+    // the retired variant free-text Input (placeholder="Default") is gone
+    expect(view.container.querySelector('input[placeholder="Default"]')).toBeNull();
   } finally {
     view.cleanup();
   }

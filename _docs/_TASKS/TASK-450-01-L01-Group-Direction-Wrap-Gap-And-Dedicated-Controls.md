@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Medium
 **Dependencies:** TASK-450-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -19,23 +20,25 @@ preserving the current working nested-runtime behavior.
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
 ```tsx
 // Controls: the real registry accessor is getPageEditorControlsForTarget
-// (core/services/pages/pageEditorControlRegistry.ts:508); group rows
-// (direction segmented, wrap switch, gap number) live at
-// pageEditorControlRegistry.ts:487-505.
+// (core/services/pages/pageEditorControlRegistry.ts:870-890); group rows
+// (direction segmented, wrap switch, gap bounded number) live at
+// pageEditorControlRegistry.ts:849-867 and map through
+// pageEditorControlUiModel.ts before the PageEditor renders shared widgets.
 const groupControls = getPageEditorControlsForTarget({ kind: "block", type: "group" });
 
 // Runtime guard: published group output flows through renderPageBlockContent /
 // PageDocumentRender (core/services/pages/pageRendererV2.tsx); the
-// `data-page-block` attribute is emitted at pageRendererV2.tsx:293. Assert
-// against PageDocumentRender output in tests/vitest/pages/page-renderer-v2.test.tsx:
+// `data-page-block` attribute is emitted by toPageBlockRenderProps
+// (pageRendererV2.tsx:529-539). Assert against PageDocumentRender output in
+// tests/vitest/pages/page-renderer-v2.test.tsx:
 expect(html).toContain('data-page-block="group"');
 ```
 
@@ -43,6 +46,7 @@ Owner files:
 
 - `core/admin/ui/pages/PageEditor.tsx`
 - `core/services/pages/pageEditorControlRegistry.ts`
+- `core/services/pages/pageEditorControlUiModel.ts`
 - `core/services/pages/pageRendererV2.tsx`
 - `core/services/pages/pageDocumentV2.ts`
 

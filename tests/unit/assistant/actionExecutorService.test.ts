@@ -35,9 +35,14 @@ import type {
 } from "../../../core/services/assistant/actionPlanTypes";
 import type { AssistantUndoManifestItem } from "../../../core/services/assistant/actionUndoManifest";
 import type { DetailPageDocument } from "../../../core/services/content/detailPageTypes";
-import type {
+import {
   CustomScreenBinding,
   CustomScreenCollectionRole,
+  type CustomScreenDefinition,
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
+  normalizeCustomScreenDefinitionForWrite,
+  withCustomScreenEditorViewCompat,
 } from "../../../core/services/customScreens/customScreenSchemas";
 import type { ContentRouteSetting } from "../../../core/services/settings/settingsService";
 import type { WidgetBlock } from "../../../core/widgets/types";
@@ -69,6 +74,53 @@ const createTestPageData = (sections: PageSectionV2[] = []) => ({
     showInNav: true,
   },
 });
+
+const createTestCustomScreenDefinition = (
+  blocks: WidgetBlock[] = [],
+  bindings: CustomScreenBinding[] = []
+): CustomScreenDefinition =>
+  withCustomScreenEditorViewCompat(normalizeCustomScreenDefinitionForWrite(), {
+    blocks,
+    bindings,
+    saveMode: "entry",
+    interactionMode: "inline",
+  });
+
+const createNativeTestCustomScreenDefinition = (
+  blocks: CustomScreenDefinition["editorView"]["document"]["sections"][number]["blocks"],
+  bindings: CustomScreenDefinition["editorView"]["bindings"] = []
+): CustomScreenDefinition =>
+  normalizeCustomScreenDefinitionForWrite({
+    definition: {
+      schemaVersion: 4,
+      editorView: {
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: "main",
+              type: "section",
+              data: {},
+              blocks,
+            },
+          ],
+        },
+        bindings,
+        saveMode: "entry",
+        interactionMode: "inline",
+      },
+    },
+  });
+
+const projectTestCustomScreenDefinition = (definition: CustomScreenDefinition) => {
+  const blocks = getCustomScreenEditorViewBlocks(definition);
+  const bindings = getCustomScreenEditorViewBindings(definition);
+  return {
+    blocks,
+    bindings,
+    capabilities: resolveCustomScreenCapabilities({ blocks, bindings }),
+  };
+};
 
 const readPageSections = (data: unknown) => {
   if (!data || typeof data !== "object") return [];
@@ -159,7 +211,8 @@ const createDeps = () => {
     compositionKey: string | null;
     showInSidebar: boolean;
     sidebarLabel: string | null;
-    schemaVersion: 1;
+    schemaVersion: 4;
+    definition: CustomScreenDefinition;
     blocks: WidgetBlock[];
     bindings: CustomScreenBinding[];
     capabilities: CustomScreenCapabilities;
@@ -424,10 +477,15 @@ const createDeps = () => {
       compositionKey?: string | null;
       showInSidebar?: boolean;
       sidebarLabel?: string | null;
+      definition?: CustomScreenDefinition;
       blocks?: WidgetBlock[] | null;
       bindings?: CustomScreenBinding[] | null;
     }) => {
       const now = new Date("2026-04-10T12:00:00.000Z");
+      const definition =
+        input.definition ??
+        createTestCustomScreenDefinition(input.blocks ?? [], input.bindings ?? []);
+      const projection = projectTestCustomScreenDefinition(definition);
       const record = {
         id: `screen-${customScreens.length + 1}`,
         name: input.name,
@@ -437,13 +495,11 @@ const createDeps = () => {
         compositionKey: input.compositionKey ?? null,
         showInSidebar: input.showInSidebar === true,
         sidebarLabel: input.sidebarLabel ?? null,
-        schemaVersion: 1 as const,
-        blocks: input.blocks ?? [],
-        bindings: input.bindings ?? [],
-        capabilities: resolveCustomScreenCapabilities({
-          blocks: input.blocks ?? [],
-          bindings: input.bindings ?? [],
-        }),
+        schemaVersion: 4 as const,
+        definition,
+        blocks: projection.blocks,
+        bindings: projection.bindings,
+        capabilities: projection.capabilities,
         createdAt: now,
         updatedAt: now,
       };
@@ -460,6 +516,7 @@ const createDeps = () => {
         compositionKey?: string | null;
         showInSidebar?: boolean;
         sidebarLabel?: string | null;
+        definition?: CustomScreenDefinition;
         blocks?: WidgetBlock[] | null;
         bindings?: CustomScreenBinding[] | null;
       }
@@ -473,12 +530,18 @@ const createDeps = () => {
       if (input.compositionKey !== undefined) existing.compositionKey = input.compositionKey;
       if (input.showInSidebar !== undefined) existing.showInSidebar = input.showInSidebar;
       if (input.sidebarLabel !== undefined) existing.sidebarLabel = input.sidebarLabel;
-      if (input.blocks !== undefined) existing.blocks = input.blocks ?? [];
-      if (input.bindings !== undefined) existing.bindings = input.bindings ?? [];
-      existing.capabilities = resolveCustomScreenCapabilities({
-        blocks: existing.blocks,
-        bindings: existing.bindings,
-      });
+      if (input.definition !== undefined) {
+        existing.definition = input.definition;
+      } else if (input.blocks !== undefined || input.bindings !== undefined) {
+        existing.definition = createTestCustomScreenDefinition(
+          input.blocks ?? existing.blocks,
+          input.bindings ?? existing.bindings
+        );
+      }
+      const projection = projectTestCustomScreenDefinition(existing.definition);
+      existing.blocks = projection.blocks;
+      existing.bindings = projection.bindings;
+      existing.capabilities = projection.capabilities;
       existing.updatedAt = new Date("2026-04-10T12:01:00.000Z");
       return existing;
     },
@@ -1625,6 +1688,25 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
     questions: [],
     actions: [
       {
+        id: "custom-screen-binding-set-1",
+        type: "custom-screen.binding.set",
+        title: "Update Projects Screen binding",
+        description: "Update selected custom screen binding.",
+        input: {
+          id: screen.id,
+          name: "Projects Screen",
+          expectedStatus: "draft",
+          binding: {
+            id: "hero-headline",
+            blockId: "hero-1",
+            propPath: "headline",
+            source: "entry",
+            field: "title",
+            mode: "readwrite",
+          },
+        },
+      },
+      {
         id: "custom-screen-update-1",
         type: "custom-screen.update",
         title: "Update Projects Screen",
@@ -1641,12 +1723,6 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
             compositionKey: "projects-secondary",
             showInSidebar: true,
             sidebarLabel: "Projects",
-            binding: {
-              widgetId: "hero-1",
-              propPath: "headline",
-              field: "title",
-              mode: "readwrite",
-            },
           },
         },
       },
@@ -1665,7 +1741,7 @@ test("executeAssistantActionPlan updates custom screen metadata and binding mode
     deps
   );
 
-  expect(executed.summary.update).toBe(1);
+  expect(executed.summary.update).toBe(2);
   expect(deps.__state.customScreens[0]?.name).toBe("Projects Admin");
   expect(deps.__state.customScreens[0]?.collectionRole).toBe("secondary-admin-screen");
   expect(deps.__state.customScreens[0]?.compositionKey).toBe("projects-secondary");
@@ -1739,24 +1815,26 @@ test("dryRunAssistantActionPlan treats matching custom screen upserts as noop", 
           compositionKey: "house-projects-catalog",
           showInSidebar: true,
           sidebarLabel: "House Projects",
-          blocks: [
-            {
-              id: "header-1",
-              type: "screen-record-header",
-              data: {
-                title: "Record overview",
+          definition: createTestCustomScreenDefinition(
+            [
+              {
+                id: "header-1",
+                type: "screen-record-header",
+                data: {
+                  title: "Record overview",
+                },
               },
-            },
-          ],
-          bindings: [
-            {
-              id: "binding-header-title",
-              widgetId: "header-1",
-              propPath: "title",
-              field: "title",
-              mode: "read",
-            },
-          ],
+            ],
+            [
+              {
+                id: "binding-header-title",
+                widgetId: "header-1",
+                propPath: "title",
+                field: "title",
+                mode: "read",
+              },
+            ]
+          ),
         },
       },
     ],
@@ -1824,7 +1902,7 @@ test("executeAssistantActionPlan reuses renamed custom screens by composition me
           compositionKey: "product-catalog",
           showInSidebar: true,
           sidebarLabel: "Products",
-          blocks: [
+          definition: createTestCustomScreenDefinition([
             {
               id: "header-1",
               type: "screen-record-header",
@@ -1832,8 +1910,7 @@ test("executeAssistantActionPlan reuses renamed custom screens by composition me
                 title: "Product overview",
               },
             },
-          ],
-          bindings: [],
+          ]),
         },
       },
     ],
@@ -1916,7 +1993,7 @@ test("executeAssistantActionPlan reuses legacy custom screens by name before met
           compositionKey: "product-catalog",
           showInSidebar: true,
           sidebarLabel: "Products",
-          blocks: [
+          definition: createTestCustomScreenDefinition([
             {
               id: "header-1",
               type: "screen-record-header",
@@ -1924,8 +2001,7 @@ test("executeAssistantActionPlan reuses legacy custom screens by name before met
                 title: "Product overview",
               },
             },
-          ],
-          bindings: [],
+          ]),
         },
       },
     ],
@@ -2009,7 +2085,7 @@ test("executeAssistantActionPlan rejects same-name custom screens owned by other
           compositionKey: "product-catalog",
           showInSidebar: true,
           sidebarLabel: "Products",
-          blocks: [
+          definition: createTestCustomScreenDefinition([
             {
               id: "header-1",
               type: "screen-record-header",
@@ -2017,8 +2093,7 @@ test("executeAssistantActionPlan rejects same-name custom screens owned by other
                 title: "Product overview",
               },
             },
-          ],
-          bindings: [],
+          ]),
         },
       },
     ],
@@ -2106,8 +2181,7 @@ test("executeAssistantActionPlan rejects ambiguous legacy custom screen name reu
           compositionKey: "product-catalog",
           showInSidebar: true,
           sidebarLabel: "Products",
-          blocks: [],
-          bindings: [],
+          definition: createTestCustomScreenDefinition(),
         },
       },
     ],
@@ -2132,7 +2206,7 @@ test("executeAssistantActionPlan rejects ambiguous legacy custom screen name reu
   expect(deps.__state.customScreens.every((entry) => entry.collectionRole === null)).toBe(true);
 });
 
-test("executeAssistantActionPlan patches custom screen widget block data", async () => {
+test("executeAssistantActionPlan patches custom screen block data", async () => {
   const deps = createDeps();
   const contentType = await deps.createContentType({
     name: "Projects",
@@ -2149,30 +2223,29 @@ test("executeAssistantActionPlan patches custom screen widget block data", async
     status: "draft",
     showInSidebar: false,
     sidebarLabel: null,
-    blocks: [
+    definition: createNativeTestCustomScreenDefinition([
       { id: "hero-1", type: "hero", data: { headline: "Old headline", body: "Keep body" } },
       { id: "text-1", type: "rich-text-section", data: { title: "Keep sibling" } },
-    ],
-    bindings: [],
+    ]),
   });
   const plan: AssistantActionPlan = {
-    id: "plan-custom-screen-widget-patch",
+    id: "plan-custom-screen-block-patch",
     status: "ready",
-    intentId: "custom-screen-widget-patch",
+    intentId: "custom-screen-block-patch",
     promptKind: "refinement_request",
     intentFamily: "unknown",
-    title: "Patch custom screen widget",
-    answer: "I can patch the selected custom screen widget.",
+    title: "Patch custom screen block",
+    answer: "I can patch the selected custom screen block.",
     summary: "Patch screen hero headline.",
     confidence: 0.9,
     assumptions: [],
     questions: [],
     actions: [
       {
-        id: "custom-screen-widget-patch-1",
-        type: "custom-screen.widget.patch",
+        id: "custom-screen-block-patch-1",
+        type: "custom-screen.block.patch",
         title: "Patch hero",
-        description: "Patch selected custom screen widget.",
+        description: "Patch selected custom screen block.",
         input: {
           id: screen.id,
           name: "Projects Screen",
@@ -2193,7 +2266,7 @@ test("executeAssistantActionPlan patches custom screen widget block data", async
     {
       plan,
       actorId: "user-1",
-      idempotencyKey: "assistant-custom-screen-widget-patch-1",
+      idempotencyKey: "assistant-custom-screen-block-patch-1",
     },
     deps
   );

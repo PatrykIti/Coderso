@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-435-01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -14,18 +15,17 @@
 
 Implement a visible published-front layout difference for the CTA `centered` and
 `full-width` variants — reconciling the already-shipped `full-width` inline
-`maxWidth: "none"` special-case at `core/services/pages/pageRendererV2.tsx:143`
-and the hero/CTA class collapse in `pageSectionTemplateClass`
-(`pageRendererV2.tsx:206-207`) — and replace the current native control drift
+`maxWidth: "none"` special-case in `toPageSectionStyle` and the former hero/CTA
+class collapse in `pageSectionTemplateClass` — and replace the current native control drift
 with the shared dedicated widgets.
 
 ---
 
 ## Sub-Tasks
 
-- [ ] Implement the scoped owner-file changes described below.
-- [ ] Add or update the targeted regression coverage for this leaf.
-- [ ] Verify lint/types and the lane-owned commands before handing off to the closure task.
+- [x] Implement the scoped owner-file changes described below.
+- [x] Add or update the targeted regression coverage for this leaf.
+- [x] Verify lint/types and the lane-owned commands before handing off to the closure task.
 
 ## Implementation Pseudocode
 
@@ -72,7 +72,7 @@ Expected data flow:
   class-string or marker-only change: `centered` shows a real
   alignment/centering difference versus `default`, and `full-width` a true
   full-bleed treatment (beyond the existing inline `maxWidth: "none"` removal
-  at `pageRendererV2.tsx:143` if that alone is not visibly sufficient).
+  in `toPageSectionStyle` if that alone is not visibly sufficient).
 - Inspector controls use the shared dedicated widgets.
 - Existing content blocks remain valid inside the updated layout shells.
 
@@ -115,3 +115,9 @@ Regression-test shape:
 ## Documentation Updates Required
 
 - None beyond the parent family docs unless this leaf changes the owning contract; parent closure task owns board/changelog sync.
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

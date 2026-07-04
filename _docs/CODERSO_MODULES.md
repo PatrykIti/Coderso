@@ -166,8 +166,12 @@ const sections = buildDefaultNavSections({
   - active screens can opt into direct left-menu shortcuts rendered after the `Advanced` group (`showInSidebar`, optional `sidebarLabel`),
   - classic Entries fallback remains available for metadata/publish operations outside the scoped custom-screen editor.
 - 054-23 done: Custom Screens follow-up delivered:
-  - widget registry gained surface scoping (`page-builder`, `widget-library`, `custom-screen-builder`),
-  - `Screens` now uses dedicated admin screen widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) plus explicit shared layout primitives,
+  - widget registry gained historical surface scoping (`page-builder`,
+    `widget-library`, `custom-screen-builder`); after TASK-468 active Screens no
+    longer author through the Custom Screen widget surface,
+  - `Screens` now use native V4 screen blocks (`record-header`, `field`,
+    `field-group`, `columns`, `rich-text`) plus explicit shared layout
+    primitives; old `screen-*` widget ids are migration inputs only,
   - hidden direct `Advanced/Widgets` compatibility route and template/page
     flows hide screen-only widgets,
   - custom screen responses expose derived `collection-only | dashboard | editor` capabilities,

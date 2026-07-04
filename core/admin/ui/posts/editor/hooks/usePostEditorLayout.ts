@@ -2,7 +2,7 @@ import { useCallback, useMemo, useReducer } from "react";
 
 export type PostEditorSecondarySidebar = "list-view" | "inserter" | null;
 export type PostEditorDetailsTab = "document" | "block";
-export type PostEditorLeftRailMode = "outline" | "list-view";
+export type PostEditorLeftRailMode = "blocks" | "outline" | "list-view";
 export type PostEditorLayoutFocusRestore = {
   secondarySidebar: PostEditorSecondarySidebar;
   detailsOpen: boolean;
@@ -27,16 +27,14 @@ type CreatePostEditorLayoutStateOptions = {
 
 const normalizeSecondarySidebar = (
   value: PostEditorSecondarySidebar | undefined
-): PostEditorSecondarySidebar =>
-  value === "list-view" || value === "inserter" ? value : null;
+): PostEditorSecondarySidebar => (value === "list-view" || value === "inserter" ? value : null);
 
-const normalizeDetailsTab = (
-  value: PostEditorDetailsTab | undefined
-): PostEditorDetailsTab => (value === "block" ? "block" : "document");
+const normalizeDetailsTab = (value: PostEditorDetailsTab | undefined): PostEditorDetailsTab =>
+  value === "block" ? "block" : "document";
 
 const normalizeLeftRailMode = (
   value: PostEditorLeftRailMode | undefined
-): PostEditorLeftRailMode => (value === "list-view" ? "list-view" : "outline");
+): PostEditorLeftRailMode => (value === "outline" || value === "list-view" ? value : "blocks");
 
 export const createPostEditorLayoutState = (
   options: CreatePostEditorLayoutStateOptions = {}
@@ -87,10 +85,8 @@ export const postEditorLayoutReducer = (
     case "toggle_secondary":
       return {
         ...state,
-        secondarySidebar:
-          state.secondarySidebar === action.sidebar ? null : action.sidebar,
-        focusMode:
-          state.secondarySidebar === action.sidebar ? state.focusMode : false,
+        secondarySidebar: state.secondarySidebar === action.sidebar ? null : action.sidebar,
+        focusMode: state.secondarySidebar === action.sidebar ? state.focusMode : false,
         focusRestore: null,
       };
     case "close_secondary":
@@ -230,14 +226,19 @@ export function usePostEditorLayout(
 
   const toggleListView = useCallback(() => {
     dispatch({ type: "toggle_secondary", sidebar: "list-view" });
+    dispatch({ type: "set_left_rail_mode", mode: "list-view" });
   }, []);
 
   const openInserter = useCallback(() => {
-    dispatch({ type: "open_secondary", sidebar: "inserter" });
+    // The left rail is one always-open panel; opening the Blocks palette means
+    // opening the rail (generic "list-view" sentinel) with leftRailMode "blocks".
+    dispatch({ type: "open_secondary", sidebar: "list-view" });
+    dispatch({ type: "set_left_rail_mode", mode: "blocks" });
   }, []);
 
   const toggleInserter = useCallback(() => {
     dispatch({ type: "toggle_secondary", sidebar: "inserter" });
+    dispatch({ type: "set_left_rail_mode", mode: "blocks" });
   }, []);
 
   const closeSecondarySidebar = useCallback(() => {
@@ -284,8 +285,8 @@ export function usePostEditorLayout(
       state,
       secondarySidebarOpen: state.secondarySidebar !== null,
       detailsSidebarOpen: state.detailsOpen,
-      showListView: state.secondarySidebar === "list-view",
-      showInserter: state.secondarySidebar === "inserter",
+      showListView: state.secondarySidebar !== null && state.leftRailMode === "list-view",
+      showInserter: state.secondarySidebar !== null && state.leftRailMode === "blocks",
       focusMode: state.focusMode,
       leftRailMode: state.leftRailMode,
       openListView,

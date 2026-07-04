@@ -139,6 +139,26 @@ without mutating stored data. Stored valid non-insertable sections still keep
 universal editor controls and render through generic fallback templates, while
 command-palette insertion stays gated by `pageSectionCapabilities`.
 
+Phase 3B section template semantics are part of the public runtime contract:
+
+- `content.compact`, `faq.compact`, and `timeline.compact` reduce published
+  spacing/gap rather than emitting marker-only classes.
+- `media-split.split` and `media-split.horizontal` keep the two-column template
+  floor and group existing child blocks into media and content zones. `split`
+  renders media first; `horizontal` renders content first.
+- `timeline.horizontal` floors the grid to at least three columns and wraps
+  each child block in a timeline item with a marker. Other timeline variants
+  keep the item/marker structure with their resolved grid/spacing.
+- `gallery` remains a section template over existing child blocks. `cards`
+  wraps child blocks in card surfaces while `grid` keeps the flat section grid;
+  this does not ungate or redefine the standalone `gallery` block.
+- `testimonials.cards` wraps child blocks in card surfaces while
+  `testimonials.grid` keeps flat grid rendering.
+- `cta.default`, `cta.centered`, and `cta.full-width` have distinct published
+  alignment/min-height classes. `full-width` still pins `max-width: none`.
+- `feature-grid`, `comparison`, and `custom` keep their existing truthful
+  grid/card geometry guards while using the shared dedicated control surface.
+
 ## Blocks And Layout Slots
 
 Most blocks are small content atoms. They are not the old specialized widget
@@ -162,10 +182,13 @@ nesting is not part of the contract.
     "textColor": "#111827",
     "background": null,
     "backgroundType": "none",
+    "backgroundImage": null,
     "opacity": 1,
     "radius": 0,
     "shadow": "none",
     "borderColor": null,
+    "borderWidth": 0,
+    "borderStyle": "none",
     "padding": { "top": 0, "right": 0, "bottom": 0, "left": 0 },
     "margin": { "top": 0, "right": 0, "bottom": 0, "left": 0 }
   },
@@ -183,15 +206,15 @@ nesting is not part of the contract.
 Block style is bounded and optional. Supported style keys are:
 - `align`: `left`, `center`, `right`;
 - `width`: `auto`, `full`;
-- `textColor`, `background`, `backgroundType`, `opacity`, `radius`, `shadow`,
-  and `borderColor`;
+- `textColor`, `background`, `backgroundType`, `backgroundImage`, `opacity`,
+  `radius`, `shadow`, `borderColor`, `borderWidth`, and `borderStyle`;
 - `padding` and `margin` using `{ top, right, bottom, left }` spacing objects;
 - token-backed typography (TASK-424), nullable with unset/`null` meaning
   "keep the baked classes" so pre-existing documents render identically:
   - `fontFamily`: `sans` | `display` (theme token refs emitted as
     `var(--font-sans/--font-display, <default stack>)`),
-  - `fontSize`: `sm` | `md` | `lg` | `xl` | `2xl` (theme scale refs emitted as
-    `var(--text-*, <default size>)`),
+  - `fontSize`: `2xs` | `xs` | `sm` | `md` | `lg` | `xl` | `2xl` | `3xl` |
+    `4xl` | `5xl` (theme scale refs emitted as `var(--text-*, <default size>)`),
   - `fontWeight`: `normal` | `medium` | `semibold` | `bold` (400/500/600/700),
   - `lineHeight`: unitless number clamped to 1–2.5,
   - `letterSpacing`: px number clamped to -2–8.
@@ -208,15 +231,33 @@ baked utility classes (`text-5xl`, `font-semibold`) on the text node itself.
 Unknown typography tokens reject on fresh writes and normalize to `null` on
 stored reads.
 
+`style.align` is block-box self-alignment for every block type. `center` and
+`right` resolve the frame to fit-content width (`w-fit`) and use grid
+`justify-self` plus auto horizontal margins, so `width: "full"` does not force a
+centered/right-aligned block to stretch. Content/text alignment remains owned by
+the block's text props where they exist (`heading.props.align`, `text.props.align`)
+or by the relocated typography presentation of `style.align` for other
+text-capable blocks.
+
 The Pages owner clamps numeric style values and rejects unknown style keys on
-fresh writes. Block responsive overrides are sparse deltas: `responsive.mobile`
-or `responsive.tablet` may override only the changed `props`, `style`, or
-`visibility` fields. The resolver applies section overrides first and then block
-overrides through `resolvePageDocumentForBreakpoint`.
+fresh writes. Block padding/margin side values clamp to `0..240`; block border
+width clamps to `0..12`, and `borderStyle` is `none` | `solid` | `dashed` |
+`dotted`. `borderStyle: "none"` suppresses border paint even when
+`borderColor` is present; legacy color-only blocks keep the historical
+`1px solid` fallback. Block `backgroundImage` stores a sanitized Page media URL
+and only paints when `backgroundType === "image"`, with `cover`/`center`
+defaults. Gradient backgrounds remain the existing `style.background` string,
+but the editor composes it from a sanitized linear/radial gradient model rather
+than introducing a second data structure. Block responsive overrides are sparse
+deltas: `responsive.mobile` or `responsive.tablet` may override only the
+changed `props`, `style`, or `visibility` fields. The resolver applies section
+overrides first and then block overrides through
+`resolvePageDocumentForBreakpoint`.
 
 Core block types:
 - `heading`
 - `text`
+- `badge`
 - `button`
 - `image`
 - `video`
@@ -249,28 +290,12 @@ Layout block slot contract:
   `column`, `wrap` is boolean, and `gap` clamps to `0..120`. It owns
   `slots.children`.
 
-Layout blocks normalize and validate as Page data. Their capability transition
-is intentionally staged during TASK-418-05:
-
-- L01 keeps them hidden while the recursive data contract lands.
-- L02 may expose them only in the admin editor through
-  `pageBlockCapabilities[type].editorInsertable`, so editors can compose draft
-  nested structures and edit slot children by path.
-- During that L02 staging state, `container`, `columns`, and `group` still carry
-  `insertable: false`, `assistantEmittable: false`,
-  `runtimeRenderer: "placeholder"`, allowed `slots`, and a pending-nesting
-  reason. Assistant emitters, solution kits, and public-ready catalogs must not
-  consume `editorInsertable`.
-- L03 owns recursive public/admin-preview rendering and responsive cascade. Only
-  `container`, `columns`, and `group` are
-  `editorInsertable: true`, `insertable: true`, `runtimeRenderer: "real"`,
-  `assistantEmittable: false`, `publicDataBinding: "none"`, and no pending
-  `reason`. Assistant emission stays false until TASK-418-06-L02 validates
-  nested active-surface paths and blueprint alignment.
-- L02 completes that assistant alignment: `container`, `columns`, and `group`
-  now have `assistantEmittable: true`. Assistant `page.upsert` still gates
-  block and section output through Page capabilities plus the explicit staged
-  data-bound exceptions.
+Layout blocks normalize and validate as Page data. Current capability state:
+`container`, `columns`, and `group` are editor-insertable, public insertable,
+runtime-rendered as real blocks, assistant-emittable, and use
+`publicDataBinding: "none"` with no pending reason. Assistant `page.upsert`
+still gates block and section output through Page capabilities plus the
+explicit staged data-bound exceptions.
 
 Runtime/admin-preview slot rendering is intentionally narrower than stored data
 preservation:
@@ -286,6 +311,19 @@ preservation:
 Each block type has a strict allowlist of props. Unknown props are rejected on
 fresh writes by both the imperative normalizer and `pageDocumentV2JsonSchema`.
 Examples:
+- `heading`/`text`/`quote`: optional base-only `marks[]` for fragment
+  formatting ranges. Supported marks are `{ "type": "bold" | "italic",
+  "from": number, "to": number }`, `{ "type": "color" | "highlight", "from":
+  number, "to": number, "color": string }`, and `{ "type": "link", "from":
+  number, "to": number, "href": string }`. Marks are capped at 24, clamped to
+  the plain text length, fail closed through Page color/link sanitizers, and
+  normalize same-type conflicts deterministically while allowing cross-type
+  overlap. Responsive overrides may not carry `props.marks`.
+- `badge`: `text`, `variant` (`solid` | `soft` | `outline`), `size` (`2xs` |
+  `xs` | `sm` | `md`), `shape` (`pill` | `rounded` | `square`), `weight`
+  (`normal` | `medium` | `semibold` | `bold`), nullable `background`,
+  nullable `textColor`, nullable allowlisted `icon` (`check`, `sparkles`,
+  `star`, `zap`, `shield`, `heart`), and `iconPosition` (`start` | `end`).
 - `button`: `label`, `href`, `target`, `variant`, `size`
 - `image`: `assetId`, `src`, `alt`, `caption`, `fit`
 - `collection`: `contentTypeId`, `queryId`, `limit`, `templateId`,
@@ -312,6 +350,43 @@ Examples:
 - `list`: `items`, `ordered`
 - `columns`: `count`, `gap`, `distribution`
 - `group`: `direction`, `wrap`, `gap`
+
+Pages v2 public/admin-preview rendering must keep the following block props
+truthful:
+
+- `text.format: "plain"` escapes and renders copy as text. `text.format:
+  "rich"` renders a small sanitized HTML subset (`p`, `strong`, `em`, `i`,
+  `code`, `ul`, `ol`, `li`, `br`, and safe `a[href]` with
+  `rel="nofollow noreferrer"`), drops active content, and never uses raw
+  `dangerouslySetInnerHTML`. Rich text is inline-editable on the canvas through
+  the same shared authoring sanitizer (`sanitizeAuthoringRichTextHtml`) used by
+  the panel and renderer, so allowlisted markup round-trips while dangerous
+  tags/content and unsafe links fail closed.
+- `button.variant` changes the anchor visual surface (`primary`, `secondary`,
+  `ghost`, `link`), `button.size` changes anchor spacing/type scale, and the
+  primary/accent surfaces consume `--coderso-section-accent` through inline
+  styles on the anchor, not through generated utility-class availability.
+- `badge` renders as a native Page V2 inline-flex pill with `data-page-badge`
+  attributes. Badge size resolves through the Page typography token variables
+  (`--text-2xs` through `--text-md`), colors are sanitized before store/render,
+  and icon tokens are fixed to a small lucide allowlist; no widget runtime,
+  widget registry, or widget editor participates.
+- `heading`/plain `text`/`quote` marks render as React segments:
+  `bold -> <strong>`, `italic -> <em>`, `link -> <a rel="nofollow noreferrer">`,
+  `color -> <span style.color>`, and `highlight ->
+  <span style.backgroundColor>`. The renderer re-normalizes stored marks before
+  painting and never opens a broad `span style` HTML allowlist or
+  `dangerouslySetInnerHTML` sink for marks.
+- `image.fit` changes the public image object-fit class (`cover` or
+  `contain`).
+- `video.autoplay` emits `autoPlay` on the rendered `<video>` and forces the
+  browser policy companions `muted` and `playsInline`; `video.title` emits
+  `title` and `aria-label` on the rendered media element; unset/false autoplay
+  preserves manual playback behavior.
+- `card.image` renders a sanitized image above the card copy and `card.href`
+  wraps the title in a safe link. Unsafe media/link values fail closed.
+- `divider.tone` changes the public border color (`neutral`, `muted`,
+  `accent`) while `divider.thickness` keeps controlling border width.
 
 `list.items[]` may be plain strings or simple `{ "label": "...", "href": "..." }`
 objects for navigation/footer links.
@@ -620,8 +695,38 @@ site-token style bridging. Reusable authoring modules live under
   provider SDKs, storage adapters, password hashing, or secret stores.
 - `PageAuthoringCanvas.tsx` owns the Page v2 canvas frame, section shell,
   block frames, ghost add affordances, nested slot chrome, and inline-edit
-  wiring. It receives resolved site-token style values from the shell instead
-  of reading settings itself.
+  wiring. Rich text blocks render sanitized rich output on canvas and, when
+  edited inline, commit `innerHTML` through the shared rich-text sanitizer
+  instead of the plain-text inline sanitizer. It receives resolved site-token
+  style values from the shell instead of reading settings itself.
+- Canvas inline-mark interaction (plain text/heading/quote, desktop): a first
+  click selects the block; a second single click enters inline edit with the
+  caret at the click point (double-click also works). The floating mark toolbar
+  is a sibling of the editable, so it snapshots the live DOM selection on its
+  `mousedown` and each swatch/button applies against that snapshot rather than
+  the async `selectionRange` state. The toolbar's `mousedown` preserves the
+  selection for buttons (cancels the default) but allows the link URL `<input>`
+  to focus and type; an `onBlur` guard keeps inline edit alive while focus is
+  inside the toolbar. Applied color/highlight/link marks live on
+  `block.props.marks` and paint as `data-page-text-mark` segments **while
+  editing** (the contentEditable renders the marked children, mirroring the
+  rich-text path); after applying a mark the selection is restored over the marked
+  range so it is visible and can be re-colored in place. Commit still reads
+  `innerText`, so `props.marks` remains the source of truth. Re-applying a
+  different color/href over the same range replaces it in one click; the identical
+  value toggles it off. The toolbar offers the brand/border design-token swatches
+  (each previewing the exact `var(--color-*)` it applies) plus a native
+  `<input type="color">` for an arbitrary sanitized hex.
+- Color swatch previews reflect the LIVE resolved site theme. The editor canvas
+  frame (`data-page-editor-canvas-frame`) carries the site **neutral**
+  `--color-bg/-surface/-text` (via `toPageCanvasColorCssVariableMap`) so neutral
+  block colors are WYSIWYG in-editor — the brand `--color-*` already resolve via
+  the admin `@theme` and are intentionally not re-emitted on the frame (would shift
+  editor chrome). The resolved site `getPageEditorColorPalette(siteTokens)` is
+  threaded to the block/section/badge `ColorSwatchControl`s via a palette context
+  around the floating panel, so their swatches preview the exact color they apply
+  (TASK-477-02). A brand color *applied* to a block still resolves to the admin
+  theme in-canvas (preview-only fix for brand; neutrals are fully WYSIWYG).
 - `FloatingEditorToolbar.tsx` owns shared toolbar button chrome only. The
   full panel orchestration remains shell-owned until a future task extracts a
   generic non-Page-v2 panel engine.
@@ -636,6 +741,20 @@ Pure editor derivation and mutation helpers live in
 `core/services/pages/pageEditorMutationActions.ts`. They patch only Page v2
 owner paths, keep sparse responsive overrides deterministic, and sanitize
 section style writes before draft mutation.
+
+Page Editor session controls are intentionally browser-local and Page-only:
+
+- In-session undo/redo wraps the central `setDocumentDraft` path with bounded
+  document+selection snapshots (cap 50). The stack resets after document load,
+  save, settings save, and publish so persisted drafts never replay stale local
+  mutations. Keyboard shortcuts (`Cmd/Ctrl+Z`, `Shift+Cmd/Ctrl+Z`,
+  `Cmd/Ctrl+Y`) ignore editable targets and inline editing surfaces.
+- Clipboard fragments use the `coderso/page-fragment@v1` payload with
+  `kind: "section" | "block"`. Clipboard API writes are mirrored to
+  `sessionStorage` as a same-session fallback. Paste always regenerates section
+  and block ids, re-normalizes the fragment through the Page document owner
+  before insertion, and inserts blocks after the selected block or at the end of
+  the selected section while sections paste after the selected section.
 
 ## Responsive Cascade
 
@@ -782,6 +901,11 @@ The shared renderer resolves section templates through `pageSectionTemplates`.
 It emits both `data-page-section` and the resolved `data-page-variant`, plus
 `data-page-section-template`, so public runtime and admin canvas consume the
 same type/variant layout output before editor chrome is added.
+Section-template wrappers (`data-page-media-split-zone`,
+`data-page-timeline-item`, `data-page-gallery-section-item`,
+`data-page-faq-item`, and `data-page-testimonial-item`) are emitted by the same
+renderer path and compose existing child blocks instead of introducing
+widget-template runtime dependencies.
 
 For resolved `full-width` variants, the outer section band must not add the
 default page gutter. The painted content node already owns background, spacing,
@@ -921,6 +1045,22 @@ optional capabilities and ships the menu DESIGN view on top of them:
 - **`mode`** gains `"menu"` (still inert — all behavior rides the explicit
   host fields).
 
+> **STALE (superseded by TASK-499 / TASK-501 — see "menuDocumentV2 Document
+> Contract" below).** The menu design view described in the bullets that
+> follow (the `PageEditorHost`-seam editor, `MenuAppearancePanel.tsx`,
+> `settings.menuAppearance` on the page document, and the
+> `menuDesignDocument.ts` adapter) is the PRE-TASK-499 architecture. TASK-499
+> replaced it with a dedicated `menuDocumentV2` contract persisted in the
+> `menus.settings` envelope (`document` draft + `published.document`
+> snapshot) and a `CanvasEditor`-shell Design tab
+> (`core/admin/ui/menus/MenuDesignEditor.tsx`); TASK-501 added per-device
+> (mobile) overrides, nav orientation, and per-block visibility on top. The
+> host-capability seam notes above (palette scoping, optional `preview`,
+> `appearancePanel`, `canvasChrome`, `mode:"menu"`) remain accurate for the
+> `PageEditor` host contract itself. The nav-extras bullet's envelope
+> semantics (`extras`, `menuNavExtras.ts`, per-key merge, published snapshot)
+> are still live.
+
 The menu design view (`/menus/:id/design`, `menus:read`, "Design" button in
 the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
 
@@ -967,6 +1107,403 @@ the `MenuEditorPage` header; `core/admin/ui/menus/MenuDesignEditorPage.tsx`):
   the editor's draft-save-first coherence step and copies that draft to
   `menus.settings.published`; menus issue no preview tokens — the live canvas
   IS the preview.
+
+## menuDocumentV2 Document Contract And Responsive Overrides — TASK-499 / TASK-501 / TASK-502 / TASK-504 / TASK-506 / TASK-508
+
+The Design tab of a menu edits a dedicated document contract owned by
+`core/services/menus/menuDocumentV2.ts` (NOT a Page v2 document). It persists
+in the freeform `menus.settings` jsonb envelope as the top-level `document`
+draft key and is copied to `settings.published.document` on publish; the front
+renders the PUBLISHED snapshot only (`resolvePublishedMenuDocument`,
+fail-closed to `null` ⇒ the default `SiteHeaderNav` + byte-identical
+`buildSiteShellCss` look). No dedicated endpoint/RBAC/migration — the document
+rides the validated `PATCH /menus/:id` (`menuUpdateSchema` allows
+`document: object|null`; service-side strict validation maps to a 400
+`menu_document_invalid` `ApiError` with the offending `path`).
+
+**Document shape** (`MENU_DOCUMENT_SCHEMA_VERSION = 1`):
+`{ schemaVersion: 1, sections: MenuSectionV2[] }` with at most 2 sections
+(`menu-bar` renders; `menu-drawer` is a reserved type with zero editor/front
+support — the front renders `sections[0]` only). A `menu-bar` section carries
+`layout: MenuBarLayout` (the menu-bar subset of `MenuAppearance`) and up to 12
+blocks: menu-native types (`nav-items`, `brand`, `search`, `account`,
+`language`) plus page-leaf reuses (`cta-button`, `divider`, `spacer`) that
+ride the Page v2 leaf validators. `nav-items` props are the `NavItemsProps`
+appearance subset — including `orientation: "horizontal" | "vertical"`
+(TASK-501; enum-validated in `normalizeMenuAppearance`, default `"horizontal"`
+emits NO CSS). Writes go through `normalizeMenuDocumentV2ForWrite`
+(schema-first, reject-unknown, throws `MenuDocumentError` with `path`); stored
+reads go through `normalizeStoredMenuDocumentV2ForRead`, which is FAIL-CLOSED:
+any invalid stored member degrades the WHOLE document to empty (designed blast
+radius, asserted in `tests/vitest/services/menu-document-v2.test.ts`) — which
+is why every new persisted key must be added to the section/block key
+allowlists consciously.
+
+**Responsive overrides (TASK-501 mobile v1; TASK-502 un-defers the tablet
+breakpoint — Pages cascade):** `MENU_RESPONSIVE_BREAKPOINT_KEYS =
+["tablet","mobile"]`. Desktop = base; tablet AND mobile each carry their OWN
+sparse record and BOTH inherit from the DESKTOP base — mobile does NOT inherit
+tablet (mirrors `pageResponsiveCss.ts`).
+
+- `MenuSectionV2.responsive?: { tablet?, mobile?: { layout?, navProps? } }` — a
+  SPARSE per-breakpoint record holding ONLY explicitly edited keys, lazily
+  created by `patchMenuSectionForDevice` (desktop writes the BASE; tablet and
+  mobile each write their own `responsive.<bp>` record; the editor badge shows
+  Override on tablet/mobile once a key is set). Resolve-for-display =
+  `resolveMenuSectionAppearanceForDevice(section, "tablet"|"mobile")` (base
+  merged with ONLY that breakpoint's record; tablet never sees mobile and
+  mobile never sees tablet). Override detection reads the RAW record
+  (`readMenuSectionOverrideValue`), never the merge. Explicit Reset only
+  (`clearMenuSectionOverride` — NO auto-remove-on-equality); empty
+  `group`/`<bp>`/`responsive` parents are pruned on clear and on write per
+  breakpoint (clearing the last tablet key removes `responsive.tablet` while a
+  remaining mobile record survives).
+- `MenuBlockV2.responsive?: { tablet?, mobile?: { visibility?: { visible } } }`
+  on ALL block types (native and leaf) — "hide on tablet"/"hide on mobile" for
+  any block, "show only on <bp>" for leaves (flat `visibility.visible:false` +
+  the breakpoint `visible:true`). Flat leaf visibility WITHOUT a responsive
+  record keeps the legacy render-skip semantics byte-unchanged. Helpers:
+  `resolveMenuBlockVisibleForDevice(block, "tablet"|"mobile")` (tablet/mobile
+  override ?? flat) / `setMenuBlockVisibleForDevice` (tablet|mobile ⇒ their own
+  record, all block types; desktop ⇒ flat, leaf-only) /
+  `clearMenuBlockVisibilityOverride`. `hasMenuBlockVisibilityOverride` is
+  generalized to ANY breakpoint (true when `responsive.tablet?.visibility` OR
+  `responsive.mobile?.visibility` is set) — it gates the CSS visibility plan
+  and the front hand-off-to-CSS so a tablet-only override still emits hide
+  rules and gets the anywhere-gate.
+- Legacy documents WITHOUT `responsive` round-trip byte-identically; unknown
+  breakpoint (`wide` etc.) / group / prop keys are rejected on write.
+
+**Brand text (TASK-502):** `BRAND_PROP_KEYS = ["mode","href","image","text"]`.
+`brand.props.text?: string` is string-only, trimmed, capped at 120 chars
+(authoring-text cap — fail-SOFT clamp/slice, never throw-on-long; only a
+non-string non-null `text` throws with the offending path; `null`/empty/
+whitespace is OMITTED sparse). Fallback CHAIN, identical on front AND canvas:
+`brand.props.text` → `siteName` (`site.name` setting) → `null` (renders
+nothing). `createDefaultMenuBlock("brand")` and the legacy adapter stay
+textless (inherit the site name). The canvas no longer renders the menu name.
+
+**Device-defining nav props carve-out (TASK-502, conscious):**
+`MENU_NAV_DEVICE_DEFINING_KEYS = ["mobileMode","dropdownDirection"]` are
+device-DEFINING, not overridable — they always write the BASE. On WRITE, either
+key inside `responsive.*.navProps` throws `MenuDocumentError` with the offending
+path (reject-unknown-in-context). On STORED READ the two keys get SPLIT,
+non-destructive treatment (a fail-closed whole-doc degrade would be data loss
+for 501-era records):
+- `mobileMode` is NOT dead — the mobile CSS branch reads the mobile-RESOLVED
+  appearance today — so a 501-era `responsive.mobile.navProps.mobileMode`
+  override is HOISTED into the base appearance then the record is pruned
+  (behavior-preserving: published mobile CSS is byte-identical before/after the
+  migration; a junk value is prune-only, not hoisted).
+- `dropdownDirection` is truly dead (desktop/tablet-branch-only, reads the
+  base) ⇒ prune-only.
+  Either way an override record left empty by the prune is itself pruned and
+  the migrated doc round-trips clean through the WRITE normalizer, so the next
+  autosave persists the hoisted+pruned form. Any OTHER unknown navProps key
+  still degrades the whole doc (the carve-out is exactly these two keys). The
+  editor renders "Mobile menu" ONLY on the Mobile device and "Dropdown
+  direction" ONLY on Desktop/Tablet; both write the base and are NOT wrapped in
+  `MenuResponsiveControlShell` (no badge, no reset, no responsive record).
+
+**CSS emission** (`core/site/menuDocumentCss.ts`): ONE shared
+`buildMenuRuleSets` feeds both `buildMenuDocumentCss` (front sheet) and
+`buildMenuDocumentPreviewCss(doc, device)` (canvas flatten, no `@media`). All
+rules are scoped under `[data-site-menu-doc="true"]` (every comma-list selector
+member carries the prefix). Override deltas emit per-GROUP (a triggered group
+re-emits all its declarations with explicit/neutral values) AFTER the
+`mobileMode` disclosure/inline rules so overrides win by source order.
+Orientation `vertical` emits `.site-nav-list{flex-direction:column;
+align-items:stretch}` in the branch where it resolves.
+
+- **Tablet branch (TASK-502):** tablet overrides emit per-GROUP delta rules in
+  a NEW bounded `@media (min-width: 640px) and (max-width: 1023px)`
+  (`pageResponsiveMediaBounds.tablet`) — bounded so tablet deltas never leak
+  into mobile widths. A doc with ONLY mobile overrides (or none) emits NO
+  tablet `@media` branch at all (zero responsive-branch drift). The canvas
+  builder no longer maps tablet⇒desktop: the forced tablet branch = base +
+  `desktopShared` (`dropdownRule` + `navNestingRules`) + tabletDelta.
+- **Per-device visibility (TASK-502)** is CSS-gated and placed per RESOLVED
+  tri-device visibility: hidden on desktop AND tablet ⇒ the shared
+  `min-width:640px` branch (byte-stable for docs without tablet overrides);
+  hidden on desktop ONLY (tablet-visible override) ⇒ a `min-width:1024px`
+  `@media` (so it stays visible at 640–1023px); hidden on tablet ONLY ⇒ the
+  bounded tablet branch; hidden on mobile ⇒ the mobile branch. Blocks visible
+  on at least one device stay DOM-rendered (menu-native wrappers stamped with
+  inert `data-menu-block-id` — for `nav-items` on the `<nav>` landmark
+  ancestor, never `.site-nav-list`; leaf frames keep `PageBlockFrame`'s
+  `data-block-id`) and hidden per branch via the doc-scoped dual selector
+  `[data-menu-block-id="X"],[data-block-id="X"]{display:none}`; blocks visible
+  on NEITHER device stay render-skipped. `buildMenuDocumentPreviewCss` emits NO
+  visibility hide rule in ANY forced branch — canvas visibility is owned solely
+  by the editor's dimmed-selectable GHOST gate (the hide rules target the
+  `[data-menu-block-id]` SelectableBlock stamp and would display:none the ghost).
+- **Nested sublists (TASK-502, DOC-SCOPED only — base sheet FORBIDDEN):** the
+  recursive fly-out block (`.site-nav-sublist{display:none}` hide-by-default,
+  the per-level `:hover`/`:focus-within` open pair to `display:grid`,
+  `.site-nav-sublist>li{position:relative}`, the direction-aware nested
+  `.site-nav-sublist .site-nav-sublist{left:100%;top:0;bottom:auto}` —
+  `bottom:0;top:auto` for `dropdownDirection:"top"` — and the group caret
+  rule) is emitted ONLY inside the shared `min-width:640px` branch (desktop AND
+  tablet); the mobile branch carries NO sublist hide/un-hide (the base sheet's
+  `display:grid` + cumulative per-depth `padding-left:16px` keep all levels
+  inline-indented). `buildSiteShellCss(null)` is byte-identical (no legacy CSS
+  added — 502-03 legacy path reuses base-sheet class rules).
+- **Divider context rules (TASK-502, per-divider-block, doc-scoped):** a doc
+  WITH a divider emits the frame-as-line pair
+  (`.site-header-inner [data-block-id="X"]{align-self:center;width:<thick>px;
+  height:1.5em;background:<tone>}` — deliberately NO `display:` so it cannot
+  out-specificity a visibility hide — plus inner `hr{display:none}`) in front
+  AND preview; a doc WITHOUT a divider emits neither. Declarations derive only
+  from already-validated enum/number props (injection-safe).
+
+A no-override / mobile-only document emits NO tablet branch and its base output
+changes from pre-502 ONLY by the unconditional structural divider/nested-sublist
+rules (re-baselined ONCE, pinned in
+`tests/unit/site/menu-document-render.test.tsx`); a mobile-only doc's mobile
+branch is byte-identical to pre-502.
+
+**Editor** (`core/admin/ui/menus/MenuDesignEditor.tsx`): the DeviceSwitcher
+forks the appearance writers — Tablet AND Mobile edits each write their own
+sparse override, Desktop writes the base — from event handlers only (no
+setState-in-effect). Overridable appearance controls are wrapped in
+`MenuResponsiveControlShell` (Base/Override/Inherited badge +
+`data-menu-responsive-reset` Reset), panels show RESOLVED values, the canvas
+scope cue reads "Tablet (overrides)" / "Mobile (overrides)" / "Desktop (base)";
+per-block visibility shows the flat "Visible" toggle for leaves on Desktop and
+the breakpoint override toggle on Tablet/Mobile. Content writes (brand/cta/
+utility props) stay FLAT on every device. TASK-502 canvas WYSIWYG: the
+`MenuDocumentCanvas` frame ROOT paints the seven site `--color-*` tokens
+(shared `useCanvasSiteTokens` in `core/admin/ui/shared/` +
+`toMenuCanvasColorCssVariableMap` in `core/ui/theme/tokenCss.ts`) so swatches
+resolve against SITE tokens, not the admin theme — it must be the root because
+the section Surface/Border rules emit onto the scope root and CSS custom
+properties inherit downward only; the selection ring is re-pointed to an
+`--admin-*` var. `getPageEditorColorPalette(siteTokens)` is passed as
+`palette` to every `ColorSwatchControl`. Hidden blocks render as a dimmed,
+selectable "Hidden" GHOST (the sole canvas visibility owner). The brand panel
+adds a text-mode-only "Brand text" Input (sparse; empty deletes the prop); the
+cta panel adds a "Size" SegmentedControl + "Open in new tab" toggle rendered
+via the real leaf through a local `canvasMenuLeafToPageBlock` replica
+(visibility forced true); the divider renders the real leaf frame (no literal
+"—"); `NavItemsPreview` is recursive (grandchildren reachable, never dropped).
+
+**Styling depth — brand style, per-level styling & cheap wins (TASK-504,
+per-device):** No `schemaVersion` bump, no new route/RBAC/migration; nothing
+new enters the base sheet (`buildSiteShellCss(null)` byte-identical), and
+no-override docs stay byte-identical on both CSS builders — all new styling
+ONLY overrides the hardcoded base from the `[data-site-menu-doc]` doc scope by
+later source order.
+
+- **`BrandStyle` (`brand.props.style`):** text-mode `fontSize`/`fontWeight`/
+  `color`/`textTransform`/`letterSpacing` + image-mode `height`/`maxWidth`,
+  validated by `normalizeBrandStyle` (reject-unknown KEYS with `path`; bad
+  VALUES fail-SOFT → omitted, sparse; prune-empty ⇒ legacy brand byte-identical).
+  NEW local clamp table `BRAND_STYLE_NUMBER_RANGES`: `fontSize [10,48]`,
+  `letterSpacing [-2,8]` (NEGATIVE allowed — distinct from the nav `10..32`),
+  `height [16,120]`, `maxWidth [40,400]`. `"style"` is the CONSCIOUS widening of
+  `BRAND_PROP_KEYS`; its READ trap is asserted by round-trip. Brand IMAGE mode
+  resolves its `<img>` src via the exported `resolveBrandImageSrc` (single home;
+  front + canvas import it) sized by `height`/`maxWidth` (defect B1 fix).
+- **`NavLevelStyle` / `NavItemsProps.levelStyles` (`{ 1?, 2? }`):** per-level
+  link typography + state (`linkColor`/`linkHoverColor`/`linkHoverTextColor`/
+  `linkActiveColor`/`fontSize`/`fontWeight`/`gap`/`paddingX`/`paddingY`) + submenu
+  CONTAINER chrome for levels ≥1 (`background`/`borderColor`/`borderWidth`/
+  `radius`/`shadow`/`minWidth`). Cap at **levels 0 / 1 / 2+**: level 0 = the
+  EXISTING flat `.site-nav-link` base (NO new type, NOT re-emitted), `1` = first
+  dropdown, `2` = "level 2 AND deeper" via a descendant selector. `NAV_LEVEL_NUMBER_RANGES`:
+  `fontSize [10,32]`, `gap [0,32]`, `paddingX [0,40]`, `paddingY [0,32]`,
+  `borderWidth [0,8]`, `radius [0,32]`, `minWidth [80,480]`. `normalizeNavItemsProps`
+  SPLITS `levelStyles` off the raw props BEFORE the flat `NAV_ITEMS_PROP_KEYS`
+  subset check and validates it via `normalizeNavLevelStyles` (reject-unknown
+  OUTER level keys — only `"1"`/`"2"` — and per-level style keys); `"levelStyles"`
+  is NOT added to `NAV_ITEMS_PROP_KEYS` (that const stays `... satisfies readonly
+  (keyof MenuAppearance)[]`) — the carrier type widens to `Pick<…> & { levelStyles? }`.
+  Its READ trap is asserted by round-trip (whole-doc blast radius).
+- **Inheritance is PURE CSS cascade + source order (no runtime merge):** emit
+  level 0, then 1, then 2, each only its own present overrides. Exact depth
+  selectors (`${scope}` = `[data-site-menu-doc="true"]`):
+  - Level 1 link: `${scope} .site-nav-list > .site-nav-item > .site-nav-sublist .site-nav-link`
+  - Level 1 container: `${scope} … > .site-nav-sublist, ${scope} … > .site-nav-sublist .site-nav-sublist`
+  - Level 2 link: `${scope} … > .site-nav-sublist .site-nav-sublist .site-nav-link`
+  - Level 2 container: the ANCHORED `${scope} … > .site-nav-sublist .site-nav-sublist`
+    (NOT the short `.site-nav-sublist .site-nav-sublist`).
+  The DESCENDANT combinators are deliberate: because the level-1 selectors also
+  reach deeper links/containers, "level 2 inherits level 1 where unset" holds by
+  cascade, and the specificity ordering L0 < L1 < L2 (and the anchored level-2
+  container tying level-1's reach + winning by source order) makes deeper levels
+  override. The strict-CHILD form (`… > .site-nav-sublist > li > .site-nav-link`)
+  is REJECTED — it would make level 2 inherit level 0 instead of level 1.
+- **Sublist chrome** (the level ≥1 CONTAINER fields) OVERRIDES the hardcoded
+  base `.site-nav-sublist` chrome from the doc scope only; the base sheet is
+  untouched.
+- **Cheap wins:** per-link `linkPaddingX`/`linkPaddingY`/`linkRadius` group on
+  `.site-nav-link`, a hover TEXT color (`linkHoverTextColor` on
+  `.site-nav-link:hover`), and a current-page rule
+  `:where([aria-current="page"])` colored by the EXISTING `linkActiveColor`.
+  These four keys are first-class `MenuAppearance` vocabulary (so they ride
+  `collectDeltaRules` per-device FREE) but carry **NO resolution default** (NOT
+  seeded into `MENU_APPEARANCE_DEFAULTS`/`SHELL_APPEARANCE_DEFAULTS`) — emission
+  is PRESENT-ONLY (each rule-group `base()` returns `null` unless authored) so a
+  no-override doc gains ZERO new doc-sheet bytes. `aria-current="page"` is stamped
+  FRONT-only: `activePath` is threaded `SiteHeaderMenuDocumentRender →
+  NavItemsRender → SiteNavItem → SiteNavLink` (server-component-safe; producer
+  wired via `renderPublicPageHtmlInternal` `requestPath`); the canvas preview
+  stamps none (no route concept).
+- **Per-device (tablet + mobile) brand & level channel:** brand `style` overrides
+  ride the BLOCK responsive (`responsive[bp].style`; `normalizeMenuBlockResponsive`'s
+  group-key gate widened to accept `"style"`, the READ twin of the `BRAND_PROP_KEYS`
+  widening); level styles ride the SECTION responsive
+  (`responsive[bp].navProps.levelStyles`). Both follow the Pages cascade (tablet
+  AND mobile inherit DESKTOP; mobile ≠ tablet). Level LINK typography + brand base
+  fold into the all-width base (mobile inherits desktop); level CONTAINER chrome
+  folds into the ≥640 shared bucket (a harmless present-only no-op below 640 where
+  the nav is inline). Neither dimension rides the scalar `collectDeltaRules`
+  channel — each uses its OWN parallel resolve-and-diff vs DESKTOP into the bounded
+  tablet `@media (min-width:640px) and (max-width:1023px)` and mobile
+  `@media (max-width:639px)` buckets. Dedicated NEW helpers back the writes/resets
+  (`patchMenuBrandStyleForDevice`/`clearMenuBrandStyleOverride`; a nested-path
+  `patchMenuSectionForDevice` variant + nested raw-read with a DEEP prune chain)
+  — the flat/visibility-only helpers cannot reach the nested paths. The canvas
+  `buildMenuDocumentPreviewCss` force-open opens the WHOLE ancestor chain
+  (levels 1..N) for the selected level, appended LAST (the single canvas-only add).
+
+**Modern styling — base reset, visible defaults & 5 bundles (TASK-506,
+per-level + per-device):** Same invariants — no `schemaVersion` bump, no new
+route/RBAC/migration, `buildSiteShellCss(null)` byte-identical, no-override docs
+byte-identical on both CSS builders, PRESENT-ONLY emission from the doc scope.
+
+- **F1 base-record reset.** The desktop `bp===null` branch of every
+  `patch*ForDevice` helper already deletes-on-`undefined` + prunes to the legacy
+  byte-stable shape, so F1 is a thin named API over it: `clearMenuSectionBase`
+  (flat level-0 scalar/layout), `clearMenuNavLevelStyleBase` (per-level 1/2),
+  `clearMenuNavChromeBase` (dedicated — prunes `props.navChrome`→`props`, NOT the
+  flat scalar wrapper), `clearMenuBrandStyleBase` (prunes `props.style`→`props`).
+  **A base reset of the last authored field round-trips byte-identical to a
+  never-authored doc** (asserted per surface at the model AND render layer).
+  `MENU_NAV_DEVICE_DEFINING_KEYS` (`mobileMode`/`dropdownDirection`) are EXCLUDED
+  (they carry resolution defaults). Raw base readers
+  (`readMenuNavLevelStyleBaseValue` / `readMenuSectionBaseValue` /
+  `readMenuNavChromeBaseValue` / `readMenuBrandStyleBaseValue`) feed the editor's
+  `hasBaseValue` predicate so Reset shows on any control with an explicit OWN value.
+- **F2 resolved-default provider.** `resolveMenuControlDefault(section, device,
+  level, key) → { value, sourceLabel }` (section-only, 4-param; `level` ∈
+  `0 | 1 | 2 | "base"`) is the SINGLE model source the editor reads — it never
+  hardcodes a default and an unset slider shows the RESOLVED value, not
+  `range.min`. It is a FULL CASCADE WALK, not a single hop: tablet/mobile unset
+  RECURSES through the provider on `"desktop"` (label kept "Inherited from
+  desktop") so a compound device×level-unset case can never surface `(undefined)`;
+  an unset level N (1/2) walks shallower LEVELS, then the level-0 nav-base/navChrome
+  value, then the theme/base default; gated present-only numerics (indicator/divider/
+  pill sizes) return `{ value: undefined, sourceLabel: "Off"/"Not applied" }` (never
+  `range.min`); the modern enum/bool defaults read the EXPORTED `NAV_CHROME_DEFAULTS`
+  (`submenuPlacement:"right"`, `showCaret:true`, `indicator:"none"`,
+  `flyoutAnimation:"none"`, …) mirroring today's implicit CSS. Exported model consts
+  `MENU_SHELL_DEFAULT_LINK_{PX,PY,RADIUS}` (12/8/6) + `NAV_FONT_SIZE_INHERITED` (16)
+  keep it self-contained (no CSS/editor import cycle).
+- **Level-0 home = Option B: `NavItemsProps.navChrome`.** A NEW sub-record parallel
+  to `levelStyles`, split off in `normalizeNavItemsProps` BEFORE the flat
+  `NAV_ITEMS_PROP_KEYS` subset, with its own `NAV_CHROME_KEYS` reject-unknown
+  allowlist + partitions + `NAV_CHROME_NUMBER_RANGES` + prune-empty-to-legacy, and a
+  FULL parallel helper family (`patchMenuNavChromeForDevice` / `resolveMenuNavChrome`
+  / `readMenuNavChrome{Override,Base}Value` / `clearMenuNavChromeBase` +
+  `collectChromeDeltaRules` in the CSS layer). `MenuAppearance` / `BRAND_PROP_KEYS` /
+  `NAV_ITEMS_PROP_KEYS` unchanged. It holds B4 pill + the level-0 variants of
+  B1/B2/B3 — NOT `flyoutAnimation` (a levels-≥1 CONTAINER field; writing it under
+  navChrome reject-unknown throws).
+- **The 5 modern bundles** (per-level on `NavLevelStyle` 1/2 + per-device):
+  - **B1 item separators** — orientation-aware: level-0 top bar ⇒ VERTICAL
+    `border-inline-end` on `.site-nav-list > .site-nav-item:not(:last-child)`;
+    dropdown (levels ≥ 1) ⇒ HORIZONTAL `border-block-end` on the dedicated
+    single-member `… > .site-nav-sublist > li:not(:last-child)`. Fields
+    `itemDivider{Show,Color,Width(1..8),Style(solid|dashed|dotted)}`.
+  - **B2 indicator** — a `::before` bar (caret keeps `::after`, so they coexist on
+    group parents) with `position:relative` added to the link;
+    `indicator(none|underline|overline)`/`indicatorColor`/`indicatorThickness(1..6)`/
+    `indicatorGrow` (`scaleX` vs `opacity` reveal) shown on `:hover`/`:focus-visible`/
+    `:where([aria-current="page"])`; plus `hoverUnderline`, `transitionMs(0..400)`,
+    `hoverLift(0..8)`. Link-level ⇒ re-emits at mobile.
+  - **B3 caret + flyout** — `showCaret:false` suppresses the caret `::after`
+    (`content:none`); `caretRotateOnOpen` rotates 180° on `:hover`/`:focus-within`;
+    `flyoutAnimation(none|fade|slide)` reveals the sublist. **(TASK-508 R2 rewrote
+    this reveal — see the TASK-508 subsection below: the old
+    `display …ms allow-discrete` + `@starting-style` machinery was cosmetically inert
+    and is GONE; the reveal now drives visible motion with `visibility`+`opacity`
+    +`transform`.)**
+  - **B4 pill + dropdown padding** — level-0 `navPill{Background,Radius(0..40),
+    PaddingX(0..40),PaddingY(0..32)}` on `.site-nav-list`; levels ≥ 1
+    `containerPaddingX(0..40)`/`containerPaddingY(0..32)` on the container selector
+    (≥640-only).
+  - **B5 nested placement** — `submenuPlacement(right|bottom|left)` on LEVEL 2 only,
+    emitted on the anchored (0,5,0) `LEVEL_CONTAINER_SELECTORS[2]` selector with
+    all-four-offset resets (right=`left:100%;right:auto;top:0;bottom:auto`,
+    bottom=`left:0;top:100%;…`, left=`right:100%;left:auto;top:0;…`), preserving the
+    504 specificity and the base `dropdownDirection` first-dropdown rule. Its
+    per-device tablet override rides a STANDALONE delta (≥640-only, never mobile).
+- **Per-device deltas** mirror 504: `collectLevelDeltaRules` (levelStyles) +
+  `collectChromeDeltaRules` (navChrome) diff vs DESKTOP with the ≥640-only vs
+  all-width `linkOnly` split. Every new per-level key ∈ `NAV_LEVEL_STYLE_COMPARE_KEYS`
+  and every navChrome key ∈ the navChrome compare list — else the per-device delta
+  silently drops (fail-closed trap, asserted by test).
+
+**Nesting forms — link centering, perceptible flyout, unified direction & accordion
+(TASK-508).** Same doc-scoped `buildMenuRuleSetsForDocument` family; present-only,
+no `schemaVersion` bump, `buildSiteShellCss(null)` + no-override docs byte-identical.
+
+- **R1(a) corrected container default hints (model-only).** The base sheet always
+  paints `.site-nav-sublist{min-width:180px;padding:6px}`, mirrored into
+  `menuDocumentV2.ts` as `MENU_SHELL_SUBLIST_MIN_WIDTH=180` /
+  `MENU_SHELL_SUBLIST_PADDING=6` (NOT into `MenuAppearance`/`SHELL_APPEARANCE_DEFAULTS`
+  — keeps the base sheet untouched). `resolveNavKeyThemeDefault` now returns the REAL
+  defaults: `minWidth ⇒ {180,"Default 180px"}`, `containerPaddingX/Y ⇒ {6,"Default 6px"}`
+  (removed from `MENU_GATED_PRESENT_ONLY_NOT_APPLIED_KEYS`), so the editor hint + slider
+  thumb read 180/6 instead of `undefined`/`range.min`. The level-0 pill controls
+  (`navPillRadius`/`navPillPaddingX/Y`) STAY gated. **Hint/thumb-only** — CSS emission
+  (`levelContainerDecls`, present-only on the STORED value) is unchanged.
+- **R1(b) `NavLevelStyle.linkAlign` (`left|center|right`).** Emits `text-align` on the
+  dropdown link (`LEVEL_LINK_SELECTORS[lvl]`); since `.site-nav-link` is `display:block`
+  filling the `min-width:180px` container, `center` centers the label. Present-only,
+  per-device (∈ `NAV_LEVEL_STYLE_COMPARE_KEYS` + re-emits at mobile via `linkOnly`),
+  levels 1/2.
+- **R2 robust `flyoutAnimRule` (the confirmed BUG fix).** The reveal now drives visible
+  motion with visibility+opacity+transform: at REST the sublist is overridden to
+  `display:grid;visibility:hidden;opacity:0` (+`transform:translateY(-6px)` for slide) on
+  the NON-`:hover` sublist selectors; SHOWN on `:hover`/`:focus-within` it is
+  `visibility:visible;opacity:1;transform:none`; the transition is
+  `opacity ${dur}ms[,transform ${dur}ms],visibility 0s linear ${dur}ms` — the delayed
+  `visibility` on close keeps the box visible + interactive through the fade/slide-out
+  (so CLOSE animates), `visibility 0s` on open makes it interactive from frame 0.
+  `visibility:hidden` = exact reachability parity with `display:none` (non-focusable,
+  non-clickable, a11y-hidden) ⇒ zero-JS hover/focus-within reachability preserved; the
+  `display:none→grid` toggle (`navNestingRules`) is byte-unchanged (its display:grid-on-hover
+  is now redundant-but-harmless). NO `@starting-style`/`allow-discrete`/`display`-in-transition.
+  Present-only: unset/`"none"` ⇒ early-return `[]` ⇒ byte-identical. `previewForceOpenLevel`
+  emits `display:grid;visibility:visible;opacity:1;transform:none` on the (0,4,0) level-1
+  AND anchored (0,5,0) level-2 selectors so the canvas force-open reveals the flyout.
+- **R3a `NavChromeStyle.submenuDirection` (`right|down|up|left`).** One nav-global control
+  applying CONSISTENTLY across ALL nested depths. Emitted as TWO rules in `desktopShared`
+  reading `baseNavChrome` — rule A on the precise first-dropdown selector (0,4,0) and
+  rule B on the anchored (0,5,0) `LEVEL_CONTAINER_SELECTORS[2]` — each resetting ALL FOUR
+  offsets (`down⇒left:0;top:100%;right:auto;bottom:auto`, `up⇒left:0;bottom:100%;top:auto;
+  right:auto`, `right⇒left:100%;top:0;right:auto;bottom:auto`, `left⇒right:100%;top:0;
+  left:auto;bottom:auto`) to avoid a double-anchor stretch. Emitted BEFORE
+  `submenuPlacementRule` so a granular level-2 `submenuPlacement` still WINS (coexistence
+  precedence). ≥640-only; **base-only** (like `dropdownDirection`: NOT in
+  `NAV_CHROME_COMPARE_KEYS`, tablet inherits via the flatten — a per-device override is
+  dead data). Unset ⇒ ZERO bytes ⇒ `dropdownDirection`/`submenuPlacement` byte-identical.
+- **R3b `NavChromeStyle.submenuMode` (`flyout|accordion`).** Accordion renders sublists
+  IN-FLOW under a vertical top bar as one downward block: `.site-nav-list{flex-direction:
+  column;align-items:stretch}` + `.site-nav-sublist{position:static;box-shadow:none;
+  border:0;min-width:0}` + `.site-nav-sublist{padding-left:16px}`, revealed via the SAME
+  untouched `display:none→grid` hover/focus-within toggle (zero-JS). ≥640-only,
+  `desktopShared`, base-only (NOT in `NAV_CHROME_COMPARE_KEYS`). Flyout is the default +
+  present-only: a flyout-mode doc emits ZERO accordion bytes; accordion gates the R2
+  flyout reveal OFF (no `visibility:hidden` over static content).
+- **Reject-unknown / value partitions.** Each new key joins its allowlist
+  (`linkAlign → NAV_LEVEL_STYLE_KEYS`; `submenuDirection`/`submenuMode → NAV_CHROME_KEYS`)
+  + exactly one value partition (`NAV_LINK_ALIGNS`/`SUBMENU_DIRECTIONS`/`SUBMENU_MODES`) +
+  a `NAV_CHROME_DEFAULTS` hint entry (the level-agnostic hint provider also serves the
+  levels-1/2 `linkAlign` hint). Bad enum VALUE fails soft (OMITTED); unknown KEY throws
+  `MenuDocumentError`+path. `core/site/siteShell.tsx` needs ZERO markup change.
 
 ## Revisions And Autosave
 
@@ -1317,6 +1854,22 @@ Allowed differences are page-chrome only: the template metadata form
 Page Settings panels that do not apply to templates (SEO, `showInNav`,
 `collectionLink`, revision retention) are hidden in template mode while the
 stored document keeps their normalized defaults.
+
+**TASK-496 (shared editor-chrome shell — DONE 2026-06-30):** the page-editor
+builder chrome is now the shared, purely-presentational shell
+`core/admin/ui/shared/CanvasEditor.tsx` (in-content `PageHeader` + "Page builder"
+sub-toolbar + separated `rounded-2xl border bg-card shadow-card` card + light
+right-docked 280px collapsible rail + dark-correct dotted canvas), consumed by
+Pages, Page Templates, AND Custom Screens (`panelPosition: "right" | "bottom"`;
+controlled `panelOpen` with the host as the single source of truth). Pages + Page
+Templates render through it **behavior-preserving** — the `PageDocumentV2` document
+model, ops, cache, dirty/autosave, and preview pipeline are unchanged and all
+`data-page-editor-*` hooks are intact; only the chrome is extracted. The
+`mode:"menu"` designer keeps its legacy dark bottom panel. The previously orphaned
+copy of `shared/CanvasEditor.tsx` is resolved (it BECAME this shell, with real
+importers from both `ui/pages/` and `ui/custom-screens/`); the dark
+`AuthoringFloatingToolbar` / `AuthoringCanvasFrame` / authoring `canvasChrome.ts`
+chrome is removed.
 
 Assistant: the Page Templates editor advertises NO assistant active surface
 in v1 (the `widget-template` active-surface kind and `widget-template.*`

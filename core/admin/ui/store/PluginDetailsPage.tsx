@@ -2,6 +2,7 @@ import { BarChart3 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 
@@ -131,46 +132,37 @@ const pluginDetails: PluginDetailsData = {
   ],
 };
 
-const statusStyles: Record<string, string> = {
-  Enabled: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Disabled: "border-slate-200 bg-slate-50 text-slate-600",
-};
-
 export function PluginDetailsPage() {
   return (
     <AdminShell activeHref="/admin/store" breadcrumbs={["Store", "Plugins", "SEO Optimizer"]}>
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
-        <div className="rounded-2xl border bg-card p-6 shadow-sm">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-center gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <BarChart3 className="h-7 w-7" />
+        <Card className="gap-5 p-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary-soft text-primary-soft-foreground">
+              <BarChart3 className="size-8" />
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="font-display text-xl font-semibold">SEO Optimizer</h1>
+                <Badge variant="success">Enabled</Badge>
               </div>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-2xl font-semibold">SEO Optimizer</h1>
-                  <Badge variant="outline" className={statusStyles.Enabled}>
-                    Enabled
-                  </Badge>
-                </div>
-                <p className="text-sm text-muted-foreground">v2.4.1 by Digital Labs</p>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-3 rounded-xl border bg-muted/40 px-4 py-2">
-                <span className="text-sm font-medium text-muted-foreground">Auto-update</span>
-                <Switch defaultChecked />
-              </div>
-              <Button
-                variant="outline"
-                className="border-destructive/30 text-destructive hover:bg-destructive/5"
-              >
-                Uninstall
-              </Button>
+              <div className="text-sm text-muted-foreground">v2.4.1 by Digital Labs</div>
             </div>
           </div>
-        </div>
+
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <div className="flex items-center gap-3 rounded-xl border bg-muted/40 px-4 py-2">
+              <span className="text-sm font-medium text-muted-foreground">Auto-update</span>
+              <Switch defaultChecked />
+            </div>
+            <Button
+              variant="outline"
+              className="border-destructive/30 text-destructive hover:bg-destructive/5"
+            >
+              Uninstall
+            </Button>
+          </div>
+        </Card>
 
         <PluginDetailsTabs data={pluginDetails} />
       </div>

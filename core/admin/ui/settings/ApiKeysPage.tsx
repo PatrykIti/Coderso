@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, ShieldAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { isApiClientError } from "@/services/apiClient";
 import {
   createApiKey,
@@ -192,7 +193,7 @@ export function ApiKeysPage() {
       breadcrumbs={["Settings", "API Keys"]}
     >
       <div className="flex h-full flex-col">
-        <div className="border-b bg-background/70 px-6 py-5">
+        <div className="border-b border-border bg-card/70 px-6 py-5">
           <div className="mx-auto flex max-w-6xl flex-col gap-4">
             <PageHeader
               title="API Keys"
@@ -208,6 +209,16 @@ export function ApiKeysPage() {
         </div>
         <div className="flex-1 p-6">
           <div className="mx-auto flex max-w-6xl flex-col gap-6">
+            <Card className="flex flex-row items-start gap-3 bg-warning-soft p-4 text-warning shadow-none">
+              <ShieldAlert className="mt-0.5 size-5 shrink-0" />
+              <div className="text-sm">
+                <span className="font-medium">Keep your keys secret.</span>{" "}
+                <span className="text-warning/90">
+                  Anyone with a key can access your workspace. The full secret is shown only once on
+                  creation or rotation — never commit keys to source control or share them publicly.
+                </span>
+              </div>
+            </Card>
             {error ? (
               <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
                 {error}

@@ -7,6 +7,7 @@ import type {
   ContentTypeCollectionWorkspaceSummary,
 } from "@/services/contentTypesClient";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import { buildDetailTemplateEditorHref } from "./detailTemplateEditorModel";
 
@@ -164,10 +165,12 @@ export function CollectionOverview({
 
   return (
     <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-      <div className="rounded-lg border bg-card p-5">
+      <div className="rounded-2xl border bg-card p-5 shadow-soft">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="truncate text-xl font-semibold">{summary.contentType.name}</h2>
+            <h2 className="truncate font-display text-xl font-semibold">
+              {summary.contentType.name}
+            </h2>
             <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               <span>/{summary.contentType.slug}</span>
               <span>{summary.contentType.fieldCount} fields</span>
@@ -176,21 +179,21 @@ export function CollectionOverview({
               ) : null}
             </div>
           </div>
-          <Badge variant={summary.contentType.status === "published" ? "default" : "outline"}>
-            {summary.contentType.status}
-          </Badge>
+          <StatusBadge status={summary.contentType.status} />
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-5">
+      <div className="rounded-2xl border bg-card p-5 shadow-soft">
         <div className="text-sm font-medium">Linked resources</div>
         <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
           <div>
-            <div className="text-2xl font-semibold">{summary.linkedSecondary.pages.length}</div>
+            <div className="font-display text-2xl font-semibold">
+              {summary.linkedSecondary.pages.length}
+            </div>
             <div className="text-xs text-muted-foreground">Pages</div>
           </div>
           <div>
-            <div className="text-2xl font-semibold">
+            <div className="font-display text-2xl font-semibold">
               {summary.linkedSecondary.adminScreens.length}
             </div>
             <div className="text-xs text-muted-foreground">Screens</div>
@@ -198,10 +201,10 @@ export function CollectionOverview({
         </div>
       </div>
 
-      <div className="rounded-lg border bg-card p-5 lg:col-span-2">
+      <div className="rounded-2xl border bg-card p-5 shadow-soft lg:col-span-2">
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h2 className="text-base font-semibold">Canonical resources</h2>
-          <Badge variant={summary.unresolved.length === 0 ? "default" : "outline"}>
+          <h2 className="font-display text-base font-semibold">Canonical resources</h2>
+          <Badge variant={summary.unresolved.length === 0 ? "success" : "outline"}>
             {summary.unresolved.length === 0 ? "Ready" : `${summary.unresolved.length} open`}
           </Badge>
         </div>
@@ -215,7 +218,7 @@ export function CollectionOverview({
               Boolean(detailPage) && deletingDetailTemplateId === detailPage?.id;
 
             return (
-              <div key={item.key} className="min-w-0 rounded-lg border bg-background p-4">
+              <div key={item.key} className="min-w-0 rounded-xl border bg-background p-4">
                 <div className="mb-2 text-xs font-medium uppercase text-muted-foreground">
                   {item.label}
                 </div>

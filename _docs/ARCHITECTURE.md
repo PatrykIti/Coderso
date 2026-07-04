@@ -409,8 +409,8 @@ Zamiast tego:
 - `core/services/assistant/blueprints/blueprintCandidateResolver.ts`, `blueprintCompositionGraph.ts`, `blueprintConflictResolver.ts`, `blueprintSchemaMerger.ts`, `blueprintFacetMerger.ts`, `blueprintCardConfigMerger.ts`, `blueprintActionAssembler.ts`, `blueprintExistingResourceMatcher.ts`, `blueprintCompositionMetadata.ts`, and `blueprintCompositionDiagnostics.ts` provide the current `TASK-190` composition foundation: capability candidates, graph fragments, typed route/resource/field/media/permission conflict detection, validator-backed content schema merge, schema-backed listing facet/card merge, projection widening for required listing runtime fields, blocking gated-domain surfacing, catalog-backed existing-resource reuse, strict review diagnostics, internal redacted diagnostics serialization, and typed action assembly now keep supported multi-capability and primary-plus-gated setup requests on the composed planner path before provider drafting can bypass them. Single-pack setup/refinement still uses the existing legacy pack builders outside this bounded mixed-setup cutover.
 - `core/services/assistant/blueprints/blueprintPageSectionTypes.ts` and `blueprintPageSectionLibrary.ts` add the first `TASK-190-05` page-section layer: assistant-facing aliases/slots now resolve deterministically to existing page-builder widgets plus alias-specific `modulePackMatrix` helper mappings, unsupported aliases such as `steps` stay gated until a real widget/preset owner seam exists, and raw media URLs are rejected until the assistant has trusted media-library ids.
 - `core/services/assistant/blueprints/blueprintPageSectionComposer.ts` and the widened `page.upsert` contract add the next `TASK-190-05` slice: canonical collection pages now assemble listing/filter/form blocks through the existing widget owner, while `PageData.settings.collectionLink` persists canonical list-page linkage inside the current page owner seam for later workspace/no-duplicate leaves.
-- `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` adds the first `TASK-190-06` admin-surface slice: catalog admin review screens now merge deterministic admin groups into existing `screen-*` custom-screen blocks, validate referenced content schema fields, reject secret-like field references, and keep output on the current `custom-screen.upsert` `blocks` / `bindings` transport shape rather than adding an assistant-only layout schema.
-- `core/services/assistant/blueprints/blueprintBindingComposer.ts` adds the next `TASK-190-06` admin-surface slice: assistant-composed custom-screen bindings now validate existing `widgetId + propPath + field + mode` contracts against the composed content schema, reject unsafe/secret-like paths, and dedupe identical binding ids before handing payloads to the custom-screen owner seam. Canonical admin-screen metadata now lives as nullable top-level `collectionRole` / `compositionKey` fields on `custom_screens` and round-trips through custom-screen schemas, services, cached admin clients, resource catalog summaries, and `custom-screen.upsert` / `custom-screen.update`.
+- `core/services/assistant/blueprints/blueprintAdminSurfaceComposer.ts` now emits native V4 `ScreenDocumentV1` sections/blocks for catalog admin review screens. The helper validates referenced content schema fields, rejects secret-like field references, and sends `custom-screen.upsert` a V4 `definition` rather than legacy `screen-*` widget blocks.
+- `core/services/assistant/blueprints/blueprintBindingComposer.ts` now emits V4 `blockId + propPath + field + mode` screen bindings against the composed content schema, rejects unsafe or secret-like paths, and dedupes identical binding ids before handing payloads to the custom-screen owner seam. Canonical admin-screen metadata now lives as nullable top-level `collectionRole` / `compositionKey` fields on `custom_screens` and round-trips through custom-screen schemas, services, cached admin clients, resource catalog summaries, and `custom-screen.upsert` / `custom-screen.update`.
 - `core/services/content/detailPageTypes.ts`, `detailPageSchema.ts`, and the new `detail_page_documents` / `detail_page_revisions` tables add the persisted detail-page owner seam for `TASK-190-05-03`: strict normalized document storage, deterministic UUID-compatible ids, and the blocking `content_type_has_detail_pages` delete dependency are the source of truth consumed by generic detail-page resource packaging and no-duplicate reuse.
 - `core/services/content/detailPageDocumentService.ts` plus the executable `detail-page.upsert` contract extend that seam without introducing a second executor path: assistant dry-run/execute now persist strict detail-page documents, refresh advisory `contentTypeSlug` from the linked content type, and keep publish state owned by `DetailPageDocument.status`, while canonical route linkage remains owned by `setting.content-route.upsert.detailPageId`.
 - `core/server/routes/detailPageRoutes.ts` and `core/server/validation/detailPageSchemas.ts` now add the internal `/admin/api/detail-pages*` detail-page boundary for `TASK-190-05-03-07-01`: list/detail/create/update/delete, preview, publish/unpublish, autosave, revision list/restore, and autosave discard routes stay orchestration-only at the route layer, filter by stable `contentTypeId` where applicable, surface linked-route delete conflicts through `mapDetailPageError`, and keep route linkage outside the detail-page route family.
@@ -485,10 +485,11 @@ Runtime admin context:
   SDKs, storage adapters, auth/password hashing, secret stores, or host cache
   clients. Site-token style values are resolved by the shell and passed into
   the canvas; reusable canvas modules do not read privileged settings.
-- Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, block summaries, bindings, and writable field names.
-- Writable field names are derived only from widget-aware write-capable targets
-  (for example `screen-field-value.value`), so legacy fallback widgets and
-  read-only screen props do not advertise false editor capability.
+- Custom screen builder, records list, and record editor surfaces publish bounded active custom screen context: screen identity, capabilities mode, selected entry id, selected block id, V4 screen block summaries, bindings, and writable field names.
+- Writable field names are derived only from V4 write-capable screen bindings
+  (for example `field.value` with `mode: "write"` or `"readwrite"`), so
+  legacy fallback placeholders and read-only screen props do not advertise false
+  editor capability.
 - The assistant plan route rehydrates active surface identity server-side before
   planning: pages through `pageService`, widget templates through
   `widgetTemplateService`, and custom screens through `customScreenService`;
@@ -600,7 +601,7 @@ Action family contract registry:
   output. Fresh
   widget-style `blocks[]` payloads are rejected for Pages.
 - `widget-template.update` edits reusable template metadata/settings; `widget-template.block.patch` patches selected reusable template block data paths and preserves unrelated blocks/settings.
-- `custom-screen.update` edits custom screen metadata/sidebar/canonical collection-link metadata/binding mode; `custom-screen.widget.patch` patches selected custom screen widget block data paths while preserving unrelated blocks/bindings.
+- `custom-screen.update` edits custom screen metadata/sidebar/canonical collection-link metadata/binding mode; V4 screen edits use `custom-screen.section.add`, `custom-screen.block.add`, `custom-screen.block.patch`, `custom-screen.block.move`, `custom-screen.block.remove`, `custom-screen.binding.set`, and `custom-screen.list-view.patch` while preserving unrelated sections, blocks, bindings, and list-view settings.
 - `entry.update`, `form.update`, `listing-query.update`, `listing-template.update`, `menu.item.update`, and `seo.document.update` cover remaining domain resource edits through existing domain services and preserve unrelated fields/config/tree items.
 - `menu.item.upsert` is executable and uses existing menu services to upsert safe relative navigation links without duplicating items on re-execution.
 - `seo.document.upsert` is executable and uses existing SEO services for explicit page/entry targets.
@@ -841,18 +842,18 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - endpoints Listings sa internal (`content:read/write`), bez public write API,
   - public runtime dla entries/posts wymusza `includeDrafts=false` poza preview.
 
-## Coderso Custom Screens (v1 foundation)
+## Coderso Custom Screens (V4 screen document foundation)
 
-- Definicje ekranow admina z widgetow sa w `custom_screens`:
-  - `name`, `contentTypeId`, `schemaVersion`, `blocks`, `bindings`, `status`,
+- Definicje ekranow admina sa w `custom_screens`:
+  - `name`, `contentTypeId`, `schemaVersion`, `definition`, `status`,
   - `showInSidebar`, `sidebarLabel` dla szybkich skrotow w admin nav.
+- `custom_screens.content_type_id` jest kanonicznym powiazaniem z content type;
+  persisted `definition` nie duplikuje `contentTypeId`.
 - `customScreenService` trzyma CRUD + normalizacje:
-  - `blocks` sa walidowane przez widget schema + normalizer,
-  - `bindings` mapuja `widgetId + propPath` -> field key i sa wykonywane przez
-    `bindingResolver`,
-  - save path odrzuca unsupported write combinations dla screen widgets, wiec
-    tylko widget-owned write-capable targets licza sie do dedicated-editor
-    readiness i writable field lists.
+  - `definition.schemaVersion=4` jest aktywnym source of truth,
+  - V1/V2/V3 definitions migruja przy odczycie do `ScreenDocumentV1`,
+  - legacy `blocks`/`bindings` sa tylko compatibility projection do czasu
+    TASK-468-07 backfill/drop.
 - Shortcut model:
   - tylko `active` screen z `showInSidebar=true` moze trafic do lewego menu,
   - skrot jest renderowany po grupie `Coderso`,
@@ -860,30 +861,79 @@ Zakres CMS, model danych, auth i security opisane sa w:
   - `sidebarLabel` nadpisuje domyslna nazwe screena, ale jest opcjonalny.
 - Builder (`/admin/advanced/custom-screens/:id`) ma trzy warstwy pracy:
   - screen settings,
-  - widget-level bindings dla zaznaczonego bloku,
-  - bound preview, ktory materializuje drzewo widgetow przed renderem przez `WidgetRenderer`.
+  - screen block bindings dla zaznaczonego elementu,
+  - bound preview renderowany bezposrednio z `ScreenDocumentV1` przez
+    screen runtime.
+- `ScreenDocumentV1.sections[]` jest lista `ScreenSectionV1`, a nie plaska
+  lista blokow. Kazda sekcja ma `id`, `type: "section"`, `data`, opcjonalne
+  layout/visibility i `blocks[]`. Stare plaskie V4 block-array dokumenty sa
+  migrowane przy odczycie do sekcji domyslnej bez destrukcyjnego zapisu; nowe
+  zapisy musza przejsc strict sectioned shape.
+- Neutral authoring ownership:
+  - `core/admin/ui/authoring/*` zawiera tylko UI shell: canvas frame,
+    `InlineEditWrapper`, selection/canvas chrome tokens, insertion zones,
+    floating toolbar, attached toolbar subpanels, layers, and command palette,
+  - neutral modules nie importuja Page services, Custom Screen services,
+    widget runtime, DB, server adapters, ani clients,
+  - Page Editor pozostaje Page-owned; Custom Screens uzywaja
+    `ScreenAuthoringCanvas` jako adaptera nad `ScreenDocumentV1`.
+- **TASK-496 shared editor-chrome shell (DONE 2026-06-30):** the page-editor
+  builder chrome is extracted into one shared, purely-presentational shell
+  `core/admin/ui/shared/CanvasEditor.tsx` consumed by Pages, Page Templates, AND
+  Custom Screens (builder `panelPosition="right"`, entry content `="bottom"`); it
+  carries no data/service import, so it stays legal under the
+  custom-screen-authoring boundary for both `@/ui/pages/*` and
+  `@/ui/custom-screens/*`. The previously orphaned copy BECAME this shell (real
+  importers, dead `BlockChip` removed). The dark authoring chrome —
+  `AuthoringFloatingToolbar`, `AuthoringCanvasFrame`, the authoring `canvasChrome.ts`
+  styling module, plus the orphan `AuthoringInsertionZone` / `FieldBindingPanel` /
+  `shared/FilterBar` — is deleted; surviving authoring LOGIC stays:
+  `InlineEditWrapper`, `authoringSelection`, `selectionChrome`/`selectionBorder`,
+  `AuthoringLayersPanel`, `AuthoringCommandPalette`, `authoringCommands`. Screens keep
+  `ScreenDocumentV1`, field bindings, List/Editor views, and `ScreenRuntimeRenderer` —
+  inheriting only the visual frame; `mode:"menu"` keeps the legacy dark bottom panel.
 - `Editor View` preview owner jest cached-first nad `entries:list:<typeSlug>`:
   pierwszy cached record hydratuje i builder canvas, i preview dialog; cold
   cache fallback pozostaje schema-shaped z jawna notka dla `no-records` albo
   `read-failed`.
-- `Screens` nie korzysta juz z calej public/page widget library:
-  - insert library filtruje do surface `custom-screen-builder`,
-  - screen-only widgets (`screen-record-header`, `screen-field-value`, `screen-field-group`, `screen-two-column`) sa ukryte w `Advanced/Widgets`,
-  - wspoldzielone prymitywy layoutowe musza byc jawnie dopuszczone do obu surface'ow.
+- TASK-468 V4 active surface: `Screens` nie korzysta juz z public/page widget
+  library w Editor View:
+  - insert library pokazuje screen-owned blocks oraz pola wybranego content
+    type,
+  - `List View` i `Editor View` nie uzywaja stalych lewych/prawych rails;
+    list elements, columns, hidden columns, insert, layers, content, binding,
+    style, and settings sa panelami doczepionymi do floating toolbar,
+  - active canvas renderuje `record-header`, `field`, `field-group`,
+    `columns`, `rich-text`, oraz bounded legacy placeholders,
+  - screen-only widgets (`screen-record-header`, `screen-field-value`,
+    `screen-field-group`, `screen-two-column`) sa retired migration inputs and
+    are no longer registered as active widget surfaces after TASK-468-07.
 - Kazdy custom screen ma derived capabilities:
   - `collection-only`: brak dedykowanego record screen; shortcut zawęża tylko liste rekordow,
   - `dashboard`: screen moze previewowac dane rekordu, ale nie ma ani jednego
-    widget-aware write-capable target,
-  - `editor`: screen ma co najmniej jeden widget-aware write-capable binding i
+    native write-capable binding,
+  - `editor`: screen ma co najmniej jeden native write-capable binding i
     moze pelnic role dedykowanego record editor.
 - Workflow rekordow custom screen korzysta z istniejacego domain `entries`, bez nowego storage:
   - list route: `/admin/advanced/custom-screens/:screenId/entries`,
   - editor route: `/admin/advanced/custom-screens/:screenId/entries/:entryId`,
   - `contentTypeId` z `custom_screens` jest rozwiazywany do `content_types.slug`, a zapis/listowanie dalej ida przez `content_entries`.
+- Records list pozostaje tabela, ale `definition.listView.rowTemplate`
+  przechowuje additive V4 document + bindings for real-row cells. Older
+  definitions backfill row bindings from visible columns on read; builder
+  preview rows stay read-only.
 - Record workflow jest gate'owany przez capabilities:
   - `collection-only` prowadzi rekord bezposrednio do classic editor,
   - `dashboard` otwiera read-only screen z CTA do classic editor,
-  - `editor` pokazuje tylko pola wynikajace z `write/readwrite` bindings i zapisuje standardowy `entry.data`.
+  - `editor` pokazuje tylko pola wynikajace z `write/readwrite` bindings i zapisuje standardowy `entry.data`;
+    entry canvas nie pokazuje builderowych operacji sekcji/blokow, exposes one
+    selection ring, and edits writable bound text/field values inline without a
+    detached Value panel. Records-list row edits reuse the existing
+    `PATCH /content/:type/entries/:id` path and entries cache contract.
+- Trwale per-record presentation overrides (np. image/text-size/style per
+  rekord) nie sa zapisywane w `content_entries.data`; TASK-473 owns their
+  storage/API. TASK-474 unblocks TASK-473-03 for record-detail override panel
+  wiring as a follow-up.
 
 ## Coderso Filters & Search (v2 beta)
 
@@ -1543,10 +1593,13 @@ Composite-first delivery (Coderso):
   - `complexity` (`composite|atomic`),
   - `audience` (`beginner|intermediate|advanced`),
   - `module`,
-  - `surfaces` (`page-builder|widget-library|custom-screen-builder`),
+  - `surfaces` (`page-builder|widget-library`; historical
+    `custom-screen-builder` declarations are migration-only),
   - optional `presets[]` i `requires[]`,
 - admin widget library filtruje po `module`, `complexity`, i surface `widget-library`.
-- `Screens` uzywa osobnego widget surface `custom-screen-builder`.
+- `Screens` no longer use a widget registry surface for active V4 authoring;
+  V4 editor blocks come from the screen document owner and legacy
+  `custom-screen-builder` metadata remains migration-only.
 - module pack matrix:
   - minimum per module: `1 page preset`, `2 section presets`, `3 composite widgets`,
   - enforcement profile: `strict` (runtime gate) / `advisory` (gap reporting),

@@ -149,6 +149,26 @@ vi.mock("../../../core/admin/ui/posts/editor/blocks/PostListViewPanel", () => ({
   ),
 }));
 
+vi.mock("../../../core/admin/ui/posts/editor/blocks/BlockInserter", () => ({
+  BlockInserter: ({
+    onInsertBlock,
+    showHeader,
+    recentlyUsedTypes,
+  }: {
+    onInsertBlock: (type: string) => void;
+    showHeader?: boolean;
+    recentlyUsedTypes?: string[];
+  }) => (
+    <div>
+      <span>{`inserter-header:${String(Boolean(showHeader))}`}</span>
+      <span>{`inserter-recent:${(recentlyUsedTypes ?? []).join(",")}`}</span>
+      <button type="button" onClick={() => onInsertBlock("code")}>
+        blocks-insert
+      </button>
+    </div>
+  ),
+}));
+
 import { PostListViewSidebar } from "../../../core/admin/ui/posts/editor/sidebars/PostListViewSidebar";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -198,6 +218,7 @@ test("PostListViewSidebar routes outline/list view state and child callbacks", (
       onInsertBlock={() => undefined}
       leftRailMode="list-view"
       onLeftRailModeChange={onLeftRailModeChange}
+      recentlyUsedTypes={["image", "quote"]}
       showOutlineHints={false}
       showKeyboardHints={false}
     />
@@ -207,6 +228,17 @@ test("PostListViewSidebar routes outline/list view state and child callbacks", (
     expect(view.container.textContent).toContain("outline-hints:false");
     expect(view.container.textContent).toContain("keyboard-hints:false");
     expect(view.container.querySelector("[data-tabs-value='list-view']")).not.toBeNull();
+    expect(
+      view.container.querySelector("[data-post-editor-left-rail-tab='blocks']")
+    ).not.toBeNull();
+    expect(
+      view.container.querySelector("[data-post-editor-left-rail-tab='outline']")
+    ).not.toBeNull();
+    expect(
+      view.container.querySelector("[data-post-editor-left-rail-tab='list-view']")
+    ).not.toBeNull();
+    expect(view.container.textContent).toContain("inserter-header:false");
+    expect(view.container.textContent).toContain("inserter-recent:image,quote");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     React.act(() => {

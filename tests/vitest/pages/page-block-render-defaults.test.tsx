@@ -40,6 +40,8 @@ const markupOf = (block: PageBlockV2) => renderToStaticMarkup(<>{renderPageBlock
 
 /** Baked Tailwind class for each font-size token (1:1 with the token rem values). */
 const fontSizeTokenClass: Record<PageTypographyFontSize, string> = {
+  "2xs": "text-[0.625rem]",
+  xs: "text-xs",
   sm: "text-sm",
   md: "text-base",
   lg: "text-lg",

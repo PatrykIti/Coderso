@@ -1,3 +1,5 @@
+import { ShoppingBag } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -8,27 +10,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
+import type { CommerceStockState } from "@/services/commerceClient";
 import { AdminLink } from "@/ui/shared/AdminLink";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import { CommerceRowActions } from "./CommerceRowActions";
 import type { CommerceProductListRow } from "./CommerceListPage";
 
-const statusStyles: Record<string, string> = {
-  published: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
-  draft: "bg-slate-500/10 text-slate-500 border-slate-500/20",
-  archived: "bg-amber-500/10 text-amber-600 border-amber-500/20",
-};
-
-const statusLabels: Record<string, string> = {
-  published: "Published",
-  draft: "Draft",
-  archived: "Archived",
-};
-
-const stockLabels: Record<string, string> = {
-  in_stock: "In stock",
-  out_of_stock: "Out of stock",
-  backorder: "Backorder",
+/**
+ * TASK-479-19-L01: token-driven stock badge over the real `CommerceStockState`
+ * enum (in_stock -> success, out_of_stock -> destructive, backorder -> warning).
+ * Replaces the previous inline `stockLabels` string. The product status pill now
+ * reuses the shared `StatusBadge` (479-06-L02) so the catalog matches the rest of
+ * the admin instead of a divergent local hex map.
+ */
+const stockBadge: Record<
+  CommerceStockState,
+  { variant: "success" | "warning" | "destructive"; label: string }
+> = {
+  in_stock: { variant: "success", label: "In stock" },
+  out_of_stock: { variant: "destructive", label: "Out of stock" },
+  backorder: { variant: "warning", label: "Backorder" },
 };
 
 const formatDate = (value: string) => {
@@ -85,7 +88,7 @@ export function CommerceTable({
   onDelete,
 }: CommerceTableProps) {
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="overflow-hidden rounded-2xl border bg-card shadow-card">
       <Table>
         <TableHeader className="bg-muted/40">
           <TableRow>
@@ -102,7 +105,7 @@ export function CommerceTable({
             <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground md:table-cell">
               Status
             </TableHead>
-            <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
+            <TableHead className="hidden text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground lg:table-cell">
               Price
             </TableHead>
             <TableHead className="hidden text-xs font-semibold uppercase tracking-wider text-muted-foreground xl:table-cell">
@@ -122,23 +125,23 @@ export function CommerceTable({
         <TableBody>
           {items.length === 0 ? (
             <TableRow>
-              <TableCell
-                colSpan={8}
-                className="py-10 text-center text-sm text-muted-foreground"
-              >
-                {emptyMessage ??
-                  "No products yet. Create your first product to start cataloging."}
+              <TableCell colSpan={8} className="py-10 text-center text-sm text-muted-foreground">
+                {emptyMessage ?? "No products yet. Create your first product to start cataloging."}
               </TableCell>
             </TableRow>
           ) : null}
           {items.map((item) => {
             const isSelected = selectedIds.includes(item.id);
-            const stockLabel = stockLabels[item.stock.state] ?? item.stock.state;
+            const stock = stockBadge[item.stock.state];
+            const quantitySuffix = item.stock.quantity != null ? ` (${item.stock.quantity})` : "";
 
             return (
               <TableRow
                 key={item.id}
-                className={isSelected ? "bg-muted/30" : undefined}
+                className={cn(
+                  "transition-colors",
+                  isSelected ? "bg-muted/30" : "hover:bg-accent/40"
+                )}
               >
                 <TableCell className="pl-4">
                   <Checkbox
@@ -148,74 +151,63 @@ export function CommerceTable({
                   />
                 </TableCell>
                 <TableCell>
-                  <div className="flex flex-col gap-1">
-                    <AdminLink
-                      href={`/advanced/commerce/${encodeURIComponent(item.id)}`}
-                      prefetch
-                      className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
-                      aria-label={`Edit product: ${item.title}`}
+                  <div className="flex items-start gap-3">
+                    <span
+                      aria-hidden="true"
+                      className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-muted text-muted-foreground"
                     >
-                      {item.title}
-                    </AdminLink>
-                    <span className="text-xs text-muted-foreground break-all">
-                      /{item.slug}
+                      <ShoppingBag className="size-5" />
                     </span>
-                    <span className="text-xs text-muted-foreground">
-                      {item.excerpt ?? "No excerpt"}
-                    </span>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
-                      <Badge
-                        variant="outline"
-                        className={
-                          statusStyles[item.status] ?? statusStyles.draft
-                        }
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <AdminLink
+                        href={`/advanced/commerce/${encodeURIComponent(item.id)}`}
+                        prefetch
+                        className="break-words text-left font-semibold text-foreground underline-offset-4 transition hover:underline focus-visible:underline"
+                        aria-label={`Edit product: ${item.title}`}
                       >
-                        {statusLabels[item.status] ?? item.status}
-                      </Badge>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span className="text-muted-foreground">
-                        {formatMoney(item.pricing.amount, item.pricing.currency)}
+                        {item.title}
+                      </AdminLink>
+                      <span className="text-xs text-muted-foreground break-all">/{item.slug}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {item.excerpt ?? "No excerpt"}
                       </span>
-                      <span className="text-muted-foreground/60">•</span>
-                      <span>
-                        {stockLabel}
-                        {item.stock.quantity != null
-                          ? ` (${item.stock.quantity})`
-                          : ""}
-                      </span>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground md:hidden">
+                        <StatusBadge status={item.status} />
+                        <span className="text-muted-foreground/60">•</span>
+                        <span className="tabular-nums text-muted-foreground">
+                          {formatMoney(item.pricing.amount, item.pricing.currency)}
+                        </span>
+                        <span className="text-muted-foreground/60">•</span>
+                        <Badge variant={stock.variant}>{stock.label}</Badge>
+                        {quantitySuffix ? <span>{quantitySuffix.trim()}</span> : null}
+                      </div>
                     </div>
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <Badge
-                    variant="outline"
-                    className={statusStyles[item.status] ?? statusStyles.draft}
-                  >
-                    {statusLabels[item.status] ?? item.status}
-                  </Badge>
+                  <StatusBadge status={item.status} />
                 </TableCell>
-                <TableCell className="hidden text-sm text-muted-foreground lg:table-cell">
+                <TableCell className="hidden text-right text-sm tabular-nums text-foreground lg:table-cell">
                   {formatMoney(item.pricing.amount, item.pricing.currency)}
                 </TableCell>
                 <TableCell className="hidden text-sm text-muted-foreground xl:table-cell">
-                  {stockLabel}
-                  {item.stock.quantity != null ? ` (${item.stock.quantity})` : ""}
+                  <span className="inline-flex items-center gap-1.5">
+                    <Badge variant={stock.variant}>{stock.label}</Badge>
+                    {quantitySuffix ? (
+                      <span className="tabular-nums">{quantitySuffix.trim()}</span>
+                    ) : null}
+                  </span>
                 </TableCell>
                 <TableCell className="hidden max-w-[12rem] text-sm text-muted-foreground xl:table-cell">
                   {item.collectionLabels.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {item.collectionLabels.slice(0, 2).map((label, index) => (
-                        <Badge
-                          key={`${item.id}-${label}-${index}`}
-                          variant="secondary"
-                        >
+                        <Badge key={`${item.id}-${label}-${index}`} variant="secondary">
                           {label}
                         </Badge>
                       ))}
                       {item.collectionLabels.length > 2 ? (
-                        <Badge variant="outline">
-                          +{item.collectionLabels.length - 2}
-                        </Badge>
+                        <Badge variant="outline">+{item.collectionLabels.length - 2}</Badge>
                       ) : null}
                     </div>
                   ) : (

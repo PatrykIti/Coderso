@@ -92,10 +92,12 @@ library ids or return `needs_input`.
 
 Admin surface contributions must go through:
 
-- `blueprintAdminSurfaceComposer.ts` for deterministic screen block groups,
-- `blueprintBindingComposer.ts` for `widgetId + propPath + field + mode`
+- `blueprintAdminSurfaceComposer.ts` for deterministic V4 screen sections and
+  block groups,
+- `blueprintBindingComposer.ts` for `blockId + propPath + field + mode`
   bindings,
-- current `custom-screen.upsert` or `custom-screen.update` action contracts.
+- current `custom-screen.upsert`, `custom-screen.update`, or V4 screen document
+  action contracts.
 
 Generated admin screens must keep `collectionRole` and `compositionKey` stable
 so workspace routing, cache hydration, and existing-resource matching can reuse

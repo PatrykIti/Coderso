@@ -13,7 +13,12 @@ import {
 } from "../utils/bindingPath";
 export { collectBindingPropPaths } from "../utils/bindingPropPaths";
 
-import type { CustomScreenBinding } from "./customScreenSchemas";
+import type {
+  CustomScreenBinding,
+  CustomScreenListColumn,
+  CustomScreenListRowTemplate,
+  ScreenFieldBinding,
+} from "./customScreenSchemas";
 
 export { readBindingPathValue, splitBindingPath, writeBindingPathValue };
 
@@ -335,6 +340,25 @@ export function collectWritableBindingFields(
         .map((binding) => binding.field)
     )
   );
+}
+
+export function resolveListRowFieldBinding(input: {
+  rowTemplate?: CustomScreenListRowTemplate | null;
+  column: CustomScreenListColumn;
+}): ScreenFieldBinding | null {
+  const bindings = input.rowTemplate?.bindings ?? [];
+  return (
+    bindings.find(
+      (binding) =>
+        binding.source === "entry" &&
+        binding.propPath === "value" &&
+        binding.field === input.column.field
+    ) ?? null
+  );
+}
+
+export function isListRowFieldWritable(binding: ScreenFieldBinding | null | undefined) {
+  return binding?.mode === "write" || binding?.mode === "readwrite";
 }
 
 export function sanitizeUnsupportedWriteBindings(

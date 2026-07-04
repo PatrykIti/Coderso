@@ -2,7 +2,7 @@ import { Star } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
@@ -75,9 +75,13 @@ export function WidgetCard({
     );
   }
   return (
+    // TASK-479-22-L01: soft & friendly gallery card ported from the prototype —
+    // rounded-2xl, soft shadow + subtle hover lift. Controls are re-skinned in
+    // place (preview frame + pinned actions/checkbox, category/meta badges, name
+    // beside the inline Configure button); no control is added or removed.
     <Card
       className={cn(
-        "group flex h-full flex-col gap-0 overflow-hidden border-border/60 py-0 shadow-sm transition hover:border-primary/40 hover:shadow-lg",
+        "group flex h-full flex-col gap-3 rounded-2xl border-border/60 p-4 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-card",
         className
       )}
       role={onSelect ? "button" : undefined}
@@ -87,12 +91,11 @@ export function WidgetCard({
       draggable={draggable}
       onDragStart={onDragStart}
     >
-      <div className="relative mx-4 mt-4 aspect-video overflow-hidden rounded-xl border border-border/70 bg-muted/30">
+      <div className="relative h-28">
         {preview ? <div className="absolute inset-0">{preview}</div> : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
         {onSelectionChange ? (
           <div
-            className="absolute left-2 top-2 rounded-md bg-background/85 p-1 shadow-sm backdrop-blur"
+            className="absolute left-2 top-2 rounded-md bg-card/85 p-1 shadow-soft backdrop-blur"
             onClick={(event) => event.stopPropagation()}
           >
             <Checkbox
@@ -104,7 +107,7 @@ export function WidgetCard({
         ) : null}
         {actions ? (
           <div
-            className="absolute right-2 top-2 rounded-md bg-background/85 shadow-sm backdrop-blur"
+            className="absolute right-2 top-2 rounded-md bg-card/85 shadow-soft backdrop-blur"
             onClick={(event) => event.stopPropagation()}
           >
             {actions}
@@ -122,7 +125,7 @@ export function WidgetCard({
             aria-pressed={isFavorite}
             title={favoriteLabel}
             className={cn(
-              "absolute right-2 top-2 rounded-full bg-background/80 text-muted-foreground shadow-sm backdrop-blur",
+              "absolute right-2 top-2 rounded-full bg-card/80 text-muted-foreground shadow-soft backdrop-blur",
               isFavorite && "text-yellow-500"
             )}
           >
@@ -130,38 +133,36 @@ export function WidgetCard({
           </Button>
         ) : null}
       </div>
-      <CardContent className="flex flex-1 flex-col gap-3 px-4 pb-4 pt-4">
-        <div className="flex items-center gap-2">
-          <Badge variant="secondary" className="text-[10px] uppercase">
-            {categoryLabel}
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="secondary" className="text-[10px] uppercase">
+          {categoryLabel}
+        </Badge>
+        {metaBadges?.map((item) => (
+          <Badge key={item} variant="outline" className="text-[10px] uppercase">
+            {item}
           </Badge>
-          {metaBadges?.map((item) => (
-            <Badge key={item} variant="outline" className="text-[10px] uppercase">
-              {item}
-            </Badge>
-          ))}
-          {badge ? (
-            <Badge variant="outline" className="text-[10px] uppercase">
-              {badge}
-            </Badge>
-          ) : null}
-        </div>
-        <div className="flex items-start justify-between gap-4">
-          <h3 className="text-sm font-semibold text-foreground">{name}</h3>
-          {resolvedAction ? (
-            <Button
-              variant="outline"
-              size="xs"
-              onClick={(event) => {
-                event.stopPropagation();
-                resolvedAction();
-              }}
-            >
-              {resolvedLabel}
-            </Button>
-          ) : null}
-        </div>
-      </CardContent>
+        ))}
+        {badge ? (
+          <Badge variant="outline" className="text-[10px] uppercase">
+            {badge}
+          </Badge>
+        ) : null}
+      </div>
+      <div className="mt-auto flex items-start justify-between gap-4">
+        <h3 className="font-display text-[15px] font-semibold text-foreground">{name}</h3>
+        {resolvedAction ? (
+          <Button
+            variant="outline"
+            size="xs"
+            onClick={(event) => {
+              event.stopPropagation();
+              resolvedAction();
+            }}
+          >
+            {resolvedLabel}
+          </Button>
+        ) : null}
+      </div>
     </Card>
   );
 }

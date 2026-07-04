@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { CheckCircle2, PackageX, Plus, ShoppingBag } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -16,6 +16,7 @@ import { AdminShell } from "@/ui/layouts/AdminShell";
 import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatCard } from "@/ui/shared/StatCard";
 import { useListPagination } from "@/ui/shared/useListPagination";
 
 import { CommerceBulkActionsBar, type CommerceBulkActionValue } from "./CommerceBulkActionsBar";
@@ -103,6 +104,17 @@ export function CommerceListPage() {
         .sort((left, right) => left.label.localeCompare(right.label)),
     [collections]
   );
+
+  const catalogStats = useMemo(() => {
+    const total = products.length;
+    const published = products.filter((product) => product.status === "published").length;
+    const outOfStock = products.filter((product) => product.stock.state === "out_of_stock").length;
+    return [
+      { label: "Products", value: String(total), icon: <ShoppingBag /> },
+      { label: "Published", value: String(published), icon: <CheckCircle2 /> },
+      { label: "Out of stock", value: String(outOfStock), icon: <PackageX /> },
+    ];
+  }, [products]);
 
   const enrichedProducts = useMemo(
     () => enrichCommerceProducts(products, collections),
@@ -229,6 +241,7 @@ export function CommerceListPage() {
         <PageHeader
           title="Commerce"
           description="Manage products and keep your catalog ready for runtime widgets."
+          icon={<ShoppingBag />}
           actions={
             <>
               {selectedCount > 0 ? (
@@ -263,6 +276,12 @@ export function CommerceListPage() {
           </Alert>
         ) : null}
 
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {catalogStats.map((stat) => (
+            <StatCard key={stat.label} label={stat.label} value={stat.value} icon={stat.icon} />
+          ))}
+        </div>
+
         <CommerceFilters
           search={search}
           status={statusFilter}
@@ -276,7 +295,7 @@ export function CommerceListPage() {
         />
 
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground shadow-card">
             Loading products...
           </div>
         ) : (

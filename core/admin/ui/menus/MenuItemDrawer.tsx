@@ -1,13 +1,15 @@
+import { ChevronDown, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
 import type { MenuItemRecord } from "@/services/menusClient";
 import type { PageSummary } from "@/services/pagesClient";
-import {
-  MenuItemForm,
-  type MenuItemFormValue,
-} from "@/ui/menus/MenuItemForm";
+import { MenuItemForm, type MenuItemFormValue } from "@/ui/menus/MenuItemForm";
 import {
   normalizeMenuItemSettings,
   type MenuItemBadgeTone,
@@ -73,9 +75,7 @@ function MenuItemDrawerContent({
   onDelete,
 }: MenuItemDrawerProps) {
   const [draft, setDraft] = useState<MenuItemFormValue>(() => toFormValue(item));
-  const [errors, setErrors] = useState<{ label?: string; link?: string } | null>(
-    null
-  );
+  const [errors, setErrors] = useState<{ label?: string; link?: string } | null>(null);
 
   const isEditing = Boolean(item?.id);
 
@@ -168,11 +168,7 @@ function MenuItemDrawerContent({
           {isEditing ? "Update Item" : "Add Item"}
         </Button>
         {canDelete ? (
-          <Button
-            variant="destructive"
-            className="w-full"
-            onClick={() => onDelete(item)}
-          >
+          <Button variant="destructive" className="w-full" onClick={() => onDelete(item)}>
             Delete Item
           </Button>
         ) : null}
@@ -184,4 +180,157 @@ function MenuItemDrawerContent({
 export function MenuItemDrawer(props: MenuItemDrawerProps) {
   const key = props.item?.id ?? "menu-item-empty";
   return <MenuItemDrawerContent key={key} {...props} />;
+}
+
+/**
+ * TASK-499-01: always-on "Item settings" inspector for the three-pane frame
+ * (and the mobile Sheet). Unlike `MenuItemDrawer` this is LIVE — every edit
+ * flows straight through `onChange` (wired to the page's `handleSaveItem`) so
+ * parent reparent/reindex + `normalizeMenuItemSettings` are reused unchanged.
+ * The "Open in new tab" Switch lives HERE (never in `MenuItemForm`, keeping the
+ * `menu-item-form.test.tsx` "no switch" lock green). With no active item it
+ * renders the menu-level settings slot (name + theme location).
+ */
+type MenuItemInspectorProps = {
+  activeItem: MenuItemDraft | null;
+  pages: PageSummary[];
+  parentOptions: Array<{ id: string; label: string }>;
+  disabledParentIds?: Set<string>;
+  onChange: (item: MenuItemDraft) => void;
+  onDelete: (item: MenuItemDraft) => void;
+  menuSettingsSlot: React.ReactNode;
+};
+
+const toInspectorValue = (item: MenuItemDraft): MenuItemFormValue => {
+  const settings = normalizeMenuItemSettings(item.settings);
+  return {
+    id: item.id,
+    label: item.label,
+    linkType: item.linkType,
+    pageId: item.pageId ?? "",
+    href: item.href ?? "",
+    parentId: item.parentId ?? null,
+    visibility: settings.visibility ?? "all",
+    badgeLabel: settings.badge?.label ?? "",
+    badgeTone: (settings.badge?.tone ?? "default") as MenuItemBadgeTone,
+    description: settings.description ?? "",
+    icon: settings.icon ?? "",
+    openInNewTab: settings.openInNewTab ?? false,
+    variant: settings.variant ?? "link",
+  };
+};
+
+function MenuItemInspectorContent({
+  activeItem,
+  pages,
+  parentOptions,
+  disabledParentIds,
+  onChange,
+  onDelete,
+}: Omit<MenuItemInspectorProps, "menuSettingsSlot"> & { activeItem: MenuItemDraft }) {
+  const [draft, setDraft] = useState<MenuItemFormValue>(() => toInspectorValue(activeItem));
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const propagate = (next: MenuItemFormValue) => {
+    setDraft(next);
+    const badgeLabel = next.badgeLabel.trim();
+    onChange({
+      ...activeItem,
+      label: next.label,
+      linkType: next.linkType,
+      pageId: next.linkType === "page" ? next.pageId : "",
+      href: next.linkType === "url" ? next.href : "",
+      parentId: next.parentId ?? null,
+      settings: normalizeMenuItemSettings({
+        visibility: next.visibility,
+        badge: badgeLabel ? { label: badgeLabel, tone: next.badgeTone } : undefined,
+        description: next.description,
+        icon: next.icon,
+        openInNewTab: next.openInNewTab,
+        variant: next.variant,
+      }),
+    });
+  };
+
+  return (
+    <div className="flex h-full flex-col">
+      <div className="mb-3 flex items-center justify-between">
+        <span className="text-sm font-semibold">Item settings</span>
+        <Badge variant="soft">{draft.linkType === "page" ? "Page" : "Link"}</Badge>
+      </div>
+
+      {/* TASK-499-01 §4: the inspector reads like the prototype's minimal panel —
+          PRIMARY fields ordered Label → Link → Open-in-new-tab → Visibility, with
+          the heavy legacy controls demoted into a default-closed "Advanced"
+          disclosure (not deleted). */}
+      <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+        {/* PRIMARY — Label + link-type-aware Link control. */}
+        <MenuItemForm
+          value={draft}
+          pages={pages}
+          parentOptions={parentOptions}
+          disabledParentIds={disabledParentIds}
+          onChange={propagate}
+          section="primary"
+        />
+
+        {/* PRIMARY — Open in new tab lives in the inspector wrapper (not the
+            form), keeping the `menu-item-form.test.tsx` "no switch" lock green. */}
+        <div className="flex items-center justify-between gap-4 rounded-xl border border-border px-3 py-2.5">
+          <div className="text-sm font-medium">Open in new tab</div>
+          <Switch
+            checked={draft.openInNewTab ?? false}
+            onCheckedChange={(checked) => propagate({ ...draft, openInNewTab: checked })}
+            aria-label="Open in new tab"
+          />
+        </div>
+
+        {/* PRIMARY — Visibility. */}
+        <MenuItemForm
+          value={draft}
+          pages={pages}
+          parentOptions={parentOptions}
+          disabledParentIds={disabledParentIds}
+          onChange={propagate}
+          section="visibility"
+        />
+
+        {/* ADVANCED — collapsible, default-closed: Link Type toggle, Parent,
+            Display as, Badge label+tone, Description, Icon. */}
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
+          <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-border px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/60">
+            <span>Advanced</span>
+            <ChevronDown
+              className={cn("size-4 transition-transform", advancedOpen && "rotate-180")}
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <MenuItemForm
+              value={draft}
+              pages={pages}
+              parentOptions={parentOptions}
+              disabledParentIds={disabledParentIds}
+              onChange={propagate}
+              section="advanced"
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      </div>
+
+      <Separator className="my-4" />
+      <Button variant="destructive" className="w-full gap-2" onClick={() => onDelete(activeItem)}>
+        <Trash2 className="h-4 w-4" />
+        Remove item
+      </Button>
+    </div>
+  );
+}
+
+export function MenuItemInspector({
+  activeItem,
+  menuSettingsSlot,
+  ...rest
+}: MenuItemInspectorProps) {
+  if (!activeItem) return <>{menuSettingsSlot}</>;
+  return <MenuItemInspectorContent key={activeItem.id} activeItem={activeItem} {...rest} />;
 }

@@ -362,7 +362,10 @@ test("UserList renders badges, fallback roles, protected users, and routes actio
     expect(view.container.textContent).toContain("+1");
     expect(view.container.textContent).toContain("Last admin");
     expect(view.container.textContent).toContain("Active");
-    expect(view.container.textContent).toContain("Inactive");
+    // 479-27 re-skin: status now renders via the shared 06 StatusBadge, which emits
+    // the raw status + CSS `capitalize` — so the DOM textContent is lowercase
+    // (consistent with the lowercase "custom" role asserted in the read-only test).
+    expect(view.container.textContent).toContain("inactive");
 
     click(rows[1]);
     expect(onSelect).toHaveBeenCalledWith("user-1");
@@ -429,7 +432,8 @@ test("UserList read-only mode disables management actions and falls back to onSe
 
   try {
     expect(view.container.textContent).toContain("custom");
-    expect(view.container.textContent).toContain("Pending");
+    // 479-27: StatusBadge renders raw status + CSS capitalize -> lowercase textContent.
+    expect(view.container.textContent).toContain("pending");
 
     click(findButtonsByText(view.container, "View profile")[0]);
     expect(onSelect).toHaveBeenCalledWith("user-3");

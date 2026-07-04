@@ -35,6 +35,7 @@ import { ConfirmActionDialog } from "@/ui/shared/ConfirmActionDialog";
 import { ListPaginationFooter } from "@/ui/shared/ListPaginationFooter";
 import { createListActionToastAdapter } from "@/ui/shared/listActionToasts";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { StatusTabs } from "@/ui/shared/StatusTabs";
 import { useListPagination } from "@/ui/shared/useListPagination";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { PageFilters } from "../pages/PageFilters";
@@ -206,6 +207,20 @@ export function PostsListPage() {
     return Array.from(map.entries())
       .map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label));
+  }, [items]);
+
+  // Status tabs are derived from the already-loaded items (no extra fetch); a
+  // tab click only flips the existing statusFilter that filterPosts() consumes.
+  // The tab values are exactly real PostStatus members + "all" — there is no
+  // "review"/"trash" status on the post DTO, so those prototype tabs are dropped.
+  const statusTabItems = useMemo(() => {
+    const by = (status: string) => items.filter((post) => post.status === status).length;
+    return [
+      { value: "all", label: "All", count: items.length },
+      { value: "published", label: "Published", count: by("published") },
+      { value: "draft", label: "Drafts", count: by("draft") },
+      { value: "scheduled", label: "Scheduled", count: by("scheduled") },
+    ];
   }, [items]);
 
   const filteredItems = useMemo(
@@ -415,7 +430,7 @@ export function PostsListPage() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <PageHeader
           title="Posts"
-          description="Create and publish articles rendered by widgets and templates."
+          description="Write, schedule, and publish blog posts for your site."
           actions={
             <>
               {selectedCount > 0 ? (
@@ -465,7 +480,7 @@ export function PostsListPage() {
               ) : null}
               <Button className="gap-2" onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
-                New
+                New post
               </Button>
             </>
           }
@@ -482,6 +497,7 @@ export function PostsListPage() {
             <AlertDescription>{bulkFeedback.message}</AlertDescription>
           </Alert>
         ) : null}
+        <StatusTabs tabs={statusTabItems} value={statusFilter} onValueChange={setStatusFilter} />
         <PageFilters
           search={searchQuery}
           status={statusFilter}
@@ -494,7 +510,7 @@ export function PostsListPage() {
           onAuthorChange={setAuthorFilter}
         />
         {isLoading ? (
-          <div className="rounded-xl border bg-card/60 p-6 text-sm text-muted-foreground shadow-sm">
+          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-card">
             Loading posts...
           </div>
         ) : (

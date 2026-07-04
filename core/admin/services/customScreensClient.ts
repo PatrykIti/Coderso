@@ -2,6 +2,10 @@ import { apiRequest } from "./apiClient";
 import { broadcastCacheEvent } from "@/utils/cacheBus";
 import { cacheKeys, cacheTtlMs } from "@/services/cachePolicy";
 import {
+  clearCustomScreenDetailBrowserCache,
+  clearCustomScreensBrowserCache,
+} from "@/services/customScreensCache";
+import {
   clearLocalCache,
   createMemoryBackedLocalCache,
   readLocalCache,
@@ -14,10 +18,18 @@ import {
 } from "../../services/customScreens/capabilities";
 import {
   customScreenCollectionRoleValues,
+  getCustomScreenEditorViewBindings,
+  getCustomScreenEditorViewBlocks,
   normalizeCustomScreenDefinitionForRead,
+  type CustomScreenBindingWarning,
   type CustomScreenCollectionRole,
   type CustomScreenDefinition,
 } from "../../services/customScreens/customScreenSchemas";
+import {
+  screenEntryPresentationOverridePropPaths,
+  type ScreenEntryPresentationOverrideDraft,
+  type ScreenEntryPresentationOverridePropPath,
+} from "../../services/customScreens/screenEntryPresentationOverrideContract";
 
 export type CustomScreenStatus = "draft" | "active";
 
@@ -63,6 +75,13 @@ export type CustomScreenRecord = {
   capabilities?: CustomScreenCapabilities;
   createdAt: string;
   updatedAt: string;
+  // TASK-505-03 (Item B3): TRANSIENT binding-GC warnings the server (505-01)
+  // attaches to the PATCH 200 response when the save-path GC pruned orphaned
+  // bindings — computed at normalize time, NEVER persisted. Type-only carry so
+  // the raw returned record typechecks in the editor (`isCustomScreenRecord`
+  // ignores extra keys; `normalizeCustomScreenRecord` spreads `...item`;
+  // `updateCustomScreen` returns the raw record → the field survives to the UI).
+  warnings?: CustomScreenBindingWarning[];
 };
 
 export type CustomScreenCreateInput = {
@@ -73,16 +92,55 @@ export type CustomScreenCreateInput = {
   compositionKey?: string | null;
   showInSidebar?: boolean;
   sidebarLabel?: string | null;
-  schemaVersion?: number;
+  schemaVersion?: 4;
   definition?: CustomScreenDefinition | null;
-  blocks?: WidgetBlock[] | null;
-  bindings?: CustomScreenBinding[] | null;
 };
 
 export type CustomScreenUpdateInput = Partial<CustomScreenCreateInput>;
 
+export type CustomScreenEntryPresentationOverride = ScreenEntryPresentationOverrideDraft;
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+const screenEntryPresentationOverridePropPathSet = new Set<string>(
+  screenEntryPresentationOverridePropPaths
+);
+
+const isScreenEntryPresentationOverridePropPath = (
+  value: unknown
+): value is ScreenEntryPresentationOverridePropPath =>
+  typeof value === "string" && screenEntryPresentationOverridePropPathSet.has(value);
+
+const normalizeScreenEntryPresentationOverrideDraft = (
+  value: unknown
+): ScreenEntryPresentationOverrideDraft | null => {
+  if (!isRecord(value)) return null;
+  if (
+    typeof value.blockId !== "string" ||
+    !isScreenEntryPresentationOverridePropPath(value.propPath) ||
+    typeof value.value !== "string"
+  ) {
+    return null;
+  }
+  return {
+    blockId: value.blockId,
+    propPath: value.propPath,
+    value: value.value,
+  };
+};
+
+const normalizeScreenEntryPresentationOverrides = (
+  value: unknown[]
+): ScreenEntryPresentationOverrideDraft[] =>
+  value.flatMap((item) => {
+    const normalized = normalizeScreenEntryPresentationOverrideDraft(item);
+    return normalized ? [normalized] : [];
+  });
+
+const isScreenEntryPresentationOverrideList = (value: unknown): value is unknown[] =>
+  Array.isArray(value) &&
+  value.every((item) => normalizeScreenEntryPresentationOverrideDraft(item) !== null);
 
 const isCustomScreenStatus = (value: unknown): value is CustomScreenStatus =>
   value === "draft" || value === "active";
@@ -118,6 +176,10 @@ const isCustomScreenList = (value: unknown): value is CustomScreenRecord[] =>
   Array.isArray(value) && value.every(isCustomScreenRecord);
 
 let cachedScreensPromise: Promise<CustomScreenRecord[]> | null = null;
+const screenEntryOverridesPromises = new Map<
+  string,
+  Promise<ScreenEntryPresentationOverrideDraft[]>
+>();
 
 const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenRecord => {
   const definition = normalizeCustomScreenDefinitionForRead({
@@ -130,13 +192,13 @@ const normalizeCustomScreenRecord = (item: CustomScreenRecord): CustomScreenReco
     ...item,
     schemaVersion: definition.schemaVersion,
     definition,
-    blocks: definition.editorView.blocks,
-    bindings: definition.editorView.bindings,
+    blocks: getCustomScreenEditorViewBlocks(definition),
+    bindings: getCustomScreenEditorViewBindings(definition),
     collectionRole: item.collectionRole ?? null,
     compositionKey: item.compositionKey ?? null,
     showInSidebar: item.showInSidebar ?? false,
     sidebarLabel: item.sidebarLabel ?? null,
-    capabilities: item.capabilities ?? resolveCustomScreenCapabilities(definition),
+    capabilities: item.capabilities ?? resolveCustomScreenCapabilities({ definition }),
   };
 };
 
@@ -178,7 +240,33 @@ const upsertCachedScreen = (item: CustomScreenRecord) => {
 const removeCachedScreen = (id: string) => {
   const current = readScreensCache();
   if (current) primeScreensCacheInternal(current.filter((entry) => entry.id !== id));
-  clearLocalCache(cacheKeys.customScreenDetail(id));
+  clearCustomScreenDetailBrowserCache(id);
+};
+
+const getScreenEntryOverridesCacheKey = (screenId: string, entryId: string) =>
+  cacheKeys.customScreenEntryOverrides(screenId, entryId);
+
+const readScreenEntryOverridesCache = (screenId: string, entryId: string) => {
+  const cached = readLocalCache(
+    getScreenEntryOverridesCacheKey(screenId, entryId),
+    cacheTtlMs.detail,
+    isScreenEntryPresentationOverrideList
+  );
+  return cached ? normalizeScreenEntryPresentationOverrides(cached) : null;
+};
+
+const writeScreenEntryOverridesCache = (
+  screenId: string,
+  entryId: string,
+  overrides: ScreenEntryPresentationOverrideDraft[]
+) => {
+  writeLocalCache(getScreenEntryOverridesCacheKey(screenId, entryId), overrides);
+};
+
+const clearScreenEntryOverridesCache = (screenId: string, entryId: string) => {
+  const key = getScreenEntryOverridesCacheKey(screenId, entryId);
+  screenEntryOverridesPromises.delete(key);
+  clearLocalCache(key);
 };
 
 export const getCachedCustomScreens = () => {
@@ -192,9 +280,79 @@ export const getCachedCustomScreen = (id: string) => {
   return cached ? normalizeCustomScreenRecord(cached) : cached;
 };
 
+export const getCachedScreenEntryOverrides = (screenId: string, entryId: string) =>
+  readScreenEntryOverridesCache(screenId, entryId);
+
 export const clearCustomScreensCache = () => {
   cachedScreensPromise = null;
   customScreensListCache.clear();
+  clearCustomScreensBrowserCache();
+};
+
+async function getScreenEntryOverrides(screenId: string, entryId: string) {
+  const payload = await apiRequest<{ overrides: unknown[] }>(
+    `/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}/overrides`,
+    { method: "GET" }
+  );
+  return normalizeScreenEntryPresentationOverrides(payload.overrides ?? []);
+}
+
+export async function getScreenEntryOverridesCached(
+  screenId: string,
+  entryId: string,
+  options?: { force?: boolean }
+) {
+  const key = getScreenEntryOverridesCacheKey(screenId, entryId);
+  if (!options?.force) {
+    const cached = getCachedScreenEntryOverrides(screenId, entryId);
+    if (cached) return cached;
+    const pending = screenEntryOverridesPromises.get(key);
+    if (pending) return pending;
+  }
+
+  const request = getScreenEntryOverrides(screenId, entryId);
+  screenEntryOverridesPromises.set(key, request);
+  try {
+    const overrides = await request;
+    writeScreenEntryOverridesCache(screenId, entryId, overrides);
+    return overrides;
+  } finally {
+    if (screenEntryOverridesPromises.get(key) === request) {
+      screenEntryOverridesPromises.delete(key);
+    }
+  }
+}
+
+export async function replaceScreenEntryOverrides(
+  screenId: string,
+  entryId: string,
+  overrides: ScreenEntryPresentationOverrideDraft[]
+) {
+  const normalized = normalizeScreenEntryPresentationOverrides(overrides);
+  const payload = await apiRequest<{ overrides: unknown[] }>(
+    `/custom-screens/${encodeURIComponent(screenId)}/entries/${encodeURIComponent(entryId)}/overrides`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ overrides: normalized }),
+    },
+    { withCsrf: true }
+  );
+  const saved = normalizeScreenEntryPresentationOverrides(payload.overrides ?? []);
+  writeScreenEntryOverridesCache(screenId, entryId, saved);
+  broadcastCacheEvent({
+    key: getScreenEntryOverridesCacheKey(screenId, entryId),
+    action: "update",
+  });
+  return saved;
+}
+
+export const invalidateScreenEntryOverrides = (screenId: string, entryId: string) => {
+  clearScreenEntryOverridesCache(screenId, entryId);
+  broadcastCacheEvent({
+    key: getScreenEntryOverridesCacheKey(screenId, entryId),
+    action: "invalidate",
+  });
 };
 
 export async function listCustomScreens() {

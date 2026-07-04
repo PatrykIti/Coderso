@@ -1,0 +1,227 @@
+@import "tailwindcss";
+
+/* Dark mode is class-based: toggled on <html class="dark"> by the ThemeProvider. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+  Design language — "Soft & Friendly" (Notion-like), violet accent.
+  Warm near-white canvas, white cards, generous rounding, soft shadows.
+  Tokens mirror core/admin/styles/globals.css naming so this ports back cleanly.
+*/
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-soft-foreground: var(--primary-soft-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-warning-soft: var(--warning-soft);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+  --color-info-soft: var(--info-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-soft: 0 1px 2px rgba(28, 25, 23, 0.04), 0 4px 12px -6px rgba(28, 25, 23, 0.08);
+  --shadow-card: 0 1px 3px rgba(28, 25, 23, 0.05), 0 12px 32px -16px rgba(28, 25, 23, 0.14);
+  --shadow-pop: 0 10px 34px -10px rgba(28, 25, 23, 0.24);
+}
+
+@layer base {
+  :root {
+    /* warm light canvas */
+    --background: #f6f5f2;
+    --foreground: #1c1a17;
+
+    --card: #ffffff;
+    --card-foreground: #1c1a17;
+    --popover: #ffffff;
+    --popover-foreground: #1c1a17;
+
+    /* violet accent */
+    --primary: #7c3aed;
+    --primary-foreground: #ffffff;
+    --primary-soft: #f1ecfe;
+    --primary-soft-foreground: #6d28d9;
+
+    --secondary: #f1efeb;
+    --secondary-foreground: #44403c;
+
+    --muted: #f3f1ed;
+    --muted-foreground: #79716b;
+
+    --accent: #efece6;
+    --accent-foreground: #1c1a17;
+
+    --destructive: #e11d48;
+    --destructive-foreground: #ffffff;
+
+    --success: #16a34a;
+    --success-foreground: #ffffff;
+    --success-soft: #e7f6ec;
+    --warning: #d97706;
+    --warning-foreground: #ffffff;
+    --warning-soft: #fdf0db;
+    --info: #2563eb;
+    --info-foreground: #ffffff;
+    --info-soft: #e7eefe;
+
+    --border: #eae7e0;
+    --input: #e5e1d9;
+    --ring: #a78bfa;
+
+    --sidebar: #f1efea;
+    --sidebar-foreground: #57534e;
+    --sidebar-muted: #a8a29a;
+    --sidebar-accent: #ece6fb;
+    --sidebar-accent-foreground: #6d28d9;
+    --sidebar-border: #e7e3db;
+  }
+
+  .dark {
+    --background: #18171a;
+    --foreground: #ededec;
+
+    --card: #211f24;
+    --card-foreground: #ededec;
+    --popover: #232127;
+    --popover-foreground: #ededec;
+
+    --primary: #8b5cf6;
+    --primary-foreground: #ffffff;
+    --primary-soft: #2a2440;
+    --primary-soft-foreground: #c4b5fd;
+
+    --secondary: #29272e;
+    --secondary-foreground: #d8d4ce;
+
+    --muted: #232128;
+    --muted-foreground: #a09a91;
+
+    --accent: #2b2930;
+    --accent-foreground: #ededec;
+
+    --destructive: #fb7185;
+    --destructive-foreground: #1c1a17;
+
+    --success: #34d399;
+    --success-foreground: #06281c;
+    --success-soft: #18342a;
+    --warning: #fbbf24;
+    --warning-foreground: #2a1c05;
+    --warning-soft: #36290f;
+    --info: #60a5fa;
+    --info-foreground: #07203f;
+    --info-soft: #16263f;
+
+    --border: #2d2b32;
+    --input: #36333c;
+    --ring: #8b5cf6;
+
+    --sidebar: #1c1b1f;
+    --sidebar-foreground: #a8a29a;
+    --sidebar-muted: #756f68;
+    --sidebar-accent: #2c2542;
+    --sidebar-accent-foreground: #c4b5fd;
+    --sidebar-border: #2a282f;
+  }
+
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    margin: 0;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
+  }
+
+  /* Quiet, soft scrollbars to match the calm aesthetic. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--foreground) 18%, transparent) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: color-mix(in oklab, var(--foreground) 16%, transparent);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in oklab, var(--foreground) 28%, transparent);
+    background-clip: padding-box;
+  }
+}
+
+@layer utilities {
+  /* Subtle dotted texture for hero/empty surfaces. */
+  .bg-dotted {
+    background-image: radial-gradient(
+      color-mix(in oklab, var(--foreground) 8%, transparent) 1px,
+      transparent 1px
+    );
+    background-size: 18px 18px;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
+    letter-spacing: -0.012em;
+  }
+
+  @keyframes proto-fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-in-soft {
+    animation: proto-fade-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+}

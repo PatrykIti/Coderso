@@ -38,13 +38,13 @@ test("PostListViewSidebar renders document outline with list/outline tabs", () =
     />
   );
 
-  expect(html).toContain("Document Outline");
-  expect(html).toContain("data-post-editor-left-rail-mode=\"outline\"");
-  expect(html).toContain("data-post-editor-left-rail-tab=\"outline\"");
-  expect(html).toContain("data-post-editor-left-rail-tab=\"list-view\"");
-  expect(html).toContain("List view");
+  expect(html).toContain('data-post-editor-left-rail-tab="blocks"');
+  expect(html).toContain('data-post-editor-left-rail-mode="blocks"');
+  expect(html).toContain('data-post-editor-left-rail-tab="outline"');
+  expect(html).toContain('data-post-editor-left-rail-tab="list-view"');
+  expect(html).toContain("List");
   expect(html).toContain("Outline");
-  expect(html).toContain("data-post-editor-outline-insert=\"true\"");
+  expect(html).toContain('data-post-editor-outline-insert="true"');
   expect(html).toContain("Section title");
   expect(html).toContain("Implementation");
 });

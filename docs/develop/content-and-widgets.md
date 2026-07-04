@@ -140,7 +140,7 @@ Coderso delivers UI in layers: **Kits → Composite widgets → Atomic widgets**
 - `2` section presets
 - `3` composite widgets
 
-`content`, `forms`, `listings`, and `commerce` are `strict` modules (fail fast with `module_pack_invalid:<module>`); others are `advisory`. Composite references must exist and be registered as `complexity = "composite"`. Screen-only widgets (`custom-screen-builder`) are excluded from the matrix. Runtime helpers: `listModulePackStatus` and `validateModulePackMatrix({ strictOnly })`.
+`content`, `forms`, `listings`, and `commerce` are `strict` modules (fail fast with `module_pack_invalid:<module>`); others are `advisory`. Composite references must exist and be registered as `complexity = "composite"`. Retired screen-only Custom Screens migration widgets from the historical `custom-screen-builder` surface are excluded from the matrix. Runtime helpers: `listModulePackStatus` and `validateModulePackMatrix({ strictOnly })`.
 
 ## Add a widget: the checklist
 

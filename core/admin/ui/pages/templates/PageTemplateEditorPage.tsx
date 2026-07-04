@@ -1,7 +1,11 @@
+import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Textarea } from "@/components/ui/textarea";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import type { PageDetail } from "@/services/pagesClient";
@@ -90,48 +94,48 @@ const TemplateSettingsForm = ({ templateId, onOpenChange, onSaved }: TemplateSet
     }
   };
 
-  const labelClass = "grid gap-1 text-xs font-semibold uppercase text-muted-foreground";
-  const inputClass = "rounded border px-2 py-2 text-sm font-normal normal-case text-foreground";
-
   return (
     <div className="space-y-4">
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
-      <label className={labelClass}>
-        Name
-        <input
-          className={inputClass}
+      <div className="space-y-1.5">
+        <div className="text-xs font-medium text-muted-foreground">Name</div>
+        <Input
+          aria-label="Template name"
           value={name}
           onChange={(event) => setName(event.target.value)}
         />
-      </label>
-      <label className={labelClass}>
-        Slug
-        <input
-          className={inputClass}
+      </div>
+      <div className="space-y-1.5">
+        <div className="text-xs font-medium text-muted-foreground">Slug</div>
+        <Input
+          aria-label="Template slug"
           value={slug}
           onChange={(event) => setSlug(event.target.value)}
         />
-      </label>
-      <label className={labelClass}>
-        Description
-        <textarea
-          className={`${inputClass} min-h-20`}
+      </div>
+      <div className="space-y-1.5">
+        <div className="text-xs font-medium text-muted-foreground">Description</div>
+        <Textarea
+          aria-label="Template description"
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
-      </label>
-      <label className={labelClass}>
-        Category
-        <input
-          className={inputClass}
+      </div>
+      <div className="space-y-1.5">
+        <div className="text-xs font-medium text-muted-foreground">Category</div>
+        <Input
+          aria-label="Template category"
           value={category}
           onChange={(event) => setCategory(event.target.value)}
         />
-      </label>
+      </div>
       {/* Dedicated-widget contract: status renders as the shared segmented
           control (Draft | Published), never a native select. The stored enum
           tokens stay lowercase; only the display labels are capitalized. */}
-      <div className="rounded bg-slate-950 p-2" data-page-template-status-control="true">
+      <div
+        className="rounded-xl border border-border bg-muted/40 p-2"
+        data-page-template-status-control="true"
+      >
         <SegmentedControl
           label="Status"
           value={status}
@@ -178,6 +182,26 @@ const TemplateSettingsSheet = ({
   </Sheet>
 );
 
+/**
+ * Always-visible propagation cue rendered by the host `canvasChrome` seam
+ * (inside the canvas frame, above the document sections) — the same seam the
+ * Menus editor uses for its live shell preview, so the editor shell is reused,
+ * not forked. Ports the prototype's "edit once, update everywhere" note.
+ *
+ * HONESTY GUARD: generic copy only — `PageTemplateDetail` carries no usage
+ * field, so this never fabricates a page count. OWNERSHIP: kept page-scoped —
+ * a template can be the site footer (site.footerTemplateId); the header/main
+ * menu is a Menu (site.navigationMenuId, owned by TASK-479-10), not a template.
+ */
+const TemplatePropagationBanner = () => (
+  <Card className="mx-auto mb-3 flex max-w-3xl flex-row items-center gap-3 bg-primary-soft/50 p-3">
+    <RefreshCw className="size-5 shrink-0 text-primary" />
+    <p className="text-sm text-muted-foreground">
+      Editing this template updates every page that uses it.
+    </p>
+  </Card>
+);
+
 export function PageTemplateEditorPage({ templateId }: { templateId?: string }) {
   const [resolvedTemplateId] = useState<string | null>(() => {
     if (templateId) return templateId;
@@ -198,8 +222,8 @@ export function PageTemplateEditorPage({ templateId }: { templateId?: string }) 
         const cached = getCachedPageTemplateDetail(id);
         return cached ? toEditorDetail(cached) : null;
       },
-      loadDetail: async (id) => {
-        const detail = await getPageTemplateCached(id);
+      loadDetail: async (id, options) => {
+        const detail = await getPageTemplateCached(id, { force: options?.force });
         return detail ? toEditorDetail(detail) : null;
       },
       saveDocument: async (id, document) => {
@@ -214,6 +238,12 @@ export function PageTemplateEditorPage({ templateId }: { templateId?: string }) 
         return { previewUrl: response.previewUrl };
       },
       renderSettings: (props) => <TemplateSettingsSheet {...props} />,
+      // Surface the propagation context as ALWAYS-VISIBLE canvas chrome via the
+      // existing optional `canvasChrome` host field (same seam the Menus editor
+      // uses), keeping the note visible without forking/wrapping the shared
+      // editor and without any host-contract change. The banner is static, so it
+      // ignores the document/device props.
+      canvasChrome: () => <TemplatePropagationBanner />,
     }),
     []
   );

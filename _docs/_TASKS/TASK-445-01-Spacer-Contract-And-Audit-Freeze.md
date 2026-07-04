@@ -6,7 +6,8 @@
 **Category:** Pages / Page Editor V2 / Blocks
 **Estimated Effort:** Small
 **Dependencies:** TASK-421
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -20,7 +21,7 @@ control truthfulness while preserving the existing size clamp/runtime behavior.
 
 ## Sub-Tasks
 
-- [ ] TASK-445-01-L01: Spacer dedicated controls and runtime guard.
+- [x] TASK-445-01-L01: Spacer dedicated controls and runtime guard.
 
 ---
 

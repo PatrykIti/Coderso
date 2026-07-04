@@ -1,6 +1,3 @@
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
-
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -23,11 +20,6 @@ export type TopContentRow = {
   type: "page" | "entry";
 };
 
-const trendStyles = {
-  up: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600",
-  down: "border-rose-500/20 bg-rose-500/10 text-rose-600",
-};
-
 type TopContentTableProps = {
   items: TopContentRow[];
   onViewAll?: () => void;
@@ -44,8 +36,8 @@ const formatDate = (value: string) =>
 
 export function TopContentTable({ items, onViewAll }: TopContentTableProps) {
   return (
-    <Card className="border-border/60">
-      <CardHeader className="space-y-1">
+    <Card className="gap-0 overflow-hidden rounded-2xl border border-border py-0 shadow-soft">
+      <CardHeader className="gap-1 px-5 py-4">
         <SectionHeader
           title="Top Content"
           action={
@@ -58,51 +50,40 @@ export function TopContentTable({ items, onViewAll }: TopContentTableProps) {
           Updated items in the selected date range with activity score.
         </p>
       </CardHeader>
-      <Separator className="mx-6" />
-      <CardContent className="pt-4">
+      <Separator />
+      <CardContent className="p-0">
         <Table>
           <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead>Content</TableHead>
+              <TableHead className="px-5">Content</TableHead>
               <TableHead>Activity Score</TableHead>
               <TableHead>Updated</TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Trend</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {items.map((row) => {
-              const trend = row.score >= 50 ? "up" : "down";
-              const TrendIcon = trend === "up" ? ArrowUpRight : ArrowDownRight;
-              return (
-                <TableRow key={row.id}>
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-semibold text-foreground">{row.title}</span>
-                      <span className="text-xs text-muted-foreground">{row.path}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatScore(row.score)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(row.updatedAt)}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground capitalize">
-                    {row.type}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={trendStyles[trend]}>
-                      <TrendIcon className="h-3 w-3" />
-                      {trend === "up" ? "+5%" : "-3%"}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
+            {items.map((row) => (
+              <TableRow key={row.id}>
+                <TableCell className="px-5">
+                  <div className="flex flex-col">
+                    <span className="font-medium text-foreground">{row.title}</span>
+                    <span className="font-mono text-xs text-muted-foreground">{row.path}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-sm tabular-nums text-muted-foreground">
+                  {formatScore(row.score)}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {formatDate(row.updatedAt)}
+                </TableCell>
+                <TableCell className="text-sm capitalize text-muted-foreground">
+                  {row.type}
+                </TableCell>
+              </TableRow>
+            ))}
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="py-10 text-center text-sm text-muted-foreground">
+                <TableCell colSpan={4} className="py-10 text-center text-sm text-muted-foreground">
                   No content activity yet. Publish content or widen the date range.
                 </TableCell>
               </TableRow>

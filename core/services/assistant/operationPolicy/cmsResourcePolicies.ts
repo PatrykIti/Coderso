@@ -647,7 +647,7 @@ export const customScreenPolicy: AssistantResourcePolicy = {
         "tekst",
       ],
       valueType: "record",
-      action: { type: "custom-screen.widget.patch", patchPath: ["dataPath"] },
+      action: { type: "custom-screen.block.patch", patchPath: ["dataPath"] },
     },
   },
   actions: {
@@ -671,7 +671,7 @@ export const customScreenPolicy: AssistantResourcePolicy = {
     },
     patchWidget: {
       operation: "update",
-      type: "custom-screen.widget.patch",
+      type: "custom-screen.block.patch",
       target: "active",
       mode: "executable",
     },

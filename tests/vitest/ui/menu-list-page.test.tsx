@@ -76,6 +76,10 @@ test("MenuListPage renders cached menus with editor links", () => {
     expect(html).toContain("Next");
     expect(html).not.toContain("Open editor");
     expect(html).not.toContain("Loading menus");
+    // TASK-479-10-L01: card grid (not a data table) with a per-card Design
+    // AdminLink alongside the Edit href; route shapes unchanged.
+    expect(html).not.toContain("<table");
+    expect(html).toContain("/admin/menus/menu-1/design");
   } finally {
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

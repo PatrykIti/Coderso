@@ -6,6 +6,10 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { PageEditor, resolveToolbarTargetLabel } from "../../../core/admin/ui/pages/PageEditor";
+import {
+  AdminRouterProvider,
+  useAdminRouter,
+} from "../../../core/admin/ui/contexts/AdminRouterContext";
 import type { PageDetail, PageRevision } from "../../../core/admin/services/pagesClient";
 import {
   createPageBlockV2,
@@ -28,6 +32,9 @@ import {
   editorCanvasCtaButtonClass,
   editorDarkButtonClass,
   editorDarkGhostButtonClass,
+  editorPanelButtonClass,
+  editorPanelGhostButtonClass,
+  editorPanelSegmentTrackClass,
 } from "../../../core/admin/ui/pages/editorControls/controlChrome";
 import { resolvePageEditorControlUiModel } from "../../../core/services/pages/pageEditorControlUiModel";
 import { getPageBlockRenderDefault } from "../../../core/services/pages/pageBlockRenderDefaults";
@@ -103,6 +110,7 @@ const pageEditorState = vi.hoisted(() => {
     restorePageRevision: vi.fn(async (_pageId: string, revisionId: string) => {
       const restored = createPage({
         title: "Restored Homepage",
+        updatedAt: "2026-03-08T09:15:00.000Z",
         currentData: createDocument({
           sections: [
             createPageSectionV2("cta", {
@@ -652,8 +660,23 @@ const mount = (node: React.ReactNode) => {
   };
 };
 
+function PageEditorNavigationHarness() {
+  const router = useAdminRouter();
+
+  return (
+    <div>
+      <span data-testid="admin-path">{router.path}</span>
+      <PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />
+      <button type="button" onClick={() => router.navigate("/admin/pages")}>
+        Go pages
+      </button>
+    </div>
+  );
+}
+
 const flush = async () => {
   await React.act(async () => {
+    await Promise.resolve();
     await Promise.resolve();
     await Promise.resolve();
   });
@@ -708,6 +731,7 @@ const clickSelector = (container: ParentNode, selector: string) => {
 const pageEditorBlockLabels: Record<PageBlockType, string> = {
   heading: "Heading",
   text: "Text",
+  badge: "Badge",
   button: "Button",
   image: "Image",
   video: "Video",
@@ -948,7 +972,7 @@ test("PageEditor loads v2 documents, subscribes to cache updates, and exposes se
   try {
     await flush();
 
-    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-1");
+    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-1", { force: true });
     expect(view.container.textContent).toContain("Welcome to Coderso");
     expect(activeSurfaceState.contexts.at(-1)).toMatchObject({
       kind: "page",
@@ -1022,6 +1046,161 @@ test("PageEditor ignores stale pageDetail cache events instead of wiping the loa
       pageEditorState.triggerCacheEvent("page-detail:page-1");
     });
     expect(view.container.textContent).toContain("Welcome to Coderso");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor treats initial cached detail as provisional and applies forced fresh detail", async () => {
+  pageEditorState.cachedPage = createPage({
+    updatedAt: "2026-03-08T09:00:00.000Z",
+    currentData: createDocument({ sections: [] }),
+  });
+  pageEditorState.currentPage = createPage({
+    updatedAt: "2026-03-08T09:05:00.000Z",
+  });
+  const view = mount(<PageEditor pageId="page-1" />);
+
+  try {
+    expect(view.container.textContent).toContain("This page has no sections yet.");
+    expect(view.container.textContent).not.toContain("Welcome to Coderso");
+
+    await flush();
+
+    expect(pageEditorState.getPageCached).toHaveBeenCalledWith("page-1", { force: true });
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor rejects non-newer forced detail for timestamp-authoritative hosts", async () => {
+  const candidates = [
+    createPage({
+      updatedAt: "2026-03-08T08:00:00.000Z",
+      currentData: createDocument({ sections: [] }),
+    }),
+    createPage({
+      updatedAt: "2026-03-08T09:00:00.000Z",
+      currentData: createDocument({ sections: [] }),
+    }),
+    createPage({
+      updatedAt: "not-a-date",
+      currentData: createDocument({ sections: [] }),
+    }),
+  ];
+
+  for (const candidate of candidates) {
+    pageEditorState.reset();
+    pageEditorState.cachedPage = createPage({ updatedAt: "2026-03-08T09:00:00.000Z" });
+    pageEditorState.currentPage = candidate;
+    const view = mount(<PageEditor pageId="page-1" />);
+
+    try {
+      await flush();
+      expect(view.container.textContent).toContain("Welcome to Coderso");
+      expect(view.container.textContent).not.toContain("This page has no sections yet.");
+    } finally {
+      view.cleanup();
+    }
+  }
+});
+
+test("PageEditor forced revalidation never overwrites dirty local edits", async () => {
+  let resolveLoad: (detail: PageDetail | null) => void = () => undefined;
+  pageEditorState.getPageCached.mockImplementationOnce(
+    () =>
+      new Promise<PageDetail | null>((resolve) => {
+        resolveLoad = resolve;
+      })
+  );
+  pageEditorState.cachedPage = createPage({
+    updatedAt: "2026-03-08T09:00:00.000Z",
+  });
+  const freshEmpty = createPage({
+    updatedAt: "2026-03-08T09:05:00.000Z",
+    currentData: createDocument({ sections: [] }),
+  });
+  const view = mount(<PageEditor pageId="page-1" />);
+
+  try {
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "FAQ");
+    await flush();
+    expect(view.container.textContent).toContain("faq section");
+
+    await React.act(async () => {
+      resolveLoad(freshEmpty);
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    await flush();
+
+    expect(view.container.textContent).toContain("Welcome to Coderso");
+    expect(view.container.textContent).toContain("faq section");
+    expect(view.container.textContent).not.toContain("This page has no sections yet.");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor dirty state blocks SPA, popstate, and hard navigation until confirmed", async () => {
+  window.history.replaceState({}, "", "/admin/pages/page-1");
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/pages/page-1">
+      <PageEditorNavigationHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    await flush();
+
+    clickButton(view.container, "Add section");
+    await flush();
+    clickButton(view.container, "Content");
+    await flush();
+
+    const unloadEvent = new Event("beforeunload", { cancelable: true });
+    expect(window.dispatchEvent(unloadEvent)).toBe(false);
+    expect(unloadEvent.defaultPrevented).toBe(true);
+
+    window.history.replaceState({}, "", "/admin/pages");
+    React.act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages/page-1"
+    );
+    expect(window.location.pathname).toBe("/admin/pages/page-1");
+    expect(document.body.textContent).toContain(
+      "Cancel to keep editing, or discard local changes and continue."
+    );
+
+    clickButton(document.body, "Cancel");
+    await flush();
+
+    clickButton(view.container, "Go pages");
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages/page-1"
+    );
+    expect(document.body.textContent).toContain(
+      "Cancel to keep editing, or discard local changes and continue."
+    );
+
+    clickButton(document.body, "Discard and continue");
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages"
+    );
+    expect(window.location.pathname).toBe("/admin/pages");
   } finally {
     view.cleanup();
   }
@@ -1368,8 +1547,10 @@ test("PageEditor block style controls update visible canvas style and saved data
     await flush();
 
     const block = findEditorBlock(view.container, "blk-copy");
-    expect(block.className).toContain("w-full");
+    expect(block.className).toContain("w-fit");
+    expect(block.classList.contains("w-full")).toBe(false);
     expect(block.className).toContain("justify-self-center");
+    expect(block.className).toContain("mx-auto");
     expect(block.style.getPropertyValue("--coderso-block-text")).toBe("#123456");
     expect(block.style.getPropertyValue("--coderso-block-surface")).toBe("#fef3c7");
     expect(block.style.opacity).toBe("0.5");
@@ -1377,6 +1558,8 @@ test("PageEditor block style controls update visible canvas style and saved data
     expect(block.style.boxShadow).toBe("0 14px 40px rgba(15, 23, 42, 0.12)");
     expect(block.style.padding).toBe("12px 14px 0px 0px");
     expect(block.style.marginBottom).toBe("10px");
+    expect(block.style.marginLeft).toBe("auto");
+    expect(block.style.marginRight).toBe("auto");
 
     clickButton(view.container, "Save");
     await flush();
@@ -1399,6 +1582,105 @@ test("PageEditor block style controls update visible canvas style and saved data
     });
   } finally {
     view.cleanup();
+  }
+});
+
+test("PageEditor background panel edits block gradients and background images", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+
+    clickButtonByLabel(view.container, "Background panel");
+    clickSegmentedOption(view.container, "Background type", "gradient");
+    await flush();
+    setSliderField(view.container, "Angle", "90");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    let savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    let savedDocument = savedPayload?.data as PageDocumentV2;
+    let savedBlock = savedDocument.sections[0]?.blocks.find((block) => block.id === "blk-copy");
+    expect(savedBlock?.style?.backgroundType).toBe("gradient");
+    expect(savedBlock?.style?.background).toBe(
+      "linear-gradient(90deg, var(--color-primary) 0%, var(--color-accent) 100%)"
+    );
+
+    if (
+      !view.container.querySelector(
+        '[data-page-editor-control="segmented"] [role="group"][aria-label="Background type"]'
+      )
+    ) {
+      clickButtonByLabel(view.container, "Background panel");
+    }
+    clickSegmentedOption(view.container, "Background type", "image");
+    await flush();
+    selectMediaAsset(view.container, "Background image", "asset-hero");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    savedDocument = savedPayload?.data as PageDocumentV2;
+    savedBlock = savedDocument.sections[0]?.blocks.find((block) => block.id === "blk-copy");
+    expect(savedBlock?.style).toMatchObject({
+      backgroundType: "image",
+      backgroundImage: "/hero.jpg",
+    });
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor undo redo and session clipboard duplicate selected blocks", async () => {
+  window.sessionStorage.clear();
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+
+    clickButtonByLabel(view.container, "Style panel");
+    clickColorSwatch(view.container, "Text color", "primary");
+    await flush();
+
+    clickButtonByLabel(view.container, "Undo");
+    clickButtonByLabel(view.container, "Redo");
+    await flush();
+
+    clickButtonByLabel(view.container, "Copy selection");
+    await flush();
+    expect(window.sessionStorage.getItem("coderso.pageEditor.clipboard")).toContain(
+      "coderso/page-fragment@v1"
+    );
+
+    clickButtonByLabel(view.container, "Paste");
+    await flush();
+
+    clickButton(view.container, "Save");
+    await flush();
+
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    const blocks = savedDocument.sections[0]?.blocks ?? [];
+    expect(blocks).toHaveLength(3);
+    expect(blocks[1]?.id).toBe("blk-copy");
+    expect(blocks[1]?.style?.textColor).toBe("var(--color-primary)");
+    expect(blocks[2]?.id).not.toBe("blk-copy");
+    expect(blocks[2]?.type).toBe("text");
+    expect(blocks[2]?.props.text).toBe("Existing page copy.");
+    expect(blocks[2]?.style?.textColor).toBe("var(--color-primary)");
+  } finally {
+    view.cleanup();
+    window.sessionStorage.clear();
   }
 });
 
@@ -1969,7 +2251,7 @@ test("PageEditor section inserter follows owner insertable section capabilities"
   }
 });
 
-test("PageEditor command palette catalog is frozen to 11 sections plus 17 blocks with gated titles absent", async () => {
+test("PageEditor command palette catalog is frozen to 11 sections plus 18 blocks with gated titles absent", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -2002,11 +2284,12 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 17 blocks
       "Custom",
     ]);
     // TASK-456 amendment: "Form" joined the block palette; TASK-457
-    // amendment: "Collection" joined it; TASK-459-02 amendment: "Filters"
-    // joined it (17 blocks, final frozen catalog).
+    // amendment: "Collection" joined it; TASK-459-02 amendment: "Filters";
+    // TASK-471-04 amendment: native "Badge" block (18 blocks).
     expect(blockPaletteTitles).toEqual([
       "Heading",
       "Text",
+      "Badge",
       "Button",
       "Image",
       "Video",
@@ -2023,7 +2306,7 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 17 blocks
       "Columns",
       "Group",
     ]);
-    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(28);
+    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(29);
 
     expect(sectionPaletteTitles).not.toContain("Template");
     expect(sectionPaletteTitles).not.toContain("Navigation");
@@ -2626,11 +2909,17 @@ test("PageEditor canvas frame anchors site typography token variables for WYSIWY
       '[data-page-editor-canvas-frame="true"]'
     ) as HTMLElement;
     expect(frame).toBeTruthy();
+    // TASK-495-03 P1a: the frame is an adaptive `bg-card` surface (the dark-mode
+    // fix) — never the hardcoded `bg-white` slab that stayed bright in dark mode.
+    expect(frame.className).toContain("bg-card");
+    expect(frame.className).not.toContain("bg-white");
     for (const [variable, value] of Object.entries(
       toPageTypographyCssVariableMap(DEFAULT_TOKENS)
     )) {
       expect(frame.style.getPropertyValue(variable), variable).toBe(value);
     }
+    expect(frame.style.getPropertyValue("--text-2xs")).toBe("0.625rem");
+    expect(frame.style.getPropertyValue("--text-xs")).toBe("0.75rem");
     expect(frame.style.getPropertyValue("--text-sm")).toBe("0.875rem");
     expect(frame.style.getPropertyValue("--text-5xl")).toBe("3rem");
   } finally {
@@ -2641,7 +2930,7 @@ test("PageEditor canvas frame anchors site typography token variables for WYSIWY
 test("PageEditor canvas frame paints the resolved site design.tokens typography over the defaults", async () => {
   siteSettingsState.settings = {
     "design.tokens": {
-      typography: { sm: "1.125rem", "5xl": "3.5rem" },
+      typography: { xs: "0.8rem", sm: "1.125rem", "5xl": "3.5rem" },
     },
   };
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
@@ -2652,9 +2941,11 @@ test("PageEditor canvas frame paints the resolved site design.tokens typography 
     const frame = view.container.querySelector(
       '[data-page-editor-canvas-frame="true"]'
     ) as HTMLElement;
+    expect(frame.style.getPropertyValue("--text-xs")).toBe("0.8rem");
     expect(frame.style.getPropertyValue("--text-sm")).toBe("1.125rem");
     expect(frame.style.getPropertyValue("--text-5xl")).toBe("3.5rem");
     // Untouched tokens keep the DEFAULT_TOKENS anchor.
+    expect(frame.style.getPropertyValue("--text-2xs")).toBe("0.625rem");
     expect(frame.style.getPropertyValue("--text-md")).toBe("1rem");
     expect(frame.style.getPropertyValue("--font-sans")).toBe(DEFAULT_TOKENS.typography.sans);
   } finally {
@@ -2662,7 +2953,42 @@ test("PageEditor canvas frame paints the resolved site design.tokens typography 
   }
 });
 
-test("PageEditor floating toolbar labels selection, switches one panel, collapses, and tracks drag state", async () => {
+test("PageEditor canvas + block color swatches reflect the live site neutral tokens (TASK-477-02)", async () => {
+  siteSettingsState.settings = {
+    "design.tokens": {
+      neutrals: { bg: "#abcdef" },
+    },
+  };
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // Part A: the canvas frame now carries the site neutral var so neutral block
+    // colors are WYSIWYG in-editor; brand vars are NOT re-emitted (chrome-safe).
+    const frame = view.container.querySelector(
+      '[data-page-editor-canvas-frame="true"]'
+    ) as HTMLElement;
+    expect(frame.style.getPropertyValue("--color-bg")).toBe("#abcdef");
+    expect(frame.style.getPropertyValue("--color-primary")).toBe("");
+
+    // Part B: the block color swatch previews the resolved site token (#abcdef),
+    // threaded from the hook through the palette context — not the DEFAULT token.
+    clickSelector(view.container, '[data-page-editor-block-id="blk-copy"]');
+    await flush();
+    clickButtonByLabel(view.container, "Style panel");
+    const bgSwatch = findColorSwatchGroup(view.container, "Text color").querySelector(
+      '[data-page-editor-color-swatch="bg"]'
+    ) as HTMLElement | null;
+    expect(bgSwatch).toBeTruthy();
+    const style = bgSwatch?.getAttribute("style") ?? "";
+    expect(style.includes("#abcdef") || style.includes("rgb(171, 205, 239)")).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor floating toolbar labels selection, switches one panel, collapses, and right-docks (builder chrome)", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -2749,42 +3075,57 @@ test("PageEditor floating toolbar labels selection, switches one panel, collapse
     ) as HTMLElement | null;
     expect(toolbar?.getAttribute("data-page-editor-toolbar-collapsed")).toBe("false");
 
-    const dragHandle = view.container.querySelector('button[aria-label="Drag toolbar"]');
-    React.act(() => {
-      dragHandle?.dispatchEvent(
-        new MouseEvent("pointerdown", { bubbles: true, clientX: 20, clientY: 20 })
-      );
-    });
-    await flush();
+    // TASK-495-02: the builder chrome (page host) right-docks the panel — it is
+    // NOT draggable. The legacy bottom-center draggable panel (drag handle +
+    // data-page-editor-toolbar-dragging + transform) is exercised only on the
+    // menu host (see menu-design-editor-flow.test.tsx). Assert the right-dock
+    // position classes and that no drag affordances are present here.
     toolbar = view.container.querySelector(
       '[data-page-editor-floating-toolbar="true"]'
     ) as HTMLElement | null;
-    expect(toolbar?.getAttribute("data-page-editor-toolbar-dragging")).toBe("true");
-
-    React.act(() => {
-      window.dispatchEvent(
-        new MouseEvent("pointermove", { bubbles: true, clientX: 55, clientY: 42 })
-      );
-    });
-    await flush();
-    expect(toolbar?.style.transform).toContain("35px");
-    expect(toolbar?.style.transform).toContain("22px");
-
-    React.act(() => {
-      window.dispatchEvent(new MouseEvent("pointerup", { bubbles: true }));
-    });
-    await flush();
-    expect(
-      view.container
-        .querySelector('[data-page-editor-floating-toolbar="true"]')
-        ?.getAttribute("data-page-editor-toolbar-dragging")
-    ).toBe("false");
+    expect(toolbar?.className).toContain("right-4");
+    expect(toolbar?.className).toContain("top-4");
+    // TASK-495-03 P3a: the builder rail is narrowed to the proto 280px width.
+    expect(toolbar?.className).toContain("w-[min(280px,calc(100%-2rem))]");
+    expect(toolbar?.className).not.toContain("w-[min(340px,calc(100%-2rem))]");
+    expect(toolbar?.className).not.toContain("bottom-6");
+    expect(toolbar?.className).not.toContain("left-1/2");
+    expect(toolbar?.style.transform).toBe("");
+    expect(toolbar?.hasAttribute("data-page-editor-toolbar-dragging")).toBe(false);
+    expect(view.container.querySelector('button[aria-label="Drag toolbar"]')).toBeNull();
   } finally {
     view.cleanup();
   }
 });
 
-test("PageEditor dark-toolbar buttons and canvas CTAs use the shared non-inverting chrome", async () => {
+test("PageEditor builder wraps the sub-toolbar and canvas region in one separated card (TASK-495-03 P2a)", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // The dotted canvas region sits inside ONE rounded/bordered/shadowed card
+    // (proto CanvasEditor card — CanvasEditor.tsx:53).
+    const scroller = view.container.querySelector(
+      '[data-page-editor-canvas-scroller="true"]'
+    ) as HTMLElement;
+    expect(scroller).toBeTruthy();
+    const canvasCard = scroller.closest(".rounded-2xl.border.bg-card.shadow-card");
+    expect(canvasCard).toBeTruthy();
+
+    // The page-builder sub-toolbar ("Page builder") shares that SAME card
+    // ancestor — the chrome bar + the canvas are blended into one card.
+    const builderLabel = Array.from(view.container.querySelectorAll("span")).find(
+      (el) => el.textContent === "Page builder"
+    );
+    expect(builderLabel).toBeTruthy();
+    expect(builderLabel?.closest(".rounded-2xl.border.bg-card.shadow-card")).toBe(canvasCard);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor builder panel buttons and canvas CTAs use the shared non-inverting chrome", async () => {
   const chromePage = createPage({
     currentData: createDocument({
       sections: [
@@ -2826,20 +3167,26 @@ test("PageEditor dark-toolbar buttons and canvas CTAs use the shared non-inverti
     const gapCta = view.container.querySelector('button[aria-label="Add section at position 1"]');
     expect(gapCta?.className).toContain(editorCanvasCtaButtonClass);
 
-    // Owner finding #4 contract tokens: idle subtle light fill, hover only a
+    // Mode-agnostic CONSTANT-value (shape) checks — the dark constants stay LIVE
+    // (the menu branch renders them), and the light siblings now back the
+    // builder rail. Owner finding #4 contract: idle subtle fill, hover only a
     // slightly lighter fill — never the inverted white-bg/black-text jump.
     expect(editorDarkButtonClass).toContain("bg-white/10");
     expect(editorDarkButtonClass).toContain("hover:bg-white/20");
-    expect(editorCanvasCtaButtonClass).toContain("bg-white");
-    expect(editorCanvasCtaButtonClass).toContain("hover:bg-slate-100");
+    expect(editorDarkGhostButtonClass).toContain("text-slate-200");
+    expect(editorDarkGhostButtonClass).toContain("hover:bg-white/10");
+    expect(editorPanelButtonClass).toContain("bg-muted");
+    expect(editorPanelGhostButtonClass).toContain("text-muted-foreground");
+    expect(editorCanvasCtaButtonClass).toContain("bg-card");
+    expect(editorCanvasCtaButtonClass).toContain("hover:bg-muted");
 
-    // "Add block" inside the (default-open) Content panel carries the dark
-    // toolbar chrome.
+    // TASK-495-02: the page host is now the light builder rail. "Add block"
+    // inside the (default-open) Content panel carries the LIGHT panel chrome.
     const addBlock = findButton(view.container, "Add block");
-    expect(addBlock?.className).toContain(editorDarkButtonClass);
+    expect(addBlock?.className).toContain(editorPanelButtonClass);
 
-    // The Background panel's external URL readout "Clear" keeps the quiet
-    // dark-ghost chrome instead of the admin ghost hover inversion.
+    // The Background panel's external URL readout "Clear" carries the light
+    // ghost chrome on the builder rail (the in-file ToolbarMediaUrlField).
     clickButtonByLabel(view.container, "Background panel");
     await flush();
     const externalReadout = view.container.querySelector(
@@ -2847,8 +3194,87 @@ test("PageEditor dark-toolbar buttons and canvas CTAs use the shared non-inverti
     );
     expect(externalReadout).toBeTruthy();
     expect(externalReadout?.querySelector("button")?.className).toContain(
-      editorDarkGhostButtonClass
+      editorPanelGhostButtonClass
     );
+
+    // INTEGRATION-level non-button relight guard (TASK-495-02): a NON-button
+    // registry control rendered through the real page-host rail must carry the
+    // LIGHT token via the EditorControlToneContext path (NO explicit `tone`
+    // prop — the per-primitive test covers the explicit-prop case). The
+    // Background panel's "Background type" SegmentedControl track resolves
+    // `tone="light"` from the rail provider, so it carries
+    // `editorPanelSegmentTrackClass` and NEVER the dark `bg-white/10`. Guards
+    // the "silent button-only" regression where a registry control stops
+    // consuming the tone context yet every button assertion stays green.
+    const bgTypeTrack = findSegmentedGroup(view.container, "Background type");
+    expect(bgTypeTrack.className).toContain(editorPanelSegmentTrackClass);
+    expect(bgTypeTrack.className).not.toContain("bg-white/10");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor builder chrome renders the in-content PageHeader and page-builder sub-toolbar (TASK-495-02)", async () => {
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    // PageHeader actions in order: Page settings → History → Preview → Save
+    // draft → Publish.
+    const buttonTexts = Array.from(view.container.querySelectorAll("button")).map(
+      (button) => button.textContent ?? ""
+    );
+    const indexOfText = (label: string) => buttonTexts.findIndex((text) => text.includes(label));
+    const settingsIdx = indexOfText("Page settings");
+    const historyIdx = indexOfText("History");
+    const previewIdx = indexOfText("Preview");
+    const saveDraftIdx = indexOfText("Save draft");
+    const publishIdx = indexOfText("Publish");
+    expect(settingsIdx).toBeGreaterThanOrEqual(0);
+    expect(historyIdx).toBeGreaterThan(settingsIdx);
+    expect(previewIdx).toBeGreaterThan(historyIdx);
+    expect(saveDraftIdx).toBeGreaterThan(previewIdx);
+    expect(publishIdx).toBeGreaterThan(saveDraftIdx);
+
+    // Save relabeled to "Save draft"; Publish carries the Rocket icon.
+    const publishButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      (button.textContent ?? "").includes("Publish")
+    );
+    expect(publishButton?.querySelector("svg")?.getAttribute("class")).toContain("lucide-rocket");
+
+    // The DeviceSwitcher relocated into the sub-toolbar (top-bar {actions} are
+    // drained — the topbar-slot drainage is asserted in menu-design-editor-flow).
+    // Exactly ONE device switcher group renders (no duplicate in a drained top
+    // bar): one button per device, by accessible name.
+    expect(view.container.querySelectorAll('button[aria-label="Desktop"]').length).toBe(1);
+    expect(view.container.querySelector('button[aria-label="Tablet"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Mobile"]')).toBeTruthy();
+
+    // Sub-toolbar: "Page builder" label + relocated controls.
+    expect(view.container.textContent).toContain("Page builder");
+    expect(view.container.querySelector('button[aria-label="Undo"]')).toBeTruthy();
+    expect(view.container.querySelector('button[aria-label="Redo"]')).toBeTruthy();
+    // Panel toggle, open by default (label "Hide panel"). Its aria-pressed
+    // state is asserted with the real Button in page-editor.test.tsx.
+    const panelToggle = view.container.querySelector('button[aria-label="Hide panel"]');
+    expect(panelToggle).toBeTruthy();
+
+    // The page host provides publish, so NO "Save only" capability badge.
+    const badges = Array.from(view.container.querySelectorAll('[data-slot="badge"]'));
+    expect(badges.some((badge) => (badge.textContent ?? "").includes("Save only"))).toBe(false);
+
+    // Hide the panel: the toggle flips and the reopen chip appears top-right.
+    // (After hiding, both the sub-toolbar toggle and the chip carry
+    // aria-label="Show panel"; the chip is the absolutely-positioned one.)
+    clickButtonByLabel(view.container, "Hide panel");
+    await flush();
+    const reopenChip = Array.from(
+      view.container.querySelectorAll('button[aria-label="Show panel"]')
+    ).find((button) => button.className.includes("right-4") && button.className.includes("top-4"));
+    expect(reopenChip).toBeTruthy();
+    expect(reopenChip?.className).not.toContain("bottom-6");
+    expect(reopenChip?.className).not.toContain("left-1/2");
   } finally {
     view.cleanup();
   }
@@ -3003,11 +3429,17 @@ test("PageEditor toolbar panel icons expose metadata tooltips and toggle a singl
       expect(button?.getAttribute("data-slot")).toBe("tooltip-trigger");
       expect(button?.hasAttribute("title")).toBe(false);
     }
-    for (const label of ["Drag toolbar", "Collapse toolbar", "Duplicate section"]) {
+    // TASK-495-02 added a header "Hide options panel" close button in place of
+    // the legacy drag handle; TASK-500-03 removed that redundant closer again —
+    // the sub-toolbar Hide/Show toggle is the sole hide surface. The surviving
+    // head-row actions are still ToolbarIconButton tooltip-triggers.
+    for (const label of ["Collapse toolbar", "Duplicate section"]) {
       expect(
         view.container.querySelector(`button[aria-label="${label}"]`)?.getAttribute("data-slot")
       ).toBe("tooltip-trigger");
     }
+    // The removed TASK-500-03 closer must not resurface.
+    expect(view.container.querySelector('button[aria-label="Hide options panel"]')).toBeNull();
 
     // Focus (keyboard hover) reveals the metadata description in the tooltip.
     const layoutButton = view.container.querySelector('button[aria-label="Layout panel"]');
@@ -3632,6 +4064,197 @@ test("PageEditor surfaces bounded autosave errors", async () => {
   }
 });
 
+test("PageEditor surfaces recoverable autosave drafts after mount revalidation", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    expect(pageEditorState.listPageRevisions).toHaveBeenCalledWith("page-1");
+    expect(view.container.textContent).toContain("Recover draft version");
+    expect(view.container.textContent).toContain("Restore draft");
+    expect(view.container.textContent).toContain("Discard draft");
+
+    clickButton(view.container, "Keep current");
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Recover draft version");
+    expect(pageEditorState.restorePageRevision).not.toHaveBeenCalled();
+    expect(pageEditorState.discardPageRevision).not.toHaveBeenCalled();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor ignores non-recoverable autosave candidates", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-old",
+      pageId: "page-1",
+      version: 1,
+      kind: "autosave",
+      title: "Old draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T08:50:00.000Z",
+      createdBy: null,
+    },
+    {
+      id: "rev-same",
+      pageId: "page-1",
+      version: 2,
+      kind: "autosave",
+      title: "Same draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:00:00.000Z",
+      createdBy: null,
+    },
+    {
+      id: "rev-invalid",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Invalid draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "not-a-date",
+      createdBy: null,
+    },
+  ];
+  const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
+
+  try {
+    await flush();
+
+    expect(view.container.textContent).not.toContain("Recover draft version");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor recoverable autosave prompt restores and discards through revision actions", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  const restoreView = mount(
+    <PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />
+  );
+
+  try {
+    await flush();
+    clickButton(restoreView.container, "Restore draft");
+    await flush();
+
+    expect(pageEditorState.restorePageRevision).toHaveBeenCalledWith("page-1", "rev-autosave");
+    expect(restoreView.container.textContent).toContain("Restored rev-autosave");
+    expect(restoreView.container.textContent).not.toContain("Recover draft version");
+  } finally {
+    restoreView.cleanup();
+  }
+
+  pageEditorState.reset();
+  pageEditorState.cachedPage = createPage();
+  pageEditorState.currentPage = createPage();
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  const discardView = mount(
+    <PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />
+  );
+
+  try {
+    await flush();
+    clickButton(discardView.container, "Discard draft");
+    await flush();
+
+    expect(pageEditorState.discardPageRevision).toHaveBeenCalledWith("page-1", "rev-autosave");
+    expect(discardView.container.textContent).not.toContain("Recover draft version");
+  } finally {
+    discardView.cleanup();
+  }
+});
+
+test("PageEditor recoverable autosave blocks navigation without deleting the revision", async () => {
+  pageEditorState.revisions = [
+    {
+      id: "rev-autosave",
+      pageId: "page-1",
+      version: 3,
+      kind: "autosave",
+      title: "Draft",
+      slug: "homepage",
+      data: createDocument(),
+      createdAt: "2026-03-08T09:10:00.000Z",
+      createdBy: null,
+    },
+  ];
+  window.history.replaceState({}, "", "/admin/pages/page-1");
+  const view = mount(
+    <AdminRouterProvider initialPath="/admin/pages/page-1">
+      <PageEditorNavigationHarness />
+    </AdminRouterProvider>
+  );
+
+  try {
+    await flush();
+    expect(view.container.textContent).toContain("Recover draft version");
+
+    clickButton(view.container, "Go pages");
+    await flush();
+
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages/page-1"
+    );
+    expect(document.body.textContent).toContain(
+      "A saved draft version is available. Cancel to recover it, or continue and leave it in history."
+    );
+
+    clickButton(document.body, "Discard and continue");
+    await flush();
+
+    expect(pageEditorState.discardPageRevision).not.toHaveBeenCalled();
+    expect(view.container.querySelector('[data-testid="admin-path"]')?.textContent).toBe(
+      "/admin/pages"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("PageEditor previews, publishes, updates settings, and manages revisions with v2 payloads", async () => {
   pageEditorState.revisions = [
     {
@@ -3642,7 +4265,7 @@ test("PageEditor previews, publishes, updates settings, and manages revisions wi
       title: "Draft",
       slug: "homepage",
       data: createDocument(),
-      createdAt: "2026-03-08T09:10:00.000Z",
+      createdAt: "2026-03-08T08:50:00.000Z",
       createdBy: null,
     },
     {
@@ -3940,6 +4563,12 @@ const setInlineRegionText = (element: HTMLElement, value: string) => {
   });
 };
 
+const setInlineRegionHtml = (element: HTMLElement, value: string) => {
+  React.act(() => {
+    element.innerHTML = value;
+  });
+};
+
 test("PageEditor canvas dblclick enters inline edit and typing plus blur updates the panel field", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
@@ -4224,6 +4853,74 @@ test("PageEditor inline edit commits sanitized plain text and never writes marku
     const committed = savedDocument.sections[0]?.blocks[1]?.props.text;
     expect(committed).toBe("Pasted rich content");
     expect(String(committed)).not.toContain("<");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("PageEditor rich inline edit preserves sanitized markup and updates the panel field", async () => {
+  const richPage = createPage({
+    currentData: createDocument({
+      sections: [
+        createPageSectionV2("content", {
+          id: "sec-rich-inline",
+          name: "Rich inline",
+          blocks: [
+            createPageBlockV2("text", {
+              id: "blk-rich-inline",
+              props: {
+                text: "<p>Existing <strong>rich</strong> copy</p>",
+                format: "rich",
+                align: "left",
+              },
+            }),
+          ],
+        }),
+      ],
+    }),
+  });
+  pageEditorState.cachedPage = richPage;
+  pageEditorState.currentPage = richPage;
+  const view = mount(<PageEditor pageId="page-1" initialPage={richPage} />);
+
+  try {
+    await flush();
+
+    clickSelector(view.container, '[data-page-editor-block-id="blk-rich-inline"]');
+    await flush();
+    dblClickElement(findInlineEditRegion(view.container, "blk-rich-inline", "text"));
+    await flush();
+
+    const region = findInlineEditRegion(view.container, "blk-rich-inline", "text");
+    expect(region.getAttribute("data-page-editor-inline-edit")).toBe("active");
+    expect(region.querySelector("strong")?.textContent).toBe("rich");
+
+    setInlineRegionHtml(
+      region,
+      '<p>Edited <strong>rich</strong> <a href="/safe" onclick="alert(1)">safe</a><script>alert(1)</script></p>'
+    );
+    blurElement(region);
+    await flush();
+
+    const expected =
+      '<p>Edited <strong>rich</strong> <a href="/safe" rel="nofollow noreferrer">safe</a></p>';
+    expect(findFieldControl(view.container, "Primary text").value).toBe(expected);
+    expect(
+      view.container.querySelector('[data-page-editor-block-id="blk-rich-inline"] strong')
+        ?.textContent
+    ).toBe("rich");
+    expect(
+      view.container
+        .querySelector('[data-page-editor-block-id="blk-rich-inline"] a')
+        ?.getAttribute("href")
+    ).toBe("/safe");
+    expect(view.container.textContent).not.toContain("alert(1)");
+
+    clickButton(view.container, "Save");
+    await flush();
+    const savedPayload = pageEditorState.updatePage.mock.calls.at(-1)?.[1];
+    const savedDocument = savedPayload?.data as PageDocumentV2;
+    expect(savedDocument.sections[0]?.blocks[0]?.props.text).toBe(expected);
   } finally {
     view.cleanup();
   }
@@ -4958,7 +5655,13 @@ test("PageEditor floating-panel sweep: every rendered control presents the docum
     ) => {
       for (const panel of panels) {
         await openFloatingPanel(view.container, panel);
-        for (const control of controls.filter((entry) => entry.panel === panel)) {
+        const visibleControls = controls
+          .filter((entry) => entry.panel === panel)
+          .filter(
+            (entry) =>
+              entry.id !== "block.style.backgroundImage" || block?.style?.backgroundType === "image"
+          );
+        for (const control of visibleControls) {
           expect(readControlDisplayValue(view.container, control), control.id).toBe(
             expectedControlDisplayValue(
               target,
@@ -5896,27 +6599,12 @@ test("PageEditor inline-edit blur commits first and the same gesture's click tar
   }
 });
 
-test("PageEditor reserves floating-toolbar scroll clearance on the canvas scroller while a selection is active", async () => {
-  // Deterministic ResizeObserver: fires once on observe (like the real one)
-  // so the measured toolbar footprint lands in state. happy-dom rects are
-  // zero-height, so the clearance equals the anchor+gap constant (40px).
-  class ImmediateResizeObserver {
-    private readonly callback: ResizeObserverCallback;
-
-    constructor(callback: ResizeObserverCallback) {
-      this.callback = callback;
-    }
-
-    observe() {
-      this.callback([], this as unknown as ResizeObserver);
-    }
-
-    unobserve() {}
-
-    disconnect() {}
-  }
-  vi.stubGlobal("ResizeObserver", ImmediateResizeObserver);
-
+test("PageEditor reserves right-rail padding on the canvas scroller while a selection is active (builder chrome)", async () => {
+  // TASK-495-02: the builder chrome (page host) docks the panel into a light
+  // right rail, so the canvas reserves RIGHT padding (not bottom clearance) so
+  // the centered frame is not occluded by the overlay. The legacy bottom
+  // clearance (ResizeObserver + --page-editor-toolbar-clearance) is retained
+  // for the menu host only.
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {
@@ -5927,26 +6615,26 @@ test("PageEditor reserves floating-toolbar scroll clearance on the canvas scroll
     ) as HTMLElement;
     expect(scroller).toBeTruthy();
 
-    // The editor auto-selects the first section, so the toolbar is visible
-    // and its footprint is reserved as scroll clearance from the start.
+    // The editor auto-selects the first section, so the right rail is visible
+    // and right padding is reserved from the start.
     expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeTruthy();
-    expect(scroller.style.paddingBottom).toBe("40px");
-    expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("40px");
+    expect(scroller.style.paddingRight).toBe("300px");
+    // The builder branch never sets the legacy bottom-clearance var.
+    expect(scroller.style.paddingBottom).toBe("");
+    expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("");
 
-    // Escape clears the selection: the toolbar unmounts and the clearance is
+    // Escape clears the selection: the rail unmounts and the padding is
     // released with it.
     dispatchDocumentKey("Escape");
     await flush();
     expect(view.container.querySelector('[data-page-editor-floating-toolbar="true"]')).toBeFalsy();
-    expect(scroller.style.paddingBottom).toBe("");
-    expect(scroller.style.getPropertyValue("--page-editor-toolbar-clearance")).toBe("");
+    expect(scroller.style.paddingRight).toBe("");
 
-    // Selecting a block restores the clearance.
+    // Selecting a block restores the right padding.
     clickSelector(view.container, '[data-page-editor-block-id="blk-heading"]');
     await flush();
-    expect(scroller.style.paddingBottom).toBe("40px");
+    expect(scroller.style.paddingRight).toBe("300px");
   } finally {
-    vi.unstubAllGlobals();
     view.cleanup();
   }
 });

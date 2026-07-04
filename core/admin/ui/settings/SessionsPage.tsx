@@ -236,11 +236,11 @@ export function SessionsPage() {
       }
     >
       <div className="flex h-full flex-col">
-        <div className="border-b bg-background/70 px-6 py-4">
+        <div className="border-b border-border bg-card/70 px-6 py-4">
           <h1 className="text-2xl font-semibold">Security Sessions</h1>
           <p className="text-sm text-muted-foreground">Account Security / Monitoring</p>
         </div>
-        <div className="border-b bg-background px-6">
+        <div className="border-b border-border bg-card px-6">
           <div className="flex flex-wrap gap-6 text-sm font-medium">
             {tabs.map((tab) => {
               const isActive = tab.id === "sessions";
@@ -305,25 +305,25 @@ export function SessionsPage() {
               selectedSessionId={selectedSessionId}
               onRevoke={handleRevoke}
             />
-            <div className="rounded-xl border border-blue-200/60 bg-blue-50/60 p-6 text-blue-900 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
+            <div className="rounded-2xl bg-info-soft p-6 text-info">
               <div className="flex flex-col gap-4 sm:flex-row">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-200">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-info/15 text-info">
                   <ShieldCheck className="h-5 w-5" />
                 </div>
                 <div className="flex-1 space-y-3">
                   <div>
                     <h3 className="text-sm font-semibold">Noticing something strange?</h3>
-                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                    <p className="text-sm text-info/90">
                       If you don&apos;t recognize a session, revoke it immediately and change your
                       password to keep your account secure.
                     </p>
                   </div>
-                  <Separator className="bg-blue-200/70 dark:bg-blue-500/30" />
+                  <Separator className="bg-info/20" />
                   <div className="flex flex-wrap items-center gap-4">
                     <Button
                       variant="link"
                       size="sm"
-                      className="h-auto px-0 py-0 text-blue-700 dark:text-blue-300"
+                      className="h-auto px-0 py-0 text-info"
                       disabled
                       title={accountSecurityLinksUnavailableReason}
                       data-no-op-control="settings-sessions-change-password"
@@ -333,7 +333,7 @@ export function SessionsPage() {
                     <Button
                       variant="link"
                       size="sm"
-                      className="h-auto px-0 py-0 text-blue-700 dark:text-blue-300"
+                      className="h-auto px-0 py-0 text-info"
                       disabled
                       title={accountSecurityLinksUnavailableReason}
                       data-no-op-control="settings-sessions-security-settings"

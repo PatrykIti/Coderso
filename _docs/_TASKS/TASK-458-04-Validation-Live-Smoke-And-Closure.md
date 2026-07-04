@@ -6,8 +6,9 @@
 **Category:** Menus / Validation / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-458-01, TASK-458-02, TASK-458-03
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-13
+**Completed:** 2026-06-18
 
 ---
 
@@ -45,13 +46,13 @@ Live smoke MUST prove (owner acceptance):
       lint:types`, root `npx tsc -p tsconfig.json --noEmit`.
 - [x] Migration check on the dev DB (menus.settings present, legacy rows
       null, no errors).
-- [ ] Live smoke via `coderso-dev-core-host` + `playwright-cli` covering the
+- [x] Live smoke via `coderso-dev-core-host` + `playwright-cli` covering the
       three scenarios above; capture notes/screenshots under `.tmp/`.
 - [x] Docs: `_docs/PAGE_MODEL.md`, `_docs/DATA_MODEL.md`,
       `_docs/ADMIN_CACHE.md`/`_docs/ADMIN_CACHE_MAP.md` (as touched),
       `docs/guide/` screens (Menus list dialog, design view, Settings page
       without shell).
-- [ ] Board: mark family done in `_docs/_TASKS/README.md` + statistics;
+- [x] Board: mark family done in `_docs/_TASKS/README.md` + statistics;
       `_docs/_CHANGELOG/` entry (note the Settings shell-section REMOVAL as
       a deliberate owner-requested change and the byte-identity guarantee
       for legacy menus).
@@ -67,6 +68,20 @@ Live smoke MUST prove (owner acceptance):
   shell before publish. Fixed by storing draft design at top-level
   `menus.settings` and public design under `menus.settings.published`; added
   menu service and runtime regression coverage.
+- 2026-06-18: Fresh live closure pass ran against `coderso-dev-core-host`
+  using `playwright-cli`. Evidence:
+  `.tmp/task-458-459-live-audit-result.json` (`generatedAt:
+  2026-06-18T14:22:17.285Z`, command
+  `playwright-cli -s=task458459-live-audit run-code --filename
+  .tmp/task-458-459-live-audit-code.js`) passed with `failedChecks: []`;
+  screenshots captured the Menus Site shell dialog, restricted menu palette,
+  and published shell. Supplemental
+  `.tmp/task-458-page-editor-catalog-result.json` (`generatedAt:
+  2026-06-18T14:23:58.403Z`, command
+  `playwright-cli -s=task458-page-catalog run-code --filename
+  .tmp/task-458-page-editor-catalog-code.js`) passed and proved the regular
+  Page editor still exposes `Sections`, `Hero`, `Content`, `Blocks`,
+  `Heading`, and `Button`.
 
 ---
 

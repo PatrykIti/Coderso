@@ -6,8 +6,9 @@
 **Category:** Pages / Listings / Validation / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-459-02, TASK-459-03, TASK-459-04
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
 **Started:** 2026-06-13
+**Completed:** 2026-06-18
 
 ---
 
@@ -48,12 +49,12 @@ Live demo (acceptance scenario, built on the dev host):
       `bun run gates:coderso`; record numbers at the seeded corpus.
 - [x] Migrations verified on the dev DB (jsonb indexes present, EXPLAIN
       shows index usage on the demo query shapes).
-- [ ] Live demo via `coderso-dev-core-host` + `playwright-cli` covering the
+- [x] Live demo via `coderso-dev-core-host` + `playwright-cli` covering the
       journey above (desktop + mobile viewport); evidence under `.tmp/`.
 - [x] Docs: `_docs/PAGE_MODEL.md`, `_docs/CONTENT_TYPES_SPEC.md`,
       `_docs/SEARCH_SPEC.md`, `_docs/DATA_MODEL.md`, `docs/guide/`
       authoring walkthrough (build a filterable catalog page).
-- [ ] Board: family closure in `_docs/_TASKS/README.md` + statistics;
+- [x] Board: family closure in `_docs/_TASKS/README.md` + statistics;
       `_docs/_CHANGELOG/` entry (final frozen catalog numbers, pagination
       default, pushdown + index strategy).
 
@@ -61,8 +62,8 @@ Live demo (acceptance scenario, built on the dev host):
 
 - 2026-06-13: Targeted Vitest, Bun pages/listing/cache suites, lint,
   typecheck, root local `tsc`, DB reachability, listing index presence, perf
-  gate, EXPLAIN checks, and `bun run gates:coderso` passed. Live dev-host
-  Playwright catalog demo remains the only closure blocker.
+  gate, EXPLAIN checks, and `bun run gates:coderso` passed. At that point,
+  the live dev-host Playwright catalog demo remained the only closure blocker.
 - 2026-06-13: Drift pass normalized TASK-459-04 evidence: shipped generic
   indexes are the published-scope composite btree plus jsonb GIN; expression
   indexes are intentionally not part of the static migration because field
@@ -70,6 +71,23 @@ Live demo (acceptance scenario, built on the dev host):
 - 2026-06-13: Added the missing DB-free pushdown superset/oracle operator
   matrix (`tests/unit/content/listingPushdown.test.ts`) so TASK-459-04's
   parity evidence is executable.
+- 2026-06-18: Fresh documentation closure pass verified the implementation
+  without product-code changes. Validation evidence: `bun --cwd core lint`,
+  `bun --cwd core lint:types`, root `tsc`, full Vitest (`681/681` suites,
+  `4149/4149` tests), targeted Bun listing/runtime suites (`37 pass`),
+  query-builder tests (`18 pass`), perf gate (`3 pass`),
+  `bun run gates:coderso` (functional/ux/performance/security/reliability
+  PASS), and dev DB listing indexes present.
+- 2026-06-18: Live `coderso-dev-core-host` + `playwright-cli` catalog smoke
+  passed at
+  `http://coderso-a.localhost:3000/task-459-live-task459-mqjw83wg`, covering
+  desktop filtering/sort/pagination, shareable pretty URLs in a fresh context,
+  price range aliasing, no-JS/mobile GET fallback, draft invisibility, and
+  working detail routes. Evidence artifacts:
+  `.tmp/task-459-live-catalog-desktop.png`,
+  `.tmp/task-459-live-catalog-filtered-page2.png`,
+  `.tmp/task-459-live-catalog-mobile-nojs.png`, and
+  `.tmp/task-459-live-catalog-smoke.js`.
 
 ---
 

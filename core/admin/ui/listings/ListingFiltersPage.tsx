@@ -1,7 +1,10 @@
+import { Filter, Info } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,6 +16,7 @@ import {
 import { previewListingFilters, type ListingFiltersPreviewResult } from "@/services/listingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 
 import { useListingQueries } from "./hooks/useListingQueries";
 
@@ -153,19 +157,26 @@ export function ListingFiltersPage() {
         <PageHeader
           title="Filters"
           description="Preview runtime filter behavior for listing widgets and URL tokens."
+          icon={<Filter />}
+          actions={<Badge variant="soft">Beta</Badge>}
         />
 
-        <section className="rounded-xl border border-border/70 bg-card/50 p-4 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">How this works</p>
-          <p className="mt-1">
-            First define data logic in <code>Coderso → Listings</code> (source, filters, sorting,
-            pagination). Then use this Filters screen to test runtime URL tokens for that listing
-            query.
-          </p>
-          <p className="mt-1">
-            Widgets and templates use the same listing query, so data logic stays in one place.
-          </p>
-        </section>
+        <Card className="flex flex-row items-start gap-3 rounded-2xl bg-primary-soft/50 p-4 text-sm text-muted-foreground">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card text-primary-soft-foreground">
+            <Info className="size-4" />
+          </span>
+          <div className="min-w-0 space-y-1">
+            <p className="font-medium text-foreground">How this works</p>
+            <p>
+              First define data logic in <code>Coderso → Listings</code> (source, filters, sorting,
+              pagination). Then use this Filters screen to test runtime URL tokens for that listing
+              query.
+            </p>
+            <p>
+              Widgets and templates use the same listing query, so data logic stays in one place.
+            </p>
+          </div>
+        </Card>
 
         {error ? (
           <Alert variant="destructive">
@@ -174,7 +185,7 @@ export function ListingFiltersPage() {
           </Alert>
         ) : null}
 
-        <section className="space-y-4 rounded-xl border border-border/70 bg-card/50 p-4">
+        <SectionCard bodyClassName="space-y-4">
           <div className="grid gap-3 md:grid-cols-[1fr_2fr_auto] md:items-end">
             <div className="space-y-2">
               <p className="text-sm font-medium">Listing query</p>
@@ -240,20 +251,20 @@ export function ListingFiltersPage() {
             </p>
           </div>
           {showExamples ? (
-            <section className="space-y-4 rounded-xl border border-border/70 bg-background/70 p-4">
+            <section className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-soft">
               <div className="space-y-1">
                 <p className="text-sm font-medium">How runtime query string works</p>
                 <p className="text-xs text-muted-foreground">
                   Prefix every token with <code>{runtimeTokenPrefix}</code>. Token groups:
                 </p>
                 <div className="grid gap-2 md:grid-cols-2">
-                  <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs">
+                  <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs">
                     <p className="font-medium text-foreground">Search and paging</p>
                     <p>
                       <code>.__q</code>, <code>.__sort</code>, <code>.__page</code>
                     </p>
                   </div>
-                  <div className="rounded-md border border-border/70 bg-muted/20 p-3 text-xs">
+                  <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs">
                     <p className="font-medium text-foreground">Field filters</p>
                     <p>
                       <code>.&lt;field&gt;.&lt;operator&gt;=value</code>
@@ -273,7 +284,7 @@ export function ListingFiltersPage() {
                   {queryExamples.map((example) => (
                     <article
                       key={example.id}
-                      className="rounded-md border border-border/70 bg-muted/10 p-3"
+                      className="rounded-xl border border-border bg-card p-3"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-sm font-medium">{example.label}</p>
@@ -302,7 +313,7 @@ export function ListingFiltersPage() {
               </div>
             </section>
           ) : null}
-        </section>
+        </SectionCard>
 
         {previewError ? (
           <Alert variant="destructive">
@@ -312,25 +323,25 @@ export function ListingFiltersPage() {
         ) : null}
 
         {preview ? (
-          <section className="space-y-4 rounded-xl border border-border/70 bg-card/50 p-4">
+          <section className="space-y-4 rounded-2xl border border-border bg-card p-4 shadow-soft">
             <div className="grid gap-3 md:grid-cols-4">
-              <div className="rounded-md border border-border/70 bg-background/60 p-3">
+              <div className="rounded-xl border border-border bg-card p-3 shadow-soft">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
                 <p className="text-lg font-semibold">{preview.total}</p>
               </div>
-              <div className="rounded-md border border-border/70 bg-background/60 p-3">
+              <div className="rounded-xl border border-border bg-card p-3 shadow-soft">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Applied filters
                 </p>
                 <p className="text-lg font-semibold">{preview.appliedFilters.length}</p>
               </div>
-              <div className="rounded-md border border-border/70 bg-background/60 p-3">
+              <div className="rounded-xl border border-border bg-card p-3 shadow-soft">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Rejected tokens
                 </p>
                 <p className="text-lg font-semibold">{preview.rejectedTokens.length}</p>
               </div>
-              <div className="rounded-md border border-border/70 bg-background/60 p-3">
+              <div className="rounded-xl border border-border bg-card p-3 shadow-soft">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">
                   Runtime search
                 </p>
@@ -339,14 +350,15 @@ export function ListingFiltersPage() {
             </div>
 
             {preview.rejectedTokens.length > 0 ? (
-              <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                Ignored tokens: {preview.rejectedTokens.join(", ")}
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-warning/30 bg-warning-soft p-3 text-sm text-warning">
+                <Badge variant="warning">Ignored tokens</Badge>
+                <span>{preview.rejectedTokens.join(", ")}</span>
               </div>
             ) : null}
 
             <div className="space-y-2">
               <p className="text-sm font-medium">Rows snapshot</p>
-              <pre className="max-h-80 overflow-auto rounded-md border border-border/70 bg-background/60 p-3 text-xs">
+              <pre className="max-h-80 overflow-auto rounded-xl border border-border bg-card p-3 shadow-soft text-xs">
                 {JSON.stringify(preview.rows.slice(0, 20), null, 2)}
               </pre>
             </div>

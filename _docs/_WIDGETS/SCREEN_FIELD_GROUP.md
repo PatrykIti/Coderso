@@ -1,9 +1,13 @@
 # Screen Field Group Widget (v1)
 
+**Status:** Retired after TASK-468; kept only as legacy Custom Screens migration
+input for V4 `field-group` blocks.
+
 ## Purpose
 
-Section wrapper for grouping related `screen-field-value` widgets and other
-screen-safe children into one admin panel.
+Legacy section wrapper for grouping related `screen-field-value` widgets and
+other screen-safe children into one admin panel. Active V4 Custom Screens use
+native `field-group` blocks instead.
 
 ## Widget ID
 
@@ -11,7 +15,7 @@ screen-safe children into one admin panel.
 
 ## Surfaces and Data Access
 
-- surfaces: `custom-screen-builder`, `admin-editor-view`
+- surfaces: retired `custom-screen-builder`, retired `admin-editor-view`
 - data access: `selected-content-type` (`read`)
 - selected-entry binding cards: not exposed; `title` and `description` stay
   layout-owned copy unless an old saved binding is being preserved only as

@@ -1,9 +1,8 @@
-import { Download, Plus, Search } from "lucide-react";
+import { Download, Palette, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -22,10 +21,13 @@ import {
 import { DEFAULT_ADMIN_THEME_TOKENS } from "../../../services/adminThemes/tokenTypes";
 import { mergeAdminThemeTokens } from "../../../services/adminThemes/tokenUtils";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { EmptyState } from "@/ui/shared/EmptyState";
 import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 
 import { ThemeExportDialog } from "./ThemeExportDialog";
+import { ThemeLivePreview } from "./ThemeLivePreview";
 import { ThemeProfileCard, type AdminThemeProfileCard } from "./ThemeProfileCard";
 import { ThemeProfileDrawer } from "./ThemeProfileDrawer";
 import { ThemeTemplateCard } from "./ThemeTemplateCard";
@@ -181,6 +183,13 @@ export function ThemesPage() {
 
   const activeProfile = profileCards.find((profile) => profile.isActive) ?? null;
 
+  // Live-preview tokens = the ACTIVE profile's template tokens, merged over the
+  // defaults so the mini-admin never throws when no profile/template is active.
+  const activePreviewTokens = useMemo(() => {
+    const activeTemplate = templates.find((t) => t.id === activeProfile?.templateId) ?? null;
+    return mergeAdminThemeTokens(DEFAULT_ADMIN_THEME_TOKENS, activeTemplate?.tokens ?? null);
+  }, [templates, activeProfile]);
+
   const openCreateTemplate = () => {
     setEditingTemplate(null);
     setTemplateDrawerOpen(true);
@@ -203,8 +212,9 @@ export function ThemesPage() {
 
   return (
     <AdminShell activeHref="/admin/themes" breadcrumbs={["Visual", "Admin UI Theme"]}>
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         <PageHeader
+          icon={<Palette />}
           title="Admin UI Theme"
           description="Create theme templates and activate profiles for the admin panel."
           actions={
@@ -223,52 +233,74 @@ export function ThemesPage() {
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
+        {/* Preset row — template cards (swatch cards, hover lift) */}
         <section className="space-y-4">
-          <div className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative w-full max-w-sm">
-                  <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search templates..."
-                    className="pl-9"
-                    value={templateQuery}
-                    onChange={(event) => setTemplateQuery(event.target.value)}
-                  />
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {templateQuery.trim()
-                    ? `${filteredTemplateCards.length} of ${templateCards.length} templates`
-                    : `${templateCards.length} templates`}
-                </div>
-              </div>
+          {filteredTemplateCards.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {filteredTemplateCards.map((template) => (
+                <ThemeTemplateCard
+                  key={template.id}
+                  template={template}
+                  onEdit={() => openEditTemplate(template)}
+                />
+              ))}
             </div>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filteredTemplateCards.map((template) => (
-              <ThemeTemplateCard
-                key={template.id}
-                template={template}
-                onEdit={() => openEditTemplate(template)}
-              />
-            ))}
-            {!isLoading && filteredTemplateCards.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                {templateQuery.trim()
+          ) : !isLoading ? (
+            <EmptyState
+              icon={<Palette />}
+              title={
+                templateQuery.trim()
                   ? "No templates match your search."
-                  : "No theme templates yet. Create your first template to unlock profiles."}
-              </div>
-            ) : null}
-          </div>
+                  : "No theme templates yet. Create your first template to unlock profiles."
+              }
+            />
+          ) : null}
         </section>
 
-        <Separator />
+        {/* Two-column body: live preview (left) + controls (right) */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+          <SectionCard
+            icon={<Palette />}
+            title="Live preview"
+            description="A snapshot of how your admin will look."
+          >
+            <ThemeLivePreview tokens={activePreviewTokens} />
+          </SectionCard>
 
+          <div className="flex flex-col gap-6">
+            <SectionCard
+              icon={<Search />}
+              title="Templates"
+              description="Reusable token sets that power your profiles."
+            >
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search templates..."
+                  className="pl-9"
+                  value={templateQuery}
+                  onChange={(event) => setTemplateQuery(event.target.value)}
+                />
+              </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {templateQuery.trim()
+                  ? `${filteredTemplateCards.length} of ${templateCards.length} templates`
+                  : `${templateCards.length} templates`}
+              </p>
+            </SectionCard>
+            {activeProfile ? (
+              <p className="text-xs text-muted-foreground">
+                Active profile: <span className="font-medium">{activeProfile.name}</span>
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Profiles — preset cards w/ active ring + Activate */}
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold">Profiles</h2>
+              <h2 className="font-display text-lg font-semibold">Profiles</h2>
               <p className="text-sm text-muted-foreground">
                 Profiles activate a template for the admin UI.
               </p>
@@ -284,38 +316,35 @@ export function ThemesPage() {
             </Button>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {profileCards.map((profile) => (
-              <ThemeProfileCard
-                key={profile.id}
-                profile={profile}
-                onEdit={() => openEditProfile(profile)}
-                onActivate={() => {
-                  setIsSaving(true);
-                  activateAdminThemeProfile(profile.id)
-                    .then(() => refresh({ force: true, background: true }))
-                    .then(() => dispatchThemeUpdated())
-                    .catch((err) => {
-                      if (isApiClientError(err)) {
-                        setError(err.message);
-                      } else {
-                        setError("Failed to activate profile.");
-                      }
-                    })
-                    .finally(() => setIsSaving(false));
-                }}
-              />
-            ))}
-            {!isLoading && profileCards.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                Create a profile to activate a template for your admin UI.
-              </div>
-            ) : null}
-          </div>
-          {activeProfile ? (
-            <p className="text-xs text-muted-foreground">
-              Active profile: <span className="font-medium">{activeProfile.name}</span>
-            </p>
+          {profileCards.length > 0 ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {profileCards.map((profile) => (
+                <ThemeProfileCard
+                  key={profile.id}
+                  profile={profile}
+                  onEdit={() => openEditProfile(profile)}
+                  onActivate={() => {
+                    setIsSaving(true);
+                    activateAdminThemeProfile(profile.id)
+                      .then(() => refresh({ force: true, background: true }))
+                      .then(() => dispatchThemeUpdated())
+                      .catch((err) => {
+                        if (isApiClientError(err)) {
+                          setError(err.message);
+                        } else {
+                          setError("Failed to activate profile.");
+                        }
+                      })
+                      .finally(() => setIsSaving(false));
+                  }}
+                />
+              ))}
+            </div>
+          ) : !isLoading ? (
+            <EmptyState
+              icon={<Palette />}
+              title="Create a profile to activate a template for your admin UI."
+            />
           ) : null}
         </section>
       </div>

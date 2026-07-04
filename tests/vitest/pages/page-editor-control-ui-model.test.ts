@@ -117,13 +117,15 @@ describe("page editor control ui model adapter", () => {
       options: ["sans", "display"],
       labels: { sans: "Sans", display: "Display" },
     });
-    // The font-size scale tops out at 5xl (matching the baked h1 class) and
-    // STAYS segmented above the select-upgrade limit: declared segmented
-    // controls never degrade to a native select.
+    // The font-size scale spans compact badges/body copy through the baked h1
+    // class and STAYS segmented above the select-upgrade limit: declared
+    // segmented controls never degrade to a native select.
     expect(resolveById("block.style.fontSize")).toMatchObject({
       kind: "segmented",
-      options: ["sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
+      options: ["2xs", "xs", "sm", "md", "lg", "xl", "2xl", "3xl", "4xl", "5xl"],
       labels: {
+        "2xs": "XX-small",
+        xs: "X-small",
         sm: "Small",
         md: "Medium",
         lg: "Large",
@@ -164,6 +166,16 @@ describe("page editor control ui model adapter", () => {
       "section.style.backgroundType",
       "section.style.shadow",
       "section.hero.variant",
+      "section.content.variant",
+      "section.feature-grid.variant",
+      "section.media-split.variant",
+      "section.timeline.variant",
+      "section.gallery.variant",
+      "section.comparison.variant",
+      "section.faq.variant",
+      "section.testimonials.variant",
+      "section.cta.variant",
+      "section.custom.variant",
       "block.style.width",
       "block.style.align",
       "block.style.backgroundType",
@@ -409,6 +421,13 @@ describe("page editor control ui model adapter", () => {
       step: 0.05,
       unit: "",
     });
+    expect(resolveById("block.style.borderWidth")).toEqual({
+      kind: "slider",
+      min: 0,
+      max: 12,
+      step: 1,
+      unit: "px",
+    });
   });
 
   test("numbers without a valid clamp fail closed to unsupported", () => {
@@ -463,7 +482,12 @@ describe("page editor control ui model adapter", () => {
   });
 
   test("media inputs map to media models, never text", () => {
-    for (const id of ["block.image.props.src", "block.video.props.src", "block.card.props.image"]) {
+    for (const id of [
+      "block.style.backgroundImage",
+      "block.image.props.src",
+      "block.video.props.src",
+      "block.card.props.image",
+    ]) {
       expect(resolveById(id), id).toEqual({ kind: "media" });
     }
   });
@@ -504,14 +528,21 @@ describe("page editor control ui model adapter", () => {
     expect(palette[0]).toEqual({
       id: "primary",
       label: "Primary",
-      value: DEFAULT_TOKENS.colors.primary,
+      value: "var(--color-primary)",
+      previewValue: DEFAULT_TOKENS.colors.primary,
     });
-    expect(palette[6]!.value).toBe(DEFAULT_TOKENS.neutrals.text);
+    expect(palette[6]).toMatchObject({
+      value: "var(--color-text)",
+      previewValue: DEFAULT_TOKENS.neutrals.text,
+    });
     const custom = getPageEditorColorPalette({
       ...DEFAULT_TOKENS,
       colors: { ...DEFAULT_TOKENS.colors, primary: "#123456" },
     });
-    expect(custom[0]!.value).toBe("#123456");
+    expect(custom[0]).toMatchObject({
+      value: "var(--color-primary)",
+      previewValue: "#123456",
+    });
   });
 
   test("slider clamp helper bounds values and rejects non-finite input", () => {

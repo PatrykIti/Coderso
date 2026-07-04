@@ -2,8 +2,13 @@ import { and, eq } from "drizzle-orm";
 import { db } from "./client";
 import { getUserByEmail } from "../services/auth/userService";
 import { buildEmailFields, normalizeEmail } from "../services/security/piiEmail";
-import { roles, userRoles, users } from "./schema";
+import { adminThemeProfiles, adminThemeTemplates, roles, userRoles, users } from "./schema";
 import { hashSeedAdminPassword } from "./seedPassword";
+import {
+  type AdminThemeSeedStore,
+  type SeedDefaultAdminThemeResult,
+  runDefaultAdminThemeSeed,
+} from "./seedAdminTheme";
 
 export async function seedAdmin() {
   const adminEmail = process.env.ADMIN_EMAIL;
@@ -68,9 +73,69 @@ export async function seedAdmin() {
   }
 }
 
+/**
+ * Drizzle-backed {@link AdminThemeSeedStore} over the real `admin_theme_*` tables.
+ * The DB-agnostic orchestration lives in `./seedAdminTheme` so it can be unit
+ * tested without a live database.
+ */
+function createDbAdminThemeSeedStore(): AdminThemeSeedStore {
+  return {
+    async findTemplateByName(name) {
+      const [row] = await db
+        .select({ id: adminThemeTemplates.id })
+        .from(adminThemeTemplates)
+        .where(eq(adminThemeTemplates.name, name));
+      return row ?? null;
+    },
+    async insertTemplate(input) {
+      const now = new Date();
+      const [row] = await db
+        .insert(adminThemeTemplates)
+        .values({
+          name: input.name,
+          description: input.description,
+          tokens: input.tokens,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: adminThemeTemplates.id });
+      return row;
+    },
+    async findActiveProfile() {
+      const [row] = await db
+        .select({ id: adminThemeProfiles.id })
+        .from(adminThemeProfiles)
+        .where(eq(adminThemeProfiles.isActive, true));
+      return row ?? null;
+    },
+    async insertProfile(input) {
+      const now = new Date();
+      await db.insert(adminThemeProfiles).values({
+        name: input.name,
+        templateId: input.templateId,
+        isActive: input.isActive,
+        createdAt: now,
+        updatedAt: now,
+      });
+    },
+  };
+}
+
+/**
+ * Seed the default "Soft Violet" admin theme template (+ activate a "Default"
+ * profile when none is active). Idempotent and non-destructive — safe to run on
+ * every boot. `admin_theme_templates.tokens` is `jsonb`, so no schema migration
+ * is needed to carry the TASK-479-05 token fields.
+ */
+export async function seedDefaultAdminTheme(): Promise<SeedDefaultAdminThemeResult> {
+  console.log("Seeding default admin theme (Soft Violet)");
+  return runDefaultAdminThemeSeed(createDbAdminThemeSeedStore(), (message) => console.log(message));
+}
+
 // Allow running directly if executed as a script
 if (import.meta.main) {
   seedAdmin()
+    .then(() => seedDefaultAdminTheme())
     .then(() => {
       console.log("Seed complete");
       process.exit(0);

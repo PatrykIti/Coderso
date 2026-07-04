@@ -69,7 +69,7 @@ const readContextFromHtml = (html: string) => {
         blocks: Array<{ id: string; type: string; templateId: string | null }>;
       }>;
       blocks?: Array<{ id: string; type: string; templateId: string | null }>;
-      bindings?: Array<{ widgetId: string; field: string; propPath: string; mode: string }>;
+      bindings?: Array<{ blockId: string; field: string; propPath: string; mode: string }>;
       writableBindingFields?: string[];
       settings?: {
         wrapperContainer: string | null;
@@ -320,7 +320,7 @@ test("useAssistantAdminContext includes active custom screen context on screen r
     ],
     bindings: [
       {
-        widgetId: "header-1",
+        blockId: "header-1",
         field: "title",
         propPath: "title",
         mode: "readwrite",
@@ -348,7 +348,7 @@ test("useAssistantAdminContext includes active custom screen context on screen r
       selectedEntryId: null,
       selectedBlockId: "header-1",
       blocks: [{ id: "header-1", type: "screen-record-header" }],
-      bindings: [{ widgetId: "header-1", field: "title", propPath: "title", mode: "readwrite" }],
+      bindings: [{ blockId: "header-1", field: "title", propPath: "title", mode: "readwrite" }],
       writableBindingFields: ["title"],
     });
   } finally {

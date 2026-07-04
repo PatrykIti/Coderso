@@ -186,10 +186,10 @@ export const assistantActionFamilyContracts = [
     "custom-screen.upsert",
     "custom-screen",
     "core/services/customScreens/customScreenService.ts",
-    ["name", "contentTypeSlug", "status", "showInSidebar", "blocks", "bindings"],
+    ["name", "contentTypeSlug", "status", "showInSidebar", "definition"],
     {
       notes: [
-        "Optional collectionRole/compositionKey metadata persists through the current custom-screen owner seam.",
+        "Optional collectionRole/compositionKey metadata and the V4 definition persist through the custom-screen owner seam.",
       ],
     }
   ),
@@ -221,12 +221,40 @@ export const assistantActionFamilyContracts = [
         execute: ["content:write"],
       },
       notes: [
-        "Updates custom screen metadata/sidebar/canonical collection link/binding mode while preserving unrelated config.",
+        "Updates custom screen metadata/sidebar/canonical collection link while preserving the V4 definition.",
       ],
     }
   ),
   executableContract(
-    "custom-screen.widget.patch",
+    "custom-screen.section.add",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "section"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Adds one V4 screen section after target revalidation."],
+    }
+  ),
+  executableContract(
+    "custom-screen.block.add",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "block"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Adds one V4 screen block and optional bindings after target revalidation."],
+    }
+  ),
+  executableContract(
+    "custom-screen.block.patch",
     "custom-screen",
     "core/services/customScreens/customScreenService.ts",
     ["id", "name", "blockId", "dataPath", "value"],
@@ -236,9 +264,63 @@ export const assistantActionFamilyContracts = [
         dryRun: ["content:read"],
         execute: ["content:write"],
       },
-      notes: [
-        "Patches one existing custom screen widget block data path and preserves unrelated blocks.",
-      ],
+      notes: ["Patches one V4 custom screen block data path and preserves unrelated blocks."],
+    }
+  ),
+  executableContract(
+    "custom-screen.block.move",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "blockId", "direction"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Moves one V4 screen block within its current sibling list."],
+    }
+  ),
+  executableContract(
+    "custom-screen.block.remove",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "blockId"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Removes one V4 screen block and bindings owned by that block tree."],
+    }
+  ),
+  executableContract(
+    "custom-screen.binding.set",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "binding"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Adds or replaces one V4 screen field binding after block target revalidation."],
+    }
+  ),
+  executableContract(
+    "custom-screen.list-view.patch",
+    "custom-screen",
+    "core/services/customScreens/customScreenService.ts",
+    ["id", "name", "listView"],
+    {
+      permissions: {
+        plan: ["content:read"],
+        dryRun: ["content:read"],
+        execute: ["content:write"],
+      },
+      notes: ["Replaces the V4 custom screen list-view definition after target revalidation."],
     }
   ),
   executableContract(

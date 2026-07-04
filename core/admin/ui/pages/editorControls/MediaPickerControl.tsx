@@ -1,9 +1,11 @@
 import { MediaPicker } from "@/ui/media/MediaPicker";
 
 import {
-  editorControlLabelClass,
-  editorDarkButtonClass,
-  editorDarkGhostButtonClass,
+  editorButtonClassFor,
+  editorControlLabelClassFor,
+  editorGhostButtonClassFor,
+  useEditorControlTone,
+  type EditorControlTone,
 } from "./controlChrome";
 
 export type MediaPickerControlProps = {
@@ -14,6 +16,8 @@ export type MediaPickerControlProps = {
   /** Mime patterns forwarded to the shared media picker, e.g. ["image/*"]. */
   accept?: string[];
   disabled?: boolean;
+  /** Light/dark surface tone; defaults to the surrounding panel context. */
+  tone?: EditorControlTone;
 };
 
 /**
@@ -27,23 +31,27 @@ export const MediaPickerControl = ({
   onChange,
   accept,
   disabled = false,
-}: MediaPickerControlProps) => (
-  <div
-    className="grid gap-1"
-    data-page-editor-control="media"
-    data-page-editor-media-control={label}
-    aria-disabled={disabled || undefined}
-  >
-    <span className={editorControlLabelClass}>{label}</span>
-    <div className={disabled ? "pointer-events-none opacity-50" : undefined}>
-      <MediaPicker
-        value={value}
-        onChange={onChange}
-        multiple={false}
-        accept={accept}
-        triggerButtonClassName={editorDarkButtonClass}
-        removeButtonClassName={editorDarkGhostButtonClass}
-      />
+  tone,
+}: MediaPickerControlProps) => {
+  const resolvedTone = useEditorControlTone(tone);
+  return (
+    <div
+      className="grid gap-1"
+      data-page-editor-control="media"
+      data-page-editor-media-control={label}
+      aria-disabled={disabled || undefined}
+    >
+      <span className={editorControlLabelClassFor(resolvedTone)}>{label}</span>
+      <div className={disabled ? "pointer-events-none opacity-50" : undefined}>
+        <MediaPicker
+          value={value}
+          onChange={onChange}
+          multiple={false}
+          accept={accept}
+          triggerButtonClassName={editorButtonClassFor(resolvedTone)}
+          removeButtonClassName={editorGhostButtonClassFor(resolvedTone)}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};

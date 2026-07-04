@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Migration / Compatibility
 **Estimated Effort:** Medium
 **Dependencies:** TASK-468-02-L03, TASK-467-02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,12 +19,12 @@ cutover starts.
 
 ## Sub-Tasks
 
-- [ ] Add a feature/contract switch for V4-only writes.
-- [ ] Preserve read migration for old rows.
-- [ ] Make V4 writes store inert compatibility `blocks`/`bindings` values until
+- [x] Add a feature/contract switch for V4-only writes.
+- [x] Preserve read migration for old rows.
+- [x] Make V4 writes store inert compatibility `blocks`/`bindings` values until
   columns are dropped.
-- [ ] Add tests proving new writes cannot regress to V3.
-- [ ] Document rollback expectations.
+- [x] Add tests proving new writes cannot regress to V3.
+- [x] Document rollback expectations.
 
 ## Files To Change
 

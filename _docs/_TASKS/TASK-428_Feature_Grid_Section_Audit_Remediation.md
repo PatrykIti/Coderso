@@ -5,7 +5,8 @@
 **Category:** Pages / Page Editor V2 / Sections
 **Estimated Effort:** Medium
 **Dependencies:** TASK-421, TASK-424, TASK-425
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-16
 
 ---
 
@@ -24,10 +25,10 @@ the shared TASK-421 widgets once they land.
 
 ## Sub-Tasks
 
-- [ ] TASK-428-01: Feature Grid variant/control contract freeze.
-- [ ] TASK-428-01-L01: Preserve working `cards`/`grid` runtime behavior and
+- [x] TASK-428-01: Feature Grid variant/control contract freeze.
+- [x] TASK-428-01-L01: Preserve working `cards`/`grid` runtime behavior and
       verify the Feature Grid panels render the shared TASK-421 widgets.
-- [ ] TASK-428-02: Validation, docs, and closure.
+- [x] TASK-428-02: Validation, docs, and closure.
 
 ---
 
@@ -45,3 +46,9 @@ the shared TASK-421 widgets once they land.
 
 - `_docs/_TASKS/README.md`
 
+
+---
+
+## Completion Notes
+
+Completed on 2026-06-16 from the merged Phase 3B section audit (`_TMP_AUDYT_PAGES_EDITOR_V2_FAZA_3B_SCALONY_2026-06-16.md`). Runtime/control evidence, public smoke, and final validation are recorded in changelog 1177 and the task-board closeout. The public smoke used a disposable published page (`/phase3b-smoke-2d0dbd92`) and removed the owned page/user fixture after verification.

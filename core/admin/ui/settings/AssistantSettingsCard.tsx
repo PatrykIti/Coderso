@@ -61,7 +61,7 @@ export function AssistantSettingsCard({
     <Card className="border-border/60">
       <CardHeader className="border-b">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
             <Bot className="h-5 w-5" />
           </div>
           <div>
@@ -74,7 +74,7 @@ export function AssistantSettingsCard({
       </CardHeader>
       <CardContent className="space-y-6 pt-6">
         <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+          <div className="space-y-2 rounded-2xl border border-border p-3 md:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium">Enable assistant</p>
@@ -90,7 +90,7 @@ export function AssistantSettingsCard({
             </div>
           </div>
 
-          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+          <div className="space-y-2 rounded-2xl border border-border p-3 md:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium">Launcher avatar</p>
@@ -139,7 +139,7 @@ export function AssistantSettingsCard({
             </Select>
           </div>
 
-          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+          <div className="space-y-2 rounded-2xl border border-border p-3 md:col-span-2">
             <div className="flex items-center justify-between gap-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium">Enable LLM Guide</p>
@@ -205,11 +205,23 @@ export function AssistantSettingsCard({
           <div className="space-y-2 md:col-span-2">
             <label className={labelClassName}>LLM model</label>
             <Input
+              list="assistant-model-suggestions"
               value={values.assistantLlmModel}
               onChange={(event) => onChange?.({ assistantLlmModel: event.target.value })}
               placeholder="google/gemma-3n-e2b-it:free"
               disabled={llmConfigDisabled}
             />
+            {/* TASK-479-28-L03: curated latest-Claude suggestions surfaced via a
+                <datalist> — the field stays free-form so any provider-resolved /
+                custom model id (incl. OpenRouter-namespaced) remains valid. */}
+            <datalist id="assistant-model-suggestions">
+              <option value="claude-opus-4-8">Claude Opus 4.8</option>
+              <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+              <option value="claude-haiku-4-5">Claude Haiku 4.5</option>
+            </datalist>
+            <p className="text-xs text-muted-foreground">
+              The latest Claude models offer the best quality for content work.
+            </p>
             {showOpenRouterMetadata ? (
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {isModelMetadataLoading ? (
@@ -233,7 +245,7 @@ export function AssistantSettingsCard({
             ) : null}
           </div>
 
-          <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+          <div className="space-y-2 rounded-2xl border border-border p-3 md:col-span-2">
             <p className={labelClassName}>Official assistant corpus</p>
             <p className="text-sm font-medium text-foreground">
               Official <code>docs/guide</code> docs are indexed automatically for assistant answers
@@ -247,7 +259,7 @@ export function AssistantSettingsCard({
           </div>
 
           <Collapsible className="md:col-span-2">
-            <div className="rounded-lg border">
+            <div className="rounded-2xl border border-border">
               <CollapsibleTrigger asChild>
                 <Button
                   type="button"
@@ -268,7 +280,7 @@ export function AssistantSettingsCard({
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <div className="grid gap-4 border-t p-3 md:grid-cols-2">
-                  <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+                  <div className="space-y-2 rounded-2xl border border-border p-3 md:col-span-2">
                     <div className="flex items-center justify-between gap-3">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">Reindex on boot</p>
@@ -394,7 +406,7 @@ export function AssistantSettingsCard({
                   </div>
 
                   {onRunReindex ? (
-                    <div className="space-y-2 rounded-lg border p-3 md:col-span-2">
+                    <div className="space-y-2 rounded-2xl border border-border p-3 md:col-span-2">
                       <p className="text-sm font-medium">Support reindex</p>
                       <p className="text-xs text-muted-foreground">
                         Normal Docker startup should seed docs once per image/docs version. Use this

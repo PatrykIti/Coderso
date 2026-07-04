@@ -6,7 +6,8 @@
 **Category:** Custom Screens / Architecture / Audit
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-06-22
 
 ---
 
@@ -18,11 +19,11 @@ so later leaves do not rediscover or silently change scope.
 
 ## Sub-Tasks
 
-- [ ] Map every V3 Custom Screens source owner and active legacy widget path.
-- [ ] Record every admin UI entry point that reads `blocks` / `bindings`.
-- [ ] Record assistant, cache, and route validation owners.
-- [ ] Resolve the documented `screen-record-header` write-capability drift.
-- [ ] Produce a final drift checklist consumed by TASK-468-01-L02.
+- [x] Map every V3 Custom Screens source owner and active legacy widget path.
+- [x] Record every admin UI entry point that reads `blocks` / `bindings`.
+- [x] Record assistant, cache, and route validation owners.
+- [x] Resolve the documented `screen-record-header` write-capability drift.
+- [x] Produce a final drift checklist consumed by TASK-468-01-L02.
 
 ## Files To Change
 

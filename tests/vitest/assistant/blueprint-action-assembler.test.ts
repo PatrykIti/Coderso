@@ -10,6 +10,7 @@ import { PRODUCT_CATALOG_PRESET } from "../../../core/services/assistant/bluepri
 import { getBlueprintCapabilityRegistration } from "../../../core/services/assistant/blueprints/blueprintCapabilityRegistry";
 import { buildBlueprintCompositionGraph } from "../../../core/services/assistant/blueprints/blueprintCompositionGraph";
 import { resolveBlueprintCompositionConflicts } from "../../../core/services/assistant/blueprints/blueprintConflictResolver";
+import { normalizeCustomScreenDefinitionForWrite } from "../../../core/services/customScreens/customScreenSchemas";
 
 test("assembleComposedBlueprintPlan keeps the existing product inquiry action shape", () => {
   const graph = buildBlueprintCompositionGraph({
@@ -996,8 +997,7 @@ test("buildBlueprintActionMergeKey scopes custom screen resources by content typ
         status: "active",
         showInSidebar: true,
         sidebarLabel: "Overview",
-        blocks: [],
-        bindings: [],
+        definition: normalizeCustomScreenDefinitionForWrite(),
       },
     })
   ).not.toBe(
@@ -1012,8 +1012,7 @@ test("buildBlueprintActionMergeKey scopes custom screen resources by content typ
         status: "active",
         showInSidebar: true,
         sidebarLabel: "Overview",
-        blocks: [],
-        bindings: [],
+        definition: normalizeCustomScreenDefinitionForWrite(),
       },
     })
   );
@@ -1031,8 +1030,7 @@ test("buildBlueprintActionMergeKey scopes custom screen resources by content typ
       compositionKey: "product-catalog",
       showInSidebar: true,
       sidebarLabel: "Overview",
-      blocks: [],
-      bindings: [],
+      definition: normalizeCustomScreenDefinitionForWrite(),
     },
   };
   const comparisonProductsScreen = {

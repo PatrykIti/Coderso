@@ -41,11 +41,11 @@ const typeLabels: Record<SearchItemType, string> = {
 
 const typeOrder: SearchItemType[] = ["page", "entry", "media", "user"];
 
-const typeStyles: Record<SearchItemType, { icon: typeof FileText; className: string }> = {
-  page: { icon: FileText, className: "bg-blue-500/10 text-blue-600" },
-  entry: { icon: File, className: "bg-emerald-500/10 text-emerald-600" },
-  media: { icon: Image, className: "bg-amber-500/10 text-amber-600" },
-  user: { icon: User, className: "bg-violet-500/10 text-violet-600" },
+const typeStyles: Record<SearchItemType, { icon: typeof FileText }> = {
+  page: { icon: FileText },
+  entry: { icon: File },
+  media: { icon: Image },
+  user: { icon: User },
 };
 
 export function groupResults(items: SearchItem[]): SearchGroup[] {
@@ -135,36 +135,36 @@ function renderListCard(
   onSelect?: (item: SearchItem) => void,
   onPrefetch?: (item: SearchItem) => void
 ) {
-  const { icon: Icon, className } = typeStyles[item.type];
+  const { icon: Icon } = typeStyles[item.type];
   return (
     <button
       key={item.id}
       type="button"
-      className="text-left"
+      className="w-full text-left"
       onMouseEnter={() => onPrefetch?.(item)}
       onFocus={() => onPrefetch?.(item)}
       onClick={() => onSelect?.(item)}
     >
-      <Card className="gap-0 border-muted/60 py-4 shadow-sm transition hover:border-primary/30 hover:bg-muted/30">
-        <div className="flex items-center gap-4 px-4">
-          <div className={cn("flex h-10 w-10 items-center justify-center rounded-lg", className)}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div className="flex-1 space-y-1">
-            <p className="text-sm font-semibold text-foreground">{highlight(item.title, query)}</p>
-            {item.subtitle || item.meta ? (
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                {item.meta ? (
-                  <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                    {item.meta}
-                  </Badge>
-                ) : null}
-                {item.subtitle ? <span>{highlight(item.subtitle, query)}</span> : null}
-              </div>
-            ) : null}
-          </div>
-        </div>
-      </Card>
+      <div className="flex items-center gap-3 rounded-xl px-4 py-2.5 transition-colors hover:bg-muted">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
+          <Icon className="size-4" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium text-foreground">
+            {highlight(item.title, query)}
+          </span>
+          {item.subtitle ? (
+            <span className="block truncate text-xs text-muted-foreground">
+              {highlight(item.subtitle, query)}
+            </span>
+          ) : null}
+        </span>
+        {item.meta ? (
+          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+            {item.meta}
+          </Badge>
+        ) : null}
+      </div>
     </button>
   );
 }
