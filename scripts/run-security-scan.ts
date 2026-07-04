@@ -60,6 +60,14 @@ const createScans = (mode: ScanMode, imageRef: string | null): ScanDefinition[] 
       command: [
         "semgrep",
         ...(strict ? ["--error"] : []),
+        // Give heavy taint/dataflow rules enough budget to FULLY scan large files
+        // (core/db/schema.ts, core/services/assistant/actionExecutorService.ts) —
+        // the default 5s/rule timeout silently SKIPPED rules on them (coverage gap).
+        // --timeout-threshold 0 = never abandon a file after N timed-out rules.
+        "--timeout",
+        "120",
+        "--timeout-threshold",
+        "0",
         "--config",
         ".semgrep.yml",
         "--config",
@@ -175,7 +183,8 @@ const createScans = (mode: ScanMode, imageRef: string | null): ScanDefinition[] 
   return scans;
 };
 
-const formatCommand = (command: string[]) => command.map((part) => (part.includes(" ") ? `"${part}"` : part)).join(" ");
+const formatCommand = (command: string[]) =>
+  command.map((part) => (part.includes(" ") ? `"${part}"` : part)).join(" ");
 
 const runScan = async (scan: ScanDefinition): Promise<ScanResult> => {
   const startedAt = performance.now();
@@ -222,7 +231,9 @@ const main = async () => {
 
   process.stdout.write(`[security-scan] mode=${mode}\n`);
   if (!imageRef) {
-    process.stdout.write("[security-scan] container image scan skipped; set SECURITY_SCAN_IMAGE or pass --image.\n");
+    process.stdout.write(
+      "[security-scan] container image scan skipped; set SECURITY_SCAN_IMAGE or pass --image.\n"
+    );
   }
 
   for (const scan of scans) {
@@ -267,7 +278,9 @@ const main = async () => {
       .map((result) => result.id)
       .join(", ")}\n`
   );
-  process.stdout.write("[security-scan] rerun with --strict or bun run scan:security:strict to fail on these findings.\n");
+  process.stdout.write(
+    "[security-scan] rerun with --strict or bun run scan:security:strict to fail on these findings.\n"
+  );
   return 0;
 };
 
