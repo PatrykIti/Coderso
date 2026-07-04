@@ -65,9 +65,9 @@ test("PR gates pin supported Bun and Node runtimes", () => {
   expect(workflow).not.toContain("bun-version: 1.3.6");
 
   for (const job of runtimeJobs) {
-    expect(job).toContain("oven-sh/setup-bun@v2");
+    expect(job).toMatch(/oven-sh\/setup-bun@[0-9a-f]{40}\s+# v2\b/);
     expect(job).toContain("bun-version: ${{ env.BUN_VERSION }}");
-    expect(job).toContain("actions/setup-node@v4");
+    expect(job).toMatch(/actions\/setup-node@[0-9a-f]{40}\s+# v4\b/);
     expect(job).toContain("node-version: ${{ env.NODE_VERSION }}");
     expect(job).toContain("Verify CI runtime");
     expect(job).toContain("node --version");
@@ -82,7 +82,7 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   expect(securityGate).toContain("semgrep");
   expect(securityGate).toContain("trivy");
   expect(securityGate).toContain("fetch-depth: 0");
-  expect(securityGate).toContain("aquasecurity/trivy-action@v0.36.0");
+  expect(securityGate).toMatch(/aquasecurity\/trivy-action@[0-9a-f]{40}\s+# v0\.36\.0\b/);
   expect(securityGate).toContain("Generate Trivy SARIF (SCA/CVE)");
   expect(securityGate).toContain("format: sarif");
   expect(securityGate).toContain("output: trivy.sarif");
@@ -92,7 +92,7 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   expect(securityGate).toContain("format: table");
   expect(securityGate).toContain("skip-setup-trivy: true");
   expect(securityGate).toContain("gitleaks");
-  expect(securityGate).toContain("gitleaks/gitleaks-action@v2");
+  expect(securityGate).toMatch(/gitleaks\/gitleaks-action@[0-9a-f]{40}\s+# v2\b/);
   expect(securityGate).toContain("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}");
   expect(securityGate).toContain("GITLEAKS_CONFIG: .gitleaks.toml");
   expect(securityGate).toContain('GITLEAKS_ENABLE_COMMENTS: "false"');
@@ -102,7 +102,7 @@ test("security gate workflow wires semgrep, trivy, and gitleaks", () => {
   expect(securityGate).toContain("actions: read");
   expect(securityGate).toContain("contents: read");
   expect(securityGate).toContain("security-events: write");
-  expect(securityGate).toContain("github/codeql-action/upload-sarif@v4");
+  expect(securityGate).toMatch(/github\/codeql-action\/upload-sarif@[0-9a-f]{40}\s+# v4\b/);
   expect(securityGate).toContain("--error");
   expect(securityGate).toContain('exit-code: "1"');
   expect(securityGate).toContain('scanners: "vuln,secret,misconfig"');
