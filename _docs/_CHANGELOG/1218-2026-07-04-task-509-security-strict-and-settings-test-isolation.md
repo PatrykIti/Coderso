@@ -52,6 +52,18 @@ Record** below (owner + reason + exact bumps/overrides + SHA pins + expiry).
   `github/codeql-action/upload-sarif` keeps its `/upload-sarif` subpath. Only the
   `@<tag>` portion changed — `with:`/`env:`/`run:`/`if:`/job names untouched.
 
+### PART D — Semgrep full-coverage timeout raise (SAST coverage gap)
+
+- The default semgrep 5s/rule timeout silently SKIPPED heavy taint/dataflow rules
+  on two large files (`core/db/schema.ts`,
+  `core/services/assistant/actionExecutorService.ts`), emitting
+  `Warning: N timeout error(s)` and leaving those rules unscanned on those files.
+- Raised to `--timeout 120 --timeout-threshold 0` (per-rule budget 120s; never
+  abandon a file after N timed-out rules) in `scripts/run-security-scan.ts` and
+  the standalone `scan:semgrep` / `scan:semgrep:strict` `package.json` scripts.
+  Confirmed: 0 timeout warnings, both files now fully scanned (0 findings),
+  strict sweep still GREEN. Cost: `semgrep-sast` ~62s → ~263s (full coverage).
+
 ## Security & Dependency Record
 
 - **Ticket:** TASK-509
