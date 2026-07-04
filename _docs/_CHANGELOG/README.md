@@ -29,10 +29,11 @@ Ordinary new entries continue at 1195.
 
 Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
-assistant policy coverage fix. Use 1219 for the next changelog entry.
+assistant policy coverage fix. Use 1220 for the next changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
+| 1219 | 2026-07-04 | TASK-510 AGENTS.md Multi-Agent Workflow Codification — codifies the practiced multi-agent process (research→author→≥5-round drift-audit with cross-subtask reconcile→sequential single-writer implement with targeted gates→~5-lens post-audit→mandatory ≥5-scenario VISIBLE-EFFECT smoke→closure), parallel-stream collision guards, deferred combined gates, fail-closed allowlist + present-only rules, operational discipline | Docs/Process/Task Board |
 | 1218 | 2026-07-04 | TASK-509 Security Strict Pass & Settings Test Isolation — scan:security:strict GREEN (nodemailer 9 bump + ws/undici/vite/sigstore overrides + full GitHub Actions SHA pinning) + self-scoped settingsService nullable-id fixture | Security/Dependencies/CI/GitHub Actions/Testing/QA/Docs/Task Board |
 | 1217 | 2026-07-03 | TASK-508 Menu Nesting Forms & Flyout Fix — container default hints (180/6), per-level linkAlign centering, perceptible visibility+opacity+transform flyout, unified submenuDirection (right/down/up/left) & accordion submenuMode | Admin UI/Content (Menus)/Navigation/Page Builder/Site Front/Responsive/QA/Docs/Task Board |
 | 1216 | 2026-07-03 | TASK-507 Menu Indicator Scope & Hint Alignment — top-bar-only B2 chrome scope, dual-axis rest reset, ControlDefaultHint value===undefined guard (2 TASK-506 LOW residuals) | Site Front/Admin UI/Content (Menus)/Navigation/Responsive/QA/Docs/Task Board |
