@@ -48,6 +48,14 @@ export type Router = {
 export type SettingsRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
+  // Optional persistence seams (default = real services), same additive
+  // injection pattern as InstallRouteDeps.{isFirstRun,createFirstAdmin,logAudit}.
+  // Lets the onboarding E2E drive the REAL bulk-settings handler (validation,
+  // key resolution, audit-action strings, error mapping) over an in-memory world
+  // without touching the shared remote Postgres.
+  setSettings?: typeof setSettings;
+  getResolvedTokens?: typeof getResolvedTokens;
+  logAudit?: typeof logAudit;
 };
 
 export const resolveSettingsRouteKey = (key: string) => resolveSettingKey(key);
@@ -98,6 +106,9 @@ const assertSiteShellReferencesExist = async (
 
 export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) {
   const { requirePermission, validate } = deps;
+  const persistSettings = deps.setSettings ?? setSettings;
+  const resolveTokens = deps.getResolvedTokens ?? getResolvedTokens;
+  const audit = deps.logAudit ?? logAudit;
 
   const withSettingsErrors = async <T>(fn: () => Promise<T>) => {
     try {
@@ -110,7 +121,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
   router.get("/settings", requirePermission("settings:read"), async () => {
     return withSettingsErrors(async () => {
       const current = await listSettings();
-      const tokens = await getResolvedTokens();
+      const tokens = await resolveTokens();
       return { ...current, "design.tokens": tokens };
     });
   });
@@ -128,7 +139,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
       resolveSettingsRouteKey(ctx.params.key)
     );
     if (settingKey === "design.tokens") {
-      const tokens = await withSettingsErrors(() => getResolvedTokens());
+      const tokens = await withSettingsErrors(() => resolveTokens());
       return { key: settingKey, value: tokens };
     }
 
@@ -141,7 +152,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     const payload = ctx.body as StorageSettingsUpdate;
     const updated = await withSettingsErrors(() => setStorageSettings(payload));
     await withSettingsErrors(async () => {
-      await logAudit({
+      await audit({
         actorId: ctx.user?.id ?? null,
         action: "settings.update",
         targetType: "settings",
@@ -157,7 +168,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     const payload = ctx.body as SecuritySettingsUpdate;
     const updated = await withSettingsErrors(() => setSecuritySettingsPublic(payload));
     await withSettingsErrors(async () => {
-      await logAudit({
+      await audit({
         actorId: ctx.user?.id ?? null,
         action: "settings.update",
         targetType: "settings",
@@ -179,7 +190,7 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
     );
     const updated = await withSettingsErrors(() => setSetting(settingKey, body.value));
     await withSettingsErrors(async () => {
-      await logAudit({
+      await audit({
         actorId: ctx.user?.id ?? null,
         action: "settings.update",
         targetType: "settings",
@@ -208,10 +219,10 @@ export function registerSettingsRoutes(router: Router, deps: SettingsRouteDeps) 
         }))
       )
     );
-    const updated = await withSettingsErrors(() => setSettings(payload));
-    const tokens = await withSettingsErrors(() => getResolvedTokens());
+    const updated = await withSettingsErrors(() => persistSettings(payload));
+    const tokens = await withSettingsErrors(() => resolveTokens());
     await withSettingsErrors(async () => {
-      await logAudit({
+      await audit({
         actorId: ctx.user?.id ?? null,
         action: "settings.update",
         targetType: "settings",

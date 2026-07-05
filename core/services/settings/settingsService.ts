@@ -49,6 +49,7 @@ const DEFAULT_CONTENT_ROUTES: ContentRouteSetting[] = [];
 const DEFAULT_SETTINGS = {
   "site.name": "Coderso",
   "site.locale": "en",
+  "site.timezone": "UTC",
   "site.adminBaseUrl": null as string | null,
   "site.publicBaseUrl": null as string | null,
   "site.adminPath": "/admin",
@@ -304,6 +305,28 @@ const normalizeOptionalId = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+// TASK-482-05-L01: `site.timezone` is an IANA time-zone string. Prefer the
+// runtime's own zone database (Intl) over a hardcoded list so the allowlist
+// stays current; a non-string or an unknown zone is rejected as
+// `settings_value_invalid`. Module-private (validated on write via the
+// `validateSettingValue` dispatch); the Bun service suite covers the edge cases.
+const normalizeTimezoneValue = (value: unknown): string => {
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const tz = value.trim();
+  if (!tz) {
+    throw new Error("settings_value_invalid");
+  }
+  try {
+    // Throws RangeError for an invalid IANA zone.
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+  } catch {
+    throw new Error("settings_value_invalid");
+  }
+  return tz;
+};
+
 const normalizeOptionalIdValue = (value: unknown) => {
   if (value === null) return "";
   if (typeof value !== "string") {
@@ -327,6 +350,10 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
       throw new Error("settings_value_invalid");
     }
     return value;
+  }
+
+  if (key === "site.timezone") {
+    return normalizeTimezoneValue(value);
   }
 
   if (isBaseUrlKey(key)) {

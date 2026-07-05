@@ -4,11 +4,16 @@ import { db } from "../../db/client";
 import { sessions } from "../../db/schema";
 import { getSecuritySettings } from "../settings/securitySettings";
 import { getSetting } from "../settings/settingsService";
+// TASK-482-07-L02: the TTL precedence/clamping resolver now lives in a pure,
+// dependency-free module so the admin setup wizard can share the exact same
+// logic for its read-only "effective TTL" advisory. Re-exported here so the
+// existing Bun precedence pin (tests/unit/auth/sessionService.test.ts) and
+// every other importer keep resolving these symbols from `sessionService`.
+import { DEFAULT_SESSION_TTL_DAYS, resolveSessionTtlDaysFromSources } from "./sessionTtl";
+
+export { DEFAULT_SESSION_TTL_DAYS, resolveSessionTtlDaysFromSources };
 
 export const SESSION_COOKIE_NAME = "session";
-export const DEFAULT_SESSION_TTL_DAYS = 7;
-const MIN_SESSION_TTL_DAYS = 1;
-const MAX_SESSION_TTL_DAYS = 365;
 
 export type SessionRow = typeof sessions.$inferSelect;
 
@@ -104,46 +109,13 @@ async function getSessionPolicy() {
   return settings.session;
 }
 
-const toBoundedInteger = (value: unknown, min: number, max: number) => {
-  if (typeof value !== "number" || !Number.isFinite(value)) return null;
-  const normalized = Math.floor(value);
-  if (normalized <= 0) return null;
-  return Math.min(max, Math.max(min, normalized));
-};
-
-export function resolveSessionTtlDaysFromSources(input: {
-  inputTtlDays?: number;
-  authSettingTtlDays?: unknown;
-  securitySettingTtlDays?: unknown;
-}): number {
-  const fromInput = toBoundedInteger(
-    input.inputTtlDays,
-    MIN_SESSION_TTL_DAYS,
-    MAX_SESSION_TTL_DAYS
-  );
-  if (fromInput !== null) return fromInput;
-
-  const fromAuthSettings = toBoundedInteger(
-    input.authSettingTtlDays,
-    MIN_SESSION_TTL_DAYS,
-    MAX_SESSION_TTL_DAYS
-  );
-  if (fromAuthSettings !== null) return fromAuthSettings;
-
-  const fromSecuritySettings = toBoundedInteger(
-    input.securitySettingTtlDays,
-    MIN_SESSION_TTL_DAYS,
-    MAX_SESSION_TTL_DAYS
-  );
-  if (fromSecuritySettings !== null) return fromSecuritySettings;
-
-  return DEFAULT_SESSION_TTL_DAYS;
-}
-
-async function enforceSessionLimits(userId: string, policy: {
-  maxPerUser: number;
-  singleSession: boolean;
-}) {
+async function enforceSessionLimits(
+  userId: string,
+  policy: {
+    maxPerUser: number;
+    singleSession: boolean;
+  }
+) {
   if (policy.singleSession) {
     await revokeAllSessions(userId);
     return;
@@ -157,11 +129,7 @@ async function enforceSessionLimits(userId: string, policy: {
     .select({ id: sessions.id, createdAt: sessions.createdAt })
     .from(sessions)
     .where(
-      and(
-        eq(sessions.userId, userId),
-        isNull(sessions.revokedAt),
-        gt(sessions.expiresAt, now)
-      )
+      and(eq(sessions.userId, userId), isNull(sessions.revokedAt), gt(sessions.expiresAt, now))
     )
     .orderBy(asc(sessions.createdAt));
 
@@ -170,10 +138,7 @@ async function enforceSessionLimits(userId: string, policy: {
   if (excess <= 0) return;
 
   const revokeIds = active.slice(0, excess).map((row) => row.id);
-  await db
-    .update(sessions)
-    .set({ revokedAt: now })
-    .where(inArray(sessions.id, revokeIds));
+  await db.update(sessions).set({ revokedAt: now }).where(inArray(sessions.id, revokeIds));
 }
 
 export async function createSession(input: CreateSessionInput) {
@@ -205,10 +170,7 @@ export async function createSession(input: CreateSessionInput) {
 
 export async function getSessionByToken(token: string) {
   const tokenHash = hashSessionToken(token);
-  const [session] = await db
-    .select()
-    .from(sessions)
-    .where(eq(sessions.tokenHash, tokenHash));
+  const [session] = await db.select().from(sessions).where(eq(sessions.tokenHash, tokenHash));
 
   if (!session) return null;
   if (session.revokedAt) return null;

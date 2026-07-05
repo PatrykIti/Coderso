@@ -29,6 +29,7 @@ async function canConnect() {
 const cleanupKeys = [
   "site.name",
   "site.locale",
+  "site.timezone",
   "site.adminBaseUrl",
   "site.publicBaseUrl",
   "site.adminPath",
@@ -163,6 +164,31 @@ testIfDb("clamps site.cacheTtlSeconds to the beacon-nonce-safe upper bound", asy
   expect(await getSetting("site.cacheTtlSeconds")).toBe(MAX_SITE_CACHE_TTL_SECONDS);
   await setSetting("site.cacheTtlSeconds", 30);
   expect(await getSetting("site.cacheTtlSeconds")).toBe(30);
+});
+
+testIfDb("site.timezone accepts IANA zones, rejects invalid values, defaults to UTC", async () => {
+  // Self-restoring on the shared remote DB: this test owns the key and the
+  // suite's afterAll deletes it (see cleanupKeys), so order across parallel
+  // streams does not matter.
+  await setSetting("site.timezone", "Europe/Warsaw");
+  expect(await getSetting("site.timezone")).toBe("Europe/Warsaw");
+  expect((await listSettings())["site.timezone"]).toBe("Europe/Warsaw");
+
+  // Whitespace is trimmed on write.
+  await setSetting("site.timezone", "  America/New_York  ");
+  expect(await getSetting("site.timezone")).toBe("America/New_York");
+
+  await expect(setSetting("site.timezone", "Mars/Phobos")).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("site.timezone", 42)).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("site.timezone", "")).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("site.timezone", null)).rejects.toThrow("settings_value_invalid");
+
+  // Default reported after delete (order-independent across parallel streams).
+  await deleteSetting("site.timezone");
+  expect(await getSetting("site.timezone")).toBe("UTC");
+  expect((await listSettings())["site.timezone"]).toBe("UTC");
 });
 
 testIfDb("rejects unknown key", async () => {
