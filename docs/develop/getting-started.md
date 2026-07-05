@@ -53,8 +53,22 @@ openssl rand -hex 32
 | Variable | Purpose |
 | --- | --- |
 | `FORM_SUBMIT_NONCE_SECRET` | HMAC secret for public form submission nonces. Required once you serve public forms. |
+| `ANALYTICS_BEACON_NONCE_SECRET` | HMAC secret for the public analytics beacon nonces. **Required for web analytics to work** — see the note below. |
+| `ANALYTICS_IP_HASH_SECRET` | HMAC key for the salted, daily-rotated visitor hash (one-way; no raw IP is ever stored). Also required for analytics. |
 | `AUTH_PASSWORD_PEPPER` | Optional pepper for password hashing. Rotating it forces password resets, so set it once and leave it. |
 | `ADMIN_EMAIL` / `ADMIN_PASSWORD` | Seed bootstrap admin credentials (defaults: `admin@example.com` / `change-me`). |
+
+> **Web analytics fails closed and silently if its secrets are missing.** Tracking
+> is enabled by default (`analytics.trackingEnabled`), but the public site only
+> injects the tracking beacon when `ANALYTICS_BEACON_NONCE_SECRET` is set — the
+> render path mints a per-page nonce and, if the secret is absent, catches the
+> error and injects nothing (analytics must never break page render). The result
+> is a live site that records **zero** pageviews with no visible error. Set both
+> `ANALYTICS_BEACON_NONCE_SECRET` and `ANALYTICS_IP_HASH_SECRET` (e.g.
+> `openssl rand -hex 32` each) before expecting data in **Admin → Analytics**.
+> Optional: `ANALYTICS_BEACON_NONCE_TTL_MINUTES` (default 30) and
+> `ANALYTICS_RETENTION_DAYS` (raw-row pruning window). Note that bot/headless
+> user-agents are dropped by design, so verify with a real browser.
 
 The defaults already wired in `.env.example` for local work: `PORT=3000`, `PUBLIC_BASE_URL=http://localhost:3000`, `MEDIA_STORAGE=local`, `MEDIA_DIR=./storage/media`, and `EMAIL_TRANSPORT=mock`. The `VITE_*` URLs point the dev servers at the right ports (see below). Cloud storage (`S3_*`, `AZURE_*`) and the Store/plugin knobs (`STORE_BASE_URL`, `PLUGINS_RUNTIME_DIR`, …) stay blank until you need them.
 
