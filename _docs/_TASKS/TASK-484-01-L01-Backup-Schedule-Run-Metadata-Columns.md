@@ -5,10 +5,13 @@
 **Priority:** High
 **Category:** `backups` / `schema-migration`
 **Estimated Effort:** Small
-**Dependencies:** None.
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Dependencies:** Sync precondition — before this leaf authors its migration and
+runs `db:migrate`, the orchestrator syncs TASK-483's `0064` artifacts (SQL +
+`meta/0064_snapshot.json` + `meta/_journal.json` entry) into this worktree so
+the journal stays gapless; this leaf then generates `0065`.
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -20,8 +23,10 @@
   migration artifacts**. Extend the domain types + mappers to carry the fields
   (no behaviour change yet — calculation/wiring is L02).
 - **Owning module(s) to create-or-extend:** `core/db/schema.ts` (the `backups`
-  and `backup_schedules` `pgTable`s at lines 527-560),
-  `core/db/migrations/0064_*.sql` + `core/db/migrations/meta/0064_snapshot.json`
+  and `backup_schedules` `pgTable`s at lines 527-560 — **shared surface**: the
+  parallel TASK-483 stream adds analytics tables to this same file; edit ONLY
+  these two tables, additively, and never restructure/reorder anything else),
+  `core/db/migrations/0065_*.sql` + `core/db/migrations/meta/0065_snapshot.json`
   + `core/db/migrations/meta/_journal.json` (append),
   `core/services/backups/backupTypes.ts` (`BackupSchedule`, `BackupRecord`),
   `core/services/backups/backupService.ts` (`mapSchedule` 134-142,
@@ -32,9 +37,10 @@
   (L02); the scheduler (484-02); any remote upload (484-05).
 
 > **DB change — full migration artifacts required.** This leaf adds columns, so it
-> MUST ship the SQL file + `meta/0064_snapshot.json` + an appended
+> MUST ship the SQL file + `meta/0065_snapshot.json` + an appended
 > `meta/_journal.json` entry, generated via the repo's drizzle-kit flow and
-> verified to apply cleanly.
+> verified to apply cleanly. Precondition: TASK-483's `0064` artifacts are
+> synced into this worktree first (see Dependencies).
 
 ---
 
@@ -124,11 +130,16 @@ const mapBackup = (row, options = {}): BackupRecord => ({
 
 ### 4) Migration artifacts (FULL — required)
 
-Generate via the repo's drizzle-kit flow (confirm the exact script in
-`package.json` / `core/db/drizzle.config.ts`), then verify three artifacts. Next
-free index is **0064** (last shipped `0063_yummy_glorian`; journal version `"7"`):
+**Sync precondition first:** the orchestrator syncs TASK-483's `0064` artifacts
+(SQL + `meta/0064_snapshot.json` + `meta/_journal.json` entry) into this
+worktree so the journal stays gapless. Only then generate via the repo's
+drizzle-kit flow (`bun run db:generate` to author, `bun run db:migrate` to
+apply — both auto-source `.env` and use `core/db/drizzle.config.ts`), and
+verify three artifacts. The
+pinned index for TASK-484 is **0065** (this worktree's current max is
+`0063_yummy_glorian`, journal version `"7"`; `0064` belongs to TASK-483):
 
-- **SQL** — `core/db/migrations/0064_backup_run_metadata.sql`:
+- **SQL** — `core/db/migrations/0065_backup_run_metadata.sql`:
   ```sql
   ALTER TABLE "backups" ADD COLUMN "artifact_key" text;
   --> statement-breakpoint
@@ -138,19 +149,21 @@ free index is **0064** (last shipped `0063_yummy_glorian`; journal version `"7"`
   --> statement-breakpoint
   CREATE INDEX "backup_schedules_next_run_at_idx" ON "backup_schedules" USING btree ("next_run_at");
   ```
-- **Snapshot** — `core/db/migrations/meta/0064_snapshot.json`: full regenerated
+- **Snapshot** — `core/db/migrations/meta/0065_snapshot.json`: full regenerated
   drizzle snapshot including the two new `backup_schedules` columns + index and
   the new `backups.artifact_key` column (do not hand-edit beyond generator
   output).
 - **Journal** — append to `core/db/migrations/meta/_journal.json`:
   ```json
-  { "idx": 64, "version": "7", "when": <epoch-ms>, "tag": "0064_backup_run_metadata", "breakpoints": true }
+  { "idx": 65, "version": "7", "when": <epoch-ms>, "tag": "0065_backup_run_metadata", "breakpoints": true }
   ```
 
-> **Migration index is provisional.** Re-derive as last-shipped+1 via
-> `drizzle-kit generate` at implementation time. TASK-483/484/493 each add a
-> migration — only one can be 0064; whichever lands later renumbers (0065/0066).
-> Allocate in dependency order at merge.
+> **Migration index is FIXED by cross-stream pin — do not re-derive.**
+> TASK-483 (analytics tables) owns `0064` and merges first; TASK-484 owns
+> `0065`. Never author a `0064` in this stream: it would collide with 483's
+> `0064` in the journal and against the shared remote DB. Before generating,
+> sync 483's `0064` artifacts into this worktree (see Dependencies) so the
+> journal stays gapless.
 
 **Data flow:** existing routes/services read the new columns via the mappers; no
 write path changes in this leaf.
@@ -171,6 +184,7 @@ Bun lane (DB-backed). Load env: `set -a && source .env && set +a`.
 - `bun --cwd core lint` / `bun --cwd core lint:types`
 - `bun test tests/unit/backups` — mapper field coverage (above); existing backup
   service tests stay green with the widened types.
-- Apply migration `0064` (repo migrate script) and confirm the SQL,
-  `0064_snapshot.json`, and the `_journal.json` entry exist and the columns are
-  present.
+- Apply migration `0065` (`bun run db:migrate`) and confirm the SQL,
+  `0065_snapshot.json`, and the `_journal.json` entry (idx 65) exist and the
+  columns are present. Precondition: TASK-483's `0064` artifacts are synced in
+  first (see Dependencies) so the journal has no gap.

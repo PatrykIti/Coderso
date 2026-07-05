@@ -44,6 +44,18 @@ Uwaga:
 - Po rotacji klucza trzeba ponownie zapisac sekrety w Admin UI.
   Szczegoly: `_docs/SECURITY_SPEC.md`.
 
+Backup artefakty (remote):
+- Backupy (TASK-484) **reużywaja tych samych driverow storage** przez
+  `getMediaStorageAdapter()`: gdy schedule ma `storageDriver` `s3`/`azure`,
+  artefakt JSON jest uploadowany tym samym adapterem (`put` → `{ url, key }`),
+  a publiczny URL trafia do `backups.artifact_path`, natomiast klucz obiektu do
+  server-internal `backups.artifact_key` (uzywany do `delete` przy retencji).
+- Credentiale storage sa czytane wylacznie backend-only
+  (`getStorageSettingsInternal()`) i nigdy nie sa zapisywane do artefaktu,
+  logow ani odpowiedzi klienta.
+- Backup artefakt zawiera metadane biblioteki mediow + URL-e, ale **nie
+  archiwizuje bajtow plikow mediow** — restore nie pobiera ponownie plikow.
+
 ## Upload rules
 
 - Max size per file (config: `MEDIA_MAX_SIZE_BYTES`).

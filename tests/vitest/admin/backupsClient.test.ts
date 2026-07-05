@@ -250,6 +250,12 @@ test("restoreBackup uses CSRF and POST", async () => {
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
     expect(calls[1]?.input).toBe("/admin/api/backups/backup-1/restore");
     expect(calls[1]?.init?.method).toBe("POST");
+    // The hardened route REQUIRES `confirm: true` in the body (restoreBackupSchema);
+    // the client MUST send it or restore fails validation with a 400. Regression for
+    // the client->route gap where restore was unreachable from the UI.
+    expect(calls[1]?.init?.body).toBe(JSON.stringify({ confirm: true }));
+    const headers = new Headers(calls[1]?.init?.headers);
+    expect(headers.get("content-type")).toBe("application/json");
   } finally {
     globalThis.fetch = originalFetch;
   }

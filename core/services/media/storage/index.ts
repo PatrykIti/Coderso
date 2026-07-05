@@ -7,8 +7,12 @@ import { getSetting } from "../../settings/settingsService";
 
 let cachedAdapter: { key: string; adapter: MediaStorageAdapter } | null = null;
 
-const buildCacheKey = (input: Record<string, unknown>) =>
-  JSON.stringify(input);
+// Test-only seam: when set, `getMediaStorageAdapter()` returns this adapter
+// instead of resolving a real driver. Keeps the backup remote-storage suite
+// hermetic (no S3/Azure network). Never set in production code paths.
+let testAdapterOverride: MediaStorageAdapter | null = null;
+
+const buildCacheKey = (input: Record<string, unknown>) => JSON.stringify(input);
 
 const normalizeBaseUrl = (value: string | null) => {
   if (!value) return null;
@@ -26,7 +30,11 @@ const joinUrl = (base: string, path: string) => {
   return new URL(normalizedPath, normalizedBase).toString().replace(/\/$/, "");
 };
 
-const resolveS3BaseUrl = (bucket: string | null, region: string | null, endpoint: string | null) => {
+const resolveS3BaseUrl = (
+  bucket: string | null,
+  region: string | null,
+  endpoint: string | null
+) => {
   if (!bucket) return null;
   if (endpoint) {
     return joinUrl(ensureProtocol(endpoint.trim()), bucket);
@@ -50,7 +58,14 @@ const resolveLocalBaseUrl = (sitePublicBaseUrl: string | null) => {
   return joinUrl(sitePublicBaseUrl, "media");
 };
 
+// Fail-closed guard for the test-only injection seam: NODE_ENV==='production'
+// must never honor (or even hold) an injected adapter. Belt-and-braces with the
+// setter guard below, so a production build can never route media through a
+// test override even if some path mutated the global.
+const isProductionRuntime = () => process.env.NODE_ENV === "production";
+
 export async function getMediaStorageAdapter() {
+  if (testAdapterOverride && !isProductionRuntime()) return testAdapterOverride;
   const config = await getStorageSettingsInternal();
   const sitePublicBaseUrl = await getSetting("site.publicBaseUrl");
   const normalizedSiteBaseUrl =
@@ -125,4 +140,16 @@ export async function getMediaStorageAdapter() {
 
 export function resetMediaStorageAdapterCache() {
   cachedAdapter = null;
+}
+
+// Test-only: inject (or clear with `null`) a fake `MediaStorageAdapter` so the
+// backup remote-storage tests exercise the s3/azure upload + delete paths
+// without any real cloud call. Always restore to `null` in test cleanup.
+export function __setMediaStorageAdapterForTests(adapter: MediaStorageAdapter | null) {
+  // Never allow a production build to install a test override on the shared media
+  // hot path (this resolver serves ALL site-wide uploads, not just backups).
+  if (isProductionRuntime() && adapter !== null) {
+    throw new Error("media_storage_test_override_forbidden_in_production");
+  }
+  testAdapterOverride = adapter;
 }

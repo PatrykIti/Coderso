@@ -21,6 +21,7 @@ import { authenticateApiKey } from "../services/security/apiKeyAuth";
 import { evaluateMediaAccess } from "../services/media/mediaAccess";
 import { initializeDocsIndexOnBootIfEnabled } from "../services/assistant/docsIndexService";
 import { ensureThemesLoaded } from "../themes/registry";
+import { startBackupScheduler } from "./jobs/backupScheduler";
 import { handlePublicRequest } from "./publicSite";
 import { resolveAdminPath } from "./utils/adminPath";
 
@@ -500,6 +501,8 @@ export function startHttpServer(options: HttpServerOptions = {}) {
   void initializeDocsIndexOnBootIfEnabled().catch((error) => {
     console.warn("Assistant docs index initialization failed:", error);
   });
+  startBackupScheduler(); // shared seam: dev.ts and prod.ts both call startHttpServer;
+  // dockerStart.ts imports ./prod. Env-gated opt-in outside production (see backupScheduler.ts).
 
   const serveOptions: HttpServerServeOptions = {
     idleTimeout: options.idleTimeout,

@@ -2990,16 +2990,38 @@ Response:
 
 Permissions: `backups:read`, `backups:write`
 
-Note: v1 manual backups are CMS-managed metadata rows plus a local JSON artifact.
-`POST /backups` creates the row, writes the artifact under `BACKUP_DIR` or
-`storage/backups`, and returns a completed row when artifact creation succeeds.
-Restore is still unsupported until a separate restore contract exists.
+Note: backups are CMS-managed metadata rows plus a `version: 1` JSON artifact.
+`POST /backups` creates the row, writes the artifact, and returns a completed row
+when artifact creation succeeds. The artifact is stored according to the active
+storage driver: `local` writes under `BACKUP_DIR` or `storage/backups`; `s3` /
+`azure` upload via the shared media storage adapters and store the object's
+public URL as `artifactPath` (the server-internal storage key is never returned
+to clients). A remote upload failure surfaces as the machine-readable
+`backup_upload_failed` error only — raw adapter/credential text is never leaked.
+
+The `backup_schedules` singleton drives an in-process scheduler (opt-in outside
+production via `BACKUP_SCHEDULER_ENABLED`): when a schedule is `enabled` and due
+(`next_run_at <= now`), a system-actor run creates a `kind: "scheduled"` backup,
+advances `next_run_at` (and sets `last_run_at`), then prunes expired backups by
+`retentionDays`. Retention can also be triggered manually via `POST
+/backups/prune`.
+
+`POST /backups/:id/restore` performs a real, **destructive**, confirmation-gated
+restore from the `version: 1` artifact. It restores CMS **metadata + settings
+only** — the artifact stores media library rows/URLs but never file bytes, so
+media files are not re-fetched. The whole restore runs in a single transaction
+(snapshot tables replaced + settings imported share one `tx`), so a malformed
+artifact or mid-restore failure rolls back with no partial state. Requires
+`backups:write` and a body of exactly `{ "confirm": true }` (unknown keys and
+`confirm: false`/missing are rejected `400`).
 
 - `GET /backups?page=1&limit=10&query=queued`
 - `POST /backups` (manual create)
-- `POST /backups/:id/restore`
+- `POST /backups/:id/restore` (body `{ "confirm": true }`, destructive)
 - `GET /backups/:id/download`
 - `DELETE /backups/:id`
+- `POST /backups/prune` (`backups:write`, retention pruning)
+- `GET /backups/usage` (`backups:read`, storage usage/quota)
 - `GET /backups/schedule`
 - `PATCH /backups/schedule`
 
@@ -3063,7 +3085,8 @@ List response:
 Unknown query fields are rejected. `page` must be an integer >= 1 and `limit`
 must be 1-100.
 
-Schedule payload:
+Schedule payload (`PATCH /backups/schedule`, all fields optional,
+`additionalProperties: false`):
 
 ```json
 {
@@ -3073,6 +3096,10 @@ Schedule payload:
   "storageDriver": "s3"
 }
 ```
+
+`GET /backups/schedule` returns the singleton including the scheduler-managed
+`nextRunAt` / `lastRunAt` timestamps (nullable). Enabling a schedule (or changing
+`frequency`) recomputes `nextRunAt`; the scheduler advances it after each run.
 
 Download response:
 
@@ -3089,14 +3116,65 @@ Download response:
 Download returns `backup_not_ready` for queued/running/failed/artifact-less
 rows and `backup_artifact_invalid` when a completed row has a non-downloadable
 artifact path outside the configured backup directory. Local CMS artifacts are
-returned as JSON content with `url: null` and `path: null`; list responses and
-browser cache redact local artifact paths to `artifactPath: "local"` and never
-persist downloaded artifact content. Future plugin/storage integrations may
-still return public `http(s)` artifact URLs.
+returned as JSON content with `url: null` and `path: null`; remote (`s3`/`azure`)
+artifacts return the public `http(s)` URL as `url` and are fetched server-side
+for restore. List responses and browser cache redact local artifact paths to
+`artifactPath: "local"`, keep the server-internal storage key null to clients,
+and never persist downloaded artifact content.
 
-Restore returns `backup_not_ready` until a completed artifact exists, then
-`backup_restore_unsupported` until the CMS ships an explicit restore
-implementation.
+Restore error codes: `backup_not_found` (404), `backup_not_ready` (409) for
+queued/running/failed/artifact-less rows, `backup_restore_confirmation_required`
+(400) when `confirm` is not exactly `true`, `backup_restore_invalid_artifact`
+(422) when the stored artifact is missing/garbage or not `version: 1` (strict
+parse rejects unknown top-level keys before any write),
+`backup_artifact_unreadable` (502) when a remote artifact cannot be fetched. The
+legacy `backup_restore_unsupported` (409) code is retained for back-compat but is
+no longer emitted. The restore response is the redacted backup record; the audit
+log records `{ status }` only (no artifact contents, paths, or secrets).
+
+Prune request/response:
+
+```json
+{}
+```
+
+`POST /backups/prune` takes an empty body (`additionalProperties: false`) and
+uses the server-owned `retentionDays` from the schedule singleton (never a
+client-supplied window). It deletes expired terminal backups (reusing the
+per-row artifact cleanup, local and remote) and returns:
+
+```json
+{ "prunedCount": 2, "prunedIds": ["backup-id-1", "backup-id-2"] }
+```
+
+Usage response (`GET /backups/usage`):
+
+```json
+{
+  "totalBytes": 3145728,
+  "backupCount": 3,
+  "byStatus": {
+    "queued": { "count": 0, "bytes": 0 },
+    "running": { "count": 0, "bytes": 0 },
+    "complete": { "count": 3, "bytes": 3145728 },
+    "failed": { "count": 0, "bytes": 0 }
+  },
+  "byDriver": {
+    "local": { "count": 3, "bytes": 3145728 },
+    "s3": { "count": 0, "bytes": 0 },
+    "azure": { "count": 0, "bytes": 0 }
+  },
+  "activeDriver": "local",
+  "quotaBytes": null,
+  "overQuota": false
+}
+```
+
+Usage aggregates numeric totals over the whole `backups` table plus the active
+driver label. `quotaBytes` is the server-owned threshold from
+`BACKUP_MAX_TOTAL_BYTES` (`null` when unset); `overQuota` is a pure signal only —
+it never blocks new backups. The payload carries no artifact paths, storage
+keys, credentials, or PII.
 
 Delete response:
 
@@ -3111,11 +3189,16 @@ Known backup error codes:
 
 - `backup_not_found`
 - `backup_not_ready`
-- `backup_restore_unsupported`
+- `backup_restore_confirmation_required`
+- `backup_restore_invalid_artifact`
+- `backup_artifact_unreadable`
+- `backup_upload_failed`
+- `backup_restore_unsupported` (legacy; retained for back-compat, no longer emitted)
 - `backup_artifact_invalid`
 - `backup_include_required`
 - `backup_include_invalid`
 - `backup_schedule_invalid`
+- `backup_schedule_not_found`
 
 ---
 

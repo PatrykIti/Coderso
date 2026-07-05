@@ -532,6 +532,7 @@ export const backups = pgTable(
     kind: text("kind").notNull().default("manual"),
     storageDriver: text("storage_driver").notNull().default("local"),
     artifactPath: text("artifact_path"),
+    artifactKey: text("artifact_key"),
     sizeBytes: integer("size_bytes"),
     error: text("error"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -551,11 +552,14 @@ export const backupSchedules = pgTable(
     frequency: text("frequency").notNull().default("daily"),
     retentionDays: integer("retention_days").notNull().default(30),
     storageDriver: text("storage_driver").notNull().default("local"),
+    nextRunAt: timestamp("next_run_at"),
+    lastRunAt: timestamp("last_run_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (t) => ({
     frequencyIdx: index("backup_schedules_frequency_idx").on(t.frequency),
+    nextRunAtIdx: index("backup_schedules_next_run_at_idx").on(t.nextRunAt),
   })
 );
 

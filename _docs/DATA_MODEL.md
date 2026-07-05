@@ -431,6 +431,42 @@ Migration: `0064_analytics_traffic_tables` (+ `meta/0064_snapshot.json`,
 `meta/_journal.json` idx-64 version-7). Deleting a session cascades to its
 pageviews so retention pruning removes both without FK violations.
 
+## Backups
+
+`backups`
+- id (uuid, pk)
+- status (string: queued|running|complete|failed, default queued)
+- kind (string: manual|scheduled, default manual)
+- storage_driver (string: local|s3|azure, default local)
+- artifact_path (text, nullable) — local path or remote public URL; redacted to
+  `"local"` for clients when local
+- artifact_key (text, nullable) — **server-internal** remote object key used for
+  remote artifact deletion; never returned to clients (redacted to `null`)
+- size_bytes (integer, nullable)
+- error (text, nullable) — sanitized machine-readable error only
+- created_at
+- finished_at (nullable)
+
+`backup_schedules` (singleton)
+- id (uuid, pk)
+- enabled (bool, default true)
+- frequency (string: daily|weekly|monthly, default daily)
+- retention_days (integer, default 30)
+- storage_driver (string: local|s3|azure, default local)
+- next_run_at (timestamp, nullable) — scheduler-managed; when `enabled` and
+  `next_run_at <= now` the schedule is due
+- last_run_at (timestamp, nullable) — set after each scheduled run
+- created_at
+- updated_at
+
+Scheduler / retention lifecycle: when a schedule is `enabled` and due, the
+in-process scheduler runs `createBackup({ kind: "scheduled" })`, advances
+`next_run_at` (recomputed from `frequency`) and sets `last_run_at`, then prunes
+expired terminal backups older than `retention_days`. Remote (`s3`/`azure`)
+artifacts store the public URL in `artifact_path` and the object key in
+`artifact_key`; restore reads + strict-parses the `version: 1` artifact and
+restores metadata + settings transactionally (never media file bytes).
+
 ## Optional (v1.1+)
 
 `form_submissions`
@@ -461,3 +497,7 @@ pageviews so retention pruning removes both without FK violations.
 - analytics_pageviews.created_at
 - analytics_pageviews.path
 - analytics_pageviews.session_id
+- backups.status
+- backups.created_at
+- backup_schedules.frequency
+- backup_schedules.next_run_at

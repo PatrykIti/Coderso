@@ -6,9 +6,9 @@
 **Category:** `backups` / `domain-service`
 **Estimated Effort:** Small
 **Dependencies:** TASK-484-01-L01 (columns + type fields must exist).
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -60,7 +60,19 @@ export function computeNextRunAt(frequency: BackupFrequency, from: Date): Date {
   switch (frequency) {
     case "daily":   next.setUTCDate(next.getUTCDate() + 1); break;
     case "weekly":  next.setUTCDate(next.getUTCDate() + 7); break;
-    case "monthly": next.setUTCMonth(next.getUTCMonth() + 1); break; // JS clamps month rollover
+    case "monthly": {
+      // CAUTION: JS Date OVERFLOWS on month rollover (Jan 31 + setUTCMonth(+1)
+      // yields Mar 2/3) — it does NOT clamp. Clamp explicitly to the last day
+      // of the target month so Jan 31 -> Feb 28/29.
+      const day = next.getUTCDate();
+      next.setUTCDate(1);                                   // avoid overflow while switching month
+      next.setUTCMonth(next.getUTCMonth() + 1);
+      const daysInTarget = new Date(
+        Date.UTC(next.getUTCFullYear(), next.getUTCMonth() + 1, 0)
+      ).getUTCDate();                                       // day 0 of month+1 = last day of target month
+      next.setUTCDate(Math.min(day, daysInTarget));
+      break;
+    }
   }
   next.setUTCHours(RUN_HOUR_UTC, 0, 0, 0);
   // ensure strictly in the future relative to `from` (handles same-day anchor)
@@ -117,19 +129,51 @@ export async function markScheduleRun(scheduleId: string, runAt: Date): Promise<
 **Error handling:** `backup_schedule_not_found` → add to `mapBackupError`
 (`backupRoutes.ts` 76-101) as a 404 for completeness; existing codes unchanged.
 
-**Regression-test shape (Bun):** `computeNextRunAt` daily/weekly/monthly deltas +
-Jan-31→Feb clamp + same-day anchor pushes to tomorrow; `getBackupSchedule` seeds a
-future `nextRunAt`; `setBackupSchedule` nulls `nextRunAt` when disabling and
-recomputes when re-enabling or changing frequency, but preserves it on an
-unrelated change (e.g. `retentionDays`); `markScheduleRun` sets `lastRunAt` and
-advances `nextRunAt`.
+**Regression-test shape (two lanes):** **Vitest**
+(`tests/vitest/backups/computeNextRunAt.test.ts` — pure, no `Bun.*`, no DB):
+`computeNextRunAt` daily/weekly/monthly deltas +
+Jan-31→Feb clamp (incl. leap year) + same-day anchor pushes to tomorrow.
+**Bun** (`tests/unit/backups`, DB-backed):
+`getBackupSchedule` seeds a future `nextRunAt`; `setBackupSchedule` nulls
+`nextRunAt` when disabling and recomputes when re-enabling or changing
+frequency, but preserves it on an unrelated change (e.g. `retentionDays`);
+`markScheduleRun` sets `lastRunAt` and advances `nextRunAt`.
+
+**Shared remote test DB contract (mandatory):** the test DB is ONE remote
+Postgres (`DATABASE_URL` in `.env`) shared by parallel streams 482/483/484 and
+the owner. `getBackupSchedule`/`setBackupSchedule` operate on a **singleton**
+`backup_schedules` row (`backupService.ts` 413-433 selects `limit(1)` and
+seeds if empty; 435-460 updates that one row), so the wiring tests above mutate
+state visible to everyone. Therefore:
+
+- Before any mutation, read and capture the current schedule row's exact values
+  (`enabled`, `frequency`, `retentionDays`, `storageDriver`, `nextRunAt`,
+  `lastRunAt`).
+- Restore those exact prior values in `afterEach`/`afterAll` — including
+  `nextRunAt`/`lastRunAt` after `markScheduleRun` tests — never leaving the
+  schedule disabled or re-frequencied.
+- Never truncate or delete `backup_schedules` or `backups` rows the test did
+  not create (the existing `backupService.test.ts` cleanup pattern —
+  `afterEach` + `inArray` on self-created ids — is the model for any `backups`
+  rows).
 
 ---
 
 ## Testing Requirements
 
-Bun lane. Load env: `set -a && source .env && set +a`.
+Two lanes, per `_docs/TESTING_STRATEGY.md` and the parent TASK-484 Testing
+Requirements: the pure `computeNextRunAt` cases (no `Bun.*`, no DB) live in the
+**Vitest** lane (`tests/vitest/backups/computeNextRunAt.test.ts`, run via
+`bun run test:vitest`); the DB-backed wiring cases
+(seed/recompute/`markScheduleRun`) are **Bun** by strategy. Load env:
+`set -a && source .env && set +a`.
 
 - `bun --cwd core lint` / `bun --cwd core lint:types`
-- `bun test tests/unit/backups` — all calculator + wiring cases above; existing
+- `bun run test:vitest` — `tests/vitest/backups/computeNextRunAt.test.ts`
+  (all calculator cases above).
+- `bun test tests/unit/backups` — all wiring cases above; existing
   schedule tests stay green.
+- Wiring tests MUST honour the shared remote test DB contract above: capture
+  the singleton `backup_schedules` row's prior values before mutation and
+  restore them exactly in `afterEach`/`afterAll`; no truncation/bulk deletion;
+  only self-created `backups` rows are cleaned up.

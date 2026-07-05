@@ -7,9 +7,9 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-484-01 (schedule access). Reuses `deleteBackup`
 (`backupService.ts` 399-411). Called by the TASK-484-02 worker.
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -91,9 +91,27 @@ now)` → select expired terminal rows → `deleteBackup` per row → result sum
 bad row never blocks retention (worker resilience).
 
 **Regression-test shape (Bun):** seed rows at varying `createdAt`/`status`; assert
-only terminal rows older than the cutoff are deleted; `running`/`queued` survive
-regardless of age; in-window rows survive; result counts match; invalid
+per seeded id that only terminal rows older than the cutoff are deleted;
+`running`/`queued` survive regardless of age; in-window rows survive; all
+seeded-expired ids appear in `prunedIds` (per-id membership, never table-global
+counts — see Shared-DB isolation below); invalid
 `retentionDays` rejected without deleting anything.
+
+**Shared-DB isolation (MANDATORY):** the test runs against the ONE shared remote
+Postgres (render.com, `.env` `DATABASE_URL`) used by the owner and parallel
+streams, and `pruneExpiredBackups` is a table-wide sweep — so the test MUST scope
+the cutoff so only its own fixture rows are eligible. Concretely: pass an ancient
+`now` (e.g. `new Date("2000-01-01")`) so `cutoff = now - retentionDays` predates
+all real data, and seed fixture rows with `createdAt` older than that ancient
+cutoff (and in-window controls just after it). Assertions must be **per seeded
+id** (membership of seeded ids in `prunedIds` / survival of specific seeded rows)
+— never table-global counts (`prunedCount` may only be compared against the
+seeded-eligible set, e.g. asserting all seeded-expired ids are included, not that
+it equals the seeded count). Track every seeded id in a `createdIds` list and
+delete any fixture rows the prune did not remove in `afterEach` (follow the
+established per-id cleanup pattern in
+`tests/unit/backups/backupService.test.ts:30-39`). The test must never delete or
+assert on rows it did not create.
 
 ---
 
@@ -102,4 +120,6 @@ regardless of age; in-window rows survive; result counts match; invalid
 Bun lane (DB). Load env: `set -a && source .env && set +a`.
 
 - `bun --cwd core lint` / `bun --cwd core lint:types`
-- `bun test tests/unit/backups` — the cases above.
+- `bun test tests/unit/backups` — the cases above, under the mandatory shared-DB
+  isolation pattern (ancient `now`, per-id assertions, per-id `afterEach` cleanup
+  of leftover fixture rows).

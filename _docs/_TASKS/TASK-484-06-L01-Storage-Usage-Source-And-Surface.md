@@ -7,9 +7,9 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-484-01 (`backups.size_bytes` already exists; storage driver
 label from `getStorageSettings()`). Aggregates rows produced by 02/03/05.
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -101,11 +101,25 @@ router.get("/backups/usage", requirePermission("backups:read"), async () =>
 **Error handling:** none domain-specific; DB errors propagate to the generic
 handler. No new `mapBackupError` code needed.
 
-**Regression-test shape (Bun):** seed rows with mixed `size_bytes` (incl. null)
-and drivers; assert `totalBytes`, `backupCount`, `byStatus`, `byDriver` sums;
-`overQuota` true when `BACKUP_MAX_TOTAL_BYTES` < total, false/`quotaBytes: null`
-when unset; route requires `backups:read` and returns the shape with no secret
-fields.
+**Regression-test shape (Bun):** `getBackupStorageUsage()` aggregates the
+**entire** `backups` table, and the tests run against the **shared remote test
+DB** (render.com Postgres from `.env`, used concurrently by TASK-482/483 and
+the owner) — so assert **deltas, never absolute sums**:
+
+- capture `before = await getBackupStorageUsage()`, seed uniquely-scoped
+  fixture rows with mixed `size_bytes` (incl. null) and drivers, then assert
+  `after.totalBytes - before.totalBytes`, `after.backupCount -
+  before.backupCount`, and the per-`byStatus` / per-`byDriver` count/bytes
+  **increases** match exactly the seeded rows;
+- track created ids and clean up **only rows this test created** in
+  `afterEach` — reuse the existing `createdIds` + `deleteBackup` (with
+  `db.delete(backups).where(inArray(...))` fallback) pattern from
+  `tests/unit/backups/backupService.test.ts`; **never truncate or bulk-delete
+  the shared `backups` table**;
+- for `overQuota`: derive the threshold from the observed live total (e.g. set
+  `BACKUP_MAX_TOTAL_BYTES` to `after.totalBytes - 1` → `true`; unset →
+  `false` / `quotaBytes: null`), restoring the env var afterwards;
+- route requires `backups:read` and returns the shape with no secret fields.
 
 ---
 
@@ -114,6 +128,8 @@ fields.
 Bun lane (service + route). Load env: `set -a && source .env && set +a`.
 
 - `bun --cwd core lint` / `bun --cwd core lint:types`
-- `bun test tests/unit/backups` — usage aggregation + quota flag.
+- `bun test tests/unit/backups` — usage aggregation + quota flag (delta-based
+  assertions, uniquely-scoped fixtures, scoped cleanup — see regression-test
+  shape above).
 - `bun test tests/integration/routes/backups.test.ts` — `GET /backups/usage`
   registration, `backups:read` gate, shape, no-secret assertion.

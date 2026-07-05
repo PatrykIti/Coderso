@@ -372,9 +372,16 @@ export async function deleteBackup(id: string) {
 }
 
 export async function restoreBackup(id: string) {
+  // The route hardens restore behind an explicit confirmation (restoreBackupSchema
+  // requires `confirm: true`); the body MUST carry it or the request fails
+  // validation with a 400 before any restore runs.
   const restored = await apiRequest<BackupItem>(
     `/backups/${id}/restore`,
-    { method: "POST" },
+    {
+      method: "POST",
+      body: JSON.stringify({ confirm: true }),
+      headers: { "Content-Type": "application/json" },
+    },
     { withCsrf: true }
   );
   if (restored) invalidateBackupListCaches();
