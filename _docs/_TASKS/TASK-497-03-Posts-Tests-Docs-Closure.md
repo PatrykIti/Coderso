@@ -6,14 +6,8 @@
 **Category:** Admin UI / Visual Refresh / Content (Posts) / QA / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-497-01 (Posts list restyle), TASK-497-02 (Post editor restyle + `EditorRail` port), TASK-479 (redesign tokens shipped), TASK-479-09 (Posts screen migrated to redesign tokens — Done 2026-06-29), TASK-496 (shared editor-chrome precedent — Done, changelog 1205)
-**Status:** 🚧 In Progress (REOPENED — its dependency TASK-497-02 was re-scoped to prototype
-parity after the owner rejected the first editor pass; per AGENTS.md "if any task/test/validation-
-contract file changes after the pass, that pass is obsolete", this closure leaf cannot be Done
-ahead of the re-scoped 497-02. Its editor Restyle-Assertions + suite partition + changelog below
-are rewritten to the re-scoped editor: in-page `PageHeader` above a framed `rounded-2xl …
-shadow-card` card, a unified Blocks-default three-tab rail with Outline + List relocated to
-sibling tabs. The first-pass "single chrome strip / Outline-default / mutually-exclusive rail"
-guidance is REMOVED — it re-asserted the dropped ~~D4~~/~~B6~~.)
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 
 ---
 

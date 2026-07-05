@@ -5,7 +5,8 @@
 **Category:** Admin UI / Visual Refresh / Content (Posts)
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 (Done — soft/violet redesign tokens + shared primitives shipped: `ui/shared/{PageHeader,StatusTabs,StatusBadge,ListPaginationFooter,DataTable}`, `components/ui/badge` `soft`/`outline` variants). **TASK-479-09 (Posts Screen Migration — Done 2026-06-29)** already moved Posts onto the redesign tokens + shared `PageHeader`/`StatusTabs`/`StatusBadge` (first pass: token migration); **this task is the prototype-parity second pass** (quiet table, single editor chrome strip, EditorRail rail, flat inspector). Same prototype design source-of-truth as TASK-495/TASK-496. **Independent of** TASK-496's shared `shared/CanvasEditor.tsx` shell — Posts keeps its own three-pane editor (see D2/D4). Background memories: **[[admin-ui-redesign-prototype]]**, **[[pages-editor-v2-remediation-program]]**, **[[pageeditor-tsx-grep-binary-trap]]**.
-**Status:** 🚧 In Progress (reopened — TASK-497-02 re-scoped to prototype parity; the owner rejected the first editor pass as "the old approach")
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 
 ---
 

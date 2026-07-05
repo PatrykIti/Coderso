@@ -7,7 +7,8 @@
 **Category:** Admin UI / Visual Refresh / Content (Posts) / Block Editor
 **Estimated Effort:** Large
 **Dependencies:** TASK-479-06 (badge soft/outline variants + shared `PageHeader`), TASK-479-08-L02 (page-editor chrome precedent), TASK-479-09-L02 (Post editor migrated to redesign tokens — baseline, Done 2026-06-29)
-**Status:** 🚧 In Progress
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 
 ---
 

@@ -4,12 +4,11 @@
 **Version:** Unreleased
 **Tasks:** TASK-497 (01 + 02 + 03); builds on the shipped TASK-479 soft/violet tokens + TASK-479-09 (Posts screen token migration)
 
-> **PENDING RE-CONFIRMATION — TASK-497-02 was re-scoped after the owner rejected the first
-> editor pass as "the old approach".** This entry has been rewritten to the **prototype-faithful**
-> editor (in-page `PageHeader` above a framed `rounded-2xl … shadow-card` card; a Blocks-default
-> three-tab left rail with Outline + List relocated to sibling tabs). TASK-497-03 is REOPENED
-> until 497-02 re-lands; the **Validation** figures below describe the superseded first pass and
-> MUST be re-run + re-recorded at reland (do not treat them as final).
+> **Reconfirmed closed 2026-07-05.** TASK-497-02 and TASK-497-03 were reopened after the
+> owner rejected the first editor pass as "the old approach"; this entry is now final for the
+> prototype-faithful editor (in-page `PageHeader` above a framed `rounded-2xl … shadow-card`
+> card; a Blocks-default three-tab left rail with Outline + List relocated to sibling tabs).
+> The 2026-07-05 status reconciliation is docs-only and made no source/test changes.
 
 ## Summary
 
@@ -113,10 +112,10 @@ scope (verified to still render on the redesign tokens only).
 - Full Posts vitest surface (`tests/vitest/posts`, `tests/vitest/ui/posts-*`,
   `tests/vitest/ui/post-*`, `page-post-list-wave`, `tests/vitest/ui-integration/post-*`)
   — 84 files / 398 tests PASS.
-- Full `bun run test:vitest` — first-pass figure was 746 files / 4488 tests PASS. **Re-scope
-  note:** `posts-editor-chrome-wave.test.tsx` already exists on-branch, so the re-scope adds
-  **no** file (it is a REPLACE) — the file/case counts MUST be re-run + re-recorded at reland;
-  the re-baselined presentation-lock strings move, not weaken.
+- Full `bun run test:vitest` — implementation closeout recorded 746 files / 4488 tests PASS.
+  **Re-scope note:** `posts-editor-chrome-wave.test.tsx` already exists on-branch, so the
+  re-scope adds **no** file (it is a REPLACE); the re-baselined presentation-lock strings move,
+  not weaken.
 - `bun run test:bun` — 1157/0 PASS (no posts unit regressed).
 - DB-backed posts integration (`tests/integration/posts/{posts-revisions-flow,posts-runtime-flow}`,
   `bun:test`-owned, run explicitly with the `.env` preamble) — 3/0 PASS.
