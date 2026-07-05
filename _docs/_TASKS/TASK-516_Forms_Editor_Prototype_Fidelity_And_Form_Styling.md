@@ -114,7 +114,8 @@ is authoritative for structure.)
 
 ## Schema-extension plan (JSON model — NO DDL)
 
-`forms.settings` is a `jsonb` column (`schema.ts:1224`) already carrying
+`forms.settings` is a `jsonb` column (`schema.ts:1241`; the `forms` pgTable
+starts at `schema.ts:1230`) already carrying
 `layoutMode`, `saveProgress`, `stepTitles`, `preset`, `automationRetry`
 (`formSettings.ts`). We extend the same normalized `FormSettings` model with a
 new **`theme`** sub-record (present-only, defaulted). `normalizeFormSettings` is a
@@ -151,27 +152,27 @@ FormSettings.theme?: {
     borderColor?: string;
     borderWidth?: "none" | "sm" | "md";
     radius?: "none" | "sm" | "md" | "lg" | "xl";
-    padding?: "sm" | "md" | "lg";
-    shadow?: "none" | "sm" | "md" | "lg";
+    padding?: "sm" | "md" | "lg" | "xl"; // 516-01 authoritative set (516-01:87,157,191); adds "xl"
+    shadow?: "none" | "soft" | "sm" | "md" | "lg"; // 516-01 authoritative set (516-01:87,159,190); "soft" is the resolver DEFAULT (prototype Card shadow-soft), so the allowlist MUST accept it or the mandatory round-trip test (516-01:208) rejects shadow:"soft"
   };
   typography?: {
     titleSize?: "sm" | "md" | "lg" | "xl";
-    titleWeight?: "medium" | "semibold" | "bold";
+    titleWeight?: "normal" | "medium" | "semibold" | "bold"; // 516-01 authoritative set (516-01:87,163); the widget FormEmbedStyle.titleWeight is narrower (medium|semibold|bold) so 516-06 clamps "normal"→"medium" on the public embed
     titleColor?: string;
     labelColor?: string;
     helperColor?: string;
-    fontFamily?: "inherit" | "sans" | "serif" | "mono";
+    fontFamily?: "display" | "inherit" | "sans" | "serif" | "mono"; // "display" = resolver DEFAULT (prototype font-display, 516-01:133); type/enum + every token→class map MUST include it
   };
   input?: {
     size?: "sm" | "md" | "lg";
-    radius?: "none" | "sm" | "md" | "lg";
+    radius?: "none" | "sm" | "md" | "lg" | "xl"; // 516-01 authoritative: shared FormThemeRadius (516-01:194); adds "xl". Default "lg" (Input rounded-xl), NOT "md" — the round-trip test (516-01:208) asserts input.radius:"xl" persists
     borderColor?: string;
     background?: string;
   };
   submit?: {
     background?: string;
     textColor?: string;
-    radius?: "none" | "sm" | "md" | "lg";
+    radius?: "none" | "sm" | "md" | "lg" | "xl"; // 516-01 authoritative: shared FormThemeRadius (516-01:194); adds "xl". Default "lg" (Button rounded-xl); round-trip test (516-01:208) asserts submit.radius:"xl" persists
     fullWidth?: boolean;
     label?: string;                  // whole-form submit label override
   };
@@ -204,7 +205,7 @@ FormSettings.theme?: {
 | 516-03 | Builder chrome + rail fidelity + wiring | `core/admin/ui/forms/FormBuilderPage.tsx`, `FieldLibrary.tsx`, `FieldListPanel.tsx` | 516-01, 516-02, **516-04** (FormCanvas `deviceWidth`/`theme` prop signature must exist before FormBuilderPage passes them) |
 | 516-04 | Canvas fidelity + field-preview fixes (B2/B3/B5) + theme apply | `core/admin/ui/forms/FormCanvas.tsx` | 516-01 |
 | 516-05 | Field settings control fixes (B1 wiring/B4/B5/B6) | `core/admin/ui/forms/FieldSettingsPanel.tsx`, `core/services/forms/fieldSettings.ts` | 516-01 |
-| 516-06 | Runtime theme application (preview + public inherit) | `core/admin/ui/forms/FormRuntimePreviewDialog.tsx`, `core/widgets/core/formEmbed.tsx` | 516-01, 516-04 |
+| 516-06 | Runtime theme application (preview + public inherit) | `core/admin/ui/forms/FormRuntimePreviewDialog.tsx`, `core/widgets/core/formEmbed.tsx`, **`core/services/pages/pageRendererV2.tsx` (per-region: `mapFormBindingToEmbedData`, `:1329-1361` — present-only `theme` passthrough only; no other 516 subtask touches this file)** | 516-01, 516-04 |
 | 516-07 | `file` field type (optional/heaviest) | `core/services/forms/validation.ts`, `core/services/forms/submissionService.ts`, submission route in `formsRoutes.ts`, **+ additive `file`-case-only edits to `FieldLibrary.tsx`/`FormBuilderPage.tsx` (rail item), `FormCanvas.tsx` (preview), `formEmbed.tsx` (control), `FormRuntimePreviewDialog.tsx` (control)** — see File-case seam below | 516-03, 516-04, 516-05, 516-06 |
 
 **Land order:** 516-01 → 516-02 → **516-04 → 516-03** → 516-05 → 516-06 → 516-07.
@@ -219,7 +220,15 @@ lint:types`). The optional props are a no-op until 516-03 supplies the values.
 - Disjoint single-writer ownership per the table above; no two subtasks edit the
   same file. `validation.ts` is touched **only** by 516-07 (516-04/05 are
   admin-only and align the UI to the *existing* backend behavior — no `validation.ts`
-  change needed for B4/B5). `formEmbed.tsx` primary owner is **516-06**;
+  change needed for B4/B5). The `mapFormBindingToEmbedData` region of
+  `core/services/pages/pageRendererV2.tsx` (`:1329-1361`) is a **per-region
+  single-writer entry owned only by 516-06** (adds the present-only `theme`
+  passthrough — the projection at `:1353-1355` emits a 3-key literal
+  `{ layoutMode, saveProgress, stepTitles }` that DROPS `theme`, so without it
+  `resolved.settings.theme` is `undefined` at runtime and the public embed renders
+  un-themed); no other 516 subtask edits `pageRendererV2.tsx` (516-04 owns
+  `FormCanvas.tsx` only; the 516-07 file-case seam omits it), so there is no
+  double-write. `formEmbed.tsx` primary owner is **516-06**;
   `FieldLibrary.tsx`/`FormBuilderPage.tsx`/`FormCanvas.tsx` primary owners are
   **516-03/516-03/516-04** respectively (516-03 mounts the 516-02 panel).
 - **File-case seam (the single documented multi-writer exception).** Because the
@@ -249,44 +258,53 @@ lint:types`). The optional props are a no-op until 516-03 supplies the values.
 Shared vocabulary (define once, export from `formTheme.ts`):
 
 ```ts
-// formTheme.ts — single source of truth for the theme vocabulary
+// formTheme.ts — ILLUSTRATIVE sketch. The AUTHORITATIVE names/shapes are owned by
+// TASK-516-01 (sole writer of formTheme.ts): the enum sets are exported as `FORM_THEME_*`
+// Sets (e.g. `FORM_THEME_WIDTHS = new Set([...])`, not `THEME_*` `as const` arrays), the
+// theme type is `FormFormTheme`, and `ResolvedFormTheme` is the GROUPED-RAW shape below.
+// Reconcile any drift TO 516-01, never the reverse.
 export const THEME_WIDTHS   = ["sm","md","lg","xl","full"] as const;
 export const THEME_ALIGNS   = ["left","center","right"] as const;
 export const THEME_BTN_ALIGN= ["left","center","right","full"] as const;
 export const THEME_GAPS     = ["sm","md","lg"] as const;
 export const THEME_COLUMNS  = [1, 2] as const;
 export const THEME_BORDER_W = ["none","sm","md"] as const;
-export const THEME_RADII    = ["none","sm","md","lg","xl"] as const;   // surface
-export const THEME_INPUT_RAD= ["none","sm","md","lg"] as const;        // input/submit
-export const THEME_PADS     = ["sm","md","lg"] as const;
-export const THEME_SHADOWS  = ["none","sm","md","lg"] as const;
+export const THEME_RADII    = ["none","sm","md","lg","xl"] as const;   // surface AND input/submit (shared FormThemeRadius, 516-01:194)
+export const THEME_PADS     = ["sm","md","lg","xl"] as const;          // == 516-01:87,191 (authoritative; adds "xl")
+export const THEME_SHADOWS  = ["none","soft","sm","md","lg"] as const; // == 516-01:87,159,190 (authoritative; adds "soft", the resolver default)
 export const THEME_TITLE_SZ = ["sm","md","lg","xl"] as const;
-export const THEME_TITLE_WT = ["medium","semibold","bold"] as const;
-export const THEME_FONTS    = ["inherit","sans","serif","mono"] as const;
+export const THEME_TITLE_WT = ["normal","medium","semibold","bold"] as const; // == 516-01:87,163 (authoritative; adds "normal")
+export const THEME_FONTS    = ["display","inherit","sans","serif","mono"] as const; // == 516-01:87,164 (authoritative; MUST include "display", the resolver default = prototype font-display)
 export const THEME_INPUT_SZ = ["sm","md","lg"] as const;
 
-export type FormTheme = { /* the shape in the Schema-extension plan block */ };
+export type FormFormTheme = { /* the shape in the Schema-extension plan block */ }; // 516-01 name
 
 // token -> Tailwind class maps (only these classes may reach the DOM):
 const widthClass:  Record<(typeof THEME_WIDTHS)[number], string> = {
-  sm:"max-w-sm", md:"max-w-md", lg:"max-w-lg", xl:"max-w-xl", full:"max-w-full" };
+  sm:"max-w-md", md:"max-w-lg" /* prototype default :103 */, lg:"max-w-2xl", xl:"max-w-3xl", full:"max-w-none" };  // == 516-01:138 (authoritative)
 // …radiusClass / padClass / shadowClass / gapClass / titleSizeClass /
 //   titleWeightClass / fontFamilyClass / inputSizeClass / borderWidthClass…
 
+// AUTHORITATIVE shape = TASK-516-01 (lines 116-122): `resolveFormTheme` returns
+// GROUPED-RAW effective tokens (fully-defaulted concrete enum values per group), NOT
+// className/style. This is what FormDesignPanel's ControlDefaultHint reads
+// (`resolved.layout.width` → "md"). The token→className / token→style maps +
+// `buildFormThemeStyleVars` (colors) are a SEPARATE concern (owned by 516-01) and MUST
+// NOT be folded into this return shape. (An earlier className/style-shaped sketch here
+// broke 516-02's hint contract — see 516-02 §"Cross-subtask reconcile".)
 export type ResolvedFormTheme = {
-  // fully-defaulted, DOM-ready: className strings + policy-checked color values
-  container: { className: string; align: (typeof THEME_ALIGNS)[number] };
-  surface:   { className: string; style: CSSProperties };   // colors already policy-checked
-  typography:{ titleClassName: string; titleColor?: string; labelColor?: string; helperColor?: string; fontClassName: string };
-  input:     { className: string; style: CSSProperties };
-  submit:    { className: string; style: CSSProperties; fullWidth: boolean; label?: string };
-  columns: 1 | 2;
+  layout:     { width: FormThemeWidth; align: FormThemeAlign; columns: 1|2; fieldGap: FormThemeGap; buttonAlignment: FormThemeButtonAlign /* left|center|right|full — keeps parent's "full"; NOT FormThemeAlign (516-01:131,195) */ };
+  surface:    { card: boolean; padding: FormThemePadding; radius: FormThemeRadius; shadow: FormThemeShadow; borderWidth: FormThemeBorderWidth /* none|sm|md — RESTORED per 516-01:132,192; default "sm" = Card's 1px border */; background?: string; borderColor?: string };
+  typography: { fontFamily: FormThemeFontFamily; titleSize: FormThemeTitleSize; titleWeight: FormThemeTitleWeight; titleColor?: string; labelColor?: string; helperColor?: string };
+  input:      { size: FormThemeInputSize; radius: FormThemeRadius; background?: string; borderColor?: string; textColor?: string };
+  submit:     { fullWidth: boolean; radius: FormThemeRadius; label?: string; background?: string; textColor?: string };
 };
 
-// Pure, Bun-free. Never returns a raw enum straight to the DOM; maps to classes.
-// Colors run through resolveClearableCssColorValue (see Security Contract) HERE too
-// (defence in depth) so the resolver output is always render-safe.
-export function resolveFormTheme(theme: FormTheme | undefined): ResolvedFormTheme;
+// Pure, Bun-free. Enum/bool tokens are always concrete; optional COLOR tokens stay
+// undefined by default. Token→class maps (formThemeWidthClass etc.) + buildFormThemeStyleVars
+// live alongside in formTheme.ts (516-01). Colors run through resolveClearableCssColorValue
+// (see Security Contract) at the render maps (defence in depth).
+export function resolveFormTheme(theme: FormFormTheme | undefined): ResolvedFormTheme;
 ```
 
 `normalizeFormTheme` (invoked by `normalizeFormSettings`, mirrors the existing
@@ -302,7 +320,7 @@ const toEnum = <T extends string>(v: unknown, allowed: readonly T[]): T | undefi
 const toColor = (v: unknown): string | undefined =>
   resolveClearableCssColorValue(v);      // policy: drop unsafe/invalid -> undefined
 
-function normalizeFormTheme(value: unknown): FormTheme | undefined {
+function normalizeFormTheme(value: unknown): FormFormTheme | undefined {
   if (!isRecord(value)) return undefined;              // absent -> stays absent
   const layout = isRecord(value.layout) ? {
     ...(toEnum(value.layout.width, THEME_WIDTHS)  ? { width: … } : {}),
@@ -328,40 +346,54 @@ key/value). Regression-test shapes (Vitest, Bun-free):
 - reject-unknown: `normalizeFormSettings({ theme: { layout: { width:"sm", bogus:1 }, junk:2 }})` → `theme.layout === { width:"sm" }`, no `junk`/`bogus`.
 - present-only (no theme key): `expect("theme" in normalizeFormSettings(legacyNoThemeSettings)).toBe(false)` — assert the `theme` sub-record is ABSENT when the input has none. Do NOT assert `JSON.stringify(out) === JSON.stringify(input)`: `normalizeFormSettings` is fully-defaulted (`formSettings.ts:82-125`, always re-emits the base keys and returns `getDefaultFormSettings()` for a non-record), so whole-object byte equality fails for any legacy input not already in the exact normalized shape/key-order. (Optionally also assert the base keys are still present and correctly normalized.)
 - clamp/enum: bad enum (`width:"huge"`) and unsafe color (`background:"url(x)"`, `titleColor:"expression(alert(1))"`) → key omitted.
-- resolver token→class: `resolveFormTheme({ layout:{ width:"lg" }}).container.className` includes `max-w-lg`; unset → default class.
+- resolver grouped-raw: `resolveFormTheme({ layout:{ width:"lg" }}).layout.width === "lg"`; unset group/key → default token (`.layout.width === "md"`). Token→class is tested separately on the maps (`formThemeWidthClass["lg"] === "max-w-2xl"`, per 516-01:138), NOT via a `.container.className` on the resolver return.
 
 ### 516-02 — Design inspector panel (`FormDesignPanel.tsx` NEW)
 
 ```tsx
 type FormDesignPanelProps = {
-  theme: FormTheme | undefined;                 // current persisted theme (may be undefined)
-  onChange: (next: FormTheme | undefined) => void; // parent persists via PATCH settings
+  theme: FormFormTheme | undefined;             // current persisted theme (may be undefined)
+  // GROUP-LEVEL REPLACE partial (authoritative shape = TASK-516-02): each emitted group
+  // fully replaces theme[group]; `{ [group]: undefined }` clears a group; `undefined` = reset whole theme.
+  onThemeChange: (updates: Partial<FormFormTheme> | undefined) => void; // parent persists via PATCH settings
   disabled?: boolean;
 };
 // Renders grouped sections (Layout / Surface / Typography / Inputs / Submit) using
 // the SAME clearable-style color-swatch controls the widget editors use
 // (resolveClearableCssColorValue-backed). Every control shows the resolved default
 // (from resolveFormTheme(undefined)) as its placeholder/hint and has a reset-to-default
-// affordance. onChange emits a present-only FormTheme (unset control -> key absent, i.e.
-// `undefined`), never writes enum strings the resolver can't map. When the panel clears
+// affordance. onThemeChange emits a present-only group-level Partial<FormFormTheme> (unset
+// control -> key absent, i.e. `undefined`), never writes enum strings the resolver can't map. When the panel clears
 // the last token it emits `undefined` (drops the whole theme) so normalizeFormSettings
 // emits no `theme` key (preserves the present-only / theme-absence invariant).
 ```
 Test shape (Vitest admin/UI): render with `theme=undefined` → controls show
-resolved-default hints; change width → `onChange` called with `{ layout:{ width } }`
+resolved-default hints; change width → `onThemeChange` called with `{ layout:{ width } }`
 only; reset → key removed.
 
 ### 516-03 — builder chrome + rail (`FormBuilderPage.tsx`, `FieldLibrary.tsx`, `FieldListPanel.tsx`)
 
 ```tsx
 // Replace <EditorShell> with <PageHeader …/> + <EditorFrame …/>.
-<PageHeader breadcrumb={["Forms", form.name]} title={form.name}
+// NOTE: PageHeader takes `breadcrumbs?: Crumb[]` where Crumb = { label; href? }
+// (plural prop, objects with `href` — NOT a singular `breadcrumb` string[], and
+// NOT the prototype's `to`; PageHeader.tsx:15,28). Getting the prop name/shape
+// wrong fails the typecheck gate.
+<PageHeader
+  breadcrumbs={[{ label: "Forms", href: "/admin/forms" }, { label: form.name }]}
+  title={form.name}
   description="Drag fields onto the canvas and configure them on the right."
   actions={<><Button variant="ghost" onClick={save}>Save</Button>
              <Button onClick={publish}>Publish</Button></>} />
+// NOTE: the admin EditorFrame renders `{title}{toolbar}` in the LEFT chrome group
+// and `{actions}` in the RIGHT group (EditorFrame.tsx:43-46) — the OPPOSITE
+// mapping from the prototype `EditorPreviewFrame`, whose `toolbar` renders in the
+// RIGHT group next to undo/redo/device. In the prototype the status badge +
+// undo/redo + device toggle are all RIGHT-aligned, so in the admin frame they go
+// in `actions`, NOT `toolbar`. Leave `toolbar` empty (or a left sub-title only).
 <EditorFrame
   title="Form builder"
-  toolbar={<>
+  actions={<>
     <StatusBadge>{form.name} · {form.status}</StatusBadge>
     <UndoRedoControls history={history}/>       {/* see undo/redo scope */}
     <DeviceToggle value={deviceWidth} onChange={setDeviceWidth}/>  {/* host-wired */}
@@ -369,12 +401,33 @@ only; reset → key removed.
   left={<FieldLibrary items={fieldLibraryItems} onAdd={addField}/>}   // EditorRailGroup/Item
   canvas={<FormCanvas fields={fields} theme={theme} deviceWidth={deviceWidth} …/>}
   right={<InspectorTabs tabs={["Settings","Design","Automation"]}>
-           {/* Design tab mounts <FormDesignPanel theme onChange/> */}
+           {/* Design tab mounts <FormDesignPanel theme onThemeChange/> */}
          </InspectorTabs>} />
 ```
 `FieldLibrary` uses `EditorRailGroup`/`EditorRailItem` (icon + label), NOT a flat
 list. `deviceWidth` local state (`"desktop" | "mobile"`) drives the canvas frame
 width; passed to `FormCanvas` via the optional prop added in 516-04 (land order).
+
+**`FieldListPanel.tsx` fate (sole-writer edit, explicit).** The current left rail
+is a **two-tab split** — `Fields` (`FieldListPanel`, the list of already-added
+fields with selection/reorder — `FormBuilderPage.tsx:743-758,886-911`) and
+`Library` (`FieldLibrary`). The prototype has **NO such split**: a **single**
+`Fields` rail (which is the LIBRARY — `EditorRailGroup` at
+`FormBuilderPreview.tsx:60-74`) on the left, and field **selection moves to
+canvas-click** (the selected field is highlighted on the canvas card via
+`ring-2 ring-primary`, `FormBuilderPreview.tsx:117`). So 516-03: (a) **removes the
+left Tabs split** and mounts `FieldLibrary` alone as `EditorFrame.left`; (b)
+**repurposes `FieldListPanel`** into the canvas selection + reorder path — field
+SELECTION is driven by canvas-click (`FormCanvas` `onSelectField`, selected field
+gets the prototype's `ring-2 ring-primary` highlight), and the existing
+reorder/remove controls `FieldListPanel` owns move onto the canvas cards (drag
+handle / remove-on-hover). `FieldListPanel.tsx` is therefore **not deleted** — its
+list-management logic is retained but is no longer a left-rail tab; it becomes the
+canvas-side selection/reorder model (or is fully folded into `FormCanvas`'s
+selection state if the reorder affordance is realized entirely canvas-side, in
+which case the sole-writer edit reduces `FieldListPanel.tsx` to its exported
+`FormFieldListItem` type + reorder helper). Net: after 516-03 there is exactly ONE
+left rail (the library) and no `Fields`/`Library` tab pair, matching the prototype.
 
 **Undo/redo SCOPE decision (explicit).** The prototype's Undo/Redo buttons are
 **decorative** (page marked "Preview only"; the admin `EditorFrame` does not
@@ -393,7 +446,7 @@ history, it is a separate subtask with a history-stack contract — not folded i
 
 ```tsx
 // Extend props (these land BEFORE 516-03 wires them — see Land order):
-type FormCanvasProps = { …existing; theme?: FormTheme; deviceWidth?: "desktop"|"mobile"; };
+type FormCanvasProps = { …existing; theme?: FormFormTheme; deviceWidth?: "desktop"|"mobile"; };
 // Apply resolveFormTheme(theme) to the canvas card + fields; deviceWidth sets frame max-width.
 // FieldPreview: ADD a real `select` branch (fixes B2 — currently kind:"select" at
 // :204-206 falls through to text Input :120-129) rendering a real <select> with the
@@ -520,16 +573,23 @@ validated as a **media reference**, not a free path:
 - **Vitest, Bun-free pure** (`tests/vitest/forms/*`): `formSettings.ts` theme
   normalize/reject-unknown/clamp/round-trip/present-only-no-theme-key (516-01);
   `formTheme.ts` token→class resolution (516-01); `fieldSettings.ts` option
-  lists (516-05).
+  lists (516-05); `formRuntimeResolver` returns `theme` through the resolution and
+  omits it when unset (`tests/vitest/forms/formRuntimeResolver.test.ts`, 516-06 —
+  imports `{ afterEach, expect, test, vi }` from `"vitest"` + `vi.doMock`, no DB /
+  `Bun.serve`, so it is a Bun-free Vitest lane, NOT a Bun runtime/DB lane).
 - **Vitest admin/UI** (`tests/vitest/admin/*`): `formsClient.ts` theme
   round-trip (516-01); component render assertions for `FormDesignPanel`,
   `FormCanvas` select/type previews, `FieldSettingsPanel` field-type control
   gating (516-02/04/05).
 - **Bun runtime/route/DB** (`tests/integration/routes/forms.test.ts`,
-  `tests/unit/forms/*`, `tests/unit/server/publicFormsApi.test.ts`): PATCH
-  settings persists `theme` and rejects unknown theme keys (516-01);
-  `formRuntimeResolver` returns `theme` through the resolution
-  (`tests/vitest/forms/formRuntimeResolver.test.ts`, 516-06); file field
+  `tests/unit/forms/*`, `tests/unit/server/publicFormsApi.test.ts`): the MANDATORY
+  theme-persistence round-trip (write `theme` → read back equal + present-only
+  no-theme-key assertion) lives in `tests/unit/forms/formsService.test.ts` (516-01)
+  — the Bun DB lane that actually persists rows (`import { db }`,
+  `db.delete(forms)`, mirroring the existing `layoutMode` round-trip); keep
+  `tests/integration/routes/forms.test.ts` for mock-only route-wiring / schema-shape
+  assertions (it imports only from `"bun:test"` with NO `db` import, so it CANNOT
+  create/persist rows and must NOT hold the persistence assertion). File field
   submission validation (516-07). **Shared-DB safety:** integration tests create
   and clean up their own form rows (unique slug per test); never assume seed
   data; the local Postgres is a resettable test DB.
@@ -554,6 +614,28 @@ validated as a **media reference**, not a free path:
 - Maximum flexibility: every theme token is optional, resettable to the resolved
   default, and independently overridable; per-field style still overrides the
   form default (columns/width precedence documented in 516-04).
+
+## Open Questions
+
+- **Live admin side-by-side was blocked (verification caveat).** The bot-protection
+  captcha / rate-limit on the admin login route (`:5173`) blocked a live admin
+  side-by-side capture under load, so the current-side gap analysis (G1–G4, B1–B6)
+  is grounded in **source** (`core/admin/ui/forms/*`, services, routes, schema),
+  which is authoritative for what exists today; the **prototype** side is grounded
+  in prototype SOURCE + a live prototype screenshot
+  (`_docs/_workflows/_smoke/wf516-proto-builder.png`, `http://localhost:5180/#/advanced/forms/sample`,
+  no auth). RESOLUTION: implementers should re-confirm the current-side chrome by
+  running the local admin (`coderso-dev-core-host`, admin at
+  `http://coderso-a.localhost:5173/admin/`) once login is reachable; no contract
+  claim depends on the blocked admin screenshot.
+- **516-07 file field is scoped to REFERENCE existing media, not add a table.**
+  Decision: the `file` field validates its submitted value as a **media reference**
+  that resolves to an existing, owned media row (see Security Contract §516-07),
+  rather than introducing a new uploads table / DDL. Rationale: keeps TASK-516
+  DDL-free (consistent with the jsonb-only theme model), reuses the existing media
+  ownership/authorization path, and avoids a schema migration in an already-Large
+  task. A dedicated per-form file-upload store (with its own table + retention
+  policy) is an explicit follow-up, not folded into 516-07.
 
 ## Definition of done
 

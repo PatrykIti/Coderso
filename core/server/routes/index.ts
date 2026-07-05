@@ -101,7 +101,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });
-  registerDashboardRoutes(router, { requirePermission: deps.requirePermission });
+  registerDashboardRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
   registerBackupRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,

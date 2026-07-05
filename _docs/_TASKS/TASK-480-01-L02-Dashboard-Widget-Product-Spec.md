@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Product spec
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-01-L01 (audit informs which data sources already exist)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-01
 
 ---

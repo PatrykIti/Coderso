@@ -88,9 +88,11 @@ render SectionCard WITHOUT the `<Progress>` + footer (count-only description). N
 matches proto MediaLibraryPage.tsx:80-96 exactly and is less code than a bespoke bar.
 
 ### MediaFolderRail.tsx (NEW) — replaces the static type-only rail with real folders + types
-Props: `{ folders:MediaFolder[]; folderTree; typeCounts; activeFolderId:string|null;
-activeType:MediaFilter; onSelectType; onSelectFolder; onCreateFolder; onRenameFolder;
-onDeleteFolder; onReorder }`. Render (proto rail tokens, MediaLibraryPage.tsx:104-108: `flex
+Props: `{ folders:MediaFolder[]; folderTree; typeCounts; folderCounts:Record<string,number>;
+activeFolderId:string|null; activeType:MediaFilter; onSelectType; onSelectFolder; onCreateFolder;
+onRenameFolder; onDeleteFolder; onReorder }`. `folderCounts` is a `folderId → count` map (recursive,
+incl. descendants) supplied by the page (512-06, via `countMediaByFolder`); the rail does NOT compute
+it. Render (proto rail tokens, MediaLibraryPage.tsx:104-108: `flex
 items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition-colors`, active
 `bg-primary-soft font-medium text-primary-soft-foreground`, inactive `text-muted-foreground
 hover:bg-muted hover:text-foreground`). NOTE: current admin rail (`MediaLibraryPage.tsx:594`) uses
@@ -98,7 +100,8 @@ hover:bg-muted hover:text-foreground`). NOTE: current admin rail (`MediaLibraryP
 to the `bg-primary-soft`/`text-primary-soft-foreground` tokens above. TWO sections — (1) type
 filters (All/Images/Videos/
 Documents/Audio, existing `folderDefs` + counts), (2) a "Folders" section listing user folders as
-a nestable tree (indent by depth) with per-folder count, a "+ New folder" affordance, inline
+a nestable tree (indent by depth) with per-folder count from `folderCounts[folder.id]` (trailing
+`tabular-nums`, `0` when absent), a "+ New folder" affordance, inline
 rename, delete (confirm), and drag-or-buttons reorder. Selecting a folder sets `activeFolderId`
 (type filter → "all"); selecting a type clears `activeFolderId`. Keep it responsive (`flex-row
 flex-wrap lg:flex-col` like current).
@@ -145,9 +148,25 @@ Props: `{ tags:string[]; folders:MediaFolder[]; value:MediaFilterState; onChange
   `(types.length===0 || types.includes(item.type))` AND `(tags.length===0 || tags.every(t=>item.tags?.includes(t)))`
   (all selected tags required — AND within tags for precise narrowing) AND
   `(folderId===null || item.folderId===folderId)` AND
-  `(alt==="any" || (alt==="missing") === hasMissingImageAlt(item))` (reuse 512-04's
-  `hasMissingImageAlt` from `utils.ts`; `"has"` ⇒ image with alt present) AND
-  `(!dateFrom || item.createdAt>=dateFrom)` AND `(!dateTo || item.createdAt<=dateTo)`.
+  `(alt==="any" || (alt==="missing" ? hasMissingImageAlt(item) : (item.type==="image" && !hasMissingImageAlt(item))))`
+  (reuse 512-04's `hasMissingImageAlt` from `utils.ts` = `item.type==="image" && !item.alt?.trim()`).
+  The alt facet is **image-only**: `"missing"` ⇒ image with no alt text; `"has"` ⇒ image with alt
+  present. Non-image items (document/audio/video) have no alt concept and therefore NEVER satisfy
+  `"has"` or `"missing"` — they are excluded whenever `alt!=="any"`. (Do NOT collapse this to
+  `(alt==="missing")===hasMissingImageAlt(item)`: because `hasMissingImageAlt` is `false` for every
+  non-image, that equality would wrongly surface all non-images under `"has"`.) AND
+  `(!dateFrom || item.createdAt.slice(0,10) >= dateFrom)` AND `(!dateTo || item.createdAt.slice(0,10) <= dateTo)`.
+  **Date-facet semantics (inclusive both bounds — compare DATE portion, not the raw timestamp):**
+  `item.createdAt` is a full ISO datetime string (populated from the DB `media.created_at`
+  `timestamp` column via `toMediaItem` in `utils.ts:66/75`; `types.ts:11 createdAt:string`), whereas
+  `dateFrom`/`dateTo` are bare `<input type="date">` values (`"YYYY-MM-DD"`, contract lines 121-122).
+  A raw lexical compare (`item.createdAt <= dateTo`) is a bug: `"2026-07-05T14:00:00Z" > "2026-07-05"`,
+  so an asset created on the selected end day (any time after 00:00) fails `<= dateTo` and is wrongly
+  dropped (exclusive upper bound). Therefore compare only the date portion via
+  `item.createdAt.slice(0,10)` (equivalently `< nextDay(dateTo)`), giving an **inclusive** upper
+  bound so items created anytime on `dateTo` pass. 512-06's filter test MUST assert this: an item
+  with `createdAt="2026-07-05T14:00:00Z"` passes when `dateTo="2026-07-05"` (and when
+  `dateFrom="2026-07-05"`), guarding the inclusive-boundary regression.
 - **Reset affordance:** a "Clear all" / "Reset" button (disabled when
   `countActiveFilters(value)===0`) calls `onReset` → page sets `EMPTY_MEDIA_FILTER`. Panel also shows
   the active-facet count inline. Presentational only; no network calls.
@@ -189,8 +208,42 @@ at `right-2 top-2` (`MediaCard.tsx:82-86`), missing-alt marker at `right-2 botto
     are mutually exclusive states — `selected && !selectionMode` — so they never co-occupy).
   - **bottom-right** = missing-alt marker (unchanged corner); if a focal/tone chip is also placed
     bottom-right, stack them in one `flex gap` container so they don't overlap.
-For images with a focal point, apply `object-position` from `resolveFocalPosition`. Props additive
-only (`MediaPicker` back-compat).
+**Tone-chip per-`MediaKind` color map (prototype-faithful — do NOT invent colors):** the proto
+hard-codes tone classes per kind (`_docs/_PROTOTYPE/src/pages/media/MediaLibraryPage.tsx:30-36`
+`KINDS`, applied at line 142 `item.tone`); the live screen shows distinct violet/blue/amber/green
+chips. MediaCard MUST derive the tone class from `item.type` (`MediaKind`) via this exact table (no
+new tokens):
+```ts
+// tone class for the bottom-right size-5 chip, by MediaKind
+const KIND_TONE: Record<MediaKind, string> = {
+  image:    "bg-primary-soft text-primary-soft-foreground", // proto "Image" → violet
+  video:    "bg-info-soft text-info",                        // proto "Video" → blue
+  document: "bg-warning-soft text-warning",                  // proto "Doc"   → amber
+  audio:    "bg-success-soft text-success",                  // proto "Audio" → green
+};
+```
+Apply on the `inline-flex size-5 rounded-md [&_svg]:size-3` chip. For images with a focal point,
+apply `object-position` from `resolveFocalPosition`. Props additive only (`MediaPicker` back-compat).
+
+**Reconcile the pre-existing tone representation (single-writer duty — this file already ships one).**
+The current card ALREADY carries a second, proto-deviating tone representation that MUST be retired,
+not left in parallel: `MediaCard.tsx:28-35` defines `typeToneMap: Record<MediaKind,'soft'|'info'|'warning'|'success'>`
+(TASK-479-11-L01) and `MediaCard.tsx:105-111` renders a COLORED footer type Badge
+`<Badge variant={typeToneMap[item.type]} className="text-[10px] capitalize">{item.type}</Badge>`
+next to `formatBytes(item.sizeBytes)` + `item.originalName`. The prototype footer (proto lines 137-147)
+shows ONLY `{size}` + the bottom-right tone chip — there is NO colored type-text badge in the footer —
+and the top-left badge is neutral `variant="outline"` (proto line 131), with tone living solely on the
+bottom-right chip. Therefore:
+  - REPLACE the footer colored type Badge (`MediaCard.tsx:107-109`) with the proto footer row = size
+    + the bottom-right `KIND_TONE` tone chip (no colored type-text badge, matching proto 137-147).
+  - RETIRE the `Badge`-variant `typeToneMap` (`MediaCard.tsx:30`): the NEW class-string `KIND_TONE`
+    above is the ONE surviving tone map. The top-left type badge is neutral `variant="outline"`
+    (proto), so it is NOT a `typeToneMap` consumer. After this change exactly one tone source exists
+    (`KIND_TONE` class strings on the chip) — do NOT leave the two parallel maps coexisting.
+  - The `missing-alt` marker stays a distinct concern (moved to its pinned corner per the overlay
+    rules above); only the type-text tone Badge + `typeToneMap` are being removed. Vitest asserts the
+    footer no longer renders a per-type colored text Badge and that the chip carries the `KIND_TONE`
+    class for each `MediaKind`.
 
 ### MediaSettingsDrawer.tsx (extend) — quota config (controlled inputs only)
 Add a "Storage quota" section: `planLabel` input + `totalBytes` input (accept GB, convert to
@@ -215,6 +268,16 @@ existing access-mode control.
 
 ## Testing Requirements
 
+- **Test file placement (align to existing media-* convention; Vitest globs `tests/vitest/**`):**
+  EXTEND in place: `MediaCard` → `tests/vitest/ui/media-card.test.tsx`; `MediaDetailsDrawer` →
+  `tests/vitest/ui/media-details.test.tsx` (verified: this suite imports `MediaDetailsDrawer`;
+  do NOT use `tests/vitest/ui/media-details-panel.test.tsx`, which covers the separate
+  `MediaDetailsPanel`); settings/quota drawer → `tests/vitest/mediaUi/mediaSettingsDrawer.test.tsx`
+  (note: this one lives under `mediaUi/`, not `ui/`). CREATE new files under `tests/vitest/ui/` to
+  match the dominant media-* convention: `tests/vitest/ui/storage-quota-card.test.tsx`,
+  `tests/vitest/ui/tag-input.test.tsx`, `tests/vitest/ui/focal-point-picker.test.tsx`,
+  `tests/vitest/ui/media-folder-rail.test.tsx`, `tests/vitest/ui/media-filter-panel.test.tsx`, and
+  `tests/vitest/ui/media-toolbar.test.tsx`.
 - **Vitest lane (Bun-free, render):** one test per NEW component + extended drawer:
   `StorageQuotaCard` (reused `Progress` receives `value=pct` from used/total — assert the
   `[data-slot=progress-indicator]` transform / value reflects the clamped pct; null-total degrades
@@ -224,9 +287,15 @@ existing access-mode control.
   callbacks), `MediaFilterPanel` (per-facet: toggling a type/tag chip, selecting a folder, flipping
   the alt tri-state, and setting a date each `onChange` a NEW `MediaFilterState` with only that facet
   changed; "Reset" disabled when `countActiveFilters===0` and fires `onReset`; assert
-  `countActiveFilters` returns one per non-empty facet), `MediaToolbar` (Filters button fires
+  `countActiveFilters` returns one per non-empty facet). **Alt-facet regression (must be asserted in
+  512-06's filter test where the predicate lives):** with `alt==="has"`, a non-image item
+  (e.g. a document/audio/video with no alt) must NOT pass, and only an image WITH alt passes; with
+  `alt==="missing"`, only an image lacking alt passes — non-images pass under neither state (guards
+  against the `(alt==="missing")===hasMissingImageAlt(item)` collapse that admits all non-images), `MediaToolbar` (Filters button fires
   `onOpenFilters`; badge shows `activeFilterCount` and hides at `0`), `MediaDetailsDrawer` (new fields present + onSave carries them),
-  `MediaCard` (type badge top-left, tone chip, focal object-position). Assert VISIBLE effect
+  `MediaCard` (type badge top-left, tone chip — assert the resolved `KIND_TONE` class per
+  `MediaKind`: image→`bg-primary-soft`, video→`bg-info-soft`, document→`bg-warning-soft`,
+  audio→`bg-success-soft`; focal object-position). Assert VISIBLE effect
   (computed classes/styles), per owner smoke mandate, not mere presence.
 - **Back-compat test:** `MediaPicker` render still passes with unchanged props.
 - `lint:types` + root `tsc` green.

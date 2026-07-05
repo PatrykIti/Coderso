@@ -17,6 +17,7 @@ test("role permission risk helper flags privileged scopes", () => {
   expect(isHighRiskPermission("api-keys:write")).toBe(true);
   expect(isHighRiskPermission("plugins:manage")).toBe(true);
   expect(isHighRiskPermission("content:read")).toBe(false);
+  expect(isHighRiskPermission("dashboard:write")).toBe(false);
 });
 
 test("role permission risk helper detects high-risk permission sets", () => {

@@ -5,9 +5,9 @@
 **Category:** Admin UI / Dashboard / Configurable Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-480-05-L01 (builder grid + reducer) · TASK-480-04 (widget UI registry) · TASK-480-02 (widget/config schema)
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-05
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-05
 
 ---
@@ -16,7 +16,7 @@
 
 Add the two authoring surfaces that feed the L01 grid: an **"Add widget" catalog**
 (browse the available dashboard widget types from the product spec and insert one)
-and a **per-widget configure panel** built with the **floating-panel pattern**
+and a **per-widget configure panel** built as a **non-modal side panel**
 (title, data source / content type, range, columns, visualization, etc.). The
 configure panel is **schema-driven** — its fields come from each widget type's
 config descriptor in the UI registry — and renders a **live preview** of the
@@ -24,12 +24,12 @@ widget with the draft config before commit.
 
 - **Goal:** From Edit mode the user can (1) open an **Add widget** catalog, pick a
   type, and have a new `DashboardWidgetInstance` inserted into the draft with the
-  type's default config + default size; (2) open a **floating configure panel** for
+  type's default config + default size; (2) open a **non-modal configure side panel** for
   any widget, edit its config through schema-driven controls with a live preview,
   and commit changes into the draft (dirty) — all without leaving the dashboard.
 - **Owning module/service:**
   - `core/admin/ui/dashboard/builder/AddWidgetCatalog.tsx` (new — catalog dialog/sheet)
-  - `core/admin/ui/dashboard/builder/WidgetConfigPanel.tsx` (new — floating panel)
+  - `core/admin/ui/dashboard/builder/WidgetConfigPanel.tsx` (new — non-modal side panel)
   - `core/admin/ui/dashboard/builder/widgetConfigForm.tsx` (new — schema → controls renderer)
 - **Source-of-truth docs:**
   - Product/widget spec: `_docs/DASHBOARD_WIDGETS_SPEC.md` (catalog entries, config
@@ -41,9 +41,9 @@ widget with the draft config before commit.
   - Config schema/types: `core/services/dashboard/dashboardWidgetContract.ts`
     (`DashboardWidgetConfig` discriminated union + `normalizeDashboardWidgetConfig`) — TASK-480-02
   - Widget host for preview: `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`
-  - Floating-panel pattern: `_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx`
-    (pinned popover card, `GripHorizontal` handle, close affordance); shared shell
-    primitives from TASK-479-06 (`Select`, `Input`, `Tabs`, `Switch`, `SectionCard`)
+  - Admin side-panel pattern: shared sheet primitives from TASK-479-06
+    (`Sheet`, `Select`, `Input`, `Tabs`, `Switch`, `SectionCard`) configured
+    as non-modal for dashboard editing so stale overlays cannot block grid controls
   - Content-type / range source options: `core/admin/services/contentTypesClient.ts`
     (`contentTypes:list`) for the data-source selector
 - **Out of scope:** The grid/arrange/resize/Save lifecycle (L01); widget renderer
@@ -153,12 +153,12 @@ function instantiate(e: DashboardWidgetCatalogEntry): DashboardWidgetInstance {
 // onAdd → parent dispatches { type: "addWidget", widget } into the L01 reducer (dirty=true)
 ```
 
-### Floating configure panel (floating-panel pattern + live preview)
+### Configure side panel (non-modal sheet + live preview)
 
 ```tsx
 // core/admin/ui/dashboard/builder/WidgetConfigPanel.tsx
-// Pinned popover card mirroring _docs/_PROTOTYPE CanvasEditor floating panel:
-// GripHorizontal title bar, scrollable body, close button. NOT a full-screen modal.
+// Non-modal side panel using the shared admin Sheet primitive:
+// scrollable body, close/Done action, no blocking backdrop over the grid.
 export function WidgetConfigPanel({ widget, previewState, onClose, onApply }: WidgetConfigPanelProps) {
   const entry = DASHBOARD_WIDGET_CATALOG[widget.type];
   // local draft config so typing doesn't thrash the global reducer; commit on change (debounced) or on "Apply"
@@ -172,24 +172,22 @@ export function WidgetConfigPanel({ widget, previewState, onClose, onApply }: Wi
   useEffect(() => { onApply(config); }, [config, onApply]);
 
   return (
-    <div className="absolute right-4 top-4 z-20 w-[300px] overflow-hidden rounded-2xl border border-border bg-popover shadow-pop">
-      <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-        <GripHorizontal className="size-4 cursor-grab text-muted-foreground/60" />
-        <span className="flex-1 text-xs font-semibold">{entry.label} settings</span>
-        <button type="button" aria-label="Close settings" onClick={onClose}>{/* X */}</button>
-      </div>
-      <div className="max-h-[58vh] space-y-3 overflow-y-auto p-3">
-        {/* LIVE PREVIEW with the draft config */}
-        <div className="rounded-xl border border-dashed border-border p-2">
+    <Sheet open modal={false}>
+      <SheetContent overlayClassName="pointer-events-none bg-transparent">
+        <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+          <span className="flex-1 text-xs font-semibold">{entry.label} settings</span>
+          <button type="button" aria-label="Close settings" onClick={onClose}>{/* X */}</button>
+        </div>
+        <div className="max-h-[58vh] space-y-3 overflow-y-auto p-3">
+          {/* LIVE PREVIEW with the draft config */}
           <DashboardWidgetHost
             widget={{ ...widget, config }}
             state={previewState ?? { status: "loading" }}
           />
+          <WidgetConfigForm fields={entry.configFields} config={config} onChange={setField} />
         </div>
-        {/* SCHEMA-DRIVEN CONTROLS */}
-        <WidgetConfigForm fields={entry.configFields} config={config} onChange={setField} />
-      </div>
-    </div>
+      </SheetContent>
+    </Sheet>
   );
 }
 ```

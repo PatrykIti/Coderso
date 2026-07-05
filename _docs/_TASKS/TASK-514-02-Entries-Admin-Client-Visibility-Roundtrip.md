@@ -87,23 +87,34 @@ path.
    fields update via the returned `EntryDetail`. Verify the mem+local cache
    round-trip keeps `visibility`/`hasPassword` (they are part of `EntrySummary`).
 
-5. **Present-only guard — and why a client default cannot cover the all-entries
-   list.** Because `visibility`/`hasPassword` are declared **required** on
+5. **Present-only guard — and why a client default cannot cover ANY list-load
+   path.** Because `visibility`/`hasPassword` are declared **required** on
    `EntrySummary` (`:14-28`), they propagate to `EntryListItem`
    (`EntryListItem = EntrySummary & {...}`, `:37-39`) and `EntryDetail` (`:52-54`).
    For that type to be TRUE at runtime, **all three** server read projections
-   (see "Hard dependency" below) must physically select + map both fields. A
-   client-side defensive default in `toEntrySummary` would NOT protect the
-   all-entries list: `listAllEntriesCached` (`:270-281`) primes the cache via
-   `primeAllEntriesCacheInternal(items)` (`:279`), which writes the **raw** server
-   `EntryListItem[]` straight into mem + localStorage (`:138-142`) WITHOUT passing
-   through `toEntrySummary`. So if `listEntriesWithContentTypes` omits the fields,
-   all-entries rows carry `visibility/hasPassword === undefined` at runtime while
-   the type claims they exist (a type lie the 514-05 badge reads off list rows).
-   Conclusion: server coverage of the third selection is **mandatory** — do NOT
-   rely on a client default. Per-type list rows and detail rows DO flow through
-   `toEntrySummary`, so a default there could soften those two paths only; we keep
-   the type honest and add **no** client default (server is the single source).
+   (see "Hard dependency" above) must physically select + map both fields. A
+   client-side defensive default in `toEntrySummary` would NOT protect either
+   list-load path, because **both list loaders prime the cache with RAW server
+   rows, bypassing `toEntrySummary` entirely**:
+   - `listAllEntriesCached` (`:270-281`): `const items = await request;
+     primeAllEntriesCacheInternal(items)` (`:279`) writes the **raw** server
+     `EntryListItem[]` straight into mem + localStorage (`:138-142`).
+   - `listEntriesCached` (`:253-268`): `const items = await request;
+     primeEntriesCacheInternal(typeSlug, items)` (`:266`) writes the **raw** server
+     `EntrySummary[]` straight into mem + localStorage (`:135`) — the identical raw
+     pattern as the all-entries path.
+
+   `toEntrySummary` (`:98-112`) is applied ONLY inside `upsertCachedEntry`
+   (`:152-166`) — i.e. on **single-entry** paths: `getEntryCached`'s network branch
+   (`:302`), `createEntry`, `updateEntry`, `updateEntryMetadata`, `duplicateEntry`
+   — plus the cached-list→detail fallback via `toEntryDetail(match)` (`:299`). So a
+   default in `toEntrySummary` would soften only single-entry mutations/detail
+   reads, NOT either bulk list load. If `listEntriesWithContentTypes` (or
+   `entryListSelection`) omits the fields, list rows carry
+   `visibility/hasPassword === undefined` at runtime while the type claims they
+   exist (a type lie the 514-05 badge reads off list rows). Conclusion: physical
+   server coverage of all three selections is **mandatory** — the server is the
+   single source; we keep the type honest and add **no** client default.
 
 ---
 

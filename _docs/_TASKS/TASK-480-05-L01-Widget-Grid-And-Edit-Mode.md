@@ -5,9 +5,9 @@
 **Category:** Admin UI / Dashboard / Configurable Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-480-03 (cached layout client) · TASK-480-04 (`DashboardWidgetHost`, widget UI registry)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-05
 
 ---

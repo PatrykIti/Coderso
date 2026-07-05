@@ -6,9 +6,9 @@
 **Category:** Admin / Dashboard / Domain Contract
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-05
+**Completed:** 2026-07-05
 
 ---
 

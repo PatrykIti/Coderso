@@ -68,13 +68,45 @@ export type RoleCapabilities = ContentTypePermissionCapabilities;
 export type PermissionsMatrix = NonNullable<ContentTypeConfig["permissions"]>;
 
 // Roles come from the roles list (see data source below). Normalize keeps only true caps,
-// drops empty role rows — mirrors the server normalizer so the UI never sends droppable data.
-export function normalizePermissionsMatrix(input: PermissionsMatrix): PermissionsMatrix { ... }
+// drops empty role rows — mirrors the server normalizer (513-01 §2 CAP_KEYS loop) so the UI
+// never sends droppable data. Pure, Bun/db-free; iterate roles, keep caps whose value===true.
+export function normalizePermissionsMatrix(input: PermissionsMatrix): PermissionsMatrix {
+  const out: PermissionsMatrix = {};
+  for (const role of Object.keys(input ?? {})) {
+    const caps = input[role];
+    if (!caps || typeof caps !== "object") continue;      // skip malformed role rows
+    const kept: RoleCapabilities = {};
+    for (const cap of CAPABILITIES) {                      // fixed allowlist, no unknown caps
+      if (caps[cap] === true) kept[cap] = true;            // keep only true caps (drop false/undefined)
+    }
+    if (Object.keys(kept).length > 0) out[role] = kept;    // drop empty role rows
+  }
+  return out;
+}
 // Resolve effective caps for a role given the matrix (missing role ⇒ {} = inherit/none).
-export function resolveRoleCapabilities(matrix: PermissionsMatrix | undefined, role: string): RoleCapabilities { ... }
-// Toggle helper: pure, returns next matrix with role[cap] set/cleared (clears role if empty).
-export function toggleCapability(matrix, role, cap, next): PermissionsMatrix { ... }
+// Returns a NEW object so callers never mutate stored config; empty for unknown/undefined.
+export function resolveRoleCapabilities(matrix: PermissionsMatrix | undefined, role: string): RoleCapabilities {
+  return { ...(matrix?.[role] ?? {}) };
+}
+// Toggle helper: pure, returns a NEXT matrix (shallow-cloned) with role[cap] set/cleared.
+// Setting next=false deletes the cap; if the role row becomes empty its key is removed too,
+// so the emitted matrix is already normalize-clean (identical to normalizePermissionsMatrix output).
+export function toggleCapability(
+  matrix: PermissionsMatrix | undefined,
+  role: string,
+  cap: Capability,
+  next: boolean,
+): PermissionsMatrix {
+  const out: PermissionsMatrix = { ...(matrix ?? {}) };
+  const caps: RoleCapabilities = { ...(out[role] ?? {}) };
+  if (next) caps[cap] = true; else delete caps[cap];       // set true / clear the cap
+  if (Object.keys(caps).length > 0) out[role] = caps;      // keep role with ≥1 true cap
+  else delete out[role];                                    // clearing last cap removes the row
+  return out;
+}
 ```
+`CAPABILITIES` is the single 5-entry allowlist shared with the render (Security Contract); no helper
+ever writes a cap key outside it, so the emitted matrix always passes the server normalizer.
 
 ### 2. `ContentTypePermissionsPanel.tsx`
 Props: `{ permissions: PermissionsMatrix | undefined; onChange: (next: PermissionsMatrix) => void;
@@ -115,16 +147,110 @@ disabled?: boolean }`.
   reset-to-default idiom used elsewhere (e.g. menu controls).
 - Empty/loading/error states for the roles fetch.
 
+**Render skeleton (execution-ready):**
+```tsx
+import { useEffect, useState } from "react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";           // matrix idiom (roles/PermissionsMatrix.tsx)
+import { Card } from "@/components/ui/card";                   // Type-settings visual token
+import { Button } from "@/components/ui/button";
+import { listAdminRoles, type AdminRole } from "@/services/adminRolesClient";
+import { CAPABILITIES, type Capability, toggleCapability, resolveRoleCapabilities,
+  type PermissionsMatrix } from "./contentTypePermissions";
+
+const CAP_LABELS: Record<Capability, string> = {
+  read: "Read", create: "Create", update: "Update", delete: "Delete", publish: "Publish",
+};
+
+export function ContentTypePermissionsPanel({ permissions, onChange, disabled }: {
+  permissions: PermissionsMatrix | undefined;
+  onChange: (next: PermissionsMatrix) => void;
+  disabled?: boolean;
+}) {
+  const [roles, setRoles] = useState<AdminRole[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    listAdminRoles()
+      .then((r) => { if (live) { setRoles(r); setError(null); } })
+      .catch(() => { if (live) { setRoles([]); setError("roles_load_failed"); } });
+    return () => { live = false; };
+  }, []);
+
+  if (roles === null) return <LoadingState />;                 // fetch pending
+  if (error) return <ErrorState onRetry={/* re-run effect */} />; // do NOT synthesize roles
+  if (roles.length === 0) return <EmptyState message="No roles yet." />;
+
+  return (
+    <Card>
+      <p className="text-sm text-muted-foreground">
+        Configure which roles can act on entries of this content type. Unset = inherit the global
+        role permission.
+      </p>
+      <div className="flex justify-end">
+        <Button variant="ghost" disabled={disabled} onClick={() => onChange({})}>
+          Reset to defaults
+        </Button>
+      </div>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Role</TableHead>
+            {CAPABILITIES.map((cap) => <TableHead key={cap}>{CAP_LABELS[cap]}</TableHead>)}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {roles.map((role) => {                                // key = role.id (stable; state in closure)
+            const caps = resolveRoleCapabilities(permissions, role.id);
+            return (
+              <TableRow key={role.id}>
+                <TableCell>{role.name}</TableCell>
+                {CAPABILITIES.map((cap) => (
+                  <TableCell key={cap}>
+                    <Checkbox
+                      checked={caps[cap] === true}
+                      disabled={disabled}
+                      onCheckedChange={(next) =>
+                        onChange(toggleCapability(permissions, role.id, cap, next === true))}
+                    />
+                  </TableCell>
+                ))}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
+  );
+}
+```
+Notes: matrix key is `role.id` (stable — restate in closure); every emit goes through
+`toggleCapability`/`{}` so `onChange` always receives normalize-clean data; the render NEVER
+iterates a cap set other than `CAPABILITIES` (Security Contract allowlist). `LoadingState`/
+`ErrorState`/`EmptyState` are small inline blocks reusing existing muted-text/skeleton tokens.
+
 ---
 
 ## Testing requirements (lanes + shared-DB safety)
 
-**Vitest pure lane**: `normalizePermissionsMatrix` (drops false caps, drops empty rows),
-`toggleCapability` (set/clear round-trip, clearing last cap removes the role), `resolveRoleCapabilities`.
+**Vitest pure lane** (no DB/Bun import — mirrors 513-01's pure lane):
+- `normalizePermissionsMatrix`: `{editor:{read:true,create:false}}` ⇒ `{editor:{read:true}}` (drops
+  false caps); `{viewer:{}}` and `{viewer:{delete:false}}` ⇒ `{}` (drops empty rows); malformed
+  `{editor:null}` row is skipped; output contains no cap key outside `CAPABILITIES`.
+- `toggleCapability`: `toggle({}, "editor", "read", true)` ⇒ `{editor:{read:true}}`; toggling the
+  same cap `false` ⇒ `{}` (clearing last cap removes the role); set/clear round-trip returns to the
+  original; input matrix is NOT mutated (returns a new object); role with a remaining cap survives.
+- `resolveRoleCapabilities`: missing role ⇒ `{}`; `undefined` matrix ⇒ `{}`; present role ⇒ a copy
+  (mutating the result does not mutate the source matrix).
 
-**Vitest admin/UI lane** (`tests/vitest/ui/**`): panel renders a switch grid for a stubbed role
-list; toggling a cell calls `onChange` with the expected matrix; "Reset to defaults" emits `{}`;
-disabled prop disables all switches. Mock the roles client.
+**Vitest admin/UI lane** (`tests/vitest/ui/**`), roles client mocked to return two stub roles:
+- renders one `TableRow` per role × 5 capability `Checkbox` cells (roles as rows, caps as columns);
+- toggling a cell calls `onChange` exactly once with the expected matrix (e.g. checking Editor→Read
+  emits `{ <editorId>: { read: true } }`);
+- unchecking the role's last cap emits `{}` (row removed);
+- "Reset to defaults" emits `{}`;
+- `disabled` prop disables every `Checkbox` and the Reset button;
+- roles-fetch rejection renders the error state (NOT a synthetic role list).
 
 **Gates**: `bun --cwd core lint:types` + root `tsc -p tsconfig.json --noEmit`, `lint`.
 

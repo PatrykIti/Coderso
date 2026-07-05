@@ -8,10 +8,9 @@
 **Dependencies:** TASK-480-02 (widget/layout contract + data-source resolvers:
 `DASHBOARD_WIDGET_TYPES`, `normalizeDashboardWidgetConfig`, `resolveWidgetData`),
 TASK-480-03-L01 (layout repository), TASK-480-03-L02 (`mapDashboardError`).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
-
+**Completed:** 2026-07-05
 ---
 
 ## Overview

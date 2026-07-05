@@ -41,7 +41,7 @@ Current implementation (verified fresh 2026-07-05):
   `core/services/content/validation.ts` (ajv `assertContentSchema` + `x*` keywords).
 - Client: `core/admin/services/contentTypesClient.ts` (`ContentTypeSummary`, cache upsert/
   invalidate, `cacheKeys.contentType*`).
-- DB: `core/db/schema.ts:667-675` — `content_types(id, name, slug, schema jsonb, status,
+- DB: `core/db/schema.ts:684-692` — `content_types(id, name, slug, schema jsonb, status,
   createdAt, updatedAt)`. Entry consumer: `core/admin/ui/entries/FieldRenderer.tsx`
   (renders text/richtext/number/boolean/select/media/relation — **no date, no slug**).
 
@@ -138,15 +138,15 @@ Single new column on `content_types` for **maximum flexibility** and one migrati
   byte-unchanged). Unknown top-level or per-role keys are **rejected** (reject-unknown), bad
   scalar values fail-soft (omitted).
 - Migration artifacts (DDL): the **next available** index is computed at LAND time via
-  `bun run db:generate` — `0066_*` ONLY if 513-01 merges before its siblings. **Cross-task
-  ordering (mandatory):** sibling To-Do tasks **TASK-512-01** and **TASK-514-01** ALSO reserve
-  `0066` with the same "last is 0065" reasoning; migration indices are single-valued + sequential,
-  so only ONE of 512/513/514 can be `0066` and the others bump to `0067`/`0068`. Do NOT hard-code
-  `0066` — whichever of 512-01/513-01/514-01 merges first takes `0066`; the rest re-run
-  `db:generate` against the then-current journal (which drizzle-kit picks automatically) and
-  hand-verify the resulting `_journal.json` has a single fresh `idx` with no duplicate. Migration
-  is additive with a default — safe on existing data. (See 513-01 §a for the same note anchored to
-  the subtask.)
+  `bun run db:generate` — **the last landed migration is `0066_dashboard_layouts` (`_journal.json`
+  last `idx: 66`), so the true next-free index is `0067`, NOT `0066`.** **Cross-task ordering
+  (mandatory):** sibling To-Do tasks **TASK-512-01** and **TASK-514-01** ALSO need a fresh index
+  off the same baseline; migration indices are single-valued + sequential, so only ONE of
+  512/513/514 can be `0067` and the others bump to `0068`/`0069`. Do NOT hard-code any index —
+  whichever of 512-01/513-01/514-01 merges first takes `0067`; the rest re-run `db:generate`
+  against the then-current journal (which drizzle-kit picks automatically) and hand-verify the
+  resulting `_journal.json` has a single fresh `idx` with no duplicate. Migration is additive with a
+  default — safe on existing data. (See 513-01 §1 for the same note anchored to the subtask.)
 
 The JSON **field schema** (`content_types.schema`) keeps its existing `x*` extension convention;
 `date`/`slug` are ordinary field types mapped to JSON-Schema `type:"string"` carrying
@@ -165,7 +165,7 @@ before 03 imports it; 03 = editor rebuild consuming 01/02/04; 05 = functional sc
 
 | Subtask | Title | Owns (sole writer) |
 |---|---|---|
-| 513-01 | Content-type `config` schema extension (DB + service + validation + client) | `core/db/schema.ts` (content_types block), `core/db/migrations/<next-idx>_*` (+meta/journal; index computed at land time, see 513-01 §a — NOT hard-coded 0066), `core/services/content/typeService.ts` (server-authoritative `ContentTypeConfig`/`ContentTypePermissionCapabilities` types + `normalizeContentTypeConfig` with INLINED reject-unknown permission normalization — NO separate `contentTypeConfig.ts` module), `core/server/validation/contentSchemas.ts`, `core/admin/services/contentTypesClient.ts` (client MIRROR of the config types + `resolveDraftsEnabled`/`resolveVersioning` helpers + payload) |
+| 513-01 | Content-type `config` schema extension (DB + service + validation + client) | `core/db/schema.ts` (content_types block), `core/db/migrations/<next-idx>_*` (+meta/journal; index computed at land time, see 513-01 §1 — NOT hard-coded; last landed is 0066_dashboard_layouts so next-free is 0067), `core/services/content/contentTypeConfig.ts` (**NEW** db/Bun-free module: `normalizeContentTypeConfig` + `CONFIG_KEYS`/`CAP_KEYS`/`isRecord` + `ContentTypeConfig`/`ContentTypePermissionCapabilities` types), `core/services/content/typeService.ts` (imports the normalizer + re-exports the types from that module; wires create/update/duplicate/list), `core/server/validation/contentSchemas.ts`, `core/admin/services/contentTypesClient.ts` (client MIRROR of the config types + canonical `resolveDraftsEnabled`/`resolveVersioning` helpers + payload) |
 | 513-02 | `date` + `slug` field types (model → mapping → editor → renderer) | `core/admin/ui/content-types/SchemaBuilder.tsx`, `core/admin/ui/content-types/FieldEditor.tsx`, `core/admin/ui/content-types/schemaMapping.ts`, `core/admin/ui/entries/FieldRenderer.tsx` |
 | 513-04 | Permissions tab panel + per-role config helper | `core/admin/ui/content-types/ContentTypePermissionsPanel.tsx` (NEW), `core/admin/ui/content-types/contentTypePermissions.ts` (NEW helper) |
 | 513-03 | Editor prototype-fidelity rebuild + Type settings card + ergonomics | `core/admin/ui/content-types/ContentTypeEditor.tsx`, `core/admin/ui/content-types/ContentTypeFieldsPanel.tsx` (NEW), `core/admin/ui/content-types/ContentTypeSettingsCard.tsx` (NEW) |
@@ -181,20 +181,23 @@ before 03 imports it; 03 = editor rebuild consuming 01/02/04; 05 = functional sc
 - 513-03 imports the panel from 513-04 (`ContentTypePermissionsPanel`) — 04 lands first so the
   file exists. 513-03 adds `"permissions"` to its local `EditorTab` union + `TabsTrigger` + the
   conditional render.
-- **Config/permissions shape + normalizers (TWO mirrored normalizers, NOT one shared module):**
-  the authoritative config + per-role capability shape (`ContentTypeConfig`,
+- **Config/permissions shape + normalizers (authoritative normalizer in a db-free module; UI
+  minimizer separate):** the authoritative config + per-role capability shape (`ContentTypeConfig`,
   `ContentTypePermissionCapabilities`) and the server-authoritative `normalizeContentTypeConfig`
-  (which **INLINES** reject-unknown per-role permission normalization — there is NO separately
-  exported server `normalizePermissionsMatrix`) are OWNED by **513-01** and live in
-  `core/services/content/typeService.ts` (server-only — it imports `db`, so the admin UI must NOT
-  import it). 513-01 MIRRORS the config TYPES + the pure `resolveDraftsEnabled`/`resolveVersioning`
-  helpers into the client-safe `core/admin/services/contentTypesClient.ts`, and the UI imports the
-  shape from there. **513-04 defines its OWN UI-side `normalizePermissionsMatrix` minimizer** (in
+  (which reject-unknown-normalizes per-role permissions in one function — there is NO separately
+  exported `normalizePermissionsMatrix` on the server) are OWNED by **513-01** and live in the
+  **new db/Bun-free module `core/services/content/contentTypeConfig.ts`**. `typeService.ts`
+  (server-only — it imports `db`) imports `normalizeContentTypeConfig` from that module and
+  re-exports the types; the admin UI must NOT import `typeService.ts`. 513-01 MIRRORS the config
+  TYPES + the canonical pure `resolveDraftsEnabled`/`resolveVersioning` helpers into the client-safe
+  `core/admin/services/contentTypesClient.ts`, and the UI imports the shape/helpers from there.
+  **513-04 defines its OWN UI-side `normalizePermissionsMatrix` minimizer** (in
   `contentTypePermissions.ts`) that ALIASES 513-01's client-mirrored types (`RoleCapabilities =
   ContentTypePermissionCapabilities`; `PermissionsMatrix = NonNullable<ContentTypeConfig["permissions"]>`)
-  — it imports NO server module. The server normalizer (reject-unknown, authoritative) and the UI
-  normalizer (minimizer — never sends droppable data) are intentionally mirrored and covered by
-  shared test vectors. There is NO shared `contentTypeConfig.ts` module.
+  — it imports NO server module. The server normalizer (reject-unknown, authoritative, in the pure
+  module) and the UI normalizer (minimizer — never sends droppable data) are intentionally mirrored
+  and covered by shared test vectors. The pure module lets the Vitest Bun-free lane import
+  `normalizeContentTypeConfig` directly without dragging in `db/client`.
 - Only 513-01 touches backend/DB/client; 03/04/05 are admin-UI only. No subtask edits
   `contentEntryRoutes.ts` (permission ENFORCEMENT is an Open Question / follow-up).
 
@@ -222,11 +225,13 @@ Migration artifacts: `bun run db:generate` (from repo ROOT — the root `package
 `db:generate`/`db:migrate`; `bun --cwd core db:generate` fails missing-script) produces
 `<idx>_*.sql` (`ALTER TABLE "content_types" ADD COLUMN "config" jsonb DEFAULT '{}'::jsonb NOT
 NULL;`), `meta/<idx>_snapshot.json`, and a new `_journal.json` `idx` entry. NEVER hand-edit the
-snapshot/journal. **Index is NOT hard-coded `0066`:** TASK-512-01 and TASK-514-01 also reserve
-`0066` (all three are To Do); whichever merges first takes `0066` and the others bump to
-`0067`/`0068`. At land time run `db:generate` against the then-current journal (drizzle-kit picks
-the true next index) and hand-verify `_journal.json` gains exactly one fresh sequential `idx` with
-no duplicate before landing. Additive with default → safe on existing rows (they read `{}`).
+snapshot/journal. **Index is NOT hard-coded:** the last landed migration is `0066_dashboard_layouts`
+(`_journal.json` last `idx: 66`), so the next-free index is `0067` — TASK-512-01 and TASK-514-01
+also need a fresh index off this same baseline (all three are To Do); whichever merges first takes
+`0067` and the others bump to `0068`/`0069`. At land time run `db:generate` against the then-current
+journal (drizzle-kit picks the true next index) and hand-verify `_journal.json` gains exactly one
+fresh sequential `idx` with no duplicate before landing. Additive with default → safe on existing
+rows (they read `{}`).
 
 **b. Validation (`core/server/validation/contentSchemas.ts`):** add a shared `config` object
 subschema (still `additionalProperties:false` at every level) to BOTH `contentTypeCreateSchema`
@@ -261,22 +266,26 @@ The JSON-Schema layer rejects unknown top-level keys and unknown per-capability 
 existing 400 envelope; per-role KEYS are open (`additionalProperties: <capabilityObj>`) so any
 role slug is accepted structurally but re-validated in the service.
 
-**c. Config types + server normalizer (`core/services/content/typeService.ts`) — NO separate
-`contentTypeConfig.ts` module:**
+**c. Config types + server normalizer (new db-free module
+`core/services/content/contentTypeConfig.ts`; imported by `typeService.ts`):**
 
 The `ContentTypeConfig` / `ContentTypePermissionCapabilities` types and the server-authoritative
-`normalizeContentTypeConfig` are defined and exported from `typeService.ts` (513-01's owned file).
-`typeService.ts` imports `db` at module top (`import { db } from "../../db/client"` :2), so the
-admin UI must NOT import from it (that would drag drizzle/db into the client bundle). The client
-gets a **mirror** of the config TYPES plus the pure `resolveDraftsEnabled`/`resolveVersioning`
-helpers re-exported from `core/admin/services/contentTypesClient.ts` (§d), which the UI
-(513-03/513-04) imports. There is NO shared `contentTypeConfig.ts` module (that earlier single-
-source plan is dropped): server-side per-role permission normalization is **inlined inside
-`normalizeContentTypeConfig`**, and 513-04 supplies its OWN UI-side `normalizePermissionsMatrix`
-minimizer — the two are intentionally mirrored (server reject-unknown authoritative; UI minimizer)
-and covered by shared test vectors. The authoritative shape (ALIASED, not re-declared, by 513-04):
+`normalizeContentTypeConfig` (plus `CONFIG_KEYS`/`CAP_KEYS`/`isRecord`) are defined and exported
+from the **new db/Bun-free module `core/services/content/contentTypeConfig.ts`**. `typeService.ts`
+imports `db` at module top (`import { db } from "../../db/client"` :2) — which throws when
+`DATABASE_URL` is unset and opens a `postgres` pool at load — so the normalizer is relocated to the
+pure module: both `typeService.ts` (which imports `normalizeContentTypeConfig` + re-exports the
+types) and the **Vitest Bun-free pure lane** import it with NO db pull-in. The admin UI must NOT
+import from `typeService.ts`; the client gets a **mirror** of the config TYPES plus the pure
+`resolveDraftsEnabled`/`resolveVersioning` helpers exported from
+`core/admin/services/contentTypesClient.ts` (§d), which the UI (513-03/513-04) imports. Server-side
+per-role permission normalization is **inlined inside `normalizeContentTypeConfig`** (one function
+in the pure module — no separately exported server `normalizePermissionsMatrix`), and 513-04
+supplies its OWN UI-side `normalizePermissionsMatrix` minimizer — the two are intentionally mirrored
+(server reject-unknown authoritative; UI minimizer) and covered by shared test vectors. The
+authoritative shape (ALIASED, not re-declared, by 513-04):
 ```ts
-// core/services/content/typeService.ts (server) — single authoritative shape
+// core/services/content/contentTypeConfig.ts (db-free) — single authoritative shape
 export type ContentTypePermissionCapabilities = {
   read?: boolean; create?: boolean; update?: boolean; delete?: boolean; publish?: boolean;
 };
@@ -300,13 +309,14 @@ export function normalizeContentTypeConfig(input: unknown): ContentTypeConfig {
   // resolved defaults: draftsEnabled TRUE, versioning FALSE -> omit when at default
   if (src.draftsEnabled === false) out.draftsEnabled = false;
   if (src.versioning === true) out.versioning = true;
-  const perms = normalizePermissions(src.permissions);       // INLINE reject-unknown loop (513-01 §2) — NOT a shared module
+  const perms = normalizePermissions(src.permissions);       // INLINE reject-unknown loop (513-01 §2), same pure module
   if (perms) out.permissions = perms;
   return out;   // no custom config => {} (byte-identical to legacy rows)
 }
 ```
-The inlined server permission normalization (inside `normalizeContentTypeConfig`, NOT a shared
-exported helper) keeps only known capability booleans per role, drops roles with no set
+The inlined server permission normalization (inside `normalizeContentTypeConfig`, in the pure
+`contentTypeConfig.ts` module — not a separately exported helper) keeps only known capability
+booleans per role, drops roles with no set
 capabilities, and REJECTS unknown capability keys by throwing `content_type_config_invalid` (mapped
 to HTTP 400 in the route) — since the ajv layer already blocks unknown capability keys, this is
 defense-in-depth for the service-called-directly path. 513-04's UI-side `normalizePermissionsMatrix`
@@ -314,7 +324,13 @@ mirrors the KEEP/DROP behavior for the client (minimizer, so the UI never sends 
 does NOT reject-unknown (the server is authoritative). Wire into `createContentType` (`out.config =
 normalizeContentTypeConfig(input.config)` before insert) and `updateContentType` (only set
 `config` when `input.config !== undefined`; present-only so an update that omits `config` leaves
-the column untouched).
+the column untouched). **Also edit `duplicateContentType`** (owned file, `typeService.ts`): pass
+`config: (source.config ?? {}) as ContentTypeConfig` into its existing `createContentType({ name,
+slug, schema: source.schema as ContentSchema, status: "draft" })` call — currently it omits
+`config`, so without this step a duplicate would silently reset config to `{}` and the "duplicate
+copies config" regression test (§Testing) would FAIL. `createContentType` re-runs
+`normalizeContentTypeConfig` on it (idempotent — `source.config` is already normalized on write),
+so the copied config round-trips byte-identically.
 
 **d. Client (`core/admin/services/contentTypesClient.ts`):** add `config?: ContentTypeConfig` to
 BOTH `ContentTypeSummary` (:35) and `ContentTypePayload` (:46). The client cannot import from
@@ -337,11 +353,11 @@ metadata.
 **Regression tests:**
 - **Pure config helpers (Vitest Bun-free pure lane):** the client-mirrored `resolveDraftsEnabled` /
   `resolveVersioning` from `contentTypesClient` resolve defaults correctly. The server-authoritative
-  `normalizeContentTypeConfig` lives in `typeService.ts` (imports `db`), so its cases —
+  `normalizeContentTypeConfig` lives in the db-free `contentTypeConfig.ts` module, so its cases —
   empty/`{}`/legacy → `{}`; trims + drops >120-char names; `draftsEnabled:true`/`versioning:false`
   omitted (at default); unknown top-level key rejected; unknown capability key rejected (inlined
-  permission normalization); valid permissions matrix round-trips — run in the **Bun runtime lane**
-  (below), NOT this Bun-free lane.
+  permission normalization); valid permissions matrix round-trips — run **here in the Vitest
+  Bun-free pure lane** (importing the module directly, no `db/client` pull-in).
 - **Route / persistence (Bun runtime lane, own-slug isolate + teardown):** `PATCH` with valid
   `config` persists + returns normalized; `additionalProperties`
   violation → 400; create→get round-trip byte-identical; duplicate copies config; update omitting
@@ -366,18 +382,32 @@ inspector **Unique** toggle (prototype `SchemaBuilderPreview.tsx:139`, rendered 
 existing `xFieldConfig.unique` (no ajv/DB change), and it is declarative-only (not route/DB
 enforced — Open Question 5). Both editors surface it via the shared `FieldEditor`.
 
-**b. Mapping (`schemaMapping.ts`):** in `buildSchemaFromFields` (~:184) add arms so
-`type:"date"` → `{ type:"string", xFieldType:"date" }` and `type:"slug"` →
-`{ type:"string", xFieldType:"slug" }` — **NO `format` keyword on either** (see Security Contract);
-slug/date config persists present-only via `xFieldConfig.slug`/`xFieldConfig.date` (the pinned key
-is `xFieldConfig.slug`, NOT a loose `xFieldConfig.sourceField`). `resolveFieldType`/`fieldsFromSchema`
-(~:387) already round-trip both via the existing top-of-function `xFieldType in fieldTypeMap` check
-(`candidate = String(definition.xFieldType)`) — add NO explicit `xFieldType`/`format` branch (dead
-code; no `format` is ever persisted and these are brand-new types with no legacy `format:"date"`).
+**b. Mapping (`schemaMapping.ts`):** the SINGLE load-bearing edit is adding two keys to the
+`fieldTypeMap` `Record<FieldType, ...>` at `schemaMapping.ts:31` — `date: "string"` and
+`slug: "string"`. (Extending the `FieldType` union at `SchemaBuilder.tsx:142` with `date`/`slug`
+makes TS *require* these two Record entries, so this is enforced, not optional.) That one edit
+carries BOTH directions:
+- **Build** (`buildSchemaFromFields`, ~:184): `definition.xFieldType = field.type` is set
+  unconditionally at :192, and the generic else-branch at :212 does
+  `definition.type = fieldTypeMap[field.type]`, so once `date`/`slug` are in the map a date field
+  serializes to `{ type:"string", xFieldType:"date" }` and slug to `{ type:"string",
+  xFieldType:"slug" }` with **NO `format` keyword** (see Security Contract) — add NO explicit
+  per-type build arm (the else-branch already handles them; an explicit arm would be dead code).
+- **Reverse** (`resolveFieldType`, :309-312 / `fieldsFromSchema`): the existing
+  `if (candidate in fieldTypeMap) return candidate` check (`candidate = String(definition.xFieldType)`)
+  round-trips both back to `date`/`slug` — but ONLY because they are now in `fieldTypeMap`. Add NO
+  explicit `xFieldType`/`format` branch (dead code; no `format` is ever persisted and these are
+  brand-new types with no legacy `format:"date"`).
 
-**c. Editor (`FieldEditor.tsx`):** add a `date` config block (optional min/max ISO date, default =
-"today" token) and a `slug` config block (source-field select + lowercase/max-length hints).
-Reuse existing label/name/required/help controls.
+slug/date config persists present-only via `xFieldConfig.slug`/`xFieldConfig.date` (the pinned key
+is `xFieldConfig.slug`, NOT a loose `xFieldConfig.sourceField`).
+
+**c. Editor (`FieldEditor.tsx`):** add a `date` config block (a `Switch` "Include time" bound to
+`field.date.includeTime`, present-only) and a `slug` config block (a `Select` "Derive from"
+populated from sibling field names → `field.slug.source`, plus a `Switch` "Editable" →
+`field.slug.editable`). Config shapes are `date?: { includeTime?: boolean }` and
+`slug?: { source?: string; editable?: boolean }` per 513-02 §a (the sole writer). Reuse existing
+label/name/required/help controls.
 
 **d. Renderer (`FieldRenderer.tsx`, switch at :220):** add `case "date":` → `<Input type="date">`
 bound to ISO string; `case "slug":` → text `<Input>` with slugify-on-blur (reuse existing
@@ -534,21 +564,25 @@ publish→front parity; (6) dirty-guard + Cmd/Ctrl+S save. Light + dark measured
 prototype `http://localhost:5180/#/advanced/engine/sample`.
 
 **Gates:** `bun --cwd core lint:types` AND root `tsc -p tsconfig.json --noEmit`, `lint`,
-`gates:coderso`, Bun + Vitest lanes green. Closure updates `_TASKS/README.md` + changelog 1225.
+`gates:coderso`, Bun + Vitest lanes green. Closure updates only `TASK-513*` subtask **Status**
+fields; it does NOT edit `_TASKS/README.md` or `_CHANGELOG/*` (orchestrator adds board rows; the
+pinned changelog **1225** is owner/orchestrator-driven).
 
 ---
 
 ## Testing strategy (lanes)
 
-- **Bun runtime lane** (`bun test`, DB/route/service): 513-01 config normalize + reject-unknown +
-  round-trip create/update/duplicate persistence; migration applies on a seeded DB.
+- **Bun runtime lane** (`bun test`, DB/route/service): 513-01 route + create/update/duplicate
+  persistence round-trip (config persists/reads byte-identical, PATCH-omit preserves, duplicate
+  copies), reject-unknown via the route (`content_type_config_invalid` → 400); migration applies on
+  a seeded DB.
 - **Vitest Bun-free pure lane**: 513-02 `schemaMapping` round-trip for `date`/`slug`; 513-04
   `normalizePermissionsMatrix`/`toggleCapability`/`resolveRoleCapabilities` (UI helpers in
-  `contentTypePermissions.ts`, no db); and 513-01's client-mirrored `resolveDraftsEnabled`/
-  `resolveVersioning` from `contentTypesClient`. The server-authoritative `normalizeContentTypeConfig`
-  lives in `typeService.ts` (imports `db`), so its reject-unknown / round-trip cases run in the
-  **Bun runtime lane** (see 513-01), NOT this Bun-free Vitest lane — there is no `contentTypeConfig.ts`
-  module to import.
+  `contentTypePermissions.ts`, no db); 513-01's client-mirrored `resolveDraftsEnabled`/
+  `resolveVersioning` from `contentTypesClient`; and the server-authoritative
+  `normalizeContentTypeConfig` table-driven cases (reject-unknown top-level/cap key, present-only
+  drop-defaults, trims/caps, permissions round-trip) imported directly from the db-free
+  `core/services/content/contentTypeConfig.ts` module (no `db/client` pull-in).
 - **Vitest admin/UI lane** (`tests/vitest/ui/**`): 513-03 editor structure (breadcrumb, tabs incl.
   Permissions, Type settings card bindings, drag reorder, row actions), 513-02 FieldEditor
   date/slug config, 513-05 schema-builder add/edit/save, 513-04 permissions panel toggles.

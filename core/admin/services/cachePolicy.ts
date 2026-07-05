@@ -58,6 +58,8 @@ export const cacheKeys = {
     `analytics:traffic:overview:${rangeDays}`,
   analyticsTopPages: (rangeDays: number | string, limit: number | string) =>
     `analytics:traffic:topPages:${rangeDays}:${limit}`,
+  dashboardLayout: "dashboard:layout",
+  dashboardWidgetData: "dashboard:widgetData",
   backupsList: (page: number | string, limit: number | string, queryKey: string = "all") =>
     `backups:list:${page}:${limit}:${queryKey}`,
   backupSchedule: "backups:schedule",

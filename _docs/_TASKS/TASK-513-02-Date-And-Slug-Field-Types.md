@@ -22,7 +22,17 @@
 - `core/admin/ui/entries/FieldRenderer.tsx` (entry value rendering)
 
 Adds two field types — **`date`** and **`slug`** — end-to-end so the prototype's field list
-(`Published at` = Date, `Slug` = Slug) and the SchemaBuilder rail (Date) are real, not labels.
+(`Published at` = Date, `Slug` = Slug — grounded in
+`_docs/_PROTOTYPE/src/pages/advanced/ContentTypeEditorPreview.tsx:21-30`, `Slug`@:23, `Date`@:28,
+plus the entry-side slug inputs at `advanced/EntryEditorPreview.tsx:42` and
+`content/PostEditorPreview.tsx:86`) and the SchemaBuilder rail (Date @
+`advanced/SchemaBuilderPreview.tsx:110`, dropdown @:131, field node @:158) are real, not labels.
+NB: `SchemaBuilderPreview.tsx` shows Date as a first-class selectable type but does NOT list Slug
+in its rail (:107-114) or type dropdown (:128-135) — Slug appears there only as a read-only field
+TYPE BADGE, and the ContentTypeEditor Fields tab is where the Slug badge lives. Date is a 1:1
+reproduction of a prototype-selectable type; **surfacing `slug` as a selectable type in
+FieldEditor's dropdown (and 513-05's palette) is a deliberate max-config-flexibility EXTENSION**
+beyond the prototype's selector (see §UI/UX-fidelity notes).
 It ALSO adds the prototype inspector's **`Unique`** field flag (a declarative per-field boolean the
 prototype renders directly under `Required` at `SchemaBuilderPreview.tsx:139`), because 513-02 is
 the sole writer of the three files that flag needs (the `ContentField` type in `SchemaBuilder.tsx`,
@@ -161,6 +171,19 @@ export type FieldType =
 - Round-trip invariant: `fieldsFromSchema(buildSchemaFromFields(fields))` preserves type +
   config for date/slug (513-06/unit test).
 
+> **Non-goal — field-ORDER persistence is NOT in 513-02 scope (reconciles the 513-06 §1 CROSS-SUBTASK
+> BLOCKER's deferral target).** The build/read round-trip above preserves each field's *type + config*,
+> NOT the authored *order*. `content_types.schema` is a Postgres `jsonb` column (`core/db/schema.ts:688`)
+> that canonicalizes object keys (length, then bytewise), and `ContentSchema` (schemaMapping.ts:23-31)
+> carries no order array — `fieldsFromSchema` reads `Object.entries(schema.properties)` (~:389). So a
+> Save→reload re-sorts properties into jsonb-canonical order regardless of the authored/reordered
+> sequence (verified empirically in 513-06 §1: `jsonb_build_object('title',1,'publishedAt',2,'urlSlug',3)`
+> reads back `{title, urlSlug, publishedAt}`). Persisting order would require a NEW explicit mechanism —
+> e.g. a top-level `xFieldOrder: string[]` on `ContentSchema` that `buildSchemaFromFields` writes and
+> `fieldsFromSchema` reads to re-sort the `Object.entries` result, PLUS server-normalizer allowlisting in
+> 513-01 — and is a deliberate FUTURE enhancement, NOT delivered by 513-02 as scoped here. Until it lands,
+> the 513-03/513-05 reorder is in-memory/UX only and 513-06 asserts the property-key SET (order-independent).
+
 ### 4. `entries/FieldRenderer.tsx` — render the value input
 Add `case "date":` and `case "slug":` to the field `switch` (currently text/richtext/number/
 boolean/select/media/relation, lines ~221-379):
@@ -222,8 +245,17 @@ tsc fails if a new arm is missing).
 
 ## UI/UX-fidelity & max-config-flexibility notes
 
-Matches the prototype field list (`Slug`, `Published at` Date) and the SchemaBuilder rail's Date
-icon. Flexibility: slug supports free-text OR derive-from-source with an editable override; date
+Matches the prototype field list (`Slug`, `Published at` Date —
+`advanced/ContentTypeEditorPreview.tsx:23`/`:28`) and the SchemaBuilder rail's Date icon
+(`advanced/SchemaBuilderPreview.tsx:110`). **Fidelity nuance (honest):** the SchemaBuilder inspector
+in the prototype offers **Date** as a choosable type (rail :110, dropdown :131) but does NOT offer
+**Slug** — neither the rail (:107-114) nor the type dropdown (:128-135) lists it; Slug appears only
+as an existing field's read-only type badge (in the ContentTypeEditor Fields tab, and as an
+entry-side input at `EntryEditorPreview.tsx:42` / `PostEditorPreview.tsx:86`). So `date` is a 1:1
+reproduction of a prototype-selectable type, while adding `slug` to FieldEditor's dropdown (and
+513-05's palette) is a **deliberate extension** that surfaces Slug as first-class for
+max-config-flexibility — the prototype's badge value is made real as a selectable type.
+Flexibility: slug supports free-text OR derive-from-source with an editable override; date
 supports date OR datetime — all present-only so existing schemas are unchanged. Integrate the new
 config blocks using the SAME card/switch/select styling already used by the number/media blocks
 (no new visual idiom).

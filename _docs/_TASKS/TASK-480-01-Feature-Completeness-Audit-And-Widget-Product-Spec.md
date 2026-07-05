@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Discovery
 **Estimated Effort:** Medium
 **Dependencies:** None (this subtask UNBLOCKS TASK-480-02..06)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Task:** TASK-480
 
 ---
@@ -53,8 +54,8 @@ TASK-480-02/03.
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-480-01-L01 | Admin Screen Completeness Audit (read-only) | ⏳ To Do |
-| TASK-480-01-L02 | Dashboard Widget Product Spec | ⏳ To Do |
+| TASK-480-01-L01 | Admin Screen Completeness Audit (read-only) | ✅ Done |
+| TASK-480-01-L02 | Dashboard Widget Product Spec | ✅ Done |
 
 ---
 

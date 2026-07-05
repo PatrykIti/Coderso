@@ -55,34 +55,83 @@ components (512-05) or clients (512-04). **Land order:** after 512-05, before 51
    (replaces the inline flat Card at 564-579). Null/absent quota → count-only card (no bar).
 2. **Folders:** fetch via `listMediaFoldersCached()` into `folders` state + `subscribeCacheEvents`
    on `cacheKeys.mediaFolders`. Build `folderTree` with `buildFolderTree`. Render
-   `<MediaFolderRail/>` (replaces inline rail): pass folders/tree/typeCounts/activeFolderId/
-   activeType + create/rename/delete/reorder handlers (call `mediaFoldersClient`). Add
-   `activeFolderId` state; selecting a folder filters the grid to that folder **incl.
-   descendants** (see §3 for the inline descendant-membership filter — `countMediaByFolder` is a
-   COUNT helper, used only for rail per-folder counts, NOT for filtering the list); selecting a
-   type clears folder.
+   `<MediaFolderRail/>` (replaces inline rail): pass folders/tree/typeCounts/folderCounts/
+   activeFolderId/activeType + create/rename/delete/reorder handlers (call `mediaFoldersClient`).
+   Build the per-folder map the rail's `folderCounts` prop (512-05) requires — use a DISTINCT
+   identifier to avoid shadowing the EXISTING `folderCounts` (line 220), which is the TYPE-count map
+   (`all`/`image`/… → count) that feeds the `typeCounts` prop: `const folderItemCounts =
+   useMemo(() => Object.fromEntries(folders.map((f) => [f.id, countMediaByFolder(items, f.id)])),
+   [folders, items])` (recursive count incl. descendants), then pass `folderCounts={folderItemCounts}`
+   (and `typeCounts={folderCounts}` — the existing line-220 map). Add `activeFolderId` state; selecting a folder filters the grid to that folder
+   **incl. descendants** (see §3 for the inline descendant-membership filter — `countMediaByFolder`
+   is a COUNT helper, used only to build the rail's per-folder `folderItemCounts`, NOT for filtering the
+   list); selecting a type clears folder.
 3. **Filters panel + folder/tag filter (inline, page-owned):** add `filterPanelOpen` +
-   `mediaFilterState` state; wire `MediaToolbar` `onOpenFilters` → open `<MediaFilterPanel/>`;
-   extend the `filteredItems` memo to also apply folder + tag + alt-status + date filters
-   (compose with existing search/type filter, keep existing search/type behavior).
-
-   **`MediaFilterState` (single writer = 512-05):** the shape is DEFINED AND EXPORTED by 512-05's
-   `MediaFilterPanel.tsx` (512-05 §"MediaFilterPanel.tsx" — "Emits a `MediaFilterState`"); 512-06
-   IMPORTS the type from `@/ui/media/MediaFilterPanel` and holds it in `mediaFilterState` state.
-   Its exact fields (all optional/empty-means-inactive so the memo degrades to today's
-   search+type behavior when the panel has never been opened):
+   `mediaFilterState` state. Wire `MediaToolbar` with BOTH props 512-05 exposes: pass
+   `onOpenFilters={() => setFilterPanelOpen(true)}` AND
+   `activeFilterCount={countActiveFilters(mediaFilterState)}` (import `countActiveFilters` from
+   `@/ui/media/MediaFilterPanel` — see §"MediaFilterState" import block; 512-05's MediaToolbar hides
+   the badge at `0`/undefined and lights it when facets are active, so this consumes 512-05's
+   `activeFilterCount?` contract). 512-05's `<MediaFilterPanel/>` is CONTROLLED with required props
+   `{ tags; folders; value; onChange; onReset }` and does NOT fetch tags itself — the PAGE derives the
+   tag union from the loaded items and supplies every prop (gate the panel's visibility on
+   `filterPanelOpen`):
    ```ts
-   // exported by 512-05 MediaFilterPanel.tsx; imported by 512-06
-   export type MediaFilterState = {
-     types: MediaFilter[];              // extra type facets (empty = no type facet beyond rail `filter`)
-     tags: string[];                    // AND-match tags (empty = no tag facet)
-     folderId: string | null;          // panel-driven folder facet (rail `activeFolderId` is separate; see note)
-     altStatus: "all" | "has" | "missing"; // alt-text facet ("all" = inactive)
-     dateRange: { from: string | null; to: string | null } | null; // ISO createdAt window (null = inactive)
-   };
-   const EMPTY_MEDIA_FILTER: MediaFilterState = { types: [], tags: [], folderId: null, altStatus: "all", dateRange: null };
+   const filterTags = useMemo(
+     () => [...new Set(items.flatMap((i) => i.tags ?? []))].sort(),
+     [items],
+   ); // deduped, sorted union of all item.tags — the panel's tag chip source
+   // rendered when filterPanelOpen (popover/sheet):
+   <MediaFilterPanel
+     tags={filterTags}
+     folders={folders}                               // 512-04 MediaFolder[] (fetched in §2)
+     value={mediaFilterState}
+     onChange={(next) => {
+       setMediaFilterState(next);
+       // reconcile: a panel-selected folder is authoritative-writes-through to the rail's
+       // activeFolderId (the grid's single folder source of truth — the memo filters folders
+       // by activeFolderId ONLY, never by mediaFilterState.folderId, so without this write a
+       // panel folder would be counted by countActiveFilters yet have ZERO grid effect).
+       // Setting a panel folder clears the rail's active TYPE (folder + type are exclusive, per §2).
+       setActiveFolderId(next.folderId);
+       if (next.folderId) setFilter("all"); // clear rail type selection when a folder is chosen
+     }}
+     onReset={() => {
+       setMediaFilterState(EMPTY_MEDIA_FILTER);
+       setActiveFolderId(null); // reset clears the reconciled folder too
+     }}
+   />
    ```
-   `mediaFilterState` seeds from `EMPTY_MEDIA_FILTER`. The rail's `activeFolderId` (§2) and the
+   Then extend the `filteredItems` memo to also apply folder + tag + alt + date filters (compose with
+   existing search/type filter, keep existing search/type behavior).
+
+   **`MediaFilterState` (single writer = 512-05):** the type, `EMPTY_MEDIA_FILTER`, and
+   `countActiveFilters` are DEFINED AND EXPORTED by 512-05's `MediaFilterPanel.tsx`
+   (512-05 §"MediaFilterPanel.tsx"). 512-06 IMPORTS them and holds the value in `mediaFilterState`
+   state — it MUST NOT re-declare the type (a local re-definition is the exact cross-file drift the
+   memory warns about; it would diverge from the single writer and break root `tsc`):
+   ```ts
+   import type { MediaFilterState } from "@/ui/media/MediaFilterPanel";
+   import { EMPTY_MEDIA_FILTER, countActiveFilters } from "@/ui/media/MediaFilterPanel";
+   ```
+   For reference (do NOT copy/redeclare — this is the AUTHORITATIVE 512-05 shape 512-06 codes
+   against; all fields empty-means-inactive so the memo degrades to today's search+type behavior when
+   the panel has never been opened):
+   ```ts
+   // 512-05 MediaFilterPanel.tsx (single writer) — IMPORTED here, never redefined:
+   export type MediaAltFilter = "any" | "has" | "missing";
+   export type MediaFilterState = {
+     types: MediaKind[];        // extra type facets (empty = no type facet beyond rail `filter`)
+     tags: string[];            // AND-match tags (empty = no tag facet)
+     folderId: string | null;   // panel-driven folder facet (rail `activeFolderId` is separate; see note)
+     alt: MediaAltFilter;       // alt-text facet ("any" = inactive)
+     dateFrom: string | null;   // ISO createdAt lower bound (null = open)
+     dateTo: string | null;     // ISO createdAt upper bound (null = open)
+   };
+   // export const EMPTY_MEDIA_FILTER: MediaFilterState =
+   //   { types: [], tags: [], folderId: null, alt: "any", dateFrom: null, dateTo: null };
+   ```
+   `mediaFilterState` seeds from the imported `EMPTY_MEDIA_FILTER`. The rail's `activeFolderId` (§2) and the
    panel's `mediaFilterState.folderId` are reconciled to a single effective folder: rail selection
    is authoritative; when the panel sets a folder it writes `activeFolderId` too (keep one source of
    truth for the grid — do NOT double-filter). The folder filter is DESCENDANT-AWARE and computed
@@ -93,7 +142,11 @@ components (512-05) or clients (512-04). **Land order:** after 512-05, before 51
    `FolderNode` from `core/admin/ui/media/utils.ts` (it currently annotates `buildFolderTree(folders):
    FolderNode[]` but must also `export type FolderNode`); 512-06 IMPORTS it as
    `import type { FolderNode } from "@/ui/media/utils"`. (512-06 cannot declare the export itself —
-   utils.ts is 512-04's single-writer file.)
+   utils.ts is 512-04's single-writer file.) The page also uses `buildFolderTree` (rail tree),
+   `countMediaByFolder` (rail `folderCounts`, above), `filterByTag`, and `hasMissingImageAlt` (all
+   512-04 exports from `utils.ts`) — add them to 512-06's value imports:
+   `import { buildFolderTree, countMediaByFolder, filterByTag, hasMissingImageAlt } from
+   "@/ui/media/utils"` (verified present: `hasMissingImageAlt` at `utils.ts:54`).
    ```ts
    // page-local pure helper (or inline in the filteredItems memo) — self-contained DFS, no external findNode
    function folderDescendantIds(tree: FolderNode[], folderId: string): Set<string> {
@@ -122,11 +175,18 @@ components (512-05) or clients (512-04). **Land order:** after 512-05, before 51
    }
    if (f.types.length)   next = next.filter((i) => f.types.includes(i.type));
    if (f.tags.length)    next = f.tags.reduce((acc, t) => filterByTag(acc, t), next); // filterByTag (512-04), AND-match
-   if (f.altStatus !== "all")
-     next = next.filter((i) => (f.altStatus === "missing") === hasMissingImageAlt(i));
-   if (f.dateRange) next = next.filter((i) =>
-     (!f.dateRange!.from || i.createdAt >= f.dateRange!.from) &&
-     (!f.dateRange!.to   || i.createdAt <= f.dateRange!.to));
+   if (f.alt !== "any")
+     next = next.filter((i) =>
+       f.alt === "missing" ? hasMissingImageAlt(i) : (i.type === "image" && !hasMissingImageAlt(i)),
+     ); // image-only facet: "missing" ⇒ image w/o alt, "has" ⇒ image w/ alt; non-images excluded.
+       // Do NOT collapse to `(f.alt === "missing") === hasMissingImageAlt(i)` — hasMissingImageAlt is
+       // false for every non-image (utils.ts:54 = type==="image" && !alt), so that equality would
+       // wrongly surface all documents/audio/video under "has" (512-05 §Details lines 148-153 forbid it).
+   if (f.dateFrom) next = next.filter((i) => i.createdAt.slice(0, 10) >= f.dateFrom!); // DATE portion (inclusive lower bound)
+   if (f.dateTo)   next = next.filter((i) => i.createdAt.slice(0, 10) <= f.dateTo!);   // DATE portion (inclusive upper bound)
+   // NB: compare the DATE portion, NOT the raw ISO timestamp — createdAt is a full ISO datetime
+   // ("2026-07-05T14:00:00Z") but dateFrom/dateTo are <input type=date> "YYYY-MM-DD"; a raw lexical
+   // compare drops assets created on the selected end day (exclusive upper bound). Per 512-05 §Details.
    return next;
    // memo deps: [items, search, filter, activeFolderId, folderTree, mediaFilterState]
    ```
@@ -171,7 +231,20 @@ components (512-05) or clients (512-04). **Land order:** after 512-05, before 51
   second page suite `tests/vitest/mediaUi/mediaLibrary.test.tsx` also exists — consolidate page-level
   coverage there if appropriate. Add: (a) renders `StorageQuotaCard` with quota (bar) AND without quota (count-only);
   (b) folder rail create→select filters grid; (c) Filters button opens panel, `MediaFilterState`
-  facets (tag AND-match, altStatus, dateRange) each narrow the grid; (d) details drawer save
+  facets (tag AND-match, `alt`, `dateFrom`/`dateTo`) each narrow the grid, AND the toolbar Filters
+  badge shows `countActiveFilters(mediaFilterState)` when facets are active (hidden at 0); **(c0)
+  date-facet inclusive-boundary regression (the predicate is authored in this file's Implementation
+  §, lines 185-186; 512-05 §Details lines 167-169 delegate the assertion here): an item with
+  `createdAt="2026-07-05T14:00:00Z"` MUST pass when `dateTo="2026-07-05"` (and when
+  `dateFrom="2026-07-05"`) — guards against the raw-ISO lexical compare that drops assets created
+  any time on the selected end day;** **(c1)
+  alt-facet regression (this is the "filter test where the predicate lives" that 512-05 §Testing
+  delegates here — the memo predicate is authored in this file's Implementation §, lines 172-178):**
+  with `alt==="has"`, a non-image item (document/audio/video with no alt) must NOT appear in the
+  grid and only an image WITH alt does; with `alt==="missing"`, only an image lacking alt appears —
+  non-images pass under neither state (guards against the
+  `(f.alt==="missing")===hasMissingImageAlt(i)` collapse that would admit all non-images under
+  "has"); (d) details drawer save
   forwards new fields to `updateMedia` (mock client, assert payload); (e) upload into an active folder
   uses upload-first-then-PATCH: assert `uploadMedia` is called with meta carrying NO `folderId`, then
   `updateMedia(returnedId, { folderId })` is called with the active folder id. Mock

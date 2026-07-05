@@ -24,6 +24,22 @@ Opis docelowego modelu danych CMS. Typy sa pogladowe.
 - user_id (fk users)
 - role_id (fk roles)
 
+`dashboard_layouts`
+- user_id (uuid, pk, fk users cascade delete)
+- schema_version (int, default 1)
+- layout (jsonb, `DashboardLayout` v1)
+- created_at
+- updated_at
+- updated_by (fk users set null)
+
+Rules:
+- One saved admin Dashboard layout per user.
+- Writes reject unknown fields and more than 24 widgets.
+- Reads normalize legacy/corrupt rows to the default layout to keep `/admin`
+  usable.
+- This table is admin-Dashboard only and does not participate in Page Builder
+  pages or `core/widgets/*`.
+
 `sessions`
 - id (uuid, pk)
 - user_id (fk users)

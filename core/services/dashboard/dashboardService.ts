@@ -1,4 +1,4 @@
-import { desc, eq, sql, type SQL } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql, type SQL } from "drizzle-orm";
 import type { AnyPgTable } from "drizzle-orm/pg-core";
 
 import { db } from "../../db/client";
@@ -16,6 +16,9 @@ import type {
   DashboardStatus,
   DashboardStorageSummary,
   DashboardTotals,
+  DashboardContentQueryConfig,
+  DashboardContentTypeCount,
+  DashboardTimeBucket,
 } from "./dashboardTypes";
 
 const RECENT_EDITS_LIMIT = 10;
@@ -66,7 +69,7 @@ async function countRows(table: AnyPgTable, where?: SQL): Promise<number> {
   return Number(row?.count ?? 0);
 }
 
-async function getDashboardTotals(): Promise<DashboardTotals> {
+export async function getDashboardTotals(): Promise<DashboardTotals> {
   return {
     pages: await countRows(pages),
     entries: await countRows(contentEntries),
@@ -75,10 +78,12 @@ async function getDashboardTotals(): Promise<DashboardTotals> {
   };
 }
 
-async function getStorageSummary(): Promise<DashboardStorageSummary> {
-  const [row] = await db.select({
-    usedBytes: sql<number>`coalesce(sum(${media.size}), 0)`,
-  }).from(media);
+export async function getStorageSummary(): Promise<DashboardStorageSummary> {
+  const [row] = await db
+    .select({
+      usedBytes: sql<number>`coalesce(sum(${media.size}), 0)`,
+    })
+    .from(media);
 
   const usedBytes = Number(row?.usedBytes ?? 0);
   const limitBytes = null;
@@ -180,7 +185,7 @@ async function getRecentMedia(limit: number): Promise<DashboardRecentEdit[]> {
   }));
 }
 
-async function getRecentEdits(limit: number): Promise<DashboardRecentEdit[]> {
+export async function getRecentEdits(limit: number): Promise<DashboardRecentEdit[]> {
   const [recentPages, recentEntries, recentMedia] = await Promise.all([
     getRecentPages(limit),
     getRecentEntries(limit),
@@ -188,9 +193,7 @@ async function getRecentEdits(limit: number): Promise<DashboardRecentEdit[]> {
   ]);
 
   const merged = [...recentPages, ...recentEntries, ...recentMedia];
-  merged.sort(
-    (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  merged.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   return merged.slice(0, limit);
 }
 
@@ -213,9 +216,7 @@ const buildCheck = (
   detail: ok ? okDetail : warningDetail,
 });
 
-export function buildSecuritySummary(
-  security: SecuritySettings
-): DashboardSecuritySummary {
+export function buildSecuritySummary(security: SecuritySettings): DashboardSecuritySummary {
   const csrfEnabled = security.csrf.enabled;
   const buckets = security.rateLimit.buckets;
   const rateLimitEnabled =
@@ -225,10 +226,8 @@ export function buildSecuritySummary(
   const headersEnabled =
     security.headers.enabled &&
     security.headers.contentTypeOptions &&
-    (security.headers.frameOptions === "DENY" ||
-      security.headers.frameOptions === "SAMEORIGIN");
-  const sessionPolicyOk =
-    security.session.ttlDays <= 30 && security.session.maxPerUser <= 5;
+    (security.headers.frameOptions === "DENY" || security.headers.frameOptions === "SAMEORIGIN");
+  const sessionPolicyOk = security.session.ttlDays <= 30 && security.session.maxPerUser <= 5;
 
   const checks: DashboardSecurityCheck[] = [
     buildCheck(
@@ -269,10 +268,7 @@ export function buildSecuritySummary(
   };
 }
 
-export function calculateUsedPercent(
-  usedBytes: number,
-  limitBytes: number | null
-): number | null {
+export function calculateUsedPercent(usedBytes: number, limitBytes: number | null): number | null {
   if (limitBytes === null || !Number.isFinite(limitBytes) || limitBytes <= 0) {
     return null;
   }
@@ -283,12 +279,139 @@ export function calculateUsedPercent(
   return Math.min(100, Math.max(0, value));
 }
 
+export async function getDashboardSecuritySummary(): Promise<DashboardSecuritySummary> {
+  return buildSecuritySummary(await getSecuritySettings());
+}
+
+export async function getContentTypeCounts(
+  limit = 20,
+  contentTypeIds?: string[]
+): Promise<DashboardContentTypeCount[]> {
+  const countExpr = sql<number>`count(${contentEntries.id})`;
+  const query = db
+    .select({
+      id: contentTypes.id,
+      slug: contentTypes.slug,
+      label: contentTypes.name,
+      count: countExpr,
+    })
+    .from(contentTypes)
+    .leftJoin(contentEntries, eq(contentEntries.typeId, contentTypes.id))
+    .$dynamic();
+
+  if (contentTypeIds?.length) {
+    query.where(inArray(contentTypes.id, contentTypeIds));
+  }
+
+  const rows = await query
+    .groupBy(contentTypes.id, contentTypes.slug, contentTypes.name)
+    .orderBy(desc(countExpr))
+    .limit(Math.min(Math.max(Math.trunc(limit), 1), 50));
+
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    label: row.label,
+    count: Number(row.count ?? 0),
+  }));
+}
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
+
+const formatBucketDate = (value: Date | string) => {
+  const date = value instanceof Date ? value : new Date(value);
+  return date.toISOString().slice(0, 10);
+};
+
+export async function getContentOverTime(
+  rangeDays = 30,
+  bucket: "day" | "week" = "day"
+): Promise<DashboardTimeBucket[]> {
+  const days = Math.min(Math.max(Math.trunc(rangeDays), 1), 365);
+  const now = new Date();
+  const start = addDays(now, -(days - 1));
+  const trunc = bucket === "week" ? sql.raw("'week'") : sql.raw("'day'");
+  const bucketExpr = sql<string>`date_trunc(${trunc}, ${contentEntries.createdAt})`;
+
+  const rows = await db
+    .select({
+      bucket: bucketExpr,
+      created: sql<number>`count(*)`,
+      updated: sql<number>`count(*) filter (where ${contentEntries.updatedAt} > ${contentEntries.createdAt})`,
+    })
+    .from(contentEntries)
+    .where(gte(contentEntries.createdAt, start))
+    .groupBy(bucketExpr)
+    .orderBy(bucketExpr);
+
+  return rows.map((row) => ({
+    bucket: formatBucketDate(row.bucket),
+    created: Number(row.created ?? 0),
+    updated: Number(row.updated ?? 0),
+  }));
+}
+
+export async function resolveContentQueryWidget(
+  config: DashboardContentQueryConfig
+): Promise<DashboardRecentEdit[]> {
+  const limit = Math.min(Math.max(Math.trunc(config.limit ?? 10), 1), 50);
+  const conditions: SQL[] = [];
+  if (config.contentTypeId) conditions.push(eq(contentEntries.typeId, config.contentTypeId));
+  if (config.status) conditions.push(eq(contentEntries.status, config.status));
+
+  const sortColumn =
+    config.sort === "createdAt"
+      ? contentEntries.createdAt
+      : config.sort === "title"
+        ? contentEntries.title
+        : contentEntries.updatedAt;
+  const direction = config.order === "asc" ? asc : desc;
+
+  const query = db
+    .select({
+      id: contentEntries.id,
+      title: contentEntries.title,
+      slug: contentEntries.slug,
+      status: contentEntries.status,
+      updatedAt: contentEntries.updatedAt,
+      typeSlug: contentTypes.slug,
+      authorId: users.id,
+      authorName: users.name,
+      authorEmail: users.email,
+      authorEmailEncrypted: users.emailEncrypted,
+    })
+    .from(contentEntries)
+    .leftJoin(contentTypes, eq(contentEntries.typeId, contentTypes.id))
+    .leftJoin(users, eq(contentEntries.authorId, users.id))
+    .$dynamic();
+
+  if (conditions.length > 0) {
+    query.where(and(...conditions));
+  }
+
+  const rows = await query.orderBy(direction(sortColumn)).limit(limit);
+
+  return rows.map((row) => ({
+    id: row.id,
+    type: "entry",
+    title: row.title,
+    path: row.typeSlug ? ensurePath(`${row.typeSlug}/${row.slug}`) : null,
+    status: toStatus(row.status),
+    updatedAt: toIsoString(row.updatedAt),
+    author: toAuthor(row.authorId ?? null, row.authorName ?? null, resolveAuthorEmail(row)),
+  }));
+}
+
 export async function getDashboardData(): Promise<DashboardPayload> {
   const [totals, storage, recentEdits, securitySettings] = await Promise.all([
     getDashboardTotals(),
     getStorageSummary(),
     getRecentEdits(RECENT_EDITS_LIMIT),
-    getSecuritySettings(),
+    getDashboardSecuritySummary(),
   ]);
 
   return {
@@ -296,6 +419,6 @@ export async function getDashboardData(): Promise<DashboardPayload> {
     totals,
     storage,
     recentEdits,
-    security: buildSecuritySummary(securitySettings),
+    security: securitySettings,
   };
 }

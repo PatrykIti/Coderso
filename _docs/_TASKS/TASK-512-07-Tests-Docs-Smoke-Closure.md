@@ -38,11 +38,22 @@ Run and record green:
 (`package.json:26`) is `tests/unit tests/integration/{routes,runtime,server,store,plugins,analytics}
 tests/perf tests/security` — it does NOT include `tests/integration/db` (and no such dir exists).
 512-01 already accounts for this: its DB/migration test lands at
-`tests/integration/server/media-schema-0066.test.ts` (512-01 §Tests, "Bun lane (DB)"), an
+`tests/integration/server/media-schema-0067.test.ts` (512-01 §Tests, "Bun lane (DB)"), an
 already-globbed dir where DB-touching media tests already sit
 (e.g. `tests/integration/server/mediaDeliveryAccess.test.ts`), so it runs in the standard lane —
 no relocation needed here (do NOT chase a `tests/integration/db` move; 512-01 handled the path).
-Section A's guard is therefore a POSITIVE assertion at closure: confirm this exact file is
+
+**Migration number is OWNED/PINNED by 512-01 — 07 mirrors whatever 512-01 lands.** The live chain
+already ends at `0066_dashboard_layouts.sql` (journal `meta/_journal.json` idx:66, tag
+`0066_dashboard_layouts`, landed by TASK-480), so the media migration is `0067_*`
+(`0067_<name>.sql` + `meta/0067_snapshot.json` + journal `idx:67`) and the DB test file is
+`media-schema-0067.test.ts`. At closure, re-read 512-01's landed artifacts and use the ACTUAL number
+it committed — if the chain advanced again before 512-01 landed, 512-01 bumps past it and 07's
+anchors below (`media-schema-<N>.test.ts`) must be read as "whatever 512-01's DB test filename is",
+NOT a hard-coded `0067`.
+
+Section A's guard is therefore a POSITIVE assertion at closure: confirm this exact file
+(`tests/integration/server/media-schema-0067.test.ts`, or the number 512-01 actually landed) is
 enumerated by the `test:bun` glob AND that its cases (folder-delete-un-files, tags backfill,
 slug-uniqueness) actually EXECUTED in the `test:bun` output — not merely that the suite is green.
 If any subtask ever proposes a DB test under a NON-globbed dir, either relocate it under a globbed
@@ -71,8 +82,11 @@ persisted rows on reload) — NOT control presence. Compare structure to `:5180/
 5. **Richer metadata round-trip:** set description + credit on an asset → save → reload → both
    persist and render in the drawer.
 6. **Prototype-fidelity parity (deep visual):** side-by-side `:5173` vs `:5180/#/media` — grid
-   card has TYPE badge top-left + tone chip bottom-right + aspect-square preview; Filters button
-   present; rail tokens match; in BOTH light and dark. Assert key computed tokens/classes.
+   card has the TYPE badge as an absolute top-left overlay on the preview (`absolute left-2 top-2
+   bg-card/80 backdrop-blur`) + a footer-row right-aligned tone chip (`inline-flex size-5 rounded-md`,
+   in the `justify-between` footer alongside the file size — NOT an absolute preview overlay) +
+   aspect-square preview; Filters button present; rail tokens match; in BOTH light and dark. Assert
+   key computed tokens/classes (badge is `position:absolute`; tone chip is static/in-flow).
 7. **Cross-consumer regression:** open a Page/Screen editor MediaPicker → confirm it still lists
    media + picks (MediaGrid back-compat unbroken).
 

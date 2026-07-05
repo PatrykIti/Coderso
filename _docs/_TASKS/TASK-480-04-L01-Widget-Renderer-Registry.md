@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-02 (widget type enum, `DashboardWidget`, `DashboardWidgetData` union) · TASK-479-06-L02 (`SectionCard`, `EmptyState`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-04
 
 ---

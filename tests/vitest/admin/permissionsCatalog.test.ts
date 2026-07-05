@@ -16,6 +16,7 @@ test("permissions catalog includes coderso module permissions", () => {
       "reviews:write",
       "solution-kits:read",
       "solution-kits:write",
+      "dashboard:write",
     ])
   );
 });
@@ -29,9 +30,7 @@ test("listPermissions returns cloned groups", () => {
   });
 
   const after = listPermissions();
-  const allIds = after.flatMap((group) =>
-    group.permissions.map((permission) => permission.id)
-  );
+  const allIds = after.flatMap((group) => group.permissions.map((permission) => permission.id));
 
   expect(allIds).not.toContain("temp:permission");
 });

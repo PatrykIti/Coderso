@@ -15,6 +15,7 @@
 - `CONTENT_RELATIONS.md` - relation fields and entry linking
 - `DATA_MODEL.md` - database schema overview
 - `DESIGN_TOKENS.md` - design tokens and theming
+- `DASHBOARD_WIDGETS_SPEC.md` - admin Dashboard layout/widgets contract
 - `MEDIA_SPEC.md` - media storage and uploads
 - `INTEGRATIONS.md` - integrations registry and runtime/security rules
 - `PAGE_MODEL.md` - page builder JSON model

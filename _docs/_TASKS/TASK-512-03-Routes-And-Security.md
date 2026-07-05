@@ -43,14 +43,40 @@ ZERO edits to `routes/index.ts`, services, client, UI. **Land order:** after 512
 - Errors mapped in `mapMediaError` (line 65) switch — ADD new cases: `media_folder_not_found`
   (404), `media_folder_slug_conflict` (409), `media_folder_cycle` (400),
   `media_folder_depth_exceeded` (400), `media_focal_invalid` (400 — thrown by 512-02 ONLY for
-  NaN/non-number focal, NOT for out-of-range, which is CLAMPED not rejected), `media_tags_invalid` (400),
-  `media_quota_exceeded` (413). (`media_folder_depth_exceeded` is thrown by 512-02's
-  `MAX_DEPTH = 5` cap — it MUST be in this closed set or an over-depth create/patch bubbles as a
-  generic 500 instead of 400.)
+  NaN/non-number focal, NOT for out-of-range, which is CLAMPED not rejected), `media_tags_invalid` (400).
+  **`media_focal_invalid` is SCHEMA-SHADOWED on the HTTP path (defense-in-depth backstop only):**
+  512-02 §C declares `focalX/focalY: {type:["number","null"]}` and `validate(mediaUpdateSchema, ...)`
+  runs FIRST (mediaRoutes.ts:159) before `updateMedia` (line 161), so any non-number focal is
+  rejected as `validation_error` (400) at the edge, and JSON cannot express NaN — the service
+  `media_focal_invalid` throw never fires via HTTP. Like `media_quota_exceeded` below, KEEP the
+  mapping (correct service-layer backstop) but do NOT write an HTTP test asserting the specific
+  `media_focal_invalid` code; that code is exercised only by the 512-02 service unit test
+  (`tests/unit/media/mediaMeta.test.ts`, direct `normalizeMediaMeta` call). Test (c) here asserts
+  HTTP 400 / `validation_error` for the non-number focal.
+  **`media_tags_invalid` is SCHEMA-SHADOWED on the HTTP path too (same defense-in-depth pattern):**
+  512-02 §C declares `tags: {type:"array", items:{type:"string"}}` (validated FIRST at
+  mediaRoutes.ts:159), and 512-02 §A throws `media_tags_invalid` ONLY for a non-array value
+  (over-length/over-count is CLAMPED/truncated, not rejected — §A DECISION). A non-array `tags` is
+  therefore rejected as `validation_error` (400) at the edge before `updateMedia` runs, so the
+  service `media_tags_invalid` throw never fires via HTTP. Like `media_focal_invalid`, KEEP the
+  mapping (correct service-layer backstop) but do NOT write an HTTP test asserting the specific
+  `media_tags_invalid` code — it is exercised only by the 512-02 service unit test
+  (`tests/unit/media/mediaMeta.test.ts`, direct `normalizeMediaMeta` call with a non-array).
+  (`media_folder_depth_exceeded` is thrown by 512-02's `MAX_DEPTH = 5` cap — it MUST be in this
+  closed set or an over-depth create/patch bubbles as a generic 500 instead of 400.)
+- **`media_quota_exceeded` (413) — FORWARD-COMPAT / INERT (no producer in this series):** add the
+  case for completeness, but there is **NO throw site** in TASK-512. 512-02 §"Quota enforcement
+  DECISION" (line 168-172) makes quota **display-only by default** — `uploadMedia` does NOT
+  auto-reject unless a future `storage.quota.enforce` flag is set, and 512-03 leaves POST `/media`
+  UNCHANGED. So this case only becomes reachable once hard-enforce lands. It is **intentionally
+  untested** here (test requirements (a)-(f) correctly assert no 413). An implementer should NOT
+  hunt for a nonexistent throw site or write an unpassable 413 test. (Adding the mapping now is
+  cheap and avoids a future generic-500 leak when enforcement is enabled; guard the line with a
+  `// forward-compat: no producer until storage.quota.enforce` comment.)
 - `routes/index.ts:62` calls `registerMediaRoutes(router, {...})` — DO NOT edit; folder routes
   register from inside `registerMediaRoutes`.
 - RBAC: `requirePermission("media:read")` / `"media:write")` — buckets defined at
-  `core/services/admin/permissionsCatalog.ts:56` (`media:read`) / `:61` (`media:write`). NO new
+  `core/services/admin/permissionsCatalog.ts:67` (`media:read`) / `:72` (`media:write`). NO new
   bucket.
 
 ---
@@ -68,9 +94,9 @@ would be dead code. PATCH `/media/:id` needs NO change beyond the widened
 > **Reconciliation note (cross-subtask 02↔03, resolves the upload-schema gap):** folder/tag
 > assignment is **PATCH-only**, matching how 512-02 §A keeps focal/description/credit PATCH-only.
 > `mediaUploadSchema` is intentionally NOT widened, so upload does not carry `folderId`/`tags`.
-> Consequence for 512-02: the `folderId`/`tags` params 512-02 §A adds to `uploadMedia` are reachable
-> only by non-route (direct service/test) callers — 512-02 may keep them as an internal capability
-> or the owner reconcile pass may trim them; 512-03 does not depend on them. Client flow (512-04/05)
+> Consequence for 512-02: 512-02 §A keeps `uploadMedia` **alt/title/caption-only** (it is explicitly
+> NOT extended with `folderId`/`tags`), so there is no upload-path forwarding to reconcile and
+> 512-03 does not depend on any such params. Client flow (512-04/05)
 > uploads first, then PATCHes `folderId`/`tags` on the returned media id. This eliminates the
 > route-boundary contradiction without any edit to `mediaSchemas.ts` (512-02's file).
 
@@ -119,10 +145,15 @@ folder group ahead for consistency). This ordering is asserted by test (e) below
 - **Reject-unknown at the edge:** every write validates against a `additionalProperties:false`
   schema BEFORE hitting the service; unknown keys → 4xx. Query/params are string-typed only.
 - **Error mapping is closed-set:** new service error strings map to specific ApiError codes
-  (404/409/400/413) via `mapMediaError`; unmapped errors bubble as generic (no internal leak).
+  (404/409/400) via `mapMediaError`; unmapped errors bubble as generic (no internal leak). The
+  `media_quota_exceeded → 413` case is present but **forward-compat/inert** (no producer in this
+  series — see Grounded anchors); it activates only when the future `storage.quota.enforce` flag
+  lands.
 - **Folder delete never cascade-deletes media** (`onDelete:set null`, enforced 512-01/02).
-- **Quota:** if enforcement is enabled (512-02 flag, default off), upload maps
-  `media_quota_exceeded` → 413; default install = display-only (no reject).
+- **Quota:** default install = display-only (no reject); `uploadMedia` does NOT throw
+  `media_quota_exceeded` in this series (512-02 decision). The `→ 413` mapping is pre-wired for the
+  future `storage.quota.enforce` flag, but with enforcement off there is no producer and no 413 is
+  ever emitted (intentionally untested here).
 - **No IDOR surface:** folder ids are server-validated to exist; media folderId assignment
   validates the target folder exists (512-02) — a forged folderId 4xx, never silently persists.
 
@@ -135,8 +166,12 @@ folder group ahead for consistency). This ordering is asserted by test (e) below
   (c) PATCH `/media/:id` with `tags`/`focalX`/`focalY`/`description`/`credit`/`folderId` persists
   per-key, siblings survive, focal out-of-range is CLAMPED to `[0,1]` and PERSISTED (e.g. PATCH
   `focalX:1.5` → 200, stored `1.0` — per 512-02 §A owner behavior, which clamps not rejects; do NOT
-  assert 400 for out-of-range), a non-number focal → 400 (`media_focal_invalid`, schema-rejected at
-  the edge and service backstop), unknown key → 4xx;
+  assert 400 for out-of-range), a non-number focal (e.g. `focalX:"nope"`) → **HTTP 400 with code
+  `validation_error`** (schema-rejected at the edge by `mediaUpdateSchema`'s
+  `focalX/focalY: {type:["number","null"]}` — do NOT assert code `media_focal_invalid` here: that
+  service backstop is schema-shadowed on the HTTP path, see Grounded anchors, and JSON cannot express
+  NaN; the `media_focal_invalid` code is asserted only in the 512-02 service unit test
+  `tests/unit/media/mediaMeta.test.ts`, calling `normalizeMediaMeta` directly), unknown key → 4xx;
   (d) delete folder → assigned media survives with `folderId` null (200, not 404/cascade);
   (e) `/media/folders` not shadowed by `/media/:id` (GET returns folder list, not media_not_found);
   (f) upload boundary: POST `/media` with a `folderId`/`tags` key in the body → rejected 4xx by

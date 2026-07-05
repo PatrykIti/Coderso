@@ -73,6 +73,19 @@ shape from the card/panel state). No new client cache key. Field-name validation
   prototype's single "Save" is primary; retain Duplicate/Delete/Collection-workspace in a
   `DropdownMenu` "More" to keep the header tidy and prototype-faithful rather than the current
   6-button sticky bar).
+- **Fix the stale post-mutation navigation while relocating the retained handlers (this file is the
+  sole writer — the dead routes MUST NOT be carried forward verbatim).** Two of the retained handlers
+  currently navigate to a route that DOES NOT EXIST in the route table: `handleDuplicate` navigates
+  to `/content-types/${duplicated.id}` (ContentTypeEditor.tsx:336) and `handleDelete` navigates to
+  `/content-types` (:354), but `AdminApp.tsx` defines only `/advanced/engine` (list, :664),
+  `/advanced/engine/:id` (editor, :669), `/advanced/engine/:id/collection` (:674),
+  `/advanced/engine/:id/collection/detail-template/:detailPageId` (:679) and
+  `/advanced/engine/:id/schema` (:684) — there is NO `/content-types` pattern, so today a successful
+  duplicate/delete lands on an unmatched/blank route. When rebuilding, correct these to the real
+  routes: after duplicate → `navigate(`/advanced/engine/${encodeURIComponent(duplicated.id)}`)`
+  (the editor route for the new copy); after delete → `navigate("/advanced/engine")` (the Engine
+  landing/list, matching the prototype breadcrumb). The Collection-workspace nav
+  (`/advanced/engine/:id/collection`, :526) is already correct — keep it as-is.
 - Keep the status `Badge` near the title (draft/published) — the prototype has no status pill but
   our model needs it; place it subtly next to the title (soft badge).
 - Preserve the "Updated in another tab" / "Unsaved changes" / "Field removed (Undo)" alerts.
@@ -83,6 +96,19 @@ shape from the card/panel state). No new client cache key. Field-name validation
   Fields (`fields.length`), Relations (`relationFields.length`), Settings, Permissions.
 
 ### 3. Fields tab: `ContentTypeFieldsPanel` (NEW) + reorder + actions
+- **Reconciliation with the existing field list (single-writer boundary — do this first).** The
+  current editor imports and renders `FieldsListPanel` **and** `FieldSettingsPanel` from
+  `./SchemaBuilder` (ContentTypeEditor.tsx:34-38 imports both + `validateFieldName` + type
+  `ContentField`; `FieldsListPanel` is rendered at :440 and :621, `FieldSettingsPanel` at :628 and
+  :782). The rebuilt Fields tab **stops importing/rendering `FieldsListPanel`** (the old field-list
+  surface) and instead composes the NEW `ContentTypeFieldsPanel` (list) + `FieldSettingsPanel`
+  (settings, imported **read-only** from `./SchemaBuilder`) directly — so there is exactly ONE
+  field-list surface, never two. The `SchemaBuilder` wrapper component (SchemaBuilder.tsx:239) is
+  NOT rendered by the editor today and stays unused. Because `ContentTypeEditor.tsx` is 513-03's
+  sole-writer file, dropping the `FieldsListPanel` import/usage here is in scope; **removing the now
+  unused `FieldsListPanel` export from `SchemaBuilder.tsx` is NOT 513-03's file** (513-02 owns
+  `SchemaBuilder.tsx`) — leave that export in place (513-03 simply stops consuming it); any cleanup
+  of the dead export belongs to 513-02/513-05, not this subtask.
 - LEFT column `SectionCard title="Fields" description="Drag to reorder. Click a field to edit it."
   action={Add field soft button}` — render `ContentTypeFieldsPanel`.
 - **Prop signature (execution-ready)** — the panel is presentational; the editor owns `fields`
@@ -116,11 +142,16 @@ shape from the card/panel state). No new client cache key. Field-name validation
     const next = fields.slice();
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
-    handleFieldChange(next);                           // array order == persisted property order
+    handleFieldChange(next);                           // in-memory array order (UX only — see NOTE below)
   };
-  // Persistence: buildSchemaFromFields(fields) writes properties in fields[] iteration order;
-  // fieldsFromSchema preserves Object.entries order on reload — so reorder round-trips with NO
-  // new field or schema-mapping change (verified in schemaMapping.ts:184 / :387).
+  // ORDER-PERSISTENCE NOTE (reconciled with 513-06 §1 CROSS-SUBTASK BLOCKER — empirically verified):
+  // reorder is an IN-MEMORY / UX control only. `content_types.schema` is a Postgres `jsonb` column
+  // (core/db/schema.ts:688) that canonicalizes object keys (length, then bytewise), and `ContentSchema`
+  // carries NO order array — `fieldsFromSchema` reads `Object.entries(schema.properties)`
+  // (schemaMapping.ts ~:389). So although buildSchemaFromFields writes properties in fields[] order,
+  // that authored order does NOT survive a Save→reload round-trip (it reads back jsonb-canonical, not
+  // authored). Persisting field order would require an explicit mechanism (see 513-02 §Non-goal), which
+  // is OUT of current scope. Reorder still updates the in-session field list + the live schema preview.
   const handleDuplicateField = (id: string) => {
     const src = fields.find(f => f.id === id); if (!src) return;
     const existingNames = fields.map(f => ({ id: f.id, name: f.name }));
@@ -188,9 +219,10 @@ shape from the card/panel state). No new client cache key. Field-name validation
     ArrowUp uses `index - 1`) and DROP the `handleReorder(fromIndex, toIndex)` splice + the
     `onReorder` prop. Do NOT mix the two conventions (one uses after-removal `toIndex`, the other
     before-removal `targetIndex`).
-  Persistence is unchanged either way — field order round-trips via `buildSchemaFromFields`
-  insertion order / `fieldsFromSchema` `Object.entries` order (schemaMapping.ts:184/:387); no
-  schema-mapping or new-field change.
+  Persistence is unchanged either way — and in BOTH shapes the reorder is IN-MEMORY / UX only: the
+  authored field order does NOT survive the jsonb `content_types.schema` column on reload (see the
+  ORDER-PERSISTENCE NOTE above and 513-06 §1 CROSS-SUBTASK BLOCKER). No schema-mapping or new-field
+  change; reorder updates the in-session field list + live preview, not the persisted key order.
 - Row `…` menu (`DropdownMenu`): **Edit** (selects the field → opens the inline editor / details
   sheet), **Duplicate field** (clone with a unique name via `makeUniqueFieldName`), **Delete**
   (existing `requestFieldRemoval` confirm flow).
@@ -229,10 +261,10 @@ shape from the card/panel state). No new client cache key. Field-name validation
   Permissions tab's `<ContentTypePermissionsPanel permissions={config.permissions} onChange={(m) =>
   onConfigChange({ ...config, permissions: m })} />` (513-04) — ONE `config` object, one writer.
 - `Card "Type settings"` with:
-  - **API ID** — `Input` (mono `font-mono text-xs`) bound to `slug` (edits the slug; keep the
-    existing slug in Settings tab too, or make this the canonical slug editor — reconcile so
-    there's ONE source of truth; recommended: this card is canonical, Settings tab shows slug
-    read-only or removes the duplicate).
+  - **API ID** — `Input` (mono `font-mono text-xs`) bound to `slug`. This card is the **SOLE
+    writer of `slug`** (single control, per parent Per-tab resolution): the Settings tab's `Slug`
+    input is REMOVED (§5) so there is no dual React-state writer of `slug`. Do NOT keep or mirror a
+    slug editor in the Settings tab.
   - **Singular name** — `Input` bound to `config.singularName`.
   - **Plural name** — `Input` bound to `config.pluralName`.
   - **Enable drafts** — `Switch` bound to `resolveDraftsEnabled(config)` (default on).
@@ -248,11 +280,13 @@ shape from the card/panel state). No new client cache key. Field-name validation
   drawer (existing `previewSheetOpen` Sheet) so the right column matches the prototype.
 
 ### 5. Settings tab
-- Retain **Taxonomies** (categories/tags) + **Danger Zone** (delete) as today. Remove the
-  now-duplicated Name/Slug block if API ID/names moved to the Type-settings card (keep **Name**
-  editable somewhere — the prototype title is the name; put Name in the Type-settings card too, or
-  keep a compact identity block in Settings). Ensure exactly one editor per field (no double-write
-  React state races).
+- Retain **Taxonomies** (categories/tags) + **Danger Zone** (delete) as today. **REMOVE the
+  Settings-tab `Slug` input** — the API ID (slug) is now edited ONLY by the Type-settings card (§4),
+  so a Settings-tab slug field would be a second writer of `slug` (forbidden double-write). **KEEP
+  the Settings-tab `Name` input** — it maps to `content_types.name` (distinct from
+  `config.singularName`/`config.pluralName`) and is NOT duplicated into the Type-settings card.
+  Net: exactly ONE editor per field — `slug` in the card, `Name` in Settings — with no double-write
+  React state races (per parent Per-tab resolution).
 
 ### 6. Permissions tab
 - Render `<ContentTypePermissionsPanel permissions={config.permissions} onChange={...} />` (513-04);
@@ -276,7 +310,10 @@ shape from the card/panel state). No new client cache key. Field-name validation
   (drafts default dropped, versioning:true kept).
 - Fields list rows show label + type Badge (incl. a Date and a Slug field) + actions menu; row
   `…` → Duplicate adds a uniquely-named clone; Delete opens the confirm flow.
-- Drag/keyboard reorder changes field order and the saved schema property order reflects it.
+- Drag/keyboard reorder changes the in-session field order and the LIVE (in-memory) schema preview
+  reflects it. The **saved/reloaded** property order is NOT asserted — `content_types.schema` is jsonb
+  and re-sorts object keys, so a Save→reopen returns jsonb-canonical order (see 513-06 §1 BLOCKER);
+  assert the field-key SET + the reorder control's behavior, not a persisted key order.
 - API ID input edits slug; Save sends the new slug.
 
 **Gates**: `bun --cwd core lint:types` + root `tsc -p tsconfig.json --noEmit`, `lint`. Watch the

@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Admin UI / Media / DB Schema / Services / Routes / Prototype Fidelity
 **Estimated Effort:** Large
-**Dependencies:** TASK-479 (Soft-Violet admin redesign; the current Media screen already ports the prototype folder rail + `PageHeader`/`Card` shell — TASK-512 extends, not rewrites). Rides the existing `media:read`/`media:write` RBAC buckets (`permissionsCatalog.ts:56/61`) and the existing `PATCH /media/:id` + `GET /media` routes. No dependency on any other in-flight task.
+**Dependencies:** TASK-479 (Soft-Violet admin redesign; the current Media screen already ports the prototype folder rail + `PageHeader`/`Card` shell — TASK-512 extends, not rewrites). Rides the existing `media:read`/`media:write` RBAC buckets (`permissionsCatalog.ts:67/72`) and the existing `PATCH /media/:id` + `GET /media` routes. No dependency on any other in-flight task.
 **Status:** ⏳ To Do
 
 ---
@@ -49,7 +49,7 @@ dimension recovery) — fold them into the prototype-faithful shell.
 
 ---
 
-## Schema-extension plan (grounded against `core/db/schema.ts:1104-1119`)
+## Schema-extension plan (grounded against `core/db/schema.ts:1121-1136`)
 
 Current `media` table columns: `id, key, url, originalName, type, mimeType, size, width,
 height, alt, title, caption, createdAt, createdBy`. **New:**
@@ -63,7 +63,9 @@ height, alt, title, caption, createdAt, createdBy`. **New:**
    asset→folder membership; `set null` so deleting a folder un-files assets (never cascade-deletes
    media). Index on `folderId`.
 3. **`media.tags`** `jsonb("tags").$type<string[]>().notNull().default([])` — free-form tags
-   (mirrors the existing `custom_screens.tags` / listings `tags` pattern at `schema.ts:770/860`).
+   (mirrors the existing `content_entries.tags` (`schema.ts:787`) / `posts.tags` (`schema.ts:877`)
+   `jsonb("tags").$type<string[]>().notNull().default([])` precedent — the ONLY two such columns in
+   the schema today; the `media` table has NO tags column yet, per 512-02).
 4. **`media.focalX`** `real("focal_x")` + **`media.focalY`** `real("focal_y")` — nullable focal
    point in normalized `0..1` coords (image crop/`object-position` focus). Both null = default
    center behavior (present-only).
@@ -74,10 +76,11 @@ height, alt, title, caption, createdAt, createdBy`. **New:**
    the existing `settings` key/value store — NO DDL for quota. The storage card computes
    `usedBytes = Σ media.size` (already available client-side) against the configured quota.
 
-**DDL artifacts (512-01):** migration `0066_*` — SQL (`CREATE TABLE media_folders` + 6
-`ALTER TABLE media ADD COLUMN` + indexes), `meta/0066_snapshot.json`, and a `meta/_journal.json`
-entry `idx: 66`. `media.tags` DEFAULT `'[]'::jsonb` NOT NULL. All other new columns nullable ⇒
-legacy rows byte-safe on read.
+**DDL artifacts (512-01):** migration `0067_*` — SQL (`CREATE TABLE media_folders` + 6
+`ALTER TABLE media ADD COLUMN` + indexes), `meta/0067_snapshot.json`, and a `meta/_journal.json`
+entry `idx: 67`. `media.tags` DEFAULT `'[]'::jsonb` NOT NULL. All other new columns nullable ⇒
+legacy rows byte-safe on read. (Current last migration = `0066_dashboard_layouts` / journal
+`idx: 66`, landed with TASK-480; `db:generate` auto-numbers the next slot — do NOT hand-pick.)
 
 ---
 
@@ -96,7 +99,7 @@ legacy rows byte-safe on read.
 ### Land order (strictly sequential — each lands green before the next opens)
 
 1. **512-01 (schema + migration)** — model keystone. Sole writer of the `media`/`media_folders`
-   region of `core/db/schema.ts` + migration `0066_*` artifacts. Nothing consumes it yet.
+   region of `core/db/schema.ts` + migration `0067_*` artifacts. Nothing consumes it yet.
 2. **512-02 (services + validation + quota)** — sole writer of `core/services/media/mediaService.ts`,
    NEW `core/services/media/mediaFoldersService.ts`, `core/server/validation/mediaSchemas.ts`,
    `core/services/settings/storageSettings.ts`, and a SCOPED single-key edit to
@@ -152,7 +155,7 @@ file has exactly one owner.
 ## Security Contract (task-level; per-subtask contracts in 512-02/03/04)
 
 - All media + folder writes stay behind the existing `media:write` RBAC bucket; reads behind
-  `media:read` (`permissionsCatalog.ts:56/61`) — NO new RBAC bucket, NO loosened auth path. New
+  `media:read` (`permissionsCatalog.ts:67/72`) — NO new RBAC bucket, NO loosened auth path. New
   routes ride the app's existing CSRF/session envelope (`withCsrf: true` on the client).
 - **Schema-first, reject-unknown:** every new validated payload key gets a JSON-schema entry with
   `additionalProperties:false` (`mediaSchemas.ts` pattern) AND a service-side `normalize*`

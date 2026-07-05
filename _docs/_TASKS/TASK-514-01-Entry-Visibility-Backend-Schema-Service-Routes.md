@@ -23,19 +23,24 @@ endpoint, no new RBAC bucket, no `schemaVersion` concept** (content_entries is a
 plain table). Nothing renders here — 514-02 (client) + 514-04 (panel) consume it.
 
 **Owned files (sole writer):**
-- `core/db/schema.ts` — the `contentEntries` `pgTable` block (`:757-797`): two new
+- `core/db/schema.ts` — the `contentEntries` `pgTable` block (`:774-814`): two new
   columns.
 - `core/db/migrations/<NNNN>_<slug>.sql` + `core/db/migrations/meta/<NNNN>_snapshot.json`
   + `core/db/migrations/meta/_journal.json` (append entry) — `<NNNN>` is the
   ACTUAL next-free number allocated by `bun run db:generate` AT LAND TIME, NOT a
-  hard-pinned literal. Against the CURRENT tree the free number is `0066` (last is
-  `0065_backup_run_metadata.sql`, journal `idx:65`), but do **not** commit that
-  literal in isolation. **Cross-task coordination (mandatory):** two sibling
-  in-flight tasks — TASK-512-01 (`0066_*` media schema) and TASK-513-01 (`0066_*`
-  content-type config) — ALSO both assume they are the immediate successor to 0065
-  and hard-pin `0066`. All three cannot be `0066`; only one can. Therefore, whoever
+  hard-pinned literal. Against the CURRENT tree the free number is `0067` (last is
+  `0066_dashboard_layouts.sql`, journal `idx:66` — `0066` is ALREADY consumed by
+  the staged dashboard_layouts migration), but do **not** commit that
+  literal in isolation. **Cross-task coordination (mandatory):** `0066` is
+  ALREADY taken by `dashboard_layouts`, so the next free slot is `0067` — and
+  two sibling in-flight tasks BOTH currently target that SAME `0067` slot:
+  TASK-512-01 (media schema) pins `0067_*` (SQL + `meta/0067_snapshot.json` +
+  journal `idx:67` + its number-embedding test `media-schema-0067.test.ts`), and
+  TASK-513-01 (content-type config) pins the "next free idx currently 67". So all
+  three (512-01, 513-01, 514-01) contend for `0067` and will resolve to
+  `0067`/`0068`/`0069` at land time. Only one can be `0067`. Therefore, whoever
   lands first (strict cross-task land order among 512-01/513-01/514-01) takes the
-  then-free `0066`, and each subsequent lander bumps to `0067`, `0068`, … The
+  then-free number, and each subsequent lander bumps to the next (`0068`, `0069`, …). The
   implementer MUST run `bun run db:generate` immediately before committing so the
   SQL filename, `<NNNN>_snapshot.json`, and the appended `_journal.json` entry all
   agree with whatever number is actually free at that moment; never hand-renumber
@@ -48,8 +53,10 @@ plain table). Nothing renders here — 514-02 (client) + 514-04 (panel) consume 
   it does NOT reuse `entryListSelection`/`mapEntryListSelectionRow`, so it must be
   patched separately (see §3)**, `getEntryBySlug` (`:670-676`) — narrow its
   `db.select()` to an explicit projection that OMITS `access_password` (see Security
-  Contract), `createEntry` (`:678`), `duplicateEntry` (`:702`),
-  `updateEntryMetadata` (`:884-960`).
+  Contract), `publishEntry` (`:816-856`) + `unpublishEntry` (`:858-882`) — narrow
+  their `.returning()` (`:830-839` / `:859-868`) to an explicit projection that OMITS
+  `access_password` (see Security Contract), `createEntry` (`:678`),
+  `duplicateEntry` (`:702`), `updateEntryMetadata` (`:884-960`).
 - `core/server/validation/contentSchemas.ts` — `contentEntryMetadataSchema`
   (`:74-111`) + `contentEntryCreateSchema` (`:39-48`).
 - `core/server/routes/contentEntryRoutes.ts` — the metadata route body type +
@@ -88,33 +95,60 @@ Verified (Read + `grep -an`):
     `visibility: "public"|"private"|"password"` and `hasPassword: boolean`
     (computed `access_password IS NOT NULL`). Add `access_password` to NO
     explicit selection map.
-  - **Select-all reads that WILL now materialize the hash in their raw row —
-    audited, must stay unserialized.** Three reads use `db.select()` / `.returning()`
-    with NO explicit projection over `content_entries`, so after this migration the
-    new `access_password` column IS present on their raw rows:
+  - **Select-all reads/`.returning()` that WOULD now materialize the hash in a
+    RETURNED row — audited, and each RETURNED shape must be narrowed by projection.**
+    Three functions use `db.select()` / `.returning()` with NO explicit projection over
+    `content_entries`, so after this migration the new `access_password` column would be
+    present on the returned rows unless narrowed:
     1. `getEntryBySlug` (`:670-676`, `.select().from(contentEntries)`) — RETURNS the
-       raw row to callers.
-    2. `publishEntry` (`:816-856`) — `tx.select().from(contentEntries)` (`:818`) for
-       validation AND `tx.update(...).returning()` (`:830`) whose result `updated` is
-       RETURNED to callers.
-    3. `unpublishEntry` (`:880+`) — `.update(...).returning()` whose row is RETURNED.
+       raw row to callers. → narrow the `.select()` to an explicit projection.
+    2. `publishEntry` (`:816-856`) — has an INTERNAL `tx.select().from(contentEntries)`
+       (`:818`) used only for validation (`entry.data`/`entry.typeId`) and NOT returned
+       (leave as-is), AND a `tx.update(...).returning()` (`:830-839`) whose result
+       `updated` IS RETURNED to callers (and consumed by the assistant
+       `actionExecutorService:5133` as `record.slug`/`record.id`). → narrow the
+       `.returning()`.
+    3. `unpublishEntry` (`:858-882`) — a `db.update(...).returning()` (`:859-868`)
+       whose `row` IS RETURNED. → narrow the `.returning()`.
 
     (`listEntryRevisions` at `:962-968` is NOT a vector: it selects
-    `.from(contentRevisions)`, a different table with no `access_password` column.)
+    `.from(contentRevisions)`, a different table with no `access_password` column. The
+    `deleteEntry` `.returning()` at `:666` and `duplicateEntry`/`createEntry`
+    `.returning()` are covered by their own explicit handling in §3.)
 
     Verified current consumers do NOT serialize the field — `publicSite.tsx:1265-1270`
     uses the `getEntryBySlug` row only for `isEntryPublished` + `.id` then re-fetches
-    via `getEntry`; assistant `actionExecutorService` + forms `formAutomationRunnerCore`
-    read only `.id/.title/.slug/.data` via the narrow `AutomationEntryLookup` type; the
-    publish/unpublish routes return status/timestamps, not the full entry secret. So
-    there is NO leak today. **To keep the "never leaves the server" guarantee robust
-    against the additive column: narrow `getEntryBySlug` to an EXPLICIT projection that
-    omits `access_password` (it does not need it), and add a regression test asserting
-    each of `getEntryBySlug`/`publishEntry`/`unpublishEntry` return shapes has no
-    `accessPassword`/`access_password` key.** `publishEntry`/`unpublishEntry` `.returning()`
-    remain select-all (they need the fresh row for cache invalidation); the guard is the
-    return-shape assertion, since the string-grep AC alone cannot prove a select-all read
-    is safe (no column is named).
+    via `getEntry`; assistant `actionExecutorService:5133` reads only `record.id`/
+    `record.slug` from `publishEntry`; the publish/unpublish routes (`:356`/`:371`)
+    ignore the return entirely (`return { ok: true }`); internal `updateEntryMetadata`
+    (`:908`/`:910`) ignores it; cache invalidation inside each function reads only
+    `.id`/`.typeId`/`.slug`. So NO returned field beyond `{id,typeId,slug,status,
+    publishedAt,scheduledAt,updatedAt}` is consumed. **To make the "never leaves the
+    server" guarantee provable by construction (not by an unenforceable select-all
+    assertion): narrow ALL THREE returned shapes to explicit projections that OMIT
+    `access_password`** — mirror the `getEntryBySlug` narrowing across `publishEntry`'s
+    and `unpublishEntry`'s `.returning()`:
+    ```ts
+    .returning({
+      id: contentEntries.id,
+      typeId: contentEntries.typeId,
+      slug: contentEntries.slug,
+      status: contentEntries.status,
+      publishedAt: contentEntries.publishedAt,
+      scheduledAt: contentEntries.scheduledAt,
+      updatedAt: contentEntries.updatedAt,
+    })
+    ```
+    This projection covers every field the internal cache-invalidation
+    (`id`/`typeId`/`slug`) and the sole external consumer
+    (`actionExecutorService` → `record.slug`/`record.id`) actually read, and OMITS
+    `access_password` (and `visibility`, which these publish-transition returns do not
+    need). The AC#2b / return-shape assertion is then SATISFIABLE by construction —
+    the guarantee holds by projection, not by an impossible assertion over a select-all
+    read. (The `getEntryBySlug` projection must additionally include the fields its
+    callers use — `id`, `status` for `isEntryPublished`, and whatever `publicSite`'s
+    re-fetch path relies on — plus `visibility` + `hasPassword` per §3, but NEVER
+    `access_password`.)
   - Setting `accessPassword: ""`/`null` when `visibility !== "password"` clears
     the stored hash (write `null`); switching to `password` without a password AND
     with no existing hash → reject `400 entry_password_required` (mapped in the
@@ -137,9 +171,9 @@ path.
 
 ## Execution-Ready Plan
 
-### 1. Schema (`core/db/schema.ts`, inside `contentEntries` `:759-776`)
+### 1. Schema (`core/db/schema.ts`, inside `contentEntries` `:774-814`)
 
-Add two columns after `status` (`:769`):
+Add two columns after `status` (`:786`):
 
 ```ts
     status: text("status").notNull().default("draft"),
@@ -156,8 +190,8 @@ task; add a partial index only if 514-05 needs SQL pushdown — it does not).
 ### 2. Migration artifacts (full set — DDL ships all three)
 
 - `core/db/migrations/<NNNN>_<drizzle-slug>.sql` (`<NNNN>` = land-time next-free
-  number per the cross-task coordination caveat above — `0066` if 514-01 lands
-  first, else `0067`/`0068`):
+  number per the cross-task coordination caveat above — `0067` if 514-01 lands
+  first (0066 is already taken by dashboard_layouts), else `0068`/`0069`):
   ```sql
   ALTER TABLE "content_entries" ADD COLUMN "visibility" text DEFAULT 'public' NOT NULL;
   ALTER TABLE "content_entries" ADD COLUMN "access_password" text;
@@ -226,6 +260,22 @@ task; add a partial index only if 514-05 needs SQL pushdown — it does not).
   and require re-entry; RECOMMEND: copy `visibility`, leave `access_password` null,
   and if `visibility==='password'` set the copy to `'private'` so it is never
   silently public — document in closure).
+- **Return-shape narrowing (`getEntryBySlug` / `publishEntry` / `unpublishEntry`) —
+  MANDATORY for AC#2b satisfiability.** Because the migration adds `access_password`
+  as a real column, any `db.select()`/`.returning()` with no projection over
+  `content_entries` would return it. Narrow each RETURNED shape to an explicit
+  projection that omits `access_password` (see Security Contract for the exact
+  `.returning({...})` object):
+  - `getEntryBySlug` (`:670-676`): replace `.select()` with `.select({...})` that
+    projects the fields its callers use PLUS `visibility` + `hasPassword`
+    (`isNotNull(contentEntries.accessPassword)`), never `access_password`.
+  - `publishEntry` (`:830-839`) + `unpublishEntry` (`:859-868`): narrow the
+    `.returning()` to `{id,typeId,slug,status,publishedAt,scheduledAt,updatedAt}` —
+    every field the internal cache-invalidation and the assistant
+    `actionExecutorService:5133` (`record.slug`/`record.id`) actually consume. Leave
+    `publishEntry`'s INTERNAL validation `tx.select()` (`:818`, not returned) as-is.
+  This makes the AC#2b/return-shape assertion pass by construction rather than
+  contradicting a select-all read.
 - **`updateEntryMetadata` (`:884-960`).** This function is NOT wrapped in a
   `db.transaction` today (verified: no `db.transaction(` in the body; writes are
   the conditional status-transition side-effects — `publishEntry`/`unpublishEntry`
@@ -306,14 +356,15 @@ unless create must accept visibility (it does not in this task — keep minimal)
    all three sharing that same number) — applies clean on the local DB; re-run
    idempotent; snapshot matches schema.
 2. `EntryDetail`/`EntryListItem` expose `visibility` + `hasPassword`; NO read path
-   ever returns `accessPassword`. Two-part proof (the string-grep alone is
-   insufficient for the select-all reads — see Security Contract):
+   ever returns `accessPassword`. Two-part proof:
    (a) grep the file: `access_password`/`accessPassword` appears only in the write
-   map + `hashPassword` call, never in an EXPLICIT select map's returned object; and
-   (b) a runtime return-shape assertion that `getEntryBySlug` (now explicitly
-   projected), `publishEntry`, and `unpublishEntry` return objects have NO
-   `accessPassword`/`access_password` key — proving the select-all reads do not leak
-   the hash.
+   map + `hashPassword` call, never in an EXPLICIT select/`.returning()` map's
+   returned object; and
+   (b) a runtime return-shape assertion that `getEntryBySlug`, `publishEntry`, and
+   `unpublishEntry` — now ALL narrowed to explicit projections (see §3 Return-shape
+   narrowing) — return objects with NO `accessPassword`/`access_password` key. Because
+   each return is now an explicit projection that omits the column, this assertion is
+   satisfiable by construction (it does not depend on proving a select-all read safe).
 3. Metadata PATCH `{visibility:"password", accessPassword:"s3cret"}` → 200, stored
    hash set, response `hasPassword:true`, `visibility:"password"`, no secret echoed.
 4. PATCH `{visibility:"password"}` with no password and no existing hash → 400
@@ -330,6 +381,17 @@ unless create must accept visibility (it does not in this task — keep minimal)
     the entry stays in its prior status (NOT published) and no visibility/hash is
     written — the precondition rejects BEFORE the status side-effects run
     (reject-before-write atomicity; no partial-failure window).
+11. **All THREE read projections return `visibility` + `hasPassword`** (the
+    contract 514-02 hard-depends on): (a) per-type `entryListSelection` /
+    `mapEntryListSelectionRow` (`:435-494`, feeding `listEntries` /
+    `listEntriesForListing`), (b) the all-entries `listEntriesWithContentTypes`
+    inline select + map (`:542-600`, feeding `GET /content-entries` which primes
+    514-05's list badge via the raw all-entries cache prime), and (c) `getEntry`
+    (`:602-664`). A regression asserts a row from EACH of the three carries
+    `visibility` (default `"public"` for legacy rows) and `hasPassword` (`false`
+    when `access_password` is NULL) — none may omit them (root `tsc` would fail on
+    the required `EntryListItem`/`EntryDetail` fields, and the all-entries list
+    would surface `undefined` at runtime — see 514-02 "Hard dependency").
 
 ---
 
@@ -349,12 +411,16 @@ unique slugs; do not assume empty tables.
   UNCHANGED afterward (re-read asserts it did NOT publish) — proves the
   reject-before-write ordering leaves no partial write.**
 - Reject-unknown 400 for a junk key alongside a valid visibility.
-- **Select-all read no-leak assertion:** after storing a password hash on an entry,
-  call `getEntryBySlug` (now explicitly projected), `publishEntry`, and
-  `unpublishEntry` and assert their returned objects have NO
-  `accessPassword`/`access_password` key (proves the select-all/`.returning()` reads
-  over `content_entries` do not surface the secret; AC#2b).
+- **Return-shape no-leak assertion:** after storing a password hash on an entry,
+  call `getEntryBySlug`, `publishEntry`, and `unpublishEntry` — all now narrowed to
+  explicit projections (§3) — and assert their returned objects have NO
+  `accessPassword`/`access_password` key (proves the projected `.select()`/
+  `.returning()` returns over `content_entries` omit the secret; AC#2b).
 - Migration applied assertion (column exists / default applies to a pre-existing row).
+- **All-three-projections read assertion (AC#11):** a row from `listEntries` (per-type
+  selection), `listEntriesWithContentTypes` (all-entries), and `getEntry` each carries
+  `visibility` + `hasPassword` (default `"public"`/`false` for a legacy-style row),
+  proving the third projection is covered per 514-02's hard dependency.
 
 ### Vitest — Bun-free
 

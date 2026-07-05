@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-480-02 (widget schema + domain contract types + the per-widget `DashboardWidgetData` union) · TASK-479-06-L02 (shared pattern library: `SectionCard`, `StatCard`, `charts`, `StatusBadge`, `EmptyState`, `DataTable`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Task:** TASK-480
 
 ---
@@ -79,9 +80,9 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-480-04-L01 | Widget Renderer Registry + `DashboardWidgetHost` (loading/empty/error) | ⏳ To Do |
-| TASK-480-04-L02 | Core Widget Renderers (Stat, Chart, RecentActivity, ContentTypeCount, Storage, SiteHealth, QuickActions, ContentQuery) | ⏳ To Do |
-| TASK-480-04-L03 | Renderer & Registry Render-State Tests (Vitest) | ⏳ To Do |
+| TASK-480-04-L01 | Widget Renderer Registry + `DashboardWidgetHost` (loading/empty/error) | ✅ Done |
+| TASK-480-04-L02 | Core Widget Renderers (Stat, Chart, RecentActivity, ContentTypeCount, Storage, SiteHealth, QuickActions, ContentQuery) | ✅ Done |
+| TASK-480-04-L03 | Renderer & Registry Render-State Tests (Vitest) | ✅ Done |
 
 ---
 

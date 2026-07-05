@@ -33,8 +33,11 @@ clean **revisions seam** for TASK-487-02-L02.
   rendered by `EntryEditor.tsx` (grep `:1-53` confirms no import), referenced ONLY
   by two Vitest mocks — see the repurpose-vs-delete decision below).
 
-**`EntryEditorHeader` repurpose-vs-delete decision (parent mandate, lines 299-314;
-parent 277-292 is the 514-02 admin-client section, not this decision).**
+**`EntryEditorHeader` repurpose-vs-delete decision (parent mandate, section
+`### 514-03 — Entry editor prototype-fidelity layout`; cited by header, not line
+number, because the parent file's line numbers drift. Do NOT confuse this with the
+`### 514-02 — Admin client` section (`EntryMetadataPayload` + cache contract) nor
+the `**Security Contract (514-01).**` subsection — neither is this decision.).**
 Parent decision = **REPURPOSE** `EntryEditorHeader`/`EntryEditorHeaderActions` into
 the in-page `PageHeader` actions cluster (move Save draft / Publish / History +
 the status/Unsaved badges into it), rendered at the top of `EntryEditor` in place
@@ -112,7 +115,25 @@ title/slug card (`:763-824`), field tabs (`:834-916`), desktop `aside`
 - Wrap the whole editor body in `div className="grid gap-6 lg:grid-cols-[1fr_320px]"`.
 - **Content `SectionCard`** (title "Content", description "The main body of this
   entry.") containing the title `Textarea` (auto-grow, `:795-802`) + slug row
-  (`:803-823`) + the schema-driven fields. The current per-field `Card` wrapping
+  (`:803-823`) + the schema-driven fields.
+  - **Accepted divergence from the prototype (flag in closure):** the prototype
+    (`EntryEditorPreview.tsx:37-48`) renders Content as a labeled `Title` `Input`
+    and a labeled `Slug` `Input` (`className="font-mono text-sm"`, `defaultValue`
+    prefixed with a leading `/`), NOT a borderless headline. 514-03 instead KEEPS
+    the redesign's existing borderless auto-grow headline `Textarea`
+    (`EntryEditor.tsx:795-802`, `font-display text-3xl` title) + the inline
+    slug-with-leading-`/` pill row (`:803-823`, `Input` + regenerate button),
+    re-homed unchanged into the Content `SectionCard`. Rationale: the borderless
+    headline + slug pill is the established redesign pattern already shipped across
+    the admin authoring surfaces (matches the current PageEditor/ContentTypeEditor
+    headline treatment), preserves the regenerate-slug affordance the prototype
+    mock lacks, and avoids re-plumbing the working `handleTitleChange` /
+    `handleSlugChange` / auto-grow `titleRef` wiring for a purely cosmetic input
+    shape. This is intentional and MUST be surfaced in the closure alongside the
+    Media and 514-04 metadata-id mock divergences. (If the owner prefers strict
+    fidelity, the alternative is to adopt the prototype's two labeled `Input`s —
+    but that is NOT the default path here.)
+- The current per-field `Card` wrapping
   (`:867-907`) becomes fields grouped inside the Content card (and Media/Relations
   cards) — keep the `tabGroups` grouping (`:651-696`) but render each TAB as a
   section within the appropriate `SectionCard` (Content tab → Content card; a
@@ -156,43 +177,54 @@ title/slug card (`:763-824`), field tabs (`:834-916`), desktop `aside`
     stacked `SectionCard`s in normal document flow.
   - **Mobile `Sheet` mount: keep the internal `ScrollArea`** (the Sheet gives it a
     bounded height, so scrolling is correct and needed there).
-  - This is a 514-04-owned internal (this subtask only mounts the panel), so
-    **514-04 §4 must be corrected**: its "the panel keeps its `ScrollArea` + footer
-    for the desktop `aside` AND the mobile `Sheet`" is STALE — the desktop `aside`
-    no longer exists; the `ScrollArea` must be scoped to the mobile `Sheet` mount
-    ONLY, and the desktop in-grid mount flows with no inner scroller.
-  - **⚠ LAND-ORDER INVERSION — this correction belongs UPSTREAM in 514-04, not in
-    a 514-03 closure reconcile.** Parent Land Order (parent lines 415-420) lands
-    **514-04 (step 3) BEFORE 514-03 (step 4)**. If 514-04 authors the
-    ScrollArea-for-both-mounts internal as its contract currently reads
-    (514-04 §4, lines 197-198), it will SHIP the wrong internal and 514-03 would only
-    be flagging it after the fact. A post-hoc closure reconcile is therefore NOT
-    sufficient. **Orchestrator action (before 514-04 lands):** edit 514-04 §4 to scope
-    the `ScrollArea` (+ footer) to the mobile `Sheet` mount only and state the desktop
-    mount renders plain stacked `SectionCard`s in normal document flow. 514-03 cannot
-    edit 514-04 (single-writer discipline) — this flag exists to drive that upstream
-    fix, with a closure reconcile as the backstop, not the primary mechanism.
+  - **Mechanism (already provided by 514-04's `scrollable` prop — no upstream edit
+    needed).** 514-04 already ships this gating: it declares `scrollable?: boolean`
+    (514-04 §1 line 112, default `true`) and renders
+    `scrollable ? <ScrollArea>{stack}</ScrollArea> : <>{stack}</>` (514-04 §4 lines
+    231-241). 514-03 therefore only has to pass the right value per mount:
+    **pass `scrollable={false}` on the desktop in-grid `EntryMetadataPanel` mount**
+    (plain stacked `SectionCard`s, no inner scroller) and **omit it on the mobile
+    `Sheet` mount** (defaults to `true` → bounded `ScrollArea`). No closure reconcile
+    and no cross-file edit to 514-04 are required — the earlier "514-04 §4 must be
+    corrected" inversion is obsolete now that 514-04's gating has landed.
 
 ### 4. Visibility wiring (end-to-end)
 
 - New state: `const [visibility, setVisibility] = useState<"public"|"private"|"password">("public")`,
-  `const [accessPassword, setAccessPassword] = useState("")`, and read
-  `hasPassword` from `entry`.
+  `const [accessPassword, setAccessPassword] = useState("")` (plain `string`), and read
+  `hasPassword` from `entry`. **Two password states only** (reconciled with 514-01 §3
+  + parent authoritative semantics — there is NO clear-while-password path): `""` =
+  untouched (keep the stored hash) and a non-empty string = a newly typed password.
+  Removing a password is done by switching `visibility` to `public`/`private`, which
+  the service clears — NOT by a separate clear signal.
 - In `applyEntry` (`:166-187`) set `visibility` from `entryResult.visibility` and
   reset `accessPassword` to `""`.
 - `onVisibilityChange`/`onAccessPasswordChange` set state + `setMetadataUnsavedChanges(true)`
-  (mirror `handleStatusChange` `:463-467`). When switching AWAY from `password`,
-  clear `accessPassword` to `""`.
+  (mirror `handleStatusChange` `:463-467`). `onAccessPasswordChange` is typed
+  `(value: string) => void` (matches 514-04 §1) and stores the typed value. When
+  switching AWAY from `password`, reset `accessPassword` to `""`.
 - In `handleSaveMetadata` (`:564-569`) extend the `updateEntryMetadata` payload:
   ```ts
   visibility,
-  accessPassword: visibility === "password" ? (accessPassword || undefined) : null,
+  accessPassword:
+    visibility !== "password"
+      ? null                              // leaving password mode → clear the hash
+      : accessPassword === ""
+        ? undefined                       // untouched → omit the key → keep the existing hash
+        : accessPassword,                 // newly typed value → set/replace the hash
   ```
-  (undefined = keep existing hash; null = clear.) After save, re-read
-  `visibility`/`hasPassword` from the returned `updated` and reset `accessPassword`.
+  (undefined = omit the key = keep existing hash; `null` = clear the hash, and is only
+  ever sent when `visibility !== "password"`.) This matches 514-01 §3 exactly: the
+  service clears the hash only when visibility is not `password`, and under `password`
+  a falsy `accessPassword` keeps the existing hash. After save, re-read
+  `visibility`/`hasPassword` from the returned `updated` and reset `accessPassword` to
+  `""`.
 - Pass `visibility`, `onVisibilityChange`, `accessPassword`, `onAccessPasswordChange`,
   `hasPassword`, `createdAt: entry?.createdAt`, `updatedAt: entry?.updatedAt`,
-  `entryId: entry?.id` into BOTH `EntryMetadataPanel` mounts.
+  `entryId: entry?.id` into BOTH `EntryMetadataPanel` mounts. **Additionally pass
+  `scrollable={false}` on the desktop in-grid mount and OMIT `scrollable` on the
+  mobile `Sheet` mount (defaults to `true`)** — this drives 514-04's already-shipped
+  ScrollArea gating (§3).
 
 ### 5. Revisions seam (documented, NOT implemented)
 
@@ -245,10 +277,15 @@ Per `_docs/TESTING_STRATEGY.md`.
   marks unsaved.
 - Visibility state: selecting password sets state + marks metadata-unsaved;
   `handleSaveMetadata` payload includes `visibility` + correct `accessPassword`
-  (undefined keep / null clear) — assert via mocked `updateEntryMetadata`.
+  across the password states — assert via mocked `updateEntryMetadata`:
+  (a) untouched `""` while `password` → key omitted (`undefined`, keep hash);
+  (b) newly typed string while `password` → that string; (c) switching away from
+  `password` (to public/private) → `accessPassword: null` (clear hash). There is NO
+  clear-while-password case — `null` is only ever emitted when leaving password mode.
 - Regression: publish blocked by checklist blocking issues; runtime preview opens;
   delete dialog confirm calls `deleteEntry`.
-- **Orphaned `EntryEditorHeader` mock reconcile (MANDATORY — parent lines 299-314).**
+- **Orphaned `EntryEditorHeader` mock reconcile (MANDATORY — parent section
+  `### 514-03`, "Either path MUST update the two Vitest mocks").**
   `EntryEditorHeader` is referenced by two `vi.mock` blocks:
   `tests/vitest/ui/entry-editor-shell-wave.test.tsx:365` (mocked props
   `{ entryLabel, status }`) and `tests/vitest/ui/post-classic-editor-shell-wave.test.tsx:293`

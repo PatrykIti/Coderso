@@ -26,7 +26,11 @@ with the existing admin type boundary (`FormBuilderPage.tsx:42` already imports
 ## Scope (single-writer keystone)
 
 **Sole writer of `core/admin/ui/forms/FormBuilderPage.tsx`,
-`core/admin/ui/forms/FieldLibrary.tsx`, `core/admin/ui/forms/FieldListPanel.tsx`.**
+`core/admin/ui/forms/FieldLibrary.tsx`, `core/admin/ui/forms/FieldListPanel.tsx`,
+and their existing coverage `tests/vitest/ui-integration/forms-builder-restyle.test.tsx`
++ `tests/vitest/ui/form-builder.test.tsx` (both MUST be migrated by this subtask —
+see Testing requirements; the chrome rewrite otherwise breaks their EditorShell mock
+and `Save form` assertions).**
 Brings the builder chrome + field rail to prototype fidelity and mounts the
 Design inspector tab. Ships:
 
@@ -63,6 +67,19 @@ Design inspector tab. Ships:
      primary (Rocket icon, `handlePublish`). Fold the existing **Submissions /
      Action logs / Runtime preview** buttons into this actions row so they stay
      reachable — do NOT drop them.
+     - **RELOCATE the two `lg:hidden` mobile Sheet openers.** The sticky bar being
+       deleted (`:787-827`) holds the ONLY triggers that open the retained mobile
+       Sheets: the "Fields" button (`:818`, `onClick={() => setMobileFieldsOpen(true)}`)
+       and the "Details" button (`:821`, `onClick={() => setMobileSettingsOpen(true)}`).
+       Because `EditorFrame`'s `left`/`right` slots are `lg`/`xl`-hidden, these two
+       Sheets (`:879`/`:915`) are the sole mobile access to the field rail + inspector.
+       Move both openers into this `PageHeader` actions row inside an `lg:hidden`
+       wrapper (`<div className="flex items-center gap-2 lg:hidden">…</div>`), keeping
+       their exact `variant="outline" size="sm"` styling and `setMobileFieldsOpen(true)`
+       / `setMobileSettingsOpen(true)` handlers. Without this the `mobileFieldsOpen`
+       /`mobileSettingsOpen` state (`:302-303`) can never become `true`, mobile users
+       lose all access to the field rail + inspector, and the state/handlers become
+       dead code. Do NOT drop them.
    - `EditorFrame` (`@/ui/shared/EditorFrame`, slots `title/toolbar/actions/left/canvas/right`;
      re-exports `EditorRailGroup`/`EditorRailItem`): `title="Form builder"`;
      `toolbar` = status badge `<Badge variant="outline">{formTitle} · {meta.status}</Badge>`;
@@ -77,6 +94,18 @@ Design inspector tab. Ships:
      passes. `left` = FIELDS rail (see item 4) + added-fields list
      (see item 5); `canvas` = `<FormCanvas … deviceWidth={previewDevice} theme={meta.settings.theme}/>`;
      `right` = `renderFormInspector()` / `FieldSettingsPanel` (unchanged logic).
+   - **The `canvas` slot must PRESERVE the full current content-region body
+     (`FormBuilderPage.tsx:828-868`), not just `<FormCanvas>`.** Move the inner
+     contents of that `<div>` verbatim into the `canvas` slot: (a) the `loadError`
+     `<Alert variant="destructive">` (`:829-834`), (b) the `remoteUpdatePending`
+     "Updated in another tab" `<Alert>` + Refresh button wired to
+     `refreshForm({ allowUnsaved:true })` (`:835-849`), and (c) the
+     `isLoading ? "Loading form builder…" placeholder : <FormCanvas …/>` ternary
+     (`:850-867`). Dropping these would regress error surfacing + cross-tab conflict
+     UX AND break the existing SSR assertion `form-builder.test.tsx:16`
+     (`expect(html).toContain("Loading form builder")`). The `EditorFrame` `canvas`
+     slot replaces the old `:828` flex wrapper `<div>`, so its padding/scroll is now
+     owned by `EditorFrame`, but the three inner pieces move in unchanged.
    - The device toggle drives the canvas preview width via the `deviceWidth` prop
      added on `FormCanvas` in 516-04.
    - Keep the mobile `Sheet` fallbacks (`:879` fields, `:915` inspector) since
@@ -213,6 +242,13 @@ const handlePublish = async () => {
           <Button variant="outline" size="sm" className="gap-2" onClick={openRuntimePreview} disabled={!activeForm || isBusy}><Eye className="h-4 w-4"/> Runtime preview</Button>
           <Button variant="ghost" onClick={handleSave} disabled={isBusy || !hasUnsavedChanges}>{isSaving ? "Saving..." : "Save"}</Button>
           <Button className="gap-1.5" onClick={handlePublish} disabled={isBusy || !activeForm}><Rocket className="size-4"/> Publish</Button>
+          {/* relocated mobile Sheet openers (were sticky-bar :818/:821 — the ONLY triggers for the
+              retained :879/:915 Sheets); EditorFrame left/right are lg-hidden so these are the sole
+              mobile access to the field rail + inspector */}
+          <div className="flex items-center gap-2 lg:hidden">
+            <Button variant="outline" size="sm" onClick={() => setMobileFieldsOpen(true)}>Fields</Button>
+            <Button variant="outline" size="sm" onClick={() => setMobileSettingsOpen(true)}>Details</Button>
+          </div>
         </div>
       }
     />
@@ -224,16 +260,47 @@ const handlePublish = async () => {
           {/* render-only disabled undo/redo (prototype chrome fidelity; NO history stack — parent scope 366-377) */}
           <Button variant="ghost" size="icon-sm" disabled aria-label="Undo"><Undo2 className="h-4 w-4"/></Button>
           <Button variant="ghost" size="icon-sm" disabled aria-label="Redo"><Redo2 className="h-4 w-4"/></Button>
-          <Button variant={previewDevice==="desktop"?"secondary":"ghost"} size="icon-sm" onClick={()=>setPreviewDevice("desktop")}><Monitor className="h-4 w-4"/></Button>
-          <Button variant={previewDevice==="mobile"?"secondary":"ghost"} size="icon-sm" onClick={()=>setPreviewDevice("mobile")}><Smartphone className="h-4 w-4"/></Button>
+          {/* segmented device pill (prototype EditorPreviewFrame.tsx:53-61): one bordered
+              bg-card p-0.5 container, active device on a bg-muted chip; wired to setPreviewDevice */}
+          <div className="ml-1 hidden items-center rounded-lg border border-border bg-card p-0.5 sm:flex">
+            <button type="button" aria-label="Desktop preview" aria-pressed={previewDevice==="desktop"}
+              onClick={()=>setPreviewDevice("desktop")}
+              className={cn("flex size-6 items-center justify-center rounded-md",
+                previewDevice==="desktop" ? "bg-muted text-foreground" : "text-muted-foreground")}>
+              <Monitor className="size-3.5"/>
+            </button>
+            <button type="button" aria-label="Mobile preview" aria-pressed={previewDevice==="mobile"}
+              onClick={()=>setPreviewDevice("mobile")}
+              className={cn("flex size-6 items-center justify-center rounded-md",
+                previewDevice==="mobile" ? "bg-muted text-foreground" : "text-muted-foreground")}>
+              <Smartphone className="size-3.5"/>
+            </button>
+          </div>
         </div>
       }
       left={/* Fields/Library Tabs: FieldListPanel (added fields) + FieldLibrary rail */}
-      canvas={<FormCanvas ... deviceWidth={previewDevice} theme={meta.settings.theme} />}
+      canvas={/* move :828-868 body inner contents here verbatim — NOT just FormCanvas: */
+        <>
+          {loadError ? (
+            <Alert variant="destructive"><AlertTitle>Unable to load form</AlertTitle><AlertDescription>{loadError}</AlertDescription></Alert>
+          ) : null}
+          {remoteUpdatePending ? (
+            <Alert><AlertTitle>Updated in another tab</AlertTitle><AlertDescription className="…">
+              <span>New changes are available. Refresh to load the latest version.</span>
+              <Button variant="outline" size="sm" onClick={() => refreshForm({ allowUnsaved: true })}>Refresh</Button>
+            </AlertDescription></Alert>
+          ) : null}
+          {isLoading ? (
+            <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground shadow-soft">Loading form builder...</div>
+          ) : (
+            <FormCanvas ... deviceWidth={previewDevice} theme={meta.settings.theme} />
+          )}
+        </>}
       right={selectedTarget?.type === "form" ? renderFormInspector() : <FieldSettingsPanel .../>}
     />
   </div>
-  {/* keep mobile Sheets (:879 fields, :915 inspector — both render the Design tab), toasts, FormRuntimePreviewDialog */}
+  {/* keep mobile Sheets (:879 fields, :915 inspector — both render the Design tab), toasts, FormRuntimePreviewDialog;
+      NOTE: loadError/remoteUpdatePending alerts + isLoading placeholder are NOT dropped — they moved into the EditorFrame `canvas` slot above */}
 </AdminShell>
 ```
 
@@ -245,16 +312,78 @@ Device toggle is pure client state (no persistence).
 
 ## Testing requirements + lanes
 
-- **Vitest admin/UI** `tests/vitest/admin/formBuilderPage.test.tsx` (extend or
-  NEW): the field library includes a `Phone` item and adding it appends a
-  `type:"phone"` field; the inspector exposes a `Design` tab that renders
-  `FormDesignPanel`; the device toggle updates the `deviceWidth` passed to
-  `FormCanvas`; **Publish calls the mocked `updateForm` with `status:"published"`**
-  (assert the call argument, not merely that a save fired — this guards the
-  status-override fix against the async-`setMeta` regression); **a theme edit
-  through `setFormTheme` marks the form dirty (Save/`hasUnsavedChanges` enabled)
-  and persists `settings.theme` via `updateForm`** (guards the statement-body
-  dirty-flag fix). Pure render lane (mock `formsClient`).
+**Lane:** Vitest, Bun-free, pure render (mock `formsClient`). FormBuilderPage's
+coverage already lives in the **ui** and **ui-integration** lanes, so this subtask
+EXTENDS those files in place — do **NOT** introduce a divergent
+`tests/vitest/admin/formBuilderPage.test.tsx` (none exists today; `tests/vitest/admin/`
+holds only `formsClient.test.ts`). The chrome rewrite BREAKS both existing files, so
+migrating them is mandatory, not optional:
+
+1. **UPDATE `tests/vitest/ui-integration/forms-builder-restyle.test.tsx`** (owned by
+   this subtask). This file mounts the real `FormBuilderPage` with heavy children
+   mocked and asserts three wired regions. The rewrite makes its central mock inert
+   because the page no longer renders `EditorShell`:
+   - **Replace the `@/ui/layouts/EditorShell` mock (`:191-210`)** with two mocks that
+     match the new chrome: `@/ui/layouts/AdminShell` (passthrough — render
+     `<div data-region="topbar">{topbarActions}</div>` + `{children}`) and
+     `@/ui/shared/EditorFrame` (map the new slots to the existing region hooks so the
+     data-region assertions keep working: `left`→`<aside data-region="left">`,
+     `canvas`→`<main data-region="canvas">`, `right`→`<aside data-region="right">`;
+     the mock module must also re-export passthrough `EditorRailGroup`/`EditorRailItem`
+     because `@/ui/shared/EditorFrame` re-exports them — `EditorFrame.tsx:67`). Leave
+     `PageHeader` real (pure layout, SSR-safe). The existing region assertions
+     (`:302-313`: `field-list:1` in `left`, `canvas:1` in `canvas`,
+     `field-settings-panel` in `right`) then pass unchanged against the EditorFrame
+     mock's regions; `add-library-field` (`:305`) still comes from the file's own
+     `FieldLibrary` mock (`:212`).
+   - **Rename the Save trigger `:368`** `clickByText(view.container, "Save form")`
+     → `"Save"` (the PageHeader Save button label changes `Save form`→`Save`; the
+     save-writes assertions `:371-374` stay).
+   - The `FormCanvas` mock (`:233`) currently renders `canvas:{fields.length}`; extend
+     it to also surface the new `deviceWidth` prop (e.g. render
+     `device:{deviceWidth}`) so the new device-toggle test below can assert it.
+   - There are **no** `Fields Library`/`Advanced Fields` assertions in this file to
+     drop (the local `FieldLibrary` mock at `:212` short-circuits that chrome); the
+     deletions in Scope item 4 are covered by the `form-builder.test.tsx` render below.
+2. **UPDATE `tests/vitest/ui/form-builder.test.tsx`** (owned by this subtask). It
+   `renderToString`s the real page (no mocks). **Change `:21`** `expect(html)
+   .toContain("Save form")` → `"Save"`. The `"Loading form builder"` assertion
+   (`:16`) stays valid ONLY because the `isLoading` placeholder moves into the
+   `EditorFrame` `canvas` slot verbatim (Scope item 2) — it must NOT be dropped in
+   the chrome rewrite. The other assertions stay valid post-rewrite:
+   `Fields`/`Library` (`:17-18`) are the left-slot tab labels (Scope item 5),
+   `Form Settings` (`:19`) is the inspector, `Action logs` (`:20`) folds into the
+   `PageHeader` actions row (Scope item 2). ADD a negative assertion that the deleted
+   non-prototype chrome is gone: `expect(html).not.toContain("Fields Library")` and
+   `expect(html).not.toContain("Advanced Fields")` (Scope item 4 deletes
+   `FieldLibrary.tsx:23-27` header + `:46-50` footer button). Confirm the real
+   `AdminShell`/`PageHeader`/`EditorFrame` render under `renderToString` (they are
+   pure layout wrappers, already SSR-rendered by the menu/posts editors).
+3. **NEW assertions — add to the existing ui-integration file** (extend
+   `forms-builder-restyle.test.tsx`, same lane, reuse its `formsClient` mock +
+   `mount`/`flush` harness):
+   - the field library includes a `Phone` item and adding it appends a `type:"phone"`
+     field (needs the file's `FieldLibrary` mock relaxed to expose the `phone` item,
+     or a dedicated test that unmocks `FieldLibrary` via `vi.importActual` — mirror
+     the `FormSettingsPanel` real-panel pattern already used at `:319-323`);
+   - the inspector exposes a `Design` tab that renders `FormDesignPanel`;
+   - toggling the device control updates the `deviceWidth` passed to `FormCanvas`
+     (assert `device:mobile` appears in the `canvas` region after clicking the
+     mobile toggle, via the extended FormCanvas mock above);
+   - **Publish calls the mocked `updateForm` with `status:"published"`** (assert the
+     call argument, not merely that a save fired — guards the status-override fix
+     against the async-`setMeta` regression);
+   - **a theme edit through `setFormTheme` marks the form dirty (`Save`/
+     `hasUnsavedChanges` enabled) and persists `settings.theme` via `updateForm`**
+     (guards the statement-body dirty-flag fix).
+   - **the relocated mobile openers stay reachable** — assert a "Details" opener
+     button (the mobile inspector trigger, `setMobileSettingsOpen(true)`) renders in
+     the `PageHeader` actions row, and clicking it opens the mobile inspector Sheet
+     (assert the inspector region content appears). This guards against the sticky-bar
+     deletion orphaning the retained mobile Sheets (`:879`/`:915`) and leaving
+     `mobileFieldsOpen`/`mobileSettingsOpen` (`:302-303`) permanently `false`. Use
+     "Details" (not "Fields") as the query text since "Fields" also labels the
+     left-slot tab and the `EditorRailGroup` heading.
 
 ## UI/UX fidelity + max-config-flexibility notes
 
@@ -263,7 +392,10 @@ admin `PageHeader` + `EditorFrame` primitives (see Scope item 2), not by
 patching the old `EditorShell` sticky toolbar: in-page `PageHeader` (breadcrumb
 `Forms › <name>`, title, description, `Save` ghost + `Publish` primary w/ Rocket),
 framed `EditorFrame` card (toolbar status badge `<name> · <status>`, desktop/mobile
-device toggle in the frame `actions`, FIELDS rail left, canvas card, inspector
+device toggle rendered as a single segmented pill — one `rounded-lg border bg-card
+p-0.5` container with the active device on a `bg-muted` chip, per
+`EditorPreviewFrame.tsx:53-61`, NOT two loose icon buttons — in the frame `actions`,
+FIELDS rail left, canvas card, inspector
 right). Undo/redo is delivered as **render-only chrome fidelity** — two `disabled`
 Undo/Redo buttons (matching the prototype's `EditorPreviewFrame.tsx:47-52` icons +
 placement) with NO history stack; functional edit-history is explicitly out of

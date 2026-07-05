@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Services / Validation / Settings / Model Contract
 **Estimated Effort:** Large
-**Dependencies:** TASK-512-01 (media columns + `media_folders` table + migration `0066`).
+**Dependencies:** TASK-512-01 (media columns + `media_folders` table + migration `0067`).
 **Status:** ⏳ To Do
 
 ---
@@ -63,12 +63,23 @@ export type MediaMeta = {
   alt?: string | null; title?: string | null; caption?: string | null;
   description?: string | null; credit?: string | null;
   folderId?: string | null;
-  tags?: string[] | null;
+  tags?: string[];        // NOT nullable — column is NOT NULL DEFAULT '[]' (512-01)
   focalX?: number | null; focalY?: number | null;
 };
 ```
-Extend `buildMediaPatch` — add a present-only branch PER new key (same
-`hasOwnProperty` guard). Add a `normalizeMediaMeta(meta)` helper (logically pure — no DB call inside it) that
+> **`tags` is NOT-NULL** — the `media.tags` column is ADDED by dependency 512-01 (`media` table @ `schema.ts:1121-1136`; new column defined in 512-01 §Implementation line 93 as `tags: jsonb("tags").$type<string[]>().notNull().default([])`, migration `0067`). NOTE: the media table at `schema.ts:1121-1136` has NO `tags` column TODAY; the `jsonb("tags").$type<string[]>().notNull().default([])` rows at `schema.ts:787` (`content_entries`) and `:877` (`posts`) are only jsonb-array PRECEDENT in OTHER tables, not the media column location (512-01 cites `mediaIds: jsonb("media_ids").notNull().default([])` @ `schema.ts:1578` as its precedent). So `tags` is typed `string[]` WITHOUT `| null`, and its `buildMediaPatch`
+> branch MUST assign the normalized array directly — `patch.tags = normalized.tags` — and MUST NOT copy the
+> existing `?? null` pattern (`buildMediaPatch` today does `patch.alt = meta.alt ?? null` at `mediaService.ts:76/79/82`);
+> writing `null` into the NOT-NULL column is a constraint violation. `mediaUpdateSchema` already forbids null
+> for tags (array-only, §C) and `normalizeMediaMeta` rejects non-array first, so null cannot reach the patch —
+> the type + branch here just make that invariant explicit. All OTHER new keys (`folderId/focal*/description/credit`)
+> are nullable columns and DO use the `?? null` pattern.
+
+Extend `buildMediaPatch` — add a present-only branch PER new key using the same
+`hasOwnProperty` guard, but with per-column null-handling: nullable columns
+(`folderId/focalX/focalY/description/credit`) follow the existing `patch.x = meta.x ?? null`
+pattern; the NOT-NULL `tags` column assigns the normalized array directly (`patch.tags = meta.tags`,
+never `?? null` — see NOT-NULL note above). Add a `normalizeMediaMeta(meta)` helper (logically pure — no DB call inside it) that
 clamps/sanitizes BEFORE patch build. Export it so its unit coverage can import it, but note its
 tests run in the Bun lane (DB-guarded), NOT Vitest: `mediaService.ts:2` imports `../../db/client`,
 so importing anything from this module pulls the DB client and is not Bun-free (see Testing
@@ -86,18 +97,33 @@ Security Contract present-only guarantee). Implementation: iterate/clamp only ov
 actually present on `meta` (never assign a default onto an absent key). This subset rule is the
 GENERAL contract; the per-axis focal present-only below is a specific case of it.
 
+**NOT-NULL COLUMN NOTE (tags):** `tags` is the one new NOT-NULL column, added to the `media` table
+(`schema.ts:1121-1136`) by 512-01 §Implementation line 93 as `jsonb("tags").$type<string[]>().notNull().default([])`
+(migration `0067`). Its present-only branch assigns the normalized array
+(`patch.tags = meta.tags`) and NEVER `?? null` — see §A NOT-NULL note. If `tags` is present its
+normalized value is always a (possibly empty `[]`) array, never null; if absent it is omitted entirely
+(present-only, default `[]` stays). All other new columns are nullable and use the `?? null` pattern.
+
 `normalizeMediaMeta` clamps/sanitizes BEFORE patch build:
 - `folderId`: if present and non-null, must be a uuid string that EXISTS in `media_folders`
   (validate against DB in the service layer; a bad id → throw `media_folder_not_found`); null
   clears membership.
 - `tags`: coerce to `string[]`, trim each, drop empties, dedupe (case-insensitive), cap at
   `MAX_TAGS = 30` and each tag `MAX_TAG_LEN = 40` chars (throw `media_tags_invalid` if over, or
-  clamp — DECISION: clamp/truncate silently to stay lenient, but reject non-array).
+  clamp — DECISION: clamp/truncate silently to stay lenient, but reject non-array). Result is
+  ALWAYS an array (empty `[]` when all dropped), NEVER null — column is NOT NULL. If a present
+  `tags` is `null`/`undefined` at the normalizer (the route schema already forbids null, array-only,
+  so this is belt-and-suspenders), coerce to `[]` rather than passing null through.
 - `focalX`/`focalY`: numbers clamped to `[0,1]`; NaN/non-number → reject `media_focal_invalid`.
   null clears. If exactly one of X/Y present, the other stays as-is (present-only per axis).
 - `description`/`credit`: strings or null; cap length (`MAX_DESC = 2000`, `MAX_CREDIT = 300`).
 Keep `normalizeMediaMeta` PURE (no DB) except the folder-existence check which stays in
-`updateMedia` (so the pure normalizer is Vitest-testable without Bun/DB).
+`updateMedia` — this purity means the normalizer needs no live DB connection at runtime, so its
+unit tests run in the Bun lane WITHOUT tripping the `hasDb` guard or opening a connection. It is
+STILL NOT Vitest-importable, however: `mediaService.ts:2` imports `../../db/client`, so importing
+anything from this module (including the exported `normalizeMediaMeta`) pulls the DB client and is
+not Bun-free. Coverage therefore lives in the Bun lane, NOT Vitest (see §A lines 82-86 and Testing
+Requirements).
 
 `uploadMedia` — DO NOT extend. It stays alt/title/caption only (inserts alt/title/caption at
 `mediaService.ts:150-152`). ALL new metadata — `folderId`, `tags`, `focalX`/`focalY`,
@@ -144,7 +170,12 @@ Extend `mediaUpdateSchema` (keep `additionalProperties:false`), add:
 Add NEW schemas: `mediaFolderCreateSchema` (`required:["name"]`, name/slug/parentId/orderIndex,
 `additionalProperties:false`), `mediaFolderUpdateSchema` (all optional, `additionalProperties:false`),
 `mediaFolderReorderSchema` (`required:["orders"]`, `orders: {type:"array", items:{type:"object",
-required:["id","orderIndex"], properties:{...}, additionalProperties:false}}`).
+required:["id","orderIndex"], properties:{ id:{type:"string"}, orderIndex:{type:"number"},
+parentId:{type:["string","null"]} }, additionalProperties:false}}`). **`parentId` MUST be
+allowlisted** — the client (512-04 `MediaFolderOrder`) and server
+(`reorderMediaFolders(orders: MediaFolderOrder[])`, line 147) both carry optional `parentId` for
+drag re-parenting; under `additionalProperties:false` a reorder body with `parentId` is otherwise
+rejected 4xx at the route boundary.
 
 ### D. storageSettings.ts — quota (SETTINGS, no DDL)
 

@@ -26,6 +26,7 @@ Przyklady:
 - audit:read
 - themes:read
 - themes:write
+- dashboard:write
 
 ## Default roles
 
@@ -66,6 +67,9 @@ Notes:
 - Plugins/Store: plugins:read/manage + store:browse
 - Users/Roles: users:read/write + roles:read/write
 - Audit: audit:read
+- Dashboard: content:read for viewing the Dashboard/read-model; dashboard:write
+  for saving/resetting the current user's Dashboard layout. `dashboard:write`
+  is not classified as high-risk.
 
 UI behavior:
 - Admin UI buduje `can(permission)` z redacted `permissionSnapshot` zwracanego

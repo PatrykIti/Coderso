@@ -14,9 +14,15 @@
 ## Scope (single-writer)
 
 **513-01 is the SOLE WRITER of:**
-- `core/db/schema.ts` (the `contentTypes` table block, lines ~667-675)
-- `core/db/migrations/0066_*.sql` + `core/db/migrations/meta/0066_snapshot.json` +
-  `core/db/migrations/meta/_journal.json` (idx 66) — generated, not hand-edited
+- `core/db/schema.ts` (the `contentTypes` table block, lines ~684-692)
+- `core/db/migrations/00NN_*.sql` + `core/db/migrations/meta/00NN_snapshot.json` +
+  `core/db/migrations/meta/_journal.json` (the **next free idx** produced by `db:generate` —
+  currently **67**, since idx 66 = `0066_dashboard_layouts` is already staged on this branch; do
+  NOT hardcode — if another migration lands first, `db:generate` auto-increments past it) —
+  generated, not hand-edited. 513-01 owns ONLY its own `00NN` artifacts (it does NOT touch
+  `0066_dashboard_layouts.*`, which belongs to the sibling TASK-480 migration).
+- `core/services/content/contentTypeConfig.ts` (**new** — db/Bun-free module: `normalizeContentTypeConfig`,
+  `CONFIG_KEYS`, `CAP_KEYS`, `isRecord`, `ContentTypeConfig`/`ContentTypePermissionCapabilities` types)
 - `core/services/content/typeService.ts`
 - `core/server/validation/contentSchemas.ts`
 - `core/admin/services/contentTypesClient.ts` (types + payloads only)
@@ -36,8 +42,9 @@ component or `schemaMapping.ts`.
 endpoint / RBAC bucket / HTTP method.** `config` rides `POST /content-types` (`content:write`) and
 `PATCH /content-types/:id` (`content:write`) via `contentTypeCreateSchema` /
 `contentTypeUpdateSchema` (both `additionalProperties:false`). The request schema gains a typed
-`config` object with a **closed** property set; the *authoritative* normalization is server-side
-in `typeService.normalizeContentTypeConfig` (client input is never trusted):
+`config` object with a **closed** property set; the *authoritative* normalization is
+`normalizeContentTypeConfig` (defined in the db-free `contentTypeConfig.ts` module, §2, and applied
+server-side by `typeService` on every write — client input is never trusted):
 - Unknown top-level config key OR unknown per-role capability key ⇒ throw
   `content_type_config_invalid` → mapped to `ApiError(..., 400)` in `contentTypeRoutes`.
 - Bad scalar value (wrong type) ⇒ **fail-soft omit** (never persisted raw).
@@ -58,12 +65,29 @@ Add to the `contentTypes` pgTable:
 ```ts
 config: jsonb("config").notNull().default({}),
 ```
-(place after `status`, before `createdAt`). Confirm `jsonb` is already imported (it is — used by
-`schema` in the same table). Generate migration: `bun run db:generate` ⇒ `0066_<name>.sql`
+(place after `status`:689, before `createdAt`:690 — the real `contentTypes` pgTable is at
+schema.ts:684-692). Confirm `jsonb` is already imported (it is — used by `schema` in the same
+table). Generate migration: `bun run db:generate` ⇒ `00NN_<name>.sql` (next free idx, currently
+**67** — do NOT hardcode 66; that tag is taken by `0066_dashboard_layouts`)
 (`ALTER TABLE "content_types" ADD COLUMN "config" jsonb DEFAULT '{}'::jsonb NOT NULL;`) +
-snapshot + journal idx 66. Run `bun run db:migrate` against the local TEST DB to verify apply.
+`meta/00NN_snapshot.json` + `_journal.json` entry (idx 67). Run `bun run db:migrate` against the
+local TEST DB to verify apply. **Land-order dependency:** because the idx is auto-assigned, 513-01
+must land its migration before any later 513 subtask (per the strict land order below) and rebase
+if a non-513 migration lands 67 first.
 
-### 2. Config type + normalizer (`typeService.ts`)
+### 2. Config type + normalizer (`core/services/content/contentTypeConfig.ts` — new db-free module)
+The normalizer and its allowlist constants live in a **new, db/Bun-free module** —
+`core/services/content/contentTypeConfig.ts` — NOT in `typeService.ts`. Rationale: `typeService.ts`
+does `import { db } from "../../db/client"` (line 2), and `db/client.ts` throws when
+`DATABASE_URL` is unset and instantiates a `postgres` pool at module load. Importing the normalizer
+from `typeService.ts` into the Vitest pure lane would drag in `db/client`/`postgres` and break the
+Bun-free boundary (the same reason the resolve helpers are relocated to `contentTypesClient.ts`).
+By defining `normalizeContentTypeConfig` + `CONFIG_KEYS`/`CAP_KEYS`/`isRecord` + the
+`ContentTypeConfig`/`ContentTypePermissionCapabilities` types in this pure module, both
+`typeService.ts` (server) and the Vitest pure-lane test import it with no db pull-in.
+`typeService.ts` re-exports the types (`export type { ContentTypeConfig, ... } from "./contentTypeConfig"`)
+and imports `normalizeContentTypeConfig` from it. `isRecord` — if a shared util already exists, reuse
+it; otherwise define locally here.
 ```ts
 export type ContentTypePermissionCapabilities = {
   read?: boolean; create?: boolean; update?: boolean; delete?: boolean; publish?: boolean;
@@ -239,7 +263,11 @@ Everything else in `contentTypeRoutes.ts` is untouched.
 - migration: assert the column exists / a create with config succeeds against the migrated TEST DB.
 - Each test creates a unique-slug type and deletes it (shared-DB safety).
 
-**Vitest pure lane**: `normalizeContentTypeConfig` table-driven cases (no DB import).
+**Vitest pure lane** (`tests/vitest/**` — Bun/db-free): `normalizeContentTypeConfig` table-driven
+cases, importing from the db-free `core/services/content/contentTypeConfig.ts` module (§2) — NOT
+from `typeService.ts` (which pulls `db/client`/`postgres` and would break the Vitest lane). This is
+why the normalizer is relocated to that pure module. Also cover the resolve helpers
+(`resolveDraftsEnabled`/`resolveVersioning` from `contentTypesClient.ts`) here.
 
 **Gates**: `bun --cwd core lint:types` + root `tsc -p tsconfig.json --noEmit` (client type change
 ripples into UI tests later; run root tsc), `lint`.

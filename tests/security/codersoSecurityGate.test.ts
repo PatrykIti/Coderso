@@ -17,6 +17,7 @@ import {
   createBookingSubmissionNonce,
 } from "../../core/services/booking/bookingSubmissionNonce";
 import { SECURITY_SETTINGS_DEFAULTS } from "../../core/services/settings/securitySettings";
+import { resolveRateLimitBucket } from "../../core/server/httpServer";
 
 const NONCE_SECRET = "coderso_release_gate_nonce_secret_32";
 const NONCE_TTL_MINUTES = "10";
@@ -98,6 +99,14 @@ test("security gate: internal submissions require session or scoped API key", ()
   expect(bookingWithApiKey.requireCaptcha).toBe(false);
 });
 
+test("security gate: admin dashboard endpoints use admin rate-limit buckets", () => {
+  expect(resolveRateLimitBucket("GET", "/dashboard/layout")).toBe("admin_read");
+  expect(resolveRateLimitBucket("GET", "/dashboard/widget-data")).toBe("admin_read");
+  expect(resolveRateLimitBucket("PUT", "/dashboard/layout")).toBe("admin_write");
+  expect(resolveRateLimitBucket("POST", "/dashboard/layout/reset")).toBe("admin_write");
+  expect(resolveRateLimitBucket("POST", "/dashboard/widget-data")).toBe("admin_write");
+});
+
 test("security gate: form and booking nonce contracts reject missing and tampered tokens", () => {
   withNonceSecret(() => {
     const now = Date.now();
@@ -107,7 +116,9 @@ test("security gate: form and booking nonce contracts reject missing and tampere
     );
 
     const validFormNonce = createFormSubmissionNonce("contact-form", now);
-    expect(() => assertFormSubmissionNonce("contact-form", validFormNonce, now + 1_000)).not.toThrow();
+    expect(() =>
+      assertFormSubmissionNonce("contact-form", validFormNonce, now + 1_000)
+    ).not.toThrow();
 
     const tamperedFormNonce = tamperNonce(validFormNonce);
     expect(() => assertFormSubmissionNonce("contact-form", tamperedFormNonce, now + 1_000)).toThrow(

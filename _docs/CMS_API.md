@@ -2984,12 +2984,15 @@ the published site; it checks DNT/consent before sending anything.
 
 ## Dashboard (v1)
 
-Permissions: `content:read`
+Permissions: `content:read` for reads/widget data, `dashboard:write` for
+layout save/reset.
 
 Note: Dashboard payload jest agregowany po stronie backendu z danych CMS
 (pages/content entries/media/users/security settings) i nie wymaga query params.
 
 - `GET /dashboard`
+
+Legacy aggregate payload kept for existing clients.
 
 Response:
 
@@ -3054,6 +3057,77 @@ Response:
   ]
 }
 ```
+
+### Configurable dashboard layout (TASK-480)
+
+Admin Dashboard panels are stored per admin user in `dashboard_layouts`.
+Dashboard widgets are **not** Page Builder widgets and are not part of
+`core/widgets/*`.
+
+Security contract:
+- Internal admin endpoints only (`/admin/api/*`).
+- Session auth required.
+- `GET` routes use `content:read` and the `admin_read` rate-limit bucket.
+- `PUT`/`POST` routes use CSRF and the `admin_write` bucket.
+- No nonce/HMAC/reCAPTCHA because there is no public write endpoint.
+
+- `GET /dashboard/layout`
+- `PUT /dashboard/layout`
+- `POST /dashboard/layout/reset`
+- `GET /dashboard/widget-data`
+- `POST /dashboard/widget-data`
+
+`GET /dashboard/layout` response:
+
+```json
+{
+  "layout": {
+    "version": 1,
+    "widgets": [
+      {
+        "id": "default-totals",
+        "type": "totals-counters",
+        "title": "Overview",
+        "config": {
+          "kind": "totals-counters",
+          "source": "cms",
+          "metrics": ["pages", "entries", "media", "users"]
+        },
+        "position": { "x": 0, "y": 0, "w": 12, "h": 1 }
+      }
+    ]
+  },
+  "updatedAt": null
+}
+```
+
+`PUT /dashboard/layout` uses the same strict `DashboardLayout` shape. Unknown
+fields are rejected; more than 24 widgets is rejected with
+`dashboard_layout_invalid`. Stored corrupt/legacy layouts fall back to the
+default layout on read instead of breaking the admin shell.
+
+`GET /dashboard/widget-data` resolves widget data for the saved/default layout.
+`POST /dashboard/widget-data` accepts an uncached draft batch:
+
+```json
+{
+  "widgets": [
+    {
+      "id": "draft-traffic",
+      "type": "totals-counters",
+      "config": {
+        "kind": "totals-counters",
+        "source": "traffic",
+        "metrics": ["visitors", "pageviews"]
+      }
+    }
+  ]
+}
+```
+
+Traffic sources reuse the TASK-483 analytics read model. If no traffic data is
+available, widgets return an empty/unavailable state; dashboard code does not
+fabricate fallback analytics.
 
 ---
 

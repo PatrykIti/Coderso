@@ -7,10 +7,9 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-03-L02 (layout routes), TASK-480-03-L03 (widget-data
 route).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
-
+**Completed:** 2026-07-05
 ---
 
 ## Overview

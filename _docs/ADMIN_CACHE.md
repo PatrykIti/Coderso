@@ -53,6 +53,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `analytics:topContent:<rangeDays>:<limit>:<type>`
 - `analytics:traffic:overview:<rangeDays>`
 - `analytics:traffic:topPages:<rangeDays>:<limit>`
+- `dashboard:layout`
+- `dashboard:widgetData`
 - `backups:list:<page>:<limit>:<queryKey>`
 - `backups:schedule`
 - `tools:import:history`
@@ -218,6 +220,11 @@ Contract:
   same-timestamp, or unparsable records are ignored so a replayed/poisoned
   cache event can never replace newer live editor content; the dirty-state
   guard is unchanged.
+- Dashboard layout saves update `dashboard:layout` and invalidate
+  `dashboard:widgetData`; reset does the same. The builder ignores same-draft
+  remote hints while dirty/saving and asks for explicit reload instead of
+  overwriting unsaved panel changes. Draft widget preview POST payloads are not
+  stored in localStorage.
 - Same-tab subscribers are notified directly after broadcast, so assistant
   executions and other mutations can refresh the current admin surface without
   waiting for a cross-tab storage event or full reload.

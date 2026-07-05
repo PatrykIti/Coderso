@@ -2,6 +2,19 @@
 
 This file maps admin UI surfaces to their implementation files and the cached API calls they rely on.
 
+## Dashboard
+- Configurable Dashboard
+  - UI: `core/admin/ui/dashboard/DashboardPage.tsx`,
+    `DashboardBuilder.tsx`, `DashboardWidgetHost.tsx`
+  - Cached APIs: `getDashboardLayoutCached`, `getCachedDashboardLayout`,
+    `getDashboardWidgetDataCached`, `getCachedDashboardWidgetData`
+  - Draft preview: `resolveDashboardWidgetData` / `previewDashboardWidgetData`
+    uses `POST /dashboard/widget-data` and is intentionally uncached
+  - Mutations: `saveDashboardLayout`, `resetDashboardLayout`
+  - Cache bus: `dashboard:layout`, `dashboard:widgetData`
+  - Permission gate: read/model data requires `content:read`; customize/save
+    controls require `dashboard:write`.
+
 ## Pages
 - Pages list
   - UI: `core/admin/ui/pages/PageListPage.tsx`

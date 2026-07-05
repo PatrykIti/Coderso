@@ -392,6 +392,23 @@ export const userSettings = pgTable(
   })
 );
 
+export const dashboardLayouts = pgTable(
+  "dashboard_layouts",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    layout: jsonb("layout").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    updatedAtIdx: index("dashboard_layouts_updated_at_idx").on(t.updatedAt),
+  })
+);
+
 export const assistantDocs = pgTable(
   "assistant_docs",
   {

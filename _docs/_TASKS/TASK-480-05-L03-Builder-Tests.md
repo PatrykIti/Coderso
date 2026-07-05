@@ -5,9 +5,9 @@
 **Category:** Admin UI / Dashboard / Configurable Widgets / Testing
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-05-L01 (grid + reducer) · TASK-480-05-L02 (catalog + configure panel)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-05
 
 ---
