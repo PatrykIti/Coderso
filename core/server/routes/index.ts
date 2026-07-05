@@ -1,5 +1,6 @@
 import type { RouteContext, Router } from "../router";
 import { registerAuthRoutes } from "./authRoutes";
+import { registerInstallRoutes } from "./installRoutes";
 import { registerPageRoutes } from "./pageRoutes";
 import { registerMediaRoutes } from "./mediaRoutes";
 import { registerMenuRoutes } from "./menuRoutes";
@@ -42,6 +43,7 @@ import { registerCommerceRoutes } from "./commerceRoutes";
 import { registerPopupsRoutes } from "./popupsRoutes";
 import { registerReviewsRoutes } from "./reviewsRoutes";
 import { registerSolutionKitsRoutes } from "./solutionKitsRoutes";
+import { registerSetupRoutes } from "./setupRoutes";
 import { registerPostsRoutes } from "./postsRoutes";
 
 export type RouteDeps = {
@@ -52,6 +54,7 @@ export type RouteDeps = {
 
 export function registerAllRoutes(router: Router, deps: RouteDeps) {
   registerAuthRoutes(router, { requireAuth: deps.requireAuth, validate: deps.validate });
+  registerInstallRoutes(router, { validate: deps.validate });
   registerPageRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
@@ -204,6 +207,10 @@ export function registerAllRoutes(router: Router, deps: RouteDeps) {
     validate: deps.validate,
   });
   registerSolutionKitsRoutes(router, {
+    requirePermission: deps.requirePermission,
+    validate: deps.validate,
+  });
+  registerSetupRoutes(router, {
     requirePermission: deps.requirePermission,
     validate: deps.validate,
   });

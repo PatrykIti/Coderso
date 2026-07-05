@@ -6,9 +6,9 @@
 **Category:** Admin / Onboarding / Auth
 **Estimated Effort:** Medium
 **Dependencies:** TASK-482-02-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -23,8 +23,12 @@
   - `core/admin/ui/setup/installerValidation.ts` (new) — owns client-side field
     validation (mirrors the server `installAdminSchema`; password min length,
     email shape, confirm match) so the rules live in one place.
-  - A thin client in `core/admin/.../adminApiClient` (reuse the existing api
-    client used by login) for `getInstallStatus()` and `createInstallAdmin()`.
+  - A thin client for `getInstallStatus()` and `createInstallAdmin()` added to
+    `core/admin/services/authClient.ts` (or a sibling
+    `core/admin/services/installClient.ts`), built on `apiRequest` from
+    `core/admin/services/apiClient.ts` — explicitly **without** the `withCsrf`
+    option, matching the existing `login()` in `authClient.ts` (which posts to
+    `/auth/login` without `withCsrf`).
   - Reuse the centered `core/admin/ui/layouts/AuthShell.tsx` (exported `AuthShell`)
     — after 479-29 its default (no `brand` prop) is the centered layout that
     replaces the removed `AuthBrandPanel` split column — and
@@ -103,4 +107,10 @@ export function InstallerWizard({ onInstalled }: { onInstalled: (user: Installed
 - Cases: field validation (empty/short password, email shape, confirm match);
   password-strength list reflects input; successful submit invokes the install
   client with no extra fields; server error mapping; `available:false` path.
+- Tests are mock-based (no shared remote DB access, no `users`/settings
+  mutation) per the Coordination Pins in TASK-482-03.
 - No migration artifacts.
+- Coordination pins: see TASK-482-03-Installer-UI-And-Gate-Ordering.md
+  §Coordination Pins — changelog `1220` belongs to the 482-09 closure only
+  (1219/1221/1222 reserved); this leaf never edits `_docs/_TASKS/README.md` or
+  `_docs/_CHANGELOG/*` and stays clear of the TASK-483/484 forbidden paths.

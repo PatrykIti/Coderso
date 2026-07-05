@@ -6,6 +6,7 @@ Dokument zbiera klucze `settings` i ich znaczenie dla runtime/admin UI.
 
 | Key | Type | Default | Notes |
 | --- | --- | --- | --- |
+| `site.timezone` | `string` | `"UTC"` | Strefa czasowa (IANA); walidowana przez `Intl.DateTimeFormat` — nienumeryczna/nieznana strefa → `settings_value_invalid`. Ustawiana w Setup Wizard (Basic). |
 | `site.publicBaseUrl` | `string \| null` | `null` | Publiczny base URL runtime (`http/https`, trailing slash normalizowany) |
 | `auth.sessionTtlDays` | `number` | `14` | TTL sesji logowania w dniach (`1..365`) |
 | `auth.resetTtlMinutes` | `number` | `60` | TTL tokenu resetu hasla w minutach (`5..1440`) |

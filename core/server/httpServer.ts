@@ -5,7 +5,7 @@ import { attachUserFromSession, requireAuth } from "./middleware/auth";
 import { applyCorsHeaders } from "./middleware/cors";
 import { enforceCsrf } from "./middleware/csrf";
 import { requirePermission } from "./middleware/rbac";
-import { checkRateLimit } from "./middleware/rateLimit";
+import { checkRateLimit, type RateLimitBucket } from "./middleware/rateLimit";
 import { createRequestIdContext } from "./middleware/requestId";
 import { applySecurityHeaders } from "./middleware/securityHeaders";
 import { recordAccessLog } from "./middleware/accessLog";
@@ -35,6 +35,43 @@ const isPublicWritePath = (pathname: string) => /^\/forms\/[^/]+\/submissions$/.
 const resolvePublicWriteIdentifier = (pathname: string) => {
   const match = pathname.match(/^\/forms\/([^/]+)\/submissions$/);
   return match ? match[1] : null;
+};
+
+/**
+ * Select the rate-limit bucket for a request. Exported so security tests can
+ * assert the real bucket selection (e.g. /auth/install ⇒ "auth") instead of a
+ * test-local copy — a regression here must fail those tests.
+ */
+export const resolveRateLimitBucket = (method: string, pathname: string): RateLimitBucket => {
+  if (pathname.startsWith("/auth")) return "auth";
+  if (pathname.startsWith("/assistant")) return "assistant";
+  if (method.toUpperCase() === "POST" && isPublicWritePath(pathname)) return "public_write";
+  return isReadMethod(method) ? "admin_read" : "admin_write";
+};
+
+/**
+ * Derive the rate-limit identifier for a request. Exported so security tests
+ * can assert the real anti-rotation guard: /auth/install writes must NOT key off
+ * the body email (so rotating emails cannot buy fresh windows), unlike other
+ * /auth routes. A regression here must fail those tests.
+ */
+export const resolveRateLimitIdentifier = (
+  method: string,
+  pathname: string,
+  body: unknown
+): string | undefined => {
+  if (method.toUpperCase() === "POST" && isPublicWritePath(pathname)) {
+    return resolvePublicWriteIdentifier(pathname) ?? undefined;
+  }
+  if (
+    pathname.startsWith("/auth") &&
+    !pathname.startsWith("/auth/install") &&
+    body &&
+    typeof body === "object"
+  ) {
+    return (body as { email?: string }).email;
+  }
+  return undefined;
 };
 
 const parseCookies = (header: string | null) => {
@@ -325,25 +362,8 @@ const handleApi = async (req: Request, apiPrefix: string) => {
     await attachUserFromSession(ctx);
 
     try {
-      const isAuthRoute = pathname.startsWith("/auth");
-      const isAssistantRoute = pathname.startsWith("/assistant");
-      const isPublicWrite = req.method === "POST" && isPublicWritePath(pathname);
-      const bucket = isAuthRoute
-        ? "auth"
-        : isAssistantRoute
-          ? "assistant"
-          : isPublicWrite
-            ? "public_write"
-            : isReadMethod(req.method)
-              ? "admin_read"
-              : "admin_write";
-      const identifierFromBody =
-        isAuthRoute && ctx.body && typeof ctx.body === "object"
-          ? (ctx.body as { email?: string }).email
-          : undefined;
-      const identifier = isPublicWrite
-        ? (resolvePublicWriteIdentifier(pathname) ?? undefined)
-        : identifierFromBody;
+      const bucket = resolveRateLimitBucket(req.method, pathname);
+      const identifier = resolveRateLimitIdentifier(req.method, pathname, ctx.body);
       checkRateLimit(
         bucket,
         {

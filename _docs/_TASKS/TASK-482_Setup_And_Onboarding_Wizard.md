@@ -5,9 +5,9 @@
 **Category:** Admin / Onboarding / Auth
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-479-29 (Auth screen restyle — reuses the new centered `AuthShell` + restyled auth primitives from 479-29, which **removes** `AuthBrandPanel`; reskin only, this task is the feature)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -84,15 +84,15 @@ content-seeded site without touching env vars or the seed script.
 
 | ID | Title | Effort | Status |
 | --- | --- | --- | --- |
-| TASK-482-01 | Pre-auth installer foundation (first-run service + `/auth/install` status) | Medium | ⏳ To Do |
-| TASK-482-02 | First-admin bootstrap + `POST /auth/install/admin` | Large | ⏳ To Do |
-| TASK-482-03 | Pre-login installer UI + `AdminApp` gate ordering | Large | ⏳ To Do |
-| TASK-482-04 | Phase-2 wizard shell + step framework | Medium | ⏳ To Do |
-| TASK-482-05 | Phase-2 Basic steps + `site.timezone` settings key | Medium | ⏳ To Do |
-| TASK-482-06 | Starter content via Solution Kits | Large | ⏳ To Do |
-| TASK-482-07 | Advanced track steps + session-TTL reconciliation | Large | ⏳ To Do |
-| TASK-482-08 | Install-lock / finalize / self-disable | Medium | ⏳ To Do |
-| TASK-482-09 | E2E tests + documentation | Medium | ⏳ To Do |
+| TASK-482-01 | Pre-auth installer foundation (first-run service + `/auth/install` status) | Medium | ✅ Done |
+| TASK-482-02 | First-admin bootstrap + `POST /auth/install/admin` | Large | ✅ Done |
+| TASK-482-03 | Pre-login installer UI + `AdminApp` gate ordering | Large | ✅ Done |
+| TASK-482-04 | Phase-2 wizard shell + step framework | Medium | ✅ Done |
+| TASK-482-05 | Phase-2 Basic steps + `site.timezone` settings key | Medium | ✅ Done |
+| TASK-482-06 | Starter content via Solution Kits | Large | ✅ Done |
+| TASK-482-07 | Advanced track steps + session-TTL reconciliation | Large | ✅ Done |
+| TASK-482-08 | Install-lock / finalize / self-disable | Medium | ✅ Done |
+| TASK-482-09 | E2E tests + documentation | Medium | ✅ Done |
 
 ## Testing Requirements
 
@@ -106,8 +106,75 @@ content-seeded site without touching env vars or the seed script.
   KV table (`settings(key, value)`). Any leaf that *does* touch the schema must
   ship full migration artifacts (SQL + `meta/*_snapshot.json` + `meta/_journal.json`);
   none currently do.
-- Security gate (`tests/security/codersoSecurityGate.test.ts`) must stay green;
-  the new public route is added to its expectations.
+- Security gate (`tests/security/codersoSecurityGate.test.ts`) must stay green.
+  It has no per-route expectation inventory, so the install route's public /
+  session-less-CSRF / `auth`-bucket contract is asserted in dedicated new test
+  files (e.g. `tests/integration/routes/install.test.ts`,
+  `tests/security/installAdmin.test.ts`), **not** by editing the shared gate
+  file.
+- **Shared remote test database — non-destructive test contract (mandatory).**
+  All tests run against ONE shared remote Postgres (render.com, the single
+  `DATABASE_URL` in `.env`) used concurrently by TASK-482, TASK-483, TASK-484
+  and the owner. Therefore:
+  - Never truncate/delete the `users` table, never flip the real DB into a
+    global no-users install state, and never reset shared `settings` rows.
+  - Test `isFirstRun` / the no-users fail-closed gate and the TOCTOU
+    concurrency race via **service-level seams** (an injected user-count/db
+    seam on the first-run service) and self-restoring setup/teardown with
+    uniquely scoped fixtures (unique emails/keys, restored on teardown).
+  - The "full fresh-DB E2E" must run against an isolated/ephemeral database or
+    a fully mocked persistence boundary — **never** against the shared
+    `DATABASE_URL`.
+
+## Coordination & Shared Surfaces (parallel-stream contract)
+
+- **Parallel streams.** TASK-483 (analytics, worktree
+  `/home/coder/project/Coderso-task-483`) and TASK-484 (backups, worktree
+  `/home/coder/project/Coderso-task-484`) run concurrently on sibling
+  branches. TASK-482 works exclusively in
+  `/home/coder/project/Coderso-task-482` (branch `feature/task-482`).
+- **Forbidden paths for TASK-482:** `core/services/analytics/**`,
+  `core/services/backups/**`, any analytics/backups route modules,
+  `core/db/schema.ts`, `core/db/migrations/**`. No file in this task tree may
+  plan edits, DDL, or migration artifacts there.
+- **No DB migration in this tree.** Settings/branding/locale keys go through
+  the settings service defaults (rows in the generic KV `settings` table, not
+  DDL) and first-admin creation uses the existing `users` table. If a leaf
+  genuinely turns out to require DDL, escalate to the orchestrator instead of
+  adding migration artifacts.
+- **Shared surfaces (all three streams touch these ADDITIVELY).** Edits must
+  be scoped to TASK-482's own sections/lines and must not restructure the
+  file:
+  - The server route registration module `core/server/routes/index.ts`
+    (`registerAllRoutes()`) — add the `/auth/install` and `/setup` registrations
+    as new, self-contained blocks only.
+  - The shared request pipeline `core/server/httpServer.ts` — TASK-482-02-L02
+    makes **one** minimal, clearly-delimited edit to the existing
+    `identifierFromBody` conditional (`httpServer.ts:340-346`) to exclude
+    `/auth/install/*` paths from the email-based rate-limit identifier; no other
+    change. This is a modification of an existing line (not a pure append) in a
+    pipeline the 483/484 streams may also touch (rate-limit bucketing), so
+    coordinate before landing and escalate to the orchestrator if 483/484 edit
+    the same region.
+  - `tests/security/codersoSecurityGate.test.ts` — keep **GREEN**; this file is
+    a forms/booking submission-access + nonce **service** gate with NO per-route
+    CSRF/RBAC expectation inventory to extend, so TASK-482 does **not** edit it.
+    482's route-contract assertions live in dedicated new test files (per the
+    leaves' Testing Requirements). Only introduce a route-expectation inventory
+    here via an explicit cross-stream decision.
+  - `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`, `_docs/AUTH_SPEC.md` — add
+    482-scoped sections/entries only.
+- **Changelog / board discipline.** The pinned closure changelog number for
+  this task is **1220** (`_docs/_CHANGELOG/1220-*.md`). Numbers **1219**
+  (TASK-510, in flight in the shared main tree — may be absent from this
+  worktree's checkout; do NOT reallocate it), **1221** (TASK-483) and **1222**
+  (TASK-484) are RESERVED by parallel streams and must not be taken. ONLY the
+  closure subtask (TASK-482-09) edits `_docs/_TASKS/README.md` and
+  `_docs/_CHANGELOG/*`, and it touches only TASK-482 rows and its own
+  statistics deltas; implementation subtasks never touch them.
+- **Land order:** 01 → 02 → 03 (Phase 1), then 04 → 05 → 06 → 07 → 08
+  (Phase 2), then 09 (closure). Strictly sequential, single writer per source
+  file.
 
 ## Documentation Updates Required
 
@@ -121,6 +188,11 @@ content-seeded site without touching env vars or the seed script.
 - `_docs/SETTINGS.md` / settings key list — new `site.timezone` (+ optional
   branding key).
 - `_docs/AUDIT_SPEC.md` — `auth.install.*` taxonomy entries.
+- `_docs/_CHANGELOG/1220-*.md` — closure changelog entry, **pinned number
+  1220** (written by TASK-482-09 only; 1219/1221/1222 are reserved by
+  parallel streams).
+- `_docs/_TASKS/README.md` — board row updates for TASK-482 rows + statistics
+  deltas (written by TASK-482-09 only; implementation subtasks never edit it).
 
 ## Notes
 

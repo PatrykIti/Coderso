@@ -147,6 +147,46 @@ test("mapSettingsRouteError preserves known settings contract errors", () => {
   expect(mapped.message).toBe("Unknown setting key");
 });
 
+test("mapSettingsRouteError maps invalid setting values (e.g. an invalid timezone) to 400", () => {
+  // TASK-482-05-L01: the `site.timezone` normalizer throws
+  // `settings_value_invalid` for a non-IANA zone; the route boundary maps it to
+  // a 400 ApiError.
+  const mapped = mapSettingsRouteError(new Error("settings_value_invalid"));
+
+  expect(mapped).toBeInstanceOf(ApiError);
+  expect(mapped.code).toBe("settings_value_invalid");
+  expect(mapped.status).toBe(400);
+  expect(mapped.message).toBe("Invalid setting value");
+});
+
+test("PATCH /settings/:key propagates settings_key_invalid for an unknown key as a 400", async () => {
+  // TASK-482-05-L01: the PATCH handler resolves the key inside
+  // `withSettingsErrors`, so an unknown key surfaces as a mapped 400 ApiError
+  // (DB-free: resolveSettingKey rejects before any persistence).
+  const { router, routes } = makeRouter();
+
+  registerSettingsRoutes(router, {
+    requirePermission: () => async () => undefined,
+    validate: () => undefined,
+  });
+
+  const route = findRoute(routes, "PATCH", "/settings/:key");
+  const handler = route.handlers[route.handlers.length - 1];
+  if (!handler) throw new Error("Missing PATCH /settings/:key handler");
+
+  await expect(
+    handler({
+      params: { key: "unknown.key" },
+      query: {},
+      body: { value: "whatever" },
+      user: { id: "admin-1" },
+    })
+  ).rejects.toMatchObject({
+    code: "settings_key_invalid",
+    status: 400,
+  });
+});
+
 test("mapSettingsRouteError maps site shell reference errors to 400 responses", () => {
   const menuError = mapSettingsRouteError(new Error("site_shell_menu_not_found"));
   expect(menuError).toBeInstanceOf(ApiError);

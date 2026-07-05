@@ -50,8 +50,41 @@ Przyklad error:
 - `POST /auth/verify-otp` (MFA)
 - `POST /auth/reset` (public)
 - `POST /auth/reset/confirm` (public)
+- `GET /auth/install/status` (public, first-run installer)
+- `POST /auth/install/admin` (public, session-less, first-run installer)
 
 `GET /auth/csrf` wymaga aktywnej sesji i zwraca `{ token }` do headera `X-CSRF-Token`.
+
+### First-run installer (v1.2)
+
+Faza 1 dwufazowego onboardingu (TASK-482). Publiczne, session-less; szczegoly
+security w `SECURITY_SPEC.md` → „Pre-auth first-run installer”.
+
+`GET /auth/install/status` — czy installer jest dostepny (zero userow w DB).
+Odrzuca nieznane query params (`install_query_invalid`, 400).
+
+```json
+{ "available": true }
+```
+
+`POST /auth/install/admin` — tworzy pierwszego admina (rola `["*"]`,
+`status: "active"`, argon2). Strict reject-unknown; haslo `minLength 8`.
+
+Request:
+
+```json
+{ "name": "Ada Admin", "email": "ada@example.com", "password": "correct horse staple" }
+```
+
+Response (bez sekretow — `passwordHash`/`roleId` nigdy nie sa zwracane):
+
+```json
+{ "ok": true, "user": { "id": "u1", "email": "ada@example.com", "name": "Ada Admin" } }
+```
+
+Bledy: `install_unavailable` (409, gdy user juz istnieje — self-disable /
+TOCTOU re-check), `install_admin_invalid` (400), `validation_error` (400, strict
+schema / slabe haslo).
 
 Payload login:
 
@@ -2364,6 +2397,44 @@ Item shape (summary):
 Note:
 - `POST /solution-kits/:id/apply` and `POST /solution-kits/:id/rollback` require `solution-kits:write`.
 - Read routes require `solution-kits:read`.
+
+---
+
+## Setup / Starter content (v1.2)
+
+Onboarding Faza 2 — internal admin surface (`/setup/*`, TASK-482) ktory seeduje
+starter site przez Solution Kit installer i podpina wynik pod publiczny `site.*`
+shell. Blueprint jest ZAWSZE server-chosen; client podaje wylacznie selector
+(`kitId` LUB `blueprintKey`, dokladnie jeden), nigdy surowej `SolutionKitDefinition`.
+
+- `POST /setup/starter-content/preview` — dry-run; wymaga `solution-kits:write`
+  (dry-run persystuje `dry_run` run + items + audit row, jak
+  `POST /solution-kits/:id/apply`).
+- `POST /setup/starter-content/apply` — realny install; wymaga
+  `solution-kits:write` ORAZ `settings:write` (mutuje `site.homepageId` /
+  `site.navigationMenuId` / `site.footerTemplateId`).
+
+Request (dokladnie jeden selector):
+
+```json
+{ "blueprintKey": "default" }
+```
+
+Preview response:
+
+```json
+{ "summary": { "total": 3, "created": 3, "updated": 0, "skipped": 0 } }
+```
+
+Apply response:
+
+```json
+{ "runId": "123e4567-e89b-12d3-a456-426614174000", "summary": { "total": 3 } }
+```
+
+Audit: apply zapisuje `setup.starter_content.applied` (metadata `{ runId }`).
+Bledy: `starter_kit_unknown` (400, nieznany id/key), `starter_choice_invalid`
+(400, oba/zaden selector).
 
 ---
 

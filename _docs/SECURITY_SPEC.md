@@ -666,6 +666,37 @@ Rotacja klucza:
 - Ustawienie kontroluje waznosc tokenu resetu hasla.
 - Fallback: gdy key jest brakujacy/niepoprawny, runtime uzywa domyslnego `60` minut.
 
+## Pre-auth first-run installer (v1.2)
+
+Model zagrozen dla jedynego session-less endpointu, ktory potrafi utworzyc konto
+uprzywilejowane (`POST /auth/install/admin`, Faza 1 onboardingu, TASK-482).
+
+- **Brak CSRF przez brak sesji.** Endpoint jest z definicji session-less, wiec
+  `enforceCsrf` (`core/server/middleware/csrf.ts`) pomija go celowo: SAFE_METHODS
+  i kazde zadanie bez `ctx.sessionId` sa skipowane (`if (!ctx.sessionId)
+  return;`). Wyjatek CSRF jest scisle ograniczony do tej jednej sciezki — kazda
+  sesyjna mutacja nadal wymaga poprawnego tokenu.
+- **Boundary = no-users gate.** Jedyna granica autoryzacji jest fail-closed
+  precondycja „zero userow”, sprawdzana tanio przed transakcja i ponownie
+  wewnatrz transakcji (TOCTOU re-check) pod `pg_advisory_xact_lock`. Lock
+  serializuje rownolegle installery, wiec `count(*)` re-check pod READ COMMITTED
+  jest autorytatywny; unique index na email to defence-in-depth. Powtorka →
+  `install_unavailable` (409).
+- **Rate-limit.** Sciezka `/auth/install/*` mapuje sie na bucket `auth`
+  (prefix `/auth`); burst jest throttlowany jak login. Identyfikatorem NIE jest
+  email z body (installer jest wykluczony z `identifierFromBody` w
+  `httpServer.ts`), tylko IP — zeby nieznane konto nie sterowalo bucketem.
+- **Strong password + strict schema.** `installAdminSchema` jest strict
+  (reject-unknown), haslo `minLength 8`; walidacja przed jakimkolwiek zapisem.
+- **Audit trail.** Sukces → `auth.install.admin.created` (actor = nowy admin,
+  metadata email przez PII redaction seam). Zablokowana proba post-setup →
+  `auth.install.blocked` (actorId `null`). `GET /auth/install/status` nie
+  audytuje.
+- **Self-disable.** Endpoint trwale przestaje dzialac, gdy istnieje jakikolwiek
+  user (installer- lub seed-utworzony) lub gdy install-lock jest ustawiony.
+- **Brak wycieku sekretow.** Odpowiedz zwraca tylko `{ id, email, name }` — nigdy
+  `passwordHash`, `roleId`, tokenow ani cookie.
+
 ## Login alerts (v1.0)
 
 - Konfigurowalne w Admin UI: Settings → Security → Login Alerts.

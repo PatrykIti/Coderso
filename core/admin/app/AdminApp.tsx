@@ -1,6 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 import { canAdmin, resolveAuthBootstrap, type AuthUser } from "@/services/authClient";
+import { getInstallStatus } from "@/services/installClient";
 import { isApiClientError, subscribeAdminPermissionFailure } from "@/services/apiClient";
 import {
   getCachedSettings,
@@ -25,6 +26,7 @@ import {
 } from "@/ui/settings/settingsValues";
 import { PagePreview } from "@/ui/pages/PagePreview";
 import { SetupWizard } from "@/ui/setup/SetupWizard";
+import { InstallerWizard } from "@/ui/setup/InstallerWizard";
 import { Toaster } from "@/components/ui/sonner";
 import {
   AccessLogsRoute,
@@ -92,10 +94,8 @@ import {
   PageTemplateEditorRoute,
 } from "@/app/adminRouteComponents";
 import { AdminRouteErrorBoundary } from "@/app/AdminRouteErrorBoundary";
-import {
-  toSetupWizardSettingsPayload,
-  type SetupWizardValues,
-} from "@/ui/setup/setupWizardValidation";
+import { toBasicSettingsPayload, type SetupWizardValues } from "@/ui/setup/setupWizardValidation";
+import type { WizardValues } from "@/ui/setup/wizardSteps";
 import { toAdminThemeCssVariables } from "../../ui/theme/tokenCss";
 import {
   DEFAULT_ADMIN_THEME_TOKENS,
@@ -244,6 +244,19 @@ export const shouldShowSetupWizard = (input: {
   input.authState === "authenticated" &&
   input.settingsStatus === "ready" &&
   !input.setupCompleted;
+
+// The pre-login installer is a pre-auth surface: it renders ONLY when the DB has
+// zero users (`installState === "available"`) and the visitor is not already
+// authenticated. Fail-closed by construction — any non-`"available"` state
+// (including the fail-safe `"disabled"` on a status-fetch error) hides the form
+// and lets the normal login flow take over. Exported for unit testing so it can
+// be asserted to gate ahead of the redirect/loading branches.
+export const shouldShowInstaller = (input: {
+  isAdminPath: boolean;
+  installState: "checking" | "available" | "disabled";
+  authState: "checking" | "authenticated" | "unauthenticated";
+}) =>
+  input.isAdminPath && input.installState === "available" && input.authState !== "authenticated";
 
 export const resolveThemeUpdatedRefreshScope = () => ({
   refreshSettings: false,
@@ -426,6 +439,13 @@ export function AdminApp({ path }: AdminAppProps) {
     isProtected ? "checking" : "unauthenticated"
   );
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  // Pre-auth installer gate (TASK-482-03-L02). Populated from the PUBLIC
+  // `GET /auth/install/status`; runs for both authenticated and unauthenticated
+  // visitors on admin paths. Starts `"checking"` so a fresh install is never
+  // bounced to `/login` before the status resolves.
+  const [installState, setInstallState] = useState<"checking" | "available" | "disabled">(
+    "checking"
+  );
 
   const [settingsState, setSettingsState] = useState<SettingsState>({
     status: "idle",
@@ -521,12 +541,13 @@ export function AdminApp({ path }: AdminAppProps) {
     }
   }, []);
 
-  const completeSetup = useCallback(async (values: SetupWizardValues) => {
+  const completeSetup = useCallback(async (values: WizardValues) => {
     setSetupSaving(true);
     setSetupError(null);
     try {
       const updated = await updateSettings({
-        ...toSetupWizardSettingsPayload(values),
+        // Owned/exported by 05-L02: the single wizard-values → settings-keys map.
+        ...toBasicSettingsPayload(values),
         "setup.completed": true,
       });
       setSettingsState((prev) => {
@@ -1018,6 +1039,28 @@ export function AdminApp({ path }: AdminAppProps) {
     };
   }, [isAdminPath, isProtected]);
 
+  // Public install-status bootstrap. Runs for BOTH auth states (unlike the
+  // settings/theme effects gated on `authenticated`) because the status endpoint
+  // is unauthenticated. Fail-closed: a failed/uncertain fetch resolves to
+  // `"disabled"` so a transient error can never expose the installer on a
+  // populated DB (it only delays a real login by one status roundtrip).
+  useEffect(() => {
+    if (!isAdminPath) return;
+    let active = true;
+    getInstallStatus()
+      .then((status) => {
+        if (!active) return;
+        setInstallState(status.available ? "available" : "disabled");
+      })
+      .catch(() => {
+        if (!active) return;
+        setInstallState("disabled");
+      });
+    return () => {
+      active = false;
+    };
+  }, [isAdminPath]);
+
   useEffect(() => {
     if (authState !== "authenticated") return;
     if (!canReadSettings) return;
@@ -1074,12 +1117,17 @@ export function AdminApp({ path }: AdminAppProps) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (authState === "unauthenticated" && isProtected) {
+      // Suppress the /login bounce while the installer gate is unresolved
+      // ("checking") or open ("available"). Guarding only on "available" would
+      // let this effect fire a full-page redirect on a fresh install when auth
+      // resolves "unauthenticated" before the status fetch settles.
+      if (installState !== "disabled") return;
       window.location.assign(withAdminBasePath(adminBasePath, "/login"));
     }
     if (authState === "authenticated" && isPublic && canonicalRelativePath !== "/preview") {
       window.location.assign(withAdminBasePath(adminBasePath, "/"));
     }
-  }, [adminBasePath, authState, canonicalRelativePath, isProtected, isPublic]);
+  }, [adminBasePath, authState, canonicalRelativePath, installState, isProtected, isPublic]);
 
   const showSetupWizard = shouldShowSetupWizard({
     isProtected,
@@ -1087,6 +1135,43 @@ export function AdminApp({ path }: AdminAppProps) {
     settingsStatus: settingsState.status,
     setupCompleted: settingsState.values.setupCompleted,
   });
+
+  const showInstaller = shouldShowInstaller({ isAdminPath, installState, authState });
+
+  // Render-side install gate. Runs BEFORE the loading branch and ahead of the
+  // /login redirect effect above (which is separately guarded). This is
+  // render-only — it does NOT stop the redirect effect; the effect guard is what
+  // prevents the bounce during "checking".
+  if (isAdminPath && installState === "checking") {
+    return (
+      <>
+        <AdminThemeTokensStyle css={tokenCss} />
+        <Loading />
+      </>
+    );
+  }
+
+  if (showInstaller) {
+    return (
+      <AdminBasePathProvider value={adminBasePath}>
+        <>
+          <AdminThemeTokensStyle css={tokenCss} />
+          <InstallerWizard
+            onInstalled={() => {
+              // The installer self-disables server-side; reflect it client-side
+              // so the form cannot re-open, then hand off to /login. If 02-L02
+              // later issues a session it can instead re-run resolveAuthBootstrap
+              // and fall through to Phase 2 — the default handoff is /login.
+              setInstallState("disabled");
+              if (typeof window !== "undefined") {
+                window.location.assign(withAdminBasePath(adminBasePath, "/login"));
+              }
+            }}
+          />
+        </>
+      </AdminBasePathProvider>
+    );
+  }
 
   if (isProtected && authState !== "authenticated") {
     return (

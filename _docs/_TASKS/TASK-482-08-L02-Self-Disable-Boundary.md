@@ -6,9 +6,9 @@
 **Category:** Admin / Onboarding / Auth
 **Estimated Effort:** Medium
 **Dependencies:** TASK-482-08-L01, TASK-482-02-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -19,7 +19,20 @@
   is closed server-side (status `available:false`, create returns 409), and once
   `setup.completed` is true the post-login wizard never renders. This leaf owns
   the dedicated boundary test that asserts both, and confirms the env
-  `seedAdmin()` path coexists (a seeded user also disables the installer).
+  `seedAdmin()` path (`core/db/seed.ts`) coexists: a seeded user also disables
+  the installer, asserted at the `countUsers` seam — never by running the real
+  `seedAdmin()` in tests (see the shared-DB pin below).
+- **Shared-DB pin (coordination, mandatory):** all TASK-482/483/484 streams and
+  the owner share ONE remote Postgres (render.com, `DATABASE_URL` in `.env`).
+  This leaf's tests MUST NOT delete/truncate `users`, flip the real DB into a
+  global no-users install state, run the real `seedAdmin()` (env
+  `ADMIN_EMAIL`/`ADMIN_PASSWORD`), or reset shared settings rows. First-run /
+  no-users gates are tested exclusively via service-level seams and injected
+  fakes (the `InstallRouteDeps.isFirstRun` seam from 01-L02 and the
+  `countUsers`/`countUsersTx` seam from 01-L01/02-L01). Real-DB TOCTOU/count
+  behaviour is owned by 02-L01's `tests/security/firstAdminRace.test.ts` with
+  its uniquely-scoped, self-restoring fixtures — this leaf does not duplicate
+  it.
 - **Owning module(s):** no new product code beyond hardening assertions; this is
   primarily a **security test** plus any small fixes uncovered (e.g. ensuring the
   status endpoint and create endpoint share the **same** `isFirstRun` source so
@@ -52,38 +65,52 @@
 ## Implementation Pseudocode
 
 ```ts
-// Boundary test outline (Bun):
-test("installer self-disables once any user exists", async () => {
-  // 1. Fresh DB: status.available === true
-  expect((await GET("/auth/install/status")).available).toBe(true);
+// Boundary test outline (Bun, tests/security/installerSelfDisable.test.ts).
+// NO real DB: fake-router + injected-deps pattern, exactly like
+// tests/integration/routes/adminUsers.test.ts (makeRouter/findRoute/runRoute
+// helpers, bun:test). Register the real route module with fakes:
+//   registerInstallRoutes(router, { validate, isFirstRun: fake, ... })
+// via the InstallRouteDeps.isFirstRun seam (01-L02). If 02-L02's create
+// handler binds createFirstAdmin directly, extend InstallRouteDeps with an
+// optional injectable createFirstAdmin (additive, same pattern as isFirstRun).
 
-  // 2. Create the first admin (installer OR seedAdmin()).
-  await POST("/auth/install/admin", validAdminBody); // or run seedAdmin()
-
-  // 3. Installer is now closed.
-  expect((await GET("/auth/install/status")).available).toBe(false);
-  const second = await POST("/auth/install/admin", validAdminBody);
-  expect(second.status).toBe(409); // install_unavailable
-
-  // 4. Status body carries no count/PII.
-  expect(Object.keys(await GET("/auth/install/status"))).toEqual(["available"]);
+test("status is open only while isFirstRun() is true", async () => {
+  // isFirstRun fake → true: status handler returns { available: true }.
+  // isFirstRun fake → false: returns { available: false }.
+  // Same injected isFirstRun drives both — status and create cannot disagree.
 });
 
-test("seedAdmin path also disables installer", async () => {
-  await seedAdmin(); // env ADMIN_EMAIL/ADMIN_PASSWORD
-  expect((await GET("/auth/install/status")).available).toBe(false);
+test("create returns 409 install_unavailable once any user exists", async () => {
+  // createFirstAdmin fake throws first_run_unavailable (the 02-L01 domain
+  // code); assert mapInstallRouteError maps it to ApiError 409.
+});
+
+test("status body carries no count/PII", async () => {
+  // Object.keys(statusBody) is exactly ["available"] — no count, no email.
+});
+
+test("seedAdmin coexists via the same countUsers source", async () => {
+  // Source-agnostic invariant, asserted at the service seam WITHOUT running
+  // the real seedAdmin(): isFirstRun() === (countUsers() === 0), so ANY row
+  // in users — installer-created or seeded by core/db/seed.ts#seedAdmin —
+  // closes the installer. Stub countUsers → 1 and assert isFirstRun-derived
+  // availability is false regardless of how the user row originated.
 });
 ```
 
-- **Data flow:** DB user count + `setup.completed` flag → endpoint/gate responses.
-- **Error handling:** the second create maps `first_run_unavailable` → 409 via
-  `mapInstallRouteError`.
+- **Data flow:** injected `isFirstRun`/`countUsers` fakes (standing in for the
+  DB user count) + `setup.completed` flag → endpoint/gate responses. Real-DB
+  count/TOCTOU coverage lives in 02-L01's `firstAdminRace.test.ts` only.
+- **Error handling:** a create attempted while users exist maps
+  `first_run_unavailable` → 409 via `mapInstallRouteError`.
 - **Regression-test shape:** the four invariant bullets above, each asserted.
 
 ## Testing Requirements
 
 - **Lane:** Bun security lane — `tests/security/installerSelfDisable.test.ts`
-  (runtime/route + DB state ⇒ Bun). Plus a Vitest unit for
+  (route/runtime + security boundary ⇒ Bun), using the fake-router +
+  injected-deps pattern from `tests/integration/routes/adminUsers.test.ts` —
+  no real-DB access, per the shared-DB pin above. Plus a Vitest unit for
   `shouldShowSetupWizard`/`shouldShowInstaller` with `setupCompleted:true` /
   users-present.
 - Keep `tests/security/codersoSecurityGate.test.ts` green.

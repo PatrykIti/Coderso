@@ -62,6 +62,12 @@ vi.mock("@/services/adminThemeClient", () => ({
   listAdminThemeTemplatesCached: adminAppServiceMocks.listAdminThemeTemplatesCached,
 }));
 
+// Install-status gate (TASK-482-03-L02): default to a populated DB (installer
+// disabled) so these RBAC/routing tests resolve past the pre-auth install gate.
+vi.mock("@/services/installClient", () => ({
+  getInstallStatus: vi.fn(async () => ({ available: false })),
+}));
+
 vi.mock("@/components/ui/sonner", () => ({
   Toaster: ({
     containerAriaLabel,
