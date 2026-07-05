@@ -6,9 +6,9 @@
 **Category:** Tools / Analytics / Admin UI
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-05-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
@@ -28,6 +28,44 @@
   - `KpiCards.tsx` / `TopContentTable.tsx` / `TopContentDrawer.tsx` — adapt to the
     traffic row shape (`path` + `views` + `visitors`) or add a sibling
     `TopPagesTable` if the content shape must remain for the demoted inventory view.
+  - `tests/vitest/ui/analytics.test.tsx` — EXISTING suite; its closed
+    module-factory mock `vi.mock("@/services/analyticsClient", () => ({...}))`
+    (line 113) exports only `getOverview(Cached)` / `getCachedOverview` /
+    `getTopContent(Cached)` / `getCachedTopContent` / `exportTopContent`. Once
+    `AnalyticsPage` imports the new traffic functions the factory lacks the
+    exports and the suite crashes. Extend the factory with
+    `getCachedTrafficOverview` / `getTrafficOverviewCached` /
+    `getCachedTopPages` / `getTopPagesCached` / `exportTopPages` and adjust the
+    `AnalyticsPage` + `buildAnalyticsKpiCards` assertions to the traffic-first
+    page (or its `buildTrafficKpiCards` successor).
+  - `tests/vitest/ui-integration/tools-analytics-restyle.test.tsx` — EXISTING
+    suite with the same closed factory mock (line 47): extend it identically.
+    Its test `"renders KPI cards + area/bar cards from seeded analytics (no
+    Sources donut)"` (line 146) hard-codes the OLD content-inventory KPI row and
+    asserts three traffic-page surfaces ABSENT — the traffic rewire reverses ALL
+    of them, so every one of these must be updated (fixing only the sources donut
+    leaves the suite red at lines 155/163):
+    - line 155 `expect(...).not.toContain("Visitors")` — REMOVE / reverse:
+      `buildTrafficKpiCards` now renders the "Unique Visitors" KPI, so assert it
+      is PRESENT.
+    - line 163 `expect(...).not.toMatch(/bounce/i)` — REMOVE / reverse:
+      `buildTrafficKpiCards` now renders the "Bounce Rate" KPI, so assert it is
+      PRESENT.
+    - line 162 `expect(...).not.toMatch(/\bsources\b/i)` — REMOVE / replace with
+      an assertion that the new sources / devices / referrers breakdown visuals
+      render from the traffic overview.
+    - line 154 `expect(...).toContain("Published Pages")` plus its comment at
+      lines 153-154 ("KPI labels come from buildAnalyticsKpiCards ... NOT
+      'Visitors'") — RECONCILE with the demoted-inventory decision: since traffic
+      KPIs are now primary, drop the "Published Pages" KPI-row assertion (or move
+      it to assert the secondary content-inventory section, matching the
+      Out-of-scope note below).
+    - Update the seeded `overview` fixture (lines 12-22) so it carries the
+      traffic shape the rewired page reads (`totals`/`previous` with
+      visitors/pageviews/sessions/bounceRate, `trend`, `sources`, `devices`,
+      `referrers`, `topPages`) instead of the content-inventory
+      pages/publishedPages/entries totals, and add the new traffic client exports
+      to the factory mock.
 - **Source-of-truth docs:** `_docs/ADMIN_CACHE.md`, `_docs/CMS_API.md`.
 - **Out-of-scope:** server routes (TASK-483-04), client cache (L01). The content
   inventory cards may remain as a secondary section but must no longer be the
@@ -106,7 +144,21 @@ test("api error shows Alert", async () => {});
 ## Testing Requirements
 
 - **Vitest** (`tests/vitest/ui-integration/*`): render flow with a mocked traffic
-  client — KPIs, trend, breakdowns, top-pages, export, error, empty state.
+  client — KPIs, trend, breakdowns, top-pages, export, error, empty state
+  (new suite `tests/vitest/ui-integration/analyticsTrafficPage.test.tsx`).
+- Update the two EXISTING suites in the same change so gates stay green:
+  `tests/vitest/ui/analytics.test.tsx` and
+  `tests/vitest/ui-integration/tools-analytics-restyle.test.tsx`. For the
+  restyle suite this means: extend the closed factory mock with the new traffic
+  client exports, retype the seeded `overview` fixture to the traffic shape, and
+  reverse/reconcile ALL of the now-stale KPI-row assertions — not just the
+  sources donut: remove `not.toContain("Visitors")` (line 155) and
+  `not.toMatch(/bounce/i)` (line 163) — assert those KPIs PRESENT — replace the
+  `not.toMatch(/\bsources\b/i)` sources-absent assertion (line 162) with a
+  breakdown-present assertion, and reconcile the `toContain("Published Pages")`
+  KPI assertion (line 154, plus its "NOT 'Visitors'" comment) with the demoted
+  inventory (see Owning modules above). Do NOT touch
+  `tests/vitest/admin/adminPrefetch.test.ts` (owned by L01).
 - `bun --cwd core lint`, `bun --cwd core lint:types` — keep
   `eslint-plugin-react-hooks` recommended preset; no synchronous `setState` in
   effects; preserve cache hydration + background revalidation semantics.

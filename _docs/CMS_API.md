@@ -2839,6 +2839,76 @@ the browser download:
 }
 ```
 
+### Traffic analytics (TASK-483 — real visitor data)
+
+Permissions: `content:read`. Internal admin reads, session cookie + `admin_read`
+rate-limit bucket, GET-only (no CSRF). Query strings are strict via
+`assertKnownQuery`; unknown params and out-of-range `limit`/`rangeDays` are
+rejected with `validation_error`. These endpoints report REAL traffic
+(pageviews/visitors/sessions/bounce/sources/devices/referrers/top-pages-by-views)
+from the `analytics_pageviews` / `analytics_sessions` tables, distinct from the
+CMS-derived v1 analytics above.
+
+- `GET /analytics/traffic/overview?rangeDays=30`
+- `GET /analytics/traffic/top-pages?limit=10&rangeDays=30`
+- `GET /analytics/traffic/top-pages/export?limit=50&rangeDays=30&format=csv`
+
+Traffic overview response:
+
+```json
+{
+  "rangeDays": 30,
+  "generatedAt": "2026-01-30T10:00:00Z",
+  "totals": { "pageviews": 1200, "visitors": 430, "sessions": 510, "bounceRate": 0.42, "avgPagesPerSession": 2.35 },
+  "previous": { "pageviews": 980, "visitors": 360, "sessions": 420, "bounceRate": 0.45, "avgPagesPerSession": 2.33 },
+  "trend": [ { "date": "2026-01-24", "value": 40 }, { "date": "2026-01-25", "value": 52 } ],
+  "sources": [ { "key": "direct", "label": "Direct", "value": 210 } ],
+  "devices": [ { "key": "desktop", "label": "Desktop", "value": 300 } ],
+  "referrers": [ { "key": "example.com", "label": "example.com", "value": 30 } ],
+  "topPages": [ { "path": "/", "views": 320, "visitors": 210 } ]
+}
+```
+
+Top-pages response is `TopPageRow[]` (`{ path, views, visitors }`). Export
+returns the same JSON envelope as the v1 export (CSV only):
+
+```json
+{
+  "fileName": "coderso-traffic-top-pages-30d-2026-01-30.csv",
+  "contentType": "text/csv",
+  "content": "path,views,visitors\n/,320,210",
+  "rangeDays": 30,
+  "totalRows": 1
+}
+```
+
+### Public beacon collector (TASK-483 — PUBLIC WRITE)
+
+- `POST /_analytics/collect` (public, no auth)
+
+Lightweight visitor beacon delivered via `navigator.sendBeacon` from the public
+tracking snippet. Success is always **204 No Content** (empty body). Anti-abuse
+reuses the shared forms/booking stack, NOT a one-off flow:
+
+- HMAC `nonce` (`createBeaconNonce`/`assertBeaconNonce`, mirroring
+  `createFormSubmissionNonce`) — a valid nonce is required in the body.
+- `public_write` rate-limit bucket (shared middleware); over-limit returns `429`
+  `analytics_rate_limited`.
+- Server-side `classifyBot` + Do-Not-Track/GPC drop: bot UAs and DNT/consent
+  opt-outs are silently accepted (204) and NOT persisted.
+- Strict reject-unknown body validation; body is size-capped at 4 KB
+  (`413 analytics_payload_too_large`); malformed JSON is `400 invalid_json`.
+
+**Binding captcha exemption:** the collector does NOT call
+`enforceBotProtection`. A token-less `sendBeacon` still succeeds with 204 even
+when bot protection is enabled — captcha stays on forms/booking only; wiring it
+here would 400 every beacon and kill the pipeline. No raw IP/User-Agent/full
+referrer is ever stored (see `_docs/SECURITY_SPEC.md` and `_docs/DATA_MODEL.md`).
+
+The privacy-respecting tracking snippet asset is delivered as a static
+public-read script (no secrets, no per-visitor data embedded) and is injected on
+the published site; it checks DNT/consent before sending anything.
+
 ---
 
 ## Dashboard (v1)

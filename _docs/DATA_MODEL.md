@@ -396,6 +396,41 @@ Przykładowe klucze:
 - value
 - updated_at
 
+## Analytics traffic (TASK-483)
+
+Real visitor-analytics pipeline, distinct from the content-inventory
+`analyticsService`. **PII posture:** no raw IP, no User-Agent, and no full
+referrer URL is ever persisted. Visitor identity is a salted, non-reversible
+daily hash (`ANALYTICS_IP_HASH_SECRET` + rotating daily salt); the referrer is
+stored host-only. Raw rows are pruned beyond a configurable retention window
+(`ANALYTICS_RETENTION_DAYS`).
+
+`analytics_sessions`
+- id (uuid, pk)
+- visitor_hash (text, not null) — salted daily hash, never the raw IP
+- source_kind (text, not null) — `TrafficSourceKind`
+- referrer_host (text, nullable) — host only, never a full URL
+- device_class (text, not null) — `TrafficDeviceClass`
+- lang (text, nullable)
+- entry_path (text, not null)
+- exit_path (text, nullable)
+- pageview_count (integer, not null, default 1)
+- started_at (timestamp, not null, default now)
+- last_seen_at (timestamp, not null, default now)
+
+`analytics_pageviews`
+- id (uuid, pk)
+- session_id (uuid, fk analytics_sessions, ON DELETE CASCADE)
+- path (text, not null)
+- referrer_host (text, nullable) — host only
+- source_kind (text, not null)
+- device_class (text, not null)
+- created_at (timestamp, not null, default now)
+
+Migration: `0064_analytics_traffic_tables` (+ `meta/0064_snapshot.json`,
+`meta/_journal.json` idx-64 version-7). Deleting a session cascades to its
+pageviews so retention pruning removes both without FK violations.
+
 ## Optional (v1.1+)
 
 `form_submissions`
@@ -421,3 +456,8 @@ Przykładowe klucze:
 - preview_tokens.token_hash
 - preview_tokens.target_type
 - preview_tokens.target_id
+- analytics_sessions.started_at
+- analytics_sessions.visitor_hash
+- analytics_pageviews.created_at
+- analytics_pageviews.path
+- analytics_pageviews.session_id

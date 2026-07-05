@@ -26,7 +26,12 @@ import {
   listAdminThemeProfilesCached,
   listAdminThemeTemplatesCached,
 } from "@/services/adminThemeClient";
-import { getOverviewCached, getTopContentCached } from "@/services/analyticsClient";
+import {
+  getOverviewCached,
+  getTopContentCached,
+  getTopPagesCached,
+  getTrafficOverviewCached,
+} from "@/services/analyticsClient";
 import { getBackupScheduleCached, listBackupsCached } from "@/services/backupsClient";
 import { listImportHistoryCached } from "@/services/importExportClient";
 import { listRedirectsCached } from "@/services/redirectsClient";
@@ -434,6 +439,8 @@ const defaultEntries: AdminPrefetchEntry[] = [
       Promise.all([
         getOverviewCached(30, prefetchWarmupOptions),
         getTopContentCached({ limit: 50, rangeDays: 30, ...prefetchWarmupOptions }),
+        getTrafficOverviewCached(30, prefetchWarmupOptions),
+        getTopPagesCached({ rangeDays: 30, limit: 50, ...prefetchWarmupOptions }),
       ]),
   },
   {

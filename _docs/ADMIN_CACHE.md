@@ -51,6 +51,8 @@ Defined in `core/admin/services/cachePolicy.ts`:
 - `search:results:<queryKey>`
 - `analytics:overview:<rangeDays>`
 - `analytics:topContent:<rangeDays>:<limit>:<type>`
+- `analytics:traffic:overview:<rangeDays>`
+- `analytics:traffic:topPages:<rangeDays>:<limit>`
 - `backups:list:<page>:<limit>:<queryKey>`
 - `backups:schedule`
 - `tools:import:history`
@@ -117,7 +119,8 @@ legacy stored rows are normalized before admin caching.
   Engine cache family without a parallel `collections:*` namespace.
 - Tools route prefetch warms the same cached resources used by the page shells:
   `/admin/search` warms `search:recent`, `/admin/seo` warms `seo:list`,
-  `/admin/analytics` warms the default overview and Top Content caches,
+  `/admin/analytics` warms the default overview, Top Content, and real
+  traffic-overview caches,
   `/admin/backups` warms the first backup page plus schedule cache,
   `/admin/tools/import-export` hydrates the local import history cache, and
   `/admin/redirects` warms `redirects:list`.
@@ -354,7 +357,10 @@ Clients update caches and broadcast events on:
   - Search recent/results caches are browser-local read caches; explicit search
     calls patch the relevant result key and recent-search list.
   - Analytics overview and Top Content caches are range-scoped read caches and
-    are refreshed explicitly by range changes or route prefetch.
+    are refreshed explicitly by range changes or route prefetch. The real
+    traffic caches (`analytics:traffic:overview:<rangeDays>`,
+    `analytics:traffic:topPages:<rangeDays>:<limit>`) follow the same
+    range-scoped, read-only pattern; ingestion never invalidates them.
   - Backups create/delete/restore and schedule updates patch or selectively
     invalidate `backups:list:<page>:<limit>:<queryKey>` and
     `backups:schedule`. Create patches first-page matching caches and
@@ -600,8 +606,8 @@ Clients update caches and broadcast events on:
   - Search caches recent searches and query/date-range result payloads.
   - SEO Manager caches list/detail rows and invalidates public HTML cache after
     writes.
-  - Analytics caches range-scoped overview and Top Content rows; CSV export
-    payloads are not cached.
+  - Analytics caches range-scoped overview and Top Content rows plus the real
+    traffic overview and Top Pages rows; CSV export payloads are not cached.
   - Backups caches redacted list/schedule rows, patches create/delete cache
     state when the cached page can stay correct, selectively invalidates pages
     whose totals/row order can shift, and never stores local filesystem

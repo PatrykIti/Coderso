@@ -535,6 +535,8 @@ test("default tools prefetch warms route-specific caches", async () => {
     const listSeoCached = vi.fn().mockResolvedValue([]);
     const getOverviewCached = vi.fn().mockResolvedValue({});
     const getTopContentCached = vi.fn().mockResolvedValue([]);
+    const getTrafficOverviewCached = vi.fn().mockResolvedValue({});
+    const getTopPagesCached = vi.fn().mockResolvedValue([]);
     const listBackupsCached = vi.fn().mockResolvedValue({ items: [], total: 0 });
     const getBackupScheduleCached = vi.fn().mockResolvedValue(null);
     const listImportHistoryCached = vi.fn().mockResolvedValue([]);
@@ -549,6 +551,8 @@ test("default tools prefetch warms route-specific caches", async () => {
     vi.doMock("@/services/analyticsClient", () => ({
       getOverviewCached,
       getTopContentCached,
+      getTrafficOverviewCached,
+      getTopPagesCached,
     }));
     vi.doMock("@/services/backupsClient", () => ({
       getBackupScheduleCached,
@@ -583,6 +587,12 @@ test("default tools prefetch warms route-specific caches", async () => {
       expect(getTopContentCached).toHaveBeenCalledWith({
         limit: 50,
         rangeDays: 30,
+        ...module.prefetchWarmupOptions,
+      });
+      expect(getTrafficOverviewCached).toHaveBeenCalledWith(30, module.prefetchWarmupOptions);
+      expect(getTopPagesCached).toHaveBeenCalledWith({
+        rangeDays: 30,
+        limit: 50,
         ...module.prefetchWarmupOptions,
       });
       expect(listBackupsCached).toHaveBeenCalledWith({

@@ -694,3 +694,40 @@ Rotacja klucza:
   - Env: `PLUGIN_ERROR_THRESHOLD` (domyslnie 3).
 - Watchdog/timeouts dla hookow i renderowania server-side.
   - Env: `PLUGIN_TIMEOUT_MS` (domyslnie 5000ms).
+
+## Web analytics (v1)
+
+- Public surfaces: `POST /_analytics/collect` (public-write beacon ingestion,
+  TASK-483-02) and the front-end tracking snippet injected on live published
+  renders (TASK-483-03). No secrets or PII are embedded in the snippet; the
+  client sends only `path`, host-only `referrer`, and `navigator.language`.
+- Anti-abuse: the beacon carries a per-render HMAC nonce
+  (`createBeaconNonce()` / `assertBeaconNonce()`) plus the `public_write` rate
+  limit and server-side bot/DNT classification. The beacon action is EXEMPT from
+  `enforceBotProtection` — a token-less beacon would otherwise 400 whenever bot
+  protection is enabled and kill the pipeline.
+- DNT / consent: the snippet short-circuits client-side on Do-Not-Track / GPC
+  before any network call; the server also honors DNT. When
+  `analytics.trackingEnabled` is `false` the snippet is not injected at all.
+- Preview exclusion: the snippet is never injected on admin preview renders, so
+  preview traffic never pollutes the analytics tables.
+- Secrets: the HMAC nonce is keyed by `ANALYTICS_BEACON_NONCE_SECRET`; the
+  visitor identity hash is keyed by `ANALYTICS_IP_HASH_SECRET`. Neither secret is
+  ever sent to the browser, logged, or embedded in the snippet.
+- PII posture: no raw IP, no User-Agent, and no full referrer URL is ever
+  persisted. Visitor identity is a salted, non-reversible daily hash —
+  `HMAC-SHA256(ANALYTICS_IP_HASH_SECRET, ip|ua|dailySalt)` — so the same visitor
+  is not correlatable across days and the raw inputs cannot be recovered; the
+  referrer is stored host-only.
+- Retention: raw pageview/session rows are pruned beyond a configurable window
+  (`ANALYTICS_RETENTION_DAYS`, default 365, clamped to [30, 1095]); deleting a
+  session cascades to its pageviews (FK `ON DELETE CASCADE`). The inline
+  post-ingestion prune can be disabled with `ANALYTICS_PRUNE_INLINE_DISABLED=1`
+  (test-safety seam for the shared remote DB — never enabled in production).
+- CSP compatibility: the tracking snippet ships as an inline `<script>` IIFE and
+  the codebase has NO per-render CSP nonce facility (CSP is a static
+  admin-configured string, `securitySettings.headers.csp`). An admin who sets a
+  custom `script-src` must allow `'unsafe-inline'` (or add the script hash) for
+  the inline snippet to run. When a strict CSP without `'unsafe-inline'` is
+  required, prefer the optional external-asset variant (`GET /_analytics/a.js`)
+  instead of the inline snippet.

@@ -5,77 +5,66 @@ import { createRoot } from "react-dom/client";
 import { beforeEach, expect, test, vi } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 
+type TrafficTotals = {
+  pageviews: number;
+  visitors: number;
+  sessions: number;
+  bounceRate: number;
+  avgPagesPerSession: number;
+};
+
+const emptyTotals = (): TrafficTotals => ({
+  pageviews: 0,
+  visitors: 0,
+  sessions: 0,
+  bounceRate: 0,
+  avgPagesPerSession: 0,
+});
+
 const makeOverview = (overrides?: {
-  totals?: Partial<{
-    pages: number;
-    publishedPages: number;
-    entries: number;
-    media: number;
-    users: number;
-  }>;
-  current?: Partial<{
-    pages: number;
-    publishedPages: number;
-    entries: number;
-    media: number;
-    users: number;
-  }>;
-  previous?: Partial<{
-    pages: number;
-    publishedPages: number;
-    entries: number;
-    media: number;
-    users: number;
-  }>;
+  totals?: Partial<TrafficTotals>;
+  previous?: Partial<TrafficTotals>;
+  trend?: { date: string; value: number }[];
+  topPages?: { path: string; views: number; visitors: number }[];
 }) => ({
   rangeDays: 30,
   generatedAt: "2026-06-01T00:00:00.000Z",
-  totals: {
-    pages: 0,
-    publishedPages: 0,
-    entries: 0,
-    media: 0,
-    users: 0,
-    ...overrides?.totals,
-  },
-  current: {
-    pages: 0,
-    publishedPages: 0,
-    entries: 0,
-    media: 0,
-    users: 0,
-    ...overrides?.current,
-  },
-  previous: {
-    pages: 0,
-    publishedPages: 0,
-    entries: 0,
-    media: 0,
-    users: 0,
-    ...overrides?.previous,
-  },
-  trend: [],
+  totals: { ...emptyTotals(), ...overrides?.totals },
+  previous: { ...emptyTotals(), ...overrides?.previous },
+  trend: overrides?.trend ?? [],
+  sources: [],
+  devices: [],
+  referrers: [],
+  topPages: overrides?.topPages ?? [],
 });
 
 const analyticsState = vi.hoisted(() => ({
   overviewResult: {
     rangeDays: 30,
     generatedAt: "2026-06-01T00:00:00.000Z",
-    totals: { pages: 0, publishedPages: 0, entries: 0, media: 0, users: 0 },
-    current: { pages: 0, publishedPages: 0, entries: 0, media: 0, users: 0 },
-    previous: { pages: 0, publishedPages: 0, entries: 0, media: 0, users: 0 },
-    trend: [],
+    totals: {
+      pageviews: 0,
+      visitors: 0,
+      sessions: 0,
+      bounceRate: 0,
+      avgPagesPerSession: 0,
+    },
+    previous: {
+      pageviews: 0,
+      visitors: 0,
+      sessions: 0,
+      bounceRate: 0,
+      avgPagesPerSession: 0,
+    },
+    trend: [] as { date: string; value: number }[],
+    sources: [] as { key: string; label: string; value: number }[],
+    devices: [] as { key: string; label: string; value: number }[],
+    referrers: [] as { key: string; label: string; value: number }[],
+    topPages: [] as { path: string; views: number; visitors: number }[],
   },
-  topContentResult: [] as Array<{
-    id: string;
-    type: "page" | "entry";
-    title: string;
-    slug: string | null;
-    updatedAt: string;
-    score: number;
-  }>,
+  topPagesResult: [] as Array<{ path: string; views: number; visitors: number }>,
   nextOverviewError: null as unknown,
-  getOverview: vi.fn(async (rangeDays: number) => {
+  getTrafficOverview: vi.fn(async (rangeDays: number) => {
     if (analyticsState.nextOverviewError) {
       const error = analyticsState.nextOverviewError;
       analyticsState.nextOverviewError = null;
@@ -83,11 +72,11 @@ const analyticsState = vi.hoisted(() => ({
     }
     return { ...analyticsState.overviewResult, rangeDays };
   }),
-  getTopContent: vi.fn(async () => analyticsState.topContentResult),
-  exportTopContent: vi.fn(async () => ({
-    fileName: "analytics.csv",
+  getTopPages: vi.fn(async () => analyticsState.topPagesResult),
+  exportTopPages: vi.fn(async () => ({
+    fileName: "traffic.csv",
     contentType: "text/csv",
-    content: "type,title,slug,updatedAt,score",
+    content: "path,views,visitors",
     rangeDays: 30,
     totalRows: 0,
   })),
@@ -95,29 +84,44 @@ const analyticsState = vi.hoisted(() => ({
     analyticsState.overviewResult = {
       rangeDays: 30,
       generatedAt: "2026-06-01T00:00:00.000Z",
-      totals: { pages: 0, publishedPages: 0, entries: 0, media: 0, users: 0 },
-      current: { pages: 0, publishedPages: 0, entries: 0, media: 0, users: 0 },
-      previous: { pages: 0, publishedPages: 0, entries: 0, media: 0, users: 0 },
+      totals: {
+        pageviews: 0,
+        visitors: 0,
+        sessions: 0,
+        bounceRate: 0,
+        avgPagesPerSession: 0,
+      },
+      previous: {
+        pageviews: 0,
+        visitors: 0,
+        sessions: 0,
+        bounceRate: 0,
+        avgPagesPerSession: 0,
+      },
       trend: [],
+      sources: [],
+      devices: [],
+      referrers: [],
+      topPages: [],
     };
-    analyticsState.topContentResult = [];
+    analyticsState.topPagesResult = [];
     analyticsState.nextOverviewError = null;
-    analyticsState.getOverview.mockClear();
-    analyticsState.getTopContent.mockClear();
-    analyticsState.exportTopContent.mockClear();
+    analyticsState.getTrafficOverview.mockClear();
+    analyticsState.getTopPages.mockClear();
+    analyticsState.exportTopPages.mockClear();
   },
 }));
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 vi.mock("@/services/analyticsClient", () => ({
-  getOverview: analyticsState.getOverview,
-  getOverviewCached: analyticsState.getOverview,
-  getCachedOverview: vi.fn(() => null),
-  getTopContent: analyticsState.getTopContent,
-  getTopContentCached: analyticsState.getTopContent,
-  getCachedTopContent: vi.fn(() => null),
-  exportTopContent: analyticsState.exportTopContent,
+  getTrafficOverview: analyticsState.getTrafficOverview,
+  getTrafficOverviewCached: analyticsState.getTrafficOverview,
+  getCachedTrafficOverview: vi.fn(() => null),
+  getTopPages: analyticsState.getTopPages,
+  getTopPagesCached: analyticsState.getTopPages,
+  getCachedTopPages: vi.fn(() => null),
+  exportTopPages: analyticsState.exportTopPages,
 }));
 
 vi.mock("@/components/ui/select", () => ({
@@ -172,7 +176,7 @@ vi.mock("@/ui/shared/PageHeader", () => ({
 
 import {
   AnalyticsPage,
-  buildAnalyticsKpiCards,
+  buildTrafficKpiCards,
 } from "../../../core/admin/ui/analytics/AnalyticsPage";
 
 const mount = (node: React.ReactNode) => {
@@ -213,59 +217,50 @@ test("AnalyticsPage renders loading shell before client data resolves", () => {
   expect(html).toContain("Loading analytics...");
 });
 
-test("buildAnalyticsKpiCards renders no-data and no-period states without fake percentages", () => {
-  const emptyCards = buildAnalyticsKpiCards(makeOverview());
-  expect(emptyCards.map((card) => card.value)).toEqual(["-", "-", "-"]);
-  expect(emptyCards.map((card) => card.change)).toEqual([
-    "No data yet",
-    "No data yet",
-    "No data yet",
+test("buildTrafficKpiCards renders zeroed, new, and delta states", () => {
+  const emptyCards = buildTrafficKpiCards(makeOverview());
+  expect(emptyCards.map((card) => card.id)).toEqual([
+    "visitors",
+    "pageviews",
+    "sessions",
+    "bounce",
   ]);
+  expect(emptyCards.map((card) => card.value)).toEqual(["0", "0", "0", "0%"]);
+  expect(emptyCards.every((card) => card.change === "No activity in range")).toBe(true);
   expect(emptyCards.every((card) => card.trend === "neutral")).toBe(true);
 
-  const quietCards = buildAnalyticsKpiCards(
+  const deltaCards = buildTrafficKpiCards(
     makeOverview({
-      totals: { pages: 4, publishedPages: 2, entries: 3, media: 1 },
+      totals: { visitors: 10, pageviews: 20, sessions: 8, bounceRate: 0.25 },
+      previous: { visitors: 5, pageviews: 10, sessions: 4, bounceRate: 0.5 },
     })
   );
-  expect(quietCards.map((card) => card.change)).toEqual([
-    "No activity in range",
-    "No activity in range",
-    "No activity in range",
-  ]);
+  expect(deltaCards[0]?.value).toBe("10");
+  expect(deltaCards[0]?.change).toBe("100%");
+  expect(deltaCards[0]?.trend).toBe("up");
+  expect(deltaCards[3]?.value).toBe("25%");
 
-  const newDataCards = buildAnalyticsKpiCards(
-    makeOverview({
-      totals: { publishedPages: 1 },
-      current: { publishedPages: 1 },
-    })
+  const newCards = buildTrafficKpiCards(
+    makeOverview({ totals: { visitors: 5 }, previous: { visitors: 0 } })
   );
-  expect(newDataCards[0]?.change).toBe("New");
-  expect(newDataCards[0]?.trend).toBe("up");
+  expect(newCards[0]?.change).toBe("New");
+  expect(newCards[0]?.trend).toBe("up");
 });
 
-test("AnalyticsPage requests range-scoped Top Content and clears stale rows after reload failure", async () => {
+test("AnalyticsPage requests range-scoped Top Pages and clears stale rows after reload failure", async () => {
   analyticsState.overviewResult = makeOverview({
-    totals: { pages: 1, publishedPages: 1 },
-    current: { publishedPages: 1 },
+    totals: { visitors: 12, pageviews: 30 },
+    previous: { visitors: 6, pageviews: 15 },
+    topPages: [{ path: "/home", views: 42, visitors: 30 }],
   });
-  analyticsState.topContentResult = [
-    {
-      id: "page-1",
-      type: "page",
-      title: "Homepage",
-      slug: "home",
-      updatedAt: "2026-06-01T00:00:00.000Z",
-      score: 100,
-    },
-  ];
+  analyticsState.topPagesResult = [{ path: "/home", views: 42, visitors: 30 }];
 
   const view = mount(<AnalyticsPage />);
 
   try {
     await flushAsync();
-    expect(view.container.textContent).toContain("Homepage");
-    expect(analyticsState.getTopContent).toHaveBeenCalledWith(
+    expect(view.container.textContent).toContain("/home");
+    expect(analyticsState.getTopPages).toHaveBeenCalledWith(
       expect.objectContaining({ limit: 50, rangeDays: 30 })
     );
 
@@ -282,11 +277,11 @@ test("AnalyticsPage requests range-scoped Top Content and clears stale rows afte
     expect(view.container.textContent).toContain("Loading analytics...");
 
     await flushAsync();
-    expect(analyticsState.getTopContent).toHaveBeenLastCalledWith(
+    expect(analyticsState.getTopPages).toHaveBeenLastCalledWith(
       expect.objectContaining({ limit: 50, rangeDays: 7 })
     );
     expect(view.container.textContent).toContain("Analytics unavailable");
-    expect(view.container.textContent).not.toContain("Homepage");
+    expect(view.container.textContent).not.toContain("/home");
   } finally {
     view.cleanup();
   }

@@ -6,9 +6,9 @@
 **Category:** Tools / Analytics / Privacy / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-02, TASK-483-04, TASK-483-05
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
@@ -17,14 +17,20 @@
 Close the pipeline: prune raw traffic rows beyond a configurable retention
 window, consolidate the privacy/DNT/consent posture and IP-hash salt rotation,
 run the full cross-lane test matrix and security gates, and update the
-source-of-truth docs.
+source-of-truth docs. L02 additionally performs the stream's board/changelog
+closure: it creates `_docs/_CHANGELOG/1221-*.md` (pinned number **1221**;
+1219/1220/1222 are reserved by parallel streams) and edits
+`_docs/_TASKS/README.md` touching only TASK-483 rows and its own statistics
+deltas. L02 is the ONLY TASK-483 file that touches the board or the changelog
+(implementation subtasks never do) — matching the board/changelog-discipline
+Note in `TASK-483_Real_Web_Analytics_Pipeline.md`.
 
 ## Sub-Tasks
 
 | ID | Title | Effort | Status |
 |---|---|---|---|
-| TASK-483-06-L01 | Retention Pruning And Privacy Enforcement | Medium | ⏳ To Do |
-| TASK-483-06-L02 | Test Matrix And Documentation Closure | Medium | ⏳ To Do |
+| TASK-483-06-L01 | Retention Pruning And Privacy Enforcement | Medium | ✅ Done |
+| TASK-483-06-L02 | Test Matrix And Documentation Closure | Medium | ✅ Done |
 
 ## Dependencies
 

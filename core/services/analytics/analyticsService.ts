@@ -208,7 +208,10 @@ const csvHeaders = ["type", "title", "slug", "updatedAt", "score"] as const;
 
 const shouldGuardCsvCell = (value: string) => /^[=+\-@\t\r]/.test(value.trimStart());
 
-const escapeCsvCell = (value: string) => {
+// Exported (additive, no behavior change — TASK-483-04-L03) so
+// trafficAggregationService.ts can DRY-reuse the same formula-injection guard for
+// its top-pages CSV export instead of redefining it.
+export const escapeCsvCell = (value: string) => {
   const guarded = shouldGuardCsvCell(value) ? `'${value}` : value;
   if (/[",\r\n]/.test(guarded)) {
     return `"${guarded.replace(/"/g, '""')}"`;
@@ -216,7 +219,7 @@ const escapeCsvCell = (value: string) => {
   return guarded;
 };
 
-const serializeCsvRow = (values: readonly string[]) => values.map(escapeCsvCell).join(",");
+export const serializeCsvRow = (values: readonly string[]) => values.map(escapeCsvCell).join(",");
 
 export function serializeTopContentCsv(items: TopContentItem[]) {
   return [

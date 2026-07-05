@@ -284,11 +284,19 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Analytics
   - UI: `core/admin/ui/analytics/AnalyticsPage.tsx`
   - Cached APIs: `getOverviewCached`, `getCachedOverview`,
-    `getTopContentCached`, `getCachedTopContent`
+    `getTopContentCached`, `getCachedTopContent`,
+    `getTrafficOverviewCached`, `getCachedTrafficOverview`,
+    `getTopPagesCached`, `getCachedTopPages`
   - Cache keys: `analytics:overview:<rangeDays>`,
-    `analytics:topContent:<rangeDays>:<limit>:<type>`
+    `analytics:topContent:<rangeDays>:<limit>:<type>`,
+    `analytics:traffic:overview:<rangeDays>` (TTL `detail`),
+    `analytics:traffic:topPages:<rangeDays>:<limit>` (TTL `list`)
   - Hydration: selected range hydrates from cache when available and
-    background refreshes preserve the visible table/card state.
+    background refreshes preserve the visible table/card state. The real
+    traffic overview/Top Pages caches follow the same range-scoped read-only
+    pattern; the public ingestion beacon never invalidates admin caches.
+    `exportTopPages` (`/analytics/traffic/top-pages/export`) is a direct CSV
+    fetch and is not cached.
 - Backups
   - UI: `core/admin/ui/backups/BackupsPage.tsx`
   - Cached APIs: `listBackupsCached`, `getCachedBackups`,
@@ -398,7 +406,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - `/themes` -> `listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`
 - `/search` -> `listRecentSearchesCached`
 - `/seo` -> `listSeoCached`
-- `/analytics` -> `getOverviewCached`, `getTopContentCached`
+- `/analytics` -> `getOverviewCached`, `getTopContentCached`, `getTrafficOverviewCached`
 - `/backups` -> `listBackupsCached`, `getBackupScheduleCached`
 - `/tools/import-export` -> `listImportHistoryCached`
 - `/redirects` -> `listRedirectsCached`
