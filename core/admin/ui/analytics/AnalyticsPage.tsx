@@ -1,4 +1,4 @@
-import { CalendarDays, Download } from "lucide-react";
+import { CalendarDays, Download, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -110,6 +110,7 @@ export function AnalyticsPage() {
   const [overview, setOverview] = useState<TrafficOverview | null>(initialState.overview);
   const [topPages, setTopPages] = useState<TopPageRow[]>(initialState.topPages);
   const [isLoading, setIsLoading] = useState(initialState.isLoading);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const rangeDays = useMemo(() => resolveRangeDays(rangeValue), [rangeValue]);
@@ -148,6 +149,29 @@ export function AnalyticsPage() {
     return () => {
       active = false;
     };
+  }, [rangeDays]);
+
+  // Refresh pulls fresh numbers on demand: `force: true` bypasses the 5-minute
+  // SPA cache and refetches only the data (overview + top pages) — the page shell
+  // stays mounted. This is a user event handler, not an effect, so the state
+  // updates here are outside the effect body.
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    Promise.all([
+      getTrafficOverviewCached(rangeDays, { force: true }),
+      getTopPagesCached({ rangeDays, limit: TOP_PAGES_LIMIT, force: true }),
+    ])
+      .then(([nextOverview, nextTopPages]) => {
+        setError(null);
+        setOverview(nextOverview);
+        setTopPages(nextTopPages);
+      })
+      .catch((err: unknown) => {
+        setOverview(null);
+        setTopPages([]);
+        setError(isApiClientError(err) ? err.message : "Failed to load analytics data.");
+      })
+      .finally(() => setIsRefreshing(false));
   }, [rangeDays]);
 
   const metrics = useMemo(() => buildTrafficKpiCards(overview), [overview]);
@@ -217,10 +241,21 @@ export function AnalyticsPage() {
           title="Analytics Overview"
           description="Understand how visitors move through your site."
           actions={
-            <Button variant="outline" className="gap-1.5" onClick={handleExportTopPages}>
-              <Download className="size-4" />
-              Export
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                className="gap-1.5"
+                onClick={handleRefresh}
+                disabled={isRefreshing || isLoading}
+              >
+                <RefreshCw className={`size-4${isRefreshing ? " animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button variant="outline" className="gap-1.5" onClick={handleExportTopPages}>
+                <Download className="size-4" />
+                Export
+              </Button>
+            </div>
           }
         />
         {error ? (

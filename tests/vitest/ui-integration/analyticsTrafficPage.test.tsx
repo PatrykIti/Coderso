@@ -212,6 +212,29 @@ test("export button calls exportTopPages", async () => {
   }
 });
 
+test("refresh button forces a fresh data refetch (bypasses the SPA cache)", async () => {
+  const view = mount(<AnalyticsPage />);
+  try {
+    await flush();
+    analyticsState.getTrafficOverviewCached.mockClear();
+    analyticsState.getTopPagesCached.mockClear();
+    const refreshButton = Array.from(view.container.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Refresh")
+    );
+    expect(refreshButton).toBeTruthy();
+    React.act(() => {
+      refreshButton?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(analyticsState.getTrafficOverviewCached).toHaveBeenCalledWith(30, { force: true });
+    expect(analyticsState.getTopPagesCached).toHaveBeenCalledWith(
+      expect.objectContaining({ rangeDays: 30, force: true })
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
 test("api error shows Alert", async () => {
   analyticsState.getTrafficOverviewCached.mockRejectedValueOnce(new Error("boom"));
   const view = mount(<AnalyticsPage />);
