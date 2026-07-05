@@ -4,8 +4,10 @@ import {
   deleteBackup,
   getBackupById,
   getBackupSchedule,
+  getBackupStorageUsage,
   listBackups,
   normalizeBackupInclude,
+  pruneExpiredBackups,
   resolveBackupDownload,
   restoreBackup,
   setBackupSchedule,
@@ -20,6 +22,8 @@ import { ApiError } from "../errorHandler";
 import {
   backupListQuerySchema,
   createBackupSchema,
+  pruneBackupsSchema,
+  restoreBackupSchema,
   scheduleUpdateSchema,
 } from "../validation/backupSchemas";
 
@@ -81,6 +85,22 @@ export const mapBackupError = (error: unknown) => {
       return new ApiError("backup_not_found", "Backup not found.", 404);
     case "backup_not_ready":
       return new ApiError("backup_not_ready", "Backup is not ready for this action.", 409);
+    case "backup_restore_confirmation_required":
+      return new ApiError(
+        "backup_restore_confirmation_required",
+        "Restore requires an explicit confirmation.",
+        400
+      );
+    case "backup_restore_invalid_artifact":
+      return new ApiError(
+        "backup_restore_invalid_artifact",
+        "Backup artifact is missing or malformed.",
+        422
+      );
+    case "backup_artifact_unreadable":
+      return new ApiError("backup_artifact_unreadable", "Backup artifact could not be read.", 502);
+    // Restore no longer throws this — the service now performs a real restore.
+    // Kept mapped for back-compat with older stored errors / API consumers.
     case "backup_restore_unsupported":
       return new ApiError(
         "backup_restore_unsupported",
@@ -95,6 +115,8 @@ export const mapBackupError = (error: unknown) => {
       return new ApiError("backup_include_invalid", "Backup include options are invalid.", 400);
     case "backup_schedule_invalid":
       return new ApiError("backup_schedule_invalid", "Backup schedule is invalid.", 400);
+    case "backup_schedule_not_found":
+      return new ApiError("backup_schedule_not_found", "Backup schedule not found.", 404);
     default:
       return null;
   }
@@ -147,7 +169,9 @@ export function registerBackupRoutes(router: Router, deps: BackupRouteDeps) {
 
   router.post("/backups/:id/restore", requirePermission("backups:write"), async (ctx) => {
     return withBackupErrors(async () => {
-      const backup = await restoreBackup(ctx.params.id);
+      validate(restoreBackupSchema, ctx.body ?? {});
+      const body = (ctx.body ?? {}) as { confirm?: boolean };
+      const backup = await restoreBackup(ctx.params.id, { confirm: body.confirm === true });
       await logAudit({
         actorId: ctx.user?.id ?? null,
         action: "backups.restore",
@@ -182,6 +206,28 @@ export function registerBackupRoutes(router: Router, deps: BackupRouteDeps) {
       return result;
     });
   });
+
+  router.post("/backups/prune", requirePermission("backups:write"), async (ctx) => {
+    return withBackupErrors(async () => {
+      validate(pruneBackupsSchema, ctx.body ?? {});
+      const schedule = await getBackupSchedule();
+      const result = await pruneExpiredBackups(schedule.retentionDays); // server-owned window
+      await logAudit({
+        actorId: ctx.user?.id ?? null,
+        action: "backups.prune",
+        targetType: "backup",
+        targetId: "retention", // sentinel: target-less admin write (AuditEvent.targetId is required)
+        metadata: { prunedCount: result.prunedCount, retentionDays: schedule.retentionDays },
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+      });
+      return result;
+    });
+  });
+
+  router.get("/backups/usage", requirePermission("backups:read"), async () =>
+    withBackupErrors(async () => getBackupStorageUsage())
+  );
 
   router.get("/backups/schedule", requirePermission("backups:read"), async () =>
     getBackupSchedule()

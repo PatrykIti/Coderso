@@ -622,6 +622,35 @@ Rotacja klucza:
 - Payload do podpisu: `${timestamp}.${body}`.
 - Sekrety webhookow sa szyfrowane w DB (AES-256-GCM) z tym samym master key.
 
+## Backups (v1)
+
+- Wszystkie route backupow sa `internal` (`/admin/api/*`), cookie sesyjny admina;
+  reads wymagaja `backups:read`, writes (create/restore/prune/schedule) wymagaja
+  `backups:write` + `enforceCsrf` + bucket `admin_write`. Zaden nowy permission
+  nie jest wprowadzany.
+- Scheduler (`core/server/jobs/backupScheduler.ts`) dziala jako **system actor**
+  bez requestu: brak CSRF (nie jest request-driven), a jego zapisy audytowane sa
+  z `actorId: null` i `metadata.source: "scheduler"`. Jest opt-in poza produkcja
+  (`BACKUP_SCHEDULER_ENABLED`) i single-flight (in-process flag + Postgres
+  advisory lock), zeby wiele instancji na wspoldzielonej DB nie odpalalo backupow
+  rownolegle.
+- Restore jest **destrukcyjny** i confirmation-gated: wymaga `{ "confirm": true }`
+  (strict schema, `confirm: false`/brak/unknown keys → 400) zarowno na route jak
+  i w serwisie. Artefakt jest strict-parsowany fail-closed (walidacja
+  `version: 1`, reject unknown top-level keys) **przed** jakimkolwiek zapisem,
+  a caly restore idzie w jednej `db.transaction` (all-or-nothing, wspoldzieli
+  `importConfigTx`). Sekrety pozostaja zaszyfrowane bo restore ustawien idzie
+  przez seam `importConfig`.
+- Sekrety/PII: artefakty backupu **nigdy** nie zawieraja credentiali storage
+  (czytane tylko przez `getStorageSettingsInternal()`); `artifactPath` jest
+  redagowany do klientow, a `artifactKey` (klucz obiektu remote) jest
+  server-internal i zwracany jako `null`. Bledy uploadu remote sa zawijane do
+  `backup_upload_failed` — surowy tekst bledu adaptera/credentiale nigdy nie
+  trafiaja do pol widocznych dla klienta ani do logow (`sanitizeBackupError`
+  usuwa sciezki cwd + backup-dir).
+- Backupy pozostaja **non-LLM-executable** (patrz nota wyzej: settings/users/
+  roles/backups/... nie sa wykonywalne z LLM Guide bez typed contract).
+
 ## Audit logs (v1.0)
 
 - Logowanie zdarzen admin: login, publish, plugin install, settings update.

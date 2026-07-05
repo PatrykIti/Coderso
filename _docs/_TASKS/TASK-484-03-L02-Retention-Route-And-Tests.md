@@ -7,9 +7,9 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-484-03-L01 (`pruneExpiredBackups`), TASK-484-01 (schedule
 read for the effective `retentionDays`).
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -69,7 +69,7 @@ router.post("/backups/prune", requirePermission("backups:write"), async (ctx) =>
       actorId: ctx.user?.id ?? null,
       action: "backups.prune",
       targetType: "backup",
-      targetId: null,
+      targetId: "retention",   // sentinel: target-less admin write (AuditEvent.targetId is a required string, auditService.ts:26; pattern per settingsRoutes.ts "storage"/"security"/"bulk")
       metadata: { prunedCount: result.prunedCount, retentionDays: schedule.retentionDays },
       ip: ctx.ip, userAgent: ctx.userAgent,
     });
@@ -94,7 +94,27 @@ codes map to `ApiError` at the boundary via `mapBackupError`.
 **Regression-test shape (Bun):** route registered at `POST /backups/prune`;
 rejects without `backups:write`; rejects unknown body keys (`additionalProperties`
 400); returns the prune summary; audit entry written; integration with seeded
-expired rows deletes the expected set.
+expired rows deletes the expected set **under the shared-DB isolation pattern
+below**.
+
+**Shared-DB isolation (MANDATORY):** the route prunes with real `now` and the
+persisted shared `backup_schedules` singleton's `retentionDays`
+(`getBackupSchedule`, `backupService.ts:413-433`), against the ONE shared remote
+Postgres (render.com, `.env` `DATABASE_URL`) used by the owner and parallel
+streams. The integration test MUST therefore:
+- read the current schedule first, then temporarily set `retentionDays` to the
+  maximum `3650` via `setBackupSchedule` (`backupService.ts:435`; cutoff ≈ 10
+  years back), so no real data is eligible;
+- seed its fixture rows with `createdAt` **older** than that ~10-year cutoff
+  (plus in-window controls), tracking every seeded id;
+- assert **only on seeded ids** (seeded-expired ids pruned, seeded in-window ids
+  survive); never assert table-global counts and never delete or assert on rows
+  the test did not create;
+- restore the prior `retentionDays` (and any other mutated schedule fields) in
+  `afterEach`/`finally`, and delete any leftover fixture rows per id (follow the
+  `createdIds`/`afterEach` pattern in
+  `tests/unit/backups/backupService.test.ts:30-39`) — no enabled-schedule or
+  fixture residue may be left behind on the shared DB.
 
 ---
 
@@ -104,6 +124,10 @@ Bun lane (route + security + DB). Load env: `set -a && source .env && set +a`.
 
 - `bun --cwd core lint` / `bun --cwd core lint:types`
 - `bun test tests/integration/routes/backups.test.ts` — route registration, RBAC,
-  reject-unknown, summary shape, audit.
-- `bun test tests/security/codersoSecurityGate.test.ts` — `/backups/prune` is
-  under the internal `backups:write` + CSRF + `admin_write` buckets.
+  reject-unknown, summary shape, audit, and the isolated seeded-prune integration
+  case. RBAC / CSRF / reject-unknown / bucket behavior for `/backups/prune` is
+  asserted HERE — do **not** touch `tests/security/codersoSecurityGate.test.ts`:
+  that file (141 lines) only unit-gates forms/booking submission access, captcha
+  and nonce tampering, has no route/permission/bucket enumeration to extend, and
+  is a shared surface across the parallel 482/483/484 streams (additive-only; no
+  restructuring).

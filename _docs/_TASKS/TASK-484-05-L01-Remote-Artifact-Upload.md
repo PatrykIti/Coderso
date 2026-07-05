@@ -8,9 +8,9 @@
 **Dependencies:** TASK-484-01 (`backups.artifact_key`). Reuses
 `getMediaStorageAdapter()` (`core/services/media/storage/index.ts`) and the
 `MediaStorageAdapter` / `UploadFile` contract (`adapter.ts`).
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -54,9 +54,18 @@ Data/service leaf touching storage credentials indirectly — full data contract
   secret seam internally) — this leaf never reads, logs, or returns raw keys. The
   stored `artifact_path` for remote is the **public URL** (already treated as
   public by `redactArtifactPath` / `resolveBackupDownload`); `artifact_key` stays
-  server-internal (never returned to clients — see 484-01-L01 mapper). Upload
-  failures surface via `sanitizeBackupError` (strips cwd/backup-dir; the
-  adapter must not echo credentials in its error).
+  server-internal (never returned to clients — see 484-01-L01 mapper).
+- **Upload-failure redaction (mandatory, asserted by L02):**
+  `sanitizeBackupError` (`backupService.ts` 191-198) only strips
+  `process.cwd()` + the backup dir and truncates to 240 chars — it performs
+  **no credential redaction**, and `row.error` is client-visible via
+  `mapBackup`. Do NOT rely on the adapter's error message being clean.
+  `uploadBackupArtifact` MUST catch any adapter `put` rejection, log the raw
+  error server-side only (`console.error`, never persisted or returned), and
+  re-throw the machine-readable `Error("backup_upload_failed")`. That wrapped
+  code is what reaches `sanitizeBackupError` → `markBackupFailed` → `row.error`,
+  so no access key / connection string can leak regardless of what the adapter
+  echoes. L02's sentinel-secret test asserts exactly this mechanism.
 
 ---
 
@@ -76,7 +85,13 @@ async function uploadBackupArtifact(id: string, content: string, driver: BackupS
     arrayBuffer: async () => bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
   };
   const adapter = await getMediaStorageAdapter(); // resolves the SAME driver as storageSettings.driver
-  const stored = await adapter.put(file);         // { key, url }
+  let stored: StoredMedia;
+  try {
+    stored = await adapter.put(file);             // { key, url }
+  } catch (error) {
+    console.error("backup artifact upload failed", error); // server-side only; raw message may echo credentials
+    throw new Error("backup_upload_failed");      // machine-readable; the ONLY thing that reaches row.error
+  }
   return { artifactPath: stored.url, artifactKey: stored.key, sizeBytes: bytes.byteLength };
 }
 ```
@@ -102,27 +117,56 @@ passes `artifact.artifactKey` through.
 
 ```ts
 if (existing?.artifactKey) {
-  try { (await getMediaStorageAdapter()).delete(existing.artifactKey); }
-  catch { /* best-effort; row deletion still proceeds */ }
+  // Driver-drift guard: getMediaStorageAdapter() resolves the CURRENT settings
+  // driver (media/storage/index.ts 53-54, via getStorageSettingsInternal),
+  // while existing.storageDriver was frozen at create time (backupService.ts
+  // 293-301). If the operator switched drivers since create (s3→azure, or
+  // remote→local), deleting via the current adapter would hit the WRONG
+  // backend — skip the remote delete and log the orphaned artifact instead.
+  const currentDriver = (await getStorageSettings()).driver;
+  if (currentDriver !== existing.storageDriver) {
+    console.warn(
+      `backup remote delete skipped (driver drift ${existing.storageDriver} -> ${currentDriver}); ` +
+      `remote artifact orphaned: ${existing.artifactKey}`
+    );
+  } else {
+    try {
+      const adapter = await getMediaStorageAdapter();
+      await adapter.delete(existing.artifactKey); // MUST await: delete() returns Promise<void>
+      // (adapter.ts:16) — un-awaited, a rejection escapes the catch as an unhandled rejection
+    } catch { /* best-effort; row deletion still proceeds */ }
+  }
 } else if (existing?.artifactPath && !isPublicDownloadUrl(existing.artifactPath)) {
   // existing local-path cleanup (unchanged, isPathInside-guarded)
 }
 ```
 
+**Driver-drift contract:** remote deletion is best-effort against the backend
+that matches the row's frozen `storageDriver` only. On mismatch the delete is
+skipped and logged (the remote artifact is orphaned by design — never call
+`delete(key)` against a store that may not hold the key). Row deletion always
+proceeds. L02 covers this skip path.
+
 **Data flow:** `createBackup` → `createBackupArtifact` → (driver) local write OR
 `uploadBackupArtifact` → `markBackupComplete(id, path, key, size)`. Download
 already returns `{ url }` for public artifacts (`resolveBackupDownload` 381-383).
 
-**Error handling:** upload failures bubble as a sanitized error so `createBackup`
-marks the row `failed` (existing `try/catch` at 308-313); delete failures are
-best-effort and never block row removal.
+**Error handling:** adapter `put` rejections are wrapped into the
+machine-readable `Error("backup_upload_failed")` (raw error logged server-side
+only — see Security Contract) and bubble so `createBackup` marks the row
+`failed` (existing `try/catch` at 308-312 → `markBackupFailed` 349); delete
+failures are best-effort and never block row removal; a create/delete driver
+mismatch skips the remote delete (logged, artifact orphaned by design).
 
 **Regression-test shape (Bun):** with an **injected fake adapter** (no real
 network): `local` driver writes FS + null key; `s3`/`azure` call `put` once and
 store `{ url, key }`; `mapBackup` keeps `artifactKey` internal-only and redacts/
-passes `artifactPath` correctly; `deleteBackup` calls `adapter.delete(key)` for
-remote rows and `rm` for local rows; a `put` rejection marks the backup `failed`
-with a sanitized (credential-free) error.
+passes `artifactPath` correctly; `deleteBackup` awaits `adapter.delete(key)` for
+remote rows and `rm`s for local rows; a `put` rejection (fake message containing
+a sentinel secret) marks the backup `failed` with
+`row.error === "backup_upload_failed"` — the raw adapter message is never
+persisted; a driver switch between create and delete skips the remote delete
+(no wrong-backend call) while the row is still removed.
 
 ---
 

@@ -7,9 +7,9 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-484-01..06-L01 (all behaviour shipped). Final leaf of the
 task.
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -19,9 +19,22 @@ task.
   the final gate matrix for task closure. No new code/behaviour — documentation
   + verification only.
 - **Owning module(s) to create-or-extend:** `_docs/DATA_MODEL.md`,
-  `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`, `_docs/MEDIA_SPEC.md`, the task
-  board (orchestrator-synced — do not hand-edit `_docs/_TASKS/README.md`), and a
-  `_docs/_CHANGELOG/` entry on closure.
+  `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`, `_docs/MEDIA_SPEC.md`,
+  `_docs/_TASKS/README.md` (this closure leaf is the **single writer** of the
+  task board and changelog for the TASK-484 stream — implementation subtasks
+  never touch them), and the pinned changelog entry
+  `_docs/_CHANGELOG/1222-*.md` on closure.
+- **Shared-surface scoping (pinned):** `_docs/CMS_API.md`,
+  `_docs/SECURITY_SPEC.md` and `_docs/DATA_MODEL.md` are shared surfaces that
+  the parallel TASK-482/483 streams also edit additively. All doc edits here
+  are **additive and confined to backup-owned sections/lines**: CMS_API
+  `## Backups (v1)` (line 2919), a **new** backups section in `DATA_MODEL.md`
+  (the file currently has no backups section at all — author it as a clean
+  standalone section, not interleaved with TASK-483's new analytics section),
+  and backup-specific lines in SECURITY_SPEC/MEDIA_SPEC. Do not restructure or
+  reflow sections owned by TASK-482/483. Board/changelog edits touch **only
+  TASK-484 rows and this stream's own statistics deltas** — never rows/entries
+  owned by TASK-482/483/510.
 - **Source-of-truth docs:** all four above (this leaf edits them).
 - **Out of scope:** any further feature work; the usage source (L01).
 
@@ -48,10 +61,13 @@ Docs/closure leaf — no route, no code, no data path. Security-relevant
 
 (Editorial — concrete doc edits, not code.)
 
-1. **`_docs/DATA_MODEL.md`** — add `backup_schedules.next_run_at` /
-   `last_run_at` and `backups.artifact_key`; describe the scheduler/retention
-   lifecycle (enabled + due → run → advance `next_run_at` → prune by
-   `retention_days`).
+1. **`_docs/DATA_MODEL.md`** — author a **new** backups section (the file has
+   no backups coverage today) documenting `backup_schedules` incl.
+   `next_run_at` / `last_run_at` and `backups` incl. `artifact_key`; describe
+   the scheduler/retention lifecycle (enabled + due → run → advance
+   `next_run_at` → prune by `retention_days`). Keep it a self-contained
+   additive section placed next to — never interleaved with — TASK-483's new
+   analytics section.
 2. **`_docs/CMS_API.md`** — update the **Backups (v1)** section (≈ line 2919):
    - restore is now supported and requires `{ "confirm": true }`;
    - new `POST /backups/prune` (`backups:write`);
@@ -64,8 +80,15 @@ Docs/closure leaf — no route, no code, no data path. Security-relevant
    non-LLM-executable (the existing note ≈ line 513 stays true).
 4. **`_docs/MEDIA_SPEC.md`** — backup artifacts reuse the media storage drivers
    for s3/azure and still do **not** archive media file bytes.
-5. **Board + changelog** — flip statuses; add a `_docs/_CHANGELOG/` entry
-   cross-linking `TASK-484` + this leaf id and the `0064` migration tag.
+5. **Board + changelog** — as the stream's single writer of
+   `_docs/_TASKS/README.md` and `_docs/_CHANGELOG/*`: flip **only** TASK-484
+   row statuses plus this stream's own statistics deltas, and create the
+   pinned entry `_docs/_CHANGELOG/1222-*.md` cross-linking `TASK-484` + this
+   leaf id and the `0065` migration tag. Changelog numbers `1219` (TASK-510,
+   in flight in the shared main tree — may be absent from this worktree's
+   checkout), `1220` (TASK-482) and `1221` (TASK-483) are **reserved** by
+   parallel streams and must not be reallocated even if absent from the
+   checkout.
 
 **Regression-test shape:** N/A (docs). The verification is the gate matrix below
 plus a grep check that the docs no longer claim restore is unsupported.
@@ -80,10 +103,16 @@ Closure gate matrix (record results in the closeout). Load env:
 - `bun --cwd core lint`
 - `bun --cwd core lint:types`
 - `bun test tests/unit/backups`
+- `bun run test:vitest` — covers `tests/vitest/backups/computeNextRunAt.test.ts`
+  (the pure calculator's Vitest lane, per the root Testing Requirements).
 - `bun test tests/integration/routes/backups.test.ts`
 - `bun test tests/integration/runtime/backupScheduler.test.ts`
 - `bun test tests/security/codersoSecurityGate.test.ts`
-- Migration `0064` applies cleanly; artifacts present.
+- Migration `0065` applies cleanly; artifacts present (`0065_*.sql` +
+  `meta/0065_snapshot.json` + `meta/_journal.json` entry idx 65).
+  Precondition: TASK-483's `0064` analytics artifacts (owned by the parallel
+  TASK-483 stream, which merges first) must already be synced into this
+  worktree so the journal stays gapless before this gate runs.
 - Grep gate: `_docs/CMS_API.md` no longer states backup restore is unsupported;
   `restoreBackup` no longer throws `backup_restore_unsupported`.
 
@@ -93,7 +122,8 @@ State explicitly if any DB lane was skipped (no database) and why.
 
 ## Closure Checklist
 
-- [ ] DATA_MODEL / CMS_API / SECURITY_SPEC / MEDIA_SPEC synced to shipped code.
-- [ ] All TASK-484-01..06 leaves terminal.
-- [ ] Gate matrix recorded; board + changelog synced; `0064` migration tag
-      cross-linked.
+- [x] DATA_MODEL / CMS_API / SECURITY_SPEC / MEDIA_SPEC synced to shipped code.
+- [x] All TASK-484-01..06 leaves terminal.
+- [x] Gate matrix recorded; board synced (TASK-484 rows + own statistics
+      deltas only); changelog `_docs/_CHANGELOG/1222-*.md` created; `0065`
+      migration tag cross-linked (0064 belongs to TASK-483).
