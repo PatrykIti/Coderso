@@ -12,31 +12,23 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { isApiClientError } from "@/services/apiClient";
 import {
-  exportTopContent,
-  getCachedOverview,
-  getCachedTopContent,
-  getOverviewCached,
-  getTopContentCached,
-  type AnalyticsOverview,
-  type TopContentItem,
+  exportTopPages,
+  getCachedTopPages,
+  getCachedTrafficOverview,
+  getTopPagesCached,
+  getTrafficOverviewCached,
+  type TopPageRow,
+  type TrafficOverview,
 } from "@/services/analyticsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { PageHeader } from "@/ui/shared/PageHeader";
 
 import { AnalyticsCharts } from "./AnalyticsCharts";
-import { KpiCards, type KpiCard } from "./KpiCards";
-import { TopContentTable, type TopContentRow } from "./TopContentTable";
-import { TopContentDrawer } from "./TopContentDrawer";
+import { KpiCards, type KpiCard, type KpiCardId } from "./KpiCards";
+import { TopPagesTable, type TopPageTableRow } from "./TopPagesTable";
+import { TopPagesDrawer } from "./TopPagesDrawer";
 
-type AnalyticsMetricKey = "publishedPages" | "entries" | "media";
-
-const metricLabels: Record<AnalyticsMetricKey, string> = {
-  publishedPages: "Published Pages",
-  entries: "Content Entries",
-  media: "Media Items",
-};
-
-const formatMetricValue = (value: number) => (value === 0 ? "-" : value.toLocaleString("en-US"));
+const TOP_PAGES_LIMIT = 50;
 
 const resolveRangeDays = (value: string) => {
   if (value === "ytd") return 365;
@@ -46,57 +38,77 @@ const resolveRangeDays = (value: string) => {
 };
 
 const createInitialAnalyticsState = () => {
-  const overview = getCachedOverview(30);
-  const topContent = getCachedTopContent({ limit: 50, rangeDays: 30 });
+  const overview = getCachedTrafficOverview(30);
+  const topPages = getCachedTopPages({ rangeDays: 30, limit: TOP_PAGES_LIMIT });
   return {
     overview,
-    topContent: topContent ?? [],
-    isLoading: !(overview && topContent),
+    topPages: topPages ?? [],
+    isLoading: !(overview && topPages),
   };
 };
 
-const calcChange = (input: { total: number; current: number; previous: number }) => {
-  if (input.total === 0) {
-    return { change: "No data yet", trend: "neutral" as const };
-  }
-  if (input.current === 0 && input.previous === 0) {
+const calcChange = (current: number, previous: number) => {
+  if (current === 0 && previous === 0) {
     return { change: "No activity in range", trend: "neutral" as const };
   }
-  if (input.previous === 0) {
+  if (previous === 0) {
     return { change: "New", trend: "up" as const };
   }
-  const delta = ((input.current - input.previous) / input.previous) * 100;
+  const delta = ((current - previous) / previous) * 100;
   return {
     change: `${Math.abs(Math.round(delta))}%`,
     trend: delta >= 0 ? ("up" as const) : ("down" as const),
   };
 };
 
-export function buildAnalyticsKpiCards(overview: AnalyticsOverview | null): KpiCard[] {
+const buildCountKpi = (
+  id: KpiCardId,
+  label: string,
+  current: number,
+  previous: number
+): KpiCard => {
+  const change = calcChange(current, previous);
+  return {
+    id,
+    label,
+    value: current.toLocaleString("en-US"),
+    change: change.change,
+    trend: change.trend,
+  };
+};
+
+const buildRateKpi = (id: KpiCardId, label: string, current: number, previous: number): KpiCard => {
+  const change = calcChange(current, previous);
+  return {
+    id,
+    label,
+    value: `${Math.round(current * 100)}%`,
+    change: change.change,
+    trend: change.trend,
+  };
+};
+
+export function buildTrafficKpiCards(overview: TrafficOverview | null): KpiCard[] {
   if (!overview) return [];
-  const keys: AnalyticsMetricKey[] = ["publishedPages", "entries", "media"];
-  return keys.map((key) => {
-    const change = calcChange({
-      total: overview.totals[key],
-      current: overview.current[key],
-      previous: overview.previous[key],
-    });
-    return {
-      id: key,
-      label: metricLabels[key],
-      value: formatMetricValue(overview.totals[key]),
-      change: change.change,
-      trend: change.trend,
-    };
-  });
+  return [
+    buildCountKpi(
+      "visitors",
+      "Unique Visitors",
+      overview.totals.visitors,
+      overview.previous.visitors
+    ),
+    buildCountKpi("pageviews", "Pageviews", overview.totals.pageviews, overview.previous.pageviews),
+    buildCountKpi("sessions", "Sessions", overview.totals.sessions, overview.previous.sessions),
+    buildRateKpi("bounce", "Bounce Rate", overview.totals.bounceRate, overview.previous.bounceRate),
+  ];
 }
 
 export function AnalyticsPage() {
   const [initialState] = useState(createInitialAnalyticsState);
-  const [topContentOpen, setTopContentOpen] = useState(false);
+  const [topPagesOpen, setTopPagesOpen] = useState(false);
   const [rangeValue, setRangeValue] = useState("30");
-  const [overview, setOverview] = useState<AnalyticsOverview | null>(initialState.overview);
-  const [topContent, setTopContent] = useState<TopContentItem[]>(initialState.topContent);
+  const [overview, setOverview] = useState<TrafficOverview | null>(initialState.overview);
+  const [topPages, setTopPages] = useState<TopPageRow[]>(initialState.topPages);
   const [isLoading, setIsLoading] = useState(initialState.isLoading);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,26 +116,26 @@ export function AnalyticsPage() {
 
   useEffect(() => {
     let active = true;
-    const cachedOverview = getCachedOverview(rangeDays);
-    const cachedTopContent = getCachedTopContent({ limit: 50, rangeDays });
+    const cachedOverview = getCachedTrafficOverview(rangeDays);
+    const cachedTopPages = getCachedTopPages({ rangeDays, limit: TOP_PAGES_LIMIT });
     Promise.all([
-      getOverviewCached(rangeDays, { force: !cachedOverview }),
-      getTopContentCached({
-        limit: 50,
+      getTrafficOverviewCached(rangeDays, { force: !cachedOverview }),
+      getTopPagesCached({
         rangeDays,
-        force: !cachedTopContent,
+        limit: TOP_PAGES_LIMIT,
+        force: !cachedTopPages,
       }),
     ])
-      .then(([nextOverview, nextTop]) => {
+      .then(([nextOverview, nextTopPages]) => {
         if (!active) return;
         setError(null);
         setOverview(nextOverview);
-        setTopContent(nextTop);
+        setTopPages(nextTopPages);
       })
       .catch((err: unknown) => {
         if (!active) return;
         setOverview(null);
-        setTopContent([]);
+        setTopPages([]);
         if (isApiClientError(err)) {
           setError(err.message);
         } else {
@@ -138,33 +150,30 @@ export function AnalyticsPage() {
     };
   }, [rangeDays]);
 
-  const metrics = useMemo(() => buildAnalyticsKpiCards(overview), [overview]);
+  const metrics = useMemo(() => buildTrafficKpiCards(overview), [overview]);
 
-  const topRows = useMemo((): TopContentRow[] => {
-    return topContent.map((item) => ({
-      id: item.id,
-      title: item.title,
-      path: item.slug ? (item.slug.startsWith("/") ? item.slug : `/${item.slug}`) : "/",
-      score: item.score,
-      updatedAt: item.updatedAt,
-      type: item.type,
-    }));
-  }, [topContent]);
-
-  const tableRows = useMemo(() => topRows.slice(0, 12), [topRows]);
-
-  const topPages = useMemo(
-    () =>
-      topRows.slice(0, 4).map((row) => ({
-        id: row.id,
-        path: row.path,
-        score: row.score,
+  const tableRows = useMemo(
+    (): TopPageTableRow[] =>
+      topPages.slice(0, 12).map((page) => ({
+        path: page.path,
+        views: page.views,
+        visitors: page.visitors,
       })),
-    [topRows]
+    [topPages]
   );
 
-  const handleExportTopContent = useCallback(
-    () => exportTopContent({ limit: 50, rangeDays }),
+  const drawerRows = useMemo(
+    (): TopPageTableRow[] =>
+      topPages.map((page) => ({
+        path: page.path,
+        views: page.views,
+        visitors: page.visitors,
+      })),
+    [topPages]
+  );
+
+  const handleExportTopPages = useCallback(
+    () => exportTopPages({ limit: TOP_PAGES_LIMIT, rangeDays }),
     [rangeDays]
   );
 
@@ -180,14 +189,14 @@ export function AnalyticsPage() {
             setError(null);
             setRangeValue(nextValue);
             const nextRangeDays = resolveRangeDays(nextValue);
-            const cachedOverview = getCachedOverview(nextRangeDays);
-            const cachedTopContent = getCachedTopContent({
-              limit: 50,
+            const cachedOverview = getCachedTrafficOverview(nextRangeDays);
+            const cachedTopPages = getCachedTopPages({
               rangeDays: nextRangeDays,
+              limit: TOP_PAGES_LIMIT,
             });
             setOverview(cachedOverview ?? null);
-            setTopContent(cachedTopContent ?? []);
-            setIsLoading(!(cachedOverview && cachedTopContent));
+            setTopPages(cachedTopPages ?? []);
+            setIsLoading(!(cachedOverview && cachedTopPages));
           }}
         >
           <SelectTrigger className="h-9">
@@ -208,7 +217,7 @@ export function AnalyticsPage() {
           title="Analytics Overview"
           description="Understand how visitors move through your site."
           actions={
-            <Button variant="outline" className="gap-1.5" onClick={handleExportTopContent}>
+            <Button variant="outline" className="gap-1.5" onClick={handleExportTopPages}>
               <Download className="size-4" />
               Export
             </Button>
@@ -227,16 +236,22 @@ export function AnalyticsPage() {
         ) : (
           <>
             <KpiCards items={metrics} />
-            <AnalyticsCharts trend={overview?.trend ?? []} topPages={topPages} />
-            <TopContentTable items={tableRows} onViewAll={() => setTopContentOpen(true)} />
+            <AnalyticsCharts
+              trend={overview?.trend ?? []}
+              topPages={overview?.topPages ?? []}
+              sources={overview?.sources ?? []}
+              devices={overview?.devices ?? []}
+              referrers={overview?.referrers ?? []}
+            />
+            <TopPagesTable items={tableRows} onViewAll={() => setTopPagesOpen(true)} />
           </>
         )}
       </div>
-      <TopContentDrawer
-        open={topContentOpen}
-        onOpenChange={setTopContentOpen}
-        items={topRows}
-        onExport={handleExportTopContent}
+      <TopPagesDrawer
+        open={topPagesOpen}
+        onOpenChange={setTopPagesOpen}
+        items={drawerRows}
+        onExport={handleExportTopPages}
       />
     </AdminShell>
   );

@@ -6,9 +6,9 @@
 **Category:** Tools / Analytics / Security / Domain Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
@@ -24,7 +24,8 @@
     `assertBeaconNonce()`, a 1:1 mirror of
     `core/services/forms/submissionNonce.ts`.
 - **Source-of-truth docs:** `_docs/SECURITY_SPEC.md`, `_docs/CMS_API.md`.
-- **Out-of-scope:** the HTTP route + rate-limit + captcha wiring (L02), IP
+- **Out-of-scope:** the HTTP route + rate-limit wiring (L02; captcha-exempt per
+  the binding decision below), IP
   hashing/bot classification (L03), DB writes (TASK-483-01-L03).
 
 ## Security Contract
@@ -44,10 +45,23 @@
   secret `ANALYTICS_BEACON_NONCE_SECRET` (fail-fast `analytics_nonce_secret_missing`
   if absent, exactly like `FORM_SUBMIT_NONCE_SECRET`). TTL via
   `ANALYTICS_BEACON_NONCE_TTL_MINUTES` (default 30, matching the session window).
-  reCAPTCHA is layered at the route via `enforceBotProtection` (L02).
+  The beacon route does **NOT** layer reCAPTCHA — binding captcha decision in
+  TASK-483-02 / 02-L02: the snippet sends no captcha token, so an
+  `enforceBotProtection` call would 400 every beacon whenever bot protection is
+  enabled; nonce + `public_write` rate limit + bot/DNT filtering (L02/L03) are
+  the complete anti-abuse stack.
+- **Env provisioning (owned by THIS leaf):** append
+  `ANALYTICS_BEACON_NONCE_SECRET=` (with a generation comment, e.g.
+  `openssl rand -hex 32`) and `ANALYTICS_BEACON_NONCE_TTL_MINUTES=` to
+  `.env.example`, next to the precedent `FORM_SUBMIT_NONCE_SECRET`
+  (`.env.example:26`). The shared runtime `.env` (dev server + DB-backed tests)
+  MUST be provisioned with a real secret before the route (L02) ships — with
+  fail-fast semantics an unprovisioned deploy 500s every beacon and analytics
+  collects nothing.
 - **Secret/PII handling:** the nonce secret is read from `process.env` only,
   never returned to the client beyond the signed token, never logged. The
-  payload carries no PII (host-only referrer, opaque visitId).
+  payload carries no PII (host-only referrer; no client-minted session token —
+  sessionization is server-side via the visitorHash, per TASK-483-01-L01).
 
 ## Implementation Pseudocode
 
@@ -95,6 +109,9 @@ export const beaconRequestSchema = {
   },
 } as const;
 
+// contract helpers throw plain Error("analytics_beacon_invalid") — the
+// machine-readable convention of the TASK-483-01-L01 normalizers, mapped at the
+// route via mapAnalyticsError (NOT ApiError; only beaconNonce throws ApiError)
 export function normalizeBeaconRequest(input: unknown) {
   const record = assertRecord(input, "analytics_beacon_invalid");
   rejectUnknownKeys(record, ["event", "nonce"], "analytics_beacon_invalid");
@@ -104,8 +121,14 @@ export function normalizeBeaconRequest(input: unknown) {
 
 Data flow: the tracking snippet (TASK-483-03) receives a fresh nonce embedded at
 render time, then POSTs `{ event, nonce }`. The route (L02) verifies the nonce
-before any DB work. Error handling uses machine-readable
-`analytics_nonce_*` / `analytics_beacon_invalid` codes mapped at the route.
+before any DB work. Error convention (binding, mirrored in 02-L02):
+`beaconNonce.ts` throws `ApiError` DIRECTLY (`analytics_nonce_required` /
+`analytics_nonce_invalid` / `analytics_nonce_secret_missing`), exactly like
+`core/services/forms/submissionNonce.ts` — those return via the route's
+`instanceof ApiError` branch and never reach `mapAnalyticsError`. Only
+`beaconContract.ts` uses the plain-`Error("analytics_beacon_invalid")`
+machine-readable convention (matching the TASK-483-01-L01 normalizers) and is
+mapped at the route via `mapAnalyticsError`.
 
 Regression-test shape (Vitest,
 `tests/vitest/analytics/beaconNonce.test.ts` + `beaconContract.test.ts`):
@@ -115,13 +138,20 @@ test("valid nonce round-trips", () => {
   process.env.ANALYTICS_BEACON_NONCE_SECRET = "x";
   expect(() => assertBeaconNonce(createBeaconNonce())).not.toThrow();
 });
+// nonce failures are ApiError instances — assert the machine code on `.code`
+// (the ApiError MESSAGE is human-readable, so toThrow("analytics_nonce_…")
+// would not match)
+const codeOf = (fn: () => unknown) => {
+  try { fn(); } catch (e) { return (e as ApiError).code; }
+  return null;
+};
 test("tampered signature rejected", () => {
   const n = createBeaconNonce().replace(/.$/, "0");
-  expect(() => assertBeaconNonce(n)).toThrow("analytics_nonce_invalid");
+  expect(codeOf(() => assertBeaconNonce(n))).toBe("analytics_nonce_invalid");
 });
 test("expired nonce rejected", () => {
   const old = createBeaconNonce("beacon", Date.now() - 60 * 60 * 1000);
-  expect(() => assertBeaconNonce(old)).toThrow("analytics_nonce_invalid");
+  expect(codeOf(() => assertBeaconNonce(old))).toBe("analytics_nonce_invalid");
 });
 test("envelope rejects unknown keys", () => {
   expect(() => normalizeBeaconRequest({ event: {}, nonce: "x", extra: 1 }))

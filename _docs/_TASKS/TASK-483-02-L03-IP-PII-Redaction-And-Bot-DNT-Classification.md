@@ -6,9 +6,9 @@
 **Category:** Tools / Analytics / Security / Privacy
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
@@ -22,7 +22,8 @@
   `core/services/analytics/visitorIdentity.ts` (hash + device/bot/DNT helpers).
 - **Source-of-truth docs:** `_docs/SECURITY_SPEC.md` (Email/PII HMAC pattern),
   `_docs/DATA_MODEL.md`.
-- **Out-of-scope:** the HTTP route + rate-limit + captcha wiring (L02), DB writes.
+- **Out-of-scope:** the HTTP route + rate-limit wiring (L02; captcha-exempt per
+  the binding decision in TASK-483-02 / 02-L02), DB writes.
 
 ## Security Contract
 
@@ -40,6 +41,12 @@
     persisted or logged, and the daily salt rotation prevents cross-day visitor
     correlation, matching the `PII_HASH_KEY` posture in `_docs/SECURITY_SPEC.md`.
   - Fail-fast `analytics_ip_hash_secret_missing` if the secret is absent.
+  - **Env provisioning (owned by THIS leaf):** append `ANALYTICS_IP_HASH_SECRET=`
+    (with a generation comment, e.g. `openssl rand -base64 32`) to
+    `.env.example`, next to the precedent `PII_HASH_KEY` (`.env.example:19`).
+    The shared runtime `.env` (dev server + DB-backed tests) MUST be provisioned
+    with a real secret before the route (L02) ships — with fail-fast semantics
+    an unprovisioned deploy 500s every beacon and analytics collects nothing.
   - Honor Do-Not-Track: if the `DNT: 1` header (or a configured consent signal)
     is present, the route skips ingestion entirely; this helper exposes
     `shouldHonorDnt(headers)` so the policy is testable and centralized.
@@ -89,9 +96,12 @@ Data flow: route extracts `ip` (via the existing `x-forwarded-for` resolution in
 return), `classifyBot` (drop), `classifyDevice` + `computeVisitorHash` (persist).
 The hash and device class are the only request-derived values that reach the DB.
 
-Error handling: missing secret → `analytics_ip_hash_secret_missing` (500) mapped
-at the route. Bot/DNT are not errors — they short-circuit to a 204 No Content so
-the client cannot distinguish "dropped" from "accepted".
+Error handling: missing secret → `ApiError("analytics_ip_hash_secret_missing", …, 500)`
+thrown DIRECTLY (see pseudocode) — it returns via the route's
+`instanceof ApiError` branch and never passes through `mapAnalyticsError`
+(binding error convention in 02-L01/02-L02). Bot/DNT are not errors — they
+short-circuit to a 204 No Content so the client cannot distinguish "dropped"
+from "accepted".
 
 Regression-test shape (Vitest,
 `tests/vitest/analytics/visitorIdentity.test.ts`):

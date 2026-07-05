@@ -8,6 +8,12 @@ const routeSuites = [
   "tests/integration/routes/adminRoles.test.ts",
   "tests/integration/routes/adminUsers.test.ts",
   "tests/integration/routes/analytics.test.ts",
+  "tests/integration/routes/analyticsTraffic.test.ts",
+  "tests/integration/routes/publicAnalytics.test.ts",
+  "tests/integration/analytics/trafficSchema.test.ts",
+  "tests/integration/analytics/trafficRepository.test.ts",
+  "tests/integration/analytics/trafficAggregation.test.ts",
+  "tests/integration/analytics/trafficRetention.test.ts",
   "tests/integration/routes/apiKeys.test.ts",
   "tests/integration/routes/assistant-rate-limit.test.ts",
   "tests/integration/routes/assistant.test.ts",
@@ -53,6 +59,8 @@ const baselineSuites = [
   "tests/integration/plugins/assets.test.ts",
   "tests/perf/admin-request-baseline.test.ts",
   "tests/perf/admin-prefetch-budget.test.ts",
+  "tests/perf/analyticsIngestion.test.ts",
+  "tests/security/analyticsBeacon.test.ts",
 ];
 
 type Mode = "test" | "coverage" | "all";

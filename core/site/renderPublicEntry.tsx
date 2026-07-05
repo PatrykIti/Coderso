@@ -103,6 +103,12 @@ export type PublicEntryListOptions = {
   metaDescription?: string | null;
   canonicalUrl?: string | null;
   robots?: string | null;
+  /**
+   * Analytics tracking snippet body (TASK-483-03-L02): the inline IIFE built by
+   * `buildTrackingScript`. Appended before `</body>` on LIVE list renders only;
+   * skipped when `isPreview` is set. Absent/null → no script.
+   */
+  analyticsScriptHtml?: string | null;
 };
 
 export type PublicEntryDetailOptions = {
@@ -117,6 +123,13 @@ export type PublicEntryDetailOptions = {
   metaDescription?: string | null;
   canonicalUrl?: string | null;
   robots?: string | null;
+  /**
+   * Analytics tracking snippet body (TASK-483-03-L02): the inline IIFE built by
+   * `buildTrackingScript`. Appended before `</body>` on LIVE detail renders only
+   * (blog posts + default-template entry detail); skipped when `isPreview` is
+   * set. Absent/null → no script.
+   */
+  analyticsScriptHtml?: string | null;
 };
 
 type TemplateComponent<Props> = (props: Props) => ReactNode;
@@ -171,7 +184,8 @@ const renderDocument = (
   canonicalUrl?: string | null,
   robots?: string | null,
   devModuleScripts?: string[] | null,
-  isPreview?: boolean
+  isPreview?: boolean,
+  analyticsScriptHtml?: string | null
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -221,8 +235,11 @@ const renderDocument = (
 
   const head = renderToString(<>{headTags}</>);
   const bodyHtml = renderToString(body);
+  // Analytics snippet (TASK-483-03-L02): LIVE renders only — never on previews.
+  const analyticsHtml =
+    analyticsScriptHtml && !isPreview ? `<script>${analyticsScriptHtml}</script>` : "";
 
-  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}</body></html>`;
+  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}${analyticsHtml}</body></html>`;
 };
 
 const PreviewBanner = () => (
@@ -307,6 +324,7 @@ export async function renderPublicEntryListHtml(options: PublicEntryListOptions)
     canonicalUrl,
     robots,
     themeName,
+    analyticsScriptHtml,
   } = options;
 
   const templatePath = await resolveContentTemplatePath({
@@ -343,7 +361,8 @@ export async function renderPublicEntryListHtml(options: PublicEntryListOptions)
     canonicalUrl,
     robots,
     devModuleScripts,
-    isPreview
+    isPreview,
+    analyticsScriptHtml
   );
 }
 
@@ -360,6 +379,7 @@ export async function renderPublicEntryDetailHtml(options: PublicEntryDetailOpti
     canonicalUrl,
     robots,
     themeName,
+    analyticsScriptHtml,
   } = options;
 
   const templatePath = await resolveContentTemplatePath({
@@ -400,6 +420,7 @@ export async function renderPublicEntryDetailHtml(options: PublicEntryDetailOpti
     canonicalUrl,
     robots,
     devModuleScripts,
-    isPreview
+    isPreview,
+    analyticsScriptHtml
   );
 }

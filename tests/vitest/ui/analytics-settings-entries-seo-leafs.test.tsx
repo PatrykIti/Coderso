@@ -7,8 +7,8 @@ import { expect, test, vi } from "vitest";
 
 import { AnalyticsCharts } from "../../../core/admin/ui/analytics/AnalyticsCharts";
 import { KpiCards } from "../../../core/admin/ui/analytics/KpiCards";
-import { TopContentDrawer } from "../../../core/admin/ui/analytics/TopContentDrawer";
-import { TopContentTable } from "../../../core/admin/ui/analytics/TopContentTable";
+import { TopPagesDrawer } from "../../../core/admin/ui/analytics/TopPagesDrawer";
+import { TopPagesTable } from "../../../core/admin/ui/analytics/TopPagesTable";
 import { EntryFilters } from "../../../core/admin/ui/entries/EntryFilters";
 import { EntryGrid } from "../../../core/admin/ui/entries/EntryGrid";
 import { ApiKeySecretDialog } from "../../../core/admin/ui/settings/ApiKeySecretDialog";
@@ -264,7 +264,9 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 };
 
 test("analytics leaf components render empty and populated states", () => {
-  const emptyHtml = renderToString(<AnalyticsCharts trend={[]} topPages={[]} />);
+  const emptyHtml = renderToString(
+    <AnalyticsCharts trend={[]} topPages={[]} sources={[]} devices={[]} referrers={[]} />
+  );
   const populatedHtml = renderToString(
     <>
       <AnalyticsCharts
@@ -272,54 +274,66 @@ test("analytics leaf components render empty and populated states", () => {
           { date: "Mar 1", value: 2 },
           { date: "Mar 7", value: 8 },
         ]}
-        topPages={[{ id: "page-1", path: "/pricing", score: 78 }]}
+        topPages={[{ path: "/pricing", views: 78, visitors: 40 }]}
+        sources={[{ key: "direct", label: "Direct", value: 30 }]}
+        devices={[{ key: "desktop", label: "Desktop", value: 50 }]}
+        referrers={[{ key: "example.com", label: "example.com", value: 12 }]}
       />
       <KpiCards
         items={[
           {
-            id: "publishedPages",
-            label: "Published pages",
+            id: "visitors",
+            label: "Unique Visitors",
             value: "24",
             change: "+12%",
             trend: "up",
           },
           {
-            id: "entries",
-            label: "Entries",
+            id: "pageviews",
+            label: "Pageviews",
             value: "16",
             change: "-3%",
             trend: "down",
           },
           {
-            id: "media",
-            label: "Media",
+            id: "sessions",
+            label: "Sessions",
             value: "128",
             change: "+8%",
             trend: "up",
+          },
+          {
+            id: "bounce",
+            label: "Bounce Rate",
+            value: "32%",
+            change: "-2%",
+            trend: "down",
           },
         ]}
       />
     </>
   );
 
-  expect(emptyHtml).toContain("No content activity yet. Publish content or widen the date range.");
+  expect(emptyHtml).toContain("No traffic data yet. Publish content or widen the date range.");
   expect(populatedHtml).toContain("Mar 1");
   expect(populatedHtml).toContain("Mar 7");
   expect(populatedHtml).toContain("/pricing");
-  expect(populatedHtml).toContain("78%");
-  expect(populatedHtml).toContain("score");
-  expect(populatedHtml).toContain("Published pages");
+  expect(populatedHtml).toContain("78");
+  expect(populatedHtml).toContain("views");
+  expect(populatedHtml).toContain("Direct");
+  expect(populatedHtml).toContain("Unique Visitors");
+  expect(populatedHtml).toContain("Bounce Rate");
   expect(populatedHtml).toContain("+12%");
   expect(populatedHtml).toContain("-3%");
 });
 
-test("top content components render rows and forward actions", async () => {
+test("top pages components render rows and forward actions", async () => {
   const onViewAll = vi.fn();
   const onOpenChange = vi.fn();
   const onExport = vi.fn(async () => ({
-    fileName: "analytics.csv",
+    fileName: "traffic.csv",
     contentType: "text/csv",
-    content: "type,title,slug,updatedAt,score",
+    content: "path,views,visitors",
   }));
   const originalCreateObjectUrl = URL.createObjectURL;
   const originalRevokeObjectUrl = URL.revokeObjectURL;
@@ -333,47 +347,29 @@ test("top content components render rows and forward actions", async () => {
   });
   const view = mount(
     <>
-      <TopContentTable
-        items={[
-          {
-            id: "item-1",
-            title: "Homepage",
-            path: "/",
-            score: 82,
-            updatedAt: "2026-03-06T12:00:00.000Z",
-            type: "page",
-          },
-        ]}
+      <TopPagesTable
+        items={[{ path: "/pricing", views: 82, visitors: 40 }]}
         onViewAll={onViewAll}
       />
-      <TopContentDrawer
+      <TopPagesDrawer
         open
         onOpenChange={onOpenChange}
         onExport={onExport}
-        items={[
-          {
-            id: "item-1",
-            title: "Homepage",
-            path: "/",
-            score: 82,
-            updatedAt: "2026-03-06T12:00:00.000Z",
-            type: "page",
-          },
-        ]}
+        items={[{ path: "/pricing", views: 82, visitors: 40 }]}
       />
     </>
   );
 
   try {
-    expect(view.container.textContent).toContain("Homepage");
+    expect(view.container.textContent).toContain("/pricing");
     expect(view.container.textContent).toContain("View all");
-    expect(view.container.textContent).toContain("Top Content");
+    expect(view.container.textContent).toContain("Top Pages");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     React.act(() => {
       buttons.find((button) => button.textContent?.includes("View all"))?.click();
       buttons
-        .find((button) => button.getAttribute("aria-label") === "Close top content drawer")
+        .find((button) => button.getAttribute("aria-label") === "Close top pages drawer")
         ?.click();
       buttons.find((button) => button.textContent === "Close")?.click();
     });
@@ -400,15 +396,15 @@ test("top content components render rows and forward actions", async () => {
   }
 });
 
-test("top content table and drawer render empty states", () => {
+test("top pages table and drawer render empty states", () => {
   const html = renderToString(
     <>
-      <TopContentTable items={[]} />
-      <TopContentDrawer
+      <TopPagesTable items={[]} />
+      <TopPagesDrawer
         open
         onOpenChange={() => undefined}
         onExport={async () => ({
-          fileName: "analytics.csv",
+          fileName: "traffic.csv",
           contentType: "text/csv",
           content: "",
         })}
@@ -417,7 +413,7 @@ test("top content table and drawer render empty states", () => {
     </>
   );
 
-  expect(html).toContain("No content activity yet. Publish content or widen the date range.");
+  expect(html).toContain("No page views yet. Publish content or widen the date range.");
   expect(html).toContain("No rows to export.");
 });
 

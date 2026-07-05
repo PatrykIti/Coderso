@@ -54,6 +54,10 @@ export const cacheKeys = {
   analyticsOverview: (rangeDays: number | string) => `analytics:overview:${rangeDays}`,
   analyticsTopContent: (rangeDays: number | string, limit: number | string, type: string = "all") =>
     `analytics:topContent:${rangeDays}:${limit}:${type}`,
+  analyticsTrafficOverview: (rangeDays: number | string) =>
+    `analytics:traffic:overview:${rangeDays}`,
+  analyticsTopPages: (rangeDays: number | string, limit: number | string) =>
+    `analytics:traffic:topPages:${rangeDays}:${limit}`,
   backupsList: (page: number | string, limit: number | string, queryKey: string = "all") =>
     `backups:list:${page}:${limit}:${queryKey}`,
   backupSchedule: "backups:schedule",
