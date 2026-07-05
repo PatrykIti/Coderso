@@ -28,8 +28,19 @@ clean **revisions seam** for TASK-487-02-L02.
 **Owned files (sole writer):**
 - `core/admin/ui/entries/EntryEditor.tsx` (1005 lines — reads as binary to rg;
   use `Read`/`grep -an`).
-- `core/admin/ui/entries/EntryEditorHeader.tsx` (94 lines — currently unused-ish;
-  may become the PageHeader actions cluster).
+- `core/admin/ui/entries/EntryEditorHeader.tsx` (94 lines — exports
+  `EntryEditorHeader` + `EntryEditorHeaderActions`; **ORPHANED**: NOT imported or
+  rendered by `EntryEditor.tsx` (grep `:1-53` confirms no import), referenced ONLY
+  by two Vitest mocks — see the repurpose-vs-delete decision below).
+
+**`EntryEditorHeader` repurpose-vs-delete decision (parent mandate, lines 299-314;
+parent 277-292 is the 514-02 admin-client section, not this decision).**
+Parent decision = **REPURPOSE** `EntryEditorHeader`/`EntryEditorHeaderActions` into
+the in-page `PageHeader` actions cluster (move Save draft / Publish / History +
+the status/Unsaved badges into it), rendered at the top of `EntryEditor` in place
+of the inline sticky bar. Fallback if repurposing is heavier than an inline
+`PageHeader`: **DELETE** `EntryEditorHeader.tsx`. **Either path MUST reconcile the
+two orphaned Vitest mocks** — see Testing Requirements.
 
 **Do NOT** edit `EntryMetadataPanel.tsx` (514-04 owns its internals — this subtask
 only passes props), the client (514-02), `FieldRenderer.tsx`, or the list.
@@ -60,8 +71,32 @@ title/slug card (`:763-824`), field tabs (`:834-916`), desktop `aside`
   `flex h-full min-h-0` + `contentClassName="p-0 overflow-hidden"` workspace
   shape; use the normal content container like `EntryList` (`max-w-6xl`,
   `flex flex-col gap-6`).
+- **Dispose of the existing shell chrome to avoid duplication (single owner =
+  in-page `PageHeader`, prototype-faithful).** The current `AdminShell` at
+  `EntryEditor.tsx:699-712` passes BOTH:
+  - `breadcrumbs={["Content", typeLabel, entry?.title ?? editorLabel]}` (`:703`)
+  - `topbarActions={<status Badge + Unsaved Badge>}` (`:704-711`)
+  When the trail + badges move onto the in-page `PageHeader` below, **REMOVE the
+  `AdminShell breadcrumbs` prop AND the `topbarActions` prop entirely** — otherwise
+  the screen renders a duplicate breadcrumb trail (shell + PageHeader) and duplicate
+  status/Unsaved badges (top bar + PageHeader actions).
+  - Rationale: the live prototype (`wf514audit-r2-proto-editor.png`) shows the
+    trail `Entries › Article` in-page directly above the "Edit entry" title and the
+    status/Unsaved-equivalent badges in the PageHeader actions row — the prototype
+    top bar carries NO trail and NO badges. Carrying both on the in-page PageHeader
+    is the faithful match.
+  - **Accepted divergence from siblings (flag in closure):** `EntryList.tsx:501`
+    and `ContentTypeEditor.tsx:455` keep the trail on the shell and pass a PageHeader
+    with NO breadcrumbs (`EntryList:503`, `ContentTypeEditor:459`). 514-03 instead
+    carries the trail in-page for prototype fidelity; this is intentional and must
+    be the SOLE owner of the trail (shell prop removed). Do NOT keep both.
 - Add `PageHeader` (from `@/ui/shared/PageHeader`) with:
-  - `breadcrumbs={[{label:"Entries", to:"/entries"}, {label: typeLabel}]}` (uses
+  - `breadcrumbs={[{label:"Entries", href:"/entries"}, {label: typeLabel}]}`
+    (admin `PageHeader` crumbs are `{ label: string; href?: string }`
+    (`PageHeader.tsx:15`) routed via `AdminLink`, which prepends the admin base
+    path — so route-relative `/entries` matches `activeHref="/admin/entries"`; do
+    NOT use the prototype's `to:` prop — it is an excess property that fails root
+    `tsc` and yields a non-linking crumb) (uses
     the existing `typeLabel`/`typeSingular` from `getContentTypeLabels` `:631-635`),
   - `title={editorLabel}` (already computed, `:635`), `description="Compose and
     publish an entry in this content type."`,
@@ -85,8 +120,20 @@ title/slug card (`:763-824`), field tabs (`:834-916`), desktop `aside`
   `SectionCard`). If a content type has no explicit tabs, everything lands in the
   Content card. Keep `FieldRenderer` per field, required-badge, missing-required
   highlight (`:859-905`).
-- **Media `SectionCard`** — if the schema has media fields (or always, matching the
-  prototype's cover-image card), render them here; otherwise omit gracefully.
+- **Media `SectionCard` — decided rule (schema-driven): render the Media
+  `SectionCard` ONLY when the schema has ≥1 media field (i.e. `tabGroups` produced a
+  `"Media"` tab — `EntryEditor.tsx:655` maps `field.type === "media"` → `"Media"`).
+  When no media field exists, OMIT the card entirely (no empty placeholder).**
+  - **Accepted divergence from the prototype (flag in closure):** the prototype
+    (`EntryEditorPreview.tsx:70-82`) ALWAYS renders a Media card with a *static*
+    aspect-16/9 cover mock + "Upload cover" button. That is a mock affordance (same
+    class as the prototype's mocked `ent_8f21a0` id that 514-04 replaces with the real
+    UUID) — the real editor is schema-driven, so an always-on Media card would be
+    empty/meaningless for content types with no media field. We therefore diverge:
+    real media fields → Media card; no media field → no card. This is intentional and
+    must be surfaced in the closure alongside the 514-04 metadata mock divergence.
+  - When present, the Media card holds the media-tab fields via `FieldRenderer` (real
+    upload widgets), NOT the prototype's static cover placeholder.
 - Loading + empty states (`:826-833`) re-homed into the Content card.
 
 ### 3. Right column — mount redesigned panel (both mounts)
@@ -95,6 +142,36 @@ title/slug card (`:763-824`), field tabs (`:834-916`), desktop `aside`
   `w-96 aside`; the `320px` grid track sizes it). Keep the mobile `Sheet`
   (`:947-980`) mounting the SAME panel for small screens (hide the in-grid panel
   `lg:` and show the Sheet trigger below `lg`), mirroring the current dual-mount.
+- **Internal ScrollArea reconciliation (resolves the 514-04 §4 contradiction).**
+  The current desktop mount wraps the panel in `<aside className="… min-h-0 w-96
+  … overflow-hidden lg:flex …">` (`EntryEditor.tsx:920`) whose bounded height lets
+  the panel's internal `ScrollArea` scroll. Once the aside is removed and the panel
+  flows in the unbounded `320px` grid track, an internal `ScrollArea` has NO bounded
+  height → it collapses / breaks and is non-faithful. The live prototype
+  (`wf514audit-r2-proto-editor.png`) shows the right column (Publish + Taxonomy
+  cards) flowing WITH the page to the page bottom (page-level scroll, no inner
+  scroller). Therefore:
+  - **Desktop in-grid mount: the 320px column flows with the page — NO internal
+    `ScrollArea` (and no bounded-height wrapper).** The panel renders as plain
+    stacked `SectionCard`s in normal document flow.
+  - **Mobile `Sheet` mount: keep the internal `ScrollArea`** (the Sheet gives it a
+    bounded height, so scrolling is correct and needed there).
+  - This is a 514-04-owned internal (this subtask only mounts the panel), so
+    **514-04 §4 must be corrected**: its "the panel keeps its `ScrollArea` + footer
+    for the desktop `aside` AND the mobile `Sheet`" is STALE — the desktop `aside`
+    no longer exists; the `ScrollArea` must be scoped to the mobile `Sheet` mount
+    ONLY, and the desktop in-grid mount flows with no inner scroller.
+  - **⚠ LAND-ORDER INVERSION — this correction belongs UPSTREAM in 514-04, not in
+    a 514-03 closure reconcile.** Parent Land Order (parent lines 415-420) lands
+    **514-04 (step 3) BEFORE 514-03 (step 4)**. If 514-04 authors the
+    ScrollArea-for-both-mounts internal as its contract currently reads
+    (514-04 §4, lines 197-198), it will SHIP the wrong internal and 514-03 would only
+    be flagging it after the fact. A post-hoc closure reconcile is therefore NOT
+    sufficient. **Orchestrator action (before 514-04 lands):** edit 514-04 §4 to scope
+    the `ScrollArea` (+ footer) to the mobile `Sheet` mount only and state the desktop
+    mount renders plain stacked `SectionCard`s in normal document flow. 514-03 cannot
+    edit 514-04 (single-writer discipline) — this flag exists to drive that upstream
+    fix, with a closure reconcile as the backstop, not the primary mechanism.
 
 ### 4. Visibility wiring (end-to-end)
 
@@ -171,6 +248,19 @@ Per `_docs/TESTING_STRATEGY.md`.
   (undefined keep / null clear) — assert via mocked `updateEntryMetadata`.
 - Regression: publish blocked by checklist blocking issues; runtime preview opens;
   delete dialog confirm calls `deleteEntry`.
+- **Orphaned `EntryEditorHeader` mock reconcile (MANDATORY — parent lines 299-314).**
+  `EntryEditorHeader` is referenced by two `vi.mock` blocks:
+  `tests/vitest/ui/entry-editor-shell-wave.test.tsx:365` (mocked props
+  `{ entryLabel, status }`) and `tests/vitest/ui/post-classic-editor-shell-wave.test.tsx:293`
+  (mocked props `{ status, hasUnsavedChanges, contentType, entryLabel }`).
+  - If **REPURPOSED** (default): update BOTH `vi.mock` blocks — the import path (if
+    it changes) and the mocked prop surface — to track the new
+    `EntryEditorHeader`/`EntryEditorHeaderActions` signature actually rendered by
+    `EntryEditor`, and adjust any assertions reading the mock's rendered output.
+  - If **DELETED**: remove BOTH `vi.mock` blocks and every assertion that depends on
+    them (a `vi.mock` of a non-existent module resolves to nothing / breaks Vitest).
+  - Note this cross-file test impact in the 514-03 closure (these two test files are
+    NOT in this subtask's owned-files list, so surface the reconcile explicitly).
 
 ### SMOKE
 

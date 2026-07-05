@@ -132,10 +132,24 @@ never reach into `typeService`.
 - `updateContentType`: compute `const config = input.config !== undefined ?
   normalizeContentTypeConfig(input.config) : undefined;` and include in `.set` (drizzle skips
   `undefined`). Do NOT normalize when the caller omits `config` (partial PATCH must not wipe it).
-- `duplicateContentType`: carry `config: source.config` (already normalized) into the new row.
+- `duplicateContentType`: carry the source config into the new row via
+  `config: source.config as ContentTypeConfig`. **Why the cast:** the jsonb column carries no
+  `.$type<>()` (neither `schema` nor the new `config` column use it — confirmed in `schema.ts`),
+  so drizzle infers `contentTypes.$inferSelect.config` as `unknown`; passing bare `source.config`
+  (unknown) into `createContentType`'s `config?: ContentTypeConfig` param yields TS2322 and breaks
+  the root `tsc -p tsconfig.json --noEmit` gate. Mirror the existing `source.schema as ContentSchema`
+  cast on the adjacent line (typeService.ts:265). The value is re-normalized inside
+  `createContentType` (`normalizeContentTypeConfig(input.config)`), so the cast is safe — no
+  fail-open widening. Do NOT add `.$type<ContentTypeConfig>()` to the column instead: it would force
+  `schema.ts` to import `ContentTypeConfig` from `typeService.ts`, creating a schema→service import
+  cycle.
 - `listContentTypes` select: add `config: contentTypes.config` and add `contentTypes.config` to
-  the `groupBy` list (it uses an aggregate `count`). `getContentType`/`getContentTypeBySlug` use
-  `select()` (all columns) — already include `config`, no change.
+  the `groupBy` list (it uses an aggregate `count`). The selected `config` field is inferred
+  `unknown` (no `.$type<>()` — see duplicate note above); this needs NO extra server-side typing
+  because the list crosses the wire and the client re-asserts the shape via the
+  `apiRequest<ContentTypeSummary[]>` generic (`ContentTypeSummary.config?: ContentTypeConfig`, §5).
+  Server callers of `listContentTypes` do not read `.config` directly. `getContentType`/
+  `getContentTypeBySlug` use `select()` (all columns) — already include `config`, no change.
 
 ### 4. Request validation (`contentSchemas.ts`)
 Add a shared `contentTypeConfigSchema` fragment and reference it in create + update:

@@ -21,6 +21,18 @@ Delivers the prototype's 4th tab (`Permissions`) as a **per-content-type role→
 persisted in `config.permissions` (513-01). It is created BEFORE 513-03 so the editor can import
 it. 513-04 does NOT edit `ContentTypeEditor.tsx` (513-03 renders the panel + owns the tab wiring).
 
+> **Prototype-fidelity note (read first):** In the prototype the `Permissions` tab is an **inert
+> label only** — `ContentTypeEditorPreview.tsx` renders `<Tabs variant="underline" items=[fields,
+> relations, settings, permissions] />` with **no active-tab state, no `onChange`, and no per-tab
+> conditional render**; the page always shows the Fields `SectionCard` + Type-settings `Card` grid
+> regardless of the selected tab. So there is **nothing to visually match** for this tab, and **no
+> live-visual verification applies** to this file (the prototype source proves the tab is a
+> placeholder). This panel is therefore a **designed-from-scratch surface sanctioned by parent
+> gap #3**, and its visual/interaction language is derived from two existing in-repo idioms rather
+> than from a prototype mock: (a) the Type-settings card/switch idiom (for token/spacing
+> consistency inside the editor) and (b) the canonical roles↔permission matrix in
+> `core/admin/ui/roles/PermissionsMatrix.tsx` (for the grid/toggle-cell interaction language).
+
 **Land order (strict):** 513-01 → 513-02 → 513-04 (this) → 513-03 → 513-05 → 513-06.
 
 ---
@@ -67,17 +79,36 @@ export function toggleCapability(matrix, role, cap, next): PermissionsMatrix { .
 ### 2. `ContentTypePermissionsPanel.tsx`
 Props: `{ permissions: PermissionsMatrix | undefined; onChange: (next: PermissionsMatrix) => void;
 disabled?: boolean }`.
-- Renders a `SectionCard`-consistent table/grid: **rows = roles**, **columns = capabilities**
-  (Read / Create / Update / Delete / Publish), each cell a `Switch` (or `Checkbox`) bound via
-  `toggleCapability`. Use the existing shared UI primitives (`Switch`, `Card`/`SectionCard`,
-  `Badge`) so it matches the Type-settings visual idiom.
+- **Match the established matrix idiom.** A canonical role↔permission matrix already exists at
+  `core/admin/ui/roles/PermissionsMatrix.tsx` (+ `PermissionsMatrixPage.tsx`,
+  `rolePermissionDiff.ts`). Reconcile this panel's visual/interaction conventions with it: it uses
+  the `@/components/ui/table` primitives (`Table*`), `Checkbox` toggle cells, and a
+  `RolePermissionsMap = Record<string, string[]>` shape, with **roles as COLUMNS and permission
+  rows** (note: the existing matrix orients roles across columns). 513-04's grid is the transpose —
+  **rows = roles**, **columns = capabilities** (Read / Create / Update / Delete / Publish) — which
+  is warranted here because the capability set is a fixed 5-column allowlist while roles are the
+  variable-length axis (one row per role reads better and scales with workspace roles). State this
+  transpose choice explicitly in the closure. Reuse the same primitives (`Table*` + `Checkbox`, or
+  `Switch` if the closure justifies it) and the Type-settings `Card`/`SectionCard`/`Badge` tokens so
+  the panel matches BOTH the roles-matrix interaction language and the editor's visual idiom — do
+  NOT invent a divergent grid. Each cell is bound via `toggleCapability`.
 - **Roles data source:** load the roles list via `listAdminRoles()` (returns `AdminRole[]`) and the
   `AdminRole` type from `@/services/adminRolesClient` (`core/admin/services/adminRolesClient.ts` —
   verified the ONLY roles client; there is NO `rolesClient`/`roleClient` module). Each role's
   matrix key is the role `id` (or `name` — pick one and state it in the closure; `id` is the stable
   key). If a cached list hook exists for admin roles, prefer it; otherwise fetch once with
-  loading/error state. If the roles list is unavailable, fall back to a small built-in role set
-  derived from `getUserPermissions` buckets — **flag which client/key is used in the closure**.
+  loading/error state. **Do NOT reference `getUserPermissions`** (`core/services/auth/roleService.ts`)
+  as a fallback — it is a server-only async function that `import { db } from "../../db/client"` +
+  drizzle (the exact admin-bundle boundary break 513-01 flags for `typeService`), and it returns a
+  single USER's flattened permission strings, not a role set. **There is NO client-side roles
+  fallback in the repo** — do NOT reference `core/admin/ui/roles/permissionCatalog.ts`
+  (`fallbackPermissionGroups` is `PermissionGroup[]` = permission-group/permission definitions and
+  `flattenPermissionGroups` returns permission IDs like `content:read`; seeding role rows from it
+  would put permission ids where role keys belong). Preferred behavior on `listAdminRoles()` error:
+  render the **error/empty state** (below) rather than a synthetic role list. If a fallback role set
+  is genuinely required, declare a **small static client-side role-name/id constant local to this
+  file** — never derive it from the permission catalog and never a server service. **Flag which
+  client/key (and whether a fallback fired) is used in the closure.**
 - Header row explains "Configure which roles can act on entries of this content type. Unset =
   inherit the global role permission." (declarative note aligned with Open Question #1).
 - A "Reset to defaults" affordance clears the matrix (→ `{}`), matching the owner's
@@ -101,7 +132,11 @@ disabled prop disables all switches. Mock the roles client.
 
 ## UI/UX-fidelity & max-config-flexibility notes
 
-Realizes the prototype's `Permissions` tab. Flexibility: any role in the workspace gets a full
-5-capability matrix; unset cells inherit; server accepts arbitrary role keys (capped). Styling
-reuses the Type-settings card / switch idiom for a clean, native-feeling integration (no new
-visual language, no raw JSON).
+Fills in the prototype's `Permissions` tab, which ships as an **inert label with no panel content**
+(see the Prototype-fidelity note under Scope) — so this is a designed-from-scratch surface (parent
+gap #3), not a reproduction of a prototype mock, and **no live-visual verification applies**.
+Flexibility: any role in the workspace gets a full 5-capability matrix; unset cells inherit; server
+accepts arbitrary role keys (capped). To avoid a divergent permissions language, the panel's
+grid/toggle-cell interaction mirrors the canonical `core/admin/ui/roles/PermissionsMatrix.tsx`
+idiom (transposed to role-rows × capability-columns) and its tokens reuse the Type-settings
+card / switch idiom for a clean, native-feeling integration (no new visual language, no raw JSON).

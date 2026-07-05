@@ -66,9 +66,9 @@ The current list card (`CustomScreenTable.tsx:120-170`) already faithfully repro
 ### Land order & single-writer ownership (strictly sequential — each lands green before the next opens)
 
 1. **515-01 (the fix + focused regression tests)** — **sole writer of** `core/admin/ui/navigation/sidebarConfig.ts` and `core/admin/ui/custom-screens/customScreenListModel.ts`. Removes the editor gate from `buildCustomScreenShortcutNavItems`; collapses `resolveCustomScreenSidebarShortcutState` so `status==="active" && showInSidebar` → `"visible"` (prunes the now-dead `"requires_editor_setup"` member from `CustomScreenSidebarShortcutStateV3`). Adds regression unit tests. Verifies existing tests stay green.
-2. **515-02 (closure)** — the ≥5-scenario **live playwright SMOKE**, docs, changelog **1227** (verify fresh at closure), board/Statistics rows → Done. Authors NO production code and NO `sidebarConfig.ts`/`customScreenListModel.ts` edits.
+2. **515-02 (closure)** — the ≥5-scenario **live playwright SMOKE**, docs, changelog **1223** (verify fresh at closure), board/Statistics rows → Done. Authors NO production code and NO `sidebarConfig.ts`/`customScreenListModel.ts` edits.
 
-Single-writer map: **`sidebarConfig.ts` = 515-01**, **`customScreenListModel.ts` = 515-01**, **regression unit tests = 515-01**, **live smoke + docs + changelog + board = 515-02**. Every production file has exactly one owner. `CustomScreenTable.tsx` and `CustomScreenEntriesPage.tsx` need **no edits** (they already read `sidebarShortcutState === "visible"` — the fix flows through them for free); if 515-01 elects to prune the union member and the TS compiler flags a narrowed switch/exhaustiveness in either consumer, that surgical follow-through is 515-01's (documented in its file), still under a single sequential land.
+Single-writer map: **`sidebarConfig.ts` = 515-01**, **`customScreenListModel.ts` = 515-01**, **regression unit tests = 515-01**, **live smoke + docs + changelog + board = 515-02**. Every production file has exactly one owner. `CustomScreenTable.tsx` and `CustomScreenEntriesPage.tsx` need **no source edits** (they already read `sidebarShortcutState === "visible"` — the fix flows through them), but this flow-through is NOT behavior-neutral on the entries page: because `CustomScreenEntriesPage.tsx:213` derives `isSidebarPublished` from the same corrected state, a newly-visible dashboard/collection-only screen's page-header badge flips grey "Not in sidebar" → green "Published / In sidebar" (`:641-651`) — an intended parity effect that 515-02 must assert (see Hard Invariant #6), not an invisible inheritance. If 515-01 elects to prune the union member and the TS compiler flags a narrowed switch/exhaustiveness in either consumer, that surgical follow-through is 515-01's (documented in its file), still under a single sequential land.
 
 ---
 
@@ -92,8 +92,9 @@ No auth/nonce/HMAC/reCAPTCHA change: no write path is added or loosened.
 2. **Draft screens NEVER appear.** The `status === "active"` gate is retained; a pinned Draft screen stays out of the menu (matches the create-drawer contract + prototype).
 3. **List-card badge parity.** `resolveCustomScreenSidebarShortcutState` returns `"visible"` for every Active+pinned screen so the "In sidebar" badge + "Open" button render for all modes (prototype fidelity); `showInSidebar===false` → `"hidden"`; draft+pinned → `"configured_after_activation"` (unchanged).
 4. **Dead-state pruned cleanly.** `"requires_editor_setup"` is removed from `CustomScreenSidebarShortcutStateV3` (no code produces it); consumers referencing only `"visible"` compile unchanged.
-5. **No behavior change for editor-mode or unpinned screens** — existing green tests (`custom-screen-list-restyle.test.tsx`, `custom-screens-list-wave.test.tsx`, `admin-shell-nav.test.tsx`) stay green (editor-mode active+pinned was already `"visible"`; unpinned still `"hidden"`).
-6. **NO schema/route/RBAC/migration/`schemaVersion` change.**
+5. **No behavior change for editor-mode or unpinned screens** — existing green tests (`advanced-modules.test.ts` — incl. the existing builder test `buildCustomScreenShortcutNavItems returns only active sidebar screens` at `:155`, whose only Active+pinned fixture `screen-b` is editor-mode so it stays emitted, keeping `toHaveLength(1)` — plus `custom-screen-list-restyle.test.tsx`, `custom-screens-list-wave.test.tsx`, `admin-shell-nav.test.tsx`) stay green (editor-mode active+pinned was already `"visible"`; unpinned still `"hidden"`).
+6. **Entries-page header badge flips to "Published / In sidebar" for newly-visible screens (EXPECTED PARITY EFFECT, not a no-op inheritance).** `CustomScreenEntriesPage.tsx:213` derives `isSidebarPublished = sidebarShortcutState === "visible"` from the SAME `resolveCustomScreenSidebarShortcutState(screen)` this fix corrects, so for an Active + `showInSidebar` **dashboard/collection-only** screen the page-header badge (`:641-648`) changes from the grey `secondary` "Not in sidebar" Badge to the green `success` "Published" Badge, and the meta text (`:651`) gains the `"In sidebar · "` prefix. This is the desired, on-message result (the page now truthfully reflects that the screen IS in the sidebar) — `CustomScreenEntriesPage.tsx` still needs **no source edit** (it reads the state for free), but the effect is intentional and MUST be asserted in the 515-02 smoke, not treated as "nothing else changes". Editor-mode + unpinned + draft screens' badges are unchanged.
+7. **NO schema/route/RBAC/migration/`schemaVersion` change.**
 
 ---
 
@@ -102,7 +103,7 @@ No auth/nonce/HMAC/reCAPTCHA change: no write path is added or loosened.
 1. **The reported bug is fixed.** On `coderso-a.localhost:5173`, a screen that is Active + "show in left menu" appears under "Published screens" in the sidebar **even with only read-only bindings / no writable editor** — verified with the three live `mode:dashboard` screens that are currently absent.
 2. **Draft pinned screen stays hidden.** Setting a screen to Draft removes it from the sidebar; re-activating restores it (no refresh required beyond the existing cache-event invalidation).
 3. **List-card fidelity.** Every Active+pinned card shows the green "In sidebar" badge + "Open" button (matching the prototype), including dashboard/collection-only screens.
-4. **Navigation works.** Clicking a newly-visible sidebar item lands on that screen's entries list and renders it correctly for a read-only/dashboard screen.
+4. **Navigation works + entries-page badge parity.** Clicking a newly-visible sidebar item lands on that screen's entries list and renders it correctly for a read-only/dashboard screen, AND the entries-page header shows the green `success` "Published" badge with the "In sidebar · " meta prefix (`CustomScreenEntriesPage.tsx:641-651`) — no longer the grey "Not in sidebar" badge. The 515-02 smoke scenario that opens the entries page asserts this badge/text, not merely that the list renders.
 5. **No regression** for editor-mode, unpinned, or draft screens.
 6. Full gates green: `bun --cwd core lint`, `bun --cwd core lint:types`, root `tsc -p tsconfig.json --noEmit`, `test:bun`, full vitest, `gates:coderso`.
 
@@ -110,7 +111,7 @@ No auth/nonce/HMAC/reCAPTCHA change: no write path is added or loosened.
 
 ## Coordination / changelog pin
 
-- **Changelog (closure only): 1227** (verify it is still the next free number at closure).
+- **Changelog (closure only): 1223** (verify it is still the next free number at closure).
 - Board rows (parent + 2 children) and Statistics are added by the orchestrator — this task does **not** edit `_docs/_TASKS/README.md` or `_docs/_CHANGELOG/*`.
 - Isolate implementation on a separate worktree; scope commits to files this task owns.
 
@@ -120,6 +121,6 @@ No auth/nonce/HMAC/reCAPTCHA change: no write path is added or loosened.
 
 - `core/admin/ui/navigation/sidebarConfig.ts` — remove `supportsDedicatedCustomScreenEditor` (`:133-142`) from the `buildCustomScreenShortcutNavItems` filter (`:144-160`) so the predicate becomes `status==="active" && showInSidebar===true`; delete the now-unused helper + any now-unused imports (`CustomScreenShortcutRecord.capabilities`/`blocks`/`bindings` are still typed on the record, only the helper is removed). (515-01)
 - `core/admin/ui/custom-screens/customScreenListModel.ts` — remove the `"requires_editor_setup"` branch from `resolveCustomScreenSidebarShortcutState` (`:66-68`) so Active+pinned → `"visible"`; prune `"requires_editor_setup"` from `CustomScreenSidebarShortcutStateV3` (`:14-17`) and repoint `CustomScreenListRow.sidebarShortcutState` (`:25`) to the base union. (515-01)
-- `tests/vitest/ui/admin-shell-nav.test.tsx` — NEW unit test exercising `buildCustomScreenShortcutNavItems` directly (dashboard/collection-only Active+pinned → emitted; draft+pinned → dropped; unpinned → dropped). (515-01)
+- `tests/vitest/admin/advanced-modules.test.ts` — NEW unit test exercising `buildCustomScreenShortcutNavItems` directly (dashboard/collection-only Active+pinned → emitted; draft+pinned → dropped; unpinned → dropped), co-located beside the existing builder test at `:155` (this file already imports the builder; `admin-shell-nav.test.tsx` never imports it — it only feeds pre-built items to `SidebarNav`). (515-01)
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx` (or a focused list-model test) — NEW case: Active + `showInSidebar` + read-only-binding (dashboard) screen → `resolveCustomScreenSidebarShortcutState === "visible"` + card shows "In sidebar". (515-01)
-- live playwright smoke + `_docs/*` docs + `_docs/_CHANGELOG/` (1227) + board/Statistics. (515-02)
+- live playwright smoke + `_docs/*` docs + `_docs/_CHANGELOG/` (1223) + board/Statistics. (515-02)

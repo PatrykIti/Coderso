@@ -101,8 +101,11 @@ and `index` are imported from `drizzle-orm/pg-core` (add to the import list if m
 
 ## Implementation — migration `0066_*` (full artifacts, owner mandate)
 
-Run `bun --cwd core db:generate` (drizzle-kit) to author `0066_<name>.sql` +
-`meta/0066_snapshot.json` + append `meta/_journal.json` entry `idx: 66`. THEN hand-verify the
+Run `bun run db:generate` (drizzle-kit) from the repo ROOT — the `db:generate`/`db:migrate`
+scripts live in the ROOT `package.json` (lines 67-68, they auto-source `.env`); core/package.json
+has NO `db:*` scripts (only `drizzle-kit` devDep), so `bun --cwd core db:generate` fails
+missing-script. This authors `0066_<name>.sql` +
+`meta/0066_snapshot.json` + appends `meta/_journal.json` entry `idx: 66`. THEN hand-verify the
 generated SQL contains exactly:
 1. `CREATE TABLE "media_folders" (...)` with the 3 indexes (unique slug, parent, parent+order).
 2. `ALTER TABLE "media" ADD COLUMN "folder_id" uuid;` + FK constraint `ON DELETE set null`.
@@ -119,7 +122,13 @@ migration reads identically for all pre-existing columns; new columns default to
 
 ## Testing Requirements
 
-- **Bun lane (DB):** `tests/integration/db/media-schema-0066.test.ts` (NEW) — after migrate:
+- **Bun lane (DB):** `tests/integration/server/media-schema-0066.test.ts` (NEW) — must live
+  under `tests/integration/server/` because that is where DB-touching media tests already sit
+  (e.g. `tests/integration/server/mediaDeliveryAccess.test.ts`) AND it is one of the dirs the
+  `test:bun` glob enumerates (package.json:26); a `tests/integration/db/` dir is NOT in the glob
+  and would silently NEVER run (false green). Presumes 0066 is already applied to the shared test
+  DB — `test:bun` does NOT run migrations, so run `bun run db:migrate` (repo root) first. After
+  migrate:
   (a) insert a `media_folders` row + a nested child (parentId set), assert slug uniqueness
   rejects a dup; (b) insert `media` with `folderId` → delete the folder → assert the media row
   survives with `folderId === null` (NOT deleted — proves `onDelete: "set null"`); (c) assert a
@@ -133,8 +142,8 @@ migration reads identically for all pre-existing columns; new columns default to
 ## Acceptance Criteria
 
 1. `mediaFolders` table + 5 new `media` columns present in `schema.ts` with correct types.
-2. `0066_*.sql` + `0066_snapshot.json` + `_journal.json` `idx:66` committed; `bun --cwd core
-   db:migrate` applies clean on the test DB.
+2. `0066_*.sql` + `0066_snapshot.json` + `_journal.json` `idx:66` committed; `bun run db:migrate`
+   (repo root) applies clean on the test DB.
 3. Folder-delete sets `media.folderId` null (never cascade-deletes media) — proven by Bun test.
 4. Legacy rows byte-identical for pre-existing columns; `tags` backfills `[]`.
 5. `lint:types` + root `tsc` green.

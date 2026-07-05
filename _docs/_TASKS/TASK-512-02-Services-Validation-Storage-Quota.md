@@ -68,8 +68,25 @@ export type MediaMeta = {
 };
 ```
 Extend `buildMediaPatch` — add a present-only branch PER new key (same
-`hasOwnProperty` guard). Add a `normalizeMediaMeta(meta)` helper (pure, Bun-free — export for
-Vitest) that clamps/sanitizes BEFORE patch build:
+`hasOwnProperty` guard). Add a `normalizeMediaMeta(meta)` helper (logically pure — no DB call inside it) that
+clamps/sanitizes BEFORE patch build. Export it so its unit coverage can import it, but note its
+tests run in the Bun lane (DB-guarded), NOT Vitest: `mediaService.ts:2` imports `../../db/client`,
+so importing anything from this module pulls the DB client and is not Bun-free (see Testing
+Requirements).
+
+**KEY-SUBSET INVARIANT (critical for present-only / byte-identity):** `buildMediaPatch`
+(`mediaService.ts:73`) gates EVERY field via `Object.prototype.hasOwnProperty.call(meta, key)`
+and runs AFTER `normalizeMediaMeta`. Therefore `normalizeMediaMeta` MUST NOT introduce any key
+that was not present in its input — it transforms present keys in place and returns an object
+whose key set is a SUBSET of the input's present keys. It must never inject defaults for absent
+keys (no `tags:[]`, no `folderId:null`, no `focal*:…` when the caller did not send them),
+otherwise `hasOwnProperty` becomes true for keys the caller never sent and omitted fields get
+written — breaking present-only/byte-identity for legacy rows (Acceptance Criterion 1 + parent
+Security Contract present-only guarantee). Implementation: iterate/clamp only over the keys
+actually present on `meta` (never assign a default onto an absent key). This subset rule is the
+GENERAL contract; the per-axis focal present-only below is a specific case of it.
+
+`normalizeMediaMeta` clamps/sanitizes BEFORE patch build:
 - `folderId`: if present and non-null, must be a uuid string that EXISTS in `media_folders`
   (validate against DB in the service layer; a bad id → throw `media_folder_not_found`); null
   clears membership.
@@ -82,8 +99,19 @@ Vitest) that clamps/sanitizes BEFORE patch build:
 Keep `normalizeMediaMeta` PURE (no DB) except the folder-existence check which stays in
 `updateMedia` (so the pure normalizer is Vitest-testable without Bun/DB).
 
-`uploadMedia` — accept optional `folderId`/`tags` in `meta` on insert (default `tags` to `[]`,
-folderId null). Focal/description/credit are set post-upload via PATCH (not on the upload form).
+`uploadMedia` — DO NOT extend. It stays alt/title/caption only (inserts alt/title/caption at
+`mediaService.ts:150-152`). ALL new metadata — `folderId`, `tags`, `focalX`/`focalY`,
+`description`, `credit` — is assigned POST-upload via `PATCH /media/:id` (i.e. `updateMedia` +
+`mediaUpdateSchema`), never on the upload form. RATIONALE: the upload route validator
+`mediaUploadSchema` (`mediaSchemas.ts:1-11`) is `additionalProperties:false` with ONLY
+`file/alt/title/caption`, and the POST /media handler (`mediaRoutes.ts:113` validate,
+`:123-128` forward) maps ONLY `alt/title/caption` into `uploadMedia` — so adding `folderId`/`tags`
+to `uploadMedia` here would be an UNREACHABLE dead path (4xx-rejected at the boundary before it
+could ever be forwarded). Keeping upload minimal also avoids an FK-check on the hot upload path.
+Consequently §C extends ONLY `mediaUpdateSchema` (NOT `mediaUploadSchema`), and no `uploadMedia`
+signature/insert change is made in this subtask. (If a future task wants folder-on-upload, it must
+extend `mediaUploadSchema` AND the POST /media handler forward map — a 512-03 route-file edit, out
+of scope here.)
 
 ### B. mediaFoldersService.ts (NEW)
 
@@ -102,8 +130,10 @@ export async function reorderMediaFolders(orders: MediaFolderOrder[]): Promise<v
   service level with a friendly `media_folder_slug_conflict` (DB unique index is the backstop).
 - `parentId`: reject self-parent (`id === parentId`) and reject cycles (walk ancestors; throw
   `media_folder_cycle`). Nesting depth cap `MAX_DEPTH = 5` (`media_folder_depth_exceeded`).
-- `normalizeMediaFolderInput` — PURE helper (name trim + required, slug normalize, orderIndex
-  int ≥ 0) exported for Vitest; cycle/existence checks stay in the DB-touching functions.
+- `normalizeMediaFolderInput` — logically PURE helper (name trim + required, slug normalize,
+  orderIndex int ≥ 0), no DB call inside it; cycle/existence checks stay in the DB-touching
+  functions. Exported for its unit tests, which run in the Bun lane (this NEW service module
+  imports `db/client`, so it is not Vitest-importable — see Testing Requirements).
 
 ### C. mediaSchemas.ts — validation
 
@@ -124,9 +154,17 @@ Add to `STORAGE_KEYS`: `quotaTotalBytes: "storage.quota.totalBytes"`,
 `StorageSettingsUpdate`: optional `quota?: { totalBytes?: number|null; planLabel?: string|null }`.
 - `getStorageSettings`/`getStorageSettingsInternal`: read the two keys via existing
   `resolveNumberWithFallback`/`resolveStringWithFallback` (null default = unlimited/no bar).
-- `setStorageSettings`: `queueValue(STORAGE_KEYS.quotaTotalBytes, normalizeNumber(...))` +
-  planLabel (trim, cap 60 chars, empty→null). `normalizeNumber` already rejects negatives —
-  verify; quota must be ≥ 0 or null.
+- `setStorageSettings`: `queueValue(STORAGE_KEYS.quotaTotalBytes, <non-negative quota>)` +
+  planLabel (trim, cap 60 chars, empty→null). **NOTE — `normalizeNumber` does NOT reject
+  negatives** (verified: `storageSettings.ts:134-143` returns any `Number.isFinite(value)`
+  as-is, including `-5`; `maxSizeBytes` is likewise unguarded). Quota MUST be `≥ 0` or `null`,
+  so add an EXPLICIT non-negative guard for `quotaTotalBytes` in `setStorageSettings` before
+  queueing — either reject `value < 0` with `throw new Error("storage_settings_invalid")`
+  (preferred, consistent with the other normalizers) or clamp to `0`. DECISION: reject
+  (`storage_settings_invalid`) so a bad client write surfaces as a 4xx rather than silently
+  writing a wrong bar. `null` passes through unchanged (= unlimited/no bar). Apply the same
+  reasoning to `planLabel` (already `null`/string via trim+cap). The regression assertion
+  (negative → reject; `null` → passthrough) lives in the Bun DB quota setter test below.
 - **Quota enforcement DECISION (default = display-only):** do NOT reject uploads by default.
   Add an internal helper `checkQuota(usedBytes, incomingBytes)` returning
   `{ exceeded: boolean, over: number }` for the route/UI to consume, but `uploadMedia` does NOT
@@ -176,19 +214,52 @@ authoritative — the schema only opens the key.
 
 ## Testing Requirements
 
-- **Vitest lane (Bun-free, pure):** `tests/vitest/services/mediaMeta-normalize.test.ts` +
-  `mediaFolders-normalize.test.ts` + `storageSettings-quota-normalize.test.ts`:
-  focal clamp `[0,1]` (out-of-range + NaN reject), tag dedupe/cap/trim, description/credit cap,
-  slug derive, orderIndex coerce, quota number normalize (negative→reject, null passthrough),
-  reject-unknown shape assertions on the schemas, INCLUDING a `storageSettingsSchema` round-trip
-  test: `{ quota: { totalBytes, planLabel } }` validates OK, and `{ quota: { bogus: 1 } }` +
-  a top-level unknown key are rejected.
-- **Bun lane (DB, SERVICE lane — distinct files, never 512-03's route tests):**
-  `tests/integration/services/media-folders-service.test.ts` (NEW) — folder CRUD round-trip, cycle/
-  self-parent rejection, over-depth rejection (`media_folder_depth_exceeded`), slug conflict,
-  delete-un-files; and `tests/integration/services/mediaMeta-service.test.ts` (NEW) —
-  `updateMedia` new-fields round-trip with siblings surviving + quota getter/setter round-trip.
-  These are the SERVICE-layer lane and MUST NOT land in 512-03's
+**LANE-COVERAGE WARNING (verified 2026-07-05):** `tests/integration/services/` is NOT covered by
+ANY runner glob and does not exist today. `package.json` `test:bun` globs =
+`tests/unit tests/integration/routes tests/integration/runtime tests/integration/server
+tests/integration/store tests/integration/plugins tests/integration/analytics tests/perf
+tests/security`; `test:integration` = routes/runtime/server/store/plugins/analytics; Vitest
+`include` = `tests/vitest/**` only. A file placed under `tests/integration/services/` would
+SILENTLY never run (green gates hiding untested service code). Therefore all NEW tests below are
+placed in ALREADY-GLOBBED directories. (If a dedicated `tests/integration/services/` lane is ever
+wanted, adding it to both the `test:bun` and `test:integration` globs is a cross-file
+`package.json` edit that must be assigned to a single owner and noted in the parent — NOT done in
+512-02.)
+
+**Import-purity constraint (verified):** `mediaService.ts:2` and `storageSettings.ts:3` both
+`import { db } from "../../db/client"`, and `mediaFoldersService.ts` (NEW) is DB-touching. So the
+`normalizeMediaMeta` / `normalizeMediaFolderInput` / quota normalizers exported from those service
+modules CANNOT be imported under Vitest without pulling the DB client (not Bun-free) — their
+"pure" unit coverage therefore runs in the Bun lane (DB-guarded), NOT Vitest. Only the validation
+SCHEMA modules are import-pure: `settingsSchemas.ts` and `mediaSchemas.ts` have ZERO imports
+(verified), so schema round-trip / reject-unknown assertions are the correct Vitest content.
+
+- **Vitest lane (Bun-free, pure) — SCHEMA round-trip only:**
+  `tests/vitest/services/storageSettings-schema.test.ts` — `storageSettingsSchema` round-trip:
+  `{ quota: { totalBytes, planLabel } }` validates OK; `{ quota: { bogus: 1 } }` rejected (nested
+  `additionalProperties:false`); a top-level unknown key rejected. And
+  `tests/vitest/services/mediaSchemas.test.ts` — `mediaUpdateSchema` accepts the new keys
+  (`folderId/tags/focalX/focalY/description/credit`) and rejects an unknown key; the three folder
+  schemas (`mediaFolderCreateSchema` requires `name`, `mediaFolderUpdateSchema` all-optional,
+  `mediaFolderReorderSchema` requires `orders[]`) accept valid shapes and reject unknown keys.
+  These import ONLY `settingsSchemas.ts` / `mediaSchemas.ts` (import-pure — no DB). Do NOT import
+  service modules here.
+- **Bun lane (DB, SERVICE lane) — in already-globbed `tests/unit/media/` + `tests/unit/settings/`
+  (alongside existing `tests/unit/media/mediaService.test.ts` + `tests/unit/settings/
+  storageSettings.test.ts`), DB-guarded like the existing files (`hasDb` skip guard, `bun:test`):**
+  - `tests/unit/media/mediaFoldersService.test.ts` (NEW) — folder CRUD round-trip; cycle /
+    self-parent rejection; over-depth rejection (`media_folder_depth_exceeded`); slug conflict
+    (`media_folder_slug_conflict`); delete-un-files (media survives with `folderId` null); plus
+    `normalizeMediaFolderInput` coverage (name trim/require, slug derive, `orderIndex` int ≥ 0).
+  - `tests/unit/media/mediaMeta.test.ts` (NEW) — `updateMedia` new-fields round-trip with siblings
+    surviving; the KEY-SUBSET INVARIANT regression: patching only `{ alt }` leaves
+    `tags/folderId/focal*/description/credit` UNTOUCHED (no default injected); plus
+    `normalizeMediaMeta` coverage (focal clamp `[0,1]` out-of-range + NaN reject, tag
+    dedupe/cap/trim, description/credit cap, folderId non-uuid reject).
+  - `tests/unit/settings/storageSettings-quota.test.ts` (NEW) — quota getter/setter round-trip;
+    negative `totalBytes` → REJECT (`storage_settings_invalid`); `null` → passthrough (unlimited);
+    `planLabel` trim/cap/empty→null; `checkQuota` helper `{ exceeded, over }` math.
+  These are the SERVICE-layer lane and MUST NOT be placed in 512-03's
   `tests/integration/routes/media*.test.ts` / `media-folders.test.ts` (route lane, owned by 512-03).
   Shared-DB safety: unique slugs + `afterEach` teardown.
 

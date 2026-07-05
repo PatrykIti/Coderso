@@ -19,7 +19,7 @@ Fix the reported bug: custom screens marked *"show in the admin left main menu"*
 
 - `core/admin/ui/navigation/sidebarConfig.ts`
 - `core/admin/ui/custom-screens/customScreenListModel.ts`
-- `tests/vitest/ui/admin-shell-nav.test.tsx` (add one test; existing tests unchanged)
+- `tests/vitest/admin/advanced-modules.test.ts` (add one builder test beside the existing `buildCustomScreenShortcutNavItems` test at `:155`; existing tests unchanged)
 - one list-model regression case in `tests/vitest/ui/custom-screens-list-wave.test.tsx` (or a new focused `tests/vitest/ui/custom-screen-sidebar-shortcut-state.test.ts`)
 
 `CustomScreenTable.tsx` / `CustomScreenEntriesPage.tsx` are **not** owned/edited — they read `sidebarShortcutState === "visible"` and inherit the fix. The only exception: if pruning the union member makes the TS compiler flag an exhaustive switch/narrowing in either consumer, apply the surgical follow-through here (none is expected — both use a plain `=== "visible"` equality, see `CustomScreenTable.tsx:89`, `CustomScreenEntriesPage.tsx:213`).
@@ -130,18 +130,19 @@ Notes:
 
 **Lane: Vitest (Bun-free — pure model/UI).** These modules are pure client TS/TSX with no Bun/DB/`Bun.serve` dependency, so they belong in the Vitest lane. Run `bun --cwd core lint:types` **and** root `tsc -p tsconfig.json --noEmit` (the union prune is a type change; per the typecheck-scope gotcha, the root tsc covers the tests/ tree that `--cwd core` misses).
 
-1. **`tests/vitest/ui/admin-shell-nav.test.tsx` — NEW test `buildCustomScreenShortcutNavItems includes pinned Active screens of every mode`:**
-   - import `buildCustomScreenShortcutNavItems` from `sidebarConfig`.
+1. **`tests/vitest/admin/advanced-modules.test.ts` — NEW test `buildCustomScreenShortcutNavItems includes pinned Active screens of every mode`, co-located beside the existing builder test at `:155`:**
+   - import `buildCustomScreenShortcutNavItems` from `sidebarConfig` (this file already imports it at `:10`, so no new import wiring — this is its natural home; `admin-shell-nav.test.tsx` never imports the builder, it only feeds pre-built items to `SidebarNav`).
    - fixtures (as `CustomScreenShortcutRecord[]`): (a) Active + `showInSidebar` + **dashboard** (`capabilities.supportsDedicatedEditor:false`, read-only bindings) → **emitted**, href `/admin/advanced/custom-screens/<id>/entries`; (b) Active + `showInSidebar` + **collection-only** (no blocks/bindings, `supportsDedicatedEditor:false`) → **emitted**; (c) Active + `showInSidebar` + **editor** → **emitted** (regression baseline); (d) Active + `showInSidebar:false` → **dropped**; (e) **draft** + `showInSidebar:true` → **dropped**.
    - assert emitted labels honor `sidebarLabel?.trim() || name` and are sorted.
-   - This is the guard that would have caught the original bug (no existing test exercised the builder's filter — the current tests at `:408-449` pass pre-built items straight to `SidebarNav`, bypassing the filter entirely).
+   - This is the guard that would have caught the original bug. The existing builder test at `:155` (`buildCustomScreenShortcutNavItems returns only active sidebar screens`) DOES exercise the filter directly, but its only Active + pinned fixture (`screen-b`) is **editor-mode** (a `readwrite` binding), so it passed both before and after the fix and never covered the non-editor Active+pinned case — which is precisely why the bug slipped through. Fixtures (a)/(b) above close that gap.
 
 2. **List-model regression** (extend `tests/vitest/ui/custom-screens-list-wave.test.tsx`, or new focused file): `resolveCustomScreenSidebarShortcutState` returns `"visible"` for an Active + `showInSidebar` + **read-only-binding (dashboard)** `CustomScreenRecord` (previously `"requires_editor_setup"`); `"hidden"` for `showInSidebar:false`; `"configured_after_activation"` for draft + pinned. Assert the literal `"requires_editor_setup"` no longer appears anywhere in the module (grep-style / type-level: assigning it is now a TS error).
 
 3. **Existing-test verification (shared-DB-safe; these are pure render/model tests, no DB):**
+   - `tests/vitest/admin/advanced-modules.test.ts:155` (`buildCustomScreenShortcutNavItems returns only active sidebar screens`) — the one existing test that exercises the builder's filter directly. Confirm it stays green: its only Active + pinned fixture (`screen-b`) is editor-mode (`readwrite` binding), so it was emitted before and after the fix; `screen-a` (draft) and `screen-c` (`showInSidebar:false`) stay dropped, so `toHaveLength(1)` still holds. (It lacks an Active + pinned + non-editor fixture, which is exactly why it never caught the bug — the new test in item 1 supplies that coverage.)
    - `tests/vitest/ui-integration/custom-screen-list-restyle.test.tsx` — must stay green: its active fixture has a `readwrite` binding (editor mode) so it was already `"visible"`; the draft fixture stays `"hidden"`. Confirm no assertion breaks.
    - `tests/vitest/ui/custom-screens-list-wave.test.tsx:482` — the `"configured_after_activation"` fixture (draft + pinned) is unchanged by this fix; confirm green.
-   - `tests/vitest/ui/admin-shell-nav.test.tsx:408-449` — unaffected (they bypass the builder).
+   - `tests/vitest/ui/admin-shell-nav.test.tsx:408-449` — unaffected (they bypass the builder, feeding pre-built items straight to `SidebarNav`).
 
 **Shared-DB safety:** all tests in this subtask are Vitest pure-render/model with no Postgres access — no smoke-DB pollution risk. (The live end-to-end smoke lives in 515-02.)
 

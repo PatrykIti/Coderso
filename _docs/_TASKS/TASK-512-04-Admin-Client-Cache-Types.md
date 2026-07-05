@@ -15,7 +15,8 @@ in `/settings/storage`).
 ## Scope (single-writer)
 
 **512-04 is the SOLE WRITER of:**
-- `core/admin/services/mediaClient.ts` (extend `MediaRecord`, `MediaUpdatePayload`, upload meta).
+- `core/admin/services/mediaClient.ts` (extend `MediaRecord`, `MediaUpdatePayload`; upload meta
+  stays `{alt?,title?,caption?}` — folder/tag set via upload-first-then-PATCH per 512-03).
 - `core/admin/services/mediaFoldersClient.ts` (**NEW** — folder CRUD/reorder + cache).
 - `core/admin/ui/media/types.ts` (extend `MediaItem`, `MediaMetaUpdate`; add `MediaFolder`).
 - `core/admin/ui/media/utils.ts` (extend `toMediaItem`; add folder/tag/focal derivations).
@@ -34,7 +35,10 @@ Consumed by 512-05/06. **Land order:** after 512-03, before 512-05.
   Cache built at line 81 `key: cacheKeys.mediaList`, `getCachedMedia`/`getCachedMediaForEvent`
   (109/111), `listMediaCached` (122).
 - `cachePolicy.ts:28` `export const cacheKeys = {...}`; `mediaList: "media:list"` at line 94 —
-  APPEND `mediaFolders: "media:folders"` + its ttl entry (mirror the `mediaList` ttl shape).
+  APPEND ONLY `mediaFolders: "media:folders"`. NOTE: `cacheKeys` is a flat key→string map with NO
+  per-key ttl; `cacheTtlMs` (lines 23–26) is a shared flat `{ list, detail }` and `mediaList` has
+  no dedicated ttl (mediaClient reuses `cacheTtlMs.list` at `mediaClient.ts:82`). Do NOT add any ttl
+  entry — the new folders cache reuses the shared `cacheTtlMs.list`.
 - `settingsClient.ts` — `StorageSettingsResponse` (line 62) with `delivery:{accessMode}` (68),
   `StorageSettingsUpdate` (86) with `delivery?` (92); `getStorageSettings`/`updateStorageSettings`
   hit `/settings/storage`. APPEND `quota:{totalBytes:number|null; planLabel:string|null}` to
@@ -50,8 +54,14 @@ Consumed by 512-05/06. **Land order:** after 512-03, before 512-05.
 ### A. mediaClient.ts
 Extend `MediaRecord` with server fields: `folderId: string|null`, `tags: string[]`,
 `focalX: number|null`, `focalY: number|null`, `description: string|null`, `credit: string|null`.
-Extend `MediaUpdatePayload` with the same (all optional — present-only PATCH). Extend
-`uploadMedia` meta type to allow `folderId`/`tags`. `updateMedia` already broadcasts the
+Extend `MediaUpdatePayload` with the same (all optional — present-only PATCH). **Do NOT extend
+`uploadMedia` meta to carry `folderId`/`tags`** — per 512-03's reconciliation, `mediaUploadSchema`
+is `additionalProperties:false` and NOT widened, so an upload body with `folderId`/`tags` is
+rejected 4xx at the route boundary (any such forwarding would be dead code / break uploads).
+`uploadMedia` meta stays `{ alt?, title?, caption? }` (matches `mediaClient.ts:138-140`). Folder/tag
+assignment is **upload-first-then-PATCH**: the UI (512-05/06) calls `uploadMedia`, then
+`updateMedia(returnedId, { folderId?, tags? })` on the returned media id. `updateMedia` already
+broadcasts the
 `mediaList` cache event — keep. When an update changes `folderId`, ALSO broadcast the
 `mediaFolders` event (counts may shift) — OR let folder counts derive client-side from the media
 list (simpler; DECISION: derive counts client-side, so no extra broadcast needed).
@@ -66,8 +76,14 @@ export async function updateMediaFolder(id, patch): ...                      // 
 export async function reorderMediaFolders(orders): ...                       // POST /media/folders/reorder
 export async function deleteMediaFolder(id): ...                             // DELETE {withCsrf:true} + broadcast BOTH folders+mediaList (un-files media)
 ```
-Mirror `mediaClient`'s cache-builder + `broadcastCacheEvent` + `subscribeCacheEvents` pattern
-exactly (use `cacheKeys.mediaFolders`). All writes `withCsrf:true`.
+Mirror `mediaClient`'s client-layer cache pattern EXACTLY: `createMemoryBackedLocalCache({ key:
+cacheKeys.mediaFolders, ... })` (as `mediaClient.ts:80`) + a module-level in-flight promise dedupe
+(`cachedFoldersPromise`, mirroring `cachedMediaPromise` at `mediaClient.ts:76`) + `broadcastCacheEvent`
+on every write (as `mediaClient.ts:152/174/…`). All writes `withCsrf:true`. Do NOT call
+`subscribeCacheEvents` here — the service/client layer only BROADCASTS; `mediaClient.ts` itself never
+subscribes (grep: zero `subscribeCacheEvents` in `core/admin/services/`). Subscription to the
+`mediaFolders`/`mediaList` events belongs in the 512-06 UI (`MediaLibraryPage.tsx`, which already
+calls `subscribeCacheEvents`), consistent with the rest of the codebase.
 
 ### C. types.ts + utils.ts
 Extend `MediaItem` with `folderId/tags/focalX/focalY/description/credit`. Extend `toMediaItem`
@@ -80,7 +96,8 @@ orderIndex), `countMediaByFolder(items, folderId): number` (recursive incl. desc
 `filterByTag(items, tag)`. Keep all PURE (Vitest-testable).
 
 ### D. cachePolicy.ts + settingsClient.ts (append-only)
-- `cachePolicy.ts`: add `mediaFolders: "media:folders"` to `cacheKeys` + ttl (copy `mediaList`).
+- `cachePolicy.ts`: add ONLY `mediaFolders: "media:folders"` to `cacheKeys` (no ttl entry — the
+  folders cache reuses the shared `cacheTtlMs.list`, exactly as `mediaClient.ts:82`).
 - `settingsClient.ts`: add `quota` to `StorageSettingsResponse` + `StorageSettingsUpdate`.
 
 ---
@@ -97,10 +114,19 @@ orderIndex), `countMediaByFolder(items, folderId): number` (recursive incl. desc
 
 ## Testing Requirements
 
-- **Vitest lane (Bun-free):** `tests/vitest/ui/media-utils.test.ts` (extend) — `toMediaItem`
-  maps new fields + defaults; `buildFolderTree` nesting+order; `countMediaByFolder` recursion;
-  `resolveFocalPosition` default center + clamp; `filterByTag`. `mediaFoldersClient` request-shape
-  test with mocked `apiRequest` (asserts `withCsrf:true`, correct paths/methods).
+- **Vitest lane (Bun-free) — pure utils:** EXTEND the REAL existing suite
+  `tests/vitest/admin/mediaUtils.test.ts` (verified: it imports `core/admin/ui/media/utils` and
+  today covers `resolveMediaDisplayName`/`formatDimensions`/`hasMissingImageAlt` over a `MediaItem`
+  — this, NOT `media-restyle.test.tsx`, is where utils coverage lives; do NOT create a
+  nonexistent `tests/vitest/ui/media-utils.test.ts`). Add: `toMediaItem` maps new fields +
+  defaults; `buildFolderTree` nesting+order; `countMediaByFolder` recursion; `resolveFocalPosition`
+  default center + clamp; `filterByTag`.
+- **Vitest lane (Bun-free) — client transport (SEPARATE file):** CREATE NEW
+  `tests/vitest/admin/mediaFoldersClient.test.ts` alongside the REAL existing
+  `tests/vitest/admin/mediaClient.test.ts` (verified: `tests/vitest/admin/` is the client-transport
+  lane, globbed by Vitest `tests/vitest/**`; the `tests/vitest/services/` dir holds only menu/page
+  suites, no client transport). Mock `apiRequest` and assert `withCsrf:true` + correct method +
+  path per call. Keep transport assertions OUT of `mediaUtils.test.ts` — do not fold them together.
 - **Bun lane:** covered by 512-03 route tests (client is transport).
 - Run `bun --cwd core lint:types` AND root `tsc -p tsconfig.json --noEmit` (prop-signature
   change → verify `MediaPicker.tsx` + `MediaLibraryPage.tsx` still compile; per memory the

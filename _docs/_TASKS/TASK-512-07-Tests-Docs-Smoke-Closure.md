@@ -27,10 +27,27 @@ Run and record green:
 - `bun --cwd core lint:types`
 - root `tsc -p tsconfig.json --noEmit` (catches test-file excess-prop breaks the core-only lint
   misses — per MEMORY typecheck-scope gotcha).
-- `bun --cwd core test:bun` (route/DB lanes; re-run named media/folder files if the full glob
-  shows the known smoke-DB-pollution transient — see MEMORY).
-- full Vitest (`bun run test` / vitest glob).
+- root `bun run test:bun` (route/DB lanes — this is a ROOT script; `test:bun` does NOT exist in
+  `core/package.json`, so keep `--cwd core` only on `lint`/`lint:types` which ARE core scripts).
+  Re-run named media/folder files if the full glob shows the known smoke-DB-pollution transient
+  (see MEMORY).
+- full Vitest (`bun run test:vitest` / vitest glob).
 - `bun run gates:coderso` (5/5).
+
+**DB-test glob reconcile (cross-subtask, 07 owns the sweep):** the root `test:bun` glob
+(`package.json:26`) is `tests/unit tests/integration/{routes,runtime,server,store,plugins,analytics}
+tests/perf tests/security` — it does NOT include `tests/integration/db` (and no such dir exists).
+512-01 already accounts for this: its DB/migration test lands at
+`tests/integration/server/media-schema-0066.test.ts` (512-01 §Tests, "Bun lane (DB)"), an
+already-globbed dir where DB-touching media tests already sit
+(e.g. `tests/integration/server/mediaDeliveryAccess.test.ts`), so it runs in the standard lane —
+no relocation needed here (do NOT chase a `tests/integration/db` move; 512-01 handled the path).
+Section A's guard is therefore a POSITIVE assertion at closure: confirm this exact file is
+enumerated by the `test:bun` glob AND that its cases (folder-delete-un-files, tags backfill,
+slug-uniqueness) actually EXECUTED in the `test:bun` output — not merely that the suite is green.
+If any subtask ever proposes a DB test under a NON-globbed dir, either relocate it under a globbed
+dir or extend the glob — but that would edit root `package.json` (a shared file NOT owned by
+TASK-512, so assign ownership explicitly if ever chosen).
 
 ## B. SMOKE — ≥5 DISTINCT real-flow scenarios (owner mandate)
 
@@ -65,11 +82,16 @@ MEMORY smoke mandate.)
 
 ## C. Documentation
 
-- Media model doc (`_docs/CONTENT_TYPES_SPEC.md` or the media-specific spec — grep for the
-  existing media model section; extend it): new `media` columns (`folderId`, `tags`, `focalX/Y`,
-  `description`, `credit`), the `media_folders` table (nesting, slug uniqueness, `onDelete:set
-  null` semantics), storage-quota settings keys (`storage.quota.totalBytes`/`.planLabel`), and
-  the reject-unknown/present-only/clamp contract.
+- Media feature/model spec (`_docs/MEDIA_SPEC.md` — the dedicated media spec; sections: Content
+  fields, Admin UI behavior (v1), Admin usage read model, Security): document folders (nesting,
+  slug uniqueness, `onDelete:set null` un-file semantics), tags, focal (`focalX/Y` clamped
+  `[0,1]`), `description`/`credit`, storage-quota settings keys
+  (`storage.quota.totalBytes`/`.planLabel`), and the reject-unknown / present-only / clamp
+  contract. (NOT `CONTENT_TYPES_SPEC.md` — its `media` references are field-type entries,
+  `media.accept`/`media.maxItems`, not the asset-table model.)
+- Schema doc (`_docs/DATA_MODEL.md`, `## Media` section, the `media` table at ~L200-216): add the
+  new `media` columns (`folderId`, `tags`, `focalX/Y`, `description`, `credit`) and the new
+  `media_folders` table (nesting/parent ref, slug uniqueness, `onDelete:set null`).
 - Getting-started / admin docs: note the new folder + quota + focal features if a media section
   exists.
 - **Changelog:** new entry **pinned 1224** (VERIFY 1224 still free at closure; if taken, take the

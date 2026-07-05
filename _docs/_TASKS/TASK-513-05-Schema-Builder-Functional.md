@@ -65,15 +65,72 @@ connector lines, `SchemaPreviewPanel` on the right).
    `FIELD_TYPES` still owns the per-type `icon` (icons are 513-05-local), but its label text comes
    from the canonical map so it cannot drift from FieldEditor's `fieldTypes` (513-02) or 513-03's
    Badge.
-2. **Node graph → select + reorder**: `FieldNode` already has `onSelect`; add keyboard/drag reorder
-   (mirror 513-03's reorder approach or the `moveSelectOption` up/down idiom). Selecting drives the
-   inspector.
+   **ALSO update `iconForType` (`SchemaBuilderPage.tsx:44-61`) — the helper the NODE GRAPH uses
+   (`iconForType(field.type)` at `:286`).** Today its `switch` has arms for
+   `number`/`boolean`/`select`/`media`/`relation`/`richtext` and a `default` (Text) only, so a `date`
+   or `slug` field node falls through to `<Type />`. Add `case "date": return <CalendarDays className="size-4" />;`
+   (the prototype's `SchemaBuilderPreview.tsx:158` renders the "Published at" Date node with a
+   `CalendarDays` icon — this is the exact node the prototype highlights) and
+   `case "slug": return <Link2 className="size-4" />;` so node-graph icons match the palette entries.
+   Import `CalendarDays` and `Link2` from `lucide-react` (both are currently un-imported in this
+   file). Icons stay 513-05-local; do NOT touch 513-02's `FieldEditor`/`SchemaBuilder` icons.
+2. **Node graph → select + reorder**: `FieldNode` already has `onSelect`; add an explicit reorder
+   **affordance** (the current `FieldNode`, `SchemaBuilderPage.tsx:66-105`, is a single
+   `<button onClick={onSelect}>` with props `{icon,name,type,selected,onSelect}` only — no reorder
+   control and no keyboard handler, so there is nothing to drive the reorder today).
+   **513-05 owns `SchemaBuilderPage.tsx`, so extend `FieldNode` here**: add two optional props
+   `onMoveUp?: () => void` / `onMoveDown?: () => void`, and render small up/down icon buttons
+   (`<ChevronUp/>`/`<ChevronDown/>` from `lucide-react`, `size-4`, `type="button"`) inside the node —
+   each with `onClick={(e) => { e.stopPropagation(); onMoveUp?.(); }}` (respectively `onMoveDown`) so
+   the reorder click does not also trigger the node's `onSelect`; disable up on the first node and
+   down on the last (`disabled` when `index === 0` / `index === fields.length - 1`). ALSO handle
+   `ArrowUp`/`ArrowDown` in the node's `onKeyDown` while selected (call `onMoveUp`/`onMoveDown`,
+   `preventDefault`). Wire from the map (`:282-293`):
+   `onMoveUp={() => moveField(field.id, -1)}` and `onMoveDown={() => moveField(field.id, 1)}`
+   (uses the `moveField` helper in Step 2 of the pseudocode). Selecting still drives the inspector.
+   The UI test clicks these up/down buttons to assert reorder.
 3. **Inspector → editable**: replace the read-only `FieldInspector` with the real editable
-   `FieldEditor`/`FieldSettingsPanel` from `SchemaBuilder.tsx` (consume, do not edit) so Label /
-   API id / Field type / Required / per-type config / Default / Help are editable and update
-   `fields`. Keep it inside the prototype's right/inspector visual frame.
-4. **Live schema + Save**: recompute `schema = buildSchemaFromFields(fields)` on change; feed
-   `SchemaPreviewPanel` (keep its JSON view). Enable **Save schema**: `validateFieldsForSave`-style
+   `FieldSettingsPanel` from `SchemaBuilder.tsx` (consume, do not edit) so Label /
+   API id / Field type / Required / **Unique** / per-type config / Default / Help are editable and
+   update `fields` (the **Unique** toggle is the one 513-02 adds under Required, matching the
+   prototype inspector `SchemaBuilderPreview.tsx:138-139` — it surfaces automatically here because
+   this reuses the shared `FieldSettingsPanel`; do NOT re-add it). Keep it inside the prototype's
+   right/inspector visual frame.
+   **Thread ALL the props `FieldSettingsPanel` needs to be fully functional** — mirror
+   `ContentTypeEditor.tsx:628-636` exactly (`FieldSettingsPanel` accepts these at
+   `SchemaBuilder.tsx:97-101`). Passing only `field`/`onChange` silently degrades the reused editor:
+   without `existingNames` the API-id uniqueness dedup breaks; without `relationTargets` the relation
+   config falls back to a free-text input; without `nameError` no INLINE inspector error can render
+   (see the test in the next section). Wire:
+   - `field={selectedField}`
+   - `onChange={(next) => setFields((prev) => prev.map((f) => (f.id === next.id ? next : f)))}`
+     (mark dirty). **`onRemove` takes NO argument** — its prop type is `onRemove: () => void`
+     (`SchemaBuilder.tsx:103`; `ContentTypeEditor.tsx:638` passes the zero-arg `requestFieldRemoval`,
+     which operates on `selectedField`/`selectedFieldId`, `ContentTypeEditor.tsx:369-372`). So wire
+     `onRemove={() => { if (!selectedField) return; const i = fields.findIndex((f) => f.id === selectedField.id); const next = fields.filter((f) => f.id !== selectedField.id); setFields(next); setSelectedFieldId(next[i]?.id ?? next[i - 1]?.id ?? next[0]?.id ?? null); }}`
+     — remove the currently-selected field and reselect its neighbor by index (mirrors
+     `confirmFieldRemoval`, `ContentTypeEditor.tsx:374-383`); do NOT reference a passed `id`, none is
+     supplied.
+   - `existingNames={fields.map((f) => ({ id: f.id, name: f.name }))}`
+   - `relationTargets={list.map(({ slug, name }) => ({ slug, name }))}` — `ContentTypeSummary`
+     carries both `slug` and `name` (`contentTypesClient.ts:37-38`), so `list` (already fetched into
+     state for the sidebar) is the mirror of `ContentTypeEditor`'s `relationTargets`.
+   - `nameError`, `defaultError`, `relationError` from `useMemo` that mirror
+     `ContentTypeEditor.tsx:420-430`:
+     `nameError = selectedField ? validateFieldName(selectedField.name, existingNames, selectedField.id) : null`
+     (consume the exported `validateFieldName` from `SchemaBuilder.tsx` read-only);
+     `defaultError = selectedField?.required && !selectedField.defaultValue ? "Required fields need a default value." : null`;
+     `relationError = selectedField?.type === "relation" && !selectedField.relation?.target ? "Select a related content type." : null`.
+4. **Live schema + Save**: make `schema` **derived**, not stored — the current
+   `const [schema, setSchema] = useState<ContentSchema>(buildSchemaFromFields(initialFields))`
+   (`SchemaBuilderPage.tsx:164`) goes stale because the mutation handlers (add/move/inspector
+   `onChange`) only call `setFields` and never `setSchema`, so `<SchemaPreviewPanel schema={schema} />`
+   (`:220`) would show pre-edit JSON. **Replace that `useState` with
+   `const schema = useMemo(() => buildSchemaFromFields(fields), [fields]);`** and **delete the two
+   `setSchema(...)` calls** (the `:164` initializer is subsumed by the memo; the `:193` load-effect
+   call becomes redundant because `setFields(mappedFields)` already re-derives it). Then the preview
+   and every handler stay consistent with zero extra wiring. Keep `SchemaPreviewPanel`'s JSON view.
+   Enable **Save schema**: `validateFieldsForSave`-style
    guard — duplicate the minimal name/select/number checks locally in this file (do NOT extract:
    the aggregate save-validator `validateFieldsForSave` is a local, non-exported const inside
    `ContentTypeEditor.tsx`, owned by 513-03, and `SchemaBuilder.tsx` exports only the per-name
@@ -86,12 +143,126 @@ connector lines, `SchemaPreviewPanel` on the right).
 
 ---
 
+## Execution-ready pseudocode (per handler)
+
+New state (added to `SchemaBuilderPage`):
+
+```ts
+const [isSaving, setIsSaving] = useState(false);
+// snapshot of the last-persisted field list — Discard target + dirty baseline
+const [lastLoaded, setLastLoaded] = useState<ContentField[]>(initialFields);
+```
+
+In BOTH the initial-load and `getContentTypeCached` effect (`:187-193`), set the snapshot alongside
+`setFields`: `setLastLoaded(mappedFields)` (so Discard reverts to what the server last returned, and
+`isDirty` is false right after a successful load/save).
+
+```ts
+// derived — REPLACES the stale `const [schema, setSchema] = useState(...)` at :164;
+// delete both setSchema(...) calls (:164 initializer + :193 load effect).
+const schema = useMemo(() => buildSchemaFromFields(fields), [fields]);
+const isDirty = useMemo(
+  () => JSON.stringify(fields) !== JSON.stringify(lastLoaded),
+  [fields, lastLoaded]
+);
+const nameError = useMemo(
+  () => (selectedField
+    ? validateFieldName(selectedField.name,
+        fields.map((f) => ({ id: f.id, name: f.name })), selectedField.id)
+    : null),
+  [selectedField, fields]
+);
+const hasBlockingError = useMemo(
+  () => fields.some((f) =>
+    validateFieldName(f.name, fields.map((x) => ({ id: x.id, name: x.name })), f.id) != null),
+  [fields]
+);
+const saveDisabled = isLoading || isSaving || fields.length === 0 || hasBlockingError;
+```
+
+```ts
+// Step 1 — palette add
+function addFieldOfType(type: FieldType) {
+  const name = makeUniqueFieldName(type, fields.map((f) => ({ id: f.id, name: f.name })));
+  const field: ContentField = {
+    id: crypto.randomUUID(),
+    name,
+    type,
+    label: typeLabel(type),      // from FIELD_TYPE_LABELS-derived helper
+    required: false,
+  };
+  setFields((prev) => [...prev, field]);
+  setSelectedFieldId(field.id);   // select the new node
+}
+// dashed "Add new field" button → addFieldOfType("text"); remove the `disabled` attr.
+```
+
+```ts
+// Step 2 — reorder (mirror moveSelectOption up/down idiom)
+function moveField(id: string, dir: -1 | 1) {
+  setFields((prev) => {
+    const i = prev.findIndex((f) => f.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= prev.length) return prev;
+    const next = [...prev];
+    [next[i], next[j]] = [next[j], next[i]];
+    return next;
+  });
+}
+```
+
+```ts
+// Step 4 — local save-guard (do NOT extract 513-03's validateFieldsForSave; duplicate the minimal
+// name/select/number checks locally — mirror ContentTypeEditor.tsx:252-288)
+function validateFields(): string | null {
+  const names = fields.map((f) => ({ id: f.id, name: f.name }));
+  for (const f of fields) {
+    const e = validateFieldName(f.name, names, f.id);
+    if (e) return e;
+    if (f.type === "select") { /* labels+values present, values unique */ }
+    if (f.type === "number") { /* min<=max, step>0, integer default */ }
+  }
+  return null;
+}
+
+async function handleSave() {
+  if (!typeId) return;
+  const err = validateFields();
+  if (err) { setError(err); return; }
+  setIsSaving(true);
+  setError(null);
+  try {
+    const nextSchema = buildSchemaFromFields(fields);
+    await updateContentType(typeId, { schema: nextSchema }); // client upserts cache + broadcasts
+    setLastLoaded(fields);        // clears dirty; new baseline
+    toast.success("Schema saved");
+  } catch (e) {
+    setError(isApiClientError(e) ? e.message : "Failed to save schema."); // load pattern at :196-203
+  } finally {
+    setIsSaving(false);
+  }
+}
+
+// Step 5 — Discard
+function handleDiscard() {
+  setFields(lastLoaded);
+  setSelectedFieldId(lastLoaded[0]?.id ?? null);
+  setError(null);
+}
+```
+
+Wire into `topbarActions` (`:222-229`): `<Button variant="ghost" onClick={handleDiscard} disabled={!isDirty || isSaving}>Discard</Button>`
+and `<Button onClick={handleSave} disabled={saveDisabled}>{isSaving ? "Saving…" : "Save schema"}</Button>`.
+
+---
+
 ## Testing requirements (lanes)
 
 **Vitest admin/UI lane** (`tests/vitest/ui/**`) — mock `contentTypesClient`:
 - Clicking a palette type (e.g. Date) appends a field of that type and selects it.
 - Editing the inspector label updates the node graph label + the live schema preview.
-- Reorder changes field order.
+- Reorder: clicking a field node's up/down control (from Step 2) changes field order (and the live
+  schema preview reflects the new order).
 - Save calls `updateContentType(typeId, { schema })` with the built schema; Discard reverts.
 - Invalid field name blocks Save with an inline error.
 

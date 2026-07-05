@@ -206,8 +206,13 @@ file has exactly one owner.
 
 ## Documentation Updates Required (authored at 512-07 closure)
 
-- `_docs/CONTENT_TYPES_SPEC.md` / media model doc — new `media` columns + `media_folders` table,
-  tags/focal/description/credit semantics, storage quota settings keys.
+- `_docs/MEDIA_SPEC.md` (the dedicated media feature/model spec) + `_docs/DATA_MODEL.md`
+  (`## Media` section, the `media` table at ~L200-216) — new `media` columns (`folderId`, `tags`,
+  `focalX/Y`, `description`, `credit`) + `media_folders` table (nesting/parent ref, slug
+  uniqueness, `onDelete:set null` un-file semantics), tags/focal/description/credit semantics,
+  storage quota settings keys. NOT `_docs/CONTENT_TYPES_SPEC.md` — its `media` references are
+  field-type entries (`media.accept`/`media.maxItems`), not the asset-table model. (Authored per
+  512-07 §C.)
 - `_docs/_CHANGELOG/` — new entry, **pinned 1224** (verify still free at closure).
 - `_docs/_TASKS/README.md` — parent + 7 child rows + Statistics (owner-managed; NOT edited here).
 </content>

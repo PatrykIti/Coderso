@@ -25,13 +25,30 @@ plain table). Nothing renders here — 514-02 (client) + 514-04 (panel) consume 
 **Owned files (sole writer):**
 - `core/db/schema.ts` — the `contentEntries` `pgTable` block (`:757-797`): two new
   columns.
-- `core/db/migrations/0066_<slug>.sql` + `core/db/migrations/meta/0066_snapshot.json`
-  + `core/db/migrations/meta/_journal.json` (append entry) — verified next number
-  is **0066** (last is `0065_backup_run_metadata.sql`).
+- `core/db/migrations/<NNNN>_<slug>.sql` + `core/db/migrations/meta/<NNNN>_snapshot.json`
+  + `core/db/migrations/meta/_journal.json` (append entry) — `<NNNN>` is the
+  ACTUAL next-free number allocated by `bun run db:generate` AT LAND TIME, NOT a
+  hard-pinned literal. Against the CURRENT tree the free number is `0066` (last is
+  `0065_backup_run_metadata.sql`, journal `idx:65`), but do **not** commit that
+  literal in isolation. **Cross-task coordination (mandatory):** two sibling
+  in-flight tasks — TASK-512-01 (`0066_*` media schema) and TASK-513-01 (`0066_*`
+  content-type config) — ALSO both assume they are the immediate successor to 0065
+  and hard-pin `0066`. All three cannot be `0066`; only one can. Therefore, whoever
+  lands first (strict cross-task land order among 512-01/513-01/514-01) takes the
+  then-free `0066`, and each subsequent lander bumps to `0067`, `0068`, … The
+  implementer MUST run `bun run db:generate` immediately before committing so the
+  SQL filename, `<NNNN>_snapshot.json`, and the appended `_journal.json` entry all
+  agree with whatever number is actually free at that moment; never hand-renumber
+  or hand-pin. (Model on the TASK-487-style cross-task coordination note.)
 - `core/services/content/entryService.ts` — types (`EntryDetail`, `EntryListItem`,
   `UpdateEntryMetadataInput`, `CreateEntryInput`), `entryListSelection` +
   `EntryListSelectionRow` + `mapEntryListSelectionRow` (`:435-494`), `getEntry`
-  read map (`:602-664`), `createEntry` (`:678`), `duplicateEntry` (`:702`),
+  read map (`:602-664`), **`listEntriesWithContentTypes` (`:542-600`) — its OWN
+  inline selection object (`:544-564`) + its OWN inline row mapper (`:570-599`);
+  it does NOT reuse `entryListSelection`/`mapEntryListSelectionRow`, so it must be
+  patched separately (see §3)**, `getEntryBySlug` (`:670-676`) — narrow its
+  `db.select()` to an explicit projection that OMITS `access_password` (see Security
+  Contract), `createEntry` (`:678`), `duplicateEntry` (`:702`),
   `updateEntryMetadata` (`:884-960`).
 - `core/server/validation/contentSchemas.ts` — `contentEntryMetadataSchema`
   (`:74-111`) + `contentEntryCreateSchema` (`:39-48`).
@@ -65,15 +82,46 @@ Verified (Read + `grep -an`):
 - **Access password is a WRITE-ONLY secret.**
   - Stored **hashed** via `hashPassword` from `core/services/auth/password.ts:8`
     (the same hasher used by `userService`/`apiKeysService`) — NEVER stored plain.
-  - **NEVER returned** by any read. `getEntry`/`entryListSelection` do NOT select
-    `access_password`; `EntryDetail`/`EntryListItem` expose only
+  - **Never exposed via a typed read map.** The narrow, explicitly-projected read
+    maps — `getEntry`, `entryListSelection`, and `listEntriesWithContentTypes`'s
+    inline selection — MUST NOT select `access_password`; they expose only
     `visibility: "public"|"private"|"password"` and `hasPassword: boolean`
     (computed `access_password IS NOT NULL`). Add `access_password` to NO
-    selection map.
+    explicit selection map.
+  - **Select-all reads that WILL now materialize the hash in their raw row —
+    audited, must stay unserialized.** Three reads use `db.select()` / `.returning()`
+    with NO explicit projection over `content_entries`, so after this migration the
+    new `access_password` column IS present on their raw rows:
+    1. `getEntryBySlug` (`:670-676`, `.select().from(contentEntries)`) — RETURNS the
+       raw row to callers.
+    2. `publishEntry` (`:816-856`) — `tx.select().from(contentEntries)` (`:818`) for
+       validation AND `tx.update(...).returning()` (`:830`) whose result `updated` is
+       RETURNED to callers.
+    3. `unpublishEntry` (`:880+`) — `.update(...).returning()` whose row is RETURNED.
+
+    (`listEntryRevisions` at `:962-968` is NOT a vector: it selects
+    `.from(contentRevisions)`, a different table with no `access_password` column.)
+
+    Verified current consumers do NOT serialize the field — `publicSite.tsx:1265-1270`
+    uses the `getEntryBySlug` row only for `isEntryPublished` + `.id` then re-fetches
+    via `getEntry`; assistant `actionExecutorService` + forms `formAutomationRunnerCore`
+    read only `.id/.title/.slug/.data` via the narrow `AutomationEntryLookup` type; the
+    publish/unpublish routes return status/timestamps, not the full entry secret. So
+    there is NO leak today. **To keep the "never leaves the server" guarantee robust
+    against the additive column: narrow `getEntryBySlug` to an EXPLICIT projection that
+    omits `access_password` (it does not need it), and add a regression test asserting
+    each of `getEntryBySlug`/`publishEntry`/`unpublishEntry` return shapes has no
+    `accessPassword`/`access_password` key.** `publishEntry`/`unpublishEntry` `.returning()`
+    remain select-all (they need the fresh row for cache invalidation); the guard is the
+    return-shape assertion, since the string-grep AC alone cannot prove a select-all read
+    is safe (no column is named).
   - Setting `accessPassword: ""`/`null` when `visibility !== "password"` clears
     the stored hash (write `null`); switching to `password` without a password AND
     with no existing hash → reject `400 entry_password_required` (mapped in the
-    route's `withContentEntryErrors`/`mapEntryMetadataError` chain).
+    route's `withContentEntryErrors`/`mapEntryMetadataError` chain). This reject
+    MUST fire BEFORE any write commits — including the status side-effects on a
+    combined `{status,visibility}` PATCH — so a rejected request never leaves a
+    partial write (see the split precondition in Execution-Ready Plan §3).
 - **Present-only / byte-identity.** Omitting `visibility` from a metadata PATCH
   leaves the stored value untouched (partial update — mirror the existing
   `status`/`scheduledAt` optional handling at `:271-277`); legacy rows default to
@@ -107,17 +155,21 @@ task; add a partial index only if 514-05 needs SQL pushdown — it does not).
 
 ### 2. Migration artifacts (full set — DDL ships all three)
 
-- `core/db/migrations/0066_<drizzle-slug>.sql`:
+- `core/db/migrations/<NNNN>_<drizzle-slug>.sql` (`<NNNN>` = land-time next-free
+  number per the cross-task coordination caveat above — `0066` if 514-01 lands
+  first, else `0067`/`0068`):
   ```sql
   ALTER TABLE "content_entries" ADD COLUMN "visibility" text DEFAULT 'public' NOT NULL;
   ALTER TABLE "content_entries" ADD COLUMN "access_password" text;
   ```
-- `core/db/migrations/meta/0066_snapshot.json` — regenerate via the project's
-  drizzle generate (`bun --cwd core db:generate` or the repo's documented script;
-  `core/db/drizzle.config.ts` present) so the snapshot mirrors 0065 + the two new
-  columns; do NOT hand-edit shape drift.
-- `core/db/migrations/meta/_journal.json` — append the 0066 entry (generator does
-  this; verify idx/when/tag).
+- `core/db/migrations/meta/<NNNN>_snapshot.json` — regenerate via the project's
+  drizzle generate: `bun run db:generate` (a ROOT `package.json` script that runs
+  `bunx drizzle-kit generate --config core/db/drizzle.config.ts`; there is NO
+  `db:generate` in `core/package.json`, so `bun --cwd core db:generate` would fail)
+  so the snapshot mirrors the prior migration + the two new columns; do NOT
+  hand-edit shape drift.
+- `core/db/migrations/meta/_journal.json` — append the new `<NNNN>` entry (generator
+  does this; verify idx/when/tag match the allocated number).
 - Verify against the resettable local DB: `bun run db:migrate` up applies clean;
   `bun run db:seed:admin` still seeds; a re-run is idempotent.
 
@@ -134,14 +186,37 @@ task; add a partial index only if 514-05 needs SQL pushdown — it does not).
   accessPassword?: string | null; // plaintext in; hashed before store; null clears
   ```
 - **List selection (`:435-451`).** Add `visibility: contentEntries.visibility` and
-  a computed `hasPassword` — either select `access_password` **only to derive the
-  boolean and DROP it** in `mapEntryListSelectionRow`, or better use a SQL
-  expression `sql<boolean>\`${contentEntries.accessPassword} is not null\``. Add
-  `visibility`/`hasPassword` to `EntryListSelectionRow` + `mapEntryListSelectionRow`
-  (`:471-494`). **Never** put `accessPassword` on the returned object.
+  a computed `hasPassword`. Prefer `hasPassword: isNotNull(contentEntries.accessPassword)`
+  — `isNotNull` is ALREADY imported in `entryService.ts` (`:1`, used at `:532`) and
+  yields exactly the boolean `access_password IS NOT NULL` SQL with no new import and
+  no raw-SQL interpolation, so it never selects the hash itself. (If you instead use
+  a raw `sql<boolean>\`${contentEntries.accessPassword} is not null\`` expression you
+  MUST add `sql` to the `import { … } from "drizzle-orm"` list at `:1`, which
+  currently imports `and, desc, eq, inArray, isNotNull, max, ne, type SQL` and NOT
+  `sql` — prefer `isNotNull` to avoid the extra import.) Add `visibility`/`hasPassword`
+  to `EntryListSelectionRow` + `mapEntryListSelectionRow` (`:471-494`). **Never** put
+  `accessPassword` on the returned object.
 - **`getEntry` (`:602-664`).** Add `visibility` to the row select + map;
-  `hasPassword` from the same `is not null` expression; do NOT select the hash into
-  the returned detail.
+  `hasPassword: isNotNull(contentEntries.accessPassword)` (same already-imported
+  helper as the list map — apply consistently); do NOT select the hash into the
+  returned detail.
+- **`listEntriesWithContentTypes` (`:542-600`) — MANDATORY, not optional.** This
+  function is typed `Promise<EntryListItem[]>` (`:542`) but has its OWN inline
+  selection object (`:544-564`) and its OWN inline row mapper (`:570-599`) — it
+  does NOT go through `entryListSelection`/`mapEntryListSelectionRow`. Because §3
+  adds `visibility` + `hasPassword` as REQUIRED (non-optional) fields on
+  `EntryDetail` — and `EntryListItem = Omit<EntryDetail, "seo"|"taxonomy"> & {…}`
+  (`:52`) so they are required on `EntryListItem` too — this hand-built return
+  object will (a) FAIL root `tsc` compile (returned object missing the two now-
+  required fields; the memory-noted missing-prop trap) and (b) functionally OMIT
+  `visibility` from the `GET /content-entries` all-entries list that feeds
+  514-05's list-view visibility work. Therefore add to the inline selection
+  (`:544-564`): `visibility: contentEntries.visibility` and
+  `hasPassword: isNotNull(contentEntries.accessPassword)` (same already-imported
+  helper); and add `visibility: row.visibility as EntryVisibility` (or the inline
+  union) + `hasPassword: row.hasPassword` to the inline mapper's returned object
+  (`:570-599`). **Never** put `accessPassword` on this returned object. This is a
+  functional requirement (all-entries list visibility), not merely a type fix.
 - **`createEntry` (`:678`).** Default `visibility: 'public'` (rely on DDL default;
   no input field needed unless the create drawer sends one — it does not, keep
   create minimal to avoid touching 487-03-L01's EntryCreateDrawer surface).
@@ -151,21 +226,54 @@ task; add a partial index only if 514-05 needs SQL pushdown — it does not).
   and require re-entry; RECOMMEND: copy `visibility`, leave `access_password` null,
   and if `visibility==='password'` set the copy to `'private'` so it is never
   silently public — document in closure).
-- **`updateEntryMetadata` (`:884-960`).** In the same transaction that writes
-  status/scheduledAt/tags:
-  ```ts
-  const patch: Partial<...> = {};
-  if (input.visibility !== undefined) patch.visibility = input.visibility;
-  if (input.visibility === "password") {
-    if (input.accessPassword) patch.accessPassword = await hashPassword(input.accessPassword);
-    else if (!existing.hasPassword) throw new Error("entry_password_required");
-    // else: keep existing hash (accessPassword omitted = unchanged)
-  } else if (input.visibility === "public" || input.visibility === "private") {
-    patch.accessPassword = null; // clear secret when not password-gated
-  }
-  ```
-  Merge `patch` into the existing `set({...})`. Import `hashPassword` from
-  `../auth/password`.
+- **`updateEntryMetadata` (`:884-960`).** This function is NOT wrapped in a
+  `db.transaction` today (verified: no `db.transaction(` in the body; writes are
+  the conditional status-transition side-effects — `publishEntry`/`unpublishEntry`
+  and the status `set()` — at `:906-920` that run ONLY when the status changes,
+  plus the ALWAYS-evaluated `metadataUpdate` conditional block at `:929-945`, plus
+  a separate SEO upsert — the writes are non-atomic today; making them atomic is
+  OUT OF SCOPE here). **BECAUSE the status side-effects at `:906-920` COMMIT a
+  publish/unpublish/status write BEFORE any visibility handling at `:929`, the
+  `entry_password_required` precondition MUST be split from the hash write** —
+  otherwise a combined PATCH such as `{status:"published", visibility:"password"}`
+  with no password and no existing hash would PUBLISH the entry (side effect
+  committed) and only THEN throw, leaving a partial, non-atomic write (a new
+  partial-failure window that does not exist today; the prototype Publish card
+  carries Status AND Visibility in one card behind a single Publish button, so a
+  combined PATCH is realistic). Split it into two placements:
+  - **Precondition — reject BEFORE any write.** Add the reject check to the
+    early-validation block alongside the `scheduledAt` checks (`:896-904`, BEFORE
+    the status side-effects at `:906`). All inputs it needs are already available
+    there: `entry.hasPassword` (from `getEntry` at `:889`), `input.visibility`,
+    `input.accessPassword`:
+    ```ts
+    // TASK-514-01: reject password-gating with no password BEFORE the status side-effects
+    if (input.visibility === "password" && !input.accessPassword && !entry.hasPassword) {
+      throw new Error("entry_password_required");
+    }
+    ```
+    This guarantees a combined `{status,visibility}` PATCH fails atomically — no
+    publish/unpublish/status write commits when the visibility input is invalid.
+  - **Hash write/clear — in the metadataUpdate object.** Visibility + the hash
+    assignment/clear MUST be merged into the ALWAYS-evaluated `metadataUpdate`
+    object at `:929`, NOT the status-transition `set()` (that block is skipped on a
+    visibility-only PATCH with no status change, which would silently drop the
+    write and break acceptance #3/#5/#6). The local read is named `entry` (from
+    `getEntry`), not `existing`. Add, right after the existing `metadataUpdate`
+    assignments (`:929-938`) and before the `if (Object.keys(metadataUpdate).length
+    > 0)` write guard (`:940`):
+    ```ts
+    if (input.visibility !== undefined) metadataUpdate.visibility = input.visibility;
+    if (input.visibility === "password") {
+      if (input.accessPassword) metadataUpdate.accessPassword = await hashPassword(input.accessPassword);
+      // else: existing hash guaranteed by the precondition above → keep it (accessPassword omitted = unchanged)
+    } else if (input.visibility === "public" || input.visibility === "private") {
+      metadataUpdate.accessPassword = null; // clear secret when not password-gated
+    }
+    ```
+    Adding these to the existing `metadataUpdate` object reuses the single
+    conditional write + present-only semantics (`:940-945`), so a visibility-only
+    PATCH still writes. Import `hashPassword` from `../auth/password`.
 
 ### 4. Validation (`contentSchemas.ts`)
 
@@ -194,12 +302,18 @@ unless create must accept visibility (it does not in this task — keep minimal)
 
 ## Acceptance Criteria
 
-1. Migration 0066 (SQL + snapshot + journal) applies clean on the local DB;
-   re-run idempotent; snapshot matches schema.
+1. Migration `<NNNN>` — the land-time next-free number (SQL + snapshot + journal,
+   all three sharing that same number) — applies clean on the local DB; re-run
+   idempotent; snapshot matches schema.
 2. `EntryDetail`/`EntryListItem` expose `visibility` + `hasPassword`; NO read path
-   ever returns `accessPassword` (grep the file: `access_password`/`accessPassword`
-   appears only in the write map + hash call, never in a select map's returned
-   object).
+   ever returns `accessPassword`. Two-part proof (the string-grep alone is
+   insufficient for the select-all reads — see Security Contract):
+   (a) grep the file: `access_password`/`accessPassword` appears only in the write
+   map + `hashPassword` call, never in an EXPLICIT select map's returned object; and
+   (b) a runtime return-shape assertion that `getEntryBySlug` (now explicitly
+   projected), `publishEntry`, and `unpublishEntry` return objects have NO
+   `accessPassword`/`access_password` key — proving the select-all reads do not leak
+   the hash.
 3. Metadata PATCH `{visibility:"password", accessPassword:"s3cret"}` → 200, stored
    hash set, response `hasPassword:true`, `visibility:"password"`, no secret echoed.
 4. PATCH `{visibility:"password"}` with no password and no existing hash → 400
@@ -211,6 +325,11 @@ unless create must accept visibility (it does not in this task — keep minimal)
    `hasPassword:false` — byte-identical behavior.
 9. `duplicateEntry` copies visibility per the documented rule and never copies the
    password hash.
+10. Combined PATCH `{status:"published", visibility:"password"}` with no password
+    and no existing hash → 400 `entry_password_required` with NO write committed:
+    the entry stays in its prior status (NOT published) and no visibility/hash is
+    written — the precondition rejects BEFORE the status side-effects run
+    (reject-before-write atomicity; no partial-failure window).
 
 ---
 
@@ -225,7 +344,16 @@ unique slugs; do not assume empty tables.
   `hasPassword` transitions and that `accessPassword` is ABSENT from every
   response body (serialize + assert key not present).
 - `entry_password_required` 400 path.
+- **Combined `{status:"published", visibility:"password"}` (no password, no
+  existing hash) → 400 `entry_password_required` AND the entry's status is
+  UNCHANGED afterward (re-read asserts it did NOT publish) — proves the
+  reject-before-write ordering leaves no partial write.**
 - Reject-unknown 400 for a junk key alongside a valid visibility.
+- **Select-all read no-leak assertion:** after storing a password hash on an entry,
+  call `getEntryBySlug` (now explicitly projected), `publishEntry`, and
+  `unpublishEntry` and assert their returned objects have NO
+  `accessPassword`/`access_password` key (proves the select-all/`.returning()` reads
+  over `content_entries` do not surface the secret; AC#2b).
 - Migration applied assertion (column exists / default applies to a pre-existing row).
 
 ### Vitest — Bun-free

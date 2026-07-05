@@ -45,12 +45,27 @@ const supportsStep = new Set(["number","range","time"]);            // +time (B4
 const supportsNumericBounds = new Set(["number","range"]);          // -rating (B5)
 const supportsRatingScale = new Set(["rating"]);                    // NEW (B5)
 
+// DEFINE a module-local clampInt inside FieldSettingsPanel.tsx (single-writer
+// scope). Do NOT import from FormSettingsPanel.tsx — its clampInt is a private
+// (non-exported) module const and no 516 subtask owns FormSettingsPanel.tsx,
+// so exporting it would be an unowned cross-file write. This local copy mirrors
+// the proven FormSettingsPanel.tsx:51 signature + clamp semantics exactly:
+const clampInt = (value: string, fallback: number, min: number, max: number) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+};
+
 {supportsRatingScale.has(field.type) ? (
   <div className="space-y-2">
     <label>Rating scale (3–10)</label>
-    <Input type="number" min={3} max={10}
+    <Input type="number" min={3} max={10} step={1}
       value={field.settings.max ?? 5}
-      onChange={e => onSettingsChange(field.id, { max: clamp(Number(e.target.value), 3, 10) })} />
+      // clampInt: Number.parseInt(value,10) → integer, then clamp 3..10.
+      // Non-integer/out-of-range input is coerced to a valid integer BEFORE
+      // write so validation.ts:236 (Number.isInteger && 3..10) can never reject
+      // a value this control produced. Pass the raw string as the first arg.
+      onChange={e => onSettingsChange(field.id, { max: clampInt(e.target.value, 5, 3, 10) })} />
     <p className="text-xs text-muted-foreground">Number of points on the scale.</p>
   </div>
 ) : null}
@@ -78,7 +93,11 @@ validation). This subtask does not change what the server accepts.
 - **Vitest admin/UI** `tests/vitest/admin/fieldSettingsPanel.test.tsx`
   (NEW/extend): `time` field shows the input-increment control (B4); `rating`
   field shows a Scale (3–10) control and NO Minimum control (B5); the Scale
-  clamps to 3–10; `hidden` field shows the required-value notice when empty (B6);
+  clamps to 3–10 AND coerces to an integer — assert a decimal entry (e.g. `4.5`
+  via `fireEvent.change` value `"4.5"`) writes `max: 4` and an out-of-range entry
+  (`"99"`) writes `max: 10`, so the value handed to `PUT /forms/:id/fields`
+  always satisfies `validation.ts:236` (`Number.isInteger(max) && 3 ≤ max ≤ 10`)
+  and is never silently rejected on save; `hidden` field shows the required-value notice when empty (B6);
   a `phone` field shows the Placeholder control.
 - **Vitest pure** `tests/vitest/forms/fieldSettings.test.ts` (only if option
   lists change): assert any new exported option list.

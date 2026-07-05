@@ -30,8 +30,17 @@ this subtask lands. Ships:
 4. **`formTheme.ts` resolver** — `resolveFormTheme(theme | undefined) →
    ResolvedFormTheme` (all tokens resolved to concrete values) + token→className
    / token→style maps (width, align, gap, radius, padding, shadow, input size,
-   title size/weight, submit) reusing the vocabulary the widget already ships
-   (`formEmbed.tsx` maps) so 516-06 can make the widget inherit cleanly.
+   title size/weight, submit). This subtask defines its OWN (richer) token
+   vocabulary + class/style maps in `formTheme.ts` — it does **not** align to the
+   widget's `FormEmbedStyle`/`FormEmbedLayout`, whose vocabulary DIVERGES on
+   several axes (widget `borderWidth` `0|1|2` vs model `none|sm|md`; widget
+   `radius` `none|sm|md|lg` and `titleSize` `sm|md|lg` lack the `xl` this model
+   adds; widget `widthClassMap` uses `lg:max-w-xl`/`xl:max-w-2xl` vs this model's
+   `lg:max-w-2xl`/`xl:max-w-3xl`). 516-06 makes the widget inherit by consuming
+   `resolveFormTheme` + the `formTheme.ts` maps as its defaults (NOT by aligning
+   the theme to the widget); any per-axis reconciliation with the legacy
+   `FormEmbedStyle` shape is a token-translation 516-06 owns and must name
+   explicitly.
 5. **`formsClient.ts`** — extend the mirrored admin `FormSettings` type with
    `theme` and ensure the client `normalizeFormSettings` call path preserves it
    on read/round-trip.
@@ -45,8 +54,10 @@ this subtask lands. Ships:
 `updateForm`/`createForm` write path (`formsService.ts:93,161`) which is already
 gated by `forms:write` (`formsRoutes.ts:249,268`). Reject-unknown at the KEY
 boundary; VALUES are fail-soft (invalid color/enum omitted — raw stored input
-never reaches CSS; colors flow through the existing `clearableStyle` value policy
-used by the widget). The stored-read normalizer stays fail-closed: a legacy form
+never reaches CSS; colors flow through `resolveClearableCssColorValue`
+(`core/widgets/core/clearableStyle.ts:66`), the same value policy the widget uses,
+which whitelists hex / `var(--color-*)` / bounded `rgb()`/`hsl()`/safe keyword and
+rejects `url()`/`expression()`/`javascript:`/`data:`/`;{}<>`). The stored-read normalizer stays fail-closed: a legacy form
 row without `theme` parses unchanged. **Each new key that joins the reject-unknown
 allowlist is a fail-closed READ TRAP ⇒ carries a round-trip persistence test.**
 
@@ -65,8 +76,9 @@ export type FormSettings = { /* existing */ theme?: FormFormTheme };
 
 const normalizeEnum = <T extends string>(v: unknown, set: Set<T>): T | undefined =>
   typeof v === "string" && set.has(v as T) ? (v as T) : undefined;      // fail-soft
+import { resolveClearableCssColorValue } from "../../widgets/core/clearableStyle";
 const normalizeColor = (v: unknown): string | undefined =>
-  typeof v === "string" && isSafeColorToken(v.trim()) ? v.trim() : undefined; // reuse clearableStyle policy
+  resolveClearableCssColorValue(v); // real helper (clearableStyle.ts:66): returns undefined for unsafe/blank ⇒ fail-soft VALUE
 const normalizeBool = (v: unknown): boolean | undefined =>
   typeof v === "boolean" ? v : undefined;
 
@@ -104,9 +116,18 @@ export type ResolvedFormTheme = { /* all tokens concrete */ };
 export const FORM_THEME_DEFAULTS: ResolvedFormTheme = { layout:{ width:"md", align:"center", ... }, ... };
 export function resolveFormTheme(theme?: FormFormTheme): ResolvedFormTheme { /* deep-merge over defaults */ }
 export const formThemeWidthClass: Record<..., string> = { sm:"max-w-md", md:"max-w-lg", lg:"max-w-2xl", xl:"max-w-3xl", full:"max-w-none" };
+export const formThemeColumnsClass: Record<1|2, string> = { 1:"grid-cols-1", 2:"md:grid-cols-2" }; // layout.columns → grid class (matches 516-04:62)
 // ...align/gap/radius/padding/shadow/inputSize/titleSize/titleWeight maps
 export function buildFormThemeStyleVars(t: ResolvedFormTheme): Record<string,string>; // for color tokens (bg/border/title/label/helper/submit)
 ```
+
+**Full exported symbol list (this subtask is the SOLE writer of `formTheme.ts`; 516-02/04/06 import these read-only by exact name — 516-04:82 imports
+`resolveFormTheme`, `formThemeWidthClass`, `formThemeRadiusClass`, `formThemePaddingClass`, `formThemeShadowClass`, `formThemeColumnsClass`, `buildFormThemeStyleVars`):**
+`ResolvedFormTheme` (type), `FORM_THEME_DEFAULTS`, `resolveFormTheme`,
+`formThemeWidthClass`, `formThemeColumnsClass`, `formThemeAlignClass`,
+`formThemeGapClass`, `formThemeRadiusClass`, `formThemePaddingClass`,
+`formThemeShadowClass`, `formThemeInputSizeClass`, `formThemeTitleSizeClass`,
+`formThemeTitleWeightClass`, `buildFormThemeStyleVars`.
 
 Error handling: no throws for bad VALUES (fail-soft). `normalizeFormSettings`
 already returns defaults for a non-object `settings` (`formSettings.ts:83`).
@@ -121,13 +142,27 @@ already returns defaults for a non-object `settings` (`formSettings.ts:83`).
     (`JSON.stringify` equals the pre-change baseline);
   - `getDefaultFormSettings()` unchanged (snapshot).
 - **Vitest pure** `tests/vitest/forms/formTheme.test.ts` (NEW): `resolveFormTheme`
-  deep-merge; every token→class map covers its full enum set.
+  deep-merge; every token→class map covers its full enum set — INCLUDING
+  `formThemeColumnsClass` for both `1` and `2` (`layout.columns`), plus width /
+  align / gap / radius / padding / shadow / inputSize / titleSize / titleWeight.
 - **Vitest admin** `tests/vitest/admin/formsClient.test.ts` (extend): client
   `updateForm({settings:{theme}})` preserves theme on the cached round-trip.
-- **Bun route** `tests/integration/routes/forms.test.ts` (extend): PATCH a form
-  with a full theme persists it; PATCH with an unknown theme key succeeds but
-  drops the key (reject-unknown at KEY level). Create/cleanup own form row
-  (unique slug); shared-DB safe.
+- **Bun DB round-trip** `tests/unit/forms/formsService.test.ts` (extend — this is
+  the real DB lane: it imports `{ db }` (`:5`), creates rows via `createForm` and
+  cleans up with `db.delete(forms)` in `afterEach` (`:61-65`), and already
+  round-trips `settings.layoutMode` through `createForm`/`updateForm`
+  (`formsService.ts:93/161`, asserted `:105-151`)):
+  - `updateForm(id, { settings: { theme } })` with a FULL theme round-trips it
+    from the DB (mirror the existing `settings.layoutMode` round-trip — read back
+    `(form.settings as { theme?: ... }).theme` and assert the resolved shape);
+  - `updateForm`/`createForm` with an UNKNOWN theme key persists the row but the
+    read-back has the key DROPPED (reject-unknown at KEY level);
+  - each test creates + cleans up its own form row (the suite's `afterEach`
+    `db.delete(forms)` already makes this shared-DB safe).
+  (The mock-only `tests/integration/routes/forms.test.ts` — no `db` import; it
+  only asserts route wiring / `mapFormError` / schema shapes — CANNOT persist or
+  create/delete rows; keep any schema-shape assertion there if desired, but the
+  "persists it / own row" claim only holds in the `formsService.test.ts` DB lane.)
 
 ## UI/UX fidelity + max-config-flexibility notes
 

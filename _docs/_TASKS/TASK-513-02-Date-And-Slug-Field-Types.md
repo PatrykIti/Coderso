@@ -23,6 +23,14 @@
 
 Adds two field types — **`date`** and **`slug`** — end-to-end so the prototype's field list
 (`Published at` = Date, `Slug` = Slug) and the SchemaBuilder rail (Date) are real, not labels.
+It ALSO adds the prototype inspector's **`Unique`** field flag (a declarative per-field boolean the
+prototype renders directly under `Required` at `SchemaBuilderPreview.tsx:139`), because 513-02 is
+the sole writer of the three files that flag needs (the `ContentField` type in `SchemaBuilder.tsx`,
+the inspector `Switch` in `FieldEditor.tsx`, and the `xFieldConfig` persistence in
+`schemaMapping.ts`). `unique` is declarative-only (surfaced + persisted, NOT DB/route-enforced — see
+parent Open Question 5), mirroring the parent's `versioning`/`permissions` declarative pattern; both
+editors (513-03 tabbed + 513-05 visual) surface it automatically because both consume this
+`FieldEditor`/`FieldSettingsPanel`.
 The `FieldType` union widening is **additive**; downstream non-owned consumers
 (`entries/EntryEditor.tsx`, `custom-screens/*`) already treat unknown field types as passthrough
 (text-like) — 513-06 adds a guard test.
@@ -35,11 +43,25 @@ The `FieldType` union widening is **additive**; downstream non-owned consumers
 
 **Admin-UI + pure mapping only — no route/DB/RBAC/migration.** `date`/`slug` are ordinary field
 types serialized into the existing `content_types.schema` JSON via the established `xFieldType`
-convention. Both map to JSON-Schema `type: "string"`; `date` additionally sets `format: "date"`.
-`assertContentSchema` (ajv, `core/services/content/validation.ts`) already accepts `format` and
-the `x*` keywords — **NO new ajv keyword, NO validation.ts edit**. Entry data for these fields is
-still validated by the per-type ajv validator (`validateEntryData`) as strings; no new server
-trust surface.
+convention. Both map to JSON-Schema `type: "string"` and carry **no `format` keyword** — the
+type is identified purely by `xFieldType: "date"|"slug"` plus optional `xFieldConfig.date` /
+`xFieldConfig.slug`.
+
+> **Why no `format`:** `assertContentSchema` (`core/services/content/validation.ts:33`) compiles
+> the built schema with `new Ajv({ allErrors: true, strict: true })` (validation.ts:3) and
+> registers ONLY the `xFieldType`/`xRelationTarget`/`xFieldConfig` keywords — **ajv-formats is NOT
+> installed** (`core/package.json` has no `ajv-formats`; ajv `^8.17.1`). Under `strict: true`, an
+> unknown `format` (`"date"`/`"date-time"`) makes `ajv.compile` **throw** (`unknown format "date"
+> ignored in schema …`), which `assertContentSchema` re-raises as `ContentValidationError`. That
+> path runs on every save — `createContentType` (`typeService.ts:189`) and `updateContentType`
+> (`typeService.ts:218`) both call `assertContentSchema(input.schema)` — so emitting `format` would
+> make any content type containing a date field **un-savable**. We therefore do NOT emit `format`
+> and do NOT touch `validation.ts`.
+
+`assertContentSchema` already accepts the `x*` keywords — **NO new ajv keyword, NO validation.ts
+edit** (the "no validation.ts edit" claim is only true because we omit `format`). Entry data for
+these fields is still validated by the per-type ajv validator (`validateEntryData`) as strings; no
+new server trust surface.
 
 ---
 
@@ -56,6 +78,11 @@ export type FieldType =
   `date?: { includeTime?: boolean }` config sub-objects (both optional; present-only). Keep it
   minimal: `slug.source` = the field name to derive the slug from (default none → free text);
   `date.includeTime` toggles `datetime-local` vs `date`.
+- `ContentField` also gains `unique?: boolean` (present-only, applies to ANY field type — it is a
+  field-level flag, not a per-type config). This reproduces the prototype inspector's **Unique**
+  toggle (`SchemaBuilderPreview.tsx:139`, rendered right under Required). Declarative-only: it is
+  persisted and surfaced but NOT enforced at the DB/route layer (the `content_types.schema` is
+  jsonb; there is no per-entry uniqueness index) — see parent Open Question 5. Omit when falsy.
 - No behavior change to `validateFieldName`/`slugifyFieldName`.
 - **Export the canonical label map** — the SINGLE source of truth for `FieldType → human label`:
   ```ts
@@ -90,19 +117,47 @@ export type FieldType =
     to `field.slug.editable`.
 - The shared "Default value" input: for `date` use `type="date"` (or `datetime-local` when
   `includeTime`); for `slug` keep `type="text"`.
+- **Unique toggle:** add a second `Switch` row immediately AFTER the existing "Required" row
+  (`FieldEditor.tsx:688-696`), reusing that row's exact `flex … rounded-lg border p-3` markup:
+  label **"Unique"**, helper "Value must be unique across entries.", bound to `field.unique`
+  (`checked={field.unique ?? false}`, `onCheckedChange={(checked) => onChange({ ...field, unique:
+  checked || undefined })}` so it stays present-only). Applies to every field type (not gated on
+  `field.type`), matching the prototype's always-visible Unique row.
 
 ### 3. `schemaMapping.ts` — build + parse
-- `fieldTypeMap` gains `date: "string"`, `slug: "string"`.
-- `buildSchemaFromFields`: for `date`, set `definition.format = "date"` (add `format?: "date" |
-  "date-time"` to `ContentSchemaProperty`); if `date.includeTime` use `"date-time"`. For `slug`,
-  emit `definition.format = undefined` but persist `xFieldConfig.slug` = `{ ...(source?{source}:{}),
-  ...(editable===false?{editable:false}:{}) }` when non-empty, and `xFieldConfig.date` for date.
-- `resolveFieldType(definition)`: BEFORE the generic `type:"string" ⇒ text` fallback, detect:
-  `if (definition.xFieldType === "date" || definition.format === "date" || definition.format ===
-  "date-time") return "date";` and `if (definition.xFieldType === "slug") return "slug";`.
-  (Order matters: check `xFieldType` explicitly first, matching how relation/media are detected.)
+- `fieldTypeMap` (`schemaMapping.ts:30`, typed `Record<FieldType, "string"|"number"|"boolean">`)
+  gains `date: "string"`, `slug: "string"`. Because it is a `Record<FieldType, …>`, tsc forces
+  both entries once the union widens (compile-time exhaustiveness guard). **Do NOT add a `format`
+  field to `ContentSchemaProperty`** and do NOT emit `format` anywhere — see Security Contract.
+- `buildSchemaFromFields` (the `fields.reduce` at `schemaMapping.ts:189`): `definition.type` for
+  both types falls through to the existing `else { definition.type = fieldTypeMap[field.type]; }`
+  arm (line 211-212) ⇒ `"string"`, no special-casing needed there. Persist config into the same
+  `fieldConfig` object the number/media/relation blocks already build (assigned to
+  `definition.xFieldConfig` at line 284-285 only when non-empty):
+  - `date`: `if (field.type === "date" && field.date?.includeTime) fieldConfig.date = { includeTime: true };`
+    (present-only — omit entirely when `includeTime` is falsy so existing schemas stay byte-identical).
+  - `slug`: build `const slugConfig = { ...(field.slug?.source ? { source: field.slug.source } : {}),
+    ...(field.slug?.editable === false ? { editable: false } : {}) };` and
+    `if (field.type === "slug" && Object.keys(slugConfig).length > 0) fieldConfig.slug = slugConfig;`.
+  - `unique` (ALL types): `if (field.unique) fieldConfig.unique = true;` — rides the SAME
+    `fieldConfig`→`definition.xFieldConfig` object (assigned only when non-empty at line 284-285), so
+    NO new property on `ContentSchemaProperty` and NO ajv keyword (`xFieldConfig` is already
+    registered). Present-only: omitted entirely when `field.unique` is falsy so legacy schemas stay
+    byte-identical.
+- `resolveFieldType(definition)` (`schemaMapping.ts:309`): **no new branch required.** The function
+  already returns any `xFieldType` that is a key of `fieldTypeMap` at the very top
+  (lines 310-313: `if (definition.xFieldType) { const candidate = String(definition.xFieldType)
+  as FieldType; if (candidate in fieldTypeMap) return candidate; }`). Once `fieldTypeMap` gains
+  `date`/`slug`, `xFieldType: "date"|"slug"` resolve automatically via that top check — do NOT add
+  explicit `xFieldType === "date"/"slug"` branches (they would be **unreachable dead code**), and do
+  NOT add a `format`-based fallback (no `format` is ever persisted, and `date`/`slug` are brand-new
+  types so there are no legacy schemas carrying `format:"date"`).
 - `fieldsFromSchema`: read back `date`/`slug` config into `field.date`/`field.slug` via small
-  readers mirroring `readNumberConfig`/`readMediaConfig` (`readSlugConfig`, `readDateConfig`).
+  readers mirroring `readNumberConfig`/`readMediaConfig` (`readSlugConfig` reads
+  `xFieldConfig.slug` → `{ source?, editable? }`; `readDateConfig` reads `xFieldConfig.date` →
+  `{ includeTime? }`), each returning `undefined` when the config is absent so unrelated fields
+  are untouched. Also read back `unique`: `unique: definition.xFieldConfig?.unique === true ? true :
+  undefined` (present-only, all types).
 - Round-trip invariant: `fieldsFromSchema(buildSchemaFromFields(fields))` preserves type +
   config for date/slug (513-06/unit test).
 
@@ -116,7 +171,12 @@ boolean/select/media/relation, lines ~221-379):
   when `field.slug?.source` is set and `field.slug.editable !== true`, derive read-only from the
   source field's current value (mirror the label→name auto behavior). Keep it a controlled input
   writing a URL-safe string.
-- Ensure the `default:` arm still falls back to a text input so unknown future types never crash.
+- **Change the `default:` arm** — it currently `return null` (renders nothing;
+  `FieldRenderer.tsx:407-408`). Change it to fall back to a text input so unknown future types render
+  an editable value instead of vanishing. (This is a NEW change, not a preservation.) NB: the scope's
+  "downstream consumers already treat unknown field types as passthrough (text-like)" claim (§Scope
+  above) refers to `entries/EntryEditor.tsx` / `custom-screens/*`, NOT to this switch's current
+  `null` default.
 
 ---
 
@@ -124,14 +184,33 @@ boolean/select/media/relation, lines ~221-379):
 
 **Vitest pure lane** (`tests/vitest/**`, no Bun/DB):
 - `schemaMapping` round-trip: a field list containing `date` (with/without includeTime) and `slug`
-  (with/without source) survives `build → fields` unchanged; `date` emits `format`, `slug` emits
-  `xFieldConfig.slug`.
-- `resolveFieldType`: a legacy property with `format:"date"` but no `xFieldType` resolves to
-  `date`; `xFieldType:"slug"` resolves to `slug`; a plain `type:"string"` still resolves `text`.
+  (with/without source) survives `build → fields` unchanged; the built `date` property has
+  `type:"string"`, `xFieldType:"date"`, **no `format` key**, and `xFieldConfig.date.includeTime`
+  only when set; the built `slug` property has `type:"string"`, `xFieldType:"slug"`, and
+  `xFieldConfig.slug` only when source/editable is set. A field with `unique: true` round-trips
+  (`xFieldConfig.unique === true`, read back to `unique: true`); `unique` omitted when falsy.
+- `resolveFieldType`: `xFieldType:"date"` resolves to `date`, `xFieldType:"slug"` resolves to
+  `slug` (both via the existing top-of-function `in fieldTypeMap` check), and a plain
+  `type:"string"` with no `xFieldType` still resolves `text`.
+- **Schema-persistence regression (mandatory — guards the ajv-strict break):** run
+  `buildSchemaFromFields([<a date field, a slug field>])` and assert its output passes
+  `assertContentSchema(schema)` (from `core/services/content/validation.ts`, 1-arg signature at
+  validation.ts:33) WITHOUT throwing, then feed a sample entry
+  (`{ "published-at": "2026-07-05", "slug": "hello-world" }`) through
+  `validateEntryData("<unique-test-typeId>", schema, entry)` and assert it validates. **Note the real
+  signature is `validateEntryData(typeId, schema, data)` (validation.ts:72) — 3 args, typeId FIRST.**
+  Because `getEntryValidator` (validation.ts:63-69) memoizes the compiled validator in a module-level
+  `validatorCache` keyed by `typeId`, use a UNIQUE `typeId` per test (or call
+  `invalidateValidator(typeId)` from validation.ts:59 in setup/teardown) so a stale validator is not
+  returned across tests. This proves the built schema actually persists under
+  `new Ajv({ strict: true })` (which would throw on a stray `format` keyword) — the pure
+  `build → fields` round-trip alone does NOT exercise ajv and would miss that break.
 
 **Vitest admin/UI lane** (`tests/vitest/ui/**`):
 - `FieldEditor` renders the Date "Include time" switch and Slug "Derive from" select when the
   respective type is selected; toggling updates `field.date`/`field.slug` present-only.
+- `FieldEditor` renders the "Unique" switch for every field type; toggling it on sets
+  `field.unique: true` and toggling off removes the key (present-only).
 - `FieldRenderer` renders a `type="date"` input for a date field and a slugifying input for a slug
   field; entering a value calls `onChange` with the expected shape.
 

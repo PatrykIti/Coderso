@@ -48,10 +48,26 @@ is authoritative for structure.)
 
 - **G1 — Builder chrome.** Prototype = in-page `PageHeader` (breadcrumb `Forms ›
   Contact form`, title, description, `Save` + `Publish`) + `EditorPreviewFrame`
-  card with a toolbar (`Contact form · draft` badge, undo/redo, **desktop/mobile
-  device toggle**). Current = full-screen `EditorShell` with a sticky sub-toolbar
-  (Submissions / Action logs / Runtime preview / Save form) and NO device toggle,
-  NO undo/redo, NO `Publish` primary action (only a status `Select`).
+  card with a toolbar (`Preview only` pill + `Contact form · draft` badge,
+  undo/redo, **desktop/mobile device toggle**). Current = full-screen
+  `EditorShell` (`FormBuilderPage.tsx:46,740`) with a sticky sub-toolbar
+  (Submissions / Action logs / Runtime preview / Save form `:815`) and NO device
+  toggle, NO undo/redo, NO `Publish` primary action (only a status `Select`).
+  **Admin primitives to reuse (do NOT re-port the prototype frame):**
+  `core/admin/ui/shared/EditorFrame.tsx` `export function EditorFrame({ title,
+  toolbar, actions, left, canvas, right })` is the real admin port of the
+  prototype `EditorPreviewFrame` (chrome bar / `w-60` left rail / dotted canvas /
+  `w-72` right inspector); `core/admin/ui/shared/EditorRail.tsx`
+  `EditorRailGroup`/`EditorRailItem` are the rail primitives (re-exported from
+  `EditorFrame`); `PageHeader.tsx` is the in-page header. **516-03 replaces
+  `EditorShell` with `EditorFrame` + `PageHeader`.** IMPORTANT: unlike the
+  prototype's `EditorPreviewFrame` (which bakes in `device = true` and Undo/Redo
+  buttons — `EditorPreviewFrame.tsx:19,47-59`), the admin `EditorFrame` is
+  deliberately chrome-only: its own doc-comment states it has **NO "Preview only"
+  pill, NO static device toggle, and does not bake in Undo/Redo — the host wires
+  them into `toolbar`/`actions`**. So 516-03/04 must render the device toggle and
+  the undo/redo controls themselves (see undo/redo scope in 516-03 pseudocode
+  below); they are not free from the frame.
 - **G2 — Field rail.** Prototype rail exposes **Phone** and **File**; current
   `fieldLibraryItems` (`FormBuilderPage.tsx:68-153`) exposes neither. Rail item
   styling/grouping differs (`EditorRailGroup`/`EditorRailItem` vs. flat list).
@@ -92,16 +108,33 @@ is authoritative for structure.)
   WIDGET has a rich per-embed `FormEmbedStyle`/`FormEmbedLayout`
   (`formEmbed.tsx:13-38`), but that lives on the page-widget instance, NOT on the
   form — so it cannot be authored from the Forms editor and does not travel with
-  the form.) We add a form-owned theme in `forms.settings.theme`.
+  the form.) We add a form-owned theme in `forms.settings.theme`. The
+  theme-vs-per-embed precedence (form theme = base, per-embed `FormEmbedStyle`
+  overrides per explicit token) is specified in 516-06 pseudocode.
 
 ## Schema-extension plan (JSON model — NO DDL)
 
 `forms.settings` is a `jsonb` column (`schema.ts:1224`) already carrying
 `layoutMode`, `saveProgress`, `stepTitles`, `preset`, `automationRetry`
 (`formSettings.ts`). We extend the same normalized `FormSettings` model with a
-new **`theme`** sub-record (present-only, defaulted, byte-identity round-trip),
-mirroring the token vocabulary the `formEmbed` widget already ships so the widget
-can inherit it:
+new **`theme`** sub-record (present-only, defaulted). `normalizeFormSettings` is a
+**fully-defaulted** normalizer (it always re-emits `layoutMode`/`saveProgress`/
+`stepTitles`/`preset`/`automationRetry` from a fresh object literal —
+`formSettings.ts:82-125` — and returns `getDefaultFormSettings()` for a non-record
+input), so it does NOT round-trip its input byte-for-byte. The `theme` invariant is
+therefore **present-only**: the `theme` key is emitted only when a valid theme is
+present, and is **absent** in the output when the input has none. The
+theme vocabulary **overlaps** the token vocabulary the `formEmbed` widget already
+ships (`FormEmbedStyle`/`FormEmbedLayout`, `formEmbed.tsx:13-38`) but is **NOT
+identical** to it — several axes share a name with different value strings (theme
+`layout.align` `left|center|right` vs. widget `alignment` `start|center|end`), some
+theme values have no widget equivalent (`layout.width:"full"`, `surface.radius:"xl"`,
+`layout.buttonAlignment:"full"`), and some theme tokens have no widget axis at all
+(`typography.fontFamily`, `layout.columns`). The widget therefore inherits the theme
+through a **documented translation + direct-apply** step (owned by 516-06: enum value
+mapping such as `left→start`, clamp of extra values such as `radius:"xl"→"lg"`, and
+direct container/grid application for tokens with no widget enum), NOT a clean 1:1
+copy. Shape:
 
 ```
 FormSettings.theme?: {
@@ -150,11 +183,15 @@ FormSettings.theme?: {
 - **Reject-unknown at the boundary; fail-soft values.** `normalizeFormSettings`
   learns the `theme` block: unknown KEYS are dropped (present-only emission),
   bad color/enum VALUES are omitted (reuse the `clearableStyle` value policy the
-  widget already uses). Legacy forms without `theme` normalize byte-unchanged.
+  widget already uses). Legacy forms without `theme` normalize to output that
+  contains **NO `theme` key** (the four/five base keys are always present by
+  design — this is a defaulted normalizer, not a passthrough — only the `theme`
+  sub-record is present-only).
 - **Round-trip test is mandatory** for the new sub-record (fail-closed READ trap:
   every new key that joins the allowlist ships a persistence round-trip
-  assertion + a present-only byte-identity assertion for the default/no-theme
-  form).
+  assertion + a present-only **no-theme-key** assertion for the default/no-theme
+  form — i.e. `!("theme" in normalizeFormSettings(noThemeInput))`, NOT a
+  whole-object byte-for-byte equality).
 - **File field (516-07) is the only candidate for DDL** and is deliberately
   scoped to reference existing media rather than add a table; see Open Questions.
 
@@ -201,10 +238,287 @@ lint:types`). The optional props are a no-op until 516-03 supplies the values.
 - rg misdetects the large TSX (`formEmbed.tsx`, `FormBuilderPage.tsx`) as binary
   — use `Read` / `grep -an`, never trust an empty `rg`.
 
+## Execution-ready pseudocode (per subtask)
+
+> Signatures are the contract. Enum unions + clamp sets are defined **once** in
+> 516-01 (`formTheme.ts`) and imported read-only by 516-02/04/06. Colors reuse
+> the existing CSS-value policy — see Security Contract.
+
+### 516-01 — model + resolver (`formSettings.ts`, `formTheme.ts` NEW)
+
+Shared vocabulary (define once, export from `formTheme.ts`):
+
+```ts
+// formTheme.ts — single source of truth for the theme vocabulary
+export const THEME_WIDTHS   = ["sm","md","lg","xl","full"] as const;
+export const THEME_ALIGNS   = ["left","center","right"] as const;
+export const THEME_BTN_ALIGN= ["left","center","right","full"] as const;
+export const THEME_GAPS     = ["sm","md","lg"] as const;
+export const THEME_COLUMNS  = [1, 2] as const;
+export const THEME_BORDER_W = ["none","sm","md"] as const;
+export const THEME_RADII    = ["none","sm","md","lg","xl"] as const;   // surface
+export const THEME_INPUT_RAD= ["none","sm","md","lg"] as const;        // input/submit
+export const THEME_PADS     = ["sm","md","lg"] as const;
+export const THEME_SHADOWS  = ["none","sm","md","lg"] as const;
+export const THEME_TITLE_SZ = ["sm","md","lg","xl"] as const;
+export const THEME_TITLE_WT = ["medium","semibold","bold"] as const;
+export const THEME_FONTS    = ["inherit","sans","serif","mono"] as const;
+export const THEME_INPUT_SZ = ["sm","md","lg"] as const;
+
+export type FormTheme = { /* the shape in the Schema-extension plan block */ };
+
+// token -> Tailwind class maps (only these classes may reach the DOM):
+const widthClass:  Record<(typeof THEME_WIDTHS)[number], string> = {
+  sm:"max-w-sm", md:"max-w-md", lg:"max-w-lg", xl:"max-w-xl", full:"max-w-full" };
+// …radiusClass / padClass / shadowClass / gapClass / titleSizeClass /
+//   titleWeightClass / fontFamilyClass / inputSizeClass / borderWidthClass…
+
+export type ResolvedFormTheme = {
+  // fully-defaulted, DOM-ready: className strings + policy-checked color values
+  container: { className: string; align: (typeof THEME_ALIGNS)[number] };
+  surface:   { className: string; style: CSSProperties };   // colors already policy-checked
+  typography:{ titleClassName: string; titleColor?: string; labelColor?: string; helperColor?: string; fontClassName: string };
+  input:     { className: string; style: CSSProperties };
+  submit:    { className: string; style: CSSProperties; fullWidth: boolean; label?: string };
+  columns: 1 | 2;
+};
+
+// Pure, Bun-free. Never returns a raw enum straight to the DOM; maps to classes.
+// Colors run through resolveClearableCssColorValue (see Security Contract) HERE too
+// (defence in depth) so the resolver output is always render-safe.
+export function resolveFormTheme(theme: FormTheme | undefined): ResolvedFormTheme;
+```
+
+`normalizeFormTheme` (invoked by `normalizeFormSettings`, mirrors the existing
+`formSettings.ts` present-only idiom — `isRecord`/`toString`/`clampInt`, emit a
+key only when a valid value is present):
+
+```ts
+// formSettings.ts (theme branch) — reuse local isRecord/toString helpers
+const toEnum = <T extends string>(v: unknown, allowed: readonly T[]): T | undefined => {
+  const s = toString(v);                 // toString already trims + null-empties
+  return s && (allowed as readonly string[]).includes(s) ? (s as T) : undefined;
+};
+const toColor = (v: unknown): string | undefined =>
+  resolveClearableCssColorValue(v);      // policy: drop unsafe/invalid -> undefined
+
+function normalizeFormTheme(value: unknown): FormTheme | undefined {
+  if (!isRecord(value)) return undefined;              // absent -> stays absent
+  const layout = isRecord(value.layout) ? {
+    ...(toEnum(value.layout.width, THEME_WIDTHS)  ? { width: … } : {}),
+    ...(toEnum(value.layout.align, THEME_ALIGNS)  ? { align: … } : {}),
+    ...(toEnum(value.layout.fieldGap, THEME_GAPS) ? { fieldGap: … } : {}),
+    ...(THEME_COLUMNS.includes(value.layout.columns as 1|2) ? { columns: … } : {}),
+    ...(toEnum(value.layout.buttonAlignment, THEME_BTN_ALIGN) ? { buttonAlignment: … } : {}),
+  } : undefined;
+  // surface/typography/input/submit branches identical shape; colors via toColor.
+  const theme = compact({ layout, surface, typography, input, submit }); // drop empty sub-objects
+  return theme && Object.keys(theme).length ? theme : undefined;         // present-only
+}
+// In normalizeFormSettings: only assign `normalized.theme` when normalizeFormTheme
+// returns a value -> a legacy form with no `theme` key emits NO `theme` key
+// (present-only). NOTE: the base keys are ALWAYS re-emitted (defaulted normalizer),
+// so this preserves the theme-absence invariant, NOT whole-object byte-identity.
+// Unknown top-level and unknown per-branch keys are dropped (reject-unknown)
+// because each branch is rebuilt field-by-field.
+```
+
+Error handling: never throw on bad theme input — fail-soft (drop the offending
+key/value). Regression-test shapes (Vitest, Bun-free):
+- reject-unknown: `normalizeFormSettings({ theme: { layout: { width:"sm", bogus:1 }, junk:2 }})` → `theme.layout === { width:"sm" }`, no `junk`/`bogus`.
+- present-only (no theme key): `expect("theme" in normalizeFormSettings(legacyNoThemeSettings)).toBe(false)` — assert the `theme` sub-record is ABSENT when the input has none. Do NOT assert `JSON.stringify(out) === JSON.stringify(input)`: `normalizeFormSettings` is fully-defaulted (`formSettings.ts:82-125`, always re-emits the base keys and returns `getDefaultFormSettings()` for a non-record), so whole-object byte equality fails for any legacy input not already in the exact normalized shape/key-order. (Optionally also assert the base keys are still present and correctly normalized.)
+- clamp/enum: bad enum (`width:"huge"`) and unsafe color (`background:"url(x)"`, `titleColor:"expression(alert(1))"`) → key omitted.
+- resolver token→class: `resolveFormTheme({ layout:{ width:"lg" }}).container.className` includes `max-w-lg`; unset → default class.
+
+### 516-02 — Design inspector panel (`FormDesignPanel.tsx` NEW)
+
+```tsx
+type FormDesignPanelProps = {
+  theme: FormTheme | undefined;                 // current persisted theme (may be undefined)
+  onChange: (next: FormTheme | undefined) => void; // parent persists via PATCH settings
+  disabled?: boolean;
+};
+// Renders grouped sections (Layout / Surface / Typography / Inputs / Submit) using
+// the SAME clearable-style color-swatch controls the widget editors use
+// (resolveClearableCssColorValue-backed). Every control shows the resolved default
+// (from resolveFormTheme(undefined)) as its placeholder/hint and has a reset-to-default
+// affordance. onChange emits a present-only FormTheme (unset control -> key absent, i.e.
+// `undefined`), never writes enum strings the resolver can't map. When the panel clears
+// the last token it emits `undefined` (drops the whole theme) so normalizeFormSettings
+// emits no `theme` key (preserves the present-only / theme-absence invariant).
+```
+Test shape (Vitest admin/UI): render with `theme=undefined` → controls show
+resolved-default hints; change width → `onChange` called with `{ layout:{ width } }`
+only; reset → key removed.
+
+### 516-03 — builder chrome + rail (`FormBuilderPage.tsx`, `FieldLibrary.tsx`, `FieldListPanel.tsx`)
+
+```tsx
+// Replace <EditorShell> with <PageHeader …/> + <EditorFrame …/>.
+<PageHeader breadcrumb={["Forms", form.name]} title={form.name}
+  description="Drag fields onto the canvas and configure them on the right."
+  actions={<><Button variant="ghost" onClick={save}>Save</Button>
+             <Button onClick={publish}>Publish</Button></>} />
+<EditorFrame
+  title="Form builder"
+  toolbar={<>
+    <StatusBadge>{form.name} · {form.status}</StatusBadge>
+    <UndoRedoControls history={history}/>       {/* see undo/redo scope */}
+    <DeviceToggle value={deviceWidth} onChange={setDeviceWidth}/>  {/* host-wired */}
+  </>}
+  left={<FieldLibrary items={fieldLibraryItems} onAdd={addField}/>}   // EditorRailGroup/Item
+  canvas={<FormCanvas fields={fields} theme={theme} deviceWidth={deviceWidth} …/>}
+  right={<InspectorTabs tabs={["Settings","Design","Automation"]}>
+           {/* Design tab mounts <FormDesignPanel theme onChange/> */}
+         </InspectorTabs>} />
+```
+`FieldLibrary` uses `EditorRailGroup`/`EditorRailItem` (icon + label), NOT a flat
+list. `deviceWidth` local state (`"desktop" | "mobile"`) drives the canvas frame
+width; passed to `FormCanvas` via the optional prop added in 516-04 (land order).
+
+**Undo/redo SCOPE decision (explicit).** The prototype's Undo/Redo buttons are
+**decorative** (page marked "Preview only"; the admin `EditorFrame` does not
+provide them). For this task, undo/redo is delivered as **render-only chrome
+fidelity**: render the two buttons (matching the prototype's icons/placement) in
+`disabled` state so the toolbar matches the prototype visually, with NO history
+stack and NO functional behavior. Functional edit-history is **explicitly out of
+scope** for TASK-516 (would require a builder-state history model spanning fields
++ settings + theme; tracked as a follow-up, not here). The device toggle IS
+functional (drives canvas width). No smoke scenario exercises undo/redo; the
+smoke asserts the buttons render disabled. (If a reviewer wants functional
+history, it is a separate subtask with a history-stack contract — not folded into
+"wiring".)
+
+### 516-04 — canvas fidelity + field-preview fixes (`FormCanvas.tsx`)
+
+```tsx
+// Extend props (these land BEFORE 516-03 wires them — see Land order):
+type FormCanvasProps = { …existing; theme?: FormTheme; deviceWidth?: "desktop"|"mobile"; };
+// Apply resolveFormTheme(theme) to the canvas card + fields; deviceWidth sets frame max-width.
+// FieldPreview: ADD a real `select` branch (fixes B2 — currently kind:"select" at
+// :204-206 falls through to text Input :120-129) rendering a real <select> with the
+// field's options; ADD type-specific affordances for date/time/number/phone/email
+// (fixes B3: <input type=date|time|number|tel|email> instead of one generic text Input);
+// map `rating` to a scale/star affordance (fixes B5 low-fidelity), NOT the range slider.
+// Column/width precedence (documented): form theme `layout.columns` is the DEFAULT grid;
+// a field's own `style.width` (fieldSettings) OVERRIDES the form default for that field.
+```
+Test shape (Vitest admin/UI): a `select` field renders a `<select>` (not
+`<input type=text>`); `date` field renders `<input type="date">`; theme
+`columns:2` yields a 2-col grid class unless a field sets `width:"full"`.
+
+### 516-05 — field settings control fixes (`FieldSettingsPanel.tsx`, `fieldSettings.ts`)
+
+```ts
+// B4: add "time" to the step-supporting set so the increment control shows:
+const supportsStep = new Set(["number","range","time"]);   // was {number,range}
+// B5: remove the inert Minimum control for `rating` (backend deletes min + clamps
+// max 3–10 at validation.ts:234-243); show a "scale (3–10)" max control only.
+// B1: `phone` is added to the field library in 516-03; ensure the panel's control
+// gating includes `phone` (type=tel) with no dead controls.
+// B6: `hidden` requires a non-empty defaultValue (validation.ts:226-232) — surface
+// an inline required-hint on the defaultValue control BEFORE save, not just via the
+// generic save error.
+```
+Test shape (Vitest, Bun-free / admin): `supportsStep` includes `time`; `rating`
+panel has no Minimum control; `hidden` panel shows the defaultValue requirement.
+
+### 516-06 — runtime theme application (`FormRuntimePreviewDialog.tsx`, `formEmbed.tsx`)
+
+```ts
+// formEmbed today derives visuals from the PER-EMBED block instance:
+//   const style = { ...resolveStyle(undefined), ...(normalizedData.style ?? {}) }  (:1046-1049)
+// and reads ONLY layoutMode/stepTitles/saveProgress from resolved.settings (:1055-1060).
+// 516-06 makes the widget INHERIT the form-owned theme via resolved.settings.theme.
+//
+// PRECEDENCE (explicit): the FORM THEME is the BASE; the per-embed FormEmbedStyle
+// OVERRIDES per-token where the embed instance explicitly sets that token.
+//   const formTheme = resolveFormTheme(resolved?.settings?.theme);     // base
+//   const embed     = normalizedData.style ?? {};                      // page-widget overrides
+//   const effective = mergeThemeThenEmbed(formTheme, embed); // embed wins per explicit key
+// Rationale: the form theme travels with the form (author's intent for every embed);
+// a page author may still fine-tune a specific placement. An unset embed token falls
+// through to the form theme; an unset form token falls through to the built-in default.
+// Colors STILL pass resolveClearableCssColorValue at render (Security Contract).
+```
+Test shapes: `formRuntimeResolver` returns `theme` through resolution
+(`tests/vitest/forms/formRuntimeResolver.test.ts`); a form with a theme and an
+embed with NO style shows the theme; an embed that overrides `background` wins
+over the theme's `background`. Smoke: publish → front `formEmbed` shows the form
+theme UNLESS the embed instance overrides a given token.
+
+### 516-07 — `file` field (see Security Contract for the upload guard)
+
+```ts
+// validation.ts: register "file" in the field-type union + normalizeSettings
+// (accept size/accept-type constraints, reject unknown). submissionService.ts +
+// formsRoutes.ts submission path: validate the submitted value as a MEDIA REFERENCE
+// (must resolve to an owned, existing media row of an allowed type within size);
+// never trust a client-supplied path/URL. Additive file-case-only UI edits per the
+// File-case seam.
+```
+
+## Security Contract
+
+Two subtasks touch route/public-render surfaces and MUST satisfy the following.
+
+### 516-01 — theme colors on the PUBLIC render path (XSS / CSS-injection)
+
+The new `theme` color strings (`surface.background`, `surface.borderColor`,
+`typography.titleColor`/`labelColor`/`helperColor`, `input.borderColor`/
+`background`, `submit.background`/`textColor`) persist through
+`PATCH /forms/:id` → `forms.settings` and are then emitted into the **public**
+`formEmbed` via inline `style={{ … }}`. They are attacker-influenceable content
+and MUST be constrained at BOTH boundaries:
+
+1. **Normalize (write) boundary** — `normalizeFormTheme` runs every theme color
+   through `core/widgets/core/clearableStyle.ts` `resolveClearableCssColorValue`
+   (the existing CSS-value policy: allows hex / `var(--color-*)` tokens / bounded
+   `rgb[a]`/`hsl[a]` / the `transparent|currentColor|inherit` keywords; rejects
+   anything containing `url(` / `expression(` / `javascript:` / `data:` /
+   `;{}<>`). Invalid/unsafe → the key is DROPPED (present-only emission), never
+   persisted. Enum tokens (widths/radii/etc.) are validated against the fixed
+   unions in `formTheme.ts`; unknown enum values are dropped.
+2. **Render boundary (defence in depth)** — `resolveFormTheme` and the
+   `formEmbed`/runtime-preview render paths re-run every color through
+   `resolveClearableCssColorValue` before it reaches an inline `style`. This
+   matters because the existing `formEmbed` code already emits some colors via
+   the WEAKER `resolveClearableStyleValue` (trim/non-empty only — NOT a color
+   policy) and even applies `borderColor` RAW (`formEmbed.tsx:1069`
+   `borderColor: style.borderColor`, and `:739/:777/:808/:837` `style={{
+   color: labelColor }}` / `style={{ borderColor }}`). 516-06's theme-inherit
+   path MUST use `resolveClearableCssColorValue` (as `contact.tsx:4` already
+   does) for every theme-derived color, and MUST NOT widen the existing raw
+   `borderColor` seam to theme input.
+3. **Allowlist + round-trip** — the `theme` key and each validated leaf join the
+   PATCH-settings allowlist with **reject-unknown** at the boundary; ship a
+   persistence round-trip test (write theme → read back equal) AND a present-only
+   **no-theme-key** test (no-theme form emits no `theme` key — assert
+   `!("theme" in normalizeFormSettings(noThemeInput))`, NOT a whole-object
+   byte-for-byte equality, because the normalizer is fully-defaulted and always
+   re-emits the base keys). No new theme key may ship without both assertions
+   (fail-closed READ trap).
+
+### 516-07 — file field submission (`formsRoutes.ts` submission path + `validation.ts`)
+
+The `file` field accepts a value on the **public submission route**. It MUST be
+validated as a **media reference**, not a free path:
+
+- The submitted value resolves to an **existing** media row that is **owned**
+  by / scoped to the site/tenant, of an **allowed type**, within a **size**
+  bound (accept-type + max-size come from the field's normalized settings).
+- Reject unknown/oversized/unresolvable references and any **client-supplied
+  filesystem path or URL** — never trust or dereference client paths; only
+  accept an ID/reference that the server can independently resolve and
+  authorize.
+- Submission validation runs in the Bun runtime/route lane
+  (`tests/integration/routes/forms.test.ts`) with a rejection test for an
+  unowned/nonexistent/oversized/wrong-type reference.
+
 ## Testing strategy (lanes)
 
 - **Vitest, Bun-free pure** (`tests/vitest/forms/*`): `formSettings.ts` theme
-  normalize/reject-unknown/clamp/round-trip/byte-identity (516-01);
+  normalize/reject-unknown/clamp/round-trip/present-only-no-theme-key (516-01);
   `formTheme.ts` token→class resolution (516-01); `fieldSettings.ts` option
   lists (516-05).
 - **Vitest admin/UI** (`tests/vitest/admin/*`): `formsClient.ts` theme
@@ -244,9 +558,15 @@ lint:types`). The optional props are a no-op until 516-03 supplies the values.
 ## Definition of done
 
 All 7 subtasks landed in order; theme persists + round-trips + rejects unknown
-keys; no-theme forms are byte-identical; all enumerated broken fields fixed;
-builder matches prototype; theme applies in canvas + runtime preview + public
-`formEmbed`; every gate green (root `tsc -p tsconfig.json --noEmit`,
+keys; no-theme forms emit no `theme` key (present-only invariant, not whole-object
+byte-identity — the normalizer is fully-defaulted); all enumerated broken fields fixed;
+builder matches prototype (`EditorFrame` + `PageHeader`, FIELDS rail via
+`EditorRailGroup`/`EditorRailItem`, functional device toggle, render-only
+disabled undo/redo per the 516-03 scope decision, `Publish` action); theme
+applies in canvas + runtime preview + public `formEmbed` (form theme = base,
+per-embed overrides); Security Contract satisfied (theme colors policy-checked at
+normalize + render via `resolveClearableCssColorValue`; file field validated as
+an owned media reference); every gate green (root `tsc -p tsconfig.json --noEmit`,
 `bun --cwd core lint:types`, vitest, `bun test`, `gates:coderso`); ≥5-scenario
 Playwright smoke passes light + dark with 0 console errors; closure documented
 under changelog 1228.

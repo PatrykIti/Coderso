@@ -43,8 +43,13 @@ Per the parallel-streams discipline (AGENTS.md), run once after 514-01..05:
    after the prop-signature changes in 514-02/03/04).
 3. `bun --cwd core lint:types` + `bun --cwd core lint`.
 4. `gates:coderso` (5/5).
-5. Migration check: fresh `bun run db:migrate` applies 0066 clean on the
-   resettable local DB; `db:seed:admin` still works.
+5. Migration check: fresh `bun run db:migrate` applies the 514 visibility
+   migration clean on the resettable local DB; `db:seed:admin` still works.
+   **Do NOT assert a fixed number here** — the migration number is REALLOCATED at
+   land time per strict cross-task land order (see 514-01: TASK-512-01 and
+   TASK-513-01 also claim `0066`, so 514, landing after both, is very likely
+   `0067`/`0068`). Read the real filename in `core/db/migrations/` at closure and
+   confirm the snapshot + `_journal.json` entry match it.
 
 ## Runtime Smoke (mandatory — ≥5 distinct real-flow scenarios)
 
@@ -68,7 +73,11 @@ screenshots to `_docs/_workflows/_smoke/`.
    (not placeholders) and Entry ID matches the URL id.
 5. **List list↔grid toggle** — toggle to grid; assert grid cards render across ≥2
    content types with correct type/status; toggle to list; reload → the stored
-   view is restored (localStorage assertion).
+   view is restored. This asserts the localStorage persistence 514-05 MANDATES
+   (the `entries.view` key, mirroring the existing `entries.metadataHelpCollapsed`
+   pattern at `EntryMetadataPanel.tsx:120-123,222`) — assert the key value AND the
+   restored DOM view after reload. (Grounded: 514-05 §1/§Acceptance-1 build this;
+   NOT new persistence invented by the smoke.)
 6. **Publish/checklist regression** — publish flow still works in the new layout
    (checklist blocks when required field missing; publishes when satisfied);
    taxonomy quick-add + runtime preview still function.
@@ -78,6 +87,13 @@ screenshots to `_docs/_workflows/_smoke/`.
 - `_docs/DATA_MODEL.md`: document the two new columns, the enum, the hashed
   write-only `access_password` (never selected/returned; `hasPassword` boolean
   surfaced instead), and the duplicate-entry visibility rule.
+- **Migration number re-verification at land (do NOT hard-code `0066`).** Because
+  TASK-512-01 and TASK-513-01 also claim `0066`, 514's ACTUAL migration number is
+  reallocated at land time per the strict cross-task land order (likely
+  `0067`/`0068` if 512/513 land first — see 514-01 §2). At closure, read the real
+  filename in `core/db/migrations/` and ensure EVERY migration-number reference —
+  the `DATA_MODEL.md` note, the changelog **1226** entry, and the smoke/gate notes
+  (step 5 above) — uses the number 514 actually received, NOT the `0066` literal.
 - Confirm the parent + subtask files' final Status flips to ✅ Done with completion
   dates (orchestrator/owner action per board convention).
 
