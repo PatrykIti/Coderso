@@ -19,17 +19,13 @@ import {
 } from "../../../core/admin/services/mediaClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys, cacheTtlMs } from "../../../core/admin/services/cachePolicy";
-import {
-  subscribeCacheEvents,
-  type CacheEvent,
-} from "../../../core/admin/utils/cacheBus";
+import { subscribeCacheEvents, type CacheEvent } from "../../../core/admin/utils/cacheBus";
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
     headers: { "Content-Type": "application/json" },
   });
-
 
 const createLocalStorage = () => {
   const store = new Map<string, string>();
@@ -307,7 +303,6 @@ test("deleteMedia sends DELETE with CSRF", async () => {
   }
 });
 
-
 test("listMediaCached reads from local storage", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
@@ -333,10 +328,7 @@ test("listMediaCached reads from local storage", async () => {
         createdAt: "2026-02-14T00:00:00.000Z",
       },
     ];
-    storage.setItem(
-      cacheKeys.mediaList,
-      JSON.stringify({ value: cached, savedAt: Date.now() })
-    );
+    storage.setItem(cacheKeys.mediaList, JSON.stringify({ value: cached, savedAt: Date.now() }));
 
     const result = await listMediaCached();
     expect(result).toEqual(cached);
@@ -373,9 +365,7 @@ test("listMediaCached ignores expired in-memory list cache", async () => {
     setCacheValue(storage, stale);
     expect(await listMediaCached()).toEqual(stale);
 
-    vi.setSystemTime(
-      new Date(Date.now() + cacheTtlMs.list + 1000)
-    );
+    vi.setSystemTime(new Date(Date.now() + cacheTtlMs.list + 1000));
 
     const result = await listMediaCached();
     expect(result).toEqual(fresh);
@@ -492,15 +482,9 @@ test("media mutations patch the cached list and broadcast update events", async 
     await replaceMedia("media-1", file);
     expect(getCachedMedia()?.[0]?.key).toBe("replaced");
 
-    const uploaded = await uploadMedia(
-      new File(["img"], "upload.png", { type: "image/png" })
-    );
+    const uploaded = await uploadMedia(new File(["img"], "upload.png", { type: "image/png" }));
     expect(uploaded.title).toBe("Uploaded");
-    expect(getCachedMedia()?.map((item) => item.id)).toEqual([
-      "media-3",
-      "media-1",
-      "media-2",
-    ]);
+    expect(getCachedMedia()?.map((item) => item.id)).toEqual(["media-3", "media-1", "media-2"]);
 
     await deleteMedia("media-1");
     expect(getCachedMedia()?.map((item) => item.id)).toEqual(["media-3", "media-2"]);
@@ -512,6 +496,63 @@ test("media mutations patch the cached list and broadcast update events", async 
     );
   } finally {
     unsubscribe();
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+  }
+});
+
+test("mutating an asset while the list cache is expired does not poison it to a single item (TASK-512 smoke regression)", async () => {
+  // Live-smoke regression: tagging/foldering one asset AFTER the media:list
+  // cache had TTL-expired collapsed the whole library to that one row (the
+  // upsert seeded `[item]` as if it were the complete list, then reload read
+  // that fresh single-item cache). upsertCachedMedia now guards on an empty
+  // cache and leaves it unset so the update event forces a full refetch.
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const rows = [
+    mediaRecord({ id: "media-1", title: "One" }),
+    mediaRecord({ id: "media-2", title: "Two" }),
+    mediaRecord({ id: "media-3", title: "Three" }),
+  ];
+  const responses = [
+    jsonResponse({ token: "csrf-token" }),
+    jsonResponse(mediaRecord({ id: "media-1", title: "Tagged" })),
+    jsonResponse([
+      mediaRecord({ id: "media-1", title: "Tagged" }),
+      mediaRecord({ id: "media-2", title: "Two" }),
+      mediaRecord({ id: "media-3", title: "Three" }),
+    ]),
+  ];
+  globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf"))
+      return responses.shift() ?? jsonResponse({ token: "csrf-token" });
+    return responses.shift() ?? jsonResponse({});
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCsrfToken();
+    // Seed a list cache that is already TTL-expired.
+    setCacheValue(storage, rows, Date.now() - cacheTtlMs.list - 60_000);
+    expect(getCachedMedia()).toBeNull();
+
+    // Mutate one asset (e.g. assign a folder / add a tag) while the cache is expired.
+    await updateMedia("media-1", { title: "Tagged" });
+
+    // GUARD: the cache must NOT be seeded with just the mutated item.
+    expect(getCachedMedia()).toBeNull();
+
+    // A subsequent cached fetch rebuilds the FULL list (3 items), not 1.
+    const refetched = await listMediaCached();
+    expect(refetched.map((item) => item.id)).toEqual(["media-1", "media-2", "media-3"]);
+    expect(refetched.find((item) => item.id === "media-1")?.title).toBe("Tagged");
+  } finally {
     globalThis.fetch = originalFetch;
     if (originalLocal === undefined) {
       delete (globalThis as { localStorage?: unknown }).localStorage;

@@ -111,7 +111,15 @@ const primeMediaCacheInternal = (items: MediaRecord[]) => {
 };
 
 const upsertCachedMedia = (item: MediaRecord) => {
-  const current = getCachedMedia() ?? [];
+  const current = getCachedMedia();
+  // If there is no valid cached list (unset or TTL-expired) do NOT seed a
+  // partial single-item cache: writing `[item]` would masquerade as the
+  // complete list and hide every other asset until the TTL lapses again
+  // (e.g. tagging/foldering one asset after the list cache expired collapsed
+  // the library to that one row). Mirror removeCachedMedia's guard and leave
+  // the cache empty — the update cache-event drives a forced refetch that
+  // rebuilds the full list including this mutation.
+  if (!current) return;
   const index = current.findIndex((media) => media.id === item.id);
   const next = [...current];
   if (index === -1) {

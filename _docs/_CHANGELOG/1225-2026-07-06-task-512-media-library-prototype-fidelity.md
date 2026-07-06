@@ -30,3 +30,12 @@ Reproduces the admin Media Library to prototype fidelity (`_docs/_PROTOTYPE/src/
 - `bun run test:vitest`
 - `bun run gates:coderso`
 - Live ≥5-scenario prototype-fidelity playwright smoke (storage quota data-backed + degrade, folder lifecycle + un-file-on-delete, tags add/remove/filter, focal point, richer metadata round-trip, prototype-parity light+dark, cross-consumer MediaPicker) deferred to the orchestrator post-merge (the running dev host serves the main tree, not this worktree).
+
+## Post-merge live-smoke remediation (orchestrator)
+
+The post-merge live smoke ran green on all core flows (folder create/assign, tag round-trip, all new details-drawer controls, storage-card degrade) and surfaced two fixes:
+
+- **Cache-poisoning bug (fixed) — `mediaClient.ts`:** mutating one asset (assign folder / add tag) *after* the `media:list` TTL had lapsed collapsed the whole library to that single row (a reload then showed "1 of N"). Root cause: `upsertCachedMedia` did `getCachedMedia() ?? []` and, on an empty/expired cache, wrote `[item]` as if it were the complete list (a fresh single-item cache masquerading as full). Now guarded (`if (!current) return`, mirroring `removeCachedMedia`) so an expired-cache mutation leaves the cache unset and the update cache-event forces a full refetch. Added regression test in `tests/vitest/admin/mediaClient.test.ts`. (Latent pre-512, exposed by the new folder/tag drawer controls.)
+- **View-toggle fidelity (fixed) — `MediaToolbar.tsx`:** reordered the grid/list toggle to list-then-grid and switched the grid glyph `Grid2X2` → `LayoutGrid` to match the prototype `FilterBar`.
+
+Gates re-verified green after the fixes: `test:vitest` (mediaClient + media-toolbar 19/19), `core lint`, `core lint:types`, root `tsc --noEmit`.

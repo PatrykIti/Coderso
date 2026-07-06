@@ -1,4 +1,4 @@
-import { Grid2X2, List, Search, SlidersHorizontal } from "lucide-react";
+import { LayoutGrid, List, Search, SlidersHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -75,21 +75,9 @@ export function MediaToolbar({
             ) : null}
           </Button>
         ) : null}
+        {/* Prototype FilterBar orders the toggle list-then-grid and uses the
+            LayoutGrid glyph for the grid view (see _PROTOTYPE FilterBar). */}
         <div className="inline-flex items-center rounded-xl border border-border bg-card p-0.5 shadow-soft">
-          <button
-            type="button"
-            onClick={() => onViewChange("grid")}
-            aria-label="Grid view"
-            aria-pressed={view === "grid"}
-            className={cn(
-              "flex size-7 items-center justify-center rounded-lg transition-colors",
-              view === "grid"
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Grid2X2 className="size-4" />
-          </button>
           <button
             type="button"
             onClick={() => onViewChange("list")}
@@ -103,6 +91,20 @@ export function MediaToolbar({
             )}
           >
             <List className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange("grid")}
+            aria-label="Grid view"
+            aria-pressed={view === "grid"}
+            className={cn(
+              "flex size-7 items-center justify-center rounded-lg transition-colors",
+              view === "grid"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <LayoutGrid className="size-4" />
           </button>
         </div>
       </div>
