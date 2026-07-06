@@ -1,6 +1,6 @@
 import { desc, eq } from "drizzle-orm";
 import { db } from "../../db/client";
-import { media } from "../../db/schema";
+import { media, mediaFolders } from "../../db/schema";
 import { readImageDimensions } from "./imageDimensions";
 import { getMediaStorageAdapter } from "./storage";
 import { getStorageSettingsInternal } from "../settings/storageSettings";
@@ -12,7 +12,18 @@ export type MediaMeta = {
   alt?: string | null;
   title?: string | null;
   caption?: string | null;
+  description?: string | null;
+  credit?: string | null;
+  folderId?: string | null;
+  tags?: string[]; // NOT nullable — column is NOT NULL DEFAULT '[]' (512-01)
+  focalX?: number | null;
+  focalY?: number | null;
 };
+
+const MAX_TAGS = 30;
+const MAX_TAG_LEN = 40;
+const MAX_DESC = 2000;
+const MAX_CREDIT = 300;
 
 type MediaConfig = {
   maxSizeBytes: number;
@@ -70,6 +81,70 @@ const resolveUploadTitle = (fileName: string, title?: string | null) => {
   return fallback.length > 0 ? fallback : null;
 };
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const capText = (value: unknown, max: number): string | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "string") throw new Error("media_text_invalid");
+  return value.slice(0, max);
+};
+
+const normalizeFocal = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new Error("media_focal_invalid");
+  }
+  return Math.min(1, Math.max(0, value));
+};
+
+const normalizeTags = (value: unknown): string[] => {
+  // Column is NOT NULL DEFAULT '[]' — always resolve to an array, never null.
+  if (value === null || value === undefined) return [];
+  if (!Array.isArray(value)) throw new Error("media_tags_invalid");
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim().slice(0, MAX_TAG_LEN);
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+    if (out.length >= MAX_TAGS) break;
+  }
+  return out;
+};
+
+/**
+ * Logically PURE — no DB call. Clamps/sanitizes ONLY the keys present on `meta`
+ * (subset invariant: never injects a default for an absent key, so present-only /
+ * byte-identity gating in `buildMediaPatch` stays correct). The folder-existence
+ * check is deferred to `updateMedia` (DB); here folderId is only format-validated.
+ */
+export function normalizeMediaMeta(meta: MediaMeta): MediaMeta {
+  const out: MediaMeta = {};
+  const has = (key: string) => Object.prototype.hasOwnProperty.call(meta, key);
+
+  if (has("alt")) out.alt = meta.alt ?? null;
+  if (has("title")) out.title = meta.title ?? null;
+  if (has("caption")) out.caption = meta.caption ?? null;
+  if (has("description")) out.description = capText(meta.description, MAX_DESC);
+  if (has("credit")) out.credit = capText(meta.credit, MAX_CREDIT);
+  if (has("folderId")) {
+    const folderId = meta.folderId ?? null;
+    if (folderId !== null && (typeof folderId !== "string" || !UUID_RE.test(folderId))) {
+      throw new Error("media_folder_not_found");
+    }
+    out.folderId = folderId;
+  }
+  if (has("tags")) out.tags = normalizeTags(meta.tags);
+  if (has("focalX")) out.focalX = normalizeFocal(meta.focalX);
+  if (has("focalY")) out.focalY = normalizeFocal(meta.focalY);
+
+  return out;
+}
+
 const buildMediaPatch = (meta: MediaMeta) => {
   const patch: MediaMeta = {};
   if (Object.prototype.hasOwnProperty.call(meta, "alt")) {
@@ -80,6 +155,25 @@ const buildMediaPatch = (meta: MediaMeta) => {
   }
   if (Object.prototype.hasOwnProperty.call(meta, "caption")) {
     patch.caption = meta.caption ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(meta, "description")) {
+    patch.description = meta.description ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(meta, "credit")) {
+    patch.credit = meta.credit ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(meta, "folderId")) {
+    patch.folderId = meta.folderId ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(meta, "tags")) {
+    // NOT-NULL column — assign the normalized array directly, NEVER `?? null`.
+    patch.tags = meta.tags ?? [];
+  }
+  if (Object.prototype.hasOwnProperty.call(meta, "focalX")) {
+    patch.focalX = meta.focalX ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(meta, "focalY")) {
+    patch.focalY = meta.focalY ?? null;
   }
   return patch;
 };
@@ -167,7 +261,21 @@ export async function getMediaById(id: string) {
 }
 
 export async function updateMedia(id: string, meta: MediaMeta) {
-  const patch = buildMediaPatch(meta);
+  const normalized = normalizeMediaMeta(meta);
+
+  const folderId = normalized.folderId;
+  if (
+    Object.prototype.hasOwnProperty.call(normalized, "folderId") &&
+    typeof folderId === "string"
+  ) {
+    const [folder] = await db
+      .select({ id: mediaFolders.id })
+      .from(mediaFolders)
+      .where(eq(mediaFolders.id, folderId));
+    if (!folder) throw new Error("media_folder_not_found");
+  }
+
+  const patch = buildMediaPatch(normalized);
   if (Object.keys(patch).length === 0) {
     return getMediaById(id);
   }

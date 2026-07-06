@@ -2045,6 +2045,23 @@ Permissions: `media:read`, `media:write`
 - `POST /media/:id/replace` (multipart)
 - `DELETE /media/:id`
 
+Folders (TASK-512, registered from inside `registerMediaRoutes`; `/media/folders`
+is registered BEFORE `/media/:id` for first-match dispatch):
+
+- `GET /media/folders` (`media:read`)
+- `POST /media/folders` (`media:write`) — reject-unknown; duplicate slug →
+  `media_folder_slug_conflict` (409)
+- `POST /media/folders/reorder` (`media:write`)
+- `PATCH /media/folders/:id` (`media:write`)
+- `DELETE /media/folders/:id` (`media:write`) — un-files member assets
+  (`media.folder_id` → null), never cascade-deletes media
+
+`PATCH /media/:id` accepts (present-only, reject-unknown, TASK-512): `alt`,
+`title`, `caption`, `folderId` (uuid|null), `tags` (`string[]`, capped),
+`focalX`/`focalY` (clamped `[0,1]`), `description`, `credit`. The upload body
+rejects `folderId`/`tags`. Storage quota is written via `PATCH /settings/storage`
+(`storage.quota.totalBytes`/`.planLabel`).
+
 Runtime asset delivery:
 - `GET /media/*` (public site runtime URL)
 - zachowanie zalezy od `settings.storage.delivery.accessMode`.

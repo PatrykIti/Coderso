@@ -7,7 +7,8 @@
 **Category:** Services / Validation / Settings / Model Contract
 **Estimated Effort:** Large
 **Dependencies:** TASK-512-01 (media columns + `media_folders` table + migration `0067`).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

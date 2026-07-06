@@ -8,7 +8,8 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-512-04 (client/types/utils: `MediaItem` new fields, `mediaFoldersClient`,
 `MediaFolder`, focal/tree/tag helpers, quota shape).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

@@ -68,6 +68,10 @@ export type StorageSettingsResponse = {
   delivery: {
     accessMode: "public" | "internal";
   };
+  quota: {
+    totalBytes: number | null;
+    planLabel: string | null;
+  };
   s3: {
     bucket: string | null;
     region: string | null;
@@ -91,6 +95,10 @@ export type StorageSettingsUpdate = {
   allowedMime?: string | string[] | null;
   delivery?: {
     accessMode?: "public" | "internal";
+  };
+  quota?: {
+    totalBytes?: number | null;
+    planLabel?: string | null;
   };
   s3?: {
     bucket?: string | null;

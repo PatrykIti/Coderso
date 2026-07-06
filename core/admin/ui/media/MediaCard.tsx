@@ -7,7 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 import type { MediaItem, MediaKind } from "./types";
-import { formatBytes, hasMissingImageAlt, resolveMediaDisplayName } from "./utils";
+import {
+  formatBytes,
+  hasMissingImageAlt,
+  resolveFocalPosition,
+  resolveMediaDisplayName,
+} from "./utils";
 
 type MediaCardProps = {
   item: MediaItem;
@@ -25,13 +30,16 @@ const typeIconMap = {
   video: Video,
 };
 
-// TASK-479-11-L01: type tone mapped from the prototype KINDS[] (image=violet,
-// video=info, document=warning, audio=success) — all token-driven Badge variants.
-const typeToneMap: Record<MediaKind, "soft" | "info" | "warning" | "success"> = {
-  image: "soft",
-  video: "info",
-  document: "warning",
-  audio: "success",
+// TASK-512-05: tone class for the bottom-right size-5 chip, by MediaKind — the
+// prototype's KINDS[] tone strings (`_docs/_PROTOTYPE/src/pages/media/
+// MediaLibraryPage.tsx:30-36`, applied at line 142). This is the ONE surviving
+// tone map: the old Badge-variant `typeToneMap` + colored footer type text Badge
+// (proto footer 137-147 has neither) are retired.
+const KIND_TONE: Record<MediaKind, string> = {
+  image: "bg-primary-soft text-primary-soft-foreground", // proto "Image" → violet
+  video: "bg-info-soft text-info", // proto "Video" → blue
+  document: "bg-warning-soft text-warning", // proto "Doc"   → amber
+  audio: "bg-success-soft text-success", // proto "Audio" → green
 };
 
 export function MediaCard({
@@ -50,16 +58,31 @@ export function MediaCard({
   const hasPreview = item.type === "image" && Boolean(item.url);
   const showImage = hasPreview && !isError;
   const showSkeleton = showImage && !isLoaded;
+  const hasFocal =
+    item.type === "image" && (typeof item.focalX === "number" || typeof item.focalY === "number");
+  const focal = hasFocal ? resolveFocalPosition(item) : null;
+
+  const toneChip = (
+    <span
+      className={cn(
+        "inline-flex size-5 items-center justify-center rounded-md [&_svg]:size-3",
+        KIND_TONE[item.type]
+      )}
+      aria-hidden="true"
+    >
+      <Icon />
+    </span>
+  );
 
   const preview = (
     <div
       className={cn(
         "relative flex items-center justify-center overflow-hidden bg-muted text-muted-foreground",
-        variant === "grid" ? "aspect-[4/3] rounded-xl" : "h-16 w-20 shrink-0 rounded-lg",
+        variant === "grid" ? "aspect-square rounded-xl" : "h-16 w-20 shrink-0 rounded-lg",
         selected && "ring-2 ring-primary/40"
       )}
     >
-      {!showImage ? <Icon className="h-8 w-8 text-muted-foreground" /> : null}
+      {!showImage ? <Icon className="size-8 text-muted-foreground" /> : null}
       {showImage ? (
         <img
           src={item.url}
@@ -68,6 +91,7 @@ export function MediaCard({
             "absolute inset-0 h-full w-full object-cover transition-opacity duration-200",
             isLoaded ? "opacity-100" : "opacity-0"
           )}
+          style={focal ? { objectPosition: `${focal.x * 100}% ${focal.y * 100}%` } : undefined}
           loading="lazy"
           onLoad={() => setIsLoaded(true)}
           onError={() => {
@@ -79,21 +103,26 @@ export function MediaCard({
       {showSkeleton ? (
         <div className="absolute inset-0 animate-pulse bg-muted-foreground/10" />
       ) : null}
-      {selected && !selectionMode ? (
-        <span className="absolute right-2 top-2 rounded-md bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground">
-          Selected
-        </span>
+      {/* top-left: neutral TYPE badge (proto) */}
+      {variant === "grid" ? (
+        <Badge
+          variant="outline"
+          className="absolute left-2 top-2 bg-card/80 capitalize backdrop-blur"
+        >
+          {item.type}
+        </Badge>
       ) : null}
+      {/* bottom-right: missing-alt marker (own corner) */}
       {missingAlt ? (
-        <span className="absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-md bg-warning-soft text-warning shadow-soft">
-          <AlertTriangle className="h-3.5 w-3.5" />
+        <span className="absolute bottom-2 right-2 flex size-6 items-center justify-center rounded-md bg-warning-soft text-warning shadow-soft">
+          <AlertTriangle className="size-3.5" />
         </span>
       ) : null}
     </div>
   );
 
   const details = (
-    <div className={cn("min-w-0 space-y-1", variant === "grid" ? "px-1" : "flex-1")}>
+    <div className={cn("min-w-0", variant === "grid" ? "px-1 pb-1 pt-2.5" : "flex-1 space-y-1")}>
       <div className="flex min-w-0 items-center gap-2">
         <p className="truncate text-sm font-medium text-foreground">{displayName}</p>
         {missingAlt ? (
@@ -102,12 +131,14 @@ export function MediaCard({
           </Badge>
         ) : null}
       </div>
-      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-        <span>{formatBytes(item.sizeBytes)}</span>
-        <Badge variant={typeToneMap[item.type]} className="text-[10px] capitalize">
-          {item.type}
-        </Badge>
-        {item.originalName ? <span className="truncate">{item.originalName}</span> : null}
+      <div className="mt-0.5 flex items-center justify-between gap-2 text-xs text-muted-foreground">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="shrink-0">{formatBytes(item.sizeBytes)}</span>
+          {item.originalName && item.originalName !== displayName ? (
+            <span className="truncate">{item.originalName}</span>
+          ) : null}
+        </span>
+        {toneChip}
       </div>
     </div>
   );
@@ -140,21 +171,25 @@ export function MediaCard({
   }
 
   return (
-    <Card className="group relative gap-2 overflow-hidden p-2 transition-all hover:-translate-y-0.5 hover:shadow-card">
+    <Card className="group relative gap-0 overflow-hidden p-2 transition-all hover:-translate-y-0.5 hover:shadow-card">
+      {/* top-right selection affordance — sibling of the click button so the
+          checkbox toggle never doubles as an item-select click. selectionMode
+          Checkbox and the non-selectionMode "Selected" pill are mutually
+          exclusive states, so they never co-occupy the corner. */}
       {selectionMode ? (
-        <div className="absolute left-2 top-2 z-10 rounded-md bg-card/90 p-1 shadow-soft backdrop-blur">
+        <div className="absolute right-3 top-3 z-10 rounded-md bg-card/90 p-1 shadow-soft backdrop-blur">
           <Checkbox
             checked={Boolean(selected)}
             aria-label={`Select ${displayName}`}
             onCheckedChange={() => onToggleSelect?.(item.id)}
           />
         </div>
+      ) : selected ? (
+        <span className="absolute right-3 top-3 z-10 rounded-md bg-primary px-2 py-1 text-[10px] font-semibold text-primary-foreground">
+          Selected
+        </span>
       ) : null}
-      <button
-        type="button"
-        className="flex flex-col gap-2 text-left"
-        onClick={() => onSelect?.(item.id)}
-      >
+      <button type="button" className="flex flex-col text-left" onClick={() => onSelect?.(item.id)}>
         {preview}
         {details}
       </button>

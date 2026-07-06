@@ -7,7 +7,8 @@
 **Category:** Server Routes / Security / API
 **Estimated Effort:** Medium
 **Dependencies:** TASK-512-02 (extended `MediaMeta`/schemas, `mediaFoldersService`, quota).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

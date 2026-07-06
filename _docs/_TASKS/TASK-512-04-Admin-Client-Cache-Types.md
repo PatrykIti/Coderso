@@ -8,7 +8,8 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-512-03 (routes live: media PATCH new fields + `/media/folders*` + quota
 in `/settings/storage`).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

@@ -26,7 +26,9 @@ import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/she
 import { Textarea } from "@/components/ui/textarea";
 import { AdminLink } from "@/ui/shared/AdminLink";
 
-import type { MediaItem, MediaMetaUpdate, MediaUsageItem } from "./types";
+import { FocalPointPicker } from "./FocalPointPicker";
+import { TagInput } from "./TagInput";
+import type { MediaFolder, MediaItem, MediaMetaUpdate, MediaUsageItem } from "./types";
 import {
   formatBytes,
   formatDate,
@@ -43,6 +45,10 @@ export type MediaDetailsDrawerProps = {
   usageError?: string | null;
   dimensionState?: "idle" | "recovering" | "recovered" | "error";
   dimensionMessage?: string | null;
+  // TASK-512-05: OPTIONAL (defaulted []) option source for the Folder control.
+  // Required-ness would break the three unowned test renders (media.test.tsx /
+  // media-restyle.test.tsx / mediaLibrary.test.tsx) under root tsc + Vitest.
+  folders?: MediaFolder[];
   onOpenChange: (open: boolean) => void;
   onSave: (id: string, meta: MediaMetaUpdate) => Promise<MediaItem> | MediaItem | void;
   onDelete: (id: string) => void;
@@ -73,6 +79,7 @@ export function MediaDetailsDrawer({
   usageError,
   dimensionState = "idle",
   dimensionMessage,
+  folders = [],
   onOpenChange,
   onSave,
   onDelete,
@@ -86,6 +93,12 @@ export function MediaDetailsDrawer({
   const [title, setTitle] = useState(item?.title ?? displayName);
   const [alt, setAlt] = useState(item?.alt ?? "");
   const [caption, setCaption] = useState(item?.caption ?? "");
+  const [folderId, setFolderId] = useState<string | null>(item?.folderId ?? null);
+  const [tags, setTags] = useState<string[]>(item?.tags ?? []);
+  const [description, setDescription] = useState(item?.description ?? "");
+  const [credit, setCredit] = useState(item?.credit ?? "");
+  const [focalX, setFocalX] = useState<number | null>(item?.focalX ?? null);
+  const [focalY, setFocalY] = useState<number | null>(item?.focalY ?? null);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [copyStatus, setCopyStatus] = useState<"idle" | "copied" | "error">("idle");
   const [replaceStatus, setReplaceStatus] = useState<"idle" | "replacing" | "replaced" | "error">(
@@ -97,6 +110,12 @@ export function MediaDetailsDrawer({
       setTitle(item?.title ?? (item ? resolveMediaDisplayName(item) : ""));
       setAlt(item?.alt ?? "");
       setCaption(item?.caption ?? "");
+      setFolderId(item?.folderId ?? null);
+      setTags(item?.tags ?? []);
+      setDescription(item?.description ?? "");
+      setCredit(item?.credit ?? "");
+      setFocalX(item?.focalX ?? null);
+      setFocalY(item?.focalY ?? null);
       setSaveStatus("idle");
       setCopyStatus("idle");
       setReplaceStatus("idle");
@@ -104,20 +123,62 @@ export function MediaDetailsDrawer({
     return () => window.cancelAnimationFrame(frameId);
   }, [item]);
 
-  const handleSaveMeta = async () => {
-    if (!item || saveStatus === "saving") return;
+  const buildMeta = (overrides: Partial<MediaMetaUpdate> = {}): MediaMetaUpdate => ({
+    title,
+    alt,
+    caption,
+    folderId,
+    tags,
+    focalX,
+    focalY,
+    description,
+    credit,
+    ...overrides,
+  });
+
+  const syncFromUpdated = (updated: MediaItem) => {
+    setTitle(updated.title ?? resolveMediaDisplayName(updated));
+    setAlt(updated.alt ?? "");
+    setCaption(updated.caption ?? "");
+    setFolderId(updated.folderId ?? null);
+    setTags(updated.tags ?? []);
+    setDescription(updated.description ?? "");
+    setCredit(updated.credit ?? "");
+    setFocalX(updated.focalX ?? null);
+    setFocalY(updated.focalY ?? null);
+  };
+
+  // Persist the FULL metadata payload (present-only per MediaMetaUpdate). Rapid
+  // control changes (e.g. focal drag) coalesce: while one save is in flight the
+  // latest overrides are queued and flushed once it settles, so the final value
+  // always lands without concurrent PATCH races.
+  const savingRef = useRef(false);
+  const pendingRef = useRef<Partial<MediaMetaUpdate> | null>(null);
+
+  const persist = async (overrides: Partial<MediaMetaUpdate> = {}) => {
+    if (!item) return;
+    if (savingRef.current) {
+      pendingRef.current = { ...(pendingRef.current ?? {}), ...overrides };
+      return;
+    }
+    savingRef.current = true;
     setSaveStatus("saving");
     try {
-      const updated = await onSave(item.id, { title, alt, caption });
-      if (updated) {
-        setTitle(updated.title ?? resolveMediaDisplayName(updated));
-        setAlt(updated.alt ?? "");
-        setCaption(updated.caption ?? "");
-      }
+      const updated = await onSave(item.id, buildMeta(overrides));
+      if (updated) syncFromUpdated(updated);
       setSaveStatus("saved");
     } catch {
       setSaveStatus("error");
+    } finally {
+      savingRef.current = false;
+      const pending = pendingRef.current;
+      pendingRef.current = null;
+      if (pending) void persist(pending);
     }
+  };
+
+  const handleSaveMeta = () => {
+    void persist();
   };
 
   const handleOpenAsset = () => {
@@ -146,11 +207,7 @@ export function MediaDetailsDrawer({
     setReplaceStatus("replacing");
     try {
       const updated = await onReplace(item.id, file);
-      if (updated) {
-        setTitle(updated.title ?? resolveMediaDisplayName(updated));
-        setAlt(updated.alt ?? "");
-        setCaption(updated.caption ?? "");
-      }
+      if (updated) syncFromUpdated(updated);
       setReplaceStatus("replaced");
     } catch {
       setReplaceStatus("error");
@@ -341,6 +398,100 @@ export function MediaDetailsDrawer({
                       className="bg-muted/30"
                     />
                   </div>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-5">
+                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Organization
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor={`media-folder-${item.id}`}
+                      className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                    >
+                      Folder
+                    </label>
+                    <select
+                      id={`media-folder-${item.id}`}
+                      value={folderId ?? ""}
+                      onChange={(event) => {
+                        const next = event.target.value ? event.target.value : null;
+                        setFolderId(next);
+                        void persist({ folderId: next });
+                      }}
+                      className="flex h-9 w-full rounded-md border border-input bg-muted/30 px-3 text-sm"
+                    >
+                      <option value="">— No folder —</option>
+                      {(folders ?? []).map((folder) => (
+                        <option key={folder.id} value={folder.id}>
+                          {folder.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Tags
+                    </div>
+                    <TagInput
+                      value={tags}
+                      onChange={(next) => {
+                        setTags(next);
+                        void persist({ tags: next });
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor={`media-description-${item.id}`}
+                      className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                    >
+                      Description
+                    </label>
+                    <Textarea
+                      id={`media-description-${item.id}`}
+                      rows={3}
+                      value={description}
+                      onChange={(event) => setDescription(event.target.value)}
+                      onBlur={handleSaveMeta}
+                      className="bg-muted/30"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label
+                      htmlFor={`media-credit-${item.id}`}
+                      className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                    >
+                      Credit
+                    </label>
+                    <Input
+                      id={`media-credit-${item.id}`}
+                      value={credit}
+                      onChange={(event) => setCredit(event.target.value)}
+                      onBlur={handleSaveMeta}
+                      className="bg-muted/30"
+                    />
+                  </div>
+                  {item.type === "image" && item.url ? (
+                    <div className="space-y-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Focal point
+                      </div>
+                      <FocalPointPicker
+                        src={item.url}
+                        alt={item.alt ?? displayName}
+                        focalX={focalX}
+                        focalY={focalY}
+                        onChange={(x, y) => {
+                          setFocalX(x);
+                          setFocalY(y);
+                          void persist({ focalX: x, focalY: y });
+                        }}
+                      />
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="space-y-4">
