@@ -12,9 +12,9 @@ import type {
 } from "../../../services/customScreens/customScreenSchemas";
 
 export type CustomScreenSidebarShortcutState = "visible" | "configured_after_activation" | "hidden";
-export type CustomScreenSidebarShortcutStateV3 =
-  | CustomScreenSidebarShortcutState
-  | "requires_editor_setup";
+// V3 kept as an alias for source compatibility; the "requires_editor_setup" member
+// is removed — no code produces it after the sidebar visibility fix (TASK-515).
+export type CustomScreenSidebarShortcutStateV3 = CustomScreenSidebarShortcutState;
 
 export type CustomScreenListRow = {
   screen: CustomScreenRecord;
@@ -55,19 +55,9 @@ export const resolveCustomScreenModeLabel = (screen: CustomScreenRecord) => {
 export const resolveCustomScreenSidebarShortcutState = (
   screen: CustomScreenRecord
 ): CustomScreenSidebarShortcutStateV3 => {
-  const capabilities =
-    screen.capabilities ??
-    resolveCustomScreenCapabilities({
-      definition: screen.definition,
-      blocks: screen.blocks,
-      bindings: screen.bindings,
-    });
   if (!screen.showInSidebar) return "hidden";
-  if (screen.status === "active" && capabilities.supportsDedicatedEditor !== true) {
-    return "requires_editor_setup";
-  }
-  if (screen.status === "active") return "visible";
-  return "configured_after_activation";
+  if (screen.status === "active") return "visible"; // any mode -> visible
+  return "configured_after_activation"; // pinned but still draft
 };
 
 export const buildCustomScreenListRows = (

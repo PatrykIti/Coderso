@@ -12,6 +12,18 @@ internal screens. This reduces loading flashes and keeps cached data warm.
   - conditions: `status=active` and `showInSidebar=true`
   - target route: `/admin/advanced/custom-screens/:screenId/entries`
   - label: `sidebarLabel ?? name`
+  - applies to **every** screen mode (collection-only, dashboard, editor) — there is
+    **no** editor-capability requirement. A `draft` + pinned (`showInSidebar=true`)
+    screen is a valid "will publish on activation" state: it is hidden from the
+    sidebar while Draft and appears automatically on activation with **no manual
+    reload** (the `custom_screens` list cache-event invalidation on
+    `cacheKeys.customScreensList` re-derives the nav shortcuts).
+  - Historical note (TASK-515): a previously-implied `"requires_editor_setup"`
+    editor-capability gate was **removed** as an intentional simplification. The
+    code (`sidebarConfig.ts` + `customScreenListModel.ts`) had over-filtered pinned
+    non-editor screens against this already-documented contract, silently dropping
+    Active + pinned dashboard/collection-only screens from the sidebar; the fix
+    restores the contract above.
 - Default (enabled) Advanced modules:
   - `Engine` -> `/admin/advanced/engine`
   - `Entries` -> `/admin/advanced/entries`

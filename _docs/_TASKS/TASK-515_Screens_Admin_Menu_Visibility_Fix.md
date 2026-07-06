@@ -7,7 +7,7 @@
 **Category:** Admin UI / Navigation / Custom Screens / Bug Fix
 **Estimated Effort:** Small
 **Dependencies:** TASK-468 (custom screens V4 model + `capabilities.ts` mode/editor resolution), TASK-474 (custom-screen list card + workspace/entries route parity), TASK-479-14 (soft-card list restyle + `resolveCustomScreenSidebarShortcutState`-derived "In sidebar" badge). Rides the existing validated `GET /custom-screens` read path — NO new route, RBAC, endpoint, schema column, or migration.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -60,13 +60,13 @@ The current list card (`CustomScreenTable.tsx:120-170`) already faithfully repro
 
 | ID | Title | File | Status |
 |----|-------|------|--------|
-| TASK-515-01 | Sidebar Visibility Root-Cause Fix (nav builder + list-model state) + regression tests | `TASK-515-01-Sidebar-Visibility-Root-Cause-Fix.md` | ⏳ To Do |
-| TASK-515-02 | Screens Sidebar — Live Smoke, Docs & Closure | `TASK-515-02-Screens-Sidebar-Tests-Docs-Closure.md` | ⏳ To Do |
+| TASK-515-01 | Sidebar Visibility Root-Cause Fix (nav builder + list-model state) + regression tests | `TASK-515-01-Sidebar-Visibility-Root-Cause-Fix.md` | ✅ Done |
+| TASK-515-02 | Screens Sidebar — Live Smoke, Docs & Closure | `TASK-515-02-Screens-Sidebar-Tests-Docs-Closure.md` | ✅ Done |
 
 ### Land order & single-writer ownership (strictly sequential — each lands green before the next opens)
 
 1. **515-01 (the fix + focused regression tests)** — **sole writer of** `core/admin/ui/navigation/sidebarConfig.ts` and `core/admin/ui/custom-screens/customScreenListModel.ts`. Removes the editor gate from `buildCustomScreenShortcutNavItems`; collapses `resolveCustomScreenSidebarShortcutState` so `status==="active" && showInSidebar` → `"visible"` (prunes the now-dead `"requires_editor_setup"` member from `CustomScreenSidebarShortcutStateV3`). Adds regression unit tests. Verifies existing tests stay green.
-2. **515-02 (closure)** — the ≥5-scenario **live playwright SMOKE**, docs, changelog **1223** (verify fresh at closure), board/Statistics rows → Done. Authors NO production code and NO `sidebarConfig.ts`/`customScreenListModel.ts` edits.
+2. **515-02 (closure)** — the ≥5-scenario **live playwright SMOKE**, docs, changelog **1224** (1223 was consumed by TASK-480; next-free at closure), board/Statistics rows → Done. Authors NO production code and NO `sidebarConfig.ts`/`customScreenListModel.ts` edits.
 
 Single-writer map: **`sidebarConfig.ts` = 515-01**, **`customScreenListModel.ts` = 515-01**, **regression unit tests = 515-01**, **live smoke + docs + changelog + board = 515-02**. Every production file has exactly one owner. `CustomScreenTable.tsx` and `CustomScreenEntriesPage.tsx` need **no source edits** (they already read `sidebarShortcutState === "visible"` — the fix flows through them), but this flow-through is NOT behavior-neutral on the entries page: because `CustomScreenEntriesPage.tsx:213` derives `isSidebarPublished` from the same corrected state, a newly-visible dashboard/collection-only screen's page-header badge flips grey "Not in sidebar" → green "Published / In sidebar" (`:641-651`) — an intended parity effect that 515-02 must assert (see Hard Invariant #6), not an invisible inheritance. If 515-01 elects to prune the union member and the TS compiler flags a narrowed switch/exhaustiveness in either consumer, that surgical follow-through is 515-01's (documented in its file), still under a single sequential land.
 
@@ -111,7 +111,7 @@ No auth/nonce/HMAC/reCAPTCHA change: no write path is added or loosened.
 
 ## Coordination / changelog pin
 
-- **Changelog (closure only): 1223** (verify it is still the next free number at closure).
+- **Changelog (closure only): 1224** (1223 was consumed by TASK-480; 1224 was the next-free at closure).
 - Board rows (parent + 2 children) and Statistics are added by the orchestrator — this task does **not** edit `_docs/_TASKS/README.md` or `_docs/_CHANGELOG/*`.
 - Isolate implementation on a separate worktree; scope commits to files this task owns.
 
@@ -123,4 +123,4 @@ No auth/nonce/HMAC/reCAPTCHA change: no write path is added or loosened.
 - `core/admin/ui/custom-screens/customScreenListModel.ts` — remove the `"requires_editor_setup"` branch from `resolveCustomScreenSidebarShortcutState` (`:66-68`) so Active+pinned → `"visible"`; prune `"requires_editor_setup"` from `CustomScreenSidebarShortcutStateV3` (`:14-17`) and repoint `CustomScreenListRow.sidebarShortcutState` (`:25`) to the base union. (515-01)
 - `tests/vitest/admin/advanced-modules.test.ts` — NEW unit test exercising `buildCustomScreenShortcutNavItems` directly (dashboard/collection-only Active+pinned → emitted; draft+pinned → dropped; unpinned → dropped), co-located beside the existing builder test at `:155` (this file already imports the builder; `admin-shell-nav.test.tsx` never imports it — it only feeds pre-built items to `SidebarNav`). (515-01)
 - `tests/vitest/ui/custom-screens-list-wave.test.tsx` (or a focused list-model test) — NEW case: Active + `showInSidebar` + read-only-binding (dashboard) screen → `resolveCustomScreenSidebarShortcutState === "visible"` + card shows "In sidebar". (515-01)
-- live playwright smoke + `_docs/*` docs + `_docs/_CHANGELOG/` (1223) + board/Statistics. (515-02)
+- live playwright smoke + `_docs/*` docs + `_docs/_CHANGELOG/` (1224) + board/Statistics. (515-02)

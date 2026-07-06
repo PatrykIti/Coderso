@@ -7,7 +7,7 @@
 **Category:** Admin UI / Navigation / Custom Screens / Bug Fix
 **Estimated Effort:** Small
 **Dependencies:** none within TASK-515 (this is the keystone; 515-02 depends on it).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
