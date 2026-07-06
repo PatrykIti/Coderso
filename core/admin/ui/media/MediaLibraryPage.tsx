@@ -813,36 +813,34 @@ export function MediaLibraryPage() {
                 </Button>
               </div>
             </div>
+            {/* Headless dropzone lives OUTSIDE the card's space-y flow (it is
+                display:none) so it keeps drag/drop + the openFileDialog handle
+                for the header "Upload" button without adding any vertical gap
+                or the large dashed drop area that pushed the list below the fold. */}
+            <UploadDropzone
+              ref={dropzoneRef}
+              onFiles={handleUploadFiles}
+              disabled={isUploading}
+              error={uploadError}
+              variant="headless"
+            />
             <Card>
               <CardContent className="space-y-8">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Upload assets</p>
-                      <p className="text-xs text-muted-foreground">
-                        New uploads use the configured media storage provider.
-                      </p>
-                    </div>
-                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Checkbox
-                        checked={openAfterUpload}
-                        onCheckedChange={(next) => updateOpenAfterUpload(next === true)}
-                      />
-                      Open details after upload
-                    </label>
+                <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-3">
+                    <span>
+                      Showing {filteredItems.length} of {items.length} assets
+                    </span>
+                    {isLoading ? <span>Loading...</span> : null}
+                    {uploadError ? <span className="text-destructive">{uploadError}</span> : null}
                   </div>
-                  <UploadDropzone
-                    ref={dropzoneRef}
-                    onFiles={handleUploadFiles}
-                    disabled={isUploading}
-                    error={uploadError}
-                  />
-                </div>
-                <div className="flex items-center justify-between gap-3 text-sm text-muted-foreground">
-                  <span>
-                    Showing {filteredItems.length} of {items.length} assets
-                  </span>
-                  {isLoading ? <span>Loading...</span> : null}
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Checkbox
+                      checked={openAfterUpload}
+                      onCheckedChange={(next) => updateOpenAfterUpload(next === true)}
+                    />
+                    Open details after upload
+                  </label>
                 </div>
                 {isLoading ? (
                   <div className="rounded-2xl border border-dashed border-border p-6 text-sm text-muted-foreground">

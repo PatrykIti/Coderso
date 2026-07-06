@@ -32,6 +32,10 @@ test("MediaLibraryPage renders upload and details drawer", () => {
   expect(html).toContain("Media Library");
   expect(html).toContain("Upload");
   expect(html).not.toContain("Upload New");
-  expect(html).toContain("Drag and drop files");
+  // The header "Upload" button drives uploads via a headless dropzone; the
+  // large dashed drop area was removed so the asset list is visible without
+  // scrolling past it.
+  expect(html).not.toContain("Drag and drop files");
+  expect(html).toContain("Open details after upload");
   expect(drawer).toContain("Media Details");
 });
