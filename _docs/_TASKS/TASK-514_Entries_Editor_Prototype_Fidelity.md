@@ -578,5 +578,8 @@ TASK-514 therefore:
 
 - Revision drawer (TASK-487-02-L02) — seam only.
 - SEO title/canonical/robots inputs (TASK-487-03-L02) — card only.
-- Public-front enforcement of `private`/`password` visibility (open question).
+- Public-front enforcement of `private`/`password` visibility — **owner-confirmed 2026-07-06:
+  deferred to its own task, `TASK-517` (Entry Visibility — Public Front Enforcement).** 514
+  persists + surfaces + respects-in-admin; 517 gates the public render path (private→auth/404,
+  password→prompt). Do NOT implement front enforcement in 514.
 - Entry-create drawer redesign / tags input (TASK-487-03-L01) — untouched here.

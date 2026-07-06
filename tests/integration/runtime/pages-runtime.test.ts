@@ -860,7 +860,15 @@ testIfDbWithOptions(
     expect(html).not.toContain("ct-private");
     expect(html).not.toContain("query-private");
     expect(html).not.toContain("form-private");
-    expect(html).not.toContain("<script>");
+    // The analytics tracking beacon (TASK-483) is a legitimate first-party inline <script>
+    // that the public render injects when analytics is enabled. Exclude it, then assert NO
+    // OTHER inline <script> leaked (the XSS / injected-script hygiene guard) — so this
+    // block-render test is deterministic whether or not ANALYTICS_BEACON_NONCE_SECRET is set.
+    const htmlWithoutAnalyticsBeacon = html.replace(
+      /<script>[\s\S]*?_analytics\/collect[\s\S]*?<\/script>/g,
+      ""
+    );
+    expect(htmlWithoutAnalyticsBeacon).not.toContain("<script>");
     expect(html).not.toContain("javascript:alert");
   },
   { timeout: dbRuntimeTimeout }

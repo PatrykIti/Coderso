@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 276 tasks
+- **To Do:** 278 tasks
 - **In Progress:** 5 tasks
 - **Done:** 2893 tasks
 
@@ -112,6 +112,8 @@ Task board for project work. Keep task files and this board in sync.
 | TASK-514 | Entries Editor — Prototype-Fidelity UI/UX | High | Large | Entry editor mirroring the Engine editor + `content_entries.visibility` (public/private/password). Contracts authored + drift-audited. Relates to TASK-487 (revisions — clean seam left). Changelog 1226; migration `0069`. 6 subtasks (01–06). |
 | TASK-515 | Screens — Admin Left-Menu Visibility Bug & Fixes | Medium | Medium | BUG (root cause live-verified): pinned non-editor custom screens are dropped from the admin sidebar by an editor-only filter in `sidebarConfig.ts` (+ list-page mirror). No schema change. Contracts authored + drift-audited. Changelog 1227. 2 subtasks (01–02). |
 | TASK-516 | Forms Editor — Prototype UI/UX, Field Fixes & Whole-Form Styling | High | Large | Forms editor to prototype fidelity + fix broken fields (phone/select/time/rating/hidden) + `FormSettings.theme` whole-form styling + `file` field type. Contracts authored + drift-audited. Relates to TASK-490 (export). Changelog 1228; no DDL (JSONB settings). 7 subtasks (01–07). |
+| TASK-517 | Entry Visibility — Public Front Enforcement | High | Medium | Follow-up to TASK-514: enforce `content_entries.visibility` on the PUBLIC render path — `private`→auth-gate (404 anon, no existence leak), `password`→HMAC-signed prompt-gate (verify vs hashed `access_password`), cache exclusion for gated bodies. Parent authored 2026-07-06. Changelog 1230; no own migration (reuses 514 model). 3 subtasks (to be broken down). |
+| TASK-518 | Seed Default Admin Role via Migration (stable id, admin-only) | High | Small | Seed the default `admin` role (`["*"]`) via a migration with a STABLE fixed id (idempotent), so a fresh `db:migrate` is complete + RBAC backup/restore (511) is cross-install consistent; point createFirstAdmin + seedAdmin at it. Owner: admin-only, NO editor/viewer (security first). Parent authored 2026-07-06. Changelog 1231; migration next-free. 2 subtasks (to be broken down). |
 | TASK-485 | Plugin Store: Real Registry & Install Pipeline | High | Large | FEATURE: the store UI is 100% mock; wire it to the real `core/store` + `installService` + `/plugins` pipeline (browse/install/update/uninstall). 5 subtasks (01–05) + 15 leaves. |
 | TASK-486 | Popups: Public Runtime Delivery & Trigger/Targeting Engine | High | Large | FEATURE: admin CRUD exists but popups never render on the site. Adds a public read endpoint + client trigger/targeting/frequency runtime + render injection. 4 subtasks (01–04) + 11 leaves. |
 | TASK-487 | Entries: Revision History & Restore | Medium | Medium | FEATURE: entry revisions are written but unviewable/unrestorable. Adds revisions/restore route+service + editor drawer (parity with Posts/Pages). 3 subtasks (01–03) + 6 leaves. |
