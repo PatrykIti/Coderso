@@ -688,6 +688,7 @@ export const contentTypes = pgTable("content_types", {
   slug: text("slug").notNull().unique(),
   schema: jsonb("schema").notNull(),
   status: text("status").notNull().default("draft"),
+  config: jsonb("config").notNull().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });

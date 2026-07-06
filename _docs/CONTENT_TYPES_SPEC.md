@@ -58,8 +58,12 @@ Typy dostepne w UI v1:
 - select (single lub multi-select)
 - media (image/file w jednym typie)
 - relation (do innego typu)
+- date (TASK-513-02) — input `type="date"`, ISO string
+- slug (TASK-513-02) — slugified text input, opcjonalny `source` (derive-from) + `editable`
 
-Pozostale typy (date/datetime, seo) planowane v1.1+ lub przez pluginy.
+`date`/`slug` mapuja sie na JSON-Schema `type:"string"` z `xFieldType:"date"|"slug"` i **bez
+`format`** (ajv `strict:true` rzuca na nieznanym `format` → typ nie do zapisania). Kolejne typy
+(datetime, seo) planowane v1.1+ lub przez pluginy.
 
 ### Schema meta (v1)
 
@@ -76,10 +80,35 @@ nie tracic typu pola:
   - `number.format/min/max/step` mapowane na JSON Schema
     `type: "integer" | "number"`, `minimum`, `maximum`, `multipleOf`,
   - `layout.tab/section/width/display` (uklad pola w edytorze wpisu),
+  - `date.includeTime` (present-only) — TASK-513-02,
+  - `slug.source` (pole źródłowe) i `slug.editable` (present-only) — TASK-513-02,
+  - `unique` (deklaratywna flaga unikalności, present-only) — TASK-513-02, NIE egzekwowana per-entry,
+  - `order` — całkowita, per-property kolejność pola (0-based). Zapisywana dla KAŻDEGO pola
+    (nie present-only), bo jsonb kanonizuje klucze obiektu; `fieldsFromSchema` re-sortuje po niej,
+    dzieki czemu kolejnosc pól przetrwa Save→reload. Schematy legacy bez `order` zachowuja
+    kolejnosc `Object.entries` (brak regresji odczytu) — TASK-513-02.
   - przyszłe: reguły mediów, richtext, walidatory.
 - `xRelationTarget` jest wspierane dla kompatybilności wstecznej.
 
 Te pola sa ignorowane przez walidator danych wpisu.
+
+## Content-type config (TASK-513-01)
+
+`content_types.config` (jsonb, DEFAULT `'{}'`, migracja `0068`) to konfiguracja na poziomie
+typu, normalizowana serwerowo (`core/services/content/contentTypeConfig.ts`, present-only +
+reject-unknown), rides na istniejacych envelope'ach `POST /content-types` +
+`PATCH /content-types/:id` (`content:write`, brak nowego endpointu/RBAC):
+
+- `singularName` / `pluralName` (string, trim ≤120) — nazwy w karcie "Type settings",
+- `draftsEnabled` (bool, default `true`; zapisywane tylko gdy `false`),
+- `versioning` (bool, default `false`; zapisywane tylko gdy `true`) — deklaratywne,
+- `permissions` (`{ [roleKey]: { read?, create?, update?, delete?, publish? } }`) — macierz
+  rola×capability, trzymane tylko `true`, puste role odrzucone. **Deklaratywne** — nie bramkuje
+  samo w sobie autoryzacji `contentEntryRoutes` (egzekwowanie = follow-up).
+
+Nieznany klucz top-level lub capability → `content_type_config_invalid` (HTTP 400); złe skalary
+fail-soft (pomijane). Typ bez własnej konfiguracji serializuje `{}` (wiersze legacy czytane
+byte-identycznie). Slug kolumny = **API ID** w edytorze (mono input).
 
 ## Admin UI rules (v1)
 

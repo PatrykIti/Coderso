@@ -32,12 +32,42 @@ export type ContentSchema = {
   properties: Record<string, ContentSchemaProperty>;
 };
 
+// Client MIRROR of the server-authoritative config shape defined in
+// core/services/content/contentTypeConfig.ts (kept in sync). The admin UI CANNOT import
+// typeService.ts (server-only `db`), so 513-03/513-04 import these types + the resolve helpers
+// below from here.
+export type ContentTypePermissionCapabilities = {
+  read?: boolean;
+  create?: boolean;
+  update?: boolean;
+  delete?: boolean;
+  publish?: boolean;
+};
+
+export type ContentTypeConfig = {
+  singularName?: string;
+  pluralName?: string;
+  draftsEnabled?: boolean; // resolved default true
+  versioning?: boolean; // resolved default false
+  permissions?: Record<string, ContentTypePermissionCapabilities>;
+};
+
+// Canonical, pure (no db/Bun) resolved-default helpers — UI-importable source for 513-03.
+export function resolveDraftsEnabled(cfg: ContentTypeConfig | undefined): boolean {
+  return cfg?.draftsEnabled ?? true;
+}
+
+export function resolveVersioning(cfg: ContentTypeConfig | undefined): boolean {
+  return cfg?.versioning ?? false;
+}
+
 export type ContentTypeSummary = {
   id: string;
   name: string;
   slug: string;
   schema: ContentSchema;
   status: "draft" | "published";
+  config?: ContentTypeConfig;
   createdAt: string;
   updatedAt: string;
   entryCount?: number;
@@ -48,6 +78,7 @@ export type ContentTypePayload = {
   slug: string;
   schema: ContentSchema;
   status?: "draft" | "published";
+  config?: ContentTypeConfig;
 };
 
 export type CollectionWorkspaceResourceKind =

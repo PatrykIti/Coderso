@@ -80,9 +80,7 @@ export function FieldsListPanel({
                 )}
               >
                 <span>{field.label}</span>
-                <span className="text-[10px] uppercase text-muted-foreground">
-                  {field.type}
-                </span>
+                <span className="text-[10px] uppercase text-muted-foreground">{field.type}</span>
               </button>
             ))
           )}
@@ -146,7 +144,27 @@ export type FieldType =
   | "boolean"
   | "select"
   | "media"
-  | "relation";
+  | "relation"
+  | "date"
+  | "slug";
+
+/**
+ * Canonical FieldType → human label map. SINGLE source of truth for the
+ * content-types module; downstream consumers (FieldEditor dropdown, 513-03
+ * fields-panel badge, 513-05 palette) read this map, never re-declare. Typed
+ * `Record<FieldType, string>` so tsc enforces a label for every union member.
+ */
+export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
+  text: "Text",
+  richtext: "Rich text",
+  number: "Number",
+  boolean: "Boolean",
+  select: "Select",
+  media: "Media",
+  relation: "Relation",
+  date: "Date",
+  slug: "Slug",
+};
 
 export type SelectOption = {
   id: string;
@@ -175,6 +193,9 @@ export type ContentField = {
   number?: NumberFieldConfig;
   relation?: { target: string; multiple?: boolean };
   media?: { multiple?: boolean; accept?: string[]; maxItems?: number };
+  date?: { includeTime?: boolean };
+  slug?: { source?: string; editable?: boolean };
+  unique?: boolean;
   defaultValue?: string;
   layout?: {
     tab?: string;
@@ -192,9 +213,7 @@ export function validateFieldName(
   const kebabCase = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
   if (!name.trim()) return "Field name is required.";
   if (!kebabCase.test(name)) return "Use kebab-case (e.g. hero-title).";
-  const isDuplicate = existingNames.some(
-    (entry) => entry.name === name && entry.id !== currentId
-  );
+  const isDuplicate = existingNames.some((entry) => entry.name === name && entry.id !== currentId);
   if (isDuplicate) return "Field name must be unique.";
   return null;
 }
@@ -215,11 +234,7 @@ export const makeUniqueFieldName = (
   const base = slugifyFieldName(value) || "field";
   let candidate = base;
   let index = 2;
-  while (
-    existingNames.some(
-      (entry) => entry.name === candidate && entry.id !== currentId
-    )
-  ) {
+  while (existingNames.some((entry) => entry.name === candidate && entry.id !== currentId)) {
     candidate = `${base}-${index}`;
     index += 1;
   }

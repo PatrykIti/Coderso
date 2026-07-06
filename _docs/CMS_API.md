@@ -2477,12 +2477,33 @@ Content type payload:
     "type": "object",
     "additionalProperties": false,
     "properties": {}
+  },
+  "config": {
+    "singularName": "Story",
+    "pluralName": "Stories",
+    "draftsEnabled": false,
+    "versioning": true,
+    "permissions": { "editor": { "read": true, "create": true } }
   }
 }
 ```
 
 `status` is `draft` or `published`. Create defaults to `draft`; existing rows
 from the TASK-202 migration were retained as `published`.
+
+`config` (TASK-513-01) is optional and rides the existing `POST /content-types` +
+`PATCH /content-types/:id` envelopes under `content:write` — no new endpoint or RBAC bucket. The
+request schema stays `additionalProperties:false` at every nesting level; every persisted key is
+re-allowlisted + normalized server-side (present-only: keys at their resolved default —
+`draftsEnabled:true`, `versioning:false`, empty names, false/empty capability rows — are dropped,
+so a default type persists `config = {}`). Unknown top-level or per-role capability keys are
+rejected with machine-readable `content_type_config_invalid` (HTTP 400); bad scalar values
+fail-soft (omitted). On `PATCH`, omitting `config` leaves the stored value untouched. The
+`permissions` matrix is DECLARATIVE only — it does not by itself change route authorization.
+Duplicate copies the source `config` through unchanged. The field `schema` supports the `date` and
+`slug` field types (TASK-513-02): both map to `type:"string"` with `xFieldType:"date"|"slug"` and
+**no `format` keyword**; authored field order persists via a per-property integer
+`xFieldConfig.order`.
 
 Duplicate payload accepts optional `name` / `slug`; without them the service
 creates a unique `Copy of ...` draft and copies schema only, never entries.

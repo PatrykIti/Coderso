@@ -301,6 +301,7 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
         slug: "house-projects",
         name: "House Projects",
         status: "published",
+        config: {},
         schema: {
           type: "object",
           additionalProperties: false,
@@ -314,6 +315,7 @@ test("resolveContentListRuntimeData omits undefined listing runtime keys", async
         slug: "house-projects",
         name: "House Projects",
         status: "published",
+        config: {},
         schema: {
           type: "object",
           additionalProperties: false,
@@ -406,6 +408,7 @@ test("resolveContentListRuntimeData grows legacy load-more cumulatively across p
         slug: "articles",
         name: "Articles",
         status: "published",
+        config: {},
         schema: {
           type: "object",
           additionalProperties: false,
@@ -489,6 +492,7 @@ test("resolveContentListRuntimeData ignores stale page params for legacy view-al
         slug: "articles",
         name: "Articles",
         status: "published",
+        config: {},
         schema: {
           type: "object",
           additionalProperties: false,
@@ -544,6 +548,7 @@ test("dangling-route guard suppresses card links when no enabled route exists (T
       slug: "articles",
       name: "Articles",
       status: "published",
+      config: {},
       schema: {
         type: "object",
         additionalProperties: false,
@@ -669,6 +674,7 @@ test("listing resolution passes the template style and emptyState through for re
         slug: "homes",
         name: "Homes",
         status: "published",
+        config: {},
         schema: { type: "object", additionalProperties: false, properties: {} },
         createdAt: new Date(),
         updatedAt: new Date(),
