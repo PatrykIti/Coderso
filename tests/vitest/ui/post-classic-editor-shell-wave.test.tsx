@@ -290,27 +290,9 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   }),
 }));
 
-vi.mock("@/ui/entries/EntryEditorHeader", () => ({
-  EntryEditorHeader: ({
-    status,
-    hasUnsavedChanges,
-    contentType,
-    entryLabel,
-  }: {
-    status: string;
-    hasUnsavedChanges: boolean;
-    contentType: string;
-    entryLabel: string;
-  }) => (
-    <div>
-      <span>{contentType}</span>
-      <span>{entryLabel}</span>
-      <span>{status}</span>
-      <span>{`unsaved:${String(hasUnsavedChanges)}`}</span>
-    </div>
-  ),
-}));
-
+// TASK-514-03: removed the inert EntryEditorHeader mock — PostClassicEditorShell
+// (this file's subject) never imported it, and EntryEditorHeader was repurposed
+// into EntryEditorHeaderActions (owned/rendered only by EntryEditor).
 vi.mock("@/ui/entries/EntryMetadataPanel", () => ({
   EntryMetadataPanel: ({
     status,

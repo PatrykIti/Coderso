@@ -786,6 +786,11 @@ export const contentEntries = pgTable(
     slug: text("slug").notNull(),
     title: text("title").notNull(),
     status: text("status").notNull().default("draft"),
+    // TASK-514-01: entry visibility (prototype Publish card). 'public' default
+    // = legacy behavior byte-identical. accessPassword is a HASHED secret,
+    // never selected into any read map (see entryService).
+    visibility: text("visibility").notNull().default("public"), // public|private|password
+    accessPassword: text("access_password"), // hashed; null unless visibility='password'
     tags: jsonb("tags").$type<string[]>().notNull().default([]),
     data: jsonb("data").notNull(),
     publishedAt: timestamp("published_at"),

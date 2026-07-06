@@ -189,6 +189,8 @@ const entryDetail = {
   title: "Project Aurora",
   slug: "project-aurora",
   status: "draft" as const,
+  visibility: "public" as const,
+  hasPassword: false,
   data: {
     headline: "Project Aurora",
     heroImage: "55555555-5555-4555-8555-555555555555",

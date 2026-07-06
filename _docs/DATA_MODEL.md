@@ -112,12 +112,43 @@ stored as data; legacy schemas without `order` keep their canonical position).
 - slug
 - title
 - status (draft|published|scheduled|archived)
+- visibility (text, NOT NULL, default `public`, enum `public|private|password`) — TASK-514
+- access_password (text, nullable) — TASK-514
 - tags (jsonb, default [])
 - data (jsonb)
 - created_at
 - updated_at
 - published_at
 - scheduled_at
+
+Entry visibility (TASK-514, migration `0069_past_leopardon`):
+
+- `visibility` is a normal read/write enum column joined to the metadata-PATCH
+  allowlist (`contentEntryMetadataSchema`, `additionalProperties:false`); an
+  unknown key or out-of-enum value is rejected `400` at the route boundary. It is
+  surfaced on `EntryDetail`/`EntryListItem` and round-trips byte-identically
+  (set → read back → equal). Legacy rows default to `public` and behave exactly
+  as before. Present-only: omitting `visibility` from a metadata PATCH leaves the
+  stored value untouched.
+- `access_password` stores an **argon2 hash** (via `hashPassword`) written only
+  when `visibility = 'password'`. It is **write-only**: never SELECTed into any
+  read/list/detail projection and never echoed in any API response or log — the
+  read side exposes only the derived boolean `hasPassword` (`access_password IS
+  NOT NULL`). Write/clear is keyed on `visibility`, not on `accessPassword`
+  presence:
+  - `password` + a supplied `accessPassword` → hash + store.
+  - `password` + omitted password + an existing hash → keep it (unchanged).
+  - `password` + omitted password + NO existing hash → reject `400
+    entry_password_required` (precondition fires before any status/publish write,
+    so a combined `{status,visibility}` PATCH fails atomically with nothing
+    committed).
+  - `public` / `private` → clear the stored hash (`access_password = NULL`,
+    `hasPassword = false`).
+- Duplicate-entry rule: a duplicated entry copies `visibility` but a `password`
+  source is downgraded to `private` and the hash is NEVER copied.
+- Public-front ENFORCEMENT of `private`/`password` on the render path is out of
+  scope here (persist + surface + respect-in-admin only) and is deferred to
+  TASK-517 (Entry Visibility — Public Front Enforcement).
 
 Visitor listing indexes (TASK-459-04):
 

@@ -17,6 +17,8 @@ const createEntry = (data: Record<string, unknown>) => ({
   title: "Entry title",
   slug: "entry-title",
   status: "published" as const,
+  visibility: "public" as const,
+  hasPassword: false,
   data,
   tags: [],
   taxonomy: undefined,

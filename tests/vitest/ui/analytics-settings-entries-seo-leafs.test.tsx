@@ -555,7 +555,6 @@ test("sessions table renders loading and empty fallbacks", () => {
 
 test("entry leaf components forward filter and entry actions", () => {
   const onSearchChange = vi.fn();
-  const onStatusChange = vi.fn();
   const onTypeChange = vi.fn();
   const onAuthorChange = vi.fn();
   const onUpdatedFromChange = vi.fn();
@@ -567,7 +566,6 @@ test("entry leaf components forward filter and entry actions", () => {
     <>
       <EntryFilters
         search="hero"
-        status="draft"
         typeValue="page"
         typeOptions={[
           { value: "page", label: "Page" },
@@ -578,8 +576,9 @@ test("entry leaf components forward filter and entry actions", () => {
         updatedFrom=""
         updatedTo=""
         advancedOpen={true}
+        view="list"
+        onViewChange={vi.fn()}
         onSearchChange={onSearchChange}
-        onStatusChange={onStatusChange}
         onTypeChange={onTypeChange}
         onAuthorChange={onAuthorChange}
         onUpdatedFromChange={onUpdatedFromChange}
@@ -595,7 +594,9 @@ test("entry leaf components forward filter and entry actions", () => {
             title: "Landing page",
             slug: "landing-page",
             status: "published",
+            visibility: "public",
             updatedAt: "2026-03-06T12:00:00.000Z",
+            contentType: { id: "ct-page", slug: "pages", name: "Page", status: "active" },
           } as never,
         ]}
         onEdit={onEdit}
@@ -607,10 +608,11 @@ test("entry leaf components forward filter and entry actions", () => {
             title: "Blog post",
             slug: "blog-post",
             status: "draft",
+            visibility: "public",
             updatedAt: "2026-03-06T12:00:00.000Z",
+            contentType: { id: "ct-post", slug: "posts", name: "Post", status: "active" },
           } as never,
         ]}
-        entryTypeSlug="posts"
         onEdit={onEdit}
       />
     </>
@@ -619,7 +621,9 @@ test("entry leaf components forward filter and entry actions", () => {
   try {
     expect(view.container.textContent).toContain("Nothing here");
     expect(view.container.textContent).toContain("Landing page");
-    expect(view.container.innerHTML).toContain("/entries/posts/entry-2");
+    // Cross-type soft badge text sourced from contentType.name (new EntryListItem contract).
+    expect(view.container.textContent).toContain("Page");
+    expect(view.container.textContent).toContain("Post");
 
     const input = view.container.querySelector("input");
     const selects = Array.from(view.container.querySelectorAll("select"));
@@ -627,19 +631,26 @@ test("entry leaf components forward filter and entry actions", () => {
 
     React.act(() => {
       setInputValue(input ?? undefined, "pricing");
-      setSelectValue(selects[0], "published");
-      setSelectValue(selects[1], "post");
-      setSelectValue(selects[2], "john");
+      // Status lives in the prototype-faithful StatusTabs, not EntryFilters;
+      // the filter bar now carries only type + author selects (type, author).
+      setSelectValue(selects[0], "post");
+      setSelectValue(selects[1], "john");
       buttons.find((button) => button.textContent?.includes("Clear"))?.click();
-      buttons.find((button) => button.className.includes("text-left"))?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Edit entry: Landing page")
+        ?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Edit entry: Blog post")
+        ?.click();
     });
 
     expect(onSearchChange).toHaveBeenCalledWith("pricing");
     expect(onTypeChange).toHaveBeenCalledWith("post");
-    expect(onStatusChange).toHaveBeenCalledWith("published");
     expect(onAuthorChange).toHaveBeenCalledWith("john");
     expect(onClear).toHaveBeenCalledOnce();
+    // Grid routes via onEdit(id) now — the AdminLink /entries/<slug>/<id> href is gone.
     expect(onEdit).toHaveBeenCalledWith("entry-1");
+    expect(onEdit).toHaveBeenCalledWith("entry-2");
   } finally {
     view.cleanup();
   }

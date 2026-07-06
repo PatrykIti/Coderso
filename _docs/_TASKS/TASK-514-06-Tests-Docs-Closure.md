@@ -7,7 +7,7 @@
 **Category:** QA / Docs / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-514-01, -02, -03, -04, -05 (all landed)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 
@@ -15,7 +15,7 @@
 
 Closure subtask for TASK-514: the combined gate run, the mandatory ≥5-scenario
 runtime smoke, the data-model doc note for the new `visibility`/`access_password`
-columns, and the changelog closure (**pinned 1226**). This subtask owns DOCS +
+columns, and the changelog closure (**pinned 1227**). This subtask owns DOCS +
 the smoke script only; it does NOT modify feature source (any regression found is
 fixed in the owning subtask's file, not here).
 
@@ -27,7 +27,7 @@ fixed in the owning subtask's file, not here).
 
 **Do NOT** edit any feature source, `_docs/_TASKS/README.md`, or
 `_docs/_CHANGELOG/*` (the orchestrator adds board rows + the changelog file).
-The changelog **number is pinned 1226** — reference it, do not allocate another.
+The changelog **number is pinned 1227** — reference it, do not allocate another.
 
 ---
 
@@ -94,7 +94,7 @@ screenshots to `_docs/_workflows/_smoke/`.
   reallocated at land time per the strict cross-task land order (likely
   `0068`/`0069` if 512/513 land first — see 514-01 §2). At closure, read the real
   filename in `core/db/migrations/` and ensure EVERY migration-number reference —
-  the `DATA_MODEL.md` note, the changelog **1226** entry, and the smoke/gate notes
+  the `DATA_MODEL.md` note, the changelog **1227** entry, and the smoke/gate notes
   (step 5 above) — uses the number 514 actually received, NOT the `0066` literal.
 - Confirm the parent + subtask files' final Status flips to ✅ Done with completion
   dates (orchestrator/owner action per board convention).
@@ -106,7 +106,7 @@ screenshots to `_docs/_workflows/_smoke/`.
 2. All ≥6 smoke scenarios pass with visible-effect assertions, light + dark, 0
    console errors, screenshots saved.
 3. `DATA_MODEL.md` note added.
-4. Changelog closure recorded under the pinned number **1226** (by orchestrator).
+4. Changelog closure recorded under the pinned number **1227** (by orchestrator).
 
 ## Deferred / Follow-ups to note in closure
 

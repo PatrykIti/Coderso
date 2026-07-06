@@ -1,16 +1,14 @@
-import { Eye, RefreshCcw, Save, Send, SlidersHorizontal } from "lucide-react";
+import { RefreshCcw, SlidersHorizontal } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -26,6 +24,7 @@ import {
   updateEntryMetadata,
   updateEntry,
   type EntryDetail,
+  type EntryVisibility,
 } from "@/services/entriesClient";
 import {
   getSiteSettings,
@@ -41,10 +40,13 @@ import {
 } from "@/services/taxonomyClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { AdminShell } from "@/ui/layouts/AdminShell";
+import { PageHeader } from "@/ui/shared/PageHeader";
+import { SectionCard } from "@/ui/shared/SectionCard";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import { RuntimePreviewDialog } from "@/ui/preview/RuntimePreviewDialog";
 
 import { EntryDeleteDialog } from "./EntryDeleteDialog";
+import { EntryEditorHeaderActions } from "./EntryEditorHeader";
 import { EntryMetadataPanel, type EntryStatus } from "./EntryMetadataPanel";
 import { getContentTypeLabels } from "./contentTypeLabels";
 import { buildEntryChecklist } from "./entryChecklist";
@@ -123,6 +125,11 @@ export function EntryEditor() {
   const [fields, setFields] = useState<ContentField[]>([]);
   const [values, setValues] = useState<Record<string, unknown>>({});
   const [status, setStatus] = useState<EntryStatus>("draft");
+  // Visibility (514-03). Two password states only: "" = untouched (keep the
+  // stored hash), a non-empty string = a newly typed password. Removing a
+  // password is done by switching visibility to public/private (514-01 §3).
+  const [visibility, setVisibility] = useState<EntryVisibility>("public");
+  const [accessPassword, setAccessPassword] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const hasUnsavedChangesRef = useRef(false);
   const setUnsavedChanges = (value: boolean) => {
@@ -176,6 +183,8 @@ export function EntryEditor() {
       setSlug(entryResult.slug);
       setValues(buildInitialValues(mappedFields, entryResult.data ?? {}));
       setStatus(entryResult.status);
+      setVisibility(entryResult.visibility);
+      setAccessPassword("");
       setUnsavedChanges(false);
       setMetadataUnsavedChanges(false);
       setScheduledAt(entryResult.scheduledAt ?? "");
@@ -466,6 +475,21 @@ export function EntryEditor() {
     setMetadataUnsavedChanges(true);
   };
 
+  const handleVisibilityChange = (nextVisibility: EntryVisibility) => {
+    setVisibility(nextVisibility);
+    // Switching away from password mode discards any typed value (removal is
+    // driven by the visibility switch, not a separate clear signal — 514-01 §3).
+    if (nextVisibility !== "password") {
+      setAccessPassword("");
+    }
+    setMetadataUnsavedChanges(true);
+  };
+
+  const handleAccessPasswordChange = (value: string) => {
+    setAccessPassword(value);
+    setMetadataUnsavedChanges(true);
+  };
+
   const handleScheduledAtChange = (value: string) => {
     setScheduledAt(value);
     setMetadataUnsavedChanges(true);
@@ -488,6 +512,13 @@ export function EntryEditor() {
 
   const handleGenerateSlug = () => {
     handleSlugChange(slugify(title));
+  };
+
+  // Revisions seam (TASK-487-02-L02): opens the future revision drawer. No-op
+  // for now so the PageHeader "History" action renders as a documented insertion
+  // point without fetching/rendering revision data.
+  const handleOpenRevisions = () => {
+    // Intentionally empty until TASK-487-02-L02 wires the EntryRevisionDrawer.
   };
 
   const handleCreateTerm = async (
@@ -563,12 +594,19 @@ export function EntryEditor() {
 
       const updated = await updateEntryMetadata(type, id, {
         status,
+        visibility,
+        // undefined = omit the key = keep the existing hash; null = clear the
+        // hash (only ever sent when leaving password mode). See 514-01 §3.
+        accessPassword:
+          visibility !== "password" ? null : accessPassword === "" ? undefined : accessPassword,
         scheduledAt: status === "scheduled" ? scheduledAtIso : null,
         taxonomy: taxonomyPayload,
         seo: { description: seoDescription },
       });
       setEntry(updated);
       setStatus(updated.status);
+      setVisibility(updated.visibility);
+      setAccessPassword("");
       setScheduledAt(updated.scheduledAt ?? "");
       setSeoDescription(updated.seo?.description ?? "");
       setSelectedCategoryId(updated.taxonomy?.category?.id ?? null);
@@ -690,259 +728,238 @@ export function EntryEditor() {
       };
     });
   }, [fields]);
-  const [activeTab, setActiveTab] = useState("content");
-  const activeTabId = tabGroups.some((tab) => tab.id === activeTab)
-    ? activeTab
-    : (tabGroups[0]?.id ?? activeTab);
+
+  // The "Content" group is re-homed into the prototype Content card (Title/Slug
+  // above its fields). Every OTHER authored group (Media, Relations, or a custom
+  // layout.tab) renders as its own stacked SectionCard — no authored grouping is
+  // ever dropped (514-03 field-grouping decision).
+  const contentGroup = tabGroups.find((group) => group.label === "Content") ?? null;
+  const otherGroups = tabGroups.filter((group) => group.label !== "Content");
+
+  const renderFieldSections = (
+    sections: Array<{ label: string | null; fields: ContentField[] }>
+  ) => (
+    <div className="flex flex-col gap-8">
+      {sections.map((section, index) => (
+        <div key={`${section.label ?? "default"}-${index}`} className="space-y-4">
+          {section.label ? (
+            <div className="flex items-center gap-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {section.label}
+              </h4>
+              <div className="h-px flex-1 bg-border" />
+            </div>
+          ) : null}
+          <div className="grid gap-4 md:grid-cols-12">
+            {section.fields.map((field) => {
+              const width = field.layout?.width ?? "full";
+              const colSpan = width === "half" ? "md:col-span-6" : "md:col-span-12";
+              const isCompact = field.layout?.display === "compact";
+              const isMissing = missingRequiredNames.has(field.name);
+              return (
+                <div
+                  key={field.id}
+                  className={cn(
+                    colSpan,
+                    "flex flex-col gap-1.5 rounded-xl border p-4",
+                    isMissing ? "border-destructive/40 bg-destructive/5" : "border-border",
+                    isCompact ? "border-dashed" : null
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold">{field.label}</p>
+                    {field.required ? (
+                      <Badge
+                        variant="outline"
+                        className={
+                          isMissing
+                            ? "border-destructive/40 bg-destructive/10 text-destructive"
+                            : undefined
+                        }
+                      >
+                        Required
+                      </Badge>
+                    ) : null}
+                  </div>
+                  {field.help ? (
+                    <p className="text-xs text-muted-foreground">{field.help}</p>
+                  ) : null}
+                  {isMissing ? (
+                    <p className="text-xs font-semibold text-destructive">
+                      Required field missing.
+                    </p>
+                  ) : null}
+                  <FieldRenderer
+                    field={field}
+                    value={values[field.name]}
+                    onChange={(value) => handleFieldChange(field.name, value)}
+                    relationTargets={relationTargets}
+                    display={field.layout?.display}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const metadataPanelProps = {
+    status,
+    onStatusChange: handleStatusChange,
+    scheduledAt,
+    onScheduledAtChange: handleScheduledAtChange,
+    visibility,
+    onVisibilityChange: handleVisibilityChange,
+    accessPassword,
+    onAccessPasswordChange: handleAccessPasswordChange,
+    hasPassword: entry?.hasPassword ?? false,
+    title,
+    slug,
+    seoPreviewUrl: seoDisplay.value,
+    seoDescription,
+    onSeoDescriptionChange: handleSeoDescriptionChange,
+    checklist,
+    taxonomy: taxonomyState,
+    onCategoryChange: handleCategoryChange,
+    onTagIdsChange: handleTagIdsChange,
+    onCreateCategory: (name: string) => handleCreateTerm("category", name),
+    onCreateTag: (name: string) => handleCreateTerm("tag", name),
+    helpItems,
+    taxonomySettingsHref,
+    author: entry?.author ?? null,
+    createdAt: entry?.createdAt,
+    updatedAt: entry?.updatedAt,
+    entryId: entry?.id,
+    onSave: handleSaveMetadata,
+    isSaving: isSavingMetadata,
+    onDelete: () => setDeleteDialogOpen(true),
+    isDeleting,
+  };
+
+  const titleSlugBlock = (
+    <div className="flex flex-col gap-4">
+      <Textarea
+        ref={titleRef}
+        value={title}
+        onChange={(event) => handleTitleChange(event.target.value)}
+        rows={1}
+        className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border-transparent bg-transparent px-0 py-1 font-display text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-0"
+        placeholder="Enter post title..."
+      />
+      <div className="flex items-center gap-3">
+        <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Slug
+        </span>
+        <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
+          <span className="text-xs text-muted-foreground">/</span>
+          <Input
+            value={slug}
+            onChange={(event) => handleSlugChange(event.target.value)}
+            className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
+          />
+          <Button type="button" variant="ghost" size="icon-xs" onClick={handleGenerateSlug}>
+            <RefreshCcw className="h-3 w-3" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
-    <AdminShell
-      activeHref="/admin/entries"
-      showSearch={false}
-      contentClassName="p-0 overflow-hidden"
-      breadcrumbs={["Content", typeLabel, entry?.title ?? editorLabel]}
-      topbarActions={
-        <div className="flex items-center gap-2">
-          <Badge variant="outline" className="text-[10px] uppercase">
-            {status}
-          </Badge>
-          {hasAnyUnsavedChanges ? <Badge variant="warning">Unsaved changes</Badge> : null}
-        </div>
-      }
-    >
-      <div className="flex h-full min-h-0">
-        <div className="flex min-h-0 flex-1 flex-col bg-muted/30">
-          <div className="sticky top-0 z-10 w-full border-b border-border bg-card/70 px-6 py-3 backdrop-blur">
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={handlePreview}
-                  disabled={isLoading}
-                >
-                  <Eye className="h-4 w-4" />
-                  Runtime preview
-                </Button>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => void handleSaveDraft()}
-                    disabled={isSaving || isLoading}
-                  >
-                    <Save className="h-4 w-4" />
-                    {isSaving ? "Saving..." : "Save draft"}
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    onClick={handlePublish}
-                    disabled={isPublishing || isLoading}
-                  >
-                    <Send className="h-4 w-4" />
-                    {status === "published" ? "Update" : "Publish"}
-                  </Button>
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 lg:hidden">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => setDetailsOpen(true)}
-                >
-                  <SlidersHorizontal className="h-4 w-4" />
-                  Details
-                </Button>
-              </div>
-            </div>
-          </div>
-          <ScrollArea className="flex-1 min-h-0">
-            <div className="mx-auto flex max-w-4xl flex-col gap-8 px-10 py-10">
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertTitle>Unable to load entry</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
-              {remoteUpdatePending ? (
-                <Alert>
-                  <AlertTitle>Updated in another tab</AlertTitle>
-                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span>New changes are available. Refresh to load the latest version.</span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => refreshEntry({ allowUnsaved: true })}
-                    >
-                      Refresh
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              {hasAnyUnsavedChanges ? (
-                <Alert>
-                  <AlertTitle>Unsaved changes</AlertTitle>
-                  <AlertDescription>
-                    Save the entry content or metadata to keep your edits.
-                  </AlertDescription>
-                </Alert>
-              ) : null}
-              <div className="space-y-4 rounded-2xl border border-border bg-card p-5 shadow-card">
-                <Textarea
-                  ref={titleRef}
-                  value={title}
-                  onChange={(event) => handleTitleChange(event.target.value)}
-                  rows={1}
-                  className="min-h-0 h-auto resize-none overflow-hidden rounded-lg border-transparent bg-transparent px-0 py-1 font-display text-3xl font-semibold leading-tight tracking-tight focus-visible:ring-0"
-                  placeholder="Enter post title..."
-                />
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Slug
-                  </span>
-                  <div className="flex flex-1 items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2">
-                    <span className="text-xs text-muted-foreground">/</span>
-                    <Input
-                      value={slug}
-                      onChange={(event) => handleSlugChange(event.target.value)}
-                      className="h-auto border-0 bg-transparent px-0 py-0 text-sm font-mono focus-visible:ring-0"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      onClick={handleGenerateSlug}
-                    >
-                      <RefreshCcw className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+    <AdminShell activeHref="/admin/entries" showSearch={false}>
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <PageHeader
+          breadcrumbs={[{ label: "Entries", href: "/entries" }, { label: typeLabel }]}
+          title={editorLabel}
+          description="Compose and publish an entry in this content type."
+          actions={
+            <>
+              <EntryEditorHeaderActions
+                status={status}
+                hasUnsavedChanges={hasAnyUnsavedChanges}
+                isLoading={isLoading}
+                isSaving={isSaving}
+                isPublishing={isPublishing}
+                onPreview={handlePreview}
+                onSaveDraft={() => void handleSaveDraft()}
+                onPublish={handlePublish}
+                onHistory={handleOpenRevisions}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 lg:hidden"
+                onClick={() => setDetailsOpen(true)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                Details
+              </Button>
+            </>
+          }
+        />
 
-              {isLoading ? (
-                <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                  Loading entry fields...
-                </div>
-              ) : tabGroups.length === 0 ? (
-                <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                  This content type has no fields yet.
-                </div>
-              ) : (
-                <Tabs value={activeTabId} onValueChange={setActiveTab} className="space-y-6">
-                  <TabsList variant="line">
-                    {tabGroups.map((tab) => (
-                      <TabsTrigger key={tab.id} value={tab.id}>
-                        {tab.label}
-                      </TabsTrigger>
-                    ))}
-                  </TabsList>
-                  {tabGroups.map((tab) => (
-                    <TabsContent key={tab.id} value={tab.id} className="space-y-8">
-                      {tab.sections.map((section, index) => (
-                        <div
-                          key={`${tab.id}-${section.label ?? "default"}-${index}`}
-                          className="space-y-4"
-                        >
-                          {section.label ? (
-                            <div className="flex items-center gap-3">
-                              <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                {section.label}
-                              </h4>
-                              <div className="h-px flex-1 bg-border" />
-                            </div>
-                          ) : null}
-                          <div className="grid gap-4 md:grid-cols-12">
-                            {section.fields.map((field) => {
-                              const width = field.layout?.width ?? "full";
-                              const colSpan = width === "half" ? "md:col-span-6" : "md:col-span-12";
-                              const isCompact = field.layout?.display === "compact";
-                              const isMissing = missingRequiredNames.has(field.name);
-                              const requiredBadgeClass = isMissing
-                                ? "border-destructive/40 bg-destructive/10 text-destructive"
-                                : undefined;
-                              return (
-                                <div key={field.id} className={colSpan}>
-                                  <Card
-                                    className={[
-                                      isCompact ? "border-dashed" : "",
-                                      isMissing ? "border-destructive/40 bg-destructive/5" : "",
-                                    ]
-                                      .filter(Boolean)
-                                      .join(" ")}
-                                  >
-                                    <CardHeader
-                                      className={isCompact ? "space-y-1 pb-3" : "space-y-2"}
-                                    >
-                                      <div className="flex items-center justify-between gap-3">
-                                        <CardTitle className="text-base">{field.label}</CardTitle>
-                                        {field.required ? (
-                                          <Badge variant="outline" className={requiredBadgeClass}>
-                                            Required
-                                          </Badge>
-                                        ) : null}
-                                      </div>
-                                      {field.help ? (
-                                        <CardDescription>{field.help}</CardDescription>
-                                      ) : null}
-                                      {isMissing ? (
-                                        <p className="text-xs font-semibold text-destructive">
-                                          Required field missing.
-                                        </p>
-                                      ) : null}
-                                    </CardHeader>
-                                    <CardContent className={isCompact ? "pt-0" : undefined}>
-                                      <FieldRenderer
-                                        field={field}
-                                        value={values[field.name]}
-                                        onChange={(value) => handleFieldChange(field.name, value)}
-                                        relationTargets={relationTargets}
-                                        display={field.layout?.display}
-                                      />
-                                    </CardContent>
-                                  </Card>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </TabsContent>
-                  ))}
-                </Tabs>
-              )}
-            </div>
-          </ScrollArea>
+        {error ? (
+          <Alert variant="destructive">
+            <AlertTitle>Unable to load entry</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
+        {remoteUpdatePending ? (
+          <Alert>
+            <AlertTitle>Updated in another tab</AlertTitle>
+            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span>New changes are available. Refresh to load the latest version.</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refreshEntry({ allowUnsaved: true })}
+              >
+                Refresh
+              </Button>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {hasAnyUnsavedChanges ? (
+          <Alert>
+            <AlertTitle>Unsaved changes</AlertTitle>
+            <AlertDescription>
+              Save the entry content or metadata to keep your edits.
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
+        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+          <div className="flex flex-col gap-6">
+            <SectionCard title="Content" description="The main body of this entry.">
+              <div className="flex flex-col gap-6">
+                {titleSlugBlock}
+                {isLoading ? (
+                  <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                    Loading entry fields...
+                  </div>
+                ) : contentGroup ? (
+                  renderFieldSections(contentGroup.sections)
+                ) : tabGroups.length === 0 ? (
+                  <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                    This content type has no fields yet.
+                  </div>
+                ) : null}
+              </div>
+            </SectionCard>
+            {!isLoading
+              ? otherGroups.map((group) => (
+                  <SectionCard key={group.id} title={group.label}>
+                    {renderFieldSections(group.sections)}
+                  </SectionCard>
+                ))
+              : null}
+          </div>
+          <div className="hidden lg:block">
+            <EntryMetadataPanel {...metadataPanelProps} scrollable={false} />
+          </div>
         </div>
-        <aside className="hidden min-h-0 w-96 shrink-0 overflow-hidden border-l bg-muted/30 lg:flex lg:flex-col">
-          <EntryMetadataPanel
-            status={status}
-            onStatusChange={handleStatusChange}
-            scheduledAt={scheduledAt}
-            onScheduledAtChange={handleScheduledAtChange}
-            title={title}
-            slug={slug}
-            seoPreviewUrl={seoDisplay.value}
-            seoDescription={seoDescription}
-            onSeoDescriptionChange={handleSeoDescriptionChange}
-            checklist={checklist}
-            taxonomy={taxonomyState}
-            onCategoryChange={handleCategoryChange}
-            onTagIdsChange={handleTagIdsChange}
-            onCreateCategory={(name) => handleCreateTerm("category", name)}
-            onCreateTag={(name) => handleCreateTerm("tag", name)}
-            helpItems={helpItems}
-            taxonomySettingsHref={taxonomySettingsHref}
-            author={entry?.author ?? null}
-            onSave={handleSaveMetadata}
-            isSaving={isSavingMetadata}
-            onDelete={() => setDeleteDialogOpen(true)}
-            isDeleting={isDeleting}
-          />
-        </aside>
       </div>
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
         <SheetContent side="right" className="w-full gap-0 overflow-hidden p-0 sm:max-w-md">
@@ -951,33 +968,14 @@ export function EntryEditor() {
             Edit status, SEO, and metadata for this entry.
           </SheetDescription>
           <div className="min-h-0 flex-1">
-            <EntryMetadataPanel
-              status={status}
-              onStatusChange={handleStatusChange}
-              scheduledAt={scheduledAt}
-              onScheduledAtChange={handleScheduledAtChange}
-              title={title}
-              slug={slug}
-              seoPreviewUrl={seoDisplay.value}
-              seoDescription={seoDescription}
-              onSeoDescriptionChange={handleSeoDescriptionChange}
-              checklist={checklist}
-              taxonomy={taxonomyState}
-              onCategoryChange={handleCategoryChange}
-              onTagIdsChange={handleTagIdsChange}
-              onCreateCategory={(name) => handleCreateTerm("category", name)}
-              onCreateTag={(name) => handleCreateTerm("tag", name)}
-              helpItems={helpItems}
-              taxonomySettingsHref={taxonomySettingsHref}
-              author={entry?.author ?? null}
-              onSave={handleSaveMetadata}
-              isSaving={isSavingMetadata}
-              onDelete={() => setDeleteDialogOpen(true)}
-              isDeleting={isDeleting}
-            />
+            <EntryMetadataPanel {...metadataPanelProps} />
           </div>
         </SheetContent>
       </Sheet>
+      {/* TASK-487-02-L02 mount point: the <EntryRevisionDrawer> (a Sheet sibling
+          of the delete dialog) plugs in here, opened by the PageHeader "History"
+          action (handleOpenRevisions). 514-03 provides the trigger + seam only —
+          no revision fetch/render. */}
       <EntryDeleteDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {

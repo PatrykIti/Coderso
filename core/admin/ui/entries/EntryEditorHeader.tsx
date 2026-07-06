@@ -1,94 +1,81 @@
-import { Eye, Send } from "lucide-react";
+import { Eye, History, Save, Send } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import type { EntryStatus } from "./EntryMetadataPanel";
 
-const statusLabels: Record<EntryStatus, string> = {
-  draft: "Draft",
-  published: "Published",
-  scheduled: "Scheduled",
-  archived: "Archived",
-};
-
-const statusStyles: Record<EntryStatus, string> = {
-  published: "border-emerald-500/30 bg-emerald-500/10 text-emerald-600",
-  draft: "border-amber-500/30 bg-amber-500/10 text-amber-700",
-  scheduled: "border-blue-500/30 bg-blue-500/10 text-blue-600",
-  archived: "border-slate-500/30 bg-slate-500/10 text-slate-600",
-};
-
-const statusDotStyles: Record<EntryStatus, string> = {
-  published: "bg-emerald-500",
-  draft: "bg-amber-500",
-  scheduled: "bg-blue-500",
-  archived: "bg-slate-500",
-};
-
-type EntryEditorHeaderProps = {
-  status: EntryStatus;
-  hasUnsavedChanges: boolean;
-  contentType: string;
-  entryLabel: string;
-};
-
-export function EntryEditorHeader({
-  status,
-  hasUnsavedChanges,
-  contentType,
-  entryLabel,
-}: EntryEditorHeaderProps) {
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-        <span>Content</span>
-        <span className="text-muted-foreground/50">/</span>
-        <span>{contentType}</span>
-        <span className="text-muted-foreground/50">/</span>
-        <span className="font-medium text-foreground">{entryLabel}</span>
-      </nav>
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className={`gap-1.5 ${statusStyles[status]}`}>
-          <span className={`h-1.5 w-1.5 rounded-full ${statusDotStyles[status]}`} />
-          {statusLabels[status]}
-        </Badge>
-        {hasUnsavedChanges ? (
-          <Badge
-            variant="outline"
-            className="border-rose-500/30 bg-rose-500/10 text-rose-600"
-          >
-            Unsaved changes
-          </Badge>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
+/**
+ * TASK-514-03: repurposed from the orphaned breadcrumb/badge header into the
+ * in-page `PageHeader` actions cluster (prototype fidelity — actions live in the
+ * PageHeader, not the outer AdminShell topbar). Renders the status + unsaved
+ * badges alongside Runtime preview / History (revisions seam) / Save draft /
+ * Publish. `EntryEditor` mounts this as the `PageHeader actions` node.
+ */
 type EntryEditorHeaderActionsProps = {
   status: EntryStatus;
+  hasUnsavedChanges: boolean;
+  isLoading?: boolean;
+  isSaving?: boolean;
+  isPublishing?: boolean;
   onPreview: () => void;
+  onSaveDraft: () => void;
   onPublish: () => void;
+  // Revisions seam (TASK-487-02-L02): opens the future revision drawer. Optional
+  // so the button can render as a documented, non-functional insertion point.
+  onHistory?: () => void;
 };
 
 export function EntryEditorHeaderActions({
   status,
+  hasUnsavedChanges,
+  isLoading,
+  isSaving,
+  isPublishing,
   onPreview,
+  onSaveDraft,
   onPublish,
+  onHistory,
 }: EntryEditorHeaderActionsProps) {
-  const primaryLabel = status === "published" ? "Update" : "Publish";
-
   return (
-    <div className="flex items-center gap-3">
-      <Button variant="ghost" size="sm" className="gap-2" onClick={onPreview}>
+    <>
+      <StatusBadge status={status} />
+      {hasUnsavedChanges ? <Badge variant="warning">Unsaved changes</Badge> : null}
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-2"
+        onClick={onPreview}
+        disabled={isLoading}
+      >
         <Eye className="h-4 w-4" />
-        Preview
+        Runtime preview
       </Button>
-      <Button size="sm" className="gap-2" onClick={onPublish}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="gap-2"
+        onClick={onHistory}
+        title="Revision history (coming soon)"
+      >
+        <History className="h-4 w-4" />
+        History
+      </Button>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="gap-2"
+        onClick={onSaveDraft}
+        disabled={isSaving || isLoading}
+      >
+        <Save className="h-4 w-4" />
+        {isSaving ? "Saving..." : "Save draft"}
+      </Button>
+      <Button size="sm" className="gap-2" onClick={onPublish} disabled={isPublishing || isLoading}>
         <Send className="h-4 w-4" />
-        {primaryLabel}
+        {status === "published" ? "Update" : "Publish"}
       </Button>
-    </div>
+    </>
   );
 }

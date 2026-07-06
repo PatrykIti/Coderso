@@ -1,8 +1,17 @@
-import { CalendarDays, Filter, Layers, Search, SlidersHorizontal, User } from "lucide-react";
+import {
+  CalendarDays,
+  Layers,
+  LayoutGrid,
+  List,
+  Search,
+  SlidersHorizontal,
+  User,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -18,7 +27,6 @@ type EntryFilterOption = {
 
 type EntryFiltersProps = {
   search: string;
-  status: string;
   typeValue: string;
   typeOptions: EntryFilterOption[];
   author: string;
@@ -26,8 +34,9 @@ type EntryFiltersProps = {
   updatedFrom: string;
   updatedTo: string;
   advancedOpen: boolean;
+  view: "list" | "grid";
+  onViewChange: (view: "list" | "grid") => void;
   onSearchChange: (value: string) => void;
-  onStatusChange: (value: string) => void;
   onTypeChange: (value: string) => void;
   onAuthorChange: (value: string) => void;
   onUpdatedFromChange: (value: string) => void;
@@ -38,7 +47,6 @@ type EntryFiltersProps = {
 
 export function EntryFilters({
   search,
-  status,
   typeValue,
   typeOptions,
   author,
@@ -46,8 +54,9 @@ export function EntryFilters({
   updatedFrom,
   updatedTo,
   advancedOpen,
+  view,
+  onViewChange,
   onSearchChange,
-  onStatusChange,
   onTypeChange,
   onAuthorChange,
   onUpdatedFromChange,
@@ -73,19 +82,6 @@ export function EntryFilters({
               className="pl-9"
             />
           </div>
-          <Select value={status} onValueChange={onStatusChange}>
-            <SelectTrigger className="h-8 w-full sm:w-[150px]">
-              <Filter className="h-3 w-3 text-muted-foreground" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Status: All</SelectItem>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="scheduled">Scheduled</SelectItem>
-              <SelectItem value="archived">Archived</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={typeValue} onValueChange={onTypeChange}>
             <SelectTrigger className="h-8 w-full sm:w-[180px]">
               <Layers className="h-3 w-3 text-muted-foreground" />
@@ -110,6 +106,32 @@ export function EntryFilters({
           <Button variant="ghost" size="sm" onClick={onClear}>
             Clear
           </Button>
+          <div className="ml-auto inline-flex items-center rounded-xl border border-border bg-card p-0.5 shadow-soft">
+            <button
+              type="button"
+              onClick={() => onViewChange("list")}
+              aria-label="List view"
+              aria-pressed={view === "list"}
+              className={cn(
+                "flex size-7 items-center justify-center rounded-lg transition-colors",
+                view === "list" ? "bg-muted text-foreground" : "text-muted-foreground"
+              )}
+            >
+              <List className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewChange("grid")}
+              aria-label="Grid view"
+              aria-pressed={view === "grid"}
+              className={cn(
+                "flex size-7 items-center justify-center rounded-lg transition-colors",
+                view === "grid" ? "bg-muted text-foreground" : "text-muted-foreground"
+              )}
+            >
+              <LayoutGrid className="size-4" />
+            </button>
+          </div>
         </div>
       </div>
       <CollapsibleContent className="pt-3">

@@ -7,7 +7,7 @@
 **Category:** Services / Content / Schema / Migration
 **Estimated Effort:** Medium
 **Dependencies:** none (foundation of TASK-514; 514-02..05 consume it)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 

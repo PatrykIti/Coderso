@@ -506,6 +506,8 @@ const createEntry = (overrides: Partial<EntrySummary> = {}): EntrySummary => ({
   title: "Sample Product",
   slug: "sample-product",
   status: "published",
+  visibility: "public",
+  hasPassword: false,
   data: {},
   createdAt: "2026-05-10T10:00:00.000Z",
   updatedAt: "2026-05-10T10:00:00.000Z",

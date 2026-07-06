@@ -15,6 +15,8 @@ const entries: EntrySummary[] = [
     title: "Aurora",
     slug: "aurora",
     status: "draft",
+    visibility: "public",
+    hasPassword: false,
     data: {
       projectStatus: "planned",
       featured: false,
@@ -28,6 +30,8 @@ const entries: EntrySummary[] = [
     title: "Borealis",
     slug: "borealis",
     status: "published",
+    visibility: "public",
+    hasPassword: false,
     data: {
       projectStatus: "active",
       featured: true,

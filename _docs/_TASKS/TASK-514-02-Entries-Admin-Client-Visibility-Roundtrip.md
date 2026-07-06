@@ -7,7 +7,7 @@
 **Category:** Admin Client / Cache
 **Estimated Effort:** Small
 **Dependencies:** TASK-514-01 (server returns `visibility` + `hasPassword` from **all three** read projections — per-type `entryListSelection`/`mapEntryListSelectionRow` at `entryService.ts:435-494`, the all-entries `listEntriesWithContentTypes` inline select+map at `entryService.ts:542-600`, and `getEntry` at `entryService.ts:602-664` — and accepts them in the metadata payload). See "Hard dependency on 514-01 read-path coverage" below.
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 

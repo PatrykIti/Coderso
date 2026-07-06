@@ -53,7 +53,7 @@ const readDomainField = (error: unknown) =>
 
 const maybeFieldDetails = (field?: string) => (field ? { field } : undefined);
 
-const mapEntryMetadataError = (error: unknown) => {
+export const mapEntryMetadataError = (error: unknown) => {
   if (!(error instanceof Error)) return null;
   switch (error.message) {
     case "scheduled_at_invalid":
@@ -70,6 +70,12 @@ const mapEntryMetadataError = (error: unknown) => {
       );
     case "auth_required":
       return new ApiError("auth_required", "Authentication is required.", 401);
+    case "entry_password_required":
+      return new ApiError(
+        "entry_password_required",
+        "A password is required for password-protected entries.",
+        400
+      );
     case "taxonomy_category_disabled":
       return new ApiError(
         "taxonomy_category_disabled",
@@ -242,6 +248,8 @@ export function registerContentEntryRoutes(router: Router, deps: ContentEntryRou
         const body = ctx.body as {
           status?: "draft" | "published" | "scheduled" | "archived";
           scheduledAt?: string | null;
+          visibility?: "public" | "private" | "password";
+          accessPassword?: string | null;
           tags?: string[];
           taxonomy?: {
             categoryId?: string | null;
@@ -271,6 +279,8 @@ export function registerContentEntryRoutes(router: Router, deps: ContentEntryRou
             {
               status: body.status,
               scheduledAt,
+              visibility: body.visibility,
+              accessPassword: body.accessPassword,
               tags: body.tags,
               taxonomy: body.taxonomy,
               seo: body.seo,

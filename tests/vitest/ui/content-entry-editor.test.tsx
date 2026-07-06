@@ -13,17 +13,19 @@ test("EntryEditor renders main panels", () => {
   expect(html).toContain("Runtime preview");
 });
 
-test("EntryEditor lets the metadata panel own right-panel scrolling", () => {
+test("EntryEditor mounts the metadata panel in a non-scrolling desktop column", () => {
+  // TASK-514-03: prototype fidelity — the right column is an in-grid 320px track
+  // of stacked SectionCards flowing with the page (no fixed-width <aside>, no
+  // inner ScrollArea). The desktop mount passes scrollable={false}.
   const html = renderAdminUi(<EntryEditor />);
 
-  expect(html).toMatch(
-    /<aside[^>]*class="[^"]*min-h-0[^"]*overflow-hidden[^"]*"[^>]*><div data-entry-metadata-panel="true"/
-  );
+  // The 320px column lives inside the prototype grid, not a legacy fixed aside.
+  expect(html).toContain("lg:grid-cols-[1fr_320px]");
+  // The panel renders (data attribute from EntryMetadataPanel) ...
+  expect(html).toContain('data-entry-metadata-panel="true"');
+  // ... and, with scrollable={false}, its cards render directly (no ScrollArea
+  // wrapper) — the panel body div follows the panel root immediately.
   expect(html).toContain(
-    'data-entry-metadata-panel="true" class="flex h-full min-h-0 flex-col overflow-hidden"'
+    'data-entry-metadata-panel="true" class="flex h-full min-h-0 flex-col overflow-hidden"><div class="space-y-6 px-6 py-6"'
   );
-  expect(html).toContain(
-    'data-slot="scroll-area" class="relative min-h-0 flex-1 px-6 py-6"'
-  );
-  expect(html).toContain('class="shrink-0 border-t px-6 py-4"');
 });
