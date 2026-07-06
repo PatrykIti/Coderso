@@ -7,7 +7,7 @@
 **Category:** Admin UI / Navigation / Custom Screens / QA / Docs
 **Estimated Effort:** Small
 **Dependencies:** TASK-515-01 (must be landed green — this subtask verifies its runtime effect, does NOT author production code).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -18,7 +18,7 @@ Prove the sidebar-visibility fix works end-to-end against the running app with a
 ## Owned files (single writer)
 
 - `_docs/ADMIN_NAVIGATION.md` (the canonical admin-navigation spec — there is **no** `_docs/CUSTOM_SCREENS.md`; the custom-screen sidebar contract already lives here at **lines 10-14** under "Active custom screens can also expose direct shortcuts") — affirm/extend the sidebar-publication contract (see Docs below). **Root-cause note:** ADMIN_NAVIGATION.md:10-14 already documents the correct post-fix contract (`status=active` AND `showInSidebar=true`, target `/entries`, label `sidebarLabel ?? name`, no editor-capability requirement) — the CODE (`sidebarConfig.ts` + `customScreenListModel.ts`) had drifted from its own documented contract, so 515-02's doc work is an **affirmation + nuance addition**, not net-new documentation.
-- `_docs/_CHANGELOG/1223-2026-…-task-515-screens-admin-menu-visibility-fix.md` — **next-free number is 1223** (`_docs/_CHANGELOG/README.md:32` says "Use 1223 for the next changelog entry"; highest existing entry is 1222 = TASK-484). This subtask (closure) is the **single owner of the changelog number**; the parent `TASK-515_Screens_Admin_Menu_Visibility_Fix.md` is now consistent at **1223** (lines 69 / 114 / 126). Re-verify the number is still free at closure (feature/tasks has other in-flight work — if 1223 has been consumed, take the then-current next-free and update this pin AND the parent's lines 69/114/126 to match).
+- `_docs/_CHANGELOG/1224-2026-07-06-task-515-screens-admin-menu-visibility-fix.md` — **actual number used is 1224** (the originally-pinned 1223 was consumed by TASK-480 Dashboard Widgets; at closure the next-free was 1224 — `_docs/_CHANGELOG/README.md:32` "Use 1224 for the next changelog entry", highest existing entry was 1223). This subtask (closure) is the **single owner of the changelog number**; the parent `TASK-515_Screens_Admin_Menu_Visibility_Fix.md` was updated to **1224** to match.
 - `_docs/_TASKS/README.md` board rows + Statistics (**parent + 2 children To Do → Done at closure**) — *if the orchestrator has not already added them; do not duplicate rows.*
 - smoke screenshots under `_docs/_workflows/_smoke/` (`wf515-*.png`).
 
@@ -47,7 +47,7 @@ Capture `wf515-admin-sidebar-before.png` / `wf515-admin-sidebar-after.png` and a
 ## Docs
 
 - `_docs/ADMIN_NAVIGATION.md` (lines 10-14): the existing bullets **already** state the correct contract — a screen appears in the admin left main menu iff **`status === "active"` AND `showInSidebar === true`** (source `custom_screens`, target `/admin/advanced/custom-screens/:screenId/entries`, label `sidebarLabel ?? name`), with **no editor-capability requirement** (any mode: collection-only, dashboard, editor). Confirm these lines are correct/unchanged, then **add the nuances**: (a) draft+pinned is a valid "will publish on activation" state (hidden while Draft, appears on activation with no manual reload), and (b) record that the previously-implied `"requires_editor_setup"` gate was removed as an intentional simplification (the code had over-filtered against this already-documented contract). Do NOT create `_docs/CUSTOM_SCREENS.md` — that file does not exist and the canonical home is ADMIN_NAVIGATION.md.
-- Changelog `1223`: list TASK-515 + both leaves (515-01/02), the root cause (editor-capability gate over-filtering the `showInSidebar` intent in `sidebarConfig.ts` + `customScreenListModel.ts`, contradicting the already-documented ADMIN_NAVIGATION.md:10-14 contract), the file:line evidence, and the minimal fix. Note NO schema/route/RBAC/migration change.
+- Changelog `1224`: list TASK-515 + both leaves (515-01/02), the root cause (editor-capability gate over-filtering the `showInSidebar` intent in `sidebarConfig.ts` + `customScreenListModel.ts`, contradicting the already-documented ADMIN_NAVIGATION.md:10-14 contract), the file:line evidence, and the minimal fix. Note NO schema/route/RBAC/migration change.
 
 ## Board
 
@@ -65,4 +65,4 @@ Capture `wf515-admin-sidebar-before.png` / `wf515-admin-sidebar-after.png` and a
 
 ## Definition of Done
 
-- Smoke 5/5 green with evidence; `_docs/ADMIN_NAVIGATION.md` affirmed/extended + changelog 1223 written (re-verified next-free); board + Statistics → Done; all gates green.
+- Smoke 5/5 green with evidence; `_docs/ADMIN_NAVIGATION.md` affirmed/extended + changelog 1224 written (re-verified next-free); board + Statistics → Done; all gates green.

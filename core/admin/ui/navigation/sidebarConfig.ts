@@ -130,27 +130,15 @@ export const buildDefaultNavSections = (
 
 export const defaultNavSections: NavSection[] = buildDefaultNavSections();
 
-const supportsDedicatedCustomScreenEditor = (screen: CustomScreenShortcutRecord) => {
-  if (typeof screen.capabilities?.supportsDedicatedEditor === "boolean") {
-    return screen.capabilities.supportsDedicatedEditor;
-  }
-  const hasBlocks = Array.isArray(screen.blocks) && screen.blocks.length > 0;
-  const hasWritableBinding =
-    Array.isArray(screen.bindings) &&
-    screen.bindings.some((binding) => binding.mode === "write" || binding.mode === "readwrite");
-  return hasBlocks && hasWritableBinding;
-};
-
 export const buildCustomScreenShortcutNavItems = (
   screens: CustomScreenShortcutRecord[]
 ): NavItem[] =>
   screens
-    .filter(
-      (screen) =>
-        screen.status === "active" &&
-        screen.showInSidebar === true &&
-        supportsDedicatedCustomScreenEditor(screen)
-    )
+    // A pinned Active screen ALWAYS gets a sidebar shortcut, regardless of editor
+    // capability. The shortcut targets the entries LIST view, which is valid for
+    // every screen mode (collection-only / dashboard / editor); the per-entry
+    // dedicated editor is a separate concern handled on the entries page.
+    .filter((screen) => screen.status === "active" && screen.showInSidebar === true)
     .map((screen) => ({
       label: screen.sidebarLabel?.trim() || screen.name,
       href: `/admin/advanced/custom-screens/${encodeURIComponent(screen.id)}/entries`,

@@ -214,6 +214,128 @@ test("buildCustomScreenShortcutNavItems returns only active sidebar screens", ()
   expect(items[0]?.href).toBe("/admin/advanced/custom-screens/screen-b/entries");
 });
 
+test("buildCustomScreenShortcutNavItems includes pinned Active screens of every mode", () => {
+  const items = buildCustomScreenShortcutNavItems([
+    {
+      // (a) Active + pinned + dashboard: no dedicated editor, read-only binding
+      id: "screen-dashboard",
+      name: "Dash Screen",
+      contentTypeId: "type-1",
+      status: "active",
+      collectionRole: null,
+      compositionKey: null,
+      showInSidebar: true,
+      sidebarLabel: "  Dashboard  ",
+      schemaVersion: 1,
+      capabilities: { supportsDedicatedEditor: false },
+      blocks: [{ id: "field-1", type: "screen-field-value", data: {} }],
+      bindings: [
+        {
+          id: "binding-1",
+          widgetId: "field-1",
+          propPath: "value",
+          field: "title",
+          mode: "read",
+        },
+      ],
+      createdAt: "2026-03-06T00:00:00.000Z",
+      updatedAt: "2026-03-06T00:00:00.000Z",
+    },
+    {
+      // (b) Active + pinned + collection-only: no blocks/bindings, no editor
+      id: "screen-collection",
+      name: "Collection",
+      contentTypeId: "type-1",
+      status: "active",
+      collectionRole: null,
+      compositionKey: null,
+      showInSidebar: true,
+      sidebarLabel: null,
+      schemaVersion: 1,
+      capabilities: { supportsDedicatedEditor: false },
+      blocks: [],
+      bindings: [],
+      createdAt: "2026-03-06T00:00:00.000Z",
+      updatedAt: "2026-03-06T00:00:00.000Z",
+    },
+    {
+      // (c) Active + pinned + editor: regression baseline (was emitted before)
+      id: "screen-editor",
+      name: "Editor Screen",
+      contentTypeId: "type-1",
+      status: "active",
+      collectionRole: null,
+      compositionKey: null,
+      showInSidebar: true,
+      sidebarLabel: "Editor",
+      schemaVersion: 1,
+      capabilities: { supportsDedicatedEditor: true },
+      blocks: [{ id: "field-2", type: "screen-field-value", data: {} }],
+      bindings: [
+        {
+          id: "binding-2",
+          widgetId: "field-2",
+          propPath: "value",
+          field: "title",
+          mode: "readwrite",
+        },
+      ],
+      createdAt: "2026-03-06T00:00:00.000Z",
+      updatedAt: "2026-03-06T00:00:00.000Z",
+    },
+    {
+      // (d) Active but not pinned -> dropped
+      id: "screen-unpinned",
+      name: "Unpinned",
+      contentTypeId: "type-2",
+      status: "active",
+      collectionRole: null,
+      compositionKey: null,
+      showInSidebar: false,
+      sidebarLabel: null,
+      schemaVersion: 1,
+      blocks: [],
+      bindings: [],
+      createdAt: "2026-03-06T00:00:00.000Z",
+      updatedAt: "2026-03-06T00:00:00.000Z",
+    },
+    {
+      // (e) draft + pinned -> dropped (unpublished)
+      id: "screen-draft",
+      name: "Draft Screen",
+      contentTypeId: "type-2",
+      status: "draft",
+      collectionRole: null,
+      compositionKey: null,
+      showInSidebar: true,
+      sidebarLabel: "Draft",
+      schemaVersion: 1,
+      capabilities: { supportsDedicatedEditor: true },
+      blocks: [{ id: "field-3", type: "screen-field-value", data: {} }],
+      bindings: [
+        {
+          id: "binding-3",
+          widgetId: "field-3",
+          propPath: "value",
+          field: "title",
+          mode: "readwrite",
+        },
+      ],
+      createdAt: "2026-03-06T00:00:00.000Z",
+      updatedAt: "2026-03-06T00:00:00.000Z",
+    },
+  ]);
+
+  expect(items).toHaveLength(3);
+  // Labels honor sidebarLabel?.trim() || name and are sorted by localeCompare.
+  expect(items.map((item) => item.label)).toEqual(["Collection", "Dashboard", "Editor"]);
+  expect(items.map((item) => item.href)).toEqual([
+    "/admin/advanced/custom-screens/screen-collection/entries",
+    "/admin/advanced/custom-screens/screen-dashboard/entries",
+    "/admin/advanced/custom-screens/screen-editor/entries",
+  ]);
+});
+
 test("appendNavItemsAfterGroup appends shortcut items after Advanced group", () => {
   const sections = appendNavItemsAfterGroup(buildDefaultNavSections(), "advanced", [
     {
