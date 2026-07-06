@@ -7,14 +7,15 @@
 **Category:** Testing / Docs / Smoke / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-512-01..06 all landed green.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 
 ## Scope (single-writer)
 
 **512-07 owns:** the ≥5-scenario Playwright SMOKE, the closure regression sweep, the docs
-updates, the changelog entry (**pinned 1224**), and the board update (README rows are
+updates, the changelog entry (**1225** — 1224 was taken by TASK-515; next-free used), and the board update (README rows are
 owner/orchestrator-managed — do NOT hand-edit here per task rules). Adds cross-cutting tests
 NOT owned by a specific earlier subtask. **Land order:** LAST.
 
@@ -108,8 +109,8 @@ MEMORY smoke mandate.)
   `media_folders` table (nesting/parent ref, slug uniqueness, `onDelete:set null`).
 - Getting-started / admin docs: note the new folder + quota + focal features if a media section
   exists.
-- **Changelog:** new entry **pinned 1224** (VERIFY 1224 still free at closure; if taken, take the
-  next free and note it). Summarize prototype-fidelity + schema extension + full functionality.
+- **Changelog:** new entry **1225** (1224 was taken by TASK-515 at closure; took the next free
+  1225 and noted it). Summarize prototype-fidelity + schema extension + full functionality.
 
 ## D. Closure
 
@@ -129,5 +130,5 @@ MEMORY smoke mandate.)
 1. All gates green (lint, lint:types, root tsc, test:bun, full vitest, gates:coderso 5/5).
 2. ≥5 smoke scenarios pass with asserted visible/persisted effects, light + dark; screenshots
    saved. Prototype parity confirmed side-by-side.
-3. Docs + changelog (1224) written; parent + 7 children flipped to Done; closure summary lists
+3. Docs + changelog (1225) written; parent + 7 children flipped to Done; closure summary lists
    board rows for the orchestrator.

@@ -8,7 +8,8 @@
 **Estimated Effort:** Large
 **Dependencies:** TASK-512-05 (all leaf components + new controls), TASK-512-04 (clients/types/
 utils/quota).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

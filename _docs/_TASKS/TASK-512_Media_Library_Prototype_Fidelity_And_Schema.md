@@ -7,7 +7,8 @@
 **Category:** Admin UI / Media / DB Schema / Services / Routes / Prototype Fidelity
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 (Soft-Violet admin redesign; the current Media screen already ports the prototype folder rail + `PageHeader`/`Card` shell — TASK-512 extends, not rewrites). Rides the existing `media:read`/`media:write` RBAC buckets (`permissionsCatalog.ts:67/72`) and the existing `PATCH /media/:id` + `GET /media` routes. No dependency on any other in-flight task.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 
@@ -157,7 +158,7 @@ file has exactly one owner.
   gotcha (test-glob tsc catches excess/missing-prop breaks the core-only lint misses).
 - **`core/server/routes/index.ts`** is NOT edited — folder routes register from inside
   `registerMediaRoutes` (512-03) to preserve the one-owner rule.
-- **Changelog pin (closure only):** **1224**.
+- **Changelog pin (closure only):** **1225** (1224 was taken by TASK-515; next-free used).
 
 ---
 
@@ -225,7 +226,7 @@ file has exactly one owner.
   storage quota settings keys. NOT `_docs/CONTENT_TYPES_SPEC.md` — its `media` references are
   field-type entries (`media.accept`/`media.maxItems`), not the asset-table model. (Authored per
   512-07 §C.)
-- `_docs/_CHANGELOG/` — new entry, **pinned 1224** (verify still free at closure).
+- `_docs/_CHANGELOG/` — new entry, **1225** (1224 was taken by TASK-515; next-free used at closure).
 - `_docs/_TASKS/README.md` — parent + 7 child rows + Statistics (owner-managed; NOT edited here).
 </content>
 </invoke>

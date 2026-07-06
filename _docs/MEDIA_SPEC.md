@@ -67,6 +67,75 @@ Backup artefakty (remote):
 - Jesli `title` nie zostanie podany przy uploadzie, domyslnie przyjmuje
   oryginalna nazwe pliku. `originalName` pozostaje read-only identity.
 
+## Folders, tags, focal point & richer metadata (TASK-512)
+
+The media model is organized + enriched beyond the base `alt/title/caption`:
+
+### Folders / collections (`media_folders`)
+
+- Real user-defined folders (`media_folders`: `id, name, slug, parent_id,
+  order_index, created_at, created_by`), separate from the type-based rail.
+- **Nesting:** `parent_id` self-references `media_folders.id`
+  (`onDelete: set null`), so deleting a parent un-parents its children rather
+  than cascade-deleting them.
+- **Slug uniqueness:** enforced at the DB (unique index `media_folders_slug_idx`)
+  AND service-side; a duplicate slug is rejected `media_folder_slug_conflict`
+  (409).
+- **Ordering:** `order_index` (default 0) orders siblings; reorder is a
+  `media:write` operation.
+- **Membership:** `media.folder_id` (nullable, `onDelete: set null`). **Deleting
+  a folder NEVER deletes its assets** — member assets have `folder_id` set to
+  null and return to "All files". Filtering the grid by folder is a client read.
+- Folder CRUD/reorder rides new routes registered from inside
+  `registerMediaRoutes` (no `routes/index.ts` edit), all behind `media:read`
+  (reads) / `media:write` (writes); `GET /media/folders` is registered BEFORE
+  `GET /media/:id` for correct first-match dispatch.
+
+### Tags
+
+- `media.tags` (jsonb `string[]`, NOT NULL DEFAULT `'[]'`) — free-form labels
+  (mirrors `content_entries.tags`/`posts.tags`). Tag count + per-tag length are
+  capped server-side; the value is normalized (trim/dedupe/reject non-string)
+  before write. Filter-by-tag is a client read over the loaded list.
+
+### Focal point
+
+- `media.focal_x` / `media.focal_y` (real, nullable) — normalized `0..1`
+  coordinates driving image crop/`object-position` focus. Out-of-range values are
+  **clamped to `[0,1]`** service-side (not rejected). Both null = center default;
+  a legacy row reads byte-identical.
+
+### Richer metadata
+
+- `media.description` (long-form, distinct from `caption`) and `media.credit`
+  (attribution line) — both `text`, nullable, present-only round-trip.
+
+### Storage quota (settings, not schema)
+
+- Quota lives in the `settings` key/value store (NO DDL):
+  `storage.quota.totalBytes` (number|null — null = unlimited/no bar) and
+  `storage.quota.planLabel` (string|null). Written via `PATCH /settings/storage`,
+  which validates a nested `quota` object (`additionalProperties:false`,
+  `totalBytes` number|null, `planLabel` string|null) in `storageSettingsSchema`.
+- The admin storage card computes `usedBytes = Σ media.size` (client-side) against
+  the configured quota and renders a progress bar + "% used" / "available" footer
+  + "Manage plan". **Unset quota degrades gracefully** to the count-only card (no
+  bar) so no-quota installs see no regression.
+- Quota is **advisory/display by default**; enforcement (reject upload with
+  `media_quota_exceeded` 413 when `usedBytes + incoming > quota`) is opt-in so
+  existing installs are never locked out.
+
+### Validation contract (reject-unknown / present-only / clamp)
+
+- Every new validated payload key has a JSON-schema entry with
+  `additionalProperties:false` (`mediaSchemas.ts`) plus a service-side `normalize*`
+  (reject/omit unknown; clamp/validate). Unknown keys are rejected 4xx
+  (`validation_error`) at the route edge.
+- Media update is **present-only** (`hasOwnProperty` gating in `buildMediaPatch`)
+  — an omitted key is never written, so siblings survive a partial PATCH.
+- Upload body rejects `folderId`/`tags` (assignment/tagging is a PATCH, not an
+  upload key).
+
 ## Assistant avatar assets (TASK-101-06)
 
 - Assistant floating launcher supports optional avatar asset URL (`assistant.launcher.avatarAsset`).
@@ -128,11 +197,21 @@ raw file bytes/text into provider prompts or action execution.
 
 ## Admin UI behavior (v1)
 
+- Prototype-faithful shell (TASK-512): storage **quota** progress card
+  (data-backed, degrades to count-only when no quota), a "Filters" affordance
+  (tag/type/folder facets), grid cards with a top-left absolute type badge overlay
+  (`absolute left-2 top-2 bg-card/80 backdrop-blur`) + a static in-flow tone chip
+  in the footer row, aspect-square previews, and a real user **folder rail**
+  alongside the type-based rail.
 - Upload dropzone + manual browse.
 - Wyszukiwarka po nazwie i tytule.
-- Filtry: all, images, documents, audio.
+- Filtry: all, images, documents, audio; plus folder + tag facet filters
+  (TASK-512).
 - Panel szczegolow: podglad meta, edycja title/alt/caption, copy link,
-  replace asset bez zmiany ID, usage links, file info i wymiary obrazow.
+  replace asset bez zmiany ID, usage links, file info i wymiary obrazow; oraz
+  (TASK-512) przypisanie do folderu, tagi (`TagInput`), focal point
+  (`FocalPointPicker`, `0..1` drag marker → `object-position`), description i
+  credit.
 - Metadata autosave i Copy URL pokazuja wynik operacji (saving/saved/failed,
   copied/failed) oparty o realny wynik async.
 - Widok grid/list korzysta z tego samego ownera listy i pokazuje `title`,
@@ -169,3 +248,9 @@ raw file bytes/text into provider prompts or action execution.
 
 - Uploady tylko przez admin API (auth + CSRF).
 - Opcjonalny AV scan jako plugin.
+- Media + folder writes stay behind the existing `media:write` RBAC bucket; reads
+  behind `media:read` — NO new RBAC bucket, NO loosened auth path. New folder +
+  quota client writes carry CSRF (`withCsrf: true`).
+- Reject-unknown 4xx on every new validated key (media PATCH + folder routes +
+  storage-quota settings); folder-delete un-files (never cascades); focal clamped
+  `[0,1]`; tag count + per-tag length capped; quota display-only by default.

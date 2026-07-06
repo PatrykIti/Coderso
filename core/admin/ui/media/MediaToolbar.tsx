@@ -1,5 +1,6 @@
-import { Grid2X2, List, Search } from "lucide-react";
+import { Grid2X2, List, Search, SlidersHorizontal } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -18,6 +19,12 @@ type MediaToolbarProps = {
   onOpenAfterUploadChange?: (value: boolean) => void;
   onSearchChange: (value: string) => void;
   onViewChange: (value: MediaView) => void;
+  // TASK-512-05: the prototype "Filters" affordance. BOTH props are OPTIONAL so
+  // the existing render in tests/vitest/ui/plugin-media-site-leaf.test.tsx (no
+  // onOpenFilters) keeps compiling under root tsc + Vitest. The Filters button is
+  // hidden when onOpenFilters is absent; the count badge hides at 0/undefined.
+  onOpenFilters?: () => void;
+  activeFilterCount?: number;
 };
 
 export function MediaToolbar({
@@ -27,6 +34,8 @@ export function MediaToolbar({
   onOpenAfterUploadChange,
   onSearchChange,
   onViewChange,
+  onOpenFilters,
+  activeFilterCount = 0,
 }: MediaToolbarProps) {
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -48,35 +57,54 @@ export function MediaToolbar({
           Open details after upload
         </label>
       ) : null}
-      <div className="ml-auto inline-flex items-center rounded-xl border border-border bg-card p-0.5 shadow-soft">
-        <button
-          type="button"
-          onClick={() => onViewChange("grid")}
-          aria-label="Grid view"
-          aria-pressed={view === "grid"}
-          className={cn(
-            "flex size-7 items-center justify-center rounded-lg transition-colors",
-            view === "grid"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Grid2X2 className="size-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => onViewChange("list")}
-          aria-label="List view"
-          aria-pressed={view === "list"}
-          className={cn(
-            "flex size-7 items-center justify-center rounded-lg transition-colors",
-            view === "list"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <List className="size-4" />
-        </button>
+      <div className="ml-auto flex items-center gap-2">
+        {onOpenFilters ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={onOpenFilters}
+          >
+            <SlidersHorizontal className="size-4" />
+            Filters
+            {activeFilterCount > 0 ? (
+              <span className="ml-0.5 inline-flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold tabular-nums text-primary-foreground">
+                {activeFilterCount}
+              </span>
+            ) : null}
+          </Button>
+        ) : null}
+        <div className="inline-flex items-center rounded-xl border border-border bg-card p-0.5 shadow-soft">
+          <button
+            type="button"
+            onClick={() => onViewChange("grid")}
+            aria-label="Grid view"
+            aria-pressed={view === "grid"}
+            className={cn(
+              "flex size-7 items-center justify-center rounded-lg transition-colors",
+              view === "grid"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Grid2X2 className="size-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onViewChange("list")}
+            aria-label="List view"
+            aria-pressed={view === "list"}
+            className={cn(
+              "flex size-7 items-center justify-center rounded-lg transition-colors",
+              view === "list"
+                ? "bg-muted text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <List className="size-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

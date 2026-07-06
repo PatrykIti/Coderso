@@ -94,6 +94,7 @@ export const cacheKeys = {
   pageTemplatesList: "pageTemplates:list",
   pageTemplateDetail: (id: string) => `pageTemplates:detail:${id}`,
   mediaList: "media:list",
+  mediaFolders: "media:folders",
   adminThemeTemplatesList: "adminThemeTemplates:list",
   adminThemeProfilesList: "adminThemeProfiles:list",
   settingsRedacted: "settings:redacted",

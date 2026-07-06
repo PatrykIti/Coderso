@@ -1,21 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Download,
-  FileText,
-  HardDrive,
-  Image as ImageIcon,
-  Music,
-  Settings2,
-  Trash2,
-  UploadCloud,
-  Video,
-} from "lucide-react";
+import { Download, Image as ImageIcon, Settings2, Trash2, UploadCloud } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import {
@@ -29,16 +19,41 @@ import {
   updateMedia,
   uploadMedia,
 } from "@/services/mediaClient";
+import {
+  createMediaFolder,
+  deleteMediaFolder,
+  getCachedMediaFolders,
+  getCachedMediaFoldersForEvent,
+  listMediaFoldersCached,
+  reorderMediaFolders,
+  updateMediaFolder,
+} from "@/services/mediaFoldersClient";
 import { getStorageSettings, updateStorageSettings } from "@/services/settingsClient";
 import { getUserSettings, setUserSetting } from "@/services/userSettingsClient";
 import { AdminShell } from "@/ui/layouts/AdminShell";
 import { MediaDetailsDrawer } from "@/ui/media/MediaDetailsDrawer";
+import {
+  EMPTY_MEDIA_FILTER,
+  MediaFilterPanel,
+  countActiveFilters,
+  type MediaFilterState,
+} from "@/ui/media/MediaFilterPanel";
+import { MediaFolderRail, type MediaFolderReorder } from "@/ui/media/MediaFolderRail";
 import { MediaGrid } from "@/ui/media/MediaGrid";
 import { MediaSettingsDrawer } from "@/ui/media/MediaSettingsDrawer";
+import { StorageQuotaCard } from "@/ui/media/StorageQuotaCard";
 import { MediaToolbar, type MediaFilter, type MediaView } from "@/ui/media/MediaToolbar";
-import type { MediaItem, MediaMetaUpdate, MediaUsageItem } from "@/ui/media/types";
+import type { MediaFolder, MediaItem, MediaMetaUpdate, MediaUsageItem } from "@/ui/media/types";
 import { UploadDropzone, type UploadDropzoneHandle } from "@/ui/media/UploadDropzone";
-import { formatBytes, resolveMediaDisplayName, toMediaItem } from "@/ui/media/utils";
+import {
+  buildFolderTree,
+  countMediaByFolder,
+  filterByTag,
+  hasMissingImageAlt,
+  resolveMediaDisplayName,
+  toMediaItem,
+  type FolderNode,
+} from "@/ui/media/utils";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
@@ -68,16 +83,32 @@ const defaultDimensionState: DimensionRecoveryState = {
   message: null,
 };
 
-// TASK-479-11-L01: folder rail definitions ported from the prototype. Each key is
-// a valid MediaFilter the existing `filter` state already understands; counts are
-// derived render-time from the loaded `items` (no folders backend, no new fetch).
-const folderDefs = [
-  { key: "all", label: "All files", icon: HardDrive },
-  { key: "image", label: "Images", icon: ImageIcon },
-  { key: "video", label: "Videos", icon: Video },
-  { key: "document", label: "Documents", icon: FileText },
-  { key: "audio", label: "Audio", icon: Music },
-] as const;
+// TASK-512-06: descendant-aware folder membership set. Walks the built folder
+// tree once; on the matching node it collects that node id + every nested
+// descendant id, so filtering by a parent folder includes its subfolders'
+// assets. Returns an EMPTY set when `folderId` is absent from the tree. Pure (no
+// React) so it is unit-testable directly; exported for the Vitest lane.
+export function folderDescendantIds(tree: FolderNode[], folderId: string): Set<string> {
+  const ids = new Set<string>();
+  let matched = false;
+  const collectSubtree = (node: FolderNode) => {
+    ids.add(node.id);
+    for (const child of node.children ?? []) collectSubtree(child);
+  };
+  const find = (nodes: FolderNode[]) => {
+    for (const node of nodes) {
+      if (matched) return;
+      if (node.id === folderId) {
+        matched = true;
+        collectSubtree(node);
+        return;
+      }
+      if (node.children?.length) find(node.children);
+    }
+  };
+  find(tree);
+  return ids;
+}
 
 export function MediaLibraryPage() {
   const dropzoneRef = useRef<UploadDropzoneHandle | null>(null);
@@ -106,6 +137,13 @@ export function MediaLibraryPage() {
   const [isSettingsSaving, setIsSettingsSaving] = useState(false);
   const [settingsError, setSettingsError] = useState<string | null>(null);
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
+  // TASK-512-06: real user folders + storage quota + Filters panel state.
+  const [folders, setFolders] = useState<MediaFolder[]>(() => getCachedMediaFolders() ?? []);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [mediaFilterState, setMediaFilterState] = useState<MediaFilterState>(EMPTY_MEDIA_FILTER);
+  const [quotaTotalBytes, setQuotaTotalBytes] = useState<number | null>(null);
+  const [quotaPlanLabel, setQuotaPlanLabel] = useState<string | null>(null);
   const hasHydratedRef = useRef(hasInitialCache);
 
   const initialSelectedId = useMemo(() => {
@@ -162,6 +200,52 @@ export function MediaLibraryPage() {
     });
   }, [applyCachedMediaRows, refresh]);
 
+  // TASK-512-06: user folders — cached fetch on mount + cross-tab cache sync.
+  const refreshFolders = useCallback(async (options?: { force?: boolean }) => {
+    try {
+      const result = await listMediaFoldersCached({ force: options?.force ?? false });
+      if (Array.isArray(result)) setFolders(result);
+    } catch {
+      // Ignore folder load failures; the rail degrades to type-only filters.
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshFolders().catch(() => undefined);
+  }, [refreshFolders]);
+
+  useEffect(() => {
+    return subscribeCacheEvents((event) => {
+      if (event.key !== cacheKeys.mediaFolders) return;
+      const cached = getCachedMediaFoldersForEvent();
+      if (cached) {
+        setFolders(cached);
+        return;
+      }
+      refreshFolders({ force: true }).catch(() => undefined);
+    });
+  }, [refreshFolders]);
+
+  // TASK-512-06: quota fetch on mount (explicit) so the storage card is
+  // data-backed BEFORE the settings drawer is ever opened. `loadMediaSettings`
+  // re-syncs the same state on drawer open so card + drawer stay consistent.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const settings = await getStorageSettings();
+        if (!active) return;
+        setQuotaTotalBytes(settings.quota.totalBytes ?? null);
+        setQuotaPlanLabel(settings.quota.planLabel ?? null);
+      } catch {
+        // Ignore quota load failures; the card degrades to the count-only view.
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -200,9 +284,11 @@ export function MediaLibraryPage() {
     }
   }, [items, initialSelectedId, selectedId]);
 
+  const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
+
   const filteredItems = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    return items.filter((item) => {
+    let next = items.filter((item) => {
       const displayName = resolveMediaDisplayName(item).toLowerCase();
       const matchesSearch =
         !normalizedSearch ||
@@ -213,7 +299,32 @@ export function MediaLibraryPage() {
       const matchesFilter = filter === "all" || item.type === filter;
       return matchesSearch && matchesFilter;
     });
-  }, [items, search, filter]);
+
+    const f = mediaFilterState;
+    if (activeFolderId) {
+      const descendantIds = folderDescendantIds(folderTree, activeFolderId);
+      next = next.filter((item) => item.folderId != null && descendantIds.has(item.folderId));
+    }
+    if (f.types.length) next = next.filter((item) => f.types.includes(item.type));
+    if (f.tags.length) next = f.tags.reduce((acc, tag) => filterByTag(acc, tag), next);
+    if (f.alt !== "any")
+      next = next.filter((item) =>
+        f.alt === "missing"
+          ? hasMissingImageAlt(item)
+          : item.type === "image" && !hasMissingImageAlt(item)
+      );
+    // Compare the DATE portion (createdAt is a full ISO datetime; the facet is a
+    // <input type=date> "YYYY-MM-DD"). Inclusive on both bounds.
+    if (f.dateFrom) next = next.filter((item) => item.createdAt.slice(0, 10) >= f.dateFrom!);
+    if (f.dateTo) next = next.filter((item) => item.createdAt.slice(0, 10) <= f.dateTo!);
+    return next;
+  }, [items, search, filter, activeFolderId, folderTree, mediaFilterState]);
+
+  // Deduped, sorted union of every item tag — the Filters panel's tag chip source.
+  const filterTags = useMemo(
+    () => [...new Set(items.flatMap((item) => item.tags ?? []))].sort(),
+    [items]
+  );
 
   // Folder rail counts + storage summary are pure render-time derivations of the
   // already-loaded `items` (no extra fetch, no setState-in-effect).
@@ -225,6 +336,15 @@ export function MediaLibraryPage() {
   const totalBytes = useMemo(
     () => items.reduce((sum, it) => sum + (it.sizeBytes ?? 0), 0),
     [items]
+  );
+  // Per-folder recursive item counts (descendants included) for the rail — a
+  // DISTINCT map from the type-count `folderCounts` above (which feeds `typeCounts`).
+  const folderItemCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        folders.map((folder) => [folder.id, countMediaByFolder(items, folder.id, folders)])
+      ),
+    [folders, items]
   );
 
   const selectedItem = items.find((item) => item.id === selectedId) ?? null;
@@ -252,8 +372,16 @@ export function MediaLibraryPage() {
     try {
       const uploaded = [] as Array<{ id: string }>;
       for (const file of files) {
+        // Upload meta stays minimal (mediaUploadSchema is additionalProperties:false
+        // and carries no folderId). When a folder is active, land the asset there via
+        // upload-first-then-PATCH so the route boundary never sees an unknown key.
         const result = await uploadMedia(file);
-        uploaded.push(result);
+        if (activeFolderId) {
+          const patched = await updateMedia(result.id, { folderId: activeFolderId });
+          uploaded.push(patched);
+        } else {
+          uploaded.push(result);
+        }
       }
       applyCachedMediaRows();
       if (uploaded[0]?.id) {
@@ -286,6 +414,60 @@ export function MediaLibraryPage() {
       }
       throw err;
     }
+  };
+
+  // TASK-512-06: rail selection reconciled in BOTH directions so the grid
+  // (activeFolderId, the sole folder source of truth), the Filters badge, and the
+  // panel folder control never diverge. Folder + rail type are mutually exclusive.
+  const handleSelectFolder = (folderId: string | null) => {
+    setActiveFolderId(folderId);
+    setMediaFilterState((prev) => ({ ...prev, folderId }));
+    if (folderId) setFilter("all");
+  };
+
+  const handleSelectType = (type: MediaFilter) => {
+    setFilter(type);
+    setActiveFolderId(null);
+    setMediaFilterState((prev) => ({ ...prev, folderId: null }));
+  };
+
+  const handleCreateFolder = (name: string, parentId: string | null) => {
+    createMediaFolder({ name, parentId }).catch(() => undefined);
+  };
+
+  const handleRenameFolder = (id: string, name: string) => {
+    updateMediaFolder(id, { name }).catch(() => undefined);
+  };
+
+  const handleDeleteFolder = (id: string) => {
+    void (async () => {
+      try {
+        await deleteMediaFolder(id);
+        if (activeFolderId === id) {
+          setActiveFolderId(null);
+          setMediaFilterState((prev) => ({ ...prev, folderId: null }));
+        }
+      } catch {
+        // Ignore delete failures; the rail reconciles on the next cache event.
+      }
+    })();
+  };
+
+  const handleReorderFolders = (orders: MediaFolderReorder[]) => {
+    reorderMediaFolders(orders).catch(() => undefined);
+  };
+
+  const handleFilterChange = (next: MediaFilterState) => {
+    setMediaFilterState(next);
+    // A panel-selected folder writes through to the rail's activeFolderId (the
+    // grid's single folder source of truth); a panel folder clears the rail type.
+    setActiveFolderId(next.folderId);
+    if (next.folderId) setFilter("all");
+  };
+
+  const handleFilterReset = () => {
+    setMediaFilterState(EMPTY_MEDIA_FILTER);
+    setActiveFolderId(null);
   };
 
   const handleDelete = (id: string) => {
@@ -488,6 +670,8 @@ export function MediaLibraryPage() {
     try {
       const settings = await getStorageSettings();
       setDeliveryAccessMode(settings.delivery.accessMode ?? "public");
+      setQuotaTotalBytes(settings.quota.totalBytes ?? null);
+      setQuotaPlanLabel(settings.quota.planLabel ?? null);
     } catch (err) {
       if (isApiClientError(err)) {
         setSettingsError(err.message);
@@ -514,8 +698,11 @@ export function MediaLibraryPage() {
       try {
         const updated = await updateStorageSettings({
           delivery: { accessMode: deliveryAccessMode },
+          quota: { totalBytes: quotaTotalBytes, planLabel: quotaPlanLabel },
         });
         setDeliveryAccessMode(updated.delivery.accessMode ?? "public");
+        setQuotaTotalBytes(updated.quota.totalBytes ?? null);
+        setQuotaPlanLabel(updated.quota.planLabel ?? null);
         setSettingsSuccess("Media settings updated.");
       } catch (err) {
         if (isApiClientError(err)) {
@@ -561,55 +748,37 @@ export function MediaLibraryPage() {
             <AlertDescription>{actionMessage}</AlertDescription>
           </Alert>
         ) : null}
-        <Card className="shadow-soft">
-          <CardContent className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary-soft-foreground">
-                <HardDrive className="size-5" />
-              </span>
-              <div>
-                <p className="font-display text-[15px] font-semibold text-foreground">Storage</p>
-                <p className="text-sm text-muted-foreground">
-                  {items.length} {items.length === 1 ? "asset" : "assets"} ·{" "}
-                  {formatBytes(totalBytes)}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <StorageQuotaCard
+          usedBytes={totalBytes}
+          totalBytes={quotaTotalBytes}
+          planLabel={quotaPlanLabel}
+          assetCount={items.length}
+          className="shadow-soft"
+          onManagePlan={handleOpenMediaSettings}
+        />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_minmax(0,1fr)]">
-          <nav className="flex flex-row flex-wrap gap-1 lg:flex-col" aria-label="Media folders">
-            {folderDefs.map((folder) => {
-              const FolderIcon = folder.icon;
-              const active = filter === folder.key;
-              return (
-                <button
-                  key={folder.key}
-                  type="button"
-                  onClick={() => setFilter(folder.key)}
-                  aria-pressed={active}
-                  className={cn(
-                    "flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm transition-colors",
-                    active
-                      ? "bg-primary/10 font-medium text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  )}
-                >
-                  <span className="flex items-center gap-2.5">
-                    <FolderIcon className="size-4" />
-                    {folder.label}
-                  </span>
-                  <span className="text-xs tabular-nums">{folderCounts[folder.key] ?? 0}</span>
-                </button>
-              );
-            })}
-          </nav>
+          <MediaFolderRail
+            folders={folders}
+            folderTree={folderTree}
+            typeCounts={folderCounts}
+            folderCounts={folderItemCounts}
+            activeFolderId={activeFolderId}
+            activeType={filter}
+            onSelectType={handleSelectType}
+            onSelectFolder={handleSelectFolder}
+            onCreateFolder={handleCreateFolder}
+            onRenameFolder={handleRenameFolder}
+            onDeleteFolder={handleDeleteFolder}
+            onReorder={handleReorderFolders}
+          />
           <div className="flex min-w-0 flex-col gap-4">
             <MediaToolbar
               search={search}
               view={view}
               onSearchChange={setSearch}
               onViewChange={setView}
+              onOpenFilters={() => setFilterPanelOpen(true)}
+              activeFilterCount={countActiveFilters(mediaFilterState)}
             />
             <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-soft sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">{selectedIds.length} selected</p>
@@ -708,6 +877,7 @@ export function MediaLibraryPage() {
         usageError={currentUsage.error}
         dimensionState={currentDimensionState.state}
         dimensionMessage={currentDimensionState.message}
+        folders={folders}
         onOpenChange={setIsDrawerOpen}
         onSave={handleSaveMeta}
         onDelete={handleDelete}
@@ -725,7 +895,29 @@ export function MediaLibraryPage() {
         success={settingsSuccess}
         onAccessModeChange={setDeliveryAccessMode}
         onSave={handleSaveMediaSettings}
+        quotaPlanLabel={quotaPlanLabel}
+        quotaTotalBytes={quotaTotalBytes}
+        onQuotaPlanLabelChange={setQuotaPlanLabel}
+        onQuotaTotalBytesChange={setQuotaTotalBytes}
       />
+      <Sheet open={filterPanelOpen} onOpenChange={setFilterPanelOpen}>
+        <SheetContent side="right" className="w-full p-0 sm:max-w-sm">
+          <div className="flex h-full flex-col">
+            <SheetHeader className="border-b px-5 py-4">
+              <SheetTitle>Filters</SheetTitle>
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <MediaFilterPanel
+                tags={filterTags}
+                folders={folders}
+                value={mediaFilterState}
+                onChange={handleFilterChange}
+                onReset={handleFilterReset}
+              />
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
     </AdminShell>
   );
 }

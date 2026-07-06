@@ -9,7 +9,8 @@
 **Dependencies:** none (model keystone — lands FIRST). Rides existing `media` table
 (`core/db/schema.ts:1121-1136`, symbol `export const media = pgTable("media", ...)`) + existing
 migration chain (last = `0066_dashboard_layouts`, journal `idx: 66`). Consumed by 512-02..06.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-06
 
 ---
 

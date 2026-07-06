@@ -227,8 +227,37 @@ Rules:
 - alt
 - title
 - caption
+- folder_id (fk media_folders, nullable; `onDelete: set null` — deleting a
+  folder un-files its assets, never cascade-deletes media) — TASK-512
+- tags (jsonb `string[]`, NOT NULL DEFAULT `'[]'`; free-form labels, mirrors
+  `content_entries.tags`/`posts.tags`) — TASK-512
+- focal_x (real, nullable) / focal_y (real, nullable) — normalized `0..1` focal
+  point for crop/`object-position`; both null = center default — TASK-512
+- description (text, nullable; long-form, distinct from `caption`) — TASK-512
+- credit (text, nullable; attribution line) — TASK-512
 - created_at
 - created_by (fk users)
+
+`media_folders` (TASK-512, migration `0067`)
+- id (uuid, pk)
+- name (notNull)
+- slug (notNull; unique index `media_folders_slug_idx`)
+- parent_id (fk media_folders, nullable; self-ref nesting, `onDelete: set null`)
+- order_index (integer, notNull DEFAULT 0; sibling ordering)
+- created_at
+- created_by (fk users, nullable)
+
+Zasady (Media):
+- All TASK-512 metadata columns except `tags` are nullable, so a legacy row with
+  none of them set reads byte-identical; `tags` backfills to `[]`.
+- Folder membership is `media.folder_id`; deleting a folder sets member assets'
+  `folder_id` to null (never deletes the asset). Slug uniqueness enforced at DB +
+  service (`media_folder_slug_conflict` 409). Focal coords clamped to `[0,1]`
+  service-side; tag count + per-tag length capped server-side.
+- Storage quota is NOT a DDL column — it lives in the `settings` key/value store
+  (`storage.quota.totalBytes` number|null, `storage.quota.planLabel` string|null);
+  the admin storage card computes `usedBytes = Σ media.size` against it. Quota is
+  advisory/display by default (see `_docs/MEDIA_SPEC.md`).
 
 ## Menus
 
