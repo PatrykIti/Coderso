@@ -12,11 +12,13 @@ test("ContentTypeList renders table view", () => {
   expect(html).toContain("New type");
 });
 
-test("ContentTypeEditor renders schema preview and actions", () => {
+test("ContentTypeEditor renders header actions", () => {
   const html = renderAdminUi(<ContentTypeEditor />);
 
-  expect(html).toContain("Schema Preview");
-  expect(html).toContain("Collection workspace");
-  expect(html).toContain("Save draft");
-  expect(html).toContain("Publish");
+  // Inline actions on the refactored PageHeader; Publish/Duplicate/Schema preview/
+  // Collection workspace now live in the collapsed "More actions" menu.
+  expect(html).toContain(">Save<");
+  expect(html).toContain("Open schema");
+  expect(html).toContain('aria-label="More actions"');
+  expect(html).toContain("Define the fields and behavior");
 });

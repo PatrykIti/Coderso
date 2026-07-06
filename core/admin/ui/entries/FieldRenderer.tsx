@@ -15,7 +15,7 @@ import { MediaPicker } from "@/ui/media/MediaPicker";
 import { PostRichTextAdapter } from "@/ui/posts/editor/richtext/PostRichTextAdapter";
 import { serializePostRichText } from "../../../services/posts/editor/postRichTextSerializer";
 
-import type { ContentField } from "../content-types/SchemaBuilder";
+import { slugifyFieldName, type ContentField } from "../content-types/SchemaBuilder";
 
 type FieldRendererProps = {
   field: ContentField;
@@ -97,11 +97,7 @@ function RelationSelect({
     };
   }, [targetSlug]);
 
-  const selectedValues = Array.isArray(value)
-    ? value.map(String)
-    : value
-      ? [String(value)]
-      : [];
+  const selectedValues = Array.isArray(value) ? value.map(String) : value ? [String(value)] : [];
   const helperLabel = targetName ? targetName : "related content";
   const filteredEntries = entries.filter((entry) => {
     if (!query) return true;
@@ -139,13 +135,9 @@ function RelationSelect({
         disabled={isLoading}
         className={inputClass}
       />
-      <div
-        className={`${listClass} space-y-2 overflow-y-auto rounded-lg border p-2`}
-      >
+      <div className={`${listClass} space-y-2 overflow-y-auto rounded-lg border p-2`}>
         {entries.length === 0 ? (
-          <div className="px-2 py-2 text-xs text-muted-foreground">
-            No items found yet.
-          </div>
+          <div className="px-2 py-2 text-xs text-muted-foreground">No items found yet.</div>
         ) : filteredEntries.length === 0 ? (
           <div className="px-2 py-2 text-xs text-muted-foreground">
             No matches for <span className="font-medium">{query}</span>.
@@ -168,9 +160,7 @@ function RelationSelect({
                   <p className="text-sm font-medium">{entry.title}</p>
                   <p className="text-xs text-muted-foreground">/{entry.slug}</p>
                 </div>
-                {multiple ? (
-                  <Checkbox checked={isSelected} aria-label="Select relation" />
-                ) : null}
+                {multiple ? <Checkbox checked={isSelected} aria-label="Select relation" /> : null}
               </button>
             );
           })
@@ -179,9 +169,7 @@ function RelationSelect({
       {error ? (
         <p className={`${helperClass} text-destructive`}>{error}</p>
       ) : (
-        <p className={`${helperClass} text-muted-foreground`}>
-          {helpText ?? fallbackHelp}
-        </p>
+        <p className={`${helperClass} text-muted-foreground`}>{helpText ?? fallbackHelp}</p>
       )}
     </div>
   );
@@ -215,6 +203,8 @@ export function FieldRenderer({
     select: "Choose one option from the list.",
     media: "Pick media from the library.",
     relation: "Link this entry to related content.",
+    date: "Pick a calendar date.",
+    slug: "URL-safe identifier.",
   } as const;
 
   switch (field.type) {
@@ -227,9 +217,7 @@ export function FieldRenderer({
             placeholder={`Enter ${field.label.toLowerCase()}...`}
             className={inputClass}
           />
-          <p className={`${helperClass} text-muted-foreground`}>
-            {customHelp || defaultHelp.text}
-          </p>
+          <p className={`${helperClass} text-muted-foreground`}>{customHelp || defaultHelp.text}</p>
         </div>
       );
     case "richtext":
@@ -283,85 +271,83 @@ export function FieldRenderer({
           </p>
         </div>
       );
-    case "select":
-      {
-        const options = normalizeSelectOptions(field.options);
-        const selectedValues = Array.isArray(value)
-          ? value.map(String)
-          : value
-            ? [String(value)]
-            : [];
-        if (field.multiple) {
-          return (
-            <div className={spacingClass}>
-              <div className="space-y-2 rounded-lg border p-2">
-                {options.length === 0 ? (
-                  <div className="px-2 py-2 text-xs text-muted-foreground">
-                    No options configured.
-                  </div>
-                ) : (
-                  options.map((option) => {
-                    const checked = selectedValues.includes(option.value);
-                    return (
-                      <label
-                        key={option.id}
-                        className="flex items-center gap-2 rounded-md px-2 py-1 text-sm"
-                      >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(nextChecked) => {
-                            const next = nextChecked
-                              ? [...selectedValues, option.value]
-                              : selectedValues.filter((item) => item !== option.value);
-                            onChange(next);
-                          }}
-                        />
-                        {option.label}
-                      </label>
-                    );
-                  })
-                )}
-              </div>
-              <p className={`${helperClass} text-muted-foreground`}>
-                {customHelp || "Choose one or more options from the list."}
-              </p>
-            </div>
-          );
-        }
+    case "select": {
+      const options = normalizeSelectOptions(field.options);
+      const selectedValues = Array.isArray(value)
+        ? value.map(String)
+        : value
+          ? [String(value)]
+          : [];
+      if (field.multiple) {
         return (
           <div className={spacingClass}>
-            <Select
-              value={value ? String(value) : undefined}
-              onValueChange={(next) => onChange(next)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select option" />
-              </SelectTrigger>
-              <SelectContent>
-                {options.map((option) => (
-                  <SelectItem key={option.id} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-2 rounded-lg border p-2">
+              {options.length === 0 ? (
+                <div className="px-2 py-2 text-xs text-muted-foreground">
+                  No options configured.
+                </div>
+              ) : (
+                options.map((option) => {
+                  const checked = selectedValues.includes(option.value);
+                  return (
+                    <label
+                      key={option.id}
+                      className="flex items-center gap-2 rounded-md px-2 py-1 text-sm"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(nextChecked) => {
+                          const next = nextChecked
+                            ? [...selectedValues, option.value]
+                            : selectedValues.filter((item) => item !== option.value);
+                          onChange(next);
+                        }}
+                      />
+                      {option.label}
+                    </label>
+                  );
+                })
+              )}
+            </div>
             <p className={`${helperClass} text-muted-foreground`}>
-              {customHelp || defaultHelp.select}
+              {customHelp || "Choose one or more options from the list."}
             </p>
           </div>
         );
       }
-    case "media":
-      {
-        const mediaHint = (() => {
-          if (customHelp) return customHelp;
-          if (field.media?.multiple) {
-            return field.media.maxItems
-              ? `Select up to ${field.media.maxItems} assets from the library.`
-              : "Select one or more assets from the library.";
-          }
-          return defaultHelp.media;
-        })();
+      return (
+        <div className={spacingClass}>
+          <Select
+            value={value ? String(value) : undefined}
+            onValueChange={(next) => onChange(next)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select option" />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.id} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className={`${helperClass} text-muted-foreground`}>
+            {customHelp || defaultHelp.select}
+          </p>
+        </div>
+      );
+    }
+    case "media": {
+      const mediaHint = (() => {
+        if (customHelp) return customHelp;
+        if (field.media?.multiple) {
+          return field.media.maxItems
+            ? `Select up to ${field.media.maxItems} assets from the library.`
+            : "Select one or more assets from the library.";
+        }
+        return defaultHelp.media;
+      })();
 
       return (
         <div className={spacingClass}>
@@ -375,7 +361,7 @@ export function FieldRenderer({
           <p className={`${helperClass} text-muted-foreground`}>{mediaHint}</p>
         </div>
       );
-      }
+    }
     case "relation":
       if (relationTarget) {
         return (
@@ -404,7 +390,49 @@ export function FieldRenderer({
           </p>
         </div>
       );
+    case "date":
+      return (
+        <div className={spacingClass}>
+          <Input
+            type={field.date?.includeTime ? "datetime-local" : "date"}
+            value={String(value ?? "")}
+            onChange={(event) => onChange(event.target.value)}
+            className={inputClass}
+          />
+          <p className={`${helperClass} text-muted-foreground`}>{customHelp || defaultHelp.date}</p>
+        </div>
+      );
+    case "slug":
+      return (
+        <div className={spacingClass}>
+          <Input
+            value={String(value ?? "")}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={(event) => {
+              const normalized = slugifyFieldName(event.target.value);
+              if (normalized !== event.target.value) onChange(normalized);
+            }}
+            placeholder={`Enter ${field.label.toLowerCase()}...`}
+            className={inputClass}
+          />
+          <p className={`${helperClass} text-muted-foreground`}>{customHelp || defaultHelp.slug}</p>
+        </div>
+      );
     default:
-      return null;
+      // Unknown/future field types fall back to an editable text input so a
+      // value is never silently dropped (previously returned null → vanished).
+      return (
+        <div className={spacingClass}>
+          <Input
+            value={String(value ?? "")}
+            onChange={(event) => onChange(event.target.value)}
+            placeholder={`Enter ${field.label.toLowerCase()}...`}
+            className={inputClass}
+          />
+          {customHelp ? (
+            <p className={`${helperClass} text-muted-foreground`}>{customHelp}</p>
+          ) : null}
+        </div>
+      );
   }
 }

@@ -10,6 +10,10 @@ import {
   settings,
 } from "../../db/schema";
 import { assertContentSchema, invalidateValidator, type ContentSchema } from "./validation";
+import { normalizeContentTypeConfig } from "./contentTypeConfig";
+
+export type { ContentTypeConfig, ContentTypePermissionCapabilities } from "./contentTypeConfig";
+import type { ContentTypeConfig } from "./contentTypeConfig";
 
 export type ContentTypeRecord = typeof contentTypes.$inferSelect;
 export type ContentTypeStatus = "draft" | "published";
@@ -19,6 +23,7 @@ export type CreateContentTypeInput = {
   slug: string;
   schema: ContentSchema;
   status?: ContentTypeStatus;
+  config?: ContentTypeConfig;
 };
 
 export type UpdateContentTypeInput = {
@@ -26,6 +31,7 @@ export type UpdateContentTypeInput = {
   slug?: string;
   schema?: ContentSchema;
   status?: ContentTypeStatus;
+  config?: ContentTypeConfig;
 };
 
 export type DuplicateContentTypeInput = {
@@ -41,6 +47,7 @@ export async function listContentTypes() {
       slug: contentTypes.slug,
       schema: contentTypes.schema,
       status: contentTypes.status,
+      config: contentTypes.config,
       createdAt: contentTypes.createdAt,
       updatedAt: contentTypes.updatedAt,
       entryCount: sql<number>`count(${contentEntries.id})`.mapWith(Number).as("entryCount"),
@@ -53,6 +60,7 @@ export async function listContentTypes() {
       contentTypes.slug,
       contentTypes.schema,
       contentTypes.status,
+      contentTypes.config,
       contentTypes.createdAt,
       contentTypes.updatedAt
     )
@@ -201,6 +209,7 @@ export async function createContentType(input: CreateContentTypeInput) {
       slug,
       schema: input.schema,
       status,
+      config: normalizeContentTypeConfig(input.config),
     })
     .returning();
 
@@ -220,6 +229,7 @@ export async function updateContentType(
   const name = input.name !== undefined ? normalizeContentTypeName(input.name) : undefined;
   const slug = input.slug !== undefined ? normalizeContentTypeSlug(input.slug) : undefined;
   const status = input.status !== undefined ? normalizeContentTypeStatus(input.status) : undefined;
+  const config = input.config !== undefined ? normalizeContentTypeConfig(input.config) : undefined;
 
   if (name !== undefined) await assertUniqueContentTypeName(name, id);
   if (slug !== undefined) await assertUniqueContentTypeSlug(slug, id);
@@ -231,6 +241,7 @@ export async function updateContentType(
       slug,
       schema: input.schema,
       status,
+      config,
       updatedAt: new Date(),
     })
     .where(eq(contentTypes.id, id))
@@ -264,6 +275,7 @@ export async function duplicateContentType(
     slug,
     schema: source.schema as ContentSchema,
     status: "draft",
+    config: source.config as ContentTypeConfig,
   });
 }
 

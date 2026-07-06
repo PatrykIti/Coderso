@@ -49,6 +49,7 @@ const mapContentTypeError = (error: unknown) => {
     case "content_type_name_generated_uuid":
     case "content_type_duplicate_slug_unavailable":
     case "content_type_duplicate_name_unavailable":
+    case "content_type_config_invalid":
       return new ApiError(error.message, "Content type payload is invalid.", 400);
     case "content_type_name_exists":
       return new ApiError("content_type_name_exists", "Content type name already exists.", 409);

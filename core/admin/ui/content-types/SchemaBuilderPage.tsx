@@ -1,13 +1,18 @@
 import {
   Binary,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
   GitBranch,
   Hash,
   Image as ImageIcon,
+  Link2,
   ListChecks,
   Type,
   WholeWord,
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +23,7 @@ import {
   getCachedContentTypes,
   getContentTypeCached,
   listContentTypesCached,
+  updateContentType,
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
@@ -28,17 +34,31 @@ import { SectionCard } from "@/ui/shared/SectionCard";
 import { ContentTypeSidebar } from "./ContentTypeSidebar";
 import { SchemaPreviewPanel } from "./SchemaPreviewPanel";
 import { buildSchemaFromFields, fieldsFromSchema, type ContentSchema } from "./schemaMapping";
-import { type ContentField, type FieldType } from "./SchemaBuilder";
+import {
+  FIELD_TYPE_LABELS,
+  FieldSettingsPanel,
+  makeUniqueFieldName,
+  validateFieldName,
+  type ContentField,
+  type FieldType,
+} from "./SchemaBuilder";
 import { resolveContentTypeIdFromPath } from "./pathResolvers";
 
-const FIELD_TYPES: Array<{ type: FieldType; label: string; icon: ReactNode }> = [
-  { type: "text", label: "Text", icon: <Type /> },
-  { type: "number", label: "Number", icon: <Hash /> },
-  { type: "boolean", label: "Boolean", icon: <Binary /> },
-  { type: "richtext", label: "Rich text", icon: <WholeWord /> },
-  { type: "media", label: "Media", icon: <ImageIcon /> },
-  { type: "relation", label: "Relation", icon: <GitBranch /> },
-  { type: "select", label: "Select", icon: <ListChecks /> },
+// Palette order mirrors the prototype (`SchemaBuilderPreview.tsx:107-114`) byte-for-byte for the
+// first 8 entries — Text, Number, Boolean, Date, Rich text, Media, Relation, Select — then appends
+// `slug` (no prototype palette entry) as a beyond-prototype extension enabled by 513-02's union
+// widening. Labels are derived from the canonical FIELD_TYPE_LABELS map (513-02) via `typeLabel`;
+// only the per-type `icon` is 513-05-local.
+const FIELD_TYPES: Array<{ type: FieldType; icon: ReactNode }> = [
+  { type: "text", icon: <Type /> },
+  { type: "number", icon: <Hash /> },
+  { type: "boolean", icon: <Binary /> },
+  { type: "date", icon: <CalendarDays /> },
+  { type: "richtext", icon: <WholeWord /> },
+  { type: "media", icon: <ImageIcon /> },
+  { type: "relation", icon: <GitBranch /> },
+  { type: "select", icon: <ListChecks /> },
+  { type: "slug", icon: <Link2 /> },
 ];
 
 const iconForType = (type: FieldType): ReactNode => {
@@ -55,13 +75,16 @@ const iconForType = (type: FieldType): ReactNode => {
       return <GitBranch className="size-4" />;
     case "richtext":
       return <WholeWord className="size-4" />;
+    case "date":
+      return <CalendarDays className="size-4" />;
+    case "slug":
+      return <Link2 className="size-4" />;
     default:
       return <Type className="size-4" />;
   }
 };
 
-const typeLabel = (type: FieldType) =>
-  FIELD_TYPES.find((item) => item.type === type)?.label ?? "Text";
+const typeLabel = (type: FieldType) => FIELD_TYPE_LABELS[type];
 
 function FieldNode({
   icon,
@@ -69,17 +92,42 @@ function FieldNode({
   type,
   selected,
   onSelect,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: {
   icon: ReactNode;
   name: string;
   type: string;
   selected?: boolean;
   onSelect: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }) {
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect();
+        } else if (event.key === "ArrowUp") {
+          if (canMoveUp) {
+            event.preventDefault();
+            onMoveUp?.();
+          }
+        } else if (event.key === "ArrowDown") {
+          if (canMoveDown) {
+            event.preventDefault();
+            onMoveDown?.();
+          }
+        }
+      }}
       className={cn(
         "flex w-full flex-row items-center gap-3 rounded-2xl border bg-card p-4 text-left shadow-soft transition-colors",
         selected ? "border-2 border-primary" : "border-border hover:border-primary/40"
@@ -97,50 +145,35 @@ function FieldNode({
         <div className="truncate text-sm font-medium">{name}</div>
         <div className="truncate text-xs text-muted-foreground">{type}</div>
       </div>
+      <div className="flex flex-col">
+        <button
+          type="button"
+          aria-label="Move field up"
+          disabled={!canMoveUp}
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveUp?.();
+          }}
+          className="flex items-center justify-center rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+        >
+          <ChevronUp className="size-4" />
+        </button>
+        <button
+          type="button"
+          aria-label="Move field down"
+          disabled={!canMoveDown}
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveDown?.();
+          }}
+          className="flex items-center justify-center rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-primary-soft hover:text-primary disabled:pointer-events-none disabled:opacity-40"
+        >
+          <ChevronDown className="size-4" />
+        </button>
+      </div>
       <span
         className={cn("size-2.5 rounded-full", selected ? "bg-primary" : "bg-muted-foreground/30")}
       />
-    </button>
-  );
-}
-
-function InspectorRow({ label, value }: { label: string; value: ReactNode }) {
-  return (
-    <div className="mb-3">
-      <div className="mb-1.5 text-xs font-medium text-muted-foreground">{label}</div>
-      <div className="rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm">{value}</div>
-    </div>
-  );
-}
-
-function ToggleRow({ label, on }: { label: string; on?: boolean }) {
-  return (
-    <div className="mb-2 flex items-center justify-between gap-4 rounded-xl border border-border px-3 py-2.5">
-      <div className="text-sm font-medium">{label}</div>
-      <Badge variant={on ? "success" : "outline"}>{on ? "On" : "Off"}</Badge>
-    </div>
-  );
-}
-
-function FieldInspector({ field }: { field: ContentField | null }) {
-  if (!field) {
-    return <p className="text-sm text-muted-foreground">Select a field to inspect its settings.</p>;
-  }
-  return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-sm font-semibold">{field.label}</span>
-        <Badge variant="soft">{typeLabel(field.type)}</Badge>
-      </div>
-      <InspectorRow label="Label" value={field.label} />
-      <InspectorRow
-        label="API id"
-        value={<span className="font-mono text-xs">{field.name}</span>}
-      />
-      <InspectorRow label="Field type" value={typeLabel(field.type)} />
-      <ToggleRow label="Required" on={field.required} />
-      <InspectorRow label="Default value" value={field.defaultValue || "—"} />
-      <InspectorRow label="Help text" value={field.help || "—"} />
     </div>
   );
 }
@@ -161,9 +194,11 @@ export function SchemaBuilderPage() {
     : fieldsFromSchema(buildSchemaFromFields([]));
   const [contentType, setContentType] = useState<ContentTypeSummary | null>(initialCachedType);
   const [fields, setFields] = useState(initialFields);
-  const [schema, setSchema] = useState<ContentSchema>(buildSchemaFromFields(initialFields));
+  // snapshot of the last-persisted field list — Discard target + dirty baseline
+  const [lastLoaded, setLastLoaded] = useState<ContentField[]>(initialFields);
   const [list, setList] = useState<ContentTypeSummary[]>(initialCachedList ?? []);
   const [isLoading, setIsLoading] = useState(() => !initialCachedType);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
     () => initialFields[0]?.id ?? null
@@ -190,7 +225,7 @@ export function SchemaBuilderPage() {
         setContentType(result);
         const mappedFields = fieldsFromSchema(result.schema);
         setFields(mappedFields);
-        setSchema(buildSchemaFromFields(mappedFields));
+        setLastLoaded(mappedFields);
         setError(null);
       })
       .catch((err) => {
@@ -214,6 +249,131 @@ export function SchemaBuilderPage() {
     [fields, selectedFieldId]
   );
 
+  // Derived — REPLACES the stale `useState(buildSchemaFromFields(...))`; the explicit
+  // <ContentSchema> type-arg keeps the `type ContentSchema` import used.
+  const schema = useMemo<ContentSchema>(() => buildSchemaFromFields(fields), [fields]);
+  const isDirty = useMemo(
+    () => JSON.stringify(fields) !== JSON.stringify(lastLoaded),
+    [fields, lastLoaded]
+  );
+  const existingNames = useMemo(
+    () => fields.map((field) => ({ id: field.id, name: field.name })),
+    [fields]
+  );
+  const relationTargets = useMemo(() => list.map(({ slug, name }) => ({ slug, name })), [list]);
+  const nameError = useMemo(
+    () =>
+      selectedField ? validateFieldName(selectedField.name, existingNames, selectedField.id) : null,
+    [selectedField, existingNames]
+  );
+  const defaultError = useMemo(
+    () =>
+      selectedField?.required && !selectedField.defaultValue
+        ? "Required fields need a default value."
+        : null,
+    [selectedField]
+  );
+  const relationError = useMemo(
+    () =>
+      selectedField?.type === "relation" && !selectedField.relation?.target
+        ? "Select a related content type."
+        : null,
+    [selectedField]
+  );
+  const hasBlockingError = useMemo(
+    () => fields.some((field) => validateFieldName(field.name, existingNames, field.id) != null),
+    [fields, existingNames]
+  );
+  const saveDisabled = isLoading || isSaving || fields.length === 0 || hasBlockingError;
+
+  function addFieldOfType(type: FieldType) {
+    const name = makeUniqueFieldName(type, existingNames);
+    const field: ContentField = {
+      id: crypto.randomUUID(),
+      name,
+      type,
+      label: typeLabel(type),
+      keyAuto: true,
+      required: false,
+    };
+    setFields((prev) => [...prev, field]);
+    setSelectedFieldId(field.id);
+  }
+
+  function moveField(id: string, dir: -1 | 1) {
+    setFields((prev) => {
+      const i = prev.findIndex((field) => field.id === id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
+
+  function validateFields(): string | null {
+    for (const field of fields) {
+      const fieldNameError = validateFieldName(field.name, existingNames, field.id);
+      if (fieldNameError) return fieldNameError;
+      if (field.type === "select") {
+        const optionValues = new Set<string>();
+        for (const option of field.options ?? []) {
+          if (!option.label.trim() || !option.value.trim()) {
+            return "Select options need labels and values.";
+          }
+          if (optionValues.has(option.value)) {
+            return "Select option values must be unique.";
+          }
+          optionValues.add(option.value);
+        }
+      }
+      if (field.type === "number") {
+        const { min, max, step, format } = field.number ?? {};
+        if (typeof min === "number" && typeof max === "number" && min > max) {
+          return "Number field minimum cannot exceed maximum.";
+        }
+        if (typeof step === "number" && step <= 0) {
+          return "Number field step must be positive.";
+        }
+        if (
+          format === "integer" &&
+          field.defaultValue &&
+          !Number.isInteger(Number(field.defaultValue))
+        ) {
+          return "Integer number fields cannot use decimal defaults.";
+        }
+      }
+    }
+    return null;
+  }
+
+  async function handleSave() {
+    if (!typeId || isSaving) return;
+    const validationError = validateFields();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+    setIsSaving(true);
+    setError(null);
+    try {
+      const nextSchema = buildSchemaFromFields(fields);
+      await updateContentType(typeId, { schema: nextSchema });
+      setLastLoaded(fields);
+      toast.success("Schema saved");
+    } catch (err) {
+      setError(isApiClientError(err) ? err.message : "Failed to save schema.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function handleDiscard() {
+    setFields(lastLoaded);
+    setSelectedFieldId(lastLoaded[0]?.id ?? null);
+    setError(null);
+  }
+
   return (
     <SplitShell
       activeHref="/admin/content-types"
@@ -221,9 +381,11 @@ export function SchemaBuilderPage() {
       breadcrumbs={["Content", "Schema Builder", contentType?.name ?? "Content Type"]}
       topbarActions={
         <div className="flex items-center gap-2">
-          <Button variant="ghost">Discard</Button>
-          <Button className="gap-2" disabled>
-            Save schema
+          <Button variant="ghost" onClick={handleDiscard} disabled={!isDirty || isSaving}>
+            Discard
+          </Button>
+          <Button className="gap-2" onClick={handleSave} disabled={saveDisabled}>
+            {isSaving ? "Saving…" : "Save schema"}
           </Button>
         </div>
       }
@@ -258,10 +420,11 @@ export function SchemaBuilderPage() {
                   <button
                     key={fieldType.type}
                     type="button"
+                    onClick={() => addFieldOfType(fieldType.type)}
                     className="flex items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-primary-soft [&_svg]:size-4 [&_svg]:text-muted-foreground"
                   >
                     {fieldType.icon}
-                    {fieldType.label}
+                    {typeLabel(fieldType.type)}
                   </button>
                 ))}
               </div>
@@ -288,14 +451,18 @@ export function SchemaBuilderPage() {
                       type={`${typeLabel(field.type)}${field.required ? " · required" : ""}`}
                       selected={field.id === selectedField?.id}
                       onSelect={() => setSelectedFieldId(field.id)}
+                      canMoveUp={index !== 0}
+                      canMoveDown={index !== fields.length - 1}
+                      onMoveUp={() => moveField(field.id, -1)}
+                      onMoveDown={() => moveField(field.id, 1)}
                     />
                   </div>
                 ))
               )}
               <button
                 type="button"
-                disabled
-                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-4 text-sm font-medium text-muted-foreground disabled:opacity-60"
+                onClick={() => addFieldOfType("text")}
+                className="mt-2 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border py-4 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
               >
                 <Hash className="size-4" /> Add new field
               </button>
@@ -303,7 +470,25 @@ export function SchemaBuilderPage() {
           </SectionCard>
 
           <SectionCard title="Field settings">
-            <FieldInspector field={selectedField} />
+            <FieldSettingsPanel
+              field={selectedField}
+              nameError={nameError}
+              defaultError={defaultError}
+              relationError={relationError}
+              relationTargets={relationTargets}
+              existingNames={existingNames}
+              onChange={(next) => {
+                setFields((prev) => prev.map((field) => (field.id === next.id ? next : field)));
+              }}
+              onRemove={() => {
+                if (!selectedField) return;
+                const i = fields.findIndex((field) => field.id === selectedField.id);
+                const next = fields.filter((field) => field.id !== selectedField.id);
+                setFields(next);
+                setSelectedFieldId(next[i]?.id ?? next[i - 1]?.id ?? next[0]?.id ?? null);
+              }}
+              className="h-auto overflow-visible"
+            />
           </SectionCard>
         </div>
       </div>

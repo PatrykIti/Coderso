@@ -7,7 +7,7 @@
 **Category:** Content (Engine) / Tests / Smoke / Closure
 **Estimated Effort:** Medium
 **Dependencies:** TASK-513-01, -02, -03, -04, -05 (all land first)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 
@@ -281,7 +281,7 @@ Gate on `http://coderso-a.localhost:5173/admin/` == 200 (start `coderso-dev-core
 - Update `TASK-513*` subtask **Status** fields to ✅ Done with completion dates and truthful
   closure notes (what shipped, residuals, gate results, smoke pass counts).
 - Do NOT edit `_docs/_TASKS/README.md` or `_docs/_CHANGELOG/*` (orchestrator adds board rows;
-  closure changelog **1225** is pinned and owner/orchestrator-driven).
+  closure changelog **1226** is pinned and owner/orchestrator-driven).
 - Record any residuals + confirm the parent Open Questions' resolutions taken during impl.
 
 ---
@@ -293,3 +293,34 @@ exercised with real input (owner mandate: ≥5 distinct real-flow scenarios; acc
 only smoke is insufficient). Confirm every new control (API ID, singular, plural, drafts,
 versioning, permissions matrix, date/slug fields, drag reorder, visual builder Save) is functional
 end-to-end, not a shell.
+
+---
+
+## Closure (2026-07-06)
+
+**Shipped (513-06, test files + docs only — no impl source touched):**
+- `tests/integration/routes/contentTypeConfigRoundTrip.test.ts` (Bun route lane): config
+  POST→GET→PATCH→GET present-only round-trip, `date`/`slug` `xFieldType` (no `format`), `unique`
+  persistence, `xFieldConfig.order` field-order integers, and `config.bogus` /
+  `permissions.<role>.bogus` → 400 (own-slug isolate + afterEach teardown).
+- `tests/vitest/content/contentTypeConfig.test.ts` (pure lane): `normalizeContentTypeConfig`
+  table cases (reject-unknown top-level/cap, present-only drop-defaults, trims/caps, idempotent),
+  `resolveDraftsEnabled`/`resolveVersioning`, and the 513-04 permissions minimizer
+  (`normalizePermissionsMatrix`/`toggleCapability`/`resolveRoleCapabilities`).
+- `tests/vitest/content/fieldTypeWideningGuard.test.ts` (pure guard): `FieldType` widening
+  (`date`/`slug`) survives `schemaMapping` round-trip and does not throw in `entryChecklist`.
+
+**Changelog:** 1226 (`_docs/_CHANGELOG/1226-2026-07-06-task-513-engine-content-type-editor.md`);
+README next-pointer bumped to 1227. Migration used by 513-01: `0068_productive_stephen_strange`.
+
+**Gate results:** see the workflow commit body / structured result (lint, lint:types, root tsc,
+test:bun, test:vitest, gates:coderso all green at closure).
+
+**Smoke deferral:** the ≥5-scenario LIVE prototype-fidelity Playwright smoke is run by the
+ORCHESTRATOR post-merge (the dev host serves the MAIN tree, not this worktree).
+
+**Residuals / Open Questions (decisions taken):** permissions enforcement (OQ1), `versioning`
+semantics (OQ2), `draftsEnabled` entry-editor effect (OQ4), and `unique` per-entry enforcement
+(OQ5) are all delivered as DECLARATIVE config only (surfaced + persisted; enforcement deferred).
+Field-order persistence (OQ6) is delivered via `xFieldConfig.order` (RESOLVED). Both field editors
+(tab-based 513-03 + visual builder 513-05) are kept (OQ3).

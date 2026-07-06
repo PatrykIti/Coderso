@@ -80,10 +80,30 @@ Note (v2+):
 `content_types`
 - id (uuid, pk)
 - name
-- slug (unique)
+- slug (unique) — also surfaced in the editor as the mono **API ID**
 - schema (jsonb)
+- config (jsonb, NOT NULL DEFAULT `'{}'`, TASK-513-01, migration `0068`)
 - created_at
 - updated_at
+
+`content_types.config` is a present-only, reject-unknown-normalized content-type-level
+configuration object (normalizer `core/services/content/contentTypeConfig.ts`, applied on
+create/update; duplicate copies the source config). Keys — all optional, dropped when at their
+resolved default so a default type serializes to `{}` (legacy rows read byte-identical):
+- `singularName` / `pluralName` (string, trimmed ≤120; empty dropped)
+- `draftsEnabled` (boolean, resolved default `true`; persisted only when `false`)
+- `versioning` (boolean, resolved default `false`; persisted only when `true`; declarative)
+- `permissions` (`{ [roleKey]: { read?, create?, update?, delete?, publish? } }`) — per-role
+  capability matrix, kept only for `true` caps, empty role rows dropped; **declarative** — it
+  does not by itself gate `contentEntryRoutes` authorization (enforcement is a follow-up).
+
+Unknown top-level or per-role capability keys are rejected server-side (`content_type_config_invalid`
+→ HTTP 400). The `content_types.schema` field JSON keeps its `x*` extension convention; the
+`date`/`slug` field types (TASK-513-02) map to JSON-Schema `type:"string"` carrying
+`xFieldType:"date"|"slug"` with **no `format` keyword**, optional `xFieldConfig.date`/`.slug`
+config, a declarative `xFieldConfig.unique`, and a per-property integer `xFieldConfig.order` that
+persists authored field order across a Save→reload (jsonb canonicalizes object keys, so order is
+stored as data; legacy schemas without `order` keep their canonical position).
 
 `content_entries`
 - id (uuid, pk)

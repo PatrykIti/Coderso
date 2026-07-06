@@ -14,6 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { InfoTip } from "@/ui/shared/InfoTip";
 
 import {
+  FIELD_TYPE_LABELS,
   makeUniqueFieldName,
   slugifyFieldName,
   type ContentField,
@@ -21,14 +22,16 @@ import {
   type SelectOption,
 } from "./SchemaBuilder";
 
-const fieldTypes: { value: FieldType; label: string }[] = [
-  { value: "text", label: "Text" },
-  { value: "richtext", label: "Rich text" },
-  { value: "number", label: "Number" },
-  { value: "boolean", label: "Boolean" },
-  { value: "select", label: "Select" },
-  { value: "media", label: "Media" },
-  { value: "relation", label: "Relation" },
+const fieldTypeOrder: FieldType[] = [
+  "text",
+  "richtext",
+  "number",
+  "boolean",
+  "select",
+  "media",
+  "relation",
+  "date",
+  "slug",
 ];
 
 const fieldTypeHelp: Record<FieldType, { helper: string; tooltip: string }> = {
@@ -60,21 +63,21 @@ const fieldTypeHelp: Record<FieldType, { helper: string; tooltip: string }> = {
     helper: "Link to entries from another content type.",
     tooltip: "Relations connect entries together (e.g. Testimonials → Projects).",
   },
+  date: {
+    helper: "Calendar date (optionally with time).",
+    tooltip: "Stores an ISO date; enable Include time for a date + time value.",
+  },
+  slug: {
+    helper: "URL-safe identifier, optionally derived from another field.",
+    tooltip: "URL-safe string (e.g. hello-world); can be derived from a sibling field.",
+  },
 };
 
-const makeUniqueOptionValue = (
-  label: string,
-  options: SelectOption[],
-  currentId?: string
-) => {
+const makeUniqueOptionValue = (label: string, options: SelectOption[], currentId?: string) => {
   const base = slugifyFieldName(label) || "option";
   let candidate = base;
   let index = 2;
-  while (
-    options.some(
-      (option) => option.value === candidate && option.id !== currentId
-    )
-  ) {
+  while (options.some((option) => option.value === candidate && option.id !== currentId)) {
     candidate = `${base}-${index}`;
     index += 1;
   }
@@ -94,9 +97,7 @@ function NumberInput({
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-xs font-semibold uppercase text-muted-foreground">
-        {label}
-      </label>
+      <label className="text-xs font-semibold uppercase text-muted-foreground">{label}</label>
       <Input
         type="number"
         min={min}
@@ -136,6 +137,14 @@ export function FieldEditor({
   onChange,
   onRemove,
 }: FieldEditorProps) {
+  // Derived at render (not module top-level) to avoid a circular-import TDZ:
+  // SchemaBuilder imports FieldEditor before FIELD_TYPE_LABELS is initialized.
+  // Labels sourced from the canonical map so this dropdown cannot drift.
+  const fieldTypes: { value: FieldType; label: string }[] = fieldTypeOrder.map((value) => ({
+    value,
+    label: FIELD_TYPE_LABELS[value],
+  }));
+
   const relationOptions =
     relationTargets.length > 0
       ? relationTargets
@@ -198,7 +207,11 @@ export function FieldEditor({
           next.value = makeUniqueOptionValue(patch.label, field.options ?? [], optionId);
         }
         if (patch.value !== undefined || lockValue) {
-          next.value = makeUniqueOptionValue(patch.value ?? next.value, field.options ?? [], optionId);
+          next.value = makeUniqueOptionValue(
+            patch.value ?? next.value,
+            field.options ?? [],
+            optionId
+          );
           next.valueLocked = true;
         }
         return next;
@@ -250,9 +263,7 @@ export function FieldEditor({
         </label>
         <Input
           value={field.name}
-          onChange={(event) =>
-            onChange({ ...field, name: event.target.value, keyAuto: false })
-          }
+          onChange={(event) => onChange({ ...field, name: event.target.value, keyAuto: false })}
         />
         {nameError ? (
           <div className="flex items-center gap-2 text-xs text-destructive">
@@ -262,29 +273,19 @@ export function FieldEditor({
         ) : null}
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Label
-        </label>
-        <Input
-          value={field.label}
-          onChange={(event) => handleLabelChange(event.target.value)}
-        />
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Label</label>
+        <Input value={field.label} onChange={(event) => handleLabelChange(event.target.value)} />
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <label className="text-xs font-semibold uppercase text-muted-foreground">
             Field type
           </label>
-          <InfoTip
-            content={fieldTypeHelp[field.type].tooltip}
-            label="Field type help"
-          />
+          <InfoTip content={fieldTypeHelp[field.type].tooltip} label="Field type help" />
         </div>
         <Select
           value={field.type}
-          onValueChange={(value) =>
-            onChange({ ...field, type: value as FieldType })
-          }
+          onValueChange={(value) => onChange({ ...field, type: value as FieldType })}
         >
           <SelectTrigger>
             <SelectValue placeholder="Select type" />
@@ -297,17 +298,13 @@ export function FieldEditor({
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-muted-foreground">
-          {fieldTypeHelp[field.type].helper}
-        </p>
+        <p className="text-xs text-muted-foreground">{fieldTypeHelp[field.type].helper}</p>
       </div>
       {field.type === "select" ? (
         <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-semibold uppercase text-muted-foreground">
-                Options
-              </p>
+              <p className="text-xs font-semibold uppercase text-muted-foreground">Options</p>
               <p className="text-xs text-muted-foreground">
                 Store stable values while showing readable labels.
               </p>
@@ -345,11 +342,7 @@ export function FieldEditor({
                     value={option.value}
                     placeholder="value"
                     onChange={(event) =>
-                      updateSelectOption(
-                        option.id,
-                        { value: event.target.value },
-                        true
-                      )
+                      updateSelectOption(option.id, { value: event.target.value }, true)
                     }
                   />
                   <div className="flex items-center gap-1">
@@ -400,9 +393,7 @@ export function FieldEditor({
             </div>
             <Switch
               checked={field.multiple ?? false}
-              onCheckedChange={(checked) =>
-                onChange({ ...field, multiple: checked === true })
-              }
+              onCheckedChange={(checked) => onChange({ ...field, multiple: checked === true })}
             />
           </div>
         </div>
@@ -485,9 +476,7 @@ export function FieldEditor({
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
               <p className="text-sm font-medium">Allow multiple</p>
-              <p className="text-xs text-muted-foreground">
-                Enable picking more than one asset.
-              </p>
+              <p className="text-xs text-muted-foreground">Enable picking more than one asset.</p>
             </div>
             <Switch
               checked={field.media?.multiple ?? false}
@@ -597,6 +586,88 @@ export function FieldEditor({
           ) : null}
         </div>
       ) : null}
+      {field.type === "date" ? (
+        <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+          <div className="flex items-center justify-between rounded-lg border bg-background p-3">
+            <div>
+              <p className="text-sm font-medium">Include time</p>
+              <p className="text-xs text-muted-foreground">
+                Capture a time alongside the date (date &amp; time).
+              </p>
+            </div>
+            <Switch
+              checked={field.date?.includeTime ?? false}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...field,
+                  date: checked ? { includeTime: true } : undefined,
+                })
+              }
+            />
+          </div>
+        </div>
+      ) : null}
+      {field.type === "slug" ? (
+        <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+              Derive from
+            </label>
+            <Select
+              value={field.slug?.source ?? "__none__"}
+              onValueChange={(value) => {
+                const source = value === "__none__" ? undefined : value;
+                const nextSlug = {
+                  ...(source ? { source } : {}),
+                  ...(field.slug?.editable === false ? { editable: false } : {}),
+                };
+                onChange({
+                  ...field,
+                  slug: Object.keys(nextSlug).length ? nextSlug : undefined,
+                });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Free text" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Free text (no source)</SelectItem>
+                {existingNames
+                  .filter((entry) => entry.id !== field.id)
+                  .map((entry) => (
+                    <SelectItem key={entry.id} value={entry.name}>
+                      {entry.name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Declarative link to a sibling field this slug represents.
+            </p>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border bg-background p-3">
+            <div>
+              <p className="text-sm font-medium">Editable</p>
+              <p className="text-xs text-muted-foreground">
+                Allow editors to override the slug value.
+              </p>
+            </div>
+            <Switch
+              checked={field.slug?.editable ?? true}
+              onCheckedChange={(checked) => {
+                const nextSlug = {
+                  ...(field.slug?.source ? { source: field.slug.source } : {}),
+                  ...(checked ? {} : { editable: false }),
+                };
+                onChange({
+                  ...field,
+                  slug: Object.keys(nextSlug).length ? nextSlug : undefined,
+                });
+              }}
+            />
+          </div>
+        </div>
+      ) : null}
       <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
         <div className="space-y-1">
           <p className="text-sm font-semibold">Layout & grouping</p>
@@ -606,9 +677,7 @@ export function FieldEditor({
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Tab
-            </label>
+            <label className="text-xs font-semibold uppercase text-muted-foreground">Tab</label>
             <Input
               value={field.layout?.tab ?? ""}
               onChange={(event) => {
@@ -619,9 +688,7 @@ export function FieldEditor({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Section
-            </label>
+            <label className="text-xs font-semibold uppercase text-muted-foreground">Section</label>
             <Input
               value={field.layout?.section ?? ""}
               onChange={(event) => {
@@ -634,9 +701,7 @@ export function FieldEditor({
             />
           </div>
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">
-              Width
-            </label>
+            <label className="text-xs font-semibold uppercase text-muted-foreground">Width</label>
             <Select
               value={field.layout?.width ?? "full"}
               onValueChange={(value) => {
@@ -674,9 +739,7 @@ export function FieldEditor({
         </div>
       </div>
       <div className="space-y-2">
-        <label className="text-xs font-semibold uppercase text-muted-foreground">
-          Help text
-        </label>
+        <label className="text-xs font-semibold uppercase text-muted-foreground">Help text</label>
         <Textarea
           value={field.help ?? ""}
           onChange={(event) => onChange({ ...field, help: event.target.value })}
@@ -686,15 +749,21 @@ export function FieldEditor({
       <div className="flex items-center justify-between rounded-lg border p-3">
         <div>
           <p className="text-sm font-medium">Required</p>
-          <p className="text-xs text-muted-foreground">
-            Field must be filled in.
-          </p>
+          <p className="text-xs text-muted-foreground">Field must be filled in.</p>
         </div>
         <Switch
           checked={field.required}
-          onCheckedChange={(checked) =>
-            onChange({ ...field, required: checked })
-          }
+          onCheckedChange={(checked) => onChange({ ...field, required: checked })}
+        />
+      </div>
+      <div className="flex items-center justify-between rounded-lg border p-3">
+        <div>
+          <p className="text-sm font-medium">Unique</p>
+          <p className="text-xs text-muted-foreground">Value must be unique across entries.</p>
+        </div>
+        <Switch
+          checked={field.unique ?? false}
+          onCheckedChange={(checked) => onChange({ ...field, unique: checked || undefined })}
         />
       </div>
       <div className="space-y-2">
@@ -702,14 +771,20 @@ export function FieldEditor({
           Default value
         </label>
         <Input
-          type={field.type === "number" ? "number" : "text"}
+          type={
+            field.type === "number"
+              ? "number"
+              : field.type === "date"
+                ? field.date?.includeTime
+                  ? "datetime-local"
+                  : "date"
+                : "text"
+          }
           step={field.number?.step}
           min={field.number?.min}
           max={field.number?.max}
           value={field.defaultValue ?? ""}
-          onChange={(event) =>
-            onChange({ ...field, defaultValue: event.target.value })
-          }
+          onChange={(event) => onChange({ ...field, defaultValue: event.target.value })}
         />
         {defaultError ? (
           <div className="flex items-center gap-2 text-xs text-destructive">

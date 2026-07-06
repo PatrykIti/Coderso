@@ -5,8 +5,8 @@
 **Priority:** High
 **Category:** Admin UI / Content (Engine / Content Types) / Editor Fidelity / Schema Extension
 **Estimated Effort:** Large
-**Status:** ⏳ To Do
-**Closure Changelog (pinned):** 1225
+**Status:** ✅ Done (2026-07-06)
+**Closure Changelog (pinned):** 1226
 
 ---
 
@@ -559,7 +559,7 @@ Save invokes `updateContentType` with mapped schema; disabled→enabled transiti
 ### 513-06 — Integration tests, gates, Playwright smoke, closure
 
 **Goal:** Cross-subtask integration coverage + gates + ≥5 real-flow Playwright scenarios + closure.
-Owns test files only + this task's docs (changelog number lives ONLY here — pinned 1225).
+Owns test files only + this task's docs (changelog number lives ONLY here — pinned 1226).
 
 **Guard test (from Coordination note):** assert `custom-screens`/`entries` consumers of
 `FieldType` type-narrow safely over the new `"date"|"slug"` arms (no runtime throw on unknown-to-
@@ -575,7 +575,7 @@ prototype `http://localhost:5180/#/advanced/engine/sample`.
 **Gates:** `bun --cwd core lint:types` AND root `tsc -p tsconfig.json --noEmit`, `lint`,
 `gates:coderso`, Bun + Vitest lanes green. Closure updates only `TASK-513*` subtask **Status**
 fields; it does NOT edit `_TASKS/README.md` or `_CHANGELOG/*` (orchestrator adds board rows; the
-pinned changelog **1225** is owner/orchestrator-driven).
+pinned changelog **1226** is owner/orchestrator-driven).
 
 ---
 
