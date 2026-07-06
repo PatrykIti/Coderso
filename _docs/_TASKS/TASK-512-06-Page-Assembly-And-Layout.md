@@ -65,7 +65,26 @@ components (512-05) or clients (512-04). **Land order:** after 512-05, before 51
    (and `typeCounts={folderCounts}` — the existing line-220 map). Add `activeFolderId` state; selecting a folder filters the grid to that folder
    **incl. descendants** (see §3 for the inline descendant-membership filter — `countMediaByFolder`
    is a COUNT helper, used only to build the rail's per-folder `folderItemCounts`, NOT for filtering the
-   list); selecting a type clears folder.
+   list); selecting a type clears folder. **The rail's `onSelectFolder`/`onSelectType` handlers MUST
+   keep `mediaFilterState.folderId` in lock-step with `activeFolderId`** (single-direction reconcile
+   is NOT enough — see the reconcile note in §3): because the Filters badge counts
+   `mediaFilterState.folderId` (`countActiveFilters`, 512-05) and the panel is CONTROLLED via
+   `value={mediaFilterState}`, a rail folder that wrote ONLY `activeFolderId` would filter the grid yet
+   be un-counted by the badge AND display as "Any folder" in the panel (the exact desync). So mirror it:
+   ```ts
+   // rail folder select — grid source of truth (activeFolderId) + badge/panel mirror (mediaFilterState.folderId):
+   onSelectFolder={(folderId) => {
+     setActiveFolderId(folderId);
+     setMediaFilterState((prev) => ({ ...prev, folderId })); // keep badge count + panel display in sync
+     if (folderId) setFilter("all"); // folder + rail type are exclusive (§2)
+   }}
+   // rail type select — clears BOTH folder surfaces (grid + mirror):
+   onSelectType={(type) => {
+     setFilter(type);
+     setActiveFolderId(null);
+     setMediaFilterState((prev) => ({ ...prev, folderId: null }));
+   }}
+   ```
 3. **Filters panel + folder/tag filter (inline, page-owned):** add `filterPanelOpen` +
    `mediaFilterState` state. Wire `MediaToolbar` with BOTH props 512-05 exposes: pass
    `onOpenFilters={() => setFilterPanelOpen(true)}` AND
@@ -132,9 +151,13 @@ components (512-05) or clients (512-04). **Land order:** after 512-05, before 51
    //   { types: [], tags: [], folderId: null, alt: "any", dateFrom: null, dateTo: null };
    ```
    `mediaFilterState` seeds from the imported `EMPTY_MEDIA_FILTER`. The rail's `activeFolderId` (§2) and the
-   panel's `mediaFilterState.folderId` are reconciled to a single effective folder: rail selection
-   is authoritative; when the panel sets a folder it writes `activeFolderId` too (keep one source of
-   truth for the grid — do NOT double-filter). The folder filter is DESCENDANT-AWARE and computed
+   panel's `mediaFilterState.folderId` are reconciled to a single effective folder **in BOTH directions**
+   so the grid, the Filters badge, and the panel's folder control never diverge: `activeFolderId` is the
+   grid's sole folder source of truth (the memo filters folders by `activeFolderId` ONLY, never by
+   `mediaFilterState.folderId`), while `mediaFilterState.folderId` is the badge-count + panel-display
+   mirror. Panel→rail: the panel `onChange` writes `activeFolderId` (§3 above). Rail→panel: the rail's
+   `onSelectFolder`/`onSelectType` handlers write `mediaFilterState.folderId` (§2 above). Keep one
+   effective folder — do NOT double-filter. The folder filter is DESCENDANT-AWARE and computed
    INLINE in the page memo (no `filterByFolder` helper exists in 512-04's utils.ts and 512-06 cannot
    add one — 512-04 is the single writer of that file; 512-04 owns only `buildFolderTree`,
    `countMediaByFolder` (count), `filterByTag`). `FolderNode` is the `buildFolderTree` return type —
@@ -193,7 +216,14 @@ components (512-05) or clients (512-04). **Land order:** after 512-05, before 51
    Keep `folderDescendantIds` pure so it is Vitest-testable (see Testing Requirements).
 4. **Details drawer save-through:** `handleSaveMeta` already forwards `MediaMetaUpdate`; ensure new
    fields (folderId/tags/focalX/focalY/description/credit) are included in the drawer's onSave
-   payload (drawer built in 512-05). On folderId change, refresh folder counts (derive from items;
+   payload (drawer built in 512-05). **Pass the folder option source:** the drawer's Folder select
+   needs the collection of selectable folders (512-05 adds an OPTIONAL, `[]`-defaulted
+   `folders?: MediaFolder[]` prop to `MediaDetailsDrawerProps` — optional for back-compat with the
+   three unowned test renders, but this page MUST pass it or the Folder control shows only the
+   "— No folder —" row; `item.folderId` is only the asset's OWN folder, not the option list), so
+   extend the existing drawer render (`MediaLibraryPage.tsx:702-717`) to pass `folders={folders}` (the
+   same `folders` state fetched in §2). Without it the Folder control has no options to render. On
+   folderId change, refresh folder counts (derive from items;
    optionally re-broadcast). **Upload-into-folder = upload-first-then-PATCH** (NOT via upload meta):
    when `activeFolderId` is set, call `uploadMedia(file, { alt?, title?, caption? })` (upload meta
    stays minimal — `mediaUploadSchema` is `additionalProperties:false` and does NOT carry

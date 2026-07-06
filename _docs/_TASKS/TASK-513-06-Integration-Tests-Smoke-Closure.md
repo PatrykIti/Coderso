@@ -35,9 +35,11 @@ endpoint/RBAC bucket was added beyond the existing `content:read`/`content:write
 
 ### 1. Integration / cross-cutting tests
 - **End-to-end config round-trip (Bun route lane)**: `POST /content-types` with `config` +
-  `date`/`slug` fields → `GET` → `PATCH` (change config + send a reordered properties map) → `GET` asserts config
-  present-only, the field-key **SET** preserved (field **order is NOT persisted** — `content_types.schema` is a
-  `jsonb` column that re-sorts object keys; see the CROSS-SUBTASK BLOCKER below), schema `xFieldType:"date"`/`xFieldType:"slug"` intact
+  `date`/`slug` fields → `GET` → `PATCH` (change config + send properties carrying `xFieldConfig.order`) → `GET` asserts config
+  present-only, the field-key **SET** preserved AND each field's **`xFieldConfig.order` integer round-trips as data**
+  (field order persists via `xFieldConfig.order`, NOT via raw key position — `content_types.schema` is a `jsonb` column that
+  re-sorts object keys, so the route lane proves persistence through the `order` integers; see the CROSS-SUBTASK ITEM below),
+  schema `xFieldType:"date"`/`xFieldType:"slug"` intact
   (NO `format` key — 513-02 emits none; ajv `strict:true` would throw on it), and a
   field marked `unique` persists its `xFieldConfig.unique === true` through the round-trip (omitted
   when unset). Reject-unknown: `config.bogus` and `permissions.editor.bogus` → 400. Unique-slug per test +
@@ -49,24 +51,28 @@ endpoint/RBAC bucket was added beyond the existing `content:read`/`content:write
   consumers.
 - **countSchemaFields / list summary** still correct with date/slug fields.
 
-> **⚠ CROSS-SUBTASK BLOCKER — field-ORDER persistence is NOT delivered by the current architecture (owner / 513-02 decision required).**
-> `content_types.schema` is a Postgres **`jsonb`** column (`core/db/schema.ts:688`) and field order rides
-> `Object.entries(schema.properties)` (`schemaMapping.ts` `fieldsFromSchema`, line ~389) with **no** separate order array in
-> `ContentSchema` (`schemaMapping.ts:24-28`). Postgres `jsonb` does **not** preserve object-key insertion order — it canonicalizes
-> keys by (length, then bytewise). **Verified empirically against the live DB:**
+> **✅ CROSS-SUBTASK ITEM — field-ORDER persistence IS delivered (513-02 via `xFieldConfig.order`; parent Open Question 6).**
+> `content_types.schema` is a Postgres **`jsonb`** column (`core/db/schema.ts:688`) and Postgres `jsonb` does **not** preserve
+> object-key insertion order — it canonicalizes keys by (length, then bytewise). **Verified empirically against the live DB:**
 > `jsonb_build_object('title',1,'publishedAt',2,'urlSlug',3)::text` → `{"title": 1, "urlSlug": 3, "publishedAt": 2}`
-> (`title`(5) < `urlSlug`(7) < `publishedAt`(11) — jsonb-canonical, NOT the authored `[title, publishedAt, urlSlug]`).
-> **Consequence:** the editor drag/keyboard reorder (513-03 §3 "array order == persisted property order"; 513-05 Step 2) and
-> smoke scenario 3's "reopen shows the new order" assert an invariant the code does **not** provide — a Save→reopen round-trip
-> re-sorts properties into jsonb-canonical order regardless of authored order. **This is a 513-02 concern (owner of
-> `schemaMapping`), NOT fixable inside 513-06:** persisting field order requires an EXPLICIT mechanism (e.g. a top-level
-> `x-field-order: string[]` on `ContentSchema` that `buildSchemaFromFields` writes and `fieldsFromSchema` reads to re-sort the
-> `Object.entries` result, or a per-property `x-order` integer). **Until that lands,** 513-06's route round-trip asserts the
-> property-key **SET** (order-independent), and smoke scenario 3 verifies type/flag/add/dup/delete persistence only. **When the
-> order mechanism lands in 513-02, tighten the two `Object.keys(...)` assertions below (get1 + get2) back to exact-order
-> `toEqual([...])` and re-enable the smoke "new order" check.** (Prior draft asserted `get1 → [title, publishedAt, urlSlug]`,
-> which is RED under jsonb, and `get2 → [title, urlSlug, publishedAt]`, which passed only COINCIDENTALLY — it equals the
-> length-sorted canonical order — so it proved nothing about reorder persistence.)
+> (`title`(5) < `urlSlug`(7) < `publishedAt`(11) — jsonb-canonical, NOT the authored `[title, publishedAt, urlSlug]`). Because raw
+> key position cannot carry order, **513-02 makes order DATA, not key-position:** `buildSchemaFromFields` stamps a per-property
+> integer **`xFieldConfig.order`** (0-based authored index) on every field, and `fieldsFromSchema` re-sorts the
+> `Object.entries(schema.properties)` result by it (missing `order` ⇒ `Infinity`, so legacy fields keep their canonical position —
+> no read regression). This rides the already-registered `xFieldConfig` keyword (NO top-level `xFieldOrder`, which would throw
+> under `assertContentSchema`'s `new Ajv({ strict:true })`).
+> **What this means for the two lanes (IMPORTANT — do not over-assert the route lane):**
+> - **Bun route round-trip (raw jsonb in/out):** the route serializes/returns the schema JSON *verbatim*; it does NOT run
+>   `fieldsFromSchema`, so `Object.keys(props)` STILL comes back jsonb-canonical (key position is not order). Therefore assert the
+>   property-key **SET** (order-independent) AND that the **`xFieldConfig.order` integers round-trip as data** (that is the
+>   route-level proof that order PERSISTS). Do NOT assert `Object.keys(...)` equals the authored sequence — it never will at the
+>   raw-jsonb layer, regardless of the order feature.
+> - **Admin/UI + smoke (through `fieldsFromSchema`):** the editor reads via `fieldsFromSchema`, which re-sorts by
+>   `xFieldConfig.order`, so the reloaded FIELD order equals the authored order. The exact-order round-trip is unit-covered in
+>   **513-02** (`fieldsFromSchema(buildSchemaFromFields(reordered)).map(f => f.name)` === reordered), and smoke scenario 3
+>   **re-enables the "reopen shows the new order" check** (real UI path). (Prior draft asserted raw `Object.keys` order, which is
+>   RED/coincidental under jsonb — the correct order proof is the `order` integers at the route layer + the `fieldsFromSchema`
+>   resort at the UI layer.)
 
 #### Test skeletons (execution-ready)
 
@@ -105,12 +111,14 @@ testIfDbWithOptions("content-type config + date/slug round-trip via POST→GET�
     schema: {
       type: "object", additionalProperties: false, required: ["title"],
       properties: {
-        title: { type: "string" },
-        publishedAt: { type: "string", xFieldType: "date" }, // NO format: ajv strict:true would throw (513-02)
-        // urlSlug carries BOTH a slug config and `unique:true` on the SAME xFieldConfig object — proves
+        // Every field carries xFieldConfig.order (0-based authored index) — exactly what buildSchemaFromFields
+        // stamps on every field (513-02 §Field-ORDER); order rides the registered xFieldConfig keyword (no ajv change).
+        title: { type: "string", xFieldConfig: { order: 0 } },
+        publishedAt: { type: "string", xFieldType: "date", xFieldConfig: { order: 1 } }, // NO format: ajv strict:true would throw (513-02)
+        // urlSlug carries a slug config, `unique:true`, AND order on the SAME xFieldConfig object — proves
         // the jsonb schema persists xFieldConfig verbatim through the route/DB round-trip (513-02 build
         // arm `if (field.unique) fieldConfig.unique = true` rides this same object; read-back at 513-02 §fieldsFromSchema).
-        urlSlug: { type: "string", xFieldType: "slug", xFieldConfig: { slug: { source: "title" }, unique: true } },
+        urlSlug: { type: "string", xFieldType: "slug", xFieldConfig: { slug: { source: "title" }, unique: true, order: 2 } },
       },
     },
     // present-only: draftsEnabled:true & versioning:false are RESOLVED DEFAULTS → must be DROPPED to {}
@@ -138,29 +146,40 @@ testIfDbWithOptions("content-type config + date/slug round-trip via POST→GET�
   // `unique` rides xFieldConfig verbatim through the route/jsonb round-trip — persists when set, omitted when unset.
   // (This is the route/DB-lane proof; the present-only build/read minimizer — set true → drop when falsy — is unit-covered by 513-02's schemaMapping round-trip, so 513-06 does not re-test that arm.)
   expect(props1.urlSlug.xFieldConfig.unique).toBe(true);      // persisted when set
-  expect(props1.title.xFieldConfig?.unique).toBeUndefined();  // omitted when unset (title carries no xFieldConfig at all)
-  // field SET preserved — NOT order (jsonb re-sorts keys; see CROSS-SUBTASK BLOCKER above). Compare the sorted key set,
+  expect(props1.title.xFieldConfig?.unique).toBeUndefined();  // omitted when unset (title's xFieldConfig carries only `order`, no `unique`)
+  // field-ORDER persists as DATA — the authored xFieldConfig.order integers round-trip verbatim (513-02 §Field-ORDER; parent OQ6).
+  // (Raw key position is NOT order — jsonb re-sorts keys; the route-layer proof is the `order` integers, and the fieldsFromSchema
+  // resort that turns them back into authored FIELD order is unit-covered by 513-02.)
+  expect(props1.title.xFieldConfig.order).toBe(0);
+  expect(props1.publishedAt.xFieldConfig.order).toBe(1);
+  expect(props1.urlSlug.xFieldConfig.order).toBe(2);
+  // field SET preserved (jsonb re-sorts keys; see CROSS-SUBTASK ITEM above). Compare the sorted key set,
   // never the raw insertion order: the authored [title, publishedAt, urlSlug] reads back jsonb-canonical [title, urlSlug, publishedAt].
   expect([...Object.keys(props1)].sort()).toEqual(["publishedAt", "title", "urlSlug"]);
 
-  // ACT: PATCH — turn a default OFF (now present) + send a REORDERED properties map
-  // (exercises the PATCH path; the reorder will NOT persist through jsonb — see CROSS-SUBTASK BLOCKER above)
+  // ACT: PATCH — turn a default OFF (now present) + REORDER to [title, urlSlug, publishedAt], RE-STAMPING
+  // xFieldConfig.order to the new authored indices (exactly what buildSchemaFromFields emits after a UI reorder).
   await runRoute(routes, "PATCH", "/content-types/:id", { params: { id }, query: {}, body: {
     config: { ...body.config, draftsEnabled: false, versioning: true },
     schema: { ...body.schema, properties: {
-      title: body.schema.properties.title,
-      urlSlug: body.schema.properties.urlSlug,
-      publishedAt: body.schema.properties.publishedAt,
+      title:       { ...body.schema.properties.title,       xFieldConfig: { order: 0 } },
+      urlSlug:     { ...body.schema.properties.urlSlug,      xFieldConfig: { ...body.schema.properties.urlSlug.xFieldConfig, order: 1 } },
+      publishedAt: { ...body.schema.properties.publishedAt, xFieldConfig: { order: 2 } },
     } },
   } });
 
   const get2 = (await runRoute(routes, "GET", "/content-types/:id", { params: { id }, query: {}, body: {} })) as any;
   const cfg2 = get2.config ?? get2.contentType?.config;
+  const props2 = (get2.schema ?? get2.contentType?.schema).properties;
   expect(cfg2.draftsEnabled).toBe(false); // now non-default → PERSISTED
   expect(cfg2.versioning).toBe(true);
-  // SET only — jsonb does NOT persist the authored reorder (see BLOCKER). Do NOT assert exact order: the prior
-  // [title, urlSlug, publishedAt] passed only COINCIDENTALLY (it equals jsonb's length-sorted canonical order) and proved nothing.
-  expect([...Object.keys((get2.schema ?? get2.contentType?.schema).properties)].sort()).toEqual(["publishedAt", "title", "urlSlug"]);
+  // ORDER-persistence proof: the re-stamped xFieldConfig.order integers round-trip — the new authored order
+  // [title(0), urlSlug(1), publishedAt(2)] is preserved as DATA (the fieldsFromSchema resort that renders it back as
+  // authored FIELD order is unit-covered by 513-02). Raw Object.keys stays jsonb-canonical — assert the SET, never key order.
+  expect(props2.title.xFieldConfig.order).toBe(0);
+  expect(props2.urlSlug.xFieldConfig.order).toBe(1);
+  expect(props2.publishedAt.xFieldConfig.order).toBe(2);
+  expect([...Object.keys(props2)].sort()).toEqual(["publishedAt", "title", "urlSlug"]);
 }, { timeout: 20000 });
 
 testIfDbWithOptions("reject-unknown: config.bogus and permissions.<role>.bogus → 400", async () => {
@@ -246,10 +265,11 @@ Gate on `http://coderso-a.localhost:5173/admin/` == 200 (start `coderso-dev-core
    on (the inspector row 513-02 adds under Required, matching the prototype), reorder via drag,
    duplicate a field, delete a field (with Undo), Save → reopen shows the new field **types**, the
    add/duplicate/delete results, AND the Unique flag persisted (present-only via `xFieldConfig.unique`).
-   **Field ORDER is NOT asserted** — jsonb re-sorts property keys, so a reordered save reopens in jsonb-canonical
-   order (see the CROSS-SUBTASK BLOCKER in §1; re-enable the "new order" check once 513-02 lands an explicit order
-   array). The drag itself is still exercised to confirm the control works. Open an **Entry** of the type and
-   confirm the date input + slug input render (513-02 renderer).
+   **Field ORDER IS asserted** — the reordered field order PERSISTS through Save→reopen (513-02 stamps
+   `xFieldConfig.order` and `fieldsFromSchema` re-sorts by it, so the real UI reload reflects the authored
+   order despite jsonb key-canonicalization; see the CROSS-SUBTASK ITEM in §1). Drag to a new order, Save,
+   reopen, and confirm the fields render in that new order. Open an **Entry** of the type and confirm the
+   date input + slug input render (513-02 renderer).
 4. **Permissions tab**: toggle several role×capability cells, Reset to defaults, re-toggle, Save,
    reload → matrix persists (present-only).
 5. **Visual schema builder (Open schema)**: from the editor header open `/schema`, add a field via

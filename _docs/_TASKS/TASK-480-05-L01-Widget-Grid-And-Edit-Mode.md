@@ -29,11 +29,16 @@ the Save round-trip.
   state, (4) **Save** persists via the cached client and (5) **Discard** reverts to
   the last saved layout. No mount-force refetch loop; background revalidation never
   overwrites a dirty draft.
-- **Owning module/service:**
-  - `core/admin/ui/dashboard/builder/DashboardBuilder.tsx` (new)
-  - `core/admin/ui/dashboard/builder/useDashboardBuilder.ts` (new — reducer hook)
-  - `core/admin/ui/dashboard/builder/WidgetGrid.tsx` (new — grid + arrange/resize)
-  - integration edit into `core/admin/ui/dashboard/DashboardPage.tsx`
+- **Owning module/service (as-built, flat layout — NOT a `builder/` subdir):**
+  - `core/admin/ui/dashboard/DashboardBuilder.tsx` (new — the whole builder:
+    inline `useReducer` state machine, the responsive grid, the inline add-widget
+    catalog, the pointer drag/resize wiring, and the config side panel)
+  - `core/admin/ui/dashboard/dashboardLayoutArrange.ts` (new — pure
+    `moveWidget`/`resizeWidget`/`sortWidgetsByPosition` helpers shared by pointer
+    DnD and the keyboard/toolbar nudges; the reducer is inline, there is no
+    separate `useDashboardBuilder.ts` hook or `WidgetGrid.tsx`)
+  - `core/admin/ui/dashboard/DashboardPage.tsx` renders
+    `<DashboardBuilder canWrite={can("dashboard:write")} />`
 - **Source-of-truth docs:**
   - Layout contract: `core/services/dashboard/dashboardWidgetContract.ts`
     (`DashboardLayout`, `DashboardWidget`, `normalizeDashboardLayout`,
@@ -77,6 +82,47 @@ the Save round-trip.
   config; nothing secret-bearing is cached, logged, or sent.
 
 ---
+
+## As-Built (delivered) — authoritative
+
+> The pseudocode below is the pre-implementation design sketch. Where it disagrees
+> with this section, **this section is the source of truth**. Key deltas:
+>
+> - **Single-file builder, inline reducer.** All builder logic ships in
+>   `DashboardBuilder.tsx` (no `useDashboardBuilder.ts` hook, no `WidgetGrid.tsx`).
+>   `BuilderState = { layout, savedLayout, data, loading, previewing, saving, error,
+>   editMode, dirty, selectedId, remoteStale }`; actions are `load:*`, `preview:*`,
+>   `layout:update`, `edit:set`, `select`, `save:*`, `remote:stale`.
+> - **Hydrate + revalidate (no mount-force loop).** Mount calls `load(false)` →
+>   `getDashboardLayoutCached({force:false})` + `getDashboardWidgetDataCached(...)`
+>   in parallel (cache-first). `subscribeDashboardCache(...)` handles background/
+>   cross-tab updates; while `dirty || saving` it sets `remoteStale` (a hint banner)
+>   and never clobbers the draft — otherwise it re-`load(true)`s. **Save** →
+>   `saveDashboardLayout(layout)` then a forced widget-data refetch → `save:success`
+>   adopts the server echo. **Reset** → `resetDashboardLayout()`. **Cancel** exits
+>   edit and reloads the saved layout. Draft config edits re-preview via
+>   `previewDashboardWidgetData(widgets)` (sequence-guarded); geometry-only edits
+>   (move/resize) deliberately skip the preview refetch.
+> - **Arrange/resize = native Pointer events (NOT `@dnd-kit`/HTML5 DnD).** The host's
+>   drag grip fires `onReorderPointerDown` → `beginReorder`, which attaches `window`
+>   `pointermove`/`pointerup`/`pointercancel`/`keydown(Escape)` listeners, hit-tests
+>   widget wrappers by `data-widget-id` under the pointer, and on drop applies
+>   `moveWidget(layout, activeId, overId)` (resequences visual `y`; `x/w/h`
+>   preserved). The resize handle fires `onResizePointerDown` → `beginResize`, which
+>   measures a column's pixel width (`(gridWidth - 16*11)/12`), converts drag delta
+>   to grid steps, and applies `resizeWidget(...)` clamped to the contract
+>   (`w ≤ 12 - x`, `h ≤ 12`). Both are pure helpers in
+>   `dashboardLayoutArrange.ts` so a dragged draft round-trips through
+>   `normalizeDashboardLayout` unchanged. Escape/`pointercancel` abort a drag; a
+>   ref-based cleanup detaches listeners on unmount (cleanup-only effect, no
+>   set-state-in-effect).
+> - **A11y / keyboard fallback** = the host's edit-chrome **toolbar** of icon
+>   buttons (move left/right/up/down, wider/narrower, taller/shorter, configure,
+>   remove) — every arrange/resize/remove action is reachable without a pointer.
+>   Pointer DnD is the enhancement; the toolbar is the baseline.
+> - **Widget data** is passed to each `DashboardWidgetHost` as a
+>   `DashboardWidgetResolution` (via a `Map` keyed by widget id), not a
+>   `WidgetDataState` union.
 
 ## Implementation Pseudocode
 

@@ -3,29 +3,22 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUp,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  GripVertical,
   Maximize2,
   Minimize2,
   Settings,
   Trash2,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { AreaChart, BarChart, Donut } from "@/ui/shared/Charts";
-import { DataTable } from "@/ui/shared/DataTable";
-import { AdminLink } from "@/ui/shared/AdminLink";
-import { SectionCard } from "@/ui/shared/SectionCard";
-import { StatusBadge } from "@/ui/shared/StatusBadge";
-import { RecentEditsTable } from "@/ui/dashboard/RecentEditsTable";
-import { SecurityStatusCard } from "@/ui/dashboard/SecurityStatusCard";
-import { StatCard } from "@/ui/dashboard/StatCard";
+import { getWidgetRenderer } from "./widgetRegistry";
+import { UnavailableWidget } from "./widgetRenderers";
 import type {
-  DashboardSecuritySummary,
   DashboardWidget,
-  DashboardWidgetData,
   DashboardWidgetResolution,
 } from "../../../services/dashboard/dashboardTypes";
 
@@ -36,6 +29,8 @@ type WidgetAction =
   | "down"
   | "wider"
   | "narrower"
+  | "taller"
+  | "shorter"
   | "configure"
   | "remove";
 
@@ -45,34 +40,13 @@ type DashboardWidgetHostProps = {
   editMode: boolean;
   selected?: boolean;
   onAction?: (action: WidgetAction) => void;
-};
-
-const formatBytes = (value: number) => {
-  if (value <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let size = value;
-  let unitIndex = 0;
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex += 1;
-  }
-  const rounded = size >= 10 ? Math.round(size) : Math.round(size * 10) / 10;
-  return `${rounded} ${units[unitIndex]}`;
-};
-
-const toDateLabel = (value: string) => {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) return value;
-  return new Date(timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-};
-
-const quickActionHref = (target: string) => {
-  if (target === "pages") return "/pages";
-  if (target === "entries") return "/content";
-  if (target === "media") return "/media";
-  if (target === "analytics") return "/analytics";
-  if (target === "settings") return "/settings";
-  return "/admin";
+  // Pointer drag-and-drop (TASK-480-05-L01). These wire the grip + corner handles
+  // to the builder's pointer arrange/resize; when omitted the handles are hidden
+  // and only the keyboard-operable nudge buttons remain (the a11y fallback).
+  onReorderPointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+  onResizePointerDown?: (event: React.PointerEvent<HTMLElement>) => void;
+  dragging?: boolean;
+  dropTarget?: boolean;
 };
 
 function IconAction({
@@ -107,301 +81,15 @@ function IconAction({
   );
 }
 
-const unwrap = <T extends DashboardWidgetData["type"]>(
-  data: DashboardWidgetResolution | undefined,
-  type: T
-): Extract<DashboardWidgetData, { type: T }> | null => {
-  if (!data || "error" in data || data.type !== type) return null;
-  return data as Extract<DashboardWidgetData, { type: T }>;
-};
-
-function UnavailableWidget({ widget }: { widget: DashboardWidget }) {
-  return (
-    <SectionCard title={widget.title ?? "Widget"} description="Data unavailable">
-      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-5 text-sm text-muted-foreground">
-        This widget has no data for the current source.
-      </div>
-    </SectionCard>
-  );
-}
-
-function TotalsWidget({
-  widget,
-  data,
-}: {
-  widget: DashboardWidget;
-  data?: DashboardWidgetResolution;
-}) {
-  const payload = unwrap(data, "totals-counters");
-  if (!payload) return <UnavailableWidget widget={widget} />;
-  return (
-    <div className="grid h-full grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      {payload.counters.map((counter) => (
-        <StatCard
-          key={counter.key}
-          label={counter.label}
-          value={counter.formatted}
-          delta={counter.delta?.label}
-          trend={counter.delta?.trend}
-          spark={counter.spark}
-          className="h-full"
-        />
-      ))}
-    </div>
-  );
-}
-
-function CountsWidget({
-  widget,
-  data,
-}: {
-  widget: DashboardWidget;
-  data?: DashboardWidgetResolution;
-}) {
-  const payload = unwrap(data, "content-type-counts");
-  if (!payload) return <UnavailableWidget widget={widget} />;
-  const max = Math.max(...payload.counts.map((row) => row.count), 1);
-  return (
-    <SectionCard title={widget.title ?? "Content Types"}>
-      {payload.counts.length === 0 ? (
-        <div className="py-6 text-sm text-muted-foreground">No content types yet.</div>
-      ) : payload.segments ? (
-        <div className="flex flex-col items-center gap-4">
-          <Donut segments={payload.segments} />
-          <div className="grid w-full gap-2 text-sm">
-            {payload.segments.map((segment) => (
-              <div key={segment.label} className="flex items-center gap-2">
-                <span className="size-2.5 rounded-full" style={{ background: segment.color }} />
-                <span className="text-muted-foreground">{segment.label}</span>
-                <span className="ml-auto font-medium">{segment.value.toLocaleString("en-US")}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {payload.counts.map((row) => (
-            <div key={row.id} className="space-y-1.5">
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="truncate font-medium">{row.label}</span>
-                <span className="text-muted-foreground">{row.count.toLocaleString("en-US")}</span>
-              </div>
-              <div className="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full bg-primary"
-                  style={{ width: `${(row.count / max) * 100}%` }}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </SectionCard>
-  );
-}
-
-function TimelineWidget({
-  widget,
-  data,
-}: {
-  widget: DashboardWidget;
-  data?: DashboardWidgetResolution;
-}) {
-  const payload = unwrap(data, "content-over-time");
-  if (!payload) return <UnavailableWidget widget={widget} />;
-  const primary = payload.series[0]?.points ?? [];
-  return (
-    <SectionCard
-      title={widget.title ?? "Timeline"}
-      description={payload.categories.slice(-2).map(toDateLabel).join(" - ")}
-    >
-      {payload.variant === "bar" ? (
-        <BarChart data={primary} labels={payload.categories.map(toDateLabel)} />
-      ) : (
-        <AreaChart data={primary} tone="primary" />
-      )}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {payload.series.map((series) => (
-          <Badge key={series.id} variant="secondary">
-            {series.label}
-          </Badge>
-        ))}
-      </div>
-    </SectionCard>
-  );
-}
-
-function StorageWidget({
-  widget,
-  data,
-}: {
-  widget: DashboardWidget;
-  data?: DashboardWidgetResolution;
-}) {
-  const payload = unwrap(data, "storage-usage");
-  if (!payload) return <UnavailableWidget widget={widget} />;
-  return (
-    <SectionCard title={widget.title ?? "Storage Usage"}>
-      <div className="space-y-3">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Used</span>
-          <span className="font-medium">
-            {payload.usedPercent === null
-              ? `${formatBytes(payload.usedBytes)} / no limit`
-              : `${payload.usedPercent}%`}
-          </span>
-        </div>
-        <Progress value={payload.usedPercent ?? 0} className="h-2" />
-        <div className="text-xs text-muted-foreground">
-          {formatBytes(payload.usedBytes)}
-          {payload.limitBytes ? ` of ${formatBytes(payload.limitBytes)}` : " stored"}
-        </div>
-      </div>
-    </SectionCard>
-  );
-}
-
-function SiteHealthWidget({
-  widget,
-  data,
-}: {
-  widget: DashboardWidget;
-  data?: DashboardWidgetResolution;
-}) {
-  const payload = unwrap(data, "site-health");
-  if (!payload) return <UnavailableWidget widget={widget} />;
-  const storagePercent = payload.storage.usedPercent ?? 0;
-  const securityScore =
-    payload.security.checks.length === 0
-      ? 100
-      : Math.round(
-          ((payload.security.checks.length - payload.security.issues) /
-            payload.security.checks.length) *
-            100
-        );
-  return (
-    <SectionCard
-      title={widget.title ?? "Site Health"}
-      action={<StatusBadge status={payload.security.status} />}
-    >
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Storage</span>
-            <span className="font-medium">
-              {payload.storage.usedPercent === null ? "No limit" : `${storagePercent}%`}
-            </span>
-          </div>
-          <Progress value={storagePercent} className="h-2" />
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Security</span>
-            <span className="font-medium">{securityScore}%</span>
-          </div>
-          <Progress value={securityScore} className="h-2" />
-        </div>
-      </div>
-    </SectionCard>
-  );
-}
-
-function SecurityWidget({ data }: { data?: DashboardWidgetResolution }) {
-  const payload = unwrap(data, "security-summary");
-  if (!payload) {
-    const empty: DashboardSecuritySummary = { status: "ok", issues: 0, checks: [] };
-    return <SecurityStatusCard summary={empty} />;
-  }
-  return <SecurityStatusCard summary={payload.security} />;
-}
-
-function QuickActionsWidget({
-  widget,
-  data,
-}: {
-  widget: DashboardWidget;
-  data?: DashboardWidgetResolution;
-}) {
-  const payload = unwrap(data, "quick-actions");
-  if (!payload) return <UnavailableWidget widget={widget} />;
-  return (
-    <SectionCard title={widget.title ?? "Quick Actions"}>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {payload.actions.map((action) => (
-          <Button key={action.id} asChild variant="outline" className="justify-start">
-            <AdminLink href={quickActionHref(action.target)} prefetch>
-              {action.label}
-            </AdminLink>
-          </Button>
-        ))}
-      </div>
-    </SectionCard>
-  );
-}
-
-function ContentQueryWidget({
-  widget,
-  data,
-}: {
-  widget: DashboardWidget;
-  data?: DashboardWidgetResolution;
-}) {
-  const payload = unwrap(data, "content-query");
-  if (!payload) return <UnavailableWidget widget={widget} />;
-  return (
-    <SectionCard title={widget.title ?? "Content Query"} padded={false} bodyClassName="p-0">
-      {payload.rows.length === 0 ? (
-        <div className="px-5 py-8 text-sm text-muted-foreground">No matching entries.</div>
-      ) : (
-        <DataTable
-          className="rounded-none border-0 shadow-none"
-          columns={payload.columns.map((column) => ({
-            key: column.key,
-            header: column.label,
-            render: (row) =>
-              column.key === "status" ? (
-                <StatusBadge status={String(row[column.key] ?? "")} />
-              ) : (
-                String(row[column.key] ?? "")
-              ),
-          }))}
-          rows={payload.rows}
-        />
-      )}
-    </SectionCard>
-  );
-}
-
+// Dispatch through the exhaustive renderer registry. The host owns the two
+// cross-cutting cases the registry does not: an error resolution and a
+// data/widget-type mismatch. Each renderer receives its own narrowed data
+// variant (or `undefined`, which the renderer handles per its contract).
 function renderWidget(widget: DashboardWidget, data?: DashboardWidgetResolution) {
   if (data && "error" in data) return <UnavailableWidget widget={widget} />;
-  switch (widget.type) {
-    case "totals-counters":
-      return <TotalsWidget widget={widget} data={data} />;
-    case "content-type-counts":
-      return <CountsWidget widget={widget} data={data} />;
-    case "content-over-time":
-      return <TimelineWidget widget={widget} data={data} />;
-    case "recent-activity": {
-      const payload = unwrap(data, "recent-activity");
-      return (
-        <SectionCard title={widget.title ?? "Recent Activity"} padded={false} bodyClassName="p-0">
-          <RecentEditsTable items={payload?.items ?? []} />
-        </SectionCard>
-      );
-    }
-    case "storage-usage":
-      return <StorageWidget widget={widget} data={data} />;
-    case "site-health":
-      return <SiteHealthWidget widget={widget} data={data} />;
-    case "security-summary":
-      return <SecurityWidget data={data} />;
-    case "quick-actions":
-      return <QuickActionsWidget widget={widget} data={data} />;
-    case "content-query":
-      return <ContentQueryWidget widget={widget} data={data} />;
-    default:
-      return <UnavailableWidget widget={widget} />;
-  }
+  const payload = data && data.type === widget.type ? data : undefined;
+  const Renderer = getWidgetRenderer(widget.type);
+  return <Renderer widget={widget} data={payload} />;
 }
 
 export function DashboardWidgetHost({
@@ -410,19 +98,43 @@ export function DashboardWidgetHost({
   editMode,
   selected,
   onAction,
+  onReorderPointerDown,
+  onResizePointerDown,
+  dragging,
+  dropTarget,
 }: DashboardWidgetHostProps) {
   return (
     <div
       className={cn(
-        "relative h-full min-h-40 rounded-lg",
+        "relative h-full min-h-40 rounded-lg transition-[opacity,box-shadow]",
         editMode && "outline outline-1 outline-dashed outline-border",
-        selected && "outline-2 outline-primary"
+        selected && "outline-2 outline-primary",
+        dragging && "opacity-60",
+        dropTarget && "outline-2 outline-primary ring-2 ring-primary/40"
       )}
       data-widget-id={widget.id}
       data-widget-type={widget.type}
+      data-dragging={dragging ? "true" : undefined}
+      data-drop-target={dropTarget ? "true" : undefined}
+      aria-grabbed={editMode ? Boolean(dragging) : undefined}
     >
       {editMode ? (
         <div className="absolute right-2 top-2 z-10 flex flex-wrap items-center gap-1 rounded-lg border border-border bg-background/95 p-1 shadow-soft">
+          {onReorderPointerDown ? (
+            <div
+              role="presentation"
+              aria-hidden="true"
+              data-testid="widget-drag-handle"
+              title="Drag to rearrange (or use the move buttons)"
+              onPointerDown={onReorderPointerDown}
+              className={cn(
+                "flex size-8 touch-none items-center justify-center rounded-md text-muted-foreground",
+                "cursor-grab hover:bg-muted active:cursor-grabbing"
+              )}
+            >
+              <GripVertical className="size-4" />
+            </div>
+          ) : null}
           <IconAction
             label="Move left"
             icon={<ArrowLeft className="size-4" />}
@@ -454,6 +166,16 @@ export function DashboardWidgetHost({
             onClick={() => onAction?.("narrower")}
           />
           <IconAction
+            label="Taller"
+            icon={<ChevronsUpDown className="size-4" />}
+            onClick={() => onAction?.("taller")}
+          />
+          <IconAction
+            label="Shorter"
+            icon={<ChevronsDownUp className="size-4" />}
+            onClick={() => onAction?.("shorter")}
+          />
+          <IconAction
             label="Configure"
             icon={<Settings className="size-4" />}
             onClick={() => onAction?.("configure")}
@@ -467,6 +189,19 @@ export function DashboardWidgetHost({
         </div>
       ) : null}
       <div className={cn("h-full", editMode && "pt-11")}>{renderWidget(widget, data)}</div>
+      {editMode && onResizePointerDown ? (
+        <div
+          role="presentation"
+          aria-hidden="true"
+          data-testid="widget-resize-handle"
+          title="Drag to resize (or use the wider/taller buttons)"
+          onPointerDown={onResizePointerDown}
+          className={cn(
+            "absolute bottom-1 right-1 z-10 size-4 touch-none cursor-nwse-resize rounded-sm",
+            "border-b-2 border-r-2 border-primary/50 hover:border-primary"
+          )}
+        />
+      ) : null}
     </div>
   );
 }

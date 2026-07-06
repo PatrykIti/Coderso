@@ -129,11 +129,11 @@ Theme→widget translation table (source: `formEmbed.tsx:13-38` vs 516-01 schema
 | `FormEmbedLayout.alignment` `start\|center\|end` | `layout.align` `left\|center\|right` | `left→start`, `center→center`, `right→end` |
 | `FormEmbedLayout.width` `none\|sm\|md\|lg\|xl`   | `layout.width` `sm\|md\|lg\|xl\|full` | **NEVER map into `data.layout.width` — the two width enums DIVERGE (`widthClassMap` `lg="max-w-xl"`/`xl="max-w-2xl"`, `formEmbed.tsx:163-169`; `formThemeWidthClass` `lg="max-w-2xl"`/`xl="max-w-3xl"`, 516-01:152). Routing `lg`/`xl` through the widget enum renders a NARROWER public embed than canvas/preview for the same theme (breaks the cross-surface single-source mandate; 516-01:47-48 documents this divergence).** Emit the theme width class directly via `formThemeWidthClass[width]` on the container for ALL widths (`sm\|md\|lg\|xl\|full`), bypassing the widget width enum entirely, so the embed matches the canvas + preview class-for-class (incl. `full="max-w-none"`) |
 | `FormEmbedLayout.buttonAlignment` `start\|center\|end` | `layout.buttonAlignment` `left\|center\|right\|full` | `left→start`, `center→center`, `right→end`; **`full` LOSSY → clamp to `center`** (widget `buttonAlignClassMap` has only `start/center/end`, `formEmbed.tsx:177-181` — no full-width alignment). ACCEPTED lossy gap: the widget-native way to get a full-width submit is `submit.fullWidth` (mapped in the submit row below), so `buttonAlignment:"full"` degrades to a centered button row rather than fabricating a new widget enum |
-| `FormEmbedLayout.fieldGap` `sm\|md\|lg` | `layout.fieldGap` `sm\|md\|lg` | **IDENTICAL vocab → pass through** into `themeLayout.fieldGap`; the embed's `resolveLayout` → `fieldGapClassMap` (`formEmbed.tsx:197`) then renders it. Matches the preview's `formThemeGapClass`. Present-only: emit nothing when unset |
+| `FormEmbedLayout.fieldGap` `sm\|md\|lg` | `layout.fieldGap` `sm\|md\|lg` | **DO NOT route through the widget map — the two gap enums DIVERGE for the SAME token** (`fieldGapClassMap` `sm=gap-4`/`md=gap-6`/`lg=gap-8`, `formEmbed.tsx:197-201`; `formThemeGapClass` `sm=gap-2`/`md=gap-4`/`lg=gap-6`, 516-01:156). Routing `layout.fieldGap` through `fieldGapClassMap` renders a LARGER gap on the public embed than the canvas/preview show for the SAME theme (e.g. theme `fieldGap:"lg"` → embed `gap-8` but canvas/preview `gap-6`) — the exact cross-surface break the width row goes to lengths to avoid. **EXCLUDE `fieldGap` from `themeLayout` entirely** (like width) and instead **direct-apply `formThemeGapClass[fieldGap]`** on the fields containers via the `fieldGapClass` const in the direct-apply seam below (folded into the same `md:grid-cols-2`→columns swap the `columns` row does at `:1217-1218`/`:1250-1251`, so EXACTLY ONE gap utility survives — the hardcoded `fieldGapClassMap[layout.fieldGap]` gap is removed, not left to collide), matching the canvas + preview class-for-class. Present-only: keep the widget `fieldGapClassMap[layout.fieldGap]` gap when the theme did not set it (byte-identity) |
 | `FormEmbedStyle.radius` `none\|sm\|md\|lg`       | `surface.radius` `none\|sm\|md\|lg\|xl` | pass through; **`xl` LOSSY → clamp to `lg`** |
 | `FormEmbedStyle.borderWidth` `0\|1\|2`          | `surface.borderWidth` `none\|sm\|md` | `none→"0"`, `sm→"1"`, `md→"2"` |
-| `FormEmbedStyle.inputSize` `none\|sm\|md\|lg`   | `input.size` (narrower vocab)   | pass matching values; clamp any theme value not in `{none,sm,md,lg}` to the resolveStyle default (`md`) |
-| `FormEmbedStyle.titleSize` `sm\|md\|lg`         | `typography.titleSize` `sm\|md\|lg\|xl` | pass matching; **`xl` LOSSY → clamp to `lg`** (widget `titleSizeClassMap` `sm\|md\|lg`, `formEmbed.tsx:217`) |
+| `FormEmbedStyle.inputSize` `none\|sm\|md\|lg`   | `input.size` `sm\|md\|lg`   | **DO NOT route through the widget map — the two input-size enums DIVERGE mechanically** (`inputSizeClassMap` is PADDING-based `sm=px-3 py-2 text-sm`/`md=px-3 py-2.5 text-sm`/`lg=px-4 py-3 text-base`, `formEmbed.tsx:210-215`; `formThemeInputSizeClass` is FIXED-HEIGHT `sm=h-8 text-sm`/`md=h-9 text-sm`/`lg=h-11 text-base`, 516-01:161). Routing `input.size` through `inputSizeClassMap` renders differently-sized inputs than the canvas/preview for the SAME theme. **EXCLUDE `inputSize` from `themeStyle`** and **direct-apply `formThemeInputSizeClass[input.size]`** as `inputClassName` (`formEmbed.tsx:1074`) via the `inputClassNameSize` const in the seam below (precedence per-instance `normalizedData.style?.inputSize` > theme > widget default), matching canvas + preview. Present-only: keep `inputSizeClassMap[style.inputSize]` when unset (byte-identity) |
+| `FormEmbedStyle.titleSize` `sm\|md\|lg`         | `typography.titleSize` `sm\|md\|lg\|xl` | **DO NOT route through the widget map — the two title-size enums DIVERGE for the SAME token AND the widget lacks `xl`** (`titleSizeClassMap` `sm=text-lg`/`md=text-xl`/`lg=text-2xl`, `formEmbed.tsx:217-221`; `formThemeTitleSizeClass` `sm=text-sm`/`md=text-base`/`lg=text-lg`/`xl=text-xl`, 516-01:162). Routing `titleSize` through `titleSizeClassMap` renders a LARGER title than canvas/preview (e.g. theme `titleSize:"md"` → embed `text-xl` but canvas/preview `text-base`) AND clamps `xl` lossily. **EXCLUDE `titleSize` from `themeStyle`** and **direct-apply `formThemeTitleSizeClass[titleSize]`** in `titleClassName` (`formEmbed.tsx:1077-1078`) via the `titleSizeClass` const in the seam below (the map handles `xl`→`text-xl`, no clamp; precedence per-instance `normalizedData.style?.titleSize` > theme > widget default), matching canvas + preview. Present-only: keep `titleSizeClassMap[style.titleSize]` when unset (byte-identity) |
 | `FormEmbedStyle.titleWeight` `medium\|semibold\|bold` | `typography.titleWeight` `normal\|medium\|semibold\|bold` | **NON-IDENTICAL vocab — the theme adds `normal` (516-01:87,163 `formThemeTitleWeightClass.normal="font-normal"`) that the widget lacks.** Pass matching values (`medium/semibold/bold`) through into `themeStyle.titleWeight`; **`normal` LOSSY → clamp to `medium`** (nearest available weight — the widget `titleWeightClassMap` has only `medium\|semibold\|bold`, `formEmbed.tsx:223-227`, and `FormEmbedStyle.titleWeight` is `medium\|semibold\|bold`, `formEmbed.tsx:33`; NEVER pass `normal` straight through or `titleWeightClassMap["normal"]===undefined` at render + `Required<FormEmbedStyle>` typecheck fails — the exact enum-token-undefined hazard the Security/render contract warns about). The embed's `titleWeightClassMap` then renders the clamped value. Present-only: emit nothing when unset |
 | color tokens (`background`,`surface`,`borderColor`,`titleColor`,`labelColor`,`helperColor`,`submitBackground`,`submitTextColor`) | container/typography/submit colors: `surface.background`→widget `surface`, `surface.borderColor`→`borderColor`, `typography.titleColor/labelColor/helperColor`→same, `submit.background`→`submitBackground`, `submit.textColor`→`submitTextColor` | identity CSS-value passthrough into `themeStyle` (values already policy-checked by `normalizeColor`; re-checked at render via `resolveClearableCssColorValue` per Security Contract). Present-only per key |
 | *(no widget axis)* | `surface.padding` `sm\|md\|lg` | **NO widget enum** — the card wrapper hardcodes `p-6` (`formEmbed.tsx:1126`). Direct-apply `formThemePaddingClass[padding]` on that wrapper in place of the hardcoded `p-6` when the theme set it. Present-only: leave `p-6` untouched when unset (byte-identity) |
@@ -181,8 +181,12 @@ Define the `mapFormThemeToEmbedStyle` / `mapFormThemeToEmbedLayout` helpers
 declare these helpers, and 516-01 explicitly assigns the token-translation to
 516-06, not itself: 516-01:48-52). The helpers import read-only ONLY the enum
 types from `formSettings.ts` (`FormFormTheme`) and the already-exported class maps
-they need (`formThemeWidthClass`, `formThemePaddingClass`, `formThemeShadowClass`,
-`formThemeRadiusClass`, `buildFormThemeStyleVars`) from `formTheme.ts`; the raw
+`formEmbed.tsx` needs (`formThemeWidthClass`, `formThemeGapClass`,
+`formThemeTitleSizeClass`, `formThemeInputSizeClass`, `formThemePaddingClass`,
+`formThemeShadowClass`, `formThemeRadiusClass`, `buildFormThemeStyleVars`) from
+`formTheme.ts` — note `formThemeGapClass`/`formThemeTitleSizeClass`/`formThemeInputSizeClass`
+are consumed by the direct-apply seam (fieldGap/titleSize/inputSize), NOT by the mapping
+helpers, since those three tokens bypass `themeStyle`/`themeLayout` like width; the raw
 `fontFamily` token→class map is defined locally in `formEmbed.tsx` (no 516-01
 export for it). Each helper returns `undefined` for a token the form theme did not
 set (present-only) — never a fabricated default.
@@ -193,8 +197,8 @@ set (present-only) — never a fabricated default.
 // NEVER let an enum token be undefined at the class-map lookup (:1072-1074), or the
 // class-map yields no class and breaks byte-identity.
 const formTheme = resolved?.settings?.theme; // raw normalized theme (present-only), NOT resolveFormTheme() defaults
-const themeStyle: Partial<FormEmbedStyle> = mapFormThemeToEmbedStyle(formTheme);   // ONLY keys the form theme set; enum values already translated+clamped
-const themeLayout: Partial<FormEmbedLayout> = mapFormThemeToEmbedLayout(formTheme); // present-only; EXCLUDES width entirely (all theme widths handled as the direct container class below — widget/theme width enums diverge, see table)
+const themeStyle: Partial<FormEmbedStyle> = mapFormThemeToEmbedStyle(formTheme);   // ONLY keys the form theme set; enum values already translated+clamped. EXCLUDES titleSize + inputSize (their widget class-maps DIVERGE from the formTheme maps — direct-applied below as titleSizeClass/inputClassNameSize, like width)
+const themeLayout: Partial<FormEmbedLayout> = mapFormThemeToEmbedLayout(formTheme); // present-only; EXCLUDES width AND fieldGap entirely (widget width/gap class-maps diverge from the theme maps — all handled as direct container classes below, see table)
 const style: Required<FormEmbedStyle> = {
   ...resolveStyle(undefined),          // concrete widget defaults (borderWidth "1", radius "md", inputSize "md", ...)
   ...themeStyle,                       // present-only theme overrides (translated enums)
@@ -218,9 +222,38 @@ const containerWidthClass =
 // apply containerWidthClass on the :1117 flex container in place of widthClassMap[layout.width].
 // (data-form-embed-width may keep layout.width for compat; the RENDERED width class is containerWidthClass.)
 //
+// TITLE SIZE (widget titleSizeClassMap DIVERGES from formThemeTitleSizeClass — see table). Replace
+// `titleSizeClassMap[style.titleSize ?? "md"]` inside titleClassName (:1077-1078) with titleSizeClass:
+const titleSizeClass =
+  normalizedData.style?.titleSize
+    ? titleSizeClassMap[normalizedData.style.titleSize]           // per-instance → widget enum (unchanged)
+    : formTheme?.typography?.titleSize
+      ? formThemeTitleSizeClass[formTheme.typography.titleSize]   // theme → LOSSLESS class (matches canvas + preview; handles xl, no clamp)
+      : titleSizeClassMap[style.titleSize ?? "md"];              // byte-identity default (widget map)
+//
+// INPUT SIZE (widget inputSizeClassMap is padding-based; formThemeInputSizeClass is height-based — see table).
+// Replace `inputSizeClassMap[style.inputSize]` at :1074 with inputClassNameSize:
+const inputClassNameSize =
+  normalizedData.style?.inputSize
+    ? inputSizeClassMap[normalizedData.style.inputSize]           // per-instance → widget enum (unchanged)
+    : formTheme?.input?.size
+      ? formThemeInputSizeClass[formTheme.input.size]            // theme → LOSSLESS class (matches canvas + preview)
+      : inputSizeClassMap[style.inputSize];                      // byte-identity default (widget map)
+//
+// FIELD GAP (widget fieldGapClassMap DIVERGES from formThemeGapClass — see table). On BOTH fields
+// containers (:1217-1218 multi-step, :1250-1251 single) replace `fieldGapClassMap[layout.fieldGap]`
+// with fieldGapClass, folded into the same columns swap so EXACTLY ONE gap survives:
+const fieldGapClass =
+  normalizedData.layout?.fieldGap
+    ? fieldGapClassMap[normalizedData.layout.fieldGap]           // per-instance → widget enum (unchanged)
+    : formTheme?.layout?.fieldGap
+      ? formThemeGapClass[formTheme.layout.fieldGap]            // theme → LOSSLESS class (matches canvas + preview)
+      : fieldGapClassMap[layout.fieldGap];                      // byte-identity default (widget map)
+//
 // fontFamily → LOCAL font-family token→class map in formEmbed.tsx on the outer wrapper
 //              (present-only, no widget enum; 516-01 exports no fontFamilyClass; inherit→"");
-// columns    → conditional grid-cols swap on the fields container (see columns row + preview pseudocode);
+// columns    → conditional grid-cols swap on the fields containers, joined with fieldGapClass above so
+//              EXACTLY ONE gap + ONE columns utility survive (see columns/fieldGap rows + preview pseudocode);
 // surface.padding/shadow → formThemePaddingClass/formThemeShadowClass swapped onto the card
 //              wrapper (:1126, replacing/augmenting hardcoded `p-6`); surface.card===false drops the
 //              card chrome; all present-only (un-themed ⇒ today's `w-full space-y-6 p-6` untouched);

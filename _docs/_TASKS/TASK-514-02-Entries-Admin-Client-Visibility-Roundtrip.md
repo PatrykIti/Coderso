@@ -109,7 +109,16 @@ path.
    (`:302`), `createEntry`, `updateEntry`, `updateEntryMetadata`, `duplicateEntry`
    — plus the cached-list→detail fallback via `toEntryDetail(match)` (`:299`). So a
    default in `toEntrySummary` would soften only single-entry mutations/detail
-   reads, NOT either bulk list load. If `listEntriesWithContentTypes` (or
+   reads, NOT either bulk list load. **`createEntry` is the one single-entry mutation
+   whose RAW server response is easy to overlook:** the create route returns the
+   service `createEntry` row directly (not a re-read), so once 514-02 §3 makes
+   `toEntrySummary` copy `hasPassword: entry.hasPassword`, that raw response MUST carry
+   `visibility` + `hasPassword` or the cached create result gets `hasPassword: undefined`
+   (a type-lie on the required boolean). This is GUARANTEED by 514-01 §3, which routes
+   the service `createEntry` return through the narrowed `getEntry` (mirroring
+   `duplicateEntry`) — no client-side change is needed here beyond the `toEntrySummary`
+   projection, but the dependency on 514-01's create-return narrowing is REAL and
+   must land first (Land Order: 514-01 → 514-02). If `listEntriesWithContentTypes` (or
    `entryListSelection`) omits the fields, list rows carry
    `visibility/hasPassword === undefined` at runtime while the type claims they
    exist (a type lie the 514-05 badge reads off list rows). Conclusion: physical

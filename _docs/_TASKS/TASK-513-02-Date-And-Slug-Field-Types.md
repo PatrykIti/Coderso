@@ -86,8 +86,9 @@ export type FieldType =
 ```
 - `ContentField` optionally gains `slug?: { source?: string; editable?: boolean }` and
   `date?: { includeTime?: boolean }` config sub-objects (both optional; present-only). Keep it
-  minimal: `slug.source` = the field name to derive the slug from (default none → free text);
-  `date.includeTime` toggles `datetime-local` vs `date`.
+  minimal: `slug.source` = the field name the slug is declaratively associated with (authoring
+  intent; default none → free text — entry-time auto-derive is a FUTURE enhancement, see §4
+  renderer); `date.includeTime` toggles `datetime-local` vs `date`.
 - `ContentField` also gains `unique?: boolean` (present-only, applies to ANY field type — it is a
   field-level flag, not a per-type config). This reproduces the prototype inspector's **Unique**
   toggle (`SchemaBuilderPreview.tsx:139`, rendered right under Required). Declarative-only: it is
@@ -154,6 +155,13 @@ export type FieldType =
     NO new property on `ContentSchemaProperty` and NO ajv keyword (`xFieldConfig` is already
     registered). Present-only: omitted entirely when `field.unique` is falsy so legacy schemas stay
     byte-identical.
+  - `order` (ALL types — field-ORDER persistence, parent Open Question 6 / §Field-ORDER block below):
+    `fieldConfig.order = index;` using the field's 0-based position in the `fields` array (the
+    `fields.reduce` at :189 already exposes the index). This is the ONE key that is intentionally NOT
+    present-only — a total order needs a value on every field — so `fieldConfig` is now non-empty for
+    every field and `xFieldConfig` is emitted on every property (the :284-285 "only when non-empty"
+    gate is always satisfied). Still NO new `ContentSchemaProperty` property and NO ajv keyword
+    (`xFieldConfig` is registered); NO top-level `xFieldOrder` (would throw under ajv `strict:true`).
 - `resolveFieldType(definition)` (`schemaMapping.ts:309`): **no new branch required.** The function
   already returns any `xFieldType` that is a key of `fieldTypeMap` at the very top
   (lines 310-313: `if (definition.xFieldType) { const candidate = String(definition.xFieldType)
@@ -168,21 +176,55 @@ export type FieldType =
   `{ includeTime? }`), each returning `undefined` when the config is absent so unrelated fields
   are untouched. Also read back `unique`: `unique: definition.xFieldConfig?.unique === true ? true :
   undefined` (present-only, all types).
+- **Order-aware re-sort (field-ORDER persistence):** read the ordinal from the raw
+  `definition.xFieldConfig?.order` (NEVER from the mapped field), pair each mapped field with its
+  ordinal in a tuple, stable-sort the tuples, then project back to fields — so the returned
+  `ContentField` objects are never mutated with a temp `order`/`__order` key:
+  ```ts
+  const ordered = Object.entries(schema.properties)
+    .map(([name, def]) => ({
+      order: typeof def.xFieldConfig?.order === "number" ? def.xFieldConfig.order : Number.POSITIVE_INFINITY,
+      field: mapField(name, def),
+    }))
+    .sort((a, b) => a.order - b.order) // stable: missing order = Infinity → keeps Object.entries position, sorts AFTER ordered
+    .map((t) => t.field);
+  ```
+  This makes the authored order survive Save→reload despite jsonb key-canonicalization. Do NOT surface
+  `order` as a `ContentField` field — the ordinal lives ONLY on the sort tuple, never on the returned
+  field; it is reconstructed from `xFieldConfig.order` on the next build (do NOT round-trip it onto `ContentField`).
 - Round-trip invariant: `fieldsFromSchema(buildSchemaFromFields(fields))` preserves type +
   config for date/slug (513-06/unit test).
 
-> **Non-goal — field-ORDER persistence is NOT in 513-02 scope (reconciles the 513-06 §1 CROSS-SUBTASK
-> BLOCKER's deferral target).** The build/read round-trip above preserves each field's *type + config*,
-> NOT the authored *order*. `content_types.schema` is a Postgres `jsonb` column (`core/db/schema.ts:688`)
-> that canonicalizes object keys (length, then bytewise), and `ContentSchema` (schemaMapping.ts:23-31)
-> carries no order array — `fieldsFromSchema` reads `Object.entries(schema.properties)` (~:389). So a
-> Save→reload re-sorts properties into jsonb-canonical order regardless of the authored/reordered
-> sequence (verified empirically in 513-06 §1: `jsonb_build_object('title',1,'publishedAt',2,'urlSlug',3)`
-> reads back `{title, urlSlug, publishedAt}`). Persisting order would require a NEW explicit mechanism —
-> e.g. a top-level `xFieldOrder: string[]` on `ContentSchema` that `buildSchemaFromFields` writes and
-> `fieldsFromSchema` reads to re-sort the `Object.entries` result, PLUS server-normalizer allowlisting in
-> 513-01 — and is a deliberate FUTURE enhancement, NOT delivered by 513-02 as scoped here. Until it lands,
-> the 513-03/513-05 reorder is in-memory/UX only and 513-06 asserts the property-key SET (order-independent).
+> **Field-ORDER persistence — DELIVERED by 513-02 via per-property `xFieldConfig.order` (resolves the
+> 513-06 §1 CROSS-SUBTASK item; parent Open Question 6).** `content_types.schema` is a Postgres `jsonb`
+> column (`core/db/schema.ts:688`) that canonicalizes object keys (length, then bytewise), and
+> `ContentSchema` (schemaMapping.ts:23-31) carries no order array — `fieldsFromSchema` reads
+> `Object.entries(schema.properties)` (~:389), so raw key order does NOT survive a Save→reload
+> (verified empirically in 513-06 §1: `jsonb_build_object('title',1,'publishedAt',2,'urlSlug',3)` reads
+> back `{title, urlSlug, publishedAt}`). A reorder control that silently discards its result would be a
+> cosmetic shell (forbidden by the parent Goal), so 513-02 makes order **data, not key-position**:
+> - **Build** (`buildSchemaFromFields`): write `fieldConfig.order = index` (0-based array index) for
+>   **every** field, so `definition.xFieldConfig.order` records the authored position. Because `order`
+>   is always present, `xFieldConfig` is now emitted for every property (the line 284-285 "only when
+>   non-empty" gate is always satisfied) — this is the ONE key that is intentionally NOT present-only
+>   (a total order needs a value on every field); `unique`/`date`/`slug` stay present-only as before.
+> - **Read** (`fieldsFromSchema`): after building the `Object.entries(schema.properties)` list, do a
+>   **stable sort by `xFieldConfig.order`** (numeric ascending; fields lacking `order` keep their
+>   `Object.entries` position and sort AFTER ordered ones — a stable sort with `order ?? Infinity`).
+>   This makes jsonb key-canonicalization irrelevant: authored order round-trips regardless of how
+>   Postgres reorders the keys.
+> - **No ajv/keyword change:** `order` rides the already-registered `xFieldConfig` keyword — NO top-level
+>   `xFieldOrder` (it would be an unknown keyword under `assertContentSchema`'s `new Ajv({ strict:true })`
+>   at validation.ts:3 and THROW on compile — the same wall we avoid for `format`), NO `validation.ts`
+>   edit, NO 513-01 normalizer change (schema is validated by `assertContentSchema`, which already
+>   accepts `xFieldConfig`).
+> - **Byte-identity (honest):** because `order` is written for every field, a schema re-saved after this
+>   ships gains `xFieldConfig.order` on each property (additive, ajv-safe). **Legacy schemas without
+>   `order` are unaffected on READ** — the `order ?? Infinity` fallback keeps their existing jsonb-canonical
+>   order exactly as today, so there is no read regression.
+>
+> Consequently 513-03/513-05 reorder PERSISTS (marking the editor dirty is correct — the change survives
+> Save→reload) and 513-06 asserts EXACT round-tripped order.
 
 ### 4. `entries/FieldRenderer.tsx` — render the value input
 Add `case "date":` and `case "slug":` to the field `switch` (currently text/richtext/number/
@@ -190,10 +232,18 @@ boolean/select/media/relation, lines ~221-379):
 - `date`: an `<input type="date">` (or `datetime-local` when `field.date?.includeTime`) bound to
   the entry value; store ISO string. Reuse the existing text-field wrapper/label/help/error
   markup pattern from the `text` case.
-- `slug`: a text input that slugifies on blur (reuse `slugifyFieldName` from SchemaBuilder);
-  when `field.slug?.source` is set and `field.slug.editable !== true`, derive read-only from the
-  source field's current value (mirror the label→name auto behavior). Keep it a controlled input
-  writing a URL-safe string.
+- `slug`: a plain **editable** text input that slugifies on blur (reuse `slugifyFieldName` from
+  SchemaBuilder), writing a URL-safe controlled string. **`field.slug.source`/`field.slug.editable`
+  are DECLARATIVE-only here** (persisted + surfaced in the FieldEditor authoring UI, NOT entry-time
+  auto-derived) — mirroring how 513-02 already scopes the `unique` flag as declarative-only. Do NOT
+  attempt to derive the value read-only from the source field's current value: `FieldRenderer`'s
+  props are `{ field, value, onChange, relationTargets?, display? }` (`FieldRenderer.tsx:20-26`)
+  with **NO access to sibling/entry values**, and its sole caller passes only
+  `value={values[field.name]}` (`EntryEditor.tsx:898-904`). Threading a source value would require
+  editing `entries/EntryEditor.tsx` to add a sibling-values prop — and `EntryEditor.tsx` is OUTSIDE
+  513-02's sole-writer set (§Scope lists only `SchemaBuilder`/`FieldEditor`/`schemaMapping`/
+  `FieldRenderer`), so entry-time auto-derive-from-source is NOT deliverable within scope. It is a
+  deliberate FUTURE enhancement gated on an explicit `EntryEditor` prop addition, not shipped here.
 - **Change the `default:` arm** — it currently `return null` (renders nothing;
   `FieldRenderer.tsx:407-408`). Change it to fall back to a text input so unknown future types render
   an editable value instead of vanishing. (This is a NEW change, not a preservation.) NB: the scope's
@@ -212,6 +262,13 @@ boolean/select/media/relation, lines ~221-379):
   only when set; the built `slug` property has `type:"string"`, `xFieldType:"slug"`, and
   `xFieldConfig.slug` only when source/editable is set. A field with `unique: true` round-trips
   (`xFieldConfig.unique === true`, read back to `unique: true`); `unique` omitted when falsy.
+- **Field-ORDER round-trip (mandatory — parent Open Question 6):** pass a fields list to
+  `buildSchemaFromFields` in a REORDERED sequence; assert each built property carries
+  `xFieldConfig.order` = its new array index, and that `fieldsFromSchema(built)` reads the fields
+  back in that reordered sequence (compare `.map(f => f.name)`), proving order survives independent
+  of jsonb key-canonicalization. Also assert a legacy-shaped schema whose properties carry NO `order`
+  reads back in `Object.entries` order (the `order ?? Infinity` fallback → no read regression), and
+  that `order` is NOT surfaced onto the returned `ContentField` objects.
 - `resolveFieldType`: `xFieldType:"date"` resolves to `date`, `xFieldType:"slug"` resolves to
   `slug` (both via the existing top-of-function `in fieldTypeMap` check), and a plain
   `type:"string"` with no `xFieldType` still resolves `text`.

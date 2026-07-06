@@ -27,10 +27,13 @@ widget with the draft config before commit.
   type's default config + default size; (2) open a **non-modal configure side panel** for
   any widget, edit its config through schema-driven controls with a live preview,
   and commit changes into the draft (dirty) — all without leaving the dashboard.
-- **Owning module/service:**
-  - `core/admin/ui/dashboard/builder/AddWidgetCatalog.tsx` (new — catalog dialog/sheet)
-  - `core/admin/ui/dashboard/builder/WidgetConfigPanel.tsx` (new — non-modal side panel)
-  - `core/admin/ui/dashboard/builder/widgetConfigForm.tsx` (new — schema → controls renderer)
+- **Owning module/service (as-built):**
+  - The **add-widget catalog** (`AddWidgetCatalog`) and the **non-modal configure
+    side panel** (`ConfigPanel`) ship as inline components inside
+    `core/admin/ui/dashboard/DashboardBuilder.tsx` (no separate
+    `AddWidgetCatalog.tsx`/`WidgetConfigPanel.tsx` files)
+  - `core/admin/ui/dashboard/WidgetConfigForm.tsx` (new — the schema-driven
+    control renderer, exported as `WidgetConfigForm`; capital-W filename)
 - **Source-of-truth docs:**
   - Product/widget spec: `_docs/DASHBOARD_WIDGETS_SPEC.md` (catalog entries, config
     fields, defaults — seeded by TASK-480-01-L02)
@@ -76,6 +79,40 @@ widget with the draft config before commit.
   nothing secret-bearing is cached or logged.
 
 ---
+
+## As-Built (delivered) — authoritative
+
+> The pseudocode below is the pre-implementation design sketch. Where it disagrees
+> with this section, **this section is the source of truth**. Key deltas:
+>
+> - **Add-widget catalog** is a flat responsive grid of buttons (one per catalog
+>   entry, in `dashboardWidgetCatalog` enum order), shown above the grid in edit
+>   mode — not a category-grouped `Dialog`. There is no `category` field to group by
+>   (see 04-L01 as-built). Clicking a card calls `createDashboardWidget(type, y)`
+>   and dispatches into the draft (`dirty`); the whole catalog is disabled once the
+>   `DASHBOARD_MAX_WIDGETS` (24) cap is reached.
+> - **Configure panel** is the inline `ConfigPanel` built on the shared `Sheet`
+>   primitive with `modal={false}` + a transparent, `pointer-events-none` overlay so
+>   it never blocks the grid controls behind it. It renders a **live preview**
+>   (`<DashboardWidgetHost widget={widget} data={…} editMode={false} />`), a title
+>   `Input`, and `<WidgetConfigForm fields={descriptor.configFields}
+>   config={widget.config} onChange={setField} />`. It edits the selected widget in
+>   place (selected by `state.selectedId`) and commits on each change straight into
+>   the reducer draft — there is no separate local-draft-then-Apply step; a single
+>   "Done" button closes the panel.
+> - **`setField`** merges the change and routes the whole config through
+>   `normalizeDashboardWidgetConfig(widget.type, next)` on every keystroke
+>   (schema-first, reject-unknown, clamps ranges). Passing `undefined` deletes the
+>   key so the schema default re-applies.
+> - **`WidgetConfigForm`** (in `WidgetConfigForm.tsx`) renders controls by the
+>   field's `control` discriminant (`text | select | multiselect | checkbox |
+>   number | slider | actions`) — see 04-L01 as-built for the exact `WidgetConfigField`
+>   union. `select`/`multiselect` resolve dynamic option sources (`"contentTypes"`
+>   via `useContentTypeOptions()` reading `listContentTypesCached({force:false})`
+>   with a single guarded revalidate; `"counterMetrics"` via
+>   `DASHBOARD_COUNTER_METRIC_OPTIONS[source]`). A `select` with `emptyOption`
+>   renders a leading clear item (Radix-safe sentinel value). `actions` is a
+>   repeating quick-action editor (label/target/optional icon) capped at 8 rows.
 
 ## Implementation Pseudocode
 

@@ -48,9 +48,39 @@ or unavailable widget data.
 
 The dashboard builder lives on canonical `/admin`. Users with `dashboard:write`
 can enter edit mode, add widgets from the catalog, configure the selected widget
-in a non-modal side panel, move/resize panels with icon controls, and save or
-reset the per-user layout. Read-only users with `content:read` see the resolved
-dashboard data without the customize controls.
+in a non-modal side panel, and save or reset the per-user layout. Panels can be
+rearranged and resized two ways: **pointer drag-and-drop** (drag the grip to
+reorder, drag the corner handle to resize) and a **keyboard-operable toolbar** of
+icon controls (move/wider/narrower/taller/shorter) so every action is reachable
+without a pointer. Read-only users with `content:read` see the resolved dashboard
+data without the customize controls.
+
+## Builder Architecture
+
+The admin builder ships as flat modules under `core/admin/ui/dashboard/`:
+
+- `DashboardBuilder.tsx` — the builder shell: inline `useReducer` state
+  (`layout`/`savedLayout`/`data`/`editMode`/`dirty`/`selectedId`/`remoteStale`/…),
+  hydrate-then-revalidate load, the responsive 12-column grid, the inline
+  add-widget catalog, the native-pointer drag/resize wiring, and the inline
+  non-modal `ConfigPanel`. No mount-force refetch loop; a background cache update
+  arriving while the draft is dirty raises a "changed elsewhere" hint instead of
+  clobbering the draft.
+- `dashboardLayoutArrange.ts` — pure `moveWidget`/`resizeWidget`/
+  `sortWidgetsByPosition` helpers shared by pointer DnD and the toolbar nudges;
+  geometry is clamped to the server contract (`x∈[0,11]`, `w≤12-x`, `h≤12`) so a
+  dragged draft round-trips through `normalizeDashboardLayout` unchanged.
+- `widgetRegistry.ts` — the exhaustive typed renderer registry
+  `DASHBOARD_WIDGET_RENDERERS` (`{ [T in DashboardWidgetType]: WidgetRenderer<T> }`,
+  omitting a type is a compile error), the `DASHBOARD_WIDGET_CATALOG` metadata
+  (`label`/`description`/`icon`/`defaultConfig`/`defaultLayout`/`configFields`),
+  and `isWidgetDataEmpty`.
+- `widgetRenderers.tsx` — the 9 per-type renderer components + `UnavailableWidget`.
+- `DashboardWidgetHost.tsx` — dispatches through the registry and owns the edit
+  chrome (toolbar + drag grip + resize handle).
+- `WidgetConfigForm.tsx` — the schema-driven control renderer that turns a
+  widget type's `configFields` descriptors into controls and writes every change
+  back through `normalizeDashboardWidgetConfig` (reject-unknown preserved).
 
 ## API and Security
 

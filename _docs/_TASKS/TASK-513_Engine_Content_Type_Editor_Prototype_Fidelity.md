@@ -217,10 +217,13 @@ duplicate envelope. No new endpoint or RBAC bucket.
 → row returned with normalized `config` → `contentTypesClient` upserts cache → editor reads
 `type.config`.
 
-**a. DB (`core/db/schema.ts`, content_types block ~:667-675):**
+**a. DB (`core/db/schema.ts`, content_types block :684-692):**
 ```
-config: jsonb("config").notNull().default(sql`'{}'::jsonb`),
+config: jsonb("config").notNull().default({}),
 ```
+(repo idiom — every existing jsonb default in schema.ts uses `.default({})`, e.g. :264; the file
+imports/uses no `sql` template, so DO NOT introduce `sql`'{}'::jsonb`. drizzle-kit generates the
+identical DDL `DEFAULT '{}'::jsonb` either way.)
 Migration artifacts: `bun run db:generate` (from repo ROOT — the root `package.json` owns
 `db:generate`/`db:migrate`; `bun --cwd core db:generate` fails missing-script) produces
 `<idx>_*.sql` (`ALTER TABLE "content_types" ADD COLUMN "config" jsonb DEFAULT '{}'::jsonb NOT
@@ -298,9 +301,15 @@ export type ContentTypeConfig = {
 `normalizeContentTypeConfig` is defined + exported here and called by create/update; duplicate
 carries `source.config` through unchanged (already normalized on write):
 ```
+// CONDENSED OVERVIEW — 513-01 §2 is the AUTHORITATIVE shipped code (full reject-unknown
+// throws for non-record input + per-role/cap loops). The top-level reject-unknown loop below
+// is MANDATORY: an unknown top-level key MUST throw, never be silently dropped.
 export function normalizeContentTypeConfig(input: unknown): ContentTypeConfig {
   if (!input || typeof input !== "object") return {};
   const src = input as Record<string, unknown>;
+  for (const key of Object.keys(src)) {
+    if (!CONFIG_KEYS.has(key)) throw new Error("content_type_config_invalid"); // reject-unknown (top level)
+  }
   const out: ContentTypeConfig = {};
   const s = trimOrUndefined(src.singularName, 120);   // drop empty/>120 (fail-soft omit)
   const p = trimOrUndefined(src.pluralName, 120);
@@ -630,3 +639,29 @@ Open Question).
    jsonb `content_types.schema`, and entry values live in a shared store), or stay declarative
    config only? (Default: declarative-only now — surfaced + persisted, enforcement a follow-up,
    consistent with `versioning`/`permissions`.)
+6. **Field-ORDER persistence mechanism (RESOLVED — required by the "no cosmetic shell" mandate).**
+   The prototype lets you drag/reorder fields; 513-03's Fields panel + 513-05's node graph both
+   expose a reorder control. But `content_types.schema` is a Postgres **`jsonb`** column
+   (`core/db/schema.ts:688`) and `fieldsFromSchema` reads `Object.entries(schema.properties)`
+   (`schemaMapping.ts` ~:389) with no order array on `ContentSchema` — and jsonb does NOT preserve
+   object-key insertion order (it canonicalizes keys by length-then-bytewise; verified empirically:
+   `jsonb_build_object('title',1,'publishedAt',2,'urlSlug',3)::text` reads back
+   `{title, urlSlug, publishedAt}`). So authored order does NOT survive a Save→reload by default. A
+   reorder control that silently discards its result on reload is exactly the **cosmetic shell the
+   parent Goal (line 16-17) and gap point 6 forbid** — so a documented "non-persisting UX-only
+   reorder" is NOT an acceptable resolution (it would contradict this task's own mandate).
+   **Decision (default): PERSIST field order** via a **per-property integer `xFieldConfig.order`**
+   (0-based, the field's authored array index) written by `buildSchemaFromFields` for every field
+   and used by `fieldsFromSchema` to re-sort the `Object.entries(schema.properties)` result. This
+   rides the **already-registered `xFieldConfig` keyword** — so it needs **NO new ajv keyword and NO
+   `validation.ts` edit**, and stays entirely within 513-02's sole-writer set (`schemaMapping.ts`).
+   A top-level `xFieldOrder: string[]` on `ContentSchema` was REJECTED: it would be an **unknown
+   keyword** under `assertContentSchema`'s `new Ajv({ strict: true })` (validation.ts:3, only
+   `xFieldType`/`xRelationTarget`/`xFieldConfig` registered) and would make `ajv.compile` **throw**
+   on every save — the identical wall 513-02 avoids for `format`. Byte-identity note (honest): unlike
+   the present-only `unique`/`date`/`slug` config keys, `order` is written for **every** field, so a
+   schema re-saved after this ships gains `xFieldConfig.order` on each property (additive, ajv-safe);
+   **legacy schemas without `order` are unaffected on read** — `fieldsFromSchema` falls back to the
+   existing `Object.entries` (jsonb-canonical) order exactly as today, so there is no read regression.
+   (Owned by 513-02 §schemaMapping; consumed by 513-03/513-05 reorder; asserted exact-order by
+   513-06.)

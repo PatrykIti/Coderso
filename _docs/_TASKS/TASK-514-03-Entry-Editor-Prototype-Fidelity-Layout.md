@@ -179,9 +179,10 @@ title/slug card (`:763-824`), field tabs (`:834-916`), desktop `aside`
     bounded height, so scrolling is correct and needed there).
   - **Mechanism (already provided by 514-04's `scrollable` prop — no upstream edit
     needed).** 514-04 already ships this gating: it declares `scrollable?: boolean`
-    (514-04 §1 line 112, default `true`) and renders
-    `scrollable ? <ScrollArea>{stack}</ScrollArea> : <>{stack}</>` (514-04 §4 lines
-    231-241). 514-03 therefore only has to pass the right value per mount:
+    (the `scrollable?: boolean` prop declared in 514-04 §1, default `true`) and renders
+    `scrollable ? <ScrollArea>{stack}</ScrollArea> : <>{stack}</>` (the gating in 514-04 §4;
+    cited by section, not line number, since sibling line numbers drift). 514-03 therefore
+    only has to pass the right value per mount:
     **pass `scrollable={false}` on the desktop in-grid `EntryMetadataPanel` mount**
     (plain stacked `SectionCard`s, no inner scroller) and **omit it on the mobile
     `Sheet` mount** (defaults to `true` → bounded `ScrollArea`). No closure reconcile

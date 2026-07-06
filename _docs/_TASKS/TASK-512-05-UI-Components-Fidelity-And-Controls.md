@@ -172,10 +172,18 @@ Props: `{ tags:string[]; folders:MediaFolder[]; value:MediaFilterState; onChange
   the active-facet count inline. Presentational only; no network calls.
 
 ### MediaToolbar.tsx (extend) — add Filters button + keep grid/list toggle
-Add a `<Button variant="outline" size="sm"><SlidersHorizontal/>Filters</Button>` + `onOpenFilters`
-prop + an active-filter count badge driven by a new `activeFilterCount?:number` prop (512-06 passes
-`countActiveFilters(filterState)`; badge hidden when `0`/undefined). Keep search + view toggle.
-Reproduce FilterBar tokens. Keep existing props additive.
+Add a `<Button variant="outline" size="sm"><SlidersHorizontal/>Filters</Button>` + an **OPTIONAL**
+`onOpenFilters?:()=>void` prop + an active-filter count badge driven by a new `activeFilterCount?:number`
+prop (512-06 passes both; badge hidden when `0`/undefined; the Filters button renders but is inert/hidden
+when `onOpenFilters` is absent). Keep search + view toggle. Reproduce FilterBar tokens. Keep existing
+props additive.
+> **BACK-COMPAT — `onOpenFilters` MUST be OPTIONAL (verified 2026-07-05).** Besides `MediaLibraryPage`
+> (the only production consumer), `MediaToolbar` is rendered directly in
+> `tests/vitest/ui/plugin-media-site-leaf.test.tsx:312` (`<MediaToolbar search view openAfterUpload
+> onOpenAfterUploadChange onSearchChange onViewChange />`, no `onOpenFilters`) — a file this subtask
+> does NOT own. A REQUIRED `onOpenFilters` would break that render under root tsc + Vitest. Both new
+> toolbar props (`onOpenFilters?`, `activeFilterCount?`) are therefore optional so the existing render
+> keeps compiling untouched — this is the "additive" guarantee, made explicit.
 
 ### TagInput.tsx (NEW) — chips input for `tags`
 Props `{ value:string[]; onChange; max?=30 }`. Chip list + text input; Enter/comma adds, Backspace
@@ -192,6 +200,32 @@ Add sections BELOW existing title/alt/caption: **Folder** (select from folders),
 (`TagInput`), **Description** (textarea), **Credit** (input), **Focal point** (`FocalPointPicker`,
 images only). Wire to `onSave` via extended `MediaMetaUpdate` (present-only). Keep existing
 preview/usage/dimension-recovery/replace intact.
+**New prop for the Folder control's option source (additive — back-compat preserved):** the current
+`MediaDetailsDrawerProps` (`MediaDetailsDrawer.tsx:38-52`) carries only `item` (whose `folderId` is
+the asset's OWN current folder, not the list of selectable folders), so the Folder `<select>` has no
+option source. Add an **OPTIONAL, defaulted** prop `folders?: MediaFolder[]` (default `[]`; import
+`MediaFolder` from `@/ui/media/types`) to `MediaDetailsDrawerProps`; render the Folder control as
+options over `folders ?? []` plus an "— No folder —" (unfiled) reset row, with the current value read
+from `item.folderId`.
+> **BACK-COMPAT — the prop MUST be OPTIONAL, not required (verified 2026-07-05).** `MediaDetailsDrawer`
+> is rendered DIRECTLY (with JSX props) in FOUR test files under `tests/vitest/**` — all compiled by
+> the closure gate `root tsc -p tsconfig.json --noEmit` (512-07 §A) AND by Vitest:
+> `tests/vitest/ui/media-details.test.tsx` (extended below), plus THREE that this subtask does NOT own
+> and MUST NOT break — `tests/vitest/ui-integration/media.test.tsx:21`,
+> `tests/vitest/ui-integration/media-restyle.test.tsx:227`, and
+> `tests/vitest/mediaUi/mediaLibrary.test.tsx:21` — each renders `<MediaDetailsDrawer item open
+> onOpenChange onSave onDelete onCopy onOpen [onReplace] />` with NO `folders` prop. A REQUIRED
+> `folders: MediaFolder[]` would fail root tsc on all three (the exact test-glob tsc excess/missing-prop
+> break the MEMORY typecheck-scope gotcha warns blocks the owner's commit) and could crash at runtime
+> (`folders.map` on `undefined`). So `folders?` is optional with a `[]` default (renders just the
+> "— No folder —" row when unset) — this is why "back-compat preserved" holds. Only
+> `tests/vitest/ui/media-details.test.tsx` is updated here to assert the new Folder control; the three
+> unowned files keep compiling untouched precisely because the prop is optional. 512-06 §4 passes `folders={folders}` (the same
+`MediaFolder[]` it fetches in §2). The Folder select's onChange maps the chosen folder id (or `null`
+for the unfiled row) into the `folderId` field of the `MediaMetaUpdate` forwarded by the drawer's
+existing `onSave` (which currently sends `{ title, alt, caption }` at `MediaDetailsDrawer.tsx:111`;
+extend to `{ title, alt, caption, folderId, tags, focalX, focalY, description, credit }`, present-only
+per the widened `MediaMetaUpdate` from 512-04).
 
 ### MediaCard.tsx / MediaGrid.tsx (extend) — prototype-faithful card
 Rework card to proto structure: `aspect-square` muted preview, TYPE badge (`<Badge

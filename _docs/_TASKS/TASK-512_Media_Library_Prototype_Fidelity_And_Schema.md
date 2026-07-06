@@ -146,6 +146,15 @@ file has exactly one owner.
 - **`core/admin/ui/media/MediaGrid.tsx`** is ALSO imported by `MediaPicker.tsx` (`mediaClient`
   consumer, line 17) — 512-05 must keep `MediaGrid`'s public props back-compatible (additive only)
   so the picker is unaffected; verify `MediaPicker.tsx` compiles unchanged.
+- **New props on shared leaf components MUST be OPTIONAL, not required (root-tsc/Vitest back-compat).**
+  512-05's leaf components are rendered directly (with JSX) in test files 512-05 does NOT own, all
+  compiled by the closure gate `root tsc -p tsconfig.json --noEmit` (512-07 §A): `MediaDetailsDrawer`
+  in `tests/vitest/ui-integration/media.test.tsx`, `tests/vitest/ui-integration/media-restyle.test.tsx`,
+  `tests/vitest/mediaUi/mediaLibrary.test.tsx` (none pass a `folders` prop); `MediaToolbar` in
+  `tests/vitest/ui/plugin-media-site-leaf.test.tsx` (no `onOpenFilters`). Therefore 512-05's new
+  `MediaDetailsDrawer.folders?` and `MediaToolbar.onOpenFilters?`/`activeFilterCount?` props are all
+  OPTIONAL (defaulted) so those unowned renders keep compiling — matching the MEMORY typecheck-scope
+  gotcha (test-glob tsc catches excess/missing-prop breaks the core-only lint misses).
 - **`core/server/routes/index.ts`** is NOT edited — folder routes register from inside
   `registerMediaRoutes` (512-03) to preserve the one-owner rule.
 - **Changelog pin (closure only):** **1224**.

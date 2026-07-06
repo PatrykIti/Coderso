@@ -60,6 +60,7 @@ Primary internal/agent docs live in `_docs/`:
 - `_docs/TESTING_STRATEGY.md` - target hybrid testing model for Bun runtime and Vitest coverage lanes
 - `_docs/WIDGETS.md` - core widgets and configuration model
 - `_docs/_WIDGETS/README.md` - widgets index and per-widget docs
+- `_docs/DASHBOARD_WIDGETS_SPEC.md` - admin dashboard widgets & configurable panels (distinct from `core/widgets/*`: admin-only registry, RBAC, cache family, and render host)
 - `_docs/_TASKS/README.md` - tasks index
 - `_docs/_CHANGELOG/README.md` - changelog index
 - `_docs/_workflows/` - multi-agent workflow scripts (`task-###-author-audit.mjs`,

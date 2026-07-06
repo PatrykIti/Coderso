@@ -13,7 +13,7 @@ export function DashboardPage() {
           title="Dashboard"
           description="Operational view for content, security, storage, and traffic."
         />
-        <DashboardBuilder canWrite={can("dashboard:write")} />
+        <DashboardBuilder canWrite={can("dashboard:write")} can={can} />
       </div>
     </AdminShell>
   );

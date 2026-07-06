@@ -5,7 +5,7 @@
 **Priority:** High
 **Category:** Admin UI / Content (Forms) / Page Builder / Runtime / Schema (JSON model)
 **Estimated Effort:** Large
-**Dependencies:** Rides the existing validated `PATCH /forms/:id` + `PUT /forms/:id/fields` write paths (`core/server/routes/formsRoutes.ts`). Relates to TASK-490 (submissions export) — **kept distinct**: this task does NOT touch export/submissions listing scope.
+**Dependencies:** The theme/model/UI subtasks (516-01…06) ride the existing validated `PATCH /forms/:id` + `PUT /forms/:id/fields` write paths (`core/server/routes/formsRoutes.ts`). **516-07 does NOT merely ride existing write paths:** it adds a genuinely NEW public route `POST /forms/:id/uploads` (`handleFormAttachmentUploadRoute`), a NEW `formAttachmentUploadSchema` (`core/server/validation/formSchemas.ts`), two NEW leaf/backstop modules (`core/services/forms/formAttachment.ts`, `core/services/forms/mimeMatchesAccept.ts`), and additive single-writer edits to `core/services/media/mediaService.ts` (`uploadMedia` `constraints`) + `core/services/media/mediaUsageService.ts` (`"submission"` usage variant) — enumerated in the ownership table (516-07 row) + coordination note below. Relates to TASK-490 (submissions export) — **kept distinct**: this task does NOT touch export/submissions listing scope.
 **Status:** ⏳ To Do
 **Closure changelog (pinned):** 1228
 
@@ -202,11 +202,11 @@ FormSettings.theme?: {
 |---|---------|-------------------|------------|
 | 516-01 | Form theme/style model (settings) + resolver | `core/services/forms/formSettings.ts`, `core/services/forms/formTheme.ts` (NEW), `core/admin/services/formsClient.ts` (FormSettings type) | — (foundation) |
 | 516-02 | Design inspector panel (new component) | `core/admin/ui/forms/FormDesignPanel.tsx` (NEW) | 516-01 |
-| 516-03 | Builder chrome + rail fidelity + wiring | `core/admin/ui/forms/FormBuilderPage.tsx`, `FieldLibrary.tsx`, `FieldListPanel.tsx` | 516-01, 516-02, **516-04** (FormCanvas `deviceWidth`/`theme` prop signature must exist before FormBuilderPage passes them) |
+| 516-03 | Builder chrome + rail fidelity + wiring | `core/admin/ui/forms/FormBuilderPage.tsx`, `FieldLibrary.tsx` (516-03 STOPS rendering `FieldListPanel` but leaves `FieldListPanel.tsx` unchanged — see 516-03 Scope item 5: it stays a standalone test-covered primitive) | 516-01, 516-02, **516-04** (FormCanvas `deviceWidth`/`theme` prop signature must exist before FormBuilderPage passes them) |
 | 516-04 | Canvas fidelity + field-preview fixes (B2/B3/B5) + theme apply | `core/admin/ui/forms/FormCanvas.tsx` | 516-01 |
 | 516-05 | Field settings control fixes (B1 wiring/B4/B5/B6) | `core/admin/ui/forms/FieldSettingsPanel.tsx`, `core/services/forms/fieldSettings.ts` | 516-01 |
 | 516-06 | Runtime theme application (preview + public inherit) | `core/admin/ui/forms/FormRuntimePreviewDialog.tsx`, `core/widgets/core/formEmbed.tsx`, **`core/services/pages/pageRendererV2.tsx` (per-region: `mapFormBindingToEmbedData`, `:1329-1361` — present-only `theme` passthrough only; no other 516 subtask touches this file)** | 516-01, 516-04 |
-| 516-07 | `file` field type (optional/heaviest) | `core/services/forms/validation.ts`, `core/services/forms/submissionService.ts`, submission route in `formsRoutes.ts`, **+ additive `file`-case-only edits to `FieldLibrary.tsx`/`FormBuilderPage.tsx` (rail item), `FormCanvas.tsx` (preview), `formEmbed.tsx` (control), `FormRuntimePreviewDialog.tsx` (control)** — see File-case seam below | 516-03, 516-04, 516-05, 516-06 |
+| 516-07 | `file` field type (optional/heaviest) | `core/services/forms/validation.ts`, `core/services/forms/submissionService.ts`; **NEW** `core/services/forms/formAttachment.ts` + `core/services/forms/mimeMatchesAccept.ts` (leaf); `core/server/routes/formsRoutes.ts` (submission handler branch + **NEW** `POST /forms/:id/uploads` `handleFormAttachmentUploadRoute` + additive `mapFormError` media cases); **NEW** `formAttachmentUploadSchema` in `core/server/validation/formSchemas.ts`; additive single-writer edits to `core/services/media/mediaService.ts` (`uploadMedia` `constraints` param) + `core/services/media/mediaUsageService.ts` (`"submission"` `MediaUsageTargetType` + `form_submissions` scan branch); **+ additive `file`-case-only edits to `FieldLibrary.tsx`/`FormBuilderPage.tsx` (rail item), `FormCanvas.tsx` (preview), `formEmbed.tsx` (control), `FormRuntimePreviewDialog.tsx` (control)** — see File-case seam + 516-07 Scope | 516-03, 516-04, 516-05, 516-06 |
 
 **Land order:** 516-01 → 516-02 → **516-04 → 516-03** → 516-05 → 516-06 → 516-07.
 516-04 (sole writer of `FormCanvas.tsx`) lands **before** 516-03 so the optional
@@ -239,6 +239,19 @@ lint:types`). The optional props are a no-op until 516-03 supplies the values.
   (preview control). 516-03/04/06 add **no** `file` branch — they omit the type
   entirely. This seam is safe because it is strictly additive, references a type
   that exists only after all primary owners have shipped, and lands last.
+- **516-07 additive single-writer edits + NEW modules/route (no in-task collision).**
+  Beyond the file-case seam, 516-07 is the SOLE writer of: additive edits to
+  `core/services/media/mediaService.ts` (`uploadMedia` gains an optional
+  `constraints?` param) and `core/services/media/mediaUsageService.ts` (adds a
+  `"submission"` `MediaUsageTargetType` member + a `form_submissions` scan branch);
+  and it CREATES the NEW modules `core/services/forms/formAttachment.ts`,
+  `core/services/forms/mimeMatchesAccept.ts`, and the `formAttachmentUploadSchema`
+  in `core/server/validation/formSchemas.ts`, plus the NEW public route
+  `POST /forms/:id/uploads` (`handleFormAttachmentUploadRoute`) + additive
+  `mapFormError` media cases in `formsRoutes.ts`. No other 516 subtask writes any
+  of these files, so single-writer holds; they are declared here (and in the
+  ownership table + Dependencies) because they are genuinely NEW surfaces, not part
+  of "riding the existing write paths". Full contract + Security in 516-07.
 - The shared theme vocabulary (enum unions, clamp sets, `resolveFormTheme`
   helper name) is defined **once** in 516-01 and imported read-only by
   516-02/04/06. Any drift in these enums between subtasks is a reconcile failure.
@@ -371,7 +384,7 @@ Test shape (Vitest admin/UI): render with `theme=undefined` → controls show
 resolved-default hints; change width → `onThemeChange` called with `{ layout:{ width } }`
 only; reset → key removed.
 
-### 516-03 — builder chrome + rail (`FormBuilderPage.tsx`, `FieldLibrary.tsx`, `FieldListPanel.tsx`)
+### 516-03 — builder chrome + rail (`FormBuilderPage.tsx`, `FieldLibrary.tsx`)
 
 ```tsx
 // Replace <EditorShell> with <PageHeader …/> + <EditorFrame …/>.
@@ -408,26 +421,38 @@ only; reset → key removed.
 list. `deviceWidth` local state (`"desktop" | "mobile"`) drives the canvas frame
 width; passed to `FormCanvas` via the optional prop added in 516-04 (land order).
 
-**`FieldListPanel.tsx` fate (sole-writer edit, explicit).** The current left rail
+**`FieldListPanel` fate (`FormBuilderPage.tsx` sole-writer edit — panel file left unchanged).** The current left rail
 is a **two-tab split** — `Fields` (`FieldListPanel`, the list of already-added
-fields with selection/reorder — `FormBuilderPage.tsx:743-758,886-911`) and
-`Library` (`FieldLibrary`). The prototype has **NO such split**: a **single**
-`Fields` rail (which is the LIBRARY — `EditorRailGroup` at
-`FormBuilderPreview.tsx:60-74`) on the left, and field **selection moves to
-canvas-click** (the selected field is highlighted on the canvas card via
-`ring-2 ring-primary`, `FormBuilderPreview.tsx:117`). So 516-03: (a) **removes the
-left Tabs split** and mounts `FieldLibrary` alone as `EditorFrame.left`; (b)
-**repurposes `FieldListPanel`** into the canvas selection + reorder path — field
-SELECTION is driven by canvas-click (`FormCanvas` `onSelectField`, selected field
-gets the prototype's `ring-2 ring-primary` highlight), and the existing
-reorder/remove controls `FieldListPanel` owns move onto the canvas cards (drag
-handle / remove-on-hover). `FieldListPanel.tsx` is therefore **not deleted** — its
-list-management logic is retained but is no longer a left-rail tab; it becomes the
-canvas-side selection/reorder model (or is fully folded into `FormCanvas`'s
-selection state if the reorder affordance is realized entirely canvas-side, in
-which case the sole-writer edit reduces `FieldListPanel.tsx` to its exported
-`FormFieldListItem` type + reorder helper). Net: after 516-03 there is exactly ONE
-left rail (the library) and no `Fields`/`Library` tab pair, matching the prototype.
+fields with **selection only** — its props are `fields/selectedId/onSelect/onAdd`,
+`FieldListPanel.tsx:17-23`; there is **no reorder** control today) and `Library`
+(`FieldLibrary`). The prototype has **NO such split**: a **single** `Fields` rail
+(which is the LIBRARY — `EditorRailGroup` at `FormBuilderPreview.tsx:60-74`) on the
+left, and field **selection is canvas-click** (the selected field is highlighted on
+the canvas card via `ring-2 ring-primary`, `FormBuilderPreview.tsx:117`). So 516-03:
+(a) **removes the left Tabs split** and mounts `FieldLibrary` alone as
+`EditorFrame.left`; (b) field SELECTION is driven by canvas-click, which the real
+`FormCanvas` ALREADY implements (`onSelectField`/`selectedFieldId` + the prototype's
+`ring-2 ring-primary` highlight, `FormCanvas.tsx:48`; per-card remove via
+`onRemoveField`, `:66`) — so NO new canvas selection work is required (516-04 Scope
+§4 "keep selection/remove affordances intact" already covers it). **Field REORDER is
+out of scope for TASK-516** — it is not implemented anywhere today (`FieldListPanel`
+has no `onMove`/`onReorder`; the canvas `GripVertical` at `FormCanvas.tsx:54` is a
+render-only handle), so dropping the added-fields list tab loses no reorder feature;
+canvas-side drag reorder is a follow-up, matching this task's out-of-scope posture on
+functional edit-history (see "Undo/redo SCOPE decision"). Because its list-selection
+role is now redundant with canvas-click selection, the sole-writer removal happens
+**entirely in `FormBuilderPage.tsx`**: delete the `fieldListItems` `useMemo`
+(`:317`), BOTH `<FieldListPanel>` render sites (`:749` desktop, `:892` mobile Sheet —
+each replaced by `<FieldLibrary>`), and the now-unused
+`import { FieldListPanel, type FormFieldListItem }` at `:61` (its only consumer was
+the `:317` memo, so leaving it fails the typecheck/lint gate). **`FieldListPanel.tsx`
+itself is left UNCHANGED — NOT gutted** — because the standalone component test
+`tests/vitest/ui/forms-component-wave.test.tsx:416-486` (NOT in 516-03's ownership)
+still imports and renders the real component; deleting/reducing it would break that
+unowned test under `vitest` + `tsc`. It stays a test-covered primitive the builder
+no longer renders (516-03 Scope item 5 has the full grounding). Net:
+after 516-03 there is exactly ONE left rail (the library) and no `Fields`/`Library`
+tab pair, matching the prototype.
 
 **Undo/redo SCOPE decision (explicit).** The prototype's Undo/Redo buttons are
 **decorative** (page marked "Preview only"; the admin `EditorFrame` does not

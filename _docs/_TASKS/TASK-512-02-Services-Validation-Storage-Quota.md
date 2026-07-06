@@ -139,6 +139,21 @@ signature/insert change is made in this subtask. (If a future task wants folder-
 extend `mediaUploadSchema` AND the POST /media handler forward map — a 512-03 route-file edit, out
 of scope here.)
 
+> **SERVICE-LAYER TYPE ASYMMETRY vs 512-04 (deliberate — verified 2026-07-05).** `uploadMedia`'s
+> signature is `uploadMedia(file: UploadFile, meta: MediaMeta, userId?)` (`mediaService.ts:116`), and
+> §A widens the SHARED `MediaMeta` type. So at the service layer `uploadMedia`'s `meta` param
+> *type-accepts* `folderId`/`tags` after this edit — it is NOT type-narrowed the way 512-04 narrows the
+> CLIENT `uploadMedia` (which introduces a dedicated `UploadMediaMeta = {alt?,title?,caption?}` so
+> `uploadMedia(file,{folderId})` is a *compile error*). This asymmetry is INTENTIONAL and safe, not a
+> gap: the POST `/media` handler builds the upload meta EXPLICITLY as `{alt,title,caption}`
+> (`mediaRoutes.ts:123-128`, does NOT spread `ctx.body`) and `mediaUploadSchema` is
+> `additionalProperties:false` (rejects `folderId`/`tags` 4xx before the handler runs), so a widened
+> `MediaMeta` param can never carry the new keys into an insert. Do NOT introduce a service-side narrow
+> upload type — keeping `meta: MediaMeta` here (with the route as the trust boundary) is correct; the
+> type-enforcement "not convention" rule of 512-04 lives where a developer could actually mis-call it
+> (the client). This note exists so the 512-04 narrowing is not read as a contradiction the service
+> file failed to mirror.
+
 ### B. mediaFoldersService.ts (NEW)
 
 ```ts

@@ -142,16 +142,16 @@ shape from the card/panel state). No new client cache key. Field-name validation
     const next = fields.slice();
     const [moved] = next.splice(fromIndex, 1);
     next.splice(toIndex, 0, moved);
-    handleFieldChange(next);                           // in-memory array order (UX only — see NOTE below)
+    handleFieldChange(next);                           // reorders the fields[] array (PERSISTS — see NOTE)
   };
-  // ORDER-PERSISTENCE NOTE (reconciled with 513-06 §1 CROSS-SUBTASK BLOCKER — empirically verified):
-  // reorder is an IN-MEMORY / UX control only. `content_types.schema` is a Postgres `jsonb` column
-  // (core/db/schema.ts:688) that canonicalizes object keys (length, then bytewise), and `ContentSchema`
-  // carries NO order array — `fieldsFromSchema` reads `Object.entries(schema.properties)`
-  // (schemaMapping.ts ~:389). So although buildSchemaFromFields writes properties in fields[] order,
-  // that authored order does NOT survive a Save→reload round-trip (it reads back jsonb-canonical, not
-  // authored). Persisting field order would require an explicit mechanism (see 513-02 §Non-goal), which
-  // is OUT of current scope. Reorder still updates the in-session field list + the live schema preview.
+  // ORDER-PERSISTENCE NOTE (parent Open Question 6; delivered by 513-02 §schemaMapping):
+  // reorder PERSISTS. `content_types.schema` is a Postgres `jsonb` column (core/db/schema.ts:688) that
+  // canonicalizes object keys, so 513-02 records the authored position in a per-property integer
+  // `xFieldConfig.order` (written by buildSchemaFromFields for every field) and re-sorts by it in
+  // `fieldsFromSchema` — so the fields[] array order set here is exactly what reloads. Marking the
+  // editor dirty via handleFieldChange is therefore CORRECT (the reorder survives Save→reload), NOT a
+  // cosmetic affordance. Nothing extra to do here: emitting the reordered fields[] is sufficient because
+  // Save serializes it via buildSchemaFromFields, which stamps xFieldConfig.order from array index.
   const handleDuplicateField = (id: string) => {
     const src = fields.find(f => f.id === id); if (!src) return;
     const existingNames = fields.map(f => ({ id: f.id, name: f.name }));
@@ -219,10 +219,11 @@ shape from the card/panel state). No new client cache key. Field-name validation
     ArrowUp uses `index - 1`) and DROP the `handleReorder(fromIndex, toIndex)` splice + the
     `onReorder` prop. Do NOT mix the two conventions (one uses after-removal `toIndex`, the other
     before-removal `targetIndex`).
-  Persistence is unchanged either way — and in BOTH shapes the reorder is IN-MEMORY / UX only: the
-  authored field order does NOT survive the jsonb `content_types.schema` column on reload (see the
-  ORDER-PERSISTENCE NOTE above and 513-06 §1 CROSS-SUBTASK BLOCKER). No schema-mapping or new-field
-  change; reorder updates the in-session field list + live preview, not the persisted key order.
+  Either shape emits a reordered `fields[]` array, and in BOTH the reorder PERSISTS: Save serializes
+  `fields[]` via `buildSchemaFromFields`, which stamps `xFieldConfig.order` from the array index, and
+  `fieldsFromSchema` re-sorts by it on reload (513-02 §Field-ORDER block; parent Open Question 6).
+  513-03 makes NO schema-mapping change — the order mechanism is entirely owned by 513-02; 513-03 only
+  produces the reordered array + marks dirty. The live schema preview reflects the new order too.
 - Row `…` menu (`DropdownMenu`): **Edit** (selects the field → opens the inline editor / details
   sheet), **Duplicate field** (clone with a unique name via `makeUniqueFieldName`), **Delete**
   (existing `requestFieldRemoval` confirm flow).
@@ -310,10 +311,10 @@ shape from the card/panel state). No new client cache key. Field-name validation
   (drafts default dropped, versioning:true kept).
 - Fields list rows show label + type Badge (incl. a Date and a Slug field) + actions menu; row
   `…` → Duplicate adds a uniquely-named clone; Delete opens the confirm flow.
-- Drag/keyboard reorder changes the in-session field order and the LIVE (in-memory) schema preview
-  reflects it. The **saved/reloaded** property order is NOT asserted — `content_types.schema` is jsonb
-  and re-sorts object keys, so a Save→reopen returns jsonb-canonical order (see 513-06 §1 BLOCKER);
-  assert the field-key SET + the reorder control's behavior, not a persisted key order.
+- Drag/keyboard reorder changes the field order, the LIVE schema preview reflects it, AND the order
+  PERSISTS through Save→reload via `xFieldConfig.order` (513-02 §Field-ORDER; parent Open Question 6).
+  The admin-lane test asserts the reorder emits the new array order; the exact saved/reloaded order is
+  asserted end-to-end in 513-06 (Bun route round-trip + smoke scenario 3).
 - API ID input edits slug; Save sends the new slug.
 
 **Gates**: `bun --cwd core lint:types` + root `tsc -p tsconfig.json --noEmit`, `lint`. Watch the

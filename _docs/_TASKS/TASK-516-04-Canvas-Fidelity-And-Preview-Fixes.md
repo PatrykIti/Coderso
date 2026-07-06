@@ -264,8 +264,13 @@ const submitClass = cn(
 <Button type="button" disabled className={submitClass}>{t.submit.label ?? "Submit"}</Button>
 ```
 
-Grid wrappers (both single AND multi-step branches, `FormCanvas.tsx:263,278`):
-replace the hardcoded `md:grid-cols-2` with `cn(deviceWidth === "mobile" ? "grid-cols-1" : formColumnsClass, formThemeGapClass[t.layout.fieldGap])` (where `formColumnsClass` is the local const from Scope §3); per-field span uses the columns-aware rule from Scope §3
+Grid wrappers (both single AND multi-step branches, `FormCanvas.tsx:263,278`): the real
+wrappers are `grid gap-3 md:grid-cols-2` — replace the FULL `gap-3 md:grid-cols-2` substring
+(keep only `grid`) with `cn(deviceWidth === "mobile" ? "grid-cols-1" : formColumnsClass, formThemeGapClass[t.layout.fieldGap])`
+(where `formColumnsClass` is the local const from Scope §3) so EXACTLY ONE columns utility
+(`formColumnsClass`) + ONE gap utility (`formThemeGapClass[fieldGap]`) survive — leaving the
+pre-existing `gap-3` in place would collide with the injected gap and produce a non-deterministic
+gap (mirror 516-06's explicit anti-collision handling). Per-field span uses the columns-aware rule from Scope §3
 (`columns:1`→`col-span-1`; `columns:2`→`half:md:col-span-1`/`full:md:col-span-2`;
 mobile→single column). The submit button applies `t.submit.*` + the
 `t.layout.buttonAlignment` precedence rule 516-01:155 assigns to THIS subtask

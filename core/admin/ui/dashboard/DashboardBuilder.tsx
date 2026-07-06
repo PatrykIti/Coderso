@@ -8,19 +8,19 @@ import {
   Settings2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useReducer, useRef, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Sheet,
   SheetClose,
@@ -41,7 +41,10 @@ import {
 } from "@/services/dashboardClient";
 import { cn } from "@/lib/utils";
 import { DashboardWidgetHost } from "./DashboardWidgetHost";
+import { moveWidget, resizeWidget, sortWidgetsByPosition } from "./dashboardLayoutArrange";
+import { WidgetConfigForm } from "./WidgetConfigForm";
 import {
+  canRenderWidgetType,
   createDashboardWidget,
   dashboardWidgetCatalog,
   getDashboardWidgetDescriptor,
@@ -49,17 +52,12 @@ import {
 import {
   cloneLayout,
   DASHBOARD_MAX_WIDGETS,
+  normalizeDashboardWidgetConfig,
 } from "../../../services/dashboard/dashboardWidgetContract";
 import type {
-  DashboardContentOverTimeConfig,
-  DashboardContentQueryConfig,
-  DashboardCounterMetric,
   DashboardLayout,
-  DashboardRecentActivityConfig,
-  DashboardRecentEditType,
-  DashboardTotalsCountersConfig,
   DashboardWidget,
-  DashboardWidgetConfig,
+  DashboardWidgetResolution,
   DashboardWidgetType,
 } from "../../../services/dashboard/dashboardTypes";
 import type { DashboardWidgetDataResponse } from "../../../services/dashboard/dashboardWidgetData";
@@ -192,30 +190,6 @@ const spanClass: Record<number, string> = {
   12: "lg:col-span-12",
 };
 
-const counterMetrics: DashboardCounterMetric[] = [
-  "pages",
-  "entries",
-  "media",
-  "users",
-  "visitors",
-  "pageviews",
-  "sessions",
-  "bounceRate",
-];
-
-const recentTypes: DashboardRecentEditType[] = ["page", "entry", "media"];
-
-const metricLabel: Record<DashboardCounterMetric, string> = {
-  pages: "Pages",
-  entries: "Entries",
-  media: "Media",
-  users: "Users",
-  visitors: "Visitors",
-  pageviews: "Pageviews",
-  sessions: "Sessions",
-  bounceRate: "Bounce rate",
-};
-
 const extractError = (error: unknown, fallback: string) =>
   isApiClientError(error) ? error.message : fallback;
 
@@ -228,6 +202,29 @@ const nextY = (layout: DashboardLayout) =>
   layout.widgets.reduce((max, widget) => Math.max(max, widget.position.y + widget.position.h), 0);
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+// Pointer-resize geometry constants — kept in sync with the render below:
+// the grid uses `gap-4` (16px) and each wrapper's minHeight is `h * 88px`.
+const GRID_GAP_PX = 16;
+const GRID_ROW_UNIT_PX = 88;
+
+// Hit-test the widget wrappers (which carry `data-widget-id`) for the point under
+// the pointer during a reorder drag. Returns the topmost matching widget id.
+const widgetIdAtPoint = (grid: HTMLElement, clientX: number, clientY: number): string | null => {
+  const nodes = Array.from(grid.querySelectorAll<HTMLElement>("[data-widget-id]"));
+  for (const node of nodes) {
+    const rect = node.getBoundingClientRect();
+    if (
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom
+    ) {
+      return node.getAttribute("data-widget-id");
+    }
+  }
+  return null;
+};
 
 const withWidget = (
   layout: DashboardLayout,
@@ -247,14 +244,27 @@ const buildDataMap = (data: DashboardWidgetDataResponse | null) =>
 
 function AddWidgetCatalog({
   disabled,
+  can,
   onAdd,
 }: {
   disabled?: boolean;
+  // Presentational RBAC predicate (TASK-480-05-L02): the catalog only lists widget
+  // types the current permission set can render data for. The widget-data route
+  // stays the real boundary; this just hides types the viewer could never populate.
+  can: (permission: string) => boolean;
   onAdd: (type: DashboardWidgetType) => void;
 }) {
+  const entries = dashboardWidgetCatalog.filter((item) => canRenderWidgetType(item.type, can));
+  if (entries.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-center text-sm text-muted-foreground">
+        No widget types are available for your permissions.
+      </div>
+    );
+  }
   return (
     <div className="grid gap-2 md:grid-cols-3">
-      {dashboardWidgetCatalog.map((item) => {
+      {entries.map((item) => {
         const Icon = item.icon;
         return (
           <button
@@ -268,7 +278,7 @@ function AddWidgetCatalog({
               <Icon className="size-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-medium">{item.title}</span>
+              <span className="block text-sm font-medium">{item.label}</span>
               <span className="block text-xs text-muted-foreground">{item.description}</span>
             </span>
           </button>
@@ -289,10 +299,12 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function ConfigPanel({
   widget,
+  data,
   onUpdate,
   onClose,
 }: {
   widget: DashboardWidget | null;
+  data?: DashboardWidgetResolution;
   onUpdate: (widget: DashboardWidget) => void;
   onClose: () => void;
 }) {
@@ -300,48 +312,52 @@ function ConfigPanel({
 
   const descriptor = getDashboardWidgetDescriptor(widget.type);
 
-  const updateConfig = <T extends DashboardWidgetConfig>(config: T) => {
-    if (!widget) return;
-    onUpdate({ ...widget, config });
+  // Every field change routes through the schema owner, so an out-of-range or
+  // unknown value can never enter the draft (reject-unknown preserved). Passing
+  // `undefined` clears the key so the schema default applies.
+  const setField = (key: string, value: unknown) => {
+    const base: Record<string, unknown> = { ...widget.config };
+    if (value === undefined) delete base[key];
+    else base[key] = value;
+    onUpdate({ ...widget, config: normalizeDashboardWidgetConfig(widget.type, base) });
   };
 
   const updateTitle = (title: string) => {
-    if (!widget) return;
     onUpdate({ ...widget, title });
   };
-
-  const body = (
-    <div className="grid gap-4">
-      <Field label="Title">
-        <Input value={widget.title ?? ""} onChange={(event) => updateTitle(event.target.value)} />
-      </Field>
-
-      {widget.config.kind === "totals-counters" ? (
-        <TotalsConfig config={widget.config} onChange={updateConfig} />
-      ) : null}
-      {widget.config.kind === "content-over-time" ? (
-        <TimelineConfig config={widget.config} onChange={updateConfig} />
-      ) : null}
-      {widget.config.kind === "recent-activity" ? (
-        <RecentActivityConfig config={widget.config} onChange={updateConfig} />
-      ) : null}
-      {widget.config.kind === "content-query" ? (
-        <ContentQueryConfig config={widget.config} onChange={updateConfig} />
-      ) : null}
-    </div>
-  );
 
   return (
     <Sheet open modal={false} onOpenChange={(open) => (open ? undefined : onClose())}>
       <SheetContent
-        className="w-full overflow-y-auto sm:max-w-md"
+        className="flex w-full flex-col overflow-y-auto sm:max-w-md"
         overlayClassName="pointer-events-none bg-transparent"
       >
         <SheetHeader>
-          <SheetTitle>{descriptor.title}</SheetTitle>
+          <SheetTitle>{descriptor.label}</SheetTitle>
           <SheetDescription>{descriptor.description}</SheetDescription>
         </SheetHeader>
-        {body}
+        <div className="grid gap-4">
+          <div className="grid gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Preview
+            </span>
+            <div className="rounded-lg border border-border bg-muted/20 p-3">
+              <DashboardWidgetHost widget={widget} data={data} editMode={false} />
+            </div>
+          </div>
+          <Field label="Title">
+            <Input
+              value={widget.title ?? ""}
+              onChange={(event) => updateTitle(event.target.value)}
+            />
+          </Field>
+          <WidgetConfigForm
+            widgetId={widget.id}
+            fields={descriptor.configFields}
+            config={widget.config}
+            onChange={setField}
+          />
+        </div>
         <SheetFooter>
           <SheetClose asChild>
             <Button type="button" onClick={onClose}>
@@ -355,206 +371,48 @@ function ConfigPanel({
   );
 }
 
-function TotalsConfig({
-  config,
-  onChange,
+export function DashboardBuilder({
+  canWrite,
+  can,
 }: {
-  config: DashboardTotalsCountersConfig;
-  onChange: (config: DashboardTotalsCountersConfig) => void;
+  canWrite: boolean;
+  // Permission predicate for the presentational add-widget RBAC guard. Defaults to
+  // "allow" so existing callers/tests that only assert layout mechanics are
+  // unaffected; DashboardPage passes the live admin `can`.
+  can?: (permission: string) => boolean;
 }) {
-  const allowed =
-    config.source === "traffic"
-      ? new Set(["visitors", "pageviews", "sessions", "bounceRate"])
-      : new Set(["pages", "entries", "media", "users"]);
-  return (
-    <>
-      <Field label="Source">
-        <Select
-          value={config.source ?? "cms"}
-          onValueChange={(value) =>
-            onChange({
-              ...config,
-              source: value as DashboardTotalsCountersConfig["source"],
-              metrics:
-                value === "traffic"
-                  ? ["visitors", "pageviews", "sessions", "bounceRate"]
-                  : ["pages", "entries", "media", "users"],
-            })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="cms">CMS</SelectItem>
-            <SelectItem value="traffic">Traffic</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
-      <div className="grid gap-2 text-sm">
-        <span className="font-medium">Metrics</span>
-        {counterMetrics
-          .filter((metric) => allowed.has(metric))
-          .map((metric) => (
-            <label key={metric} className="flex items-center gap-2">
-              <Checkbox
-                checked={(config.metrics ?? []).includes(metric)}
-                onCheckedChange={(checked) => {
-                  const current = new Set(config.metrics ?? []);
-                  if (checked) current.add(metric);
-                  else current.delete(metric);
-                  const metrics = counterMetrics.filter(
-                    (entry) => current.has(entry) && allowed.has(entry)
-                  );
-                  onChange({ ...config, metrics: metrics.length ? metrics : [metric] });
-                }}
-              />
-              {metricLabel[metric]}
-            </label>
-          ))}
-      </div>
-    </>
-  );
-}
-
-function TimelineConfig({
-  config,
-  onChange,
-}: {
-  config: DashboardContentOverTimeConfig;
-  onChange: (config: DashboardContentOverTimeConfig) => void;
-}) {
-  return (
-    <>
-      <Field label="Source">
-        <Select
-          value={config.source ?? "content"}
-          onValueChange={(value) =>
-            onChange({ ...config, source: value as DashboardContentOverTimeConfig["source"] })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="content">Content</SelectItem>
-            <SelectItem value="traffic">Traffic</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
-      <Field label="Chart">
-        <Select
-          value={config.variant ?? "area"}
-          onValueChange={(value) =>
-            onChange({ ...config, variant: value as DashboardContentOverTimeConfig["variant"] })
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="area">Area</SelectItem>
-            <SelectItem value="bar">Bar</SelectItem>
-          </SelectContent>
-        </Select>
-      </Field>
-      <Field label="Range days">
-        <Input
-          type="number"
-          min={1}
-          max={365}
-          value={config.rangeDays ?? 30}
-          onChange={(event) =>
-            onChange({ ...config, rangeDays: clamp(Number(event.target.value), 1, 365) })
-          }
-        />
-      </Field>
-    </>
-  );
-}
-
-function RecentActivityConfig({
-  config,
-  onChange,
-}: {
-  config: DashboardRecentActivityConfig;
-  onChange: (config: DashboardRecentActivityConfig) => void;
-}) {
-  return (
-    <>
-      <Field label="Limit">
-        <Input
-          type="number"
-          min={1}
-          max={25}
-          value={config.limit ?? 10}
-          onChange={(event) =>
-            onChange({ ...config, limit: clamp(Number(event.target.value), 1, 25) })
-          }
-        />
-      </Field>
-      <div className="grid gap-2 text-sm">
-        <span className="font-medium">Types</span>
-        {recentTypes.map((type) => (
-          <label key={type} className="flex items-center gap-2 capitalize">
-            <Checkbox
-              checked={(config.types ?? recentTypes).includes(type)}
-              onCheckedChange={(checked) => {
-                const current = new Set(config.types ?? recentTypes);
-                if (checked) current.add(type);
-                else current.delete(type);
-                const types = recentTypes.filter((entry) => current.has(entry));
-                onChange({ ...config, types: types.length ? types : [type] });
-              }}
-            />
-            {type}
-          </label>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function ContentQueryConfig({
-  config,
-  onChange,
-}: {
-  config: DashboardContentQueryConfig;
-  onChange: (config: DashboardContentQueryConfig) => void;
-}) {
-  return (
-    <>
-      <Field label="Content type id">
-        <Input
-          value={config.contentTypeId ?? ""}
-          onChange={(event) =>
-            onChange({ ...config, contentTypeId: event.target.value.trim() || null })
-          }
-        />
-      </Field>
-      <Field label="Limit">
-        <Input
-          type="number"
-          min={1}
-          max={50}
-          value={config.limit ?? 10}
-          onChange={(event) =>
-            onChange({ ...config, limit: clamp(Number(event.target.value), 1, 50) })
-          }
-        />
-      </Field>
-    </>
-  );
-}
-
-export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
+  const canRender = can ?? (() => true);
   const [state, dispatch] = useReducer(reducer, initialState);
   const stateRef = useRef(state);
   const previewSeq = useRef(0);
 
+  // Pointer drag-and-drop (TASK-480-05-L01). `gridRef` measures a column's pixel
+  // width for resize; the two "*Ref"s are the live pointer sessions (source of
+  // truth read by the window listeners, which capture no reactive state); the
+  // three states drive drag/drop/resize styling only. All mutations flow through
+  // `applyGeometry`, keeping the same dirty-state + cache contract as the nudges.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const dragSessionRef = useRef<{ id: string; overId: string | null } | null>(null);
+  const resizeSessionRef = useRef<{
+    id: string;
+    startX: number;
+    startY: number;
+    startW: number;
+    startH: number;
+    colWidth: number;
+  } | null>(null);
+  const pointerCleanupRef = useRef<(() => void) | null>(null);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [overId, setOverId] = useState<string | null>(null);
+  const [resizeId, setResizeId] = useState<string | null>(null);
+
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Detach any in-flight pointer session on unmount. Cleanup-only (no state set),
+  // so it does not violate the no-set-state-in-effect rule.
+  useEffect(() => () => pointerCleanupRef.current?.(), []);
 
   const load = useCallback(async (force = false) => {
     dispatch({ type: "load:start" });
@@ -619,6 +477,126 @@ export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
     [refreshPreview]
   );
 
+  // Geometry-only draft mutation (reorder/resize). Unlike `applyLayout` it does
+  // NOT re-preview: moving or resizing a widget changes neither its resolved data
+  // nor the data of any other widget, so a preview refetch would be wasted network
+  // (and would spam on every pointermove). Dirty-state + save flow are unchanged.
+  const applyGeometry = useCallback((layout: DashboardLayout) => {
+    dispatch({ type: "layout:update", layout });
+  }, []);
+
+  const detachPointer = useCallback(() => {
+    pointerCleanupRef.current?.();
+    pointerCleanupRef.current = null;
+  }, []);
+
+  const beginReorder = useCallback(
+    (id: string, event: React.PointerEvent<HTMLElement>) => {
+      if (!stateRef.current.editMode) return;
+      event.preventDefault();
+      detachPointer();
+      dragSessionRef.current = { id, overId: null };
+      setDragId(id);
+      setOverId(null);
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        const grid = gridRef.current;
+        const session = dragSessionRef.current;
+        if (!grid || !session) return;
+        const target = widgetIdAtPoint(grid, moveEvent.clientX, moveEvent.clientY);
+        const nextOver = target && target !== session.id ? target : null;
+        if (nextOver !== session.overId) {
+          session.overId = nextOver;
+          setOverId(nextOver);
+        }
+      };
+      const finish = (commit: boolean) => {
+        detachPointer();
+        const session = dragSessionRef.current;
+        dragSessionRef.current = null;
+        setDragId(null);
+        setOverId(null);
+        if (commit && session?.overId && stateRef.current.layout) {
+          applyGeometry(moveWidget(stateRef.current.layout, session.id, session.overId));
+        }
+      };
+      const handleUp = () => finish(true);
+      const handleCancel = () => finish(false);
+      const handleKey = (keyEvent: KeyboardEvent) => {
+        if (keyEvent.key === "Escape") finish(false);
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", handleUp);
+      window.addEventListener("pointercancel", handleCancel);
+      window.addEventListener("keydown", handleKey);
+      pointerCleanupRef.current = () => {
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", handleUp);
+        window.removeEventListener("pointercancel", handleCancel);
+        window.removeEventListener("keydown", handleKey);
+      };
+    },
+    [applyGeometry, detachPointer]
+  );
+
+  const beginResize = useCallback(
+    (id: string, event: React.PointerEvent<HTMLElement>) => {
+      if (!stateRef.current.editMode) return;
+      event.preventDefault();
+      event.stopPropagation();
+      detachPointer();
+      const grid = gridRef.current;
+      const layout = stateRef.current.layout;
+      if (!grid || !layout) return;
+      const widget = layout.widgets.find((entry) => entry.id === id);
+      if (!widget) return;
+      const gridWidth = grid.getBoundingClientRect().width;
+      const colWidth = Math.max(1, (gridWidth - GRID_GAP_PX * 11) / 12);
+      resizeSessionRef.current = {
+        id,
+        startX: event.clientX,
+        startY: event.clientY,
+        startW: widget.position.w,
+        startH: widget.position.h,
+        colWidth,
+      };
+      setResizeId(id);
+
+      const handleMove = (moveEvent: PointerEvent) => {
+        const session = resizeSessionRef.current;
+        const current = stateRef.current.layout;
+        if (!session || !current) return;
+        // Absolute target from the drag origin (not cumulative), so a one-frame
+        // lag in `stateRef` can never accrue drift.
+        const stepX = Math.round((moveEvent.clientX - session.startX) / session.colWidth);
+        const stepY = Math.round((moveEvent.clientY - session.startY) / GRID_ROW_UNIT_PX);
+        const next = resizeWidget(
+          current,
+          session.id,
+          session.startW + stepX,
+          session.startH + stepY
+        );
+        if (next !== current) applyGeometry(next);
+      };
+      const finish = () => {
+        detachPointer();
+        resizeSessionRef.current = null;
+        setResizeId(null);
+      };
+
+      window.addEventListener("pointermove", handleMove);
+      window.addEventListener("pointerup", finish);
+      window.addEventListener("pointercancel", finish);
+      pointerCleanupRef.current = () => {
+        window.removeEventListener("pointermove", handleMove);
+        window.removeEventListener("pointerup", finish);
+        window.removeEventListener("pointercancel", finish);
+      };
+    },
+    [applyGeometry, detachPointer]
+  );
+
   const addWidget = useCallback(
     (type: DashboardWidgetType) => {
       if (!state.layout || state.layout.widgets.length >= DASHBOARD_MAX_WIDGETS) return;
@@ -651,20 +629,43 @@ export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
         dispatch({ type: "select", id: widget.id });
         return;
       }
+      // Remove changes which resolved data the grid shows, so it re-previews via
+      // applyLayout. Everything else is geometry-only (reorder/resize) and reuses
+      // the pointer path's applyGeometry — no wasted preview refetch, matching the
+      // pointer drag/resize sessions exactly.
+      if (action === "remove") {
+        applyLayout(
+          withWidget(state.layout, widget.id, () => null),
+          null
+        );
+        return;
+      }
+      // Up/down reorder using the SAME dense-resequence model as pointer drag
+      // (moveWidget): swap with the previous/next widget in visual order so one
+      // keypress advances exactly one slot (no y-tie dead press).
+      if (action === "up" || action === "down") {
+        const order = sortWidgetsByPosition(state.layout.widgets);
+        const index = order.findIndex((entry) => entry.id === widget.id);
+        const targetIndex = action === "up" ? index - 1 : index + 1;
+        if (index === -1 || targetIndex < 0 || targetIndex >= order.length) return;
+        applyGeometry(moveWidget(state.layout, widget.id, order[targetIndex].id));
+        return;
+      }
+      // Positional (left/right) + size (wider/narrower/taller/shorter) nudges:
+      // clamp to the same bounds the pointer resize + server normalizer use.
       const next = withWidget(state.layout, widget.id, (current) => {
-        if (action === "remove") return null;
         const position = { ...current.position };
         if (action === "left") position.x = clamp(position.x - 1, 0, 11);
         if (action === "right") position.x = clamp(position.x + 1, 0, 12 - position.w);
-        if (action === "up") position.y = clamp(position.y - 1, 0, 9999);
-        if (action === "down") position.y = clamp(position.y + 1, 0, 9999);
         if (action === "wider") position.w = clamp(position.w + 1, 1, 12 - position.x);
         if (action === "narrower") position.w = clamp(position.w - 1, 1, 12);
+        if (action === "taller") position.h = clamp(position.h + 1, 1, 12);
+        if (action === "shorter") position.h = clamp(position.h - 1, 1, 12);
         return { ...current, position };
       });
-      applyLayout(next, action === "remove" ? null : widget.id);
+      applyGeometry(next);
     },
-    [applyLayout, state.layout]
+    [applyGeometry, applyLayout, state.layout]
   );
 
   const save = useCallback(async () => {
@@ -741,7 +742,7 @@ export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
                 <X className="mr-2 size-4" />
                 Cancel
               </Button>
-              <Button onClick={save} disabled={!state.dirty || state.saving}>
+              <Button onClick={save} disabled={!state.dirty || state.saving || state.remoteStale}>
                 <Save className="mr-2 size-4" />
                 Save
               </Button>
@@ -763,12 +764,15 @@ export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
           <AlertCircle className="size-4" />
           <AlertTitle>Saved layout changed elsewhere</AlertTitle>
           <AlertDescription>
-            Finish or cancel this draft before loading the newer saved layout.
+            Saving is disabled to avoid overwriting the newer layout. Cancel to load it (discarding
+            this draft), or reset to defaults.
           </AlertDescription>
         </Alert>
       ) : null}
 
-      {state.editMode ? <AddWidgetCatalog disabled={!canAdd} onAdd={addWidget} /> : null}
+      {state.editMode ? (
+        <AddWidgetCatalog disabled={!canAdd} can={canRender} onAdd={addWidget} />
+      ) : null}
 
       {state.loading ? (
         <div className="rounded-lg border border-dashed border-border bg-muted/30 p-8 text-center text-sm text-muted-foreground">
@@ -777,8 +781,12 @@ export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
       ) : null}
 
       <div
+        ref={gridRef}
         aria-busy={state.loading || state.previewing}
-        className="grid grid-cols-1 gap-4 lg:grid-cols-12"
+        className={cn(
+          "grid grid-cols-1 gap-4 lg:grid-cols-12",
+          (dragId || resizeId) && "select-none"
+        )}
       >
         {widgets.map((widget) => (
           <div
@@ -794,6 +802,10 @@ export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
               editMode={state.editMode}
               selected={state.selectedId === widget.id}
               onAction={(action) => handleWidgetAction(widget, action)}
+              onReorderPointerDown={(event) => beginReorder(widget.id, event)}
+              onResizePointerDown={(event) => beginResize(widget.id, event)}
+              dragging={dragId === widget.id}
+              dropTarget={overId === widget.id}
             />
           </div>
         ))}
@@ -807,6 +819,7 @@ export function DashboardBuilder({ canWrite }: { canWrite: boolean }) {
 
       <ConfigPanel
         widget={selectedWidget}
+        data={selectedWidget ? dataMap.get(selectedWidget.id) : undefined}
         onClose={() => dispatch({ type: "select", id: null })}
         onUpdate={updateWidget}
       />

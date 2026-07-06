@@ -6,7 +6,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Entries
 **Estimated Effort:** Medium
-**Dependencies:** TASK-514-02 (client `visibility` field, if a visibility badge is added)
+**Dependencies:** TASK-514-02 (client `visibility` field — required for the §4c/§3 visibility badge)
 **Status:** ⏳ To Do
 
 ---
@@ -30,7 +30,10 @@ renders the mono sub-line under the title (`:196-198`), the soft type badge
 (`:209` `<Badge variant="soft">`), the author `Avatar`+name column (`:225-238`),
 and the full column set Title / Content Type / Status / Author / Last Updated /
 Actions (`:125-142`). So the only remaining table deltas vs the prototype
-(`wf514-proto-list.png`) are two small tweaks — see §4.
+(`wf514-proto-list.png`) are two small tweaks (§4a sub-line content, §4b author
+token); §4 additionally adds a third row element — the committed visibility badge
+(§4c) — which is an intentional EXTENSION of the prototype (surfacing the new
+persisted `visibility` concept), not a prototype delta.
 
 **Owned files (sole writer):**
 - `core/admin/ui/entries/EntryList.tsx`
@@ -143,8 +146,10 @@ REAL breaking change is widening `entries` and dropping the now-pointless
 - Render each card: icon tile + title + mono id sub-line + `Badge variant="soft"`
   type (from `entry.contentType.name`) + status badge + author + updated date
   (reuse `EntryGrid`'s existing `formatDate` `:21-31`, statusStyles/labels).
-- Optionally show a small "Private"/"Password" indicator when `entry.visibility !==
-  "public"` (max-config-flexibility surfacing; requires 514-02).
+- Show a small "Private"/"Password" indicator when `entry.visibility !== "public"`
+  (the SAME committed visibility badge as the table — see §4(c); non-`public` only;
+  reads `entry.visibility`, guaranteed by 514-01/514-02). Grid parity with the table
+  is required, not optional.
 - Keep it selectable-agnostic (grid need not support bulk-select in v1 — document
   that bulk actions remain a list-view affordance; or add checkboxes if trivial).
 
@@ -173,6 +178,19 @@ NOT re-implement or "restore" any of it. The only real deltas vs the prototype:
   email-only / no-space case by falling back to the full resolved value when there
   is no space (so `"jane@site.com"` and `"System"` render whole). This is a purely
   cosmetic column tweak; the `Avatar` + initials fallback already matches.
+- **(c) Visibility badge — COMMITTED (not optional).** Render a small badge in the
+  row (recommended: inline beside the title or in the Status column) ONLY when
+  `entry.visibility !== "public"` — `"Private"` for `private`, `"Password"` for
+  `password` (a lucide `Lock`/`EyeOff` glyph is an acceptable additive). Public rows
+  render NO badge (avoid noise on the common case). This is a deliberate
+  max-config-flexibility surfacing of the new persisted `visibility` concept (the
+  prototype list has no such indicator because it has no visibility model — this is
+  the "extend functionality" half of the fidelity mandate, not a prototype-drift
+  defect). Its data is guaranteed: 514-01 populates `visibility` on all three read
+  projections and 514-02 mirrors it onto the client `EntrySummary`, so the badge
+  reads `entry.visibility` directly with NO extra fetch. This is the concrete
+  rendering the parent Gap #7, 514-01 §3/AC#11, and 514-02 §5 all reference as "the
+  514-05 badge" — it is built HERE.
 
 Do NOT remove the selection checkbox column, the row actions
 (edit/delete/duplicate), or the content-type slug helper line (`:214-218`) —
@@ -269,12 +287,14 @@ and its test disagree.
 1. A list/grid toggle appears in the filter bar; clicking it switches the rendered
    view; the choice persists across reloads (localStorage).
 2. Grid view renders real entries across MULTIPLE content types with correct
-   type/status/author/updated per row and routes to the right editor on click.
+   type/status/author/updated per row, routes to the right editor on click, and
+   shows the visibility badge on non-`public` rows (§3, parity with the table §4c).
 3. Table view keeps selection + row actions (edit/delete/duplicate) and the
    already-present mono sub-line, soft type badge, and author avatar column; the
-   two §4 deltas match the prototype: the title sub-line renders `entry.id.slice(0,
-   8)` in mono (§4a), and the author cell renders the first token only with the
-   no-space fallback (§4b).
+   three §4 deltas are present: the title sub-line renders `entry.id.slice(0,
+   8)` in mono (§4a), the author cell renders the first token only with the
+   no-space fallback (§4b), and a `"Private"`/`"Password"` visibility badge renders
+   ONLY on rows where `entry.visibility !== "public"` (§4c) — public rows show none.
 4. `EntryGrid` is now rendered by the admin runtime (imported + rendered by
    `EntryList` in grid view), not only by a test. The existing
    `analytics-settings-entries-seo-leafs.test.tsx` `EntryGrid` block is updated to
@@ -299,6 +319,9 @@ Per `_docs/TESTING_STRATEGY.md`.
   the 8-char id form (§4a, e.g. matches `entry.id.slice(0, 8)`, not the old slug),
   and assert the author cell renders first-name only for a multi-word name and the
   full value when there is no space (§4b).
+- Visibility badge (§4c): a `private`/`password` row renders the `"Private"`/
+  `"Password"` badge and a `public` row renders NO visibility badge — assert in BOTH
+  table and grid views (§3 parity).
 - `filterEntries` (existing pure fn `:98-126`) regression stays green.
 - The existing `EntryGrid` block in
   `analytics-settings-entries-seo-leafs.test.tsx` is migrated to the new

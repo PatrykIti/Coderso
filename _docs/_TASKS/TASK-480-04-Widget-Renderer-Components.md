@@ -33,8 +33,11 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
 - **Goal:** Given a validated `DashboardWidget` and its `DashboardWidgetData`,
   render the correct token-styled panel with first-class loading / empty / error
   states, so the layout/builder (TASK-480-05) only has to place hosts in a grid.
-- **Owning module/service:** `core/admin/ui/dashboard/widgets/`
-  (`registry.tsx`, `DashboardWidgetHost.tsx`, `renderers/*`).
+- **Owning module/service (as-built, flat — no `widgets/` subdir):**
+  `core/admin/ui/dashboard/widgetRegistry.ts` (registry + catalog),
+  `core/admin/ui/dashboard/widgetRenderers.tsx` (the 9 renderers +
+  `UnavailableWidget` + `WidgetRenderer` type), and
+  `core/admin/ui/dashboard/DashboardWidgetHost.tsx` (dispatch + edit chrome).
 - **Source-of-truth docs:**
   - `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by TASK-480-01-L02; this unit
     extends it with the "Renderer catalog & states" section).

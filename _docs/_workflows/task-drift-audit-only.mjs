@@ -13,12 +13,12 @@ export const meta = {
   ],
 };
 
-const WT = "/home/coder/project/Coderso";
-const TASKS_DIR = WT + "/_docs/_TASKS";
-const PROTO = WT + "/_docs/_PROTOTYPE/src";
-
-const A = typeof args === "string" ? JSON.parse(args) : args; // { id, files: [...] | "a.md,b.md" }
+const A = typeof args === "string" ? JSON.parse(args) : args; // { id, files, wt?, note? }
 if (!A || !A.id) throw new Error("args must be { id, files }");
+const WT = A.wt || "/home/coder/project/Coderso";
+const TASKS_DIR = WT + "/_docs/_TASKS";
+const PROTO = "/home/coder/project/Coderso/_docs/_PROTOTYPE/src";
+const PIN_NOTE = A.note ? "\nPINNED (orchestrator, do NOT change): " + A.note : "";
 const FILES = (Array.isArray(A.files) ? A.files : String(A.files || "").split(","))
   .map((s) => s.trim())
   .filter(Boolean);
@@ -29,7 +29,7 @@ You work EXCLUSIVELY inside ${WT} (branch feature/tasks). This is a CONTRACT-QA 
 Ground EVERY anchor against REAL source: prototype screen source under ${PROTO} AND the current admin implementation + service/route/schema. Verify file paths/component names/route shapes/schema columns/migration indices before trusting them; rg misdetects large TSX as binary — use grep -an / Read, never trust an empty rg.
 LIVE VISUAL VERIFICATION (mandatory for screen-describing files): the PROTOTYPE is the SOURCE OF TRUTH and everything must end up EXACTLY as in the prototype. Open the matching prototype screen at http://localhost:5180/ (hash router /#/..., no auth) with playwright-cli (unique session -s=wf${A.id}audit, screenshots to ${WT}/_docs/_workflows/_smoke/) and VISUALLY verify that this task's gap analysis + target description capture the prototype layout/structure/controls/tokens FAITHFULLY and COMPLETELY — flag anything the contract misses or misstates vs what the prototype actually shows. Ground the CURRENT implementation in CODE (source is authoritative for what exists today; admin login at :5173 may be captcha/rate-limited under load, so do NOT depend on it — read the current admin/service/route/schema source). The contract must describe, per element, what the prototype shows and how the current code differs + what to change.
 Contract-quality bar (AGENTS.md): execution-ready pseudocode per subtask (helper/function shape, data flow, error handling, regression-test shape); Security Contract subsection for route-touching subtasks; correct test lanes (Bun runtime/route/Bun.serve/DB; Vitest Bun-free pure + admin/UI); schema-first reject-unknown + normalize*; new validated keys join allowlist + round-trip test; present-only/byte-identity for new optional fields; admin cache contract for new cached resources; DB changes ship FULL migration artifacts (SQL + snapshot + journal); single-writer (or explicit per-region) file ownership; strictly sequential land order; changelog number only in the closure subtask.
-The task must be COMPLETE and implementation-ready — hold it to that bar.
+The task must be COMPLETE and implementation-ready — hold it to that bar.${PIN_NOTE}
 `;
 
 const AUDIT_SCHEMA = {

@@ -35,8 +35,8 @@ Consumed by 512-05/06. **Land order:** after 512-03, before 512-05.
   `{withCsrf:true}` + `broadcastCacheEvent({key: cacheKeys.mediaList, action:"update"})`.
   Cache built at line 81 `key: cacheKeys.mediaList`, `getCachedMedia`/`getCachedMediaForEvent`
   (109/111), `listMediaCached` (122).
-- `cachePolicy.ts:28` `export const cacheKeys = {...}`; `mediaList: "media:list"` at line 94 —
-  APPEND ONLY `mediaFolders: "media:folders"`. NOTE: `cacheKeys` is a flat key→string map with NO
+- `cachePolicy.ts:28` `export const cacheKeys = {...}`; `mediaList: "media:list"` at line 96
+  (verified 2026-07-05) — APPEND ONLY `mediaFolders: "media:folders"`. NOTE: `cacheKeys` is a flat key→string map with NO
   per-key ttl; `cacheTtlMs` (lines 23–26) is a shared flat `{ list, detail }` and `mediaList` has
   no dedicated ttl (mediaClient reuses `cacheTtlMs.list` at `mediaClient.ts:82`). Do NOT add any ttl
   entry — the new folders cache reuses the shared `cacheTtlMs.list`.
@@ -70,8 +70,19 @@ code that breaks uploads). To keep "extend `MediaUpdatePayload`" and "upload met
 (the pre-extension `MediaUpdatePayload` shape) and re-type the signature to
 `uploadMedia(file: File, meta?: UploadMediaMeta)` (body still `set`s only `alt/title/caption` per
 `mediaClient.ts:138-140`). This makes an `uploadMedia(file, { folderId })` call a *compile error*,
-matching 512-06 §4 ("Do NOT pass `folderId` into `uploadMedia` meta"). Folder/tag
-assignment is **upload-first-then-PATCH**: the UI (512-05/06) calls `uploadMedia`, then
+matching 512-06 §4 ("Do NOT pass `folderId` into `uploadMedia` meta").
+> **SAME-FILE SIBLING — narrow `uploadClipboardImage` too (verified 2026-07-05).** `mediaClient.ts`
+> also exports `uploadClipboardImage(file: File, meta?: MediaUpdatePayload)` (`mediaClient.ts:157`)
+> which forwards to `uploadMedia(normalizedFile, meta)`. If its `meta` param keeps the (now-extended)
+> `MediaUpdatePayload`, `uploadClipboardImage(file, { folderId })` STILL compiles — the wide payload is
+> assignable to the narrow `UploadMediaMeta` param (target props all optional), so the "type-enforced,
+> not convention" guarantee (AC1) leaks through this sibling in the very file 512-04 owns. It is NOT a
+> compile break today (both real call sites — `usePostEditorState.ts:994` and `MediaLibraryPage.tsx:255`
+> — pass NO meta, verified), but 512-04 is the SOLE WRITER of this file, so re-type
+> `uploadClipboardImage`'s `meta` to `UploadMediaMeta` as well (it only ever needs `alt/title/caption`)
+> so the upload-cannot-carry-folder invariant holds across BOTH upload entry points, not just
+> `uploadMedia`.
+Folder/tag assignment is **upload-first-then-PATCH**: the UI (512-05/06) calls `uploadMedia`, then
 `updateMedia(returnedId, { folderId?, tags? })` on the returned media id. `updateMedia` already
 broadcasts the
 `mediaList` cache event — keep. When an update changes `folderId`, ALSO broadcast the

@@ -123,13 +123,14 @@ connector lines, `SchemaPreviewPanel` on the right).
    (uses the `moveField` helper in Step 2 of the pseudocode; `moveField` already no-ops on
    out-of-range so the flags are purely for the disabled affordance). Selecting still drives the
    inspector. The UI test clicks these up/down buttons to assert reorder.
-   **ORDER-PERSISTENCE NOTE (reconciled with 513-06 §1 CROSS-SUBTASK BLOCKER):** reorder is IN-MEMORY /
-   UX only — it updates `fields` and the live `SchemaPreviewPanel` (which is derived from `fields`), but
-   the authored order does NOT survive a Save→reload. `content_types.schema` is a Postgres `jsonb` column
-   that canonicalizes keys and `ContentSchema` carries no order array (see 513-02 §Non-goal), so a
-   reordered Save reopens in jsonb-canonical order. The "Save persists via `updateContentType`" contract
-   (Scope) refers to field TYPE + CONFIG, not key order. The UI test asserts the reorder CONTROL + the
-   live (in-memory) preview change, NOT a reloaded persisted order.
+   **ORDER-PERSISTENCE NOTE (parent Open Question 6; delivered by 513-02 §schemaMapping):** reorder
+   PERSISTS. It updates `fields` and the live `SchemaPreviewPanel` (derived from `fields`), and because
+   Save serializes `fields` via `buildSchemaFromFields` — which stamps a per-property integer
+   `xFieldConfig.order` from the array index that `fieldsFromSchema` re-sorts by — the authored order
+   survives Save→reload despite jsonb key-canonicalization. So "Save persists via `updateContentType`"
+   covers field TYPE + CONFIG **and** order. 513-05 makes NO schema-mapping change (the mechanism is
+   513-02-owned); it only emits the reordered `fields` array. The UI test asserts the reorder CONTROL +
+   the live preview change; the reloaded persisted order is asserted end-to-end in 513-06.
 3. **Inspector → editable**: replace the read-only `FieldInspector` with the real editable
    `FieldSettingsPanel` from `SchemaBuilder.tsx` (consume, do not edit) so Label /
    API id / Field type / Required / **Unique** / per-type config / Default / Help are editable and

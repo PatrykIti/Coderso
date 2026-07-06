@@ -25,8 +25,8 @@ with the existing admin type boundary (`FormBuilderPage.tsx:42` already imports
 
 ## Scope (single-writer keystone)
 
-**Sole writer of `core/admin/ui/forms/FormBuilderPage.tsx`,
-`core/admin/ui/forms/FieldLibrary.tsx`, `core/admin/ui/forms/FieldListPanel.tsx`,
+**Sole writer of `core/admin/ui/forms/FormBuilderPage.tsx` and
+`core/admin/ui/forms/FieldLibrary.tsx`,
 and their existing coverage `tests/vitest/ui-integration/forms-builder-restyle.test.tsx`
 + `tests/vitest/ui/form-builder.test.tsx` (both MUST be migrated by this subtask —
 see Testing requirements; the chrome rewrite otherwise breaks their EditorShell mock
@@ -82,12 +82,22 @@ Design inspector tab. Ships:
        dead code. Do NOT drop them.
    - `EditorFrame` (`@/ui/shared/EditorFrame`, slots `title/toolbar/actions/left/canvas/right`;
      re-exports `EditorRailGroup`/`EditorRailItem`): `title="Form builder"`;
-     `toolbar` = status badge `<Badge variant="outline">{formTitle} · {meta.status}</Badge>`;
-     `actions` = the **desktop/mobile device toggle** (drives `previewDevice`)
-     PLUS two **render-only `disabled` Undo/Redo buttons** (`Undo2`/`Redo2` lucide
-     icons, `size="icon-sm"`, always `disabled`) placed before the device toggle to
-     mirror the prototype chrome (`EditorPreviewFrame.tsx:47-52` renders both
-     unconditionally). Per the parent scope decision (TASK-516 lines 366-377) and
+     `toolbar` = **empty** (leave it unset). The admin `EditorFrame` renders
+     `toolbar` in the LEFT chrome group next to the title (`{title}{toolbar}`,
+     `EditorFrame.tsx:43-46`) — the OPPOSITE mapping from the prototype
+     `EditorPreviewFrame`, whose `toolbar` renders in the RIGHT group next to
+     undo/redo/device (`EditorPreviewFrame.tsx:44-45`, badge passed as `toolbar` at
+     `FormBuilderPreview.tsx:59`). Since the prototype's status badge + undo/redo +
+     device toggle are ALL right-aligned, in the admin frame they go in `actions`
+     (parent TASK-516 lines 388-393); putting the badge in `toolbar` would render it
+     LEFT (next to "Form builder"), diverging from the prototype.
+     `actions` (rendered RIGHT — `EditorFrame.tsx:46`) = the **status badge FIRST**
+     (`<Badge variant="outline">{formTitle} · {meta.status}</Badge>`, mirroring the
+     prototype's right-aligned `Contact form · draft` badge), THEN two **render-only
+     `disabled` Undo/Redo buttons** (`Undo2`/`Redo2` lucide icons, `size="icon-sm"`,
+     always `disabled`) placed before the device toggle to mirror the prototype
+     chrome (`EditorPreviewFrame.tsx:47-52` renders both unconditionally), THEN the
+     **desktop/mobile device toggle** (drives `previewDevice`). Per the parent scope decision (TASK-516 lines 366-377) and
      DoD (line 548), functional edit-history is **out of scope** — do NOT build a
      history stack; render the two buttons disabled so the toolbar matches the
      prototype visually and the parent smoke (which asserts they render disabled)
@@ -134,15 +144,57 @@ Design inspector tab. Ships:
    imports — `EditorRailGroup` supplies the label + item spacing, and the
    `EditorFrame` left aside owns overflow scrolling, matching the prototype
    `EditorPreviewFrame` aside `overflow-y-auto`, so no local `ScrollArea` is needed).
-5. **Field list panel ownership (G2 consistency).** `FieldListPanel`
-   (`core/admin/ui/forms/FieldListPanel.tsx`) is the added-fields list; keep it
-   reachable inside the `EditorFrame` `left` slot (as the "Fields" tab beside the
-   "Library" rail) and in the mobile Sheet. Align its selectable rows
-   (`FieldListPanel.tsx:77-104`) toward the `EditorRailItem` active/hover look for
-   rail visual consistency — a **bounded styling-only** edit that preserves the
-   search box, per-row Required badge, type label, and the add ("+") button. This
-   makes the sole-writer claim over `FieldListPanel.tsx` non-empty and
-   unambiguous.
+5. **Single-rail model + `FieldListPanel` fate (prototype fidelity — NO
+   Fields/Library tab split).** The prototype has exactly ONE left rail — the
+   `EditorRailGroup label="Fields"` LIBRARY (`FormBuilderPreview.tsx:60-73`) — and
+   field **selection is canvas-click**, NOT a separate added-fields list tab; the
+   selected field card carries `ring-2 ring-primary` (`FormBuilderPreview.tsx:117`).
+   Per parent TASK-516 lines 414-430, 516-03 therefore mounts **`FieldLibrary`
+   ALONE** as `EditorFrame.left` (and in the mobile fields Sheet) — there is **NO**
+   `Fields`/`Library` `Tabs` pair and `FieldListPanel` is **NOT** a left-rail tab.
+   This is LOW-RISK and already-supported: the real `FormCanvas` ALREADY implements
+   canvas-click selection (`onSelectField`/`selectedFieldId` + `ring-2 ring-primary`
+   at `FormCanvas.tsx:48`) and per-card remove (`onRemoveField`, `:66`), so no new
+   canvas selection work is needed (516-04 Scope §4 "keep selection/remove
+   affordances intact" already covers it). **Reorder is out of scope:** it is NOT
+   implemented anywhere today (`FieldListPanel` props are only
+   `fields/selectedId/onSelect/onAdd`, `FieldListPanel.tsx:17-23` — no `onMove`/
+   `onReorder`; the canvas `GripVertical` at `FormCanvas.tsx:54` is a render-only
+   handle), so dropping the list tab loses no reorder feature (tracked as a
+   follow-up, matching the parent's out-of-scope posture on functional history).
+   **`FieldListPanel.tsx` fate + `FormBuilderPage.tsx` sole-writer removal
+   (unambiguous):** the removal is done **entirely in `FormBuilderPage.tsx`**, NOT
+   by gutting `FieldListPanel.tsx`. Concretely, the sole-writer `FormBuilderPage.tsx`
+   edit DELETES: (a) the `fieldListItems` `useMemo<FormFieldListItem[]>`
+   (`FormBuilderPage.tsx:317`), (b) BOTH `<FieldListPanel>` render sites — the
+   desktop left-tab one (`:749`, replaced by `<FieldLibrary>` in `EditorFrame.left`)
+   and the mobile-Sheet one (`:892`, replaced by `<FieldLibrary>` in the mobile
+   fields Sheet per this item), and (c) the now-unused
+   `import { FieldListPanel, type FormFieldListItem } from "./FieldListPanel"`
+   (`:61`), and (d) the now-obsolete Fields/Library **tab machinery** the single-rail
+   model deletes on BOTH surfaces: the `leftTab`/`setLeftTab` `useState` (`:293`) + its
+   `setLeftTab("fields")` call (`:464`), the desktop leftPanel `<Tabs>` Fields/Library
+   wrapper (`:743-747`, `:753`), AND the mobile fields Sheet `<Tabs>` wrapper (`:886`,
+   `:899`) — the mobile Sheet content becomes `<FieldLibrary>` alone (matching the desktop
+   left slot), so no `leftTab` reference survives (an unused `leftTab`/`setLeftTab` would
+   FAIL the same `bun --cwd core lint:types` gate) and neither surface keeps a Fields/Library
+   split (single-rail, both desktop + mobile). The `:61` import MUST be dropped: its sole consumer was the `:317` memo
+   (grounded: `FormFieldListItem`/`fieldListItems` appear ONLY at `:61`/`:317`/`:749`
+   /`:892` in `FormBuilderPage.tsx`), so once the memo + render sites are gone the
+   import is unused and would FAIL the `bun --cwd core lint:types` / root `tsc`
+   gate. (This corrects the earlier "still imported at `:61`" rationale — after the
+   removal it is NOT imported there.)
+   **`FieldListPanel.tsx` is NOT reduced/gutted — 516-03 leaves it unchanged.** The
+   `FieldListPanel` component (and its `FormFieldListItem` type) is RETAINED because
+   the standalone component test `tests/vitest/ui/forms-component-wave.test.tsx:416-486`
+   (which is NOT in 516-03's sole-writer set) imports and renders the REAL component
+   (`const { FieldListPanel } = await import(".../FieldListPanel")` → `<FieldListPanel
+   fields={[]} selectedId={null} onSelect onAdd/>`). Deleting or gutting the component
+   would break that unowned test under `vitest` + `tsc`; single-writer discipline
+   forbids 516-03 editing it. So `FieldListPanel.tsx` stays a live, test-covered
+   primitive that the builder simply no longer renders (no desktop tab, no mobile
+   Sheet use). The desktop `left` slot is `FieldLibrary` alone; the mobile fields
+   Sheet renders `FieldLibrary` too (no added-fields list retained anywhere).
 
 ## Pseudocode (grounded in real code)
 
@@ -254,9 +306,14 @@ const handlePublish = async () => {
     />
     <EditorFrame
       title="Form builder"
-      toolbar={<Badge variant="outline">{formTitle} · {meta.status}</Badge>}
+      /* toolbar intentionally EMPTY — admin EditorFrame renders toolbar LEFT next to the
+         title (EditorFrame.tsx:43-46); the prototype right-aligns the badge, so it goes in
+         `actions` below, NOT `toolbar` (parent TASK-516 388-393) */
       actions={
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          {/* status badge FIRST (right-aligned like the prototype's `Contact form · draft`,
+              FormBuilderPreview.tsx:59) */}
+          <Badge variant="outline">{formTitle} · {meta.status}</Badge>
           {/* render-only disabled undo/redo (prototype chrome fidelity; NO history stack — parent scope 366-377) */}
           <Button variant="ghost" size="icon-sm" disabled aria-label="Undo"><Undo2 className="h-4 w-4"/></Button>
           <Button variant="ghost" size="icon-sm" disabled aria-label="Redo"><Redo2 className="h-4 w-4"/></Button>
@@ -278,7 +335,7 @@ const handlePublish = async () => {
           </div>
         </div>
       }
-      left={/* Fields/Library Tabs: FieldListPanel (added fields) + FieldLibrary rail */}
+      left={<FieldLibrary items={fieldLibraryItems} onAddField={handleAddField} selectedFieldType={selectedFieldType}/> /* SINGLE library rail — NO Fields/Library Tabs; selection is canvas-click (FormCanvas onSelectField + ring-2 ring-primary), see Scope item 5 */}
       canvas={/* move :828-868 body inner contents here verbatim — NOT just FormCanvas: */
         <>
           {loadError ? (
@@ -331,11 +388,19 @@ migrating them is mandatory, not optional:
      `canvas`→`<main data-region="canvas">`, `right`→`<aside data-region="right">`;
      the mock module must also re-export passthrough `EditorRailGroup`/`EditorRailItem`
      because `@/ui/shared/EditorFrame` re-exports them — `EditorFrame.tsx:67`). Leave
-     `PageHeader` real (pure layout, SSR-safe). The existing region assertions
-     (`:302-313`: `field-list:1` in `left`, `canvas:1` in `canvas`,
-     `field-settings-panel` in `right`) then pass unchanged against the EditorFrame
-     mock's regions; `add-library-field` (`:305`) still comes from the file's own
-     `FieldLibrary` mock (`:212`).
+     `PageHeader` real (pure layout, SSR-safe). Of the existing region assertions
+     (`:302-313`), `canvas:1` in `canvas` and `field-settings-panel` in `right` pass
+     unchanged against the EditorFrame mock's regions; **but `field-list:1` in `left`
+     must be RETARGETED** — the single-rail model (Scope item 5) mounts `FieldLibrary`
+     ALONE in `left` (NO Fields/Library tab pair), so `FieldListPanel` is no longer
+     rendered in `left`. Change that assertion to `add-library-field` in `left` (the
+     file's own `FieldLibrary` mock, `:212`/`:305`, is now the sole left-slot region),
+     and drop the file's `FieldListPanel` mock as inert (the page no longer imports
+     or renders `FieldListPanel` — Scope item 5 deletes the `:317` memo, the
+     `:749`/`:892` render sites, and the `:61` import; the `FieldListPanel` component
+     itself is NOT removed — it remains a standalone test-covered primitive exercised
+     by `tests/vitest/ui/forms-component-wave.test.tsx:416-486`, which 516-03 does not
+     own — so this file's now-unused mock is simply deleted).
    - **Rename the Save trigger `:368`** `clickByText(view.container, "Save form")`
      → `"Save"` (the PageHeader Save button label changes `Save form`→`Save`; the
      save-writes assertions `:371-374` stay).
@@ -350,11 +415,17 @@ migrating them is mandatory, not optional:
    .toContain("Save form")` → `"Save"`. The `"Loading form builder"` assertion
    (`:16`) stays valid ONLY because the `isLoading` placeholder moves into the
    `EditorFrame` `canvas` slot verbatim (Scope item 2) — it must NOT be dropped in
-   the chrome rewrite. The other assertions stay valid post-rewrite:
-   `Fields`/`Library` (`:17-18`) are the left-slot tab labels (Scope item 5),
-   `Form Settings` (`:19`) is the inspector, `Action logs` (`:20`) folds into the
-   `PageHeader` actions row (Scope item 2). ADD a negative assertion that the deleted
-   non-prototype chrome is gone: `expect(html).not.toContain("Fields Library")` and
+   the chrome rewrite. **`Fields` (`:17`) stays valid** — it is now the single
+   `EditorRailGroup label="Fields"` heading (Scope item 4/5), NOT a tab. **But
+   `Library` (`:18`) must be DROPPED** — the single-rail model (Scope item 5) removes
+   the `Fields`/`Library` `Tabs` pair, so there is no "Library" tab label; simply
+   delete the `:18` assertion (do NOT replace it with a bare
+   `.not.toContain("Library")` — the `AdminShell` nav rendered under `renderToString`
+   may legitimately contain a "…Library" nav link, which would make that negative
+   flaky). `Form Settings` (`:19`) is the
+   inspector, `Action logs` (`:20`) folds into the `PageHeader` actions row (Scope
+   item 2). ADD negative assertions that the deleted non-prototype chrome is gone:
+   `expect(html).not.toContain("Fields Library")` and
    `expect(html).not.toContain("Advanced Fields")` (Scope item 4 deletes
    `FieldLibrary.tsx:23-27` header + `:46-50` footer button). Confirm the real
    `AdminShell`/`PageHeader`/`EditorFrame` render under `renderToString` (they are
@@ -383,7 +454,8 @@ migrating them is mandatory, not optional:
      deletion orphaning the retained mobile Sheets (`:879`/`:915`) and leaving
      `mobileFieldsOpen`/`mobileSettingsOpen` (`:302-303`) permanently `false`. Use
      "Details" (not "Fields") as the query text since "Fields" also labels the
-     left-slot tab and the `EditorRailGroup` heading.
+     single `EditorRailGroup` library heading (Scope item 5 — there is no
+     Fields/Library tab pair anymore).
 
 ## UI/UX fidelity + max-config-flexibility notes
 
@@ -391,7 +463,8 @@ Match the prototype builder chrome (`FormBuilderPreview.tsx`) by ADOPTING the
 admin `PageHeader` + `EditorFrame` primitives (see Scope item 2), not by
 patching the old `EditorShell` sticky toolbar: in-page `PageHeader` (breadcrumb
 `Forms › <name>`, title, description, `Save` ghost + `Publish` primary w/ Rocket),
-framed `EditorFrame` card (toolbar status badge `<name> · <status>`, desktop/mobile
+framed `EditorFrame` card (RIGHT-aligned status badge `<name> · <status>` in the
+frame `actions`, NOT `toolbar` — parent TASK-516 388-393; desktop/mobile
 device toggle rendered as a single segmented pill — one `rounded-lg border bg-card
 p-0.5` container with the active device on a `bg-muted` chip, per
 `EditorPreviewFrame.tsx:53-61`, NOT two loose icon buttons — in the frame `actions`,
