@@ -1,5 +1,6 @@
 import {
   Binary,
+  Braces,
   CalendarDays,
   ChevronDown,
   ChevronUp,
@@ -27,11 +28,9 @@ import {
   type ContentTypeSummary,
 } from "@/services/contentTypesClient";
 import { SplitShell } from "@/ui/layouts/SplitShell";
-import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
 import { PageHeader } from "@/ui/shared/PageHeader";
 import { SectionCard } from "@/ui/shared/SectionCard";
 
-import { ContentTypeSidebar } from "./ContentTypeSidebar";
 import { SchemaPreviewPanel } from "./SchemaPreviewPanel";
 import { buildSchemaFromFields, fieldsFromSchema, type ContentSchema } from "./schemaMapping";
 import {
@@ -179,7 +178,6 @@ function FieldNode({
 }
 
 export function SchemaBuilderPage() {
-  const { navigate } = useAdminRouter();
   const [typeId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return resolveContentTypeIdFromPath(window.location.pathname);
@@ -200,6 +198,9 @@ export function SchemaBuilderPage() {
   const [isLoading, setIsLoading] = useState(() => !initialCachedType);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Schema JSON preview is opt-in (owner request): hidden behind a toolbar
+  // toggle instead of permanently occupying a side panel.
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedFieldId, setSelectedFieldId] = useState<string | null>(
     () => initialFields[0]?.id ?? null
   );
@@ -377,25 +378,34 @@ export function SchemaBuilderPage() {
   return (
     <SplitShell
       activeHref="/admin/content-types"
-      rightPanel={<SchemaPreviewPanel schema={schema} />}
+      rightPanel={previewOpen ? <SchemaPreviewPanel schema={schema} /> : undefined}
       breadcrumbs={["Content", "Schema Builder", contentType?.name ?? "Content Type"]}
-      topbarActions={
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" onClick={handleDiscard} disabled={!isDirty || isSaving}>
-            Discard
-          </Button>
-          <Button className="gap-2" onClick={handleSave} disabled={saveDisabled}>
-            {isSaving ? "Saving…" : "Save schema"}
-          </Button>
-        </div>
-      }
     >
       <div className="flex flex-col gap-6">
         <PageHeader
           title={contentType?.name ?? "Schema Builder"}
           description="Compose your content model visually."
           icon={<GitBranch />}
-          actions={<Badge variant="outline">{fields.length} fields</Badge>}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{fields.length} fields</Badge>
+              <Button
+                variant={previewOpen ? "secondary" : "ghost"}
+                className="gap-2"
+                onClick={() => setPreviewOpen((open) => !open)}
+                aria-pressed={previewOpen}
+              >
+                <Braces className="size-4" />
+                {previewOpen ? "Hide preview" : "Preview"}
+              </Button>
+              <Button variant="ghost" onClick={handleDiscard} disabled={!isDirty || isSaving}>
+                Discard
+              </Button>
+              <Button className="gap-2" onClick={handleSave} disabled={saveDisabled}>
+                {isSaving ? "Saving…" : "Save"}
+              </Button>
+            </div>
+          }
         />
         {error ? (
           <Alert variant="destructive">
@@ -405,15 +415,9 @@ export function SchemaBuilderPage() {
         ) : null}
         <div className="grid gap-5 lg:grid-cols-[240px_minmax(0,1fr)_300px]">
           <div className="flex flex-col gap-5">
-            <div className="hidden h-[340px] overflow-hidden rounded-2xl border bg-card shadow-soft lg:block">
-              <ContentTypeSidebar
-                items={list.map((item) => ({ id: item.id, name: item.name }))}
-                activeId={contentType?.id}
-                onSelect={(id) => {
-                  navigate(`/content-types/${id}/schema`);
-                }}
-              />
-            </div>
+            {/* Single-type context: no content-type list/switcher here — you are
+                editing THIS type's schema. The left rail is just the field-type
+                palette, matching the prototype's EditorPreviewFrame. */}
             <SectionCard title="Field types">
               <div className="flex flex-col gap-1">
                 {FIELD_TYPES.map((fieldType) => (

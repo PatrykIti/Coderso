@@ -29,3 +29,13 @@ Brings the Engine **content-type editor** to prototype fidelity (`_docs/_PROTOTY
 - `bun run test:vitest`
 - `bun run gates:coderso`
 - Live ≥5-scenario prototype-fidelity playwright smoke (prototype side-by-side light+dark, type-settings persist, field lifecycle incl. date/slug/unique/reorder, permissions matrix persist, visual schema builder, cross-device) deferred to the orchestrator post-merge (the running dev host serves the main tree, not this worktree).
+
+## Post-merge live-smoke fidelity remediation (owner-driven, `SchemaBuilderPage.tsx`)
+
+The post-merge live smoke confirmed the per-content-type editor (513-03) and backend (config schema, migration 0068, normalizer, permissions matrix, date/slug field types) all work end-to-end. The owner, reviewing the **visual schema builder** (`/schema`) live side-by-side with the prototype, flagged old-approach leftovers that 513-05 had carried over instead of adapting to the prototype's `SchemaBuilderPreview`/`EditorPreviewFrame` layout (Field types rail | canvas | Field inspector — no type list, no docked preview). Fixed:
+
+- **Removed the content-type list / filter / switcher** from the schema builder's left column (the `ContentTypeSidebar` with "Filter types" + COLLECTIONS + "Create New Type"). You are editing ONE type's schema — the left rail is now just the field-type palette, matching the prototype. `ContentTypeSidebar` is no longer referenced from this page.
+- **Schema JSON preview is opt-in behind a toolbar toggle** (`Preview`) instead of a permanently-docked side panel — the prototype has no docked preview. The `SchemaPreviewPanel` renders as the `SplitShell` `rightPanel` only when the toggle is on.
+- **Primary actions moved into the in-page `PageHeader`** (`Preview`, `Discard`, `Save`) — right above the editor cards, matching the prototype's `PageHeader actions={<Button>Save</Button>}` — rather than the outer AdminShell topbar; "Save schema" relabeled "Save".
+
+Tests updated (`schema-builder.test.tsx`, `engine-schema-builder-restyle.test.tsx`): assert the docked "Schema Preview" panel is absent by default (opt-in). Gates green: vitest, core lint, lint:types, root tsc.
