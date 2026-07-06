@@ -69,6 +69,8 @@ const createEntry = (patch: Partial<ContentListResolverEntry>): ContentListResol
   title: "Entry title",
   slug: "entry-title",
   status: "published",
+  visibility: "public",
+  hasPassword: false,
   tags: [],
   data: {},
   publishedAt: new Date("2026-02-07T10:00:00.000Z"),

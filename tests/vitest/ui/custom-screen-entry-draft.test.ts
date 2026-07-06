@@ -200,6 +200,8 @@ test("hydrateEditorViewDraft preserves existing data and does not overwrite defa
     title: "Lake House",
     slug: "lake-house",
     status: "draft",
+    visibility: "public",
+    hasPassword: false,
     data: {
       projectStatus: "active",
       internalNotes: "Keep hidden",
@@ -227,6 +229,8 @@ test("Editor View payload builders keep create scoped and update non-destructive
       title: "Lake House",
       slug: "lake-house",
       status: "draft",
+      visibility: "public",
+      hasPassword: false,
       data: {
         projectStatus: "planned",
         budget: 100000,

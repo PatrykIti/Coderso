@@ -6,7 +6,7 @@
 **Category:** Admin UI / Entries / Schema
 **Estimated Effort:** Large
 **Dependencies:** TASK-479 (Soft-Violet admin redesign; `PageHeader`/`SectionCard`/`StatusTabs`/`AdminShell` shared patterns), TASK-468 (entries model + editor foundations), relates to **TASK-487** (revision history/restore + SEO-field surfacing — scopes kept DISTINCT; this task leaves a clean seam, see Coordination)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 
@@ -167,7 +167,7 @@ DIFFERENT round-trip contracts:
 | 514-03 | Entry editor prototype-fidelity layout (PageHeader + SectionCard grid + Content/Media grouping + visibility wiring + revisions seam) | `core/admin/ui/entries/EntryEditor.tsx`, `core/admin/ui/entries/EntryEditorHeader.tsx` |
 | 514-04 | Entry metadata panel — Publish (Status+Visibility+Schedule) / Taxonomy / **Metadata** cards | `core/admin/ui/entries/EntryMetadataPanel.tsx` |
 | 514-05 | Entries list — list/grid view toggle (wire `EntryGrid`) + row fidelity | `core/admin/ui/entries/EntryList.tsx`, `EntryTable.tsx`, `EntryGrid.tsx`, `EntryFilters.tsx`; **region-owned** `tests/vitest/ui/analytics-settings-entries-seo-leafs.test.tsx` (ONLY the `EntryGrid`/`EntryFilters` render blocks — coupled to the `EntryGrid` prop-contract change, same commit; see 514-05 §6) |
-| 514-06 | Tests, docs, closure (changelog **1226**) | changelog + README rows (orchestrator), `_docs/DATA_MODEL.md` note |
+| 514-06 | Tests, docs, closure (changelog **1227**) | changelog + README rows (orchestrator), `_docs/DATA_MODEL.md` note |
 
 ## Subtask Execution Detail (execution-ready pseudocode)
 
@@ -553,7 +553,7 @@ TASK-514 therefore:
 3. **514-04** (metadata panel: Publish/Visibility/Metadata cards) — needs 514-02 field
 4. **514-03** (editor layout wires the panel + visibility + revisions seam) — needs 514-04
 5. **514-05** (list view toggle + row fidelity) — needs 514-02 for the visibility badge
-6. **514-06** (tests/docs/closure, changelog 1226)
+6. **514-06** (tests/docs/closure, changelog 1227)
 
 ## Validation (whole task)
 

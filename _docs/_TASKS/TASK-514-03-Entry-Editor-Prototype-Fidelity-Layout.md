@@ -7,7 +7,7 @@
 **Category:** Admin UI / Entries
 **Estimated Effort:** Large
 **Dependencies:** TASK-514-04 (panel props: visibility/password/created/updated/entryId), TASK-514-02 (client fields)
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 

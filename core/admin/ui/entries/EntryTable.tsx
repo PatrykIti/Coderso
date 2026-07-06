@@ -1,4 +1,4 @@
-import { Copy, FileText, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Copy, EyeOff, FileText, Lock, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { EntryListContentType, EntrySummary } from "@/services/entriesClient";
+import type {
+  EntryAuthor,
+  EntryListContentType,
+  EntrySummary,
+  EntryVisibility,
+} from "@/services/entriesClient";
 
 type EntryTableProps = {
   entries: EntryTableItem[];
@@ -44,6 +49,23 @@ type EntryTableItem = EntrySummary & {
 
 const entrySelectionKey = (entry: EntryTableItem) =>
   entry.contentType ? `${entry.contentType.slug}:${entry.id}` : entry.id;
+
+const resolveAuthorLabel = (author?: EntryAuthor | null) => {
+  const full = author?.name ?? author?.email ?? "System";
+  return full.trim().split(/\s+/)[0] || full;
+};
+
+function VisibilityBadge({ visibility }: { visibility: EntryVisibility }) {
+  if (visibility === "public") return null;
+  const isPassword = visibility === "password";
+  const Icon = isPassword ? Lock : EyeOff;
+  return (
+    <Badge variant="outline" className="gap-1 text-muted-foreground">
+      <Icon className="size-3" />
+      {isPassword ? "Password" : "Private"}
+    </Badge>
+  );
+}
 
 const formatUpdatedAt = (value?: string | null) => {
   if (!value) return "—";
@@ -194,7 +216,7 @@ export function EntryTable({
                           <span className="font-semibold text-foreground">{entry.title}</span>
                         )}
                         <span className="truncate font-mono text-xs text-muted-foreground">
-                          {entry.slug}
+                          {entry.id.slice(0, 8)}
                         </span>
                       </div>
                     </div>
@@ -218,7 +240,10 @@ export function EntryTable({
                     ) : null}
                   </TableCell>
                   <TableCell>
-                    <StatusBadge status={entry.status} />
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <StatusBadge status={entry.status} />
+                      <VisibilityBadge visibility={entry.visibility} />
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -234,7 +259,7 @@ export function EntryTable({
                         </AvatarFallback>
                       </Avatar>
                       <span className="text-sm text-muted-foreground">
-                        {entry.author?.name ?? entry.author?.email ?? "System"}
+                        {resolveAuthorLabel(entry.author)}
                       </span>
                     </div>
                   </TableCell>

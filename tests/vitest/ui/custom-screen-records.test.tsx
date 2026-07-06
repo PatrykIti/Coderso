@@ -184,6 +184,8 @@ test("CustomScreenEntriesTable exposes inline row editing only for writable row 
           title: "Ocean View",
           slug: "ocean-view",
           status: "draft",
+          visibility: "public",
+          hasPassword: false,
           data: { headline: "Ocean View" },
           createdAt: "2026-03-05T00:00:00.000Z",
           updatedAt: "2026-03-05T00:00:00.000Z",

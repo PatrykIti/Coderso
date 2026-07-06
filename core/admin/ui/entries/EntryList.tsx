@@ -34,6 +34,7 @@ import { resolveCacheRefreshBackground } from "@/utils/cacheRefresh";
 import { EntryCreateDrawer } from "./EntryCreateDrawer";
 import { EntryBulkActionsBar, type BulkActionValue } from "./EntryBulkActionsBar";
 import { EntryFilters } from "./EntryFilters";
+import { EntryGrid } from "./EntryGrid";
 import { EntryTable } from "./EntryTable";
 
 export type SelectedEntryRef = {
@@ -144,6 +145,17 @@ export function EntryList() {
   const [updatedFromFilter, setUpdatedFromFilter] = useState("");
   const [updatedToFilter, setUpdatedToFilter] = useState("");
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false);
+  const [view, setView] = useState<"list" | "grid">(() =>
+    typeof window !== "undefined" && window.localStorage.getItem("entries.view") === "grid"
+      ? "grid"
+      : "list"
+  );
+  const changeView = useCallback((next: "list" | "grid") => {
+    setView(next);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("entries.view", next);
+    }
+  }, []);
   const [selectedRefs, setSelectedRefs] = useState<SelectedEntryRef[]>([]);
   const [bulkAction, setBulkAction] = useState<BulkActionValue | "">("");
   const [isBulkWorking, setIsBulkWorking] = useState(false);
@@ -536,7 +548,6 @@ export function EntryList() {
         <StatusTabs tabs={statusTabs} value={statusFilter} onValueChange={setStatusFilter} />
         <EntryFilters
           search={searchQuery}
-          status={statusFilter}
           typeValue={typeFilter}
           typeOptions={typeOptions}
           author={authorFilter}
@@ -544,8 +555,9 @@ export function EntryList() {
           updatedFrom={updatedFromFilter}
           updatedTo={updatedToFilter}
           advancedOpen={advancedFiltersOpen}
+          view={view}
+          onViewChange={changeView}
           onSearchChange={setSearchQuery}
-          onStatusChange={setStatusFilter}
           onTypeChange={setTypeFilter}
           onAuthorChange={setAuthorFilter}
           onUpdatedFromChange={setUpdatedFromFilter}
@@ -557,6 +569,12 @@ export function EntryList() {
           <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground shadow-card">
             Loading entries...
           </div>
+        ) : view === "grid" ? (
+          <EntryGrid
+            entries={pagination.visibleRows}
+            onEdit={handleEditEntry}
+            emptyMessage={entries.length > 0 ? "No entries match your current filters." : undefined}
+          />
         ) : (
           <EntryTable
             entries={pagination.visibleRows}

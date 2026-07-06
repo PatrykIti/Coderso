@@ -106,6 +106,8 @@ export const contentEntryMetadataSchema = {
       enum: ["draft", "published", "scheduled", "archived"],
     },
     scheduledAt: { type: ["string", "null"], format: "date-time" },
+    visibility: { type: "string", enum: ["public", "private", "password"] },
+    accessPassword: { type: ["string", "null"], maxLength: 200 },
     tags: {
       type: "array",
       maxItems: 20,

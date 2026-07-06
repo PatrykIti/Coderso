@@ -1,19 +1,17 @@
 // @vitest-environment happy-dom
 
-// TASK-479-13-L03 (updated TASK-514-03): locks the prototype-fidelity Entry
-// editor — in-page PageHeader (breadcrumbs + title + actions cluster), the
-// [1fr_320px] SectionCard grid with the metadata panel in the right column, the
-// bound Title/Slug (typing flips the Unsaved changes badge), and the
-// schema-driven fields rendered via FieldRenderer. Harness mirrors
-// tests/vitest/ui/entry-editor-shell-wave.test.tsx (createRoot + React.act +
-// hoisted cache state). Actions moved off the AdminShell topbar into the
-// in-page PageHeader (prototype match), so the dirty badge is asserted there.
+// TASK-514-03: locks the new visibility wiring (end-to-end metadata payload
+// across the three accessPassword states) and the field-grouping decision
+// (every authored group renders as its own SectionCard — no two-card flatten,
+// no dropped field). Harness mirrors entry-editor-restyle.test.tsx (createRoot +
+// React.act + hoisted state), mocking the metadata panel with explicit
+// visibility controls so the payload branch is directly assertable.
 
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { afterEach, expect, test, vi } from "vitest";
 
-const editorState = vi.hoisted(() => {
+const state = vi.hoisted(() => {
   const contentType = {
     id: "type-1",
     slug: "articles",
@@ -22,28 +20,28 @@ const editorState = vi.hoisted(() => {
   };
 
   const entry = {
-    id: "entry-1",
+    id: "entry-42",
     title: "Hello",
     slug: "hello",
     status: "draft" as const,
+    visibility: "public" as const,
+    hasPassword: false,
+    createdAt: "2026-06-18T10:00:00Z",
+    updatedAt: "2026-06-27T10:00:00Z",
     scheduledAt: null,
     seo: { description: "Meta" },
     taxonomy: { category: null, tags: [] },
-    author: { name: "Alex Doe", email: "alex@example.com" },
+    author: { name: "Maria Nowak", email: "maria@example.com" },
     data: { title: "Hello", summary: "Summary" },
-  };
-
-  const taxonomyOverview = {
-    taxonomies: { category: { id: "cat-taxonomy" }, tag: { id: "tag-taxonomy" } },
-    terms: { categories: [], tags: [] },
   };
 
   return {
     contentType,
     entry,
-    taxonomyOverview,
+    updateMetadataCalls: [] as Array<Record<string, unknown>>,
     subscribers: new Set<(event: { key: string }) => void>(),
     reset() {
+      this.updateMetadataCalls = [];
       this.subscribers.clear();
     },
   };
@@ -110,15 +108,6 @@ vi.mock("@/components/ui/sheet", () => ({
   SheetTitle: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock("@/components/ui/tabs", () => ({
-  Tabs: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsList: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  TabsTrigger: ({ children }: { children: React.ReactNode }) => (
-    <button type="button">{children}</button>
-  ),
-}));
-
 vi.mock("@/components/ui/textarea", () => ({
   Textarea: React.forwardRef(function MockTextarea(
     {
@@ -148,23 +137,28 @@ vi.mock("@/services/cachePolicy", () => ({
 }));
 
 vi.mock("@/services/contentTypesClient", () => ({
-  getCachedContentTypes: () => [editorState.contentType],
-  listContentTypesCached: vi.fn(async () => [editorState.contentType]),
+  getCachedContentTypes: () => [state.contentType],
+  listContentTypesCached: vi.fn(async () => [state.contentType]),
 }));
 
 vi.mock("@/services/entriesClient", () => ({
   deleteEntry: vi.fn(async () => ({ ok: true })),
-  getCachedEntryDetail: () => editorState.entry,
-  getEntryCached: vi.fn(async () => editorState.entry),
+  getCachedEntryDetail: () => state.entry,
+  getEntryCached: vi.fn(async () => state.entry),
   previewEntry: vi.fn(async () => ({ previewUrl: "https://preview.test/entry" })),
   publishEntry: vi.fn(async () => ({ ok: true })),
-  updateEntry: vi.fn(async (_type: string, _id: string, input) => ({
-    ...editorState.entry,
-    title: input.title,
-    slug: input.slug,
-    data: input.data,
-  })),
-  updateEntryMetadata: vi.fn(async () => editorState.entry),
+  updateEntry: vi.fn(async (_type: string, _id: string, input) => ({ ...state.entry, ...input })),
+  updateEntryMetadata: vi.fn(async (_type: string, _id: string, input) => {
+    state.updateMetadataCalls.push(input);
+    return {
+      ...state.entry,
+      status: input.status,
+      visibility: input.visibility ?? state.entry.visibility,
+      hasPassword: input.visibility === "password" ? true : false,
+      scheduledAt: input.scheduledAt,
+      seo: { description: input.seo?.description ?? "" },
+    };
+  }),
 }));
 
 vi.mock("@/services/siteSettingsClient", () => ({
@@ -183,7 +177,7 @@ vi.mock("@/services/siteSettingsClient", () => ({
 }));
 
 vi.mock("@/services/taxonomyClient", () => ({
-  getTaxonomyOverview: vi.fn(async () => editorState.taxonomyOverview),
+  getTaxonomyOverview: vi.fn(async () => null),
   createTaxonomyTerm: vi.fn(async () => ({ id: "term-new", name: "New", slug: "new" })),
 }));
 
@@ -192,27 +186,13 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
 }));
 
 vi.mock("@/ui/layouts/AdminShell", () => ({
-  AdminShell: ({
-    children,
-    breadcrumbs,
-    topbarActions,
-  }: {
-    children: React.ReactNode;
-    breadcrumbs?: React.ReactNode;
-    topbarActions?: React.ReactNode;
-  }) => (
-    <div>
-      <div>{breadcrumbs}</div>
-      <div data-topbar-actions="true">{topbarActions}</div>
-      <div>{children}</div>
-    </div>
-  ),
+  AdminShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock("@/utils/cacheBus", () => ({
   subscribeCacheEvents: (handler: (event: { key: string }) => void) => {
-    editorState.subscribers.add(handler);
-    return () => editorState.subscribers.delete(handler);
+    state.subscribers.add(handler);
+    return () => state.subscribers.delete(handler);
   },
 }));
 
@@ -227,61 +207,64 @@ vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
     open ? <div data-delete-dialog="true" /> : null,
 }));
 
+// Panel mock with explicit visibility controls so the EntryEditor payload branch
+// is directly assertable (the real Radix Select is impractical in happy-dom).
 vi.mock("../../../core/admin/ui/entries/EntryMetadataPanel", () => ({
   EntryMetadataPanel: ({
-    status,
-    onStatusChange,
+    visibility,
+    onVisibilityChange,
+    onAccessPasswordChange,
+    hasPassword,
+    createdAt,
+    updatedAt,
+    entryId,
     onSave,
-    onDelete,
   }: {
-    status: string;
-    onStatusChange: (status: "draft" | "published" | "scheduled" | "archived") => void;
+    visibility?: string;
+    onVisibilityChange?: (value: "public" | "private" | "password") => void;
+    onAccessPasswordChange?: (value: string) => void;
+    hasPassword?: boolean;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+    entryId?: string | null;
     onSave?: () => void;
-    onDelete?: () => void;
   }) => (
     <div data-metadata-panel="true">
-      <select
-        aria-label="Publish status"
-        value={status}
-        onChange={(event) =>
-          onStatusChange(event.target.value as "draft" | "published" | "scheduled" | "archived")
-        }
-      >
-        <option value="draft">Draft</option>
-        <option value="published">Published</option>
-        <option value="scheduled">Scheduled</option>
-        <option value="archived">Archived</option>
-      </select>
-      <button type="button" onClick={onSave}>
-        Save metadata
+      <span>{`visibility:${visibility}`}</span>
+      <span>{`hasPassword:${String(hasPassword)}`}</span>
+      <span>{`created:${createdAt ?? "—"}`}</span>
+      <span>{`updated:${updatedAt ?? "—"}`}</span>
+      <span>{`entryId:${entryId ?? "—"}`}</span>
+      <button type="button" onClick={() => onVisibilityChange?.("password")}>
+        vis-password
       </button>
-      <button type="button" onClick={onDelete}>
-        Delete entry
+      <button type="button" onClick={() => onVisibilityChange?.("public")}>
+        vis-public
+      </button>
+      <button type="button" onClick={() => onAccessPasswordChange?.("secret")}>
+        set-password
+      </button>
+      <button type="button" onClick={onSave}>
+        save-metadata
       </button>
     </div>
   ),
 }));
 
 vi.mock("../../../core/admin/ui/entries/FieldRenderer", () => ({
-  FieldRenderer: ({
-    field,
-    onChange,
-  }: {
-    field: { name: string };
-    onChange: (value: unknown) => void;
-  }) => (
-    <button type="button" onClick={() => onChange(`${field.name}-updated`)}>
-      {`field:${field.name}`}
-    </button>
-  ),
+  FieldRenderer: ({ field }: { field: { name: string } }) => <div>{`field:${field.name}`}</div>,
 }));
 
 vi.mock("../../../core/admin/ui/content-types/schemaMapping", () => ({
   fieldsFromSchema: () => [
-    { id: "field-1", name: "title", label: "Title", type: "text" },
-    { id: "field-2", name: "summary", label: "Summary", type: "text" },
+    { id: "f1", name: "title", label: "Title", type: "text" },
+    { id: "f2", name: "summary", label: "Summary", type: "text" },
+    { id: "f3", name: "cover", label: "Cover", type: "media" },
+    { id: "f4", name: "related", label: "Related", type: "relation" },
   ],
-  buildSchemaFromFields: () => ({ properties: { title: {}, summary: {} } }),
+  buildSchemaFromFields: () => ({
+    properties: { title: {}, summary: {}, cover: {}, related: {} },
+  }),
 }));
 
 vi.mock("../../../core/admin/ui/entries/contentTypeLabels", () => ({
@@ -290,9 +273,9 @@ vi.mock("../../../core/admin/ui/entries/contentTypeLabels", () => ({
 
 vi.mock("../../../core/admin/ui/entries/entryChecklist", () => ({
   buildEntryChecklist: ({ title }: { title: string }) => ({
-    items: [{ id: "seo", label: "SEO", status: "warning", detail: title }],
+    items: [],
     blockingIssues: title ? [] : ["Title is required"],
-    missingRequiredFields: title ? [] : [{ name: "title" }],
+    missingRequiredFields: [],
   }),
 }));
 
@@ -321,82 +304,108 @@ async function flushAsync() {
   });
 }
 
+const clickButton = (container: HTMLElement, label: string) => {
+  React.act(() => {
+    Array.from(container.querySelectorAll("button"))
+      .find((button) => button.textContent === label)
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  });
+};
+
 afterEach(() => {
   vi.restoreAllMocks();
-  editorState.reset();
+  state.reset();
   window.history.replaceState({}, "", "/");
   document.body.innerHTML = "";
 });
 
-test("editor renders the in-page PageHeader + [1fr_320px] SectionCard grid", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+test("every authored group renders as its own SectionCard and no field is dropped", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
   const view = mount(<EntryEditor />);
   try {
     await flushAsync();
-
-    // prototype grid: 1fr content column + 320px right column
-    expect(view.container.innerHTML).toContain("lg:grid-cols-[1fr_320px]");
-    // in-page PageHeader title (breadcrumb Entries › Articles + "Edit Article")
-    expect(view.container.textContent).toContain("Edit Article");
-    // metadata panel mounted in the right column
-    expect(view.container.querySelector('[data-metadata-panel="true"]')).not.toBeNull();
-
-    // Publish status Select + Save metadata / Delete still live in the panel
-    expect(view.container.querySelector("select[aria-label='Publish status']")).not.toBeNull();
-    expect(view.container.textContent).toContain("Save metadata");
-    expect(view.container.textContent).toContain("Delete entry");
-
-    // PageHeader action cluster stays wired (History seam included)
-    const buttonText = Array.from(view.container.querySelectorAll("button")).map(
-      (b) => b.textContent
-    );
-    expect(buttonText).toContain("Runtime preview");
-    expect(buttonText).toContain("Save draft");
-    expect(buttonText).toContain("Publish");
-    expect(buttonText).toContain("History");
+    const text = view.container.textContent ?? "";
+    // Content card (Title/Slug + text fields), plus Media and Relations cards.
+    expect(text).toContain("Content");
+    expect(text).toContain("Media");
+    expect(text).toContain("Relations");
+    // No field dropped by the grouping (guards the two-card flatten).
+    expect(text).toContain("field:summary");
+    expect(text).toContain("field:cover");
+    expect(text).toContain("field:related");
+    // History revisions seam present.
+    const labels = Array.from(view.container.querySelectorAll("button")).map((b) => b.textContent);
+    expect(labels).toContain("History");
+    // Metadata card fed real created/updated/id.
+    expect(text).toContain("created:2026-06-18T10:00:00Z");
+    expect(text).toContain("updated:2026-06-27T10:00:00Z");
+    expect(text).toContain("entryId:entry-42");
   } finally {
     view.cleanup();
   }
 });
 
-test("title/slug stay bound: typing flips the Unsaved changes badge", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+test("password visibility with an untouched field omits accessPassword (keeps hash)", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
   const view = mount(<EntryEditor />);
   try {
     await flushAsync();
     expect(view.container.textContent).not.toContain("Unsaved changes");
 
-    React.act(() => {
-      const titleArea = view.container.querySelector("textarea");
-      if (titleArea instanceof HTMLTextAreaElement) {
-        // Use the native prototype setter so React's value tracker still sees a
-        // change and fires onChange (setting `.value` directly is swallowed).
-        const descriptor = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value");
-        descriptor?.set?.call(titleArea, "Updated title");
-        titleArea.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-    });
-
+    clickButton(view.container, "vis-password");
+    // Switching visibility marks metadata-unsaved.
     expect(view.container.textContent).toContain("Unsaved changes");
+
+    clickButton(view.container, "save-metadata");
+    await flushAsync();
+
+    expect(state.updateMetadataCalls).toHaveLength(1);
+    const payload = state.updateMetadataCalls[0];
+    expect(payload.visibility).toBe("password");
+    // Untouched "" while password → key omitted (undefined = keep existing hash).
+    expect(payload.accessPassword).toBeUndefined();
   } finally {
     view.cleanup();
   }
 });
 
-test("schema-driven field cards still render via FieldRenderer", async () => {
-  window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
+test("password visibility with a typed value sends that value", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
-
   const view = mount(<EntryEditor />);
   try {
     await flushAsync();
-    // field Card label + renderer for the schema "summary" field
-    expect(view.container.textContent).toContain("Summary");
-    expect(view.container.textContent).toContain("field:summary");
+    clickButton(view.container, "vis-password");
+    clickButton(view.container, "set-password");
+    clickButton(view.container, "save-metadata");
+    await flushAsync();
+
+    const payload = state.updateMetadataCalls[0];
+    expect(payload.visibility).toBe("password");
+    expect(payload.accessPassword).toBe("secret");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("switching away from password clears the hash (accessPassword: null)", async () => {
+  window.history.replaceState({}, "", "/admin/entries/articles/entry-42");
+  const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
+  const view = mount(<EntryEditor />);
+  try {
+    await flushAsync();
+    clickButton(view.container, "vis-password");
+    clickButton(view.container, "set-password");
+    // Leaving password mode discards the typed value and clears the stored hash.
+    clickButton(view.container, "vis-public");
+    clickButton(view.container, "save-metadata");
+    await flushAsync();
+
+    const payload = state.updateMetadataCalls[0];
+    expect(payload.visibility).toBe("public");
+    expect(payload.accessPassword).toBeNull();
   } finally {
     view.cleanup();
   }

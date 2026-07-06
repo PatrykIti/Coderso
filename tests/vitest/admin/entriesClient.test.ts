@@ -8,6 +8,7 @@ import {
   duplicateEntry,
   getCachedAllEntries,
   getCachedEntries,
+  getCachedEntryDetail,
   getEntry,
   getEntryCached,
   listAllEntries,
@@ -20,6 +21,7 @@ import {
   updateEntry,
   updateEntryMetadata,
 } from "../../../core/admin/services/entriesClient";
+import type { EntryMetadataPayload } from "../../../core/admin/services/entriesClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
 
@@ -28,7 +30,6 @@ const jsonResponse = (payload: unknown, status = 200) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
-
 
 const createLocalStorage = () => {
   const store = new Map<string, string>();
@@ -325,9 +326,7 @@ test("duplicateEntry uses CSRF and primes list/detail caches", async () => {
     const result = await duplicateEntry("blog", "entry-1");
     expect(result.id).toBe("entry-copy");
     expect(calls[0]?.input).toBe("/admin/api/auth/csrf");
-    expect(calls[1]?.input).toBe(
-      "/admin/api/content/blog/entries/entry-1/duplicate"
-    );
+    expect(calls[1]?.input).toBe("/admin/api/content/blog/entries/entry-1/duplicate");
     expect(calls[1]?.init?.method).toBe("POST");
     expect(calls[1]?.init?.body).toBe(JSON.stringify({}));
     expect(getCachedEntries("blog")?.[0]?.id).toBe("entry-copy");
@@ -382,7 +381,6 @@ test("failed updateEntryMetadata leaves cached list untouched", async () => {
     resetCaches("blog");
   }
 });
-
 
 test("listEntriesCached reads from local storage", async () => {
   const originalFetch = globalThis.fetch;
@@ -469,6 +467,150 @@ test("listAllEntriesCached reads from local storage", async () => {
     const result = await listAllEntriesCached();
     expect(result).toEqual(cached);
     expect(calls.length).toBe(0);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    clearAllEntriesCache();
+  }
+});
+
+test("EntryMetadataPayload accepts visibility and accessPassword", () => {
+  const publicPayload: EntryMetadataPayload = { visibility: "public" };
+  const passwordPayload: EntryMetadataPayload = {
+    visibility: "password",
+    accessPassword: "s3cret",
+  };
+  const clearPayload: EntryMetadataPayload = {
+    visibility: "private",
+    accessPassword: null,
+  };
+  expect(publicPayload.visibility).toBe("public");
+  expect(passwordPayload.accessPassword).toBe("s3cret");
+  expect(clearPayload.accessPassword).toBeNull();
+});
+
+test("updateEntryMetadata round-trips visibility/hasPassword and never caches accessPassword", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  let sentBody: string | undefined;
+  const updatedDetail = {
+    id: "entry-1",
+    typeId: "type-1",
+    title: "Guarded",
+    slug: "guarded",
+    status: "published" as const,
+    visibility: "password" as const,
+    hasPassword: true,
+    data: {},
+    createdAt: "2026-02-14T00:00:00.000Z",
+    updatedAt: "2026-02-14T00:00:00.000Z",
+    taxonomy: null,
+  };
+
+  globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    sentBody = init?.body as string | undefined;
+    return jsonResponse(updatedDetail);
+  };
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    resetCsrfToken();
+    resetCaches("blog");
+    await updateEntryMetadata("blog", "entry-1", {
+      visibility: "password",
+      accessPassword: "s3cret",
+    });
+    // Plaintext password is sent to the server (write-only).
+    expect(sentBody).toContain('"accessPassword":"s3cret"');
+    expect(sentBody).toContain('"visibility":"password"');
+
+    const cached = getCachedEntryDetail("blog", "entry-1");
+    expect(cached?.visibility).toBe("password");
+    expect(cached?.hasPassword).toBe(true);
+    // accessPassword is send-only: it must never land on a cached entry object.
+    expect(cached && "accessPassword" in cached).toBe(false);
+
+    const cachedList = getCachedEntries("blog");
+    expect(cachedList?.[0]?.visibility).toBe("password");
+    expect(cachedList?.[0]?.hasPassword).toBe(true);
+    expect(cachedList?.[0] && "accessPassword" in cachedList[0]).toBe(false);
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (originalLocal === undefined) {
+      delete (globalThis as { localStorage?: unknown }).localStorage;
+    } else {
+      (globalThis as { localStorage?: unknown }).localStorage = originalLocal;
+    }
+    resetCaches("blog");
+  }
+});
+
+test("listAllEntriesCached raw-primes visibility/hasPassword from server rows", async () => {
+  const originalFetch = globalThis.fetch;
+  const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
+  const storage = createLocalStorage();
+  const serverRows = [
+    {
+      id: "entry-1",
+      typeId: "type-1",
+      title: "Public",
+      slug: "public",
+      status: "published" as const,
+      visibility: "public" as const,
+      hasPassword: false,
+      data: {},
+      createdAt: "2026-02-14T00:00:00.000Z",
+      updatedAt: "2026-02-14T00:00:00.000Z",
+      contentType: {
+        id: "type-1",
+        slug: "blog",
+        name: "Blog",
+        status: "published",
+      },
+    },
+    {
+      id: "entry-2",
+      typeId: "type-1",
+      title: "Guarded",
+      slug: "guarded",
+      status: "published" as const,
+      visibility: "password" as const,
+      hasPassword: true,
+      data: {},
+      createdAt: "2026-02-14T00:00:00.000Z",
+      updatedAt: "2026-02-14T00:00:00.000Z",
+      contentType: {
+        id: "type-1",
+        slug: "blog",
+        name: "Blog",
+        status: "published",
+      },
+    },
+  ];
+
+  globalThis.fetch = async () => jsonResponse(serverRows);
+  (globalThis as { localStorage?: unknown }).localStorage = storage as unknown;
+
+  try {
+    clearAllEntriesCache();
+    const result = await listAllEntriesCached({ force: true });
+    expect(result[0]?.visibility).toBe("public");
+    expect(result[0]?.hasPassword).toBe(false);
+    expect(result[1]?.visibility).toBe("password");
+    expect(result[1]?.hasPassword).toBe(true);
+    // The raw prime (no toEntrySummary) must round-trip both fields via cache.
+    const cached = getCachedAllEntries();
+    expect(cached?.[1]?.visibility).toBe("password");
+    expect(cached?.[1]?.hasPassword).toBe(true);
   } finally {
     globalThis.fetch = originalFetch;
     if (originalLocal === undefined) {
