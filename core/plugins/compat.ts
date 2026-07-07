@@ -6,7 +6,7 @@ export type CompatibilityInput = {
 };
 
 export const API_VERSION = "1";
-export const CORE_VERSION = process.env.CORE_VERSION ?? "1.7.0";
+export const CORE_VERSION = process.env.CORE_VERSION ?? "1.8.0";
 
 export function isCompatible(input: CompatibilityInput) {
   if (input.apiVersion !== API_VERSION) return false;

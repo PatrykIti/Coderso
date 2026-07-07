@@ -3,6 +3,24 @@
 All notable changes to this project will be documented in this file.
 The format is based on Keep a Changelog, and this project adheres to Semantic Versioning.
 
+## [1.8.0] - 2026-07-07
+### Added
+- Two-phase Setup & Onboarding Wizard (first-run installer + configuration wizard) — TASK-482.
+- Real web-analytics pipeline: visitor pageviews/sessions/bounce/sources/devices/referrers/top-pages + Refresh control — TASK-483.
+- Configurable Dashboard widgets & panels with drag/resize, schema-driven config, and per-user saved layouts — TASK-480.
+- Media Library folders, tags, focal-point, description/credit metadata, and storage-quota card — TASK-512.
+- Content-type config (singular/plural, drafts, versioning, per-role permissions), `date` & `slug` field types, and a functional schema builder — TASK-513.
+- Entry Visibility (public / private / password) with a functional Entries list/grid toggle — TASK-514.
+
+### Changed
+- Backups now actually run: scheduler, retention pruning, transactional restore, and remote (s3/azure) storage — TASK-484.
+- Media Library, Engine content-type editor, and Entries editor rebuilt to redesign (Soft-Violet) prototype fidelity — TASK-512/513/514.
+
+### Fixed
+- Pinned Active custom screens (dashboard / collection-only) now appear in the admin sidebar regardless of editor capability — TASK-515.
+
+### Security
+- Analytics ingestion stores no raw IP/UA/full referrer (salted non-reversible hash); entry access passwords stored as write-only argon2 hashes never exposed to read paths.
 ## [1.7.0] - 2026-07-04
 ### Added
 - Soft‑Violet admin redesign; Pages Editor V2 inline editing + mark/color toolbars; Custom Screens V4 data‑oriented builder, record‑detail overrides, section column presets; Menu Design tab with per‑device overrides, per‑level + brand styling, modern styling bundles (separators, underline indicator, caret/flyout animation, pill nav, dropdown padding), unified directional submenu placement (right/down/up/left) and an accordion inline mode; per‑control reset‑to‑default and visible resolved‑default hints.
