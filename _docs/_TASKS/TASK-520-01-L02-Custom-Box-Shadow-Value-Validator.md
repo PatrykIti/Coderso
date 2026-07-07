@@ -96,7 +96,11 @@ export function normalizeMenuBoxShadowValue(value: unknown): string | null {
     if (lengths.length < 2 || lengths.length > 4) return null;  // need offset-x/y (+ optional blur/spread)
     if (color === null) return null;                            // a visible shadow needs a color
     // `color` is normalizeMenuColorValue's output — the leading-dot alpha form (`.24`) is
-    // PRESERVED verbatim, consistent with TASK-519 (which never rewrites `.24`→`0.24`).
+    // PRESERVED verbatim. This DIFFERS from TASK-519 on purpose: 519 canonicalizes
+    // `.84`→`0.84` because its render boundary regex (`resolveClearableCssColorValue`)
+    // REJECTS leading-dot alpha; 520's box-shadow does NOT need that canonicalization
+    // because 520-02 emits it as raw CSS in a `<style>` block (which browsers accept
+    // with leading-dot) and it never passes through `resolveClearableCssColorValue`.
     cleaned.push(`${inset}${lengths.join(" ")} ${color}`.trim());
   }
   return cleaned.join(", ");                                    // canonicalized, validated
@@ -131,8 +135,13 @@ bracket-aware, not `rest.split(/\s+/)`:
 
 The owner acceptance token **`0 18px 50px rgba(0,0,0,.24)`** is therefore accepted as
 `0 18px 50px` (three lengths) + one `rgba(0,0,0,.24)` color token, and the leading-dot
-alpha (`.24`) is preserved verbatim in the canonical output — consistent with TASK-519,
-which never rewrites `.24`→`0.24`.
+alpha (`.24`) is preserved verbatim in the canonical output. This is intentionally
+UNLIKE TASK-519: 519 canonicalizes leading-dot alpha (`.84`→`0.84` via
+`normalizeAdminColorValue`) because its render boundary `resolveClearableCssColorValue`
+rejects the leading-dot form; 520's custom box-shadow needs no such rewrite because
+520-02 emits it as raw CSS inside a `<style>` block — a context where the browser's
+CSS parser accepts leading-dot alpha directly — and it never traverses
+`resolveClearableCssColorValue`.
 
 ## Regression-test shape (Vitest, Bun-free)
 

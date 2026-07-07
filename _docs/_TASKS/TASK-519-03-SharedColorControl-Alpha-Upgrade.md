@@ -25,7 +25,7 @@ swatch), without losing transparent / theme-token / clear UX.
 |------|------|---------|
 | 519-03-L01 | `core/admin/ui/widgets/editors/ClearableFields.tsx` | fix alpha-losing helpers + shared inputs |
 | 519-03-L02 | `core/admin/ui/widgets/editors/SharedColorControl.tsx` | add alpha slider + true swatch + state classification |
-| 519-03-L03 | `tests/vitest/ui/clearable-fields-alpha.test.tsx` + `tests/vitest/ui/shared-color-alpha.test.tsx` (NEW) | alpha author/round-trip + regression tests |
+| 519-03-L03 | `tests/vitest/ui/clearable-fields-alpha.test.tsx` + `tests/vitest/ui/shared-color-alpha.test.tsx` (NEW); PLUS the alpha-behavior assertions of EXISTING `tests/vitest/ui/clearable-fields.test.tsx` + `tests/vitest/ui/shared-color-control.test.tsx` | alpha author/round-trip + regression tests, AND re-baseline the 4 legacy alpha assertions to the new intended behavior |
 
 **Land order within subtask:** L01 (ClearableFields helpers) → L02 (SharedColorControl
 consumes them) → L03 (tests). L01 lands first because `SharedColorControl` imports
@@ -143,9 +143,11 @@ handleSwatchChange -> keep, but route through applySharedColorPickerChange so al
   token value keeps `theme_token` classification + hint + disabled slider; `onClear` fires.
 
 The EXISTING `tests/vitest/ui/clearable-fields.test.tsx` and
-`tests/vitest/ui/shared-color-control.test.tsx` are NOT owned here; if any assert the
-old alpha-dropping behavior they must be reconciled by their owner — flag it in the
-closure (519-06) rather than editing them from this subtask (single-writer).
+`tests/vitest/ui/shared-color-control.test.tsx` DO assert the old alpha-dropping behavior
+(4 assertions). Because L01 makes that behavior an INTENDED contract change, 519-03-L03 is
+assigned sole ownership of re-baselining exactly those 4 assertions to the new correct
+values (see 519-03-L03 for the precise old→new list). This keeps single-writer coherent
+(only L03 writes those two files) and keeps the full-vitest gate green.
 
 ## Acceptance (this subtask)
 

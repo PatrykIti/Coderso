@@ -17,14 +17,39 @@
 - `tests/vitest/ui/clearable-fields-alpha.test.tsx` (NEW) — helper unit tests.
 - `tests/vitest/ui/shared-color-alpha.test.tsx` (NEW) — component render tests.
 
-Both Vitest admin/UI lane (`vitest`; component render via `createRoot` from
+**Also owns (re-baseline of EXISTING files — alpha-behavior assertions ONLY):**
+- `tests/vitest/ui/clearable-fields.test.tsx` — the 2 alpha assertions below.
+- `tests/vitest/ui/shared-color-control.test.tsx` — the 2 alpha assertions below.
+
+This leaf is the SINGLE authorized writer of the 4 legacy assertions that assert the OLD
+alpha-dropping behavior, which becomes wrong once L01 makes rgba-with-alpha
+picker-representable + canonicalized. This is an INTENDED contract change (per AGENTS.md,
+re-baselining a test to a NEW intended contract is permitted — this is NOT weakening; each
+assertion moves to the exact new correct value, keeping the same assertion count). Edit
+ONLY these 4 assertions (and their enclosing test titles/comments that describe the old
+behavior); do not touch any other assertion in either file. No other leaf/subtask writes
+these two files (single-writer holds).
+
+Re-baseline exactly (alpha-behavior assertions only):
+- `clearable-fields.test.tsx:102` — `resolveColorPickerValue("rgba(17, 34, 51, 0.4)", "#ffffff")`
+  → was `"#ffffff"` (fallback); NEW `"#112233"` (extracted base color, alpha handled by slider).
+- `clearable-fields.test.tsx:109` — `isPickerRepresentableColorValue("rgba(17, 34, 51, 0.4)")`
+  → was `false`; NEW `true`. (Update the two enclosing test titles at :99 and :106 that say
+  "falls back for rgba" / "without alpha" to describe the new alpha-representable behavior.)
+- `shared-color-control.test.tsx:239-241` — `describeSharedColorControlState({ value: "rgba(10, 20, 30, 0.4)" }).kind`
+  → was `"saved_custom"`; NEW `"selected_swatch"`.
+- `shared-color-control.test.tsx:314` (test "rgba text keeps fallback swatch preview…" at :296)
+  — the swatch `input[aria-label="Overlay swatch"]` `.value` → was `"#102030"` (pickerFallback);
+  NEW `"#0a141e"` (extracted base of `rgba(10, 20, 30, 0.4)`). The text field (:315) still reads
+  the raw `"rgba(10, 20, 30, 0.4)"` and Clear (:317-320) still fires — leave those unchanged;
+  rename the test title to reflect that the swatch now previews the real base color.
+
+Both NEW files are Vitest admin/UI lane (`vitest`; component render via `createRoot` from
 `react-dom/client` — NOT `@testing-library/react`, which is NOT a repo dependency; all
 `tests/vitest/ui/` tests render via `createRoot`, mirror
 `page-editor-control-primitives.test.tsx`). Import specifiers are RELATIVE
 (`vitest.config.ts:6` aliases `@` → `core/admin` only, so `@/admin/...` resolves to
-`core/admin/admin/...` and is wrong). The EXISTING `clearable-fields.test.tsx` /
-`shared-color-control.test.tsx` are NOT owned here — do not edit them (single-writer); if
-they assert legacy alpha-dropping, flag for their owner in 519-06 closure.
+`core/admin/admin/...` and is wrong).
 
 ## `clearable-fields-alpha.test.tsx` (helpers)
 
