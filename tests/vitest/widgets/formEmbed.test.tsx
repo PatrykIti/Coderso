@@ -125,6 +125,39 @@ test("form embed falls back to resolved success message", () => {
   expect(html).toContain("We received your request.");
 });
 
+test("516-07: file field renders a real file control (not 'Unsupported') + hidden companion", () => {
+  const html = renderToString(
+    <FormEmbedBlock
+      data={{
+        formId: "form-1",
+        resolved: {
+          formName: "Careers",
+          fields: [
+            {
+              id: "field-1",
+              type: "file",
+              label: "Resume",
+              name: "resume",
+              required: true,
+              settings: { accept: ["image/png", "application/pdf"], multiple: true },
+            },
+          ],
+        },
+      }}
+      variant="standard"
+    />
+  );
+
+  // supported (no fallback), a real file input with accept/multiple, and a hidden
+  // companion carrying the submitted field name (raw fake-path is never submitted).
+  expect(html).not.toContain('data-form-field-unsupported="file"');
+  expect(html).toContain('type="file"');
+  expect(html).toContain('accept="image/png,application/pdf"');
+  expect(html).toContain('data-form-file-input="resume"');
+  expect(html).toContain('data-form-file-value="resume"');
+  expect(html).toContain('type="hidden"');
+});
+
 test("form embed renders submission nonce when resolved", () => {
   const html = renderToString(
     <FormEmbedBlock
@@ -456,7 +489,7 @@ test("form embed renders internal-only resolved forms as a noninteractive bounda
   expect(html).not.toContain("__nextlessFormRuntimeClient");
 });
 
-test("form embed supports hidden fields and keeps file fields explicitly unsupported", () => {
+test("form embed supports hidden fields and keeps unknown field types explicitly unsupported", () => {
   const html = renderToString(
     <FormEmbedBlock
       data={{
@@ -475,10 +508,10 @@ test("form embed supports hidden fields and keeps file fields explicitly unsuppo
               },
             },
             {
-              id: "field-file",
-              type: "file",
-              label: "Attachment",
-              name: "attachment",
+              id: "field-unknown",
+              type: "signature",
+              label: "Signature",
+              name: "signature",
               required: false,
             },
           ],
@@ -491,7 +524,7 @@ test("form embed supports hidden fields and keeps file fields explicitly unsuppo
   expect(html).toContain('type="hidden"');
   expect(html).toContain('name="segment"');
   expect(html).toContain('value="enterprise"');
-  expect(html).toContain('data-form-field-unsupported="file"');
+  expect(html).toContain('data-form-field-unsupported="signature"');
   expect(html).toContain("Unsupported form field type:");
 });
 

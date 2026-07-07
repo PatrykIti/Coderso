@@ -21,7 +21,9 @@ test("FormCanvas renders empty state fallback copy", () => {
   expect(html).toContain("Form title");
   expect(html).toContain("Add a short description for this form.");
   expect(html).toContain("Drop a field here to add to your form");
-  expect(html).toContain("Submit Form");
+  // TASK-516-04: un-themed canvas now renders the prototype default submit label.
+  expect(html).toContain("Submit");
+  expect(html).not.toContain("Submit Form");
 });
 
 test("FormCanvas renders multi-step fields, placeholder values, and hidden labels", () => {

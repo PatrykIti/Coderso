@@ -5,12 +5,14 @@ import {
   commerceProducts,
   contentEntries,
   contentTypes,
+  formSubmissions,
+  forms,
   pages,
   posts,
 } from "../../db/schema";
 import { containsMediaReference } from "./mediaReferenceMatcher";
 
-export type MediaUsageTargetType = "page" | "entry" | "post" | "commerce";
+export type MediaUsageTargetType = "page" | "entry" | "post" | "commerce" | "submission";
 
 export type MediaUsageSummary = {
   id: string;
@@ -32,11 +34,7 @@ const clampLimit = (value: unknown) => {
   return Math.max(1, Math.min(100, Math.trunc(value)));
 };
 
-const pushUsage = (
-  target: MediaUsageSummary[],
-  seen: Set<string>,
-  usage: MediaUsageSummary
-) => {
+const pushUsage = (target: MediaUsageSummary[], seen: Set<string>, usage: MediaUsageSummary) => {
   if (seen.has(usage.id)) return;
   seen.add(usage.id);
   target.push(usage);
@@ -158,6 +156,30 @@ export async function listMediaUsage(
       targetId: product.id,
       targetSlug: product.slug,
       adminHref: `/advanced/commerce/${encodeURIComponent(product.id)}`,
+    });
+  }
+
+  const submissionRows = await db
+    .select({
+      id: formSubmissions.id,
+      formId: formSubmissions.formId,
+      payload: formSubmissions.payload,
+      formName: forms.name,
+    })
+    .from(formSubmissions)
+    .leftJoin(forms, eq(formSubmissions.formId, forms.id));
+
+  for (const submission of submissionRows) {
+    if (result.filter((usage) => usage.type === "submission").length >= limit) break;
+    if (!containsMediaReference(submission.payload, mediaId)) continue;
+    pushUsage(result, seen, {
+      id: `submission:${submission.id}`,
+      type: "submission",
+      title: submission.formName ?? "Form submission",
+      context: "Form submission attachment",
+      targetId: submission.id,
+      targetSlug: null,
+      adminHref: `/advanced/forms/${encodeURIComponent(submission.formId)}/submissions`,
     });
   }
 

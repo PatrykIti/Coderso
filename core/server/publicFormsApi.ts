@@ -3,7 +3,12 @@ import { attachUserFromSession } from "./middleware/auth";
 import { requirePermission } from "./middleware/rbac";
 import { checkRateLimit } from "./middleware/rateLimit";
 import { parseRequestBody } from "./requestBody";
-import { handleFormSubmissionRoute, mapFormError, type RouteContext } from "./routes/formsRoutes";
+import {
+  handleFormAttachmentUploadRoute,
+  handleFormSubmissionRoute,
+  mapFormError,
+  type RouteContext,
+} from "./routes/formsRoutes";
 import { validate } from "./validation/schemaValidator";
 import type { SecuritySettings } from "../services/settings/securitySettings";
 
@@ -15,6 +20,11 @@ export type PublicFormsApiContext = {
 };
 
 const FORM_SUBMISSION_PATH = /^\/forms\/([^/]+)\/submissions$/;
+// TASK-516-07: the file-attachment upload route is public "like the submission route",
+// so it is dispatched through this same anonymous entrypoint (the auth-gated admin
+// router would otherwise 401 an anonymous submitter). It reuses the form's own
+// submission access gate + nonce + bot-protection inside handleFormAttachmentUploadRoute.
+const FORM_UPLOAD_PATH = /^\/forms\/([^/]+)\/uploads$/;
 
 const jsonResponse = (payload: unknown, status = 200) =>
   new Response(JSON.stringify(payload), {
@@ -60,7 +70,9 @@ export async function handlePublicFormsApi(
   req: Request,
   ctx: PublicFormsApiContext
 ): Promise<Response | null> {
-  const match = ctx.url.pathname.match(FORM_SUBMISSION_PATH);
+  const submissionMatch = ctx.url.pathname.match(FORM_SUBMISSION_PATH);
+  const uploadMatch = submissionMatch ? null : ctx.url.pathname.match(FORM_UPLOAD_PATH);
+  const match = submissionMatch ?? uploadMatch;
   if (!match) return null;
   if (req.method !== "POST") return null;
 
@@ -88,10 +100,9 @@ export async function handlePublicFormsApi(
     };
     await attachUserFromSession(routeContext);
 
-    const result = await handleFormSubmissionRoute(routeContext, {
-      requirePermission,
-      validate,
-    });
+    const result = uploadMatch
+      ? await handleFormAttachmentUploadRoute(routeContext, { requirePermission, validate })
+      : await handleFormSubmissionRoute(routeContext, { requirePermission, validate });
     return jsonResponse(result);
   } catch (error) {
     return errorResponse(error);

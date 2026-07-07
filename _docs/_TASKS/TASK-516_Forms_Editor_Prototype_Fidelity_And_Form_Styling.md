@@ -6,7 +6,7 @@
 **Category:** Admin UI / Content (Forms) / Page Builder / Runtime / Schema (JSON model)
 **Estimated Effort:** Large
 **Dependencies:** The theme/model/UI subtasks (516-01…06) ride the existing validated `PATCH /forms/:id` + `PUT /forms/:id/fields` write paths (`core/server/routes/formsRoutes.ts`). **516-07 does NOT merely ride existing write paths:** it adds a genuinely NEW public route `POST /forms/:id/uploads` (`handleFormAttachmentUploadRoute`), a NEW `formAttachmentUploadSchema` (`core/server/validation/formSchemas.ts`), two NEW leaf/backstop modules (`core/services/forms/formAttachment.ts`, `core/services/forms/mimeMatchesAccept.ts`), and additive single-writer edits to `core/services/media/mediaService.ts` (`uploadMedia` `constraints`) + `core/services/media/mediaUsageService.ts` (`"submission"` usage variant) — enumerated in the ownership table (516-07 row) + coordination note below. Relates to TASK-490 (submissions export) — **kept distinct**: this task does NOT touch export/submissions listing scope.
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 **Closure changelog (pinned):** 1228
 
 ---

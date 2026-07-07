@@ -9,9 +9,15 @@ import {
   EyeOff,
   ListChecks,
   ListOrdered,
+  Monitor,
+  Paperclip,
+  Phone,
+  Redo2,
+  Rocket,
+  Smartphone,
   Timer,
-  Save,
   Type,
+  Undo2,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -20,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
 import { cacheKeys } from "@/services/cachePolicy";
 import { listContentTypesCached, type ContentTypeSummary } from "@/services/contentTypesClient";
@@ -38,12 +45,15 @@ import {
   type FormField as ApiFormField,
   type FormFieldInput,
   type FormPresetId,
+  type FormFormTheme,
   type FormRecord,
   type FormSettings,
   type FormStatus,
 } from "@/services/formsClient";
 import { useAdminRouter } from "@/ui/contexts/AdminRouterContext";
-import { EditorShell } from "@/ui/layouts/EditorShell";
+import { AdminShell } from "@/ui/layouts/AdminShell";
+import { EditorFrame } from "@/ui/shared/EditorFrame";
+import { PageHeader } from "@/ui/shared/PageHeader";
 import { StatusBadge } from "@/ui/shared/StatusBadge";
 import { subscribeCacheEvents } from "@/utils/cacheBus";
 import {
@@ -58,10 +68,10 @@ import {
 } from "../../../services/forms/formPresets";
 
 import { FieldLibrary, type FieldLibraryItem } from "./FieldLibrary";
-import { FieldListPanel, type FormFieldListItem } from "./FieldListPanel";
 import { FormActionsPanel } from "./FormActionsPanel";
 import { FieldSettingsPanel, type FieldSettings } from "./FieldSettingsPanel";
 import { FormCanvas } from "./FormCanvas";
+import { FormDesignPanel } from "./FormDesignPanel";
 import { FormRuntimePreviewDialog } from "./FormRuntimePreviewDialog";
 import { FormSettingsPanel } from "./FormSettingsPanel";
 
@@ -79,6 +89,13 @@ const fieldLibraryItems: FieldLibraryItem[] = [
     icon: AtSign,
     type: "email",
     helper: "Validates email addresses automatically.",
+  },
+  {
+    id: "phone",
+    label: "Phone",
+    icon: Phone,
+    type: "phone",
+    helper: "Collects a telephone number.",
   },
   {
     id: "checkbox",
@@ -114,6 +131,13 @@ const fieldLibraryItems: FieldLibraryItem[] = [
     icon: Calendar,
     type: "date",
     helper: "Pick a date from the calendar.",
+  },
+  {
+    id: "file",
+    label: "File",
+    icon: Paperclip,
+    type: "file",
+    helper: "Upload a file attachment.",
   },
   {
     id: "number",
@@ -282,7 +306,9 @@ export function FormBuilderPage() {
     () => initialCachedFormActions?.map(toFormActionInput) ?? []
   );
   const [contentTypes, setContentTypes] = useState<ContentTypeSummary[]>([]);
-  const [inspectorTab, setInspectorTab] = useState<"settings" | "automation">("settings");
+  const [inspectorTab, setInspectorTab] = useState<"settings" | "design" | "automation">(
+    "settings"
+  );
   const [fields, setFields] = useState<FormFieldState[]>(
     () => initialCachedFormDetail?.fields.map(toFieldState) ?? []
   );
@@ -290,7 +316,7 @@ export function FormBuilderPage() {
     const firstField = initialCachedFormDetail?.fields[0];
     return firstField ? { type: "field", id: firstField.id } : { type: "form" };
   });
-  const [leftTab, setLeftTab] = useState("fields");
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "mobile">("desktop");
   const [isLoading, setIsLoading] = useState(() => !initialCachedFormDetail);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -314,17 +340,7 @@ export function FormBuilderPage() {
     [fields, selectedFieldId]
   );
 
-  const fieldListItems = useMemo<FormFieldListItem[]>(
-    () =>
-      fields.map((field) => ({
-        id: field.id,
-        label: field.label,
-        name: field.name,
-        type: field.type,
-        required: field.required,
-      })),
-    [fields]
-  );
+  const selectedFieldType = selectedField?.type;
   const stepCount = useMemo(
     () => Math.max(resolveStepCount(fields), meta.settings.stepTitles.length, 1),
     [fields, meta.settings.stepTitles.length]
@@ -461,7 +477,6 @@ export function FormBuilderPage() {
     };
     setFields((prev) => [...prev, newField]);
     setSelectedTarget({ type: "field", id: newField.id });
-    setLeftTab("fields");
     setUnsavedChanges(true);
   };
 
@@ -525,7 +540,7 @@ export function FormBuilderPage() {
     setUnsavedChanges(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async ({ statusOverride }: { statusOverride?: FormStatus } = {}) => {
     if (!activeForm) return;
     setIsSaving(true);
     setSaveError(null);
@@ -548,7 +563,7 @@ export function FormBuilderPage() {
         updateForm(activeForm.id, {
           name: meta.name,
           description: meta.description,
-          status: meta.status,
+          status: statusOverride ?? meta.status,
           submissionAccess: meta.submissionAccess,
           successMessage: meta.successMessage,
           successRedirectUrl: meta.successRedirectUrl,
@@ -573,6 +588,14 @@ export function FormBuilderPage() {
     }
   };
 
+  const handlePublish = async () => {
+    // Keep the local inspector status in sync, but pass an explicit override so the
+    // SAME-tick save payload is 'published' (setMeta is async — reading meta.status
+    // in this closure would still see the pre-update value).
+    setMetaField("status", "published");
+    await handleSave({ statusOverride: "published" });
+  };
+
   const isBusy = isLoading || isSaving;
   const formTitle = meta.name || activeForm?.name || "Form";
   const formDescription = meta.description || activeForm?.description || "";
@@ -588,6 +611,21 @@ export function FormBuilderPage() {
       settings: normalizeFormSettings({
         ...prev.settings,
         ...updates,
+      }),
+    }));
+    setUnsavedChanges(true);
+  };
+
+  // GROUP-LEVEL REPLACE semantics: each key in `updates` (a theme group like
+  // `layout`/`surface`) REPLACES the whole group object at that key (shallow merge),
+  // which is what enables FormDesignPanel's per-control reset. `undefined` clears the
+  // whole theme; normalizeFormSettings drops emptied/undefined groups (present-only).
+  const setFormTheme = (updates: Partial<FormFormTheme> | undefined) => {
+    setMeta((prev) => ({
+      ...prev,
+      settings: normalizeFormSettings({
+        ...prev.settings,
+        theme: updates === undefined ? undefined : { ...(prev.settings.theme ?? {}), ...updates },
       }),
     }));
     setUnsavedChanges(true);
@@ -692,11 +730,12 @@ export function FormBuilderPage() {
   const renderFormInspector = () => (
     <Tabs
       value={inspectorTab}
-      onValueChange={(value) => setInspectorTab(value as "settings" | "automation")}
+      onValueChange={(value) => setInspectorTab(value as "settings" | "design" | "automation")}
       className="flex h-full flex-col"
     >
       <TabsList variant="line" className="border-b border-border px-4 pt-4">
         <TabsTrigger value="settings">Settings</TabsTrigger>
+        <TabsTrigger value="design">Design</TabsTrigger>
         <TabsTrigger value="automation">Automation</TabsTrigger>
       </TabsList>
       <TabsContent value="settings" className="min-h-0 flex-1">
@@ -722,6 +761,9 @@ export function FormBuilderPage() {
           onApplyPreset={applyPreset}
         />
       </TabsContent>
+      <TabsContent value="design" className="min-h-0 flex-1">
+        <FormDesignPanel theme={meta.settings.theme} onThemeChange={setFormTheme} />
+      </TabsContent>
       <TabsContent value="automation" className="min-h-0 flex-1">
         <FormActionsPanel
           actions={formActions}
@@ -737,41 +779,8 @@ export function FormBuilderPage() {
   );
 
   return (
-    <EditorShell
+    <AdminShell
       activeHref="/admin/advanced/forms"
-      leftPanel={
-        <Tabs value={leftTab} onValueChange={setLeftTab} className="flex h-full flex-col">
-          <TabsList variant="line" className="border-b border-border px-4 pt-4">
-            <TabsTrigger value="fields">Fields</TabsTrigger>
-            <TabsTrigger value="library">Library</TabsTrigger>
-          </TabsList>
-          <TabsContent value="fields" className="flex-1">
-            <FieldListPanel
-              fields={fieldListItems}
-              selectedId={selectedFieldId}
-              onSelect={(id) => setSelectedTarget({ type: "field", id })}
-              onAdd={() => setLeftTab("library")}
-            />
-          </TabsContent>
-          <TabsContent value="library" className="flex-1">
-            <FieldLibrary items={fieldLibraryItems} onAddField={handleAddField} />
-          </TabsContent>
-        </Tabs>
-      }
-      rightPanel={
-        selectedTarget?.type === "form" ? (
-          renderFormInspector()
-        ) : (
-          <FieldSettingsPanel
-            field={selectedField}
-            allFields={fields}
-            onChange={handleFieldChange}
-            onSettingsChange={handleFieldSettingsChange}
-            onDuplicate={handleDuplicate}
-          />
-        )
-      }
-      rightPanelClassName="p-0"
       breadcrumbs={["Content", "Forms", formTitle]}
       topbarActions={
         <div className="flex items-center gap-2">
@@ -784,87 +793,165 @@ export function FormBuilderPage() {
         </div>
       }
     >
-      <div className="sticky top-0 z-10 border-b bg-background/80 px-6 py-3 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-4xl flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={openSubmissions}>
-              Submissions
-            </Button>
-            <Button variant="outline" size="sm" onClick={openActionLogs}>
-              Action logs
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2"
-              onClick={openRuntimePreview}
-              disabled={!activeForm || isBusy}
-            >
-              <Eye className="h-4 w-4" />
-              Runtime preview
-            </Button>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button
-              size="sm"
-              className="gap-2"
-              disabled={isBusy || !hasUnsavedChanges}
-              onClick={handleSave}
-            >
-              <Save className="h-4 w-4" />
-              {isSaving ? "Saving..." : "Save form"}
-            </Button>
-            <div className="flex items-center gap-2 lg:hidden">
-              <Button variant="outline" size="sm" onClick={() => setMobileFieldsOpen(true)}>
-                Fields
+      <div className="flex h-full flex-col gap-6">
+        <PageHeader
+          breadcrumbs={[{ label: "Forms", href: "/admin/advanced/forms" }, { label: formTitle }]}
+          title={formTitle}
+          description="Drag fields onto the canvas and configure them on the right."
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={openSubmissions}>
+                Submissions
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setMobileSettingsOpen(true)}>
-                Details
+              <Button variant="outline" size="sm" onClick={openActionLogs}>
+                Action logs
               </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-6 px-6 py-6">
-        {loadError ? (
-          <Alert variant="destructive">
-            <AlertTitle>Unable to load form</AlertTitle>
-            <AlertDescription>{loadError}</AlertDescription>
-          </Alert>
-        ) : null}
-        {remoteUpdatePending ? (
-          <Alert>
-            <AlertTitle>Updated in another tab</AlertTitle>
-            <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span>New changes are available. Refresh to load the latest version.</span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => refreshForm({ allowUnsaved: true })}
+                className="gap-2"
+                onClick={openRuntimePreview}
+                disabled={!activeForm || isBusy}
               >
-                Refresh
+                <Eye className="h-4 w-4" />
+                Runtime preview
               </Button>
-            </AlertDescription>
-          </Alert>
-        ) : null}
-        {isLoading ? (
-          <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground shadow-soft">
-            Loading form builder...
-          </div>
-        ) : (
-          <FormCanvas
-            formTitle={formTitle}
-            formDescription={formDescription}
-            layoutMode={meta.settings.layoutMode}
-            stepTitles={meta.settings.stepTitles}
-            formSelected={selectedTarget?.type === "form"}
-            selectedFieldId={selectedFieldId}
-            fields={fields}
-            onSelectField={(id) => setSelectedTarget({ type: "field", id })}
-            onSelectForm={() => setSelectedTarget({ type: "form" })}
-            onRemoveField={handleRemoveField}
-          />
-        )}
+              <Button
+                variant="ghost"
+                onClick={() => handleSave()}
+                disabled={isBusy || !hasUnsavedChanges}
+              >
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button className="gap-1.5" onClick={handlePublish} disabled={isBusy || !activeForm}>
+                <Rocket className="size-4" />
+                Publish
+              </Button>
+              {/* Relocated mobile Sheet openers (were the deleted sticky bar) — the
+                  ONLY triggers for the retained mobile Sheets; EditorFrame left/right
+                  are lg-hidden so these are the sole mobile access to rail + inspector. */}
+              <div className="flex items-center gap-2 lg:hidden">
+                <Button variant="outline" size="sm" onClick={() => setMobileFieldsOpen(true)}>
+                  Fields
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setMobileSettingsOpen(true)}>
+                  Details
+                </Button>
+              </div>
+            </div>
+          }
+        />
+        <EditorFrame
+          title="Form builder"
+          actions={
+            <div className="flex items-center gap-1.5">
+              <Badge variant="outline">
+                {formTitle} · {meta.status}
+              </Badge>
+              <Button variant="ghost" size="icon-sm" disabled aria-label="Undo">
+                <Undo2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon-sm" disabled aria-label="Redo">
+                <Redo2 className="h-4 w-4" />
+              </Button>
+              <div className="ml-1 hidden items-center rounded-lg border border-border bg-card p-0.5 sm:flex">
+                <button
+                  type="button"
+                  aria-label="Desktop preview"
+                  aria-pressed={previewDevice === "desktop"}
+                  onClick={() => setPreviewDevice("desktop")}
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-md",
+                    previewDevice === "desktop"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <Monitor className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Mobile preview"
+                  aria-pressed={previewDevice === "mobile"}
+                  onClick={() => setPreviewDevice("mobile")}
+                  className={cn(
+                    "flex size-6 items-center justify-center rounded-md",
+                    previewDevice === "mobile"
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground"
+                  )}
+                >
+                  <Smartphone className="size-3.5" />
+                </button>
+              </div>
+            </div>
+          }
+          left={
+            <FieldLibrary
+              items={fieldLibraryItems}
+              onAddField={handleAddField}
+              selectedFieldType={selectedFieldType}
+            />
+          }
+          canvas={
+            <>
+              {loadError ? (
+                <Alert variant="destructive">
+                  <AlertTitle>Unable to load form</AlertTitle>
+                  <AlertDescription>{loadError}</AlertDescription>
+                </Alert>
+              ) : null}
+              {remoteUpdatePending ? (
+                <Alert>
+                  <AlertTitle>Updated in another tab</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span>New changes are available. Refresh to load the latest version.</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => refreshForm({ allowUnsaved: true })}
+                    >
+                      Refresh
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              {isLoading ? (
+                <div className="rounded-2xl border bg-card p-6 text-sm text-muted-foreground shadow-soft">
+                  Loading form builder...
+                </div>
+              ) : (
+                <FormCanvas
+                  formTitle={formTitle}
+                  formDescription={formDescription}
+                  layoutMode={meta.settings.layoutMode}
+                  stepTitles={meta.settings.stepTitles}
+                  formSelected={selectedTarget?.type === "form"}
+                  selectedFieldId={selectedFieldId}
+                  deviceWidth={previewDevice}
+                  theme={meta.settings.theme}
+                  fields={fields}
+                  onSelectField={(id) => setSelectedTarget({ type: "field", id })}
+                  onSelectForm={() => setSelectedTarget({ type: "form" })}
+                  onRemoveField={handleRemoveField}
+                />
+              )}
+            </>
+          }
+          right={
+            selectedTarget?.type === "form" ? (
+              renderFormInspector()
+            ) : (
+              <FieldSettingsPanel
+                field={selectedField}
+                allFields={fields}
+                onChange={handleFieldChange}
+                onSettingsChange={handleFieldSettingsChange}
+                onDuplicate={handleDuplicate}
+              />
+            )
+          }
+        />
       </div>
       {success ? (
         <div className="pointer-events-none fixed bottom-6 right-6 rounded-md border bg-background px-4 py-2 text-xs text-muted-foreground shadow">
@@ -882,33 +969,15 @@ export function FormBuilderPage() {
           <SheetDescription className="sr-only">
             Browse form fields and add new ones.
           </SheetDescription>
-          <div className="flex h-full flex-col overflow-y-auto">
-            <Tabs value={leftTab} onValueChange={setLeftTab} className="flex h-full flex-col">
-              <TabsList variant="line" className="border-b border-border px-4 pt-4">
-                <TabsTrigger value="fields">Fields</TabsTrigger>
-                <TabsTrigger value="library">Library</TabsTrigger>
-              </TabsList>
-              <TabsContent value="fields" className="flex-1">
-                <FieldListPanel
-                  fields={fieldListItems}
-                  selectedId={selectedFieldId}
-                  onSelect={(id) => {
-                    setSelectedTarget({ type: "field", id });
-                    setMobileFieldsOpen(false);
-                  }}
-                  onAdd={() => setLeftTab("library")}
-                />
-              </TabsContent>
-              <TabsContent value="library" className="flex-1">
-                <FieldLibrary
-                  items={fieldLibraryItems}
-                  onAddField={(item) => {
-                    handleAddField(item);
-                    setMobileFieldsOpen(false);
-                  }}
-                />
-              </TabsContent>
-            </Tabs>
+          <div className="flex h-full flex-col overflow-y-auto p-3">
+            <FieldLibrary
+              items={fieldLibraryItems}
+              selectedFieldType={selectedFieldType}
+              onAddField={(item) => {
+                handleAddField(item);
+                setMobileFieldsOpen(false);
+              }}
+            />
           </div>
         </SheetContent>
       </Sheet>
@@ -944,6 +1013,6 @@ export function FormBuilderPage() {
         hasUnsavedChanges={hasUnsavedChanges}
         onOpenLogs={openActionLogs}
       />
-    </EditorShell>
+    </AdminShell>
   );
 }

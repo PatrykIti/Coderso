@@ -1353,6 +1353,13 @@ const mapFormBindingToEmbedData = (
         layoutMode: binding.resolution.settings.layoutMode,
         saveProgress: binding.resolution.settings.saveProgress,
         stepTitles: binding.resolution.settings.stepTitles,
+        // TASK-516-06: present-only theme passthrough. `binding.resolution.settings`
+        // IS the full FormSettings (formRuntimeContract.ts:34) and carries `theme`
+        // after 516-01's normalizeFormSettings. Un-themed forms ⇒ spread is `{}` ⇒
+        // byte-identical to the pre-516 markup; themed forms reach the widget so the
+        // public embed can inherit the form theme (formEmbed reads it via
+        // `resolved.settings.theme`, not resolveFormTheme, to preserve present-only).
+        ...(binding.resolution.settings.theme ? { theme: binding.resolution.settings.theme } : {}),
       },
       fields: binding.resolution.fields,
       ...(binding.resolution.error ? { error: binding.resolution.error } : {}),

@@ -4621,6 +4621,7 @@ Permissions: `forms:read`, `forms:write`
 - `GET /forms/:id/submissions`
 - `POST /forms/:id/submissions` (public submit; mounted both through the
   admin API router and the public site request handler)
+- `POST /forms/:id/uploads` (public, nonce-gated file-field upload; TASK-516-07)
 - `GET /forms/:id/actions`
 - `PUT /forms/:id/actions`
 - `GET /forms/:id/action-runs`
@@ -4665,6 +4666,27 @@ Opcjonalne pola:
 - `settings.stepTitles`: nazwy krokow dla multi-step.
 - `settings.preset`: `custom|contact|lead_capture|service_intake`.
 - `settings.automationRetry`: polityka auto-retry dla akcji automatyzacji.
+- `settings.theme` (TASK-516-01): whole-form style/theme model stored in the
+  existing `forms.settings` **jsonb** (NO DDL). Present-only + reject-unknown:
+  each sub-record (`layout`/`surface`/`typography`/`input`/`submit`) is rebuilt
+  field-by-field, unknown keys are dropped, out-of-enum values are omitted, and a
+  no-theme form emits **no** `theme` key (the four base keys stay present because
+  `normalizeFormSettings` is a fully-defaulted normalizer). Color tokens
+  (`surface.background`/`borderColor`, `typography.titleColor`/`labelColor`/
+  `helperColor`, `input.background`/`borderColor`, `submit.background`/`textColor`)
+  run through the `resolveClearableCssColorValue` CSS-value policy at BOTH the
+  normalize (write) boundary and the render boundary; unsafe values
+  (`url(`/`expression(`/`javascript:`/`data:`/`;{}<>`) are dropped. Enum axes:
+  `layout.width` `sm|md|lg|xl|full`, `layout.align`/`buttonAlignment`
+  `left|center|right(|full)`, `layout.fieldGap` `sm|md|lg`, `layout.columns` `1|2`,
+  `surface.radius`/`input.radius`/`submit.radius` `none|sm|md|lg|xl`,
+  `surface.padding` `sm|md|lg|xl`, `surface.shadow` `none|soft|sm|md|lg`,
+  `surface.borderWidth` `none|sm|md`, `typography.titleSize` `sm|md|lg|xl`,
+  `typography.titleWeight` `normal|medium|semibold|bold`, `typography.fontFamily`
+  `display|inherit|sans|serif|mono`, `input.size` `sm|md|lg`. The form theme is
+  the render BASE across the builder canvas, the runtime preview, and the public
+  `form-embed` widget; a per-embed `FormEmbedStyle` token OVERRIDES the theme per
+  explicit key (form theme = base, embed wins per-token).
 
 `PUT /forms/:id/fields`
 
@@ -4693,6 +4715,13 @@ stay inside `settings`.
 Field settings use `formStep` for multi-step placement and `inputStep` for
 number/range/time input increments. Legacy `settings.step` is preserved as a
 non-destructive form-step adapter and is not interpreted as an input increment.
+
+The `file` field type (TASK-516-07) accepts per-field `settings.accept`
+(array of MIME tokens; `image/*` wildcards allowed), `settings.maxSizeMb`
+(clamped `1..100`), and `settings.multiple` (bool). It stores its submitted value
+as an **owned media ROW id** (or an array of ids when `multiple`), NOT raw bytes
+and NOT a client path/URL — see `POST /forms/:id/uploads` and the submission
+validation below.
 
 Known Forms errors are returned as machine-readable API errors:
 - `form_invalid` -> 400,
@@ -4752,6 +4781,40 @@ Przyklad odpowiedzi:
   }
 }
 ```
+
+`POST /forms/:id/uploads` (TASK-516-07)
+
+Public, nonce-gated upload endpoint for `file`-type fields. It does NOT require
+`media:write` — it reuses the form's OWN public submission access gate (same
+`submissionAccess` evaluator, the runtime-issued form nonce, `public_write`
+rate-limit bucket keyed by form id, and bot protection). Body is a multipart
+upload validated by `formAttachmentUploadSchema` (`additionalProperties:false`,
+required `fieldName` + `file`; optional `formNonce`/`captchaToken`):
+
+```
+POST /forms/:id/uploads  (multipart/form-data)
+  fieldName=resume
+  file=<binary>
+```
+
+The handler resolves `fieldName` to a `file`-type field on the form and enforces
+the field's `accept` (MIME allowlist, `image/*` wildcards) + `maxSizeMb` via
+`mediaService.uploadMedia` `constraints` (`allowedMime`/`maxSizeBytes`); anonymous
+public uploads additionally content-sniff the actual bytes (rejects spoofed/markup
+SVG). The uploaded row is tracked as a `"submission"` media usage. Response is a
+reference only:
+
+```json
+{ "id": "media-id", "url": "/media/...", "mimeType": "application/pdf", "size": 12345 }
+```
+
+Submission validation for a `file` field (`POST /forms/:id/submissions`) accepts
+only owned media row ids: `submissionService` structurally normalizes the value to
+an id/id-array, then `verifyFileReferences` re-resolves each id via `getMediaById`
+and rejects unknown/cross-origin ids, MIME outside `accept`, or size over
+`maxSizeMb` as `form_payload_invalid` (defence-in-depth even if the upload path was
+bypassed). Client-supplied filesystem paths or URLs are never trusted or
+dereferenced.
 
 `PUT /forms/:id/actions`
 

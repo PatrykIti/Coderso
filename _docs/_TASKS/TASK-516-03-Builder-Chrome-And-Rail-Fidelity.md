@@ -19,7 +19,7 @@ type lives in `core/services/forms/formSettings.ts`). 516-03 then imports both
 `FormFormTheme` and `FormStatus` **from `@/services/formsClient`**, consistent
 with the existing admin type boundary (`FormBuilderPage.tsx:42` already imports
 `FormSettings` from `@/services/formsClient`, never from the service module).
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 

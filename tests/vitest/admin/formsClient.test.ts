@@ -8,7 +8,9 @@ import {
   listForms,
   listFormsCached,
   retryFormActionRun,
+  updateForm,
   updateFormActions,
+  type FormFormTheme,
 } from "../../../core/admin/services/formsClient";
 import { resetCsrfToken } from "../../../core/admin/services/apiClient";
 import { cacheKeys } from "../../../core/admin/services/cachePolicy";
@@ -93,6 +95,78 @@ test("createForm uses CSRF and posts payload", async () => {
   }
 });
 
+test("updateForm preserves theme on the cached round-trip", async () => {
+  const originalFetch = globalThis.fetch;
+  const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+  const theme: FormFormTheme = {
+    layout: { width: "lg", columns: 2 },
+    surface: { radius: "xl", shadow: "soft" },
+    submit: { background: "#ff0000", radius: "xl" },
+  };
+
+  globalThis.fetch = async (input, init) => {
+    calls.push({ input, init });
+    const url = String(input);
+    if (url.endsWith("/auth/csrf")) {
+      return jsonResponse({ token: "csrf-token" });
+    }
+    return jsonResponse({
+      id: "form-theme",
+      name: "Themed",
+      slug: "themed",
+      status: "draft",
+      description: null,
+      successMessage: null,
+      successRedirectUrl: null,
+      submissionAccess: "public",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        preset: "custom",
+        automationRetry: {
+          enabled: false,
+          maxAttempts: 1,
+          baseDelayMs: 300,
+          maxDelayMs: 2000,
+        },
+        theme,
+      },
+      createdAt: "2026-07-04T00:00:00.000Z",
+      updatedAt: "2026-07-04T00:00:00.000Z",
+    });
+  };
+
+  try {
+    resetCsrfToken();
+    resetCaches();
+    const updated = await updateForm("form-theme", {
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        preset: "custom",
+        automationRetry: {
+          enabled: false,
+          maxAttempts: 1,
+          baseDelayMs: 300,
+          maxDelayMs: 2000,
+        },
+        theme,
+      },
+    });
+
+    // request body carries the normalized theme
+    const body = JSON.parse(calls[1]?.init?.body as string);
+    expect(body.settings.theme).toEqual(theme);
+    // returned record preserves the theme after re-normalization
+    expect(updated?.settings.theme).toEqual(theme);
+  } finally {
+    globalThis.fetch = originalFetch;
+    resetCaches();
+  }
+});
+
 test("listFormsCached reads from local storage", async () => {
   const originalFetch = globalThis.fetch;
   const originalLocal = (globalThis as { localStorage?: unknown }).localStorage;
@@ -133,10 +207,7 @@ test("listFormsCached reads from local storage", async () => {
         updatedAt: "2026-02-14T00:00:00.000Z",
       },
     ];
-    storage.setItem(
-      cacheKeys.formsList,
-      JSON.stringify({ value: cached, savedAt: Date.now() })
-    );
+    storage.setItem(cacheKeys.formsList, JSON.stringify({ value: cached, savedAt: Date.now() }));
 
     const result = await listFormsCached();
     expect(result).toEqual(cached);

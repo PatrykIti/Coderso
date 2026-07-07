@@ -254,6 +254,39 @@ co pozwala egzekwowac TTL bez dodatkowych kolumn w DB.
 - Sekrety storage (S3/Azure) przechowywane sa zaszyfrowane w DB.
 - Master key do szyfrowania: `MEDIA_SECRET_MASTER_KEY` (ENV, poza DB).
 
+### Form `file` field & public upload route (TASK-516-07)
+
+The `file` form-field type accepts values on the PUBLIC submission path, so it is
+validated as an **owned media reference**, never as a free path/URL/bytes:
+
+- `POST /forms/:id/uploads` is public but reuses the form's OWN submission access
+  gate — same `submissionAccess` evaluator, the runtime-issued HMAC form nonce,
+  the `public_write` rate-limit bucket keyed by form id, and bot protection. It
+  does NOT grant `media:write`. Anonymous uploads content-sniff the actual bytes
+  (reject spoofed/markup SVG). Per-field `accept` (MIME allowlist, `image/*`
+  wildcards via the shared `mimeMatchesAccept` leaf) and `maxSizeMb` (clamped
+  `1..100`) are enforced in `mediaService.uploadMedia` via a `constraints` param.
+- The submitted value is stored/accepted only as a media ROW id (or id array for
+  `multiple`). `submissionService` normalizes the value to an id/array, then the
+  DB-backed backstop `verifyFileReferences` re-resolves each id via `getMediaById`
+  and rejects unknown/cross-origin ids, wrong MIME, or oversize as
+  `form_payload_invalid` — defence-in-depth even if the upload path was bypassed.
+- Uploaded rows are tracked with a `"submission"` media-usage variant.
+
+### Form theme colors on the public render path (TASK-516-01)
+
+`forms.settings.theme` color tokens flow through `PATCH /forms/:id` into the
+PUBLIC `form-embed` inline `style`, so they are policy-checked at BOTH boundaries
+with `core/widgets/core/clearableStyle.ts` `resolveClearableCssColorValue`
+(allows hex / `var(--color-*)` / bounded `rgb[a]`/`hsl[a]` / `transparent`/
+`currentColor`/`inherit`; rejects `url(`/`expression(`/`javascript:`/`data:`/
+`;{}<>`): (1) at the normalize/write boundary in `normalizeFormTheme` (unsafe →
+key dropped, never persisted), and (2) at the render boundary in `resolveFormTheme`
++ the `formEmbed`/runtime-preview paths (defence-in-depth) before any color reaches
+an inline style. Enum tokens are validated against the fixed unions in
+`formTheme.ts`/`formSettings.ts`; unknown enum values and unknown keys are dropped
+(reject-unknown, present-only emission).
+
 ### Master key (storage secrets)
 
 `MEDIA_SECRET_MASTER_KEY` to klucz master do szyfrowania/odszyfrowywania sekretow

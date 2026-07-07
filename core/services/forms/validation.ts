@@ -21,6 +21,7 @@ export type FormFieldType =
   | "checkbox"
   | "textarea"
   | "phone"
+  | "file"
   | "date";
 
 export type FormFieldSettings = {
@@ -34,6 +35,9 @@ export type FormFieldSettings = {
   formStep?: number;
   inputStep?: number;
   step?: number;
+  accept?: string[];
+  maxSizeMb?: number;
+  multiple?: boolean;
   logic?: FormFieldLogic;
   style?: FormFieldStyle;
 };
@@ -71,8 +75,12 @@ const fieldTypes = new Set<FormFieldType>([
   "checkbox",
   "textarea",
   "phone",
+  "file",
   "date",
 ]);
+
+const MEDIA_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MIME_TOKEN_RE = /^[a-z0-9.+-]+\/[a-z0-9.*+-]+$/;
 
 const assertPlainObject = (value: unknown) =>
   Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -246,6 +254,34 @@ const normalizeSettings = (
     normalized.options = normalizeOptions(settings.options);
   }
 
+  if (type === "file") {
+    if (settings.accept !== undefined) {
+      if (!Array.isArray(settings.accept)) throw new Error("form_field_invalid");
+      const seen = new Set<string>();
+      const accept: string[] = [];
+      for (const entry of settings.accept) {
+        if (typeof entry !== "string") continue;
+        const token = entry.trim().toLowerCase();
+        if (!token || !MIME_TOKEN_RE.test(token) || seen.has(token)) continue;
+        seen.add(token);
+        accept.push(token);
+      }
+      if (accept.length > 0) normalized.accept = accept;
+    }
+    if (settings.maxSizeMb !== undefined) {
+      const parsed = normalizeOptionalFiniteNumber(settings.maxSizeMb);
+      if (parsed !== undefined) {
+        // Static sanity bound (1..100). The TRUE global cap is enforced at upload via
+        // uploadMedia (min(field, global)); the sync normalizer cannot read the async
+        // media getConfig cap.
+        normalized.maxSizeMb = Math.min(100, Math.max(1, Math.round(parsed)));
+      }
+    }
+    if (settings.multiple !== undefined) {
+      normalized.multiple = Boolean(settings.multiple);
+    }
+  }
+
   const logic = normalizeFormFieldLogic(settings.logic);
   if (logic) {
     normalized.logic = logic;
@@ -318,6 +354,41 @@ export function normalizeFormFields(fields: FormFieldInput[]): NormalizedFormFie
 
   return normalized;
 }
+
+type MediaRef = string | string[];
+
+const extractOneId = (entry: unknown): string | null => {
+  // Accept "<uuid>" OR { id: "<uuid>" } (the upload endpoint response shape).
+  const raw =
+    typeof entry === "object" && entry
+      ? normalizeString((entry as { id?: unknown }).id)
+      : normalizeString(entry);
+  return raw && MEDIA_ID_RE.test(raw) ? raw : null;
+};
+
+/**
+ * SYNC, STRUCTURAL ONLY (no DB). Discriminates an owned-media-ID reference from
+ * anything else. Does NOT accept raw bytes and — to avoid cross-origin/SSRF ambiguity
+ * — does NOT accept bare URLs: the canonical stored reference is the media ROW id (the
+ * upload route returns `{ id }`). Returns the normalized reference, or null for
+ * "present but malformed" / empty (the caller decides absent-vs-invalid).
+ */
+export const normalizeMediaReference = (
+  value: unknown,
+  settings: FormFieldSettings
+): MediaRef | null => {
+  if (settings.multiple === true) {
+    if (!Array.isArray(value)) return null; // present-but-malformed
+    const ids: string[] = [];
+    for (const entry of value) {
+      const id = extractOneId(entry);
+      if (!id) return null; // ANY bad entry ⇒ reject whole payload
+      ids.push(id);
+    }
+    return ids.length ? ids : null; // [] ⇒ null (caller maps to "no files chosen")
+  }
+  return extractOneId(value);
+};
 
 export function validateSubmissionPayload(payload: unknown, fields: NormalizedFormField[]) {
   if (!assertPlainObject(payload)) throw new Error("form_payload_invalid");
@@ -408,6 +479,22 @@ export function validateSubmissionPayload(payload: unknown, fields: NormalizedFo
           throw new Error("form_payload_invalid");
         }
         normalized[field.name] = text;
+        break;
+      }
+      case "file": {
+        const ref = normalizeMediaReference(value, field.settings);
+        if (!ref) {
+          // An empty array is the plausible client shape for "no files chosen" on a
+          // multiple-file field. The pre-switch guard only catches undefined/null/"",
+          // so [] reaches here and normalizes to null — treat that as "absent".
+          if (Array.isArray(value) && value.length === 0) {
+            if (field.required) throw new Error("form_payload_required");
+            break;
+          }
+          // Otherwise PRESENT-but-invalid must REJECT (mirrors the hidden strict-reject).
+          throw new Error("form_payload_invalid");
+        }
+        normalized[field.name] = ref; // owned media id(s) — never bytes
         break;
       }
       case "hidden": {

@@ -51,14 +51,25 @@ test("FieldLibrary renders items and forwards add callbacks", () => {
         { id: "checkbox", label: "Checkbox", icon: Icon as never, type: "checkbox" },
       ]}
       onAddField={onAddField}
+      selectedFieldType="number"
     />
   );
 
   try {
-    expect(view.container.textContent).toContain("Fields Library");
-    expect(view.container.textContent).toContain("Advanced Fields");
+    // Restyled to the shared EditorRailGroup/EditorRailItem chrome (516-03): the
+    // old "Fields Library" header and "Advanced Fields" button are gone; the rail
+    // is a single "Fields" group of typed items.
+    expect(view.container.textContent).toContain("Fields");
+    expect(view.container.textContent).not.toContain("Fields Library");
+    expect(view.container.textContent).not.toContain("Advanced Fields");
     expect(view.container.textContent).toContain("Number");
     expect(view.container.textContent).toContain("Hidden");
+
+    // selectedFieldType highlights the matching rail item (prototype `active`).
+    const activeButton = Array.from(view.container.querySelectorAll("button")).find(
+      (button) => button.getAttribute("data-active") === "true"
+    );
+    expect(activeButton?.textContent).toContain("Number");
 
     React.act(() => {
       Array.from(view.container.querySelectorAll("button"))

@@ -45,3 +45,123 @@ test("resolveStepTitle uses configured title first", () => {
   expect(resolveStepTitle(settings, 1)).toBe("Contact");
   expect(resolveStepTitle(settings, 3)).toBe("Step 3");
 });
+
+// ---------------------------------------------------------------------------
+// TASK-516-01: form theme normalize / reject-unknown / fail-soft / present-only
+// ---------------------------------------------------------------------------
+
+test("normalizeFormSettings round-trips a full theme (every new allowlisted key)", () => {
+  const theme = {
+    layout: {
+      width: "lg",
+      align: "left",
+      fieldGap: "lg",
+      columns: 2,
+      buttonAlignment: "full",
+    },
+    surface: {
+      card: false,
+      background: "#ffffff",
+      borderColor: "var(--color-border)",
+      borderWidth: "md",
+      radius: "xl",
+      padding: "xl",
+      shadow: "soft",
+    },
+    typography: {
+      titleSize: "xl",
+      titleWeight: "normal",
+      titleColor: "#111111",
+      labelColor: "rgb(10, 20, 30)",
+      helperColor: "hsl(210, 40%, 50%)",
+      fontFamily: "serif",
+    },
+    input: {
+      size: "lg",
+      radius: "xl",
+      borderColor: "#222222",
+      background: "#f5f5f5",
+      textColor: "#000000",
+    },
+    submit: {
+      background: "#ff0000",
+      textColor: "#ffffff",
+      radius: "xl",
+      fullWidth: false,
+      label: "Send it",
+    },
+  };
+
+  const out = normalizeFormSettings({ theme });
+  expect(out.theme).toEqual(theme);
+});
+
+test("normalizeFormSettings drops unknown theme keys (reject-unknown)", () => {
+  const out = normalizeFormSettings({
+    theme: { layout: { bogus: 1, width: "lg" }, junk: 2 },
+  });
+  expect(out.theme).toEqual({ layout: { width: "lg" } });
+  expect((out.theme as Record<string, unknown>).junk).toBeUndefined();
+});
+
+test("normalizeFormSettings omits bad enum/color VALUES (fail-soft)", () => {
+  const out = normalizeFormSettings({
+    theme: {
+      layout: { width: "huge", align: "center" },
+      surface: {
+        background: "url(x)",
+        borderColor: "expression(alert(1))",
+        radius: "md",
+      },
+    },
+  });
+  expect(out.theme).toEqual({
+    layout: { align: "center" },
+    surface: { radius: "md" },
+  });
+});
+
+test("normalizeFormSettings omits empty theme groups and emits no empty theme", () => {
+  const emptyGroup = normalizeFormSettings({ theme: { layout: { width: "nope" } } });
+  expect("theme" in emptyGroup).toBe(false);
+
+  const emptyTheme = normalizeFormSettings({ theme: {} });
+  expect("theme" in emptyTheme).toBe(false);
+});
+
+test("normalizeFormSettings is present-only: no-theme input emits no theme key", () => {
+  const noThemeInput = {
+    layoutMode: "single",
+    saveProgress: false,
+    stepTitles: [],
+    preset: "custom",
+    automationRetry: {
+      enabled: false,
+      maxAttempts: 1,
+      baseDelayMs: 300,
+      maxDelayMs: 2000,
+    },
+  };
+  const out = normalizeFormSettings(noThemeInput);
+  expect("theme" in out).toBe(false);
+  // base keys still present + correctly normalized
+  expect(out.layoutMode).toBe("single");
+  expect(out.preset).toBe("custom");
+});
+
+test("getDefaultFormSettings emits no theme key", () => {
+  const defaults = getDefaultFormSettings();
+  expect("theme" in defaults).toBe(false);
+  expect(defaults).toEqual({
+    layoutMode: "single",
+    saveProgress: false,
+    stepTitles: [],
+    preset: "custom",
+    automationRetry: {
+      enabled: false,
+      maxAttempts: 1,
+      baseDelayMs: 300,
+      maxDelayMs: 2000,
+    },
+  });
+});

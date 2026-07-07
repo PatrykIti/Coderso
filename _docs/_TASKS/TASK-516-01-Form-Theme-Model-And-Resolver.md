@@ -7,7 +7,7 @@
 **Category:** Services / Schema (JSON model) / Admin client
 **Estimated Effort:** Medium
 **Dependencies:** none — foundation. Rides the existing `PATCH /forms/:id` validated write path; `forms.settings` is `jsonb` (`schema.ts:1224`) so **no DDL**.
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 
