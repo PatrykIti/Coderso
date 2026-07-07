@@ -1,5 +1,6 @@
-import { and, desc, eq, inArray, isNotNull, max, ne, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, max, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "../../db/client";
+import { hashPassword } from "../auth/password";
 import {
   contentEntries,
   contentRevisions,
@@ -24,6 +25,7 @@ import {
 import { type ContentSchema, validateEntryData } from "./validation";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
+export type EntryVisibility = "public" | "private" | "password";
 export type EntryData = Record<string, unknown>;
 export type EntrySeo = {
   title?: string | null;
@@ -38,6 +40,8 @@ export type EntryDetail = {
   title: string;
   slug: string;
   status: EntryStatus;
+  visibility: EntryVisibility;
+  hasPassword: boolean;
   data: EntryData;
   tags: string[];
   taxonomy?: EntryTaxonomyAssignments;
@@ -75,6 +79,8 @@ export type UpdateEntryInput = {
 export type UpdateEntryMetadataInput = {
   status?: EntryStatus;
   scheduledAt?: Date | null;
+  visibility?: EntryVisibility;
+  accessPassword?: string | null; // plaintext in; hashed before store; null clears
   tags?: string[];
   taxonomy?: {
     categoryId?: string | null;
@@ -439,6 +445,8 @@ const entryListSelection = {
   title: contentEntries.title,
   slug: contentEntries.slug,
   status: contentEntries.status,
+  visibility: contentEntries.visibility,
+  hasPassword: sql<boolean>`${contentEntries.accessPassword} is not null`,
   tags: contentEntries.tags,
   data: contentEntries.data,
   publishedAt: contentEntries.publishedAt,
@@ -457,6 +465,8 @@ type EntryListSelectionRow = {
   title: string;
   slug: string;
   status: string;
+  visibility: string;
+  hasPassword: boolean;
   tags: unknown;
   data: unknown;
   publishedAt: Date | null;
@@ -474,6 +484,8 @@ const mapEntryListSelectionRow = (row: EntryListSelectionRow) => ({
   title: row.title,
   slug: row.slug,
   status: row.status as EntryStatus,
+  visibility: row.visibility as EntryVisibility,
+  hasPassword: row.hasPassword,
   tags: (row.tags ?? []) as string[],
   data: row.data as EntryData,
   publishedAt: row.publishedAt,
@@ -548,6 +560,8 @@ export async function listEntriesWithContentTypes(): Promise<EntryListItem[]> {
       title: contentEntries.title,
       slug: contentEntries.slug,
       status: contentEntries.status,
+      visibility: contentEntries.visibility,
+      hasPassword: sql<boolean>`${contentEntries.accessPassword} is not null`,
       tags: contentEntries.tags,
       data: contentEntries.data,
       publishedAt: contentEntries.publishedAt,
@@ -573,6 +587,8 @@ export async function listEntriesWithContentTypes(): Promise<EntryListItem[]> {
     title: row.title,
     slug: row.slug,
     status: row.status as EntryStatus,
+    visibility: row.visibility as EntryVisibility,
+    hasPassword: row.hasPassword,
     tags: (row.tags ?? []) as string[],
     data: row.data as EntryData,
     publishedAt: row.publishedAt,
@@ -608,6 +624,8 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
       title: contentEntries.title,
       slug: contentEntries.slug,
       status: contentEntries.status,
+      visibility: contentEntries.visibility,
+      hasPassword: sql<boolean>`${contentEntries.accessPassword} is not null`,
       tags: contentEntries.tags,
       data: contentEntries.data,
       publishedAt: contentEntries.publishedAt,
@@ -633,6 +651,8 @@ export async function getEntry(id: string): Promise<EntryDetail | null> {
     title: row.title,
     slug: row.slug,
     status: row.status as EntryStatus,
+    visibility: row.visibility as EntryVisibility,
+    hasPassword: row.hasPassword,
     tags: (row.tags ?? []) as string[],
     data: row.data as EntryData,
     publishedAt: row.publishedAt,
@@ -668,8 +688,27 @@ export async function deleteEntry(id: string) {
 }
 
 export async function getEntryBySlug(typeId: string, slug: string) {
+  // TASK-514-01: explicit WIDE projection — every content_entries column EXCEPT
+  // access_password (the hashed secret must never leave the server), plus the
+  // derived hasPassword flag. Callers read a broad field set (title/slug/status/
+  // data/id/publishedAt/…), so this projection preserves them all.
   const [row] = await db
-    .select()
+    .select({
+      id: contentEntries.id,
+      typeId: contentEntries.typeId,
+      authorId: contentEntries.authorId,
+      slug: contentEntries.slug,
+      title: contentEntries.title,
+      status: contentEntries.status,
+      visibility: contentEntries.visibility,
+      hasPassword: sql<boolean>`${contentEntries.accessPassword} is not null`,
+      tags: contentEntries.tags,
+      data: contentEntries.data,
+      publishedAt: contentEntries.publishedAt,
+      scheduledAt: contentEntries.scheduledAt,
+      createdAt: contentEntries.createdAt,
+      updatedAt: contentEntries.updatedAt,
+    })
     .from(contentEntries)
     .where(and(eq(contentEntries.typeId, typeId), eq(contentEntries.slug, slug)));
   return row ?? null;
@@ -684,6 +723,11 @@ export async function createEntry(typeId: string, input: CreateEntryInput) {
   await validateRelationEntries(contentType.schema as ContentSchema, input.data, db);
   await validateMediaAssets(contentType.schema as ContentSchema, input.data, db);
 
+  // TASK-514-01: visibility relies on the DDL default ('public'); the create
+  // drawer does not send it. Route the return through the narrowed getEntry
+  // (mirrors duplicateEntry) so the create response carries visibility +
+  // hasPassword and NEVER access_password (the create route returns this row
+  // directly to the client).
   const [row] = await db
     .insert(contentEntries)
     .values({
@@ -694,9 +738,12 @@ export async function createEntry(typeId: string, input: CreateEntryInput) {
       status: "draft",
       data: input.data,
     })
-    .returning();
+    .returning({ id: contentEntries.id });
 
-  return row ?? null;
+  if (!row) throw new Error("entry_create_failed");
+  const detail = await getEntry(row.id);
+  if (!detail) throw new Error("entry_create_failed");
+  return detail;
 }
 
 export async function duplicateEntry(entryId: string, actorId?: string | null) {
@@ -722,6 +769,11 @@ export async function duplicateEntry(entryId: string, actorId?: string | null) {
           title: nextTitle,
           slug: nextSlug,
           status: "draft",
+          // TASK-514-01: copy visibility but NEVER copy the access password hash.
+          // If the source was password-gated, downgrade the copy to 'private' so
+          // it is never silently public and never left password-gated without a
+          // password (access_password stays null → hasPassword:false).
+          visibility: source.visibility === "password" ? "private" : source.visibility,
           tags: source.tags,
           data: source.data,
           publishedAt: null,
@@ -836,7 +888,16 @@ export async function publishEntry(entryId: string, userId: string) {
         updatedAt: new Date(),
       })
       .where(eq(contentEntries.id, entry.id))
-      .returning();
+      // TASK-514-01: narrow the returned shape to omit access_password.
+      .returning({
+        id: contentEntries.id,
+        typeId: contentEntries.typeId,
+        slug: contentEntries.slug,
+        status: contentEntries.status,
+        publishedAt: contentEntries.publishedAt,
+        scheduledAt: contentEntries.scheduledAt,
+        updatedAt: contentEntries.updatedAt,
+      });
 
     return updated ?? null;
   });
@@ -865,7 +926,16 @@ export async function unpublishEntry(entryId: string) {
       updatedAt: new Date(),
     })
     .where(eq(contentEntries.id, entryId))
-    .returning();
+    // TASK-514-01: narrow the returned shape to omit access_password.
+    .returning({
+      id: contentEntries.id,
+      typeId: contentEntries.typeId,
+      slug: contentEntries.slug,
+      status: contentEntries.status,
+      publishedAt: contentEntries.publishedAt,
+      scheduledAt: contentEntries.scheduledAt,
+      updatedAt: contentEntries.updatedAt,
+    });
 
   if (row) {
     const contentType = await getContentType(row.typeId);
@@ -903,6 +973,13 @@ export async function updateEntryMetadata(
     }
   }
 
+  // TASK-514-01: reject password-gating with no password BEFORE the status
+  // side-effects below commit, so a combined {status, visibility} PATCH fails
+  // atomically (no publish/unpublish/status write leaks out on a rejected req).
+  if (input.visibility === "password" && !input.accessPassword && !entry.hasPassword) {
+    throw new Error("entry_password_required");
+  }
+
   if (input.status === "published" && entry.status !== "published") {
     if (!actorId) throw new Error("auth_required");
     await publishEntry(entry.id, actorId);
@@ -935,6 +1012,21 @@ export async function updateEntryMetadata(
   }
   if (input.status && input.status !== "scheduled") {
     metadataUpdate.scheduledAt = null;
+  }
+  // TASK-514-01: visibility + access-password hash write/clear (keyed on
+  // visibility, NOT accessPassword presence). Merged into the always-evaluated
+  // metadataUpdate accumulator so a visibility-only PATCH still writes.
+  if (input.visibility !== undefined) {
+    metadataUpdate.visibility = input.visibility;
+  }
+  if (input.visibility === "password") {
+    if (input.accessPassword) {
+      metadataUpdate.accessPassword = await hashPassword(input.accessPassword);
+    }
+    // else: existing hash guaranteed by the precondition above → keep it
+    // (accessPassword omitted from the update = unchanged).
+  } else if (input.visibility === "public" || input.visibility === "private") {
+    metadataUpdate.accessPassword = null; // clear the secret when not password-gated
   }
 
   if (Object.keys(metadataUpdate).length > 0) {

@@ -11,6 +11,7 @@ import {
   setSetting,
   setSettings,
 } from "../../../core/services/settings/settingsService";
+import { MAX_SITE_CACHE_TTL_SECONDS } from "../../../core/services/analytics/beaconTtl";
 
 const hasDb = Boolean(process.env.DATABASE_URL) && (await canConnect());
 const testIfDb = hasDb ? test : test.skip;
@@ -28,6 +29,7 @@ async function canConnect() {
 const cleanupKeys = [
   "site.name",
   "site.locale",
+  "site.timezone",
   "site.adminBaseUrl",
   "site.publicBaseUrl",
   "site.adminPath",
@@ -53,6 +55,8 @@ const cleanupKeys = [
   "assistant.llm.timeoutMs",
   "assistant.quotas.requestsPerMinute",
   "assistant.quotas.requestsPerDay",
+  "analytics.trackingEnabled",
+  "site.cacheTtlSeconds",
 ];
 
 afterAll(async () => {
@@ -145,6 +149,46 @@ testIfDb("enforces auth TTL bounds and setup boolean type", async () => {
   expect(await getSetting("auth.resetTtlMinutes")).toBe(1440);
   expect(await getSetting("posts.editor.mode")).toBe("classic");
   expect(await getSetting("setup.completed")).toBe(true);
+});
+
+testIfDb("clamps site.cacheTtlSeconds to the beacon-nonce-safe upper bound", async () => {
+  // TASK-483 post-audit MEDIUM: the site HTML cache stores the per-render beacon
+  // nonce, so the cache TTL must never exceed the nonce lifetime. Values above
+  // MAX_SITE_CACHE_TTL_SECONDS (and negatives) are rejected.
+  await expect(setSetting("site.cacheTtlSeconds", -1)).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("site.cacheTtlSeconds", MAX_SITE_CACHE_TTL_SECONDS + 1)).rejects.toThrow(
+    "settings_value_invalid"
+  );
+
+  await setSetting("site.cacheTtlSeconds", MAX_SITE_CACHE_TTL_SECONDS);
+  expect(await getSetting("site.cacheTtlSeconds")).toBe(MAX_SITE_CACHE_TTL_SECONDS);
+  await setSetting("site.cacheTtlSeconds", 30);
+  expect(await getSetting("site.cacheTtlSeconds")).toBe(30);
+});
+
+testIfDb("site.timezone accepts IANA zones, rejects invalid values, defaults to UTC", async () => {
+  // Self-restoring on the shared remote DB: this test owns the key and the
+  // suite's afterAll deletes it (see cleanupKeys), so order across parallel
+  // streams does not matter.
+  await setSetting("site.timezone", "Europe/Warsaw");
+  expect(await getSetting("site.timezone")).toBe("Europe/Warsaw");
+  expect((await listSettings())["site.timezone"]).toBe("Europe/Warsaw");
+
+  // Whitespace is trimmed on write.
+  await setSetting("site.timezone", "  America/New_York  ");
+  expect(await getSetting("site.timezone")).toBe("America/New_York");
+
+  await expect(setSetting("site.timezone", "Mars/Phobos")).rejects.toThrow(
+    "settings_value_invalid"
+  );
+  await expect(setSetting("site.timezone", 42)).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("site.timezone", "")).rejects.toThrow("settings_value_invalid");
+  await expect(setSetting("site.timezone", null)).rejects.toThrow("settings_value_invalid");
+
+  // Default reported after delete (order-independent across parallel streams).
+  await deleteSetting("site.timezone");
+  expect(await getSetting("site.timezone")).toBe("UTC");
+  expect((await listSettings())["site.timezone"]).toBe("UTC");
 });
 
 testIfDb("rejects unknown key", async () => {
@@ -325,3 +369,30 @@ test("legacy assistant docs settings keys are no longer part of the active setti
     "settings_key_invalid"
   );
 });
+
+testIfDb(
+  "analytics.trackingEnabled round-trips and defaults to true (TASK-483-03-L02)",
+  async () => {
+    // Default (no row) is true — real analytics collect out of the box.
+    await deleteSetting("analytics.trackingEnabled");
+    expect(await getSetting("analytics.trackingEnabled")).toBe(true);
+
+    // Persist false and read it back.
+    await setSetting("analytics.trackingEnabled", false);
+    expect(await getSetting("analytics.trackingEnabled")).toBe(false);
+
+    // Flip back to true and confirm.
+    await setSetting("analytics.trackingEnabled", true);
+    expect(await getSetting("analytics.trackingEnabled")).toBe(true);
+
+    // Non-boolean values are rejected by the strict validator.
+    await expect(setSetting("analytics.trackingEnabled", "yes")).rejects.toThrow(
+      "settings_value_invalid"
+    );
+
+    // Restore default state (delete → default true) for the shared remote DB.
+    await deleteSetting("analytics.trackingEnabled");
+    expect(await getSetting("analytics.trackingEnabled")).toBe(true);
+  },
+  dbTestTimeoutMs
+);

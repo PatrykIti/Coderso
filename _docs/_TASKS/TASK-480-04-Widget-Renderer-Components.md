@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-480-02 (widget schema + domain contract types + the per-widget `DashboardWidgetData` union) · TASK-479-06-L02 (shared pattern library: `SectionCard`, `StatCard`, `charts`, `StatusBadge`, `EmptyState`, `DataTable`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Task:** TASK-480
 
 ---
@@ -32,8 +33,11 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
 - **Goal:** Given a validated `DashboardWidget` and its `DashboardWidgetData`,
   render the correct token-styled panel with first-class loading / empty / error
   states, so the layout/builder (TASK-480-05) only has to place hosts in a grid.
-- **Owning module/service:** `core/admin/ui/dashboard/widgets/`
-  (`registry.tsx`, `DashboardWidgetHost.tsx`, `renderers/*`).
+- **Owning module/service (as-built, flat — no `widgets/` subdir):**
+  `core/admin/ui/dashboard/widgetRegistry.ts` (registry + catalog),
+  `core/admin/ui/dashboard/widgetRenderers.tsx` (the 9 renderers +
+  `UnavailableWidget` + `WidgetRenderer` type), and
+  `core/admin/ui/dashboard/DashboardWidgetHost.tsx` (dispatch + edit chrome).
 - **Source-of-truth docs:**
   - `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by TASK-480-01-L02; this unit
     extends it with the "Renderer catalog & states" section).
@@ -79,9 +83,9 @@ from the shared pattern library), so a widget grid reads as one cohesive surface
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-480-04-L01 | Widget Renderer Registry + `DashboardWidgetHost` (loading/empty/error) | ⏳ To Do |
-| TASK-480-04-L02 | Core Widget Renderers (Stat, Chart, RecentActivity, ContentTypeCount, Storage, SiteHealth, QuickActions, ContentQuery) | ⏳ To Do |
-| TASK-480-04-L03 | Renderer & Registry Render-State Tests (Vitest) | ⏳ To Do |
+| TASK-480-04-L01 | Widget Renderer Registry + `DashboardWidgetHost` (loading/empty/error) | ✅ Done |
+| TASK-480-04-L02 | Core Widget Renderers (Stat, Chart, RecentActivity, ContentTypeCount, Storage, SiteHealth, QuickActions, ContentQuery) | ✅ Done |
+| TASK-480-04-L03 | Renderer & Registry Render-State Tests (Vitest) | ✅ Done |
 
 ---
 

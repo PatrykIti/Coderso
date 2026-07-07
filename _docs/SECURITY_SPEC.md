@@ -622,6 +622,35 @@ Rotacja klucza:
 - Payload do podpisu: `${timestamp}.${body}`.
 - Sekrety webhookow sa szyfrowane w DB (AES-256-GCM) z tym samym master key.
 
+## Backups (v1)
+
+- Wszystkie route backupow sa `internal` (`/admin/api/*`), cookie sesyjny admina;
+  reads wymagaja `backups:read`, writes (create/restore/prune/schedule) wymagaja
+  `backups:write` + `enforceCsrf` + bucket `admin_write`. Zaden nowy permission
+  nie jest wprowadzany.
+- Scheduler (`core/server/jobs/backupScheduler.ts`) dziala jako **system actor**
+  bez requestu: brak CSRF (nie jest request-driven), a jego zapisy audytowane sa
+  z `actorId: null` i `metadata.source: "scheduler"`. Jest opt-in poza produkcja
+  (`BACKUP_SCHEDULER_ENABLED`) i single-flight (in-process flag + Postgres
+  advisory lock), zeby wiele instancji na wspoldzielonej DB nie odpalalo backupow
+  rownolegle.
+- Restore jest **destrukcyjny** i confirmation-gated: wymaga `{ "confirm": true }`
+  (strict schema, `confirm: false`/brak/unknown keys → 400) zarowno na route jak
+  i w serwisie. Artefakt jest strict-parsowany fail-closed (walidacja
+  `version: 1`, reject unknown top-level keys) **przed** jakimkolwiek zapisem,
+  a caly restore idzie w jednej `db.transaction` (all-or-nothing, wspoldzieli
+  `importConfigTx`). Sekrety pozostaja zaszyfrowane bo restore ustawien idzie
+  przez seam `importConfig`.
+- Sekrety/PII: artefakty backupu **nigdy** nie zawieraja credentiali storage
+  (czytane tylko przez `getStorageSettingsInternal()`); `artifactPath` jest
+  redagowany do klientow, a `artifactKey` (klucz obiektu remote) jest
+  server-internal i zwracany jako `null`. Bledy uploadu remote sa zawijane do
+  `backup_upload_failed` — surowy tekst bledu adaptera/credentiale nigdy nie
+  trafiaja do pol widocznych dla klienta ani do logow (`sanitizeBackupError`
+  usuwa sciezki cwd + backup-dir).
+- Backupy pozostaja **non-LLM-executable** (patrz nota wyzej: settings/users/
+  roles/backups/... nie sa wykonywalne z LLM Guide bez typed contract).
+
 ## Audit logs (v1.0)
 
 - Logowanie zdarzen admin: login, publish, plugin install, settings update.
@@ -666,6 +695,37 @@ Rotacja klucza:
 - Ustawienie kontroluje waznosc tokenu resetu hasla.
 - Fallback: gdy key jest brakujacy/niepoprawny, runtime uzywa domyslnego `60` minut.
 
+## Pre-auth first-run installer (v1.2)
+
+Model zagrozen dla jedynego session-less endpointu, ktory potrafi utworzyc konto
+uprzywilejowane (`POST /auth/install/admin`, Faza 1 onboardingu, TASK-482).
+
+- **Brak CSRF przez brak sesji.** Endpoint jest z definicji session-less, wiec
+  `enforceCsrf` (`core/server/middleware/csrf.ts`) pomija go celowo: SAFE_METHODS
+  i kazde zadanie bez `ctx.sessionId` sa skipowane (`if (!ctx.sessionId)
+  return;`). Wyjatek CSRF jest scisle ograniczony do tej jednej sciezki — kazda
+  sesyjna mutacja nadal wymaga poprawnego tokenu.
+- **Boundary = no-users gate.** Jedyna granica autoryzacji jest fail-closed
+  precondycja „zero userow”, sprawdzana tanio przed transakcja i ponownie
+  wewnatrz transakcji (TOCTOU re-check) pod `pg_advisory_xact_lock`. Lock
+  serializuje rownolegle installery, wiec `count(*)` re-check pod READ COMMITTED
+  jest autorytatywny; unique index na email to defence-in-depth. Powtorka →
+  `install_unavailable` (409).
+- **Rate-limit.** Sciezka `/auth/install/*` mapuje sie na bucket `auth`
+  (prefix `/auth`); burst jest throttlowany jak login. Identyfikatorem NIE jest
+  email z body (installer jest wykluczony z `identifierFromBody` w
+  `httpServer.ts`), tylko IP — zeby nieznane konto nie sterowalo bucketem.
+- **Strong password + strict schema.** `installAdminSchema` jest strict
+  (reject-unknown), haslo `minLength 8`; walidacja przed jakimkolwiek zapisem.
+- **Audit trail.** Sukces → `auth.install.admin.created` (actor = nowy admin,
+  metadata email przez PII redaction seam). Zablokowana proba post-setup →
+  `auth.install.blocked` (actorId `null`). `GET /auth/install/status` nie
+  audytuje.
+- **Self-disable.** Endpoint trwale przestaje dzialac, gdy istnieje jakikolwiek
+  user (installer- lub seed-utworzony) lub gdy install-lock jest ustawiony.
+- **Brak wycieku sekretow.** Odpowiedz zwraca tylko `{ id, email, name }` — nigdy
+  `passwordHash`, `roleId`, tokenow ani cookie.
+
 ## Login alerts (v1.0)
 
 - Konfigurowalne w Admin UI: Settings → Security → Login Alerts.
@@ -694,3 +754,40 @@ Rotacja klucza:
   - Env: `PLUGIN_ERROR_THRESHOLD` (domyslnie 3).
 - Watchdog/timeouts dla hookow i renderowania server-side.
   - Env: `PLUGIN_TIMEOUT_MS` (domyslnie 5000ms).
+
+## Web analytics (v1)
+
+- Public surfaces: `POST /_analytics/collect` (public-write beacon ingestion,
+  TASK-483-02) and the front-end tracking snippet injected on live published
+  renders (TASK-483-03). No secrets or PII are embedded in the snippet; the
+  client sends only `path`, host-only `referrer`, and `navigator.language`.
+- Anti-abuse: the beacon carries a per-render HMAC nonce
+  (`createBeaconNonce()` / `assertBeaconNonce()`) plus the `public_write` rate
+  limit and server-side bot/DNT classification. The beacon action is EXEMPT from
+  `enforceBotProtection` — a token-less beacon would otherwise 400 whenever bot
+  protection is enabled and kill the pipeline.
+- DNT / consent: the snippet short-circuits client-side on Do-Not-Track / GPC
+  before any network call; the server also honors DNT. When
+  `analytics.trackingEnabled` is `false` the snippet is not injected at all.
+- Preview exclusion: the snippet is never injected on admin preview renders, so
+  preview traffic never pollutes the analytics tables.
+- Secrets: the HMAC nonce is keyed by `ANALYTICS_BEACON_NONCE_SECRET`; the
+  visitor identity hash is keyed by `ANALYTICS_IP_HASH_SECRET`. Neither secret is
+  ever sent to the browser, logged, or embedded in the snippet.
+- PII posture: no raw IP, no User-Agent, and no full referrer URL is ever
+  persisted. Visitor identity is a salted, non-reversible daily hash —
+  `HMAC-SHA256(ANALYTICS_IP_HASH_SECRET, ip|ua|dailySalt)` — so the same visitor
+  is not correlatable across days and the raw inputs cannot be recovered; the
+  referrer is stored host-only.
+- Retention: raw pageview/session rows are pruned beyond a configurable window
+  (`ANALYTICS_RETENTION_DAYS`, default 365, clamped to [30, 1095]); deleting a
+  session cascades to its pageviews (FK `ON DELETE CASCADE`). The inline
+  post-ingestion prune can be disabled with `ANALYTICS_PRUNE_INLINE_DISABLED=1`
+  (test-safety seam for the shared remote DB — never enabled in production).
+- CSP compatibility: the tracking snippet ships as an inline `<script>` IIFE and
+  the codebase has NO per-render CSP nonce facility (CSP is a static
+  admin-configured string, `securitySettings.headers.csp`). An admin who sets a
+  custom `script-src` must allow `'unsafe-inline'` (or add the script hash) for
+  the inline snippet to run. When a strict CSP without `'unsafe-inline'` is
+  required, prefer the optional external-asset variant (`GET /_analytics/a.js`)
+  instead of the inline snippet.

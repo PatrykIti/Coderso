@@ -2,11 +2,7 @@ import { eq, inArray } from "drizzle-orm";
 
 import { db } from "../../db/client";
 import { settings } from "../../db/schema";
-import {
-  decryptSecret,
-  encryptSecret,
-  isEncryptedSecret,
-} from "../security/secretStore";
+import { decryptSecret, encryptSecret, isEncryptedSecret } from "../security/secretStore";
 import {
   mediaAccessDefaults,
   normalizeMediaDeliveryAccessMode,
@@ -37,6 +33,10 @@ export type StorageSettingsPublic = {
     key: { configured: boolean };
     connectionString: { configured: boolean };
   };
+  quota: {
+    totalBytes: number | null;
+    planLabel: string | null;
+  };
 };
 
 export type StorageSettingsInternal = {
@@ -60,6 +60,10 @@ export type StorageSettingsInternal = {
     account: string | null;
     key: string | null;
     connectionString: string | null;
+  };
+  quota: {
+    totalBytes: number | null;
+    planLabel: string | null;
   };
 };
 
@@ -85,6 +89,10 @@ export type StorageSettingsUpdate = {
     key?: string | null;
     connectionString?: string | null;
   };
+  quota?: {
+    totalBytes?: number | null;
+    planLabel?: string | null;
+  };
 };
 
 const STORAGE_KEYS = {
@@ -103,7 +111,11 @@ const STORAGE_KEYS = {
   azureAccount: "storage.azure.account",
   azureKey: "storage.azure.key",
   azureConnectionString: "storage.azure.connectionString",
+  quotaTotalBytes: "storage.quota.totalBytes",
+  quotaPlanLabel: "storage.quota.planLabel",
 } as const;
+
+const MAX_PLAN_LABEL_LEN = 60;
 
 const ALL_KEYS: string[] = Object.values(STORAGE_KEYS);
 
@@ -140,6 +152,19 @@ const normalizeNumber = (value: unknown) => {
     if (Number.isFinite(parsed)) return parsed;
   }
   throw new Error("storage_settings_invalid");
+};
+
+const normalizeQuotaTotalBytes = (value: unknown) => {
+  const normalized = normalizeNumber(value);
+  if (normalized === undefined || normalized === null) return normalized;
+  if (normalized < 0) throw new Error("storage_settings_invalid");
+  return normalized;
+};
+
+const normalizeQuotaPlanLabel = (value: unknown) => {
+  const normalized = normalizeString(value);
+  if (normalized === undefined || normalized === null) return normalized;
+  return normalized.slice(0, MAX_PLAN_LABEL_LEN);
 };
 
 const normalizeAllowedMime = (value: unknown) => {
@@ -180,14 +205,12 @@ const normalizeAllowedMimeList = (value: unknown) => {
   return [] as string[];
 };
 
-const getStringValue = (value: unknown) =>
-  typeof value === "string" ? value : null;
+const getStringValue = (value: unknown) => (typeof value === "string" ? value : null);
 
 const getNumberValue = (value: unknown) =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
-const hasSecretValue = (value: unknown) =>
-  typeof value === "string" || isEncryptedSecret(value);
+const hasSecretValue = (value: unknown) => typeof value === "string" || isEncryptedSecret(value);
 
 const resolveSecretValue = (value: unknown) => {
   if (typeof value === "string") return value;
@@ -238,10 +261,7 @@ const buildUpdatedAt = (rows: Array<{ updatedAt: Date }>) => {
 
 async function loadStorageRecords() {
   try {
-    const rows = await db
-      .select()
-      .from(settings)
-      .where(inArray(settings.key, ALL_KEYS));
+    const rows = await db.select().from(settings).where(inArray(settings.key, ALL_KEYS));
     const map = new Map(rows.map((row) => [row.key, row]));
     return { map, updatedAt: buildUpdatedAt(rows) };
   } catch (error) {
@@ -306,6 +326,10 @@ export async function getStorageSettings(): Promise<StorageSettingsPublic> {
         configured: hasSecretValue(map.get(STORAGE_KEYS.azureConnectionString)?.value),
       },
     },
+    quota: {
+      totalBytes: resolveNumberWithFallback(map.get(STORAGE_KEYS.quotaTotalBytes)?.value),
+      planLabel: resolveStringWithFallback(map.get(STORAGE_KEYS.quotaPlanLabel)?.value),
+    },
   };
 
   cachedPublic = payload;
@@ -327,28 +351,25 @@ export async function getStorageSettingsInternal(): Promise<StorageSettingsInter
     process.env.MEDIA_DIR ?? DEFAULT_LOCAL_DIR
   );
 
-  const maxSizeBytes = resolveMaxSizeWithFallback(
-    map.get(STORAGE_KEYS.maxSizeBytes)?.value
-  );
-  const allowedMime = resolveAllowedMimeWithFallback(
-    map.get(STORAGE_KEYS.allowedMime)?.value
-  );
+  const maxSizeBytes = resolveMaxSizeWithFallback(map.get(STORAGE_KEYS.maxSizeBytes)?.value);
+  const allowedMime = resolveAllowedMimeWithFallback(map.get(STORAGE_KEYS.allowedMime)?.value);
 
   const s3Config = {
     bucket: getStringValue(map.get(STORAGE_KEYS.s3Bucket)?.value) ?? process.env.S3_BUCKET ?? null,
     region: getStringValue(map.get(STORAGE_KEYS.s3Region)?.value) ?? process.env.S3_REGION ?? null,
-    endpoint: getStringValue(map.get(STORAGE_KEYS.s3Endpoint)?.value) ?? process.env.S3_ENDPOINT ?? null,
+    endpoint:
+      getStringValue(map.get(STORAGE_KEYS.s3Endpoint)?.value) ?? process.env.S3_ENDPOINT ?? null,
     accessKey:
       driver === "s3"
-        ? resolveSecretValue(map.get(STORAGE_KEYS.s3AccessKey)?.value) ??
+        ? (resolveSecretValue(map.get(STORAGE_KEYS.s3AccessKey)?.value) ??
           process.env.S3_ACCESS_KEY ??
-          null
+          null)
         : null,
     secretKey:
       driver === "s3"
-        ? resolveSecretValue(map.get(STORAGE_KEYS.s3SecretKey)?.value) ??
+        ? (resolveSecretValue(map.get(STORAGE_KEYS.s3SecretKey)?.value) ??
           process.env.S3_SECRET_KEY ??
-          null
+          null)
         : null,
   };
 
@@ -363,15 +384,15 @@ export async function getStorageSettingsInternal(): Promise<StorageSettingsInter
       null,
     key:
       driver === "azure"
-        ? resolveSecretValue(map.get(STORAGE_KEYS.azureKey)?.value) ??
+        ? (resolveSecretValue(map.get(STORAGE_KEYS.azureKey)?.value) ??
           process.env.AZURE_KEY ??
-          null
+          null)
         : null,
     connectionString:
       driver === "azure"
-        ? resolveSecretValue(map.get(STORAGE_KEYS.azureConnectionString)?.value) ??
+        ? (resolveSecretValue(map.get(STORAGE_KEYS.azureConnectionString)?.value) ??
           process.env.AZURE_STORAGE_CONNECTION_STRING ??
-          null
+          null)
         : null,
   };
 
@@ -389,6 +410,10 @@ export async function getStorageSettingsInternal(): Promise<StorageSettingsInter
     },
     s3: s3Config,
     azure: azureConfig,
+    quota: {
+      totalBytes: resolveNumberWithFallback(map.get(STORAGE_KEYS.quotaTotalBytes)?.value),
+      planLabel: resolveStringWithFallback(map.get(STORAGE_KEYS.quotaPlanLabel)?.value),
+    },
   };
 
   cachedInternal = payload;
@@ -402,9 +427,8 @@ export async function setStorageSettings(payload: StorageSettingsUpdate) {
   }
 
   const driver = normalizeDriver(payload.driver);
-  const localDir = payload.local?.dir !== undefined
-    ? normalizeString(payload.local?.dir)
-    : undefined;
+  const localDir =
+    payload.local?.dir !== undefined ? normalizeString(payload.local?.dir) : undefined;
   const publicBaseUrl = normalizeString(payload.publicBaseUrl);
   const maxSizeBytes = normalizeNumber(payload.maxSizeBytes);
   const allowedMime = normalizeAllowedMime(payload.allowedMime);
@@ -420,6 +444,9 @@ export async function setStorageSettings(payload: StorageSettingsUpdate) {
   const azureAccount = normalizeString(payload.azure?.account);
   const azureKey = normalizeSecret(payload.azure?.key);
   const azureConnectionString = normalizeSecret(payload.azure?.connectionString);
+
+  const quotaTotalBytes = normalizeQuotaTotalBytes(payload.quota?.totalBytes);
+  const quotaPlanLabel = normalizeQuotaPlanLabel(payload.quota?.planLabel);
 
   const toUpsert: Array<{ key: string; value: unknown }> = [];
   const toDelete: string[] = [];
@@ -445,26 +472,20 @@ export async function setStorageSettings(payload: StorageSettingsUpdate) {
   queueValue(STORAGE_KEYS.s3Endpoint, s3Endpoint);
 
   if (s3AccessKey !== undefined) {
-    queueValue(
-      STORAGE_KEYS.s3AccessKey,
-      s3AccessKey === null ? null : encryptSecret(s3AccessKey)
-    );
+    queueValue(STORAGE_KEYS.s3AccessKey, s3AccessKey === null ? null : encryptSecret(s3AccessKey));
   }
   if (s3SecretKey !== undefined) {
-    queueValue(
-      STORAGE_KEYS.s3SecretKey,
-      s3SecretKey === null ? null : encryptSecret(s3SecretKey)
-    );
+    queueValue(STORAGE_KEYS.s3SecretKey, s3SecretKey === null ? null : encryptSecret(s3SecretKey));
   }
+
+  queueValue(STORAGE_KEYS.quotaTotalBytes, quotaTotalBytes);
+  queueValue(STORAGE_KEYS.quotaPlanLabel, quotaPlanLabel);
 
   queueValue(STORAGE_KEYS.azureContainer, azureContainer);
   queueValue(STORAGE_KEYS.azureAccount, azureAccount);
 
   if (azureKey !== undefined) {
-    queueValue(
-      STORAGE_KEYS.azureKey,
-      azureKey === null ? null : encryptSecret(azureKey)
-    );
+    queueValue(STORAGE_KEYS.azureKey, azureKey === null ? null : encryptSecret(azureKey));
   }
   if (azureConnectionString !== undefined) {
     queueValue(
@@ -496,6 +517,28 @@ export async function setStorageSettings(payload: StorageSettingsUpdate) {
 
   resetStorageSettingsCache();
   return getStorageSettings();
+}
+
+export type QuotaCheck = { exceeded: boolean; over: number };
+
+/**
+ * Advisory quota math helper. `total` null/undefined = unlimited (never exceeded).
+ * Returns whether `used + incoming` exceeds `total` and by how many bytes.
+ * Display-only by default: callers (routes/UI) decide whether to enforce.
+ */
+export function checkQuota(
+  usedBytes: number,
+  incomingBytes: number,
+  total?: number | null
+): QuotaCheck {
+  const used = Number.isFinite(usedBytes) ? Math.max(0, usedBytes) : 0;
+  const incoming = Number.isFinite(incomingBytes) ? Math.max(0, incomingBytes) : 0;
+  if (total === null || total === undefined || !Number.isFinite(total) || total < 0) {
+    return { exceeded: false, over: 0 };
+  }
+  const projected = used + incoming;
+  const over = projected - total;
+  return { exceeded: over > 0, over: over > 0 ? over : 0 };
 }
 
 export async function getStorageSettingRecord(key: string) {

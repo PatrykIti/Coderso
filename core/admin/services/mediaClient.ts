@@ -16,6 +16,12 @@ export type MediaRecord = {
   alt?: string | null;
   title?: string | null;
   caption?: string | null;
+  folderId?: string | null;
+  tags?: string[];
+  focalX?: number | null;
+  focalY?: number | null;
+  description?: string | null;
+  credit?: string | null;
   createdAt: string;
   createdBy?: string | null;
 };
@@ -34,6 +40,25 @@ export type MediaUpdatePayload = {
   alt?: string | null;
   title?: string | null;
   caption?: string | null;
+  folderId?: string | null;
+  tags?: string[];
+  focalX?: number | null;
+  focalY?: number | null;
+  description?: string | null;
+  credit?: string | null;
+};
+
+/**
+ * Narrow upload-meta shape (the pre-extension `MediaUpdatePayload`). Upload bodies
+ * MUST NOT carry folder/tag/focal/etc — those are set via upload-first-then-PATCH
+ * (see 512-03 `mediaUploadSchema` is `additionalProperties:false`). Re-typing the
+ * upload entry points to this type makes `uploadMedia(file, { folderId })` a compile
+ * error (type-enforced, not convention).
+ */
+export type UploadMediaMeta = {
+  alt?: string | null;
+  title?: string | null;
+  caption?: string | null;
 };
 
 const clipboardMimeToExtension = (mimeType: string) => {
@@ -47,10 +72,7 @@ const clipboardMimeToExtension = (mimeType: string) => {
   return "png";
 };
 
-export const createClipboardImageFilename = (
-  mimeType: string,
-  now = new Date()
-) => {
+export const createClipboardImageFilename = (mimeType: string, now = new Date()) => {
   const iso = now.toISOString().replace(/[:.]/g, "-");
   const extension = clipboardMimeToExtension(mimeType);
   return `clipboard-image-${iso}.${extension}`;
@@ -89,7 +111,15 @@ const primeMediaCacheInternal = (items: MediaRecord[]) => {
 };
 
 const upsertCachedMedia = (item: MediaRecord) => {
-  const current = getCachedMedia() ?? [];
+  const current = getCachedMedia();
+  // If there is no valid cached list (unset or TTL-expired) do NOT seed a
+  // partial single-item cache: writing `[item]` would masquerade as the
+  // complete list and hide every other asset until the TTL lapses again
+  // (e.g. tagging/foldering one asset after the list cache expired collapsed
+  // the library to that one row). Mirror removeCachedMedia's guard and leave
+  // the cache empty — the update cache-event drives a forced refetch that
+  // rebuilds the full list including this mutation.
+  if (!current) return;
   const index = current.findIndex((media) => media.id === item.id);
   const next = [...current];
   if (index === -1) {
@@ -132,7 +162,7 @@ export async function listMediaCached(options?: { force?: boolean }) {
   return items;
 }
 
-export async function uploadMedia(file: File, meta?: MediaUpdatePayload) {
+export async function uploadMedia(file: File, meta?: UploadMediaMeta) {
   const formData = new FormData();
   formData.set("file", file, file.name);
   if (meta?.alt) formData.set("alt", meta.alt);
@@ -154,7 +184,7 @@ export async function uploadMedia(file: File, meta?: MediaUpdatePayload) {
   return result;
 }
 
-export async function uploadClipboardImage(file: File, meta?: MediaUpdatePayload) {
+export async function uploadClipboardImage(file: File, meta?: UploadMediaMeta) {
   const normalizedFile = normalizeClipboardImageFile(file);
   return uploadMedia(normalizedFile, meta);
 }
@@ -180,10 +210,9 @@ export async function getMediaUsage(id: string, options?: { limit?: number }) {
   const params = new URLSearchParams();
   if (options?.limit) params.set("limit", String(options.limit));
   const suffix = params.toString() ? `?${params.toString()}` : "";
-  return apiRequest<MediaUsageSummary[]>(
-    `/media/${encodeURIComponent(id)}/usage${suffix}`,
-    { method: "GET" }
-  );
+  return apiRequest<MediaUsageSummary[]>(`/media/${encodeURIComponent(id)}/usage${suffix}`, {
+    method: "GET",
+  });
 }
 
 export async function recoverMediaDimensions(id: string) {

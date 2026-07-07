@@ -1,3 +1,5 @@
+export type { MediaFolder } from "@/services/mediaFoldersClient";
+
 export type MediaKind = "image" | "document" | "audio" | "video";
 
 export type MediaItem = {
@@ -14,12 +16,24 @@ export type MediaItem = {
   title?: string | null;
   alt?: string | null;
   caption?: string | null;
+  folderId?: string | null;
+  tags?: string[];
+  focalX?: number | null;
+  focalY?: number | null;
+  description?: string | null;
+  credit?: string | null;
 };
 
 export type MediaMetaUpdate = {
   title?: string | null;
   alt?: string | null;
   caption?: string | null;
+  folderId?: string | null;
+  tags?: string[];
+  focalX?: number | null;
+  focalY?: number | null;
+  description?: string | null;
+  credit?: string | null;
 };
 
 export type MediaUsageItem = {

@@ -2,6 +2,19 @@
 
 This file maps admin UI surfaces to their implementation files and the cached API calls they rely on.
 
+## Dashboard
+- Configurable Dashboard
+  - UI: `core/admin/ui/dashboard/DashboardPage.tsx`,
+    `DashboardBuilder.tsx`, `DashboardWidgetHost.tsx`
+  - Cached APIs: `getDashboardLayoutCached`, `getCachedDashboardLayout`,
+    `getDashboardWidgetDataCached`, `getCachedDashboardWidgetData`
+  - Draft preview: `resolveDashboardWidgetData` / `previewDashboardWidgetData`
+    uses `POST /dashboard/widget-data` and is intentionally uncached
+  - Mutations: `saveDashboardLayout`, `resetDashboardLayout`
+  - Cache bus: `dashboard:layout`, `dashboard:widgetData`
+  - Permission gate: read/model data requires `content:read`; customize/save
+    controls require `dashboard:write`.
+
 ## Pages
 - Pages list
   - UI: `core/admin/ui/pages/PageListPage.tsx`
@@ -284,11 +297,19 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - Analytics
   - UI: `core/admin/ui/analytics/AnalyticsPage.tsx`
   - Cached APIs: `getOverviewCached`, `getCachedOverview`,
-    `getTopContentCached`, `getCachedTopContent`
+    `getTopContentCached`, `getCachedTopContent`,
+    `getTrafficOverviewCached`, `getCachedTrafficOverview`,
+    `getTopPagesCached`, `getCachedTopPages`
   - Cache keys: `analytics:overview:<rangeDays>`,
-    `analytics:topContent:<rangeDays>:<limit>:<type>`
+    `analytics:topContent:<rangeDays>:<limit>:<type>`,
+    `analytics:traffic:overview:<rangeDays>` (TTL `detail`),
+    `analytics:traffic:topPages:<rangeDays>:<limit>` (TTL `list`)
   - Hydration: selected range hydrates from cache when available and
-    background refreshes preserve the visible table/card state.
+    background refreshes preserve the visible table/card state. The real
+    traffic overview/Top Pages caches follow the same range-scoped read-only
+    pattern; the public ingestion beacon never invalidates admin caches.
+    `exportTopPages` (`/analytics/traffic/top-pages/export`) is a direct CSV
+    fetch and is not cached.
 - Backups
   - UI: `core/admin/ui/backups/BackupsPage.tsx`
   - Cached APIs: `listBackupsCached`, `getCachedBackups`,
@@ -398,7 +419,7 @@ This file maps admin UI surfaces to their implementation files and the cached AP
 - `/themes` -> `listAdminThemeTemplatesCached`, `listAdminThemeProfilesCached`
 - `/search` -> `listRecentSearchesCached`
 - `/seo` -> `listSeoCached`
-- `/analytics` -> `getOverviewCached`, `getTopContentCached`
+- `/analytics` -> `getOverviewCached`, `getTopContentCached`, `getTrafficOverviewCached`
 - `/backups` -> `listBackupsCached`, `getBackupScheduleCached`
 - `/tools/import-export` -> `listImportHistoryCached`
 - `/redirects` -> `listRedirectsCached`

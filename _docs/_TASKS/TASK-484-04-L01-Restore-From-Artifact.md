@@ -11,9 +11,9 @@ which today opens its **own** `db.transaction` at :401) by extracting a
 transaction-aware `importConfigTx(tx, bundle)` that reuses `setSettingsTx`, so the
 restore can share one outer `tx`. Reuses `resolveBackupDownload`
 (`backupService.ts` 375-397) as the artifact read seam.
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -143,12 +143,21 @@ export async function restoreBackup(id: string, input: BackupRestoreInput = {}):
 > same `tx`; ordering follows the existing FK graph. Media rows are restored as
 > **metadata** only — the artifact does not carry file bytes (note at
 > `backupService.ts` 256-260), and this must be stated in the response/docs.
+> Keep the tx-scoped body (`replaceSnapshotTables` + `importConfigTx`)
+> individually invokable with a caller-supplied `tx` — this is the **dry-run
+> seam** the regression tests use to exercise the restore inside a deliberately
+> rolled-back transaction (see the shared-DB pin in the test shape below).
 
 **Domain codes (add to `mapBackupError`, `backupRoutes.ts` 76-101):**
 `backup_restore_confirmation_required` → 400,
 `backup_restore_invalid_artifact` → 422,
-`backup_artifact_unreadable` → 502. Remove the `backup_restore_unsupported`
-branch (no longer thrown) or keep it mapped for back-compat with a comment.
+`backup_artifact_unreadable` → 502. **Keep** the existing
+`backup_restore_unsupported` branch (`backupRoutes.ts` :84-86) mapped for
+back-compat, with a comment that the service no longer throws it — do **not**
+remove it: the existing suite asserts this mapping
+(`tests/integration/routes/backups.test.ts` :148-151, "mapBackupError returns
+stable API errors" → 409), and keeping it is what lets L02's test edit stay
+strictly additive.
 
 **Data flow:** route (L02) → `restoreBackup(id, { confirm })` → read artifact →
 strict-parse → single outer `tx`: transactional replace + `importConfigTx(tx, …)`
@@ -157,11 +166,29 @@ strict-parse → single outer `tx`: transactional replace + `importConfigTx(tx, 
 **Error handling:** all failures throw machine-readable codes mapped at the route
 boundary; the transaction rolls back on any error (no partial restore).
 
-**Regression-test shape (Bun):** create a real backup, mutate/clear some rows,
-restore with `confirm: true`, assert tables match the artifact; `confirm` omitted
-→ `backup_restore_confirmation_required`; garbage / `version: 2` artifact →
-`backup_restore_invalid_artifact`; non-complete backup → `backup_not_ready`;
-mid-transaction failure leaves DB unchanged (rollback).
+**Regression-test shape (Bun):**
+
+> **Shared-DB pin (mandatory):** the Bun suite runs against the ONE shared
+> remote Postgres (`DATABASE_URL` in `.env`), used concurrently by TASK-482,
+> TASK-483 and the owner. Restore tests must **NEVER** restore over the shared
+> DB destructively. Wiping/clearing/truncating shared tables is **forbidden
+> outright** — `replaceSnapshotTables` delete+re-inserts EVERY snapshot table
+> (mirrors `buildDatabaseSnapshot`, `backupService.ts` 200-237), so a committed
+> real round-trip would destroy concurrent streams' data.
+
+- Round-trip via a **rollback-scoped dry-run seam**: expose the tx-scoped
+  restore body (e.g. `replaceSnapshotTables(tx, …)` + `importConfigTx(tx, …)`)
+  so a test can run it inside a deliberately **rolled-back** transaction —
+  assert in-tx state matches the artifact, then throw/rollback so nothing
+  commits — and/or restrict assertions to **fixture-scoped targets**: uniquely
+  scoped rows the test itself created, cleaned up per-row like the existing
+  `createdIds` pattern in `tests/unit/backups/backupService.test.ts`.
+- `confirm` omitted → `backup_restore_confirmation_required`; garbage /
+  `version: 2` artifact → `backup_restore_invalid_artifact`; non-complete backup
+  → `backup_not_ready` (all pre-write guards — safe to test directly, no
+  destructive path is reached).
+- Mid-transaction failure leaves DB unchanged (rollback) — exercised via the
+  same rolled-back-tx seam, never by committing a partial replace.
 
 ---
 
@@ -170,6 +197,9 @@ mid-transaction failure leaves DB unchanged (rollback).
 Bun lane (DB transaction). Load env: `set -a && source .env && set +a`.
 
 - `bun --cwd core lint` / `bun --cwd core lint:types`
-- `bun test tests/unit/backups` — round-trip restore, confirm gate, invalid
-  artifact, not-ready, rollback-on-failure. Assert `backup_restore_unsupported`
-  is no longer thrown.
+- `bun test tests/unit/backups` — round-trip restore **only via the
+  rollback-scoped seam / fixture-scoped targets** (shared-DB pin above — never a
+  committed wipe/replace of shared tables), confirm gate, invalid
+  artifact, not-ready, rollback-on-failure. Assert `restoreBackup` no longer
+  **throws** `backup_restore_unsupported` (the `mapBackupError` branch itself
+  stays, kept for back-compat — see Domain codes above).

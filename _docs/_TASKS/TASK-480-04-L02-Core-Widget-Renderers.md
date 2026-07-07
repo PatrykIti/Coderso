@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-480-04-L01 (registry + host) · TASK-480-02 (config + data union) · TASK-479-06-L02 (`StatCard`, `Charts`, `StatusBadge`, `DataTable`, `EmptyState`, `SectionCard`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-04
 
 ---

@@ -4,11 +4,19 @@ import {
   getTopContent,
   type TopContentType,
 } from "../../services/analytics/analyticsService";
+import {
+  exportTopPagesCsv,
+  getTopPages,
+  getTrafficOverview,
+} from "../../services/analytics/trafficAggregationService";
 import { ApiError } from "../errorHandler";
 import {
   overviewQuerySchema,
   topContentExportQuerySchema,
   topContentQuerySchema,
+  topPagesExportQuerySchema,
+  topPagesQuerySchema,
+  trafficOverviewQuerySchema,
 } from "../validation/analyticsSchemas";
 
 export type RouteContext = {
@@ -31,6 +39,39 @@ export type AnalyticsRouteDeps = {
   requirePermission: (permission: string) => RouteHandler;
   validate: (schema: unknown, payload: unknown) => void;
 };
+
+// Net-new shared mapper for the traffic-analytics stream (TASK-483). This leaf
+// (TASK-483-02-L02) lands it FIRST; the admin read routes in TASK-483-04-L03
+// EXTEND the same switch (adding the read-side `analytics_query_failed` case) by
+// importing and reusing it — they never redeclare it.
+//
+// Error convention (binding, two lanes exactly like forms/booking): (1)
+// beaconNonce.ts (analytics_nonce_*) and visitorIdentity.ts
+// (analytics_ip_hash_secret_missing) throw ApiError DIRECTLY and return via the
+// route's `instanceof ApiError` branch — they NEVER reach this mapper; (2) the
+// contract normalizers (analytics_beacon_invalid) and the repository
+// (analytics_persist_failed) throw plain Errors with machine-readable code
+// messages — ONLY those flow through here (mirroring mapBookingError in
+// bookingRoutes.ts, imported by publicBookingApi.ts).
+//
+// Unlike mapBookingError (which returns a NULLABLE ApiError), mapAnalyticsError
+// intentionally always returns a non-null ApiError, so its caller needs no null
+// branch.
+export function mapAnalyticsError(error: unknown): ApiError {
+  const code = (error as Error)?.message ?? "";
+  switch (code) {
+    // --- ingestion / write side (owned here, TASK-483-02-L02) ---
+    case "analytics_beacon_invalid":
+      return new ApiError(code, "Invalid analytics payload", 400);
+    case "analytics_persist_failed":
+      return new ApiError(code, "Analytics write failed", 500);
+    // --- read / aggregation side (extended by TASK-483-04-L03; listed for the full set) ---
+    case "analytics_query_failed":
+      return new ApiError(code, "Analytics query failed", 500);
+    default:
+      return new ApiError("internal_error", "Internal Server Error", 500);
+  }
+}
 
 const overviewQueryKeys = new Set(["rangeDays"]);
 const topContentQueryKeys = new Set(["limit", "rangeDays", "type"]);
@@ -55,6 +96,26 @@ const parseNumber = (query: Record<string, string | undefined>, key: string, fal
   }
   return parsed;
 };
+
+// analyticsRoutes.ts has no ambient error boundary (the existing
+// overview/top-content handlers return the service call directly), so this
+// module-local wrapper (TASK-483-04-L03) mirrors the repo-wide
+// withContentEntryErrors convention: RE-THROW ApiError unchanged (so
+// assertKnownQuery/validate's 400s pass through) and map plain Errors via the
+// shared mapAnalyticsError. Keeps handlers orchestration-only with map*Error at
+// the boundary.
+const withAnalyticsErrors = async <T>(fn: () => Promise<T>): Promise<T> => {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof ApiError) throw error; // validation 400s pass through
+    throw mapAnalyticsError(error); // plain Error -> mapped ApiError
+  }
+};
+
+const trafficOverviewQueryKeys = new Set(["rangeDays"]);
+const topPagesQueryKeys = new Set(["limit", "rangeDays"]);
+const topPagesExportQueryKeys = new Set(["limit", "rangeDays", "format"]);
 
 export function registerAnalyticsRoutes(router: Router, deps: AnalyticsRouteDeps) {
   const { requirePermission, validate } = deps;
@@ -101,4 +162,40 @@ export function registerAnalyticsRoutes(router: Router, deps: AnalyticsRouteDeps
       type: type === "page" || type === "entry" ? (type as TopContentType) : undefined,
     });
   });
+
+  router.get("/analytics/traffic/overview", requirePermission("content:read"), async (ctx) =>
+    withAnalyticsErrors(async () => {
+      assertKnownQuery(ctx.query, trafficOverviewQueryKeys);
+      const rangeDays = parseNumber(ctx.query, "rangeDays", 30);
+      validate(trafficOverviewQuerySchema, { rangeDays });
+      return getTrafficOverview({ rangeDays });
+    })
+  );
+
+  router.get("/analytics/traffic/top-pages", requirePermission("content:read"), async (ctx) =>
+    withAnalyticsErrors(async () => {
+      assertKnownQuery(ctx.query, topPagesQueryKeys);
+      const limit = parseNumber(ctx.query, "limit", 10);
+      const rangeDays = parseNumber(ctx.query, "rangeDays", 30);
+      validate(topPagesQuerySchema, { limit, rangeDays });
+      return getTopPages({ limit, rangeDays });
+    })
+  );
+
+  router.get(
+    "/analytics/traffic/top-pages/export",
+    requirePermission("content:read"),
+    async (ctx) =>
+      withAnalyticsErrors(async () => {
+        assertKnownQuery(ctx.query, topPagesExportQueryKeys);
+        const limit = parseNumber(ctx.query, "limit", 50);
+        const rangeDays = parseNumber(ctx.query, "rangeDays", 30);
+        validate(topPagesExportQuerySchema, {
+          limit,
+          rangeDays,
+          format: ctx.query.format ?? "csv",
+        });
+        return exportTopPagesCsv({ limit, rangeDays });
+      })
+  );
 }

@@ -5,6 +5,7 @@ import {
   timestamp,
   jsonb,
   integer,
+  real,
   boolean,
   primaryKey,
   uniqueIndex,
@@ -392,6 +393,23 @@ export const userSettings = pgTable(
   })
 );
 
+export const dashboardLayouts = pgTable(
+  "dashboard_layouts",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    schemaVersion: integer("schema_version").notNull().default(1),
+    layout: jsonb("layout").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+  },
+  (t) => ({
+    updatedAtIdx: index("dashboard_layouts_updated_at_idx").on(t.updatedAt),
+  })
+);
+
 export const assistantDocs = pgTable(
   "assistant_docs",
   {
@@ -532,6 +550,7 @@ export const backups = pgTable(
     kind: text("kind").notNull().default("manual"),
     storageDriver: text("storage_driver").notNull().default("local"),
     artifactPath: text("artifact_path"),
+    artifactKey: text("artifact_key"),
     sizeBytes: integer("size_bytes"),
     error: text("error"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -551,11 +570,14 @@ export const backupSchedules = pgTable(
     frequency: text("frequency").notNull().default("daily"),
     retentionDays: integer("retention_days").notNull().default(30),
     storageDriver: text("storage_driver").notNull().default("local"),
+    nextRunAt: timestamp("next_run_at"),
+    lastRunAt: timestamp("last_run_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (t) => ({
     frequencyIdx: index("backup_schedules_frequency_idx").on(t.frequency),
+    nextRunAtIdx: index("backup_schedules_next_run_at_idx").on(t.nextRunAt),
   })
 );
 
@@ -666,6 +688,7 @@ export const contentTypes = pgTable("content_types", {
   slug: text("slug").notNull().unique(),
   schema: jsonb("schema").notNull(),
   status: text("status").notNull().default("draft"),
+  config: jsonb("config").notNull().default({}),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -763,6 +786,11 @@ export const contentEntries = pgTable(
     slug: text("slug").notNull(),
     title: text("title").notNull(),
     status: text("status").notNull().default("draft"),
+    // TASK-514-01: entry visibility (prototype Publish card). 'public' default
+    // = legacy behavior byte-identical. accessPassword is a HASHED secret,
+    // never selected into any read map (see entryService).
+    visibility: text("visibility").notNull().default("public"), // public|private|password
+    accessPassword: text("access_password"), // hashed; null unless visibility='password'
     tags: jsonb("tags").$type<string[]>().notNull().default([]),
     data: jsonb("data").notNull(),
     publishedAt: timestamp("published_at"),
@@ -1097,22 +1125,54 @@ export const adminThemeProfiles = pgTable(
   })
 );
 
-export const media = pgTable("media", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  key: text("key").notNull(),
-  url: text("url").notNull(),
-  originalName: text("original_name"),
-  type: text("type").notNull(),
-  mimeType: text("mime_type").notNull(),
-  size: integer("size").notNull(),
-  width: integer("width"),
-  height: integer("height"),
-  alt: text("alt"),
-  title: text("title"),
-  caption: text("caption"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  createdBy: uuid("created_by").references(() => users.id),
-});
+export const mediaFolders = pgTable(
+  "media_folders",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+    parentId: uuid("parent_id").references((): AnyPgColumn => mediaFolders.id, {
+      onDelete: "set null",
+    }),
+    orderIndex: integer("order_index").notNull().default(0),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdBy: uuid("created_by").references(() => users.id),
+  },
+  (t) => ({
+    slugIdx: uniqueIndex("media_folders_slug_idx").on(t.slug),
+    parentIdx: index("media_folders_parent_idx").on(t.parentId),
+    parentOrderIdx: index("media_folders_parent_order_idx").on(t.parentId, t.orderIndex),
+  })
+);
+
+export const media = pgTable(
+  "media",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    key: text("key").notNull(),
+    url: text("url").notNull(),
+    originalName: text("original_name"),
+    type: text("type").notNull(),
+    mimeType: text("mime_type").notNull(),
+    size: integer("size").notNull(),
+    width: integer("width"),
+    height: integer("height"),
+    alt: text("alt"),
+    title: text("title"),
+    caption: text("caption"),
+    folderId: uuid("folder_id").references(() => mediaFolders.id, { onDelete: "set null" }),
+    tags: jsonb("tags").$type<string[]>().notNull().default([]),
+    focalX: real("focal_x"),
+    focalY: real("focal_y"),
+    description: text("description"),
+    credit: text("credit"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    createdBy: uuid("created_by").references(() => users.id),
+  },
+  (t) => ({
+    folderIdx: index("media_folder_idx").on(t.folderId),
+  })
+);
 
 export const menus = pgTable(
   "menus",
@@ -1601,5 +1661,49 @@ export const commerceProductCollections = pgTable(
     pk: primaryKey({ columns: [t.productId, t.collectionId] }),
     productIdx: index("commerce_product_collections_product_idx").on(t.productId),
     collectionIdx: index("commerce_product_collections_collection_idx").on(t.collectionId),
+  })
+);
+
+// Real traffic analytics (TASK-483-01-L02). Distinct from the content-inventory
+// analyticsService. No raw IP, no full referrer URL, no User-Agent is persisted:
+// visitor identity is a salted daily hash (TASK-483-02-L03); referrer is host-only.
+export const analyticsSessions = pgTable(
+  "analytics_sessions",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    visitorHash: text("visitor_hash").notNull(), // salted daily hash, NOT raw IP
+    sourceKind: text("source_kind").notNull(), // TrafficSourceKind
+    referrerHost: text("referrer_host"),
+    deviceClass: text("device_class").notNull(), // TrafficDeviceClass
+    lang: text("lang"),
+    entryPath: text("entry_path").notNull(),
+    exitPath: text("exit_path"),
+    pageviewCount: integer("pageview_count").notNull().default(1),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    lastSeenAt: timestamp("last_seen_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    startedAtIdx: index("analytics_sessions_started_at_idx").on(t.startedAt),
+    visitorIdx: index("analytics_sessions_visitor_idx").on(t.visitorHash),
+  })
+);
+
+export const analyticsPageviews = pgTable(
+  "analytics_pageviews",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    sessionId: uuid("session_id")
+      .notNull()
+      .references(() => analyticsSessions.id, { onDelete: "cascade" }),
+    path: text("path").notNull(),
+    referrerHost: text("referrer_host"),
+    sourceKind: text("source_kind").notNull(),
+    deviceClass: text("device_class").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    createdAtIdx: index("analytics_pageviews_created_at_idx").on(t.createdAt),
+    pathIdx: index("analytics_pageviews_path_idx").on(t.path),
+    sessionIdx: index("analytics_pageviews_session_idx").on(t.sessionId),
   })
 );

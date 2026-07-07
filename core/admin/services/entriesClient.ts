@@ -5,6 +5,8 @@ import { clearLocalCache, readLocalCache, writeLocalCache } from "@/utils/storag
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
 
+export type EntryVisibility = "public" | "private" | "password";
+
 export type EntryAuthor = {
   id: string;
   name: string | null;
@@ -17,6 +19,8 @@ export type EntrySummary = {
   title: string;
   slug: string;
   status: EntryStatus;
+  visibility: EntryVisibility;
+  hasPassword: boolean;
   data: Record<string, unknown>;
   tags?: string[];
   scheduledAt?: string | null;
@@ -68,6 +72,8 @@ export type EntryPayload = {
 
 export type EntryMetadataPayload = {
   status?: EntryStatus;
+  visibility?: EntryVisibility;
+  accessPassword?: string | null; // plaintext out; server hashes; null clears
   scheduledAt?: string | null;
   tags?: string[];
   taxonomy?: {
@@ -90,8 +96,7 @@ let cachedAllEntriesPromise: Promise<EntryListItem[]> | null = null;
 const cachedEntryDetails = new Map<string, Map<string, EntryDetail>>();
 
 const isEntryList = (value: unknown): value is EntrySummary[] => Array.isArray(value);
-const isEntryListItemList = (value: unknown): value is EntryListItem[] =>
-  Array.isArray(value);
+const isEntryListItemList = (value: unknown): value is EntryListItem[] => Array.isArray(value);
 const isEntryDetail = (value: unknown): value is EntryDetail =>
   Boolean(value && typeof value === "object");
 
@@ -101,6 +106,8 @@ const toEntrySummary = (entry: EntrySummary | EntryDetail): EntrySummary => ({
   title: entry.title,
   slug: entry.slug,
   status: entry.status,
+  visibility: entry.visibility,
+  hasPassword: entry.hasPassword,
   data: entry.data,
   tags: entry.tags,
   scheduledAt: entry.scheduledAt,
@@ -113,7 +120,7 @@ const toEntrySummary = (entry: EntrySummary | EntryDetail): EntrySummary => ({
 
 const toEntryDetail = (entry: EntrySummary | EntryDetail): EntryDetail => ({
   ...toEntrySummary(entry),
-  taxonomy: "taxonomy" in entry ? entry.taxonomy ?? null : null,
+  taxonomy: "taxonomy" in entry ? (entry.taxonomy ?? null) : null,
 });
 
 const readEntriesCache = (typeSlug: string) =>
@@ -173,7 +180,8 @@ const updateCachedEntryStatus = (typeSlug: string, id: string, status: EntryStat
       current.map((item) => (item.id === id ? { ...item, status } : item))
     );
   }
-  const cachedDetail = getCachedEntryDetailsMap(typeSlug).get(id) ?? readEntryDetailCache(typeSlug, id);
+  const cachedDetail =
+    getCachedEntryDetailsMap(typeSlug).get(id) ?? readEntryDetailCache(typeSlug, id);
   if (cachedDetail) {
     const detail = { ...cachedDetail, status };
     getCachedEntryDetailsMap(typeSlug).set(id, detail);
@@ -250,10 +258,7 @@ export async function listAllEntries() {
   });
 }
 
-export async function listEntriesCached(
-  typeSlug: string,
-  options?: { force?: boolean }
-) {
+export async function listEntriesCached(typeSlug: string, options?: { force?: boolean }) {
   if (!options?.force) {
     const cached = getCachedEntries(typeSlug);
     if (cached) return cached;
@@ -286,11 +291,7 @@ export async function getEntry(typeSlug: string, id: string) {
   });
 }
 
-export async function getEntryCached(
-  typeSlug: string,
-  id: string,
-  options?: { force?: boolean }
-) {
+export async function getEntryCached(typeSlug: string, id: string, options?: { force?: boolean }) {
   if (!options?.force) {
     const cachedDetail = getCachedEntryDetail(typeSlug, id);
     if (cachedDetail) return cachedDetail;
@@ -325,11 +326,7 @@ export async function createEntry(typeSlug: string, payload: EntryPayload) {
   return created;
 }
 
-export async function updateEntry(
-  typeSlug: string,
-  id: string,
-  payload: Partial<EntryPayload>
-) {
+export async function updateEntry(typeSlug: string, id: string, payload: Partial<EntryPayload>) {
   const updated = await apiRequest<EntryDetail>(
     `/content/${typeSlug}/entries/${id}`,
     {
@@ -399,11 +396,7 @@ export async function duplicateEntry(typeSlug: string, id: string) {
   return duplicated;
 }
 
-export async function previewEntry(
-  typeSlug: string,
-  id: string,
-  ttlMinutes?: number
-) {
+export async function previewEntry(typeSlug: string, id: string, ttlMinutes?: number) {
   return apiRequest<PreviewResponse>(
     `/content/${typeSlug}/entries/${id}/preview`,
     {

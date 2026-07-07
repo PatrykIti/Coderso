@@ -6,10 +6,9 @@
 **Category:** `dashboard` / `persistence-api`
 **Estimated Effort:** Large
 **Dependencies:** TASK-480-02 (widget/layout schema contract + data-source resolvers). This subtask owns the **layout repository, the internal admin API + cache**; it composes — does not redefine — the widget/layout schema + per-widget resolvers owned by 480-02. The layout-envelope schema itself is owned by 480-02 (`dashboardWidgetContract.ts`) and re-exported here, never re-declared.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
-
+**Completed:** 2026-07-05
 ---
 
 ## Overview
@@ -91,11 +90,11 @@ new DB table, so a real contract is required (per-leaf contracts refine this).
 
 | ID | File | Title | Status |
 |----|------|-------|--------|
-| 480-03-L01 | `TASK-480-03-L01-Layout-Storage-And-Migration.md` | Layout Storage & Migration | ⏳ To Do |
-| 480-03-L02 | `TASK-480-03-L02-Layout-Routes.md` | Layout Routes (GET/PUT) | ⏳ To Do |
-| 480-03-L03 | `TASK-480-03-L03-Widget-Data-Route.md` | Batched Widget-Data Route | ⏳ To Do |
-| 480-03-L04 | `TASK-480-03-L04-Cached-Client-And-CacheBus.md` | Cached Client & CacheBus | ⏳ To Do |
-| 480-03-L05 | `TASK-480-03-L05-Route-And-Security-Tests.md` | Route & Security Tests | ⏳ To Do |
+| 480-03-L01 | `TASK-480-03-L01-Layout-Storage-And-Migration.md` | Layout Storage & Migration | ✅ Done |
+| 480-03-L02 | `TASK-480-03-L02-Layout-Routes.md` | Layout Routes (GET/PUT) | ✅ Done |
+| 480-03-L03 | `TASK-480-03-L03-Widget-Data-Route.md` | Batched Widget-Data Route | ✅ Done |
+| 480-03-L04 | `TASK-480-03-L04-Cached-Client-And-CacheBus.md` | Cached Client & CacheBus | ✅ Done |
+| 480-03-L05 | `TASK-480-03-L05-Route-And-Security-Tests.md` | Route & Security Tests | ✅ Done |
 
 **Implementation order:** L01 (schema/storage) → L02 (layout routes) →
 L03 (widget-data route) → L04 (cached client/cacheBus) → L05 (route + security

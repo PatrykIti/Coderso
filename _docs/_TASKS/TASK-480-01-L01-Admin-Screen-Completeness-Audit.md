@@ -5,7 +5,8 @@
 **Category:** Admin UI / Discovery / Read-only audit
 **Estimated Effort:** Medium
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-01
 
 ---

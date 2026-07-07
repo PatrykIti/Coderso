@@ -112,10 +112,12 @@ test("schema builder renders rail palette + inspector chrome", () => {
   expect(html).toMatch(/fields/);
   expect(html).toContain("Field settings");
   expect(html).toContain("Add new field");
-  // Right-panel preview rail is preserved.
-  expect(html).toContain("Schema Preview");
-  // The prototype-only `date` field type must NOT be ported.
-  expect(html).not.toContain(">Date<");
+  // Schema JSON preview is opt-in behind a toolbar toggle (owner request), not a
+  // permanently docked side rail — the "Schema Preview" panel is absent by default.
+  expect(html).not.toContain("Schema Preview");
+  // TASK-513-02 ports the `date` + `slug` field types into the palette.
+  expect(html).toContain(">Date<");
+  expect(html).toContain(">Slug<");
 });
 
 test("schema builder canvas renders one node per real field with type text", async () => {

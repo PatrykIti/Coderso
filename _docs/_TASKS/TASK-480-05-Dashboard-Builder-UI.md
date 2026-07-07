@@ -5,9 +5,9 @@
 **Category:** Admin UI / Dashboard / Configurable Widgets
 **Estimated Effort:** Large
 **Dependencies:** TASK-480-03 (layout routes + cached dashboard-layout client + cache contract) · TASK-480-04 (`DashboardWidgetHost`, widget UI registry) — which transitively depend on TASK-480-02 (domain/service contract + schema + data sources) and TASK-480-01 (widget product spec)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
+**Completed:** 2026-07-05
 **Parent Task:** TASK-480
 
 ---
@@ -41,8 +41,11 @@ or the individual widget renderers / `DashboardWidgetHost`
   configure panel (schema-driven, with live preview), and a Save path that writes
   through the cached client without mount-force refetch loops or dirty-state
   overwrites.
-- **Owning module/service:** `core/admin/ui/dashboard/builder/*` (new) +
-  integration into `core/admin/ui/dashboard/DashboardPage.tsx`.
+- **Owning module/service (as-built, flat — no `builder/` subdir):**
+  `core/admin/ui/dashboard/DashboardBuilder.tsx` (builder + inline catalog +
+  inline config panel), `core/admin/ui/dashboard/dashboardLayoutArrange.ts` (pure
+  move/resize helpers), `core/admin/ui/dashboard/WidgetConfigForm.tsx` (schema-driven
+  controls) + integration into `core/admin/ui/dashboard/DashboardPage.tsx`.
 - **Source-of-truth docs:**
   - Product/widget spec: `_docs/DASHBOARD_WIDGETS_SPEC.md` (seeded by TASK-480-01-L02)
   - Layout contract: `core/services/dashboard/dashboardWidgetContract.ts`
@@ -51,9 +54,9 @@ or the individual widget renderers / `DashboardWidgetHost`
   - Cached client + keys: `core/admin/services/dashboardClient.ts`,
     `core/admin/services/cachePolicy.ts` (TASK-480-03); `_docs/ADMIN_CACHE.md`,
     `_docs/ADMIN_CACHE_MAP.md`
-  - Widget host + UI registry/catalog:
-    `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`,
-    `core/admin/ui/dashboard/widgets/registry.tsx` (`DASHBOARD_WIDGET_RENDERERS`
+  - Widget host + UI registry/catalog (as-built, flat paths):
+    `core/admin/ui/dashboard/DashboardWidgetHost.tsx`,
+    `core/admin/ui/dashboard/widgetRegistry.ts` (`DASHBOARD_WIDGET_RENDERERS`
     + `DASHBOARD_WIDGET_CATALOG`, TASK-480-04)
   - Floating-panel pattern: `_docs/_PROTOTYPE/src/components/patterns/CanvasEditor.tsx`,
     `_docs/PAGE_EDITOR_V2` floating-panel references; shared patterns from
@@ -105,9 +108,9 @@ Per-leaf Security Contracts restate the slice each leaf relies on.
 
 | ID | File | Title | Status |
 |----|------|-------|--------|
-| TASK-480-05-L01 | `TASK-480-05-L01-Widget-Grid-And-Edit-Mode.md` | Widget grid + Edit mode (arrange/resize, dirty-state, Save) | ⏳ To Do |
-| TASK-480-05-L02 | `TASK-480-05-L02-Add-Widget-Catalog-And-Configure-Panel.md` | Add-widget catalog + floating per-widget configure panel | ⏳ To Do |
-| TASK-480-05-L03 | `TASK-480-05-L03-Builder-Tests.md` | Builder Vitest ui-integration (add/remove/arrange/save → dirty/cache) | ⏳ To Do |
+| TASK-480-05-L01 | `TASK-480-05-L01-Widget-Grid-And-Edit-Mode.md` | Widget grid + Edit mode (arrange/resize, dirty-state, Save) | ✅ Done |
+| TASK-480-05-L02 | `TASK-480-05-L02-Add-Widget-Catalog-And-Configure-Panel.md` | Add-widget catalog + floating per-widget configure panel | ✅ Done |
+| TASK-480-05-L03 | `TASK-480-05-L03-Builder-Tests.md` | Builder Vitest ui-integration (add/remove/arrange/save → dirty/cache) | ✅ Done |
 
 ---
 

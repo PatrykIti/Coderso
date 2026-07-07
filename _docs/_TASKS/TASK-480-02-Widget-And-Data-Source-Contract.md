@@ -6,9 +6,9 @@
 **Category:** Admin / Dashboard / Domain Contract
 **Estimated Effort:** Medium
 **Dependencies:** None (this is the foundation subtask the layout-persistence, data API, and admin-UI subtasks build on)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-05
+**Completed:** 2026-07-05
 
 ---
 
@@ -78,9 +78,9 @@ permission model. It nonetheless encodes constraints the API subtask depends on:
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-480-02-L01 | Widget & Layout Types + Schema | ⏳ To Do |
-| TASK-480-02-L02 | Data-Source Registry & Service | ⏳ To Do |
-| TASK-480-02-L03 | Contract Tests (schema / normalize / legacy / resolvers) | ⏳ To Do |
+| TASK-480-02-L01 | Widget & Layout Types + Schema | ✅ Done |
+| TASK-480-02-L02 | Data-Source Registry & Service | ✅ Done |
+| TASK-480-02-L03 | Contract Tests (schema / normalize / legacy / resolvers) | ✅ Done |
 
 **Dependency order:** L01 (types + schema + normalize + legacy adapter) →
 L02 (registry + resolvers consume the L01 types) → L03 (tests cover both).

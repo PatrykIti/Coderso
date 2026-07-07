@@ -7,10 +7,9 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-03-L01..L04 (storage, layout routes, widget-data route,
 cached client).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
-
+**Completed:** 2026-07-05
 ---
 
 ## Overview

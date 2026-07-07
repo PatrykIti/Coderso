@@ -7,8 +7,8 @@ import { expect, test, vi } from "vitest";
 
 import { AnalyticsCharts } from "../../../core/admin/ui/analytics/AnalyticsCharts";
 import { KpiCards } from "../../../core/admin/ui/analytics/KpiCards";
-import { TopContentDrawer } from "../../../core/admin/ui/analytics/TopContentDrawer";
-import { TopContentTable } from "../../../core/admin/ui/analytics/TopContentTable";
+import { TopPagesDrawer } from "../../../core/admin/ui/analytics/TopPagesDrawer";
+import { TopPagesTable } from "../../../core/admin/ui/analytics/TopPagesTable";
 import { EntryFilters } from "../../../core/admin/ui/entries/EntryFilters";
 import { EntryGrid } from "../../../core/admin/ui/entries/EntryGrid";
 import { ApiKeySecretDialog } from "../../../core/admin/ui/settings/ApiKeySecretDialog";
@@ -264,7 +264,9 @@ const setSelectValue = (element: Element | null | undefined, value: string) => {
 };
 
 test("analytics leaf components render empty and populated states", () => {
-  const emptyHtml = renderToString(<AnalyticsCharts trend={[]} topPages={[]} />);
+  const emptyHtml = renderToString(
+    <AnalyticsCharts trend={[]} topPages={[]} sources={[]} devices={[]} referrers={[]} />
+  );
   const populatedHtml = renderToString(
     <>
       <AnalyticsCharts
@@ -272,54 +274,66 @@ test("analytics leaf components render empty and populated states", () => {
           { date: "Mar 1", value: 2 },
           { date: "Mar 7", value: 8 },
         ]}
-        topPages={[{ id: "page-1", path: "/pricing", score: 78 }]}
+        topPages={[{ path: "/pricing", views: 78, visitors: 40 }]}
+        sources={[{ key: "direct", label: "Direct", value: 30 }]}
+        devices={[{ key: "desktop", label: "Desktop", value: 50 }]}
+        referrers={[{ key: "example.com", label: "example.com", value: 12 }]}
       />
       <KpiCards
         items={[
           {
-            id: "publishedPages",
-            label: "Published pages",
+            id: "visitors",
+            label: "Unique Visitors",
             value: "24",
             change: "+12%",
             trend: "up",
           },
           {
-            id: "entries",
-            label: "Entries",
+            id: "pageviews",
+            label: "Pageviews",
             value: "16",
             change: "-3%",
             trend: "down",
           },
           {
-            id: "media",
-            label: "Media",
+            id: "sessions",
+            label: "Sessions",
             value: "128",
             change: "+8%",
             trend: "up",
+          },
+          {
+            id: "bounce",
+            label: "Bounce Rate",
+            value: "32%",
+            change: "-2%",
+            trend: "down",
           },
         ]}
       />
     </>
   );
 
-  expect(emptyHtml).toContain("No content activity yet. Publish content or widen the date range.");
+  expect(emptyHtml).toContain("No traffic data yet. Publish content or widen the date range.");
   expect(populatedHtml).toContain("Mar 1");
   expect(populatedHtml).toContain("Mar 7");
   expect(populatedHtml).toContain("/pricing");
-  expect(populatedHtml).toContain("78%");
-  expect(populatedHtml).toContain("score");
-  expect(populatedHtml).toContain("Published pages");
+  expect(populatedHtml).toContain("78");
+  expect(populatedHtml).toContain("views");
+  expect(populatedHtml).toContain("Direct");
+  expect(populatedHtml).toContain("Unique Visitors");
+  expect(populatedHtml).toContain("Bounce Rate");
   expect(populatedHtml).toContain("+12%");
   expect(populatedHtml).toContain("-3%");
 });
 
-test("top content components render rows and forward actions", async () => {
+test("top pages components render rows and forward actions", async () => {
   const onViewAll = vi.fn();
   const onOpenChange = vi.fn();
   const onExport = vi.fn(async () => ({
-    fileName: "analytics.csv",
+    fileName: "traffic.csv",
     contentType: "text/csv",
-    content: "type,title,slug,updatedAt,score",
+    content: "path,views,visitors",
   }));
   const originalCreateObjectUrl = URL.createObjectURL;
   const originalRevokeObjectUrl = URL.revokeObjectURL;
@@ -333,47 +347,29 @@ test("top content components render rows and forward actions", async () => {
   });
   const view = mount(
     <>
-      <TopContentTable
-        items={[
-          {
-            id: "item-1",
-            title: "Homepage",
-            path: "/",
-            score: 82,
-            updatedAt: "2026-03-06T12:00:00.000Z",
-            type: "page",
-          },
-        ]}
+      <TopPagesTable
+        items={[{ path: "/pricing", views: 82, visitors: 40 }]}
         onViewAll={onViewAll}
       />
-      <TopContentDrawer
+      <TopPagesDrawer
         open
         onOpenChange={onOpenChange}
         onExport={onExport}
-        items={[
-          {
-            id: "item-1",
-            title: "Homepage",
-            path: "/",
-            score: 82,
-            updatedAt: "2026-03-06T12:00:00.000Z",
-            type: "page",
-          },
-        ]}
+        items={[{ path: "/pricing", views: 82, visitors: 40 }]}
       />
     </>
   );
 
   try {
-    expect(view.container.textContent).toContain("Homepage");
+    expect(view.container.textContent).toContain("/pricing");
     expect(view.container.textContent).toContain("View all");
-    expect(view.container.textContent).toContain("Top Content");
+    expect(view.container.textContent).toContain("Top Pages");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));
     React.act(() => {
       buttons.find((button) => button.textContent?.includes("View all"))?.click();
       buttons
-        .find((button) => button.getAttribute("aria-label") === "Close top content drawer")
+        .find((button) => button.getAttribute("aria-label") === "Close top pages drawer")
         ?.click();
       buttons.find((button) => button.textContent === "Close")?.click();
     });
@@ -400,15 +396,15 @@ test("top content components render rows and forward actions", async () => {
   }
 });
 
-test("top content table and drawer render empty states", () => {
+test("top pages table and drawer render empty states", () => {
   const html = renderToString(
     <>
-      <TopContentTable items={[]} />
-      <TopContentDrawer
+      <TopPagesTable items={[]} />
+      <TopPagesDrawer
         open
         onOpenChange={() => undefined}
         onExport={async () => ({
-          fileName: "analytics.csv",
+          fileName: "traffic.csv",
           contentType: "text/csv",
           content: "",
         })}
@@ -417,7 +413,7 @@ test("top content table and drawer render empty states", () => {
     </>
   );
 
-  expect(html).toContain("No content activity yet. Publish content or widen the date range.");
+  expect(html).toContain("No page views yet. Publish content or widen the date range.");
   expect(html).toContain("No rows to export.");
 });
 
@@ -559,7 +555,6 @@ test("sessions table renders loading and empty fallbacks", () => {
 
 test("entry leaf components forward filter and entry actions", () => {
   const onSearchChange = vi.fn();
-  const onStatusChange = vi.fn();
   const onTypeChange = vi.fn();
   const onAuthorChange = vi.fn();
   const onUpdatedFromChange = vi.fn();
@@ -571,7 +566,6 @@ test("entry leaf components forward filter and entry actions", () => {
     <>
       <EntryFilters
         search="hero"
-        status="draft"
         typeValue="page"
         typeOptions={[
           { value: "page", label: "Page" },
@@ -582,8 +576,9 @@ test("entry leaf components forward filter and entry actions", () => {
         updatedFrom=""
         updatedTo=""
         advancedOpen={true}
+        view="list"
+        onViewChange={vi.fn()}
         onSearchChange={onSearchChange}
-        onStatusChange={onStatusChange}
         onTypeChange={onTypeChange}
         onAuthorChange={onAuthorChange}
         onUpdatedFromChange={onUpdatedFromChange}
@@ -599,7 +594,9 @@ test("entry leaf components forward filter and entry actions", () => {
             title: "Landing page",
             slug: "landing-page",
             status: "published",
+            visibility: "public",
             updatedAt: "2026-03-06T12:00:00.000Z",
+            contentType: { id: "ct-page", slug: "pages", name: "Page", status: "active" },
           } as never,
         ]}
         onEdit={onEdit}
@@ -611,10 +608,11 @@ test("entry leaf components forward filter and entry actions", () => {
             title: "Blog post",
             slug: "blog-post",
             status: "draft",
+            visibility: "public",
             updatedAt: "2026-03-06T12:00:00.000Z",
+            contentType: { id: "ct-post", slug: "posts", name: "Post", status: "active" },
           } as never,
         ]}
-        entryTypeSlug="posts"
         onEdit={onEdit}
       />
     </>
@@ -623,7 +621,9 @@ test("entry leaf components forward filter and entry actions", () => {
   try {
     expect(view.container.textContent).toContain("Nothing here");
     expect(view.container.textContent).toContain("Landing page");
-    expect(view.container.innerHTML).toContain("/entries/posts/entry-2");
+    // Cross-type soft badge text sourced from contentType.name (new EntryListItem contract).
+    expect(view.container.textContent).toContain("Page");
+    expect(view.container.textContent).toContain("Post");
 
     const input = view.container.querySelector("input");
     const selects = Array.from(view.container.querySelectorAll("select"));
@@ -631,19 +631,26 @@ test("entry leaf components forward filter and entry actions", () => {
 
     React.act(() => {
       setInputValue(input ?? undefined, "pricing");
-      setSelectValue(selects[0], "published");
-      setSelectValue(selects[1], "post");
-      setSelectValue(selects[2], "john");
+      // Status lives in the prototype-faithful StatusTabs, not EntryFilters;
+      // the filter bar now carries only type + author selects (type, author).
+      setSelectValue(selects[0], "post");
+      setSelectValue(selects[1], "john");
       buttons.find((button) => button.textContent?.includes("Clear"))?.click();
-      buttons.find((button) => button.className.includes("text-left"))?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Edit entry: Landing page")
+        ?.click();
+      buttons
+        .find((button) => button.getAttribute("aria-label") === "Edit entry: Blog post")
+        ?.click();
     });
 
     expect(onSearchChange).toHaveBeenCalledWith("pricing");
     expect(onTypeChange).toHaveBeenCalledWith("post");
-    expect(onStatusChange).toHaveBeenCalledWith("published");
     expect(onAuthorChange).toHaveBeenCalledWith("john");
     expect(onClear).toHaveBeenCalledOnce();
+    // Grid routes via onEdit(id) now — the AdminLink /entries/<slug>/<id> href is gone.
     expect(onEdit).toHaveBeenCalledWith("entry-1");
+    expect(onEdit).toHaveBeenCalledWith("entry-2");
   } finally {
     view.cleanup();
   }

@@ -299,7 +299,7 @@ Storage:
 - widget settings w `pages.current_data`
 
 Global settings (v1):
-- `site.name`, `site.locale`
+- `site.name`, `site.locale`, `site.timezone`
 - `site.publicBaseUrl`
 - `auth.sessionTtlDays`, `auth.resetTtlMinutes`
 - `setup.completed`
@@ -307,12 +307,33 @@ Global settings (v1):
 
 ### First-run setup lifecycle
 
-- Po pierwszym logowaniu (gdy `setup.completed=false`) Admin App renderuje Setup Wizard.
-- Wizard zbiera minimalny zestaw runtime/security:
-  - `site.name`, `site.locale`, `site.publicBaseUrl`
-  - `auth.sessionTtlDays`, `auth.resetTtlMinutes`
-- Submit wykonuje jeden bulk `PATCH /settings` i ustawia `setup.completed=true`.
-- Po sukcesie wizard znika i nie jest ponownie pokazywany (stan z DB).
+Dwufazowy onboarding (TASK-482): swiezy operator przechodzi od pustej DB do
+skonfigurowanej, zaseedowanej contentem strony bez dotykania env ani seed
+scriptu.
+
+**Faza 1 — pre-login installer (tylko swieza instalacja).** Gdy DB nie ma zadnego
+usera (`isFirstRun`), Admin App renderuje publiczny installer PRZED redirectem
+unauthenticated → `/login`. Installer tworzy pierwszego admina przez
+`POST /auth/install/admin`, po czym przekazuje do `/login`. Self-disable'uje sie
+trwale, gdy jakikolwiek user istnieje. Szczegoly + model bezpieczenstwa: patrz
+`AUTH_SPEC.md` → „First-run installer” i `SECURITY_SPEC.md` → „Pre-auth first-run
+installer”.
+
+**Faza 2 — post-login wizard (gdy `setup.completed=false`).** Po zalogowaniu
+Admin App renderuje multi-track Setup Wizard (step registry, per-step walidacja,
+resume/dirty, toggle Basic/Advanced):
+
+- **Basic track:** branding/identity/locale/timezone + publiczny/admin URL
+  (`site.name`, `site.locale`, `site.timezone`, `site.publicBaseUrl`), opcjonalny
+  starter content przez Solution Kit installer.
+- **Advanced track (opcjonalny):** email / storage / security / assistant przez
+  istniejace `/settings/*` surface'y; sesyjny TTL rozstrzygany jednym resolverem
+  (`auth.sessionTtlDays`, patrz `AUTH_SPEC.md`).
+
+- Basic submit wykonuje bulk `PATCH /settings`; starter content idzie przez
+  `POST /setup/starter-content/preview` + `.../apply` (patrz `CMS_API.md`).
+- Finalize ustawia `setup.completed=true` (install-lock); po sukcesie wizard
+  znika i nie jest ponownie pokazywany (stan z DB).
 
 ---
 

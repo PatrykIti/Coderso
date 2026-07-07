@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Widgets
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-02 (widget type enum, `DashboardWidget`, `DashboardWidgetData` union) · TASK-479-06-L02 (`SectionCard`, `EmptyState`)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-04
 
 ---
@@ -24,8 +25,11 @@ consistent regardless of which renderer fills it.
   `DASHBOARD_WIDGET_CATALOG`, and `DashboardWidgetHost`) so the builder/grid
   (TASK-480-05) places hosts, lists catalog metadata, and passes each host a
   `widget` + a per-widget data **state**, never branching on type itself.
-- **Owning module/service:** `core/admin/ui/dashboard/widgets/registry.tsx`,
-  `core/admin/ui/dashboard/widgets/DashboardWidgetHost.tsx`.
+- **Owning module/service (as-built, flat layout — NOT a `widgets/` subdir):**
+  `core/admin/ui/dashboard/widgetRegistry.ts` (registry + catalog + config-field
+  descriptors), `core/admin/ui/dashboard/widgetRenderers.tsx` (the 9 renderer
+  components + `WidgetRenderer` type, split out for 04-L02), and
+  `core/admin/ui/dashboard/DashboardWidgetHost.tsx` (dispatch + edit chrome).
 - **Source-of-truth docs:**
   - Widget contract (import, do not redefine): `core/services/dashboard/dashboardTypes.ts`
     (`DashboardWidgetType`, `DashboardWidget`, `DashboardWidgetData`, and the
@@ -60,6 +64,48 @@ consistent regardless of which renderer fills it.
   stack traces, or upstream payloads).
 
 ---
+
+## As-Built (delivered) — authoritative
+
+> The pseudocode below is the pre-implementation design sketch. Where it disagrees
+> with this section, **this section is the source of truth** (it mirrors the shipped
+> code verbatim). Key deltas from the sketch:
+>
+> - **Flat module layout** (no `widgets/` subdir):
+>   `core/admin/ui/dashboard/widgetRegistry.ts` +
+>   `core/admin/ui/dashboard/widgetRenderers.tsx` +
+>   `core/admin/ui/dashboard/DashboardWidgetHost.tsx`.
+> - **Renderer registry** — `DASHBOARD_WIDGET_RENDERERS: DashboardWidgetRendererRegistry`
+>   is the exhaustive mapped type `{ [T in DashboardWidgetType]: WidgetRenderer<T> }`;
+>   omitting a type is a compile error. `getWidgetRenderer(type)` and
+>   `isWidgetDataEmpty(data)` ship as designed. `WidgetRenderer<T>` /
+>   `DashboardWidgetRendererProps<T>` are exported from `widgetRenderers.tsx` and
+>   re-exported from `widgetRegistry.ts`.
+> - **Host is state-passed but NOT a `WidgetDataState`/`SectionCard` state machine.**
+>   Shipped signature:
+>   `DashboardWidgetHost({ widget, data?: DashboardWidgetResolution, editMode, selected?, onAction?, onReorderPointerDown?, onResizePointerDown?, dragging?, dropTarget? })`.
+>   `data` is the already-normalized `DashboardWidgetResolution` (the narrowed data
+>   variant, or `{ error }`). The host renders `<UnavailableWidget>` when
+>   `"error" in data`, drops to `undefined` on a `data.type !== widget.type`
+>   mismatch (defensive invariant), then dispatches through the registry. Per-widget
+>   loading/empty presentation lives in each renderer (04-L02), not in a shared
+>   host skeleton/empty component. The host also OWNS the **edit chrome** (a toolbar
+>   of move/resize/configure/remove icon buttons + a drag grip + a resize handle) —
+>   this is not a passed-in `action` slot.
+> - **`WidgetConfigField`** discriminates on `control` (not `kind`):
+>   `text | select | multiselect | checkbox | number | slider | actions`. `select`
+>   supports an `emptyOption` (nullable/optional enums); `select`/`multiselect`
+>   `options` may be a literal `WidgetConfigOption[]` or a dynamic source string
+>   (`"contentTypes"` | `"counterMetrics"`). `widgetRegistry.ts` also exports
+>   `DASHBOARD_COUNTER_METRIC_OPTIONS` and `DASHBOARD_QUICK_ACTION_TARGET_OPTIONS`.
+> - **`DashboardWidgetCatalogEntry`** = `{ type, label, description, icon:
+>   ComponentType<{ className?: string }>, defaultConfig, defaultLayout:
+>   DashboardWidgetPosition, configFields }`. There is **no** `category`, and sizing
+>   is a single `defaultLayout` position (no separate `defaultSize`/`minSize`/
+>   `maxSize`; min/max geometry is enforced by the contract clamps + arrange
+>   helpers). Ordered access via `dashboardWidgetCatalog` (enum order) and
+>   `getDashboardWidgetDescriptor(type)`; `createDashboardWidget(type, y)` mints a
+>   new instance from the entry.
 
 ## Implementation Pseudocode
 

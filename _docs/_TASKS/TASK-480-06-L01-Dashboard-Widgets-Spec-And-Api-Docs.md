@@ -6,7 +6,8 @@
 **Category:** Admin UI / Dashboard Widgets / Docs
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-01 (audit + product spec), TASK-480-02 (schema/service contract), TASK-480-03 (DB + routes + cache), TASK-480-04 (renderers), TASK-480-05 (UI) — all must be implemented (or frozen contracts) before the docs can describe them accurately
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 
 ---
 

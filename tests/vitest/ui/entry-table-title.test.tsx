@@ -12,6 +12,8 @@ const entry = {
   title: "Hello",
   slug: "hello",
   status: "draft" as const,
+  visibility: "public" as const,
+  hasPassword: false,
   data: {},
   createdAt: "2026-02-14T00:00:00.000Z",
   updatedAt: "2026-02-14T00:00:00.000Z",

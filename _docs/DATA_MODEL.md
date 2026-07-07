@@ -24,6 +24,22 @@ Opis docelowego modelu danych CMS. Typy sa pogladowe.
 - user_id (fk users)
 - role_id (fk roles)
 
+`dashboard_layouts`
+- user_id (uuid, pk, fk users cascade delete)
+- schema_version (int, default 1)
+- layout (jsonb, `DashboardLayout` v1)
+- created_at
+- updated_at
+- updated_by (fk users set null)
+
+Rules:
+- One saved admin Dashboard layout per user.
+- Writes reject unknown fields and more than 24 widgets.
+- Reads normalize legacy/corrupt rows to the default layout to keep `/admin`
+  usable.
+- This table is admin-Dashboard only and does not participate in Page Builder
+  pages or `core/widgets/*`.
+
 `sessions`
 - id (uuid, pk)
 - user_id (fk users)
@@ -64,10 +80,30 @@ Note (v2+):
 `content_types`
 - id (uuid, pk)
 - name
-- slug (unique)
+- slug (unique) — also surfaced in the editor as the mono **API ID**
 - schema (jsonb)
+- config (jsonb, NOT NULL DEFAULT `'{}'`, TASK-513-01, migration `0068`)
 - created_at
 - updated_at
+
+`content_types.config` is a present-only, reject-unknown-normalized content-type-level
+configuration object (normalizer `core/services/content/contentTypeConfig.ts`, applied on
+create/update; duplicate copies the source config). Keys — all optional, dropped when at their
+resolved default so a default type serializes to `{}` (legacy rows read byte-identical):
+- `singularName` / `pluralName` (string, trimmed ≤120; empty dropped)
+- `draftsEnabled` (boolean, resolved default `true`; persisted only when `false`)
+- `versioning` (boolean, resolved default `false`; persisted only when `true`; declarative)
+- `permissions` (`{ [roleKey]: { read?, create?, update?, delete?, publish? } }`) — per-role
+  capability matrix, kept only for `true` caps, empty role rows dropped; **declarative** — it
+  does not by itself gate `contentEntryRoutes` authorization (enforcement is a follow-up).
+
+Unknown top-level or per-role capability keys are rejected server-side (`content_type_config_invalid`
+→ HTTP 400). The `content_types.schema` field JSON keeps its `x*` extension convention; the
+`date`/`slug` field types (TASK-513-02) map to JSON-Schema `type:"string"` carrying
+`xFieldType:"date"|"slug"` with **no `format` keyword**, optional `xFieldConfig.date`/`.slug`
+config, a declarative `xFieldConfig.unique`, and a per-property integer `xFieldConfig.order` that
+persists authored field order across a Save→reload (jsonb canonicalizes object keys, so order is
+stored as data; legacy schemas without `order` keep their canonical position).
 
 `content_entries`
 - id (uuid, pk)
@@ -76,12 +112,43 @@ Note (v2+):
 - slug
 - title
 - status (draft|published|scheduled|archived)
+- visibility (text, NOT NULL, default `public`, enum `public|private|password`) — TASK-514
+- access_password (text, nullable) — TASK-514
 - tags (jsonb, default [])
 - data (jsonb)
 - created_at
 - updated_at
 - published_at
 - scheduled_at
+
+Entry visibility (TASK-514, migration `0069_past_leopardon`):
+
+- `visibility` is a normal read/write enum column joined to the metadata-PATCH
+  allowlist (`contentEntryMetadataSchema`, `additionalProperties:false`); an
+  unknown key or out-of-enum value is rejected `400` at the route boundary. It is
+  surfaced on `EntryDetail`/`EntryListItem` and round-trips byte-identically
+  (set → read back → equal). Legacy rows default to `public` and behave exactly
+  as before. Present-only: omitting `visibility` from a metadata PATCH leaves the
+  stored value untouched.
+- `access_password` stores an **argon2 hash** (via `hashPassword`) written only
+  when `visibility = 'password'`. It is **write-only**: never SELECTed into any
+  read/list/detail projection and never echoed in any API response or log — the
+  read side exposes only the derived boolean `hasPassword` (`access_password IS
+  NOT NULL`). Write/clear is keyed on `visibility`, not on `accessPassword`
+  presence:
+  - `password` + a supplied `accessPassword` → hash + store.
+  - `password` + omitted password + an existing hash → keep it (unchanged).
+  - `password` + omitted password + NO existing hash → reject `400
+    entry_password_required` (precondition fires before any status/publish write,
+    so a combined `{status,visibility}` PATCH fails atomically with nothing
+    committed).
+  - `public` / `private` → clear the stored hash (`access_password = NULL`,
+    `hasPassword = false`).
+- Duplicate-entry rule: a duplicated entry copies `visibility` but a `password`
+  source is downgraded to `private` and the hash is NEVER copied.
+- Public-front ENFORCEMENT of `private`/`password` on the render path is out of
+  scope here (persist + surface + respect-in-admin only) and is deferred to
+  TASK-517 (Entry Visibility — Public Front Enforcement).
 
 Visitor listing indexes (TASK-459-04):
 
@@ -211,8 +278,37 @@ Rules:
 - alt
 - title
 - caption
+- folder_id (fk media_folders, nullable; `onDelete: set null` — deleting a
+  folder un-files its assets, never cascade-deletes media) — TASK-512
+- tags (jsonb `string[]`, NOT NULL DEFAULT `'[]'`; free-form labels, mirrors
+  `content_entries.tags`/`posts.tags`) — TASK-512
+- focal_x (real, nullable) / focal_y (real, nullable) — normalized `0..1` focal
+  point for crop/`object-position`; both null = center default — TASK-512
+- description (text, nullable; long-form, distinct from `caption`) — TASK-512
+- credit (text, nullable; attribution line) — TASK-512
 - created_at
 - created_by (fk users)
+
+`media_folders` (TASK-512, migration `0067`)
+- id (uuid, pk)
+- name (notNull)
+- slug (notNull; unique index `media_folders_slug_idx`)
+- parent_id (fk media_folders, nullable; self-ref nesting, `onDelete: set null`)
+- order_index (integer, notNull DEFAULT 0; sibling ordering)
+- created_at
+- created_by (fk users, nullable)
+
+Zasady (Media):
+- All TASK-512 metadata columns except `tags` are nullable, so a legacy row with
+  none of them set reads byte-identical; `tags` backfills to `[]`.
+- Folder membership is `media.folder_id`; deleting a folder sets member assets'
+  `folder_id` to null (never deletes the asset). Slug uniqueness enforced at DB +
+  service (`media_folder_slug_conflict` 409). Focal coords clamped to `[0,1]`
+  service-side; tag count + per-tag length capped server-side.
+- Storage quota is NOT a DDL column — it lives in the `settings` key/value store
+  (`storage.quota.totalBytes` number|null, `storage.quota.planLabel` string|null);
+  the admin storage card computes `usedBytes = Σ media.size` against it. Quota is
+  advisory/display by default (see `_docs/MEDIA_SPEC.md`).
 
 ## Menus
 
@@ -396,6 +492,77 @@ Przykładowe klucze:
 - value
 - updated_at
 
+## Analytics traffic (TASK-483)
+
+Real visitor-analytics pipeline, distinct from the content-inventory
+`analyticsService`. **PII posture:** no raw IP, no User-Agent, and no full
+referrer URL is ever persisted. Visitor identity is a salted, non-reversible
+daily hash (`ANALYTICS_IP_HASH_SECRET` + rotating daily salt); the referrer is
+stored host-only. Raw rows are pruned beyond a configurable retention window
+(`ANALYTICS_RETENTION_DAYS`).
+
+`analytics_sessions`
+- id (uuid, pk)
+- visitor_hash (text, not null) — salted daily hash, never the raw IP
+- source_kind (text, not null) — `TrafficSourceKind`
+- referrer_host (text, nullable) — host only, never a full URL
+- device_class (text, not null) — `TrafficDeviceClass`
+- lang (text, nullable)
+- entry_path (text, not null)
+- exit_path (text, nullable)
+- pageview_count (integer, not null, default 1)
+- started_at (timestamp, not null, default now)
+- last_seen_at (timestamp, not null, default now)
+
+`analytics_pageviews`
+- id (uuid, pk)
+- session_id (uuid, fk analytics_sessions, ON DELETE CASCADE)
+- path (text, not null)
+- referrer_host (text, nullable) — host only
+- source_kind (text, not null)
+- device_class (text, not null)
+- created_at (timestamp, not null, default now)
+
+Migration: `0064_analytics_traffic_tables` (+ `meta/0064_snapshot.json`,
+`meta/_journal.json` idx-64 version-7). Deleting a session cascades to its
+pageviews so retention pruning removes both without FK violations.
+
+## Backups
+
+`backups`
+- id (uuid, pk)
+- status (string: queued|running|complete|failed, default queued)
+- kind (string: manual|scheduled, default manual)
+- storage_driver (string: local|s3|azure, default local)
+- artifact_path (text, nullable) — local path or remote public URL; redacted to
+  `"local"` for clients when local
+- artifact_key (text, nullable) — **server-internal** remote object key used for
+  remote artifact deletion; never returned to clients (redacted to `null`)
+- size_bytes (integer, nullable)
+- error (text, nullable) — sanitized machine-readable error only
+- created_at
+- finished_at (nullable)
+
+`backup_schedules` (singleton)
+- id (uuid, pk)
+- enabled (bool, default true)
+- frequency (string: daily|weekly|monthly, default daily)
+- retention_days (integer, default 30)
+- storage_driver (string: local|s3|azure, default local)
+- next_run_at (timestamp, nullable) — scheduler-managed; when `enabled` and
+  `next_run_at <= now` the schedule is due
+- last_run_at (timestamp, nullable) — set after each scheduled run
+- created_at
+- updated_at
+
+Scheduler / retention lifecycle: when a schedule is `enabled` and due, the
+in-process scheduler runs `createBackup({ kind: "scheduled" })`, advances
+`next_run_at` (recomputed from `frequency`) and sets `last_run_at`, then prunes
+expired terminal backups older than `retention_days`. Remote (`s3`/`azure`)
+artifacts store the public URL in `artifact_path` and the object key in
+`artifact_key`; restore reads + strict-parses the `version: 1` artifact and
+restores metadata + settings transactionally (never media file bytes).
+
 ## Optional (v1.1+)
 
 `form_submissions`
@@ -421,3 +588,12 @@ Przykładowe klucze:
 - preview_tokens.token_hash
 - preview_tokens.target_type
 - preview_tokens.target_id
+- analytics_sessions.started_at
+- analytics_sessions.visitor_hash
+- analytics_pageviews.created_at
+- analytics_pageviews.path
+- analytics_pageviews.session_id
+- backups.status
+- backups.created_at
+- backup_schedules.frequency
+- backup_schedules.next_run_at

@@ -5,9 +5,9 @@
 **Category:** Admin UI / Dashboard / Feature
 **Estimated Effort:** Very Large
 **Dependencies:** TASK-479-05 (admin tokens) + TASK-479-06 (admin shell + shared `StatCard`/`SectionCard`/charts) — required for the final TASK-480 renderer/builder UI. If TASK-480 implementation starts before TASK-479-06 is merged, the implementer must either use the current dashboard primitives as an explicit fallback or split renderer styling until TASK-479-06 is available.
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD, set when work begins>`
-**Completed:** `<YYYY-MM-DD, set at closure>`
+**Status:** ✅ Done
+**Started:** 2026-07-05
+**Completed:** 2026-07-05
 
 ---
 
@@ -106,12 +106,12 @@ Per-leaf Security Contracts are authoritative; this is the umbrella summary.
 
 | Subtask | Title | Status |
 |---------|-------|--------|
-| TASK-480-01 | Feature-Completeness Audit & Widget Product Spec | ⏳ To Do |
-| TASK-480-02 | Widget & Data-Source Contract | ⏳ To Do |
-| TASK-480-03 | Layout Persistence & API | ⏳ To Do |
-| TASK-480-04 | Widget Renderer Components | ⏳ To Do |
-| TASK-480-05 | Dashboard Builder UI (edit mode) | ⏳ To Do |
-| TASK-480-06 | Docs, Gates & Closure | ⏳ To Do |
+| TASK-480-01 | Feature-Completeness Audit & Widget Product Spec | ✅ Done |
+| TASK-480-02 | Widget & Data-Source Contract | ✅ Done |
+| TASK-480-03 | Layout Persistence & API | ✅ Done |
+| TASK-480-04 | Widget Renderer Components | ✅ Done |
+| TASK-480-05 | Dashboard Builder UI (edit mode) | ✅ Done |
+| TASK-480-06 | Docs, Gates & Closure | ✅ Done |
 
 **Subtask intent (one line each):**
 

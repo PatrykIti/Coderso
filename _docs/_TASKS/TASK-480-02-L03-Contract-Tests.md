@@ -7,9 +7,9 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-480-02-L01 (schema/normalize/adapter),
 TASK-480-02-L02 (registry/resolvers)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-05
+**Completed:** 2026-07-05
 
 ---
 

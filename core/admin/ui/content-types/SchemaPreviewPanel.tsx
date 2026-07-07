@@ -16,9 +16,7 @@ export function SchemaPreviewPanel({ schema }: SchemaPreviewPanelProps) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Schema Preview</h3>
-          <p className="text-xs text-muted-foreground">
-            Generated JSON schema for the API.
-          </p>
+          <p className="text-xs text-muted-foreground">Generated JSON schema for the API.</p>
         </div>
         <Button variant="outline" size="sm" className="gap-2">
           <Copy className="h-4 w-4" />
@@ -32,7 +30,7 @@ export function SchemaPreviewPanel({ schema }: SchemaPreviewPanelProps) {
         </pre>
       </ScrollArea>
       <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-        Preview updates after saving. Use the JSON schema for external tooling and
+        Preview updates live as you edit fields. Use the JSON schema for external tooling and
         validation checks.
       </div>
     </div>

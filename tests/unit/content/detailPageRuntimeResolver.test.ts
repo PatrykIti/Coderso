@@ -29,6 +29,8 @@ const entry: DetailPageBindingResolverEntry = {
   title: "Runtime product",
   slug: "runtime-product",
   status: "published",
+  visibility: "public",
+  hasPassword: false,
   tags: [],
   data: {
     headline: "Bound headline",

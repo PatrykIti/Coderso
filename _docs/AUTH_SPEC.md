@@ -21,6 +21,38 @@ Poza zakresem v1:
   password hashy, cookie, API key secrets ani zaszyfrowanych PII.
 - CSRF token pobierany przez `GET /auth/csrf` i uzywany w mutacjach (`X-CSRF-Token`).
 
+## First-run installer (v1.2)
+
+Faza 1 dwufazowego onboardingu (TASK-482). Publiczny, pre-login namespace
+`/auth/install/*`, ktory tworzy pierwsze uzywalne konto admina na swiezej
+instalacji (`isFirstRun` = zero rekordow w `users`).
+
+- `GET /auth/install/status` (public) — zwraca `{ available: boolean }`.
+  `available` = `true` tylko gdy DB nie ma zadnego usera (`isFirstRun`); flip na
+  `false` w momencie, gdy istnieje jakikolwiek user (installer- lub
+  seed-utworzony). Endpoint jest session-less i odrzuca nieznane query params
+  (`install_query_invalid`, 400).
+- `POST /auth/install/admin` (public, session-less) — tworzy pierwszego admina
+  (`name`, `email`, `password`; strict reject-unknown schema, haslo `minLength 8`).
+  Konto powstaje jak w `seedAdmin()`: rola `admin` z permissions `["*"]`,
+  `status: "active"`, hash argon2 — NIE przez `usersService.createUser` (ktory
+  daje `pending` + losowe haslo). Odpowiedz to `{ ok: true, user: { id, email,
+  name } }` (bez `passwordHash`, bez `roleId`, bez sekretow).
+- **Fail-closed no-users boundary.** Precondycja no-users jest sprawdzana tanio
+  przed transakcja, a nastepnie ponownie wewnatrz transakcji tworzenia
+  (TOCTOU re-check pod `pg_advisory_xact_lock`), wiec dwa rownolegle installery
+  nie stworza dwoch adminow ani nie zadzialaja po setupie. Powtorna proba zwraca
+  `install_unavailable` (409).
+- **Self-disable.** Po utworzeniu pierwszego admina `status.available` jest
+  trwale `false`; installer nie pojawia sie ponownie.
+- **Coexistence z `seedAdmin()`.** Env-driven `seedAdmin()` (`core/db/seed.ts`)
+  pozostaje wspolistniejaca sciezka CI/Docker; installer po prostu
+  self-disable'uje sie, gdy jakikolwiek user (seeded lub installer-created) juz
+  istnieje. Zadnej z tych sciezek nie usuwa druga.
+- Model bezpieczenstwa pre-auth: patrz `SECURITY_SPEC.md` → „Pre-auth first-run
+  installer”. Kody bledow: `install_unavailable`, `install_admin_invalid`,
+  `install_query_invalid`.
+
 ## Sessions
 
 - Sessions w DB (`sessions`).
@@ -31,6 +63,16 @@ Poza zakresem v1:
   - `settings["auth.sessionTtlDays"]` (default `14`, zakres `1..365`)
   - `security.settings.session.ttlDays` (fallback kompatybilnosciowy)
   - `DEFAULT_SESSION_TTL_DAYS` (`7`)
+- Rozstrzyganie precedencji + clamping do `1..365` zyje w jednym, czystym
+  module `core/services/auth/sessionTtl.ts`
+  (`resolveSessionTtlDaysFromSources`), re-eksportowanym przez
+  `sessionService.ts`. Kazde zrodlo przechodzi przez `toBoundedInteger` — wartosc
+  nienumeryczna / niedodatnia „przepada” i spada do nastepnego zrodla (to NIE
+  jest zwykly lancuch `??`), a wartosci dodatnie sa clampowane do `1..365`.
+- Kreator instalacji (Advanced → Security) zapisuje wylacznie kanoniczny klucz
+  `auth.sessionTtlDays` (nigdy `security.session.ttlDays`) oraz przeniesiony
+  `auth.resetTtlMinutes`; `security.session.ttlDays` pokazuje tylko jako
+  advisory override, a „efektywny TTL” wylicza tym samym resolverem co runtime.
 
 ## Logout
 

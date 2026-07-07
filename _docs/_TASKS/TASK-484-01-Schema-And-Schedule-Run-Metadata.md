@@ -8,9 +8,9 @@
 **Dependencies:** None. Sequenced first because TASK-484-02 (scheduler) reads and
 advances `next_run_at`, and TASK-484-05 (remote storage) needs `artifact_key` for
 clean remote deletion. Schema/type changes land here; behaviour lands downstream.
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -39,8 +39,8 @@ scheduler/retention/restore/remote leaves consume these.
 
 | ID | File | Title | Status |
 |----|------|-------|--------|
-| 484-01-L01 | `TASK-484-01-L01-Backup-Schedule-Run-Metadata-Columns.md` | Run-metadata + artifact-key columns & migration | ⏳ To Do |
-| 484-01-L02 | `TASK-484-01-L02-Next-Run-Calculator-And-Schedule-Wiring.md` | `computeNextRunAt` + schedule service wiring | ⏳ To Do |
+| 484-01-L01 | `TASK-484-01-L01-Backup-Schedule-Run-Metadata-Columns.md` | Run-metadata + artifact-key columns & migration | ✅ Done |
+| 484-01-L02 | `TASK-484-01-L02-Next-Run-Calculator-And-Schedule-Wiring.md` | `computeNextRunAt` + schedule service wiring | ✅ Done |
 
 **Implementation order:** L01 (columns + migration + type fields) → L02 (pure
 calculator + `getBackupSchedule`/`setBackupSchedule`/`markScheduleRun` wiring).
@@ -50,7 +50,15 @@ calculator + `getBackupSchedule`/`setBackupSchedule`/`markScheduleRun` wiring).
 ## Dependencies
 
 - Drizzle schema + migration tooling (`core/db/schema.ts`,
-  `core/db/migrations/*`, journal at version `"7"`, next free index `0064`).
+  `core/db/migrations/*`, journal at version `"7"`; current max in this worktree
+  is `0063_yummy_glorian`). **Pinned migration index for TASK-484: `0065`** —
+  `0064` is owned by the parallel TASK-483 stream (analytics tables), which
+  merges first. Do not use `0064` anywhere in this task.
+- **Sync precondition (mandatory, before authoring the migration):** before
+  TASK-484-01 authors its migration and runs `db:migrate`, the orchestrator
+  syncs TASK-483's `0064` artifacts (the SQL file + `meta/0064_snapshot.json` +
+  the `meta/_journal.json` entry) into this worktree so the journal stays
+  gapless; only then is `0065` generated via drizzle-kit and `db:migrate` run.
 - Existing backup domain (`core/services/backups/backupService.ts`,
   `backupTypes.ts`) — extended, not rewritten.
 
@@ -58,12 +66,30 @@ calculator + `getBackupSchedule`/`setBackupSchedule`/`markScheduleRun` wiring).
 
 ## Testing Requirements
 
-Bun lane only (DB + pure domain). Load env: `set -a && source .env && set +a`.
+Lanes split by dependency shape, per `_docs/TESTING_STRATEGY.md` and the
+parent TASK-484 Testing Requirements: the **pure** `computeNextRunAt` cases
+(no `Bun.*`, no DB) go to the **Vitest** lane —
+`tests/vitest/backups/computeNextRunAt.test.ts`, run via `bun run test:vitest`
+("Pure domain … `core/services/*` without `Bun.*`" → Vitest). Only the
+DB-backed schedule-wiring / `markScheduleRun` / mapper coverage stays in the
+Bun backups folder. Load env: `set -a && source .env && set +a`.
 
 - `bun --cwd core lint` / `bun --cwd core lint:types`
-- `bun test tests/unit/backups` — `computeNextRunAt` cases (daily/weekly/monthly,
-  month rollover), `mapSchedule`/`mapBackup` include new fields,
+- `bun run test:vitest` — `tests/vitest/backups/computeNextRunAt.test.ts`
+  (daily/weekly/monthly deltas, month rollover/clamp, same-day anchor).
+- `bun test tests/unit/backups` — `mapSchedule`/`mapBackup` include new fields,
   `getBackupSchedule` seeds `next_run_at`, `setBackupSchedule` recomputes on
   enable/frequency change.
-- Migration `0064` applies cleanly; `meta/0064_snapshot.json` + `_journal.json`
-  entry present.
+- **Shared remote test DB contract:** all three parallel streams (482/483/484)
+  and the owner share ONE remote Postgres (`DATABASE_URL` in `.env`). DB-backed
+  tests must use uniquely scoped fixtures and clean up only rows they created;
+  never truncate or bulk-delete `backup_schedules` / `backups`. Tests that
+  mutate the singleton `backup_schedules` row (seed/recompute/`markScheduleRun`
+  cases in L02) must capture the row's prior values before mutating and restore
+  them exactly in `afterEach`/`afterAll` — never leave the schedule disabled,
+  re-frequencied, or with altered `next_run_at`/`last_run_at`. See L02's
+  shared-DB test contract for the full clause.
+- Migration `0065` applies cleanly; `meta/0065_snapshot.json` + `_journal.json`
+  entry (idx 65) present. Precondition: TASK-483's `0064` artifacts are synced
+  into this worktree first (see Dependencies above) so the journal stays
+  gapless.

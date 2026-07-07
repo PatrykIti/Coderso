@@ -284,7 +284,7 @@ Current script split:
 ```json
 {
   "test": "bun run test:bun && bun run test:vitest",
-  "test:bun": "bun test tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/perf tests/security",
+  "test:bun": "bun test tests/unit tests/integration/routes tests/integration/runtime tests/integration/server tests/integration/store tests/integration/plugins tests/integration/analytics tests/perf tests/security",
   "test:vitest": "vitest run",
   "test:coverage": "bun scripts/run-vitest-coverage.ts",
   "test:bun:lane": "bun scripts/run-bun-lane.ts --test",

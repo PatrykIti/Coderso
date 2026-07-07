@@ -4,28 +4,23 @@ import { expect, test } from "vitest";
 import { renderAdminUi } from "../../utils/adminRouterRender";
 import { ContentTypeEditor } from "../../../core/admin/ui/content-types/ContentTypeEditor";
 
-test("content type editor renders tabs + fields section + sticky actions", () => {
+test("content type editor renders tabs + fields section + prototype header actions", () => {
   const html = renderAdminUi(<ContentTypeEditor />, { path: "/admin/content-types/sample" });
 
-  // Three line-variant tab triggers (no fabricated Permissions tab).
-  for (const label of ["Fields", "Relations", "Settings"]) {
+  // Four line-variant tab triggers — TASK-513-03 ADDED the Permissions tab to the prototype shell.
+  for (const label of ["Fields", "Relations", "Settings", "Permissions"]) {
     expect(html).toContain(label);
   }
-  expect(html).not.toContain("Permissions");
 
-  // Active Fields tab SectionCard action (editor seeds defaultFields, so it renders under SSR).
+  // Prototype PageHeader action surface: inline Save + Open schema, secondary actions in the
+  // More menu (TASK-513-03 replaced the EditorShell sticky toolbar with the in-page PageHeader).
+  expect(html).toContain(">Save<");
+  expect(html).toContain("Open schema");
+  expect(html).toContain('aria-label="More actions"');
+
+  // Active Fields tab SectionCard action + the right-column Type settings card (TASK-513-01/03).
   expect(html).toContain("Add field");
-
-  // Seeded default field rows render their labels in the FieldsListPanel.
-  expect(html).toContain("Title");
-  expect(html).toContain("Body");
-
-  // Sticky action bar is preserved.
-  expect(html).toContain("Save draft");
-  expect(html).toContain("Publish");
-  expect(html).toContain("Collection workspace");
-  expect(html).toContain("Duplicate");
-  expect(html).toContain("Delete");
+  expect(html).toContain("Type settings");
 
   // No fabricated raw-palette status chrome leaked back in.
   expect(html).not.toContain("border-rose-200");

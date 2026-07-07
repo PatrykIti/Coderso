@@ -13,6 +13,15 @@ export const createBackupSchema = {
   },
 };
 
+export const restoreBackupSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["confirm"],
+  properties: {
+    confirm: { type: "boolean", enum: [true] },
+  },
+};
+
 export const backupListQuerySchema = {
   type: "object",
   additionalProperties: false,
@@ -22,6 +31,12 @@ export const backupListQuerySchema = {
     limit: { type: "integer", minimum: 1, maximum: 100 },
     query: { type: "string", maxLength: 200 },
   },
+};
+
+export const pruneBackupsSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {},
 };
 
 export const scheduleUpdateSchema = {

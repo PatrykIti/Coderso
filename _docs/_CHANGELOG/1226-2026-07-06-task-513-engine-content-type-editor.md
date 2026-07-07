@@ -1,0 +1,41 @@
+# 1226 - TASK-513 Engine (Content Type Editor) — Prototype Fidelity & Config/Field-Type Extension
+
+Date: 2026-07-06
+Version: Unreleased
+Tasks: TASK-513, TASK-513-01, TASK-513-02, TASK-513-03, TASK-513-04, TASK-513-05, TASK-513-06
+
+## Key Changes
+
+Brings the Engine **content-type editor** to prototype fidelity (`_docs/_PROTOTYPE/src/pages/advanced/ContentTypeEditorPreview.tsx` + `SchemaBuilderPreview.tsx`) with the POST-editor's ergonomics AND extends the content-type model/service/route/client/UI to deliver real content-type-level configuration + two new field types (not a cosmetic re-skin). Existing tabs, dirty-state, Relations content, remote-reconcile, and delete/duplicate handlers are preserved.
+
+- **`content_types.config` schema extension (513-01, migration `0068_productive_stephen_strange`):** one new `config jsonb NOT NULL DEFAULT '{}'` column on `content_types` (journal `idx:68`, `meta/0068_snapshot.json`); legacy rows read byte-identical (`{}`). The config carries `singularName`/`pluralName` (trimmed ≤120), `draftsEnabled` (resolved default `true`), `versioning` (resolved default `false`), and a per-role `permissions` matrix. New **db/Bun-free module `core/services/content/contentTypeConfig.ts`** owns the authoritative `ContentTypeConfig`/`ContentTypePermissionCapabilities` types + `normalizeContentTypeConfig` (`CONFIG_KEYS`/`CAP_KEYS`/`isRecord`): reject-unknown at the top level AND per-role capability level (throws `content_type_config_invalid`), present-only drop-at-default, fail-soft scalar omit, drop empty role rows. `typeService` imports the normalizer + re-exports the types and wires it into create/update (present-only PATCH) and duplicate (copies `source.config`). `contentSchemas` gains a `additionalProperties:false` config subschema on create+update; the route maps `content_type_config_invalid` → 400. `contentTypesClient` MIRRORS the config types + exports pure `resolveDraftsEnabled`/`resolveVersioning` (the admin UI never imports `typeService`).
+- **`date` + `slug` field types (513-02):** `FieldType` union widened additively with `"date"|"slug"`; `schemaMapping.fieldTypeMap` maps both to JSON-Schema `type:"string"` carrying `xFieldType` with **NO `format` keyword** (ajv `strict:true` would throw on an unknown format → un-savable). Config persists present-only via `xFieldConfig.date` (`{ includeTime? }`) / `xFieldConfig.slug` (`{ source?, editable? }`); a declarative `unique` flag persists via `xFieldConfig.unique`; and **field ORDER persists** via a per-property integer `xFieldConfig.order` written by `buildSchemaFromFields` and re-sorted by `fieldsFromSchema` (jsonb canonicalizes object keys, so order is stored as data — legacy schemas without `order` keep their canonical position, no read regression). `FieldEditor` adds date/slug config blocks + a Unique toggle; `FieldRenderer` adds date + slug inputs.
+- **Permissions tab (513-04):** NEW `contentTypePermissions.ts` — a UI-side minimizer (`normalizePermissionsMatrix`, `toggleCapability`, `resolveRoleCapabilities`, `CAPABILITIES`) that ALIASES 513-01's client-mirrored types and imports NO server module (keeps true caps, drops empty roles; the server is authoritative on reject-unknown). NEW `ContentTypePermissionsPanel.tsx` renders a role × capability toggle grid, loads the role list internally via `listAdminRoles`, offers Reset-to-defaults, and marks the editor dirty.
+- **Editor rebuild + Type-settings card + ergonomics (513-03):** `ContentTypeEditor` re-laid from the full-screen `EditorShell` to the prototype in-page `PageHeader` (breadcrumb `Engine › {name}` + `Boxes` icon + `Open schema`/`Save`) + `line`-variant underline `Tabs` (Fields · Relations · Settings · **Permissions**) + the `lg:grid-cols-[1fr_300px]` Fields grid. NEW `ContentTypeFieldsPanel.tsx` (row list with `GripVertical` drag-reorder + type `Badge` + `MoreHorizontal` Edit/Duplicate/Delete menu) + `ContentTypeSettingsCard.tsx` (mono API ID = slug, Singular/Plural, Enable-drafts + Versioning toggle rows). Preserved dirty-tracking/remote-reconcile/undo; added Cmd/Ctrl+S save, leave-guard, and last-saved hint.
+- **Functional visual schema builder (513-05):** `SchemaBuilderPage` + `SchemaPreviewPanel` promoted from a disabled cosmetic preview to a working secondary "Open schema" editor — palette adds a field, inspector edits, reorder persists, Save calls `updateContentType({ schema: buildSchemaFromFields(fields) })` (513-01 envelope); `date`/`slug` appear in the palette; dirty-guard + toast parity with the editor.
+- **Tests, docs & closure (513-06):** added the Bun route round-trip + reject-unknown lane (`tests/integration/routes/contentTypeConfigRoundTrip.test.ts` — POST→GET→PATCH→GET config present-only, `date`/`slug` `xFieldType` + `unique` + `xFieldConfig.order` persistence, `config.bogus`/`permissions.<role>.bogus` → 400), the pure-lane config/permissions normalize coverage (`tests/vitest/content/contentTypeConfig.test.ts`), and the downstream `FieldType`-widening consumer guard (`tests/vitest/content/fieldTypeWideningGuard.test.ts` — `schemaMapping` round-trip + `entryChecklist` no-throw over `date`/`slug`). Synced DATA_MODEL/CMS_API/CONTENT_TYPES_SPEC; closed board + task files.
+
+## Scope
+
+- Migration `0068_productive_stephen_strange` (TASK-480 owns `0066`, TASK-512 owns `0067`). Additive with a default → safe on existing rows.
+- Security: the `config` object rides the EXISTING validated `POST /content-types` + `PATCH /content-types/:id` envelopes under `content:write` — no new endpoint, HTTP method, or RBAC bucket. Request schemas stay `additionalProperties:false` at every level; every persisted key is re-allowlisted + normalized server-side (client input never trusted). Reject-unknown → `content_type_config_invalid` 400; bad scalar values fail-soft (omitted). The stored `permissions` matrix is DECLARATIVE only — it does not by itself gate `contentEntryRoutes` authorization (enforcement is a documented follow-up / Open Question). The `unique` field flag + `versioning` toggle are likewise declarative-only for now.
+
+## Validation
+
+- `bun --cwd core lint`
+- `bun --cwd core lint:types`
+- `./node_modules/.bin/tsc -p tsconfig.json --noEmit`
+- `bun run test:bun`
+- `bun run test:vitest`
+- `bun run gates:coderso`
+- Live ≥5-scenario prototype-fidelity playwright smoke (prototype side-by-side light+dark, type-settings persist, field lifecycle incl. date/slug/unique/reorder, permissions matrix persist, visual schema builder, cross-device) deferred to the orchestrator post-merge (the running dev host serves the main tree, not this worktree).
+
+## Post-merge live-smoke fidelity remediation (owner-driven, `SchemaBuilderPage.tsx`)
+
+The post-merge live smoke confirmed the per-content-type editor (513-03) and backend (config schema, migration 0068, normalizer, permissions matrix, date/slug field types) all work end-to-end. The owner, reviewing the **visual schema builder** (`/schema`) live side-by-side with the prototype, flagged old-approach leftovers that 513-05 had carried over instead of adapting to the prototype's `SchemaBuilderPreview`/`EditorPreviewFrame` layout (Field types rail | canvas | Field inspector — no type list, no docked preview). Fixed:
+
+- **Removed the content-type list / filter / switcher** from the schema builder's left column (the `ContentTypeSidebar` with "Filter types" + COLLECTIONS + "Create New Type"). You are editing ONE type's schema — the left rail is now just the field-type palette, matching the prototype. `ContentTypeSidebar` is no longer referenced from this page.
+- **Schema JSON preview is opt-in behind a toolbar toggle** (`Preview`) instead of a permanently-docked side panel — the prototype has no docked preview. The `SchemaPreviewPanel` renders as the `SplitShell` `rightPanel` only when the toggle is on.
+- **Primary actions moved into the in-page `PageHeader`** (`Preview`, `Discard`, `Save`) — right above the editor cards, matching the prototype's `PageHeader actions={<Button>Save</Button>}` — rather than the outer AdminShell topbar; "Save schema" relabeled "Save".
+
+Tests updated (`schema-builder.test.tsx`, `engine-schema-builder-restyle.test.tsx`): assert the docked "Schema Preview" panel is absent by default (opt-in). Gates green: vitest, core lint, lint:types, root tsc.

@@ -6,9 +6,9 @@
 **Category:** Admin / Dashboard / Domain Service
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-02-L01 (widget/layout types + schema)
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-05
+**Completed:** 2026-07-05
 
 ---
 

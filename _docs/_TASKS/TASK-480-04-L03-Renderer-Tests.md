@@ -5,7 +5,8 @@
 **Category:** Admin UI / Dashboard / Widgets / Tests
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-04-L01 (registry + host) · TASK-480-04-L02 (renderers) · TASK-480-02 (fixtures: type enum + data union shapes)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 **Parent Subtask:** TASK-480-04
 
 ---

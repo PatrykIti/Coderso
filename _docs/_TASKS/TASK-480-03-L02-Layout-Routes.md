@@ -7,10 +7,9 @@
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-03-L01 (repository + normalizer). Adds a new
 `dashboard:write` permission (catalog + RBAC docs + admin seed).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
-
+**Completed:** 2026-07-05
 ---
 
 ## Overview

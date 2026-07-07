@@ -5,10 +5,10 @@
 **Priority:** High
 **Category:** Admin / Onboarding / Auth
 **Estimated Effort:** Small
-**Dependencies:** TASK-482-04-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Dependencies:** TASK-482-04-L02, TASK-482-05-L02
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -16,17 +16,39 @@
 
 - **Goal:** Make "Finish setup" persist any not-yet-saved Basic values **and**
   set `setup.completed = true` in one bulk write, so the post-login wizard
-  permanently closes. Keep the existing `shouldShowSetupWizard` gate
-  (`AdminApp.tsx` lines 234-243) as the client lock — it already hides the wizard
-  when `setupCompleted` is true.
+  permanently closes. Keep the existing exported `shouldShowSetupWizard` gate
+  in `core/admin/app/AdminApp.tsx` (symbol anchor; currently lines 237-246 @
+  HEAD fbe93dae) as the client lock — it already hides the wizard when
+  `setupCompleted` is true (`!input.setupCompleted`).
 - **Owning module(s) to extend:** `core/admin/app/AdminApp.tsx` —
-  `completeSetup` (lines 509-533). Today it calls
+  `completeSetup` (symbol anchor; currently lines 524-548 @ HEAD fbe93dae —
+  prefer the symbol, raw line numbers have drifted before). Today it calls
   `updateSettings({ ...toSetupWizardSettingsPayload(values), "setup.completed": true })`.
-  Generalise the payload builder to cover the full multi-track value set
-  (identity/branding/locale/timezone/URLs) instead of the fixed 5-field
-  `toSetupWizardSettingsPayload`, then keep the `"setup.completed": true` flag.
-  The Advanced/starter-content writes already persisted per-step (05/06/07) are
-  not re-sent.
+  Replace the fixed 5-field `toSetupWizardSettingsPayload` with
+  **`toBasicSettingsPayload(values)` imported from
+  `core/admin/ui/setup/setupWizardValidation.ts`** — that map is **owned and
+  exported by 05-L02** (single source of the wizard-values → settings-keys
+  mapping; do NOT redefine it here), then keep the `"setup.completed": true`
+  flag. The Advanced/starter-content writes already persisted per-step
+  (05/06/07) are not re-sent. **Auth-TTL note:** the pre-redesign builder
+  `toSetupWizardSettingsPayload` also persisted `auth.sessionTtlDays` and
+  `auth.resetTtlMinutes`; `toBasicSettingsPayload` intentionally omits both
+  because 07-L02 re-homes BOTH auth-TTL keys to the Advanced Security step
+  (07-L01), written per-step via bulk `PATCH /settings`. This is a deliberate
+  ownership move, not a dropped capability — finalize must NOT re-add the
+  `auth.*` keys.
+- **Type-widening ownership (04 → 08 window):** THIS leaf widens
+  `completeSetup`'s parameter from `SetupWizardValues`
+  (`setupWizardValidation.ts:1`) to the 04-L01 `WizardValues`. In the window
+  after 04-L02 lands and before this leaf, `onSubmit={completeSetup}` keeps
+  typechecking because `WizardValues` is a structural **superset** of
+  `SetupWizardValues` (04-L01 defines it that way); no other leaf touches
+  `completeSetup`.
+- **Sequential-handoff note (multi-writer file):** `AdminApp.tsx` was last
+  edited by 03-L02 (gate ordering) and optionally 04-L02 (call site); this
+  leaf lands after both per the parent's land order and edits only the
+  `completeSetup` callback — do not restructure the gate/redirect code from
+  03-L02.
 - **Source-of-truth docs:** `_docs/CMS_SPEC.md`, `_docs/SETTINGS.md`,
   `_docs/AUTH_SPEC.md`.
 - **Out-of-scope:** the self-disable server assertions (08-L02); per-step writes
@@ -55,7 +77,8 @@ const completeSetup = useCallback(async (values: WizardValues) => {
   setSetupSaving(true); setSetupError(null);
   try {
     const updated = await updateSettings({
-      ...toBasicSettingsPayload(values), // generalised superset of toSetupWizardSettingsPayload
+      // imported from core/admin/ui/setup/setupWizardValidation.ts — owned by 05-L02
+      ...toBasicSettingsPayload(values),
       "setup.completed": true,           // the install-lock flag
     });
     setSettingsState((prev) => ({ ...prev, status: "ready", error: null,

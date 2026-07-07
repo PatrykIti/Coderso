@@ -6,9 +6,9 @@
 **Category:** Tools / Analytics / Domain Contract
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
@@ -69,17 +69,33 @@ export function normalizeTopPagesQuery(q: TopPagesQuery) {
 }
 ```
 
-Data flow: routes parse query strings, validate against the re-exported schema
-(L03), then call these normalizers; the service (L02) runs the SQL and returns a
-`TrafficOverview`. The admin client (TASK-483-05) imports `TrafficOverview` for
-typed cache values.
+Data flow: routes parse query strings, validate against the JSON schemas
+declared in `core/server/validation/analyticsSchemas.ts` (L03), then call these
+normalizers; the service (L02) runs the SQL and returns a
+`TrafficOverview`. The admin client (TASK-483-05-L01) **imports**
+`TrafficOverview` from this module (`trafficAggregationTypes.ts`) for typed cache
+values and does NOT keep a local redeclared mirror — this module is the single
+source of truth for the shape. It stays a pure-types module (no `db/client`
+import) so the browser bundle can import it, matching the existing
+`dashboardClient.ts` → `dashboardTypes.ts` precedent.
 
 Error handling: invalid range/limit are clamped (not errored) to match the
 existing content-inventory behavior (`clampRangeDays` in `analyticsService.ts`);
-truly malformed query types still throw `analytics_query_invalid` at the route.
+truly malformed query types are rejected at the route via the existing
+`validationError` helper / `assertKnownQuery` + `validate` path in
+`analyticsRoutes.ts`, which throws `ApiError("validation_error", ..., 400)` —
+no new error code is introduced for query validation (matches L03).
 
-Regression-test shape (Vitest,
-`tests/vitest/analytics/trafficAggregationQuery.test.ts`):
+Regression-test shape (Bun lane,
+`tests/unit/analytics/trafficAggregationQuery.test.ts`): the normalizers live in
+`trafficAggregationService.ts`, which L02 makes import `db/client`
+(`core/db/client.ts` throws without `DATABASE_URL` and opens a `postgres()` pool
+at module load), so importing the module for these unit checks requires the Bun
+lane — mirroring the existing precedent where the equally-pure
+`serializeTopContentCsv` in the db/client-coupled `analyticsService.ts` is tested
+in the Bun lane at `tests/unit/analytics/analyticsService.test.ts:142` even
+though it is a pure function, because importing that module pulls in `db/client`
+(`core/db/client.ts:5-9` throws without `DATABASE_URL`), NOT Vitest:
 
 ```ts
 test("range clamps to [1,365]", () => {
@@ -95,15 +111,26 @@ test("top-pages limit clamps to [1,100]", () => {
 
 - **Endpoint visibility:** none (domain types/normalizers).
 - **Auth model / RBAC / CSRF / Rate-limit:** N/A here; enforced at the API (L03).
-- **Validation schema-owner module:** this module owns the query normalizers and
-  clamps; `core/server/validation/analyticsSchemas.ts` re-exports the JSON
-  schema, never re-declares the clamps.
+- **Validation schema-owner module:** the JSON query schemas are **declared** in
+  `core/server/validation/analyticsSchemas.ts` (L03), per existing convention —
+  `overviewQuerySchema`/`topContentQuerySchema`/`topContentExportQuerySchema`
+  are already declared inline there. The domain clamps/normalizers
+  (`clampRangeDays`, `clampLimit`, `normalize*Query`) are owned HERE in
+  `trafficAggregationService.ts` and are never duplicated in the schema module.
 - **Anti-abuse controls:** N/A (read side).
 - **Secret/PII handling:** types expose only aggregate counts and host/path
   strings — no `visitor_hash`, no raw IP/UA, ever surfaced to the client.
 
 ## Testing Requirements
 
-- **Vitest** only (Bun-free): query normalization/clamps and type-shape compile
-  checks.
+- **Bun** lane (`tests/unit/analytics/trafficAggregationQuery.test.ts`): query
+  normalization/clamps. Although the normalizers are pure, they live in
+  `trafficAggregationService.ts`, which imports `db/client` (`core/db/client.ts`
+  throws without `DATABASE_URL` and constructs a `postgres()` pool at import), so
+  a Vitest import would pull in the DB kernel and be flaky — the established
+  precedent is the equally-pure `serializeTopContentCsv`, tested in the Bun lane
+  at `tests/unit/analytics/analyticsService.test.ts:142` even though it is a pure
+  function, because importing `analyticsService.ts` pulls in `db/client` and gates
+  on `DATABASE_URL`. Type-shape correctness is enforced by `lint:types`.
+- `set -a && source .env && set +a` for the module import (needs `DATABASE_URL`).
 - `bun --cwd core lint`, `bun --cwd core lint:types`, `git diff --check`.

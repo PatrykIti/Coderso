@@ -9,6 +9,8 @@ const createPostEntryDetail = (data: Record<string, unknown>): EntryDetail => ({
   title: "Runtime parity post",
   slug: "runtime-parity-post",
   status: "published",
+  visibility: "public",
+  hasPassword: false,
   data,
   tags: [],
   taxonomy: undefined,
@@ -81,7 +83,7 @@ test("post detail rendering uses the same block runtime for preview and publishe
   expect(previewHtml).toContain("Runtime heading");
   expect(previewHtml).toContain("Preview mode");
   expect(publishedHtml).not.toContain("Preview mode");
-  expect(publishedHtml).not.toContain("<dl class=\"space-y-4\">");
+  expect(publishedHtml).not.toContain('<dl class="space-y-4">');
 });
 
 test("legacy post data still renders through runtime fallback", async () => {

@@ -56,6 +56,33 @@ test("schema validator rejects invalid date-time metadata values", () => {
   }
 });
 
+test("content entry metadata schema accepts visibility + accessPassword and rejects bad values", () => {
+  // TASK-514-01: visibility enum + write-only accessPassword join the allowlist.
+  expect(() =>
+    validate(contentEntryMetadataSchema, { visibility: "password", accessPassword: "s3cret" })
+  ).not.toThrow();
+  expect(() => validate(contentEntryMetadataSchema, { visibility: "public" })).not.toThrow();
+  expect(() => validate(contentEntryMetadataSchema, { accessPassword: null })).not.toThrow();
+
+  const expectRejected = (payload: Record<string, unknown>) => {
+    try {
+      validate(contentEntryMetadataSchema, payload);
+      throw new Error("expected_validation_error");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      expect((error as ApiError).code).toBe("validation_error");
+      expect((error as ApiError).status).toBe(400);
+    }
+  };
+
+  // bad enum value
+  expectRejected({ visibility: "secret" });
+  // accessPassword over maxLength (200)
+  expectRejected({ accessPassword: "x".repeat(201) });
+  // reject-unknown still intact alongside a valid visibility
+  expectRejected({ visibility: "private", bogusKey: true });
+});
+
 test("all content entries query schema rejects unknown filters", () => {
   expect(() => validate(contentEntryAllEntriesQuerySchema, {})).not.toThrow();
 

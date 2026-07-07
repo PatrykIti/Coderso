@@ -6,9 +6,9 @@
 **Category:** Tools / Analytics / DB Schema
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-01-L01
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
@@ -18,6 +18,10 @@
   migration artifacts so the pipeline has durable storage.
 - **Owning module(s) to extend:** `core/db/schema.ts` (add `analyticsPageviews`,
   `analyticsSessions`). New migration under `core/db/migrations/`.
+  `core/db/schema.ts` is a SHARED ADDITIVE surface with the parallel TASK-484
+  stream (which separately adds backup tables): append ONLY the two analytics
+  tables; never reserve, rename, restructure, or reformat anything else in the
+  file.
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md`, `_docs/ORM_SPEC.md`,
   `_docs/SECURITY_SPEC.md`.
 - **Out-of-scope:** repository functions (L03), ingestion (TASK-483-02). No raw
@@ -33,7 +37,13 @@ This leaf changes the database. It **requires the full migration artifact set**:
 - An appended entry in `core/db/migrations/meta/_journal.json` (next `idx` after
   `63`, version `"7"`, with a new `when` epoch and a `tag` matching the SQL file).
 
-> **Migration index is provisional.** Re-derive as last-shipped+1 via `drizzle-kit generate` at implementation time. TASK-483/484/493 each add a migration — only one can be 0064; whichever lands later renumbers (0065/0066). Allocate in dependency order at merge.
+> **Migration index is FIRM: TASK-483 owns 0064.** Per the cross-stream
+> coordination pin, TASK-483 lands its migration as index `0064` (SQL file +
+> `meta/0064_snapshot.json` + `meta/_journal.json` entry with `idx: 64`,
+> version `"7"`). The parallel TASK-484 stream is separately pinned to `0065`
+> and merges **after** TASK-483. Do **not** renumber at merge and do not
+> re-derive the index at implementation time — the current head is
+> `0063_yummy_glorian` (journal `idx: 63`) and 0064 is reserved for this leaf.
 
 Generate via the repo's Drizzle generate flow rather than hand-editing snapshots;
 verify the SQL matches the `pgTable` definitions before committing.
@@ -92,6 +102,29 @@ path-ranking, and visitor-uniqueness queries.
 Error handling: schema-level only (FK cascade on session delete enables
 retention pruning in TASK-483-06).
 
+### Test-runner glob update (required, owned by this leaf)
+
+`tests/integration/analytics/` does **not** exist yet and is **not** covered by
+the executable Bun lane: root `package.json` `scripts["test:bun"]` currently
+enumerates `tests/unit tests/integration/routes tests/integration/runtime
+tests/integration/server tests/integration/store tests/integration/plugins
+tests/perf tests/security` (mirrored in `_docs/TESTING_STRATEGY.md` in the
+`Current script split:` JSON snippet under `## CI And Release Gates`, line
+~287). A suite placed there would silently never run. This
+leaf therefore **must also**:
+
+- Add `tests/integration/analytics` to the `test:bun` script in root
+  `package.json` (insert the directory into the existing list — a purely
+  additive, single-line edit; `package.json` scripts are a shared surface with
+  the parallel TASK-482/484 streams, so do not reorder or reformat the script).
+- Mirror the same addition in the `test:bun` snippet in
+  `_docs/TESTING_STRATEGY.md` (the `Current script split:` JSON block under
+  `## CI And Release Gates`, line ~287).
+
+All later TASK-483 leaves (01-L03, 04-L02, 06-L01, 06-L02) place their Bun
+DB-backed suites under `tests/integration/analytics/` and rely on this glob
+update; they must not re-edit the script.
+
 Regression-test shape (Bun, DB-backed, `tests/integration/analytics/trafficSchema.test.ts`):
 
 ```ts
@@ -122,4 +155,7 @@ test("migration creates analytics tables with expected columns", async () => {
 - **Bun** DB-backed smoke (`set -a && source .env && set +a` first): assert the
   migration applies and the tables/columns/indexes exist, and that no `ip`
   column exists. Use a scoped check; do not truncate shared tables.
+- Verify the new suite actually executes: after adding
+  `tests/integration/analytics` to the root `test:bun` glob (see above), run
+  `bun run test:bun` and confirm `trafficSchema.test.ts` appears in the run.
 - `bun --cwd core lint`, `bun --cwd core lint:types`, `git diff --check`.

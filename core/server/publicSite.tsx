@@ -117,6 +117,10 @@ import { publicSearchRequestSchema } from "./validation/filterSchemas";
 import { validate } from "./validation/schemaValidator";
 import { handlePublicBookingApi } from "./publicBookingApi";
 import { handlePublicFormsApi } from "./publicFormsApi";
+import { ANALYTICS_BEACON_PATH, handlePublicAnalyticsApi } from "./publicAnalyticsApi";
+import { buildTrackingScript } from "../services/analytics/trackingSnippet";
+import { isAnalyticsTrackingEnabled } from "../services/analytics/trackingSettings";
+import { createBeaconNonce } from "../services/analytics/beaconNonce";
 import { readBindingPathValue } from "../services/utils/bindingPath";
 import { preparePageRuntimeDocument } from "../services/pages/pageRuntimeDataPreparation";
 import type { PageRuntimeCacheMode } from "../services/pages/pageRuntimeBindingContract";
@@ -858,6 +862,28 @@ const resolveSiteShellRenderProps = async (): Promise<SiteShellRenderProps> => {
   }
 };
 
+/**
+ * Build the analytics tracking snippet body for a LIVE public render
+ * (TASK-483-03-L02). Returns `null` for previews (so admin preview traffic never
+ * reaches the collector), when `analytics.trackingEnabled` is off, or when the
+ * build fails for any reason (e.g. missing beacon nonce secret) — analytics must
+ * never break page rendering, so failures degrade gracefully to no snippet. Each
+ * call mints a fresh short-TTL HMAC beacon nonce (never a reused global nonce).
+ */
+const buildLiveAnalyticsScriptHtml = async (isPreview: boolean): Promise<string | null> => {
+  if (isPreview) return null;
+  try {
+    if (!(await isAnalyticsTrackingEnabled())) return null;
+    return buildTrackingScript({
+      nonce: createBeaconNonce(),
+      collectPath: ANALYTICS_BEACON_PATH,
+    });
+  } catch (error) {
+    console.warn("analytics_snippet_build_failed", error);
+    return null;
+  }
+};
+
 const renderPublicPageHtmlInternal = async (
   page: PublicPageData,
   options?: {
@@ -959,6 +985,8 @@ const renderPublicPageHtmlInternal = async (
     renderBodyScripts = () => runtimeScripts.renderScripts();
   }
 
+  const analyticsScriptHtml = await buildLiveAnalyticsScriptHtml(options?.preview === true);
+
   return {
     html: renderPublicPageV2RuntimeHtml({
       title: resolvedSeo.title ?? page.title ?? "Page",
@@ -979,6 +1007,7 @@ const renderPublicPageHtmlInternal = async (
       siteName,
       activePath: options?.requestPath ?? null,
       renderBodyScripts,
+      analyticsScriptHtml,
     }),
     cacheable: preparedRuntime.cacheable,
     cacheMode: preparedRuntime.cacheMode,
@@ -1143,6 +1172,7 @@ const renderEntryListHtml = async (
       devModuleScripts,
       isPreview: options?.preview ?? false,
       themeName: options?.themeName ?? (await resolvePublicThemeName()),
+      analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
     });
   }
 
@@ -1176,6 +1206,7 @@ const renderEntryListHtml = async (
     devModuleScripts,
     isPreview: options?.preview ?? false,
     themeName: options?.themeName ?? (await resolvePublicThemeName()),
+    analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
   });
 };
 
@@ -1220,6 +1251,7 @@ const renderEntryDetailHtml = async (
       metaDescription: post.seo?.description ?? resolvePostRuntimeMetaDescription(post.data),
       canonicalUrl: post.seo?.canonicalUrl ?? null,
       robots: post.seo?.robots ?? null,
+      analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
     });
   }
 
@@ -1266,6 +1298,8 @@ const renderEntryDetailHtml = async (
             title: entryDetail.title,
             slug: entryDetail.slug,
             status: entryDetail.status,
+            visibility: entryDetail.visibility,
+            hasPassword: entryDetail.hasPassword,
             tags: entryDetail.tags ?? [],
             data: entryDetail.data ?? {},
             publishedAt: entryDetail.publishedAt ?? null,
@@ -1289,6 +1323,8 @@ const renderEntryDetailHtml = async (
             title: entryDetail.title,
             slug: entryDetail.slug,
             status: entryDetail.status,
+            visibility: entryDetail.visibility,
+            hasPassword: entryDetail.hasPassword,
             tags: entryDetail.tags ?? [],
             data: entryDetail.data ?? {},
             publishedAt: entryDetail.publishedAt ?? null,
@@ -1356,6 +1392,7 @@ const renderEntryDetailHtml = async (
         imageUrl: detailSeo.imageUrl,
         themeName: options?.themeName ?? (await resolvePublicThemeName()),
         templateKey: detailPage.document.settings.template,
+        analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
       }),
       cacheable: blocksAllowSiteHtmlCache(blocks),
     };
@@ -1392,6 +1429,7 @@ const renderEntryDetailHtml = async (
     metaDescription: resolvedSeo.description,
     canonicalUrl: resolvedSeo.canonicalUrl,
     robots: resolvedSeo.robots,
+    analyticsScriptHtml: await buildLiveAnalyticsScriptHtml(options?.preview === true),
   });
 };
 
@@ -1417,6 +1455,8 @@ const renderDetailPagePreviewHtml = async (input: {
       title: entryDetail.title,
       slug: entryDetail.slug,
       status: entryDetail.status,
+      visibility: entryDetail.visibility,
+      hasPassword: entryDetail.hasPassword,
       tags: entryDetail.tags ?? [],
       data: entryDetail.data ?? {},
       publishedAt: entryDetail.publishedAt ?? null,
@@ -1485,6 +1525,14 @@ export async function handlePublicRequest(req: Request) {
     security,
   });
   if (formsApiResponse) return formsApiResponse;
+
+  // Public analytics beacon collector (TASK-483-02). handlePublicAnalyticsApi
+  // always returns a Response (never null), so it is dispatched by an explicit
+  // pathname guard, mirroring the booking/forms dispatch above; ip/userAgent/
+  // security are already resolved and reused, exactly like booking.
+  if (url.pathname === ANALYTICS_BEACON_PATH) {
+    return handlePublicAnalyticsApi(req, { ip, userAgent, security });
+  }
 
   checkRateLimit(
     "public_read",

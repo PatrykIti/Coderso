@@ -1,3 +1,28 @@
+const contentTypeConfigSchema = {
+  type: "object",
+  properties: {
+    singularName: { type: "string" },
+    pluralName: { type: "string" },
+    draftsEnabled: { type: "boolean" },
+    versioning: { type: "boolean" },
+    permissions: {
+      type: "object",
+      additionalProperties: {
+        type: "object",
+        properties: {
+          read: { type: "boolean" },
+          create: { type: "boolean" },
+          update: { type: "boolean" },
+          delete: { type: "boolean" },
+          publish: { type: "boolean" },
+        },
+        additionalProperties: false,
+      },
+    },
+  },
+  additionalProperties: false,
+};
+
 export const contentTypeCreateSchema = {
   type: "object",
   required: ["name", "slug", "schema"],
@@ -6,6 +31,7 @@ export const contentTypeCreateSchema = {
     slug: { type: "string" },
     schema: { type: "object" },
     status: { type: "string", enum: ["draft", "published"] },
+    config: contentTypeConfigSchema,
   },
   additionalProperties: false,
 };
@@ -17,6 +43,7 @@ export const contentTypeUpdateSchema = {
     slug: { type: "string" },
     schema: { type: "object" },
     status: { type: "string", enum: ["draft", "published"] },
+    config: contentTypeConfigSchema,
   },
   additionalProperties: false,
 };
@@ -79,6 +106,8 @@ export const contentEntryMetadataSchema = {
       enum: ["draft", "published", "scheduled", "archived"],
     },
     scheduledAt: { type: ["string", "null"], format: "date-time" },
+    visibility: { type: "string", enum: ["public", "private", "password"] },
+    accessPassword: { type: ["string", "null"], maxLength: 200 },
     tags: {
       type: "array",
       maxItems: 20,

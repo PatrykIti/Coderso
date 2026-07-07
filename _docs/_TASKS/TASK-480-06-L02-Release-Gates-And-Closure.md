@@ -6,7 +6,8 @@
 **Category:** Admin UI / Dashboard Widgets / Release Gates / Task Board
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-06-L01 (docs landed) + all of TASK-480-01..05 implemented and test-green
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 
 ---
 
@@ -129,7 +130,7 @@ bun run gates:coderso
 
 - Move TASK-480 and every child (01..06 and their leaves) to the **Done** bucket
   with a concise truthful one-line outcome (cite the changelog number).
-- Set `**Status:** ✅ Done` + `**Completed:** <YYYY-MM-DD>` in each TASK-480 file
+- Set `**Status:** ✅ Done` + `**Completed:** 2026-07-05 in each TASK-480 file
   (umbrella, subtasks, leaves). A parent flips to Done only when all descendants are
   Done/Superseded/Cancelled.
 - Update the **Statistics** block (decrement To Do / In Progress, increment Done by
@@ -172,6 +173,26 @@ sweep. Any gate extension added in step 2 carries its own budget assertion.
   `bun run gates:coderso:security` if a gate was extended.
 - Record all pass counts and any skips/`skipReason` in the closeout; state clearly
   if any command could not run.
+
+## Closeout Evidence (2026-07-05)
+
+- `bun --cwd core lint:types` — passed.
+- `bun --cwd core lint` — passed.
+- `set -a && source .env && set +a && bun test tests/integration/routes/dashboard.test.ts tests/security/codersoSecurityGate.test.ts` — passed.
+- `bun test tests/integration/routes/dashboard.test.ts` after `bun run db:migrate` — passed, including the `dashboard_layouts` repository/migration behavior.
+- `bunx vitest run --config vitest.config.ts tests/vitest/services/dashboardWidgetContract.test.ts tests/vitest/services/dashboardDataSources.test.ts tests/vitest/services/dashboardWidgetData.test.ts tests/vitest/admin/dashboardClient.test.ts tests/vitest/admin/permissionsCatalog.test.ts tests/vitest/ui/role-permission-risk.test.ts tests/vitest/ui/dashboard.test.tsx` — passed.
+- `bun run db:migrate` — passed; applied `0066_dashboard_layouts`.
+- `bun run gates:coderso` — passed functional, UX, performance, security, and reliability gates.
+- `bun run scan:security` — passed local advisory scanners; container image scan was skipped because `SECURITY_SCAN_IMAGE` was not set.
+- Runtime smoke: `playwright-cli -s=wf480smoke-r12 run-code --filename .tmp/task-480-smoke-code.js` via `.tmp/task-480-smoke-runner.ts` — passed 5 real-flow scenario groups with 0 console errors:
+  desktop light load, add/configure, resize/reorder, save/reload mobile dark parity, reset, and read-only permission boundary.
+- Smoke screenshots:
+  `_docs/_workflows/_smoke/task-480-01-desktop-light-load.png`,
+  `_docs/_workflows/_smoke/task-480-02-add-configure.png`,
+  `_docs/_workflows/_smoke/task-480-03-resize-reorder.png`,
+  `_docs/_workflows/_smoke/task-480-04-mobile-dark-saved.png`,
+  `_docs/_workflows/_smoke/task-480-05-reset.png`,
+  `_docs/_workflows/_smoke/task-480-06-readonly.png`.
 
 ---
 

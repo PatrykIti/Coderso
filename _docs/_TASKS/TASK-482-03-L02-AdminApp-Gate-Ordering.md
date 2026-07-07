@@ -6,9 +6,9 @@
 **Category:** Admin / Onboarding / Auth
 **Estimated Effort:** Medium
 **Dependencies:** TASK-482-03-L01, TASK-482-01-L02
-**Status:** ⏳ To Do
-**Started:** `<YYYY-MM-DD>`
-**Completed:** `<YYYY-MM-DD>`
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -25,12 +25,16 @@
     from `GET /auth/install/status`, gated on `isAdminPath` and run for **both**
     authenticated and unauthenticated states (the status endpoint is public).
   - Export `shouldShowInstaller({ isAdminPath, installState, authState })` next
-    to `shouldShowSetupWizard` (line 234-243) for unit-testing.
+    to `shouldShowSetupWizard` (line 237-246 at HEAD fbe93dae) for unit-testing.
   - Insert the installer early-return **before** the
     `isProtected && authState !== "authenticated"` loading branch (line
-    1076-1083) and the `useEffect` that redirects unauthenticated → `/login`
-    (line 1059-1067). The redirect effect must also no-op while
-    `installState === "available"`.
+    1091-1098) and the `useEffect` that redirects unauthenticated → `/login`
+    (line 1074-1082 — identify it by shape: the effect calling
+    `window.location.assign(withAdminBasePath(adminBasePath, "/login"))`; do
+    NOT confuse it with the canonical-path `history.replaceState` effect that
+    now sits just above it at 1062-1072). The redirect effect must no-op while
+    the install status is unresolved or available (see pseudocode: guard with
+    `installState !== "disabled"`).
 - **Source-of-truth docs:** `_docs/AUTH_SPEC.md`, `_docs/ADMIN_NAVIGATION.md`,
   `_docs/SECURITY_SPEC.md`.
 - **Out-of-scope:** the installer form (03-L01); finalize/`setup.completed` (08).
@@ -71,7 +75,8 @@ export const shouldShowInstaller = (input: {
 Render ordering in `AdminApp` (top of the render, before existing branches):
 
 ```tsx
-if (installState === "checking") return <Loading />;            // before login redirect
+if (installState === "checking") return <Loading />; // render-side only — does NOT stop the
+                                                      // redirect effect; the effect guard below is mandatory
 if (showInstaller) {
   return (
     <AdminBasePathProvider value={adminBasePath}>
@@ -85,18 +90,41 @@ if (showInstaller) {
     </AdminBasePathProvider>
   );
 }
-// ...existing: loading branch (1076), setup wizard (1085), routes
+// ...existing: loading branch (1091-1098), setup wizard (computed 1084, rendered 1100), routes
 ```
 
-And the redirect `useEffect` (1059-1067) guards with
-`if (installState === "available") return;` before `window.location.assign(.../login)`.
+And the redirect `useEffect` (1074-1082 — the one calling
+`window.location.assign(withAdminBasePath(adminBasePath, "/login"))`) guards its
+unauthenticated branch with `installState !== "disabled"`, i.e. it suppresses
+the `/login` redirect during **both** `"checking"` and `"available"`:
+
+```ts
+useEffect(() => {
+  if (typeof window === "undefined") return;
+  if (authState === "unauthenticated" && isProtected) {
+    if (installState !== "disabled") return; // "checking" | "available": no bounce
+    window.location.assign(withAdminBasePath(adminBasePath, "/login"));
+  }
+  // ...existing authenticated && isPublic branch unchanged
+}, [adminBasePath, authState, canonicalRelativePath, installState, isProtected, isPublic]);
+```
+
+Why not `installState === "available"` alone: auth bootstrap and the install
+status fetch run concurrently; if `authState` resolves `"unauthenticated"`
+while the status is still `"checking"`, guarding only on `"available"` lets the
+effect fire a full-page `/login` bounce on a fresh install (the exact bug this
+leaf prevents), and makes the "no `/login` redirect fires" regression test
+timing-dependent. The fail-closed error path (fetch failure ⇒ `"disabled"`)
+keeps a populated install delayed by at most one status roundtrip.
 
 - **Data flow:** mount → fetch install status → render installer | fall through.
 - **Error handling:** status fetch failure ⇒ `installState = "disabled"`.
 - **Regression-test shape:** `shouldShowInstaller` truth table; with mocked
   status `available` + unauthenticated ⇒ installer renders and **no** `/login`
-  redirect fires; status `disabled` ⇒ normal login redirect; status `available`
-  + authenticated (edge) ⇒ installer hidden.
+  redirect fires; `authState` resolving `"unauthenticated"` while status is
+  still `"checking"` (delayed status mock) ⇒ **no** redirect fires either
+  (guards the race); status `disabled` ⇒ normal login redirect; status
+  `available` + authenticated (edge) ⇒ installer hidden.
 
 ## Testing Requirements
 
@@ -105,6 +133,14 @@ And the redirect `useEffect` (1059-1067) guards with
   ordering, redirect suppression) plus a pure unit test for
   `shouldShowInstaller` in `tests/vitest/admin/` (truth table; asserts it gates
   ahead of redirect/loading).
-- Cases: fresh install renders installer, no login bounce; disabled ⇒ login
-  redirect; failed status fetch ⇒ login redirect (fail-safe).
+- Cases: fresh install renders installer, no login bounce; auth resolves
+  unauthenticated while status still `"checking"` ⇒ no bounce (race guard);
+  disabled ⇒ login redirect; failed status fetch ⇒ login redirect (fail-safe).
+- Tests are mock-based (mocked install-status/auth clients; no shared remote DB
+  access, no `users`/settings mutation) per the Coordination Pins in
+  TASK-482-03.
 - No migration artifacts.
+- Coordination pins: see TASK-482-03-Installer-UI-And-Gate-Ordering.md
+  §Coordination Pins — changelog `1220` belongs to the 482-09 closure only
+  (1219/1221/1222 reserved); this leaf never edits `_docs/_TASKS/README.md` or
+  `_docs/_CHANGELOG/*` and stays clear of the TASK-483/484 forbidden paths.

@@ -10,10 +10,9 @@
 `normalizeDashboardLayout`, `adaptLegacyDashboardLayout`, `DEFAULT_DASHBOARD_LAYOUT`,
 `DASHBOARD_MAX_WIDGETS`, `normalizeDashboardWidgetConfig`). The storage layer
 imports + re-exports that contract; it does not redefine it.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:**
-**Completed:**
-
+**Completed:** 2026-07-05
 ---
 
 ## Overview
@@ -172,17 +171,18 @@ export async function resetDashboardLayout(userId: string) {
 Generate via the project's drizzle-kit flow, then verify the three artifacts
 exist (`bun --cwd core db:generate` or the repo's documented generate script —
 confirm the exact script in `core/db/drizzle.config.ts` / `package.json`). Use
-the **next free migration index at implementation time**. On the HEAD audited for
-this task contract the next free index is currently **0064** (last shipped is
-`0063_yummy_glorian`), but concurrent work may claim it first:
+the **next free migration index at implementation time**. The implemented
+artifact uses **0066** after TASK-483 claimed `0064_analytics_traffic_tables`
+and TASK-484 claimed `0065_backup_run_metadata`:
 
 - **SQL** — `core/db/migrations/<next>_dashboard_layouts.sql`
-  (currently `0064_dashboard_layouts.sql` on the audited HEAD):
+  (implemented as `0066_dashboard_layouts.sql`):
   ```sql
   CREATE TABLE "dashboard_layouts" (
     "user_id" uuid PRIMARY KEY NOT NULL,
     "schema_version" integer DEFAULT 1 NOT NULL,
     "layout" jsonb NOT NULL,
+    "created_at" timestamp DEFAULT now() NOT NULL,
     "updated_at" timestamp DEFAULT now() NOT NULL,
     "updated_by" uuid
   );
@@ -198,7 +198,7 @@ this task contract the next free index is currently **0064** (last shipped is
     ON DELETE set null ON UPDATE no action;
   ```
 - **Snapshot** — `core/db/migrations/meta/<next>_snapshot.json`
-  (currently `0064_snapshot.json` on the audited HEAD): full drizzle
+  (implemented as `0066_snapshot.json`): full drizzle
   snapshot regenerated for the new table (do not hand-edit beyond what the
   generator emits; it must include `dashboard_layouts` columns, PK, and both FKs).
 - **Journal** — append to `core/db/migrations/meta/_journal.json` using the same

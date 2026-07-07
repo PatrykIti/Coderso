@@ -37,11 +37,7 @@ export const storageSettingsSchema = {
     publicBaseUrl: { type: ["string", "null"] },
     maxSizeBytes: { type: ["number", "null"] },
     allowedMime: {
-      anyOf: [
-        { type: "string" },
-        { type: "null" },
-        { type: "array", items: { type: "string" } },
-      ],
+      anyOf: [{ type: "string" }, { type: "null" }, { type: "array", items: { type: "string" } }],
     },
     delivery: {
       type: "object",
@@ -69,6 +65,14 @@ export const storageSettingsSchema = {
         account: { type: ["string", "null"] },
         key: { type: ["string", "null"] },
         connectionString: { type: ["string", "null"] },
+      },
+    },
+    quota: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        totalBytes: { type: ["number", "null"] },
+        planLabel: { type: ["string", "null"] },
       },
     },
   },
@@ -100,23 +104,14 @@ export const securitySettingsSchema = {
       additionalProperties: false,
       properties: {
         allowedOrigins: {
-          anyOf: [
-            { type: "array", items: { type: "string" } },
-            { type: "string" },
-          ],
+          anyOf: [{ type: "array", items: { type: "string" } }, { type: "string" }],
         },
         allowCredentials: { type: "boolean" },
         allowedMethods: {
-          anyOf: [
-            { type: "array", items: { type: "string" } },
-            { type: "string" },
-          ],
+          anyOf: [{ type: "array", items: { type: "string" } }, { type: "string" }],
         },
         allowedHeaders: {
-          anyOf: [
-            { type: "array", items: { type: "string" } },
-            { type: "string" },
-          ],
+          anyOf: [{ type: "array", items: { type: "string" } }, { type: "string" }],
         },
         maxAgeSeconds: { type: "number" },
       },

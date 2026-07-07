@@ -32,6 +32,14 @@ export type PublicPageRenderOptions = {
   robots?: string | null;
   imageUrl?: string | null;
   layoutSettings?: PageLayoutSettings;
+  /**
+   * Analytics tracking snippet body (TASK-483-03-L02): the inline IIFE built by
+   * `buildTrackingScript` (already minted with a per-render beacon nonce).
+   * `renderDocument` wraps it in a `<script>` appended before `</body>` on LIVE
+   * renders only — it is skipped whenever `isPreview` is set, so admin preview
+   * traffic never pollutes the analytics tables. Absent/null → no script.
+   */
+  analyticsScriptHtml?: string | null;
 };
 
 export type PublicPageRuntimeRenderOptions = PublicPageRenderOptions & {
@@ -112,7 +120,8 @@ const renderDocument = (
   devModuleScripts?: string[] | null,
   isPreview?: boolean,
   renderBodyScripts?: () => ReactNode,
-  responsiveCss?: string | null
+  responsiveCss?: string | null,
+  analyticsScriptHtml?: string | null
 ) => {
   const headTags: ReactNode[] = [
     <meta key="charset" charSet="utf-8" />,
@@ -178,8 +187,13 @@ const renderDocument = (
   const head = renderToString(<>{headTags}</>);
   const bodyHtml = renderToString(body);
   const bodyScriptsHtml = renderBodyScripts ? renderToString(<>{renderBodyScripts()}</>) : "";
+  // Analytics snippet (TASK-483-03-L02): LIVE renders only — never on previews,
+  // so admin preview traffic never reaches the collector. The script body is a
+  // self-contained IIFE (built by buildTrackingScript); it embeds no markup.
+  const analyticsHtml =
+    analyticsScriptHtml && !isPreview ? `<script>${analyticsScriptHtml}</script>` : "";
 
-  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}${bodyScriptsHtml}</body></html>`;
+  return `<!doctype html><html lang="en"><head>${head}</head><body>${bodyHtml}${bodyScriptsHtml}${analyticsHtml}</body></html>`;
 };
 
 const previewBannerOffset = "2rem";
@@ -266,7 +280,9 @@ export function renderPublicPageHtml(options: PublicPageRenderOptions) {
     options.imageUrl,
     devModuleScripts,
     isPreview,
-    () => runtimeScripts.renderScripts()
+    () => runtimeScripts.renderScripts(),
+    null, // responsiveCss (legacy path has none)
+    options.analyticsScriptHtml
   );
 }
 
@@ -332,7 +348,9 @@ export async function renderPublicPageRuntimeHtml(options: PublicPageRuntimeRend
     options.imageUrl,
     devModuleScripts,
     isPreview,
-    () => runtimeScripts.renderScripts()
+    () => runtimeScripts.renderScripts(),
+    null, // responsiveCss (runtime path has none)
+    options.analyticsScriptHtml
   );
 }
 
@@ -418,6 +436,7 @@ export function renderPublicPageV2RuntimeHtml(options: PublicPageV2RuntimeRender
     devModuleScripts,
     isPreview,
     renderBodyScripts ?? undefined,
-    responsiveCss
+    responsiveCss,
+    options.analyticsScriptHtml
   );
 }

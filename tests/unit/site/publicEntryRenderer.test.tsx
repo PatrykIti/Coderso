@@ -204,3 +204,65 @@ test("renderPublicEntryListHtml renders the shared numbered pager from paginatio
   });
   expect(empty).toContain('data-entry-list-empty="1"');
 });
+
+// TASK-483-03-L02 post-audit: the entry DETAIL default-template path previously
+// dropped the analytics beacon (blog posts + default entry detail were
+// untracked). These drive the REAL render entry points and assert the snippet is
+// present on live renders and absent on previews for BOTH list and detail.
+const beaconScript = '(function(){/*beacon*/ navigator.sendBeacon("/_analytics/collect");})();';
+
+test("renderPublicEntryDetailHtml injects the analytics beacon on live renders", async () => {
+  const html = await renderPublicEntryDetailHtml({
+    title: "Hello",
+    contentType: baseContentType,
+    entry: baseEntry,
+    analyticsScriptHtml: beaconScript,
+  });
+  expect(html).toContain("sendBeacon");
+  expect(html).toContain("/_analytics/collect");
+  expect(html).toContain("</script></body></html>");
+});
+
+test("renderPublicEntryDetailHtml omits the analytics beacon in preview mode", async () => {
+  const html = await renderPublicEntryDetailHtml({
+    title: "Hello",
+    contentType: baseContentType,
+    entry: baseEntry,
+    isPreview: true,
+    analyticsScriptHtml: beaconScript,
+  });
+  expect(html).not.toContain("sendBeacon");
+  expect(html).not.toContain("/_analytics/collect");
+});
+
+test("renderPublicEntryDetailHtml omits the beacon when none is supplied", async () => {
+  const html = await renderPublicEntryDetailHtml({
+    title: "Hello",
+    contentType: baseContentType,
+    entry: baseEntry,
+  });
+  expect(html).not.toContain("_analytics/collect");
+});
+
+test("renderPublicEntryListHtml injects the analytics beacon on live renders", async () => {
+  const html = await renderPublicEntryListHtml({
+    title: "Blog",
+    contentType: baseContentType,
+    items: [{ id: "1", title: "Hello", href: "/blog/hello", entry: baseEntry }],
+    analyticsScriptHtml: beaconScript,
+  });
+  expect(html).toContain("sendBeacon");
+  expect(html).toContain("/_analytics/collect");
+});
+
+test("renderPublicEntryListHtml omits the analytics beacon in preview mode", async () => {
+  const html = await renderPublicEntryListHtml({
+    title: "Blog",
+    contentType: baseContentType,
+    items: [{ id: "1", title: "Hello", href: "/blog/hello", entry: baseEntry }],
+    isPreview: true,
+    analyticsScriptHtml: beaconScript,
+  });
+  expect(html).not.toContain("sendBeacon");
+  expect(html).not.toContain("/_analytics/collect");
+});

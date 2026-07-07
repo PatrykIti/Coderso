@@ -28,6 +28,9 @@ Minimalne logowanie zdarzen administracyjnych.
 - audit.export
 - access_logs.export
 - access_logs.revoke_session
+- auth.install.admin.created
+- auth.install.blocked
+- setup.starter_content.applied
 
 ## Data model
 
@@ -73,6 +76,11 @@ Minimalne logowanie zdarzen administracyjnych.
   `accessLogRef`, `revokedSessionRef`, `targetUserRef`, `reason`, and `result`.
   They must not include session cookies, token hashes, CSRF hashes, request
   headers, or raw session secrets.
+- First-run installer (TASK-482): `auth.install.admin.created` ma
+  `actorId` = nowy admin, `targetType: "user"`, metadata `{ email }` (przez PII
+  redaction seam, bez hasla/hashu). `auth.install.blocked` (proba post-setup) ma
+  `actorId: null`, `targetType: "install"`. `setup.starter_content.applied` ma
+  `actorId` = admin, `targetType: "settings"`, metadata `{ runId }`.
 
 ## API
 

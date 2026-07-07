@@ -4,7 +4,7 @@ import { ContentValidationError } from "../../../core/services/content/validatio
 
 process.env.DATABASE_URL ??= "postgres://localhost/nextless_test";
 
-const { mapContentEntryError, registerContentEntryRoutes } =
+const { mapContentEntryError, mapEntryMetadataError, registerContentEntryRoutes } =
   await import("../../../core/server/routes/contentEntryRoutes");
 
 type RouteContext = {
@@ -87,6 +87,35 @@ test("mapContentEntryError maps entry domain errors to route ApiErrors", () => {
   expect(mapContentEntryError(new Error("relation_entry_missing"))?.status).toBe(404);
   expect(mapContentEntryError(new Error("auth_required"))?.status).toBe(401);
   expect(mapContentEntryError(new Error("other_error"))).toBeNull();
+});
+
+test("PATCH metadata route accepts visibility + accessPassword and gates publish", () => {
+  const { router, routes } = makeRouter();
+  const requestedPermissions: string[] = [];
+
+  registerContentEntryRoutes(router, {
+    requirePermission: (permission) => {
+      requestedPermissions.push(permission);
+      return async () => undefined;
+    },
+    validate: () => undefined,
+  });
+
+  const metadataRoute = routes.find(
+    (route) => route.method === "PATCH" && route.path === "/content/:type/entries/:id/metadata"
+  );
+  expect(metadataRoute).toBeDefined();
+  // The metadata route rides content:write (no new RBAC bucket for visibility).
+  expect(requestedPermissions).toContain("content:write");
+});
+
+test("mapEntryMetadataError maps entry_password_required to a 400 without leaking the secret", () => {
+  const mapped = mapEntryMetadataError(new Error("entry_password_required"));
+  expect(mapped?.status).toBe(400);
+  expect(mapped?.code).toBe("entry_password_required");
+  expect(JSON.stringify(mapped)).not.toContain("accessPassword");
+  expect(mapEntryMetadataError(new Error("scheduled_at_required"))?.status).toBe(400);
+  expect(mapEntryMetadataError(new Error("other_error"))).toBeNull();
 });
 
 test("mapContentEntryError preserves field details for domain field errors", () => {

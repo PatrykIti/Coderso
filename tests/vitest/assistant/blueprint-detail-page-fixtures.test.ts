@@ -471,6 +471,8 @@ const createEntry = (fixture: DetailPageFixture): DetailPageBindingResolverEntry
   title: `${fixture.contentTypeName} sample`,
   slug: `${fixture.key}-sample`,
   status: "published",
+  visibility: "public",
+  hasPassword: false,
   data: fixture.entryData,
   tags: [],
   publishedAt: new Date("2026-05-10T09:00:00.000Z"),

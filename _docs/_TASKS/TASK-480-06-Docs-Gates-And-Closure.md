@@ -6,7 +6,8 @@
 **Category:** Admin UI / Dashboard Widgets / Docs / Release Gates
 **Estimated Effort:** Medium
 **Dependencies:** TASK-480-01 (feature audit + widget product spec), TASK-480-02 (domain/schema + data-source service contract), TASK-480-03 (layout persistence + internal admin API routes + cached client), TASK-480-04 (widget renderer components), TASK-480-05 (admin UI widget grid + edit-mode builder)
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-05
 
 ---
 
@@ -84,8 +85,8 @@ a closure blocker.
 
 | Leaf | Title | Status |
 |------|-------|--------|
-| TASK-480-06-L01 | Dashboard Widgets Spec & API Docs | ⏳ To Do |
-| TASK-480-06-L02 | Release Gates & Closure | ⏳ To Do |
+| TASK-480-06-L01 | Dashboard Widgets Spec & API Docs | ✅ Done |
+| TASK-480-06-L02 | Release Gates & Closure | ✅ Done |
 
 ---
 

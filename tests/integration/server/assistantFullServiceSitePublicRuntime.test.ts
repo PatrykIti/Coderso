@@ -58,6 +58,8 @@ const createDetailEntry = (action: EntrySampleCreateAction): DetailPageBindingRe
   title: action.input.title,
   slug: action.input.slug,
   status: action.input.status,
+  visibility: "public",
+  hasPassword: false,
   data: action.input.values,
   tags: [],
   scheduledAt: null,

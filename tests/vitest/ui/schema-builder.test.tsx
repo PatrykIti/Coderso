@@ -8,6 +8,8 @@ test("SchemaBuilderPage renders schema builder sections", () => {
   const html = renderAdminUi(<SchemaBuilderPage />);
 
   expect(html).toContain("Schema Builder");
-  expect(html).toContain("Schema Preview");
+  // Schema JSON preview is opt-in behind a toolbar toggle: the docked preview
+  // panel ("Schema Preview" heading) is NOT rendered until the toggle is on.
+  expect(html).not.toContain("Schema Preview");
   expect(html).toContain("Add new field");
 });

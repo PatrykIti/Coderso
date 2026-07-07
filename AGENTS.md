@@ -60,8 +60,12 @@ Primary internal/agent docs live in `_docs/`:
 - `_docs/TESTING_STRATEGY.md` - target hybrid testing model for Bun runtime and Vitest coverage lanes
 - `_docs/WIDGETS.md` - core widgets and configuration model
 - `_docs/_WIDGETS/README.md` - widgets index and per-widget docs
+- `_docs/DASHBOARD_WIDGETS_SPEC.md` - admin dashboard widgets & configurable panels (distinct from `core/widgets/*`: admin-only registry, RBAC, cache family, and render host)
 - `_docs/_TASKS/README.md` - tasks index
 - `_docs/_CHANGELOG/README.md` - changelog index
+- `_docs/_workflows/` - multi-agent workflow scripts (`task-###-author-audit.mjs`,
+  `task-###-implement.mjs`, `task-###-fix.mjs`) plus smoke evidence in
+  `_docs/_workflows/_smoke/`
 
 Testing docs:
 
@@ -80,7 +84,9 @@ Testing docs:
 - For non-trivial tasks, tasks that change contributor/process rules, or work
   done alongside other active agents, prefer a dedicated git branch + worktree
   so the change stays isolated from unrelated in-progress edits in the shared
-  tree.
+  tree. Alternatively, two streams may run in-place in the shared tree when
+  their file ownership is disjoint and each carries the collision guards from
+  the Multi-Agent Workflow Process section.
 - If scope is unclear or a task is not broken down enough, split or refine the
   task before implementation. Do not silently downgrade agreed scope to a
   smaller MVP.
@@ -164,6 +170,118 @@ Testing docs:
   runtime smoke tests.
 - Implement in dependency order to avoid unnecessary refactors and rework.
 
+## Multi-Agent Workflow Process
+
+When the owner has granted a standing mandate for agent-driven delivery (the
+default on this repo since the `feature/visual` program), substantive tasks run
+as orchestrated multi-agent workflows rather than solo edits. This section
+extends the consultation rules above: under the standing mandate fresh-context
+agents also AUTHOR task contracts and IMPLEMENT code, while the orchestrator
+authors the workflow script, dispatches the agents, and stays the FINAL
+REVIEWER — every agent finding or claim is still verified against local files
+and command output before acting on it.
+
+- Workflow scripts live in `_docs/_workflows/` (`task-###-author-audit.mjs`,
+  `task-###-implement.mjs`, `task-###-fix.mjs`); smoke evidence goes to
+  `_docs/_workflows/_smoke/`.
+- Canonical pipeline: read-only RESEARCH → AUTHOR (parent + subtasks) →
+  DRIFT-AUDIT loop → sequential IMPLEMENT with per-subtask gates → POST-AUDIT
+  lenses → runtime SMOKE → closure. Parallel streams may defer the full
+  mandatory gate set to one combined run (see Validation Rules).
+
+Research and authoring:
+
+- Fresh-context agents ground every anchor (file, symbol, line number) against
+  the real source before authoring. Seed hints passed into a workflow are hints
+  to VERIFY, never trusted facts; agents must correct wrong seeds explicitly.
+- Agents author the board parent + child subtasks per the Task Workflow rules.
+  The parent author owns the `_docs/_TASKS/README.md` row/statistics edits;
+  child authors touch only their own file.
+
+Drift-audit loop (contract QA before implementation):
+
+- Run at least 5 SEQUENTIAL audit rounds. Each round = parallel per-file drift
+  audits + ONE cross-subtask RECONCILE audit + fixers for the HIGH/MEDIUM
+  findings (per-file fixers plus one cross-file fixer).
+- A round is clean only when there are 0 HIGH/MEDIUM findings AND every audit
+  agent returned a result — a missing audit result is a false-clean, not a
+  pass.
+- The reconcile audit checks only cross-file contradictions: single-writer
+  file ownership, identical shared type shapes / enum values / clamp ranges /
+  CSS selector strings, helper names consumers use = the names the owning
+  subtask defines, per-device representation, test-file names promised vs
+  delivered, land order, and the pinned changelog number.
+- Authoring loops can OSCILLATE on cross-file contradictions because each
+  per-file fixer sees only its file. If the loop hits its round cap without
+  converging, address the residual findings surgically with fresh agents, then
+  run ONE final fresh read-only reconcile. Implementation may start only from a
+  PASS (0 HIGH/MEDIUM).
+
+Implementation pipeline:
+
+- Implement subtasks STRICTLY SEQUENTIALLY in the declared land order. Each
+  source file has exactly ONE writer subtask (single-writer ownership). An
+  implementer reads the current on-disk state of shared files before editing so
+  it builds on, not clobbers, prior work.
+- Gate each subtask before the next lands: `bun --cwd core lint:types` +
+  `bun --cwd core lint` + the targeted Vitest globs + the targeted Bun test
+  paths for the touched contract, with a fix loop of at most 3 rounds. Prefer
+  fixing the SOURCE when it diverged from the contract; re-baseline a test only
+  for an intended contract change and never weaken a behavior assertion.
+- The closure subtask owns tests + docs only (changelog entry, board rows, task
+  statuses) and must not re-open source contracts.
+- After closure, run a POST-AUDIT of ~5 independent lenses (scope fidelity,
+  model/fail-closed correctness, byte-identity/present-only, cross-stream
+  safety, test integrity). Findings must be evidence-backed (`file:line`). Fix
+  HIGH/MEDIUM once, then re-run the targeted gate.
+
+### Runtime smoke (mandatory for UI/editor work)
+
+- Every implementation stream ends with a runtime smoke of AT LEAST 5 DISTINCT
+  real-flow scenarios for the touched area (owner mandate).
+  Acceptance-checklist-only smokes are insufficient — cover deep nesting,
+  override/reset cycles, every-control-visible-effect, cross-device, and
+  publish→front parity where applicable.
+- Assert VISIBLE EFFECT — computed styles, geometry/bounding boxes, DOM state
+  (`aria-*`, data attributes) — never mere control presence, and never only the
+  presence of a CSS/transition string (a rule can be emitted yet visually
+  inert).
+- Use `playwright-cli` with a task-scoped named session (for example
+  `-s=wf508smoke`); save screenshots to `_docs/_workflows/_smoke/` for human
+  review.
+- Restart the dev server before the smoke (the Bun server does not hot-reload)
+  and verify the admin and front respond before testing.
+- Feature flows must produce 0 console errors; verify dark mode alongside light
+  for admin surfaces.
+
+### Parallel streams and collision guards
+
+- Two task streams may run in-place in the shared tree ONLY when their file
+  ownership is disjoint and each carries explicit collision guards: a
+  forbidden-paths list naming the other stream's files, and a changelog number
+  PINNED per stream up front so closure agents cannot collide.
+- Closure agents read `_docs/_TASKS/README.md` and `_docs/_CHANGELOG/README.md`
+  FRESH immediately before editing and touch ONLY their own task's rows and
+  statistics deltas.
+- Only the closure subtask edits `_docs/_TASKS/*` and `_docs/_CHANGELOG/*`;
+  implementation agents never touch them.
+- Never revert, checkout, or "clean up" uncommitted edits you did not author —
+  the owner and other agents work concurrently in the shared tree.
+- The owner creates git commits; agents do not commit unless explicitly asked.
+  Report the per-task commit scope (file set + changelog number) at closure.
+
+### Operational discipline
+
+- Some large TS/TSX files in this repo are misdetected as binary by `rg` and
+  silently return no matches (for example `PageEditor.tsx`,
+  `MenuDesignEditor.tsx`, `menuDocumentV2.ts`, `menuDocumentCss.ts`). Use
+  `Read`/`grep -an` for those files and never trust an empty `rg` result on
+  them.
+- Structured outputs: gate, audit, and smoke agents return schema-validated
+  results (`{pass, summary, errors[]}`, `{severity, area, finding, evidence,
+  recommendation}`, `{pass, serverUp, scenarios[], consoleErrors,
+  screenshots[], failures[]}`) so the orchestrator can branch deterministically.
+
 ## Implementation Rules
 
 - Prefer internal admin endpoints (`/admin/api/*`) unless a public endpoint is explicitly required by architecture/product behavior.
@@ -179,6 +297,8 @@ Testing docs:
 - Admin navigation, route matching, aliases, and prefetch must go through the shared canonical helpers (`adminPaths`, `AdminLink`, `prefetchAdminRoute`). Do not hand-build admin hrefs, alias logic, or prefetch matching.
 - For admin React/UI work under ESLint 9 and the React Hooks Compiler rules, treat `react-hooks/*` findings as implementation contract issues. Do not weaken the full `eslint-plugin-react-hooks` recommended preset to make lint pass. Avoid synchronous `setState` calls in effect bodies; prefer lazy initializers, render-time derivation, reducers, event handlers, explicit subscription callbacks, and async result boundaries. Preserve cache hydration, dirty-state protection, and background revalidation semantics while refactoring effects.
 - Model external/admin/plugin/runtime payloads schema-first: define or extend the validation schema, reject unknown fields, and normalize through explicit `normalize*` helpers before persistence, rendering, or caching.
+- Every new schema key added to a validated document contract must CONSCIOUSLY join its reject-unknown allowlist AND ship a round-trip persistence test — a forgotten allowlist entry fail-closed-degrades every stored document carrying that key on read.
+- New optional styling/config fields are present-only by default: no seeded resolution default in the `*_DEFAULTS` emission maps, zero emitted bytes when unauthored, and no-override/legacy documents must stay byte-identical (guard with tests that pin the byte-identity, e.g. `buildSiteShellCss(null)` and no-override document render).
 - Favor deterministic contracts: stable ids/slugs/anchors, clamped limits, explicit defaults, explicit schema versions where needed, and non-destructive legacy adapters instead of destructive rewrites when old data must still render.
 - Route modules stay orchestration-only: validate payloads, enforce permissions, do minimal coercion, delegate business rules to services, and map known domain errors through centralized `map*Error` helpers.
 - Keep domain/service errors machine-readable (`*_invalid`, `*_not_found`, `*_conflict`, etc.) and map them to `ApiError` at the route boundary through centralized `map*Error` helpers.
@@ -242,6 +362,8 @@ Testing docs:
 - Before `bun test:full`, verify the database behind `DATABASE_URL` is reachable; if not, pause tests and report it.
 - For auth, public-write, secret-handling, dependency, or scanner-config changes, run the local Semgrep/Trivy/Gitleaks commands from `_docs/SECURITY_SPEC.md` when feasible or state clearly that validation remains CI-only. Any change to scanner allowlists/configs must record owner, reason, expiry, and ticket in task/changelog notes.
 - If `bun test:full` cannot complete due to DB/network issues, rerun after recovery and update the changelog with the final test status.
+- Parallel workflow streams may DEFER the full mandatory gate set to ONE combined run after all streams land: full `bun run test` (Bun + Vitest), `bun run precommit:check`, `bun run gates:coderso`, and the security scan (`bun run scan:security`, or `scan:security:strict` when the strict gate is required). Each stream must still pass its targeted per-subtask gates and its runtime smoke before closure.
+- Before declaring a test failure real, re-run the NAMED failing file once in isolation — known under-load flakes exist (spurious Vitest timeouts; avoid contention when measuring the performance gate). Record confirmed flakes and fix the root cause instead of tolerating them (for example, a test asserting a clean global precondition must reset the state it asserts).
 - If any tests are skipped or cannot run, state it clearly in the summary.
 - Before creating a manual commit, run `bun run precommit` unless the commit is
   created through the configured Git hook path and the hook runs automatically.

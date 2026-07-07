@@ -50,8 +50,41 @@ Przyklad error:
 - `POST /auth/verify-otp` (MFA)
 - `POST /auth/reset` (public)
 - `POST /auth/reset/confirm` (public)
+- `GET /auth/install/status` (public, first-run installer)
+- `POST /auth/install/admin` (public, session-less, first-run installer)
 
 `GET /auth/csrf` wymaga aktywnej sesji i zwraca `{ token }` do headera `X-CSRF-Token`.
+
+### First-run installer (v1.2)
+
+Faza 1 dwufazowego onboardingu (TASK-482). Publiczne, session-less; szczegoly
+security w `SECURITY_SPEC.md` → „Pre-auth first-run installer”.
+
+`GET /auth/install/status` — czy installer jest dostepny (zero userow w DB).
+Odrzuca nieznane query params (`install_query_invalid`, 400).
+
+```json
+{ "available": true }
+```
+
+`POST /auth/install/admin` — tworzy pierwszego admina (rola `["*"]`,
+`status: "active"`, argon2). Strict reject-unknown; haslo `minLength 8`.
+
+Request:
+
+```json
+{ "name": "Ada Admin", "email": "ada@example.com", "password": "correct horse staple" }
+```
+
+Response (bez sekretow — `passwordHash`/`roleId` nigdy nie sa zwracane):
+
+```json
+{ "ok": true, "user": { "id": "u1", "email": "ada@example.com", "name": "Ada Admin" } }
+```
+
+Bledy: `install_unavailable` (409, gdy user juz istnieje — self-disable /
+TOCTOU re-check), `install_admin_invalid` (400), `validation_error` (400, strict
+schema / slabe haslo).
 
 Payload login:
 
@@ -2012,6 +2045,23 @@ Permissions: `media:read`, `media:write`
 - `POST /media/:id/replace` (multipart)
 - `DELETE /media/:id`
 
+Folders (TASK-512, registered from inside `registerMediaRoutes`; `/media/folders`
+is registered BEFORE `/media/:id` for first-match dispatch):
+
+- `GET /media/folders` (`media:read`)
+- `POST /media/folders` (`media:write`) — reject-unknown; duplicate slug →
+  `media_folder_slug_conflict` (409)
+- `POST /media/folders/reorder` (`media:write`)
+- `PATCH /media/folders/:id` (`media:write`)
+- `DELETE /media/folders/:id` (`media:write`) — un-files member assets
+  (`media.folder_id` → null), never cascade-deletes media
+
+`PATCH /media/:id` accepts (present-only, reject-unknown, TASK-512): `alt`,
+`title`, `caption`, `folderId` (uuid|null), `tags` (`string[]`, capped),
+`focalX`/`focalY` (clamped `[0,1]`), `description`, `credit`. The upload body
+rejects `folderId`/`tags`. Storage quota is written via `PATCH /settings/storage`
+(`storage.quota.totalBytes`/`.planLabel`).
+
 Runtime asset delivery:
 - `GET /media/*` (public site runtime URL)
 - zachowanie zalezy od `settings.storage.delivery.accessMode`.
@@ -2367,6 +2417,44 @@ Note:
 
 ---
 
+## Setup / Starter content (v1.2)
+
+Onboarding Faza 2 — internal admin surface (`/setup/*`, TASK-482) ktory seeduje
+starter site przez Solution Kit installer i podpina wynik pod publiczny `site.*`
+shell. Blueprint jest ZAWSZE server-chosen; client podaje wylacznie selector
+(`kitId` LUB `blueprintKey`, dokladnie jeden), nigdy surowej `SolutionKitDefinition`.
+
+- `POST /setup/starter-content/preview` — dry-run; wymaga `solution-kits:write`
+  (dry-run persystuje `dry_run` run + items + audit row, jak
+  `POST /solution-kits/:id/apply`).
+- `POST /setup/starter-content/apply` — realny install; wymaga
+  `solution-kits:write` ORAZ `settings:write` (mutuje `site.homepageId` /
+  `site.navigationMenuId` / `site.footerTemplateId`).
+
+Request (dokladnie jeden selector):
+
+```json
+{ "blueprintKey": "default" }
+```
+
+Preview response:
+
+```json
+{ "summary": { "total": 3, "created": 3, "updated": 0, "skipped": 0 } }
+```
+
+Apply response:
+
+```json
+{ "runId": "123e4567-e89b-12d3-a456-426614174000", "summary": { "total": 3 } }
+```
+
+Audit: apply zapisuje `setup.starter_content.applied` (metadata `{ runId }`).
+Bledy: `starter_kit_unknown` (400, nieznany id/key), `starter_choice_invalid`
+(400, oba/zaden selector).
+
+---
+
 ## Content types and entries
 
 Permissions: `content:read`, `content:write`, `content:publish`
@@ -2389,12 +2477,33 @@ Content type payload:
     "type": "object",
     "additionalProperties": false,
     "properties": {}
+  },
+  "config": {
+    "singularName": "Story",
+    "pluralName": "Stories",
+    "draftsEnabled": false,
+    "versioning": true,
+    "permissions": { "editor": { "read": true, "create": true } }
   }
 }
 ```
 
 `status` is `draft` or `published`. Create defaults to `draft`; existing rows
 from the TASK-202 migration were retained as `published`.
+
+`config` (TASK-513-01) is optional and rides the existing `POST /content-types` +
+`PATCH /content-types/:id` envelopes under `content:write` — no new endpoint or RBAC bucket. The
+request schema stays `additionalProperties:false` at every nesting level; every persisted key is
+re-allowlisted + normalized server-side (present-only: keys at their resolved default —
+`draftsEnabled:true`, `versioning:false`, empty names, false/empty capability rows — are dropped,
+so a default type persists `config = {}`). Unknown top-level or per-role capability keys are
+rejected with machine-readable `content_type_config_invalid` (HTTP 400); bad scalar values
+fail-soft (omitted). On `PATCH`, omitting `config` leaves the stored value untouched. The
+`permissions` matrix is DECLARATIVE only — it does not by itself change route authorization.
+Duplicate copies the source `config` through unchanged. The field `schema` supports the `date` and
+`slug` field types (TASK-513-02): both map to `type:"string"` with `xFieldType:"date"|"slug"` and
+**no `format` keyword**; authored field order persists via a per-property integer
+`xFieldConfig.order`.
 
 Duplicate payload accepts optional `name` / `slug`; without them the service
 creates a unique `Copy of ...` draft and copies schema only, never entries.
@@ -2839,16 +2948,89 @@ the browser download:
 }
 ```
 
+### Traffic analytics (TASK-483 — real visitor data)
+
+Permissions: `content:read`. Internal admin reads, session cookie + `admin_read`
+rate-limit bucket, GET-only (no CSRF). Query strings are strict via
+`assertKnownQuery`; unknown params and out-of-range `limit`/`rangeDays` are
+rejected with `validation_error`. These endpoints report REAL traffic
+(pageviews/visitors/sessions/bounce/sources/devices/referrers/top-pages-by-views)
+from the `analytics_pageviews` / `analytics_sessions` tables, distinct from the
+CMS-derived v1 analytics above.
+
+- `GET /analytics/traffic/overview?rangeDays=30`
+- `GET /analytics/traffic/top-pages?limit=10&rangeDays=30`
+- `GET /analytics/traffic/top-pages/export?limit=50&rangeDays=30&format=csv`
+
+Traffic overview response:
+
+```json
+{
+  "rangeDays": 30,
+  "generatedAt": "2026-01-30T10:00:00Z",
+  "totals": { "pageviews": 1200, "visitors": 430, "sessions": 510, "bounceRate": 0.42, "avgPagesPerSession": 2.35 },
+  "previous": { "pageviews": 980, "visitors": 360, "sessions": 420, "bounceRate": 0.45, "avgPagesPerSession": 2.33 },
+  "trend": [ { "date": "2026-01-24", "value": 40 }, { "date": "2026-01-25", "value": 52 } ],
+  "sources": [ { "key": "direct", "label": "Direct", "value": 210 } ],
+  "devices": [ { "key": "desktop", "label": "Desktop", "value": 300 } ],
+  "referrers": [ { "key": "example.com", "label": "example.com", "value": 30 } ],
+  "topPages": [ { "path": "/", "views": 320, "visitors": 210 } ]
+}
+```
+
+Top-pages response is `TopPageRow[]` (`{ path, views, visitors }`). Export
+returns the same JSON envelope as the v1 export (CSV only):
+
+```json
+{
+  "fileName": "coderso-traffic-top-pages-30d-2026-01-30.csv",
+  "contentType": "text/csv",
+  "content": "path,views,visitors\n/,320,210",
+  "rangeDays": 30,
+  "totalRows": 1
+}
+```
+
+### Public beacon collector (TASK-483 — PUBLIC WRITE)
+
+- `POST /_analytics/collect` (public, no auth)
+
+Lightweight visitor beacon delivered via `navigator.sendBeacon` from the public
+tracking snippet. Success is always **204 No Content** (empty body). Anti-abuse
+reuses the shared forms/booking stack, NOT a one-off flow:
+
+- HMAC `nonce` (`createBeaconNonce`/`assertBeaconNonce`, mirroring
+  `createFormSubmissionNonce`) — a valid nonce is required in the body.
+- `public_write` rate-limit bucket (shared middleware); over-limit returns `429`
+  `analytics_rate_limited`.
+- Server-side `classifyBot` + Do-Not-Track/GPC drop: bot UAs and DNT/consent
+  opt-outs are silently accepted (204) and NOT persisted.
+- Strict reject-unknown body validation; body is size-capped at 4 KB
+  (`413 analytics_payload_too_large`); malformed JSON is `400 invalid_json`.
+
+**Binding captcha exemption:** the collector does NOT call
+`enforceBotProtection`. A token-less `sendBeacon` still succeeds with 204 even
+when bot protection is enabled — captcha stays on forms/booking only; wiring it
+here would 400 every beacon and kill the pipeline. No raw IP/User-Agent/full
+referrer is ever stored (see `_docs/SECURITY_SPEC.md` and `_docs/DATA_MODEL.md`).
+
+The privacy-respecting tracking snippet asset is delivered as a static
+public-read script (no secrets, no per-visitor data embedded) and is injected on
+the published site; it checks DNT/consent before sending anything.
+
 ---
 
 ## Dashboard (v1)
 
-Permissions: `content:read`
+Permissions: `content:read` for reads/widget data, `dashboard:write` for
+layout save/reset.
 
 Note: Dashboard payload jest agregowany po stronie backendu z danych CMS
 (pages/content entries/media/users/security settings) i nie wymaga query params.
 
 - `GET /dashboard`
+
+Legacy aggregate payload kept for existing clients.
 
 Response:
 
@@ -2914,22 +3096,115 @@ Response:
 }
 ```
 
+### Configurable dashboard layout (TASK-480)
+
+Admin Dashboard panels are stored per admin user in `dashboard_layouts`.
+Dashboard widgets are **not** Page Builder widgets and are not part of
+`core/widgets/*`.
+
+Security contract:
+- Internal admin endpoints only (`/admin/api/*`).
+- Session auth required.
+- `GET` routes use `content:read` and the `admin_read` rate-limit bucket.
+- `PUT`/`POST` routes use CSRF and the `admin_write` bucket.
+- No nonce/HMAC/reCAPTCHA because there is no public write endpoint.
+
+- `GET /dashboard/layout`
+- `PUT /dashboard/layout`
+- `POST /dashboard/layout/reset`
+- `GET /dashboard/widget-data`
+- `POST /dashboard/widget-data`
+
+`GET /dashboard/layout` response:
+
+```json
+{
+  "layout": {
+    "version": 1,
+    "widgets": [
+      {
+        "id": "default-totals",
+        "type": "totals-counters",
+        "title": "Overview",
+        "config": {
+          "kind": "totals-counters",
+          "source": "cms",
+          "metrics": ["pages", "entries", "media", "users"]
+        },
+        "position": { "x": 0, "y": 0, "w": 12, "h": 1 }
+      }
+    ]
+  },
+  "updatedAt": null
+}
+```
+
+`PUT /dashboard/layout` uses the same strict `DashboardLayout` shape. Unknown
+fields are rejected; more than 24 widgets is rejected with
+`dashboard_layout_invalid`. Stored corrupt/legacy layouts fall back to the
+default layout on read instead of breaking the admin shell.
+
+`GET /dashboard/widget-data` resolves widget data for the saved/default layout.
+`POST /dashboard/widget-data` accepts an uncached draft batch:
+
+```json
+{
+  "widgets": [
+    {
+      "id": "draft-traffic",
+      "type": "totals-counters",
+      "config": {
+        "kind": "totals-counters",
+        "source": "traffic",
+        "metrics": ["visitors", "pageviews"]
+      }
+    }
+  ]
+}
+```
+
+Traffic sources reuse the TASK-483 analytics read model. If no traffic data is
+available, widgets return an empty/unavailable state; dashboard code does not
+fabricate fallback analytics.
+
 ---
 
 ## Backups (v1)
 
 Permissions: `backups:read`, `backups:write`
 
-Note: v1 manual backups are CMS-managed metadata rows plus a local JSON artifact.
-`POST /backups` creates the row, writes the artifact under `BACKUP_DIR` or
-`storage/backups`, and returns a completed row when artifact creation succeeds.
-Restore is still unsupported until a separate restore contract exists.
+Note: backups are CMS-managed metadata rows plus a `version: 1` JSON artifact.
+`POST /backups` creates the row, writes the artifact, and returns a completed row
+when artifact creation succeeds. The artifact is stored according to the active
+storage driver: `local` writes under `BACKUP_DIR` or `storage/backups`; `s3` /
+`azure` upload via the shared media storage adapters and store the object's
+public URL as `artifactPath` (the server-internal storage key is never returned
+to clients). A remote upload failure surfaces as the machine-readable
+`backup_upload_failed` error only — raw adapter/credential text is never leaked.
+
+The `backup_schedules` singleton drives an in-process scheduler (opt-in outside
+production via `BACKUP_SCHEDULER_ENABLED`): when a schedule is `enabled` and due
+(`next_run_at <= now`), a system-actor run creates a `kind: "scheduled"` backup,
+advances `next_run_at` (and sets `last_run_at`), then prunes expired backups by
+`retentionDays`. Retention can also be triggered manually via `POST
+/backups/prune`.
+
+`POST /backups/:id/restore` performs a real, **destructive**, confirmation-gated
+restore from the `version: 1` artifact. It restores CMS **metadata + settings
+only** — the artifact stores media library rows/URLs but never file bytes, so
+media files are not re-fetched. The whole restore runs in a single transaction
+(snapshot tables replaced + settings imported share one `tx`), so a malformed
+artifact or mid-restore failure rolls back with no partial state. Requires
+`backups:write` and a body of exactly `{ "confirm": true }` (unknown keys and
+`confirm: false`/missing are rejected `400`).
 
 - `GET /backups?page=1&limit=10&query=queued`
 - `POST /backups` (manual create)
-- `POST /backups/:id/restore`
+- `POST /backups/:id/restore` (body `{ "confirm": true }`, destructive)
 - `GET /backups/:id/download`
 - `DELETE /backups/:id`
+- `POST /backups/prune` (`backups:write`, retention pruning)
+- `GET /backups/usage` (`backups:read`, storage usage/quota)
 - `GET /backups/schedule`
 - `PATCH /backups/schedule`
 
@@ -2993,7 +3268,8 @@ List response:
 Unknown query fields are rejected. `page` must be an integer >= 1 and `limit`
 must be 1-100.
 
-Schedule payload:
+Schedule payload (`PATCH /backups/schedule`, all fields optional,
+`additionalProperties: false`):
 
 ```json
 {
@@ -3003,6 +3279,10 @@ Schedule payload:
   "storageDriver": "s3"
 }
 ```
+
+`GET /backups/schedule` returns the singleton including the scheduler-managed
+`nextRunAt` / `lastRunAt` timestamps (nullable). Enabling a schedule (or changing
+`frequency`) recomputes `nextRunAt`; the scheduler advances it after each run.
 
 Download response:
 
@@ -3019,14 +3299,65 @@ Download response:
 Download returns `backup_not_ready` for queued/running/failed/artifact-less
 rows and `backup_artifact_invalid` when a completed row has a non-downloadable
 artifact path outside the configured backup directory. Local CMS artifacts are
-returned as JSON content with `url: null` and `path: null`; list responses and
-browser cache redact local artifact paths to `artifactPath: "local"` and never
-persist downloaded artifact content. Future plugin/storage integrations may
-still return public `http(s)` artifact URLs.
+returned as JSON content with `url: null` and `path: null`; remote (`s3`/`azure`)
+artifacts return the public `http(s)` URL as `url` and are fetched server-side
+for restore. List responses and browser cache redact local artifact paths to
+`artifactPath: "local"`, keep the server-internal storage key null to clients,
+and never persist downloaded artifact content.
 
-Restore returns `backup_not_ready` until a completed artifact exists, then
-`backup_restore_unsupported` until the CMS ships an explicit restore
-implementation.
+Restore error codes: `backup_not_found` (404), `backup_not_ready` (409) for
+queued/running/failed/artifact-less rows, `backup_restore_confirmation_required`
+(400) when `confirm` is not exactly `true`, `backup_restore_invalid_artifact`
+(422) when the stored artifact is missing/garbage or not `version: 1` (strict
+parse rejects unknown top-level keys before any write),
+`backup_artifact_unreadable` (502) when a remote artifact cannot be fetched. The
+legacy `backup_restore_unsupported` (409) code is retained for back-compat but is
+no longer emitted. The restore response is the redacted backup record; the audit
+log records `{ status }` only (no artifact contents, paths, or secrets).
+
+Prune request/response:
+
+```json
+{}
+```
+
+`POST /backups/prune` takes an empty body (`additionalProperties: false`) and
+uses the server-owned `retentionDays` from the schedule singleton (never a
+client-supplied window). It deletes expired terminal backups (reusing the
+per-row artifact cleanup, local and remote) and returns:
+
+```json
+{ "prunedCount": 2, "prunedIds": ["backup-id-1", "backup-id-2"] }
+```
+
+Usage response (`GET /backups/usage`):
+
+```json
+{
+  "totalBytes": 3145728,
+  "backupCount": 3,
+  "byStatus": {
+    "queued": { "count": 0, "bytes": 0 },
+    "running": { "count": 0, "bytes": 0 },
+    "complete": { "count": 3, "bytes": 3145728 },
+    "failed": { "count": 0, "bytes": 0 }
+  },
+  "byDriver": {
+    "local": { "count": 3, "bytes": 3145728 },
+    "s3": { "count": 0, "bytes": 0 },
+    "azure": { "count": 0, "bytes": 0 }
+  },
+  "activeDriver": "local",
+  "quotaBytes": null,
+  "overQuota": false
+}
+```
+
+Usage aggregates numeric totals over the whole `backups` table plus the active
+driver label. `quotaBytes` is the server-owned threshold from
+`BACKUP_MAX_TOTAL_BYTES` (`null` when unset); `overQuota` is a pure signal only —
+it never blocks new backups. The payload carries no artifact paths, storage
+keys, credentials, or PII.
 
 Delete response:
 
@@ -3041,11 +3372,16 @@ Known backup error codes:
 
 - `backup_not_found`
 - `backup_not_ready`
-- `backup_restore_unsupported`
+- `backup_restore_confirmation_required`
+- `backup_restore_invalid_artifact`
+- `backup_artifact_unreadable`
+- `backup_upload_failed`
+- `backup_restore_unsupported` (legacy; retained for back-compat, no longer emitted)
 - `backup_artifact_invalid`
 - `backup_include_required`
 - `backup_include_invalid`
 - `backup_schedule_invalid`
+- `backup_schedule_not_found`
 
 ---
 

@@ -6,9 +6,9 @@
 **Category:** Tools / Analytics / Schema
 **Estimated Effort:** Large
 **Dependencies:** None
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
@@ -27,9 +27,9 @@ and `analyticsTypes.ts` (content inventory). Nothing here counts pages/entries.
 
 | ID | Title | Effort | Status |
 |---|---|---|---|
-| TASK-483-01-L01 | Traffic Event Domain Contract And Normalizers | Medium | ⏳ To Do |
-| TASK-483-01-L02 | Traffic Tables And Migration Artifacts | Medium | ⏳ To Do |
-| TASK-483-01-L03 | Traffic Repository Writers And Readers | Medium | ⏳ To Do |
+| TASK-483-01-L01 | Traffic Event Domain Contract And Normalizers | Medium | ✅ Done |
+| TASK-483-01-L02 | Traffic Tables And Migration Artifacts | Medium | ✅ Done |
+| TASK-483-01-L03 | Traffic Repository Writers And Readers | Medium | ✅ Done |
 
 ## Dependencies
 
@@ -40,6 +40,10 @@ and `analyticsTypes.ts` (content inventory). Nothing here counts pages/entries.
 
 - **Vitest** for L01 (pure normalizers/enums, Bun-free).
 - **Bun** for L02 (migration apply + table existence smoke) and L03 (DB-backed
-  insert/read round-trip with uniquely scoped fixtures).
+  insert/read round-trip with uniquely scoped fixtures). Both Bun suites live
+  under `tests/integration/analytics/`; L02 owns the required additive update
+  of the root `package.json` `test:bun` glob (and its
+  `_docs/TESTING_STRATEGY.md` mirror) so the directory actually runs — without
+  it the lane silently skips these suites.
 - Run `set -a && source .env && set +a` before DB-backed suites.
 - `bun --cwd core lint`, `bun --cwd core lint:types`, `git diff --check`.

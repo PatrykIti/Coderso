@@ -49,6 +49,17 @@ const permissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "dashboard",
+    label: "Dashboard",
+    permissions: [
+      {
+        id: "dashboard:write",
+        label: "Customize dashboard",
+        description: "Save and reset personal admin dashboard layouts",
+      },
+    ],
+  },
+  {
     id: "media",
     label: "Media",
     permissions: [
@@ -292,7 +303,5 @@ export function listPermissions() {
 }
 
 export function listPermissionIds() {
-  return permissionGroups.flatMap((group) =>
-    group.permissions.map((permission) => permission.id)
-  );
+  return permissionGroups.flatMap((group) => group.permissions.map((permission) => permission.id));
 }

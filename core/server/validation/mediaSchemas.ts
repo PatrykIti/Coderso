@@ -16,6 +16,56 @@ export const mediaUpdateSchema = {
     alt: { type: ["string", "null"] },
     title: { type: ["string", "null"] },
     caption: { type: ["string", "null"] },
+    folderId: { type: ["string", "null"] },
+    tags: { type: "array", items: { type: "string" } },
+    focalX: { type: ["number", "null"] },
+    focalY: { type: ["number", "null"] },
+    description: { type: ["string", "null"] },
+    credit: { type: ["string", "null"] },
+  },
+  additionalProperties: false,
+};
+
+export const mediaFolderCreateSchema = {
+  type: "object",
+  required: ["name"],
+  properties: {
+    name: { type: "string" },
+    slug: { type: "string" },
+    parentId: { type: ["string", "null"] },
+    orderIndex: { type: "number" },
+  },
+  additionalProperties: false,
+};
+
+export const mediaFolderUpdateSchema = {
+  type: "object",
+  properties: {
+    name: { type: "string" },
+    slug: { type: "string" },
+    parentId: { type: ["string", "null"] },
+    orderIndex: { type: "number" },
+  },
+  additionalProperties: false,
+};
+
+export const mediaFolderReorderSchema = {
+  type: "object",
+  required: ["orders"],
+  properties: {
+    orders: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["id", "orderIndex"],
+        properties: {
+          id: { type: "string" },
+          orderIndex: { type: "number" },
+          parentId: { type: ["string", "null"] },
+        },
+        additionalProperties: false,
+      },
+    },
   },
   additionalProperties: false,
 };

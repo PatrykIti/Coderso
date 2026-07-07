@@ -6,20 +6,33 @@
 **Category:** Tools / Analytics / Services
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-01-L01, TASK-483-01-L02
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
 ## Overview
 
-- **Goal:** Provide the thin DB access layer that ingestion writes through and
-  aggregation reads through, so neither layer hand-writes Drizzle queries.
+- **Goal:** Provide the thin DB access layer that ingestion WRITES through
+  (session upsert + pageview insert) plus the retention pruners. Aggregation
+  (TASK-483-04) reads the tables DIRECTLY with its own scoped
+  group-by / count-distinct / join queries — shapes the simple range readers
+  cannot express — so this repository owns writes + pruners, not read helpers for
+  aggregation.
 - **Owning module(s) to create:** `core/services/analytics/trafficRepository.ts`.
 - **Source-of-truth docs:** `_docs/DATA_MODEL.md`, `_docs/ORM_SPEC.md`.
 - **Out-of-scope:** HTTP/route concerns, aggregation math (TASK-483-04),
-  retention pruning (TASK-483-06). Keep business rules out of the repository.
+  retention **policy and triggering** (TASK-483-06) — this leaf does declare
+  the raw pruner helpers `deletePageviewsOlderThan` / `deleteSessionsOlderThan`
+  that TASK-483-06-L01 calls, but not when/why they run. Keep business rules
+  out of the repository.
+- **Anticipated later edit (single-writer preserved):** this leaf reserves a
+  retention-hook marker inside `recordTrafficEvent` (see pseudocode). TASK-483-06-L01
+  is the sole later writer of `trafficRepository.ts` and adds exactly one
+  `await maybePruneExpiredTraffic();` line at that marker — no other body change.
+  This is safe under the strictly sequential land order (01 → … → 06, one writer
+  per source file at a time), so the file never has two concurrent writers.
 
 ## Implementation Pseudocode
 
@@ -80,18 +93,46 @@ export async function recordTrafficEvent(args: {
     deviceClass: args.event.deviceClass,
     createdAt: now,
   });
+
+  // ── RESERVED retention hook (single insertion point) ──────────────────────
+  // TASK-483-06-L01 adds EXACTLY ONE line here, its ONLY edit to this file:
+  //   await maybePruneExpiredTraffic();   // import from "./trafficRetentionService"
+  // Placed after the pageview insert and before the return so the opportunistic,
+  // process-local time-gated prune rides the write path (mirrors
+  // searchHistoryService.pruneHistory after recordSearch). 01-L03 owns this
+  // function body; because land order is strictly sequential (01 → … → 06,
+  // single writer per source file at any time), 06-L01 is the sole later writer
+  // and touches only this marker — recordTrafficEvent stays a one-owner body.
+  // ──────────────────────────────────────────────────────────────────────────
   return { sessionId, isNewSession };
 }
 
-// Read helpers consumed by aggregation (TASK-483-04). Range-scoped, index-backed.
-export async function selectPageviewsInRange(start: Date, end: Date) { /* ... */ }
-export async function selectSessionsInRange(start: Date, end: Date) { /* ... */ }
-export async function deletePageviewsOlderThan(cutoff: Date) { /* used by TASK-483-06 */ }
+// NOTE: no read helpers for aggregation. TASK-483-04-L02 issues its own scoped
+// group-by / count-distinct / join queries directly against analyticsPageviews /
+// analyticsSessions (shapes a simple range reader cannot express), so this
+// repository intentionally exposes NO selectPageviewsInRange / selectSessionsInRange.
+// It owns WRITES (recordTrafficEvent) and the retention pruners only.
+
+// Retention pruners consumed by TASK-483-06-L01. Both return the deleted rowCount.
+// The predicate is cutoff-only (whole-table by-time delete); it CANNOT be scoped by
+// visitorHash. Each accepts an optional executor defaulting to `db` so a DB-backed
+// test can run the exact production delete inside a `db.transaction` that rolls back
+// (non-destructive on the shared render.com Postgres). 06-L01 calls cutoff-only.
+type Exec = typeof db; // db | tx handle (Parameters of db.transaction's callback)
+export async function deletePageviewsOlderThan(cutoff: Date, exec: Exec = db): Promise<number> {
+  // exec.delete(analyticsPageviews).where(lt(analyticsPageviews.createdAt, cutoff))
+}
+export async function deleteSessionsOlderThan(cutoff: Date, exec: Exec = db): Promise<number> {
+  // exec.delete(analyticsSessions).where(lt(analyticsSessions.lastSeenAt, cutoff));
+  // the analytics_pageviews.session_id FK (onDelete: "cascade", TASK-483-01-L02)
+  // removes any remaining pageviews of pruned sessions — this is the primary pruner.
+}
 ```
 
 Data flow: ingestion route → `recordTrafficEvent` (session upsert within a
-rolling window + one pageview insert). Aggregation reads via `select... InRange`.
-The 30-minute window encodes the session/bounce definition (single-pageview
+rolling window + one pageview insert). Aggregation (TASK-483-04) reads the tables
+directly with its own scoped queries — NOT through this repository. The
+30-minute window encodes the session/bounce definition (single-pageview
 session = bounce).
 
 Error handling: repository surfaces DB errors as `analytics_persist_failed`
@@ -99,7 +140,9 @@ Error handling: repository surfaces DB errors as `analytics_persist_failed`
 idempotent enough that a duplicate beacon at worst increments pageview count.
 
 Regression-test shape (Bun, DB-backed,
-`tests/integration/analytics/trafficRepository.test.ts`):
+`tests/integration/analytics/trafficRepository.test.ts` — this directory is
+added to the root `package.json` `test:bun` glob by TASK-483-01-L02; do not
+re-edit the script here, just place the suite in the covered directory):
 
 ```ts
 test("second view in window reuses session and increments count", async () => {
@@ -130,5 +173,28 @@ test("view after window opens a new session", async () => {
 ## Testing Requirements
 
 - **Bun** DB-backed suite with uniquely scoped `visitorHash` fixtures; clean up
-  only owned rows. `set -a && source .env && set +a` first.
+  only owned rows. `set -a && source .env && set +a` first. The suite lives in
+  `tests/integration/analytics/`, which TASK-483-01-L02 adds to the `test:bun`
+  glob — confirm it appears in a `bun run test:bun` run.
+- Cover the retention pruners **without a destructive global delete on the shared
+  DB**. The pruner predicate is cutoff-only (whole-table `where last_seen_at <
+  cutoff`) and CANNOT be scoped by `visitorHash`, so do NOT invoke the global
+  cutoff delete against render.com. Instead, run the whole insert → prune → assert
+  inside a `db.transaction(async (tx) => { … })` that throws at the end to roll
+  back: insert an owned old session (unique `visitorHash`) + pageview via `tx`,
+  call `deleteSessionsOlderThan(cutoff, tx)` (passing the tx executor), then assert
+  via `tx` that the owned session and its cascaded pageviews are gone. Assert only
+  on the fixture rows (existence check by the unique `visitorHash` / their
+  `sessionId`) — never assert a global `rowCount` that would depend on table
+  emptiness, since other streams' and the owner's rows older than `cutoff` are also
+  in-scope of the cutoff delete inside the transaction. The rollback discards every
+  delete (including those other rows), so nothing is persisted. Pick a `cutoff`
+  between the fixture's deliberately-ancient `lastSeenAt` and `now`.
+- **Shared-DB safety:** TASK-483-06-L01 later inserts an inline
+  `maybePruneExpiredTraffic()` at the reserved marker in `recordTrafficEvent`,
+  whose default pruners do an UNSCOPED global delete-by-cutoff. This suite calls
+  `recordTrafficEvent` directly (and is re-run in 06-L02's matrix), so it MUST
+  set `ANALYTICS_PRUNE_INLINE_DISABLED=1` so those calls never fire the unscoped
+  delete against the shared render.com Postgres. (06-L01 also defaults the
+  inline prune OFF under `NODE_ENV=test` as a backstop.)
 - `bun --cwd core lint`, `bun --cwd core lint:types`, `git diff --check`.

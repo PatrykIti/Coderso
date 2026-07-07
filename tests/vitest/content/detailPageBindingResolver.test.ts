@@ -30,6 +30,8 @@ const createEntry = (): DetailPageBindingResolverEntry => ({
   title: "Sample product",
   slug: "sample-product",
   status: "published",
+  visibility: "public",
+  hasPassword: false,
   data: {
     headline: "Bound headline",
   },

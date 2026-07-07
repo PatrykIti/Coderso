@@ -39,6 +39,17 @@ export const fallbackPermissionGroups: PermissionGroup[] = [
     ],
   },
   {
+    id: "dashboard",
+    label: "Dashboard",
+    permissions: [
+      {
+        id: "dashboard:write",
+        label: "Customize dashboard",
+        description: "Save and reset personal admin dashboard layouts",
+      },
+    ],
+  },
+  {
     id: "menus",
     label: "Menus",
     permissions: [
@@ -163,6 +174,4 @@ export const fallbackPermissionGroups: PermissionGroup[] = [
 ];
 
 export const flattenPermissionGroups = (groups: PermissionGroup[]) =>
-  groups.flatMap((group) =>
-    group.permissions.map((permission) => permission.id)
-  );
+  groups.flatMap((group) => group.permissions.map((permission) => permission.id));

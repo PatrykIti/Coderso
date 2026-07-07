@@ -13,31 +13,24 @@ import {
 } from "@/components/ui/sheet";
 import { isApiClientError } from "@/services/apiClient";
 
-import type { TopContentRow } from "./TopContentTable";
+import type { TopPageTableRow } from "./TopPagesTable";
 
-type TopContentExportFile = {
+type TopPagesExportFile = {
   fileName: string;
   contentType: string;
   content: string;
 };
 
-type TopContentDrawerProps = {
+type TopPagesDrawerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  items: TopContentRow[];
-  onExport: () => Promise<TopContentExportFile>;
+  items: TopPageTableRow[];
+  onExport: () => Promise<TopPagesExportFile>;
 };
 
-const formatScore = (score: number) => `${score}%`;
+const formatCount = (value: number) => value.toLocaleString("en-US");
 
-const formatDate = (value: string) =>
-  new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-
-const downloadTextFile = (file: TopContentExportFile) => {
+const downloadTextFile = (file: TopPagesExportFile) => {
   if (typeof document === "undefined" || typeof URL.createObjectURL !== "function") {
     throw new Error("download_unavailable");
   }
@@ -52,7 +45,7 @@ const downloadTextFile = (file: TopContentExportFile) => {
   URL.revokeObjectURL(url);
 };
 
-export function TopContentDrawer({ open, onOpenChange, items, onExport }: TopContentDrawerProps) {
+export function TopPagesDrawer({ open, onOpenChange, items, onExport }: TopPagesDrawerProps) {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
 
@@ -64,7 +57,7 @@ export function TopContentDrawer({ open, onOpenChange, items, onExport }: TopCon
       const file = await onExport();
       downloadTextFile(file);
     } catch (err) {
-      setExportError(isApiClientError(err) ? err.message : "Failed to export top content.");
+      setExportError(isApiClientError(err) ? err.message : "Failed to export top pages.");
     } finally {
       setIsExporting(false);
     }
@@ -79,13 +72,13 @@ export function TopContentDrawer({ open, onOpenChange, items, onExport }: TopCon
       >
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="space-y-1">
-            <SheetTitle>Top Content</SheetTitle>
+            <SheetTitle>Top Pages</SheetTitle>
             <SheetDescription className="text-xs">
               Full ranking for the selected date range.
             </SheetDescription>
           </div>
           <SheetClose asChild>
-            <Button variant="ghost" size="icon" aria-label="Close top content drawer">
+            <Button variant="ghost" size="icon" aria-label="Close top pages drawer">
               <X className="h-4 w-4" />
             </Button>
           </SheetClose>
@@ -94,19 +87,18 @@ export function TopContentDrawer({ open, onOpenChange, items, onExport }: TopCon
           <div className="space-y-4 px-6 py-6">
             {items.length === 0 ? (
               <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
-                No content activity yet. Publish content or widen the date range.
+                No page views yet. Publish content or widen the date range.
               </div>
             ) : (
               items.map((row) => (
-                <div key={row.id} className="rounded-xl border bg-muted/30 p-4">
-                  <p className="text-sm font-semibold">{row.title}</p>
-                  <p className="text-xs text-muted-foreground">{row.path}</p>
+                <div key={row.path} className="rounded-xl border bg-muted/30 p-4">
+                  <p className="font-mono text-xs text-muted-foreground">{row.path}</p>
                   <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                     <span className="flex items-center gap-2">
                       <BarChart3 className="h-3.5 w-3.5" />
-                      {formatScore(row.score)} activity
+                      {formatCount(row.views)} views
                     </span>
-                    <span>{formatDate(row.updatedAt)}</span>
+                    <span>{formatCount(row.visitors)} visitors</span>
                   </div>
                 </div>
               ))

@@ -9,11 +9,10 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useState, type KeyboardEvent } from "react";
+import { useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -23,15 +22,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminLink } from "@/ui/shared/AdminLink";
 import { InfoTip } from "@/ui/shared/InfoTip";
+import { SectionCard } from "@/ui/shared/SectionCard";
 import { StatusBadge } from "@/ui/shared/StatusBadge";
 
 import type { EntryChecklist } from "./entryChecklist";
 
 export type EntryStatus = "draft" | "published" | "scheduled" | "archived";
+
+export type EntryVisibility = "public" | "private" | "password";
 
 const statusOptions: Array<{ value: EntryStatus; label: string }> = [
   { value: "published", label: "Published" },
@@ -48,6 +49,28 @@ const slugify = (value: string) =>
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "");
+
+// Local date formatter for the Metadata card (mirrors EntryGrid.tsx:21-31 — no
+// component import, just a small inline helper).
+const formatMetaDate = (value?: string | null) => {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return value;
+  }
+};
+
+const MetaRow = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex items-center justify-between">
+    <dt className="text-muted-foreground">{label}</dt>
+    <dd>{children}</dd>
+  </div>
+);
 
 export type TaxonomyTermOption = {
   id: string;
@@ -69,6 +92,13 @@ type EntryMetadataPanelProps = {
   onStatusChange: (status: EntryStatus) => void;
   scheduledAt: string;
   onScheduledAtChange: (value: string) => void;
+  // Visibility (514-04). All optional so the panel compiles when mounted by the
+  // pre-514-03 editor (strict land order: 514-04 lands before 514-03).
+  visibility?: EntryVisibility;
+  onVisibilityChange?: (value: EntryVisibility) => void;
+  accessPassword?: string; // controlled plaintext input; empty on save = keep current
+  onAccessPasswordChange?: (value: string) => void;
+  hasPassword?: boolean; // server truth: a hash already exists
   title: string;
   slug: string;
   seoPreviewUrl?: string;
@@ -83,6 +113,14 @@ type EntryMetadataPanelProps = {
   helpItems?: string[];
   taxonomySettingsHref?: string | null;
   author?: { name: string | null; email: string } | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
+  entryId?: string | null;
+  // Seam for TASK-487-02-L02 (revision drawer trigger); renders nothing when absent.
+  revisionsSlot?: ReactNode;
+  // Desktop in-grid mount passes false (plain stacked cards, no inner scroller);
+  // mobile Sheet uses the default true (bounded ScrollArea). See 514-03 §3.
+  scrollable?: boolean;
   onSave?: () => void;
   isSaving?: boolean;
   onDelete?: () => void;
@@ -94,6 +132,11 @@ export function EntryMetadataPanel({
   onStatusChange,
   scheduledAt,
   onScheduledAtChange,
+  visibility,
+  onVisibilityChange,
+  accessPassword,
+  onAccessPasswordChange,
+  hasPassword,
   title,
   slug,
   seoPreviewUrl,
@@ -108,6 +151,11 @@ export function EntryMetadataPanel({
   helpItems,
   taxonomySettingsHref,
   author,
+  createdAt,
+  updatedAt,
+  entryId,
+  revisionsSlot,
+  scrollable = true,
   onSave,
   isSaving,
   onDelete,
@@ -124,6 +172,9 @@ export function EntryMetadataPanel({
   const previewTitle = title || "Content title";
   const previewUrl = seoPreviewUrl ?? `/${slug || "entry-slug"}`;
   const canSchedule = status === "scheduled";
+  const currentVisibility = visibility ?? "public";
+  const currentAccessPassword = accessPassword ?? "";
+  const passwordExists = hasPassword ?? false;
   const checklistItems = checklist?.items ?? [];
   const checklistReadyCount = checklistItems.filter((item) => item.status === "complete").length;
   const checklistHasWarnings = checklistItems.some((item) => item.status === "warning");
@@ -223,331 +274,327 @@ export function EntryMetadataPanel({
     }
   };
 
-  return (
-    <div data-entry-metadata-panel="true" className="flex h-full min-h-0 flex-col overflow-hidden">
-      <ScrollArea className="min-h-0 flex-1 px-6 py-6">
-        <div className="space-y-6 pb-6">
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Publishing
+  const cards = (
+    <div className="space-y-6 px-6 py-6">
+      <SectionCard
+        title="Publish"
+        action={<StatusBadge status={status} />}
+        bodyClassName="space-y-4"
+      >
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+            Status
+          </label>
+          <Select value={status} onValueChange={(value) => onStatusChange(value as EntryStatus)}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select status" />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+            Visibility
+          </label>
+          <Select
+            value={currentVisibility}
+            onValueChange={(value) => onVisibilityChange?.(value as EntryVisibility)}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select visibility" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="public">Public</SelectItem>
+              <SelectItem value="private">Private</SelectItem>
+              <SelectItem value="password">Password protected</SelectItem>
+            </SelectContent>
+          </Select>
+          {currentVisibility === "password" ? (
+            <div className="space-y-1.5">
+              <Input
+                type="password"
+                value={currentAccessPassword}
+                onChange={(event) => onAccessPasswordChange?.(event.target.value)}
+                placeholder={
+                  passwordExists ? "Leave blank to keep current password" : "Set a password"
+                }
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {passwordExists
+                  ? "A password is set. Enter a new one to change it, or switch Visibility to Public/Private to remove it."
+                  : "Required to protect this entry."}
               </p>
-              <StatusBadge status={status} />
             </div>
-            <Card>
-              <CardContent className="space-y-4 p-4">
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                    Status
-                  </label>
-                  <Select
-                    value={status}
-                    onValueChange={(value) => onStatusChange(value as EntryStatus)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                    Schedule date
-                  </label>
-                  <div className="relative">
-                    <Input
-                      value={scheduledAt}
-                      onChange={(event) => onScheduledAtChange(event.target.value)}
-                      disabled={!canSchedule}
-                      className="pr-10"
-                      placeholder={canSchedule ? "2026-02-01T10:00:00Z" : "Set status to scheduled"}
-                    />
-                    <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-          <Separator />
-          {checklistItems.length > 0 ? (
-            <section className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Publish checklist
-                </p>
-                <Badge variant={checklistBadgeVariant}>{checklistBadgeLabel}</Badge>
-              </div>
-              <Card>
-                <CardContent className="space-y-3 p-4">
-                  {checklistItems.map((item) => {
-                    const Icon =
-                      item.status === "complete"
-                        ? CheckCircle2
-                        : item.status === "warning"
-                          ? AlertTriangle
-                          : Info;
-                    const iconClass =
-                      item.status === "complete"
-                        ? "text-success"
-                        : item.status === "warning"
-                          ? "text-warning"
-                          : "text-muted-foreground";
-                    return (
-                      <div key={item.id} className="flex gap-2">
-                        <Icon className={`mt-0.5 h-4 w-4 ${iconClass}`} />
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{item.label}</p>
-                          {item.detail ? (
-                            <p className="text-[11px] text-muted-foreground">{item.detail}</p>
-                          ) : null}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </CardContent>
-              </Card>
-            </section>
-          ) : null}
-          <Separator />
-          {helpItems && helpItems.length > 0 ? (
-            <section className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition hover:text-foreground"
-                  onClick={() => setHelpCollapsed(!helpCollapsed)}
-                >
-                  {helpCollapsed ? (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  )}
-                  What is this?
-                </button>
-                <InfoTip
-                  content="Quick reminders about how content fields behave in this entry."
-                  label="What is this help"
-                />
-              </div>
-              {!helpCollapsed ? (
-                <Card>
-                  <CardContent className="space-y-2 p-4">
-                    <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
-                      {helpItems.map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              ) : null}
-            </section>
-          ) : null}
-          <Separator />
-          <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Search Engine Optimization
-              </p>
-              <Badge variant="outline" className="text-[10px] uppercase">
-                Snippet
-              </Badge>
-            </div>
-            <Card>
-              <CardContent className="space-y-4 p-4">
-                <div className="space-y-2">
-                  <p className="text-[11px] font-semibold uppercase text-muted-foreground">
-                    Snippet preview
-                  </p>
-                  <div className="rounded-lg border bg-muted/40 p-3">
-                    <p className="text-sm font-semibold text-primary">{previewTitle}</p>
-                    <p className="text-[10px] text-success">{previewUrl}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {seoDescription || "Add a short summary for search results."}
-                    </p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                    Meta description
-                  </label>
-                  <Textarea
-                    value={seoDescription}
-                    onChange={(event) => onSeoDescriptionChange(event.target.value)}
-                    rows={4}
-                    className="resize-none bg-muted/30"
-                    placeholder="Write a short description for search results..."
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-          <Separator />
-          <section className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Taxonomy
-            </p>
-            <Card>
-              <CardContent className="space-y-4 p-4">
-                {!taxonomyEnabled ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      Categories and tags are disabled for this content type.
-                    </p>
-                    {taxonomySettingsHref ? (
-                      <AdminLink
-                        href={taxonomySettingsHref}
-                        className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
-                      >
-                        Enable taxonomy in content type settings
-                      </AdminLink>
-                    ) : null}
-                  </div>
-                ) : null}
-                {taxonomy?.categoryEnabled ? (
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                      Category
-                    </label>
-                    <Select
-                      value={taxonomy.selectedCategoryId ?? NO_CATEGORY_VALUE}
-                      onValueChange={handleCategorySelect}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={NO_CATEGORY_VALUE}>No category</SelectItem>
-                        {categoryOptions.map((term) => (
-                          <SelectItem key={term.id} value={term.id}>
-                            {term.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        placeholder="Add category..."
-                        value={categoryInput}
-                        onChange={(event) => setCategoryInput(event.target.value)}
-                        disabled={isCreatingCategory}
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void handleAddCategory()}
-                        disabled={!categoryInput.trim() || isCreatingCategory}
-                      >
-                        {isCreatingCategory ? "Adding..." : "Add"}
-                      </Button>
-                    </div>
-                    {selectedCategory ? (
-                      <p className="text-xs text-muted-foreground">
-                        Selected: {selectedCategory.name}
-                      </p>
-                    ) : null}
-                  </div>
-                ) : null}
-                {taxonomy?.tagEnabled ? (
-                  <div className="space-y-2">
-                    <label className="text-[11px] font-semibold uppercase text-muted-foreground">
-                      Tags
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTags.map((tag) => (
-                        <Badge
-                          key={tag.id}
-                          variant="outline"
-                          className="border-primary/20 bg-primary/10 text-[10px] font-semibold text-primary"
-                        >
-                          <span>{tag.name}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleTagRemove(tag.id)}
-                            className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-primary/80 transition hover:bg-primary/20"
-                            aria-label={`Remove ${tag.name}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                      {selectedTags.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">No tags selected.</span>
-                      ) : null}
-                    </div>
-                    <Input
-                      placeholder="Add tag..."
-                      value={tagInput}
-                      onChange={(event) => setTagInput(event.target.value)}
-                      onKeyDown={handleTagKeyDown}
-                      onBlur={handleTagBlur}
-                      disabled={isCreatingTag}
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      Press Enter or comma to add a tag.
-                    </p>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          </section>
-          {onSave ? (
-            <div className="flex items-center justify-end">
-              <Button size="sm" className="gap-2" onClick={onSave} disabled={isSaving}>
-                <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : "Save metadata"}
-              </Button>
-            </div>
-          ) : null}
-          {onDelete ? (
-            <>
-              <Separator />
-              <section className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Danger zone
-                </p>
-                <Card>
-                  <CardContent className="flex flex-col gap-3 p-4">
-                    <p className="text-xs text-muted-foreground">
-                      Delete this entry permanently from the content list.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="w-full gap-2"
-                      disabled={isDeleting}
-                      onClick={onDelete}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      {isDeleting ? "Deleting..." : "Delete entry"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </section>
-            </>
           ) : null}
         </div>
-      </ScrollArea>
-      <div className="shrink-0 border-t px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/40 to-primary/10" />
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold">
-              {author?.name || author?.email || "Unknown author"}
-            </span>
-            <span className="text-[10px] uppercase text-muted-foreground">
-              {author?.email ?? "No author linked"}
-            </span>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+            Schedule date
+          </label>
+          <div className="relative">
+            <Input
+              value={scheduledAt}
+              onChange={(event) => onScheduledAtChange(event.target.value)}
+              disabled={!canSchedule}
+              className="pr-10"
+              placeholder={canSchedule ? "2026-02-01T10:00:00Z" : "Set status to scheduled"}
+            />
+            <Calendar className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           </div>
         </div>
-      </div>
+      </SectionCard>
+      {checklistItems.length > 0 ? (
+        <SectionCard
+          title="Publish checklist"
+          action={<Badge variant={checklistBadgeVariant}>{checklistBadgeLabel}</Badge>}
+          bodyClassName="space-y-3"
+        >
+          {checklistItems.map((item) => {
+            const Icon =
+              item.status === "complete"
+                ? CheckCircle2
+                : item.status === "warning"
+                  ? AlertTriangle
+                  : Info;
+            const iconClass =
+              item.status === "complete"
+                ? "text-success"
+                : item.status === "warning"
+                  ? "text-warning"
+                  : "text-muted-foreground";
+            return (
+              <div key={item.id} className="flex gap-2">
+                <Icon className={`mt-0.5 h-4 w-4 ${iconClass}`} />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">{item.label}</p>
+                  {item.detail ? (
+                    <p className="text-[11px] text-muted-foreground">{item.detail}</p>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </SectionCard>
+      ) : null}
+      {/* "What is this?" help is a collapsible, NOT one of the prototype's three
+          cards; it is re-homed into SectionCard with the toggle button as the
+          title (per contract §0) rather than the legacy <section>+<p>+<Card>. */}
+      {helpItems && helpItems.length > 0 ? (
+        <SectionCard
+          title={
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition hover:text-foreground"
+              onClick={() => setHelpCollapsed(!helpCollapsed)}
+            >
+              {helpCollapsed ? (
+                <ChevronRight className="h-3.5 w-3.5" />
+              ) : (
+                <ChevronDown className="h-3.5 w-3.5" />
+              )}
+              What is this?
+            </button>
+          }
+          action={
+            <InfoTip
+              content="Quick reminders about how content fields behave in this entry."
+              label="What is this help"
+            />
+          }
+          padded={!helpCollapsed}
+          bodyClassName={helpCollapsed ? "hidden" : "space-y-2"}
+        >
+          {!helpCollapsed ? (
+            <ul className="list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+              {helpItems.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ul>
+          ) : null}
+        </SectionCard>
+      ) : null}
+      <SectionCard
+        title="Search Engine Optimization"
+        action={
+          <Badge variant="outline" className="text-[10px] uppercase">
+            Snippet
+          </Badge>
+        }
+        bodyClassName="space-y-4"
+      >
+        <div className="space-y-2">
+          <p className="text-[11px] font-semibold uppercase text-muted-foreground">
+            Snippet preview
+          </p>
+          <div className="rounded-lg border bg-muted/40 p-3">
+            <p className="text-sm font-semibold text-primary">{previewTitle}</p>
+            <p className="text-[10px] text-success">{previewUrl}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {seoDescription || "Add a short summary for search results."}
+            </p>
+          </div>
+        </div>
+        <div className="space-y-2">
+          <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+            Meta description
+          </label>
+          <Textarea
+            value={seoDescription}
+            onChange={(event) => onSeoDescriptionChange(event.target.value)}
+            rows={4}
+            className="resize-none bg-muted/30"
+            placeholder="Write a short description for search results..."
+          />
+        </div>
+      </SectionCard>
+      <SectionCard title="Taxonomy" bodyClassName="space-y-4">
+        {!taxonomyEnabled ? (
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Categories and tags are disabled for this content type.
+            </p>
+            {taxonomySettingsHref ? (
+              <AdminLink
+                href={taxonomySettingsHref}
+                className="text-xs font-semibold text-primary underline-offset-4 hover:underline"
+              >
+                Enable taxonomy in content type settings
+              </AdminLink>
+            ) : null}
+          </div>
+        ) : null}
+        {taxonomy?.categoryEnabled ? (
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+              Category
+            </label>
+            <Select
+              value={taxonomy.selectedCategoryId ?? NO_CATEGORY_VALUE}
+              onValueChange={handleCategorySelect}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_CATEGORY_VALUE}>No category</SelectItem>
+                {categoryOptions.map((term) => (
+                  <SelectItem key={term.id} value={term.id}>
+                    {term.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="Add category..."
+                value={categoryInput}
+                onChange={(event) => setCategoryInput(event.target.value)}
+                disabled={isCreatingCategory}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void handleAddCategory()}
+                disabled={!categoryInput.trim() || isCreatingCategory}
+              >
+                {isCreatingCategory ? "Adding..." : "Add"}
+              </Button>
+            </div>
+            {selectedCategory ? (
+              <p className="text-xs text-muted-foreground">Selected: {selectedCategory.name}</p>
+            ) : null}
+          </div>
+        ) : null}
+        {taxonomy?.tagEnabled ? (
+          <div className="space-y-2">
+            <label className="text-[11px] font-semibold uppercase text-muted-foreground">
+              Tags
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {selectedTags.map((tag) => (
+                <Badge
+                  key={tag.id}
+                  variant="outline"
+                  className="border-primary/20 bg-primary/10 text-[10px] font-semibold text-primary"
+                >
+                  <span>{tag.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleTagRemove(tag.id)}
+                    className="ml-1 inline-flex h-4 w-4 items-center justify-center rounded-full text-primary/80 transition hover:bg-primary/20"
+                    aria-label={`Remove ${tag.name}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              {selectedTags.length === 0 ? (
+                <span className="text-xs text-muted-foreground">No tags selected.</span>
+              ) : null}
+            </div>
+            <Input
+              placeholder="Add tag..."
+              value={tagInput}
+              onChange={(event) => setTagInput(event.target.value)}
+              onKeyDown={handleTagKeyDown}
+              onBlur={handleTagBlur}
+              disabled={isCreatingTag}
+            />
+            <p className="text-[11px] text-muted-foreground">Press Enter or comma to add a tag.</p>
+          </div>
+        ) : null}
+      </SectionCard>
+      <SectionCard title="Metadata">
+        <dl className="flex flex-col gap-2 text-sm">
+          <MetaRow label="Created">{formatMetaDate(createdAt)}</MetaRow>
+          <MetaRow label="Updated">{formatMetaDate(updatedAt)}</MetaRow>
+          <MetaRow label="Author">{author?.name || author?.email || "—"}</MetaRow>
+          <MetaRow label="Entry ID">
+            <span className="font-mono text-xs">{entryId ?? "—"}</span>
+          </MetaRow>
+        </dl>
+      </SectionCard>
+      {/* Seam for TASK-487-02-L02 revision drawer trigger; collapses to nothing when absent. */}
+      {revisionsSlot}
+      {onSave ? (
+        <div className="flex items-center justify-end">
+          <Button size="sm" className="gap-2" onClick={onSave} disabled={isSaving}>
+            <Save className="h-4 w-4" />
+            {isSaving ? "Saving..." : "Save metadata"}
+          </Button>
+        </div>
+      ) : null}
+      {onDelete ? (
+        <SectionCard title="Danger zone" bodyClassName="flex flex-col gap-3">
+          <p className="text-xs text-muted-foreground">
+            Delete this entry permanently from the content list.
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="w-full gap-2"
+            disabled={isDeleting}
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+            {isDeleting ? "Deleting..." : "Delete entry"}
+          </Button>
+        </SectionCard>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div data-entry-metadata-panel="true" className="flex h-full min-h-0 flex-col overflow-hidden">
+      {scrollable ? <ScrollArea className="min-h-0 flex-1">{cards}</ScrollArea> : cards}
     </div>
   );
 }

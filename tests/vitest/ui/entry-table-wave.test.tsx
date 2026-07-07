@@ -131,6 +131,8 @@ const baseEntry = {
   title: "Hello",
   slug: "hello",
   status: "draft" as const,
+  visibility: "public" as const,
+  hasPassword: false,
   data: {},
   createdAt: "2026-03-06T10:00:00.000Z",
   updatedAt: "not-a-date",
@@ -212,7 +214,9 @@ test("EntryTable renders content type, button branch, author, and date fallbacks
   expect(container.textContent).toContain("World");
   expect(container.textContent).toContain("Articles");
   expect(container.textContent).toContain("products");
-  expect(container.textContent).toContain("Ada Lovelace");
+  // 514-05 §4b: author column renders the first name token only (initials keep the full name).
+  expect(container.textContent).toContain("Ada");
+  expect(container.textContent).not.toContain("Lovelace");
   expect(container.textContent).toContain("AL");
   expect(container.textContent).toContain("System");
   expect(container.textContent).toContain("not-a-date");

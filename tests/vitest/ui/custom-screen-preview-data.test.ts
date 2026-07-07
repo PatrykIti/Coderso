@@ -40,6 +40,8 @@ test("buildPreviewRecordStateFromEntry prefers the first real record payload", (
       title: "Aurora",
       slug: "aurora",
       status: "draft",
+      visibility: "public",
+      hasPassword: false,
       data: { projectTitle: "Villa Aurora" },
       createdAt: "2026-05-02T10:00:00.000Z",
       updatedAt: "2026-05-02T11:00:00.000Z",

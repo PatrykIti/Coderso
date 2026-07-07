@@ -7,9 +7,9 @@
 **Estimated Effort:** Small
 **Dependencies:** TASK-484-04-L01 (`restoreBackup(id, { confirm })` + new domain
 codes).
-**Status:** ⏳ To Do
-**Started:**
-**Completed:**
+**Status:** ✅ Done
+**Started:** 2026-07-04
+**Completed:** 2026-07-05
 
 ---
 
@@ -23,8 +23,22 @@ codes).
 - **Owning module(s) to create-or-extend:**
   `core/server/routes/backupRoutes.ts` (restore handler + validate),
   `core/server/validation/backupSchemas.ts` (new `restoreBackupSchema`),
-  `tests/integration/routes/backups.test.ts`,
-  `tests/security/codersoSecurityGate.test.ts`.
+  `tests/integration/routes/backups.test.ts` (the existing route
+  registration + RBAC matrix — `POST /backups/:id/restore` is already asserted
+  at :47 via the `makeRouter` stub-router with injected
+  `requirePermission`/`validate` deps; extend it additively with the
+  confirm-gate, reject-unknown and error-mapping cases). The additive claim
+  holds because L01 **keeps** the `backup_restore_unsupported` branch in
+  `mapBackupError` mapped for back-compat — so the pre-existing assertion at
+  :148-151 ("mapBackupError returns stable API errors" →
+  `backup_restore_unsupported` 409) stays green unmodified; do not delete or
+  rewrite it.
+  **Not** `tests/security/codersoSecurityGate.test.ts`: verified it contains no
+  route/RBAC/CSRF/rate-limit matrix and zero backups coverage (it tests
+  `evaluateSubmissionAccess`/`evaluateBookingAccess` + form-nonce tampering
+  only). `tests/security/` is a **pinned shared surface** edited additively by
+  the parallel TASK-482/483 streams — this leaf does not touch it or invent a
+  new route-bucket structure there.
 - **Source-of-truth docs:** `_docs/CMS_API.md`, `_docs/SECURITY_SPEC.md`.
 - **Out of scope:** the restore algorithm (L01).
 
@@ -101,7 +115,19 @@ audit → record.
 **Regression-test shape (Bun):** `POST /backups/:id/restore` requires
 `backups:write`; missing/`false` `confirm` → validation/`confirmation_required`;
 unknown body key → `additionalProperties` 400; happy path returns the record and
-audits; `backup_restore_unsupported` no longer surfaces.
+audits; the restore handler no longer **emits** `backup_restore_unsupported`
+(the `mapBackupError` back-compat mapping and its existing assertion at
+:148-151 remain untouched — per L01, the service just never throws it).
+
+> **Shared-DB pin (mandatory):** the Bun suite shares ONE remote Postgres
+> (`DATABASE_URL` in `.env`) with TASK-482/483 and the owner, and `restoreBackup`
+> is a full delete+re-insert of all snapshot tables. The happy-path test
+> exercises the confirm-gate / audit / error-mapping with a **stubbed or
+> injected `restoreBackup`** (or a dry-run/rollback-scoped seam from L01) —
+> matching the existing `makeRouter` stub-router pattern in
+> `tests/integration/routes/backups.test.ts` :17-53, where deps are injected and
+> validation tests short-circuit before service access. The route suite must
+> **never** invoke a real destructive restore against the shared DB.
 
 ---
 
@@ -110,7 +136,12 @@ audits; `backup_restore_unsupported` no longer surfaces.
 Bun lane (route + security). Load env: `set -a && source .env && set +a`.
 
 - `bun --cwd core lint` / `bun --cwd core lint:types`
-- `bun test tests/integration/routes/backups.test.ts` — confirm-gate, RBAC,
-  reject-unknown, error mapping.
-- `bun test tests/security/codersoSecurityGate.test.ts` — restore under internal
-  `backups:write` + CSRF + `admin_write`.
+- `bun test tests/integration/routes/backups.test.ts` — confirm-gate, RBAC
+  (`requirePermission("backups:write")` wiring), reject-unknown, error mapping,
+  and route registration (restore path already asserted at :47). Happy path uses
+  a stubbed/injected `restoreBackup` per the shared-DB pin above — never a real
+  destructive restore. The internal visibility + CSRF (`enforceCsrf`) +
+  `admin_write` bucket are enforced centrally by the `/admin/api/*` middleware
+  chain; this leaf asserts the route-level RBAC + validation here and does
+  **not** add a new matrix to the shared `tests/security/` surface (see Owning
+  modules — `codersoSecurityGate.test.ts` has no route/backups coverage).

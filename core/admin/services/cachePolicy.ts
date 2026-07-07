@@ -54,6 +54,12 @@ export const cacheKeys = {
   analyticsOverview: (rangeDays: number | string) => `analytics:overview:${rangeDays}`,
   analyticsTopContent: (rangeDays: number | string, limit: number | string, type: string = "all") =>
     `analytics:topContent:${rangeDays}:${limit}:${type}`,
+  analyticsTrafficOverview: (rangeDays: number | string) =>
+    `analytics:traffic:overview:${rangeDays}`,
+  analyticsTopPages: (rangeDays: number | string, limit: number | string) =>
+    `analytics:traffic:topPages:${rangeDays}:${limit}`,
+  dashboardLayout: "dashboard:layout",
+  dashboardWidgetData: "dashboard:widgetData",
   backupsList: (page: number | string, limit: number | string, queryKey: string = "all") =>
     `backups:list:${page}:${limit}:${queryKey}`,
   backupSchedule: "backups:schedule",
@@ -88,6 +94,7 @@ export const cacheKeys = {
   pageTemplatesList: "pageTemplates:list",
   pageTemplateDetail: (id: string) => `pageTemplates:detail:${id}`,
   mediaList: "media:list",
+  mediaFolders: "media:folders",
   adminThemeTemplatesList: "adminThemeTemplates:list",
   adminThemeProfilesList: "adminThemeProfiles:list",
   settingsRedacted: "settings:redacted",

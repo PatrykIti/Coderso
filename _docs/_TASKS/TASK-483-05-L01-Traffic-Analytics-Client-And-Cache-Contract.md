@@ -6,23 +6,44 @@
 **Category:** Tools / Analytics / Admin Client / Cache
 **Estimated Effort:** Medium
 **Dependencies:** TASK-483-04-L03
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Started:** ``
-**Completed:** ``
+**Completed:** `2026-07-05`
 
 ---
 
 ## Overview
 
 - **Goal:** Add cached admin client methods for the traffic endpoints, following
-  the shared cache contract end-to-end (keys, TTLs, cached wrappers, `cacheBus`).
+  the shared cache contract end-to-end (keys, TTLs, cached wrappers, route
+  prefetch warmup).
+- **`cacheBus`: N/A by design.** Per `_docs/ADMIN_CACHE.md` "Cross-tab Sync",
+  `cacheBus` events are broadcast by *mutating* clients; traffic data has no
+  admin-side mutation (no admin write ever changes it), so there is no
+  broadcaster and no topic to define. This matches the pattern being mirrored:
+  `core/admin/services/analyticsClient.ts` (`getOverviewCached` /
+  `getTopContentCached`) contains zero `cacheBus` imports or broadcasts. Do NOT
+  invent a broadcast topic to satisfy the phrase "shared cache contract" —
+  freshness comes from TTL + force-revalidate only.
 - **Owning module(s) to extend:**
   - `core/admin/services/analyticsClient.ts` — `getTrafficOverview(Cached)`,
     `getTopPages(Cached)`, `exportTopPages`, plus `getCached*` readers mirroring
-    the existing overview/top-content cache wrappers.
+    the existing overview/top-content cache wrappers. The `TrafficOverview` type
+    is **imported** from the service-owned `trafficAggregationTypes.ts`
+    (TASK-483-04-L01), not redeclared locally — single source of truth, no drift
+    (see pseudocode). The runtime `isTrafficOverview` cache validator stays local
+    and defensive.
   - `core/admin/services/cachePolicy.ts` — add `cacheKeys.analyticsTrafficOverview`
     and `cacheKeys.analyticsTopPages` next to the existing `analyticsOverview` /
     `analyticsTopContent` keys.
+  - `core/admin/utils/adminPrefetch.ts` — **single writer: this leaf** (L02 must
+    not touch it). Extend the existing `"/analytics"` warm entry (today it runs
+    `getOverviewCached(30, prefetchWarmupOptions)` +
+    `getTopContentCached({ limit: 50, rangeDays: 30, ...prefetchWarmupOptions })`)
+    to ALSO warm `getTrafficOverviewCached` / `getTopPagesCached`, so the page's
+    new PRIMARY traffic data is prefetched, not only the demoted
+    content-inventory caches. The matching `_docs/ADMIN_CACHE_MAP.md`
+    `/analytics` row update is a doc edit owned by TASK-483-06-L02.
 - **Source-of-truth docs:** `_docs/ADMIN_CACHE.md`, `_docs/ADMIN_CACHE_MAP.md`.
 - **Out-of-scope:** the page/charts rewire (L02); server routes (TASK-483-04).
 
@@ -49,7 +70,13 @@ analyticsTopPages: (rangeDays: number | string, limit: number | string) =>
   `analytics:traffic:topPages:${rangeDays}:${limit}`,
 
 // analyticsClient.ts (mirror getOverviewCached / getTopContentCached exactly)
-export type TrafficOverview = { /* import-compatible with service TrafficOverview */ };
+// Import the shared read-side type (owned by TASK-483-04-L01) — do NOT redeclare
+// a local mirror, to avoid silent shape drift between service and client.
+// Precedent: dashboardClient.ts imports DashboardPayload from
+// ../../services/dashboard/dashboardTypes (a pure-types module with no db/client
+// import), and trafficAggregationTypes.ts is exactly such a module (04-L01
+// out-of-scope forbids db/client there, so it is browser-bundle safe).
+import type { TrafficOverview } from "../../services/analytics/trafficAggregationTypes";
 
 export async function getTrafficOverview(rangeDays: number) {
   const params = new URLSearchParams({ rangeDays: String(rangeDays) });
@@ -71,6 +98,21 @@ export async function exportTopPages(opts: { rangeDays: number; limit: number })
   return apiRequest<TopContentExport>(`/analytics/traffic/top-pages/export?${params}`, { method: "GET" });
 }
 export const getCachedTrafficOverview = (rangeDays: number) => getTrafficOverviewCache(rangeDays).read();
+// Sync reader consumed by AnalyticsPage (L02) hydration — mirror getCachedTopContent exactly.
+export const getCachedTopPages = (opts: { rangeDays: number; limit: number }) => getTopPagesCache(opts).read();
+
+// adminPrefetch.ts — extend the EXISTING "/analytics" warm entry in place
+// (do not add a second entry; keep the current warmers and append the new ones):
+{
+  match: "/analytics",
+  run: () =>
+    Promise.all([
+      getOverviewCached(30, prefetchWarmupOptions),
+      getTopContentCached({ limit: 50, rangeDays: 30, ...prefetchWarmupOptions }),
+      getTrafficOverviewCached(30, prefetchWarmupOptions),
+      getTopPagesCached({ rangeDays: 30, limit: 50, ...prefetchWarmupOptions }),
+    ]),
+},
 ```
 
 Data flow: `AnalyticsPage` (L02) hydrates from `getCached*` synchronously, then
@@ -90,8 +132,17 @@ test("cache key encodes rangeDays and limit", () => {
 });
 ```
 
+Plus: update the EXISTING `tests/vitest/admin/adminPrefetch.test.ts` — its
+`vi.doMock("@/services/analyticsClient", ...)` factory currently exports only
+`getOverviewCached` / `getTopContentCached` and the `/admin/analytics` warm
+assertions check exactly those two calls; extend the factory with
+`getTrafficOverviewCached` / `getTopPagesCached` and assert both are warmed
+with the `rangeDays: 30` / `limit: 50` arguments above.
+
 ## Testing Requirements
 
 - **Vitest** (`tests/vitest/admin/*`): cache read/write/hydrate, force-revalidate,
-  in-flight dedupe, key shape, DTO validation.
+  in-flight dedupe, key shape, DTO validation; update the existing
+  `tests/vitest/admin/adminPrefetch.test.ts` `/analytics` warm expectations as
+  described above.
 - `bun --cwd core lint`, `bun --cwd core lint:types`, `git diff --check`.

@@ -5,6 +5,7 @@ import { clearSiteCache, invalidateContentRouteCacheTransition } from "../../sit
 import { assertTokenOverrides } from "../theme/tokenValidation";
 import type { DesignTokenOverrides } from "../theme/tokenTypes";
 import { normalizeContentRoutes, type ContentRouteSetting } from "./settingsContracts";
+import { MAX_SITE_CACHE_TTL_SECONDS } from "../analytics/beaconTtl";
 
 export type { ContentRouteSetting } from "./settingsContracts";
 
@@ -48,6 +49,7 @@ const DEFAULT_CONTENT_ROUTES: ContentRouteSetting[] = [];
 const DEFAULT_SETTINGS = {
   "site.name": "Coderso",
   "site.locale": "en",
+  "site.timezone": "UTC",
   "site.adminBaseUrl": null as string | null,
   "site.publicBaseUrl": null as string | null,
   "site.adminPath": "/admin",
@@ -79,6 +81,11 @@ const DEFAULT_SETTINGS = {
   "assistant.llm.timeoutMs": 20000,
   "assistant.quotas.requestsPerMinute": 20,
   "assistant.quotas.requestsPerDay": 1000,
+  // Global "real analytics collection" gate (TASK-483-03-L02). Default true so
+  // analytics collect out of the box; DNT/GPC is still honored client- and
+  // server-side, and preview renders never inject the snippet. When false, the
+  // tracking snippet is not injected at all.
+  "analytics.trackingEnabled": true,
 };
 
 export type SettingKey = keyof typeof DEFAULT_SETTINGS;
@@ -298,6 +305,28 @@ const normalizeOptionalId = (value: unknown) => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+// TASK-482-05-L01: `site.timezone` is an IANA time-zone string. Prefer the
+// runtime's own zone database (Intl) over a hardcoded list so the allowlist
+// stays current; a non-string or an unknown zone is rejected as
+// `settings_value_invalid`. Module-private (validated on write via the
+// `validateSettingValue` dispatch); the Bun service suite covers the edge cases.
+const normalizeTimezoneValue = (value: unknown): string => {
+  if (typeof value !== "string") {
+    throw new Error("settings_value_invalid");
+  }
+  const tz = value.trim();
+  if (!tz) {
+    throw new Error("settings_value_invalid");
+  }
+  try {
+    // Throws RangeError for an invalid IANA zone.
+    new Intl.DateTimeFormat("en-US", { timeZone: tz });
+  } catch {
+    throw new Error("settings_value_invalid");
+  }
+  return tz;
+};
+
 const normalizeOptionalIdValue = (value: unknown) => {
   if (value === null) return "";
   if (typeof value !== "string") {
@@ -321,6 +350,10 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
       throw new Error("settings_value_invalid");
     }
     return value;
+  }
+
+  if (key === "site.timezone") {
+    return normalizeTimezoneValue(value);
   }
 
   if (isBaseUrlKey(key)) {
@@ -353,10 +386,14 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
     if (typeof value !== "number" || !Number.isFinite(value)) {
       throw new Error("settings_value_invalid");
     }
-    if (value < 0) {
+    const seconds = Math.floor(value);
+    // Upper bound guarantees the site HTML cache TTL never outlives the beacon
+    // nonce baked into cached pages (TASK-483 post-audit MEDIUM). See
+    // analytics/beaconTtl.ts for the coupling invariant.
+    if (seconds < 0 || seconds > MAX_SITE_CACHE_TTL_SECONDS) {
       throw new Error("settings_value_invalid");
     }
-    return Math.floor(value);
+    return seconds;
   }
 
   if (key === "auth.sessionTtlDays") {
@@ -375,6 +412,10 @@ function validateSettingValue(key: SettingKey, value: unknown): SettingValueMap[
   }
 
   if (key === "setup.completed") {
+    return normalizeBooleanValue(value);
+  }
+
+  if (key === "analytics.trackingEnabled") {
     return normalizeBooleanValue(value);
   }
 
@@ -562,7 +603,8 @@ export async function listSettings(): Promise<SettingValueMap> {
       key === "auth.sessionTtlDays" ||
       key === "auth.resetTtlMinutes" ||
       key === "posts.editor.mode" ||
-      key === "setup.completed"
+      key === "setup.completed" ||
+      key === "analytics.trackingEnabled"
     ) {
       try {
         mergedByKey[key] = validateSettingValue(key, row.value);
@@ -615,6 +657,7 @@ export async function getSetting(key: string) {
     normalizedKey === "auth.sessionTtlDays" ||
     normalizedKey === "auth.resetTtlMinutes" ||
     normalizedKey === "setup.completed" ||
+    normalizedKey === "analytics.trackingEnabled" ||
     isAssistantSettingKey(normalizedKey)
   ) {
     try {

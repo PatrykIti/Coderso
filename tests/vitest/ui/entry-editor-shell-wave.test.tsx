@@ -24,6 +24,10 @@ const entryEditorState = vi.hoisted(() => {
     title: "Hello",
     slug: "hello",
     status: "draft" as const,
+    visibility: "public" as const,
+    hasPassword: false,
+    createdAt: "2026-06-18T10:00:00Z",
+    updatedAt: "2026-06-27T10:00:00Z",
     scheduledAt: null,
     seo: { description: "Meta" },
     taxonomy: {
@@ -362,12 +366,11 @@ vi.mock("@/ui/preview/RuntimePreviewDialog", () => ({
   }) => <div>{`preview:${open ? "open" : "closed"}:${previewUrl ?? "none"}:${error ?? "ok"}`}</div>,
 }));
 
-vi.mock("../../../core/admin/ui/entries/EntryEditorHeader", () => ({
-  EntryEditorHeader: ({ entryLabel, status }: { entryLabel: string; status: string }) => (
-    <div>{`${entryLabel}:${status}`}</div>
-  ),
-}));
-
+// TASK-514-03: EntryEditorHeader was repurposed into the PageHeader actions
+// cluster (`EntryEditorHeaderActions`), now imported + rendered by EntryEditor.
+// The real presentational component (badges + Runtime preview / History / Save
+// draft / Publish buttons) renders here so the action buttons stay assertable —
+// no mock needed.
 vi.mock("../../../core/admin/ui/entries/EntryDeleteDialog", () => ({
   EntryDeleteDialog: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
     open ? (
@@ -514,7 +517,11 @@ test("EntryEditor loads cached data and drives preview, save, publish, metadata,
       await Promise.resolve();
     });
 
-    expect(view.container.textContent).toContain("ContentArticlesHello");
+    // In-page PageHeader (prototype fidelity): breadcrumb "Entries › Articles",
+    // title "Edit Article", and the status badge in the actions cluster.
+    expect(view.container.textContent).toContain("Entries");
+    expect(view.container.textContent).toContain("Articles");
+    expect(view.container.textContent).toContain("Edit Article");
     expect(view.container.textContent).toContain("draft");
 
     const buttons = Array.from(view.container.querySelectorAll("button"));

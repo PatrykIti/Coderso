@@ -1,12 +1,13 @@
 // @vitest-environment happy-dom
 
-// TASK-479-13-L03: locks the restyled functional Entry editor — two-column
-// content + Publish/Taxonomy/Metadata sidebar, the rounded-2xl content surface,
-// the bound Title/Slug (typing flips the Unsaved changes badge), and the
-// schema-driven field cards rendered via FieldRenderer. Harness mirrors
+// TASK-479-13-L03 (updated TASK-514-03): locks the prototype-fidelity Entry
+// editor — in-page PageHeader (breadcrumbs + title + actions cluster), the
+// [1fr_320px] SectionCard grid with the metadata panel in the right column, the
+// bound Title/Slug (typing flips the Unsaved changes badge), and the
+// schema-driven fields rendered via FieldRenderer. Harness mirrors
 // tests/vitest/ui/entry-editor-shell-wave.test.tsx (createRoot + React.act +
-// hoisted cache state); the AdminShell mock also surfaces topbarActions so the
-// dirty badge is assertable.
+// hoisted cache state). Actions moved off the AdminShell topbar into the
+// in-page PageHeader (prototype match), so the dirty badge is asserted there.
 
 import React from "react";
 import { createRoot } from "react-dom/client";
@@ -327,7 +328,7 @@ afterEach(() => {
   document.body.innerHTML = "";
 });
 
-test("editor renders the two-column content + Publish/Taxonomy/Metadata sidebar", async () => {
+test("editor renders the in-page PageHeader + [1fr_320px] SectionCard grid", async () => {
   window.history.replaceState({}, "", "/admin/entries/articles/entry-1");
   const { EntryEditor } = await import("../../../core/admin/ui/entries/EntryEditor");
 
@@ -335,25 +336,26 @@ test("editor renders the two-column content + Publish/Taxonomy/Metadata sidebar"
   try {
     await flushAsync();
 
-    // restyled content surface
-    expect(view.container.innerHTML).toContain("rounded-2xl");
-    // two-column: a desktop aside hosting the metadata panel
-    const aside = view.container.querySelector("aside");
-    expect(aside).not.toBeNull();
+    // prototype grid: 1fr content column + 320px right column
+    expect(view.container.innerHTML).toContain("lg:grid-cols-[1fr_320px]");
+    // in-page PageHeader title (breadcrumb Entries › Articles + "Edit Article")
+    expect(view.container.textContent).toContain("Edit Article");
+    // metadata panel mounted in the right column
     expect(view.container.querySelector('[data-metadata-panel="true"]')).not.toBeNull();
 
-    // sidebar Publish status Select + Save metadata / Delete
+    // Publish status Select + Save metadata / Delete still live in the panel
     expect(view.container.querySelector("select[aria-label='Publish status']")).not.toBeNull();
     expect(view.container.textContent).toContain("Save metadata");
     expect(view.container.textContent).toContain("Delete entry");
 
-    // header actions stay wired
+    // PageHeader action cluster stays wired (History seam included)
     const buttonText = Array.from(view.container.querySelectorAll("button")).map(
       (b) => b.textContent
     );
     expect(buttonText).toContain("Runtime preview");
     expect(buttonText).toContain("Save draft");
     expect(buttonText).toContain("Publish");
+    expect(buttonText).toContain("History");
   } finally {
     view.cleanup();
   }
