@@ -7,7 +7,7 @@
 **Category:** Tests (Vitest pure) / Security (whitelist parity)
 **Estimated Effort:** Small
 **Dependencies:** 519-01-L01 (imports `colorValue.ts` by exact export name).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

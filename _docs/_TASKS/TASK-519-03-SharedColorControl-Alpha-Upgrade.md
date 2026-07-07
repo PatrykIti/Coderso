@@ -7,7 +7,7 @@
 **Category:** Admin UI / Editor Controls (widget editors) / Security (CSS-value validation)
 **Estimated Effort:** Medium
 **Dependencies:** 519-01 (imports `colorValue.ts`). No route/RBAC/schema/migration change.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

@@ -7,7 +7,7 @@
 **Category:** Admin UI / Menus / Verification
 **Estimated Effort:** Small
 **Dependencies:** 519-02 (upgraded `ColorSwatchControl`). No route/RBAC/schema/migration change.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

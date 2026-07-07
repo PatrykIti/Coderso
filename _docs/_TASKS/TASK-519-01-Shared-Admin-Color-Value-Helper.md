@@ -7,7 +7,7 @@
 **Category:** Admin UI / Editor Controls (shared helper) / Security (CSS-value validation)
 **Estimated Effort:** Medium
 **Dependencies:** none — foundation. No route/RBAC/schema/migration change. Imported read-only by 519-02/03.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

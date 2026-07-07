@@ -171,6 +171,24 @@ test("footer cleared surface and border colors omit background color output", ()
   expect(html).not.toContain("background-color:");
 });
 
+test("footer round-trips an authored 8-digit alpha surface color (TASK-519-05-L04 widening)", () => {
+  const html = renderToString(
+    <FooterBlock
+      data={{
+        ...footerDefaults,
+        style: {
+          ...footerDefaults.style,
+          // 8-digit alpha hex is what the opacity slider emits; it must reach render.
+          surfaceColor: "#0812209e",
+        },
+      }}
+      variant="columns-2"
+    />
+  );
+
+  expect(html).toContain("background-color:#0812209e");
+});
+
 test("footer renders localized legal labels, brand semantics, and heading markup", () => {
   const html = renderToString(
     <FooterBlock

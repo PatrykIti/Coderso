@@ -2,46 +2,45 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
+import {
+  colorAlpha,
+  composeHexColor,
+  isAlphaPickerRepresentable,
+  parseColorValue,
+  pickerHexFor,
+} from "../../shared/colorValue";
+
 export function hasClearableFieldValue(value: unknown) {
   if (typeof value === "string") return value.trim().length > 0;
   return value !== undefined && value !== null;
 }
 
+// 3/6-digit hex only — kept for the (alpha-agnostic) contrast/luminance parser
+// (`parseColor`, `resolveColorContrastAdvisory`) whose byte-slicing assumes it.
 const hexColorPattern = /^#(?:[0-9a-fA-F]{3}){1,2}$/;
+// Alpha-capable hex recognition (3/4/6/8-digit) used by classification/preview so an
+// alpha hex reads as a real color (feeds `describeSharedColorControlState` -> selected_swatch).
+const alphaHexColorPattern = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const rgbColorPattern =
   /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
 
 export function isHexColorValue(value: string | undefined) {
-  return typeof value === "string" && hexColorPattern.test(value);
+  return typeof value === "string" && alphaHexColorPattern.test(value);
 }
 
+// Picker BASE color: hex8/rgba -> base #rrggbb (alpha owned by the slider);
+// token/keyword/hsla/unknown -> fallback. Round-trips alpha (no fallback-drop).
 export function resolveColorPickerValue(value: string | undefined, fallback: string) {
-  if (!value) return fallback;
-  if (isHexColorValue(value)) return value;
-
-  const rgbMatch = value.match(rgbColorPattern);
-  if (!rgbMatch) return fallback;
-
-  const [, red, green, blue, alpha] = rgbMatch;
-  // Alpha-aware rgba values cannot round-trip through an HTML color input.
-  if (typeof alpha === "string" && alpha.length > 0) return fallback;
-  const toHex = (channel: string) => Number.parseInt(channel, 10).toString(16).padStart(2, "0");
-  return `#${toHex(red)}${toHex(green)}${toHex(blue)}`;
+  return pickerHexFor(parseColorValue(value), fallback);
 }
 
 export function resolveColorSwatchValue(value: string | undefined, fallback?: string) {
   return resolveColorPickerValue(value, fallback ?? "#000000");
 }
 
+// Alpha values ARE representable now — the opacity slider handles the alpha channel.
 export function isPickerRepresentableColorValue(value: string | undefined) {
-  const normalized = value?.trim();
-  if (!normalized) return false;
-  if (isHexColorValue(normalized)) return true;
-
-  const rgbMatch = normalized.match(rgbColorPattern);
-  if (!rgbMatch) return false;
-  const [, , , , alpha] = rgbMatch;
-  return !(typeof alpha === "string" && alpha.length > 0);
+  return isAlphaPickerRepresentable(value);
 }
 
 export function applySharedColorPickerChange({
@@ -60,9 +59,23 @@ export function applySharedColorPickerChange({
     return;
   }
 
-  if (!currentValue || isPickerRepresentableColorValue(currentValue)) {
-    onChange(nextValue);
-  }
+  // Base-color edit via the native picker preserves the current alpha (HI-2).
+  const alpha = colorAlpha(parseColorValue(currentValue));
+  onChange(alpha < 1 ? composeHexColor(nextValue, alpha) : nextValue);
+}
+
+// Opacity-slider edit: recompose the current base color with the new alpha (HI-2).
+export function applySharedColorAlphaChange({
+  currentValue,
+  alphaPct,
+  onChange,
+}: {
+  currentValue: string | undefined;
+  alphaPct: number;
+  onChange: (next: string) => void;
+}) {
+  const base = pickerHexFor(parseColorValue(currentValue), "#000000");
+  onChange(composeHexColor(base, alphaPct / 100));
 }
 
 export type ColorContrastAdvisory = {

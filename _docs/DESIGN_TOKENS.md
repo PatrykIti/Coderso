@@ -73,6 +73,50 @@ resolved site token in the admin canvas. Arbitrary `var()` expressions are not
 accepted by the Page authoring color sanitizer; only the names above are valid
 for Page block/section colors and inline text marks.
 
+## Admin color-value authoring (alpha-capable) (TASK-519)
+
+Every admin color control authors AND round-trips **alpha-capable** values, not
+just opaque hex. The two shared controls —
+`core/admin/ui/pages/editorControls/ColorSwatchControl.tsx` (menu/page) and
+`core/admin/ui/widgets/editors/SharedColorControl.tsx` +
+`core/admin/ui/widgets/editors/ClearableFields.tsx` (widget editors) — expose:
+
+- a native **base-color picker** (`<input type="color">`, `#rrggbb`),
+- an **opacity/alpha slider** (`0`–`1`),
+- a **free-text field** that accepts the full alpha-capable set, and
+- the existing **transparent**, **palette-swatch**, and **`var(--color-*)`
+  token** UX unchanged.
+
+**Accepted value set** (8-digit hex `#rrggbbaa` e.g. `#0812209e`, `rgb()/rgba()`
+incl. leading-dot alpha `.84`, `hsl()/hsla()`, `#rgb/#rgba/#rrggbb`,
+`var(--color-*)`, `transparent`) is the **authoritative whitelist** enforced at
+the server-write boundary `normalizeMenuColorValue`
+(`core/services/menus/normalizeMenuAppearance.ts`) and the render boundary
+`resolveClearableCssColorValue` (`core/widgets/core/clearableStyle.ts`). Those
+boundaries are unchanged and remain the security surface (they reject
+`url()`/`expression()`/`javascript:`/`data:`/`;{}<>`).
+
+**Shared admin helper — `core/admin/ui/shared/colorValue.ts` (TASK-519-01).**
+A pure, framework-free parse/compose helper that is a **read-only subset** of the
+authoritative whitelist (its accepted-set patterns MIRROR the boundaries; a
+parity test asserts every value it emits via `normalizeAdminColorValue` is
+accepted by `resolveClearableCssColorValue`). It never constructs an unsafe
+token. Both controls route their committed value through it.
+
+**Canonicalization note (the ONLY normalization).** The render boundary's
+`rgb()/hsl()` alpha group REQUIRES a leading `0` (`0.84`) and REJECTS a bare
+leading-dot (`.84`), whereas the menu write boundary also accepts `.84`. To keep
+BOTH boundaries happy, `normalizeAdminColorValue` accepts a leading-dot alpha as
+INPUT but canonicalizes it on emit (`rgba(8,17,31,.84)` → `rgba(8,17,31,0.84)`).
+Hex round-trips **byte-identically**; alpha is clamped to `[0,1]` (NaN/out-of-range
+falls back to fully opaque). This is why the owner's legacy token
+`rgba(8,17,31,.84)` survives to front render as `rgba(8,17,31,0.84)`.
+
+**Storage:** color strings are existing `string` fields on the menu document
+(`jsonb`) and per-widget props (`jsonb` page regions). This upgrade is
+**present-only** — NO schema key, NO DDL, NO migration; legacy opaque values
+normalize byte-identically.
+
 ## Tailwind integration
 
 - Core build mapuje tokeny na utility classes.

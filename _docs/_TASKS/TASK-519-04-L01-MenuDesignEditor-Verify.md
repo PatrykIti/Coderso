@@ -7,7 +7,7 @@
 **Category:** Admin UI / Menus / Verification
 **Estimated Effort:** Small
 **Dependencies:** 519-02 (upgraded `ColorSwatchControl`).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

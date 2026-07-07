@@ -7,7 +7,7 @@
 **Category:** Admin UI / Widget Editors / Verification / Security
 **Estimated Effort:** Small
 **Dependencies:** 519-03 (upgraded shared widget control).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
