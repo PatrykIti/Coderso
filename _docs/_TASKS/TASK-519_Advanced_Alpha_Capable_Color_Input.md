@@ -6,7 +6,7 @@
 **Category:** Admin UI / Editor Controls / Design (color authoring) / Security (CSS-value validation)
 **Estimated Effort:** Large
 **Dependencies:** None on other feature tasks — this is a shared-UI-control upgrade + rollout that rides existing validated write paths (menu `PATCH`/`PUT` menu-document routes; widget page-region PATCH). The STORAGE and RENDER layers ALREADY accept alpha-capable colors (see Overview) — no server/route change. Land-order-precedes the rollout subtasks (see Land order).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Closure changelog (pinned):** 1232 (verify next-free at closure; 511=1229 / 517=1230 / 518=1231 precede — highest committed today is 1227, so 1228–1231 are pinned-not-yet-written and 1232 is this task's slot).
 
 ---

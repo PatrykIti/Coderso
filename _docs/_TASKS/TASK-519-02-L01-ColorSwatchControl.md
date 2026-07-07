@@ -7,7 +7,7 @@
 **Category:** Admin UI / Editor Controls (menu + page swatch) / Security
 **Estimated Effort:** Small
 **Dependencies:** 519-01-L01 (`colorValue.ts`), reuses `editorControls/SliderControl.tsx`.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

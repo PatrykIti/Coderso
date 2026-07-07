@@ -185,7 +185,10 @@ const safeFieldNamePattern = /^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$/;
 const safeEventNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,63}$/;
 const safeFormIdPattern = /^[a-zA-Z0-9_-]{1,128}$/;
 const safeCssVariablePattern = /^var\(--color-[a-z0-9-]+\)$/;
-const safeHexColorPattern = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+// TASK-519-05-L04 present-only widening: accept 4/8-digit (alpha) hex to match the
+// authoritative render whitelist `resolveClearableCssColorValue` so an authored alpha
+// value (opacity slider emits `#rrggbbaa`) round-trips; legacy 3/6-digit unchanged.
+const safeHexColorPattern = /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/;
 const safeRgbColorPattern =
   /^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*((?:0|1|0?\.\d+)))?\s*\)$/i;
 const newsletterFormsRoutePattern = /^\/forms\/[a-zA-Z0-9_-]+\/submissions$/;

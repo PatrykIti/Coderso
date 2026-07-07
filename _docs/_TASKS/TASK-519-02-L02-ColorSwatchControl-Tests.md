@@ -7,7 +7,7 @@
 **Category:** Tests (Vitest admin/UI)
 **Estimated Effort:** Small
 **Dependencies:** 519-02-L01 (renders the upgraded control).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

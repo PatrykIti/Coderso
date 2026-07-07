@@ -7,7 +7,7 @@
 **Category:** Tests (Vitest admin/UI + pure)
 **Estimated Effort:** Small
 **Dependencies:** 519-03-L01, 519-03-L02.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

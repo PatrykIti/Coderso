@@ -694,7 +694,10 @@ export const normalizeFooterImageSrc = (value: unknown) =>
 const normalizeFooterRenderColor = (value: unknown) => {
   const trimmed = resolveClearableStyleValue(value);
   if (!trimmed) return undefined;
-  if (/^#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3})?$/.test(trimmed)) return trimmed;
+  // TASK-519-05-L04 present-only widening: accept 4/8-digit (alpha) hex to match the
+  // authoritative render whitelist `resolveClearableCssColorValue` so an authored alpha
+  // value (opacity slider emits `#rrggbbaa`) round-trips; legacy 3/6-digit unchanged.
+  if (/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(trimmed)) return trimmed;
   if (/^var\(--[a-zA-Z0-9-_]+\)$/.test(trimmed)) return trimmed;
   if (/^(?:rgb|hsl)a?\([\d\s,./%+-]+\)$/i.test(trimmed)) return trimmed;
   if (/^(?:transparent|currentColor|inherit)$/i.test(trimmed)) return trimmed;

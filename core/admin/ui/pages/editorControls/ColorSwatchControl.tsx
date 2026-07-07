@@ -3,6 +3,13 @@ import {
   type PageEditorColorSwatch,
 } from "../../../../services/pages/pageEditorControlUiModel";
 import {
+  colorAlpha,
+  composeHexColor,
+  normalizeAdminColorValue,
+  parseColorValue,
+  pickerHexFor,
+} from "../../shared/colorValue";
+import {
   editorControlFocusClassFor,
   editorControlLabelClassFor,
   editorPanelInputClass,
@@ -10,6 +17,7 @@ import {
   useEditorControlTone,
   type EditorControlTone,
 } from "./controlChrome";
+import { SliderControl } from "./SliderControl";
 
 export type ColorSwatchControlProps = {
   label: string;
@@ -30,21 +38,6 @@ export type ColorSwatchControlProps = {
   tone?: EditorControlTone;
 };
 
-const HEX_COLOR_PATTERN = /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
-
-const isHexColor = (value: string) => HEX_COLOR_PATTERN.test(value.trim());
-
-/** Native color inputs require `#rrggbb`; expand `#rgb` and fail safe to black. */
-const toSafeHexColor = (value: string): string => {
-  const trimmed = value.trim();
-  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed.toLowerCase();
-  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
-    const [r, g, b] = trimmed.slice(1);
-    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
-  }
-  return "#000000";
-};
-
 /**
  * Checkerboard glyph for the "Transparent" swatch so an empty value reads as
  * "no color" instead of white.
@@ -58,10 +51,16 @@ const transparentSwatchStyle = {
 } as const;
 
 /**
- * Token-backed swatch row plus native color picker and a commit-on-blur custom
- * hex affordance. Unknown stored values stay untouched (custom state, no
- * swatch pressed) until the user picks a new color; this control never mutates
- * the stored value on mount. With `allowTransparent`, a leading "Transparent"
+ * Token-backed swatch row plus native color picker, an opacity slider, and a
+ * commit-on-blur custom hex/rgba affordance that authors AND round-trips
+ * alpha-capable colors (`#rrggbbaa` like `#0812209e`, `rgba()`, `hsla()`). The
+ * native picker edits the base color while the slider owns alpha, so editing one
+ * never drops the other; the text field accepts any value the shared
+ * `normalizeAdminColorValue` boundary mirror allows (canonicalizing a leading-dot
+ * alpha `.84` -> `0.84` on emit) and reverts unknown input. Unknown stored values
+ * stay untouched (custom state, no swatch pressed) until the user picks a new
+ * color; this control never mutates the stored value on mount. With
+ * `allowTransparent`, a leading "Transparent"
  * swatch clears the stored value (`onChange(null)`) and shows as selected
  * while the value is empty.
  */
@@ -83,14 +82,30 @@ export const ColorSwatchControl = ({
       : "border-white/15 hover:border-white/45";
   const normalizedValue = value.trim().toLowerCase();
   const transparentActive = normalizedValue.length === 0;
-  const commitHexDraft = (input: HTMLInputElement) => {
+  // Parse the stored value once so the picker (base color), the opacity slider
+  // (alpha), and the hex/rgba text field stay in sync and round-trip alpha.
+  const parsed = parseColorValue(value);
+  const alpha = colorAlpha(parsed);
+  const baseHex = pickerHexFor(parsed, "#000000");
+  // The picker + opacity slider can only faithfully round-trip hex/rgb kinds;
+  // token/keyword/hsla/unknown values keep the raw text and disable the slider.
+  const alphaRepresentable = parsed.kind === "hex" || parsed.kind === "rgb";
+  const commitDraft = (input: HTMLInputElement) => {
     const draft = input.value.trim();
     if (draft === value) return;
-    if (isHexColor(draft)) {
-      onChange(draft.toLowerCase());
+    const safe = normalizeAdminColorValue(draft);
+    if (!safe) {
+      // Reject-unknown -> revert to the prior value (unchanged behavior).
+      input.value = value;
       return;
     }
-    input.value = value;
+    // A hex draft is re-emitted through the canonical composer so a byte-identical
+    // lowercase `#rrggbb[aa]` is stored; rgba/hsla/token/keyword pass through the
+    // already-canonicalized (leading-dot alpha -> `0.`) normalizer output.
+    const safeParsed = parseColorValue(safe);
+    const emit =
+      safeParsed.kind === "hex" ? composeHexColor(safeParsed.baseHex, safeParsed.alpha) : safe;
+    onChange(emit);
   };
   return (
     <div className="grid gap-1" data-page-editor-control="color-swatch">
@@ -145,11 +160,11 @@ export const ColorSwatchControl = ({
               aria-label={`Custom ${label}`}
               disabled={disabled}
               data-page-editor-color-picker={label}
-              value={toSafeHexColor(value)}
+              value={baseHex}
               className={`size-7 cursor-pointer rounded-lg border-2 bg-transparent p-0 disabled:cursor-not-allowed disabled:opacity-50 ${
                 resolvedTone === "light" ? "border-border" : "border-white/15"
               } ${focusClass}`}
-              onChange={(event) => onChange(event.target.value)}
+              onChange={(event) => onChange(composeHexColor(event.target.value, alpha))}
             />
             <input
               key={value}
@@ -158,21 +173,46 @@ export const ColorSwatchControl = ({
               disabled={disabled}
               data-page-editor-color-hex={label}
               defaultValue={value}
-              placeholder="#000000"
+              placeholder="#rrggbbaa"
               spellCheck={false}
-              className={`w-20 rounded-md px-2 py-1 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
+              className={`w-28 rounded-md px-2 py-1 font-mono text-xs disabled:cursor-not-allowed disabled:opacity-50 ${
                 resolvedTone === "light"
                   ? editorPanelInputClass
                   : "border border-white/15 bg-white/10 text-slate-100 placeholder:text-slate-500"
               } ${focusClass}`}
-              onBlur={(event) => commitHexDraft(event.currentTarget)}
+              onBlur={(event) => commitDraft(event.currentTarget)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") commitHexDraft(event.currentTarget);
+                if (event.key === "Enter") commitDraft(event.currentTarget);
               }}
             />
           </>
         ) : null}
       </div>
+      {allowCustom ? (
+        <>
+          <SliderControl
+            label="Color opacity"
+            min={0}
+            max={100}
+            step={1}
+            unit="%"
+            value={Math.round(alpha * 100)}
+            disabled={disabled || !alphaRepresentable}
+            tone={resolvedTone}
+            onChange={(pct) => onChange(composeHexColor(baseHex, pct / 100))}
+          />
+          {alphaRepresentable ? null : (
+            <p
+              data-page-editor-color-hint={label}
+              className={`text-xs ${
+                resolvedTone === "light" ? "text-muted-foreground" : "text-slate-400"
+              }`}
+            >
+              Token/keyword color — opacity slider unavailable.
+            </p>
+          )}
+        </>
+      ) : null}
     </div>
   );
 };

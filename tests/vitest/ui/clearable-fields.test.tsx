@@ -96,17 +96,19 @@ test("clearable field helper detects real values without treating empty text as 
   expect(hasClearableFieldValue("#ffffff")).toBe(true);
 });
 
-test("shared color picker resolves hex and rgb values but falls back for rgba and custom tokens", () => {
+test("shared color picker resolves hex and rgb(a) to a base color, falling back only for tokens", () => {
   expect(resolveColorPickerValue("#112233", "#ffffff")).toBe("#112233");
   expect(resolveColorPickerValue("rgb(17, 34, 51)", "#ffffff")).toBe("#112233");
-  expect(resolveColorPickerValue("rgba(17, 34, 51, 0.4)", "#ffffff")).toBe("#ffffff");
+  // Alpha is now handled by the opacity slider; the picker shows the extracted base color.
+  expect(resolveColorPickerValue("rgba(17, 34, 51, 0.4)", "#ffffff")).toBe("#112233");
   expect(resolveColorPickerValue("var(--color-border)", "#ffffff")).toBe("#ffffff");
 });
 
-test("shared color picker representable-value detection stays bounded to hex and rgb without alpha", () => {
+test("shared color picker representable-value detection covers hex and rgb(a) incl. alpha", () => {
   expect(isPickerRepresentableColorValue("#112233")).toBe(true);
   expect(isPickerRepresentableColorValue("rgb(17, 34, 51)")).toBe(true);
-  expect(isPickerRepresentableColorValue("rgba(17, 34, 51, 0.4)")).toBe(false);
+  // Alpha rgba is representable now (base via picker + alpha via slider).
+  expect(isPickerRepresentableColorValue("rgba(17, 34, 51, 0.4)")).toBe(true);
   expect(isPickerRepresentableColorValue("var(--color-border)")).toBe(false);
 });
 

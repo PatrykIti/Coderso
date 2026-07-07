@@ -7,7 +7,7 @@
 **Category:** Admin UI / Widget Editors / Verification / Security (per-widget normalize)
 **Estimated Effort:** Medium
 **Dependencies:** 519-03 (upgraded `SharedColorControl` + `ClearableFields`). No route/RBAC/migration change.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

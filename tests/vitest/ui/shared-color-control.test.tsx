@@ -82,6 +82,21 @@ const dispatchInputValue = (input: HTMLInputElement, value: string) => {
   });
 };
 
+// The free-text color field commits on blur/Enter only (not per keystroke), so typing
+// is followed by a blur to trigger the normalize + onChange emit.
+const commitTextValue = (input: HTMLInputElement, value: string) => {
+  const setValue = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+
+  React.act(() => {
+    setValue?.call(input, value);
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  React.act(() => {
+    // React delegates onBlur to the bubbling "focusout" event at the root.
+    input.dispatchEvent(new FocusEvent("focusout", { bubbles: true }));
+  });
+};
+
 afterEach(() => {
   document.body.innerHTML = "";
   vi.restoreAllMocks();
@@ -145,7 +160,7 @@ test("routes swatch and text edits through their respective handlers", () => {
     expect(text).toBeTruthy();
 
     dispatchInputValue(swatch as HTMLInputElement, "#445566");
-    dispatchInputValue(text as HTMLInputElement, "var(--color-accent)");
+    commitTextValue(text as HTMLInputElement, "var(--color-accent)");
 
     expect(onSwatchChange).toHaveBeenCalledTimes(1);
     expect(onSwatchChange).toHaveBeenCalledWith("#445566");
@@ -236,8 +251,9 @@ test("describes shared color state vocabulary", () => {
     "theme_token"
   );
   expect(describeSharedColorControlState({ value: "#112233" }).kind).toBe("selected_swatch");
+  // Alpha rgba is picker-representable now (base swatch + opacity slider) -> selected_swatch.
   expect(describeSharedColorControlState({ value: "rgba(10, 20, 30, 0.4)" }).kind).toBe(
-    "saved_custom"
+    "selected_swatch"
   );
 });
 
@@ -293,7 +309,7 @@ test("clear stays disabled when only fallback swatch state exists", () => {
   }
 });
 
-test("rgba text keeps fallback swatch preview while still allowing clear", () => {
+test("rgba text now previews the extracted base color in the swatch while still allowing clear", () => {
   const onChange = vi.fn();
   const onClear = vi.fn();
   const view = mount(
@@ -311,7 +327,7 @@ test("rgba text keeps fallback swatch preview while still allowing clear", () =>
     const text = view.container.querySelector('input[aria-label="Overlay value"]');
     const button = view.container.querySelector("button");
 
-    expect((swatch as HTMLInputElement | null)?.value).toBe("#102030");
+    expect((swatch as HTMLInputElement | null)?.value).toBe("#0a141e");
     expect((text as HTMLInputElement | null)?.value).toBe("rgba(10, 20, 30, 0.4)");
     expect(button?.disabled).toBe(false);
     expect(button?.getAttribute("aria-label")).toBe("Clear Overlay; removes the saved color value");

@@ -7,7 +7,7 @@
 **Category:** Admin UI / Editor Controls (widget shared helpers) / Security
 **Estimated Effort:** Small
 **Dependencies:** 519-01-L01 (`colorValue.ts`). Lands before 519-03-L02.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

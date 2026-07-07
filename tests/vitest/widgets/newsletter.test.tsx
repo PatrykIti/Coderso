@@ -453,6 +453,21 @@ test("newsletter normalizes invalid transport and style input safely", () => {
   expect(names[2]).not.toBe("shared");
 });
 
+test("newsletter round-trips authored alpha colors (TASK-519-05-L04 widening)", () => {
+  const normalized = normalizeNewsletterData({
+    style: {
+      // 8-digit alpha hex (opacity slider emit) + leading-`0` rgba alpha (typed).
+      background: "#0812209e",
+      buttonBackground: "rgba(8, 17, 31, 0.84)",
+      buttonTextColor: "#00000080",
+    },
+  });
+
+  expect(normalized.style.background).toBe("#0812209e");
+  expect(normalized.style.buttonBackground).toBe("rgba(8, 17, 31, 0.84)");
+  expect(normalized.style.buttonTextColor).toBe("#00000080");
+});
+
 test("newsletter editor preview shows a bound Forms contract without enabling runtime submit", () => {
   const html = renderToString(
     <NewsletterBlock

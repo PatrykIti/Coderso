@@ -7,7 +7,7 @@
 **Category:** Admin UI / Editor Controls (shared helper) / Security (CSS-value validation)
 **Estimated Effort:** Small
 **Dependencies:** none — foundation leaf; lands first in TASK-519.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

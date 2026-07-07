@@ -7,7 +7,7 @@
 **Category:** Admin UI / Editor Controls (widget editors) / Security
 **Estimated Effort:** Small
 **Dependencies:** 519-01-L01 (`colorValue.ts`), 519-03-L01 (fixed `ClearableFields` exports). Lands after L01.
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
