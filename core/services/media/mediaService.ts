@@ -4,6 +4,7 @@ import { media, mediaFolders } from "../../db/schema";
 import { readImageDimensions } from "./imageDimensions";
 import { getMediaStorageAdapter } from "./storage";
 import { getStorageSettingsInternal } from "../settings/storageSettings";
+import { mimeMatchesAccept } from "../forms/mimeMatchesAccept";
 import type { StoredMedia, UploadFile } from "./storage/adapter";
 
 export type MediaType = "image" | "file";
@@ -207,18 +208,153 @@ const extractDimensionsForFile = (mimeType: string, buffer: Buffer) => {
   return readImageDimensions(buffer);
 };
 
-export async function uploadMedia(file: UploadFile, meta: MediaMeta, userId?: string) {
+// Bounded scan for markup/script openers that turn an INLINE-served file into a
+// stored-XSS vector (SVG/HTML/XML). Skips a leading BOM + whitespace.
+const looksLikeMarkup = (buffer: Buffer): boolean => {
+  const head = buffer
+    .subarray(0, 1024)
+    .toString("utf8")
+    .replace(/^[\uFEFF\s]+/, "")
+    .toLowerCase();
+  return (
+    head.startsWith("<?xml") ||
+    head.startsWith("<svg") ||
+    head.startsWith("<!doctype") ||
+    head.startsWith("<html") ||
+    head.startsWith("<!--") ||
+    head.includes("<script")
+  );
+};
+
+type SniffedKind = "png" | "jpeg" | "gif" | "webp" | "bmp" | "pdf" | "unknown";
+
+// Magic-byte sniff of the ACTUAL uploaded bytes (never the declared Content-Type).
+const sniffBinaryKind = (buffer: Buffer): SniffedKind => {
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return "png";
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return "jpeg";
+  }
+  if (buffer.length >= 6) {
+    const sig = buffer.subarray(0, 6).toString("latin1");
+    if (sig === "GIF87a" || sig === "GIF89a") return "gif";
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString("latin1") === "RIFF" &&
+    buffer.subarray(8, 12).toString("latin1") === "WEBP"
+  ) {
+    return "webp";
+  }
+  if (buffer.length >= 2 && buffer[0] === 0x42 && buffer[1] === 0x4d) return "bmp";
+  if (buffer.length >= 5 && buffer.subarray(0, 5).toString("latin1") === "%PDF-") return "pdf";
+  return "unknown";
+};
+
+const kindMatchesMime = (kind: SniffedKind, mime: string): boolean => {
+  switch (kind) {
+    case "png":
+      return mime === "image/png";
+    case "jpeg":
+      return mime === "image/jpeg" || mime === "image/jpg" || mime === "image/pjpeg";
+    case "gif":
+      return mime === "image/gif";
+    case "webp":
+      return mime === "image/webp";
+    case "bmp":
+      return mime === "image/bmp" || mime === "image/x-ms-bmp";
+    case "pdf":
+      return mime === "application/pdf";
+    default:
+      return false;
+  }
+};
+
+/**
+ * Content sniffing for the UNTRUSTED public path (anonymous form uploads). The
+ * declared Content-Type is caller-supplied and MUST NOT be trusted: a spoofed
+ * `image/svg+xml`/`image/png` header on an SVG/HTML-with-script payload would pass
+ * the declared-type allowlist and then be served inline (stored XSS). This:
+ *   (1) rejects markup/script-bearing content outright,
+ *   (2) rejects script-capable DECLARED types (svg/html/xml/text/*, `*+xml`),
+ *   (3) requires a declared image/pdf to MATCH its magic bytes.
+ * Non-sniffable declared types (e.g. zip-based office docs) are allowed only when
+ * the content is not markup — the declared-type allowlist still bounds those.
+ */
+const assertSafePublicContent = (buffer: Buffer, declaredMime: string) => {
+  if (looksLikeMarkup(buffer)) throw new Error("media_mime_not_allowed");
+  const mime = normalizeMimeType(declaredMime);
+  if (
+    mime === "image/svg+xml" ||
+    mime === "text/html" ||
+    mime === "text/xml" ||
+    mime === "application/xml" ||
+    mime === "application/xhtml+xml" ||
+    mime.startsWith("text/") ||
+    mime.endsWith("+xml")
+  ) {
+    throw new Error("media_mime_not_allowed");
+  }
+  const kind = sniffBinaryKind(buffer);
+  if (mime.startsWith("image/")) {
+    if (kind === "unknown" || !kindMatchesMime(kind, mime)) {
+      throw new Error("media_mime_not_allowed");
+    }
+  } else if (mime === "application/pdf") {
+    if (kind !== "pdf") throw new Error("media_mime_not_allowed");
+  }
+};
+
+export type UploadConstraints = {
+  allowedMime?: string[];
+  maxSizeBytes?: number;
+  // Set on the anonymous public form-upload path: sniff the ACTUAL bytes and reject
+  // markup/spoofed content (see assertSafePublicContent). Admin uploads leave this
+  // unset (they are already `media:write`-gated and may legitimately store SVGs).
+  sniffContent?: boolean;
+};
+
+export async function uploadMedia(
+  file: UploadFile,
+  meta: MediaMeta,
+  userId?: string,
+  constraints?: UploadConstraints
+) {
   const config = await getConfig();
 
   const buffer = await toBuffer(file);
   const bufferedFile = createBufferedUploadFile(file, buffer);
 
-  if (bufferedFile.size > config.maxSizeBytes) {
+  // Effective size cap = tighter of global and field (min); undefined field ⇒ global.
+  const maxSizeBytes = Math.min(config.maxSizeBytes, constraints?.maxSizeBytes ?? Infinity);
+  if (bufferedFile.size > maxSizeBytes) {
     throw new Error("media_file_too_large");
   }
 
+  // AND the two checks on the ACTUAL uploaded mime — never intersect the two allowlists
+  // (a wildcard-vs-concrete intersection collapses to allow-all/reject-all; see 516-07).
   if (!isMimeAllowed(bufferedFile.type, config.allowedMime)) {
     throw new Error("media_mime_not_allowed");
+  }
+  if (!mimeMatchesAccept(bufferedFile.type, constraints?.allowedMime)) {
+    throw new Error("media_mime_not_allowed");
+  }
+
+  // Untrusted anonymous path: the declared Content-Type is not trustworthy — sniff
+  // the actual bytes and reject spoofed/markup (SVG/HTML) payloads before storing.
+  if (constraints?.sniffContent) {
+    assertSafePublicContent(buffer, bufferedFile.type);
   }
 
   const dimensions = extractDimensionsForFile(bufferedFile.type, buffer);

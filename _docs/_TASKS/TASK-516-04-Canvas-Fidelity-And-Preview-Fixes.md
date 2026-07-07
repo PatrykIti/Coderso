@@ -11,7 +11,7 @@ TASK-516-03** and defines the optional `deviceWidth?` + `theme?` props on
 `FormCanvasProps` that 516-03's `FormBuilderPage` then wires (the props are a
 no-op until 516-03 supplies the values; declaring them here first keeps 516-03's
 typecheck gate green).
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-06)
 
 ---
 

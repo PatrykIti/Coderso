@@ -186,53 +186,110 @@ vi.mock("@/ui/contexts/AdminRouterContext", () => ({
   useAdminRouter: () => ({ navigate: vi.fn() }),
 }));
 
-// EditorShell passthrough exposes the three regions so we never mount the heavy
-// real AdminShell. The regions test asserts these are wired.
-vi.mock("@/ui/layouts/EditorShell", () => ({
-  EditorShell: ({
+// AdminShell + EditorFrame passthroughs expose the regions so we never mount the
+// heavy real chrome. The regions test asserts these are wired. PageHeader is left
+// REAL (pure layout, SSR-safe) so the relocated Save/Publish/Details actions render.
+vi.mock("@/ui/layouts/AdminShell", () => ({
+  AdminShell: ({
     children,
-    leftPanel,
-    rightPanel,
     topbarActions,
   }: {
     children: React.ReactNode;
-    leftPanel?: React.ReactNode;
-    rightPanel?: React.ReactNode;
     topbarActions?: React.ReactNode;
   }) => (
     <div>
       <div data-region="topbar">{topbarActions}</div>
-      <aside data-region="left">{leftPanel}</aside>
-      <main data-region="canvas">{children}</main>
-      <aside data-region="right">{rightPanel}</aside>
+      {children}
     </div>
   ),
 }));
 
-vi.mock("../../../core/admin/ui/forms/FieldLibrary", () => ({
-  FieldLibrary: ({
-    onAddField,
+vi.mock("@/ui/shared/EditorFrame", () => ({
+  EditorFrame: ({
+    actions,
+    left,
+    canvas,
+    right,
   }: {
-    onAddField: (item: { id: string; label: string; type: string }) => void;
+    actions?: React.ReactNode;
+    left?: React.ReactNode;
+    canvas: React.ReactNode;
+    right?: React.ReactNode;
   }) => (
-    <button
-      type="button"
-      onClick={() => onAddField({ id: "text", label: "Text Input", type: "text" })}
-    >
-      add-library-field
+    <div>
+      <div data-region="actions">{actions}</div>
+      <aside data-region="left">{left}</aside>
+      <main data-region="canvas">{canvas}</main>
+      <aside data-region="right">{right}</aside>
+    </div>
+  ),
+  // @/ui/shared/EditorFrame re-exports these; keep them here so any importer resolves.
+  EditorRailGroup: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  EditorRailItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) => (
+    <button type="button" onClick={onClick}>
+      {children}
     </button>
   ),
 }));
 
-vi.mock("../../../core/admin/ui/forms/FieldListPanel", () => ({
-  FieldListPanel: ({ fields }: { fields: Array<{ id: string }> }) => (
-    <div>{`field-list:${fields.length}`}</div>
+// Relaxed FieldLibrary mock: keeps the "add-library-field" quick-add (text) AND
+// exposes every rail item as a `lib-item:<type>` button so the Phone test can add
+// a `type:"phone"` field via the real fieldLibraryItems list.
+vi.mock("../../../core/admin/ui/forms/FieldLibrary", () => ({
+  FieldLibrary: ({
+    items,
+    onAddField,
+  }: {
+    items?: Array<{ id: string; label: string; type: string }>;
+    onAddField: (item: { id: string; label: string; type: string }) => void;
+  }) => (
+    <div>
+      <button
+        type="button"
+        onClick={() => onAddField({ id: "text", label: "Text Input", type: "text" })}
+      >
+        add-library-field
+      </button>
+      {(items ?? []).map((item) => (
+        <button key={item.id} type="button" onClick={() => onAddField(item)}>
+          {`lib-item:${item.type}`}
+        </button>
+      ))}
+    </div>
   ),
 }));
 
 vi.mock("../../../core/admin/ui/forms/FormCanvas", () => ({
-  FormCanvas: ({ fields }: { fields: Array<{ id: string }> }) => (
-    <div>{`canvas:${fields.length}`}</div>
+  FormCanvas: ({
+    fields,
+    deviceWidth,
+    onSelectForm,
+  }: {
+    fields: Array<{ id: string }>;
+    deviceWidth?: string;
+    onSelectForm?: () => void;
+  }) => (
+    <div>
+      {`canvas:${fields.length}`}
+      <span>{`device:${deviceWidth}`}</span>
+      <button type="button" onClick={onSelectForm}>
+        select-form
+      </button>
+    </div>
+  ),
+}));
+
+// FormDesignPanel mock exposes a deterministic theme-edit trigger for the
+// setFormTheme dirty-flag + persistence test.
+vi.mock("../../../core/admin/ui/forms/FormDesignPanel", () => ({
+  FormDesignPanel: ({
+    onThemeChange,
+  }: {
+    onThemeChange: (updates: { layout?: { width?: string } } | undefined) => void;
+  }) => (
+    <button type="button" onClick={() => onThemeChange({ layout: { width: "lg" } })}>
+      design-set-width
+    </button>
   ),
 }));
 
@@ -292,17 +349,16 @@ afterEach(() => {
   window.history.replaceState({}, "", "/");
 });
 
-test("renders the Fields/Library rail + canvas preview + inspector", async () => {
+test("renders the single Fields rail + canvas preview + inspector", async () => {
   window.history.replaceState({}, "", "/admin/advanced/forms/form-1");
   const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
   const view = mount(<FormBuilderPage />);
   try {
     await flush();
-    // Left rail wires the Fields list + Library.
+    // Left slot mounts the single FieldLibrary rail (no Fields/Library tab pair).
     expect(view.container.querySelector('[data-region="left"]')?.textContent).toContain(
-      "field-list:1"
+      "add-library-field"
     );
-    expect(view.container.textContent).toContain("add-library-field");
     // Center region wires the live canvas preview.
     expect(view.container.querySelector('[data-region="canvas"]')?.textContent).toContain(
       "canvas:1"
@@ -365,13 +421,124 @@ test("add-field + Save call the client writes", async () => {
     expect(view.container.textContent).toContain("canvas:2");
     expect(view.container.textContent).toContain("Unsaved changes");
 
-    clickByText(view.container, "Save form");
+    clickByText(view.container, "Save");
     await flush();
 
     expect(builderState.updateFormCalls[0]?.id).toBe("form-1");
     expect(builderState.updateFieldsCalls[0]?.id).toBe("form-1");
     expect(builderState.updateFieldsCalls[0]?.fields.length).toBeGreaterThan(1);
     expect(builderState.updateActionsCalls[0]?.id).toBe("form-1");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("field library includes a Phone item that appends a type:phone field", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1");
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
+  const view = mount(<FormBuilderPage />);
+  try {
+    await flush();
+    // The relaxed FieldLibrary mock surfaces every real fieldLibraryItems entry.
+    clickByText(view.container, "lib-item:phone");
+    await flush();
+    clickByText(view.container, "Save");
+    await flush();
+    const savedFields = builderState.updateFieldsCalls[0]?.fields ?? [];
+    expect(savedFields.some((field) => field.type === "phone")).toBe(true);
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("inspector exposes a Design tab that renders FormDesignPanel", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1");
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
+  const view = mount(<FormBuilderPage />);
+  try {
+    await flush();
+    // Select the form target so the form inspector (with the Design tab) renders.
+    clickByText(view.container, "select-form");
+    await flush();
+    // Mocked Tabs render every TabsContent, so FormDesignPanel is present in the tree.
+    expect(view.container.textContent).toContain("Design");
+    expect(view.container.textContent).toContain("design-set-width");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("toggling the device control updates the deviceWidth passed to FormCanvas", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1");
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
+  const view = mount(<FormBuilderPage />);
+  try {
+    await flush();
+    const canvasRegion = view.container.querySelector('[data-region="canvas"]');
+    expect(canvasRegion?.textContent).toContain("device:desktop");
+    const mobileToggle = view.container.querySelector<HTMLButtonElement>(
+      '[aria-label="Mobile preview"]'
+    );
+    if (!mobileToggle) throw new Error("Missing mobile preview toggle");
+    React.act(() => {
+      mobileToggle.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    });
+    await flush();
+    expect(view.container.querySelector('[data-region="canvas"]')?.textContent).toContain(
+      "device:mobile"
+    );
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("Publish calls updateForm with status:published", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1");
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
+  const view = mount(<FormBuilderPage />);
+  try {
+    await flush();
+    clickByText(view.container, "Publish");
+    await flush();
+    expect(builderState.updateFormCalls[0]?.input.status).toBe("published");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("a theme edit marks the form dirty and persists settings.theme", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1");
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
+  const view = mount(<FormBuilderPage />);
+  try {
+    await flush();
+    clickByText(view.container, "select-form");
+    await flush();
+    clickByText(view.container, "design-set-width");
+    await flush();
+    // The statement-body setFormTheme fix flips the dirty flag.
+    expect(view.container.textContent).toContain("Unsaved changes");
+    clickByText(view.container, "Save");
+    await flush();
+    const settings = builderState.updateFormCalls[0]?.input.settings as
+      | { theme?: { layout?: { width?: string } } }
+      | undefined;
+    expect(settings?.theme?.layout?.width).toBe("lg");
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("relocated mobile 'Details' opener renders in the header and opens the inspector", async () => {
+  window.history.replaceState({}, "", "/admin/advanced/forms/form-1");
+  const { FormBuilderPage } = await import("../../../core/admin/ui/forms/FormBuilderPage");
+  const view = mount(<FormBuilderPage />);
+  try {
+    await flush();
+    // "Details" (not "Fields" — that also labels the rail group) opens the mobile inspector Sheet.
+    clickByText(view.container, "Details");
+    await flush();
+    expect(view.container.textContent).toContain("field-settings-panel");
   } finally {
     view.cleanup();
   }

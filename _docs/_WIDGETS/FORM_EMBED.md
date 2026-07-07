@@ -73,10 +73,11 @@ Current Form Embed runtime support matches the live Forms field model:
 - `select`
 - `radio`
 - `hidden`
+- `file` (TASK-516-07 — nonce-gated upload to `POST /forms/:id/uploads`; submitted
+  value is an owned media reference, validated as such on the submission path)
 
 Unsupported legacy/runtime payload types render a visible non-submitting
-diagnostic instead of silently coercing to a different control. `file` remains
-explicit unsupported scope under the current trusted-field contract.
+diagnostic instead of silently coercing to a different control.
 
 ## Accessibility Contract
 
@@ -128,6 +129,13 @@ explicit unsupported scope under the current trusted-field contract.
 - Form field settings use `formStep` for multi-step grouping and `inputStep`
   for number/range/time input increments. Legacy `settings.step` remains a
   non-destructive form-step adapter and is not used as an input increment.
+- The public embed INHERITS the form-owned theme (`forms.settings.theme`,
+  TASK-516) through `pageRendererV2` `mapFormBindingToEmbedData`: the form theme
+  is the render BASE and the per-embed `FormEmbedStyle` OVERRIDES it per explicit
+  token (form theme = base, embed wins per-token; an unset embed token falls
+  through to the form theme, an unset form token to the built-in default). Every
+  theme-derived color still passes `resolveClearableCssColorValue` before reaching
+  an inline style.
 
 ## Security Notes
 

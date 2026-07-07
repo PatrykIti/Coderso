@@ -5,8 +5,11 @@ import {
   listFormFields,
   listForms,
   setFormFields,
+  toFieldRecord,
   updateForm,
 } from "../../services/forms/formsService";
+import { uploadMedia } from "../../services/media/mediaService";
+import type { UploadFile } from "../../services/media/storage/adapter";
 import {
   evaluateSubmissionAccess,
   normalizeSubmissionAccess,
@@ -18,8 +21,10 @@ import { normalizeFormSettings } from "../../services/forms/formSettings";
 import { ApiError } from "../errorHandler";
 import { authenticateApiKey } from "../../services/security/apiKeyAuth";
 import { enforceBotProtection } from "../../services/security/botProtection";
+import { checkRateLimit } from "../middleware/rateLimit";
 import { getSecuritySettings } from "../../services/settings/securitySettings";
 import {
+  formAttachmentUploadSchema,
   formCreateSchema,
   formFieldsSchema,
   formSubmissionSchema,
@@ -103,6 +108,13 @@ export const mapFormError = (error: unknown) => {
         "Form success redirect URL must be a same-origin relative path.",
         400
       );
+    // Reuse the existing media convention (mediaRoutes.ts) so the file-upload surface
+    // stays consistent with /media. Without these, an unmapped media error rethrows
+    // raw (default returns null) → a generic 500 instead of a client error.
+    case "media_file_too_large":
+      return new ApiError("media_file_too_large", "File exceeds size limit", 413);
+    case "media_mime_not_allowed":
+      return new ApiError("media_mime_not_allowed", "File type not allowed", 400);
     default:
       return null;
   }
@@ -239,6 +251,122 @@ export async function handleFormSubmissionRoute(ctx: RouteContext, deps: FormSub
   };
 }
 
+// Local structural upload-transport guard (mirrors the PRIVATE isUploadFile in
+// mediaRoutes.ts). Reimplemented here as a leaf duplicate — no cross-route import,
+// avoiding coupling the two route modules.
+function isUploadFile(input: unknown): input is UploadFile {
+  if (!input || typeof input !== "object") return false;
+  const file = input as UploadFile;
+  return (
+    typeof file.name === "string" &&
+    typeof file.type === "string" &&
+    typeof file.size === "number" &&
+    typeof file.arrayBuffer === "function"
+  );
+}
+
+export type FormAttachmentUploadRouteDeps = {
+  requirePermission: FormsRouteDeps["requirePermission"];
+  validate: FormsRouteDeps["validate"];
+};
+
+type AttachmentUploadBody = {
+  fieldName: string;
+  file: UploadFile;
+  formNonce?: string;
+  captchaToken?: string;
+};
+
+/**
+ * PUBLIC nonce-gated upload endpoint (TASK-516-07). NO requirePermission("media:write")
+ * — it reuses the form's OWN public submission access gate + the runtime-issued
+ * submission nonce + bot-protection, and reuses mediaService.uploadMedia for mime/size
+ * enforcement (scoped to the field's accept/maxSizeMb). Returns a reference only.
+ */
+export async function handleFormAttachmentUploadRoute(
+  ctx: RouteContext,
+  deps: FormAttachmentUploadRouteDeps
+) {
+  const { requirePermission, validate } = deps;
+  validate(formAttachmentUploadSchema, ctx.body);
+  const body = ctx.body as AttachmentUploadBody;
+
+  // Schema cannot validate a binary File — runtime guard before uploadMedia so a
+  // non-file `file` cannot fall through.
+  if (!isUploadFile(body.file)) {
+    throw new ApiError("form_field_invalid", "Invalid upload payload", 400);
+  }
+
+  const form = await getForm(ctx.params.id);
+  if (!form) {
+    throw new ApiError("form_not_found", "Form not found.", 404);
+  }
+
+  // SAME access gate as the submission route.
+  const accessMode = normalizeSubmissionAccess(form.submissionAccess, "public");
+  const apiKey =
+    accessMode === "internal" ? await authenticateApiKey(ctx.headers?.authorization ?? null) : null;
+  const access = evaluateSubmissionAccess({
+    mode: accessMode,
+    isAuthenticated: Boolean(ctx.user),
+    apiKeyScopes: apiKey?.scopes,
+  });
+  if (!access.allow) {
+    if (access.reason === "forbidden") {
+      throw new ApiError("forbidden", "Forbidden", 403);
+    }
+    throw new ApiError("auth_required", "Not authenticated", 401);
+  }
+  if (accessMode === "internal" && ctx.user) {
+    await requirePermission("forms:write")(ctx);
+  }
+  if (access.requireCaptcha) {
+    // Anonymous public upload endpoint. Enforce its OWN per-IP flood guard: the
+    // global public-write rate limiter (httpServer.isPublicWritePath) only matches
+    // `/forms/:id/submissions`, and enforceBotProtection is a no-op when disabled —
+    // so without this a caller could flood media storage / the media library even
+    // with bot protection off. The nonce is a stateless, reusable HMAC and cannot
+    // bound volume on its own.
+    const securitySettings = await getSecuritySettings();
+    checkRateLimit(
+      "public_write",
+      { ip: ctx.ip, userAgent: ctx.userAgent, identifier: form.id },
+      securitySettings.rateLimit
+    );
+    assertFormSubmissionNonce(form.id, body.formNonce);
+    await enforceBotProtection({
+      token: body.captchaToken,
+      action: "public_write",
+      ip: ctx.ip,
+      settings: securitySettings.botProtection,
+    });
+  }
+
+  // Field-scoped constraint enforcement.
+  const normalizedFields = (await listFormFields(form.id)).map(toFieldRecord);
+  const field = normalizedFields.find((entry) => entry.name === body.fieldName);
+  if (!field || field.type !== "file") {
+    throw new ApiError("form_field_invalid", "Invalid field", 400);
+  }
+
+  let row: Awaited<ReturnType<typeof uploadMedia>> | null = null;
+  try {
+    row = await uploadMedia(body.file, {}, ctx.user?.id, {
+      allowedMime: field.settings.accept,
+      maxSizeBytes: field.settings.maxSizeMb ? field.settings.maxSizeMb * 1024 * 1024 : undefined,
+      // Untrusted anonymous path: sniff actual bytes, reject spoofed/markup (SVG) content.
+      sniffContent: access.requireCaptcha,
+    });
+  } catch (error) {
+    throwMappedFormError(error);
+  }
+  if (!row) {
+    throw new ApiError("form_field_invalid", "Invalid upload payload", 400);
+  }
+
+  return { id: row.id, url: row.url, mimeType: row.mimeType, size: row.size };
+}
+
 export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
   const { requirePermission, validate } = deps;
 
@@ -305,5 +433,10 @@ export function registerFormsRoutes(router: Router, deps: FormsRouteDeps) {
 
   router.post("/forms/:id/submissions", async (ctx) => {
     return handleFormSubmissionRoute(ctx, { requirePermission, validate });
+  });
+
+  // PUBLIC — no requirePermission("media:write"); gated by the form's own access + nonce.
+  router.post("/forms/:id/uploads", async (ctx) => {
+    return handleFormAttachmentUploadRoute(ctx, { requirePermission, validate });
   });
 }

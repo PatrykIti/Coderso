@@ -58,3 +58,18 @@ export const formSubmissionSchema = {
   },
   additionalProperties: false,
 };
+
+// A JSON schema cannot assert `file` is a real binary upload transport — the handler
+// mirrors the media route's two-step pattern: validate(schema) THEN a runtime
+// isUploadFile(...) guard before uploadMedia.
+export const formAttachmentUploadSchema = {
+  type: "object",
+  required: ["fieldName", "file"],
+  properties: {
+    fieldName: { type: "string" },
+    file: { type: "object" },
+    formNonce: { type: "string" },
+    captchaToken: { type: "string" },
+  },
+  additionalProperties: false,
+};

@@ -710,3 +710,108 @@ test("form runtime emits a bounded analytics event after successful submit", asy
 
   window.removeEventListener("newsletter_submit", analyticsSpy as EventListener);
 });
+
+// ---------------------------------------------------------------------------
+// TASK-516-06: public embed inherits the form theme (present-only), per-instance
+// style still wins, and un-themed forms stay byte-identical to the pre-516 markup.
+// ---------------------------------------------------------------------------
+
+const renderEmbedHtml = (data: FormEmbedData) =>
+  renderToString(React.createElement(FormEmbedBlock, { data, variant: "standard" }));
+
+const themedResolvedFields = [
+  { id: "f1", type: "text", label: "Name", name: "name", required: true, settings: {} },
+];
+
+test("516-06: a themed form renders the mapped container width, submit color/label and typography", () => {
+  const html = renderEmbedHtml({
+    formId: "form-themed",
+    resolved: {
+      formName: "Themed",
+      submissionAccess: "public",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        theme: {
+          layout: { width: "full", columns: 1, fieldGap: "sm" },
+          surface: { background: "#101010", padding: "xl", shadow: "lg" },
+          typography: { titleSize: "xl", fontFamily: "serif", titleColor: "#ff0000" },
+          input: { size: "lg", radius: "xl" },
+          submit: { background: "#00ff00", fullWidth: true, label: "Send it", radius: "xl" },
+        },
+      },
+      fields: themedResolvedFields,
+    },
+  });
+
+  // width: theme "full" → max-w-none (NOT the widget width enum, which lacks it).
+  expect(html).toContain("max-w-none");
+  // fontFamily on the outer wrapper.
+  expect(html).toContain("font-serif");
+  // title size xl (theme map, not the widget titleSize map which lacks xl).
+  expect(html).toContain("text-xl");
+  // surface padding xl + shadow lg on the card wrapper.
+  expect(html).toContain("p-8");
+  expect(html).toContain("shadow-lg");
+  // columns:1 collapses the grid; fieldGap sm → gap-2 (theme map, not widget gap-4).
+  expect(html).toContain("grid-cols-1");
+  expect(html).toContain("gap-2");
+  // colors reach inline styles (policy-checked hex passes through).
+  expect(html).toContain("#101010");
+  expect(html).toContain("#ff0000");
+  expect(html).toContain("#00ff00");
+  // submit: full-width + theme label + xl radius.
+  expect(html).toContain("Send it");
+  expect(html).toContain("rounded-2xl");
+  expect(html).toContain("w-full");
+});
+
+test("516-06: a form with NO theme and no per-instance style is byte-identical to the pre-516 markup", () => {
+  const noThemeData: FormEmbedData = {
+    formId: "form-plain",
+    resolved: {
+      formName: "Plain",
+      submissionAccess: "public",
+      settings: { layoutMode: "single", saveProgress: false, stepTitles: [] },
+      fields: themedResolvedFields,
+    },
+  };
+
+  const html = renderEmbedHtml(noThemeData);
+
+  // widget defaults survive untouched.
+  expect(html).toContain("max-w-lg"); // widthClassMap.md
+  expect(html).toContain("w-full space-y-6 p-6"); // card wrapper (padding p-6, no shadow)
+  expect(html).toContain("grid md:grid-cols-2 gap-6"); // default columns + fieldGap md
+  // no theme-only surfaces leak in.
+  expect(html).not.toContain("font-serif");
+  expect(html).not.toContain("font-display");
+  expect(html).not.toContain("max-w-none");
+  expect(html).not.toContain("grid-cols-1");
+
+  // Rendering identical data twice yields identical markup (deterministic useId).
+  expect(html).toBe(renderEmbedHtml(noThemeData));
+});
+
+test("516-06: a per-instance embed style overrides the form theme (precedence)", () => {
+  const html = renderEmbedHtml({
+    formId: "form-precedence",
+    // per-instance style sets its OWN surface color; the form theme's must lose.
+    style: { surface: "#222222" },
+    resolved: {
+      formName: "Precedence",
+      submissionAccess: "public",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        theme: { surface: { background: "#101010" } },
+      },
+      fields: themedResolvedFields,
+    },
+  });
+
+  expect(html).toContain("#222222"); // per-instance wins
+  expect(html).not.toContain("#101010"); // theme background does not reach the DOM
+});

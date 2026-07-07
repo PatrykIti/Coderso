@@ -67,9 +67,20 @@ const supportsPlaceholder = new Set([
 const supportsOptions = new Set(["select", "radio"]);
 const supportsDefault = new Set(["checkbox"]);
 const supportsChoiceDefault = new Set(["select", "radio"]);
-const supportsNumericBounds = new Set(["number", "range", "rating"]);
-const supportsStep = new Set(["number", "range"]);
+const supportsNumericBounds = new Set(["number", "range"]);
+const supportsRatingScale = new Set(["rating"]);
+const supportsStep = new Set(["number", "range", "time"]);
 const supportsTextDefault = new Set(["hidden"]);
+
+// Local, single-writer clamp (mirrors FormSettingsPanel.tsx:51 semantics exactly).
+// Do NOT import FormSettingsPanel's private clampInt — no 516 subtask owns that file.
+// Parses to an integer then clamps to [min,max], so the value handed to
+// PUT /forms/:id/fields always satisfies validation.ts:236 (Number.isInteger && 3..10).
+const clampInt = (value: string, fallback: number, min: number, max: number) => {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(min, Math.min(max, parsed));
+};
 
 const createLogicPatch = (
   current: FormFieldLogic | undefined,
@@ -129,6 +140,10 @@ export function FieldSettingsPanel({
   const style = field.settings.style ?? { width: "full", labelPosition: "above" };
   const needsField = logic.operator !== "always";
   const needsValue = isValueLogicOperator(logic.operator);
+  const hiddenDefaultValue =
+    typeof field.settings.defaultValue === "string" ? field.settings.defaultValue : "";
+  const isHiddenAndEmpty =
+    supportsTextDefault.has(field.type) && hiddenDefaultValue.trim().length === 0;
 
   const patchLogic = (patch: Partial<FormFieldLogic>) => {
     const next = createLogicPatch(field.settings.logic, patch);
@@ -297,18 +312,20 @@ export function FieldSettingsPanel({
                 <Separator />
                 <div className="space-y-2">
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                    Trusted default value
+                    Trusted default value <span className="text-destructive">*</span>
                   </label>
                   <Input
-                    value={
-                      typeof field.settings.defaultValue === "string"
-                        ? field.settings.defaultValue
-                        : ""
-                    }
+                    value={hiddenDefaultValue}
+                    aria-invalid={isHiddenAndEmpty || undefined}
                     onChange={(event) =>
                       onSettingsChange(field.id, { defaultValue: event.target.value })
                     }
                   />
+                  {isHiddenAndEmpty ? (
+                    <p className="text-xs text-destructive">
+                      Hidden fields must submit a fixed value.
+                    </p>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">
                     Hidden fields submit this exact value and reject client-side tampering.
                   </p>
@@ -353,6 +370,29 @@ export function FieldSettingsPanel({
                       }
                     />
                   </div>
+                </div>
+              </>
+            ) : null}
+            {supportsRatingScale.has(field.type) ? (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                    Rating scale (3–10)
+                  </label>
+                  <Input
+                    type="number"
+                    min={3}
+                    max={10}
+                    step={1}
+                    value={field.settings.max ?? 5}
+                    onChange={(event) =>
+                      onSettingsChange(field.id, {
+                        max: clampInt(event.target.value, 5, 3, 10),
+                      })
+                    }
+                  />
+                  <p className="text-xs text-muted-foreground">Number of points on the scale.</p>
                 </div>
               </>
             ) : null}

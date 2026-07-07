@@ -141,6 +141,105 @@ test("resolveFormRuntimeData omits captcha projection for internal forms", async
   expect(result.error).toBe("form_unpublished");
 });
 
+test("resolveFormRuntimeData projects settings.theme when the form sets one (516-06)", async () => {
+  process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
+
+  vi.doMock("../../../core/services/forms/formsService", () => ({
+    getForm: async () => ({
+      id: "form-theme",
+      name: "Themed",
+      description: null,
+      status: "published",
+      successMessage: null,
+      successRedirectUrl: null,
+      submissionAccess: "public",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        preset: "custom",
+        automationRetry: {
+          enabled: false,
+          maxAttempts: 1,
+          baseDelayMs: 300,
+          maxDelayMs: 2000,
+        },
+        theme: {
+          layout: { width: "full" },
+          submit: { background: "#00ff00" },
+        },
+      },
+    }),
+    listFormFields: async () => [
+      { id: "field-1", type: "text", label: "Name", name: "name", required: true, settings: {} },
+    ],
+    toFieldRecord: (field: Record<string, unknown>) => field,
+  }));
+
+  vi.doMock("../../../core/services/settings/securitySettings", () => ({
+    getSecuritySettingsPublic: async () => ({
+      botProtection: { enabled: false },
+      passwordPepperConfigured: true,
+    }),
+  }));
+
+  const { resolveFormRuntimeData } =
+    await import("../../../core/services/forms/formRuntimeResolver");
+
+  const result = await resolveFormRuntimeData("form-theme", { preview: false });
+
+  expect(result.settings.theme).toBeDefined();
+  expect(result.settings.theme?.layout?.width).toBe("full");
+  expect(result.settings.theme?.submit?.background).toBe("#00ff00");
+});
+
+test("resolveFormRuntimeData omits settings.theme when the form has none (516-06)", async () => {
+  process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
+
+  vi.doMock("../../../core/services/forms/formsService", () => ({
+    getForm: async () => ({
+      id: "form-no-theme",
+      name: "Plain",
+      description: null,
+      status: "published",
+      successMessage: null,
+      successRedirectUrl: null,
+      submissionAccess: "public",
+      settings: {
+        layoutMode: "single",
+        saveProgress: false,
+        stepTitles: [],
+        preset: "custom",
+        automationRetry: {
+          enabled: false,
+          maxAttempts: 1,
+          baseDelayMs: 300,
+          maxDelayMs: 2000,
+        },
+      },
+    }),
+    listFormFields: async () => [
+      { id: "field-1", type: "text", label: "Name", name: "name", required: true, settings: {} },
+    ],
+    toFieldRecord: (field: Record<string, unknown>) => field,
+  }));
+
+  vi.doMock("../../../core/services/settings/securitySettings", () => ({
+    getSecuritySettingsPublic: async () => ({
+      botProtection: { enabled: false },
+      passwordPepperConfigured: true,
+    }),
+  }));
+
+  const { resolveFormRuntimeData } =
+    await import("../../../core/services/forms/formRuntimeResolver");
+
+  const result = await resolveFormRuntimeData("form-no-theme", { preview: false });
+
+  expect(result.settings.theme).toBeUndefined();
+  expect("theme" in result.settings).toBe(false);
+});
+
 test("resolveFormRuntimeData does not project public fields for published internal forms", async () => {
   process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
 

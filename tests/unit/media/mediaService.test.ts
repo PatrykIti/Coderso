@@ -308,6 +308,100 @@ testIfDb("uploads native file without dropping metadata", async () => {
   resetMediaStorageAdapterCache();
 });
 
+const restoreDefaultGlobal = async () => {
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "text/plain",
+    maxSizeBytes: 1024,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+};
+
+const useWildcardGlobal = async (maxSizeBytes = 1024 * 1024) => {
+  // The shipped DEFAULT global shape: a WILDCARD (image/*) + a concrete pdf entry.
+  await setStorageSettings({
+    driver: "local",
+    local: { dir: tempDir },
+    publicBaseUrl: "http://localhost/media",
+    allowedMime: "image/*,application/pdf",
+    maxSizeBytes,
+  });
+  resetStorageSettingsCache();
+  resetMediaStorageAdapterCache();
+};
+
+testIfDb("uploadMedia field accept [image/png] PASSES png against wildcard global", async () => {
+  // Load-bearing regression: the removed list-intersection would have dropped the
+  // global image/* entry (mimeMatchesAccept is asymmetric) yielding [] ⇒ isMimeAllowed
+  // allow-all. AND-ing on the actual uploaded mime keeps the field restriction intact
+  // while still admitting a concrete png under a wildcard global.
+  await useWildcardGlobal();
+  const uploaded = await uploadMedia(
+    buildUploadFile("ok.png", "image/png", pngOneByOne),
+    {},
+    undefined,
+    {
+      allowedMime: ["image/png"],
+    }
+  );
+  createdMediaId = uploaded.id;
+  expect(uploaded.mimeType).toBe("image/png");
+  await deleteMedia(uploaded.id);
+  createdMediaId = undefined;
+  await restoreDefaultGlobal();
+});
+
+testIfDb("uploadMedia field accept [image/png] REJECTS image/jpeg (field tightens)", async () => {
+  await useWildcardGlobal();
+  await expect(
+    uploadMedia(buildUploadFile("x.jpg", "image/jpeg", Buffer.from("x")), {}, undefined, {
+      allowedMime: ["image/png"],
+    })
+  ).rejects.toThrow("media_mime_not_allowed");
+  await restoreDefaultGlobal();
+});
+
+testIfDb("uploadMedia field accept [image/*] still passes image/png", async () => {
+  await useWildcardGlobal();
+  const uploaded = await uploadMedia(
+    buildUploadFile("ok2.png", "image/png", pngOneByOne),
+    {},
+    undefined,
+    {
+      allowedMime: ["image/*"],
+    }
+  );
+  createdMediaId = uploaded.id;
+  expect(uploaded.mimeType).toBe("image/png");
+  await deleteMedia(uploaded.id);
+  createdMediaId = undefined;
+  await restoreDefaultGlobal();
+});
+
+testIfDb("uploadMedia maxSizeBytes uses min(field, global) — field cap rejects", async () => {
+  await useWildcardGlobal(10 * 1024 * 1024); // generous global
+  const big = Buffer.alloc(2048, 1);
+  await expect(
+    uploadMedia(buildUploadFile("big.png", "image/png", big), {}, undefined, {
+      maxSizeBytes: 1024, // field cap below the file size
+    })
+  ).rejects.toThrow("media_file_too_large");
+  await restoreDefaultGlobal();
+});
+
+testIfDb("uploadMedia with no constraints keeps global behavior", async () => {
+  await useWildcardGlobal();
+  const uploaded = await uploadMedia(buildUploadFile("plain.png", "image/png", pngOneByOne), {});
+  createdMediaId = uploaded.id;
+  expect(uploaded.mimeType).toBe("image/png");
+  await deleteMedia(uploaded.id);
+  createdMediaId = undefined;
+  await restoreDefaultGlobal();
+});
+
 testIfDb("recovers missing dimensions and replaces asset without losing title", async () => {
   await setStorageSettings({
     driver: "local",
