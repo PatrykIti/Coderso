@@ -53,7 +53,14 @@ export const PAGE_EFFECTS_RUNTIME_SOURCE = [
   '(function(){',
   'try{',
   'var RM=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)");',
-  'if(RM&&RM.matches)return;',                       // reduced-motion → do nothing
+  'if(RM&&RM.matches)return;',                       // reduced-motion → do nothing (hide never armed)
+  // ---- ARM the reveal-hide: JS-required-to-HIDE. The reveal opacity:0 rule is
+  //      scoped under [data-reveal-armed] (521-02-L02), which is set HERE and only
+  //      here. If this script never runs (JS off, CSP blocks it, or any earlier
+  //      page-JS exception), the marker is absent → reveal content stays VISIBLE
+  //      (never permanently hidden). Set it BEFORE observing so IO can then hide→reveal.
+  'var pm=document.querySelector("[data-page-motion]");',
+  'if(pm)pm.setAttribute("data-reveal-armed","true");',
   // ---- reveal via IntersectionObserver ----
   'var rv=document.querySelectorAll(\'[data-page-effect="reveal-fade"],[data-page-effect="reveal-up"]\');',
   'if("IntersectionObserver"in window&&rv.length){',
@@ -93,19 +100,28 @@ export const PAGE_EFFECTS_RUNTIME_SOURCE = [
 **Idempotency:** deduped by `PAGE_EFFECTS_RUNTIME_ID` in the registry / by the
 single emit site (521-05), so multiple sections sharing one page yield ONE script.
 **No layout thrash:** transforms only (composited); `getBoundingClientRect` reads
-batched inside rAF. **Fallback:** no-IO browsers reveal immediately (content never
-hidden permanently); `try/catch` swallows to never break the page.
+batched inside rAF. **Never-permanently-hidden (JS-required-to-HIDE):** the reveal
+`opacity:0` rule is scoped under the runtime-set `[data-reveal-armed]` marker, so
+content is hidden ONLY once this script confirms it is running — JS-disabled,
+CSP-blocked, reduced-motion, and early-exception paths all leave the marker absent
+and content fully visible. **Fallback:** no-IO browsers set `data-revealed`
+immediately (visible); `try/catch` swallows to never break the page.
 
 ## Regression-test shape
 
-- **Bun unit — `tests/unit/pages/pageEffectsRuntime.test.ts`** (`bun:test`, the Bun
-  lane per `_docs/TESTING_STRATEGY.md`): assert `PAGE_EFFECTS_RUNTIME_SOURCE` is a
-  string, contains the reduced-motion guard `matchMedia("(prefers-reduced-motion:
-  reduce)")` early-return BEFORE any observer/listener, contains
-  `IntersectionObserver`, clamps parallax to `40`, and contains NO `${`
-  template-interpolation marker and no `eval`/`Function(`/`innerHTML=` sink.
-  (Optional jsdom exec test lives in Vitest `tests/vitest/content*` if a DOM is
-  needed — but keep the static-shape assertion in the Bun lane.)
+- **Vitest — `tests/vitest/pages/pageEffectsRuntime.test.ts`** (NEW; owned/authored
+  by 521-01-L05, referenced here): the static-shape source test is a set of pure
+  string assertions on a static literal (no runtime kernel, no DOM), which per
+  `_docs/TESTING_STRATEGY.md` ("Vitest for pure TypeScript") belongs in the Vitest
+  `tests/vitest/pages/` lane — NOT `tests/unit/pages/*` (Bun, reserved for DB/service
+  + Ajv suites). It asserts `PAGE_EFFECTS_RUNTIME_SOURCE` is a string, contains the
+  reduced-motion guard `matchMedia("(prefers-reduced-motion: reduce)")` early-return
+  BEFORE any observer/listener, sets `data-reveal-armed` on the `[data-page-motion]`
+  root AFTER the reduced-motion return but BEFORE the `IntersectionObserver`
+  observe loop (JS-required-to-HIDE ordering), contains `IntersectionObserver`,
+  clamps parallax to `40`, and contains NO `${` template-interpolation marker and no
+  `eval`/`Function(`/`innerHTML=` sink. (Any optional jsdom exec test lives in the
+  Vitest `tests/vitest/content*` lane.)
 
 ## Hard Invariants
 

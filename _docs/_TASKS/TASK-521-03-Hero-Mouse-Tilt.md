@@ -29,18 +29,26 @@ DISJOINT intra-file regions across the leaves).
 | TASK-521-03-L01 | Hero tilt model (type, schema, normalize, default) | `HeroData.style` (`:133`), `heroSchema` (`:285`), `normalizeHeroStyle` (`:680-709`), `heroDefaults` (`:323`) |
 | TASK-521-03-L02 | Hero tilt editor control | editor `writablePaths` (`:1399-1407`) + the appearance control cluster |
 | TASK-521-03-L03 | Hero tilt front render + runtime script | `HeroBlock` render (`:910`,`:1016`) + `motionClassMap` neighborhood + `renderSharedWidgetRuntimeScript` emit |
-| TASK-521-03-L04 | Hero tilt tests | `tests/unit/widgets/*` (Bun) + `tests/vitest/content*` (Vitest) |
+| TASK-521-03-L04 | Hero tilt tests | Vitest only — `tests/vitest/widgets/hero.test.tsx` + `tests/vitest/widgets/heroEditors.test.tsx` + `tests/vitest/content/heroTilt.test.tsx` (no Bun `tests/unit/widgets/hero*` file exists) |
 
 **Land order:** L01 → L02 → L03 → L04 (disjoint regions of one file, strict
 sequential).
 
 ## Coordination
 
-- ONLY `hero.tsx`. No other file. The tilt runtime is emitted via the existing
+- ONLY `hero.tsx`. No other file. The tilt runtime is emitted via
   `renderSharedWidgetRuntimeScript({ renderContext, id:"hero-tilt", source })`
-  (`runtimeScripts.tsx:27`), which the hero already has access to through its
-  `WidgetRenderContext` (widget render receives `renderContext`) — so it dedupes
-  across multiple heroes and needs no page-shell change.
+  (`runtimeScripts.tsx:27`). **Grounded correction:** the hero does NOT carry
+  `renderContext` today — `HeroBlock` (`hero.tsx:814`) destructures only
+  `{ data, variant, slots, previewDevice }` and has no existing runtime-script
+  needs. L03 WIRES `renderContext` through `HeroBlock` (the widget render contract
+  already exposes it — `types.ts:211`, passed by the widget renderer
+  `widgetRenderer.tsx:236`/`:249`) to enable a single deduped emit across multiple
+  heroes; this is an intra-`hero.tsx` change, still no page-shell edit. If left
+  unwired, `renderContext` is `undefined` and `renderSharedWidgetRuntimeScript`
+  falls back to an inline `<script>` per hero — the IIFE binds per element and is
+  idempotency-safe (duplicate re-bind harmless), but wiring `renderContext` is the
+  correct single-emit path.
 - `tilt` is a SEPARATE axis from the existing entrance `motion` — both may be set;
   `motion` animates entrance (existing), `tilt` animates hover (new).
 

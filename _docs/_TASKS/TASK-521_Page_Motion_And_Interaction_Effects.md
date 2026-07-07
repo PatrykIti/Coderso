@@ -11,7 +11,7 @@
 - TASK-424/425 (`PageSectionStyleV2`, `PageBlockStyleV2`, responsive override machinery), TASK-455 (site shell + `PageDocumentRender` root), TASK-458-03 (`PageDocumentSettingsV2.menuAppearance` — the reference for a present-only additive settings sub-object), the existing widget CSS-motion substrate (`hero.tsx` `HeroMotionPreset`, `section.tsx` `SectionMotion`, `motion-safe:`/`motion-reduce:` guards).
 
 **Status:** ⏳ To Do
-**Closure changelog (pinned):** 1234 (519 = 1232, 520 = 1233 precede on disk 2026-07-07; **re-verify next-free at closure** and do NOT edit `_CHANGELOG/*` or `_TASKS/README.md` — the orchestrator owns those).
+**Closure changelog:** Changelog number is assigned at closure as the then-current next-free (grep `_docs/_CHANGELOG/` highest+1). As of authoring the next-free is 1229; the final number depends on which tasks close first (519/520 land before 521). Do NOT edit `_CHANGELOG/*` or `_TASKS/README.md` — the orchestrator owns those.
 
 ---
 
@@ -30,7 +30,10 @@ reduced-motion-safe**:
 
 - **(A) Section scroll effects** — per-section reveal-on-enter (fade / slide-up)
   and parallax, on the page-section CONTAINER (`PageSectionStyleV2`), authored in
-  the section inspector, applied on the front + admin canvas.
+  the section inspector, applied on the FRONT (and preview) only — the builder
+  canvas shows content at rest (521-02-L02 stamps the runtime + parallax wrapper
+  inside `PageSectionRender`; the canvas renders via `PageSectionContent` /
+  `PageAuthoringCanvas.tsx` and never emits the runtime — Hard Invariant 7).
 - **(B) Animated-icon block** — a NEW lightweight block/widget built from a
   curated **inline-SVG + CSS-keyframes** set (spin / pulse / bounce / draw), **no
   npm dependency**, CSP-safe, self-hosted.
@@ -79,12 +82,24 @@ config rides existing jsonb), and does **NOT** bump `PAGE_DOCUMENT_SCHEMA_VERSIO
 - Zero animation libraries in `core/package.json` (lucide-react + Tailwind only).
   Owner decision: animated icons = a curated inline-SVG + CSS-keyframes set (NOT
   Lottie, NO new dependency).
-- **Decision (refinement of the suggested decomposition):** add a NEW block type
-  `animatedIcon` rather than repurposing the pending `icon` placeholder — the
-  placeholder keeps its (unused) contract untouched (byte-identity) and the new
-  block owns a clean present-only schema. Adding a member to the `pageBlockTypes`
-  const is additive (legacy docs never reference it ⇒ byte-identical) and is NOT
-  a migration.
+- **Decision (refinement of the suggested decomposition — implement, don't add a
+  parallel type):** `pageBlockTypes` feeds EXHAUSTIVE `Record<PageBlockType, …>`
+  types (`pageBlockPropKeys` `:591`, `blockOptionCopy`
+  `pageEditorOptions.ts:85`), so adding a NEW `animatedIcon` member would force a
+  fragile multi-file ATOMIC land (every exhaustive record + palette + capability
+  set in one commit) to keep typecheck green. Since the `icon` block is a live
+  member that today does nothing (`return null`, `"icon-runtime-renderer-pending"`),
+  the clean forward move is to **implement the existing `icon` block as the
+  animated-icon block**: extend `pageBlockPropKeys.icon` with present-only
+  `animation`/`size`/`color`/`speed`, promote `icon` into `realRuntimeBlockTypes`
+  + `editorInsertableBlockTypes` (`:691`/`:715`), drop its
+  `pageBlockCapabilityReasons.icon` "pending" entry (`:772-776`), and render it
+  with the curated inline-SVG + CSS-keyframes set. This adds NO new
+  `pageBlockTypes` member (no exhaustive-record explosion, no cross-file atomic
+  hazard), keeps every existing `Record<PageBlockType,…>` entry valid, and turns a
+  dead placeholder into a real block. There are no `icon` blocks in any live
+  document (it renders null / is non-insertable), so byte-identity is trivially
+  preserved for legacy docs.
 
 ### G-C — hero mouse-tilt (MISSING)
 
@@ -163,13 +178,17 @@ export type PageEffectsV2 = {
 style?: { /* …existing… */ tilt?: HeroTilt };  // "none" | "subtle" | "strong"
 ```
 
-**PageBlockType (`pageDocumentV2.ts:50`) — animated-icon block (G-B):**
+**`icon` block (implement the placeholder) — animated-icon block (G-B):**
 
 ```ts
-export const pageBlockTypes = [ /* … */ "animatedIcon" ] as const;
-// pageBlockPropKeys.animatedIcon = ["icon","animation","size","color","speed"]
-// icon: curated-set kebab name; animation: "spin"|"pulse"|"bounce"|"draw"|"none";
-// size: 16..160 px; color: readSafeColor; speed: 400..4000 ms.
+// NO change to pageBlockTypes (icon already a member). Extend its prop allowlist:
+pageBlockPropKeys.icon = ["name","label","animation","size","color","speed"] as const;
+// name: curated-set kebab icon name (existing key, now allowlist-resolved);
+// animation: "none"|"spin"|"pulse"|"bounce"|"draw"; size: 16..160 px;
+// color: readSafeColor; speed: 400..4000 ms. Present-only additions on the
+// existing icon default props { name:"sparkles", label:"" }.
+// Capability flip (pageDocumentV2.ts): add "icon" to realRuntimeBlockTypes (:691)
+// + editorInsertableBlockTypes (:715); delete pageBlockCapabilityReasons.icon (:774).
 ```
 
 ## Subtask breakdown (single-writer file ownership; strict land order)
@@ -177,9 +196,9 @@ export const pageBlockTypes = [ /* … */ "animatedIcon" ] as const;
 | # | Subtask | Sole-writer file(s) | Leaves | Depends on |
 |---|---------|---------------------|--------|------------|
 | 521-01 | Effects MODEL + shared runtime-effects infra + normalize/reject-unknown | `core/services/pages/pageDocumentV2.ts`; NEW `core/services/pages/pageEffectsRuntime.ts` | L01 section-style model, L02 page-settings-effects model, L03 animated-icon block model, L04 runtime-effects script module, L05 model tests | — (foundation) |
-| 521-02 | Section scroll/parallax/reveal — admin descriptor + front render + reveal/parallax binding | `core/services/pages/pageEditorControlRegistry.ts`; `pageRendererV2.tsx` **[section region — seam]** | L01 control descriptors, L02 front render + reveal/parallax, L03 tests | 521-01 |
+| 521-02 | Section scroll/parallax/reveal — admin descriptor + front render + reveal/parallax binding | `pageEditorControlRegistry.ts` **[`pageUniversalSectionControls` region — seam]**; `pageRendererV2.tsx` **[section region — seam]** | L01 control descriptors, L02 front render + reveal/parallax, L03 tests | 521-01 |
 | 521-03 | Hero mouse-tilt | `core/widgets/core/hero.tsx` (disjoint intra-file regions) | L01 model, L02 editor control, L03 render + tilt script, L04 tests | 521-01 |
-| 521-04 | Animated-icon block (NEW widget) | NEW `core/widgets/core/animatedIcon.tsx`; `pageRendererV2.tsx` **[block-content region — seam]**; `core/widgets/registry.ts` + `core/widgets/modulePackMatrix.ts` | L01 widget, L02 renderer case, L03 registry + pack matrix, L04 tests | 521-01 |
+| 521-04 | Animated-icon block (implement the `icon` block) | NEW `core/services/pages/animatedIconGlyphs.tsx` (curated inline-SVG + CSS-keyframes set); `core/admin/ui/pages/editor/pageEditorOptions.ts` (palette copy enrich); `pageRendererV2.tsx` **[block-content `case "icon"` region — seam]**; `pageEditorControlRegistry.ts` **[`pageBlockControlRegistry.icon` region — seam]** | L01 glyph set + keyframes, L02 renderer `case "icon"`, L03 palette + editor controls, L04 tests | 521-01 |
 | 521-05 | Page-settings compact side-inspector panel + per-page effects | `core/admin/ui/pages/PageEditor.tsx` (disjoint intra-file regions); `pageRendererV2.tsx` **[page-root region — seam]** | L01 compact panel relocation, L02 Effects section + persistence, L03 page-shell render + spotlight, L04 tests | 521-01..04 |
 | 521-06 | Tests, docs, closure | test files (own) + `_docs/*.md` | — | 521-01..05 |
 
@@ -198,21 +217,62 @@ page-settings panel + per-page effects; then closure.
   - **521-02** edits the SECTION region only — `toPageSectionRenderProps`
     (`:515-530`) + `PageSectionRender` (`:2291-2315`).
   - **521-04** edits the BLOCK-CONTENT region only — the `renderPageBlockContent`
-    `case "animatedIcon"` beside `case "icon"` (`:1912`) + the top-of-file icon
-    imports (`:2`).
+    `case "icon"` (`:1912-1913`, replacing `return null` with the animated-icon
+    render) + the top-of-file icon imports (`:2`) if needed.
   - **521-05** edits the PAGE-ROOT region only — `PageDocumentRender`
     (`:2324-2370`).
   These three symbols do not overlap; land order 02 → 04 → 05 guarantees each
-  fixer sees the prior region already merged. Any change OUTSIDE a subtask's
-  declared region in this file is a reconcile failure.
+  fixer sees the prior region already merged.
+  - **Shared IMPORT-ONLY sub-region (top-of-file, `:1-33`).** All three subtasks
+    MUST append imports to the top-of-file import block (verified live:
+    lucide marks `:2`, the `./pageDocumentV2` import block ending `:33`) — this is
+    an explicit APPEND-ONLY additive sub-region every seam consumer may extend, and
+    is EXEMPT from the strict symbol-region rule (append new named imports only; NO
+    reordering, NO removal, NO edits to existing import lines): **521-02** adds
+    `pageSectionScrollEffects` + `PAGE_PARALLAX_INTENSITY_CLAMP` (from
+    `./pageDocumentV2`); **521-04** adds the lucide marks it needs (`:2`) +
+    `AnimatedIcon`/`ANIMATED_ICON_KEYFRAMES_CSS` (from `./animatedIconGlyphs`) +
+    `resolveAnimatedIconName` (from `./pageDocumentV2`); **521-05** adds a new
+    `./pageEffectsRuntime` import (`PAGE_EFFECTS_RUNTIME_SOURCE`/
+    `PAGE_EFFECTS_RUNTIME_ID`) + `PAGE_SPOTLIGHT_SIZE_CLAMP` (from
+    `./pageDocumentV2`). Concurrent appends to the SAME import block are an expected
+    additive merge, NOT a reconcile failure.
+  Any change OUTSIDE a subtask's declared symbol region (or the import-only
+  sub-region) in this file is a reconcile failure.
 - **`pageDocumentV2.ts` = 521-01 only** (its five model leaves edit DISJOINT
   symbol regions of the same file — section-style, settings, block-type/propKeys,
   plus the NEW `pageEffectsRuntime.ts` — in strict intra-subtask order). No OTHER
   subtask writes this file; 521-02/03/04/05 IMPORT its exports read-only.
 - **`PageEditor.tsx` = 521-05 only** (L01 panel-relocation region + L02
   Effects-section region — disjoint). `hero.tsx` = 521-03 only.
-  `pageEditorControlRegistry.ts` = 521-02 only. `animatedIcon.tsx` /
-  `registry.ts` / `modulePackMatrix.ts` = 521-04 only.
+- **`pageEditorControlRegistry.ts` is a DOCUMENTED ADDITIVE SEAM** across TWO
+  subtasks editing DISJOINT const regions in strict land order 521-02 → 521-04
+  (both `readonly PageEditorControlDefinition[]` arrays live in this one file but
+  are disjoint symbols, verified live):
+  - **521-02** owns ONLY the `pageUniversalSectionControls` region (`:212`) — the
+    section scroll-effect descriptors.
+  - **521-04** owns ONLY the `pageBlockControlRegistry.icon` region (`:903`, the
+    currently-empty `icon: []` per-type array) — the icon block-control
+    descriptors. (Per-type, so they show ONLY on the `icon` block; the universal
+    `pageUniversalBlockControls` array `:362` is NOT touched — icon `name`/
+    `animation`/`size`/`speed`/`color` are per-type PROPS, not universal style.)
+  Its Vitest test file (`tests/vitest/pages/page-editor-control-registry.test.ts`)
+  is APPENDED by 521-04 after 521-02's cases already merged. As with
+  `pageRendererV2.tsx`, the top-of-file import block here is an APPEND-ONLY additive
+  sub-region: both 521-02 and 521-04 add read-only imports from `pageDocumentV2`
+  (521-02: `pageSectionScrollEffects`/`PAGE_PARALLAX_INTENSITY_CLAMP`; 521-04:
+  `animatedIconNames`/`animatedIconAnimations`/`ANIMATED_ICON_*_CLAMP`), which is
+  an expected additive merge, not a reconcile failure. Any write outside a
+  subtask's declared const region (or the import-only sub-region) here is a
+  reconcile failure.
+- **521-04 sole-writer files:** NEW `core/services/pages/animatedIconGlyphs.tsx`
+  (curated inline-SVG + CSS-keyframes set) + `core/admin/ui/pages/editor/pageEditorOptions.ts`
+  (palette copy) = 521-04 only, PLUS the `pageRendererV2.tsx` `case "icon"`
+  block-content seam and the `pageEditorControlRegistry.ts` `pageBlockControlRegistry.icon`
+  seam region above. **`core/widgets/registry.ts` and `core/widgets/modulePackMatrix.ts`
+  are NOT edited** (there is no `animatedIcon.tsx` widget): the feature implements
+  the existing `icon` PAGE block via a renderer `case`, not a new composite widget
+  — aligning with 521-06's "likely no `modulePackMatrix` change; verify" note.
 - **Shared vocabulary defined once (521-01):** the effect enums
   (`pageSectionScrollEffects`, `HeroTilt`, `animatedIconAnimations`,
   `animatedIconNames`), clamps (`PAGE_PARALLAX_INTENSITY_CLAMP`,
@@ -227,7 +287,7 @@ page-settings panel + per-page effects; then closure.
 - rg misdetects `PageEditor.tsx` / `pageRendererV2.tsx` / `pageDocumentV2.ts` /
   `hero.tsx` as binary — use `Read` / `grep -an`, never trust an empty `rg`.
 - Do NOT edit `_docs/_TASKS/README.md` or `_docs/_CHANGELOG/*` (orchestrator owns
-  them). Closure changelog pinned **1234** (re-verify next-free at closure).
+  them). Closure changelog = then-current next-free at closure (grep `_docs/_CHANGELOG/` highest+1; next-free is 1229 as of authoring — 519/520 land before 521).
 
 ## Security Contract
 
@@ -246,18 +306,26 @@ constrained at BOTH the write (normalize) boundary and the render boundary
    `var(--…)`/`transparent`; anything else → fallback). Alpha is first-class. Raw
    stored input never reaches CSS — only validated values, injected as CSS custom
    properties (`--spotlight-color`) or `fill`/`color`, never as raw declarations.
-2. **Enums + numeric clamps (no injection surface).** `scrollEffect`,
-   `parallaxIntensity`, `tilt`, `spotlightSize`, `animatedIcon.animation`/`size`/
-   `speed` are all `normalizeEnum`/`readNumber`-clamped to a fixed set/range at
-   write; invalid → fallback/omit. These reach CSS only as bounded numbers
-   (`px`/`ms`) or class names selected from a fixed map — never string
-   interpolation.
-3. **Animated-icon name (allowlist).** `animatedIcon.icon` is validated at write
-   by a kebab pattern (`^[a-z0-9-]{1,48}$`) AND resolved at render against the
-   curated `animatedIconNames` set (the effective allowlist). An
-   unknown/unresolvable name renders the neutral fallback glyph — never
-   interpolated into markup. The inline SVGs are STATIC author-supplied literals
-   (no user data in the SVG body).
+2. **Enums + numeric clamps (no injection surface).** `scrollEffect` and
+   `animatedIcon.animation` are `normalizeEnum`-guarded (pageDocumentV2), and
+   `parallaxIntensity`, `spotlightSize`, `animatedIcon.size`/`speed` are
+   `readNumber`-clamped, at write. **`normalizeEnum` is fail-CLOSED: an invalid
+   enum VALUE throws `PageDocumentError` in write mode — it only falls back in read
+   mode** (`pageDocumentV2.ts:1554-1566`, matching every existing page enum) — so a
+   bogus `scrollEffect`/`animation` REJECTS the whole write (it is NOT silently
+   stored/dropped). **Hero `tilt` is the exception: it normalizes fail-SOFT via a
+   hero-LOCAL resolver `resolveHeroTilt`** (mirroring `resolveHeroMotionPreset`,
+   `hero.tsx:555`, which returns `"none"` for any unrecognized value and never
+   throws) — hero.tsx does NOT use pageDocumentV2's `normalizeEnum`; an invalid
+   `hero.style.tilt` falls back to `"none"` (omitted, present-only), NOT a
+   `PageDocumentError`. `readNumber` clamps out-of-range numbers to the bound
+   (fail-soft). Either way these reach CSS only as bounded numbers (`px`/`ms`) or
+   class names selected from a fixed map — never string interpolation.
+3. **Icon name (allowlist).** The icon block's `name` is validated at write by a
+   kebab pattern (`^[a-z0-9-]{1,48}$`) AND resolved at render against the curated
+   `animatedIconNames` set (the effective allowlist). An unknown/unresolvable name
+   renders the neutral fallback glyph — never interpolated into markup. The inline
+   SVGs are STATIC author-supplied literals (no user data in the SVG body).
 4. **Runtime effect scripts are STATIC literals (no interpolation).** The
    section reveal/parallax runtime (`pageEffectsRuntime.ts`), the hero tilt
    runtime, and the cursor-spotlight runtime are dependency-free IIFE **string
@@ -290,11 +358,22 @@ constrained at BOTH the write (normalize) boundary and the render boundary
 6. **Reject-unknown + fail-soft** — each new key joins its allowlist + exactly one
    value normalizer + a round-trip test; bad VALUES fail-soft (fallback/omit),
    unknown KEYS reject (`PageDocumentError`).
-7. **Runtime scripts static + gated** — emitted ONLY on the front (not
-   preview/canvas where noise is unwanted) AND only when an effect is authored;
-   never interpolate stored data; self-contained IIFE.
-8. **The pending `icon` block is UNTOUCHED** — `animatedIcon` is a NEW block; the
-   `icon` placeholder keeps `return null` + its prop contract (byte-identity).
+7. **Runtime scripts static + gated** — emitted ONLY on the front/preview render
+   path (`PageDocumentRender`, `pageRendererV2.tsx:2324`), **NOT the builder
+   canvas** — the canvas renders sections via `PageSectionContent`/
+   `renderPageBlockContent` directly (`PageAuthoringCanvas.tsx:938`), bypassing
+   `PageDocumentRender`, so it never receives `data-page-motion` / the effects
+   `<script>`. **Preview parity with the front is intended**: `PageDocumentRender`
+   is the SHARED front+preview renderer (called from `DefaultRuntimePageShellV2`,
+   `pageRuntimeV2.tsx:58`, and `siteShell.tsx`), its signature carries no
+   `isPreview`/`mode` flag and `isPreview` (`pageRuntimeV2.tsx:15`) is NOT threaded
+   into it, so effects run identically on front and preview (the editor's live
+   preview shows the real effect). Effects still emit ONLY when an effect is
+   authored; never interpolate stored data; self-contained IIFE.
+8. **No new `pageBlockTypes` member** — the animated-icon block IMPLEMENTS the
+   existing `icon` block (extends its props, flips its capability, renders it). No
+   exhaustive `Record<PageBlockType,…>` gains a key; legacy docs (which never
+   contain an `icon` block) stay byte-identical.
 
 ## Acceptance Criteria (measured LIVE — owner mandate: ≥5 real-flow scenarios)
 
@@ -316,8 +395,8 @@ owner smoke mandate:
    on scroll the section's inner content translates within the clamped range
    (computed `transform: translateY(...)` changes with `scrollY`), rAF-smooth, no
    layout shift; reduced-motion → no transform.
-3. **Animated-icon block.** Inserting an `animatedIcon` block with
-   `icon:"sparkles"`, `animation:"spin"`, `size:48`, `color:(alpha)`, `speed:1600`
+3. **Animated-icon block.** Inserting an `icon` block (now insertable) with
+   `name:"sparkles"`, `animation:"spin"`, `size:48`, `color:(alpha)`, `speed:1600`
    renders an inline `<svg>` with a CSS-keyframe spin at the authored size/color/
    duration on the front + canvas; `animation:"none"` renders a static glyph;
    reduced-motion pauses the keyframes; an invalid icon name → neutral fallback
@@ -338,11 +417,19 @@ owner smoke mandate:
    tilt, and page spotlight authored in the editor match after `publish` on the
    real front at desktop/tablet/mobile (parallax/reveal desktop-and-up feel;
    effects never break mobile layout).
-7. **Security negatives.** `spotlightColor:"url(x)"`,
-   `animatedIcon.color:"expression(alert(1))"`, `animatedIcon.icon:"../../etc"`,
-   `scrollEffect:"drop-table"`, and `parallaxIntensity:99999` are all DROPPED /
-   clamped on write; the stored doc round-trips without them; an unknown effect
-   KEY throws `PageDocumentError`.
+7. **Security negatives.** The FAIL-SOFT inputs are sanitized and stored:
+   `spotlightColor:"url(x)"` and icon block `color:"expression(alert(1))"` fall
+   back to `var(--primary)` (`readSafeColor`), icon block `name:"../../etc"` falls
+   back to `"sparkles"` (`resolveAnimatedIconName`), `parallaxIntensity:99999`
+   clamps to `40` (`readNumber`), and **`hero.style.tilt:"spin"` falls back to
+   `"none"` (omitted) via the hero-local fail-soft `resolveHeroTilt`** (like
+   `resolveHeroMotionPreset`, `hero.tsx:555` — NOT `normalizeEnum`, so it does NOT
+   throw) — the stored doc round-trips with the sanitized values. The FAIL-CLOSED
+   inputs (pageDocumentV2 `normalizeEnum`) REJECT the write: an invalid enum VALUE
+   (`scrollEffect:"drop-table"`, icon `animation:"explode"`) throws
+   `PageDocumentError` in write mode, exactly like an unknown effect KEY
+   (`settings.effects.glow`, `style.wobble`). No injected value is ever stored or
+   reaches CSS/markup.
 8. **No-effect byte-identity.** A page with no effects authored produces a
    normalized document and rendered HTML byte-identical to the pre-521 output (no
    script emitted, no data-attribute, no wrapper change).
@@ -359,4 +446,4 @@ byte-identical; Security Contract satisfied (color whitelist + icon-name allowli
 + clamps + static scripts at write and render); every gate green (root
 `tsc -p tsconfig.json --noEmit`, `bun --cwd core lint:types`, vitest, `bun test`,
 `gates:coderso`); ≥5-scenario-per-area Playwright smoke passes light + dark with 0
-console errors; closure documented under changelog **1234** (re-verify next-free).
+console errors; closure documented under the then-current next-free changelog (grep `_docs/_CHANGELOG/` highest+1; 1229 as of authoring).

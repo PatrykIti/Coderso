@@ -15,10 +15,11 @@
 
 Executable leaf. Edits ONLY the section-style region of
 `core/services/pages/pageDocumentV2.ts`: the `PageSectionStyleV2` type (`:380-387`),
-`normalizeSectionStyle` (`:2052-2100`), the `defaultStyle` object (`:559`), and the
-`sections[].style` block of `pageDocumentV2JsonSchema` (`:1342`). Adds the enum +
-clamp declared in the 521-01 shared-vocabulary block. Disjoint from L02
-(settings) and L03 (block types).
+`normalizeSectionStyle` (`:2052-2100`), the `defaultStyle` object (`:559`), and BOTH
+section-style JSON-schema objects — the inline `sections.items.properties.style`
+(`:1449-1461`) AND `partialSectionStyleJsonSchema` (`:1285`, for
+`responsive[bp].style`). Adds the enum + clamp declared in the 521-01
+shared-vocabulary block. Disjoint from L02 (settings) and L03 (block types).
 
 ## Grounded anchors
 
@@ -72,26 +73,60 @@ so toggling an effect on then back to none returns the doc to byte-identity.
 the renderer (521-02) defaults it to a sane value when `scrollEffect==="parallax"`
 and intensity is absent.
 
-## JSON-schema mirror
+## JSON-schema mirror — TWO required edits (both `additionalProperties:false`)
 
-In `pageDocumentV2JsonSchema` (`:1342`), the `sections.items.properties.style`
-object (`additionalProperties:false`) gains:
+Ajv is defence-in-depth and MUST stay in lockstep with the normalizer allowlist,
+so BOTH section-style schema objects gain the two keys:
+
+1. **Inline full section-style** — `pageDocumentV2JsonSchema` → `sections.items.
+   properties.style` (the block at `pageDocumentV2.ts:1449-1461`,
+   `additionalProperties:false`, `required:["background","backgroundType","accent",
+   "radius","shadow"]`):
 ```jsonc
 scrollEffect: { type: "string", enum: [...pageSectionScrollEffects] },
 parallaxIntensity: { type: "number", minimum: 0, maximum: 40 },
 ```
-(Mirror the same keys in any `responsive[bp].style` partial schema if one exists,
-so per-breakpoint overrides validate.)
+2. **Partial responsive-override style — harmless defence-in-depth mirror.**
+   `partialSectionStyleJsonSchema` (`pageDocumentV2.ts:1285`,
+   `additionalProperties:false`) governs `responsive[bp].style`
+   (`PageSectionResponsiveOverrideV2.style?: Partial<PageSectionStyleV2>`, `:472`).
+   **Note (device-uniform):** 02-L01 does NOT declare the scroll controls
+   `responsive:true` — section effects are authored + rendered DEVICE-UNIFORM
+   (desktop-resolved), because the render pipeline (single-breakpoint SSR +
+   `pageResponsiveCss.ts` `@media`-CSS deltas) cannot vary a JS-driven data-attribute
+   per device (see 521-02-L01/L02). The inspector will not route a per-breakpoint
+   `scrollEffect`/`parallaxIntensity`. We STILL mirror the two keys into the partial
+   schema as harmless defence-in-depth, so a HAND-authored `responsive[bp].style`
+   carrying them ROUND-TRIPS (validates) instead of being rejected by Ajv
+   `additionalProperties:false` — it just renders from the resolved-breakpoint value.
+   Add the SAME two keys here (both optional — the partial schema has no
+   `required`), in lockstep with edit (1):
+```jsonc
+scrollEffect: { type: "string", enum: [...pageSectionScrollEffects] },
+parallaxIntensity: { type: "number", minimum: 0, maximum: 40 },
+```
 
 ## Regression-test shape (delegated to L05, asserted here)
 
 - Round-trip: a section with `scrollEffect:"reveal-up"` + `parallaxIntensity:24`
   normalizes → serializes → re-normalizes to the SAME object; `scrollEffect:"none"`
-  is omitted; unknown key `style.wobble` throws `PageDocumentError`; a legacy
-  section (no keys) is byte-identical.
+  is omitted; an invalid enum VALUE `scrollEffect:"drop-table"` throws
+  `PageDocumentError` on write (fail-closed, `normalizeEnum` write mode);
+  `parallaxIntensity:99999` clamps to `40` (fail-soft); unknown key `style.wobble`
+  throws `PageDocumentError`; a legacy section (no keys) is byte-identical.
+- **Responsive override (L05 case):** a section with
+  `responsive.tablet.style.scrollEffect:"reveal-fade"` +
+  `parallaxIntensity:30` normalizes, VALIDATES against
+  `partialSectionStyleJsonSchema` (Ajv `additionalProperties:false`), and
+  round-trips — proving the partial-schema mirror is present (would REJECT
+  otherwise).
 
 ## Hard Invariants
 
 1. Present-only (`"none"` omitted; `defaultStyle` unchanged).
-2. Allowlist + JSON-schema updated in lockstep.
-3. Bad enum/number fail-soft (fallback/clamp), unknown key rejects.
+2. Allowlist + BOTH JSON-schema objects (inline `sections.items.style` `:1449` AND
+   the partial `partialSectionStyleJsonSchema` `:1285` for `responsive[bp].style`)
+   updated in lockstep with the normalizer.
+3. Bad enum VALUE rejects (throws `PageDocumentError` in write mode, like unknown
+   keys — `normalizeEnum:1554-1566`); bad number clamps (fail-soft); unknown key
+   rejects.

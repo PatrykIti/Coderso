@@ -32,13 +32,14 @@ All additions are **present-only**, join a **reject-unknown allowlist**
 |------|-------|---------------|
 | TASK-521-01-L01 | Section-style scroll-effect model | `pageDocumentV2.ts` — `PageSectionStyleV2` (`:380`) + `normalizeSectionStyle` (`:2052`) + schema mirror |
 | TASK-521-01-L02 | Page-settings effects model | `pageDocumentV2.ts` — `PageDocumentSettingsV2` (`:346`) + `normalizeSettings` (`:1990`) + schema mirror |
-| TASK-521-01-L03 | Animated-icon block model | `pageDocumentV2.ts` — `pageBlockTypes` (`:50`) + `pageBlockPropKeys` (`:591`) + defaults + block-prop normalize + curated icon/animation vocabulary |
+| TASK-521-01-L03 | Animated-icon block model (implement the `icon` block) | `pageDocumentV2.ts` — `pageBlockPropKeys.icon` (`:629`) + icon defaults (`:872`) + block-prop normalize + capability flip (`:691`/`:715`/`:774`) + curated icon/animation vocabulary (NO new `pageBlockTypes` member) |
 | TASK-521-01-L04 | Runtime-effects script module | NEW `pageEffectsRuntime.ts` — static reveal/parallax/spotlight IIFE + reduced-motion guard |
-| TASK-521-01-L05 | Model + normalize round-trip tests | `tests/unit/pages/*` (Bun) |
+| TASK-521-01-L05 | Model + normalize round-trip tests | Vitest — `tests/vitest/pages/page-document-v2.test.ts` + `page-document-v2-block-roundtrip.test.ts` (extend) + NEW `tests/vitest/pages/pageEffectsRuntime.test.ts` (pure-TS round-trips + static-source shape; NOT Bun `tests/unit/pages/*`) |
 
 **Intra-subtask land order (disjoint symbol regions, one file):** L01 → L02 → L03
 → L04 → L05. L01/L02/L03 touch disjoint symbols of `pageDocumentV2.ts`
-(section-style, settings, block-type/propKeys); L04 is a NEW file; L05 is tests.
+(section-style, settings, icon-block prop-keys/defaults/capabilities); L04 is a NEW
+file; L05 is tests.
 
 ## Shared vocabulary defined here (imported read-only by 521-02..05)
 

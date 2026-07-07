@@ -21,11 +21,15 @@ in `pageRendererV2.tsx` — the reveal/parallax data-attributes + reduced-motion
 classes on `<section>`, consuming the 521-01 runtime (emitted once by 521-05 at the
 page root).
 
-**Single-writer:** `pageEditorControlRegistry.ts` (521-02 only).
-`pageRendererV2.tsx` is a DOCUMENTED ADDITIVE SEAM — 521-02 owns ONLY the SECTION
-region (`toPageSectionRenderProps` `:515-530` + `PageSectionRender` `:2291-2315`),
-disjoint from 521-04 (block-content `case`) and 521-05 (`PageDocumentRender` root),
-which land after in order.
+**Single-writer / seam:** `pageEditorControlRegistry.ts` is a DOCUMENTED ADDITIVE
+SEAM — 521-02 owns ONLY the `pageUniversalSectionControls` region (`:212`),
+disjoint from 521-04's `pageBlockControlRegistry.icon` region (`:903`); land order
+02 → 04, and 521-04 appends to the shared
+`tests/vitest/pages/page-editor-control-registry.test.ts` after 02's cases merge.
+`pageRendererV2.tsx` is likewise a DOCUMENTED ADDITIVE SEAM — 521-02 owns ONLY the
+SECTION region (`toPageSectionRenderProps` `:515-530` + `PageSectionRender`
+`:2291-2315`), disjoint from 521-04 (block-content `case`) and 521-05
+(`PageDocumentRender` root), which land after in order.
 
 ## Leaves
 
@@ -33,7 +37,7 @@ which land after in order.
 |------|-------|---------------|
 | TASK-521-02-L01 | Section effect control descriptors | `pageEditorControlRegistry.ts` — `pageUniversalSectionControls` (`:212`) |
 | TASK-521-02-L02 | Section front render + reveal/parallax data-attrs + CSS | `pageRendererV2.tsx` — section region (`:515`, `:2291`) |
-| TASK-521-02-L03 | Section-effect tests | `tests/unit/pages/*` (Bun) + `tests/vitest/content*` (Vitest) |
+| TASK-521-02-L03 | Section-effect tests | Vitest only — `tests/vitest/pages/page-renderer-v2.test.tsx` + `tests/vitest/pages/page-editor-control-registry.test.ts` + `tests/vitest/content/sectionScrollEffect.test.tsx` (the page render/descriptor suites live under `tests/vitest/pages/`; `tests/unit/pages/` is Bun DB/service + the Ajv `validation.test.ts` only). The `page-document-v2.test.ts` model round-trips are owned by 521-01-L05. |
 
 **Land order:** L01 → L02 → L03.
 
