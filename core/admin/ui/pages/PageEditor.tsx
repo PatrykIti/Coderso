@@ -2690,8 +2690,11 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
               </div>
 
               {layersOpen ? (
-                <div className="absolute left-4 top-16 z-20 w-72 rounded-2xl border border-border bg-popover p-3 shadow-pop">
-                  <div className="mb-2 flex items-center justify-between">
+                <div
+                  className="absolute left-4 top-16 z-20 flex max-h-[min(72vh,calc(100dvh-8rem))] w-72 flex-col overflow-hidden rounded-2xl border border-border bg-popover p-3 shadow-pop"
+                  data-page-editor-layers-panel="true"
+                >
+                  <div className="mb-2 flex shrink-0 items-center justify-between">
                     <p className="text-sm font-semibold">Layers</p>
                     <Button
                       type="button"
@@ -2702,7 +2705,10 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="space-y-1">
+                  <div
+                    className="min-h-0 flex-1 space-y-1 overflow-y-auto overscroll-contain"
+                    data-page-editor-layers-scroll="true"
+                  >
                     {pageDocument.sections.map((section) => (
                       <div key={section.id} className="space-y-1">
                         <button
