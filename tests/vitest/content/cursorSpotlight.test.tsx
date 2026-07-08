@@ -75,6 +75,26 @@ describe("cursor-spotlight runtime (TASK-521-05)", () => {
     expect(sp.style.getPropertyValue("--spotlight-y")).toBe("80px");
   });
 
+  it("TASK-529 — spotlight vars are VIEWPORT coords under non-zero scroll (glow does not fall below the fold)", () => {
+    mockMatchMedia(false, true);
+    document.body.innerHTML = "<main data-page-motion data-page-spotlight><p>content</p></main>";
+    const sp = document.querySelector("[data-page-spotlight]") as HTMLElement;
+    // Simulate the page scrolled 577px: `sp` is the ROOT (full page height), so
+    // after scroll its rect top is negative (-scrollY). The overlay it feeds is
+    // position:fixed inset:0, so the vars MUST stay viewport-relative (== client),
+    // NOT client+scrollY (which painted the gradient below the visible viewport).
+    sp.getBoundingClientRect = () => ({ left: 0, top: -577 }) as DOMRect;
+
+    runRuntime();
+    movePointer(sp, 640, 500);
+
+    // Viewport coords: exactly clientX/clientY, ignoring the negative root rect.
+    expect(sp.style.getPropertyValue("--spotlight-x")).toBe("640px");
+    expect(sp.style.getPropertyValue("--spotlight-y")).toBe("500px");
+    // Regression guard: NOT the pre-fix page coordinate (clientY - (-scrollY)).
+    expect(sp.style.getPropertyValue("--spotlight-y")).not.toBe("1077px");
+  });
+
   it("reduce ⇒ runtime no-ops (no spotlight vars set)", () => {
     mockMatchMedia(true, true);
     document.body.innerHTML = "<main data-page-motion data-page-spotlight><p>content</p></main>";

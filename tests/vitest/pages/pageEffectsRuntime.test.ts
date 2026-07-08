@@ -63,6 +63,20 @@ describe("pageEffectsRuntime static source (TASK-521-01-L04)", () => {
     expect(source).toContain('setProperty("--spotlight-y"');
   });
 
+  test("TASK-529 — spotlight uses raw VIEWPORT clientX/clientY (feeds a position:fixed overlay), not root-rect page coords", () => {
+    // The vars feed a position:fixed inset:0 overlay's radial-gradient, so they
+    // must be viewport-relative. The handler must NOT subtract the root's rect
+    // (which added scrollY and pushed the glow below the fold past screen one).
+    expect(source).toContain("sx=Math.round(ev.clientX);sy=Math.round(ev.clientY);");
+    expect(source).not.toContain("ev.clientX-r.left");
+    expect(source).not.toContain("ev.clientY-r.top");
+    // No leftover root-rect read inside the pointermove handler.
+    const spotlightMove = source.indexOf('sp.addEventListener("pointermove"');
+    const nextMove = source.indexOf("addEventListener", spotlightMove + 1);
+    const handlerSlice = source.slice(spotlightMove, nextMove === -1 ? undefined : nextMove);
+    expect(handlerSlice).not.toContain("sp.getBoundingClientRect()");
+  });
+
   test("is a static literal — no template interpolation of any caller value", () => {
     expect(source.includes("${")).toBe(false);
   });
