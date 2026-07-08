@@ -25,8 +25,11 @@ production code.
 - **Block type (L01):** `pageBlockTypes` includes `"customSvg"`;
   `pageBlockPropKeys.customSvg` === `["svg","drawIn","drawSpeed","label"]`; the
   capability report marks it `editorInsertable:true`, runtime `"real"`; a `customSvg`
-  block round-trips (clean svg + drawIn + drawSpeed + label); empty svg / false drawIn
-  omitted; `drawSpeed:99999`→6000; unknown prop rejects; `<script>` svg → svg omitted.
+  block round-trips (clean svg + drawIn + drawSpeed + label); svg/drawIn/label
+  SERIALIZE WITH DEFAULTS when unauthored (`svg:""`, `drawIn:false`, `label:""` PRESENT
+  — default-seeded, NOT omitted), `drawSpeed` is the only present-only prop (absent
+  unless authored); `drawSpeed:99999`→6000; unknown prop rejects; `<script>` svg →
+  `svg === ""` (sanitizer, equals default — NOT "omitted").
 - **Style model (L03):** round-trip decoration/tilt/tiltGlare/layer/surfacePreset/
   hoverEffect/marquee/composition on a block; surfacePreset/composition on a section;
   present-only omission (`tilt:"none"`, `surfacePreset:"none"`, `composition:"flow"`);
@@ -50,6 +53,20 @@ production code.
   (`<![CDATA[<script>…`), unbalanced-quote desync (`<path fill="a onload=alert(1) />`),
   slash-separated handlers (`<svg/onload=…>`, `<rect/onclick=…/>`), duplicate/nested
   `<svg>`, `xmlns`-switch, entity-encoded `javascript:`/`#`.
+- **UNQUOTED remote-ref on an ALLOWLISTED href tag (`<use>`) — each returns `""`
+  (the in-walk local-# check sets `rejected`):** `<svg><use href=http://evil#x/></svg>`,
+  `<svg><use href=//evil/x#y/></svg>`, `<svg><use xlink:href=http://evil#x/></svg>`;
+  a QUOTED local `<svg><use href="#g"/></svg>` still PASSES.
+- **NON-ALLOWLISTED tag with a `data:`/remote href (`<image>`) — asserts a STRIPPED
+  `<svg>`, NOT `""`:** `<svg><image href=data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=/></svg>`
+  → the **tag-allowlist DROPS the non-allowlisted `<image>` tag** (`image ∉ ALLOWED_TAGS`)
+  BEFORE the local-# href check runs, and `data:image/svg+xml` is not a tripwire, so the
+  function returns a stripped `<svg></svg>` — assert the output contains no
+  `data:`/`http`/`//`/`<image` token (do NOT assert `=== ""`; do NOT add `image` to the
+  allowlist to force `""`).
+- **Fail-closed comment/CDATA pre-pass — each returns `""`:**
+  `<svg><!-- x --><path d="M0 0"/></svg>` and `<svg><![CDATA[<path/>]]></svg>` both reject
+  on the pre-pass (`<!--`/`<![CDATA[` present) — assert `=== ""`.
 - **Short-path draw-in:** a pasted SVG with a SHORT `<path>` sanitizes to a value that
   (per 522-02-L01) carries `pathLength="1"` when drawIn is on — assert the sanitized
   output preserves an injected `pathLength="1"` (draw-in completes length-independent).
@@ -65,11 +82,27 @@ production code.
   `[data-composition="layered"] [data-layer]` rule are OUTSIDE the gate (static);
   the marquee animation binds `.cx-marquee-track` (NOT `[data-marquee] > *`); draw-in
   uses `stroke-dasharray:1`.
+- **Hover glow both halves (finding 1):** the base `::after` selector list names BOTH
+  `[data-hover="glow-reveal"]::after` AND `[data-hover="lift-glow"]::after` with a
+  `content`/`position:absolute`/`radial-gradient` background (not `glow-reveal` alone),
+  and BOTH selectors get `position:relative;overflow:hidden` — asserting `lift-glow`
+  renders its glow half, not just the transform lift.
 - `resolveBlockCompositionAttrs(undefined)` empty; each style field → expected
   `data-*`/vars (`layer` → `--layer-x/y/z` + `data-layer-anchor`, not raw left/top);
   `perspectiveParent`/`glare` flags.
+- **Color threading (parent Security Contract §2 / L04 design note, finding 4):**
+  a BLOCK with `surfacePreset`/`hoverEffect`/`decoration:"radiate"|"pulse"` AND a
+  PLAIN-color `style.background` (e.g. `#ff0088`) — `resolveBlockCompositionAttrs` sets
+  `--surface-glow` (and `--deco-ring`/`--orb-color` where applicable) to that color; a
+  GRADIENT `style.background` (`linear-gradient(...)`) yields NO `--surface-glow` key
+  (invalid in `radial-gradient()`); with NO background the custom prop is ABSENT (CSS
+  falls back to the reference aqua/violet literal). A SECTION with an authored `accent`
+  threads via `resolveSectionCompositionAttrs` identically (sections have the real
+  `accent` field; blocks do NOT, so the block resolver reads `style.background` — this
+  keeps `lint:types`/root `tsc` green, no `style.accent` on a block). Confirms
+  author-controlled retint is wired, not just documented.
 
-### `tests/vitest/pages/page-effects-runtime.test.ts` (append)
+### `tests/vitest/pages/pageEffectsRuntime.test.ts` (append)
 
 - Runtime source contains `data-block-tilt` + reduced-motion/`pointer:fine` guards;
   jsdom exercise (test-only `new Function`) sets/clears `transform` + glare props;
@@ -77,10 +110,14 @@ production code.
 
 ## Validation commands
 
-- `bun --cwd core vitest run tests/vitest/pages/page-document-v2.test.ts
+- From REPO ROOT (vitest is root-only — `vitest.config.ts` include `tests/vitest/**`,
+  run via `test:vitest`; `core/package.json` has NO vitest and its `test` is a stub,
+  so `--cwd core` resolves `tests/vitest/…` to a nonexistent `core/tests/…` → "No test
+  files found"): `vitest run tests/vitest/pages/page-document-v2.test.ts
   tests/vitest/pages/svg-sanitizer.test.ts
   tests/vitest/pages/page-composition-effects.test.ts
-  tests/vitest/pages/page-effects-runtime.test.ts`
+  tests/vitest/pages/pageEffectsRuntime.test.ts` (or the whole lane via
+  `bun run test:vitest`).
 - Root `tsc -p tsconfig.json --noEmit` + `bun --cwd core lint:types` green.
 
 ## Hard Invariants

@@ -38,18 +38,25 @@ enum options (the enum const — `"none"` is the reset, normalize omits it; no b
 ```ts
 // pageEditorControlRegistry.ts — append to pageUniversalBlockControls:
 control({ id: "block.tilt.strength", panel: "style", target: "block", label: "Mouse tilt (3D)",
-  path: ["style","tilt"], input: "select", responsive: true,
+  path: ["style","tilt"], input: "select", responsive: false,
   options: pageTiltStrengths }),   // ["none","subtle","strong"]
 control({ id: "block.tilt.glare", panel: "style", target: "block", label: "Tilt glare",
-  path: ["style","tiltGlare"], input: "switch", responsive: true }),
+  path: ["style","tiltGlare"], input: "switch", responsive: false }),
 ```
+
+**`responsive:false`** on tilt + glare: tilt is a base-only `data-block-tilt` attr driven
+by the shared runtime; `pageResponsiveCss.ts` cannot express a per-breakpoint attr/runtime
+toggle against the inline base, so a per-device tilt override would be a silent no-op
+(finding-6 fix; matches parent Acceptance #7). Use per-device block visibility to drop a
+tilted block on mobile.
 
 ## Regression-test shape (delegated to 522-04-L02, asserted here)
 
 - `pageUniversalBlockControls` includes `block.tilt.strength` (select, options =
   `pageTiltStrengths`) + `block.tilt.glare` (switch); a block with `style.tilt:"subtle"`
-  + `tiltGlare:true` renders `data-block-tilt="subtle"` + `data-tilt-parent` +
-  `.cx-glare` (via the 522-03 frame); `tilt:"none"`/unset → byte-identical.
+  + `tiltGlare:true` renders `data-tilt-parent` on the FRAME + `data-block-tilt="subtle"` +
+  `.cx-glare` on the INNER effect wrapper (via the 522-03 frame seam); `tilt:"none"`/unset
+  → byte-identical (no inner wrapper).
 - **Lane:** Vitest `tests/vitest/pages/page-editor-control-registry.test.ts` +
   `page-renderer-v2.test.tsx`.
 

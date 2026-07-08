@@ -32,7 +32,9 @@ Green ALL of:
   suite (`tests/vitest/pages/page-editor-control-registry.test.ts`), the SVG
   sanitizer unit suite (`tests/vitest/pages/svg-sanitizer.test.ts`, XSS vectors), the
   composition-CSS/resolver suite (`tests/vitest/pages/page-composition-effects.test.ts`),
-  and the runtime IIFE suite (extending the 521 runtime test with the block-tilt
+  and the runtime IIFE suite (extending the ACTUAL landed 521 runtime test
+  `tests/vitest/pages/pageEffectsRuntime.test.ts` — camelCase; the kebab
+  `page-effects-runtime.test.ts` does NOT exist — with the block-tilt
   binding). New 522 tests are Vitest, NOT Bun — `tests/unit/pages/` stays reserved for
   Bun DB/service integration + the Ajv `validation.test.ts`; no new 522 file lands
   there.

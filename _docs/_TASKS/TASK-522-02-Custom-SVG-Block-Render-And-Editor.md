@@ -15,7 +15,7 @@
 
 Renders + authors the new `customSvg` block. Owns DISJOINT seam regions only:
 `pageRendererV2.tsx` block-content `case "customSvg"` (a NEW switch case, disjoint
-from 521-04's `case "icon"` `:1919`); `pageEditorControlRegistry.ts`
+from 521-04's `case "icon"` `:1959`); `pageEditorControlRegistry.ts`
 `pageBlockControlRegistry.customSvg` (enriching the 522-01-L01 `customSvg:[]` stub);
 `pageEditorOptions.ts` `blockOptionCopy.customSvg` (enriching the 522-01-L01 stub).
 Renders the SANITIZED SVG (defence-in-depth re-sanitize before

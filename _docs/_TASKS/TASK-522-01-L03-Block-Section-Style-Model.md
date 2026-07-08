@@ -13,9 +13,10 @@
 
 ## Scope
 
-Executable leaf. Edits the STYLE regions of `core/services/pages/pageDocumentV2.ts`:
-`PageBlockStyleV2` (`:412-448`) gains decoration/tilt/tiltGlare/layer/surfacePreset/
-hoverEffect/marquee/composition; `PageSectionStyleV2` (`:380-387`) gains
+Executable leaf. Edits the STYLE regions of `core/services/pages/pageDocumentV2.ts`
+(RE-GREP the symbols — 521 shifted these lines; numbers are post-521 actuals):
+`PageBlockStyleV2` (`:481-521`) gains decoration/tilt/tiltGlare/layer/surfacePreset/
+hoverEffect/marquee/composition; `PageSectionStyleV2` (`:440`) gains
 surfacePreset/composition. Adds the shared enums + clamps, extends
 `normalizeBlockStyle` + `normalizeSectionStyle` allowlists + branches, and mirrors
 BOTH block-style AND section-style JSON-schema objects (inline + partial responsive).
@@ -23,17 +24,33 @@ Disjoint from L01 (block type) and the sanitizer.
 
 ## Grounded anchors
 
-- `PageBlockStyleV2` `:412-448`; `normalizeBlockStyle` (grep `assertKnownKeys(input,
-  ["align","width","column",…]` — the block-style allowlist) — extend it.
-- `PageSectionStyleV2` `:380-387`; `normalizeSectionStyle` `:2059` allowlist
-  `["background","backgroundType","backgroundImage","accent","radius","shadow"]`
-  (`:2059-2064`).
-- Responsive channels ride for free: `PageBlockResponsiveOverrideV2.style?:
-  PageBlockStyleV2` (`:456`), `PageSectionResponsiveOverrideV2.style?:
-  Partial<PageSectionStyleV2>` (`:470`) — so layer/decoration/surface vary per device
-  via the existing override machinery (no new plumbing).
-- Helpers: `normalizeEnum` (`:1554`, fail-closed write), `readNumber` (`:1549`),
-  `readSafeColor` (`:1516`), `assertKnownKeys` (`:1624`).
+- `PageBlockStyleV2` `:481-521`; `normalizeBlockStyle` (grep `assertKnownKeys(input,
+  pageBlockStyleKeys, …` — the block-style allowlist, `:2360`) — extend it.
+- `PageSectionStyleV2` `:440`; `normalizeSectionStyle` `:2210` allowlist
+  `["background","backgroundType","backgroundImage","accent","radius","shadow",…]`
+  (`assertKnownKeys` at `:2217`).
+- Responsive channels accept the new fields at the MODEL level for free:
+  `PageBlockResponsiveOverrideV2.style?: PageBlockStyleV2` (`:523-535`),
+  `PageSectionResponsiveOverrideV2.style?: Partial<PageSectionStyleV2>` (`:539-555`) — so a
+  per-device override of ANY new style field round-trips in the schema.
+  **BUT per-device RENDER is BOUNDED (verified — do NOT overclaim).** `pageResponsiveCss.ts`
+  emits only per-PROPERTY CSS declarations into `@media` rules; it explicitly documents
+  (its header + fail-closed diagnostics) that class / data-attr / content deltas at a
+  breakpoint are NOT CSS-expressible against the inline desktop base. The data-attr /
+  class effects (`decoration.motion`, `surfacePreset`, `hoverEffect`, `tilt`,
+  `composition`, `marquee`) are stamped BASE-ONLY by the frame/section resolvers (they
+  read `block.style` / `section.style`, NOT the merged-per-breakpoint style), so a
+  per-device override of them round-trips in the model yet renders IDENTICALLY on every
+  breakpoint (silent no-op). ONLY the numeric `layer.x/y/z` offsets actually vary per
+  device — and only because 522-05-L02 adds a dedicated `--layer-x/y/z` per-breakpoint
+  custom-prop delta emit to `pageResponsiveCss.ts`. THEREFORE (option (a), matches parent
+  Acceptance #7): the effect controls (decoration/surface/hover/tilt/composition/marquee)
+  are authored `responsive:false` so authors are not offered a per-device control that
+  no-ops; only `layer.x/y/z` controls are `responsive:true`. Per-device "hide the badge"
+  is done with the EXISTING per-device block visibility (`display:none`); "keep the badge
+  but drop only its animation on mobile" is NOT deliverable this task.
+- Helpers: `normalizeEnum` (`:1681`, fail-closed write), `readNumber` (`:1676`),
+  `readSafeColor` (`:1643`), `assertKnownKeys` (`:1751`).
 - JSON schema: block-style schema object + `partialBlockStyleJsonSchema` (grep) and
   section-style `sections.items.properties.style` (`:~1449`) +
   `partialSectionStyleJsonSchema` (`:~1285`), all `additionalProperties:false`.

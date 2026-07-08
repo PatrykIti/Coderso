@@ -36,12 +36,17 @@ NO `kind`/`help`/`{value,label}`):
 ```ts
 // pageEditorControlRegistry.ts — append to pageUniversalBlockControls:
 control({ id:"block.surface.preset", panel:"style", target:"block", label:"Surface preset",
-  path:["style","surfacePreset"], input:"select", responsive:true, options:pageSurfacePresets }),
+  path:["style","surfacePreset"], input:"select", responsive:false, options:pageSurfacePresets }),
   // pageSurfacePresets = ["none","glass","glass-grid","radial-glow","ambient-orbs"]
 control({ id:"block.hover.effect", panel:"style", target:"block", label:"Hover effect",
-  path:["style","hoverEffect"], input:"select", responsive:true, options:pageBlockHoverEffects }),
+  path:["style","hoverEffect"], input:"select", responsive:false, options:pageBlockHoverEffects }),
   // pageBlockHoverEffects = ["none","glow-reveal","lift","scale","lift-glow"]
 ```
+
+**`responsive:false`** on block surface + hover: both are base-only
+`data-surface`/`data-hover` attrs; `pageResponsiveCss.ts` cannot express a per-breakpoint
+class/attr delta against the inline base, so a per-device override would be a silent no-op
+(finding-6 fix; matches parent Acceptance #7).
 
 ## Regression-test shape (delegated to 522-05-L05, asserted here)
 

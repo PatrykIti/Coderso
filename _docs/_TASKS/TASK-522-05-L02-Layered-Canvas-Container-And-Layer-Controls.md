@@ -28,9 +28,16 @@ per-device `--layer-x/y/z` `!important` deltas (owned seam — see Per-device).
 ## Grounded anchors
 
 - Layout blocks `container`/`columns`/`group` in `layoutBlockTypes`
-  (`pageDocumentV2.ts:716`); their render (grep the layout-block branch in
-  `pageRendererV2.tsx` — `renderContainerBlock`/`renderColumnsBlock`/`renderGroupBlock`
-  or the slots render). VERIFY the exact layout render function names live.
+  (`pageDocumentV2.ts:716`). Their render is ONE shared function
+  `renderPageLayoutBlockContent(block, context)` (`pageRendererV2.tsx:1688`) — NOT
+  per-type `renderContainerBlock`/`renderColumnsBlock`/`renderGroupBlock` functions and
+  NOT a `children` array. It reads active slots via `getPageBlockActiveSlotKeys(block)`
+  (`:1692`) and renders each slot's children with `renderPageBlockList(block.slots?.
+  [slotKey] ?? [], {…context})` (`:1713`/`:1753`/`:1772`) wrapped by
+  `renderSlotWrapper({block, slotKey, className, children})` (`:1665`). Branches:
+  `columns` grid (`:1695`), `group` flex (`:1742`), default/`container` (`:1768`). So
+  this leaf branches INSIDE `renderPageLayoutBlockContent` and overrides the flow
+  (flex/grid) `renderSlotWrapper` className — there is no `children.map`.
 - The 522-03 frame resolver already emits `data-layer` + `--layer-x/y/z` custom props
   on each child; 522-01-L04 CSS sets `[data-composition="layered"]{position:relative}`
   + the SCOPED `[data-composition="layered"] [data-layer]{position:absolute;left:var(--layer-x)…}`.
@@ -45,19 +52,49 @@ per-device `--layer-x/y/z` `!important` deltas (owned seam — see Per-device).
 ## Implementation pseudocode
 
 ```tsx
-// Layout-block render: when the block's own style.composition==="layered", render
-// its children WITHOUT the flow (flex/grid) track wrapper so [data-layer] children
-// position absolutely inside the relative parent. Otherwise render as today.
+// EDIT renderPageLayoutBlockContent (pageRendererV2.tsx:1688). Add a layered branch at
+// the TOP — BEFORE the columns/group/default flow branches — so a layered layout block
+// renders its slot children through a plain (NON flex/grid) slot wrapper, letting each
+// [data-layer] child position absolutely. Children come from block.slots (there is NO
+// `children` array), rendered via renderPageBlockList exactly like the flow branches.
+const slotKeys = getPageBlockActiveSlotKeys(block);      // :1692 (already at top)
+if (slotKeys.length === 0) return null;
+
 const layered = block.style?.composition === "layered";
-return (
-  <div className={layered ? layeredCanvasClass : flowClass}
-       // data-composition + relative already applied by the frame resolver;
-       // layeredCanvasClass sets a min-height so an all-absolute canvas has size.
-  >
-    {children.map((child) => renderPageBlockWithFrame(child, context))}
-    {/* each child's frame carries data-layer + --layer-x/y/z when style.layer set */}
-  </div>
-);
+if (layered) {
+  // NOTE the positioning context is the block-FRAME wrapper: 522-03's resolver stamps
+  // data-composition="layered" on it and 522-01-L04 CSS gives it position:relative +
+  // scopes [data-composition="layered"] [data-layer]{position:absolute;left:var(--layer-x)…}.
+  // Here we ONLY swap the flow track className for a plain layered pass-through (a min-
+  // height so an all-absolute canvas still has size) and render the SAME slot lists.
+  return (
+    <div className="cx-layered-canvas" data-page-layout-block={block.type}>
+      {slotKeys.map((slotKey) =>
+        renderSlotWrapper({
+          block,
+          slotKey,
+          className: "cx-layered-slot",          // NOT flex/grid — plain block so children
+                                                 // absolutely position vs the framed ancestor
+          children: renderPageBlockList(block.slots?.[slotKey] ?? [], {
+            parentPath: context.blockPath,
+            depth: context.depth + 1,
+            includeHiddenBlocks: context.includeHiddenBlocks,
+            renderBlockFrame: context.renderBlockFrame,
+            renderInlineText: context.renderInlineText,
+            renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
+            runtimeDataByBlockId: context.runtimeDataByBlockId,
+            layoutMode: context.layoutMode,
+            slotKey,
+            parentBlock: block,
+          }),
+        })
+      )}
+    </div>
+  );
+}
+// else: fall through to the existing columns (:1695) / group (:1742) / default (:1768)
+// flow branches, UNCHANGED. (`.cx-layered-canvas`/`.cx-layered-slot` base rules —
+// min-height + position pass-through — are authored in 522-01-L04, its sole-writer file.)
 ```
 
 The live registry has NO `appliesTo` field and universal controls are NOT type-gated,
@@ -76,10 +113,14 @@ options, `clamp`, required `panel`/`target`/`responsive`; NO `kind`/`min`/`appli
 //   group:     [ ...existing, layoutCompositionControl("group") ],
 // where layoutCompositionControl(type) =
 control({ id:`block.${type}.composition.mode`, panel:"layout", target:"block", label:"Composition",
-  path:["style","composition"], input:"select", responsive:true, options:pageCompositions }),
-  // pageCompositions = ["flow","layered"] ("flow" is the reset)
+  path:["style","composition"], input:"select", responsive:false, options:pageCompositions }),
+  // pageCompositions = ["flow","layered"] ("flow" is the reset). responsive:false —
+  // composition is a base-only data-attr (no per-breakpoint CSS-expressible delta).
 
-// pageUniversalBlockControls — append the layer group (any block can be a layered child):
+// pageUniversalBlockControls — append the layer group (any block can be a layered child).
+// ONLY the NUMERIC offsets x/y/z are responsive:true (they emit per-breakpoint --layer-*
+// custom-prop deltas via the pageResponsiveCss seam below — the ONE effect field that
+// genuinely varies per device). anchor is a base-only data-attr → responsive:false.
 control({ id:"block.layer.x", panel:"layout", target:"block", label:"Layer X",
   path:["style","layer","x"], input:"number", responsive:true, clamp:{min:-50,max:150}, unit:"%" }),
 control({ id:"block.layer.y", panel:"layout", target:"block", label:"Layer Y",
@@ -87,20 +128,33 @@ control({ id:"block.layer.y", panel:"layout", target:"block", label:"Layer Y",
 control({ id:"block.layer.z", panel:"layout", target:"block", label:"Layer Z (stack)",
   path:["style","layer","z"], input:"number", responsive:true, clamp:{min:0,max:40}, unit:"" }),
 control({ id:"block.layer.anchor", panel:"layout", target:"block", label:"Layer anchor",
-  path:["style","layer","anchor"], input:"select", responsive:true, options:pageLayerAnchors }),
+  path:["style","layer","anchor"], input:"select", responsive:false, options:pageLayerAnchors }),
 // layer controls are meaningful only for a child inside a layered parent; inert
-// otherwise. responsive:true routes per-breakpoint layer offsets (see Per-device).
+// otherwise. Only x/y/z route per-breakpoint offsets (see Per-device); anchor/composition
+// are base-only.
 ```
 
 **Per-device (owned seam: `core/services/pages/pageResponsiveCss.ts`).** `layer.x/y/z`
-ride `PageBlockResponsiveOverrideV2.style` (`pageDocumentV2.ts:456`), but the delivery
+ride `PageBlockResponsiveOverrideV2.style` (`pageDocumentV2.ts:523-535`), but the delivery
 channel must emit them: the 522-01-L04 frame resolver emits the BASE position as
 `--layer-x`/`--layer-y`/`--layer-z` custom props (consumed by
 `[data-composition="layered"] [data-layer]{left:var(--layer-x)…}`), and
 `pageResponsiveCss.ts` — ADDED to this leaf's sole-writer set — is taught to emit
 `!important` tablet/mobile deltas that RETARGET those custom props from the merged
 block-style override (`mergedStyle.layer.x/y/z`, mirroring the existing
-`mergedStyle`-driven declarations at `:469-497`):
+`mergedStyle`-driven declarations, re-grep the `mergedStyle` block-override branch):
+
+> **Finding-4 contract (stated identically in 522-03-L01).** `pageResponsiveCss` emits
+> these `--layer-*` deltas on `blockSelector(id) = [data-block-id]` (`pageResponsiveCss.ts:660`).
+> 522-03-L01 therefore keeps `data-layer` + `data-layer-anchor` + the BASE `--layer-*` on
+> that SAME `[data-block-id]` FRAME (via `toPageBlockRenderProps`), and moves only the
+> transform-writing EFFECT (tilt/float·drift·pulse·orbit/lift·scale) to an INNER descendant.
+> Because the frame IS the element the media-query targets AND the element that consumes the
+> var (`[data-composition="layered"] [data-layer]{left:var(--layer-x)…}`), the per-device
+> reposition reaches it directly — including for an ANIMATED, anchored floating badge
+> (`decoration:"float"` + `layer{anchor}`), the primary owner-intent case that a
+> layer-on-an-outer-wrapper design would silently break (CSS custom props inherit DOWN, so a
+> var on the frame never reaches an ancestor wrapper).
 ```ts
 // pageResponsiveCss.ts — in the block-style override branch, when mergedStyle.layer:
 if (mergedStyle.layer?.x != null) frame.push({ property:"--layer-x", value:`${mergedStyle.layer.x}%` });
@@ -121,8 +175,11 @@ silently delivering device-uniform placement.
   lives on the per-type `container`/`columns`/`group` registries (not universal);
   `block.layer.*` on the universal array.
 - **Per-device (pageResponsiveCss):** a child with a `responsive.tablet.style.layer.x`
-  override emits a tablet media-query `--layer-x` `!important` delta; the L05 responsive
-  test asserts the emitted CSS.
+  override emits a tablet media-query `--layer-x` `!important` delta on `[data-block-id]`;
+  the L05 responsive test asserts the emitted CSS targets `[data-block-id]` — the SAME
+  element that carries `data-layer` + the base `--layer-x` (finding 4), including for a
+  child that ALSO has `decoration:"float"` (the animated anchored-badge case), so the
+  per-device reposition is not a silent no-op.
 - **Lane:** Vitest `tests/vitest/pages/page-renderer-v2.test.tsx` +
   `page-editor-control-registry.test.ts` + `page-responsive-css.test.ts` (if present).
 

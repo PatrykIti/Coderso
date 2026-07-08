@@ -29,8 +29,12 @@ runtime binding — so this subtask adds ONLY the controls. Owns:
 
 ## Hard Invariants (subtask)
 
-1. Reuses 521's pointer math + `matchMedia('(pointer:fine)')` + reduced-motion gate
-   (no duplicate runtime).
+1. REPRODUCES the reference/hero pointer math (`px/py` offset → `rotateX/rotateY`) in a
+   NEW self-gated `[data-block-tilt]` binding appended to the shared
+   `pageEffectsRuntime.ts` (522-01-L05) — with its OWN `matchMedia('(pointer:fine)')`
+   gate, reusing that module's global reduced-motion early-return. The ~4-line math is a
+   small DOCUMENTED duplication of `hero.tsx`'s `HERO_TILT_SCRIPT` (unimportable from the
+   runtime; `hero.tsx` is not edited) — a single runtime MODULE, not a second one.
 2. `tilt:"none"`/unset = byte-identical; coarse pointer / reduced-motion → no tilt.
 3. Tilt enum fail-closed; glare is a boolean present-only flag.
 

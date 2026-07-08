@@ -7,8 +7,12 @@
 **Category:** Schema (JSON model) / Security / Site Render / Accessibility
 **Estimated Effort:** Large
 **Status:** ⏳ To Do
-**Depends on:** TASK-521 (all landed — reuses `pageEffectsRuntime.ts`, the tilt
-primitive, and the curated-SVG + keyframes CSS precedent).
+**Depends on:** TASK-521 (all landed — EXTENDS the shared `pageEffectsRuntime.ts`
+module and reuses its global reduced-motion early-return + the curated-SVG + keyframes
+CSS precedent). NOTE: the hero tilt PRIMITIVE lives in `hero.tsx`'s `HERO_TILT_SCRIPT`
+(not the runtime module, and 522 does not import `hero.tsx`), so 522-01-L05 REPRODUCES
+its ~4-line pointer math in a new self-gated `[data-block-tilt]` binding — a documented
+minimal duplication, not an in-module reuse.
 
 ---
 
@@ -38,7 +42,10 @@ type (see Coordination in the parent).
 
 ## Shared vocabulary (defined once here; imported read-only by 522-02..05)
 
-Enums: `pageBlockDecorationMotions` `["float","drift","pulse","orbit"]`,
+Enums: `pageBlockDecorationMotions` `["none","float","drift","pulse","orbit","radiate"]`
+(authoritative def in leaf 522-01-L03; `"none"` = the present-only reset that
+`normalizeBlockStyle` omits, `"radiate"` = the `.map-pulse`/`@keyframes mapPulse`
+concentric-ring variant),
 `pageTiltStrengths` `["none","subtle","strong"]`, `pageSurfacePresets`
 `["none","glass","glass-grid","radial-glow","ambient-orbs"]`, `pageBlockHoverEffects`
 `["none","glow-reveal","lift","scale","lift-glow"]`, `pageCompositions`

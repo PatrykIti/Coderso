@@ -41,6 +41,11 @@ marquee/ticker (L04). No production code.
   `data-marquee`, `--marquee-speed:18s`, a `.cx-marquee-viewport` with two
   `.cx-marquee-track`s; `direction:"right"`→`data-marquee-dir="right"`; no marquee →
   byte-identical.
+- **Seamless copy has no editable frames (finding 3):** rendering the seamless `group`
+  in CANVAS mode (context with a `renderBlockFrame`), the PRIMARY `.cx-marquee-track`'s
+  items carry `data-block-id` but the aria-hidden DUPLICATE `.cx-marquee-track`'s items
+  carry NONE — assert each child `data-block-id` matches exactly ONE node (no duplicate
+  selection targets / doubled chrome).
 
 ### `tests/vitest/pages/page-editor-control-registry.test.ts` (append)
 
@@ -63,9 +68,10 @@ marquee/ticker (L04). No production code.
 
 ## Validation commands
 
-- `bun --cwd core vitest run tests/vitest/pages/page-renderer-v2.test.tsx
+- From REPO ROOT (vitest is root-only; no `--cwd core`): `vitest run
+  tests/vitest/pages/page-renderer-v2.test.tsx
   tests/vitest/pages/page-editor-control-registry.test.ts
-  tests/vitest/pages/page-composition-effects.test.ts`
+  tests/vitest/pages/page-composition-effects.test.ts` (or `bun run test:vitest`).
 - Root `tsc -p tsconfig.json --noEmit` + `bun --cwd core lint:types` green.
 
 ## Hard Invariants

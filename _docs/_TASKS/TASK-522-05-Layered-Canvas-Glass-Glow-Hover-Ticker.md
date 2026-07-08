@@ -16,9 +16,9 @@
 The composition surface: layered canvas, glass/glow surface presets, block hover
 presets, and the ticker/marquee — plus the page-root composition `<style>` + tilt
 runtime emit. Owns DISJOINT seam regions: `pageRendererV2.tsx` `PageSectionRender`
-(`:2298`) surface/ambient-orbs/canvas attrs (DISJOINT from 521-02's `scrollEffect`
+(`:2381`) surface/ambient-orbs/canvas attrs (DISJOINT from 521-02's `scrollEffect`
 attrs on the same symbol — additive, after 521-02), the layout-block canvas render,
-the `group`-block marquee wrapper, and the `PageDocumentRender` (`:2331`) composition
+the `group`-block marquee wrapper, and the `PageDocumentRender` (`:2459`) composition
 `<style>`+runtime emit (adjacent to 521-05's runtime emit, present-only);
 `pageEditorControlRegistry.ts` `pageUniversalSectionControls` surface/composition
 group (`section.surface.*`, DISJOINT from 521-02's `section.scrollEffect`),

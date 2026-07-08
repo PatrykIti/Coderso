@@ -15,10 +15,12 @@
 
 Implements the floating/drift/pulse/orbit decoration AND wires the shared
 block-frame composition resolver that later subtasks (tilt, glass/hover, layer)
-reuse. Owns: `pageRendererV2.tsx` block-FRAME region `renderPageBlockWithFrame`
-(`:1926`) — ONE edit that calls the 522-01-L04 `resolveBlockCompositionAttrs(style)`
-resolver to stamp decoration/tilt/hover/glass/layer classes + `data-*` on EVERY
-block wrapper (522-04/05 add NO further frame edit — only controls);
+reuse. Owns the `pageRendererV2.tsx` block-frame composition seam: **`toPageBlockRenderProps`
+(`:748`)** merges the FRAME-level composition attrs (so they ride the real `[data-block-id]`
+element on BOTH the front + canvas paths) + **`renderPageBlockWithFrame` (`:2009`)** wraps
+`content` in ONE inner effect wrapper — calling the 522-01-L04
+`resolveBlockCompositionAttrs(style)` resolver to stamp decoration/tilt/hover/glass/layer
+`data-*`/vars (522-04/05 add NO further frame edit — only controls);
 `pageEditorControlRegistry.ts` `pageUniversalBlockControls` decoration group
 (`block.decoration.*`, DISJOINT id-namespace).
 

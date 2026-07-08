@@ -14,15 +14,15 @@
 ## Scope
 
 Executable leaf. Adds the NEW block-content `case "customSvg"` to
-`renderPageBlockContent` (`pageRendererV2.tsx:1747`) — DISJOINT from 521-04's
-`case "icon"` (`:1919`). Renders the sanitized SVG via `dangerouslySetInnerHTML` with
+`renderPageBlockContent` (`pageRendererV2.tsx:1787`) — DISJOINT from 521-04's
+`case "icon"` (`:1959`). Renders the sanitized SVG via `dangerouslySetInnerHTML` with
 a defence-in-depth RE-sanitize, plus the optional draw-in wrapper attrs from
 522-01-L04.
 
 ## Grounded anchors
 
-- Switch in `renderPageBlockContent` (`:1747`); existing cases end with
-  `case "icon"` (`:1919`, from 521-04) then `default: return null` (`:1921`).
+- Switch in `renderPageBlockContent` (`:1787`); existing cases end with
+  `case "icon"` (`:1959`, from 521-04) then `default: return null` (`:2004`).
 - Import (append-only top-of-file sub-region, `:1-33`): `sanitizeSvg` (522-01-L02),
   `resolveDrawInAttrs` (522-01-L04). Block props typed via `pageBlockPropKeys.customSvg`.
 - Precedent for `dangerouslySetInnerHTML` static `__html`: `renderEmbedBlock`
