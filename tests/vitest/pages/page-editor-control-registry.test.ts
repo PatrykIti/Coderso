@@ -98,6 +98,8 @@ const validSectionPaths = new Set([
   // TASK-522-05-L01 section surface + composition.
   "style.surfacePreset",
   "style.composition",
+  // TASK-525-01-L02 full-bleed background.
+  "style.fullBleed",
 ]);
 
 const validBlockPaths = new Set([
@@ -140,6 +142,8 @@ const validBlockPaths = new Set([
   "style.layer.y",
   "style.layer.z",
   "style.layer.anchor",
+  // TASK-525-02-L03 per-block staggered reveal control.
+  "style.revealDelay",
   "visibility.visible",
 ]);
 

@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Site Render / Content (Pages)
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Site Render / Schema (JSON model) / Admin UI / Accessibility
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-525-01 (lands after; branched from post-523 HEAD).
 
 ---

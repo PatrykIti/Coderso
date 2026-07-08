@@ -417,6 +417,20 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     responsive: false,
     options: pageCompositions,
   }),
+  // TASK-525-01-L02 — full-bleed background. When on, the section background box
+  // paints edge-to-edge (100vw) while its content stays capped/centered at
+  // layout.maxWidth. Device-uniform (responsive:false): the bleed is a fixed
+  // render structure, not a per-property CSS delta, so a per-device override
+  // would be a silent no-op. Present-only: normalize omits `false`/unset.
+  control({
+    id: "section.style.fullBleed",
+    panel: "background",
+    target: "section",
+    label: "Full-bleed background",
+    path: ["style", "fullBleed"],
+    input: "switch",
+    responsive: false,
+  }),
 ] as const;
 
 /**
@@ -621,6 +635,22 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     input: "number",
     responsive: false,
     clamp: { min: 2000, max: 16000 },
+    unit: "ms",
+  }),
+  // TASK-525-02-L03 — per-block scroll-reveal stagger. Delays this block's reveal
+  // transition inside a revealing section so its blocks CASCADE (each fades on its
+  // own delay) instead of one unit. responsive:false (mirrors decoration.delay):
+  // the reveal CSS is shared/static, so a per-device delay is not expressible.
+  // clamp == PAGE_REVEAL_DELAY_CLAMP; the normalizer is the security boundary.
+  control({
+    id: "block.style.revealDelay",
+    panel: "style",
+    target: "block",
+    label: "Reveal delay",
+    path: ["style", "revealDelay"],
+    input: "number",
+    responsive: false,
+    clamp: { min: 0, max: 4000 },
     unit: "ms",
   }),
   // TASK-522-04-L01 — mouse tilt (3D) + glare on ANY block (DISJOINT

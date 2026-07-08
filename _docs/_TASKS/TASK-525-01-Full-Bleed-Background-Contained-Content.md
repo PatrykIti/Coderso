@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Site Render / Content (Pages) / Schema (JSON model) / Admin UI
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-523 (branch-point). Lands FIRST inside TASK-525.
 
 ---

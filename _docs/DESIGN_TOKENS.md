@@ -201,6 +201,37 @@ user keeps the STATIC layered/glass/surface styling but sees no animation, no ti
 hover transition. Effects are **present-only** — no token, no DDL, no migration; a
 no-effect page renders byte-identically to post-521 output.
 
+## Pages v2 per-block staggered reveal token (TASK-525)
+
+TASK-525-02 adds a per-block scroll-reveal stagger so a revealing section's blocks
+CASCADE (each fades on its own delay) instead of fading as one unit. It reuses the 521
+reveal runtime/attributes (`data-reveal-armed`, `data-page-effect`, `data-revealed`) and
+adds NO new runtime and NO new keyframe — only one bounded custom property fed into a
+`transition-delay`.
+
+**Enum & clamp:**
+
+| Effect | Enum / clamp | Values |
+|--------|--------------|--------|
+| Block reveal delay | `PAGE_REVEAL_DELAY_CLAMP` | `0`..`4000` ms |
+
+**CSS custom property (set from normalized values only; consumed by
+`PAGE_REVEAL_MOTION_CSS`):**
+
+- `--reveal-delay` — per-block scroll-reveal stagger (ms). Emitted on the `[data-block-id]`
+  frame from `block.style.revealDelay` (normalized via `readNumber`, `Number.isFinite` +
+  clamp), present-only (absent when unauthored → default `0ms`). Because it is a custom
+  property it INHERITS down into a revealing section's children, and it is consumed as the
+  `transition-delay` of the per-block reveal transition (`opacity .7s, transform .7s`) so
+  each block staggers by its own delay. Only a bounded `${n}ms` literal reaches CSS — never
+  a raw declaration/markup/URL.
+
+**`prefers-reduced-motion` guarantee.** The `--reveal-delay` transition + `transition-delay`
+live INSIDE the existing `@media (prefers-reduced-motion: no-preference)` + `[data-reveal-armed]`
+gate, so under reduced-motion no transition runs and the delay is inert — motion-neutral,
+identical to 521's reduced-motion behavior. Present-only — no DDL, no migration, no
+schemaVersion bump; a no-`revealDelay` block renders byte-identically to post-522 output.
+
 ## Tailwind integration
 
 - Core build mapuje tokeny na utility classes.

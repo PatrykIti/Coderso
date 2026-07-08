@@ -21,7 +21,9 @@ import {
   resolvePageRenderTree,
   toPageBlockRenderProps,
   toPageBlockTypographyStyle,
+  toPageSectionBleedStyle,
   toPageSectionRenderProps,
+  toPageSectionStyle,
 } from "../../../core/services/pages/pageRendererV2";
 import {
   PAGE_EFFECTS_RUNTIME_ID,
@@ -253,7 +255,15 @@ test("phase 3b section variants change published surfaces beyond marker classes"
   expect(ctaCenteredClass).toContain("text-center");
   expect(ctaCenteredClass).not.toContain("text-left");
   expect(ctaCenteredClass).not.toBe(ctaDefaultClass);
-  expect(toPageSectionRenderProps(ctaFullWidth).style.maxWidth).toBe("none");
+  // TASK-525-01-L01 REBASELINE (owned): a full-width section's CONTENT is now
+  // capped/centered at layout.maxWidth (was maxWidth:"none"); the 100vw
+  // background bleed lives on the outer <section> box, not the content div.
+  const ctaFullWidthStyle = toPageSectionRenderProps(ctaFullWidth).style;
+  expect(ctaFullWidthStyle.maxWidth).toBe(`${ctaFullWidth.layout.maxWidth}px`);
+  expect(ctaFullWidthStyle.maxWidth).not.toBe("none");
+  expect(ctaFullWidthStyle.margin).toBe("0 auto");
+  // bleed is expressed on the section box, not by dropping the content cap:
+  expect(toPageSectionBleedStyle(ctaFullWidth)?.width).toBe("100vw");
   expect(
     stripSectionTemplateMarker(toPageSectionRenderProps(ctaFullWidth).contentClassName)
   ).toContain("min-h-[320px]");
@@ -788,13 +798,162 @@ test("full-width section variants remove the outer section gutter so backgrounds
   const fullWidthProps = toPageSectionRenderProps(fullWidth);
   const fullWidthHtml = renderToStaticMarkup(<PageSectionRender section={fullWidth} />);
 
+  // PRESERVED w-full siblings (option A: the bleed lives on the OUTER <section>).
   expect(boundedProps.sectionClassName).toBe("w-full px-4 py-6");
   expect(fullWidthProps.sectionClassName).toBe("w-full");
-  expect(fullWidthProps.style.backgroundColor).toBe("#dcfce7");
-  expect(fullWidthProps.style.maxWidth).toBe("none");
   expect(fullWidthHtml).toContain('<section class="w-full"');
-  expect(fullWidthHtml).toContain("background-color:#dcfce7");
   expect(fullWidthHtml).not.toContain('class="w-full px-4 py-6"');
+  // TASK-525-01-L01 REBASELINE (owned): the full-width content is now
+  // capped/centered at layout.maxWidth (was maxWidth:"none") and the background
+  // NO LONGER lives on the content div — the 100vw bleed + background paint on
+  // the OUTER <section> box so the bg fills the band edge-to-edge while content
+  // stays contained. STRONGER: pins the content cap AND the bg bleed on separate
+  // elements.
+  expect(fullWidthProps.style.maxWidth).toBe(`${fullWidth.layout.maxWidth}px`);
+  expect(fullWidthProps.style.maxWidth).not.toBe("none");
+  expect(fullWidthProps.style.margin).toBe("0 auto");
+  expect(fullWidthProps.style.backgroundColor).toBeUndefined();
+  // The full-bleed background box (100vw) + its background live on <section>:
+  const fullWidthBleed = toPageSectionBleedStyle(fullWidth);
+  expect(fullWidthBleed?.width).toBe("100vw");
+  expect(fullWidthBleed?.marginLeft).toBe("calc(50% - 50vw)");
+  expect(fullWidthBleed?.backgroundColor).toBe("#dcfce7");
+  // Rendered <section> carries the bleed width + the background color.
+  expect(fullWidthHtml).toContain("width:100vw");
+  expect(fullWidthHtml).toContain("background-color:#dcfce7");
+});
+
+test("TASK-525-01: full-width section caps content at layout.maxWidth (bg full-bleed)", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-fb-cap",
+    variant: "full-width",
+    layout: { columns: 1, align: "center", justify: "center", maxWidth: 1120 },
+    style: {
+      background: "#101828",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+  const style = toPageSectionStyle(section);
+  // content is capped/centered — no longer maxWidth:"none".
+  expect(style.maxWidth).toBe("1120px");
+  expect(style.margin).toBe("0 auto");
+  // reference `.container` gutter: content stays inside a min side gutter.
+  expect(style.width).toBe("min(1120px, calc(100% - 2 * 20px))");
+  // bg does NOT ride on the content div anymore.
+  expect(style.backgroundColor).toBeUndefined();
+  // the full-bleed lives on the outer section box.
+  const bleed = toPageSectionBleedStyle(section);
+  expect(bleed?.width).toBe("100vw");
+  expect(bleed?.marginLeft).toBe("calc(50% - 50vw)");
+  expect(bleed?.backgroundColor).toBe("#101828");
+});
+
+test("TASK-525-01: full-width renders a centered capped content wrapper inside a full-bleed section box", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-fb-structure",
+    variant: "full-width",
+    layout: { columns: 1, align: "center", justify: "center", maxWidth: 1120 },
+    style: {
+      background: "#dcfce7",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+  const html = renderToStaticMarkup(<PageSectionRender section={section} />);
+  // full-bleed marker/utility on the outer section box.
+  expect(html).toContain("width:100vw");
+  expect(html).toContain("margin-left:calc(50% - 50vw)");
+  expect(html).toContain("background-color:#dcfce7");
+  // content node capped at maxWidth + centered, independent of the bleed box.
+  expect(html).toContain('data-page-section-content="true"');
+  expect(html).toContain("max-width:1120px");
+  expect(html).toContain("min(1120px, calc(100% - 2 * 20px))");
+});
+
+test("TASK-525-01: non-full-width section content is byte-identical (bg + cap on one content div)", () => {
+  const section = createPageSectionV2("hero", {
+    id: "sec-fb-default",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 960 },
+    style: {
+      background: "#eef2ff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 12,
+      shadow: "sm",
+    },
+  });
+  const style = toPageSectionStyle(section);
+  // cap unchanged; background/radius/shadow still on the SAME content div.
+  expect(style.maxWidth).toBe("960px");
+  expect(style.margin).toBe("0 auto");
+  expect(style.backgroundColor).toBe("#eef2ff");
+  expect(style.borderRadius).toBe("12px");
+  expect(style.boxShadow).toBeDefined();
+  // no full-bleed gutter width literal on the non-bleed path.
+  expect(style.width).toBeUndefined();
+  // no bleed box for a non-full-bleed section.
+  expect(toPageSectionBleedStyle(section)).toBeUndefined();
+  // and the rendered <section> has NO 100vw bleed.
+  const html = renderToStaticMarkup(<PageSectionRender section={section} />);
+  expect(html).not.toContain("width:100vw");
+});
+
+test("TASK-525-01: changing layout.maxWidth moves the content cap while bg stays full-bleed", () => {
+  for (const mw of [640, 960, 1440]) {
+    const section = createPageSectionV2("hero", {
+      id: `sec-fb-mw-${mw}`,
+      variant: "full-width",
+      layout: { columns: 1, align: "center", justify: "center", maxWidth: mw },
+      style: {
+        background: "#101828",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+    });
+    expect(toPageSectionStyle(section).maxWidth).toBe(`${mw}px`);
+    // bleed is invariant to the cap.
+    expect(toPageSectionBleedStyle(section)?.width).toBe("100vw");
+  }
+});
+
+test("TASK-525-01-L02: style.fullBleed bleeds a NON-full-width section, caps content", () => {
+  const section = createPageSectionV2("content", {
+    id: "sec-fb-flag",
+    variant: "default",
+    layout: { columns: 1, align: "start", justify: "start", maxWidth: 880 },
+    style: {
+      background: "#0b1020",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+      fullBleed: true,
+    },
+  });
+  expect(section.style.fullBleed).toBe(true);
+  const style = toPageSectionStyle(section);
+  // content capped/centered even though the template variant is NOT full-width.
+  expect(style.maxWidth).toBe("880px");
+  expect(style.margin).toBe("0 auto");
+  expect(style.width).toBe("min(880px, calc(100% - 2 * 20px))");
+  expect(style.backgroundColor).toBeUndefined();
+  // and the bg bleeds on the section box.
+  const bleed = toPageSectionBleedStyle(section);
+  expect(bleed?.width).toBe("100vw");
+  expect(bleed?.backgroundColor).toBe("#0b1020");
 });
 
 test("stackVertical forces a single-column section grid on canvas and front (TASK-425)", () => {
@@ -2910,6 +3069,90 @@ test("PAGE_REVEAL_MOTION_CSS is reduced-motion-safe + reveal-armed scoped", () =
   expect(PAGE_REVEAL_MOTION_CSS).toContain(
     '[data-page-effect="reveal-up"]:not([data-revealed]){transform:translateY(1rem)}'
   );
+});
+
+// ---------------------------------------------------------------------------
+// TASK-525-02 — per-block staggered reveal (--reveal-delay + child cascade).
+// ---------------------------------------------------------------------------
+
+test("TASK-525-02: emits --reveal-delay on the block frame when authored", () => {
+  const block = createPageBlockV2("text", {
+    id: "blk-reveal-delay",
+    style: { revealDelay: 240 } as PageBlockV2["style"],
+  });
+  const props = toPageBlockRenderProps(block);
+  expect((props.style as Record<string, string>)["--reveal-delay"]).toBe("240ms");
+});
+
+test("TASK-525-02: omits --reveal-delay when unset (byte-identical frame style)", () => {
+  const block = createPageBlockV2("text", { id: "blk-reveal-none" });
+  const props = toPageBlockRenderProps(block);
+  expect("--reveal-delay" in props.style).toBe(false);
+});
+
+test("TASK-525-02: revealing CHILDREN carry their own hide-state + transition (cascade is NOT inert)", () => {
+  // Guard against the inert path: a bare transition-delay on [data-page-block]
+  // with no LIVE child transition produces zero visible stagger. Assert the child
+  // reveal transition + hide-state actually exist, keyed off the section's
+  // data-revealed, so --reveal-delay has a transition to delay.
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("prefers-reduced-motion: no-preference");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("[data-reveal-armed]");
+  // child hide-state while the section is not yet revealed:
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(":not([data-revealed]) [data-page-block]");
+
+  // REGRESSION GUARD (post-audit HIGH): the child reveal transition + transition-delay
+  // MUST live on a STATE-INDEPENDENT rule — one NOT gated by :not([data-revealed]).
+  // Per CSS Transitions, the transition is governed by the AFTER-CHANGE (revealed)
+  // computed style; if the transition only appeared on the :not([data-revealed]) rule
+  // it would reset to `all 0s` once the section is revealed and the blocks would JUMP
+  // (no fade, no per-block delay, no cascade). We therefore isolate every declaration
+  // block that carries the child transition-delay and require at least one of them to
+  // target [data-page-block] WITHOUT a preceding :not([data-revealed]) on that same
+  // compound selector.
+  const declRe =
+    /([^{}]*\[data-page-block\])\{([^}]*transition-delay:var\(--reveal-delay,0ms\)[^}]*)\}/g;
+  const transitionDeclarations = [...PAGE_REVEAL_MOTION_CSS.matchAll(declRe)];
+  // the transition rule exists at all:
+  expect(transitionDeclarations.length).toBeGreaterThan(0);
+  // and it also carries the actual opacity/transform transition:
+  expect(transitionDeclarations.some(([, , body]) => /transition:opacity[^;]*/.test(body))).toBe(
+    true
+  );
+  // at least one transition-carrying rule is STATE-INDEPENDENT (survives into revealed):
+  const hasStateIndependentTransition = transitionDeclarations.some(
+    ([, selector]) => !/:not\(\[data-revealed\]\)/.test(selector)
+  );
+  expect(hasStateIndependentTransition).toBe(true);
+  // and the hide-state rule (opacity:0) is still gated on :not([data-revealed]):
+  expect(PAGE_REVEAL_MOTION_CSS).toMatch(
+    /:not\(\[data-revealed\]\) \[data-page-block\]\{opacity:0\}/
+  );
+
+  // revealed target keyed on the SECTION's data-revealed (runtime toggles section only):
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("[data-revealed] [data-page-block]");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(
+    "[data-revealed] [data-page-block]{opacity:1;transform:none}"
+  );
+});
+
+test("TASK-525-02: staggers a revealing section's children with distinct per-block --reveal-delay", () => {
+  // Three blocks with revealDelay 0/120/240 in a reveal-up section → three frames
+  // each carrying its own --reveal-delay. Combined with the child transition rule
+  // asserted above, this is a real cascade (not distinct vars alone).
+  const delays = [0, 120, 240];
+  const emitted = delays.map(
+    (d) =>
+      (
+        toPageBlockRenderProps(
+          createPageBlockV2("text", {
+            id: `blk-stagger-${d}`,
+            style: { revealDelay: d } as PageBlockV2["style"],
+          })
+        ).style as Record<string, string>
+      )["--reveal-delay"]
+  );
+  expect(emitted).toEqual(["0ms", "120ms", "240ms"]);
+  expect(new Set(emitted).size).toBe(3);
 });
 
 // ---------------------------------------------------------------------------

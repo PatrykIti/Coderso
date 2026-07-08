@@ -155,7 +155,9 @@ Phase 3B section template semantics are part of the public runtime contract:
 - `testimonials.cards` wraps child blocks in card surfaces while
   `testimonials.grid` keeps flat grid rendering.
 - `cta.default`, `cta.centered`, and `cta.full-width` have distinct published
-  alignment/min-height classes. `full-width` still pins `max-width: none`.
+  alignment/min-height classes. Since TASK-525 `full-width` bleeds the background
+  edge-to-edge (`100vw`) while its content stays capped/centered at
+  `section.layout.maxWidth` (no longer `max-width: none`).
 - `feature-grid`, `comparison`, and `custom` keep their existing truthful
   grid/card geometry guards while using the shared dedicated control surface.
 
@@ -825,8 +827,7 @@ document to one breakpoint server-side:
 - Explicitly NOT CSS-expressible (diagnostics-only): block
   `responsive[bp].props` content overrides (no content-override contract
   exists yet), non-`visible` section visibility fields
-  (`authOnly`/`anchor`/`startsAt`/`endsAt`), `maxWidth` overrides on
-  `full-width` variants (the renderer pins `max-width: none`), typography
+  (`authOnly`/`anchor`/`startsAt`/`endsAt`), typography
   overrides on non-typography-capable block types, explicit `null` typography
   overrides (clearing back to baked classes at one breakpoint cannot beat the
   inline desktop base), and any override on nodes hidden at the desktop base
@@ -1062,12 +1063,41 @@ NUMERIC `layer.x/y/z` render per device — see below):
 - `composition?: PageComposition` — `pageCompositions = ["flow", "layered"]`; a
   layout-block (`container`/`columns`/`group`) becomes an absolute positioning context
   for its `layer`-placed children.
+- `revealDelay?: number` (TASK-525-02) — per-block scroll-reveal stagger, ms, clamped
+  `PAGE_REVEAL_DELAY_CLAMP = { min: 0, max: 4000 }` (same bound as the decoration delay).
+  Normalized via `readNumber` (`Number.isFinite` + clamp; NaN/Infinity fail-soft to 0)
+  and emitted ONLY as the bounded `--reveal-delay` custom property (`${n}ms`) on the
+  `[data-block-id]` frame — never a raw declaration/markup/URL. It feeds the per-block
+  reveal `transition-delay` (see `PAGE_REVEAL_MOTION_CSS` below), so a revealing section's
+  blocks CASCADE (each fades on its own delay) instead of fading as one unit — matching the
+  reference `[data-delay]` cascade. Present-only (omitted when unset → byte-identical),
+  BASE-ONLY (`responsive:false` — the reveal CSS is shared/static so a per-device delay is
+  not expressible), reject-unknown + round-trip tested. Reveal stays JS-gated under
+  `[data-reveal-armed]` + `motion-safe:`, so a `transition-delay` is inert under
+  `prefers-reduced-motion` (no transition runs) — motion-neutral, no new runtime/keyframe.
 
-### Section style fields (`PageSectionStyleV2`) — surface preset + layered canvas
+### Section style fields (`PageSectionStyleV2`) — surface preset + layered canvas + full-bleed
 
 `section.style` gains present-only `surfacePreset?: PageSurfacePreset` (same enum) and
 `composition?: PageComposition` (`"layered"` makes the section a positioning context for
-absolutely placed children). The section threads its `readSafeColor`-validated
+absolutely placed children).
+
+`section.style` also gains a present-only `fullBleed?: boolean` (TASK-525-01). When `true`,
+the section paints its background BOX edge-to-edge (a fixed-literal `100vw` bleed on the
+OUTER `<section>` via `toPageSectionBleedStyle`: `width:100vw;margin-left/right:calc(50% -
+50vw)`, carrying the sanitized background color/URL, clamped radius, and shadow) while its
+CONTENT stays capped and centered at `layout.maxWidth` — the content `<div>`
+(`toPageSectionStyle`) is `width:min(${maxWidth}, calc(100% - 40px));margin:0 auto` with a
+fixed 20px side gutter, mirroring the reference `.container` inside a full-bleed section.
+The bleed is keyed off `template.variant === "full-width" || style.fullBleed === true`
+(`isPageSectionFullBleed`), so ANY section — not just the `full-width` template variant —
+can bleed its background with contained content. This DECOUPLES the background bleed from
+the content max-width: prior to 525 the `full-width` variant dropped the content cap
+(`maxWidth:"none"`), spreading content to the viewport edges; now the background bleeds but
+the content stays contained. Present-only (`false`/unset omitted → the non-bleed section is
+byte-identical), device-uniform (`responsive:false` — the bleed is fixed render structure,
+not a per-property CSS delta), reject-unknown + round-trip tested. Only fixed literals
+(`100vw`, the 20px gutter) reach CSS — no author-controlled value. The section threads its `readSafeColor`-validated
 `style.accent` into `--surface-glow`; blocks thread a plain-color `style.background`
 (gradients/urls are left out — an invalid `radial-gradient()` retint).
 
@@ -1110,11 +1140,13 @@ Section-template wrappers (`data-page-media-split-zone`,
 renderer path and compose existing child blocks instead of introducing
 widget-template runtime dependencies.
 
-For resolved `full-width` variants, the outer section band must not add the
-default page gutter. The painted content node already owns background, spacing,
-grid, and `max-width: none`; keeping wrapper `px`/`py` on the outer `<section>`
-would leave white strips around hero/CTA backgrounds and break the full-bleed
-authoring contract.
+For resolved `full-width` variants (and any `style.fullBleed` section), the outer
+section band must not add the default page gutter. Since TASK-525 the background is
+DECOUPLED from the content cap: the OUTER `<section>` carries the `100vw` full-bleed
+BACKGROUND box (`toPageSectionBleedStyle`) while the inner content node stays
+capped/centered at `section.layout.maxWidth` (no longer `max-width: none`) with a fixed
+20px side gutter. Keeping wrapper `px`/`py` on the outer `<section>` would leave white
+strips around hero/CTA backgrounds and break the full-bleed authoring contract.
 
 The shared renderer owns block frame render props for `PageBlockStyleV2`:
 width/alignment classes, text/background variables, opacity, radius, border,
