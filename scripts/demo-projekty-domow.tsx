@@ -526,16 +526,15 @@ const wowPanelPill = (id: string, label: string, active: boolean) =>
     }),
   });
 
-const wowPanel: PageSectionV2 = createPageSectionV2("media-split", {
+const wowPanel: PageSectionV2 = createPageSectionV2("feature-grid", {
   id: "wowPanel-sec",
-  variant: "split",
+  variant: "grid",
   name: "Interaktywny panel wyboru stylu",
   layout: { columns: 2, align: "center", justify: "between", maxWidth: 1180 },
   style: Ss({
-    background: "rgba(255,255,255,.06)",
+    background: "rgba(255,255,255,.055)",
     backgroundType: "color",
     accent: "#8ee8ff",
-    surfacePreset: "glass",
     composition: "flow",
     radius: 38,
     shadow: "lg",
@@ -590,7 +589,6 @@ const wowPanel: PageSectionV2 = createPageSectionV2("media-split", {
       style: St({
         surfacePreset: "radial-glow",
         surfaceTint: "rgba(142,232,255,0.18)",
-        composition: "layered",
         background: "rgba(8,17,31,.72)",
         radius: 30,
         borderColor: "rgba(255,255,255,.14)",

@@ -1337,9 +1337,9 @@
     },
     {
       "id": "wowPanel-sec",
-      "type": "media-split",
+      "type": "feature-grid",
       "name": "Interaktywny panel wyboru stylu",
-      "variant": "split",
+      "variant": "grid",
       "layout": {
         "columns": 2,
         "align": "center",
@@ -1348,13 +1348,12 @@
         "stackVertical": false
       },
       "style": {
-        "background": "rgba(255,255,255,.06)",
+        "background": "rgba(255,255,255,.055)",
         "backgroundType": "color",
         "backgroundImage": null,
         "accent": "#8ee8ff",
         "radius": 38,
-        "shadow": "lg",
-        "surfacePreset": "glass"
+        "shadow": "lg"
       },
       "spacing": {
         "paddingTop": 24,
@@ -1582,8 +1581,7 @@
               "bottom": 28,
               "left": 28
             },
-            "surfacePreset": "radial-glow",
-            "composition": "layered"
+            "surfacePreset": "radial-glow"
           },
           "visibility": {
             "visible": true
