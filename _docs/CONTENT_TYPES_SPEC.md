@@ -1072,6 +1072,50 @@ unwrapped SegmentedControls with no device fork / Reset badge); `linkAlign` live
 `NavLevelStyle` (per-level, per-device). Enums are validated schema-first (reject-unknown
 key ⇒ 400 with path; bad enum value fails soft).
 
+## Menu Design tab — scrolled-state colors, card radius, custom shadow & brand icon/combo (TASK-520)
+
+TASK-520 closes three owner-reported gaps on the same Design tab, all present-only and
+doc-scoped (no `schemaVersion` bump; no route/RBAC/migration; `buildSiteShellCss(null)` +
+no-override/legacy docs byte-identical). Document contract, allowlists, validators and CSS
+emission are specified in `PAGE_MODEL.md` (menuDocumentV2 section); this is the
+authoring/UX surface. The new bar keys are held OUT of `MENU_BAR_LAYOUT_KEYS`/
+`SHELL_APPEARANCE_DEFAULTS`, so `resolveMenuControlDefault` returns `value===undefined`
+and their controls render NO `ControlDefaultHint` — they use STATIC helper text instead.
+
+- **Scrolled/floating-state colors (G1).** The menu-bar layout panel adds a
+  scrolled-state group — `surfaceColorScrolled`/`borderColorScrolled` (via TASK-519's
+  alpha-capable `ColorSwatchControl`, so owner tokens `rgba(8,17,31,.84)` /
+  `rgba(255,255,255,.18)` author + round-trip), `borderWidthScrolled`, `shadowScrolled`
+  (none|sm|md) and `shadowCustomScrolled`. The group is gated on the bar being `sticky`
+  (a non-sticky bar has no scrolled state). A preview "scrolled" toggle stamps
+  `data-scrolled` on the canvas so the author SEES the transition without scrolling.
+  Each unset variant falls back to the corresponding BASE key (a sticky bar with no
+  scrolled variant looks identical scrolled and at rest — back-compat).
+- **Menu-bar card radius + custom shadow (G2).** A `radius` slider (0..40 px, per-device)
+  gives the level-0 bar a floating-card border-radius (previously ≥1 submenu-only). A
+  `shadowCustom` text control accepts a validated raw `box-shadow` (owner token
+  `0 18px 50px rgba(0,0,0,.24)`) that OVERRIDES the none|sm|md `shadow` enum at emission
+  (clearing it reverts to the preset). Empty/invalid input fail-soft DROPS (the control
+  shows empty).
+- **Brand icon mode + graphic-with-text combo (G3).** The brand block panel adds
+  `mode:"icon"` to the mode selector; icon mode exposes a lucide icon picker (allowlisted
+  kebab name) + `iconColor` (alpha via 519) + `iconSize` (12..64). A `showText` combo
+  toggle (on `image`/`icon` modes) renders the graphic AND the text wordmark side by side
+  on the front AND canvas; unset `showText` = today's exclusive text-XOR-graphic behavior.
+  An invalid/unresolvable icon name falls through to the text/site-name chain (no broken
+  mark).
+
+**Security whitelist (write + render, defence in depth).** Colors (`surfaceColorScrolled`/
+`borderColorScrolled`/`iconColor`) run through `normalizeMenuColorValue` (the token-backed
+policy every menu color uses). The custom box-shadow strings run through the NEW
+`normalizeMenuBoxShadowValue` bracket-aware grammar (optional `inset`, ≤4 lengths, one
+validated color token, ≤4 layers, ≤200 chars; rejects `url(`/`expression(`/`javascript:`/
+`;`/`{`/`}`/`@`/`<`/`>`/backslash). The brand icon name is a pattern allowlist at write
+AND resolved against the lucide set at render (never interpolated into markup). Each new
+key joins its reject-unknown allowlist (`MENU_BAR_EXTRA_KEYS`/`BRAND_PROP_KEYS`/
+`BRAND_STYLE_KEYS`) + ships a persistence round-trip test (fail-closed READ trap). All
+bad VALUES fail-soft (omit), never throw; only an unknown KEY 400s with a `path`.
+
 ## API
 
 Admin API w `CMS_API.md`:

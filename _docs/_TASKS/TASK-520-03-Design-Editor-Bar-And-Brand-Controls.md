@@ -7,7 +7,7 @@
 **Category:** Admin UI / Content (Menus)
 **Estimated Effort:** Medium
 **Dependencies:** TASK-520-01 (model), TASK-520-02 (CSS — so the admin preview canvas reflects the new keys via `buildMenuDocumentCss`). TASK-519 (alpha color control — consumed for the scrolled/brand-icon color swatches; graceful fallback to the hex-only control if 519 has not landed).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

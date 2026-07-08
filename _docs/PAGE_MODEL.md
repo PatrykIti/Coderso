@@ -1183,6 +1183,65 @@ whitespace is OMITTED sparse). Fallback CHAIN, identical on front AND canvas:
 nothing). `createDefaultMenuBlock("brand")` and the legacy adapter stay
 textless (inherit the site name). The canvas no longer renders the menu name.
 
+**Scrolled/floating-state colors, menu-bar card radius, custom shadow & brand
+icon/combo (TASK-520):** No `schemaVersion` bump (`MENU_DOCUMENT_SCHEMA_VERSION`
+stays `1`), no route/RBAC/migration; `MenuAppearance`/`SHELL_APPEARANCE_DEFAULTS`
+are UNTOUCHED so `buildSiteShellCss(null)` stays byte-identical. All new keys are
+**present-only** (zero bytes when unauthored ⇒ legacy docs byte-identical) and
+join a reject-unknown allowlist + a round-trip test (fail-closed READ trap). The
+new bar keys are held OUT of `MENU_BAR_LAYOUT_KEYS`/`SHELL_APPEARANCE_DEFAULTS`,
+so they have NO seeded resolver default and their editor controls render NO
+`ControlDefaultHint` (per the 507 `value===undefined ⇒ null` guard).
+
+- **Menu-bar extra keys (`MenuBarLayout`, intersection extension — NOT
+  `MenuAppearance` members).** A NEW sibling allowlist `MENU_BAR_EXTRA_KEYS` gates
+  six non-appearance keys; `normalizeMenuBarLayout` is SPLIT — the appearance
+  subset routes through `normalizeAppearanceSubset` (over `MENU_BAR_LAYOUT_KEYS`
+  only), the extra keys through local fail-soft value normalizers; a key in
+  NEITHER allowlist throws `MenuDocumentError(path.key)`, bad VALUES fail-soft
+  (omit):
+  - `radius?: number` (0..40 px, `MENU_BAR_LAYOUT_NUMBER_RANGES.radius`) — the
+    level-0 floating-card border-radius (submenu `NavLevelStyle.radius` was ≥1
+    only). Per-device via the existing `section.responsive[bp].layout` channel.
+  - `shadowCustom?: string` — a validated raw `box-shadow` value that OVERRIDES
+    the `shadow` none|sm|md enum at emission (the enum stays the quick preset, the
+    custom string is the escape hatch; owner token `0 18px 50px rgba(0,0,0,.24)`).
+  - `surfaceColorScrolled?` / `borderColorScrolled?` (`normalizeMenuColorValue`,
+    alpha OK) + `borderWidthScrolled?` (0..8, reuses `borderWidth` range) +
+    `shadowScrolled?` (none|sm|md) + `shadowCustomScrolled?` (validated box-shadow,
+    OVERRIDES `shadowScrolled`) — the **scrolled/floating-state variants**. Each
+    unset variant falls back to the corresponding BASE key (back-compat: a sticky
+    bar with no scrolled variant looks identical scrolled and at rest).
+- **Custom box-shadow validator (`normalizeMenuBoxShadowValue`,
+  security-critical).** Accepts ONLY a bounded grammar: optional leading `inset`,
+  up to 4 length values (`-?\d+(px|rem|em)`), and ONE color token validated via
+  `normalizeMenuColorValue`, comma-repeated up to 4 layers, total ≤200 chars;
+  the whitespace split is BRACKET-AWARE (`rgba(0,0,0,.24)` is ONE token, split
+  only at bracket-depth 0) and leading-dot alpha is canonicalized consistent with
+  the 519 color input. REJECTS any `url(`, `expression(`, `javascript:`,
+  `image-set(`, `/*`, `<`, `>`, `{`, `}`, `;`, `@`, backslash, or off-grammar
+  token. Invalid ⇒ dropped (present-only, fail-soft).
+- **Brand icon mode + graphic-with-text combo (`BrandProps`/`BrandStyle`).**
+  `BRAND_PROP_KEYS` gains `"icon"`, `"showText"`; `BRAND_STYLE_KEYS` gains
+  `"iconColor"`, `"iconSize"`; `BRAND_STYLE_NUMBER_RANGES` gains `iconSize
+  [12,64]`. `BrandProps.mode` widens to `"text" | "image" | "icon"`.
+  - `icon?: string` — a validated kebab lucide name (`normalizeBrandIconName`
+    pattern `^[a-z0-9-]{1,64}$`, fail-soft omit) resolved at RENDER against
+    `lucideKebabIconComponents` (the lucide set = effective allowlist; an
+    unknown/unresolvable name falls through to the text/site-name chain — never a
+    broken mark). Icon color via `iconColor` (`normalizeMenuColorValue`, alpha OK
+    via 519) and size via `iconSize`.
+  - `showText?: boolean` — the graphic-with-text COMBO. When a graphic mode
+    (`"image"|"icon"`) ALSO sets `showText:true`, `BrandRender` emits the graphic
+    AND the text wordmark side by side. Unset `showText` = today's exclusive
+    text-XOR-graphic behavior (back-compat).
+- **Scroll-state machine (front only).** `SiteHeaderMenuDocumentRender` emits a
+  tiny dependency-free idempotent inline IIFE (no npm dep, respects
+  `prefers-reduced-motion`) that toggles `data-scrolled` on the header past a
+  small threshold — emitted ONLY when a scrolled variant is authored AND the bar
+  is sticky (a legacy/non-sticky/no-variant doc emits NO script). The CSS emits
+  `[data-scrolled="true"]` scrolled-variant declarations; the base paints at rest.
+
 **Device-defining nav props carve-out (TASK-502, conscious):**
 `MENU_NAV_DEVICE_DEFINING_KEYS = ["mobileMode","dropdownDirection"]` are
 device-DEFINING, not overridable — they always write the BASE. On WRITE, either

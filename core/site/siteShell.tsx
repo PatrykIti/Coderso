@@ -1,11 +1,16 @@
+import type { ReactNode } from "react";
+
 import {
   MENU_RESPONSIVE_BREAKPOINT_KEYS,
   hasMenuBlockVisibilityOverride,
   resolveBrandImageSrc,
   resolveMenuBlockVisibleForDevice,
+  resolveMenuBrandStyleForDevice,
+  type MenuBarLayout,
   type MenuBlockV2,
   type MenuDocumentV2,
 } from "../services/menus/menuDocumentV2";
+import { lucideKebabIconComponents } from "../widgets/core/timelineLucideIcons";
 import type { MenuAppearance } from "../services/menus/normalizeMenuAppearance";
 import { sanitizeAuthoringLinkHref } from "../services/pages/pageAuthoringSanitizers";
 import type { PageBlockV2, PageBreakpoint, PageDocumentV2 } from "../services/pages/pageDocumentV2";
@@ -490,47 +495,110 @@ const NavItemsRender = ({
 const BrandRender = ({
   block,
   siteName,
+  breakpoint,
 }: {
   block: Extract<MenuBlockV2, { type: "brand" }>;
   siteName?: string | null;
+  /**
+   * TASK-520-04-L01: current device breakpoint (front + canvas). Resolves the
+   * per-device `BrandStyle` (incl. the new `iconColor`/`iconSize` for icon mode).
+   * Absent ⇒ "desktop" (back-compat: the caller may thread this in either order).
+   */
+  breakpoint?: PageBreakpoint;
 }) => {
   // Defense in depth: the write + stored-read normalizers already scrub
   // brand.href through sanitizeAuthoringLinkHref, but re-sanitize at the DOM
   // seam so no unsafe scheme (`javascript:`/`data:`/`vbscript:`) can ever be
   // SSR-emitted into the public header anchor.
   const href = sanitizeAuthoringLinkHref(block.props.href) ?? "/";
-  // TASK-504-03 (defect B1): resolve the brand image `src` through the SINGLE
-  // shared resolver (menuDocumentV2). GUARD on a resolved src so an image-mode
-  // brand with NO logo falls through to the text/site-name fallback instead of
-  // rendering the empty dashed placeholder that ballooned the header. The <img>
-  // is SIZED by 504-02's `[data-menu-block-id] img{}` rule (height/max-width);
-  // this subtask emits NO CSS.
-  const brandImage = block.props.image;
-  const resolvedSrc = resolveBrandImageSrc(brandImage);
-  if (block.props.mode === "image" && resolvedSrc) {
-    const imageBlock = {
-      id: block.id,
-      type: "image",
-      props: brandImage,
-      visibility: { visible: true },
-    } as PageBlockV2;
+  // TASK-520-04-L01: resolve the per-device brand style (icon color/size live
+  // here). resolveMenuBrandStyleForDevice accepts a MenuDeviceKind, which is the
+  // same "desktop"|"tablet"|"mobile" union as PageBreakpoint.
+  const style = resolveMenuBrandStyleForDevice(block, breakpoint ?? "desktop");
+  // Fallback CHAIN (parent contract, TASK-502-01/03): per-menu override →
+  // site name → null. 502-01 stores `text` trimmed/capped/sparse; trim again =
+  // defense in depth. Empty `siteName` is falsy ⇒ treated as absent.
+  const wordmark = block.props.text?.trim() || siteName || null;
+  // TASK-520-04-L01: combo is opt-in (`showText:true`) on a graphic mode.
+  const showText = block.props.showText === true;
+
+  // Resolve a graphic node per mode (icon | image); null when none is authored.
+  let graphic: ReactNode = null;
+  if (block.props.mode === "icon" && block.props.icon) {
+    // ALLOWLIST resolution: the validated kebab name is resolved against the
+    // lucide set (the effective allowlist). An unknown/unresolvable name yields
+    // `undefined` ⇒ NO graphic ⇒ falls through to the wordmark chain below
+    // (never emits the raw name into markup).
+    // SECURITY (TASK-520 audit finding 5): `lucideKebabIconComponents` is built
+    // via `Object.fromEntries`, so it inherits `Object.prototype`. A reserved
+    // key like `"constructor"` passes the kebab pattern AND resolves to an
+    // inherited function (truthy) — rendering `<Object/>` throws "Objects are
+    // not valid as a React child" during SSR of the PUBLIC header (stored DoS).
+    // Gate on an OWN property so inherited prototype members can never resolve.
+    const iconName = block.props.icon;
+    const Icon = Object.prototype.hasOwnProperty.call(lucideKebabIconComponents, iconName)
+      ? lucideKebabIconComponents[iconName]
+      : undefined;
+    if (Icon) {
+      const iconSize = style.iconSize ?? 24;
+      graphic = (
+        <Icon
+          aria-hidden="true"
+          width={iconSize}
+          height={iconSize}
+          // `iconColor` is a validated color token (TASK-520-01). Defence in
+          // depth: it reaches ONLY an inline `style` as a whitelisted string,
+          // via `color` so lucide's `stroke=currentColor` inherits it.
+          style={style.iconColor ? { color: style.iconColor } : undefined}
+        />
+      );
+    }
+  } else if (block.props.mode === "image") {
+    // TASK-504-03 (defect B1): resolve the brand image `src` through the SINGLE
+    // shared resolver. GUARD on a resolved src so an image-mode brand with NO
+    // logo falls through to the text/site-name fallback instead of an empty
+    // placeholder. The <img> is SIZED by 504-02's `[data-menu-block-id] img{}`
+    // rule; this subtask emits NO CSS.
+    const brandImage = block.props.image;
+    const resolvedSrc = resolveBrandImageSrc(brandImage);
+    if (resolvedSrc) {
+      const imageBlock = {
+        id: block.id,
+        type: "image",
+        props: brandImage,
+        visibility: { visible: true },
+      } as PageBlockV2;
+      graphic = <PageBlockContent block={imageBlock} />;
+    }
+  }
+
+  // Compose:
+  //  - graphic + showText + wordmark ⇒ graphic + wordmark side by side (COMBO)
+  //  - graphic only                  ⇒ image-only / icon-only (today's image path)
+  //  - graphic absent                ⇒ wordmark (text mode / graphic-without-graphic)
+  if (graphic && showText && wordmark) {
     return (
-      <a className="site-header-brand" href={href} data-menu-block-id={block.id}>
-        <PageBlockContent block={imageBlock} />
+      <a
+        className="site-header-brand site-header-brand--combo inline-flex items-center gap-2"
+        href={href}
+        data-menu-block-id={block.id}
+      >
+        {graphic}
+        <span className="site-header-brand-text">{wordmark}</span>
       </a>
     );
   }
-  // Fallback CHAIN (parent contract, TASK-502-01/03): per-menu override →
-  // site name → null. Applies to text mode AND the image-mode-without-image
-  // fallthrough (same branch), so the front matches the 502-04 canvas chain
-  // (`block.props.text || siteName || "Site name"`) for every combination.
-  // 502-01 stores `text` trimmed/capped/sparse; trim again = defense in depth.
-  // Empty `siteName` is falsy ⇒ treated as absent (unchanged semantics).
-  const text = block.props.text?.trim() || siteName || null;
-  if (!text) return null;
+  if (graphic) {
+    return (
+      <a className="site-header-brand" href={href} data-menu-block-id={block.id}>
+        {graphic}
+      </a>
+    );
+  }
+  if (!wordmark) return null;
   return (
     <a className="site-header-brand" href={href} data-menu-block-id={block.id}>
-      {text}
+      {wordmark}
     </a>
   );
 };
@@ -552,11 +620,44 @@ const MenuUtilityRender = ({
   );
 };
 
+/**
+ * TASK-520-04-L02: the scroll-state machine — a dependency-free, idempotent IIFE
+ * emitted as a STATIC string literal (no interpolation of stored/user data ⇒ no
+ * injection surface). It toggles `data-scrolled="true"` on THIS `<header
+ * data-site-menu-doc>` once the page scrolls past an 8px threshold, so the
+ * TASK-520-02 `[data-scrolled="true"]` CSS applies (the floating-header effect).
+ *
+ * - Self-targets via `document.currentScript.closest('[data-site-menu-doc="true"]')`
+ *   with a `querySelector` fallback for browsers where `currentScript` is not
+ *   available at execution time.
+ * - Passive scroll/resize listeners + a `requestAnimationFrame` throttle flag (no
+ *   scroll jank).
+ * - Sets the initial state on load (deep-link / reload mid-page).
+ * - Reduced-motion is honored by construction: the machine only toggles an
+ *   attribute (NO JS-driven animation, NO scroll-behavior mutation) — any
+ *   transition is owned by the CSS layer, which gates it on prefers-reduced-motion.
+ */
+const MENU_SCROLL_STATE_MACHINE = [
+  "(function(){",
+  "var h=document.currentScript&&document.currentScript.closest?document.currentScript.closest('[data-site-menu-doc=\"true\"]'):null;",
+  "if(!h)h=document.querySelector('[data-site-menu-doc=\"true\"]');",
+  "if(!h)return;",
+  "var t=8,f=false;",
+  "function u(){f=false;var s=(window.scrollY||window.pageYOffset)>t;",
+  'if(s)h.setAttribute("data-scrolled","true");else h.removeAttribute("data-scrolled");}',
+  "function o(){if(!f){f=true;requestAnimationFrame(u);}}",
+  'window.addEventListener("scroll",o,{passive:true});',
+  'window.addEventListener("resize",o,{passive:true});',
+  "u();",
+  "})();",
+].join("");
+
 export function SiteHeaderMenuDocumentRender({
   document,
   navigation,
   siteName,
   activePath,
+  breakpoint,
 }: {
   document: MenuDocumentV2;
   /** The SAME mapped item tree `SiteHeaderNav` uses; `null` at zero items. */
@@ -576,12 +677,33 @@ export function SiteHeaderMenuDocumentRender({
   const activeHref = resolveMenuActiveHref(items, activePath);
   const blocks = document.sections[0]?.blocks ?? [];
 
+  // TASK-520-04-L02: scroll-state machine gate. Emit the tiny front-only inline
+  // script ONLY when (a) it is the front (activePath is a string; null in
+  // preview/canvas), AND (b) the menu bar is `sticky`, AND (c) at least one
+  // scrolled-variant key is authored — so legacy / no-scrolled docs stay
+  // byte-identical (no script). The base keys `radius`/`shadowCustom` are
+  // state-independent and do NOT arm the machine.
+  const barLayout = document.sections[0]?.layout as MenuBarLayout | undefined;
+  const hasScrolledVariant =
+    !!barLayout &&
+    barLayout.sticky === true &&
+    (barLayout.surfaceColorScrolled != null ||
+      barLayout.borderColorScrolled != null ||
+      barLayout.borderWidthScrolled != null ||
+      barLayout.shadowScrolled != null ||
+      barLayout.shadowCustomScrolled != null);
+  const isFront = typeof activePath === "string";
+  const emitScrollMachine = isFront && hasScrolledVariant;
+
   return (
     <header
       className="site-header"
       {...{ [SITE_HEADER_ATTRIBUTE]: "true", [SITE_MENU_DOC_ATTRIBUTE]: "true" }}
     >
       <style>{buildMenuDocumentCss(document)}</style>
+      {emitScrollMachine && (
+        <script dangerouslySetInnerHTML={{ __html: MENU_SCROLL_STATE_MACHINE }} />
+      )}
       <div className="site-header-inner">
         {blocks.filter(shouldRenderMenuBlock).map((block) => {
           switch (block.type) {
@@ -596,7 +718,14 @@ export function SiteHeaderMenuDocumentRender({
                 />
               );
             case "brand":
-              return <BrandRender key={block.id} block={block} siteName={siteName} />;
+              return (
+                <BrandRender
+                  key={block.id}
+                  block={block}
+                  siteName={siteName}
+                  breakpoint={breakpoint}
+                />
+              );
             case "search":
             case "account":
             case "language":

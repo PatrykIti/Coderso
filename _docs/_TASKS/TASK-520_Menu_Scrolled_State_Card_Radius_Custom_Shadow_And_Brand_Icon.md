@@ -8,7 +8,7 @@
 **Dependencies:**
 - **TASK-519 (alpha color input)** — the owner acceptance tokens for the scrolled-state and brand-icon colors are `hex8`/`rgba()` with alpha (e.g. header bg normal `#0812209e`, scrolled `rgba(8,17,31,.84)`, border `#ffffff1f`). The SCHEMA layer already accepts these (`normalizeMenuColorValue`, `normalizeMenuAppearance.ts:152-165` — `#rrggbbaa`/`rgba()`/`hsla()`/`var()`/`transparent`), so 520 can PERSIST alpha today; TASK-519 is required only so the ADMIN swatch controls can AUTHOR + round-trip alpha (today `ColorSwatchControl` clamps to 3/6-digit hex and rejects alpha — `ColorSwatchControl.tsx:33,38-46`). 520 admin controls (520-03) consume whatever alpha-capable control 519 ships; if 519 has not landed, the color controls fall back to the existing hex-only control and the alpha tokens must be entered via the raw text field (no schema block).
 - TASK-499 (menuDocumentV2 model + `MenuDocumentError` reject-unknown), TASK-501 (per-device `responsive.{tablet,mobile}`), TASK-504 (`BrandStyle`, per-device brand override, `NavLevelStyle`), TASK-506/507/508 (level-0 `NavChromeStyle`, `resolveMenuControlDefault{value,sourceLabel}`, `ControlDefaultHint` `value===undefined ⇒ null` guard, unified submenu direction/accordion — the modern-styling substrate this task extends).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Closure changelog (pinned):** 1233 (highest present on disk 2026-07-07 = 1227; highest pinned in `_TASKS` = 1228 (TASK-516); TASK-519 will take an intermediate number — **re-verify next-free at closure** and do NOT edit `_CHANGELOG/*` or `_TASKS/README.md`, the orchestrator owns those).
 
 ---

@@ -7,7 +7,7 @@
 **Category:** Services / Schema (JSON model) / Navigation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-499 (`menuDocumentV2` + `MenuDocumentError`), TASK-501 (per-device `responsive`), TASK-504/506/508 (`BrandStyle`, `NavChromeStyle`, `NAV_CHROME_DEFAULTS`, `resolveMenuControlDefault`). No dependency on TASK-519 (schema already accepts alpha colors).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

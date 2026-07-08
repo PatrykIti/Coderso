@@ -7,7 +7,7 @@
 **Category:** Site Render / Navigation
 **Estimated Effort:** Medium
 **Dependencies:** TASK-520-01 (model), TASK-520-02 (CSS — the `[data-scrolled]` rules the machine toggles + the radius/custom-shadow rules).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
