@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Schema (JSON model) / Widgets
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

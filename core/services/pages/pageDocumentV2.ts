@@ -171,6 +171,48 @@ export const pageBlockSlotKeys = [
 ] as const;
 
 /**
+ * TASK-521 shared motion/effects vocabulary (single source of truth). All
+ * fields modelled here are PRESENT-ONLY (omitted when unauthored so legacy
+ * documents stay byte-identical) and are consumed read-only by the section
+ * render (521-02), hero (521-03 owns its own tilt vocab), animated-icon block
+ * (521-04) and per-page effects (521-05). NO schemaVersion bump, NO migration.
+ */
+export const pageSectionScrollEffects = ["none", "reveal-fade", "reveal-up", "parallax"] as const;
+export type PageSectionScrollEffect = (typeof pageSectionScrollEffects)[number];
+export const PAGE_PARALLAX_INTENSITY_CLAMP = { min: 0, max: 40 } as const; // px travel
+export const PAGE_SPOTLIGHT_SIZE_CLAMP = { min: 120, max: 900 } as const; // px radius
+export const animatedIconAnimations = ["none", "spin", "pulse", "bounce", "draw"] as const;
+export type AnimatedIconAnimation = (typeof animatedIconAnimations)[number];
+export const ANIMATED_ICON_SIZE_CLAMP = { min: 16, max: 160 } as const; // px
+export const ANIMATED_ICON_SPEED_CLAMP = { min: 400, max: 4000 } as const; // ms
+export const animatedIconNames = [
+  "sparkles",
+  "star",
+  "heart",
+  "zap",
+  "check",
+  "shield",
+  "arrow-right",
+  "bell",
+  "rocket",
+  "loader",
+] as const; // curated set (extendable)
+export type AnimatedIconName = (typeof animatedIconNames)[number];
+export const ANIMATED_ICON_NAME_PATTERN = /^[a-z0-9-]{1,48}$/;
+/**
+ * Resolve an authored icon name to the curated allowlist. Uses a pattern gate
+ * then Set-membership (never a bare bracket lookup on a prototype-carrying map),
+ * failing soft to `"sparkles"` so a stored out-of-set / injection-shaped value
+ * never reaches the renderer.
+ */
+export const resolveAnimatedIconName = (value: unknown): AnimatedIconName => {
+  if (typeof value !== "string" || !ANIMATED_ICON_NAME_PATTERN.test(value)) return "sparkles";
+  return (animatedIconNames as readonly string[]).includes(value)
+    ? (value as AnimatedIconName)
+    : "sparkles";
+};
+
+/**
  * Token-backed typography contract (TASK-424). Option tokens reference the
  * theme token stack (`DesignTokens.typography` in `core/services/theme/
  * tokenTypes.ts`, emitted as `--font-sans`/`--font-display` and
@@ -357,6 +399,24 @@ export type PageDocumentSettingsV2 = {
    * this field; absent input stays absent in the normalized output.
    */
   menuAppearance?: MenuAppearance;
+  /**
+   * TASK-521-05 per-page interaction effects (cursor-follow spotlight, …).
+   * Present-only additive sub-object (the `menuAppearance` precedent): omitted
+   * when empty so `defaultSettings` and legacy documents stay byte-identical.
+   */
+  effects?: PageEffectsV2;
+};
+
+/**
+ * TASK-521-01-L02 per-page effects config. All fields present-only; the whole
+ * object is omitted when empty. `spotlightColor` flows through `readSafeColor`
+ * (alpha-capable via TASK-519) — the ONLY path a color reaches the runtime CSS
+ * var, so no raw/injection-shaped value is ever stored.
+ */
+export type PageEffectsV2 = {
+  cursorSpotlight?: boolean;
+  spotlightColor?: string;
+  spotlightSize?: number;
 };
 
 export type PageSectionLayoutV2 = {
@@ -384,6 +444,15 @@ export type PageSectionStyleV2 = {
   accent: string;
   radius: number;
   shadow: PageShadowToken;
+  /**
+   * TASK-521-02 front-only scroll motion. Present-only: `"none"` is treated as
+   * absence (omitted), so toggling an effect off returns the doc to byte
+   * identity. `defaultStyle` deliberately omits these so an un-authored section
+   * serializes unchanged. Authored + rendered DEVICE-UNIFORM (desktop-resolved).
+   */
+  scrollEffect?: PageSectionScrollEffect;
+  /** px travel; meaningful only for `scrollEffect === "parallax"`. */
+  parallaxIntensity?: number;
 };
 
 export type PageSectionSpacingV2 = {
@@ -626,7 +695,7 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   divider: ["tone", "thickness"],
   spacer: ["size"],
   statistic: ["value", "label", "caption"],
-  icon: ["name", "label"],
+  icon: ["name", "label", "animation", "size", "color", "speed"],
   quote: ["text", "cite", "marks"],
   container: [],
   columns: ["count", "gap", "distribution"],
@@ -709,6 +778,10 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   "container",
   "columns",
   "group",
+  // TASK-521-04: the animated-icon block is a real runtime renderer — its
+  // `renderPageBlockContent case "icon"` (pageRendererV2.tsx) mounts the curated
+  // inline-SVG + CSS-keyframe glyph. Flip lands with the renderer/palette/controls.
+  "icon",
 ]);
 const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "filters", "form", "embed"]);
 const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"]);
@@ -747,6 +820,10 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   "spacer",
   "statistic",
   "quote",
+  // TASK-521-04: the animated-icon block is now editor-insertable — its palette
+  // copy (pageEditorOptions.ts) + block controls (pageEditorControlRegistry.ts)
+  // ship with this flip.
+  "icon",
   "container",
   "columns",
   "group",
@@ -772,7 +849,6 @@ const assistantEmittableBlockTypes = new Set<PageBlockType>([
 const pageBlockCapabilityReasons: Partial<Record<PageBlockType, string>> = {
   gallery: "gallery-editor-controls-pending",
   embed: "embed-editor-controls-pending",
-  icon: "icon-runtime-renderer-pending",
 };
 
 export const pageBlockCapabilities = pageBlockTypes.reduce(
@@ -869,7 +945,14 @@ export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown
   divider: { tone: "neutral", thickness: 1 },
   spacer: { size: 32 },
   statistic: { value: "0", label: "Metric", caption: "" },
-  icon: { name: "sparkles", label: "" },
+  icon: {
+    name: "sparkles",
+    label: "",
+    animation: "pulse",
+    size: 48,
+    color: "var(--primary)",
+    speed: 1600,
+  },
   quote: { text: "", cite: "" },
   container: {},
   columns: { count: 2, gap: 24, distribution: "equal" },
@@ -1088,6 +1171,20 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   if (key === "count") return numericSchema(1, 4);
   if (type === "columns" && key === "gap") return numericSchema(0, 120);
   if (type === "group" && key === "gap") return numericSchema(0, 120);
+  // Animated-icon block props (TASK-521-01-L03) — Ajv in lockstep with the
+  // normalizer. MUST precede the generic `key === "size"` (:size 0..240) and
+  // the string tail, else `size` diverges to 0..240 and `animation`/`speed`
+  // fall to `stringSchema` (looser/type-inconsistent with the write normalizer).
+  if (type === "icon" && key === "animation") {
+    return { type: "string", enum: [...animatedIconAnimations] };
+  }
+  if (type === "icon" && key === "name") return { type: "string", enum: [...animatedIconNames] };
+  if (type === "icon" && key === "size") {
+    return numericSchema(ANIMATED_ICON_SIZE_CLAMP.min, ANIMATED_ICON_SIZE_CLAMP.max);
+  }
+  if (type === "icon" && key === "speed") {
+    return numericSchema(ANIMATED_ICON_SPEED_CLAMP.min, ANIMATED_ICON_SPEED_CLAMP.max);
+  }
   if (key === "size") return numericSchema(0, 240);
   if (
     key === "ordered" ||
@@ -1292,6 +1389,14 @@ const partialSectionStyleJsonSchema: RecordValue = {
     accent: { type: "string" },
     radius: numericSchema(0, 64),
     shadow: { type: "string", enum: [...pageShadowTokens] },
+    // Harmless defence-in-depth mirror (TASK-521-01-L01): section effects render
+    // device-uniform, but a hand-authored responsive[bp].style carrying these
+    // round-trips instead of being rejected by additionalProperties:false.
+    scrollEffect: { type: "string", enum: [...pageSectionScrollEffects] },
+    parallaxIntensity: numericSchema(
+      PAGE_PARALLAX_INTENSITY_CLAMP.min,
+      PAGE_PARALLAX_INTENSITY_CLAMP.max
+    ),
   },
 };
 
@@ -1398,6 +1503,22 @@ export const pageDocumentV2JsonSchema: RecordValue = {
             mobileMode: { type: "string", enum: [...menuAppearanceMobileModes] },
           },
         },
+        // Per-page effects (TASK-521-01-L02). Deep validation (safe color,
+        // numeric clamp) is owned by `normalizeEffects`; this mirrors the shape
+        // and the reject-unknown contract in lockstep.
+        effects: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            cursorSpotlight: { type: "boolean" },
+            spotlightColor: { type: "string" },
+            spotlightSize: {
+              type: "number",
+              minimum: PAGE_SPOTLIGHT_SIZE_CLAMP.min,
+              maximum: PAGE_SPOTLIGHT_SIZE_CLAMP.max,
+            },
+          },
+        },
         collectionLink: {
           type: "object",
           required: ["contentTypeId", "pageRole"],
@@ -1457,6 +1578,12 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               accent: { type: "string" },
               radius: { type: "number", minimum: 0, maximum: 64 },
               shadow: { type: "string", enum: [...pageShadowTokens] },
+              scrollEffect: { type: "string", enum: [...pageSectionScrollEffects] },
+              parallaxIntensity: {
+                type: "number",
+                minimum: PAGE_PARALLAX_INTENSITY_CLAMP.min,
+                maximum: PAGE_PARALLAX_INTENSITY_CLAMP.max,
+              },
             },
           },
           spacing: {
@@ -1987,11 +2114,40 @@ const normalizeSettingsMenuAppearance = (
   return sanitizeMenuAppearance(value);
 };
 
+const PAGE_EFFECTS_KEYS = ["cursorSpotlight", "spotlightColor", "spotlightSize"] as const;
+
+/**
+ * TASK-521-01-L02 per-page effects sub-normalizer (mirrors
+ * `normalizeSettingsMenuAppearance`). Present-only: returns `undefined` when
+ * nothing meaningful was authored so `settings.effects` is omitted entirely.
+ */
+const normalizeEffects = (value: unknown, mode: NormalizeMode): PageEffectsV2 | undefined => {
+  if (value === undefined) return undefined;
+  const input = requireRecord(value, "settings.effects", mode);
+  assertKnownKeys(input, PAGE_EFFECTS_KEYS, "settings.effects", mode);
+  const result: PageEffectsV2 = {};
+  if (input.cursorSpotlight !== undefined) {
+    result.cursorSpotlight = readBoolean(input.cursorSpotlight, false);
+  }
+  if (input.spotlightColor !== undefined) {
+    result.spotlightColor = readSafeColor(input.spotlightColor, "var(--primary)");
+  }
+  if (input.spotlightSize !== undefined) {
+    result.spotlightSize = readNumber(
+      input.spotlightSize,
+      400,
+      PAGE_SPOTLIGHT_SIZE_CLAMP.min,
+      PAGE_SPOTLIGHT_SIZE_CLAMP.max
+    );
+  }
+  return Object.keys(result).length ? result : undefined;
+};
+
 const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSettingsV2 => {
   const input = requireRecord(value ?? {}, "settings", mode);
   assertKnownKeys(
     input,
-    ["template", "showInNav", "revisionRetention", "collectionLink", "menuAppearance"],
+    ["template", "showInNav", "revisionRetention", "collectionLink", "menuAppearance", "effects"],
     "settings",
     mode
   );
@@ -2001,12 +2157,14 @@ const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSet
       ? undefined
       : readNumber(input.revisionRetention, 10, 1, 100);
   const menuAppearance = normalizeSettingsMenuAppearance(input.menuAppearance, mode);
+  const effects = normalizeEffects(input.effects, mode);
   return {
     template: readText(input.template, defaultSettings.template),
     showInNav: readBoolean(input.showInNav, defaultSettings.showInNav),
     ...(revisionRetention !== undefined ? { revisionRetention } : {}),
     ...(collectionLink ? { collectionLink } : {}),
     ...(menuAppearance !== undefined ? { menuAppearance } : {}),
+    ...(effects !== undefined ? { effects } : {}),
   };
 };
 
@@ -2058,7 +2216,16 @@ const normalizeSectionStyle = (
   const input = requireRecord(value ?? {}, path, mode);
   assertKnownKeys(
     input,
-    ["background", "backgroundType", "backgroundImage", "accent", "radius", "shadow"],
+    [
+      "background",
+      "backgroundType",
+      "backgroundImage",
+      "accent",
+      "radius",
+      "shadow",
+      "scrollEffect",
+      "parallaxIntensity",
+    ],
     path,
     mode
   );
@@ -2091,6 +2258,27 @@ const normalizeSectionStyle = (
       defaultStyle.shadow,
       `${path}.shadow`,
       mode
+    );
+  }
+  // Present-only scroll motion (TASK-521-01-L01). `"none"` is omitted so an
+  // effect toggled off returns to byte identity; `defaultStyle` seeds neither
+  // key, so `{ ...defaultStyle, ...result }` stays unchanged when unauthored.
+  if (input.scrollEffect !== undefined) {
+    const effect = normalizeEnum(
+      input.scrollEffect,
+      pageSectionScrollEffects,
+      "none",
+      `${path}.scrollEffect`,
+      mode
+    );
+    if (effect !== "none") result.scrollEffect = effect;
+  }
+  if (input.parallaxIntensity !== undefined) {
+    result.parallaxIntensity = readNumber(
+      input.parallaxIntensity,
+      20,
+      PAGE_PARALLAX_INTENSITY_CLAMP.min,
+      PAGE_PARALLAX_INTENSITY_CLAMP.max
     );
   }
   return partial ? result : ({ ...defaultStyle, ...result } satisfies PageSectionStyleV2);
@@ -2640,6 +2828,23 @@ const normalizeBlockProp = (
     return readNumber(value, type === "columns" ? 24 : 16, 0, 120);
   }
   if (type === "spacer" && key === "size") return readNumber(value, 32, 0, 240);
+  // Animated-icon block props (TASK-521-01-L03). These MUST precede the generic
+  // `value.trim()` string tail below, else `name` bypasses the icon-name
+  // allowlist. `name` = pattern + Set-membership (fail-soft "sparkles");
+  // `animation` = fail-CLOSED enum (bad value throws in write mode); numeric
+  // props clamp (fail-soft); `color` via readSafeColor (fail-soft). `label`
+  // falls through to the generic text tail intentionally.
+  if (type === "icon" && key === "name") return resolveAnimatedIconName(value);
+  if (type === "icon" && key === "animation") {
+    return normalizeEnum(value, animatedIconAnimations, "none", path, mode);
+  }
+  if (type === "icon" && key === "size") {
+    return readNumber(value, 48, ANIMATED_ICON_SIZE_CLAMP.min, ANIMATED_ICON_SIZE_CLAMP.max);
+  }
+  if (type === "icon" && key === "color") return readSafeColor(value, "var(--primary)");
+  if (type === "icon" && key === "speed") {
+    return readNumber(value, 1600, ANIMATED_ICON_SPEED_CLAMP.min, ANIMATED_ICON_SPEED_CLAMP.max);
+  }
   if (
     key === "ordered" ||
     key === "autoplay" ||

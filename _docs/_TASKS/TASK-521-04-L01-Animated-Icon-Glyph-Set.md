@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Site Render / Widgets / Accessibility
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

@@ -890,6 +890,98 @@ flows to avoid duplicate canonical/supporting pages:
 }
 ```
 
+## Motion And Interaction Effects — TASK-521
+
+Pages v2 carries a cohesive family of motion/interaction effects. Every effect is
+**present-only** (emits zero bytes when unauthored — a legacy / no-effect document
+normalizes and renders byte-identical to the pre-521 output), joins the
+**reject-unknown allowlist** (`assertKnownKeys` + the strict
+`pageDocumentV2JsonSchema` `additionalProperties: false`) with a round-trip test,
+respects **`prefers-reduced-motion`** (both a CSS `motion-safe:`/`motion-reduce:`
+guard AND a `matchMedia('(prefers-reduced-motion: reduce)').matches` early-return
+in each runtime IIFE), and adds **no npm dependency, no DB migration, and no
+`PAGE_DOCUMENT_SCHEMA_VERSION` bump** (stays `2`). All config rides existing jsonb
+(`section.style`, `currentData.settings.effects`, `hero.style`, block props). Runtime
+scripts are static dependency-free IIFEs emitted only on the front/preview render
+path (`PageDocumentRender`) — never on the builder canvas (Hard Invariant 7:
+canvas shows content at rest). Enums are `normalizeEnum`-guarded (fail-CLOSED on
+write — an invalid enum VALUE throws `PageDocumentError`), numbers are `readNumber`
+clamped (fail-soft), and colors run through `readSafeColor` (whitelist; alpha OK via
+TASK-519).
+
+### Section scroll effects (`PageSectionStyleV2`)
+
+`section.style` gains two present-only keys:
+
+- `scrollEffect` — `PageSectionScrollEffect`, one of
+  `pageSectionScrollEffects = ["none", "reveal-fade", "reveal-up", "parallax"]`.
+  `"none"` is omitted (present-only). `reveal-fade`/`reveal-up` are
+  IntersectionObserver reveal-on-enter; `parallax` translates the section inner
+  content on scroll (rAF).
+- `parallaxIntensity` — number, clamped to
+  `PAGE_PARALLAX_INTENSITY_CLAMP = { min: 0, max: 40 }` px of travel. Meaningful
+  only when `scrollEffect === "parallax"`.
+
+Applied on the FRONT (and preview) only — the builder canvas renders sections via
+`PageSectionContent` and never emits the runtime or reveal/parallax wrapper.
+
+### Animated-icon block (the `icon` block)
+
+The previously non-functional `icon` block placeholder is now a real, insertable,
+runtime-rendered animated-icon block built from a curated inline-SVG + CSS-keyframes
+set (`core/services/pages/animatedIconGlyphs.tsx`) — no npm dependency, CSP-safe.
+No new `pageBlockTypes` member was added; the existing `icon` member was implemented
+(promoted into `realRuntimeBlockTypes` + `editorInsertableBlockTypes`, its
+`pageBlockCapabilityReasons.icon` "pending" entry removed). `pageBlockPropKeys.icon`
+extends to `["name", "label", "animation", "size", "color", "speed"]`:
+
+- `name` — curated glyph name, resolved against the allowlist
+  `animatedIconNames = ["sparkles", "star", "heart", "zap", "check", "shield",
+  "arrow-right", "bell", "rocket", "loader"]` via `resolveAnimatedIconName` (a name
+  not matching `^[a-z0-9-]{1,48}$` or not in the set falls back to `"sparkles"`).
+  Default props stay `{ name: "sparkles", label: "" }`.
+- `animation` — one of
+  `animatedIconAnimations = ["none", "spin", "pulse", "bounce", "draw"]` (default
+  `"none"`).
+- `size` — number, clamped `ANIMATED_ICON_SIZE_CLAMP = { min: 16, max: 160 }` px
+  (default `48`).
+- `color` — `readSafeColor` (default `var(--primary)`).
+- `speed` — keyframe duration, clamped
+  `ANIMATED_ICON_SPEED_CLAMP = { min: 400, max: 4000 }` ms (default `1600`), driven
+  through the `--anim-speed` custom property. `motion-reduce` pauses the keyframes.
+
+Legacy documents never contain an `icon` block (it previously rendered `null` and
+was non-insertable), so byte-identity is trivially preserved.
+
+### Hero mouse-tilt (`hero.style.tilt`)
+
+`hero.style.tilt` is a present-only 3D parallax-on-hover option,
+`HeroTilt = "none" | "subtle" | "strong"` (`heroTilts`). Unlike the page/section
+enums, hero `tilt` normalizes **fail-SOFT** through a hero-local `resolveHeroTilt`
+(mirroring `resolveHeroMotionPreset`) — an unrecognized value falls back to `"none"`
+(omitted, present-only) and never throws. `"none"`/unset renders byte-identical to
+today. Enabled tilt wraps the hero in a CSS `perspective` and a tiny `mousemove`
+runtime that sets a clamped `rotateX`/`rotateY` on the inner card; reduced-motion or
+a coarse/touch pointer disables the tilt (no runtime effect).
+
+### Per-page effects (`settings.effects` → `PageEffectsV2`)
+
+`currentData.settings.effects` is a present-only ambient-effect sub-object
+(`PageEffectsV2`), omitted entirely when empty:
+
+- `cursorSpotlight` — boolean; enables a cursor-follow radial spotlight on the page
+  root (`--spotlight-x`/`--spotlight-y` updated on `mousemove`, rAF).
+- `spotlightColor` — `readSafeColor` (default `var(--primary)`), injected as
+  `--spotlight-color`.
+- `spotlightSize` — spotlight radius, clamped
+  `PAGE_SPOTLIGHT_SIZE_CLAMP = { min: 120, max: 900 }` px, injected as
+  `--spotlight-size`.
+
+Reduced-motion or a coarse pointer disables the spotlight. The per-page settings
+surface was relocated out of the full-height drawer into a compact panel in the same
+right side-inspector rail as section/block settings, with a new **Effects** section
+(TASK-521-05).
+
 ## Public Runtime
 
 Pages v2 section/block rendering is owned by

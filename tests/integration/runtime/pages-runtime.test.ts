@@ -501,6 +501,19 @@ const runtimeParityPageData = (token: string) => ({
           visibility: { visible: true },
         },
         {
+          // TASK-521-04: the animated-icon block is now insertable + real.
+          id: `parity-icon-${token}`,
+          type: "icon",
+          props: {
+            name: "star",
+            animation: "spin",
+            size: 48,
+            color: "var(--primary)",
+            speed: 1600,
+          },
+          visibility: { visible: true },
+        },
+        {
           id: `parity-quote-${token}`,
           type: "quote",
           props: { text: `Runtime quote ${token}`, cite: "Coderso" },

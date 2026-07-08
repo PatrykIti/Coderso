@@ -7,10 +7,13 @@ import {
   createPageSectionV2,
   PAGE_DOCUMENT_SCHEMA_VERSION,
   resolvePageSectionForBreakpoint,
+  type PageBlockV2,
   type PageDocumentV2,
   type PageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
 import {
+  PAGE_REVEAL_MOTION_CSS,
+  PAGE_SPOTLIGHT_CSS,
   PageBlockFrame,
   PageDocumentRender,
   PageSectionContent,
@@ -21,10 +24,20 @@ import {
   toPageSectionRenderProps,
 } from "../../../core/services/pages/pageRendererV2";
 import {
+  PAGE_EFFECTS_RUNTIME_ID,
+  PAGE_EFFECTS_RUNTIME_SOURCE,
+} from "../../../core/services/pages/pageEffectsRuntime";
+import {
   pageTypographyFontFamilyCssValues,
   pageTypographyFontSizeCssValues,
   pageTypographyFontWeightCssValues,
 } from "../../../core/services/pages/pageDocumentV2";
+import {
+  animatedIconGlyphs,
+  AnimatedIcon,
+  ANIMATED_ICON_KEYFRAMES_CSS,
+} from "../../../core/services/pages/animatedIconGlyphs";
+import { animatedIconNames } from "../../../core/services/pages/pageDocumentV2";
 import { serializePageBlockPath } from "../../../core/services/pages/pageBlockPaths";
 import { buildPageEditorCollectionPreviewBinding } from "../../../core/services/pages/pageEditorCollectionPreview";
 import { buildPageEditorFormPreviewBinding } from "../../../core/services/pages/pageEditorFormPreview";
@@ -2811,4 +2824,312 @@ test("paged collection binding renders the numbered pager, totals, and template 
   );
   expect(guardedHtml).toContain('data-content-list-link-unavailable="1"');
   expect(guardedHtml).not.toContain('href="/homes/lakeside-home"');
+});
+
+// TASK-521-02-L02/L03 — section scroll/parallax/reveal front render.
+const createEffectSection = (style: Partial<PageSectionV2["style"]>) =>
+  createPageSectionV2("content", {
+    id: "sec-effect",
+    name: "Effect section",
+    style: {
+      background: "#ffffff",
+      backgroundType: "none",
+      backgroundImage: null,
+      accent: "#111111",
+      radius: 0,
+      shadow: "none",
+      ...style,
+    },
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-effect-heading",
+        props: { text: "Effect headline", level: "h2", align: "left" },
+      }),
+    ],
+  });
+
+test("reveal-up stamps data-page-effect + motion-safe reveal class", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={createEffectSection({ scrollEffect: "reveal-up" })} />
+  );
+  expect(html).toContain('data-page-effect="reveal-up"');
+  expect(html).toContain("motion-safe:data-[revealed=true]:translate-y-0");
+  expect(html).toContain("motion-safe:transition-[opacity,transform]");
+  expect(html).not.toContain("data-parallax");
+  expect(html).not.toContain("data-parallax-inner");
+});
+
+test("reveal-fade stamps fade class, no translate", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={createEffectSection({ scrollEffect: "reveal-fade" })} />
+  );
+  expect(html).toContain('data-page-effect="reveal-fade"');
+  expect(html).toContain("motion-safe:data-[revealed=true]:opacity-100");
+  expect(html).not.toContain("data-parallax");
+});
+
+test("parallax stamps data-parallax + [data-parallax-inner] wrapper", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender
+      section={createEffectSection({ scrollEffect: "parallax", parallaxIntensity: 24 })}
+    />
+  );
+  expect(html).toContain('data-page-effect="parallax"');
+  expect(html).toContain('data-parallax="24"');
+  expect(html).toContain("data-parallax-inner");
+  expect(html).toContain("will-change-transform");
+  // reveal utilities only ship for reveal-* effects, not parallax.
+  expect(html).not.toContain("motion-safe:data-[revealed=true]");
+});
+
+test("clamps parallax intensity in render (>40 → 40)", () => {
+  const section = createEffectSection({ scrollEffect: "parallax" });
+  // Force an out-of-range value past the model normalize (defence in depth).
+  const overSection: PageSectionV2 = {
+    ...section,
+    style: { ...section.style, parallaxIntensity: 9999 },
+  };
+  const html = renderToStaticMarkup(<PageSectionRender section={overSection} />);
+  expect(html).toContain('data-parallax="40"');
+});
+
+test("no scrollEffect ⇒ byte-identical <section> (no attr, no wrapper)", () => {
+  const html = renderToStaticMarkup(<PageSectionRender section={createEffectSection({})} />);
+  expect(html).not.toContain("data-page-effect");
+  expect(html).not.toContain("data-parallax");
+  expect(html).not.toContain("data-parallax-inner");
+  expect(html).not.toContain("motion-safe:transition-[opacity,transform]");
+});
+
+test("PAGE_REVEAL_MOTION_CSS is reduced-motion-safe + reveal-armed scoped", () => {
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("@media (prefers-reduced-motion: no-preference)");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain("[data-reveal-armed]");
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(
+    '[data-page-effect^="reveal"]:not([data-revealed]){opacity:0}'
+  );
+  expect(PAGE_REVEAL_MOTION_CSS).toContain(
+    '[data-page-effect="reveal-up"]:not([data-revealed]){transform:translateY(1rem)}'
+  );
+});
+
+// ---------------------------------------------------------------------------
+// TASK-521-05-L03 — page-shell effects (PageDocumentRender): cursor spotlight,
+// data-page-motion marker, reveal-hide + noscript, runtime script, byte-identity.
+// ---------------------------------------------------------------------------
+
+const createEffectsDocument = (
+  sections: PageSectionV2[],
+  effects?: PageDocumentV2["settings"]["effects"]
+): PageDocumentV2 => ({
+  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  seo: {},
+  settings: { template: "page-v2", showInNav: true, ...(effects ? { effects } : {}) },
+  sections,
+});
+
+test("cursorSpotlight ⇒ data-page-spotlight + data-page-motion + overlay + custom props + one script", () => {
+  const doc = createEffectsDocument([createSection()], {
+    cursorSpotlight: true,
+    spotlightColor: "#ff0000",
+    spotlightSize: 400,
+  });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).toContain('data-page-spotlight="true"');
+  expect(html).toContain('data-page-motion="true"');
+  expect(html).toContain("data-page-spotlight-overlay");
+  expect(html).toContain("pointer-events-none fixed inset-0 z-0");
+  expect(html).toContain("--spotlight-color:#ff0000");
+  expect(html).toContain("--spotlight-size:400px");
+  // the spotlight <style> ships the static PAGE_SPOTLIGHT_CSS
+  expect(html).toContain("data-page-spotlight-css");
+  expect(html).toContain("radial-gradient");
+  expect(html).toContain("@media (prefers-reduced-motion: no-preference)");
+  // exactly one effects runtime <script>
+  expect(countMarkup(html, `data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`)).toBe(1);
+  // no section effect authored ⇒ no reveal-hide style/noscript
+  expect(html).not.toContain("data-page-motion-css");
+});
+
+test("PAGE_SPOTLIGHT_CSS is reduced-motion-gated radial-gradient reading --spotlight-*", () => {
+  expect(PAGE_SPOTLIGHT_CSS).toContain("@media (prefers-reduced-motion: no-preference)");
+  expect(PAGE_SPOTLIGHT_CSS).toContain("[data-page-spotlight] [data-page-spotlight-overlay]");
+  expect(PAGE_SPOTLIGHT_CSS).toContain("radial-gradient(var(--spotlight-size,400px)");
+  expect(PAGE_SPOTLIGHT_CSS).toContain("var(--spotlight-x,50%) var(--spotlight-y,50%)");
+  // Default is a TRANSLUCENT tint (subtle glow that does not obscure content),
+  // not the opaque brand color; authors override via --spotlight-color.
+  expect(PAGE_SPOTLIGHT_CSS).toContain(
+    "var(--spotlight-color,color-mix(in srgb,var(--primary) 14%,transparent))"
+  );
+  expect(PAGE_SPOTLIGHT_CSS).not.toContain("var(--spotlight-color,var(--primary))");
+});
+
+test("section scrollEffect only ⇒ data-page-motion + <style data-page-motion-css> (PAGE_REVEAL_MOTION_CSS) + <noscript> + script, no spotlight overlay", () => {
+  const doc = createEffectsDocument([createEffectSection({ scrollEffect: "reveal-up" })]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).toContain('data-page-motion="true"');
+  expect(html).toContain("data-page-motion-css");
+  expect(html).toContain(PAGE_REVEAL_MOTION_CSS);
+  expect(html).toContain("<noscript>");
+  expect(html).toContain('[data-page-effect^="reveal"]{opacity:1;transform:none}');
+  expect(countMarkup(html, `data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`)).toBe(1);
+  // no page spotlight
+  expect(html).not.toContain('data-page-spotlight="true"');
+  expect(html).not.toContain("data-page-spotlight-overlay");
+});
+
+test("no effects ⇒ byte-identical <Root> (no marker/overlay/script/style)", () => {
+  const doc = createEffectsDocument([createSection()]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).not.toContain("data-page-motion");
+  expect(html).not.toContain("data-page-spotlight");
+  expect(html).not.toContain("data-coderso-runtime-script");
+  expect(html).not.toContain("data-page-spotlight-css");
+  expect(html).not.toContain("data-page-motion-css");
+  expect(html).not.toContain("--spotlight-color");
+});
+
+test("spotlight script __html === PAGE_EFFECTS_RUNTIME_SOURCE", () => {
+  const doc = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).toContain(PAGE_EFFECTS_RUNTIME_SOURCE);
+});
+
+test("spotlightSize clamped in render; spotlightColor re-sanitized (bad color → subtle translucent default)", () => {
+  const doc = createEffectsDocument([createSection()], {
+    cursorSpotlight: true,
+    spotlightColor: "expression(alert(1))",
+    spotlightSize: 99999,
+  });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  // Rejected color falls back to the subtle translucent default, never the raw payload.
+  expect(html).toContain("--spotlight-color:color-mix(in srgb, var(--primary) 14%, transparent)");
+  expect(html).toContain("--spotlight-size:900px");
+  expect(html).not.toContain("expression(");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-521-04 — animated-icon block (glyph set + renderer `case "icon"`)
+// ---------------------------------------------------------------------------
+
+const renderIconSection = (
+  props: Record<string, unknown>,
+  mutate?: (block: PageBlockV2) => void
+) => {
+  const block = createPageBlockV2("icon", { id: "blk-icon", props });
+  mutate?.(block);
+  return renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-icon",
+        variant: "centered",
+        blocks: [block],
+      })}
+    />
+  );
+};
+
+test("animated-icon glyph map keys === animatedIconNames", () => {
+  expect(Object.keys(animatedIconGlyphs).sort()).toEqual([...animatedIconNames].sort());
+});
+
+test("ANIMATED_ICON_KEYFRAMES_CSS is guarded by prefers-reduced-motion: no-preference", () => {
+  expect(ANIMATED_ICON_KEYFRAMES_CSS).toContain("@media (prefers-reduced-motion: no-preference)");
+  for (const keyframe of ["ci-spin", "ci-pulse", "ci-bounce", "ci-draw"]) {
+    expect(ANIMATED_ICON_KEYFRAMES_CSS).toContain(`@keyframes ${keyframe}`);
+  }
+});
+
+test("icon block renders <svg size> in [data-anim-icon=spin] with --anim-speed + color", () => {
+  const html = renderIconSection({
+    name: "star",
+    animation: "spin",
+    size: 64,
+    color: "#0ea5e9",
+    speed: 1200,
+  });
+  expect(html).toContain('<span data-anim-icon="spin"');
+  expect(html).toContain("--anim-speed:1200ms");
+  expect(html).toContain("color:#0ea5e9");
+  expect(html).toContain('width="64"');
+  expect(html).toContain("lucide-star");
+});
+
+test("icon block animation:'none' ⇒ no data-anim-icon attr (static)", () => {
+  const html = renderIconSection({
+    name: "sparkles",
+    animation: "none",
+    size: 48,
+    color: "var(--primary)",
+    speed: 1600,
+  });
+  // The span carries NO data-anim-icon attribute (the CSS <style> body still
+  // references [data-anim-icon="…"] selectors, so scope the assertion to the span).
+  expect(html).not.toContain("<span data-anim-icon");
+  expect(html).toContain("lucide-sparkles");
+});
+
+test("icon block invalid name ⇒ sparkles fallback (render-boundary allowlist)", () => {
+  // Inject a raw out-of-allowlist name AFTER normalize to prove the render
+  // boundary re-resolves it (never trusts stored data).
+  const html = renderIconSection(
+    { name: "sparkles", animation: "pulse", size: 48, color: "var(--primary)", speed: 1600 },
+    (block) => {
+      (block.props as Record<string, unknown>).name = "../../etc/passwd";
+    }
+  );
+  expect(html).toContain("lucide-sparkles");
+  expect(html).not.toContain("etc/passwd");
+});
+
+test("icon block color re-sanitized at render ⇒ bad color → var(--primary)", () => {
+  const html = renderIconSection(
+    { name: "star", animation: "spin", size: 48, color: "var(--primary)", speed: 1600 },
+    (block) => {
+      (block.props as Record<string, unknown>).color = "expression(alert(1))";
+    }
+  );
+  expect(html).not.toContain("expression");
+  expect(html).toContain("color:var(--primary)");
+});
+
+test("each icon block emits a <style data-anim-icon-css> whose body === ANIMATED_ICON_KEYFRAMES_CSS (idempotent dup copies inert)", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-icon-multi",
+        variant: "centered",
+        blocks: [
+          createPageBlockV2("icon", {
+            id: "blk-icon-a",
+            props: { name: "star", animation: "spin", size: 48, color: "#111", speed: 1600 },
+          }),
+          createPageBlockV2("icon", {
+            id: "blk-icon-b",
+            props: { name: "heart", animation: "pulse", size: 32, color: "#222", speed: 900 },
+          }),
+        ],
+      })}
+    />
+  );
+  // A style tag rides with EVERY icon block (block-scoped so it is present in the
+  // builder canvas which bypasses PageDocumentRender). Duplicate emits are inert:
+  // the payload is the static constant, identical for every icon block.
+  expect(countMarkup(html, "data-anim-icon-css")).toBe(2);
+  // dangerouslySetInnerHTML emits the CSS verbatim (no escaping), so the static
+  // constant appears identically once per icon block.
+  expect(countMarkup(html, ANIMATED_ICON_KEYFRAMES_CSS)).toBe(2);
+});
+
+test("AnimatedIcon component falls back to sparkles for an unknown key", () => {
+  const html = renderToStaticMarkup(
+    <AnimatedIcon
+      name={"bogus" as never}
+      animation="none"
+      size={48}
+      color="var(--primary)"
+      speed={1600}
+    />
+  );
+  expect(html).toContain("lucide-sparkles");
 });

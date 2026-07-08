@@ -291,6 +291,28 @@ Zasady:
 
 ---
 
+## Motion And Interaction Effects (TASK-521)
+
+Two widget-facing motion options join the Pages v2 effects family (see
+`_docs/PAGE_MODEL.md` § Motion And Interaction Effects for the full contract —
+present-only, reject-unknown, `prefers-reduced-motion`-safe, no npm dependency):
+
+- **Hero mouse-tilt** — `hero.style.tilt` (`"none" | "subtle" | "strong"`,
+  `heroTilts`) adds a 3D parallax-on-hover to the hero card/media via CSS
+  `perspective` + a tiny dependency-free `mousemove` runtime. Present-only and
+  fail-soft (`resolveHeroTilt` falls back to `"none"`, never throws). Disabled for
+  reduced-motion and coarse/touch pointers. `"none"`/unset is byte-identical to
+  pre-521 hero output.
+- **Animated-icon block** — the Page v2 `icon` block (previously a non-functional
+  placeholder) is now a real, insertable, runtime-rendered block built from a
+  curated **inline-SVG + CSS-keyframes** set (`core/services/pages/animatedIconGlyphs.tsx`)
+  — no Lottie, no npm dependency, CSP-safe. Props: `name` (allowlist glyph,
+  `animatedIconNames`), `animation` (`none`/`spin`/`pulse`/`bounce`/`draw`), `size`
+  (16..160 px), `color` (`readSafeColor`, alpha OK), `speed` (400..4000 ms via
+  `--anim-speed`). This is a PAGE block implemented through a renderer `case`, NOT a
+  new composite widget — `core/widgets/registry.ts` / `modulePackMatrix.ts` are
+  unchanged and the widget-pack matrix gains no row.
+
 ## Dokumentacja widgetow
 
 Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:

@@ -10,8 +10,8 @@
 - **TASK-520 (menu scroll-state machine + custom box-shadow validator)** — the front-only scroll-state inline-script pattern and the "color/shadow value validation IS the security boundary" discipline established in 520-01-L02 / 520-04-L02 are the direct precedent this task reuses for the page/section/hero effect runtime.
 - TASK-424/425 (`PageSectionStyleV2`, `PageBlockStyleV2`, responsive override machinery), TASK-455 (site shell + `PageDocumentRender` root), TASK-458-03 (`PageDocumentSettingsV2.menuAppearance` — the reference for a present-only additive settings sub-object), the existing widget CSS-motion substrate (`hero.tsx` `HeroMotionPreset`, `section.tsx` `SectionMotion`, `motion-safe:`/`motion-reduce:` guards).
 
-**Status:** ⏳ To Do
-**Closure changelog:** Changelog number is assigned at closure as the then-current next-free (grep `_docs/_CHANGELOG/` highest+1). As of authoring the next-free is 1229; the final number depends on which tasks close first (519/520 land before 521). Do NOT edit `_CHANGELOG/*` or `_TASKS/README.md` — the orchestrator owns those.
+**Status:** ✅ Done
+**Closure changelog:** 1234 (`_docs/_CHANGELOG/1234-2026-07-08-task-521-page-motion-effects.md`). Resolved as the then-current next-free at closure (519=1232, 520=1233 landed first; 1229–1231 reserved for 511/517/518).
 
 ---
 
@@ -287,7 +287,7 @@ page-settings panel + per-page effects; then closure.
 - rg misdetects `PageEditor.tsx` / `pageRendererV2.tsx` / `pageDocumentV2.ts` /
   `hero.tsx` as binary — use `Read` / `grep -an`, never trust an empty `rg`.
 - Do NOT edit `_docs/_TASKS/README.md` or `_docs/_CHANGELOG/*` (orchestrator owns
-  them). Closure changelog = then-current next-free at closure (grep `_docs/_CHANGELOG/` highest+1; next-free is 1229 as of authoring — 519/520 land before 521).
+  them). Closure changelog RESOLVED to 1234 (519=1232/520=1233 landed first).
 
 ## Security Contract
 
@@ -446,4 +446,4 @@ byte-identical; Security Contract satisfied (color whitelist + icon-name allowli
 + clamps + static scripts at write and render); every gate green (root
 `tsc -p tsconfig.json --noEmit`, `bun --cwd core lint:types`, vitest, `bun test`,
 `gates:coderso`); ≥5-scenario-per-area Playwright smoke passes light + dark with 0
-console errors; closure documented under the then-current next-free changelog (grep `_docs/_CHANGELOG/` highest+1; 1229 as of authoring).
+console errors; closure documented under changelog 1234.

@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Tests / Docs / Closure
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-521-01..05 (all landed).
 
 ---
@@ -70,11 +70,10 @@ Acceptance Criteria of the parent (§ Acceptance) as computed styles / DOM state
 
 ## Closure record
 
-- Closure changelog number is assigned at closure as the then-current next-free
-  (grep `_docs/_CHANGELOG/` highest+1). As of authoring the next-free is 1229; the
-  final number depends on which tasks close first (519/520 land before 521). Do
-  NOT edit `_CHANGELOG/*` or `_TASKS/README.md`, the orchestrator owns those; PIN
-  the resolved number in the closure note text only.
+- Closure changelog number is assigned at closure as the then-current next-free.
+  RESOLVED at closure to **1234**
+  (`_docs/_CHANGELOG/1234-2026-07-08-task-521-page-motion-effects.md`) — 519=1232
+  and 520=1233 landed first (1229–1231 reserved for 511/517/518).
 - Record the residual follow-ups (e.g. configurable scroll threshold, additional
   curated icons/animations, section-effect on nested blocks) as explicit OPEN
   items — do not silently drop scope.
@@ -83,5 +82,4 @@ Acceptance Criteria of the parent (§ Acceptance) as computed styles / DOM state
 
 All gates green; PAGE_MODEL / WIDGETS / DESIGN_TOKENS updated; ≥5-per-area
 Playwright smoke passes light + dark with 0 console errors; parent Acceptance
-Criteria verified LIVE; closure documented under the then-current next-free
-changelog (grep `_docs/_CHANGELOG/` highest+1; 1229 as of authoring).
+Criteria verified LIVE; closure documented under changelog 1234.

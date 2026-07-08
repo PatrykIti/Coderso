@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Widgets (Hero) / Admin UI
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

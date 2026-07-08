@@ -99,7 +99,7 @@ export const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> =
   divider: { label: "Divider", description: "Visual separator." },
   spacer: { label: "Spacer", description: "Vertical rhythm control." },
   statistic: { label: "Statistic", description: "Metric value with label and caption." },
-  icon: { label: "Icon", description: "Small symbolic block." },
+  icon: { label: "Icon", description: "Animated inline icon (spin / pulse / bounce / draw)." },
   quote: { label: "Quote", description: "Pull quote with optional citation." },
   container: { label: "Container", description: "Nested layout container." },
   columns: { label: "Columns", description: "Nested column layout." },
