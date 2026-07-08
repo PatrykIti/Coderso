@@ -8,6 +8,7 @@ _docs/ui/gutenberg-trunk
 !.env.example
 /plugins-runtime/
 /data/
+*/projekty-domow-wow-site/
 # Local backup artifacts are full DB snapshots (real content) — never commit them.
 # Root-anchored so it only ignores the top-level backup dir, NOT source dirs
 # named "storage" (e.g. core/services/media/storage/).
