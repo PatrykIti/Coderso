@@ -1,4 +1,4 @@
-# 1240 - TASK-528 Whole-Card Tilt — Tilt Transform on the Surface Frame, Perspective on an Ancestor
+# 1241 - TASK-528 Whole-Card Tilt — Tilt Transform on the Surface Frame, Perspective on an Ancestor
 
 Date: 2026-07-08
 Version: Unreleased
