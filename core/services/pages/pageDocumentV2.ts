@@ -325,6 +325,9 @@ export type PageLayerAnchor = (typeof pageLayerAnchors)[number];
 export const pageMarqueeDirections = ["left", "right"] as const;
 export type PageMarqueeDirection = (typeof pageMarqueeDirections)[number];
 export const PAGE_DECORATION_DELAY_CLAMP = { min: 0, max: 4000 } as const; // ms
+// TASK-525-02-L01: per-block scroll-reveal stagger delay (ms). Same bound as the
+// decoration delay; emitted only as the bounded `--reveal-delay` custom property.
+export const PAGE_REVEAL_DELAY_CLAMP = { min: 0, max: 4000 } as const; // ms
 export const PAGE_DECORATION_DURATION_CLAMP = { min: 2000, max: 16000 } as const; // ms
 export const PAGE_LAYER_X_CLAMP = { min: -50, max: 150 } as const; // %
 export const PAGE_LAYER_Y_CLAMP = { min: -50, max: 150 } as const; // %
@@ -557,6 +560,14 @@ export type PageSectionStyleV2 = {
    * `"flow"` (default, omitted) keeps the normal flex/grid flow.
    */
   composition?: PageComposition;
+  /**
+   * TASK-525-01-L02 full-bleed background. When `true`, the section paints its
+   * background box edge-to-edge (100vw) while its CONTENT stays capped/centered
+   * at `layout.maxWidth`. Present-only: omitted when `false`/unset so an
+   * un-authored section serializes byte-identically (the `full-width` template
+   * variant still bleeds by default, independent of this flag).
+   */
+  fullBleed?: boolean;
 };
 
 export type PageSectionSpacingV2 = {
@@ -643,6 +654,14 @@ export type PageBlockStyleV2 = {
   marquee?: PageBlockMarquee;
   /** Layout-block canvas mode (`"layered"` positions children absolutely). */
   composition?: PageComposition;
+  /**
+   * TASK-525-02-L01 per-block scroll-reveal stagger (ms, clamped
+   * `PAGE_REVEAL_DELAY_CLAMP`). Emitted as the `--reveal-delay` custom property
+   * consumed by the reveal `transition-delay`, so a revealing section's children
+   * CASCADE (each block fades on its own delay) rather than fading as one unit.
+   * Present-only: omitted when unset so an un-authored block is byte-identical.
+   */
+  revealDelay?: number;
 };
 
 export type PageBlockVisibilityV2 = {
@@ -747,6 +766,8 @@ const pageBlockStyleKeys = [
   "hoverEffect",
   "marquee",
   "composition",
+  // TASK-525-02-L01 per-block staggered reveal (present-only number).
+  "revealDelay",
 ] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
@@ -1466,6 +1487,8 @@ const pageBlockStyleJsonSchema: RecordValue = {
         seamless: booleanSchema,
       },
     },
+    // TASK-525-02-L01 per-block staggered reveal (present-only, bounded ms).
+    revealDelay: numericSchema(PAGE_REVEAL_DELAY_CLAMP.min, PAGE_REVEAL_DELAY_CLAMP.max),
   },
 };
 
@@ -1612,6 +1635,8 @@ const partialSectionStyleJsonSchema: RecordValue = {
     // TASK-522-01-L03 section composition fields (present-only mirror).
     surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
     composition: { type: "string", enum: [...pageCompositions] },
+    // TASK-525-01-L02 full-bleed background (present-only boolean).
+    fullBleed: booleanSchema,
   },
 };
 
@@ -1807,6 +1832,8 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               // TASK-522-01-L03 section composition fields (present-only mirror).
               surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
               composition: { type: "string", enum: [...pageCompositions] },
+              // TASK-525-01-L02 full-bleed background (present-only boolean).
+              fullBleed: booleanSchema,
             },
           },
           spacing: {
@@ -2467,6 +2494,8 @@ const normalizeSectionStyle = (
       // TASK-522-01-L03 section composition fields (present-only).
       "surfacePreset",
       "composition",
+      // TASK-525-01-L02 full-bleed background (present-only boolean).
+      "fullBleed",
     ],
     path,
     mode
@@ -2545,6 +2574,10 @@ const normalizeSectionStyle = (
     );
     if (c !== "flow") result.composition = c;
   }
+  // TASK-525-01-L02 full-bleed background (present-only boolean; mirror tiltGlare).
+  // Emitted ONLY when `=== true`; `false`/unset omitted so a non-bleed section
+  // stays byte-identical (`defaultStyle` seeds no key).
+  if (input.fullBleed === true) result.fullBleed = true;
   return partial ? result : ({ ...defaultStyle, ...result } satisfies PageSectionStyleV2);
 };
 
@@ -2848,6 +2881,17 @@ const normalizeBlockStyle = (
     }
     if (mq.seamless === true) marquee.seamless = true;
     if (Object.keys(marquee).length) result.marquee = marquee;
+  }
+  // TASK-525-02-L01 per-block staggered reveal — present-only via readNumber
+  // (Number.isFinite + clamp; NaN/Infinity fail-soft to 0, out-of-range clamps).
+  // Emitted ONLY when authored so an unset block stays byte-identical.
+  if (input.revealDelay !== undefined) {
+    result.revealDelay = readNumber(
+      input.revealDelay,
+      0,
+      PAGE_REVEAL_DELAY_CLAMP.min,
+      PAGE_REVEAL_DELAY_CLAMP.max
+    );
   }
   return Object.keys(result).length > 0 ? result : undefined;
 };

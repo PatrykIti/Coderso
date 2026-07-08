@@ -2145,6 +2145,47 @@ describe("section scroll effect model (TASK-521-01-L01)", () => {
   );
 });
 
+describe("section full-bleed background model (TASK-525-01-L02)", () => {
+  const withSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+
+  test("round-trips fullBleed:true (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: true }));
+    expect(normalized.sections[0]!.style.fullBleed).toBe(true);
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.sections[0]!.style).toEqual(normalized.sections[0]!.style);
+  });
+
+  test("omits fullBleed:false (present-only, byte-identical)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: false }));
+    expect("fullBleed" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test("legacy section (no fullBleed key) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("fullBleed" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test("rejects an unknown-shaped fullBleed sibling key", () => {
+    expect(() => normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleedX: true }))).toThrow(
+      "Unknown page document field: sections.0.style.fullBleedX"
+    );
+  });
+
+  test("fullBleed:true validates against the JSON schema", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: true }));
+    const ajv = new Ajv({ allErrors: true, strict: true });
+    const validate = ajv.compile(pageDocumentV2JsonSchema);
+    expect(validate(normalized)).toBe(true);
+  });
+});
+
 describe("page settings effects model (TASK-521-01-L02)", () => {
   const withEffects = (effects: Record<string, unknown>): PageDocumentV2 => {
     const doc = buildDocument();
@@ -2400,6 +2441,56 @@ describe("customSvg block type + props (TASK-522-01-L01)", () => {
       expect(validate(extra)).toBe(false);
     }
   );
+});
+
+// TASK-525-02-L01 — per-block staggered reveal delay model.
+describe("block reveal-delay model (TASK-525-02-L01)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2) =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {};
+
+  test("round-trips block.style.revealDelay", () => {
+    expect(blockStyle(docWithBlockStyle({ revealDelay: 120 })).revealDelay).toBe(120);
+    const normalized = normalizePageDocumentV2ForWrite(docWithBlockStyle({ revealDelay: 120 }));
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.sections[0]!.blocks[0]!.style).toEqual(
+      normalized.sections[0]!.blocks[0]!.style
+    );
+  });
+
+  test("clamps revealDelay to PAGE_REVEAL_DELAY_CLAMP fail-soft", () => {
+    expect(blockStyle(docWithBlockStyle({ revealDelay: 1e9 })).revealDelay).toBe(4000);
+    expect(blockStyle(docWithBlockStyle({ revealDelay: -500 })).revealDelay).toBe(0);
+    // NaN/Infinity → readNumber fallback (0).
+    expect(blockStyle(docWithBlockStyle({ revealDelay: Number.NaN })).revealDelay).toBe(0);
+    expect(
+      blockStyle(docWithBlockStyle({ revealDelay: Number.POSITIVE_INFINITY })).revealDelay
+    ).toBe(0);
+  });
+
+  test("is present-only: an unset block emits NO revealDelay (byte-identical)", () => {
+    expect("revealDelay" in blockStyle(docWithBlockStyle({}))).toBe(false);
+    // and a block with only OTHER fields carries no revealDelay key.
+    expect("revealDelay" in blockStyle(docWithBlockStyle({ tilt: "subtle" }))).toBe(false);
+  });
+
+  test("rejects an unknown block-style sibling key (reject-unknown)", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ revealDelayX: 1 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.revealDelayX"
+    );
+  });
+
+  test("revealDelay validates against the JSON schema", () => {
+    const normalized = normalizePageDocumentV2ForWrite(docWithBlockStyle({ revealDelay: 240 }));
+    const ajv = new Ajv({ allErrors: true, strict: true });
+    const validate = ajv.compile(pageDocumentV2JsonSchema);
+    expect(validate(normalized)).toBe(true);
+  });
 });
 
 // TASK-522-01-L03 — block + section composition STYLE model.

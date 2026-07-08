@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Schema (JSON model) / Admin UI / Security
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

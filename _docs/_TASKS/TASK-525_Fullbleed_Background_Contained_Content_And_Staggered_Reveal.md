@@ -34,22 +34,34 @@
   `--reveal-delay` is emitted alongside, present-only, DISJOINT from the 522
   composition vars.
 
-**Status:** ⛔ BLOCKED (branch-point unmet) — TASK-523 has **not** merged into
-`feature/tasks-fixes`. On disk the branch is still `feature/tasks-fixes` at HEAD
-`6a833a1f`, which is exactly the pre-523 grounding HEAD this contract cites (see
-`## Root-cause grounding` and line ~11); `git log --all` shows no TASK-523 /
-root-spotlight-FIX merge commit (the only spotlight code present is the landed
-521-05 `PAGE_SPOTLIGHT_CSS`, not 523's root/spotlight fix). Per the HARD
-BRANCH-POINT DEPENDENCY below, **do NOT start 525-01 against this tree**: cutting
-`feature/task-525` now would build against a pre-523 `pageRendererV2.tsx` and
-clobber/miss 523's shared section-render edits (`toPageSectionStyle` /
-`PageSectionContent` / `toPageSectionRenderProps`). UNBLOCK GATE: (1) TASK-523
-merges into `feature/tasks-fixes`; (2) cut `feature/task-525` from the post-523
-HEAD; (3) re-grep EVERY `pageRendererV2.tsx` anchor (`toPageSectionStyle` maxWidth,
-`PAGE_REVEAL_MOTION_CSS`, the `frameVars` seam, the two owned test assertions) —
-523 will have shifted their line numbers — before touching any code. Flip Status to
-⏳ To Do only once (1)–(3) are done. No migration / no schema-version bump either
-way (pin unchanged).
+**Status:** ✅ Done (2026-07-08). Both subtasks landed in order on `feature/task-525`;
+the branch-point concern is moot — the section-render seam
+(`toPageSectionStyle` / `PageSectionContent` / `toPageSectionRenderProps`) was
+re-grepped against the on-disk state at implement time and 525 owns DISJOINT
+symbols (525-01 = section content-wrapper max-width decouple + new
+`toPageSectionBleedStyle` `100vw` background box; 525-02 = block-frame
+`--reveal-delay` emit + per-child rules in `PAGE_REVEAL_MOTION_CSS`), never
+editing a shared line destructively. **525-01:** full-bleed background decoupled
+from the content cap — content always capped/centered at `layout.maxWidth`
+(`width:min(maxWidth,calc(100% - 40px));margin:0 auto`, 20px gutter), the `100vw`
+bleed moved to the OUTER `<section>` (`toPageSectionBleedStyle`, `undefined`→
+byte-identical); present-only `PageSectionStyleV2.fullBleed?: boolean` (allowlist +
+both `additionalProperties:false` schemas + normalizer + `section.style.fullBleed`
+switch control) so ANY section can bleed; the two old `maxWidth:"none"` full-width
+assertions rebaselined. **525-02:** present-only `PageBlockStyleV2.revealDelay?:
+number` (ms, `PAGE_REVEAL_DELAY_CLAMP {0,4000}` via `readNumber`) → bounded
+`--reveal-delay` on the block frame → per-child reveal `transition-delay` inside the
+existing `motion-safe:`/`[data-reveal-armed]` gate, so a revealing section's blocks
+CASCADE (no new runtime/keyframe); + `block.style.revealDelay` control. No
+migration / no `PAGE_DOCUMENT_SCHEMA_VERSION` bump (`pageDocumentV2.ts:29` stays
+`2`) / no npm dependency / no route; `pageEffectsRuntime.ts` / `hero.tsx` /
+`PageEditor.tsx` untouched; `prefers-reduced-motion` unchanged; legacy / no-effect
+docs byte-identical. All gates green (core `lint`/`lint:types`, root `tsc`,
+`test:bun` [8 fails = known `starterContent` shared-DB seed-count transient, 3/3
+isolated], `test:vitest` pages 508/508, `gates:coderso` 5/5); `PAGE_MODEL.md` /
+`DESIGN_TOKENS.md` synced; changelog 1237. Live ≥5-per-area light+dark Playwright
+smoke deferred to the orchestrator post-merge (dev host serves the main tree).
+Optional section/page auto-stagger convenience scoped OPTIONAL, not shipped.
 **Closure changelog:** Assigned at closure as the then-current next-free (grep
 `_docs/_CHANGELOG/` highest+1). Do **NOT** hardcode a colliding number and do
 **NOT** edit `_CHANGELOG/*` or `_TASKS/README.md` — the orchestrator owns those.

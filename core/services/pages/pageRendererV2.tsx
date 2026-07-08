@@ -373,6 +373,35 @@ const toPageSectionVariantSpacing = (
   return section.spacing;
 };
 
+/**
+ * TASK-525-01-L01: a section is full-bleed when the template resolves to the
+ * `full-width` variant OR the author toggled `style.fullBleed` (525-01-L02).
+ * Full-bleed decouples the background box (painted edge-to-edge / 100vw) from
+ * the CONTENT, which stays capped and centered at `layout.maxWidth`.
+ */
+const isPageSectionFullBleed = (
+  section: PageSectionV2,
+  template: ResolvedPageSectionTemplate
+): boolean => template.variant === "full-width" || section.style.fullBleed === true;
+
+/**
+ * TASK-525-01-L01 reference `.container` gutter: on viewports narrower than the
+ * cap the centered content keeps a fixed 20px gutter each side (mirrors
+ * `.container{width:min(var(--container),calc(100% - 40px))}` in the reference
+ * `styles.css`), so full-bleed content never touches the screen edges. FIXED
+ * literal — no author-controlled value.
+ */
+const PAGE_SECTION_FULL_BLEED_GUTTER = "20px" as const;
+
+const toPageSectionBoxShadow = (shadow: PageSectionV2["style"]["shadow"]) =>
+  shadow === "none"
+    ? undefined
+    : shadow === "sm"
+      ? "0 6px 20px rgba(15, 23, 42, 0.08)"
+      : shadow === "md"
+        ? "0 14px 40px rgba(15, 23, 42, 0.12)"
+        : "0 22px 60px rgba(15, 23, 42, 0.16)";
+
 export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProperties => {
   const template = resolvePageSectionTemplate(section);
   const spacing = toPageSectionVariantSpacing(section, template);
@@ -385,25 +414,78 @@ export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProp
     section.style.backgroundType === "image"
       ? sanitizeAuthoringMediaUrl(section.style.backgroundImage)
       : null;
+  const backgroundImage = backgroundImageUrl
+    ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
+    : undefined;
+  const boxShadow = toPageSectionBoxShadow(section.style.shadow);
+  const padding = `${spacing.paddingTop}px ${spacing.paddingRight}px ${spacing.paddingBottom}px ${spacing.paddingLeft}px`;
+  const gap = `${spacing.gap}px`;
+  const maxWidth = `${section.layout.maxWidth}px`;
+  // TASK-525-01-L01: DECOUPLE bleed from the content cap. Full-bleed content is
+  // ALWAYS capped/centered at `layout.maxWidth` (no more `maxWidth:"none"`) with
+  // a min side gutter mirroring the reference `.container`; the 100vw background
+  // bleed lives on the OUTER section box (see toPageSectionBleedStyle), NOT here.
+  // Background/radius/shadow move to the bleed box so the paint reaches the
+  // viewport edges while the content stays contained. Non-full-bleed keeps the
+  // pre-525 single-node contract byte-identical (bg + cap on this content div).
+  if (isPageSectionFullBleed(section, template)) {
+    return {
+      "--coderso-section-accent": accent ?? undefined,
+      padding,
+      width: `min(${maxWidth}, calc(100% - 2 * ${PAGE_SECTION_FULL_BLEED_GUTTER}))`,
+      maxWidth,
+      margin: "0 auto",
+      gap,
+    };
+  }
   return {
     "--coderso-section-accent": accent ?? undefined,
     backgroundColor: backgroundColor ?? undefined,
-    backgroundImage: backgroundImageUrl
-      ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
-      : undefined,
+    backgroundImage,
     borderRadius: `${section.style.radius}px`,
-    boxShadow:
-      section.style.shadow === "none"
-        ? undefined
-        : section.style.shadow === "sm"
-          ? "0 6px 20px rgba(15, 23, 42, 0.08)"
-          : section.style.shadow === "md"
-            ? "0 14px 40px rgba(15, 23, 42, 0.12)"
-            : "0 22px 60px rgba(15, 23, 42, 0.16)",
-    padding: `${spacing.paddingTop}px ${spacing.paddingRight}px ${spacing.paddingBottom}px ${spacing.paddingLeft}px`,
-    maxWidth: template.variant === "full-width" ? "none" : `${section.layout.maxWidth}px`,
+    boxShadow,
+    padding,
+    maxWidth,
     margin: "0 auto",
-    gap: `${spacing.gap}px`,
+    gap,
+  };
+};
+
+/**
+ * TASK-525-01-L01: the full-bleed BACKGROUND box style, applied to the OUTER
+ * `<section>` element so the background paints edge-to-edge (100vw) while the
+ * content div (toPageSectionStyle) stays capped/centered at `layout.maxWidth`.
+ * Returns `undefined` for non-full-bleed sections (no bleed box → the section
+ * box stays byte-identical to the pre-525 output). The `100vw` bleed
+ * (`width:100vw;margin-left:calc(50% - 50vw)`) is a FIXED literal; the only
+ * author-derived values are the already-sanitized background color/URL and the
+ * clamped radius, identical to the values `toPageSectionStyle` emitted before.
+ */
+export const toPageSectionBleedStyle = (
+  section: PageSectionV2
+): PageSectionStyleProperties | undefined => {
+  const template = resolvePageSectionTemplate(section);
+  if (!isPageSectionFullBleed(section, template)) return undefined;
+  const backgroundColor =
+    section.style.backgroundType === "color"
+      ? sanitizeAuthoringCssColor(section.style.background)
+      : undefined;
+  const backgroundImageUrl =
+    section.style.backgroundType === "image"
+      ? sanitizeAuthoringMediaUrl(section.style.backgroundImage)
+      : null;
+  const backgroundImage = backgroundImageUrl
+    ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
+    : undefined;
+  return {
+    // FIXED-literal 100vw bleed centered on the section's own axis.
+    width: "100vw",
+    marginLeft: "calc(50% - 50vw)",
+    marginRight: "calc(50% - 50vw)",
+    backgroundColor: backgroundColor ?? undefined,
+    backgroundImage,
+    borderRadius: `${section.style.radius}px`,
+    boxShadow: toPageSectionBoxShadow(section.style.shadow),
   };
 };
 
@@ -590,8 +672,36 @@ export const toPageSectionRenderProps = (
  */
 export const PAGE_REVEAL_MOTION_CSS =
   "@media (prefers-reduced-motion: no-preference){" +
+  // Section-level hide-state (UNCHANGED — the <section> still composes its own reveal).
   '[data-reveal-armed] [data-page-effect^="reveal"]:not([data-revealed]){opacity:0}' +
   '[data-reveal-armed] [data-page-effect="reveal-up"]:not([data-revealed]){transform:translateY(1rem)}' +
+  // TASK-525-02-L02 per-CHILD hide-state + reveal transition so a revealing
+  // section's blocks CASCADE instead of fading as one unit. Each [data-page-block]
+  // frame carries its OWN opacity/transform transition; the transition-delay reads
+  // the inherited `--reveal-delay` (present-only frame var, default 0ms), so a
+  // section-only delay is no longer inert — the delay applies to a transition the
+  // child actually has. Keyed off the SECTION's data-revealed (the 521 runtime
+  // still toggles data-revealed on the section only — no new runtime/attr). All
+  // rules live INSIDE the motion-safe @media + [data-reveal-armed] gate, so under
+  // reduced-motion no block is ever hidden.
+  //
+  // CRITICAL: the transition + transition-delay MUST live on a STATE-INDEPENDENT
+  // rule (NOT gated by :not([data-revealed])). Per the CSS Transitions spec, a
+  // transition is governed by the transition-* properties of the AFTER-CHANGE
+  // computed style. If the transition were only on the :not([data-revealed]) rule,
+  // then once the section flips data-revealed that rule stops matching, the child
+  // frame's transition resets to `all 0s`, and blocks JUMP to opacity:1 with no
+  // fade/delay/cascade. Keeping the transition state-agnostic means it survives
+  // into the revealed style so the per-block --reveal-delay actually staggers.
+  '[data-reveal-armed] [data-page-effect^="reveal"] [data-page-block]' +
+  "{transition:opacity .7s,transform .7s;transition-delay:var(--reveal-delay,0ms)}" +
+  // Hide-state visual values only (opacity/transform) gated by :not([data-revealed]).
+  '[data-reveal-armed] [data-page-effect^="reveal"]:not([data-revealed]) [data-page-block]' +
+  "{opacity:0}" +
+  '[data-reveal-armed] [data-page-effect="reveal-up"]:not([data-revealed]) [data-page-block]' +
+  "{transform:translateY(1rem)}" +
+  '[data-reveal-armed] [data-page-effect^="reveal"][data-revealed] [data-page-block]' +
+  "{opacity:1;transform:none}" +
   "}";
 
 /**
@@ -808,6 +918,13 @@ const splitBlockComposition = (style?: PageBlockStyle) => {
 
 export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => {
   const s = splitBlockComposition(block.style);
+  // TASK-525-02-L02: present-only `--reveal-delay` (bounded ms, clamped at the
+  // write boundary) inherits down into the block's children so the revealing
+  // section's per-block reveal transition (PAGE_REVEAL_MOTION_CSS) staggers each
+  // frame by its own delay. Empty object when unauthored → byte-identical frame.
+  const revealDelay = block.style?.revealDelay;
+  const revealVar: Record<string, string> =
+    typeof revealDelay === "number" ? { "--reveal-delay": `${revealDelay}ms` } : {};
   return {
     className: joinPageRenderClasses(
       "max-w-full",
@@ -817,7 +934,11 @@ export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps
     // FRAME-level composition CSS vars (layer positioning, surface/deco glow,
     // marquee speed) merge onto the real [data-block-id] frame. Present-only:
     // empty when unstyled → byte-identical to the pre-522 output.
-    style: { ...toPageBlockStyle(block), ...(s.frameVars as CSSProperties) },
+    style: {
+      ...toPageBlockStyle(block),
+      ...(s.frameVars as CSSProperties),
+      ...(revealVar as CSSProperties),
+    },
     dataAttributes: {
       "data-page-block": block.type,
       [PAGE_BLOCK_ID_ATTRIBUTE]: block.id,
@@ -2641,13 +2762,22 @@ export function PageSectionRender({
   // from 521-02's scrollEffect attrs above (additive). Present-only: empty for a
   // section with no 522 field ⇒ byte-identical to the pre-522 output.
   const sc = resolveSectionCompositionAttrs(section.style);
+  // TASK-525-01-L01: full-bleed background box on the OUTER <section> (100vw
+  // edge-to-edge) while the content div stays capped/centered at
+  // layout.maxWidth. `undefined` for non-full-bleed → the <section> style is
+  // byte-identical to the pre-525 output (composition cssVars only).
+  const sectionBleedStyle = toPageSectionBleedStyle(section);
   const sectionCompositionStyle =
     Object.keys(sc.cssVars).length > 0 ? (sc.cssVars as CSSProperties) : undefined;
+  const sectionStyle =
+    sectionBleedStyle || sectionCompositionStyle
+      ? { ...sectionBleedStyle, ...sectionCompositionStyle }
+      : undefined;
   return (
     <section
       id={section.visibility.anchor ?? undefined}
       className={renderProps.sectionClassName}
-      style={sectionCompositionStyle}
+      style={sectionStyle}
       {...renderProps.dataAttributes}
       {...effectDataAttrs}
       {...sc.dataAttrs}
