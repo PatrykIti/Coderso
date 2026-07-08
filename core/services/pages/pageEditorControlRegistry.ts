@@ -690,6 +690,24 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
   // controls only. responsive:false: both are base-only data-attrs;
   // pageResponsiveCss cannot express a per-breakpoint attr/class delta against the
   // inline base (finding-6; parent Acceptance #7). "none" resets (normalize omits).
+  // TASK-524-02-L03 — independent glass/glow tint (alpha-capable) on ANY block.
+  // Mirrors block.style.textColor/background (input:"color", responsive:true).
+  // BASE: resolveBlockCompositionAttrs seeds --surface-glow/--deco-ring/
+  // --orb-color inline on the block frame. PER-DEVICE: pageResponsiveCss
+  // (collectBlockDeclarations, 524-02-L03 branch) retargets those same three
+  // frame custom props under the tablet/mobile @media rule with !important, so
+  // a per-breakpoint tint override actually emits (gated, like the base, on a
+  // plain non-gradient tint AND an active surfacePreset/hoverEffect/motion).
+  // Clearing it omits surfaceTint (present-only) → background fallback.
+  control({
+    id: "block.surface.tint",
+    panel: "style",
+    target: "block",
+    label: "Surface tint",
+    path: ["style", "surfaceTint"],
+    input: "color",
+    responsive: true,
+  }),
   control({
     id: "block.surface.preset",
     panel: "style",

@@ -34,8 +34,8 @@
   (`sanitizeAuthoringCssColor`, `hex8`/`rgba()`). 519 is required only so the
   ADMIN swatch AUTHORS + round-trips alpha; the raw hex control is the fallback.
 
-**Status:** ⏳ To Do
-**Closure changelog:** Assigned at closure as the then-current next-free (grep
+**Status:** ✅ Done
+**Closure changelog:** 1237 (2026-07-08). Assigned at closure as the then-current next-free (grep
 `_docs/_CHANGELOG/` highest+1). Do **NOT** hardcode a colliding number and do
 **NOT** edit `_CHANGELOG/*` or `_TASKS/README.md` — the orchestrator owns those.
 

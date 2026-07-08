@@ -173,6 +173,15 @@ const blockTextSelector = (id: string) =>
 const isSafeCssColor = isSafeAuthoringCssColor;
 
 /**
+ * Mirrors `pageCompositionEffects.isGradientOrUrl`: a gradient/url() tint is
+ * invalid inside `radial-gradient()`'s color slot, so it must not seed the
+ * `--surface-glow`/`--deco-ring`/`--orb-color` custom props (base resolver
+ * leaves it out → CSS falls back to the reference literal). Kept local to avoid
+ * widening the effects module's export surface.
+ */
+const isGradientOrUrlColor = (value: string): boolean => /gradient|url\(/i.test(value);
+
+/**
  * Stricter than the renderer's gradient sniff (`toGradientBackground`): the
  * stylesheet context additionally requires a safe charset and balanced parens.
  */
@@ -613,6 +622,40 @@ const collectBlockDeclarations = (
     }
     if (isFiniteNumber(mergedStyle.layer?.z)) {
       frame.push({ property: "--layer-z", value: String(mergedStyle.layer.z) });
+    }
+  }
+
+  // TASK-524-02-L03 — per-device glass/glow TINT. The base resolver
+  // (`resolveBlockCompositionAttrs`) seeds `--surface-glow`/`--deco-ring`/
+  // `--orb-color` as inline custom props on the block FRAME (frameVars in
+  // splitBlockComposition), gated on a plain (non-gradient/url) tint and on the
+  // surface/effect actually being active (surfacePreset|hoverEffect|
+  // decoration.motion in {radiate,pulse,drift,float}). We retarget those same
+  // three frame custom props per breakpoint so the control's advertised
+  // per-device tinting is honored: the props ride the SAME block-frame selector
+  // that carries the base var + the media query, and every frame declaration is
+  // serialized with !important, so the delta beats the inline base custom prop
+  // (mirrors the --layer-x/y/z retarget above). Fails closed to a diagnostic on
+  // an unsafe or gradient/url tint (invalid inside radial-gradient()); an
+  // effect-inactive breakpoint emits nothing, matching the base gate.
+  if (styleOverride.surfaceTint !== undefined) {
+    const tint = mergedStyle.surfaceTint;
+    const motion = mergedStyle.decoration?.motion;
+    const glowActive =
+      !!mergedStyle.surfacePreset ||
+      !!mergedStyle.hoverEffect ||
+      motion === "radiate" ||
+      motion === "pulse" ||
+      motion === "drift" ||
+      motion === "float";
+    if (typeof tint === "string" && isSafeCssColor(tint) && !isGradientOrUrlColor(tint)) {
+      if (glowActive) {
+        frame.push({ property: "--surface-glow", value: tint });
+        frame.push({ property: "--deco-ring", value: tint });
+        frame.push({ property: "--orb-color", value: tint });
+      }
+    } else if (tint !== null && tint !== undefined) {
+      diag("style.surfaceTint", "unsafe_color_value");
     }
   }
 

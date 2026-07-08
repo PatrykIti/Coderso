@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Site Render / Accessibility
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-522 (landed), TASK-523 (branch-point — 524 branches from the
 post-523 HEAD; re-grep anchors post-523).
 

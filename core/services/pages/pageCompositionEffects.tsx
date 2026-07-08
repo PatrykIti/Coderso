@@ -35,18 +35,20 @@ export const PAGE_COMPOSITION_EFFECTS_CSS = `
    positioned/flex context. */
 .cx-layered-canvas{min-height:220px}
 .cx-layered-slot{display:block}
-/* layer anchor → fixed translate (badges anchor right/bottom like the reference
-   chips). The transform-writing EFFECT rides an INNER descendant (522-03-L01) so
-   this anchor translate on the frame is never clobbered. */
-[data-layer-anchor="top-left"]{transform:translate(0,0)}
-[data-layer-anchor="top"]{transform:translate(-50%,0)}
-[data-layer-anchor="top-right"]{transform:translate(-100%,0)}
-[data-layer-anchor="left"]{transform:translate(0,-50%)}
-[data-layer-anchor="center"]{transform:translate(-50%,-50%)}
-[data-layer-anchor="right"]{transform:translate(-100%,-50%)}
-[data-layer-anchor="bottom-left"]{transform:translate(0,-100%)}
-[data-layer-anchor="bottom"]{transform:translate(-50%,-100%)}
-[data-layer-anchor="bottom-right"]{transform:translate(-100%,-100%)}
+/* layer anchor -> fixed self-offset on the independent CSS translate PROPERTY
+   (524-01-L01). Using the translate property (not transform:translate()) frees the
+   anchor offset from the transform channel so a transform-based EFFECT (float/lift
+   keyframe) can co-locate on the SAME node without clobbering the offset — the
+   glass surface floats WITH its content (524-01-L02). Offsets are identical. */
+[data-layer-anchor="top-left"]{translate:0 0}
+[data-layer-anchor="top"]{translate:-50% 0}
+[data-layer-anchor="top-right"]{translate:-100% 0}
+[data-layer-anchor="left"]{translate:0 -50%}
+[data-layer-anchor="center"]{translate:-50% -50%}
+[data-layer-anchor="right"]{translate:-100% -50%}
+[data-layer-anchor="bottom-left"]{translate:0 -100%}
+[data-layer-anchor="bottom"]{translate:-50% -100%}
+[data-layer-anchor="bottom-right"]{translate:-100% -100%}
 /* ambient-orb base (static blurred radial circles, like .hero-bg-orb) — DRIFT animates below */
 .cx-orb{position:absolute;border-radius:50%;filter:blur(46px);pointer-events:none;opacity:.55}
 .cx-orb-a{width:340px;height:340px;left:-60px;top:-40px;background:radial-gradient(circle,var(--orb-color,rgba(142,232,255,.5)),transparent 66%)}
@@ -56,9 +58,18 @@ export const PAGE_COMPOSITION_EFFECTS_CSS = `
 .cx-marquee-track{display:inline-flex;flex-wrap:nowrap;white-space:nowrap;will-change:transform}
 /* surface presets (STATIC — apply even under reduced-motion). Use
    background-IMAGE (not the shorthand) so an author-set inline background shows
-   THROUGH as the glass tint instead of clobbering the preset. */
-[data-surface="glass"]{background-image:linear-gradient(145deg,var(--surface-glow,rgba(255,255,255,.11)),rgba(255,255,255,.045));border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(14px);box-shadow:0 20px 60px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.16)}
-[data-surface="glass-grid"]{position:relative}
+   THROUGH as the glass tint instead of clobbering the preset.
+   524-03 radius-clip: the surface node carries the inline border-radius
+   (style.radius / section radius) AND, after 524-01-L02, the transform-writing
+   effect (float/lift/tilt). A backdrop-filter/::before grid layer paints to the
+   node's SQUARE box, so the moment the node tilts/floats it exposes SHARP corners
+   past the rounded card. overflow:hidden clips the node's own box to its inline
+   border-radius throughout the transform. Safe for anchored chips: those are
+   [data-layer] SIBLINGS inside .cx-layered-canvas, NOT DOM children of this
+   glass card, so they are never clipped (radial-glow/ambient-orbs already clip
+   this way with their bleeding ::after). */
+[data-surface="glass"]{background-image:linear-gradient(145deg,var(--surface-glow,rgba(255,255,255,.11)),rgba(255,255,255,.045));border:1px solid rgba(255,255,255,.13);backdrop-filter:blur(14px);box-shadow:0 20px 60px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.16);overflow:hidden}
+[data-surface="glass-grid"]{position:relative;overflow:hidden}
 [data-surface="glass-grid"]::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(142,232,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(142,232,255,.06) 1px,transparent 1px);background-size:34px 34px;mask-image:radial-gradient(circle at 50% 45%,#000 0 42%,transparent 78%);pointer-events:none}
 [data-surface="radial-glow"]{position:relative;overflow:hidden}
 [data-surface="radial-glow"]::after{content:"";position:absolute;inset:auto -30% -50% -30%;height:200px;background:radial-gradient(circle,var(--surface-glow,rgba(142,232,255,.16)),transparent 66%);pointer-events:none}
@@ -127,12 +138,18 @@ export function resolveBlockCompositionAttrs(style?: PageBlockStyleV2): PageBloc
   if (!style) {
     return { dataAttrs, cssVars, perspectiveParent: false, glare: false, ambientOrbs: false };
   }
-  // Author retint (BLOCKS): PageBlockStyleV2 has NO `accent` field, so a block
-  // retints off its EXISTING write-validated `style.background`. Only a
-  // PLAIN-color background seeds the glow (a gradient/url is invalid inside
-  // radial-gradient() and is left out → CSS falls back to the reference literal).
+  // Author retint (BLOCKS): TASK-524-02 lets a block seed the glow from an
+  // INDEPENDENT `style.surfaceTint` (sanitized plain color at write). It takes
+  // PRECEDENCE; the 522 `style.background`-derived value stays a FALLBACK only
+  // when no `surfaceTint` is authored. Only a PLAIN color seeds the glow (a
+  // gradient/url is invalid inside radial-gradient() and is left out → CSS
+  // falls back to the reference literal); the `isGradientOrUrl` guard on the
+  // sanitized tint is defence-in-depth (a `var(--x)`/hex/rgba tint passes it).
   const bg = style.background ?? undefined;
-  const glow = bg && !isGradientOrUrl(bg) ? bg : undefined;
+  const bgGlow = bg && !isGradientOrUrl(bg) ? bg : undefined;
+  const tintGlow =
+    style.surfaceTint && !isGradientOrUrl(style.surfaceTint) ? style.surfaceTint : undefined;
+  const glow = tintGlow ?? bgGlow;
   const motion = style.decoration?.motion;
   const needsGlow =
     !!style.surfacePreset ||

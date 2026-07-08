@@ -1053,6 +1053,16 @@ NUMERIC `layer.x/y/z` render per device — see below):
   `pageResponsiveCss.ts` `--layer-*` deltas); `anchor` is base-only.
 - `surfacePreset?: PageSurfacePreset` — `pageSurfacePresets = ["none", "glass",
   "glass-grid", "radial-glow", "ambient-orbs"]`; one-click premium backgrounds.
+- `surfaceTint?: string` (TASK-524-02) — present-only, alpha-capable glass/glow tint
+  that seeds `--surface-glow`/`--deco-ring`/`--orb-color` **independent of**
+  `style.background`. Sanitized at the write boundary via `sanitizeAuthoringCssColor`
+  (`readOptionalSafeColor`); a bad color fails soft (key omitted, never `null`/`""`).
+  It takes **precedence** over the 522 `style.background`-derived glow — the plain-color
+  `background` remains a FALLBACK only when no `surfaceTint` is authored (a chip with a
+  background and NO `surfaceTint` stays byte-identical to 522). A gradient/url tint is
+  left out (invalid inside `radial-gradient()` → CSS falls back to the reference
+  literal). Authored with the 519 alpha-capable swatch (hex8/`rgba()` round-trip);
+  unlike the base-only surface fields it is **per-device** (see below).
 - `hoverEffect?: PageBlockHoverEffect` — `pageBlockHoverEffects = ["none",
   "glow-reveal", "lift", "scale", "lift-glow"]`; hover interactivity (the reference
   `:hover:after` glow-reveal, `:hover` lift/scale).
@@ -1103,12 +1113,39 @@ not a per-property CSS delta), reject-unknown + round-trip tested. Only fixed li
 
 ### Per-device scope (bounded + honest)
 
-Only the NUMERIC `layer.x/y/z` offsets vary per breakpoint — `pageResponsiveCss.ts`
-emits per-property `--layer-*` declarations only; class/data-attr effect deltas are NOT
-CSS-expressible against the inline base. So `decoration`/`surfacePreset`/`hoverEffect`/
-`tilt`/`composition`/`marquee` are BASE-ONLY (identical on every breakpoint, their
-controls `responsive: false`); a decoration is HIDDEN on mobile via the existing
-per-device block visibility (`display:none`), not "kept but animation-off".
+Only the NUMERIC `layer.x/y/z` offsets AND the `surfaceTint` COLOR vary per breakpoint —
+`pageResponsiveCss.ts` emits per-property `--layer-*` declarations plus, for
+`surfaceTint` (TASK-524-02), per-breakpoint `--surface-glow`/`--deco-ring`/`--orb-color`
+retargets under the tablet/mobile `@media` rule (serialized `!important` so the delta
+beats the inline base custom prop; gated, like the base resolver, on a plain
+non-gradient tint AND an active `surfacePreset`/`hoverEffect`/decoration motion ∈
+`{radiate,pulse,drift,float}`). Class/data-attr effect deltas remain NOT CSS-expressible
+against the inline base, so `decoration`/`surfacePreset`/`hoverEffect`/`tilt`/
+`composition`/`marquee` stay BASE-ONLY (identical on every breakpoint, their controls
+`responsive: false`); a decoration is HIDDEN on mobile via the existing per-device block
+visibility (`display:none`), not "kept but animation-off".
+
+### Surface+effect co-location — one node, `translate:` anchor (TASK-524-01)
+
+Before 524, `PAGE_COMPOSITION_EFFECTS_CSS` wrote the `[data-layer-anchor]` self-offset
+via `transform: translate(…)`, so a transform-writing effect (`float`/`drift`/`pulse`/
+`orbit` decoration, `lift`/`lift-glow`/`scale` hover) would have clobbered the anchor
+offset on the same node — 522 therefore routed the effect onto an INNER wrapper while
+`data-surface` stayed on the frame, so only the inner content animated and the glass
+surface stayed static. 524-01 switches the nine anchor rules to the **independent CSS
+`translate:` property** (`translate:-100% -100%`, etc.), a separate composited channel
+from `transform`. `splitBlockComposition` (`pageRendererV2.tsx`) now keeps a transform
+decoration/hover **co-located with `data-surface`/`data-layer` on the SAME frame node**,
+so the whole glass card floats/lifts with its content (matching the reference
+`.floating-chip`). **TILT is the sole remaining inner effect** — it needs a perspective
+PARENT (the frame, stamped `data-tilt-parent`), so its node stays a descendant; tilt +
+decoration on one block is a documented edge (decoration keeps the frame, tilt the
+inner node). The glass/glass-grid surfaces gained `overflow:hidden` (524-03) so the
+node's own box clips to its inline border-radius throughout the transform (anchored
+chips are `[data-layer]` SIBLINGS in `.cx-layered-canvas`, never DOM children, so they
+are never clipped). The `translate:` property is a CSS Transforms L2 feature
+(Chrome/Edge 104, Firefox 72, Safari 14.1; universal on the 2026 evergreen baseline);
+the swap is motion-neutral (static offsets), so `prefers-reduced-motion` is unchanged.
 
 ### Composition CSS + runtime
 

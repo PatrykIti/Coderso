@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Content (Pages) / Site Render / Admin UI / Schema (JSON model) / Security
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-524-01 (co-location — so the seeded tint reaches the animating
 surface node).
 

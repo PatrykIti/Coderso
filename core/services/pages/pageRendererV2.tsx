@@ -883,15 +883,16 @@ export const toPageBlockStyle = (block: PageBlockV2): PageBlockStyleProperties =
  */
 const splitBlockComposition = (style?: PageBlockStyle) => {
   const comp = resolveBlockCompositionAttrs(style);
-  const TRANSFORM_DECOS = new Set(["float", "drift", "pulse", "orbit"]); // NOT "radiate" (box-shadow)
-  const TRANSFORM_HOVERS = new Set(["lift", "lift-glow", "scale"]); // glow-reveal = opacity (frame ok)
-  const deco = comp.dataAttrs["data-deco"];
-  const hover = comp.dataAttrs["data-hover"];
+  // 524-01-L02 co-location: after 524-01-L01 moved the anchor self-offset onto the
+  // free `translate:` property, a transform-writing DECORATION (float/drift/pulse/
+  // orbit) or HOVER (lift/lift-glow/scale) can live on the SAME node as data-surface
+  // + data-layer without clobbering the anchor offset — so the glass surface floats
+  // WITH the effect. TILT is the SOLE inner effect: it needs a perspective PARENT
+  // (the frame, stamped data-tilt-parent), so its node must be a descendant.
   const effectToInner = new Set<string>();
-  if (comp.perspectiveParent) effectToInner.add("data-block-tilt"); // tilt (perspective → frame)
-  if (deco && TRANSFORM_DECOS.has(deco)) effectToInner.add("data-deco"); // transform decoration
-  if (hover && TRANSFORM_HOVERS.has(hover)) effectToInner.add("data-hover"); // transform hover
-  const INNER_VAR_KEYS = ["--deco-delay", "--deco-duration"]; // effect timing vars
+  if (comp.perspectiveParent) effectToInner.add("data-block-tilt"); // tilt only → inner (perspective descendant)
+  // (deco + hover now stay on the frame, co-located with data-surface — 524-01-L02)
+  const INNER_VAR_KEYS: string[] = []; // decoration timing vars now seed the frame (which carries data-deco)
   const frameAttrs: Record<string, string> = {};
   const frameVars: Record<string, string> = {};
   const innerAttrs: Record<string, string> = {};

@@ -50,10 +50,21 @@ describe("PAGE_COMPOSITION_EFFECTS_CSS", () => {
     }
   });
 
-  test("includes all 9 layer-anchor transform rules", () => {
+  test("includes all 9 layer-anchor rules", () => {
     for (const anchor of pageLayerAnchors) {
       expect(css).toContain(`[data-layer-anchor="${anchor}"]`);
     }
+  });
+
+  test("layer-anchor self-offset rides the `translate:` PROPERTY, not transform (524-01-L01)", () => {
+    // The anchor offset now uses the independent CSS `translate:` property so it
+    // composes with a transform-based effect on the SAME node (glass floats with
+    // content). Offsets are identical; only the composited property differs.
+    expect(css).toContain('[data-layer-anchor="top-left"]{translate:0 0}');
+    expect(css).toContain('[data-layer-anchor="center"]{translate:-50% -50%}');
+    expect(css).toContain('[data-layer-anchor="bottom-right"]{translate:-100% -100%}');
+    // No anchor rule may write the transform channel anymore (would clobber the effect).
+    expect(css).not.toMatch(/\[data-layer-anchor="[^"]+"\]\{transform:translate\(/);
   });
 
   test("marquee animation targets .cx-marquee-track, not [data-marquee] > *", () => {
@@ -75,6 +86,25 @@ describe("PAGE_COMPOSITION_EFFECTS_CSS", () => {
     expect(css).toContain(
       '[data-hover="glow-reveal"]::after,[data-hover="lift-glow"]::after{content:""'
     );
+  });
+
+  test("524-03: glass surface presets clip their rounded box during transform (overflow:hidden)", () => {
+    // The surface node carries the inline border-radius (style.radius / section
+    // radius) AND, after 524-01-L02, the transform-writing effect. Without an
+    // overflow clip the backdrop-filter / grid ::before layer paints to the
+    // node's SQUARE box, so tilt/float/lift exposes SHARP corners past the
+    // rounded card. `overflow:hidden` on the glass surface node itself keeps the
+    // rounded corners clipped throughout the transform.
+    expect(css).toContain('[data-surface="glass"]{');
+    // the glass rule must carry overflow:hidden (backdrop-filter + border box)
+    const glassRule = css.slice(
+      css.indexOf('[data-surface="glass"]{'),
+      css.indexOf("}", css.indexOf('[data-surface="glass"]{'))
+    );
+    expect(glassRule).toContain("backdrop-filter");
+    expect(glassRule).toContain("overflow:hidden");
+    // the glass-grid preset (::before grid layer) clips its rounded box too
+    expect(css).toContain('[data-surface="glass-grid"]{position:relative;overflow:hidden}');
   });
 });
 
@@ -176,6 +206,51 @@ describe("color threading (parent Security Contract §2 / finding 4)", () => {
 
   test("[data-surface=glass] CSS uses background-image so an inline background tints through", () => {
     expect(PAGE_COMPOSITION_EFFECTS_CSS).toContain('[data-surface="glass"]{background-image:');
+  });
+
+  // TASK-524-02-L04 — surfaceTint seeds the glow INDEPENDENTLY of background;
+  // background stays a FALLBACK only when no surfaceTint is authored.
+  test("surfaceTint WINS over background for the glow", () => {
+    const v = resolveBlockCompositionAttrs({
+      surfacePreset: "glass",
+      background: "#123456",
+      surfaceTint: "rgba(142,232,255,.5)",
+    }).cssVars;
+    expect(v["--surface-glow"]).toBe("rgba(142,232,255,.5)");
+    expect(v["--deco-ring"]).toBe("rgba(142,232,255,.5)");
+    expect(v["--orb-color"]).toBe("rgba(142,232,255,.5)");
+  });
+
+  test("three different-background chips + same surfaceTint → identical glow", () => {
+    const glow = (bg: string) =>
+      resolveBlockCompositionAttrs({
+        surfacePreset: "glass",
+        background: bg,
+        surfaceTint: "rgba(142,232,255,.5)",
+      }).cssVars["--surface-glow"];
+    expect(glow("#8ee8ff")).toBe(glow("#adffd8"));
+    expect(glow("#adffd8")).toBe("rgba(142,232,255,.5)");
+  });
+
+  test("surfaceTint with NO background still seeds the glow", () => {
+    const v = resolveBlockCompositionAttrs({
+      surfacePreset: "glass",
+      surfaceTint: "#8ee8ff",
+    }).cssVars;
+    expect(v["--surface-glow"]).toBe("#8ee8ff");
+  });
+
+  test("no surfaceTint → 522 background-derived glow (byte-identical)", () => {
+    const v = resolveBlockCompositionAttrs({
+      surfacePreset: "glass",
+      background: "#123456",
+    }).cssVars;
+    expect(v["--surface-glow"]).toBe("#123456");
+  });
+
+  test("bare surfaceTint with no surface/hover/glow-deco emits no glow vars (needsGlow gate)", () => {
+    const v = resolveBlockCompositionAttrs({ surfaceTint: "#8ee8ff" }).cssVars;
+    expect(v).not.toHaveProperty("--surface-glow");
   });
 });
 
