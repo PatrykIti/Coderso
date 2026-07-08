@@ -1044,7 +1044,10 @@ NUMERIC `layer.x/y/z` render per device — see below):
   `duration` clamped `PAGE_DECORATION_DURATION_CLAMP = { min: 2000, max: 16000 }` ms.
 - `tilt?: PageTiltStrength` — `pageTiltStrengths = ["none", "subtle", "strong"]`; a
   perspective + `preserve-3d` pointer-tracking 3D tilt on any block, driven by the
-  `[data-block-tilt]` runtime binding appended to `pageEffectsRuntime.ts`.
+  `[data-block-tilt]` runtime binding appended to `pageEffectsRuntime.ts`. Since
+  TASK-528 the tilt transform rides the **surface FRAME** (`data-block-tilt` co-located
+  with `data-surface`, so the WHOLE glass card tilts, not just its inner content); the
+  CSS `perspective` sits on an ANCESTOR `[data-tilt-parent]` wrapper (see below).
 - `tiltGlare?: boolean` — optional `.cx-glare` sheen sweep on a tilted block.
 - `layer?: PageBlockLayer` — `{ x?, y?, z?, anchor? }` placement inside a layered
   canvas. `x`/`y` clamped `PAGE_LAYER_X_CLAMP`/`PAGE_LAYER_Y_CLAMP = { min: -50, max:
@@ -1137,10 +1140,18 @@ surface stayed static. 524-01 switches the nine anchor rules to the **independen
 from `transform`. `splitBlockComposition` (`pageRendererV2.tsx`) now keeps a transform
 decoration/hover **co-located with `data-surface`/`data-layer` on the SAME frame node**,
 so the whole glass card floats/lifts with its content (matching the reference
-`.floating-chip`). **TILT is the sole remaining inner effect** — it needs a perspective
-PARENT (the frame, stamped `data-tilt-parent`), so its node stays a descendant; tilt +
-decoration on one block is a documented edge (decoration keeps the frame, tilt the
-inner node). The glass/glass-grid surfaces gained `overflow:hidden` (524-03) so the
+`.floating-chip`). **TASK-528 completes the co-location for TILT too**: the tilt
+transform now rides the **FRAME** (`data-block-tilt` co-located with `data-surface`),
+so the ENTIRE glass card tilts on hover (was: tilt on an inner descendant, so only the
+inner content tilted while the glass card stayed flat). Because CSS `perspective` must
+sit on an ANCESTOR of the transformed node, `renderPageBlockWithFrame` wraps the frame
+in a present-only `[data-tilt-parent]` perspective wrapper (`splitBlockComposition`
+exposes `tiltParent`; the frame no longer carries `data-tilt-parent`) — omitted unless
+the block authors tilt, so non-tilt frames render byte-identically. The tilt uses the
+`translate:`-property anchor (524-01) so the anchor offset composes with the tilt
+`transform`; the one rare untested combo is tilt AND a transform-decoration on the same
+block (they contend on the frame `transform` — the reference never combines them: chips
+float, the card tilts). The glass/glass-grid surfaces gained `overflow:hidden` (524-03) so the
 node's own box clips to its inline border-radius throughout the transform (anchored
 chips are `[data-layer]` SIBLINGS in `.cx-layered-canvas`, never DOM children, so they
 are never clipped). The `translate:` property is a CSS Transforms L2 feature

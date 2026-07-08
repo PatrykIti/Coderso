@@ -3811,14 +3811,33 @@ test("surface preset rides the FRAME on the shared feed (both render paths)", ()
   expect(html).toContain('data-surface="glass"');
 });
 
-test("tilt on any block → inner data-block-tilt + frame data-tilt-parent + glare child", () => {
+test("TASK-528 tilt on any block → frame data-block-tilt + ancestor data-tilt-parent + glare child", () => {
   const block = composedBlock({ tilt: "subtle", tiltGlare: true });
-  // perspective parent on the FRAME; the tilt transform node is the INNER child.
-  expect(frameAttrs(block)["data-tilt-parent"]).toBe("");
-  expect(frameAttrs(block)["data-block-tilt"]).toBeUndefined();
+  // TASK-528 whole-card tilt: the tilt transform rides the FRAME (co-located with
+  // data-surface); the CSS perspective moves to an ANCESTOR wrapper (not the frame).
+  expect(frameAttrs(block)["data-block-tilt"]).toBe("subtle");
+  expect(frameAttrs(block)["data-tilt-parent"]).toBeUndefined();
   const html = renderComposedBlocks([block]);
   expect(html).toContain('data-block-tilt="subtle"');
+  expect(html).toContain("data-tilt-parent");
   expect(html).toContain("cx-glare");
+});
+
+test("TASK-528 whole card tilts — glass + tilt land on the SAME node (data-block-tilt === data-surface node)", () => {
+  // The owner bug: glass CARD stayed flat while only inner content tilted, because
+  // data-surface was on the frame but data-block-tilt sat on an inner child. FIX:
+  // both must be co-located on the FRAME so the entire glass card tilts on hover.
+  const block = composedBlock({ surfacePreset: "glass", tilt: "strong" });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-surface"]).toBe("glass");
+  expect(attrs["data-block-tilt"]).toBe("strong");
+  // Perspective on an ancestor wrapper, NOT the transformed frame node.
+  expect(attrs["data-tilt-parent"]).toBeUndefined();
+  // HTML sanity: the SAME element carries both attrs (the frame element opens with
+  // data-surface="glass" ... data-block-tilt="strong" before the next `>`).
+  const html = renderComposedBlocks([block]);
+  expect(html).toMatch(/data-surface="glass"[^>]*data-block-tilt="strong"/);
+  expect(html).toContain("data-tilt-parent");
 });
 
 test("surfacePreset ambient-orbs emits two aria-hidden .cx-orb spans in the inner wrapper", () => {
@@ -3872,7 +3891,7 @@ test("finding 4 — anchor + hover lift co-locate layer + hover on the FRAME (52
   expect(renderComposedBlocks([block])).toContain('data-hover="lift"');
 });
 
-test("finding 4 — anchor + tilt: layer + perspective on frame, tilt on inner", () => {
+test("finding 4 — anchor + tilt: layer + tilt co-locate on frame, perspective on ancestor (528)", () => {
   const block = composedBlock({
     tilt: "subtle",
     layer: { x: 8, y: 12, anchor: "bottom-right" },
@@ -3880,9 +3899,13 @@ test("finding 4 — anchor + tilt: layer + perspective on frame, tilt on inner",
   const attrs = frameAttrs(block);
   expect(attrs["data-layer"]).toBe("");
   expect(attrs["data-layer-anchor"]).toBe("bottom-right");
-  expect(attrs["data-tilt-parent"]).toBe("");
-  expect(attrs["data-block-tilt"]).toBeUndefined();
-  expect(renderComposedBlocks([block])).toContain('data-block-tilt="subtle"');
+  // TASK-528: tilt rides the frame (same node as the anchor `translate:` offset);
+  // perspective is on the ancestor wrapper, not the frame.
+  expect(attrs["data-block-tilt"]).toBe("subtle");
+  expect(attrs["data-tilt-parent"]).toBeUndefined();
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain('data-block-tilt="subtle"');
+  expect(html).toContain("data-tilt-parent");
 });
 
 test("finding 4 — radiate + anchor stays wholly on the frame (no inner wrapper)", () => {
@@ -3907,13 +3930,14 @@ test("finding 4 — layer-only block (no transform effect) keeps everything on t
 });
 
 // ── TASK-522-04-L02 — block tilt render-shape (controls in 522-04-L01) ──
-test('tilt "strong" → data-block-tilt="strong" on the inner wrapper, perspective on frame', () => {
+test('tilt "strong" → data-block-tilt="strong" on the FRAME, perspective on ancestor (528)', () => {
   const block = composedBlock({ tilt: "strong" });
-  // perspective parent on the FRAME; the runtime-rotated node is the INNER child.
-  expect(frameAttrs(block)["data-tilt-parent"]).toBe("");
-  expect(frameAttrs(block)["data-block-tilt"]).toBeUndefined();
+  // TASK-528 whole-card tilt: the runtime-rotated node is the FRAME; perspective on ancestor.
+  expect(frameAttrs(block)["data-block-tilt"]).toBe("strong");
+  expect(frameAttrs(block)["data-tilt-parent"]).toBeUndefined();
   const html = renderComposedBlocks([block]);
   expect(html).toContain('data-block-tilt="strong"');
+  expect(html).toContain("data-tilt-parent");
   // No glare requested → no sheen child.
   expect(html).not.toContain("cx-glare");
 });

@@ -887,11 +887,23 @@ const splitBlockComposition = (style?: PageBlockStyle) => {
   // free `translate:` property, a transform-writing DECORATION (float/drift/pulse/
   // orbit) or HOVER (lift/lift-glow/scale) can live on the SAME node as data-surface
   // + data-layer without clobbering the anchor offset — so the glass surface floats
-  // WITH the effect. TILT is the SOLE inner effect: it needs a perspective PARENT
-  // (the frame, stamped data-tilt-parent), so its node must be a descendant.
+  // WITH the effect.
+  //
+  // TASK-528 whole-card tilt: TILT now ALSO lives on the FRAME (co-located with
+  // data-surface / border-radius / the anchor `translate:` property). The tilt
+  // transform must be on the SAME node as the glass surface so the ENTIRE card
+  // tilts on hover (was: tilt on an inner descendant → only the inner content
+  // tilted while the glass card stayed flat). CSS `perspective` must sit on an
+  // ANCESTOR of the transformed node, so renderPageBlockWithFrame wraps the frame
+  // in a `[data-tilt-parent]` ancestor (see `tiltParent` below) instead of
+  // stamping data-tilt-parent on the frame itself. The tilt runtime binds
+  // [data-block-tilt] pointermove → the whole frame now tilts; the anchor uses the
+  // `translate:` property (524-01) so it composes with the tilt `transform`.
+  // KNOWN rare combo: a block with BOTH tilt AND a transform-decoration
+  // (float/drift) would contend on `transform` on the frame — the reference never
+  // combines them (chips float, card tilts).
   const effectToInner = new Set<string>();
-  if (comp.perspectiveParent) effectToInner.add("data-block-tilt"); // tilt only → inner (perspective descendant)
-  // (deco + hover now stay on the frame, co-located with data-surface — 524-01-L02)
+  // (deco + hover + tilt now stay on the frame, co-located with data-surface)
   const INNER_VAR_KEYS: string[] = []; // decoration timing vars now seed the frame (which carries data-deco)
   const frameAttrs: Record<string, string> = {};
   const frameVars: Record<string, string> = {};
@@ -903,8 +915,8 @@ const splitBlockComposition = (style?: PageBlockStyle) => {
   for (const [k, v] of Object.entries(comp.cssVars)) {
     (INNER_VAR_KEYS.includes(k) ? innerVars : frameVars)[k] = v;
   }
-  // tilt needs a perspective PARENT: the frame is the parent of the inner tilt node.
-  if (comp.perspectiveParent) frameAttrs["data-tilt-parent"] = "";
+  // tilt needs a perspective PARENT: an ancestor wrapper of the frame carries it.
+  const tiltParent = comp.perspectiveParent;
   const needsInner = effectToInner.size > 0 || comp.glare || comp.ambientOrbs;
   return {
     frameAttrs,
@@ -912,6 +924,7 @@ const splitBlockComposition = (style?: PageBlockStyle) => {
     innerAttrs,
     innerVars,
     needsInner,
+    tiltParent,
     glare: comp.glare,
     ambientOrbs: comp.ambientOrbs,
   };
@@ -2362,25 +2375,39 @@ const renderPageBlockWithFrame = (block: PageBlockV2, context: PageBlockRenderCo
     );
   }
   const renderProps = toPageBlockRenderProps(block);
+  // TASK-528 whole-card tilt: the frame carries data-block-tilt (co-located with
+  // data-surface), so CSS `perspective` must sit on an ANCESTOR — wrap the frame
+  // in a [data-tilt-parent] perspective wrapper. Present-only: only when the block
+  // authors tilt (`s.tiltParent`); otherwise the frame renders byte-identically.
+  const withTiltParent = (frame: ReactNode): ReactNode =>
+    s.tiltParent ? (
+      <div data-tilt-parent="" style={{ perspective: "1200px" } as CSSProperties}>
+        {frame}
+      </div>
+    ) : (
+      frame
+    );
   if (context.renderBlockFrame) {
     return (
       <FragmentLike key={block.id}>
-        {context.renderBlockFrame({
-          block,
-          content,
-          renderProps,
-          blockPath: context.blockPath,
-          depth: context.depth,
-          slotKey: context.slotKey,
-          parentBlock: context.parentBlock,
-        })}
+        {withTiltParent(
+          context.renderBlockFrame({
+            block,
+            content,
+            renderProps,
+            blockPath: context.blockPath,
+            depth: context.depth,
+            slotKey: context.slotKey,
+            parentBlock: context.parentBlock,
+          })
+        )}
       </FragmentLike>
     );
   }
   return (
-    <PageBlockFrame key={block.id} block={block}>
-      {content}
-    </PageBlockFrame>
+    <FragmentLike key={block.id}>
+      {withTiltParent(<PageBlockFrame block={block}>{content}</PageBlockFrame>)}
+    </FragmentLike>
   );
 };
 
