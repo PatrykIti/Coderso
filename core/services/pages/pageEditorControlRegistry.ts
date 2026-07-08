@@ -341,7 +341,8 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     // Device-uniform, same reason as scrollEffect above.
     responsive: false,
     clamp: { min: PAGE_PARALLAX_INTENSITY_CLAMP.min, max: PAGE_PARALLAX_INTENSITY_CLAMP.max },
-    step: 2,
+    // No explicit step — falls through to the derived default (1px) for fine
+    // control (TASK-530).
     unit: "px",
   }),
   ...(
