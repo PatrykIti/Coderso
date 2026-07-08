@@ -732,7 +732,14 @@ site-token style bridging. Reusable authoring modules live under
   generic non-Page-v2 panel engine.
 - `PageEditorLayers.tsx` and `PageEditorCommandPalette.tsx` own the layers
   rows, command groups, and Page Template insertion picker UI. The parent
-  shell still owns document mutation and template instantiation.
+  shell still owns document mutation and template instantiation. The Layers
+  popover (rendered in `PageEditor.tsx`, host of `LayerBlockRows`) self-bounds
+  its height as an `absolute` box with
+  `max-h-[min(72vh,calc(100dvh-8rem))] flex flex-col overflow-hidden` and puts a
+  single `min-h-0 flex-1 overflow-y-auto overscroll-contain` scroll region on the
+  section list, so a tall multi-section block tree scrolls as ONE list and every
+  layer stays reachable (`shrink-0` header); `LayerBlockRows` recursion adds no
+  nested scroll box (TASK-526).
 - `pageEditorOptions.ts` and `pageEditorLabels.ts` own neutral option/label
   derivation that can be reused by Pages, Page Templates, and Menu Design.
 
