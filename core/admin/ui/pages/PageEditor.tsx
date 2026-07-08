@@ -2303,6 +2303,25 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
     [setDocumentDraft]
   );
 
+  // TASK-523-01-L03 — live-draft writer for the per-page canvas background, mirroring
+  // updateEffects. Writes onto document settings via setDocumentDraft (undo/dirty
+  // wrapper), present-only: clearing drops the key ⇒ byte-identical draft. The server
+  // normalizeSettings (523-01-L01) re-validates via sanitizeAuthoringCssBackground;
+  // this client cleanup is convenience only.
+  const updateBackground = useCallback(
+    (value: string | null | undefined) => {
+      setDocumentDraft((doc) => {
+        if (!value) {
+          // Present-only: clearing drops the key entirely (byte-identity).
+          const { background: _dropped, ...restSettings } = doc.settings;
+          return { ...doc, settings: restSettings };
+        }
+        return { ...doc, settings: { ...doc.settings, background: value } };
+      });
+    },
+    [setDocumentDraft]
+  );
+
   // Host settings sheets save page-chrome metadata through their own client
   // call; only the detail metadata is synchronized so unsaved canvas edits
   // are never overwritten.
@@ -3325,6 +3344,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
             template={pageDocument.settings.template}
             effects={pageDocument.settings.effects}
             onEffectsChange={updateEffects}
+            background={pageDocument.settings.background}
+            onBackgroundChange={updateBackground}
             palette={sitePalette}
           />
         ) : null}
@@ -4958,7 +4979,7 @@ const SelectField = ({
  * `handleSettingsSave` → `updatePage`) — and hosts the L02 Effects section wired
  * to the live document draft (`settings.effects`, persisted on every save/publish).
  */
-const PageSettingsSubpanel = ({
+export const PageSettingsSubpanel = ({
   onClose,
   title,
   slug,
@@ -4973,6 +4994,8 @@ const PageSettingsSubpanel = ({
   template,
   effects,
   onEffectsChange,
+  background,
+  onBackgroundChange,
   palette,
 }: {
   onClose: () => void;
@@ -4989,6 +5012,8 @@ const PageSettingsSubpanel = ({
   template: string;
   effects: PageEffectsV2 | undefined;
   onEffectsChange: (patch: Partial<PageEffectsV2>) => void;
+  background: string | undefined;
+  onBackgroundChange: (value: string | null | undefined) => void;
   palette: readonly PageEditorColorSwatch[];
 }) => (
   <EditorControlToneContext.Provider value="light">
@@ -5037,6 +5062,26 @@ const PageSettingsSubpanel = ({
           <Button type="button" className="w-full" disabled={isSaving} onClick={onSave}>
             {isSaving ? "Saving..." : "Save settings"}
           </Button>
+          {/* TASK-523-01-L03 — per-page canvas background (solid color; alpha-capable
+              519 custom input). Writes settings.background on the live document draft;
+              gradients stay model/import-only (ColorSwatchControl is color-only). */}
+          <section
+            aria-label="Design"
+            className="space-y-3 border-t border-border pt-3"
+            data-page-editor-design-section="true"
+          >
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Design
+            </p>
+            <ColorSwatchControl
+              label="Page background"
+              value={background ?? ""}
+              palette={palette}
+              allowCustom
+              allowTransparent
+              onChange={(value) => onBackgroundChange(value ?? undefined)}
+            />
+          </section>
           <section
             aria-label="Effects"
             className="space-y-3 border-t border-border pt-3"

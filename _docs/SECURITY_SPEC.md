@@ -479,6 +479,25 @@ Rotacja klucza:
   `data-*`/CSS custom properties, emitted via static-`__html` `dangerouslySetInnerHTML`,
   never interpolating stored data.
 
+## Page canvas background color boundary (TASK-523)
+
+- `settings.background` (per-page canvas background) is a CSS sink and reaches the page
+  `<Root>` inline `style.background`. It is validated by the SINGLE color/gradient path
+  `sanitizeAuthoringCssBackground` at BOTH write (`normalizeSettings`) AND render
+  (`PageDocumentRender`, defence in depth — React SSR does not block a `;`-delimited CSS
+  injection in a `style` value). A value that fails the sanitizer returns `null` and the
+  key is dropped (fail-soft); no raw stored string ever reaches a CSS declaration.
+- **Gradient hardening.** `isSafeAuthoringCssGradient` now rejects any `url(` token AND
+  any top-level comma-separated multi-layer form (`isSingleGradientLayer`: exactly one
+  gradient head + its balanced parens, with nothing after the matching close paren). This
+  closes the `linear-gradient(...), url(//evil.example/beacon.png)` outbound-fetch layer
+  and the nested `radial-gradient(circle,url(//x))` case. The gradient charset already
+  excluded `;`/`{`/`}`/`<`/`>`/`:` (no declaration or `</style>` breakout); this addition
+  closes the residual `url()`-layer fetch surface. The hardening is a single-writer change
+  in `pageAuthoringSanitizers.ts` and applies to EVERY caller of
+  `sanitizeAuthoringCssBackground` (page canvas background + all TASK-522 background
+  authoring), not just the page canvas.
+
 ## Assistant security baseline (v1)
 
 - Konfiguracja limitow asystenta jest trzymana w global settings:

@@ -328,7 +328,14 @@ export const PAGE_DECORATION_DELAY_CLAMP = { min: 0, max: 4000 } as const; // ms
 export const PAGE_DECORATION_DURATION_CLAMP = { min: 2000, max: 16000 } as const; // ms
 export const PAGE_LAYER_X_CLAMP = { min: -50, max: 150 } as const; // %
 export const PAGE_LAYER_Y_CLAMP = { min: -50, max: 150 } as const; // %
-export const PAGE_LAYER_Z_CLAMP = { min: 0, max: 40 } as const;
+// TASK-523-02 — occlusion-proofing: the cursor-spotlight overlay paints at a
+// FIXED z-index of 30 (PAGE_SPOTLIGHT_CSS, pageRendererV2.tsx) inside the shared
+// root stacking context, strictly below the sticky nav (z-40). A layered-canvas
+// [data-layer] maps `layer.z` directly to `z-index` (pageCompositionEffects.tsx),
+// so its max is capped STRICTLY BELOW the overlay (30) — no authorable layer can
+// reach/exceed the spotlight and occlude the glow. Do NOT raise max to/above 30
+// without re-approving the spotlight-occlusion tradeoff.
+export const PAGE_LAYER_Z_CLAMP = { min: 0, max: 20 } as const;
 export const PAGE_MARQUEE_SPEED_CLAMP = { min: 8, max: 40 } as const; // s
 /** Custom-SVG block: stroke draw-in speed bounds (ms) + max sanitized byte cap. */
 export const PAGE_DRAW_SPEED_CLAMP = { min: 600, max: 6000 } as const; // ms
@@ -481,6 +488,14 @@ export type PageDocumentSettingsV2 = {
    * when empty so `defaultSettings` and legacy documents stay byte-identical.
    */
   effects?: PageEffectsV2;
+  /**
+   * TASK-523-01 per-page canvas background — a safe solid color OR CSS gradient.
+   * Present-only: omitted when unset so `defaultSettings` and legacy/post-522
+   * documents stay byte-identical. The ONLY path a value reaches this field is
+   * `sanitizeAuthoringCssBackground` (safe color/gradient, else the key is dropped),
+   * mirrored at RENDER (523-01-L02) — no raw string is ever stored or rendered.
+   */
+  background?: string;
 };
 
 /**
@@ -1719,6 +1734,11 @@ export const pageDocumentV2JsonSchema: RecordValue = {
             },
           },
         },
+        // TASK-523-01 per-page canvas background. Deep color/gradient validation
+        // is owned by `sanitizeAuthoringCssBackground` in `normalizeSettings`
+        // (exactly as `menuAppearance`'s deep validation is owned by
+        // `normalizeMenuAppearance`); the schema mirrors only the shape.
+        background: { type: "string" },
         collectionLink: {
           type: "object",
           required: ["contentTypeId", "pageRole"],
@@ -2350,7 +2370,15 @@ const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSet
   const input = requireRecord(value ?? {}, "settings", mode);
   assertKnownKeys(
     input,
-    ["template", "showInNav", "revisionRetention", "collectionLink", "menuAppearance", "effects"],
+    [
+      "template",
+      "showInNav",
+      "revisionRetention",
+      "collectionLink",
+      "menuAppearance",
+      "effects",
+      "background",
+    ],
     "settings",
     mode
   );
@@ -2361,6 +2389,13 @@ const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSet
       : readNumber(input.revisionRetention, 10, 1, 100);
   const menuAppearance = normalizeSettingsMenuAppearance(input.menuAppearance, mode);
   const effects = normalizeEffects(input.effects, mode);
+  // TASK-523-01 present-only page canvas background. `sanitizeAuthoringCssBackground`
+  // returns a safe color/gradient or `null`; a null/absent value drops the key so the
+  // normalized output stays byte-identical for legacy/post-522 docs.
+  const background =
+    input.background === undefined
+      ? undefined
+      : (sanitizeAuthoringCssBackground(input.background) ?? undefined);
   return {
     template: readText(input.template, defaultSettings.template),
     showInNav: readBoolean(input.showInNav, defaultSettings.showInNav),
@@ -2368,6 +2403,7 @@ const normalizeSettings = (value: unknown, mode: NormalizeMode): PageDocumentSet
     ...(collectionLink ? { collectionLink } : {}),
     ...(menuAppearance !== undefined ? { menuAppearance } : {}),
     ...(effects !== undefined ? { effects } : {}),
+    ...(background ? { background } : {}),
   };
 };
 

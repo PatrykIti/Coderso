@@ -201,6 +201,23 @@ user keeps the STATIC layered/glass/surface styling but sees no animation, no ti
 hover transition. Effects are **present-only** — no token, no DDL, no migration; a
 no-effect page renders byte-identically to post-521 output.
 
+## Pages v2 page canvas background & spotlight layering (TASK-523)
+
+- **Page canvas background** (`settings.background`) — a present-only per-page solid
+  color OR CSS gradient emitted as inline `style.background` on the page `<Root>`,
+  overriding the default `bg-white` utility. The panel widget authors solid colors only
+  (shared color-only `ColorSwatchControl`, alpha-capable via TASK-519); gradients are
+  model/import-only. The ONLY path a value reaches CSS is `sanitizeAuthoringCssBackground`
+  (safe color/gradient, else the key is dropped), applied at write AND render.
+- **Spotlight overlay layering z-index boundary** — the cursor-spotlight overlay paints at
+  a FIXED `z-index:30` with `mix-blend-mode:screen` (occlusion-proof: above opaque section
+  content, additive, `pointer-events:none`), STRICTLY BELOW the front sticky nav
+  (`sticky z-40`) so screen-blend never tints the menu bar. The layered-canvas token
+  `--layer-z` (`PAGE_LAYER_Z_CLAMP`) is bounded to a max of `20` — STRICTLY BELOW the
+  overlay's `30` — so no authored layer can reach the spotlight and occlude the glow. The
+  layering invariant is `PAGE_LAYER_Z_CLAMP.max (20) < overlay z-index (30) < nav z-index
+  (40)`.
+
 ## Tailwind integration
 
 - Core build mapuje tokeny na utility classes.

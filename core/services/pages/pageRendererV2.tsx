@@ -2690,14 +2690,38 @@ export const resolvePageRenderTree = (
 ): PageDocumentV2 => resolvePageDocumentForBreakpoint(document, breakpoint);
 
 /**
- * TASK-521-05-L03 — STATIC cursor-spotlight background rule. Ships as a module
+ * TASK-521-05-L03 / TASK-523-02 — STATIC cursor-spotlight rule. Ships as a module
  * const (NOT a Tailwind arbitrary variant): the radial-gradient carries multiple
  * `var()` refs + raw commas, a fragile/unreliable JIT case we do NOT gamble on.
  * Scoped under `[data-page-spotlight]` so it is inert unless the root marker is
- * present, and under `@media (prefers-reduced-motion: no-preference)` so reduce
- * users get NO gradient. Reads only VALIDATED custom props off the root.
+ * present.
+ *
+ * TASK-523-02 — Occlusion-proof. A NON-gated base rule lifts the overlay ABOVE
+ * opaque section backgrounds and makes it ADD light without blocking
+ * (`mix-blend-mode:screen` + `pointer-events:none`) — `position:fixed;inset:0`
+ * pins it to the viewport. The radial-gradient (the moving glow itself) stays
+ * inside the `@media (prefers-reduced-motion: no-preference)` gate so reduce users
+ * get NO gradient. Reads only VALIDATED custom props off the root.
+ *
+ * Hard Invariant #4 / Acceptance Criteria #4: the overlay z-index is STRICTLY
+ * BELOW the front sticky nav (`sticky z-40`, see navigation.tsx / widgetRenderer)
+ * so screen-blend never tints the menu bar. The overlay and nav are sibling
+ * children of the same root stacking context (`<Root>` forms no stacking
+ * context), so `z-index:30` still paints above opaque section content but below
+ * the nav. Do NOT raise this to/above 40 without owner re-approval of the
+ * nav-tint tradeoff.
+ *
+ * Occlusion-proofing (TASK-523-02): the ONLY other author-controllable surface
+ * in this same root stacking context is a layered-canvas `[data-layer]`, which
+ * maps `layer.z` straight to `z-index` (pageCompositionEffects.tsx). Its bound
+ * `PAGE_LAYER_Z_CLAMP.max` is capped STRICTLY BELOW 30 so no authored layer can
+ * reach the overlay and hide the glow. If you change the overlay z-index, keep
+ * `PAGE_LAYER_Z_CLAMP.max < overlay z-index < nav z-index (40)`.
  */
 export const PAGE_SPOTLIGHT_CSS =
+  "[data-page-spotlight] [data-page-spotlight-overlay]{" +
+  "position:fixed;inset:0;z-index:30;" +
+  "mix-blend-mode:screen;pointer-events:none}" +
   "@media (prefers-reduced-motion: no-preference){" +
   "[data-page-spotlight] [data-page-spotlight-overlay]{" +
   "background:radial-gradient(var(--spotlight-size,400px) at " +
@@ -2844,12 +2868,27 @@ export function PageDocumentRender({
   const spotlightColor =
     sanitizeAuthoringCssColor(effects?.spotlightColor) ??
     "color-mix(in srgb, var(--primary) 14%, transparent)";
-  const rootStyle = spotlightOn
-    ? ({
-        ["--spotlight-color" as string]: spotlightColor,
-        ["--spotlight-size" as string]: `${spotlightSize}px`,
-      } as CSSProperties)
-    : undefined;
+  // TASK-523-01-L02 — re-sanitize the per-page canvas background at RENDER
+  // (defence-in-depth, matching every other color/background in this renderer, e.g.
+  // :347 — React SSR does not block a `;`-delimited CSS injection in a `style` value).
+  // Present-only: a page without a background yields `undefined`.
+  const canvasBackground =
+    sanitizeAuthoringCssBackground(resolved.settings.background) ?? undefined;
+  // Build rootStyle when the spotlight OR a canvas background is set; keep the exact
+  // `--spotlight-*` vars and ADD `background` only when present. When NEITHER is set,
+  // rootStyle stays `undefined` ⇒ byte-identical <Root> vs post-522.
+  const rootStyle: CSSProperties | undefined =
+    spotlightOn || canvasBackground
+      ? ({
+          ...(spotlightOn
+            ? {
+                ["--spotlight-color" as string]: spotlightColor,
+                ["--spotlight-size" as string]: `${spotlightSize}px`,
+              }
+            : {}),
+          ...(canvasBackground ? { background: canvasBackground } : {}),
+        } as CSSProperties)
+      : undefined;
 
   return (
     <Root
@@ -2879,7 +2918,7 @@ export function PageDocumentRender({
           <div
             aria-hidden="true"
             data-page-spotlight-overlay
-            className="pointer-events-none fixed inset-0 z-0"
+            className="pointer-events-none fixed inset-0"
           />
         </>
       )}

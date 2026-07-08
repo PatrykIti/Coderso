@@ -1093,6 +1093,65 @@ appended to the shared `pageEffectsRuntime.ts` as a self-gated `[data-block-tilt
 binding (its own `matchMedia('(pointer:fine)')` gate; reuses the module reduced-motion
 early-return).
 
+## Page Canvas Background & Occlusion-Proof Cursor Spotlight — TASK-523
+
+TASK-523 extends the same page-settings + page-render seams landed by TASK-521,
+riding existing `currentData.settings` jsonb with **no migration, no
+`PAGE_DOCUMENT_SCHEMA_VERSION` bump (stays `2`), no npm dependency**. Both deliverables
+are **present-only** (omitted when unset ⇒ `defaultSettings` and legacy/post-522
+documents AND the `<Root>` stay byte-identical) and join the **reject-unknown
+allowlist** (`assertKnownKeys` + strict `pageDocumentV2JsonSchema`
+`additionalProperties: false`) with round-trip tests.
+
+### `settings.background` — per-page canvas background
+
+`settings.background` is a present-only per-page canvas background: a safe solid color
+OR CSS gradient. It normalizes on write (`normalizeSettings`) and re-sanitizes at render
+(`PageDocumentRender`, defence-in-depth) through the SINGLE color/gradient path
+`sanitizeAuthoringCssBackground` — a value that fails the sanitizer returns `null` and
+the key is dropped (fail-soft). When present it is emitted as an inline
+`style.background` on the page `<Root>`, overriding the default `min-h-screen bg-white
+text-slate-950` utility; when absent, `rootStyle` stays `undefined` and `<Root>` is
+byte-identical to post-522. The compact page-settings panel exposes a **Design →
+"Page background"** control (the shared color-only `ColorSwatchControl`, alpha-capable
+via the TASK-519 custom input) that writes `settings.background` onto the LIVE document
+draft via `setDocumentDraft` (persisted on every save/publish, mirroring the spotlight
+color; clearing drops the key). **Gradients are model/import-only** — they round-trip
+and render through `settings.background`, but the panel widget authors solid colors only.
+
+**Gradient hardening (was TASK-523 FU-1, landed here).** `isSafeAuthoringCssGradient`
+(`pageAuthoringSanitizers.ts`) now rejects any `url(` token AND any top-level
+comma-separated multi-layer form (`isSingleGradientLayer` — one gradient head + its
+balanced parens and nothing after the matching close paren). This closes the
+`linear-gradient(...), url(//evil/beacon.png)` outbound-fetch layer and the nested
+`radial-gradient(circle,url(//x))` case that the pre-523 charset admitted as an inert
+malformed gradient. The charset already excluded `;`/`{`/`}`/`<`/`>`/`:` (no declaration
+or `</style>` breakout); this closes the residual `url()`-layer surface too.
+
+### Occlusion-proof cursor spotlight (`PAGE_SPOTLIGHT_CSS`)
+
+The 521 cursor-follow spotlight overlay previously painted at `z-0`, BEHIND opaque
+section backgrounds, so the glow was only visible through translucent glass/SVG
+surfaces. TASK-523-02 makes it occlusion-proof:
+
+- The overlay's **static layering is a NON-gated base rule**:
+  `position:fixed;inset:0;z-index:30;mix-blend-mode:screen;pointer-events:none`. It sits
+  ABOVE opaque section content and ADDS light (screen blend) without hiding content or
+  blocking clicks. The moving `radial-gradient` stays inside
+  `@media (prefers-reduced-motion: no-preference)`, so reduced-motion users get a
+  correctly-layered but MOTIONLESS (no-gradient) overlay.
+- **Nav-safe:** the overlay z-index (`30`) is STRICTLY BELOW the front sticky nav
+  (`sticky z-40`) so screen-blend never tints the menu bar. The inequality holds because
+  `<Root>` forms no stacking context and nav + `PageDocumentRender` are sibling fragment
+  children; it is FRAGILE (a future `transform`/`filter`/`opacity`/`will-change`/
+  `isolation` ancestor would trap the fixed overlay above the nav) so it is HELD IN A
+  TEST, and `isolation:isolate` is the deliberate NON-choice on `<Root>`.
+- The only other author-controllable surface in the same root stacking context is a
+  layered-canvas `[data-layer]` (`layer.z` → `z-index`); its bound
+  `PAGE_LAYER_Z_CLAMP.max` was lowered from `40` to `20`, STRICTLY BELOW the overlay's
+  `30`, so no authored layer can reach the spotlight and occlude the glow. Invariant:
+  `PAGE_LAYER_Z_CLAMP.max (20) < overlay z-index (30) < nav z-index (40)`.
+
 ## Public Runtime
 
 Pages v2 section/block rendering is owned by
