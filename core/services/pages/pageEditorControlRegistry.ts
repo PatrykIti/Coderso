@@ -12,6 +12,7 @@ import {
   pageBadgeWeights,
   pageBlockCapabilities,
   pageBlockBorderStyles,
+  pageBlockDecorationMotions,
   pageColumnDistributions,
   pageBlockWidths,
   pageButtonSizes,
@@ -35,6 +36,12 @@ import {
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
+  pageTiltStrengths,
+  pageSurfacePresets,
+  pageBlockHoverEffects,
+  pageCompositions,
+  pageLayerAnchors,
+  pageMarqueeDirections,
   pageBlockDefaultProps,
   pageBreakpoints,
   pageTypographyFontFamilies,
@@ -384,6 +391,32 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     input: "switch",
     responsive: true,
   }),
+  // TASK-522-05-L01 — section surface preset + layered composition (DISJOINT
+  // id-namespace from 521-02's section.scrollEffect). responsive:false: both are
+  // base-only data-surface/data-composition attrs; pageResponsiveCss emits
+  // per-PROPERTY CSS only and cannot toggle a data-attr per breakpoint against
+  // the inline base, so a per-device override would be a silent no-op (finding-6;
+  // parent Acceptance #7). "none"/"flow" are the resets (normalize omits them).
+  control({
+    id: "section.surface.preset",
+    panel: "background",
+    target: "section",
+    label: "Surface preset",
+    path: ["style", "surfacePreset"],
+    input: "select",
+    responsive: false,
+    options: pageSurfacePresets,
+  }),
+  control({
+    id: "section.composition.mode",
+    panel: "layout",
+    target: "section",
+    label: "Composition",
+    path: ["style", "composition"],
+    input: "select",
+    responsive: false,
+    options: pageCompositions,
+  }),
 ] as const;
 
 /**
@@ -552,6 +585,155 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
       fallback: 0,
     }),
   ]),
+  // TASK-522-03-L01 — floating-drift decoration on ANY block (DISJOINT
+  // id-namespace). responsive:false: decoration is a base-only data-attr class
+  // (pageResponsiveCss cannot express a per-breakpoint animation delta against
+  // the inline base — a per-device override would be a silent no-op; parent
+  // Acceptance #7). "none" is the reset (normalize omits it). delay/duration are
+  // always shown (inert when no decoration motion is set — no showWhen).
+  control({
+    id: "block.decoration.motion",
+    panel: "style",
+    target: "block",
+    label: "Decoration motion",
+    path: ["style", "decoration", "motion"],
+    input: "select",
+    responsive: false,
+    options: pageBlockDecorationMotions,
+  }),
+  control({
+    id: "block.decoration.delay",
+    panel: "style",
+    target: "block",
+    label: "Decoration delay",
+    path: ["style", "decoration", "delay"],
+    input: "number",
+    responsive: false,
+    clamp: { min: 0, max: 4000 },
+    unit: "ms",
+  }),
+  control({
+    id: "block.decoration.duration",
+    panel: "style",
+    target: "block",
+    label: "Decoration duration",
+    path: ["style", "decoration", "duration"],
+    input: "number",
+    responsive: false,
+    clamp: { min: 2000, max: 16000 },
+    unit: "ms",
+  }),
+  // TASK-522-04-L01 — mouse tilt (3D) + glare on ANY block (DISJOINT
+  // id-namespace from block.decoration.*). Render is handled by the 522-03
+  // block-frame resolver (perspective wrapper + preserve-3d + data-block-tilt +
+  // .cx-glare from style.tilt/style.tiltGlare); runtime by the shared
+  // pageEffectsRuntime [data-block-tilt] binding (522-01-L05). Controls only.
+  // responsive:false: tilt is a base-only data-attr driven by the shared
+  // runtime — pageResponsiveCss cannot express a per-breakpoint attr/runtime
+  // toggle against the inline base, so a per-device override would be a silent
+  // no-op (finding-6 fix; parent Acceptance #7). Use per-device block
+  // visibility to drop a tilted block on mobile. "none" is the reset (normalize
+  // omits it). The glare switch is always shown (inert when no tilt — no
+  // showWhen).
+  control({
+    id: "block.tilt.strength",
+    panel: "style",
+    target: "block",
+    label: "Mouse tilt (3D)",
+    path: ["style", "tilt"],
+    input: "select",
+    responsive: false,
+    options: pageTiltStrengths,
+  }),
+  control({
+    id: "block.tilt.glare",
+    panel: "style",
+    target: "block",
+    label: "Tilt glare",
+    path: ["style", "tiltGlare"],
+    input: "switch",
+    responsive: false,
+  }),
+  // TASK-522-05-L03 — block glass/glow surface + hover presets on ANY block
+  // (DISJOINT id-namespace from decoration/tilt/layer). Render is handled by the
+  // 522-03 block-frame resolver (data-surface/data-hover) + the 522-01-L04 CSS;
+  // controls only. responsive:false: both are base-only data-attrs;
+  // pageResponsiveCss cannot express a per-breakpoint attr/class delta against the
+  // inline base (finding-6; parent Acceptance #7). "none" resets (normalize omits).
+  control({
+    id: "block.surface.preset",
+    panel: "style",
+    target: "block",
+    label: "Surface preset",
+    path: ["style", "surfacePreset"],
+    input: "select",
+    responsive: false,
+    options: pageSurfacePresets,
+  }),
+  control({
+    id: "block.hover.effect",
+    panel: "style",
+    target: "block",
+    label: "Hover effect",
+    path: ["style", "hoverEffect"],
+    input: "select",
+    responsive: false,
+    options: pageBlockHoverEffects,
+  }),
+  // TASK-522-05-L02 — layered-canvas child placement on ANY block (universal:
+  // any block can be a layered child). Meaningful only inside a layered parent;
+  // inert otherwise. ONLY the numeric x/y/z offsets are responsive:true — they
+  // emit per-breakpoint --layer-* custom-prop deltas via the pageResponsiveCss
+  // seam (the one effect field that genuinely varies per device). anchor is a
+  // base-only data-attr → responsive:false. (block.<type>.composition.mode lives
+  // in the per-type registry below — no appliesTo exists on the universal array.)
+  control({
+    id: "block.layer.x",
+    panel: "layout",
+    target: "block",
+    label: "Layer X",
+    path: ["style", "layer", "x"],
+    input: "number",
+    responsive: true,
+    clamp: { min: -50, max: 150 },
+    unit: "%",
+  }),
+  control({
+    id: "block.layer.y",
+    panel: "layout",
+    target: "block",
+    label: "Layer Y",
+    path: ["style", "layer", "y"],
+    input: "number",
+    responsive: true,
+    clamp: { min: -50, max: 150 },
+    unit: "%",
+  }),
+  control({
+    id: "block.layer.z",
+    panel: "layout",
+    target: "block",
+    label: "Layer Z (stack)",
+    path: ["style", "layer", "z"],
+    input: "number",
+    responsive: true,
+    clamp: { min: 0, max: 40 },
+    unit: "",
+  }),
+  control({
+    id: "block.layer.anchor",
+    panel: "layout",
+    target: "block",
+    label: "Layer anchor",
+    path: ["style", "layer", "anchor"],
+    input: "select",
+    responsive: false,
+    options: pageLayerAnchors,
+    // Unset emits no data-layer-anchor, so the frame renders with no translate
+    // (translate(0,0)) — the same placement as "top-left" (the first option the
+    // <select> presents). Declare that as the effective default.
+    fallback: "top-left",
+  }),
   control({
     id: "block.visibility.visible",
     panel: "visibility",
@@ -689,6 +871,29 @@ export const isPageSectionVariantOption = (
   value: string
 ): value is PageSectionVariant =>
   getPageSectionVariantOptions(type).includes(value as PageSectionVariant);
+
+/**
+ * TASK-522-05-L02 — the layout-only `block.composition.mode` control. The live
+ * registry has NO `appliesTo` field and the universal block controls are never
+ * type-gated, so this can't live in the universal array with a predicate; it
+ * goes in the per-type `pageBlockControlRegistry` entries for the layout blocks
+ * (container/columns/group), the live idiom for type-scoped controls.
+ * responsive:false — composition is a base-only data-attr with no
+ * per-breakpoint CSS-expressible delta.
+ */
+const layoutCompositionControl = (
+  type: "container" | "columns" | "group"
+): PageEditorControlDefinition =>
+  control({
+    id: `block.${type}.composition.mode`,
+    panel: "layout",
+    target: "block",
+    label: "Composition",
+    path: ["style", "composition"],
+    input: "select",
+    responsive: false,
+    options: pageCompositions,
+  });
 
 export const pageBlockControlRegistry: Record<
   PageBlockType,
@@ -977,7 +1182,7 @@ export const pageBlockControlRegistry: Record<
     ...pageTypographyBlockControls,
     blockStyleTextAlignTypographyControl,
   ],
-  container: [],
+  container: [layoutCompositionControl("container")],
   columns: [
     blockPropControl("columns", "count", {
       label: "Column count",
@@ -997,6 +1202,7 @@ export const pageBlockControlRegistry: Record<
       panel: "layout",
       options: pageColumnDistributions,
     }),
+    layoutCompositionControl("columns"),
   ],
   group: [
     blockPropControl("group", "direction", {
@@ -1015,6 +1221,69 @@ export const pageBlockControlRegistry: Record<
       input: "number",
       panel: "spacing",
       clamp: { min: 0, max: 120 },
+    }),
+    layoutCompositionControl("group"),
+    // TASK-522-05-L04 — marquee/ticker (group-only, per-type). The model is
+    // { speed?; direction?; seamless? } guarded by assertKnownKeys — there is NO
+    // `enabled` key (writing one throws PageDocumentError). PRESENCE convention:
+    // a set `speed` ⇒ ticker ON; clearing it empties the object (normalize omits)
+    // ⇒ OFF. responsive:false — the marquee renders as a base-only .cx-marquee
+    // track + animation class; pageResponsiveCss cannot express a per-breakpoint
+    // class/animation delta against the inline base (finding-6; Acceptance #7).
+    control({
+      id: "group.marquee.speed",
+      panel: "style",
+      target: "block",
+      label: "Ticker speed",
+      path: ["style", "marquee", "speed"],
+      input: "number",
+      responsive: false,
+      clamp: { min: 8, max: 40 },
+      unit: "s",
+    }),
+    control({
+      id: "group.marquee.direction",
+      panel: "style",
+      target: "block",
+      label: "Ticker direction",
+      path: ["style", "marquee", "direction"],
+      input: "select",
+      responsive: false,
+      options: pageMarqueeDirections,
+    }),
+    control({
+      id: "group.marquee.seamless",
+      panel: "style",
+      target: "block",
+      label: "Seamless loop",
+      path: ["style", "marquee", "seamless"],
+      input: "switch",
+      responsive: false,
+    }),
+  ],
+  // TASK-522-02-L02: sanitized SVG paste + accessible label + draw-in toggle/speed.
+  customSvg: [
+    blockPropControl("customSvg", "svg", {
+      label: "SVG source",
+      input: "text",
+      panel: "content",
+    }),
+    blockPropControl("customSvg", "label", {
+      label: "Accessible label",
+      input: "text",
+      panel: "content",
+    }),
+    blockPropControl("customSvg", "drawIn", {
+      label: "Stroke draw-in",
+      input: "switch",
+      panel: "style",
+    }),
+    blockPropControl("customSvg", "drawSpeed", {
+      label: "Draw speed",
+      input: "number",
+      panel: "style",
+      clamp: { min: 600, max: 6000 },
+      unit: "ms",
     }),
   ],
 };

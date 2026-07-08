@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Site Render / Admin UI / Accessibility
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-522-01 (runtime + resolver), TASK-522-03 (block-frame resolver
 live).
 

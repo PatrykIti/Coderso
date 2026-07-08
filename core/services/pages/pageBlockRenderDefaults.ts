@@ -189,6 +189,9 @@ export const pageBlockRenderDefaults: Record<PageBlockType, PageBlockRenderDefau
   container: { ...frameRenderDefaults },
   columns: { ...frameRenderDefaults },
   group: { ...frameRenderDefaults },
+  // TASK-522-01-L01: the custom-SVG block is a neutral inline decorative node
+  // with no baked typography — mirror the icon/divider frame defaults.
+  customSvg: { ...frameRenderDefaults },
 };
 
 /**

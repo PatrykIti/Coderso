@@ -3133,3 +3133,565 @@ test("AnimatedIcon component falls back to sparkles for an unknown key", () => {
   );
   expect(html).toContain("lucide-sparkles");
 });
+
+// ---------------------------------------------------------------------------
+// TASK-522-02 — custom-SVG block (sanitized render + draw-in, XSS at render)
+// ---------------------------------------------------------------------------
+
+const HOUSE_LINE_SVG =
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" ' +
+  'stroke="currentColor"><path d="M3 10l9-7 9 7v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>' +
+  '<polyline points="9 21 9 12 15 12 15 21"/></svg>';
+
+const renderCustomSvgSection = (
+  props: Record<string, unknown>,
+  mutate?: (block: PageBlockV2) => void
+) => {
+  const block = createPageBlockV2("customSvg", { id: "blk-svg", props });
+  mutate?.(block);
+  return renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-svg",
+        variant: "centered",
+        blocks: [block],
+      })}
+    />
+  );
+};
+
+test("customSvg block renders the sanitized inline <svg> + <path>", () => {
+  const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG, label: "House" });
+  expect(html).toContain("<svg");
+  expect(html).toContain("<path");
+  expect(html).toContain('role="img"');
+  expect(html).toContain('aria-label="House"');
+});
+
+test("customSvg drawIn:true adds data-draw-in + --draw-speed + pathLength=1 (length-independent)", () => {
+  const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG, drawIn: true, drawSpeed: 2400 });
+  expect(html).toContain("data-draw-in");
+  expect(html).toContain("--draw-speed:2400ms");
+  // Every stroke shape stamped with pathLength="1" so the fixed-dash CSS completes.
+  expect(html).toContain('pathLength="1"');
+});
+
+test("customSvg drawIn stamps pathLength=1 even on a SHORT path (length-independent draw)", () => {
+  const html = renderCustomSvgSection({
+    svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 4"><path d="M0 0h1"/></svg>',
+    drawIn: true,
+    drawSpeed: 800,
+  });
+  expect(html).toContain('pathLength="1"');
+  expect(html).toContain("--draw-speed:800ms");
+});
+
+test("customSvg empty / whitespace svg ⇒ neutral fallback (no <svg>, no crash)", () => {
+  for (const svg of ["", "   ", "\n\t"]) {
+    const html = renderCustomSvgSection({ svg });
+    expect(html).not.toContain("<svg");
+    expect(html).toContain("▢");
+  }
+});
+
+// XSS corpus asserted at the RENDER boundary — the values are injected AFTER
+// write-normalization (via `mutate`) to prove the render-time re-sanitize catches
+// a value that somehow bypassed write validation (older row, direct DB edit).
+const CUSTOM_SVG_XSS_VECTORS: readonly string[] = [
+  "<script>alert(1)</script>",
+  '<svg onload="alert(1)"><path d="M0 0h1"/></svg>',
+  '<svg><foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><script>alert(1)<\/script></body></foreignObject></svg>',
+  '<svg><a href="javascript:alert(1)"><path d="M0 0h1"/></a></svg>',
+  '<svg><use href="http://evil#x"/></svg>',
+  "<svg><use href=http://evil#x/></svg>",
+  "<svg><use href=//evil/x#y/></svg>",
+  "<svg><image href=data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=/></svg>",
+  "<svg><!--<script>--><script>alert(1)<\/script></svg>",
+  "<svg><![CDATA[<script>alert(1)</script>]]></svg>",
+  '<svg><path onclick="alert(1)"/></svg>',
+];
+
+test("customSvg RE-sanitizes at render ⇒ XSS vectors neutralized (defence in depth)", () => {
+  const dangerous = [
+    "<script",
+    "onload=",
+    "onclick=",
+    "javascript:",
+    "<foreignObject",
+    "<image",
+    "http://evil",
+    "//evil",
+    "data:image/svg",
+  ];
+  for (const svg of CUSTOM_SVG_XSS_VECTORS) {
+    const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG }, (block) => {
+      (block.props as Record<string, unknown>).svg = svg;
+    });
+    for (const token of dangerous) {
+      expect(html.includes(token), `vector "${svg}" leaked "${token}"`).toBe(false);
+    }
+  }
+});
+
+test("customSvg render is isomorphic — no Node Buffer ReferenceError (browser builder canvas)", () => {
+  const original = (globalThis as { Buffer?: unknown }).Buffer;
+  delete (globalThis as { Buffer?: unknown }).Buffer;
+  try {
+    const html = renderCustomSvgSection({ svg: HOUSE_LINE_SVG });
+    expect(html).toContain("<svg");
+  } finally {
+    (globalThis as { Buffer?: unknown }).Buffer = original;
+  }
+});
+
+// ── TASK-522-03-L02 — floating-drift decoration + block-frame composition seam ──
+type CompositionStyle = NonNullable<PageBlockV2["style"]>;
+
+const composedBlock = (style: CompositionStyle, id = "blk-comp"): PageBlockV2 =>
+  createPageBlockV2("heading", {
+    id,
+    props: { text: "Composed", level: "h2", align: "left" },
+    style,
+  });
+
+// Render a heading block through the FRONT path (PageSectionContent ->
+// renderPageBlockWithFrame) so the INNER effect wrapper (if any) is in the HTML.
+const renderComposedBlocks = (blocks: PageBlockV2[]): string =>
+  renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("hero", {
+        id: "sec-comp",
+        variant: "centered",
+        blocks,
+      })}
+    />
+  );
+
+const frameAttrs = (block: PageBlockV2): Record<string, string | undefined> =>
+  toPageBlockRenderProps(block).dataAttributes as Record<string, string | undefined>;
+const frameVars = (block: PageBlockV2): Record<string, string | undefined> =>
+  toPageBlockRenderProps(block).style as Record<string, string | undefined>;
+
+test("decoration transform motions ride the INNER effect wrapper (not the frame)", () => {
+  for (const motion of ["float", "drift", "pulse", "orbit"] as const) {
+    const block = composedBlock({ decoration: { motion } });
+    // Moved off the frame onto the inner descendant so the anchor translate is
+    // never clobbered.
+    expect(frameAttrs(block)["data-deco"]).toBeUndefined();
+    expect(renderComposedBlocks([block])).toContain(`data-deco="${motion}"`);
+  }
+});
+
+test('decoration "radiate" stays on the FRAME (box-shadow — no inner wrapper)', () => {
+  const block = composedBlock({ decoration: { motion: "radiate" } });
+  expect(frameAttrs(block)["data-deco"]).toBe("radiate");
+});
+
+test('decoration "none" resets — present-only, no data-deco anywhere', () => {
+  const block = composedBlock({ decoration: { motion: "none" } });
+  expect(frameAttrs(block)["data-deco"]).toBeUndefined();
+  expect(renderComposedBlocks([block])).not.toContain("data-deco");
+});
+
+test("decoration delay/duration emit --deco-* on the INNER wrapper (not the frame)", () => {
+  const block = composedBlock({ decoration: { motion: "float", delay: 900, duration: 8000 } });
+  expect(frameVars(block)["--deco-delay"]).toBeUndefined();
+  expect(frameVars(block)["--deco-duration"]).toBeUndefined();
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain("--deco-delay:900ms");
+  expect(html).toContain("--deco-duration:8000ms");
+});
+
+test("two decorated siblings with different delay stagger (distinct --deco-delay)", () => {
+  const html = renderComposedBlocks([
+    composedBlock({ decoration: { motion: "float", delay: 900 } }, "blk-a"),
+    composedBlock({ decoration: { motion: "float", delay: 1500 } }, "blk-b"),
+  ]);
+  expect(html).toContain("--deco-delay:900ms");
+  expect(html).toContain("--deco-delay:1500ms");
+});
+
+test("unstyled block → toPageBlockRenderProps byte-identical, no inner wrapper", () => {
+  const block = createPageBlockV2("heading", {
+    id: "blk-plain",
+    props: { text: "Plain", level: "h2", align: "left" },
+  });
+  const rp = toPageBlockRenderProps(block);
+  // Exactly the two pre-522 data attributes — no composition attrs leaked.
+  expect(Object.keys(rp.dataAttributes).sort()).toEqual(["data-block-id", "data-page-block"]);
+  const styleKeys = Object.keys(rp.style as Record<string, unknown>);
+  expect(
+    styleKeys.some(
+      (k) => k.startsWith("--layer") || k.startsWith("--deco") || k.startsWith("--surface")
+    )
+  ).toBe(false);
+  const html = renderComposedBlocks([block]);
+  expect(html).not.toContain("data-deco");
+  expect(html).not.toContain("data-surface");
+  expect(html).not.toContain("data-tilt-parent");
+  expect(html).not.toContain("cx-glare");
+});
+
+test("surface preset rides the FRAME on the shared feed (both render paths)", () => {
+  // toPageBlockRenderProps is the SINGLE feed for the front PageBlockFrame AND
+  // the canvas renderBlockFrame callback, so asserting it covers both paths.
+  const glass = composedBlock({ surfacePreset: "glass" });
+  expect(frameAttrs(glass)["data-surface"]).toBe("glass");
+  const html = renderComposedBlocks([glass]);
+  expect(html).toContain('data-surface="glass"');
+});
+
+test("tilt on any block → inner data-block-tilt + frame data-tilt-parent + glare child", () => {
+  const block = composedBlock({ tilt: "subtle", tiltGlare: true });
+  // perspective parent on the FRAME; the tilt transform node is the INNER child.
+  expect(frameAttrs(block)["data-tilt-parent"]).toBe("");
+  expect(frameAttrs(block)["data-block-tilt"]).toBeUndefined();
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain('data-block-tilt="subtle"');
+  expect(html).toContain("cx-glare");
+});
+
+test("surfacePreset ambient-orbs emits two aria-hidden .cx-orb spans in the inner wrapper", () => {
+  const block = composedBlock({ surfacePreset: "ambient-orbs" });
+  expect(frameAttrs(block)["data-surface"]).toBe("ambient-orbs");
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain("cx-orb-a");
+  expect(html).toContain("cx-orb-b");
+  // Orbs drift; both are aria-hidden decorative spans.
+  expect(html.match(/data-deco="drift"/g)?.length).toBe(2);
+});
+
+test("glass/radial-glow surfaces self-paint on the frame — NO orb spans", () => {
+  for (const surfacePreset of ["glass", "radial-glow"] as const) {
+    const html = renderComposedBlocks([composedBlock({ surfacePreset })]);
+    expect(html).not.toContain("cx-orb");
+  }
+});
+
+test("finding 4 — anchored layered child keeps layer on FRAME, effect on INNER (decoration)", () => {
+  const block = composedBlock({
+    decoration: { motion: "float" },
+    layer: { x: 10, y: 20, anchor: "top-right" },
+  });
+  const attrs = frameAttrs(block);
+  const vars = frameVars(block);
+  // Layer positioning + anchor ride the real [data-block-id] frame so the
+  // 522-05-L02 per-device --layer-* override reaches them, and the anchor
+  // translate is isolated from the effect transform.
+  expect(attrs["data-layer"]).toBe("");
+  expect(attrs["data-layer-anchor"]).toBe("top-right");
+  expect(vars["--layer-x"]).toBe("10%");
+  expect(vars["--layer-y"]).toBe("20%");
+  // The float decoration moved to the inner descendant; no tilt perspective.
+  expect(attrs["data-deco"]).toBeUndefined();
+  expect(attrs["data-tilt-parent"]).toBeUndefined();
+  expect(renderComposedBlocks([block])).toContain(`data-deco="float"`);
+});
+
+test("finding 4 — anchor + hover lift: layer on frame, hover on inner", () => {
+  const block = composedBlock({
+    hoverEffect: "lift",
+    layer: { x: 5, y: 5, anchor: "bottom-right" },
+  });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-layer-anchor"]).toBe("bottom-right");
+  expect(frameVars(block)["--layer-x"]).toBe("5%");
+  expect(attrs["data-hover"]).toBeUndefined();
+  expect(renderComposedBlocks([block])).toContain('data-hover="lift"');
+});
+
+test("finding 4 — anchor + tilt: layer + perspective on frame, tilt on inner", () => {
+  const block = composedBlock({
+    tilt: "subtle",
+    layer: { x: 8, y: 12, anchor: "bottom-right" },
+  });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-layer"]).toBe("");
+  expect(attrs["data-layer-anchor"]).toBe("bottom-right");
+  expect(attrs["data-tilt-parent"]).toBe("");
+  expect(attrs["data-block-tilt"]).toBeUndefined();
+  expect(renderComposedBlocks([block])).toContain('data-block-tilt="subtle"');
+});
+
+test("finding 4 — radiate + anchor stays wholly on the frame (no inner wrapper)", () => {
+  const block = composedBlock({
+    decoration: { motion: "radiate" },
+    layer: { x: 3, y: 4, anchor: "top-right" },
+  });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-deco"]).toBe("radiate");
+  expect(attrs["data-layer-anchor"]).toBe("top-right");
+});
+
+test("finding 4 — layer-only block (no transform effect) keeps everything on the frame", () => {
+  const block = composedBlock({ layer: { x: 1, y: 2, anchor: "center" } });
+  const attrs = frameAttrs(block);
+  expect(attrs["data-layer"]).toBe("");
+  expect(attrs["data-layer-anchor"]).toBe("center");
+  // No effect → no inner wrapper markers.
+  const html = renderComposedBlocks([block]);
+  expect(html).not.toContain("data-deco");
+  expect(html).not.toContain("data-block-tilt");
+});
+
+// ── TASK-522-04-L02 — block tilt render-shape (controls in 522-04-L01) ──
+test('tilt "strong" → data-block-tilt="strong" on the inner wrapper, perspective on frame', () => {
+  const block = composedBlock({ tilt: "strong" });
+  // perspective parent on the FRAME; the runtime-rotated node is the INNER child.
+  expect(frameAttrs(block)["data-tilt-parent"]).toBe("");
+  expect(frameAttrs(block)["data-block-tilt"]).toBeUndefined();
+  const html = renderComposedBlocks([block]);
+  expect(html).toContain('data-block-tilt="strong"');
+  // No glare requested → no sheen child.
+  expect(html).not.toContain("cx-glare");
+});
+
+test('tilt "none" resets — present-only, byte-identical (no perspective/inner wrapper)', () => {
+  const none = composedBlock({ tilt: "none" });
+  expect(frameAttrs(none)["data-tilt-parent"]).toBeUndefined();
+  expect(renderComposedBlocks([none])).not.toContain("data-block-tilt");
+
+  // Unset tilt is byte-identical to a plain block: no tilt attrs at all.
+  const plain = createPageBlockV2("heading", {
+    id: "blk-comp",
+    props: { text: "Composed", level: "h2", align: "left" },
+  });
+  const html = renderComposedBlocks([plain]);
+  expect(html).not.toContain("data-tilt-parent");
+  expect(html).not.toContain("data-block-tilt");
+  expect(html).not.toContain("cx-glare");
+});
+
+// ── TASK-522-05-L05 — section surface, page-root emit, layered canvas, ──────────
+// ── glass/hover, marquee ───────────────────────────────────────────────────────
+
+const surfaceSection = (style: Partial<PageSectionV2["style"]>) =>
+  createPageSectionV2("hero", {
+    id: "sec-surface",
+    variant: "centered",
+    style: {
+      background: "#ffffff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+      ...style,
+    },
+    blocks: [
+      createPageBlockV2("heading", {
+        id: "blk-surf-h",
+        props: { text: "Surface", level: "h1", align: "center" },
+      }),
+    ],
+  });
+
+test("section surface preset stamps data-surface (522-05-L01)", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={surfaceSection({ surfacePreset: "glass" })} />
+  );
+  expect(html).toContain('data-surface="glass"');
+});
+
+test("section ambient-orbs preset emits two decorative orb spans", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={surfaceSection({ surfacePreset: "ambient-orbs" })} />
+  );
+  expect(html).toContain('data-surface="ambient-orbs"');
+  expect(html).toContain("cx-orb-a");
+  expect(html).toContain("cx-orb-b");
+  expect(countMarkup(html, 'aria-hidden="true" data-deco="drift"')).toBe(2);
+});
+
+test("section composition:layered stamps data-composition", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionRender section={surfaceSection({ composition: "layered" })} />
+  );
+  expect(html).toContain('data-composition="layered"');
+});
+
+test("page-root composition emit is present-only + single runtime script (522-05-L01)", () => {
+  // A doc that authors a mouse-tilt → ONE composition <style> + ONE runtime
+  // <script> (the 522 tilt binding reuses 521-05's single emit, not a 2nd tag).
+  const tiltDoc = createDocument([
+    createPageSectionV2("hero", {
+      id: "sec-tilt-doc",
+      variant: "centered",
+      blocks: [composedBlock({ tilt: "strong" }, "blk-tilt-doc")],
+    }),
+  ]);
+  const tiltHtml = renderToStaticMarkup(<PageDocumentRender document={tiltDoc} />);
+  expect(countMarkup(tiltHtml, "data-page-composition-css")).toBe(1);
+  expect(countMarkup(tiltHtml, "data-coderso-runtime-script=")).toBe(1);
+
+  // A doc that authors a NON-tilt composition effect (surface) → composition
+  // <style> but NO runtime <script> (surfaces are static CSS).
+  const surfaceDoc = createDocument([surfaceSection({ surfacePreset: "glass" })]);
+  const surfaceHtml = renderToStaticMarkup(<PageDocumentRender document={surfaceDoc} />);
+  expect(countMarkup(surfaceHtml, "data-page-composition-css")).toBe(1);
+  expect(surfaceHtml).not.toContain("data-coderso-runtime-script");
+
+  // A NO-effect doc → neither the composition <style> nor a runtime <script>
+  // (present-only / byte-identical to post-521).
+  const plainDoc = createDocument([
+    createPageSectionV2("hero", {
+      id: "sec-plain-doc",
+      variant: "centered",
+      blocks: [
+        createPageBlockV2("heading", {
+          id: "blk-plain-doc",
+          props: { text: "Plain", level: "h1", align: "center" },
+        }),
+      ],
+    }),
+  ]);
+  const plainHtml = renderToStaticMarkup(<PageDocumentRender document={plainDoc} />);
+  expect(plainHtml).not.toContain("data-page-composition-css");
+  expect(plainHtml).not.toContain("data-coderso-runtime-script");
+});
+
+test("layered layout block places children absolutely via data-layer + --layer-* (522-05-L02)", () => {
+  const container = createPageBlockV2("container", {
+    id: "blk-layered",
+    style: { composition: "layered" },
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-l1",
+          props: { text: "A", level: "h2", align: "left" },
+          style: { layer: { x: 10, y: 20, z: 3, anchor: "top-left" } },
+        }),
+        createPageBlockV2("text", {
+          id: "blk-l2",
+          props: { text: "B", format: "plain", align: "left" },
+          style: { layer: { x: 40, y: 60, z: 5 } },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-l", blocks: [container] })}
+    />
+  );
+  // Parent frame is the positioning context; content is the pass-through canvas.
+  expect(html).toContain('data-composition="layered"');
+  expect(html).toContain("cx-layered-canvas");
+  expect(html).toContain("cx-layered-slot");
+  // Each child frame carries data-layer + the --layer-* custom props.
+  expect(html).toContain('data-block-id="blk-l1"');
+  expect(html).toContain("--layer-x:10%");
+  expect(html).toContain("--layer-y:20%");
+  expect(html).toContain("--layer-z:3");
+  expect(html).toContain('data-layer-anchor="top-left"');
+  expect(html).toContain("--layer-x:40%");
+});
+
+test("flow (unset composition) layout block stays byte-identical (no layered canvas)", () => {
+  const flow = createPageBlockV2("container", {
+    id: "blk-flow",
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-fc",
+          props: { text: "X", level: "h2", align: "left" },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent section={createPageSectionV2("content", { id: "sec-f", blocks: [flow] })} />
+  );
+  expect(html).not.toContain("cx-layered-canvas");
+  expect(html).not.toContain('data-composition="layered"');
+});
+
+test("block glass/hover presets stamp data-surface / data-hover (522-05-L03)", () => {
+  // Surface preset stays on the FRAME (static, non-transform).
+  expect(frameAttrs(composedBlock({ surfacePreset: "glass" }))["data-surface"]).toBe("glass");
+  expect(renderComposedBlocks([composedBlock({ surfacePreset: "glass" })])).toContain(
+    'data-surface="glass"'
+  );
+  // lift-glow is a transform hover → rides the inner effect wrapper; the FRONT
+  // render (which includes the inner) carries data-hover.
+  expect(renderComposedBlocks([composedBlock({ hoverEffect: "lift-glow" })])).toContain(
+    'data-hover="lift-glow"'
+  );
+});
+
+const marqueeGroup = (marquee: NonNullable<NonNullable<PageBlockV2["style"]>["marquee"]>) =>
+  createPageBlockV2("group", {
+    id: "blk-marquee",
+    props: { direction: "row", wrap: false, gap: 16 },
+    style: { marquee },
+    slots: {
+      children: [
+        createPageBlockV2("text", {
+          id: "blk-m1",
+          props: { text: "One", format: "plain", align: "left" },
+        }),
+        createPageBlockV2("text", {
+          id: "blk-m2",
+          props: { text: "Two", format: "plain", align: "left" },
+        }),
+      ],
+    },
+  });
+
+test("marquee group renders a viewport + two tracks with frame data-marquee (522-05-L04)", () => {
+  const group = marqueeGroup({ speed: 18, direction: "right", seamless: true });
+  // The FRAME carries the marquee attrs/vars (via the 522-03 resolver).
+  expect(frameAttrs(group)["data-marquee"]).toBe("");
+  expect(frameAttrs(group)["data-marquee-dir"]).toBe("right");
+  expect(frameVars(group)["--marquee-speed"]).toBe("18s");
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-mq", blocks: [group] })}
+    />
+  );
+  expect(html).toContain("cx-marquee-viewport");
+  // seamless → two tracks (one aria-hidden).
+  expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+  expect(countMarkup(html, 'aria-hidden="true"')).toBeGreaterThanOrEqual(1);
+});
+
+test("no marquee → byte-identical group flow (no viewport)", () => {
+  const group = createPageBlockV2("group", {
+    id: "blk-plain-group",
+    props: { direction: "row", wrap: false, gap: 16 },
+    slots: {
+      children: [
+        createPageBlockV2("text", {
+          id: "blk-pg1",
+          props: { text: "Flow", format: "plain", align: "left" },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-pg", blocks: [group] })}
+    />
+  );
+  expect(html).not.toContain("cx-marquee-viewport");
+  expect(html).not.toContain("data-marquee");
+});
+
+test("seamless marquee copy carries NO data-block-id in canvas mode (finding 3)", () => {
+  const group = marqueeGroup({ speed: 18, direction: "left", seamless: true });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-mc", blocks: [group] })}
+      // Mimic the builder canvas: the selection frame emits data-block-id.
+      renderBlockFrame={({ content, renderProps }) => (
+        <div {...renderProps.dataAttributes}>{content}</div>
+      )}
+    />
+  );
+  // Each item's data-block-id matches EXACTLY one DOM node — the primary track's
+  // framed item — never the aria-hidden decorative copy (no duplicate targets).
+  expect(countMarkup(html, 'data-block-id="blk-m1"')).toBe(1);
+  expect(countMarkup(html, 'data-block-id="blk-m2"')).toBe(1);
+  // Two tracks still render (the copy is present, just frame-less).
+  expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+});

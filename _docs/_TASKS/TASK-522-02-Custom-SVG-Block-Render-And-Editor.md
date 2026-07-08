@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Site Render / Admin UI / Security / Accessibility
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-522-01 (block type + sanitizer + CSS resolvers landed).
 
 ---

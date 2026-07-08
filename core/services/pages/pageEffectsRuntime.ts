@@ -89,6 +89,30 @@ export const PAGE_EFFECTS_RUNTIME_SOURCE = [
   "  sx=Math.round(ev.clientX-r.left);sy=Math.round(ev.clientY-r.top);",
   "  if(!sPending){sPending=true;requestAnimationFrame(sFrame);}},{passive:true});",
   "}",
+  // ---- TASK-522-01-L05 generalized block tilt ([data-block-tilt]) ----
+  // Top-level (NOT nested in the spotlight `sp` block, else it is dead on any
+  // spotlight-less page). Reuses ONLY the global reduced-motion early-return at
+  // the top; opens its OWN (pointer:fine) gate. The ~4-line normalized pointer
+  // math is a small DOCUMENTED duplication of hero.tsx's HERO_TILT_SCRIPT (which
+  // 522 does not edit/import). Reads ALL config from validated data-*; no stored
+  // data is interpolated into the static source.
+  'var bt=document.querySelectorAll("[data-block-tilt]");',
+  'if(bt.length&&window.matchMedia&&window.matchMedia("(pointer:fine)").matches){',
+  " bt.forEach(function(el){",
+  '  var s=el.getAttribute("data-block-tilt")==="strong"?10:7;',
+  '  var gl=el.querySelector(".cx-glare");',
+  "  var bPend=false,brx=0,bry=0,bgx=50,bgy=50;",
+  "  function bf(){bPend=false;",
+  '   el.style.transform="rotateX("+brx.toFixed(2)+"deg) rotateY("+bry.toFixed(2)+"deg) translateY(-2px)";',
+  '   if(gl){gl.style.setProperty("--glare-x",bgx.toFixed(1)+"%");gl.style.setProperty("--glare-y",bgy.toFixed(1)+"%");}}',
+  '  el.addEventListener("pointermove",function(e){var r=el.getBoundingClientRect();',
+  "   var px=(e.clientX-r.left)/r.width-0.5,py=(e.clientY-r.top)/r.height-0.5;",
+  "   bry=px*s;brx=-py*s;bgx=(px+0.5)*100;bgy=(py+0.5)*100;",
+  "   if(!bPend){bPend=true;requestAnimationFrame(bf);}},{passive:true});",
+  '  el.addEventListener("pointerleave",function(){el.style.transform="";',
+  '   if(gl){gl.style.removeProperty("--glare-x");gl.style.removeProperty("--glare-y");}},{passive:true});',
+  " });",
+  "}",
   "}catch(e){}",
   "})();",
 ].join("");

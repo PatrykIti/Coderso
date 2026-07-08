@@ -435,6 +435,50 @@ Rotacja klucza:
   coverage in the Vitest sanitizer/XSS suites and keep local Semgrep/security
   scans clean without scanner suppressions.
 
+## Pages custom-SVG sanitizer boundary (TASK-522)
+
+- The `customSvg` Page v2 block's `svg` prop is the one place attacker-authored
+  MARKUP is stored. It is sanitized by a dependency-free **allowlist** sanitizer,
+  `core/services/pages/svgSanitizer.ts`, applied at BOTH write
+  (`normalizeBlockProps` for `customSvg`) AND render (defence in depth, before
+  `dangerouslySetInnerHTML`). The sanitizer is ISOMORPHIC (byte cap via `TextEncoder`,
+  never `Buffer`) because it also runs at render, which the client builder canvas
+  drives.
+- **Fail-closed pre-pass:** HTML comments (`<!--…-->`) and `<![CDATA[…]]>` sections —
+  which the tag regex cannot match and would otherwise survive verbatim — are stripped
+  before the walk.
+- **Fail-closed tripwires (reject the whole SVG → neutral empty fallback):** any
+  `<script`, `<foreignObject`, `<!ENTITY`/`<!DOCTYPE` (XXE), `on\w+=` event attribute,
+  `javascript:`/`vbscript:`/`data:text/html` URL, `expression(`/`behavior:`/
+  `-moz-binding` in style, `url(` to a non-`#` target, `<use>`/`href`/`xlink:href`
+  whose value is not a local `#fragment`, or bytes > `PAGE_CUSTOM_SVG_MAX_BYTES`
+  (24576).
+- **Allowlist walk:** only allowlisted SVG tags (`svg,g,defs,path,rect,circle,ellipse,
+  line,polyline,polygon,text,tspan,linear/radialGradient,stop,clipPath,mask,pattern,
+  use[local],symbol,title,desc,marker,filter,fe*`) and allowlisted attributes
+  (geometry + presentation + `class,id,transform,viewBox,preserveAspectRatio` +
+  `href`/`xlink:href` restricted to `#…` + `xmlns`/`xmlns:xlink` restricted to the SVG/
+  xlink namespace VALUES) survive. The `style` attribute is NOT allowlisted — it is
+  dropped (no raw author CSS reaches the DOM, closing the `position:fixed`
+  layout-escape/clickjacking class at source). Unknown tag/attr ⇒ dropped, never stored
+  raw.
+- **Fail-closed post-walk residual check:** after the walk, `return ""` if any residual
+  raw `<` (not a re-emitted allowlisted tag) or an unbalanced quote remains — so no
+  un-walked markup (dropped-tag TEXT, quote-desync) reaches the DOM.
+- Result: no `<script>`, no event handler, no external/JS URL, no XXE, no raw CSS ever
+  reaches the DOM; an SVG failing a tripwire renders a neutral placeholder, never
+  partial injected markup. The Vitest sanitizer/XSS corpus
+  (`tests/vitest/pages/svg-sanitizer.test.ts`) covers mXSS / parser-differential
+  vectors (comments, CDATA, unbalanced-quote desync, slash-separated handlers,
+  nested/duplicate `<svg>`, entity-encoded), each asserting a fail-CLOSED outcome.
+- Decoration/tilt/surface/hover/marquee/composition/layer config values are
+  reject-unknown allowlisted enums (`normalizeEnum`, fail-CLOSED) + `readNumber`
+  clamps; colors run through `readSafeColor`. They reach CSS only as bounded numbers /
+  validated colors / fixed class + data-attribute tokens — never string interpolation.
+  The block-tilt runtime is a STATIC dependency-free IIFE reading only validated DOM
+  `data-*`/CSS custom properties, emitted via static-`__html` `dangerouslySetInnerHTML`,
+  never interpolating stored data.
+
 ## Assistant security baseline (v1)
 
 - Konfiguracja limitow asystenta jest trzymana w global settings:

@@ -750,6 +750,9 @@ const pageEditorBlockLabels: Record<PageBlockType, string> = {
   container: "Container",
   columns: "Columns",
   group: "Group",
+  // TASK-522-01-L01: the custom-SVG block is editor-insertable — its palette
+  // label mirrors blockOptionCopy.customSvg.
+  customSvg: "Custom SVG",
 };
 
 const pageEditorSectionLabels: Record<PageSectionType, string> = {
@@ -2287,6 +2290,7 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 19 blocks
     // amendment: "Collection" joined it; TASK-459-02 amendment: "Filters";
     // TASK-471-04 amendment: native "Badge" block; TASK-521-04 amendment:
     // the animated "Icon" block (implements the formerly-placeholder icon block).
+    // TASK-522-01 amendment: the "Custom SVG" block (sanitized inline SVG).
     expect(blockPaletteTitles).toEqual([
       "Heading",
       "Text",
@@ -2307,8 +2311,9 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 19 blocks
       "Container",
       "Columns",
       "Group",
+      "Custom SVG",
     ]);
-    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(30);
+    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(31);
 
     expect(sectionPaletteTitles).not.toContain("Template");
     expect(sectionPaletteTitles).not.toContain("Navigation");

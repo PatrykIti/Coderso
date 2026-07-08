@@ -69,6 +69,7 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
     // TASK-459-02: "filters" joined the catalog (visitor filters block).
     // TASK-471: "badge" joined the catalog (badge authoring enablement).
     // TASK-521-04: "icon" joined the catalog (animated-icon block flip).
+    // TASK-522-01: "customSvg" joined the catalog (custom-SVG block).
     expect(editorInsertableBlockTypes).toEqual([
       "heading",
       "text",
@@ -89,6 +90,7 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
       "container",
       "columns",
       "group",
+      "customSvg",
     ]);
   });
 

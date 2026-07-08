@@ -876,3 +876,55 @@ test("style.column overrides are structural and fail closed into not_css_express
   ]);
   expect(buildPageResponsiveCssPlan(baseOnly)).toEqual({ css: "", diagnostics: [] });
 });
+
+describe("per-device layer offsets (TASK-522-05-L02 seam)", () => {
+  test("a tablet layer.x override emits a --layer-x !important delta on [data-block-id]", () => {
+    const document = buildDocument([
+      buildSection({
+        style: {
+          background: "#fff",
+          backgroundType: "color",
+          backgroundImage: null,
+          accent: "#000",
+          radius: 0,
+          shadow: "none",
+          composition: "layered",
+        },
+        blocks: [
+          buildBlock({
+            id: "blk_layer",
+            // Base position + an animated float (the anchored-badge case): the
+            // per-device reposition must reach the SAME [data-block-id] frame
+            // that carries data-layer + the base --layer-x (finding 4).
+            style: {
+              layer: { x: 10, y: 20, anchor: "top-right" },
+              decoration: { motion: "float" },
+            },
+            responsive: { tablet: { style: { layer: { x: 80, y: 40 } } } },
+          }),
+        ],
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).toContain("@media (min-width: 640px) and (max-width: 1023px){");
+    // Targets the block-frame selector (the element carrying data-layer + base var).
+    expect(css).toContain('[data-block-id="blk_layer"]');
+    expect(css).toContain("--layer-x:80% !important");
+    expect(css).toContain("--layer-y:40% !important");
+  });
+
+  test("no layer override → no --layer-* delta (present-only)", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_no_layer",
+            style: { layer: { x: 10 } },
+            responsive: { tablet: { style: { align: "center" } } },
+          }),
+        ],
+      }),
+    ]);
+    expect(buildPageResponsiveCss(document)).not.toContain("--layer-x");
+  });
+});
