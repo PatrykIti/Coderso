@@ -1053,3 +1053,212 @@ testIfDb(
   },
   dbTestTimeoutMs
 );
+
+// --- TASK-520-05 §route lane: menu-bar scrolled-state colors + card radius +
+// custom box-shadow (520-01/02) AND brand icon-mode + graphic-with-text combo
+// (520-01/04) proven at the route/persistence boundary. Service-layer accept/
+// reject/prune coverage lives in menu-document-v2.test.ts; the route is a thin
+// delegate, so these assert the verbatim round-trip through the menus.settings
+// envelope (co-present appearance survives), the reject-unknown-KEY 400 mapping,
+// and — critically — the SECURITY negatives (injection shadow / url() color /
+// path-traversal icon) fail-soft DROP on write so the stored doc round-trips
+// WITHOUT them (defence in depth reaches the wire).
+
+const routeBarBrandV520Document = () => ({
+  schemaVersion: 1 as const,
+  sections: [
+    {
+      id: "sec-route-menu-bar",
+      type: "menu-bar" as const,
+      name: "Menu bar",
+      // G1 scrolled variants + G2 radius/custom-shadow (all present-only bar keys):
+      layout: {
+        surfaceColor: "#0812209e",
+        borderColor: "#ffffff1f",
+        sticky: true,
+        radius: 18,
+        shadow: "sm" as const,
+        shadowCustom: "0 18px 50px rgba(0,0,0,.24)",
+        surfaceColorScrolled: "rgba(8,17,31,.84)",
+        borderColorScrolled: "rgba(255,255,255,.18)",
+        borderWidthScrolled: 2,
+        shadowScrolled: "md" as const,
+        shadowCustomScrolled: "0 18px 50px rgba(0,0,0,.24)",
+      },
+      responsive: {
+        mobile: { layout: { radius: 8 } },
+      },
+      blocks: [
+        {
+          id: "blk-route-brand",
+          type: "brand" as const,
+          // G3 icon-mode + graphic-with-text combo + icon color/size:
+          props: {
+            mode: "icon" as const,
+            href: "/",
+            text: "Acme Co",
+            icon: "house",
+            showText: true,
+            style: { iconColor: "rgba(8,17,31,.84)", iconSize: 28 },
+          },
+        },
+        { id: "blk-route-nav", type: "nav-items" as const, props: { itemGap: 12 } },
+      ],
+    },
+  ],
+});
+
+testIfDb(
+  "PATCH /menus/:id persists the new bar (scrolled/radius/custom-shadow) + brand (icon/combo) keys verbatim without dropping a co-present appearance",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Bar Brand V520 ${randomUUID()}`,
+      location: `route-bar-brand-v520-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const patch = getPatchHandler();
+    const document = routeBarBrandV520Document();
+    const updated = (await patch({
+      params: { id: menu.id },
+      query: {},
+      body: { appearance: { surfaceColor: "#0f172a" }, document },
+    })) as typeof menus.$inferSelect;
+
+    // Per-key merge: every new bar + brand key rides the envelope byte-for-byte,
+    // and the sibling appearance is untouched.
+    expect(updated.settings).toEqual({
+      appearance: { surfaceColor: "#0f172a" },
+      document,
+    });
+
+    // Round-trip through GET: the persisted doc carries the new keys unchanged.
+    const get = getGetHandler();
+    const fetched = (await get({ params: { id: menu.id }, query: {}, body: undefined })) as {
+      menu: typeof menus.$inferSelect;
+    };
+    expect(fetched.menu.settings).toEqual({
+      appearance: { surfaceColor: "#0f172a" },
+      document,
+    });
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id maps an unknown menu-bar layout key to a 400 menu_document_invalid ApiError with a path",
+  async () => {
+    const menu = await createMenu({
+      name: `Route Bar Unknown Key ${randomUUID()}`,
+      location: `route-bar-unknown-key-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const handler = getPatchHandler();
+    try {
+      await handler({
+        params: { id: menu.id },
+        query: {},
+        body: {
+          document: {
+            schemaVersion: 1,
+            sections: [
+              {
+                id: "sec-route-menu-bar",
+                type: "menu-bar",
+                name: "Menu bar",
+                // an unknown bar-layout key is in NEITHER MENU_BAR_LAYOUT_KEYS nor
+                // MENU_BAR_EXTRA_KEYS — reject-unknown throws (fail-closed).
+                layout: { surfaceColorScrolledXYZ: "#000" },
+                blocks: [{ id: "blk-route-nav", type: "nav-items", props: {} }],
+              },
+            ],
+          },
+        },
+      });
+      throw new Error("expected menu_document_invalid");
+    } catch (error) {
+      expect(error).toBeInstanceOf(ApiError);
+      const apiError = error as ApiError;
+      expect(apiError.code).toBe("menu_document_invalid");
+      expect(apiError.status).toBe(400);
+      expect(apiError.details).toEqual({
+        path: "document.sections[0].layout.surfaceColorScrolledXYZ",
+      });
+    }
+  },
+  dbTestTimeoutMs
+);
+
+testIfDb(
+  "PATCH /menus/:id fail-soft DROPS security-negative bar/brand values (injection shadow, url() color, path-traversal icon) — stored doc round-trips WITHOUT them",
+  async () => {
+    const menu = await createMenu({
+      name: `Route V520 Security ${randomUUID()}`,
+      location: `route-v520-security-${randomUUID()}`,
+    });
+    createdMenuIds.push(menu.id);
+
+    const patch = getPatchHandler();
+    const updated = (await patch({
+      params: { id: menu.id },
+      query: {},
+      body: {
+        document: {
+          schemaVersion: 1,
+          sections: [
+            {
+              id: "sec-route-menu-bar",
+              type: "menu-bar",
+              name: "Menu bar",
+              layout: {
+                surfaceColor: "#0f172a",
+                // (2) injection box-shadow — the `;}` / stylesheet-escape must drop.
+                shadowCustom: "0 0 10px red;} body{display:none",
+                // (1) url() color — not a whitelisted color token, drops.
+                surfaceColorScrolled: "url(x)",
+                // a CLEAN scrolled color survives alongside the dropped ones.
+                borderColorScrolled: "rgba(255,255,255,.18)",
+              },
+              blocks: [
+                {
+                  id: "blk-route-brand",
+                  type: "brand",
+                  props: {
+                    mode: "icon",
+                    href: "/",
+                    text: "Acme Co",
+                    // (3) path-traversal icon name — fails the allowlist pattern, drops
+                    // (mode:"icon" falls through to the text/site-name chain at render).
+                    icon: "../../etc/passwd",
+                  },
+                },
+                { id: "blk-route-nav", type: "nav-items", props: {} },
+              ],
+            },
+          ],
+        },
+      },
+    })) as typeof menus.$inferSelect;
+
+    const settings = updated.settings as {
+      document: {
+        sections: Array<{
+          layout: Record<string, unknown>;
+          blocks: Array<{ props?: Record<string, unknown> }>;
+        }>;
+      };
+    };
+    const storedLayout = settings.document.sections[0]!.layout;
+    // The three attacker-influenceable values were dropped on write…
+    expect(storedLayout).not.toHaveProperty("shadowCustom");
+    expect(storedLayout).not.toHaveProperty("surfaceColorScrolled");
+    const brandProps = settings.document.sections[0]!.blocks[0]!.props ?? {};
+    expect(brandProps).not.toHaveProperty("icon");
+    // …while the clean sibling values persisted (fail-soft is per-key, not all-or-nothing).
+    expect(storedLayout.surfaceColor).toBe("#0f172a");
+    expect(storedLayout.borderColorScrolled).toBe("rgba(255,255,255,.18)");
+    expect(brandProps.mode).toBe("icon");
+  },
+  dbTestTimeoutMs
+);

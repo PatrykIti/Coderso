@@ -7,7 +7,7 @@
 **Category:** Site Render / CSS emission
 **Estimated Effort:** Medium
 **Dependencies:** TASK-520-01 (model — `MenuBarLayout` extra keys). TASK-501 (per-device delta machinery).
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

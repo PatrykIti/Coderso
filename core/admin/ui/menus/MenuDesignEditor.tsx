@@ -5,6 +5,7 @@ import {
   useReducer,
   useRef,
   useState,
+  type ComponentType,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -21,11 +22,13 @@ import {
   SlidersHorizontal,
   Trash2,
   Undo2,
+  type LucideProps,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { isApiClientError } from "@/services/apiClient";
@@ -80,6 +83,7 @@ import {
   resolveStoredMenuDocument,
   setMenuBlockVisibleForDevice,
   BRAND_STYLE_NUMBER_RANGES,
+  MENU_BAR_LAYOUT_NUMBER_RANGES,
   MENU_BRAND_TEXT_MAX_LENGTH,
   NAV_CHROME_NUMBER_RANGES,
   NAV_LEVEL_NUMBER_RANGES,
@@ -129,6 +133,7 @@ import {
 import { SHELL_APPEARANCE_DEFAULTS } from "../../../site/siteShellCss";
 import { toMenuCanvasColorCssVariableMap } from "../../../ui/theme/tokenCss";
 import type { NavigationItem } from "../../../widgets/core/navigation";
+import { loadFullTimelineIcons } from "../../../widgets/core/timeline";
 import { DeviceSwitcher } from "../pages/DeviceSwitcher";
 import {
   ColorSwatchControl,
@@ -371,6 +376,158 @@ const fontWeightLabels: Record<string, string> = {
 // distinctly from an EXPLICIT 16. DISPLAY only — CSS emission is unchanged.
 const NAV_FONT_SIZE_INHERITED = 16;
 const toSwatchValue = (value: string) => (value === "transparent" ? "" : value);
+
+// --- TASK-520-03 shared brand-icon / shadow chrome --------------------------
+// Default icon color/size mirror the 520-01 model defaults (BRAND_STYLE_NUMBER_RANGES.iconSize
+// floor is 12; the render fallback size is 24). Present-only: these are DISPLAY seeds for
+// the unset controls, never written unless the author moves the control.
+const DEFAULT_BRAND_ICON_COLOR = "currentColor";
+const DEFAULT_BRAND_ICON_SIZE = 24;
+/** Kebab lucide name ⇒ human label (mirrors the Timeline picker's humanizer). */
+const humanizeBrandIconName = (name: string) =>
+  name.replace(/-/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+/** Lazily-loaded lucide component map (the FULL set, dynamic-imported off the initial bundle). */
+type BrandIconLibrary = { components: Record<string, ComponentType<LucideProps>>; names: string[] };
+
+/**
+ * TASK-520-03-L01: a raw `box-shadow` value field (base + scrolled). The model
+ * (520-01 `normalizeMenuBoxShadowValue`) is the authority — it DROPS anything
+ * outside the bounded grammar on save/round-trip, so an invalid value re-reads
+ * empty here (visible fail-soft). Live keystrokes ride the in-memory doc; the
+ * server re-normalizes on PATCH.
+ */
+function ShadowValueField({
+  label,
+  value,
+  placeholder,
+  helper,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  placeholder: string;
+  helper?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="grid gap-1" data-page-editor-control="shadow-value">
+      <Input
+        aria-label={label}
+        placeholder={placeholder}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {helper ? <p className="text-[10px] leading-snug text-muted-foreground">{helper}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * TASK-520-03-L02: brand ICON picker — a lucide browser reusing the Timeline
+ * `loadFullTimelineIcons` dynamic import (the full icon set stays OUT of the
+ * initial admin static bundle). Stores the kebab name; an unknown/absent name
+ * mirrors the render-time text fallback (no injectable markup). Clearing writes
+ * `undefined` (present-only key removal).
+ */
+function BrandIconPicker({
+  value,
+  onChange,
+}: {
+  value: string | undefined;
+  onChange: (name: string | undefined) => void;
+}) {
+  const [library, setLibrary] = useState<BrandIconLibrary | null>(null);
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    let active = true;
+    void loadFullTimelineIcons().then((lib) => {
+      if (active) setLibrary(lib);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+  const names = library?.names ?? [];
+  const components = library?.components;
+  const normalizedQuery = query.trim().toLowerCase().replace(/\s+/g, "-");
+  const matches = (
+    normalizedQuery ? names.filter((name) => name.includes(normalizedQuery)) : names
+  ).slice(0, 120);
+  const Current = value && components ? components[value] : undefined;
+  return (
+    <div className="grid gap-2" data-menu-brand-icon-picker="true">
+      <div className="flex items-center gap-2">
+        <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border bg-background text-foreground">
+          {Current ? (
+            <Current className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <span className="text-[10px] leading-none text-muted-foreground" aria-hidden="true">
+              —
+            </span>
+          )}
+        </span>
+        <span className="text-xs text-muted-foreground" data-menu-brand-icon-current={value ?? ""}>
+          {value
+            ? components && !Current
+              ? `“${value}” not found`
+              : humanizeBrandIconName(value)
+            : "No icon selected"}
+        </span>
+        {value ? (
+          <button
+            type="button"
+            aria-label="Clear icon"
+            onClick={() => onChange(undefined)}
+            className="ml-auto rounded-md border border-border px-2 py-1 text-[11px] text-muted-foreground transition hover:text-primary"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+      {!components ? (
+        <p className="py-3 text-center text-xs text-muted-foreground">Loading icons…</p>
+      ) : (
+        <>
+          <Input
+            aria-label="Search brand icons"
+            value={query}
+            placeholder={`Search ${names.length.toLocaleString()} icons...`}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <ScrollArea className="h-48 rounded-md border">
+            <div className="grid grid-cols-6 gap-1.5 p-2">
+              {matches.map((name) => {
+                const Icon = components[name];
+                if (!Icon) return null;
+                return (
+                  <button
+                    key={name}
+                    type="button"
+                    aria-label={humanizeBrandIconName(name)}
+                    title={humanizeBrandIconName(name)}
+                    data-menu-brand-icon-pick={name}
+                    onClick={() => onChange(name)}
+                    className={cn(
+                      "inline-flex h-9 w-9 items-center justify-center rounded-md border transition",
+                      value === name
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-foreground hover:border-primary/50"
+                    )}
+                  >
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                );
+              })}
+            </div>
+            {matches.length === 0 ? (
+              <p className="px-2 pb-3 text-xs text-muted-foreground">No icons match “{query}”.</p>
+            ) : null}
+          </ScrollArea>
+        </>
+      )}
+    </div>
+  );
+}
 
 // --- selectable canvas ------------------------------------------------------
 
@@ -710,14 +867,20 @@ const canvasMenuLeafToPageBlock = (block: MenuBlockV2): PageBlockV2 =>
 
 function MenuBlockPreview({
   block,
+  device,
   items,
   navLabel,
   siteName,
+  iconComponents,
 }: {
   block: MenuBlockV2;
+  device: PageBreakpoint;
   items: NavigationItem[];
   navLabel: string;
   siteName: string | null;
+  /** TASK-520-03-L02: lazily-loaded lucide set for the brand ICON canvas preview
+   * (parity with the 520-04 front render; NEVER imported from `siteShell.tsx`). */
+  iconComponents: Record<string, ComponentType<LucideProps>> | null;
 }) {
   switch (block.type) {
     case "nav-items":
@@ -740,18 +903,41 @@ function MenuBlockPreview({
       // resolved src so an image-mode brand with NO logo falls through to text.
       const resolvedSrc =
         block.props.mode === "image" ? resolveBrandImageSrc(block.props.image) : null;
+      // TASK-520-03-L02: icon mode + graphic-with-text combo (mirrors 520-04). The
+      // icon resolves against the lazily-loaded lucide set; an unresolvable/absent
+      // icon falls through to the text/site-name chain (never a broken mark).
+      const brandStyle = resolveMenuBrandStyleForDevice(block, device);
+      const iconName = block.props.mode === "icon" ? block.props.icon : undefined;
+      const IconComp = iconName && iconComponents ? iconComponents[iconName] : undefined;
+      const hasGraphic =
+        (block.props.mode === "image" && !!resolvedSrc) ||
+        (block.props.mode === "icon" && !!IconComp);
+      // Show the wordmark when there is NO graphic (fallback) OR the author opted
+      // into the combo (`showText`). Graphic-only ⇒ byte-identical to today.
+      const showWordmark = !hasGraphic || block.props.showText === true;
       return (
         <a
           className="site-header-brand"
           href={href}
           onClick={(event) => event.preventDefault()}
           data-menu-block-id={block.id}
+          data-menu-brand-combo={hasGraphic && block.props.showText === true ? "true" : undefined}
         >
           {block.props.mode === "image" && resolvedSrc ? (
             <img src={resolvedSrc} alt={String(block.props.image?.alt ?? "")} />
-          ) : (
-            text
-          )}
+          ) : null}
+          {block.props.mode === "icon" && IconComp ? (
+            <IconComp
+              className="site-header-brand-icon"
+              aria-hidden="true"
+              style={{
+                color: brandStyle.iconColor ?? undefined,
+                width: brandStyle.iconSize ?? DEFAULT_BRAND_ICON_SIZE,
+                height: brandStyle.iconSize ?? DEFAULT_BRAND_ICON_SIZE,
+              }}
+            />
+          ) : null}
+          {showWordmark ? <span className="site-header-brand-text">{text}</span> : null}
         </a>
       );
     }
@@ -821,41 +1007,94 @@ function MenuDocumentCanvas({
     () => buildMenuDocumentPreviewCss(doc, device, forceOpenLevel),
     [doc, device, forceOpenLevel]
   );
-  const blocks = doc.sections[0]?.blocks ?? [];
+  const section = doc.sections[0];
+  const blocks = section?.blocks ?? [];
+  // TASK-520-03-L01: the resolved bar layout gates both the scrolled preview
+  // toggle (sticky-only) and its effect.
+  const barLayout: MenuBarLayout = section
+    ? resolveMenuSectionAppearanceForDevice(section, device).layout
+    : {};
+  const barSticky = barLayout.sticky ?? SHELL_APPEARANCE_DEFAULTS.sticky;
+  const [previewScrolled, setPreviewScrolled] = useState(false);
+  // TASK-520-03-L02: lazily-load the full lucide set ONLY when a brand icon block
+  // exists on the canvas, keeping the heavy module off the initial admin bundle.
+  const needsIcons = blocks.some(
+    (block) => block.type === "brand" && block.props.mode === "icon" && !!block.props.icon
+  );
+  const [iconComponents, setIconComponents] = useState<Record<
+    string,
+    ComponentType<LucideProps>
+  > | null>(null);
+  useEffect(() => {
+    if (!needsIcons || iconComponents) return;
+    let active = true;
+    void loadFullTimelineIcons().then((lib) => {
+      if (active) setIconComponents(lib.components);
+    });
+    return () => {
+      active = false;
+    };
+  }, [needsIcons, iconComponents]);
   return (
-    <div
-      className="site-header"
-      data-menu-document-canvas="true"
-      {...{ [SITE_MENU_DOC_ATTRIBUTE]: "true" }}
-      // Painted on the ROOT (NORMATIVE): the section Surface/Border doc rules
-      // target this very element, and CSS custom properties inherit downward
-      // only — a per-block wrapper could never feed those root-level rules.
-      style={tokenVariables}
-    >
-      <style>{`${css}\n${MENU_CANVAS_GHOST_CSS}`}</style>
-      <div className="site-header-inner">
-        {blocks.length === 0 ? (
-          <p className="p-6 text-center text-sm text-muted-foreground">
-            This menu design has no blocks yet. Add one from the panel.
-          </p>
-        ) : (
-          blocks.map((block) => (
-            <SelectableBlock
-              key={block.id}
-              id={block.id}
-              ghost={!resolveMenuBlockVisibleForDevice(block, device)}
-              selected={block.id === selectedId}
-              onSelect={onSelect}
-            >
-              <MenuBlockPreview
-                block={block}
-                items={items}
-                navLabel={navLabel}
-                siteName={siteName}
-              />
-            </SelectableBlock>
-          ))
-        )}
+    <div className="grid gap-2">
+      {barSticky ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            data-menu-preview-scrolled-toggle="true"
+            aria-pressed={previewScrolled}
+            onClick={() => setPreviewScrolled((on) => !on)}
+            className={cn(
+              "rounded-md border px-2.5 py-1 text-[11px] font-medium transition",
+              previewScrolled
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border bg-background text-muted-foreground hover:text-primary"
+            )}
+          >
+            {previewScrolled ? "Previewing scrolled state" : "Preview scrolled state"}
+          </button>
+        </div>
+      ) : null}
+      <div
+        className="site-header"
+        data-menu-document-canvas="true"
+        {...{ [SITE_MENU_DOC_ATTRIBUTE]: "true" }}
+        // TASK-520-03-L01: stamp the SAME `[data-scrolled="true"]` hook the 520-02
+        // CSS + 520-04 front machine use, so the scrolled variant is visible IN the
+        // canvas without leaving the editor. Preview-only chrome (no model write).
+        data-scrolled={barSticky && previewScrolled ? "true" : undefined}
+        // Painted on the ROOT (NORMATIVE): the section Surface/Border doc rules
+        // target this very element, and CSS custom properties inherit downward
+        // only — a per-block wrapper could never feed those root-level rules.
+        style={tokenVariables}
+      >
+        <style>{`${css}\n${MENU_CANVAS_GHOST_CSS}`}</style>
+        <div className="site-header-inner">
+          {blocks.length === 0 ? (
+            <p className="p-6 text-center text-sm text-muted-foreground">
+              This menu design has no blocks yet. Add one from the panel.
+            </p>
+          ) : (
+            blocks.map((block) => (
+              <SelectableBlock
+                key={block.id}
+                id={block.id}
+                ghost={!resolveMenuBlockVisibleForDevice(block, device)}
+                selected={block.id === selectedId}
+                onSelect={onSelect}
+              >
+                <MenuBlockPreview
+                  block={block}
+                  device={device}
+                  items={items}
+                  navLabel={navLabel}
+                  siteName={siteName}
+                  iconComponents={iconComponents}
+                />
+              </SelectableBlock>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );
@@ -924,8 +1163,12 @@ function MenuBarPanel({
     : {};
   const blocks = section?.blocks ?? [];
   const setField = setLayoutField(updateDoc, device);
-  const setColor = (field: "surfaceColor" | "borderColor") => (value: string | null) =>
-    setField(field, value === null ? "transparent" : value);
+  // TASK-520-03-L01: extended to the scrolled color variants (null ⇒ transparent,
+  // same contract as the two base keys).
+  const setColor =
+    (field: "surfaceColor" | "borderColor" | "surfaceColorScrolled" | "borderColorScrolled") =>
+    (value: string | null) =>
+      setField(field, value === null ? "transparent" : value);
   // …while override DETECTION reads the raw BASE record for the CURRENT override
   // breakpoint (tablet OR mobile) — never the resolved merge, never desktop.
   const layoutOverride = (key: keyof MenuBarLayout) =>
@@ -944,16 +1187,13 @@ function MenuBarPanel({
   // `clearMenuSectionBase(..,"layout",..)` / `readMenuSectionBaseValue`. F2 `isSet`
   // stays the device-appropriate own read.
   const layoutBaseValue = (key: keyof MenuBarLayout) =>
-    section !== undefined &&
-    readMenuSectionBaseValue(section, "layout", key as keyof MenuAppearance) !== undefined;
+    section !== undefined && readMenuSectionBaseValue(section, "layout", key) !== undefined;
   const layoutIsSet = (key: keyof MenuBarLayout) =>
     isMenuOverrideDevice(device) ? layoutOverride(key) : layoutBaseValue(key);
   const resetLayoutBase = (key: keyof MenuBarLayout) => () =>
     updateDoc((current) => {
       const target = current.sections[0];
-      return target
-        ? clearMenuSectionBase(current, target.id, "layout", key as keyof MenuAppearance)
-        : current;
+      return target ? clearMenuSectionBase(current, target.id, "layout", key) : current;
     });
   const layoutControl = (key: keyof MenuBarLayout, label: string, node: ReactNode) => (
     <MenuResponsiveControlShell
@@ -1065,6 +1305,34 @@ function MenuBarPanel({
               onChange={(next) => setField("shadow", next as MenuBarLayout["shadow"])}
             />
           )}
+          {/* TASK-520-03-L01 G2 — floating-card menu bar: corner radius (present-only,
+              NO resolved-default hint since it is held out of MENU_BAR_LAYOUT_KEYS). */}
+          {layoutControl(
+            "radius",
+            "Corner radius",
+            <SliderControl
+              label="Corner radius"
+              value={layout.radius ?? 0}
+              min={MENU_BAR_LAYOUT_NUMBER_RANGES.radius.min}
+              max={MENU_BAR_LAYOUT_NUMBER_RANGES.radius.max}
+              step={1}
+              unit="px"
+              onChange={(next) => setField("radius", next)}
+            />
+          )}
+          {/* TASK-520-03-L01 G2 — custom box-shadow: OVERRIDES the preset above. An
+              invalid value is DROPPED by the 520-01 normalizer on save (re-reads empty). */}
+          {layoutControl(
+            "shadowCustom",
+            "Custom shadow",
+            <ShadowValueField
+              label="Custom shadow"
+              placeholder="e.g. 0 18px 50px rgba(0,0,0,.24)"
+              helper="Overrides the shadow preset. Color accepts hex, rgb/rgba, hsl/hsla, var(--color-*) or transparent (same as other color fields)."
+              value={layout.shadowCustom ?? ""}
+              onChange={(v) => setField("shadowCustom", v.trim() === "" ? undefined : v)}
+            />
+          )}
           {layoutControl(
             "sticky",
             "Sticky header",
@@ -1074,6 +1342,88 @@ function MenuBarPanel({
               onChange={(next) => setField("sticky", next)}
             />
           )}
+          {/* TASK-520-03-L01 G1 — scrolled/floating-state variants. Only meaningful
+              while the bar is sticky, so the whole group is gated on `layout.sticky`.
+              Every key is present-only (unset ⇒ falls back to the base value at emit)
+              and shows NO resolved-default hint (held out of MENU_BAR_LAYOUT_KEYS). */}
+          {layout.sticky ? (
+            <div className="grid gap-3" data-menu-scrolled-group="true">
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Scrolled state
+              </p>
+              {layoutControl(
+                "surfaceColorScrolled",
+                "Scrolled surface",
+                <ColorSwatchControl
+                  label="Scrolled surface"
+                  palette={palette}
+                  value={toSwatchValue(
+                    layout.surfaceColorScrolled ??
+                      layout.surfaceColor ??
+                      SHELL_APPEARANCE_DEFAULTS.surfaceColor
+                  )}
+                  onChange={setColor("surfaceColorScrolled")}
+                />
+              )}
+              {layoutControl(
+                "borderColorScrolled",
+                "Scrolled border",
+                <ColorSwatchControl
+                  label="Scrolled border"
+                  palette={palette}
+                  value={toSwatchValue(
+                    layout.borderColorScrolled ??
+                      layout.borderColor ??
+                      SHELL_APPEARANCE_DEFAULTS.borderColor
+                  )}
+                  onChange={setColor("borderColorScrolled")}
+                />
+              )}
+              {layoutControl(
+                "borderWidthScrolled",
+                "Scrolled border width",
+                <SliderControl
+                  label="Scrolled border width"
+                  value={
+                    layout.borderWidthScrolled ??
+                    layout.borderWidth ??
+                    SHELL_APPEARANCE_DEFAULTS.borderWidth
+                  }
+                  min={menuAppearanceNumberRanges.borderWidth.min}
+                  max={menuAppearanceNumberRanges.borderWidth.max}
+                  step={1}
+                  unit="px"
+                  onChange={(next) => setField("borderWidthScrolled", next)}
+                />
+              )}
+              {layoutControl(
+                "shadowScrolled",
+                "Scrolled shadow preset",
+                <SegmentedControl
+                  label="Scrolled shadow preset"
+                  value={layout.shadowScrolled ?? layout.shadow ?? "none"}
+                  options={menuAppearanceShadows}
+                  optionLabels={shadowLabels}
+                  onChange={(next) =>
+                    setField("shadowScrolled", next as MenuBarLayout["shadowScrolled"])
+                  }
+                />
+              )}
+              {layoutControl(
+                "shadowCustomScrolled",
+                "Scrolled custom shadow",
+                <ShadowValueField
+                  label="Scrolled custom shadow"
+                  placeholder="0 18px 50px rgba(0,0,0,.24)"
+                  helper="Overrides the scrolled preset."
+                  value={layout.shadowCustomScrolled ?? ""}
+                  onChange={(v) =>
+                    setField("shadowCustomScrolled", v.trim() === "" ? undefined : v)
+                  }
+                />
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -1346,6 +1696,36 @@ function BrandStyleControls({
     </MenuResponsiveControlShell>
   );
 
+  // TASK-520-03-L02: icon mode ⇒ icon color/size (present-only; alpha via 519).
+  if (block.props.mode === "icon") {
+    return (
+      <>
+        {brandStyleControl(
+          "iconColor",
+          "Icon color",
+          <ColorSwatchControl
+            label="Icon color"
+            palette={palette}
+            value={toSwatchValue(brandStyle.iconColor ?? DEFAULT_BRAND_ICON_COLOR)}
+            onChange={(value) => setBrand("iconColor", value === null ? "transparent" : value)}
+          />
+        )}
+        {brandStyleControl(
+          "iconSize",
+          "Icon size",
+          <SliderControl
+            label="Icon size"
+            value={brandStyle.iconSize ?? DEFAULT_BRAND_ICON_SIZE}
+            min={BRAND_STYLE_NUMBER_RANGES.iconSize.min}
+            max={BRAND_STYLE_NUMBER_RANGES.iconSize.max}
+            step={1}
+            unit="px"
+            onChange={(next) => setBrand("iconSize", next)}
+          />
+        )}
+      </>
+    );
+  }
   return block.props.mode === "text" ? (
     <>
       {brandStyleControl(
@@ -2485,20 +2865,26 @@ function MenuBlockPanel({
 
       {block.type === "brand" ? (
         <div className="grid gap-3">
+          {/* TASK-520-03-L02: 3-value mode union (Text / Image / Icon). */}
           <SegmentedControl
             label="Mode"
             value={block.props.mode}
-            options={["text", "image"]}
-            optionLabels={{ text: "Text", image: "Image" }}
+            options={["text", "image", "icon"]}
+            optionLabels={{ text: "Text", image: "Image", icon: "Icon" }}
             onChange={(next) =>
               patch(block.id, (current) =>
                 current.type === "brand"
-                  ? { ...current, props: { ...current.props, mode: next as "text" | "image" } }
+                  ? {
+                      ...current,
+                      props: { ...current.props, mode: next as "text" | "image" | "icon" },
+                    }
                   : current
               )
             }
           />
-          {block.props.mode === "text" ? (
+          {/* TASK-520-03-L02: the wordmark text control shows in Text mode AND
+              whenever a graphic mode opted into the "Show text alongside" combo. */}
+          {block.props.mode === "text" || block.props.showText === true ? (
             // Sparse per-menu override of the site name. Raw keystrokes are
             // written as-is (no per-keystroke trim — it would eat mid-word
             // spaces); the 502-01 normalizer trims + caps on save. maxLength is
@@ -2545,6 +2931,42 @@ function MenuBlockPanel({
             // store `image.src` — the shape `resolveBrandImageSrc` reads (a bare
             // `assetId` never resolved, so the logo never rendered).
             <BrandLogoPicker block={block} updateDoc={updateDoc} />
+          ) : null}
+          {/* TASK-520-03-L02: lucide icon picker (icon mode only). Stores the kebab
+              name; clearing removes the present-only key. */}
+          {block.props.mode === "icon" ? (
+            <label className="grid gap-1">
+              <span className="text-xs font-medium text-muted-foreground">Icon</span>
+              <BrandIconPicker
+                value={typeof block.props.icon === "string" ? block.props.icon : undefined}
+                onChange={(name) =>
+                  patch(block.id, (current) => {
+                    if (current.type !== "brand") return current;
+                    if (!name) {
+                      const { icon: _drop, ...rest } = current.props;
+                      return { ...current, props: rest };
+                    }
+                    return { ...current, props: { ...current.props, icon: name } };
+                  })
+                }
+              />
+            </label>
+          ) : null}
+          {/* TASK-520-03-L02: graphic-with-text combo (image/icon modes). Present-only:
+              `on` writes `showText:true`; `off` DROPS the key (byte-identical to today). */}
+          {block.props.mode === "image" || block.props.mode === "icon" ? (
+            <ToggleSwitch
+              label="Show text alongside"
+              value={block.props.showText === true}
+              onChange={(on) =>
+                patch(block.id, (current) => {
+                  if (current.type !== "brand") return current;
+                  if (on) return { ...current, props: { ...current.props, showText: true } };
+                  const { showText: _drop, ...rest } = current.props;
+                  return { ...current, props: rest };
+                })
+              }
+            />
           ) : null}
           {/* TASK-504-04 §3: mode-gated brand style controls (device-forked). */}
           <BrandStyleControls

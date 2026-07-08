@@ -1488,3 +1488,369 @@ test("TASK-508-03: present-only — a flyout-mode doc emits ZERO accordion/direc
   // R2 flyout gated OFF: no perceptible-flyout visibility rest state in accordion mode.
   expect(accordionCss).not.toContain("visibility:hidden");
 });
+
+// --- TASK-520-02: menu-bar radius, custom shadow & scrolled-state variants -----
+
+test("TASK-520-02: radius emits border-radius on the header scope (front + canvas)", () => {
+  const doc = buildDoc();
+  doc.sections[0]!.layout.radius = 18;
+  const css = buildMenuDocumentCss(doc);
+  expect(baseBranchOf(css)).toContain(`${SCOPE}{border-radius:18px}`);
+  // Admin canvas (buildMenuDocumentPreviewCss spreads sets.base) sees it too.
+  expect(buildMenuDocumentPreviewCss(doc, "desktop")).toContain(`${SCOPE}{border-radius:18px}`);
+});
+
+test("TASK-520-02: shadowCustom overrides the enum shadow (custom wins on source order)", () => {
+  const doc = buildDoc();
+  doc.sections[0]!.layout.shadow = "sm";
+  doc.sections[0]!.layout.shadowCustom = "0 18px 50px rgba(0,0,0,.24)";
+  const base = baseBranchOf(buildMenuDocumentCss(doc));
+  const enumShadow = `box-shadow:0 1px 2px rgba(15,23,42,.1)`; // header-frame enum "sm"
+  const customShadow = `${SCOPE}{box-shadow:0 18px 50px rgba(0,0,0,.24)}`;
+  expect(base).toContain(enumShadow);
+  expect(base).toContain(customShadow);
+  // Custom is emitted AFTER the enum preset ⇒ wins the cascade.
+  expect(base.indexOf(enumShadow)).toBeLessThan(base.indexOf(customShadow));
+});
+
+test("TASK-520-02: scrolled variants emit a [data-scrolled] block; unset axes emit nothing", () => {
+  const doc = buildDoc();
+  doc.sections[0]!.layout.surfaceColorScrolled = "rgba(8,17,31,.84)";
+  doc.sections[0]!.layout.borderColorScrolled = "rgba(255,255,255,.18)";
+  doc.sections[0]!.layout.shadowCustomScrolled = "0 18px 50px rgba(0,0,0,.24)";
+  const base = baseBranchOf(buildMenuDocumentCss(doc));
+  // Only the authored axes appear: background + border-bottom-color (colour-only ⇒
+  // longhand keeps the base width) + custom box-shadow.
+  expect(base).toContain(
+    `${SCOPE}[data-scrolled="true"]{background:rgba(8,17,31,.84);border-bottom-color:rgba(255,255,255,.18);box-shadow:0 18px 50px rgba(0,0,0,.24)}`
+  );
+});
+
+test("TASK-520-02: shadowScrolled enum maps when no custom scrolled shadow; surface-only omits border/shadow", () => {
+  const doc = buildDoc();
+  doc.sections[0]!.layout.surfaceColorScrolled = "rgba(8,17,31,.84)";
+  doc.sections[0]!.layout.shadowScrolled = "md";
+  const base = baseBranchOf(buildMenuDocumentCss(doc));
+  // Surface + enum-mapped scrolled shadow; NO border decl (borderColorScrolled unset).
+  expect(base).toContain(
+    `${SCOPE}[data-scrolled="true"]{background:rgba(8,17,31,.84);box-shadow:0 8px 24px rgba(15,23,42,.12)}`
+  );
+  expect(base).not.toContain(`[data-scrolled="true"]{background:rgba(8,17,31,.84);border`);
+});
+
+test("TASK-520-02: a doc with NO extra bar keys is byte-identical (no radius / no [data-scrolled])", () => {
+  const css = buildMenuDocumentCss(buildDoc());
+  expect(css).toBe(GOLDEN_FRONT_CSS);
+  expect(css).not.toContain("border-radius:");
+  expect(css).not.toContain("[data-scrolled=");
+});
+
+test("TASK-520-02: per-device radius re-emits in the mobile @media; equal desktop/mobile emits once", () => {
+  const doc = buildDoc();
+  doc.sections[0]!.layout.radius = 18;
+  doc.sections[0]!.responsive = { mobile: { layout: { radius: 8 } } };
+  const css = buildMenuDocumentCss(doc);
+  expect(baseBranchOf(css)).toContain(`${SCOPE}{border-radius:18px}`);
+  expect(mobileBranchOf(css)).toContain(`${SCOPE}{border-radius:8px}`);
+
+  // Equal desktop/mobile radius ⇒ no mobile re-emit (delta discipline / byte-identity).
+  const equal = buildDoc();
+  equal.sections[0]!.layout.radius = 18;
+  equal.sections[0]!.responsive = { mobile: { layout: { radius: 18 } } };
+  const equalCss = buildMenuDocumentCss(equal);
+  expect(baseBranchOf(equalCss)).toContain(`${SCOPE}{border-radius:18px}`);
+  expect(mobileBranchOf(equalCss)).not.toContain("border-radius:18px");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-520-04-L01 — front BrandRender: icon mode + graphic-with-text combo
+// ---------------------------------------------------------------------------
+
+const iconBrandDoc = (props: Record<string, unknown>): MenuDocumentV2 => ({
+  schemaVersion: MENU_DOCUMENT_SCHEMA_VERSION,
+  sections: [
+    {
+      id: "sec_bar",
+      type: "menu-bar",
+      name: "Menu bar",
+      layout: {},
+      blocks: [{ id: "blk_brand", type: "brand", props: { href: "/", ...props } } as never],
+    },
+  ],
+});
+
+test("TASK-520-04-L01: icon mode renders a lucide <svg> with authored color + size, no wordmark", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={iconBrandDoc({
+        mode: "icon",
+        icon: "house",
+        style: { iconColor: "#f7fbffcc", iconSize: 28 },
+      })}
+      navigation={navigation}
+      siteName="Acme"
+    />
+  );
+  // A lucide <svg> is emitted inside the brand anchor.
+  expect(html).toContain('<a class="site-header-brand" href="/" data-menu-block-id="blk_brand">');
+  expect(html).toContain("<svg");
+  // Authored size + color reach the mark (size on width/height, color inline).
+  expect(html).toContain('width="28"');
+  expect(html).toContain('height="28"');
+  expect(html).toContain("color:#f7fbffcc");
+  // Icon-only ⇒ NO wordmark span, and the site name is NOT rendered as text.
+  expect(html).not.toContain("site-header-brand-text");
+  expect(html).not.toContain(">Acme</a>");
+});
+
+test("TASK-520-04-L01: unknown icon name falls through to the site-name text (no broken mark)", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={iconBrandDoc({ mode: "icon", icon: "definitely-not-an-icon" })}
+      navigation={navigation}
+      siteName="Acme"
+    />
+  );
+  // No <svg>, no raw icon name injected; the site name renders as the fallback.
+  expect(html).not.toContain("<svg");
+  expect(html).not.toContain("definitely-not-an-icon");
+  expect(html).toContain(">Acme</a>");
+});
+
+test("TASK-520 finding 5: reserved prototype keys do NOT resolve as icons (no SSR crash)", () => {
+  // `lucideKebabIconComponents` is built via Object.fromEntries ⇒ it inherits
+  // Object.prototype. A crafted menu write (bypassing the client picker) whose
+  // icon name is a reserved key like "constructor"/"hasOwnProperty" passes the
+  // kebab pattern and would resolve to an INHERITED function — rendering
+  // `<Object/>` throws "Objects are not valid as a React child" during SSR of the
+  // PUBLIC header (stored DoS). The own-property guard must reject it: fall
+  // through to the wordmark, never crash.
+  for (const evil of ["constructor", "hasOwnProperty", "toString", "valueOf", "__proto__"]) {
+    const html = renderToString(
+      <SiteHeaderMenuDocumentRender
+        document={iconBrandDoc({ mode: "icon", icon: evil })}
+        navigation={navigation}
+        siteName="Acme"
+      />
+    );
+    expect(html).not.toContain("<svg");
+    expect(html).toContain(">Acme</a>");
+  }
+});
+
+test("TASK-520-04-L01: combo image + showText renders BOTH the <img> and the wordmark", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={iconBrandDoc({
+        mode: "image",
+        image: { src: "https://cdn.example.com/logo.png", alt: "Acme" },
+        showText: true,
+        text: "Acme",
+      })}
+      navigation={navigation}
+      siteName="Acme"
+    />
+  );
+  expect(html).toContain("site-header-brand--combo");
+  expect(html).toContain("<img");
+  expect(html).toContain("https://cdn.example.com/logo.png");
+  expect(html).toContain('<span class="site-header-brand-text">Acme</span>');
+});
+
+test("TASK-520-04-L01: combo icon + showText renders BOTH the <svg> and the wordmark", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={iconBrandDoc({ mode: "icon", icon: "house", showText: true, text: "Acme" })}
+      navigation={navigation}
+      siteName="Acme"
+    />
+  );
+  expect(html).toContain("site-header-brand--combo");
+  expect(html).toContain("<svg");
+  expect(html).toContain('<span class="site-header-brand-text">Acme</span>');
+});
+
+test("TASK-520-04-L01: back-compat — text mode and image-only (no showText) are unchanged", () => {
+  // Text mode: plain text anchor, no combo class, no svg.
+  const text = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={iconBrandDoc({ mode: "text", text: "Studio 42" })}
+      navigation={navigation}
+      siteName="Acme"
+    />
+  );
+  expect(text).toContain(
+    '<a class="site-header-brand" href="/" data-menu-block-id="blk_brand">Studio 42</a>'
+  );
+  expect(text).not.toContain("site-header-brand--combo");
+
+  // Image-only (no showText): the graphic-only anchor, no wordmark span.
+  const image = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={iconBrandDoc({
+        mode: "image",
+        image: { src: "https://cdn.example.com/logo.png", alt: "Acme" },
+      })}
+      navigation={navigation}
+      siteName="Acme"
+    />
+  );
+  expect(image).toContain('<a class="site-header-brand" href="/" data-menu-block-id="blk_brand">');
+  expect(image).toContain("<img");
+  expect(image).not.toContain("site-header-brand--combo");
+  expect(image).not.toContain("site-header-brand-text");
+});
+
+test("TASK-520-04-L01: per-device iconSize override reflects when breakpoint=tablet", () => {
+  const doc = iconBrandDoc({ mode: "icon", icon: "house", style: { iconSize: 24 } });
+  // Tablet override bumps the icon to 40px.
+  (doc.sections[0]!.blocks[0] as never as { responsive: unknown }).responsive = {
+    tablet: { style: { iconSize: 40 } },
+  };
+  const desktop = renderToString(
+    <SiteHeaderMenuDocumentRender document={doc} navigation={navigation} siteName="Acme" />
+  );
+  const tablet = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={doc}
+      navigation={navigation}
+      siteName="Acme"
+      breakpoint="tablet"
+    />
+  );
+  expect(desktop).toContain('width="24"');
+  expect(tablet).toContain('width="40"');
+});
+
+test("TASK-520 finding 4: per-device brand iconSize emits responsive svg CSS on the front", () => {
+  // On the real front pageRuntimeV2 renders markup ONCE (breakpoint=desktop), so a
+  // per-device iconSize must reach the viewport via CSS, not just inline attributes.
+  const doc = iconBrandDoc({ mode: "icon", icon: "house", style: { iconSize: 24 } });
+  (doc.sections[0]!.blocks[0] as never as { responsive: unknown }).responsive = {
+    mobile: { style: { iconSize: 40 } },
+  };
+  const css = buildMenuDocumentCss(doc);
+  // Desktop base rule carries the authored 24px on the icon <svg>.
+  expect(baseBranchOf(css)).toContain(
+    `${SCOPE} [data-menu-block-id="blk_brand"] svg{width:24px;height:24px}`
+  );
+  // The mobile media branch overrides it to 40px (a CSS rule beats the inline
+  // width/height presentation attributes, so it wins across the viewport).
+  expect(mobileBranchOf(css)).toContain(
+    `${SCOPE} [data-menu-block-id="blk_brand"] svg{width:40px;height:40px}`
+  );
+});
+
+test("TASK-520 finding 4: brand icon svg CSS is present-only (unstyled ⇒ zero bytes)", () => {
+  const css = buildMenuDocumentCss(iconBrandDoc({ mode: "icon", icon: "house" }));
+  expect(css).not.toContain('[data-menu-block-id="blk_brand"] svg{');
+});
+
+// ---------------------------------------------------------------------------
+// TASK-520-04-L02 — front scroll-state machine (data-scrolled toggle script)
+// ---------------------------------------------------------------------------
+
+// The EXACT static literal the front emits (no interpolation of stored data).
+const EXPECTED_SCROLL_MACHINE = [
+  "(function(){",
+  "var h=document.currentScript&&document.currentScript.closest?document.currentScript.closest('[data-site-menu-doc=\"true\"]'):null;",
+  "if(!h)h=document.querySelector('[data-site-menu-doc=\"true\"]');",
+  "if(!h)return;",
+  "var t=8,f=false;",
+  "function u(){f=false;var s=(window.scrollY||window.pageYOffset)>t;",
+  'if(s)h.setAttribute("data-scrolled","true");else h.removeAttribute("data-scrolled");}',
+  "function o(){if(!f){f=true;requestAnimationFrame(u);}}",
+  'window.addEventListener("scroll",o,{passive:true});',
+  'window.addEventListener("resize",o,{passive:true});',
+  "u();",
+  "})();",
+].join("");
+
+const scrolledStickyDoc = (): MenuDocumentV2 => {
+  const doc = buildDoc();
+  doc.sections[0]!.layout.sticky = true;
+  doc.sections[0]!.layout.surfaceColorScrolled = "rgba(8,17,31,.84)";
+  return doc;
+};
+
+test("TASK-520-04-L02: front + sticky + scrolled variant emits the EXACT static scroll-machine script", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrolledStickyDoc()}
+      navigation={navigation}
+      siteName="Acme"
+      activePath="/"
+    />
+  );
+  // The script is present and is the exact static literal (React HTML-escapes the
+  // quotes inside dangerouslySetInnerHTML? No — dangerouslySetInnerHTML emits raw).
+  expect(html).toContain("<script>");
+  expect(html).toContain(EXPECTED_SCROLL_MACHINE);
+  // It toggles data-scrolled and uses passive listeners + rAF throttle (no jank).
+  expect(html).toContain('h.setAttribute("data-scrolled","true")');
+  expect(html).toContain("requestAnimationFrame(u)");
+  expect(html).toContain("{passive:true}");
+});
+
+test("TASK-520-04-L02: NO script in preview (activePath null) even with a scrolled variant", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrolledStickyDoc()}
+      navigation={navigation}
+      siteName="Acme"
+    />
+  );
+  // The CSS `[data-scrolled]` rule still lives in <style> (520-02, always emitted);
+  // what preview MUST NOT contain is the toggle SCRIPT.
+  expect(html).not.toContain("<script>");
+  expect(html).not.toContain('setAttribute("data-scrolled"');
+});
+
+test("TASK-520-04-L02: NO script when sticky:false, or when no scrolled variant authored", () => {
+  // Scrolled variant authored but NOT sticky ⇒ no machine.
+  const notSticky = buildDoc();
+  notSticky.sections[0]!.layout.sticky = false;
+  notSticky.sections[0]!.layout.surfaceColorScrolled = "rgba(8,17,31,.84)";
+  expect(
+    renderToString(
+      <SiteHeaderMenuDocumentRender
+        document={notSticky}
+        navigation={navigation}
+        siteName="Acme"
+        activePath="/"
+      />
+    )
+  ).not.toContain("<script>");
+
+  // Sticky but NO scrolled variant ⇒ byte-identical (no machine).
+  const stickyNoVariant = buildDoc();
+  stickyNoVariant.sections[0]!.layout.sticky = true;
+  expect(
+    renderToString(
+      <SiteHeaderMenuDocumentRender
+        document={stickyNoVariant}
+        navigation={navigation}
+        siteName="Acme"
+        activePath="/"
+      />
+    )
+  ).not.toContain("<script>");
+});
+
+test("TASK-520-04-L02: reduced-motion honored by construction — the machine is a pure attribute toggle", () => {
+  const html = renderToString(
+    <SiteHeaderMenuDocumentRender
+      document={scrolledStickyDoc()}
+      navigation={navigation}
+      siteName="Acme"
+      activePath="/"
+    />
+  );
+  // No JS-driven animation / scroll-behavior mutation: it only sets/removes an
+  // attribute (any transition is CSS-owned and prefers-reduced-motion gated).
+  expect(html).not.toContain("scroll-behavior");
+  expect(html).not.toContain(".animate");
+  expect(html).not.toContain("style.transition");
+  expect(html).toContain('setAttribute("data-scrolled"');
+  expect(html).toContain('removeAttribute("data-scrolled")');
+});

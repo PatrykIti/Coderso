@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Services / Schema (JSON model)
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

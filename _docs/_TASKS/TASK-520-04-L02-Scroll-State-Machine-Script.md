@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Site Render / Navigation
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
