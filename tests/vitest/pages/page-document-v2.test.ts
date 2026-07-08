@@ -2452,4 +2452,52 @@ describe("composition style model (TASK-522-01-L03)", () => {
     expect(normalized.sections[0]!.style).not.toHaveProperty("surfacePreset");
     expect(normalized.sections[0]!.style).not.toHaveProperty("composition");
   });
+
+  // TASK-524-02-L04 — independent surfaceTint model (round-trip / present-only /
+  // sanitize fail-soft / reject-unknown intact / JSON schema).
+  test("surfaceTint round-trips (incl. alpha rgba + hex8)", () => {
+    expect(blockStyle(docWithBlockStyle({ surfaceTint: "rgba(142,232,255,.5)" })).surfaceTint).toBe(
+      "rgba(142,232,255,.5)"
+    );
+    expect(blockStyle(docWithBlockStyle({ surfaceTint: "#8ee8ff80" })).surfaceTint).toBe(
+      "#8ee8ff80"
+    );
+  });
+
+  test("surfaceTint present-only: omitted when unset → byte-identical to 522", () => {
+    const style = blockStyle(docWithBlockStyle({ surfacePreset: "glass" }));
+    expect(style).not.toHaveProperty("surfaceTint");
+    expect("surfaceTint" in style).toBe(false);
+  });
+
+  test("surfaceTint fails soft on a bad color (omitted, no throw)", () => {
+    expect(
+      blockStyle(docWithBlockStyle({ surfaceTint: "expression(alert(1))" }))
+    ).not.toHaveProperty("surfaceTint");
+    expect(
+      blockStyle(docWithBlockStyle({ surfaceTint: "url(javascript:alert(1))" }))
+    ).not.toHaveProperty("surfaceTint");
+    expect(blockStyle(docWithBlockStyle({ surfaceTint: "" }))).not.toHaveProperty("surfaceTint");
+  });
+
+  test("surfaceTint is independent of background (both round-trip)", () => {
+    const style = blockStyle(
+      docWithBlockStyle({ background: "#123456", surfaceTint: "rgba(142,232,255,.5)" })
+    );
+    expect(style.background).toBe("#123456");
+    expect(style.surfaceTint).toBe("rgba(142,232,255,.5)");
+  });
+
+  test("surfaceTint validates against the block-style JSON schema (additionalProperties:false)", () => {
+    const doc = docWithBlockStyle({ surfaceTint: "#8ee8ff" });
+    const normalized = normalizePageDocumentV2ForWrite(doc);
+    const ajv = new Ajv({ allErrors: true, strict: true });
+    expect(ajv.compile(pageDocumentV2JsonSchema)(normalized)).toBe(true);
+  });
+
+  test("unknown block-style key still rejects with surfaceTint in the allowlist", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ wobble: 1 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.wobble"
+    );
+  });
 });

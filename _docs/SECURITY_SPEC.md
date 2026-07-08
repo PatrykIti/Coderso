@@ -402,6 +402,12 @@ Rotacja klucza:
   trusted runtime bindings) allow safe relative or `http(s)` values and reject
   script-capable protocols.
 - CSS sinks (`style.background`, `backgroundImage`, block `textColor`,
+  block `style.surfaceTint` (TASK-524-02 — the independent, alpha-capable glass
+  glow tint, sanitized via `sanitizeAuthoringCssColor` at the write boundary,
+  present-only/omitted on a bad value so it fails closed to the reference-literal
+  CSS fallback and is emitted only as the already-validated `--surface-glow`/
+  `--deco-ring`/`--orb-color` custom properties, never a raw declaration — at both
+  the inline base and the per-breakpoint `pageResponsiveCss.ts` retarget),
   block/section accent, block border colors, responsive CSS custom property
   values) are normalized through color/background policies before persistence
   and escaped before `url("...")` emission. Gradient authoring composes

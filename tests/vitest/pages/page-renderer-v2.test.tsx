@@ -3272,14 +3272,46 @@ const frameAttrs = (block: PageBlockV2): Record<string, string | undefined> =>
 const frameVars = (block: PageBlockV2): Record<string, string | undefined> =>
   toPageBlockRenderProps(block).style as Record<string, string | undefined>;
 
-test("decoration transform motions ride the INNER effect wrapper (not the frame)", () => {
+test("decoration transform motions co-locate with the surface on the FRAME (524-01-L02)", () => {
   for (const motion of ["float", "drift", "pulse", "orbit"] as const) {
+    // 524-01-L01 moved the anchor self-offset onto the free `translate:` property,
+    // so a transform decoration now rides the SAME node as data-surface (the frame),
+    // and its keyframe transform never clobbers the anchor offset — the surface
+    // animates WITH the effect.
     const block = composedBlock({ decoration: { motion } });
-    // Moved off the frame onto the inner descendant so the anchor translate is
-    // never clobbered.
-    expect(frameAttrs(block)["data-deco"]).toBeUndefined();
+    expect(frameAttrs(block)["data-deco"]).toBe(motion);
+    // A plain decoration + surface card needs no inner effect wrapper anymore.
     expect(renderComposedBlocks([block])).toContain(`data-deco="${motion}"`);
   }
+});
+
+test("glass + float move together — data-surface and data-deco on the SAME node (524-01)", () => {
+  // The primary owner-intent guarantee: the glass surface and its float decoration
+  // are the SAME DOM node, so the surface animates WITH the effect (glass floats
+  // with content). No inner effect wrapper is emitted for a plain surface+deco card.
+  const block = composedBlock({ surfacePreset: "glass", decoration: { motion: "float" } });
+  const attrs = frameAttrs(block);
+  // toPageBlockRenderProps is the SINGLE feed for the [data-block-id] frame, so both
+  // attrs landing here proves they are on the SAME node (co-located, not split).
+  expect(attrs["data-surface"]).toBe("glass");
+  expect(attrs["data-deco"]).toBe("float"); // co-located on the frame, not an inner wrapper
+  const html = renderComposedBlocks([block]);
+  // Both attributes appear inside ONE opening tag → literally the same element, so
+  // the surface animates WITH the float effect. (No inner effect wrapper for a plain
+  // surface+deco card.) Match a single tag carrying data-surface AND data-deco in
+  // either order, with no intervening `<` (i.e. same element).
+  const bothInOneTag =
+    /<[^<>]*\bdata-surface="glass"[^<>]*\bdata-deco="float"[^<>]*>/.test(html) ||
+    /<[^<>]*\bdata-deco="float"[^<>]*\bdata-surface="glass"[^<>]*>/.test(html);
+  expect(bothInOneTag).toBe(true);
+  // Timing vars ride that same frame node.
+  const timed = composedBlock({
+    surfacePreset: "glass",
+    decoration: { motion: "float", delay: 1500, duration: 8000 },
+  });
+  const timedVars = frameVars(timed);
+  expect(timedVars["--deco-delay"]).toBe("1500ms");
+  expect(timedVars["--deco-duration"]).toBe("8000ms");
 });
 
 test('decoration "radiate" stays on the FRAME (box-shadow — no inner wrapper)', () => {
@@ -3293,10 +3325,12 @@ test('decoration "none" resets — present-only, no data-deco anywhere', () => {
   expect(renderComposedBlocks([block])).not.toContain("data-deco");
 });
 
-test("decoration delay/duration emit --deco-* on the INNER wrapper (not the frame)", () => {
+test("decoration delay/duration emit --deco-* on the FRAME node (524-01-L02)", () => {
+  // 524-01-L02 empties INNER_VAR_KEYS, so the decoration timing vars seed the frame
+  // element that now carries data-deco (the keyframe binding reads them there).
   const block = composedBlock({ decoration: { motion: "float", delay: 900, duration: 8000 } });
-  expect(frameVars(block)["--deco-delay"]).toBeUndefined();
-  expect(frameVars(block)["--deco-duration"]).toBeUndefined();
+  expect(frameVars(block)["--deco-delay"]).toBe("900ms");
+  expect(frameVars(block)["--deco-duration"]).toBe("8000ms");
   const html = renderComposedBlocks([block]);
   expect(html).toContain("--deco-delay:900ms");
   expect(html).toContain("--deco-duration:8000ms");
@@ -3368,7 +3402,7 @@ test("glass/radial-glow surfaces self-paint on the frame — NO orb spans", () =
   }
 });
 
-test("finding 4 — anchored layered child keeps layer on FRAME, effect on INNER (decoration)", () => {
+test("finding 4 — anchored layered child co-locates layer + deco on the FRAME (524-01)", () => {
   const block = composedBlock({
     decoration: { motion: "float" },
     layer: { x: 10, y: 20, anchor: "top-right" },
@@ -3376,19 +3410,20 @@ test("finding 4 — anchored layered child keeps layer on FRAME, effect on INNER
   const attrs = frameAttrs(block);
   const vars = frameVars(block);
   // Layer positioning + anchor ride the real [data-block-id] frame so the
-  // 522-05-L02 per-device --layer-* override reaches them, and the anchor
-  // translate is isolated from the effect transform.
+  // 522-05-L02 per-device --layer-* override reaches them. The anchor self-offset
+  // rides the free `translate:` property (524-01-L01), so the float decoration
+  // co-locates on the SAME frame node — its transform never clobbers the offset.
   expect(attrs["data-layer"]).toBe("");
   expect(attrs["data-layer-anchor"]).toBe("top-right");
   expect(vars["--layer-x"]).toBe("10%");
   expect(vars["--layer-y"]).toBe("20%");
-  // The float decoration moved to the inner descendant; no tilt perspective.
-  expect(attrs["data-deco"]).toBeUndefined();
+  // The float decoration is now on the frame (same node as layer); no tilt perspective.
+  expect(attrs["data-deco"]).toBe("float");
   expect(attrs["data-tilt-parent"]).toBeUndefined();
   expect(renderComposedBlocks([block])).toContain(`data-deco="float"`);
 });
 
-test("finding 4 — anchor + hover lift: layer on frame, hover on inner", () => {
+test("finding 4 — anchor + hover lift co-locate layer + hover on the FRAME (524-01)", () => {
   const block = composedBlock({
     hoverEffect: "lift",
     layer: { x: 5, y: 5, anchor: "bottom-right" },
@@ -3396,7 +3431,8 @@ test("finding 4 — anchor + hover lift: layer on frame, hover on inner", () => 
   const attrs = frameAttrs(block);
   expect(attrs["data-layer-anchor"]).toBe("bottom-right");
   expect(frameVars(block)["--layer-x"]).toBe("5%");
-  expect(attrs["data-hover"]).toBeUndefined();
+  // Transform hover now rides the frame (same node as the anchor `translate:` offset).
+  expect(attrs["data-hover"]).toBe("lift");
   expect(renderComposedBlocks([block])).toContain('data-hover="lift"');
 });
 
@@ -3612,8 +3648,10 @@ test("block glass/hover presets stamp data-surface / data-hover (522-05-L03)", (
   expect(renderComposedBlocks([composedBlock({ surfacePreset: "glass" })])).toContain(
     'data-surface="glass"'
   );
-  // lift-glow is a transform hover → rides the inner effect wrapper; the FRONT
-  // render (which includes the inner) carries data-hover.
+  // lift-glow is a transform hover → after 524-01 co-location it rides the SAME
+  // node as the surface (the frame), so the front render carries data-hover on the
+  // frame (its transform composes with the anchor `translate:` offset).
+  expect(frameAttrs(composedBlock({ hoverEffect: "lift-glow" }))["data-hover"]).toBe("lift-glow");
   expect(renderComposedBlocks([composedBlock({ hoverEffect: "lift-glow" })])).toContain(
     'data-hover="lift-glow"'
   );

@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Admin UI
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

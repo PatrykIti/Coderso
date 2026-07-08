@@ -928,3 +928,75 @@ describe("per-device layer offsets (TASK-522-05-L02 seam)", () => {
     expect(buildPageResponsiveCss(document)).not.toContain("--layer-x");
   });
 });
+
+describe("per-device surface tint glow (TASK-524-02-L03 seam)", () => {
+  test("a tablet surfaceTint override emits --surface-glow/--deco-ring/--orb-color !important on [data-block-id]", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_tint",
+            // Base glass surface with a base tint; the per-device retint must
+            // reach the SAME [data-block-id] frame that carries the base glow var.
+            style: {
+              surfacePreset: "glass",
+              surfaceTint: "#8ee8ff",
+            },
+            responsive: { tablet: { style: { surfaceTint: "#c7b7ff" } } },
+          }),
+        ],
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).toContain("@media (min-width: 640px) and (max-width: 1023px){");
+    expect(css).toContain('[data-block-id="blk_tint"]');
+    expect(css).toContain("--surface-glow:#c7b7ff !important");
+    expect(css).toContain("--deco-ring:#c7b7ff !important");
+    expect(css).toContain("--orb-color:#c7b7ff !important");
+  });
+
+  test("surfaceTint override with no active surface/effect at the breakpoint emits nothing (base gate parity)", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_tint_inert",
+            // No surfacePreset/hoverEffect/motion → the glow is inert on the base
+            // and must stay inert per-device (no orphan custom prop).
+            style: { surfaceTint: "#8ee8ff" },
+            responsive: { tablet: { style: { surfaceTint: "#c7b7ff" } } },
+          }),
+        ],
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).not.toContain("--surface-glow");
+    expect(css).not.toContain("--deco-ring");
+    expect(css).not.toContain("--orb-color");
+  });
+
+  test("a gradient/url surfaceTint override fails closed (invalid inside radial-gradient())", () => {
+    const document = buildDocument([
+      buildSection({
+        blocks: [
+          buildBlock({
+            id: "blk_tint_grad",
+            style: { surfacePreset: "glass", surfaceTint: "#8ee8ff" },
+            responsive: {
+              tablet: { style: { surfaceTint: "linear-gradient(90deg,#000,#fff)" } },
+            },
+          }),
+        ],
+      }),
+    ]);
+    const plan = buildPageResponsiveCssPlan(document);
+    expect(plan.css).not.toContain("--surface-glow:linear-gradient");
+    expect(plan.diagnostics).toContainEqual({
+      scope: "block",
+      id: "blk_tint_grad",
+      breakpoint: "tablet",
+      key: "style.surfaceTint",
+      reason: "unsafe_color_value",
+    });
+  });
+});

@@ -186,11 +186,16 @@ CSS. Enums/clamps are owned by `pageDocumentV2.ts`.
 - `--deco-delay` / `--deco-duration` — decoration keyframe delay/duration (ms).
 - `--deco-ring` / `--deco-ring-2` — radiate concentric-ring colors.
 - `--layer-x` / `--layer-y` (%) / `--layer-z` — layered-canvas child placement
-  (the ONLY per-device varying token, emitted per breakpoint by `pageResponsiveCss.ts`).
+  (per-device varying token, emitted per breakpoint by `pageResponsiveCss.ts`).
 - `--draw-speed` — custom-SVG stroke draw-in duration (ms).
 - `--marquee-speed` — ticker scroll duration (s).
-- `--surface-glow` — author retint (section `accent` / plain block `background`),
-  consumed by glass/radial-glow/hover glow (reference aqua/violet fallbacks).
+- `--surface-glow` — author retint, consumed by glass/radial-glow/hover glow
+  (reference aqua/violet fallbacks). **Seed precedence (TASK-524-02):** block
+  `style.surfaceTint` (independent, alpha-capable, sanitized) FIRST → plain block
+  `style.background` FALLBACK → section `accent`; a gradient/url tint is left out
+  (invalid in `radial-gradient()`) so CSS falls back to the literal. Per-device via
+  `pageResponsiveCss.ts` (tablet/mobile `@media` retarget of this + `--deco-ring` +
+  `--orb-color`, `!important`, gated on an active surface/effect).
 - `--orb-color` / `--orb-color-2` — ambient-orb radial-gradient colors.
 - `--glare-x` / `--glare-y` — tilt glare sheen position (updated on pointermove, rAF).
 

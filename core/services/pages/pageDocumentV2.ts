@@ -620,6 +620,13 @@ export type PageBlockStyleV2 = {
   tiltGlare?: boolean;
   /** Placement inside a layered canvas ancestor (x/y in %, z-index, anchor). */
   layer?: PageBlockLayer;
+  /**
+   * TASK-524-02: independent glass/glow tint (alpha-capable), seeds
+   * `--surface-glow`/`--deco-ring`/`--orb-color` INDEPENDENT of `background`.
+   * Present-only: omitted when unset (never `null`/`""`); sanitized via
+   * `sanitizeAuthoringCssColor` at the write boundary.
+   */
+  surfaceTint?: string;
   /** Premium surface preset (glass / grid / radial-glow / ambient-orbs). */
   surfacePreset?: PageSurfacePreset;
   /** Hover-effect preset (glow-reveal / lift / scale / lift-glow). */
@@ -728,6 +735,8 @@ const pageBlockStyleKeys = [
   "tilt",
   "tiltGlare",
   "layer",
+  // TASK-524-02-L01 independent glass tint (present-only).
+  "surfaceTint",
   "surfacePreset",
   "hoverEffect",
   "marquee",
@@ -1439,6 +1448,9 @@ const pageBlockStyleJsonSchema: RecordValue = {
         anchor: { type: "string", enum: [...pageLayerAnchors] },
       },
     },
+    // TASK-524-02-L01 present-only STRING (no null — omitted when unset);
+    // sanitized at normalize; additionalProperties:false stays.
+    surfaceTint: { type: "string" },
     surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
     hoverEffect: { type: "string", enum: [...pageBlockHoverEffects] },
     composition: { type: "string", enum: [...pageCompositions] },
@@ -2608,6 +2620,15 @@ const normalizeBlockStyle = (
   }
   if (input.background !== undefined) {
     result.background = readOptionalSafeBackground(input.background) ?? null;
+  }
+  // TASK-524-02-L01: present-only independent glass tint — emit ONLY a valid
+  // sanitized color; omit the key otherwise (never null/"") so no-tint /
+  // bad-tint blocks stay byte-identical to 522.
+  if (input.surfaceTint !== undefined) {
+    const tint = readOptionalSafeColor(input.surfaceTint);
+    if (typeof tint === "string" && tint.length > 0) {
+      result.surfaceTint = tint;
+    }
   }
   if (input.backgroundType !== undefined) {
     result.backgroundType = normalizeEnum(

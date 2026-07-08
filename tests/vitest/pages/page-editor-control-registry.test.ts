@@ -136,6 +136,8 @@ const validBlockPaths = new Set([
   // TASK-522-05-L02/L03 block glass/hover surface + layered-child placement.
   "style.surfacePreset",
   "style.hoverEffect",
+  // TASK-524-02-L03 independent glass tint.
+  "style.surfaceTint",
   "style.layer.x",
   "style.layer.y",
   "style.layer.z",
@@ -281,6 +283,18 @@ describe("page editor control registry", () => {
     expect(
       pageUniversalBlockControls.find((control) => control.id === "block.style.borderStyle")
     ).toMatchObject({ input: "segmented", options: pageBlockBorderStyles });
+  });
+
+  // TASK-524-02-L04 — independent "Surface tint" alpha color control.
+  test("pageUniversalBlockControls has a Surface tint alpha color control", () => {
+    const control = pageUniversalBlockControls.find((c) => c.id === "block.surface.tint");
+    expect(control).toBeTruthy();
+    expect(control!.path).toEqual(["style", "surfaceTint"]);
+    expect(control!.input).toBe("color");
+    expect(control!.target).toBe("block");
+    expect(control!.label).toBe("Surface tint");
+    expect(typeof control!.responsive).toBe("boolean");
+    expect(control!.responsive).toBe(true);
   });
 
   test("section and block capability coverage is complete", () => {
