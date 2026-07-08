@@ -141,8 +141,12 @@ already normalized (`readSafeColor` colors, `readNumber` clamps,
 **CSS custom properties (set from normalized values only):**
 
 - `--anim-speed` — animated-icon keyframe duration (ms).
-- `--spotlight-x` / `--spotlight-y` — cursor-follow spotlight position (updated on
-  `mousemove`, rAF).
+- `--spotlight-x` / `--spotlight-y` — cursor-follow spotlight position in **VIEWPORT
+  coords** (raw `ev.clientX`/`ev.clientY`, rounded, updated on `pointermove` via rAF).
+  These feed the `position:fixed inset:0` spotlight overlay's `radial-gradient`, so they
+  MUST stay viewport-relative — NOT offset by the scrolled page root's rect (TASK-529:
+  subtracting the negative root `getBoundingClientRect().top` added `scrollY` and pushed
+  the glow below the fold past the first screenful).
 - `--spotlight-color` — `readSafeColor` spotlight color (alpha-capable via TASK-519).
 - `--spotlight-size` — spotlight radius (px).
 

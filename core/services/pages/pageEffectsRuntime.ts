@@ -85,8 +85,13 @@ export const PAGE_EFFECTS_RUNTIME_SOURCE = [
   " var sx=0,sy=0,sPending=false;",
   ' function sFrame(){sPending=false;sp.style.setProperty("--spotlight-x",sx+"px");',
   '  sp.style.setProperty("--spotlight-y",sy+"px");}',
-  ' sp.addEventListener("pointermove",function(ev){var r=sp.getBoundingClientRect();',
-  "  sx=Math.round(ev.clientX-r.left);sy=Math.round(ev.clientY-r.top);",
+  // TASK-529 — the vars feed a position:fixed inset:0 overlay's radial-gradient
+  // (523 screen-blend z-30), so they MUST be VIEWPORT coords. `sp` is the ROOT
+  // (full page height; after scroll r.top = -scrollY), so subtracting its rect
+  // ADDED scrollY → the glow "fell" below the viewport past the first screenful.
+  // Use pure clientX/clientY (already viewport-relative); no rect read needed.
+  ' sp.addEventListener("pointermove",function(ev){',
+  "  sx=Math.round(ev.clientX);sy=Math.round(ev.clientY);",
   "  if(!sPending){sPending=true;requestAnimationFrame(sFrame);}},{passive:true});",
   "}",
   // ---- TASK-522-01-L05 generalized block tilt ([data-block-tilt]) ----
