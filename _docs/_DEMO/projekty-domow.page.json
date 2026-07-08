@@ -1,0 +1,779 @@
+{
+  "schemaVersion": 2,
+  "breakpoints": ["desktop", "tablet", "mobile"],
+  "seo": {
+    "title": "Projekty domów — pracownia"
+  },
+  "settings": {
+    "template": "page-v2",
+    "showInNav": true,
+    "effects": {
+      "cursorSpotlight": true,
+      "spotlightColor": "rgba(142,232,255,0.14)",
+      "spotlightSize": 460
+    }
+  },
+  "sections": [
+    {
+      "id": "sec-hero",
+      "type": "hero",
+      "name": "Hero",
+      "variant": "split",
+      "layout": {
+        "columns": 2,
+        "align": "center",
+        "justify": "between",
+        "maxWidth": 1180,
+        "stackVertical": false
+      },
+      "style": {
+        "background": "#07111f",
+        "backgroundType": "color",
+        "backgroundImage": null,
+        "accent": "#8ee8ff",
+        "radius": 28,
+        "shadow": "none",
+        "surfacePreset": "ambient-orbs",
+        "composition": "layered"
+      },
+      "spacing": {
+        "paddingTop": 96,
+        "paddingBottom": 96,
+        "paddingLeft": 48,
+        "paddingRight": 48,
+        "gap": 48
+      },
+      "visibility": {
+        "visible": true,
+        "authOnly": false,
+        "anchor": null,
+        "startsAt": null,
+        "endsAt": null
+      },
+      "responsive": {},
+      "blocks": [
+        {
+          "id": "hero-copy",
+          "type": "group",
+          "props": {
+            "direction": "column",
+            "wrap": false,
+            "gap": 18
+          },
+          "visibility": {
+            "visible": true
+          },
+          "slots": {
+            "children": [
+              {
+                "id": "eyebrow",
+                "type": "heading",
+                "props": {
+                  "text": "◆  Pracownia projektów domów przyszłości",
+                  "level": "h3",
+                  "align": "left"
+                },
+                "style": {
+                  "background": "rgba(255,255,255,.06)"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "hero-h1",
+                "type": "heading",
+                "props": {
+                  "text": "Dom, który wygląda jak przyszłość — i czuje się jak Ty.",
+                  "level": "h1",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "hero-lead",
+                "type": "text",
+                "props": {
+                  "text": "Projektujemy domy jednorodzinne z efektem „wow”: czyste bryły, światło, funkcjonalny układ i wizualizacje, które pozwalają poczuć przestrzeń zanim powstanie pierwszy fundament.",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "hero-actions",
+                "type": "group",
+                "props": {
+                  "direction": "row",
+                  "wrap": true,
+                  "gap": 14
+                },
+                "visibility": {
+                  "visible": true
+                },
+                "slots": {
+                  "children": [
+                    {
+                      "id": "cta-1",
+                      "type": "button",
+                      "props": {
+                        "label": "Zaprojektujmy Twój dom",
+                        "href": "/kontakt",
+                        "target": "self",
+                        "variant": "primary",
+                        "size": "md"
+                      },
+                      "visibility": {
+                        "visible": true
+                      }
+                    },
+                    {
+                      "id": "cta-2",
+                      "type": "button",
+                      "props": {
+                        "label": "Zobacz projekty",
+                        "href": "/projekty",
+                        "target": "self",
+                        "variant": "primary",
+                        "size": "md"
+                      },
+                      "visibility": {
+                        "visible": true
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "trust",
+                "type": "text",
+                "props": {
+                  "text": "Projekty indywidualne    ·    Wizualizacje 3D    ·    Proces online",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "blueprint-card",
+          "type": "group",
+          "props": {
+            "direction": "column",
+            "wrap": false,
+            "gap": 12
+          },
+          "style": {
+            "background": "#0b1628",
+            "tilt": "strong",
+            "tiltGlare": true,
+            "surfacePreset": "glass",
+            "composition": "layered"
+          },
+          "visibility": {
+            "visible": true
+          },
+          "slots": {
+            "children": [
+              {
+                "id": "bp-topline",
+                "type": "text",
+                "props": {
+                  "text": "Concept 07 / Modern Barn   ·   142 m²",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "bp-svg",
+                "type": "customSvg",
+                "props": {
+                  "svg": "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 560 420\" role=\"img\"><defs><linearGradient id=\"lineGlow\" x1=\"0\" x2=\"1\"><stop offset=\"0\" stop-color=\"#b8f4ff\"/><stop offset=\"1\" stop-color=\"#d4c2ff\"/></linearGradient></defs><path d=\"M90 276 L238 142 L470 276\" fill=\"none\" stroke=\"url(#lineGlow)\" stroke-width=\"5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/><path d=\"M128 276 H432 V352 H128 Z\" fill=\"rgba(255,255,255,.03)\" stroke=\"url(#lineGlow)\" stroke-width=\"5\" stroke-linejoin=\"round\"/><path d=\"M204 352 V255 H286 V352 M326 352 V285 H392 V352\" fill=\"none\" stroke=\"url(#lineGlow)\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M235 156 V94 H290 V204\" fill=\"none\" stroke=\"url(#lineGlow)\" stroke-width=\"5\" stroke-linecap=\"round\"/><path d=\"M74 352 H490\" fill=\"none\" stroke=\"url(#lineGlow)\" stroke-width=\"4\" stroke-linecap=\"round\" opacity=\".55\"/></svg>",
+                  "drawIn": true,
+                  "label": "Modern Barn blueprint",
+                  "drawSpeed": 2600
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "chip-a",
+                "type": "heading",
+                "props": {
+                  "text": "+ duże przeszklenia",
+                  "level": "h3",
+                  "align": "center"
+                },
+                "style": {
+                  "background": "#8ee8ff",
+                  "decoration": {
+                    "motion": "float",
+                    "duration": 6000
+                  },
+                  "layer": {
+                    "x": 6,
+                    "y": 18,
+                    "anchor": "top-left"
+                  }
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "chip-b",
+                "type": "heading",
+                "props": {
+                  "text": "A++ ready",
+                  "level": "h3",
+                  "align": "center"
+                },
+                "style": {
+                  "background": "#c7b7ff",
+                  "decoration": {
+                    "motion": "drift",
+                    "duration": 11000
+                  },
+                  "layer": {
+                    "x": 88,
+                    "y": 30,
+                    "anchor": "top-right"
+                  }
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "chip-c",
+                "type": "heading",
+                "props": {
+                  "text": "VR / 3D",
+                  "level": "h3",
+                  "align": "center"
+                },
+                "style": {
+                  "background": "#adffd8",
+                  "decoration": {
+                    "motion": "pulse",
+                    "duration": 2600
+                  },
+                  "layer": {
+                    "x": 84,
+                    "y": 86,
+                    "anchor": "bottom-right"
+                  }
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "bp-dash",
+                "type": "text",
+                "props": {
+                  "text": "3 warianty układu   ·   21 dni koncepcja   ·   96% światło dzienne",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-ticker",
+      "type": "cta",
+      "name": "Cta",
+      "variant": "default",
+      "layout": {
+        "columns": 1,
+        "align": "start",
+        "justify": "start",
+        "maxWidth": 1080,
+        "stackVertical": false
+      },
+      "style": {
+        "background": "#0b1628",
+        "backgroundType": "color",
+        "backgroundImage": null,
+        "accent": "#0d9488",
+        "radius": 0,
+        "shadow": "none"
+      },
+      "spacing": {
+        "paddingTop": 28,
+        "paddingBottom": 28,
+        "paddingLeft": 0,
+        "paddingRight": 0,
+        "gap": 0
+      },
+      "visibility": {
+        "visible": true,
+        "authOnly": false,
+        "anchor": null,
+        "startsAt": null,
+        "endsAt": null
+      },
+      "responsive": {},
+      "blocks": [
+        {
+          "id": "ticker-mq",
+          "type": "group",
+          "props": {
+            "direction": "row",
+            "wrap": false,
+            "gap": 40
+          },
+          "style": {
+            "marquee": {
+              "speed": 18,
+              "direction": "left"
+            }
+          },
+          "visibility": {
+            "visible": true
+          },
+          "slots": {
+            "children": [
+              {
+                "id": "tk-0",
+                "type": "text",
+                "props": {
+                  "text": "minimalizm  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "tk-1",
+                "type": "text",
+                "props": {
+                  "text": "światło  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "tk-2",
+                "type": "text",
+                "props": {
+                  "text": "komfort  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "tk-3",
+                "type": "text",
+                "props": {
+                  "text": "technologia  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "tk-4",
+                "type": "text",
+                "props": {
+                  "text": "natura  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "tk-5",
+                "type": "text",
+                "props": {
+                  "text": "minimalizm  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "tk-6",
+                "type": "text",
+                "props": {
+                  "text": "światło  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "tk-7",
+                "type": "text",
+                "props": {
+                  "text": "komfort  ✦",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-services",
+      "type": "cta",
+      "name": "Cta",
+      "variant": "default",
+      "layout": {
+        "columns": 3,
+        "align": "start",
+        "justify": "between",
+        "maxWidth": 1180,
+        "stackVertical": false
+      },
+      "style": {
+        "background": "#07111f",
+        "backgroundType": "color",
+        "backgroundImage": null,
+        "accent": "#0d9488",
+        "radius": 0,
+        "shadow": "none",
+        "scrollEffect": "reveal-up"
+      },
+      "spacing": {
+        "paddingTop": 96,
+        "paddingBottom": 96,
+        "paddingLeft": 48,
+        "paddingRight": 48,
+        "gap": 24
+      },
+      "visibility": {
+        "visible": true,
+        "authOnly": false,
+        "anchor": null,
+        "startsAt": null,
+        "endsAt": null
+      },
+      "responsive": {},
+      "blocks": [
+        {
+          "id": "svc-head",
+          "type": "heading",
+          "props": {
+            "text": "Architektura, która od pierwszego spojrzenia mówi: to mój dom.",
+            "level": "h2",
+            "align": "left"
+          },
+          "visibility": {
+            "visible": true
+          }
+        },
+        {
+          "id": "svc-1",
+          "type": "group",
+          "props": {
+            "direction": "column",
+            "wrap": false,
+            "gap": 10
+          },
+          "style": {
+            "background": "#0b1628",
+            "tilt": "subtle",
+            "tiltGlare": true,
+            "surfacePreset": "glass",
+            "hoverEffect": "lift-glow"
+          },
+          "visibility": {
+            "visible": true
+          },
+          "slots": {
+            "children": [
+              {
+                "id": "svc-1-n",
+                "type": "heading",
+                "props": {
+                  "text": "01",
+                  "level": "h3",
+                  "align": "left"
+                },
+                "style": {
+                  "background": "rgba(142,232,255,.16)"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "svc-1-t",
+                "type": "heading",
+                "props": {
+                  "text": "Projekty indywidualne",
+                  "level": "h3",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "svc-1-b",
+                "type": "text",
+                "props": {
+                  "text": "Dom od zera dopasowany do działki, światła, stylu życia i budżetu inwestora.",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "svc-2",
+          "type": "group",
+          "props": {
+            "direction": "column",
+            "wrap": false,
+            "gap": 10
+          },
+          "style": {
+            "background": "#0b1628",
+            "tilt": "subtle",
+            "tiltGlare": true,
+            "surfacePreset": "glass",
+            "hoverEffect": "lift-glow"
+          },
+          "visibility": {
+            "visible": true
+          },
+          "slots": {
+            "children": [
+              {
+                "id": "svc-2-n",
+                "type": "heading",
+                "props": {
+                  "text": "02",
+                  "level": "h3",
+                  "align": "left"
+                },
+                "style": {
+                  "background": "rgba(142,232,255,.16)"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "svc-2-t",
+                "type": "heading",
+                "props": {
+                  "text": "Adaptacje gotowych projektów",
+                  "level": "h3",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "svc-2-b",
+                "type": "text",
+                "props": {
+                  "text": "Modernizacja gotowego projektu tak, żeby nie wyglądał jak kompromis.",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              }
+            ]
+          }
+        },
+        {
+          "id": "svc-3",
+          "type": "group",
+          "props": {
+            "direction": "column",
+            "wrap": false,
+            "gap": 10
+          },
+          "style": {
+            "background": "#0b1628",
+            "tilt": "subtle",
+            "tiltGlare": true,
+            "surfacePreset": "glass",
+            "hoverEffect": "lift-glow"
+          },
+          "visibility": {
+            "visible": true
+          },
+          "slots": {
+            "children": [
+              {
+                "id": "svc-3-n",
+                "type": "heading",
+                "props": {
+                  "text": "03",
+                  "level": "h3",
+                  "align": "left"
+                },
+                "style": {
+                  "background": "rgba(142,232,255,.16)"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "svc-3-t",
+                "type": "heading",
+                "props": {
+                  "text": "Wizualizacje 3D",
+                  "level": "h3",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "svc-3-b",
+                "type": "text",
+                "props": {
+                  "text": "Fotorealistyczne ujęcia, animacje bryły i materiały, które budują emocje.",
+                  "format": "plain",
+                  "align": "left"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "sec-cta",
+      "type": "cta",
+      "name": "Cta",
+      "variant": "default",
+      "layout": {
+        "columns": 1,
+        "align": "start",
+        "justify": "start",
+        "maxWidth": 1080,
+        "stackVertical": false
+      },
+      "style": {
+        "background": "#0b1628",
+        "backgroundType": "color",
+        "backgroundImage": null,
+        "accent": "#0d9488",
+        "radius": 0,
+        "shadow": "none",
+        "scrollEffect": "reveal-fade"
+      },
+      "spacing": {
+        "paddingTop": 96,
+        "paddingBottom": 96,
+        "paddingLeft": 48,
+        "paddingRight": 48,
+        "gap": 18
+      },
+      "visibility": {
+        "visible": true,
+        "authOnly": false,
+        "anchor": null,
+        "startsAt": null,
+        "endsAt": null
+      },
+      "responsive": {},
+      "blocks": [
+        {
+          "id": "cta-card",
+          "type": "group",
+          "props": {
+            "direction": "column",
+            "wrap": false,
+            "gap": 16
+          },
+          "style": {
+            "background": "#0b1628",
+            "surfacePreset": "radial-glow"
+          },
+          "visibility": {
+            "visible": true
+          },
+          "slots": {
+            "children": [
+              {
+                "id": "cta-h",
+                "type": "heading",
+                "props": {
+                  "text": "Zaprojektujmy dom, który poczujesz zanim powstanie.",
+                  "level": "h2",
+                  "align": "center"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              },
+              {
+                "id": "cta-btn",
+                "type": "button",
+                "props": {
+                  "label": "Zacznij projekt",
+                  "href": "/kontakt",
+                  "target": "self",
+                  "variant": "primary",
+                  "size": "md"
+                },
+                "visibility": {
+                  "visible": true
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
