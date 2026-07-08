@@ -51,6 +51,7 @@ const blueprintCard = createPageBlockV2("group", {
     tilt: "strong",
     tiltGlare: true,
     surfacePreset: "glass",
+    surfaceTint: "rgba(142,232,255,0.22)",
     composition: "layered",
     background: "#0b1628",
   }),
@@ -93,6 +94,7 @@ const hero: PageSectionV2 = createPageSectionV2("hero", {
     surfacePreset: "ambient-orbs",
     composition: "layered",
     radius: 28,
+    fullBleed: true,
   }),
   spacing: { paddingTop: 96, paddingRight: 48, paddingBottom: 96, paddingLeft: 48, gap: 48 },
   blocks: [
@@ -153,7 +155,7 @@ const ticker: PageSectionV2 = createPageSectionV2("cta", {
   ],
 });
 
-const svc = (id: string, num: string, title: string, body: string) =>
+const svc = (id: string, num: string, title: string, body: string, revealDelay: number) =>
   createPageBlockV2("group", {
     id,
     props: { direction: "column", wrap: false, gap: 10 },
@@ -161,8 +163,10 @@ const svc = (id: string, num: string, title: string, body: string) =>
       tilt: "subtle",
       tiltGlare: true,
       surfacePreset: "glass",
+      surfaceTint: "rgba(199,183,255,0.20)",
       hoverEffect: "lift-glow",
       background: "#0b1628",
+      revealDelay,
     }),
     slots: {
       children: [
@@ -175,7 +179,7 @@ const svc = (id: string, num: string, title: string, body: string) =>
 const services: PageSectionV2 = createPageSectionV2("cta", {
   id: "sec-services",
   variant: "default",
-  style: Ss({ scrollEffect: "reveal-up", background: "#07111f" }),
+  style: Ss({ scrollEffect: "reveal-up", background: "#07111f", fullBleed: true }),
   layout: { columns: 3, align: "start", justify: "between", maxWidth: 1180 },
   spacing: { paddingTop: 96, paddingRight: 48, paddingBottom: 96, paddingLeft: 48, gap: 24 },
   blocks: [
@@ -184,19 +188,22 @@ const services: PageSectionV2 = createPageSectionV2("cta", {
       "svc-1",
       "01",
       "Projekty indywidualne",
-      "Dom od zera dopasowany do działki, światła, stylu życia i budżetu inwestora."
+      "Dom od zera dopasowany do działki, światła, stylu życia i budżetu inwestora.",
+      0
     ),
     svc(
       "svc-2",
       "02",
       "Adaptacje gotowych projektów",
-      "Modernizacja gotowego projektu tak, żeby nie wyglądał jak kompromis."
+      "Modernizacja gotowego projektu tak, żeby nie wyglądał jak kompromis.",
+      140
     ),
     svc(
       "svc-3",
       "03",
       "Wizualizacje 3D",
-      "Fotorealistyczne ujęcia, animacje bryły i materiały, które budują emocje."
+      "Fotorealistyczne ujęcia, animacje bryły i materiały, które budują emocje.",
+      280
     ),
   ],
 });
@@ -228,6 +235,7 @@ const rawDoc: PageDocumentV2 = {
   settings: {
     template: "page-v2",
     showInNav: true,
+    background: "linear-gradient(180deg, #07111f 0%, #0b1628 55%, #06101b 100%)",
     effects: {
       cursorSpotlight: true,
       spotlightColor: "rgba(142,232,255,0.14)",

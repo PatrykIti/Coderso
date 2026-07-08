@@ -11,7 +11,8 @@
       "cursorSpotlight": true,
       "spotlightColor": "rgba(142,232,255,0.14)",
       "spotlightSize": 460
-    }
+    },
+    "background": "linear-gradient(180deg, #07111f 0%, #0b1628 55%, #06101b 100%)"
   },
   "sections": [
     {
@@ -34,7 +35,8 @@
         "radius": 28,
         "shadow": "none",
         "surfacePreset": "ambient-orbs",
-        "composition": "layered"
+        "composition": "layered",
+        "fullBleed": true
       },
       "spacing": {
         "paddingTop": 96,
@@ -173,6 +175,7 @@
           },
           "style": {
             "background": "#0b1628",
+            "surfaceTint": "rgba(142,232,255,0.22)",
             "tilt": "strong",
             "tiltGlare": true,
             "surfacePreset": "glass",
@@ -472,7 +475,8 @@
         "accent": "#0d9488",
         "radius": 0,
         "shadow": "none",
-        "scrollEffect": "reveal-up"
+        "scrollEffect": "reveal-up",
+        "fullBleed": true
       },
       "spacing": {
         "paddingTop": 96,
@@ -512,10 +516,12 @@
           },
           "style": {
             "background": "#0b1628",
+            "surfaceTint": "rgba(199,183,255,0.20)",
             "tilt": "subtle",
             "tiltGlare": true,
             "surfacePreset": "glass",
-            "hoverEffect": "lift-glow"
+            "hoverEffect": "lift-glow",
+            "revealDelay": 0
           },
           "visibility": {
             "visible": true
@@ -574,10 +580,12 @@
           },
           "style": {
             "background": "#0b1628",
+            "surfaceTint": "rgba(199,183,255,0.20)",
             "tilt": "subtle",
             "tiltGlare": true,
             "surfacePreset": "glass",
-            "hoverEffect": "lift-glow"
+            "hoverEffect": "lift-glow",
+            "revealDelay": 140
           },
           "visibility": {
             "visible": true
@@ -636,10 +644,12 @@
           },
           "style": {
             "background": "#0b1628",
+            "surfaceTint": "rgba(199,183,255,0.20)",
             "tilt": "subtle",
             "tiltGlare": true,
             "surfacePreset": "glass",
-            "hoverEffect": "lift-glow"
+            "hoverEffect": "lift-glow",
+            "revealDelay": 280
           },
           "visibility": {
             "visible": true
