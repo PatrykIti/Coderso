@@ -4,6 +4,7 @@ import Ajv from "ajv";
 import {
   PAGE_BLOCK_MAX_CHILDREN_PER_SLOT,
   PAGE_BLOCK_MAX_TREE_DEPTH,
+  PAGE_LAYER_Z_CLAMP,
   PAGE_TEXT_MARK_MAX,
   applyBlockTextMark,
   removeBlockTextMark,
@@ -2193,6 +2194,100 @@ describe("page settings effects model (TASK-521-01-L02)", () => {
   });
 });
 
+describe("page settings background model (TASK-523-01-L01)", () => {
+  const withBackground = (background: unknown): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.settings = { ...doc.settings, background } as PageDocumentV2["settings"];
+    return doc;
+  };
+
+  test("settings.background: solid color round-trips (normalize→serialize→normalize)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withBackground("#0ea5e9"));
+    expect(normalized.settings.background).toBe("#0ea5e9");
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.settings.background).toBe("#0ea5e9");
+  });
+
+  test("settings.background: safe gradient round-trips verbatim", () => {
+    const gradient = "linear-gradient(120deg,#0ea5e9,#a855f7)";
+    const normalized = normalizePageDocumentV2ForWrite(withBackground(gradient));
+    expect(normalized.settings.background).toBe(gradient);
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.settings.background).toBe(gradient);
+  });
+
+  test("settings.background: unknown sibling key rejects (assertKnownKeys, strict mode)", () => {
+    const doc = buildDocument();
+    doc.settings = { ...doc.settings, canvas: "#000" } as PageDocumentV2["settings"];
+    expect(() => normalizePageDocumentV2ForWrite(doc)).toThrow(
+      "Unknown page document field: settings.canvas"
+    );
+  });
+
+  test("settings.background: injection-shaped value fails soft ⇒ key omitted", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(
+      withBackground("red;}body{display:none")
+    );
+    expect("background" in normalized.settings).toBe(false);
+  });
+
+  test("settings.background: bare url()/expression() rejected ⇒ key omitted", () => {
+    const url = normalizeStoredPageDocumentV2ForRead(withBackground("url(javascript:alert(1))"));
+    expect("background" in url.settings).toBe(false);
+    const expr = normalizeStoredPageDocumentV2ForRead(withBackground("expression(alert(1))"));
+    expect("background" in expr.settings).toBe(false);
+  });
+
+  test("settings.background: url() NESTED in a gradient is rejected ⇒ key omitted (no url() layer, TASK-523 hardening)", () => {
+    // The gradient sanitizer now rejects ANY url() token, so this malformed nested
+    // form no longer survives — the key is omitted rather than stored verbatim.
+    const malformed = "radial-gradient(circle,url(//x))";
+    const normalized = normalizePageDocumentV2ForWrite(withBackground(malformed));
+    expect("background" in normalized.settings).toBe(false);
+  });
+
+  test("settings.background: gradient head + trailing comma-separated url() LAYER is rejected ⇒ key omitted (TASK-523 outbound-beacon)", () => {
+    // `linear-gradient(...), url(//evil)` is VALID CSS with two background layers, so a
+    // browser would fetch the url() layer on render (outbound tracking beacon). The
+    // sanitizer must reject the multi-layer form even though it starts with a valid head.
+    for (const beacon of [
+      "linear-gradient(red,blue), url(//evil.com/beacon.png)",
+      "conic-gradient(from 0deg,red), url(evil.com/x)",
+      "radial-gradient(circle,red,blue),url(/beacon)",
+    ]) {
+      const write = normalizePageDocumentV2ForWrite(withBackground(beacon));
+      expect("background" in write.settings).toBe(false);
+      const read = normalizeStoredPageDocumentV2ForRead(withBackground(beacon));
+      expect("background" in read.settings).toBe(false);
+    }
+  });
+
+  test("no settings.background ⇒ present-only omit; legacy/post-522 settings byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("background" in normalized.settings).toBe(false);
+  });
+
+  test(
+    "Ajv: settings.background is a valid string property; unknown settings key rejected by additionalProperties:false",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+
+      const withBg = buildDocument();
+      withBg.settings = { ...withBg.settings, background: "#0ea5e9" };
+      expect(validate(withBg)).toBe(true);
+
+      const unknownKey = buildDocument();
+      unknownKey.settings = {
+        ...unknownKey.settings,
+        canvas: "#000",
+      } as unknown as PageDocumentV2["settings"];
+      expect(validate(unknownKey)).toBe(false);
+    }
+  );
+});
+
 describe("animated-icon block Ajv lockstep (TASK-521-01-L03)", () => {
   test(
     "normalized icon block with numeric speed/size validates; a string speed fails",
@@ -2379,7 +2474,11 @@ describe("composition style model (TASK-522-01-L03)", () => {
   });
 
   test("numbers clamp fail-soft (layer.z, marquee.speed, decoration.duration)", () => {
-    expect(blockStyle(docWithBlockStyle({ layer: { z: 99999 } })).layer).toEqual({ z: 40 });
+    // TASK-523-02 — layer.z clamps to the (occlusion-proof) bound, capped below
+    // the cursor-spotlight overlay z-index so a layer can never hide the glow.
+    expect(blockStyle(docWithBlockStyle({ layer: { z: 99999 } })).layer).toEqual({
+      z: PAGE_LAYER_Z_CLAMP.max,
+    });
     expect(blockStyle(docWithBlockStyle({ marquee: { speed: 0.1 } })).marquee).toEqual({
       speed: 8,
     });

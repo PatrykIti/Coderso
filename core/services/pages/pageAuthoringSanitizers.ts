@@ -43,6 +43,32 @@ const hasBalancedParens = (value: string): boolean => {
   return depth === 0;
 };
 
+/**
+ * Ensure a candidate gradient value is a SINGLE gradient function call — i.e. one
+ * gradient head followed by its balanced parentheses and nothing else. This blocks
+ * the top-level comma-separated multi-layer form
+ * (`linear-gradient(...), url(//evil.com/beacon)`), which is valid CSS with two
+ * background layers and would otherwise cause the browser to fetch the trailing
+ * url() layer on render.
+ */
+const isSingleGradientLayer = (value: string): boolean => {
+  const openIndex = value.indexOf("(");
+  if (openIndex < 0) return false;
+  let depth = 0;
+  for (let index = openIndex; index < value.length; index += 1) {
+    const char = value[index];
+    if (char === "(") depth += 1;
+    else if (char === ")") {
+      depth -= 1;
+      if (depth === 0) {
+        // Nothing may follow the matching close paren of the single gradient call.
+        return index === value.length - 1;
+      }
+    }
+  }
+  return false;
+};
+
 export const isAuthoringColorToken = (
   value: string
 ): value is `var(--color-${AuthoringColorTokenName})` => {
@@ -56,8 +82,13 @@ export const isSafeAuthoringCssColor = (value: string): boolean =>
   namedColorPattern.test(value) ||
   functionalColorPattern.test(value);
 
+const urlFunctionPattern = /url\s*\(/i;
+
 export const isSafeAuthoringCssGradient = (value: string): boolean =>
-  gradientCharsetPattern.test(value) && hasBalancedParens(value);
+  gradientCharsetPattern.test(value) &&
+  hasBalancedParens(value) &&
+  !urlFunctionPattern.test(value) &&
+  isSingleGradientLayer(value);
 
 export const sanitizeAuthoringCssColor = (value: unknown): string | null => {
   if (typeof value !== "string") return null;

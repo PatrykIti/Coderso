@@ -6,6 +6,7 @@ import {
   createPageBlockV2,
   createPageSectionV2,
   PAGE_DOCUMENT_SCHEMA_VERSION,
+  PAGE_LAYER_Z_CLAMP,
   resolvePageSectionForBreakpoint,
   type PageBlockV2,
   type PageDocumentV2,
@@ -2938,7 +2939,10 @@ test("cursorSpotlight ⇒ data-page-spotlight + data-page-motion + overlay + cus
   expect(html).toContain('data-page-spotlight="true"');
   expect(html).toContain('data-page-motion="true"');
   expect(html).toContain("data-page-spotlight-overlay");
-  expect(html).toContain("pointer-events-none fixed inset-0 z-0");
+  // TASK-523-02 — overlay stays pointer-events-none fixed inset-0; the `z-0`
+  // class was DROPPED so it does not fight the CSS-raised z-index.
+  expect(html).toContain("pointer-events-none fixed inset-0");
+  expect(html).not.toContain("pointer-events-none fixed inset-0 z-0");
   expect(html).toContain("--spotlight-color:#ff0000");
   expect(html).toContain("--spotlight-size:400px");
   // the spotlight <style> ships the static PAGE_SPOTLIGHT_CSS
@@ -2962,6 +2966,100 @@ test("PAGE_SPOTLIGHT_CSS is reduced-motion-gated radial-gradient reading --spotl
     "var(--spotlight-color,color-mix(in srgb,var(--primary) 14%,transparent))"
   );
   expect(PAGE_SPOTLIGHT_CSS).not.toContain("var(--spotlight-color,var(--primary))");
+});
+
+test("TASK-523-02 — PAGE_SPOTLIGHT_CSS overlay is occlusion-proof: NON-gated base rule adds light above section backgrounds without blocking", () => {
+  // A NON-gated base rule (BEFORE the reduced-motion @media) fixes/raises/blends
+  // the overlay so it renders ABOVE opaque section backgrounds and ADDS light.
+  const baseRule = PAGE_SPOTLIGHT_CSS.slice(
+    0,
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  expect(baseRule).toContain("[data-page-spotlight] [data-page-spotlight-overlay]");
+  expect(baseRule).toContain("position:fixed");
+  expect(baseRule).toContain("inset:0");
+  // raised z-index — above section content, so opaque backgrounds cannot occlude it
+  const zIndexMatch = /z-index:(\d+)/.exec(baseRule);
+  expect(zIndexMatch).not.toBeNull();
+  const overlayZIndex = Number(zIndexMatch![1]);
+  // Hard Invariant #4 / AC #4: the overlay must sit STRICTLY BELOW the front
+  // sticky nav (z-40) so screen-blend never tints the menu bar.
+  expect(overlayZIndex).toBeLessThan(40);
+  expect(overlayZIndex).toBeGreaterThan(0);
+  // ADDS light without blocking
+  expect(baseRule).toContain("mix-blend-mode:screen");
+  expect(baseRule).toContain("pointer-events:none");
+  // the moving glow (radial-gradient) STAYS behind the reduced-motion gate; the
+  // base rule itself must NOT ship the gradient.
+  expect(baseRule).not.toContain("radial-gradient");
+  const gatedRule = PAGE_SPOTLIGHT_CSS.slice(
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  expect(gatedRule).toContain("radial-gradient");
+});
+
+test("TASK-523-02 — nav-safety invariant: overlay z-index stays strictly below the sticky nav (sticky z-40) and <Root> forms no stacking context", () => {
+  // The overlay must sit above section content but BELOW the sticky nav so
+  // mix-blend-mode:screen never tints the menu bar (Hard Invariant #4 / AC #4).
+  const baseRule = PAGE_SPOTLIGHT_CSS.slice(
+    0,
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  const overlayZIndex = Number(/z-index:(\d+)/.exec(baseRule)![1]);
+
+  // Grep-anchor the nav's `sticky z-40`: if the nav z-index is ever dropped/renamed,
+  // these break so the strictly-below relationship is re-checked.
+  const navigationSource = readFileSync(
+    new URL("../../../core/widgets/core/navigation.tsx", import.meta.url),
+    "utf8"
+  );
+  const widgetRendererSource = readFileSync(
+    new URL("../../../core/widgets/renderers/widgetRenderer.tsx", import.meta.url),
+    "utf8"
+  );
+  expect(navigationSource).toContain("sticky z-40");
+  expect(widgetRendererSource).toContain("sticky z-40");
+  // The nav's z-index is 40; the overlay must be strictly below it.
+  expect(overlayZIndex).toBeLessThan(40);
+
+  // <Root> must NOT form a stacking context (isolation:isolate is the deliberate
+  // NON-choice) so the overlay and nav share the root stacking context and the
+  // z-index comparison is meaningful.
+  const doc = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  const rootTagMatch = /<(main|div|section|article)\b[^>]*data-page-v2="true"[^>]*>/.exec(html);
+  expect(rootTagMatch).not.toBeNull();
+  expect(rootTagMatch![0]).not.toContain("isolation");
+  expect(rootTagMatch![0]).not.toContain("isolate");
+});
+
+test("TASK-523-02 — occlusion-proof: no authorable layer.z can reach the spotlight overlay (PAGE_LAYER_Z_CLAMP.max < overlay z-index < nav z-40)", () => {
+  // The layered-canvas surface maps `layer.z` straight to `z-index` on a
+  // [data-layer] child of the SAME root stacking context as the overlay
+  // (pageCompositionEffects.tsx). If an author could set layer.z >= the overlay
+  // z-index, that layer would paint AT/ABOVE the spotlight and occlude the glow.
+  // Cap the bound STRICTLY BELOW the overlay so the glow is always visible.
+  const baseRule = PAGE_SPOTLIGHT_CSS.slice(
+    0,
+    PAGE_SPOTLIGHT_CSS.indexOf("@media (prefers-reduced-motion: no-preference)")
+  );
+  const overlayZIndex = Number(/z-index:(\d+)/.exec(baseRule)![1]);
+
+  // Grep-anchor the composition-effects mapping so this test breaks if the
+  // layer.z ⇒ z-index binding is ever dropped/renamed and the invariant needs
+  // re-checking against a different surface.
+  const compositionEffectsSource = readFileSync(
+    new URL("../../../core/services/pages/pageCompositionEffects.tsx", import.meta.url),
+    "utf8"
+  );
+  expect(compositionEffectsSource).toContain("z-index:var(--layer-z,auto)");
+
+  // The bound is the single source of truth for both the JSON schema and the
+  // runtime normalizer (pageDocumentV2.ts), so a max below the overlay z-index
+  // means NO authored/normalized layer can reach the overlay.
+  expect(PAGE_LAYER_Z_CLAMP.max).toBeLessThan(overlayZIndex);
+  // And the overlay itself stays strictly below the sticky nav (z-40).
+  expect(overlayZIndex).toBeLessThan(40);
 });
 
 test("section scrollEffect only ⇒ data-page-motion + <style data-page-motion-css> (PAGE_REVEAL_MOTION_CSS) + <noscript> + script, no spotlight overlay", () => {
@@ -2989,6 +3087,20 @@ test("no effects ⇒ byte-identical <Root> (no marker/overlay/script/style)", ()
   expect(html).not.toContain("--spotlight-color");
 });
 
+test("TASK-523-02 — spotlight OFF ⇒ markup byte-identical to no-effects baseline (no overlay/CSS emitted despite the new base rule)", () => {
+  const sections = [createSection()];
+  const baseline = renderToStaticMarkup(
+    <PageDocumentRender document={createEffectsDocument(sections)} />
+  );
+  const spotlightOff = renderToStaticMarkup(
+    <PageDocumentRender document={createEffectsDocument(sections, { cursorSpotlight: false })} />
+  );
+  expect(spotlightOff).toBe(baseline);
+  expect(spotlightOff).not.toContain("data-page-spotlight-overlay");
+  expect(spotlightOff).not.toContain("data-page-spotlight-css");
+  expect(spotlightOff).not.toContain("mix-blend-mode:screen");
+});
+
 test("spotlight script __html === PAGE_EFFECTS_RUNTIME_SOURCE", () => {
   const doc = createEffectsDocument([createSection()], { cursorSpotlight: true });
   const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
@@ -3006,6 +3118,87 @@ test("spotlightSize clamped in render; spotlightColor re-sanitized (bad color �
   expect(html).toContain("--spotlight-color:color-mix(in srgb, var(--primary) 14%, transparent)");
   expect(html).toContain("--spotlight-size:900px");
   expect(html).not.toContain("expression(");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-523-01-L02 — per-page canvas background on the <Root> (present-only,
+// re-sanitized at render, disjoint from the spotlight vars).
+// ---------------------------------------------------------------------------
+
+const createBackgroundDocument = (
+  background?: string,
+  effects?: PageDocumentV2["settings"]["effects"]
+): PageDocumentV2 => ({
+  schemaVersion: PAGE_DOCUMENT_SCHEMA_VERSION,
+  breakpoints: ["desktop", "tablet", "mobile"],
+  seo: {},
+  settings: {
+    template: "page-v2",
+    showInNav: true,
+    ...(effects ? { effects } : {}),
+    ...(background ? { background } : {}),
+  },
+  sections: [createSection()],
+});
+
+test("settings.background color ⇒ <Root> inline style carries background (overriding bg-white)", () => {
+  const html = renderToStaticMarkup(
+    <PageDocumentRender document={createBackgroundDocument("#0ea5e9")} />
+  );
+  expect(html).toContain("background:#0ea5e9");
+});
+
+test("settings.background gradient ⇒ <Root> style carries the gradient", () => {
+  const gradient = "linear-gradient(120deg,#0ea5e9,#a855f7)";
+  const html = renderToStaticMarkup(
+    <PageDocumentRender document={createBackgroundDocument(gradient)} />
+  );
+  expect(html).toContain(gradient);
+});
+
+test("background + spotlight ON ⇒ style carries BOTH background and --spotlight-* (neither clobbered)", () => {
+  const html = renderToStaticMarkup(
+    <PageDocumentRender
+      document={createBackgroundDocument("#0ea5e9", {
+        cursorSpotlight: true,
+        spotlightColor: "#ff0000",
+        spotlightSize: 400,
+      })}
+    />
+  );
+  expect(html).toContain("background:#0ea5e9");
+  expect(html).toContain("--spotlight-color:#ff0000");
+  expect(html).toContain("--spotlight-size:400px");
+});
+
+test("no background + spotlight OFF ⇒ <Root> has NO inline style (byte-identical vs post-522)", () => {
+  const html = renderToStaticMarkup(<PageDocumentRender document={createBackgroundDocument()} />);
+  // rootStyle stays undefined ⇒ no style attribute on the page root.
+  expect(html).not.toContain("--spotlight-color");
+  expect(html).not.toMatch(/data-page-v2="true"[^>]*style=/);
+});
+
+test("no background + spotlight ON ⇒ style carries ONLY --spotlight-* (no background key)", () => {
+  const html = renderToStaticMarkup(
+    <PageDocumentRender
+      document={createBackgroundDocument(undefined, {
+        cursorSpotlight: true,
+        spotlightColor: "#ff0000",
+      })}
+    />
+  );
+  expect(html).toContain("--spotlight-color:#ff0000");
+  // no canvas background emitted on the root style
+  expect(html).not.toMatch(/data-page-v2="true"[^>]*style="[^"]*background:/);
+});
+
+test("directly-mutated bad background re-sanitized at render ⇒ no background in style", () => {
+  const doc = createBackgroundDocument();
+  // Bypass normalize: inject an unsafe stored value directly.
+  (doc.settings as { background?: string }).background = "red;}body{display:none";
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).not.toContain("display:none");
+  expect(html).not.toMatch(/data-page-v2="true"[^>]*style="[^"]*background:/);
 });
 
 // ---------------------------------------------------------------------------
