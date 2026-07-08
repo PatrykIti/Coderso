@@ -3,7 +3,15 @@ import { expect, test } from "vitest";
 import { renderToString } from "react-dom/server";
 
 import { HeroVisualEditor } from "../../../core/admin/ui/widgets/editors/HeroEditors";
-import { heroDefaults, type HeroData } from "../../../core/widgets/core/hero";
+import { heroDefaults, heroEditorContract, type HeroData } from "../../../core/widgets/core/hero";
+
+test("hero appearance editor exposes style.tilt as a writable path", () => {
+  const appearance = heroEditorContract.sections.find(
+    (section) => section.id === "hero.appearance"
+  );
+  expect(appearance?.writablePaths).toContain("style.tilt");
+  expect(appearance?.writablePaths).toContain("style.motion");
+});
 
 test("hero visual variant cards use full-width layout", () => {
   const html = renderToString(

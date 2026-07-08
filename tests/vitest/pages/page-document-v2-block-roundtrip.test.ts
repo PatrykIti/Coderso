@@ -68,6 +68,7 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
     // TASK-457: "collection" joined the catalog (collection authoring).
     // TASK-459-02: "filters" joined the catalog (visitor filters block).
     // TASK-471: "badge" joined the catalog (badge authoring enablement).
+    // TASK-521-04: "icon" joined the catalog (animated-icon block flip).
     expect(editorInsertableBlockTypes).toEqual([
       "heading",
       "text",
@@ -83,6 +84,7 @@ describe("page document v2 block round-trip (TASK-449-02-L01 guard)", () => {
       "divider",
       "spacer",
       "statistic",
+      "icon",
       "quote",
       "container",
       "columns",
@@ -323,5 +325,83 @@ describe("list block round-trip pins (TASK-442-01-L01)", () => {
     // is dropped and the link item survives.
     const read = normalizeStoredPageDocumentV2ForRead(unknownKey);
     expect(onlyBlock(read).props.items).toEqual([{ label: "Privacy", href: "/privacy" }]);
+  });
+});
+
+describe("animated-icon block prop model (TASK-521-01-L03 — prop model only, NO type/capability flip)", () => {
+  test("pageBlockTypes still contains 'icon' and NO 'animatedIcon' member", () => {
+    expect(pageBlockTypes).toContain("icon");
+    expect(pageBlockTypes as readonly string[]).not.toContain("animatedIcon");
+  });
+
+  test("pageBlockCapabilities.icon is real + insertable after the 521-04 flip", () => {
+    // TASK-521-04-L03 flipped the capability (renderer case + palette + controls
+    // shipped); this frozen-capability assertion is edited by 521-04-L04.
+    expect(pageBlockCapabilities.icon).toMatchObject({
+      runtimeRenderer: "real",
+      editorInsertable: true,
+      insertable: true,
+    });
+    expect(pageBlockCapabilities.icon).not.toHaveProperty("reason");
+  });
+
+  test("createPageBlockV2('icon') yields the extended default props + round-trips", () => {
+    const block = createPageBlockV2("icon", { id: "blk_icon_default" });
+    expect(block.props).toEqual({
+      name: "sparkles",
+      label: "",
+      animation: "pulse",
+      size: 48,
+      color: "var(--primary)",
+      speed: 1600,
+    });
+    const { written, read, published } = roundTripStages(buildDocumentWithRawBlocks([block]));
+    for (const stage of [written, read, published]) {
+      expect(onlyBlock(stage).props).toEqual(block.props);
+    }
+  });
+
+  test("resolves bad icon name → 'sparkles' (pattern + set allowlist, fail-soft)", () => {
+    for (const bad of ["../../x", "not-in-set", "SPARKLES", "<script>", "a".repeat(60)]) {
+      const doc = buildDocumentWithRawBlocks([
+        { id: "blk_icon_name", type: "icon", props: { name: bad } },
+      ]);
+      // Write mode is fail-soft for the name allowlist (no throw): coerces.
+      expect(onlyBlock(normalizePageDocumentV2ForWrite(doc)).props.name).toBe("sparkles");
+    }
+  });
+
+  test("rejects invalid animation value on write (fail-closed enum throws PageDocumentError)", () => {
+    const doc = buildDocumentWithRawBlocks([
+      { id: "blk_icon_anim", type: "icon", props: { animation: "explode" } },
+    ]);
+    expect(() => normalizePageDocumentV2ForWrite(doc)).toThrowError(
+      /Invalid sections\.0\.blocks\.0\.props\.animation/
+    );
+    // Stored reads stay non-destructive: unknown enum falls back to "none".
+    expect(onlyBlock(normalizeStoredPageDocumentV2ForRead(doc)).props.animation).toBe("none");
+  });
+
+  test("clamps size/speed (fail-soft); color 'expression(1)' → var(--primary) via readSafeColor", () => {
+    const doc = buildDocumentWithRawBlocks([
+      {
+        id: "blk_icon_clamp",
+        type: "icon",
+        props: { size: 9999, speed: 10, color: "expression(1)" },
+      },
+    ]);
+    const props = onlyBlock(normalizePageDocumentV2ForWrite(doc)).props;
+    expect(props.size).toBe(160);
+    expect(props.speed).toBe(400);
+    expect(props.color).toBe("var(--primary)");
+  });
+
+  test("rejects unknown icon prop (icon.props.wobble → throws)", () => {
+    const doc = buildDocumentWithRawBlocks([
+      { id: "blk_icon_unknown", type: "icon", props: { wobble: true } },
+    ]);
+    expect(() => normalizePageDocumentV2ForWrite(doc)).toThrowError(
+      /Unknown page document field: sections\.0\.blocks\.0\.props\.wobble/
+    );
   });
 });

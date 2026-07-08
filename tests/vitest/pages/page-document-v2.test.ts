@@ -1533,7 +1533,16 @@ describe("PageDocumentV2", () => {
       publicDataBinding: "none",
     });
     expect("reason" in pageBlockCapabilities.columns).toBe(false);
-    expect(pageBlockCapabilities.icon.reason).toBe("icon-runtime-renderer-pending");
+    // TASK-521-04: the animated-icon block is real + author-insertable (renderer
+    // case + palette + controls shipped) while staying outside the assistant
+    // emission vocabulary (no decorative-motion invention by the assistant).
+    expect(pageBlockCapabilities.icon).toMatchObject({
+      editorInsertable: true,
+      insertable: true,
+      assistantEmittable: false,
+      runtimeRenderer: "real",
+    });
+    expect("reason" in pageBlockCapabilities.icon).toBe(false);
     // TASK-457: the collection block is author-insertable (controls shipped)
     // while staying outside the assistant emission vocabulary.
     expect(pageBlockCapabilities.collection).toMatchObject({
@@ -2055,6 +2064,160 @@ describe("collection pagination props and clamp unification (TASK-459-03)", () =
           )
         )
       ).toBe(true);
+    }
+  );
+});
+
+describe("section scroll effect model (TASK-521-01-L01)", () => {
+  const withSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+
+  test("round-trips reveal-up + parallaxIntensity (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      withSectionStyle({ scrollEffect: "reveal-up", parallaxIntensity: 24 })
+    );
+    expect(normalized.sections[0]!.style).toMatchObject({
+      scrollEffect: "reveal-up",
+      parallaxIntensity: 24,
+    });
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.sections[0]!.style).toEqual(normalized.sections[0]!.style);
+  });
+
+  test("omits scrollEffect:'none' (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ scrollEffect: "none" }));
+    expect("scrollEffect" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test("clamps parallaxIntensity to [0,40] (fail-soft)", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(
+      withSectionStyle({ parallaxIntensity: 9999 })
+    );
+    expect(normalized.sections[0]!.style.parallaxIntensity).toBe(40);
+  });
+
+  test("rejects invalid scrollEffect value on write (throws PageDocumentError)", () => {
+    const bad = withSectionStyle({ scrollEffect: "drop-table" });
+    expect(() => normalizePageDocumentV2ForWrite(bad)).toThrow();
+    expect(isPageDocumentError(safeNormalizeError(bad), "page_document_invalid")).toBe(true);
+  });
+
+  test("rejects unknown style key", () => {
+    expect(() => normalizePageDocumentV2ForWrite(withSectionStyle({ wobble: true }))).toThrow(
+      "Unknown page document field: sections.0.style.wobble"
+    );
+  });
+
+  test("legacy section (no effect keys) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("scrollEffect" in normalized.sections[0]!.style).toBe(false);
+    expect("parallaxIntensity" in normalized.sections[0]!.style).toBe(false);
+  });
+
+  test(
+    "responsive[bp].style scroll keys validate + round-trip (partial-schema mirror)",
+    { timeout: 30_000 },
+    () => {
+      const doc = buildDocument();
+      doc.sections[0]!.responsive = {
+        ...doc.sections[0]!.responsive,
+        tablet: {
+          ...doc.sections[0]!.responsive.tablet,
+          style: { scrollEffect: "reveal-fade", parallaxIntensity: 30 },
+        },
+      };
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      expect(normalized.sections[0]!.responsive.tablet?.style).toMatchObject({
+        scrollEffect: "reveal-fade",
+        parallaxIntensity: 30,
+      });
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(normalized)).toBe(true);
+    }
+  );
+});
+
+describe("page settings effects model (TASK-521-01-L02)", () => {
+  const withEffects = (effects: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.settings = { ...doc.settings, effects } as PageDocumentV2["settings"];
+    return doc;
+  };
+
+  test("round-trips { cursorSpotlight, spotlightColor(alpha), spotlightSize }", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      withEffects({ cursorSpotlight: true, spotlightColor: "#0ea5e988", spotlightSize: 420 })
+    );
+    expect(normalized.settings.effects).toEqual({
+      cursorSpotlight: true,
+      spotlightColor: "#0ea5e988",
+      spotlightSize: 420,
+    });
+    const roundTripped = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(roundTripped.settings.effects).toEqual(normalized.settings.effects);
+  });
+
+  test("omits empty effects:{} (present-only)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(withEffects({}));
+    expect("effects" in normalized.settings).toBe(false);
+  });
+
+  test("falls back spotlightColor 'url(x)' → var(--primary) (fail-soft)", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(
+      withEffects({ spotlightColor: "url(x)" })
+    );
+    expect(normalized.settings.effects?.spotlightColor).toBe("var(--primary)");
+  });
+
+  test("clamps spotlightSize to [120,900] (fail-soft)", () => {
+    const normalized = normalizeStoredPageDocumentV2ForRead(withEffects({ spotlightSize: 99999 }));
+    expect(normalized.settings.effects?.spotlightSize).toBe(900);
+  });
+
+  test("rejects unknown settings.effects key", () => {
+    expect(() => normalizePageDocumentV2ForWrite(withEffects({ glow: true }))).toThrow(
+      "Unknown page document field: settings.effects.glow"
+    );
+  });
+
+  test("legacy settings (no effects) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("effects" in normalized.settings).toBe(false);
+  });
+});
+
+describe("animated-icon block Ajv lockstep (TASK-521-01-L03)", () => {
+  test(
+    "normalized icon block with numeric speed/size validates; a string speed fails",
+    { timeout: 30_000 },
+    () => {
+      const doc = buildDocument();
+      doc.sections[0]!.blocks = [createPageBlockV2("icon", { id: "blk_icon_ajv" })];
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      expect(normalized.sections[0]!.blocks[0]!.props).toMatchObject({ speed: 1600, size: 48 });
+
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(normalized)).toBe(true);
+
+      // A doc that reached the schema with a STRING speed would fail — proving
+      // blockPropJsonSchemaForType returns numericSchema for icon speed, not the
+      // generic stringSchema.
+      const stringSpeed = cloneDocument(normalized);
+      (stringSpeed.sections[0]!.blocks[0]!.props as Record<string, unknown>).speed = "fast";
+      expect(validate(stringSpeed)).toBe(false);
+
+      // And an out-of-enum animation fails the schema too (enum mirror).
+      const badAnim = cloneDocument(normalized);
+      (badAnim.sections[0]!.blocks[0]!.props as Record<string, unknown>).animation = "explode";
+      expect(validate(badAnim)).toBe(false);
     }
   );
 });

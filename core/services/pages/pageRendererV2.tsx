@@ -20,10 +20,16 @@ import {
   pageBadgeSizes,
   pageBadgeVariants,
   pageBadgeWeights,
+  PAGE_PARALLAX_INTENSITY_CLAMP,
+  PAGE_SPOTLIGHT_SIZE_CLAMP,
   pageTypographyFontFamilyCssValues,
   pageTypographyFontSizeCssValues,
   pageTypographyFontWeightCssValues,
+  resolveAnimatedIconName,
   resolvePageDocumentForBreakpoint,
+  ANIMATED_ICON_SIZE_CLAMP,
+  ANIMATED_ICON_SPEED_CLAMP,
+  type AnimatedIconAnimation,
   type PageBlockSlotKey,
   type PageBlockV2,
   type PageBreakpoint,
@@ -31,6 +37,8 @@ import {
   type PageSectionV2,
   type PageTextMark,
 } from "./pageDocumentV2";
+import { AnimatedIcon, ANIMATED_ICON_KEYFRAMES_CSS } from "./animatedIconGlyphs";
+import { PAGE_EFFECTS_RUNTIME_ID, PAGE_EFFECTS_RUNTIME_SOURCE } from "./pageEffectsRuntime";
 import type { PageBlockPath } from "./pageBlockPaths";
 import {
   isPageBlockVisualElementType,
@@ -526,8 +534,21 @@ export const toPageSectionRenderProps = (
   // `getPageSectionEffectiveColumns` owns this math so editor grid affordances
   // (ghost tiles, left/right move steps) always agree with the painted grid.
   const columns = getPageSectionEffectiveColumns(section);
+  // Section scroll-reveal (TASK-521-02): append ONLY the JIT-safe standard
+  // utilities (transition + the revealed-state target). The HIDE state ships
+  // separately as the exported PAGE_REVEAL_MOTION_CSS static string (emitted
+  // once at the page root by 521-05), scoped under the runtime-set
+  // `[data-reveal-armed]` marker so content is NEVER permanently hidden in the
+  // canvas / no-JS / CSP-blocked / reduced-motion / pre-arm cases.
+  const scrollEffect = section.style.scrollEffect;
+  const isReveal = scrollEffect === "reveal-fade" || scrollEffect === "reveal-up";
+  const revealClass = isReveal
+    ? "motion-safe:transition-[opacity,transform] motion-safe:duration-700 " +
+      "motion-safe:data-[revealed=true]:opacity-100 motion-safe:data-[revealed=true]:translate-y-0"
+    : "";
+  const baseSectionClassName = template.variant === "full-width" ? "w-full" : "w-full px-4 py-6";
   return {
-    sectionClassName: template.variant === "full-width" ? "w-full" : "w-full px-4 py-6",
+    sectionClassName: [baseSectionClassName, revealClass].filter(Boolean).join(" "),
     contentClassName: joinPageRenderClasses(
       "grid w-full",
       options?.layoutMode === "canvas-device"
@@ -546,6 +567,25 @@ export const toPageSectionRenderProps = (
     },
   };
 };
+
+/**
+ * Static reveal HIDE-state CSS (TASK-521-02) — the SINGLE source of the
+ * before-reveal hidden state for `scrollEffect: "reveal-fade" | "reveal-up"`.
+ * Scoped under BOTH `@media (prefers-reduced-motion: no-preference)` (motion-safe)
+ * AND the runtime-set `[data-reveal-armed]` marker (JS-required-to-HIDE): so the
+ * builder canvas, no-JS/SSR, CSP-blocked, reduced-motion, and any pre-arm
+ * exception path NEVER hide content (marker absent ⇒ rule inert; content shown
+ * at rest, SEO-safe). Emitted verbatim ONCE at the page root by 521-05-L03 in a
+ * `<style data-page-motion-css>`; the section carries only JIT-safe standard
+ * utilities (transition + `data-[revealed=true]:` revealed-state target). Once
+ * the runtime arms and IntersectionObserver sets `data-revealed`, the section
+ * animates to rest.
+ */
+export const PAGE_REVEAL_MOTION_CSS =
+  "@media (prefers-reduced-motion: no-preference){" +
+  '[data-reveal-armed] [data-page-effect^="reveal"]:not([data-revealed]){opacity:0}' +
+  '[data-reveal-armed] [data-page-effect="reveal-up"]:not([data-revealed]){transform:translateY(1rem)}' +
+  "}";
 
 /**
  * Visual style surface of `PageBlockStyleV2` (background, text color, border,
@@ -1916,8 +1956,51 @@ export const renderPageBlockContent = (
     }
     case "embed":
       return renderEmbedBlock(block, context);
-    case "icon":
-      return null;
+    case "icon": {
+      // Defence in depth — re-validate every prop at the render boundary (never
+      // trust stored data): name → curated allowlist (`resolveAnimatedIconName`),
+      // size/speed re-clamped, color re-sanitized (React SSR does NOT block
+      // semicolon-delimited CSS injection inside a `style` value).
+      const iconName = resolveAnimatedIconName(block.props.name);
+      const iconAnimation = ((): AnimatedIconAnimation => {
+        const value = block.props.animation;
+        return typeof value === "string" &&
+          (["none", "spin", "pulse", "bounce", "draw"] as readonly string[]).includes(value)
+          ? (value as AnimatedIconAnimation)
+          : "none";
+      })();
+      const iconSize = Math.max(
+        ANIMATED_ICON_SIZE_CLAMP.min,
+        Math.min(ANIMATED_ICON_SIZE_CLAMP.max, Math.trunc(readNumber(block.props.size, 48)))
+      );
+      const iconSpeed = Math.max(
+        ANIMATED_ICON_SPEED_CLAMP.min,
+        Math.min(ANIMATED_ICON_SPEED_CLAMP.max, Math.trunc(readNumber(block.props.speed, 1600)))
+      );
+      const iconColor = sanitizeAuthoringCssColor(block.props.color) ?? "var(--primary)";
+      return (
+        <>
+          {/* Keyframe CSS rides WITH the block (block-scoped) so it is present in
+              BOTH the front shell AND the builder canvas (the canvas bypasses
+              PageDocumentRender). A keyed <style data-anim-icon-css> per icon block:
+              React SSR duplicates are HARMLESS because the payload is a STATIC set of
+              identical @keyframes/@media rules that dedupe in the browser CSSOM — no
+              render-scoped Set exists on PageBlockRenderContext to force a single
+              emit, and none is required. */}
+          <style
+            data-anim-icon-css
+            dangerouslySetInnerHTML={{ __html: ANIMATED_ICON_KEYFRAMES_CSS }}
+          />
+          <AnimatedIcon
+            name={iconName}
+            animation={iconAnimation}
+            size={iconSize}
+            color={iconColor}
+            speed={iconSpeed}
+          />
+        </>
+      );
+    }
     default:
       return null;
   }
@@ -2306,17 +2389,45 @@ export function PageSectionRender({
 }) {
   if (!section.visibility.visible) return null;
   const renderProps = toPageSectionRenderProps(section);
+  // Section scroll effects (TASK-521-02): re-derive from section.style locally
+  // and spread the extra data-attrs DIRECTLY on <section> (NOT through the
+  // strict renderProps.dataAttributes, whose type has no index signature). The
+  // 521-01 runtime (emitted once at the page root by 521-05) reads these.
+  const scrollEffect = section.style.scrollEffect; // undefined | enum
+  const parallax =
+    scrollEffect === "parallax"
+      ? Math.max(
+          PAGE_PARALLAX_INTENSITY_CLAMP.min,
+          Math.min(PAGE_PARALLAX_INTENSITY_CLAMP.max, section.style.parallaxIntensity ?? 20)
+        )
+      : undefined;
+  const parallaxEnabled = parallax !== undefined;
+  const effectDataAttrs: Record<string, string> = {
+    ...(scrollEffect ? { "data-page-effect": scrollEffect } : {}),
+    ...(parallax !== undefined ? { "data-parallax": String(parallax) } : {}),
+  };
   return (
     <section
       id={section.visibility.anchor ?? undefined}
       className={renderProps.sectionClassName}
       {...renderProps.dataAttributes}
+      {...effectDataAttrs}
     >
-      <PageSectionContent
-        section={section}
-        emptyContent={emptyContent}
-        runtimeDataByBlockId={runtimeDataByBlockId}
-      />
+      {parallaxEnabled ? (
+        <div data-parallax-inner className="will-change-transform">
+          <PageSectionContent
+            section={section}
+            emptyContent={emptyContent}
+            runtimeDataByBlockId={runtimeDataByBlockId}
+          />
+        </div>
+      ) : (
+        <PageSectionContent
+          section={section}
+          emptyContent={emptyContent}
+          runtimeDataByBlockId={runtimeDataByBlockId}
+        />
+      )}
     </section>
   );
 }
@@ -2327,6 +2438,23 @@ export const resolvePageRenderTree = (
   document: PageDocumentV2,
   breakpoint: PageBreakpoint
 ): PageDocumentV2 => resolvePageDocumentForBreakpoint(document, breakpoint);
+
+/**
+ * TASK-521-05-L03 — STATIC cursor-spotlight background rule. Ships as a module
+ * const (NOT a Tailwind arbitrary variant): the radial-gradient carries multiple
+ * `var()` refs + raw commas, a fragile/unreliable JIT case we do NOT gamble on.
+ * Scoped under `[data-page-spotlight]` so it is inert unless the root marker is
+ * present, and under `@media (prefers-reduced-motion: no-preference)` so reduce
+ * users get NO gradient. Reads only VALIDATED custom props off the root.
+ */
+export const PAGE_SPOTLIGHT_CSS =
+  "@media (prefers-reduced-motion: no-preference){" +
+  "[data-page-spotlight] [data-page-spotlight-overlay]{" +
+  "background:radial-gradient(var(--spotlight-size,400px) at " +
+  "var(--spotlight-x,50%) var(--spotlight-y,50%)," +
+  "var(--spotlight-color,color-mix(in srgb,var(--primary) 14%,transparent))," +
+  "transparent 70%)}" +
+  "}";
 
 export function PageDocumentRender({
   document,
@@ -2364,8 +2492,66 @@ export function PageDocumentRender({
     );
   }
 
+  // TASK-521-05-L03 — per-page effects + section-motion runtime, front/preview
+  // only (this shared renderer is NOT the builder canvas). Present-only: when no
+  // effect is authored, the <Root> is byte-identical to pre-521.
+  const effects = resolved.settings.effects; // present-only (validated at write)
+  const spotlightOn = !!effects?.cursorSpotlight;
+  const hasSectionEffect = resolved.sections.some((section) => section.style.scrollEffect != null);
+  const anyMotion = spotlightOn || hasSectionEffect;
+
+  const spotlightSize = Math.max(
+    PAGE_SPOTLIGHT_SIZE_CLAMP.min,
+    Math.min(PAGE_SPOTLIGHT_SIZE_CLAMP.max, effects?.spotlightSize ?? 400)
+  );
+  // Re-sanitize the color at RENDER (defence in depth — React SSR does not block
+  // semicolon-delimited CSS injection inside a `style` value), matching every
+  // other color in this renderer.
+  // Default is a TRANSLUCENT tint (not opaque `var(--primary)`), so the out-of-box
+  // spotlight is a subtle glow that does NOT obscure content near the cursor. Authors
+  // who pick an explicit color (incl. TASK-519 alpha) fully override this.
+  const spotlightColor =
+    sanitizeAuthoringCssColor(effects?.spotlightColor) ??
+    "color-mix(in srgb, var(--primary) 14%, transparent)";
+  const rootStyle = spotlightOn
+    ? ({
+        ["--spotlight-color" as string]: spotlightColor,
+        ["--spotlight-size" as string]: `${spotlightSize}px`,
+      } as CSSProperties)
+    : undefined;
+
   return (
-    <Root className={rootClassName ?? "min-h-screen bg-white text-slate-950"} data-page-v2="true">
+    <Root
+      className={rootClassName ?? "min-h-screen bg-white text-slate-950"}
+      style={rootStyle}
+      data-page-v2="true"
+      {...(anyMotion ? { "data-page-motion": "true" } : {})}
+      {...(spotlightOn ? { "data-page-spotlight": "true" } : {})}
+    >
+      {/* Reveal HIDE state — the ONLY emit of 521-02-L02's PAGE_REVEAL_MOTION_CSS
+          (committed single path). Scoped under the runtime-set [data-reveal-armed]
+          so it is inert until the runtime arms (JS-required-to-HIDE). */}
+      {hasSectionEffect && (
+        <style data-page-motion-css dangerouslySetInnerHTML={{ __html: PAGE_REVEAL_MOTION_CSS }} />
+      )}
+      {/* Belt-and-suspenders: pure JS-disabled users keep reveal content visible. */}
+      {hasSectionEffect && (
+        <noscript
+          dangerouslySetInnerHTML={{
+            __html: '<style>[data-page-effect^="reveal"]{opacity:1;transform:none}</style>',
+          }}
+        />
+      )}
+      {spotlightOn && (
+        <>
+          <style data-page-spotlight-css dangerouslySetInnerHTML={{ __html: PAGE_SPOTLIGHT_CSS }} />
+          <div
+            aria-hidden="true"
+            data-page-spotlight-overlay
+            className="pointer-events-none fixed inset-0 z-0"
+          />
+        </>
+      )}
       {resolved.sections.map((section) => (
         <PageSectionRender
           key={section.id}
@@ -2373,6 +2559,12 @@ export function PageDocumentRender({
           runtimeDataByBlockId={runtimeDataByBlockId}
         />
       ))}
+      {anyMotion && (
+        <script
+          data-coderso-runtime-script={PAGE_EFFECTS_RUNTIME_ID}
+          dangerouslySetInnerHTML={{ __html: PAGE_EFFECTS_RUNTIME_SOURCE }}
+        />
+      )}
     </Root>
   );
 }

@@ -117,6 +117,42 @@ falls back to fully opaque). This is why the owner's legacy token
 **present-only** — NO schema key, NO DDL, NO migration; legacy opaque values
 normalize byte-identically.
 
+## Pages v2 motion & interaction effect tokens (TASK-521)
+
+The Pages v2 motion/interaction effects (see `_docs/PAGE_MODEL.md` § Motion And
+Interaction Effects) expose their per-instance config to CSS through validated
+custom properties + fixed enums/clamps — never as raw declarations. All values are
+already normalized (`readSafeColor` colors, `readNumber` clamps,
+`normalizeEnum`/`resolveHeroTilt` enums) before reaching CSS.
+
+**Enums & clamps (owned by `pageDocumentV2.ts`, hero `tilt` by `hero.tsx`):**
+
+| Effect | Enum / clamp | Values |
+|--------|--------------|--------|
+| Section scroll | `pageSectionScrollEffects` | `none`, `reveal-fade`, `reveal-up`, `parallax` |
+| Section parallax | `PAGE_PARALLAX_INTENSITY_CLAMP` | `0`..`40` px |
+| Animated icon | `animatedIconAnimations` | `none`, `spin`, `pulse`, `bounce`, `draw` |
+| Animated icon | `animatedIconNames` (allowlist) | `sparkles`, `star`, `heart`, `zap`, `check`, `shield`, `arrow-right`, `bell`, `rocket`, `loader` |
+| Animated icon size | `ANIMATED_ICON_SIZE_CLAMP` | `16`..`160` px |
+| Animated icon speed | `ANIMATED_ICON_SPEED_CLAMP` | `400`..`4000` ms |
+| Hero tilt | `heroTilts` | `none`, `subtle`, `strong` |
+| Page spotlight size | `PAGE_SPOTLIGHT_SIZE_CLAMP` | `120`..`900` px |
+
+**CSS custom properties (set from normalized values only):**
+
+- `--anim-speed` — animated-icon keyframe duration (ms).
+- `--spotlight-x` / `--spotlight-y` — cursor-follow spotlight position (updated on
+  `mousemove`, rAF).
+- `--spotlight-color` — `readSafeColor` spotlight color (alpha-capable via TASK-519).
+- `--spotlight-size` — spotlight radius (px).
+
+**`prefers-reduced-motion` guarantee.** Every effect ships BOTH a CSS
+`motion-safe:`/`motion-reduce:` guard AND a
+`matchMedia('(prefers-reduced-motion: reduce)').matches` early-return in its runtime
+IIFE, so a reduce user sees content fully at rest (no reveal/parallax translate, no
+tilt, no spotlight; icon keyframes paused). Effects are **present-only** — no token,
+no DDL, no migration; a no-effect page renders byte-identically to pre-521 output.
+
 ## Tailwind integration
 
 - Core build mapuje tokeny na utility classes.

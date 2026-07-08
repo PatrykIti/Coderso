@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Admin UI (Pages) / Site Render / Accessibility
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-521-01 (model + `pageEffectsRuntime.ts`).
 
 ---

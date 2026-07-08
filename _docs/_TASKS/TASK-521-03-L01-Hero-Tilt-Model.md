@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Widgets (Hero) / Schema
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

@@ -152,6 +152,7 @@ type HeroShadow = NonNullable<HeroStyle["cardShadow"]>;
 type HeroFont = NonNullable<HeroStyle["fontFamily"]>;
 type HeroWeight = NonNullable<HeroStyle["headlineWeight"]>;
 type HeroMotion = NonNullable<HeroStyle["motion"]>;
+type HeroTilt = NonNullable<HeroStyle["tilt"]>;
 type HeroHeight = NonNullable<NonNullable<HeroData["layout"]>["height"]>;
 type HeroBleed = NonNullable<NonNullable<HeroData["layout"]>["bleed"]>;
 type HeroBackground = NonNullable<HeroData["background"]>;
@@ -181,6 +182,7 @@ const shadowOptions = ["none", "soft", "medium", "strong"] as const;
 const fontFamilyOptions = ["inherit", "sans", "serif", "mono"] as const;
 const textWeightOptions = ["normal", "medium", "semibold", "bold"] as const;
 const motionOptions = ["none", "fade-in", "slide-up"] as const;
+const tiltOptions = ["none", "subtle", "strong"] as const;
 const formatTokenOptionLabel = (option: string) => (option === "none" ? "None" : option);
 const heroPresetLimit = 24;
 const linearGradientPattern =
@@ -329,6 +331,7 @@ const heroControlPathById: Record<string, string> = {
   "hero.style.headlineWeight": "style.headlineWeight",
   "hero.style.bodyWeight": "style.bodyWeight",
   "hero.style.motion": "style.motion",
+  "hero.style.tilt": "style.tilt",
   "hero.style.textColor": "style.textColor",
   "hero.style.subheadColor": "style.subheadColor",
   "hero.style.bodyColor": "style.bodyColor",
@@ -2797,6 +2800,29 @@ export function HeroVisualEditor({
                         : option === "slide-up"
                           ? "Slide up"
                           : "None"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </WidgetControlRow>
+          <WidgetControlRow id="hero.style.tilt" label="Hover tilt">
+            {(fieldProps) => (
+              <Select
+                value={style.tilt ?? "none"}
+                onValueChange={(next) => updateStyle({ tilt: next as HeroTilt })}
+              >
+                <SelectTrigger
+                  id={fieldProps.id}
+                  aria-labelledby={fieldProps["aria-labelledby"]}
+                  aria-describedby={fieldProps["aria-describedby"]}
+                >
+                  <SelectValue placeholder="Select tilt" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiltOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option === "subtle" ? "Subtle" : option === "strong" ? "Strong" : "None"}
                     </SelectItem>
                   ))}
                 </SelectContent>

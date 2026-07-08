@@ -6,7 +6,7 @@
 **Priority:** Medium
 **Category:** Widgets (Hero) / Site Render / Accessibility
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-521-01 (shared reduced-motion discipline; NO model import —
 hero tilt vocabulary is self-contained in `hero.tsx`).
 

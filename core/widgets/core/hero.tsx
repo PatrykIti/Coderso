@@ -6,7 +6,9 @@ import type {
   WidgetDefinition,
   WidgetEditorContract,
   WidgetEditorProps,
+  WidgetRenderContext,
 } from "../types";
+import { renderSharedWidgetRuntimeScript } from "../runtimeScripts";
 import { compactStyle, resolveClearableStyleValue } from "./clearableStyle";
 import { normalizeWidgetSafeHref } from "./widgetSafeHref";
 import { sanitizeRichTextHtml } from "./richTextSection";
@@ -21,6 +23,9 @@ export type HeroFontFamily = "inherit" | "sans" | "serif" | "mono";
 export type HeroTextWeight = "normal" | "medium" | "semibold" | "bold";
 export type HeroShadowToken = "none" | "soft" | "medium" | "strong";
 export type HeroMotionPreset = "none" | "fade-in" | "slide-up";
+export type HeroTilt = "none" | "subtle" | "strong";
+export const heroTilts = ["none", "subtle", "strong"] as const;
+const HERO_TILT_MAX_DEG: Record<HeroTilt, number> = { none: 0, subtle: 5, strong: 8 };
 export type HeroLayoutHeight = "auto" | "large" | "screen";
 export type HeroLayoutBleed = "contained" | "full-bleed";
 
@@ -131,6 +136,7 @@ export type HeroData = {
     headlineWeight?: HeroTextWeight;
     bodyWeight?: HeroTextWeight;
     motion?: HeroMotionPreset;
+    tilt?: HeroTilt;
   };
   background?: {
     color?: string;
@@ -283,6 +289,7 @@ export const heroSchema = {
         headlineWeight: { enum: ["normal", "medium", "semibold", "bold"] },
         bodyWeight: { enum: ["normal", "medium", "semibold", "bold"] },
         motion: { enum: ["none", "fade-in", "slide-up"] },
+        tilt: { enum: ["none", "subtle", "strong"] },
       },
     },
     background: {
@@ -557,6 +564,9 @@ const resolveHeroMotionPreset = (value: string | undefined): HeroMotionPreset =>
   return "none";
 };
 
+const resolveHeroTilt = (value: string | undefined): HeroTilt =>
+  value === "subtle" || value === "strong" ? value : "none";
+
 const resolveHeroLayoutHeight = (value: string | undefined): HeroLayoutHeight => {
   if (value === "large" || value === "screen") return value;
   return "auto";
@@ -707,6 +717,9 @@ function normalizeHeroStyle(value: HeroData["style"] | undefined): HeroData["sty
     headlineWeight: resolveHeroTextWeight(value.headlineWeight),
     bodyWeight: resolveHeroBodyWeight(value.bodyWeight),
     motion: resolveHeroMotionPreset(value.motion),
+    ...(value.tilt !== undefined && resolveHeroTilt(value.tilt) !== "none"
+      ? { tilt: resolveHeroTilt(value.tilt) }
+      : {}),
   };
 }
 
@@ -816,11 +829,13 @@ export function HeroBlock({
   variant,
   slots,
   previewDevice,
+  renderContext,
 }: {
   data: HeroData;
   variant: string;
   slots?: Record<string, WidgetBlock[]>;
   previewDevice?: DeviceTarget;
+  renderContext?: WidgetRenderContext;
 }) {
   const normalized = normalizeHeroData(data);
   const layout = normalized.layout ?? {};
@@ -908,6 +923,9 @@ export function HeroBlock({
   const headlineWeight = resolveHeroTextWeight(style.headlineWeight);
   const bodyWeight = resolveHeroBodyWeight(style.bodyWeight);
   const motionPreset = resolveHeroMotionPreset(style.motion);
+  const tilt = resolveHeroTilt(style.tilt);
+  const tiltEnabled = tilt !== "none";
+  const tiltMaxDeg = HERO_TILT_MAX_DEG[tilt];
   const layoutHeight = resolveHeroLayoutHeight(layout.height);
   const layoutBleed = resolveHeroLayoutBleed(layout.bleed);
   const headlineColor = style.textColor ?? "var(--color-text)";
@@ -1006,7 +1024,7 @@ export function HeroBlock({
         }
       : cardStyle;
 
-  return (
+  const heroCard = (
     <div
       className={joinClasses(
         "relative w-full overflow-hidden border px-6",
@@ -1259,7 +1277,52 @@ export function HeroBlock({
       </div>
     </div>
   );
+
+  if (!tiltEnabled) {
+    return heroCard;
+  }
+
+  return (
+    <div
+      className={joinClasses("motion-safe:[perspective:1000px]")}
+      data-hero-tilt={tilt}
+      data-hero-tilt-max={String(tiltMaxDeg)}
+    >
+      <div
+        data-hero-tilt-inner
+        className={joinClasses(
+          "motion-safe:transition-transform motion-safe:duration-150",
+          "[transform-style:preserve-3d] will-change-transform"
+        )}
+      >
+        {heroCard}
+      </div>
+      {renderContext?.runtimeScripts != null
+        ? renderSharedWidgetRuntimeScript({
+            renderContext,
+            id: "hero-tilt",
+            source: HERO_TILT_SCRIPT,
+          })
+        : null}
+    </div>
+  );
 }
+
+const HERO_TILT_SCRIPT = [
+  "(function(){try{",
+  'if(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)return;',
+  'if(!(window.matchMedia&&window.matchMedia("(pointer:fine)").matches))return;',
+  'var hs=document.querySelectorAll("[data-hero-tilt]");',
+  'hs.forEach(function(h){var inner=h.querySelector("[data-hero-tilt-inner]")||h;',
+  ' var max=Math.max(0,Math.min(12,parseFloat(h.getAttribute("data-hero-tilt-max"))||6));',
+  " var pend=false,rx=0,ry=0;",
+  ' function f(){pend=false;inner.style.transform="rotateX("+rx.toFixed(2)+"deg) rotateY("+ry.toFixed(2)+"deg)";}',
+  ' h.addEventListener("pointermove",function(e){var r=h.getBoundingClientRect();',
+  "  var px=(e.clientX-r.left)/r.width-0.5,py=(e.clientY-r.top)/r.height-0.5;",
+  "  ry=px*max*2;rx=-py*max*2;if(!pend){pend=true;requestAnimationFrame(f);}},{passive:true});",
+  ' h.addEventListener("pointerleave",function(){rx=0;ry=0;if(!pend){pend=true;requestAnimationFrame(f);}},{passive:true});',
+  "});}catch(e){}})();",
+].join("");
 
 const heroSocialProofAvatarWritablePaths = Array.from({ length: 5 }, (_, index) => [
   `socialProof.avatars.${index}.source`,
@@ -1404,6 +1467,7 @@ export const heroEditorContract: WidgetEditorContract = {
         "style.headlineWeight",
         "style.bodyWeight",
         "style.motion",
+        "style.tilt",
       ],
     },
     {
@@ -1535,6 +1599,7 @@ export const heroEditorContract: WidgetEditorContract = {
         "richHeadline",
         "richBody",
         "style.motion",
+        "style.tilt",
       ],
     },
     {

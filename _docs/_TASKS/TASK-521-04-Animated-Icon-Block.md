@@ -6,7 +6,7 @@
 **Priority:** Medium
 **Category:** Site Render / Widgets / Admin UI / Accessibility
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-521-01 (icon-block prop model, `animatedIconNames` /
 `animatedIconAnimations` / clamps, capability flip).
 

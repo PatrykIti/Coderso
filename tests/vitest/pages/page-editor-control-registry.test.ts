@@ -20,6 +20,10 @@ import {
   PAGE_COLLECTION_LIMIT_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
+  ANIMATED_ICON_SIZE_CLAMP,
+  ANIMATED_ICON_SPEED_CLAMP,
+  animatedIconAnimations,
+  animatedIconNames,
   isPageTypographyCapableBlockType,
   pageBackgroundTypes,
   pageBadgeIconPositions,
@@ -47,8 +51,10 @@ import {
   pageSectionAlignments,
   pageSectionCapabilities,
   pageSectionJustify,
+  pageSectionScrollEffects,
   pageSectionTypes,
   pageShadowTokens,
+  PAGE_PARALLAX_INTENSITY_CLAMP,
   pageTextAlignments,
   pageTextFormats,
   pageTypographyCapableBlockTypes,
@@ -60,6 +66,7 @@ import {
   getPageSectionVariantOptions,
   pageSectionTemplateRegistry,
 } from "../../../core/services/pages/pageSectionTemplates";
+import { blockOptionCopy } from "../../../core/admin/ui/pages/editor/pageEditorOptions";
 
 const validSectionPaths = new Set([
   "layout.columns",
@@ -79,6 +86,8 @@ const validSectionPaths = new Set([
   "spacing.gap",
   "visibility.visible",
   "visibility.authOnly",
+  "style.scrollEffect",
+  "style.parallaxIntensity",
 ]);
 
 const validBlockPaths = new Set([
@@ -134,12 +143,15 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageImageFits,
   pageSectionAlignments,
   pageSectionJustify,
+  pageSectionScrollEffects,
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
   pageTypographyFontWeights,
+  animatedIconNames,
+  animatedIconAnimations,
 ]);
 
 /**
@@ -182,6 +194,36 @@ describe("page editor control registry", () => {
     expect(
       pageUniversalSectionControls.find((control) => control.id === "section.style.shadow")
     ).toMatchObject({ input: "select", options: pageShadowTokens });
+
+    // TASK-521-02-L01 — section scroll/parallax descriptors (device-uniform).
+    const scrollEffect = pageUniversalSectionControls.find(
+      (control) => control.id === "section.scrollEffect"
+    );
+    expect(scrollEffect).toMatchObject({
+      panel: "style",
+      target: "section",
+      input: "segmented",
+      responsive: false,
+    });
+    expect(scrollEffect?.path).toEqual(["style", "scrollEffect"]);
+    // Options are exactly the model enum (import-and-compare guards enum/UI drift).
+    expect(scrollEffect?.options).toEqual([...pageSectionScrollEffects]);
+
+    const parallaxIntensity = pageUniversalSectionControls.find(
+      (control) => control.id === "section.parallaxIntensity"
+    );
+    expect(parallaxIntensity).toMatchObject({
+      panel: "style",
+      target: "section",
+      input: "number",
+      responsive: false,
+      unit: "px",
+      clamp: {
+        min: PAGE_PARALLAX_INTENSITY_CLAMP.min,
+        max: PAGE_PARALLAX_INTENSITY_CLAMP.max,
+      },
+    });
+    expect(parallaxIntensity?.path).toEqual(["style", "parallaxIntensity"]);
   });
 
   test("universal block controls use schema-owned array paths and owner options", () => {
@@ -306,7 +348,7 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("insertable block catalog is frozen to the audited 18 blocks (TASK-471-04 badge addition)", () => {
+  test("insertable block catalog is frozen to the audited 19 blocks (TASK-521-04 icon addition)", () => {
     const insertableBlocks = pageBlockTypes.filter(
       (type) => pageBlockCapabilities[type].editorInsertable
     );
@@ -325,6 +367,7 @@ describe("page editor control registry", () => {
       "divider",
       "spacer",
       "statistic",
+      "icon",
       "quote",
       "container",
       "columns",
@@ -338,8 +381,11 @@ describe("page editor control registry", () => {
         // filters blocks are author-insertable but stay OUTSIDE the
         // assistant emission vocabulary — assistant plans must not invent
         // form or content-type/query references (the blueprint composer
-        // binds RESOLVED query ids explicitly instead).
-        assistantEmittable: type !== "form" && type !== "collection" && type !== "filters",
+        // binds RESOLVED query ids explicitly instead). TASK-521-04: the
+        // animated icon block is likewise author-insertable but NOT
+        // assistant-emittable (the assistant does not invent decorative motion).
+        assistantEmittable:
+          type !== "form" && type !== "collection" && type !== "filters" && type !== "icon",
         runtimeRenderer: "real",
       });
       expect("reason" in pageBlockCapabilities[type]).toBe(false);
@@ -375,14 +421,14 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("all 3 gated blocks stay non-insertable with frozen capability reasons", () => {
+  test("the remaining gated blocks stay non-insertable with frozen capability reasons", () => {
     // TASK-456/457 amendments: "form" and "collection" left this set
-    // deliberately (editor controls shipped). Any further promotion requires
-    // an explicit capability change and follow-on task, exactly like those.
+    // deliberately (editor controls shipped). TASK-521-04 promoted "icon" out of
+    // this set (renderer case + palette + controls shipped). Any further promotion
+    // requires an explicit capability change and follow-on task, exactly like those.
     const gatedBlockReasons = {
       gallery: "gallery-editor-controls-pending",
       embed: "embed-editor-controls-pending",
-      icon: "icon-runtime-renderer-pending",
     } as const;
 
     expect(pageBlockTypes.filter((type) => !pageBlockCapabilities[type].editorInsertable)).toEqual(
@@ -398,13 +444,61 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("icon stays the only placeholder runtime renderer and remains non-insertable", () => {
-    expect(pageBlockCapabilities.icon.insertable).toBe(false);
-    expect(pageBlockCapabilities.icon.editorInsertable).toBe(false);
-    expect(pageBlockCapabilities.icon.runtimeRenderer).toBe("placeholder");
+  test("icon is a real, insertable runtime renderer (TASK-521-04 flip)", () => {
+    expect(pageBlockCapabilities.icon.insertable).toBe(true);
+    expect(pageBlockCapabilities.icon.editorInsertable).toBe(true);
+    expect(pageBlockCapabilities.icon.runtimeRenderer).toBe("real");
+    expect(pageBlockCapabilities.icon).not.toHaveProperty("reason");
+    // Every page block type now has a real runtime renderer (no placeholder left).
     expect(
       pageBlockTypes.filter((type) => pageBlockCapabilities[type].runtimeRenderer !== "real")
-    ).toEqual(["icon"]);
+    ).toEqual([]);
+  });
+
+  test("icon block controls are the TASK-521-04 animated-icon descriptor set", () => {
+    // Per-type controls live ONLY on the icon block (not the universal array).
+    expect(pageBlockControlRegistry.icon.map((control) => control.id)).toEqual([
+      "block.icon.props.name",
+      "block.icon.props.animation",
+      "block.icon.props.size",
+      "block.icon.props.speed",
+      "block.icon.props.color",
+    ]);
+    const nameControl = pageBlockControlRegistry.icon.find((c) => c.id.endsWith(".name"))!;
+    expect(nameControl).toMatchObject({ input: "select", options: animatedIconNames });
+    // Bare imported enum reference (identity), not a re-typed copy.
+    expect(nameControl.options).toBe(animatedIconNames);
+    const animationControl = pageBlockControlRegistry.icon.find((c) =>
+      c.id.endsWith(".animation")
+    )!;
+    expect(animationControl).toMatchObject({
+      input: "segmented",
+      panel: "style",
+      options: animatedIconAnimations,
+    });
+    expect(animationControl.options).toBe(animatedIconAnimations);
+    expect(pageBlockControlRegistry.icon.find((c) => c.id.endsWith(".size"))).toMatchObject({
+      input: "number",
+      panel: "style",
+      unit: "px",
+      clamp: { min: ANIMATED_ICON_SIZE_CLAMP.min, max: ANIMATED_ICON_SIZE_CLAMP.max },
+    });
+    expect(pageBlockControlRegistry.icon.find((c) => c.id.endsWith(".speed"))).toMatchObject({
+      input: "number",
+      panel: "style",
+      unit: "ms",
+      clamp: { min: ANIMATED_ICON_SPEED_CLAMP.min, max: ANIMATED_ICON_SPEED_CLAMP.max },
+    });
+    expect(pageBlockControlRegistry.icon.find((c) => c.id.endsWith(".color"))).toMatchObject({
+      input: "color",
+      panel: "style",
+    });
+    // The icon controls do NOT leak onto the universal block-control array.
+    expect(pageUniversalBlockControls.some((c) => c.id.startsWith("block.icon."))).toBe(false);
+    expect(blockOptionCopy.icon).toEqual({
+      label: "Icon",
+      description: "Animated inline icon (spin / pulse / bounce / draw).",
+    });
   });
 
   test("section variant controls are type-scoped from the template registry", () => {

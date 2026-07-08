@@ -26,6 +26,12 @@ import {
   pageSectionAlignments,
   pageSectionCapabilities,
   pageSectionJustify,
+  pageSectionScrollEffects,
+  PAGE_PARALLAX_INTENSITY_CLAMP,
+  animatedIconNames,
+  animatedIconAnimations,
+  ANIMATED_ICON_SIZE_CLAMP,
+  ANIMATED_ICON_SPEED_CLAMP,
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
@@ -297,6 +303,39 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     input: "select",
     responsive: true,
     options: pageShadowTokens,
+  }),
+  control({
+    id: "section.scrollEffect",
+    panel: "style",
+    target: "section",
+    label: "Scroll effect",
+    path: ["style", "scrollEffect"],
+    input: "segmented",
+    // DEVICE-UNIFORM (not responsive): the front serves one desktop-resolved
+    // HTML + @media-CSS deltas, and the effect is delivered as a single
+    // JS-driven `data-page-effect` attribute off the desktop-resolved
+    // `section.style`. A per-breakpoint override cannot vary a data-attribute
+    // inside an `@media` rule, so exposing per-device authoring would store an
+    // inert value. Section scroll effects are authored + rendered device-uniform.
+    responsive: false,
+    // Value-only enum by reference (labels resolved downstream by the UI model);
+    // passed by reference like every other owner-enum descriptor so the registry
+    // identity check (ownerOptionSets) recognises it:
+    options: pageSectionScrollEffects,
+  }),
+  control({
+    id: "section.parallaxIntensity",
+    panel: "style",
+    target: "section",
+    label: "Parallax intensity",
+    path: ["style", "parallaxIntensity"],
+    // No "slider" input member — a number + clamp/step/unit renders a slider.
+    input: "number",
+    // Device-uniform, same reason as scrollEffect above.
+    responsive: false,
+    clamp: { min: PAGE_PARALLAX_INTENSITY_CLAMP.min, max: PAGE_PARALLAX_INTENSITY_CLAMP.max },
+    step: 2,
+    unit: "px",
   }),
   ...(
     [
@@ -900,7 +939,38 @@ export const pageBlockControlRegistry: Record<
     ...pageTypographyBlockControls,
     blockStyleTextAlignTypographyControl,
   ],
-  icon: [],
+  icon: [
+    blockPropControl("icon", "name", {
+      label: "Icon",
+      input: "select",
+      options: animatedIconNames,
+    }),
+    blockPropControl("icon", "animation", {
+      label: "Animation",
+      panel: "style",
+      input: "segmented",
+      options: animatedIconAnimations,
+    }),
+    blockPropControl("icon", "size", {
+      label: "Size",
+      panel: "style",
+      input: "number",
+      clamp: { min: ANIMATED_ICON_SIZE_CLAMP.min, max: ANIMATED_ICON_SIZE_CLAMP.max },
+      unit: "px",
+    }),
+    blockPropControl("icon", "speed", {
+      label: "Speed",
+      panel: "style",
+      input: "number",
+      clamp: { min: ANIMATED_ICON_SPEED_CLAMP.min, max: ANIMATED_ICON_SPEED_CLAMP.max },
+      unit: "ms",
+    }),
+    blockPropControl("icon", "color", {
+      label: "Color",
+      panel: "style",
+      input: "color",
+    }),
+  ],
   quote: [
     blockPropControl("quote", "text", { label: "Quote", input: "text" }),
     blockPropControl("quote", "cite", { label: "Cite", input: "text" }),

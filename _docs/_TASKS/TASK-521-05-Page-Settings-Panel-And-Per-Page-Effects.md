@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Admin UI (Pages) / Site Render / Accessibility
 **Estimated Effort:** Large
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-521-01 (settings.effects model + `PAGE_EFFECTS_RUNTIME_SOURCE`),
 TASK-521-02 (front section render — the page-root marker gates its reveal CSS),
 TASK-521-04 (icon block — so the smoke covers all effects on one page).
