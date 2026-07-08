@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Site Render / Admin UI / Accessibility
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

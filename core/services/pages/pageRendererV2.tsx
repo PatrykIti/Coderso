@@ -38,6 +38,13 @@ import {
   type PageTextMark,
 } from "./pageDocumentV2";
 import { AnimatedIcon, ANIMATED_ICON_KEYFRAMES_CSS } from "./animatedIconGlyphs";
+import {
+  resolveBlockCompositionAttrs,
+  resolveDrawInAttrs,
+  resolveSectionCompositionAttrs,
+  PAGE_COMPOSITION_EFFECTS_CSS,
+} from "./pageCompositionEffects";
+import { sanitizeSvg } from "./svgSanitizer";
 import { PAGE_EFFECTS_RUNTIME_ID, PAGE_EFFECTS_RUNTIME_SOURCE } from "./pageEffectsRuntime";
 import type { PageBlockPath } from "./pageBlockPaths";
 import {
@@ -745,18 +752,79 @@ export const toPageBlockStyle = (block: PageBlockV2): PageBlockStyleProperties =
     ? toPageBlockLayoutStyle(block)
     : { ...toPageBlockVisualStyle(block), ...toPageBlockLayoutStyle(block) };
 
-export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => ({
-  className: joinPageRenderClasses(
-    "max-w-full",
-    pageBlockEffectiveWidthClass(block.style),
-    pageBlockAlignmentClass(block.style?.align)
-  ),
-  style: toPageBlockStyle(block),
-  dataAttributes: {
-    "data-page-block": block.type,
-    [PAGE_BLOCK_ID_ATTRIBUTE]: block.id,
-  },
-});
+/**
+ * TASK-522-03-L01 — split the 522-01-L04 composition resolver output into
+ * FRAME-level attrs/vars (ride the real `[data-block-id]` frame via
+ * {@link toPageBlockRenderProps}, on BOTH the front `PageBlockFrame` and the
+ * canvas `renderBlockFrame` paths) vs the INNER effect-wrapper attrs/vars (a
+ * child node that animates its OWN transform).
+ *
+ * WHY the split: the layer-anchor CSS writes `transform` on the layered child
+ * (`[data-layer-anchor]`), and EVERY transform-writing effect (tilt / the
+ * float|drift|pulse|orbit decorations / lift|scale hovers) ALSO writes
+ * `transform`. On ONE node the effect transform overwrites the anchor translate
+ * (the reference floating chip loses its corner offset). `pageResponsiveCss`
+ * emits per-device `--layer-*` on `[data-block-id]` (the frame) and custom props
+ * inherit DOWNWARD, so layer positioning MUST stay on the frame. FIX: keep layer
+ * positioning + anchor ON THE FRAME and move the transform-writing effect to an
+ * INNER descendant — frame transform = anchor translate, inner transform =
+ * effect, no clash; `data-deco="radiate"` (box-shadow, not transform) stays on
+ * the frame with no inner wrapper. Pure + present-only (empty in → empty out).
+ */
+const splitBlockComposition = (style?: PageBlockStyle) => {
+  const comp = resolveBlockCompositionAttrs(style);
+  const TRANSFORM_DECOS = new Set(["float", "drift", "pulse", "orbit"]); // NOT "radiate" (box-shadow)
+  const TRANSFORM_HOVERS = new Set(["lift", "lift-glow", "scale"]); // glow-reveal = opacity (frame ok)
+  const deco = comp.dataAttrs["data-deco"];
+  const hover = comp.dataAttrs["data-hover"];
+  const effectToInner = new Set<string>();
+  if (comp.perspectiveParent) effectToInner.add("data-block-tilt"); // tilt (perspective → frame)
+  if (deco && TRANSFORM_DECOS.has(deco)) effectToInner.add("data-deco"); // transform decoration
+  if (hover && TRANSFORM_HOVERS.has(hover)) effectToInner.add("data-hover"); // transform hover
+  const INNER_VAR_KEYS = ["--deco-delay", "--deco-duration"]; // effect timing vars
+  const frameAttrs: Record<string, string> = {};
+  const frameVars: Record<string, string> = {};
+  const innerAttrs: Record<string, string> = {};
+  const innerVars: Record<string, string> = {};
+  for (const [k, v] of Object.entries(comp.dataAttrs)) {
+    (effectToInner.has(k) ? innerAttrs : frameAttrs)[k] = v;
+  }
+  for (const [k, v] of Object.entries(comp.cssVars)) {
+    (INNER_VAR_KEYS.includes(k) ? innerVars : frameVars)[k] = v;
+  }
+  // tilt needs a perspective PARENT: the frame is the parent of the inner tilt node.
+  if (comp.perspectiveParent) frameAttrs["data-tilt-parent"] = "";
+  const needsInner = effectToInner.size > 0 || comp.glare || comp.ambientOrbs;
+  return {
+    frameAttrs,
+    frameVars,
+    innerAttrs,
+    innerVars,
+    needsInner,
+    glare: comp.glare,
+    ambientOrbs: comp.ambientOrbs,
+  };
+};
+
+export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => {
+  const s = splitBlockComposition(block.style);
+  return {
+    className: joinPageRenderClasses(
+      "max-w-full",
+      pageBlockEffectiveWidthClass(block.style),
+      pageBlockAlignmentClass(block.style?.align)
+    ),
+    // FRAME-level composition CSS vars (layer positioning, surface/deco glow,
+    // marquee speed) merge onto the real [data-block-id] frame. Present-only:
+    // empty when unstyled → byte-identical to the pre-522 output.
+    style: { ...toPageBlockStyle(block), ...(s.frameVars as CSSProperties) },
+    dataAttributes: {
+      "data-page-block": block.type,
+      [PAGE_BLOCK_ID_ATTRIBUTE]: block.id,
+      ...s.frameAttrs,
+    },
+  };
+};
 
 /**
  * Wraps the painted text node with the admin inline-edit renderer when one is
@@ -1685,12 +1753,64 @@ const renderSlotWrapper = ({
   </div>
 );
 
+/**
+ * TASK-522-05-L04 — the seamless marquee's decorative DUPLICATE track frame. It
+ * re-applies the block's VISUAL frame styling (className + style) so the ticker
+ * copy looks identical, but emits NO `data-block-id` / selection chrome, so each
+ * item's `data-block-id` matches exactly ONE DOM node in the builder canvas
+ * (finding 3). NOTE: the leaf pseudocode passed `renderBlockFrame: undefined`
+ * here, but that falls through to the runtime `PageBlockFrame`, which DOES emit
+ * `data-block-id` (defeating the stated invariant); a styling-only frameless copy
+ * is the faithful realization of that intent — no duplicate selection targets.
+ */
+const renderMarqueeCopyFrame: PageBlockFrameRenderer = ({ content, renderProps }) => (
+  <div className={renderProps.className} style={renderProps.style}>
+    {content}
+  </div>
+);
+
 const renderPageLayoutBlockContent = (
   block: PageBlockV2,
   context: PageBlockRenderContext
 ): ReactNode => {
   const slotKeys = getPageBlockActiveSlotKeys(block);
   if (slotKeys.length === 0) return null;
+
+  // Layered canvas (TASK-522-05-L02): a layout block with style.composition ===
+  // "layered" becomes a positioning context (data-composition="layered" already
+  // stamped on the block FRAME by the 522-03 resolver + position:relative from
+  // 522-01-L04 CSS), so its slot children — each carrying data-layer +
+  // --layer-x/y/z from the frame resolver — position absolutely. Render the SAME
+  // slot lists through a plain (NON flex/grid) pass-through wrapper so the flow
+  // track styles do not fight the absolute children. "flow"/unset falls through
+  // to the byte-identical columns/group/default flow branches below.
+  if (block.style?.composition === "layered") {
+    return (
+      <div className="cx-layered-canvas" data-page-layout-block={block.type}>
+        {slotKeys.map((slotKey) => (
+          <FragmentLike key={slotKey}>
+            {renderSlotWrapper({
+              block,
+              slotKey,
+              className: "cx-layered-slot",
+              children: renderPageBlockList(block.slots?.[slotKey] ?? [], {
+                parentPath: context.blockPath,
+                depth: context.depth + 1,
+                includeHiddenBlocks: context.includeHiddenBlocks,
+                renderBlockFrame: context.renderBlockFrame,
+                renderInlineText: context.renderInlineText,
+                renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
+                runtimeDataByBlockId: context.runtimeDataByBlockId,
+                layoutMode: context.layoutMode,
+                slotKey,
+                parentBlock: block,
+              }),
+            })}
+          </FragmentLike>
+        ))}
+      </div>
+    );
+  }
 
   if (block.type === "columns") {
     return (
@@ -1740,6 +1860,46 @@ const renderPageLayoutBlockContent = (
 
   const slotKey = slotKeys[0]!;
   if (block.type === "group") {
+    // Marquee/ticker (TASK-522-05-L04): when style.marquee is set (a speed
+    // present), render the group's slot children inside a
+    // .cx-marquee-viewport > .cx-marquee-track strip. The block FRAME already
+    // carries data-marquee + --marquee-speed + data-marquee-dir (522-03
+    // resolver); the animation binds .cx-marquee-track by CLASS (522-01-L04) so
+    // the overflow:hidden viewport stays put while the track scrolls. When
+    // `seamless`, a SECOND aria-hidden track is rendered WITHOUT block frames
+    // (renderBlockFrame omitted) so the decorative copy carries NO
+    // [data-block-id] / selection chrome in the builder canvas. No marquee ⇒
+    // the flow flex branch below stays byte-identical.
+    const marquee = block.style?.marquee;
+    if (marquee) {
+      const renderTrackChildren = (frame: boolean) =>
+        renderPageBlockList(block.slots?.[slotKey] ?? [], {
+          parentPath: context.blockPath,
+          depth: context.depth + 1,
+          includeHiddenBlocks: context.includeHiddenBlocks,
+          // Primary track keeps the real (canvas or runtime) frame so items stay
+          // selectable/targetable; the seamless copy uses the decorative frame
+          // (styling only, NO data-block-id) so it is not a duplicate selection
+          // target (finding 3).
+          renderBlockFrame: frame ? context.renderBlockFrame : renderMarqueeCopyFrame,
+          renderInlineText: context.renderInlineText,
+          renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
+          runtimeDataByBlockId: context.runtimeDataByBlockId,
+          layoutMode: context.layoutMode,
+          slotKey,
+          parentBlock: block,
+        });
+      return (
+        <div className="cx-marquee-viewport">
+          <div className="cx-marquee-track">{renderTrackChildren(true)}</div>
+          {marquee.seamless ? (
+            <div className="cx-marquee-track" aria-hidden="true">
+              {renderTrackChildren(false)}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
     const direction = block.props.direction === "row" ? "row" : "column";
     return renderSlotWrapper({
       block,
@@ -2001,6 +2161,49 @@ export const renderPageBlockContent = (
         </>
       );
     }
+    case "customSvg": {
+      const props = block.props as {
+        svg?: string;
+        drawIn?: boolean;
+        drawSpeed?: number;
+        label?: string;
+      };
+      // Defence in depth: re-sanitize at render (do NOT trust the stored value
+      // blindly). `sanitizeSvg` is ISOMORPHIC (TextEncoder byte count, no Node
+      // `Buffer`) because this case ALSO runs in the browser builder canvas.
+      let clean = sanitizeSvg(typeof props.svg === "string" ? props.svg : "");
+      if (!clean) {
+        // Neutral fallback (no injected markup) — a muted placeholder box.
+        return (
+          <span className="inline-block text-slate-400" aria-hidden="true">
+            ▢
+          </span>
+        );
+      }
+      const { dataAttrs, cssVars } = resolveDrawInAttrs(props.drawIn, props.drawSpeed);
+      if (props.drawIn) {
+        // Length-INDEPENDENT draw-in: stamp `pathLength="1"` on every stroke shape
+        // so the 522-01-L04 CSS (stroke-dasharray:1;stroke-dashoffset:1) completes
+        // for ANY pasted SVG. `pathLength` is allowlisted in 522-01-L02, so this
+        // survives a re-sanitize round-trip; a safe numeric-attr string inject on
+        // the already-sanitized markup.
+        clean = clean.replace(
+          /<(path|line|polyline)\b(?![^>]*\bpathLength=)/gi,
+          '<$1 pathLength="1"'
+        );
+      }
+      return (
+        <span
+          role="img"
+          aria-label={props.label || undefined}
+          aria-hidden={props.label ? undefined : "true"}
+          {...dataAttrs}
+          style={cssVars as CSSProperties}
+          // `clean` is allowlist-sanitized at write AND here; only SVG shape survives.
+          dangerouslySetInnerHTML={{ __html: clean }}
+        />
+      );
+    }
     default:
       return null;
   }
@@ -2008,7 +2211,34 @@ export const renderPageBlockContent = (
 
 const renderPageBlockWithFrame = (block: PageBlockV2, context: PageBlockRenderContext) => {
   if (!context.includeHiddenBlocks && !block.visibility.visible) return null;
-  const content = renderPageBlockContent(block, context);
+  const s = splitBlockComposition(block.style);
+  let content = renderPageBlockContent(block, context);
+  if (s.needsInner) {
+    // ONE inner wrapper carrying the transform-writing effect attrs (tilt/deco/
+    // hover) + glare + block ambient-orbs. It is a DESCENDANT of the frame, so
+    // the frame's --layer-* (incl. per-device) inherit down and the frame's
+    // anchor translate stays isolated from this node's effect transform.
+    content = (
+      <div style={s.innerVars as CSSProperties} {...s.innerAttrs}>
+        {s.glare ? <span className="cx-glare" aria-hidden="true" /> : null}
+        {s.ambientOrbs ? (
+          <>
+            {/* ambient-orbs needs REAL child spans (glass/grid/glow self-paint
+               via ::before/::after; orbs do not) — mirrors the section emit
+               (522-05-L01). */}
+            <span className="cx-orb cx-orb-a" aria-hidden="true" data-deco="drift" />
+            <span
+              className="cx-orb cx-orb-b"
+              aria-hidden="true"
+              data-deco="drift"
+              style={{ "--deco-delay": "1500ms" } as CSSProperties}
+            />
+          </>
+        ) : null}
+        {content}
+      </div>
+    );
+  }
   const renderProps = toPageBlockRenderProps(block);
   if (context.renderBlockFrame) {
     return (
@@ -2406,13 +2636,33 @@ export function PageSectionRender({
     ...(scrollEffect ? { "data-page-effect": scrollEffect } : {}),
     ...(parallax !== undefined ? { "data-parallax": String(parallax) } : {}),
   };
+  // Section composition (TASK-522-05-L01): surface preset + layered composition
+  // data-attrs + the write-validated `accent` glow retint custom props, DISJOINT
+  // from 521-02's scrollEffect attrs above (additive). Present-only: empty for a
+  // section with no 522 field ⇒ byte-identical to the pre-522 output.
+  const sc = resolveSectionCompositionAttrs(section.style);
+  const sectionCompositionStyle =
+    Object.keys(sc.cssVars).length > 0 ? (sc.cssVars as CSSProperties) : undefined;
   return (
     <section
       id={section.visibility.anchor ?? undefined}
       className={renderProps.sectionClassName}
+      style={sectionCompositionStyle}
       {...renderProps.dataAttributes}
       {...effectDataAttrs}
+      {...sc.dataAttrs}
     >
+      {sc.ambientOrbs ? (
+        <>
+          <span className="cx-orb cx-orb-a" aria-hidden="true" data-deco="drift" />
+          <span
+            className="cx-orb cx-orb-b"
+            aria-hidden="true"
+            data-deco="drift"
+            style={{ ["--deco-delay" as string]: "1500ms" } as CSSProperties}
+          />
+        </>
+      ) : null}
       {parallaxEnabled ? (
         <div data-parallax-inner className="will-change-transform">
           <PageSectionContent
@@ -2456,6 +2706,80 @@ export const PAGE_SPOTLIGHT_CSS =
   "transparent 70%)}" +
   "}";
 
+/**
+ * TASK-522-05-L01 — present-only scan for ANY authored 522 composition effect.
+ * Drives the page-root composition `<style>` + widens 521-05's runtime `<script>`
+ * emit predicate. A no-effect document returns false ⇒ nothing emitted ⇒
+ * byte-identical to post-521 (Hard Invariant 9). Recurses through nested slots.
+ */
+const blockUsesCompositionEffect = (block: PageBlockV2): boolean => {
+  const s = block.style;
+  if (
+    s &&
+    (s.decoration != null ||
+      (s.tilt != null && s.tilt !== "none") ||
+      s.surfacePreset != null ||
+      s.hoverEffect != null ||
+      s.composition === "layered" ||
+      s.marquee != null ||
+      s.layer != null)
+  ) {
+    return true;
+  }
+  if (block.type === "customSvg" && block.props.drawIn === true) return true;
+  if (block.slots) {
+    for (const children of Object.values(block.slots)) {
+      if (children) {
+        for (const child of children) {
+          if (blockUsesCompositionEffect(child)) return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
+const docUsesCompositionEffects = (document: PageDocumentV2): boolean => {
+  for (const section of document.sections) {
+    const ss = section.style;
+    if (ss && (ss.surfacePreset != null || ss.composition === "layered")) return true;
+    for (const block of section.blocks) {
+      if (blockUsesCompositionEffect(block)) return true;
+    }
+  }
+  return false;
+};
+
+/**
+ * Whether ANY block authors a mouse-tilt (`style.tilt !== "none"`). The 522
+ * block-tilt binding is APPENDED INTO 521-05's single runtime source string, so a
+ * tilt has no runtime unless that ONE emit fires — this OR-widens 521-05's emit
+ * predicate rather than adding a second `<script>` (which would double-run
+ * reveal/parallax/spotlight). Recurses through nested slots.
+ */
+const blockUsesCompositionTilt = (block: PageBlockV2): boolean => {
+  if (block.style?.tilt != null && block.style.tilt !== "none") return true;
+  if (block.slots) {
+    for (const children of Object.values(block.slots)) {
+      if (children) {
+        for (const child of children) {
+          if (blockUsesCompositionTilt(child)) return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
+const usesCompositionTilt = (document: PageDocumentV2): boolean => {
+  for (const section of document.sections) {
+    for (const block of section.blocks) {
+      if (blockUsesCompositionTilt(block)) return true;
+    }
+  }
+  return false;
+};
+
 export function PageDocumentRender({
   document,
   breakpoint = "desktop",
@@ -2498,7 +2822,14 @@ export function PageDocumentRender({
   const effects = resolved.settings.effects; // present-only (validated at write)
   const spotlightOn = !!effects?.cursorSpotlight;
   const hasSectionEffect = resolved.sections.some((section) => section.style.scrollEffect != null);
-  const anyMotion = spotlightOn || hasSectionEffect;
+  // TASK-522-05-L01 — present-only composition emit. `usesComposition` gates the
+  // page-root composition <style>; `compositionTilt` OR-widens 521-05's SINGLE
+  // runtime <script> predicate (the 522 block-tilt binding lives INSIDE the same
+  // PAGE_EFFECTS_RUNTIME_SOURCE string, so we reuse the one emit — never a second
+  // <script>, which would double-run reveal/parallax/spotlight).
+  const usesComposition = docUsesCompositionEffects(document);
+  const compositionTilt = usesCompositionTilt(document);
+  const anyMotion = spotlightOn || hasSectionEffect || compositionTilt;
 
   const spotlightSize = Math.max(
     PAGE_SPOTLIGHT_SIZE_CLAMP.min,
@@ -2551,6 +2882,16 @@ export function PageDocumentRender({
             className="pointer-events-none fixed inset-0 z-0"
           />
         </>
+      )}
+      {/* TASK-522-05-L01 — composition-effects static CSS, a DISJOINT new node
+          emitted present-only (only when a 522 surface/decoration/tilt/hover/
+          layer/marquee is authored). Front/preview only (this shared renderer is
+          NOT the builder canvas). */}
+      {usesComposition && (
+        <style
+          data-page-composition-css
+          dangerouslySetInnerHTML={{ __html: PAGE_COMPOSITION_EFFECTS_CSS }}
+        />
       )}
       {resolved.sections.map((section) => (
         <PageSectionRender

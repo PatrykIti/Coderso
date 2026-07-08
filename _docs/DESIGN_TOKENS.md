@@ -153,6 +153,54 @@ IIFE, so a reduce user sees content fully at rest (no reveal/parallax translate,
 tilt, no spotlight; icon keyframes paused). Effects are **present-only** — no token,
 no DDL, no migration; a no-effect page renders byte-identically to pre-521 output.
 
+## Pages v2 composable hero toolkit tokens (TASK-522)
+
+The composable hero toolkit (see `_docs/PAGE_MODEL.md` § Composable Hero Toolkit &
+Premium Effects) exposes its per-instance config to CSS through validated custom
+properties + fixed enums/clamps — never raw declarations. Values are normalized
+(`readSafeColor` colors, `readNumber` clamps, `normalizeEnum` enums) before reaching
+CSS. Enums/clamps are owned by `pageDocumentV2.ts`.
+
+**Enums & clamps:**
+
+| Effect | Enum / clamp | Values |
+|--------|--------------|--------|
+| Decoration motion | `pageBlockDecorationMotions` | `none`, `float`, `drift`, `pulse`, `orbit`, `radiate` |
+| Decoration delay | `PAGE_DECORATION_DELAY_CLAMP` | `0`..`4000` ms |
+| Decoration duration | `PAGE_DECORATION_DURATION_CLAMP` | `2000`..`16000` ms |
+| Block tilt | `pageTiltStrengths` | `none`, `subtle`, `strong` |
+| Surface preset | `pageSurfacePresets` | `none`, `glass`, `glass-grid`, `radial-glow`, `ambient-orbs` |
+| Hover effect | `pageBlockHoverEffects` | `none`, `glow-reveal`, `lift`, `scale`, `lift-glow` |
+| Composition | `pageCompositions` | `flow`, `layered` |
+| Layer anchor | `pageLayerAnchors` | 9 grid positions (`top-left`..`bottom-right`) |
+| Layer offset X/Y | `PAGE_LAYER_X_CLAMP`/`PAGE_LAYER_Y_CLAMP` | `-50`..`150` % |
+| Layer Z | `PAGE_LAYER_Z_CLAMP` | `0`..`40` |
+| Marquee direction | `pageMarqueeDirections` | `left`, `right` |
+| Marquee speed | `PAGE_MARQUEE_SPEED_CLAMP` | `8`..`40` s |
+| Custom-SVG draw speed | `PAGE_DRAW_SPEED_CLAMP` | `600`..`6000` ms |
+| Custom-SVG byte cap | `PAGE_CUSTOM_SVG_MAX_BYTES` | `24576` (24 KiB) |
+
+**CSS custom properties (set from normalized values only; consumed by
+`PAGE_COMPOSITION_EFFECTS_CSS`):**
+
+- `--deco-delay` / `--deco-duration` — decoration keyframe delay/duration (ms).
+- `--deco-ring` / `--deco-ring-2` — radiate concentric-ring colors.
+- `--layer-x` / `--layer-y` (%) / `--layer-z` — layered-canvas child placement
+  (the ONLY per-device varying token, emitted per breakpoint by `pageResponsiveCss.ts`).
+- `--draw-speed` — custom-SVG stroke draw-in duration (ms).
+- `--marquee-speed` — ticker scroll duration (s).
+- `--surface-glow` — author retint (section `accent` / plain block `background`),
+  consumed by glass/radial-glow/hover glow (reference aqua/violet fallbacks).
+- `--orb-color` / `--orb-color-2` — ambient-orb radial-gradient colors.
+- `--glare-x` / `--glare-y` — tilt glare sheen position (updated on pointermove, rAF).
+
+**`prefers-reduced-motion` guarantee.** Every keyframe binding sits inside a CSS
+`@media (prefers-reduced-motion: no-preference)` gate, and the block-tilt runtime IIFE
+early-returns on `matchMedia('(prefers-reduced-motion: reduce)').matches`, so a reduce
+user keeps the STATIC layered/glass/surface styling but sees no animation, no tilt, no
+hover transition. Effects are **present-only** — no token, no DDL, no migration; a
+no-effect page renders byte-identically to post-521 output.
+
 ## Tailwind integration
 
 - Core build mapuje tokeny na utility classes.

@@ -34,6 +34,7 @@ import {
   pageBadgeWeights,
   pageBlockCapabilities,
   pageBlockBorderStyles,
+  pageBlockDecorationMotions,
   pageBlockDefaultProps,
   pageBlockPropKeys,
   pageBlockTypes,
@@ -57,6 +58,12 @@ import {
   PAGE_PARALLAX_INTENSITY_CLAMP,
   pageTextAlignments,
   pageTextFormats,
+  pageTiltStrengths,
+  pageSurfacePresets,
+  pageBlockHoverEffects,
+  pageCompositions,
+  pageLayerAnchors,
+  pageMarqueeDirections,
   pageTypographyCapableBlockTypes,
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
@@ -88,6 +95,9 @@ const validSectionPaths = new Set([
   "visibility.authOnly",
   "style.scrollEffect",
   "style.parallaxIntensity",
+  // TASK-522-05-L01 section surface + composition.
+  "style.surfacePreset",
+  "style.composition",
 ]);
 
 const validBlockPaths = new Set([
@@ -116,6 +126,20 @@ const validBlockPaths = new Set([
   "style.margin.right",
   "style.margin.bottom",
   "style.margin.left",
+  // TASK-522-03 floating-drift decoration (universal).
+  "style.decoration.motion",
+  "style.decoration.delay",
+  "style.decoration.duration",
+  // TASK-522-04 mouse tilt (3D) + glare (universal).
+  "style.tilt",
+  "style.tiltGlare",
+  // TASK-522-05-L02/L03 block glass/hover surface + layered-child placement.
+  "style.surfacePreset",
+  "style.hoverEffect",
+  "style.layer.x",
+  "style.layer.y",
+  "style.layer.z",
+  "style.layer.anchor",
   "visibility.visible",
 ]);
 
@@ -130,6 +154,7 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageBadgeVariants,
   pageBadgeWeights,
   pageBlockBorderStyles,
+  pageBlockDecorationMotions,
   pageBlockWidths,
   pageButtonSizes,
   pageButtonTargets,
@@ -147,6 +172,12 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageShadowTokens,
   pageTextAlignments,
   pageTextFormats,
+  pageTiltStrengths,
+  pageSurfacePresets,
+  pageBlockHoverEffects,
+  pageCompositions,
+  pageLayerAnchors,
+  pageMarqueeDirections,
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
   pageTypographyFontWeights,
@@ -313,6 +344,8 @@ describe("page editor control registry", () => {
             (control) => control.id
           )
         );
+        // `container` has no per-type controls; every other insertable block
+        // (incl. `customSvg`, enriched by TASK-522-02) has ≥1 per-type control.
         if (type !== "container") {
           expect(pageBlockControlRegistry[type].length).toBeGreaterThan(0);
         }
@@ -348,7 +381,7 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("insertable block catalog is frozen to the audited 19 blocks (TASK-521-04 icon addition)", () => {
+  test("insertable block catalog is frozen to the audited 20 blocks (TASK-522-01 customSvg addition)", () => {
     const insertableBlocks = pageBlockTypes.filter(
       (type) => pageBlockCapabilities[type].editorInsertable
     );
@@ -372,6 +405,7 @@ describe("page editor control registry", () => {
       "container",
       "columns",
       "group",
+      "customSvg",
     ]);
     for (const type of insertableBlocks) {
       expect(pageBlockCapabilities[type]).toMatchObject({
@@ -384,8 +418,14 @@ describe("page editor control registry", () => {
         // binds RESOLVED query ids explicitly instead). TASK-521-04: the
         // animated icon block is likewise author-insertable but NOT
         // assistant-emittable (the assistant does not invent decorative motion).
+        // TASK-522-01: the custom-SVG block is likewise author-insertable but NOT
+        // assistant-emittable (the assistant does not invent pasted SVG markup).
         assistantEmittable:
-          type !== "form" && type !== "collection" && type !== "filters" && type !== "icon",
+          type !== "form" &&
+          type !== "collection" &&
+          type !== "filters" &&
+          type !== "icon" &&
+          type !== "customSvg",
         runtimeRenderer: "real",
       });
       expect("reason" in pageBlockCapabilities[type]).toBe(false);
@@ -499,6 +539,41 @@ describe("page editor control registry", () => {
       label: "Icon",
       description: "Animated inline icon (spin / pulse / bounce / draw).",
     });
+  });
+
+  test("customSvg block controls are the TASK-522-02 SVG-paste descriptor set", () => {
+    const controls = pageBlockControlRegistry.customSvg;
+    expect(controls.map((control) => control.id)).toEqual([
+      "block.customSvg.props.svg",
+      "block.customSvg.props.label",
+      "block.customSvg.props.drawIn",
+      "block.customSvg.props.drawSpeed",
+    ]);
+    expect(controls.map((control) => control.input)).toEqual(["text", "text", "switch", "number"]);
+    const drawSpeed = controls.find((c) => c.id.endsWith(".drawSpeed"))!;
+    expect(drawSpeed).toMatchObject({
+      input: "number",
+      panel: "style",
+      unit: "ms",
+      clamp: { min: 600, max: 6000 },
+    });
+    // Live PageEditorControlDefinition shape only — no invented descriptor fields.
+    for (const control of controls) {
+      expect(control).not.toHaveProperty("kind");
+      expect(control).not.toHaveProperty("showWhen");
+      expect(control).not.toHaveProperty("prop");
+      expect(control.target).toBe("block");
+      expect(control.responsive).toBe(true);
+    }
+    // customSvg controls do NOT leak onto the universal block-control array.
+    expect(pageUniversalBlockControls.some((c) => c.id.startsWith("block.customSvg."))).toBe(false);
+    // Palette-insertable with icon-less copy (BlockOption has no `icon` field).
+    expect(pageBlockCapabilities.customSvg.editorInsertable).toBe(true);
+    expect(blockOptionCopy.customSvg).toEqual({
+      label: "Custom SVG",
+      description: "Paste a sanitized inline SVG (line drawings, logos, diagrams).",
+    });
+    expect(blockOptionCopy.customSvg).not.toHaveProperty("icon");
   });
 
   test("section variant controls are type-scoped from the template registry", () => {
@@ -1081,5 +1156,277 @@ describe("page editor control registry", () => {
       (entry) => entry.id === "block.heading.props.level"
     );
     expect(headingLevel?.fallback).toBe("h2");
+  });
+});
+
+// TASK-522-03-L02 — floating-drift decoration universal controls.
+describe("block decoration controls (TASK-522-03)", () => {
+  const findUniversal = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalBlockControls.find((entry) => entry.id === id);
+
+  test("motion is a live select whose options === pageBlockDecorationMotions", () => {
+    const motion = findUniversal("block.decoration.motion");
+    expect(motion).toBeDefined();
+    expect(motion?.input).toBe("select");
+    expect(motion?.target).toBe("block");
+    expect(motion?.panel).toBe("style");
+    // Same array reference (not a copy) — includes "none" first (the reset).
+    expect(motion?.options).toBe(pageBlockDecorationMotions);
+    // Base-only stamp: decoration is not per-breakpoint expressible (finding 6).
+    expect(motion?.responsive).toBe(false);
+    // array path, no legacy fields.
+    expect(motion?.path).toEqual(["style", "decoration", "motion"]);
+    expect(Array.isArray(motion?.path)).toBe(true);
+    expect("kind" in (motion ?? {})).toBe(false);
+    expect("showWhen" in (motion ?? {})).toBe(false);
+    expect("min" in (motion ?? {})).toBe(false);
+  });
+
+  test("delay/duration are number controls with clamp bounds (no min field)", () => {
+    const delay = findUniversal("block.decoration.delay");
+    expect(delay?.input).toBe("number");
+    expect(delay?.responsive).toBe(false);
+    expect(delay?.path).toEqual(["style", "decoration", "delay"]);
+    expect(delay?.clamp).toEqual({ min: 0, max: 4000 });
+    expect(delay?.unit).toBe("ms");
+    expect("min" in (delay ?? {})).toBe(false);
+    expect("showWhen" in (delay ?? {})).toBe(false);
+
+    const duration = findUniversal("block.decoration.duration");
+    expect(duration?.input).toBe("number");
+    expect(duration?.responsive).toBe(false);
+    expect(duration?.path).toEqual(["style", "decoration", "duration"]);
+    expect(duration?.clamp).toEqual({ min: 2000, max: 16000 });
+    expect(duration?.unit).toBe("ms");
+  });
+
+  test("decoration controls are UNIVERSAL — composed for every block type", () => {
+    const decorationIds = [
+      "block.decoration.motion",
+      "block.decoration.delay",
+      "block.decoration.duration",
+    ];
+    // Universal controls compose ahead of the per-type registry for ALL types.
+    for (const type of pageBlockTypes) {
+      const composed = [...pageUniversalBlockControls, ...pageBlockControlRegistry[type]];
+      for (const id of decorationIds) {
+        expect(
+          composed.some((entry) => entry.id === id),
+          `${type} missing ${id}`
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+describe("block tilt controls (TASK-522-04)", () => {
+  const findUniversal = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalBlockControls.find((entry) => entry.id === id);
+
+  test("strength is a live select whose options === pageTiltStrengths", () => {
+    const strength = findUniversal("block.tilt.strength");
+    expect(strength).toBeDefined();
+    expect(strength?.input).toBe("select");
+    expect(strength?.target).toBe("block");
+    expect(strength?.panel).toBe("style");
+    // Same array reference (not a copy) — includes "none" first (the reset).
+    expect(strength?.options).toBe(pageTiltStrengths);
+    // Base-only stamp: tilt is a runtime data-attr, not per-breakpoint (finding 6).
+    expect(strength?.responsive).toBe(false);
+    // array path, no legacy fields.
+    expect(strength?.path).toEqual(["style", "tilt"]);
+    expect(Array.isArray(strength?.path)).toBe(true);
+    expect("kind" in (strength ?? {})).toBe(false);
+    expect("showWhen" in (strength ?? {})).toBe(false);
+  });
+
+  test("glare is a live switch — always present (inert when no tilt, no showWhen)", () => {
+    const glare = findUniversal("block.tilt.glare");
+    expect(glare).toBeDefined();
+    expect(glare?.input).toBe("switch");
+    expect(glare?.target).toBe("block");
+    expect(glare?.panel).toBe("style");
+    expect(glare?.responsive).toBe(false);
+    expect(glare?.path).toEqual(["style", "tiltGlare"]);
+    expect(Array.isArray(glare?.path)).toBe(true);
+    expect("kind" in (glare ?? {})).toBe(false);
+    expect("showWhen" in (glare ?? {})).toBe(false);
+  });
+
+  test("tilt controls are UNIVERSAL — composed for every block type", () => {
+    const tiltIds = ["block.tilt.strength", "block.tilt.glare"];
+    for (const type of pageBlockTypes) {
+      const composed = [...pageUniversalBlockControls, ...pageBlockControlRegistry[type]];
+      for (const id of tiltIds) {
+        expect(
+          composed.some((entry) => entry.id === id),
+          `${type} missing ${id}`
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+describe("section surface + composition controls (TASK-522-05-L01)", () => {
+  const findSection = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalSectionControls.find((entry) => entry.id === id);
+
+  test("section.surface.preset is a live select whose options === pageSurfacePresets", () => {
+    const preset = findSection("section.surface.preset");
+    expect(preset).toBeDefined();
+    expect(preset?.input).toBe("select");
+    expect(preset?.target).toBe("section");
+    expect(preset?.panel).toBe("background");
+    expect(preset?.options).toBe(pageSurfacePresets);
+    // Base-only data-attr — not per-breakpoint expressible (finding 6).
+    expect(preset?.responsive).toBe(false);
+    expect(preset?.path).toEqual(["style", "surfacePreset"]);
+    expect(Array.isArray(preset?.path)).toBe(true);
+    expect("kind" in (preset ?? {})).toBe(false);
+    expect("showWhen" in (preset ?? {})).toBe(false);
+    expect("appliesTo" in (preset ?? {})).toBe(false);
+  });
+
+  test("section.composition.mode is a live select whose options === pageCompositions", () => {
+    const mode = findSection("section.composition.mode");
+    expect(mode).toBeDefined();
+    expect(mode?.input).toBe("select");
+    expect(mode?.target).toBe("section");
+    expect(mode?.panel).toBe("layout");
+    expect(mode?.options).toBe(pageCompositions);
+    expect(mode?.responsive).toBe(false);
+    expect(mode?.path).toEqual(["style", "composition"]);
+    expect("showWhen" in (mode ?? {})).toBe(false);
+  });
+});
+
+describe("block glass/hover + layer controls (TASK-522-05-L02/L03)", () => {
+  const findUniversal = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalBlockControls.find((entry) => entry.id === id);
+
+  test("block.surface.preset is a live select whose options === pageSurfacePresets", () => {
+    const preset = findUniversal("block.surface.preset");
+    expect(preset).toBeDefined();
+    expect(preset?.input).toBe("select");
+    expect(preset?.target).toBe("block");
+    expect(preset?.panel).toBe("style");
+    expect(preset?.options).toBe(pageSurfacePresets);
+    expect(preset?.responsive).toBe(false);
+    expect(preset?.path).toEqual(["style", "surfacePreset"]);
+    expect("kind" in (preset ?? {})).toBe(false);
+  });
+
+  test("block.hover.effect is a live select whose options === pageBlockHoverEffects", () => {
+    const hover = findUniversal("block.hover.effect");
+    expect(hover).toBeDefined();
+    expect(hover?.input).toBe("select");
+    expect(hover?.panel).toBe("style");
+    expect(hover?.options).toBe(pageBlockHoverEffects);
+    expect(hover?.responsive).toBe(false);
+    expect(hover?.path).toEqual(["style", "hoverEffect"]);
+  });
+
+  test("block.layer.x/y/z are responsive number controls with clamp; anchor base-only", () => {
+    const x = findUniversal("block.layer.x");
+    expect(x?.input).toBe("number");
+    expect(x?.target).toBe("block");
+    expect(x?.panel).toBe("layout");
+    // The ONE effect field that varies per device — routes --layer-* deltas.
+    expect(x?.responsive).toBe(true);
+    expect(x?.clamp).toEqual({ min: -50, max: 150 });
+    expect(x?.unit).toBe("%");
+    expect(x?.path).toEqual(["style", "layer", "x"]);
+    expect("min" in (x ?? {})).toBe(false);
+
+    const y = findUniversal("block.layer.y");
+    expect(y?.responsive).toBe(true);
+    expect(y?.clamp).toEqual({ min: -50, max: 150 });
+    expect(y?.path).toEqual(["style", "layer", "y"]);
+
+    const z = findUniversal("block.layer.z");
+    expect(z?.responsive).toBe(true);
+    expect(z?.clamp).toEqual({ min: 0, max: 40 });
+    expect(z?.unit).toBe("");
+    expect(z?.path).toEqual(["style", "layer", "z"]);
+
+    const anchor = findUniversal("block.layer.anchor");
+    expect(anchor?.input).toBe("select");
+    expect(anchor?.options).toBe(pageLayerAnchors);
+    // anchor is a base-only data-attr → responsive:false.
+    expect(anchor?.responsive).toBe(false);
+    expect(anchor?.path).toEqual(["style", "layer", "anchor"]);
+  });
+
+  test("surface/hover/layer controls are UNIVERSAL — composed for every block type", () => {
+    const ids = [
+      "block.surface.preset",
+      "block.hover.effect",
+      "block.layer.x",
+      "block.layer.y",
+      "block.layer.z",
+      "block.layer.anchor",
+    ];
+    for (const type of pageBlockTypes) {
+      const composed = [...pageUniversalBlockControls, ...pageBlockControlRegistry[type]];
+      for (const id of ids) {
+        expect(
+          composed.some((entry) => entry.id === id),
+          `${type} missing ${id}`
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+describe("layout composition.mode + group marquee controls (TASK-522-05-L02/L04)", () => {
+  test("block.<type>.composition.mode lives ONLY on the per-type layout registries", () => {
+    for (const type of ["container", "columns", "group"] as const) {
+      const control = pageBlockControlRegistry[type].find(
+        (entry) => entry.id === `block.${type}.composition.mode`
+      );
+      expect(control, `${type} missing composition.mode`).toBeDefined();
+      expect(control?.input).toBe("select");
+      expect(control?.target).toBe("block");
+      expect(control?.panel).toBe("layout");
+      expect(control?.options).toBe(pageCompositions);
+      expect(control?.responsive).toBe(false);
+      expect(control?.path).toEqual(["style", "composition"]);
+    }
+    // NOT universal (no appliesTo exists on the universal array).
+    expect(pageUniversalBlockControls.some((entry) => entry.id.endsWith(".composition.mode"))).toBe(
+      false
+    );
+  });
+
+  test("group.marquee.* controls live on the per-type group registry only", () => {
+    const groupControls = pageBlockControlRegistry.group;
+    const speed = groupControls.find((entry) => entry.id === "group.marquee.speed");
+    expect(speed?.input).toBe("number");
+    expect(speed?.responsive).toBe(false);
+    expect(speed?.clamp).toEqual({ min: 8, max: 40 });
+    expect(speed?.unit).toBe("s");
+    expect(speed?.path).toEqual(["style", "marquee", "speed"]);
+
+    const direction = groupControls.find((entry) => entry.id === "group.marquee.direction");
+    expect(direction?.input).toBe("select");
+    expect(direction?.options).toBe(pageMarqueeDirections);
+    expect(direction?.responsive).toBe(false);
+    expect(direction?.path).toEqual(["style", "marquee", "direction"]);
+
+    const seamless = groupControls.find((entry) => entry.id === "group.marquee.seamless");
+    expect(seamless?.input).toBe("switch");
+    expect(seamless?.responsive).toBe(false);
+    expect(seamless?.path).toEqual(["style", "marquee", "seamless"]);
+
+    // No `enabled` key control (unallowlisted); presence via `speed`.
+    expect(groupControls.some((entry) => entry.id === "group.marquee.enabled")).toBe(false);
+    // Marquee is group-only: no other block type carries it.
+    for (const type of pageBlockTypes) {
+      if (type === "group") continue;
+      expect(
+        pageBlockControlRegistry[type].some((entry) => entry.id.startsWith("group.marquee.")),
+        `${type} should not carry marquee`
+      ).toBe(false);
+    }
   });
 });

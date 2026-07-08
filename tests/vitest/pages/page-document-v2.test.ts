@@ -2221,3 +2221,235 @@ describe("animated-icon block Ajv lockstep (TASK-521-01-L03)", () => {
     }
   );
 });
+
+// TASK-522-01-L01 — the ONE new customSvg block type + props model.
+describe("customSvg block type + props (TASK-522-01-L01)", () => {
+  const CLEAN_SVG =
+    '<svg viewBox="0 0 10 10"><path d="M0 0 L10 10" stroke="#000" stroke-width="2"/></svg>';
+
+  const docWithCustomSvg = (props: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks = [
+      { id: "blk_svg", type: "customSvg", props, visibility: { visible: true } },
+    ];
+    return doc;
+  };
+
+  test("pageBlockTypes includes customSvg; propKeys + defaults + capabilities are correct", () => {
+    expect(pageBlockTypes).toContain("customSvg");
+    expect(pageBlockPropKeys.customSvg).toEqual(["svg", "drawIn", "drawSpeed", "label"]);
+    expect(pageBlockDefaultProps.customSvg).toEqual({ svg: "", drawIn: false, label: "" });
+    expect(pageBlockCapabilities.customSvg.editorInsertable).toBe(true);
+    expect(pageBlockCapabilities.customSvg.runtimeRenderer).toBe("real");
+  });
+
+  test("round-trips a clean svg + drawIn + drawSpeed + label", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: CLEAN_SVG, drawIn: true, drawSpeed: 2400, label: "House" })
+    );
+    const p = normalized.sections[0]!.blocks[0]!.props;
+    expect(p.svg).toContain("<path");
+    expect(p.drawIn).toBe(true);
+    expect(p.drawSpeed).toBe(2400);
+    expect(p.label).toBe("House");
+    // idempotent re-normalize
+    const again = normalizePageDocumentV2ForWrite(cloneDocument(normalized));
+    expect(again.sections[0]!.blocks[0]!.props).toEqual(p);
+  });
+
+  test("svg/drawIn/label serialize WITH defaults when unauthored; drawSpeed is present-only", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: "", drawIn: false, label: "" })
+    );
+    const p = normalized.sections[0]!.blocks[0]!.props;
+    expect(p.svg).toBe("");
+    expect(p.drawIn).toBe(false);
+    expect(p.label).toBe("");
+    expect(p).not.toHaveProperty("drawSpeed");
+  });
+
+  test("drawSpeed:99999 clamps to 6000", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: CLEAN_SVG, drawIn: true, drawSpeed: 99999 })
+    );
+    expect(normalized.sections[0]!.blocks[0]!.props.drawSpeed).toBe(6000);
+  });
+
+  test("an svg containing <script> normalizes to svg:'' (sanitizer → default, NOT omitted)", () => {
+    const normalized = normalizePageDocumentV2ForWrite(
+      docWithCustomSvg({ svg: "<svg><script>alert(1)</script></svg>" })
+    );
+    const p = normalized.sections[0]!.blocks[0]!.props;
+    expect(p.svg).toBe("");
+    expect("svg" in p).toBe(true);
+  });
+
+  test("unknown prop customSvg.props.foo throws PageDocumentError", () => {
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithCustomSvg({ svg: CLEAN_SVG, foo: "nope" }))
+    ).toThrow("Unknown page document field: sections.0.blocks.0.props.foo");
+  });
+
+  test(
+    "Ajv: a normalized customSvg block validates; an extra prop rejects",
+    { timeout: 30_000 },
+    () => {
+      const normalized = normalizePageDocumentV2ForWrite(
+        docWithCustomSvg({ svg: CLEAN_SVG, drawIn: true, drawSpeed: 2400, label: "x" })
+      );
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      expect(validate(normalized)).toBe(true);
+      const extra = cloneDocument(normalized);
+      (extra.sections[0]!.blocks[0]!.props as Record<string, unknown>).evil = 1;
+      expect(validate(extra)).toBe(false);
+    }
+  );
+});
+
+// TASK-522-01-L03 — block + section composition STYLE model.
+describe("composition style model (TASK-522-01-L03)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2) =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {};
+
+  test("round-trips decoration/tilt/tiltGlare/layer/surfacePreset/hoverEffect/marquee/composition", () => {
+    const style = blockStyle(
+      docWithBlockStyle({
+        decoration: { motion: "float", delay: 200, duration: 8000 },
+        tilt: "subtle",
+        tiltGlare: true,
+        layer: { x: 10, y: -20, z: 5, anchor: "bottom-right" },
+        surfacePreset: "glass",
+        hoverEffect: "lift-glow",
+        marquee: { speed: 18, direction: "right", seamless: true },
+        composition: "layered",
+      })
+    );
+    expect(style).toEqual({
+      decoration: { motion: "float", delay: 200, duration: 8000 },
+      tilt: "subtle",
+      tiltGlare: true,
+      layer: { x: 10, y: -20, z: 5, anchor: "bottom-right" },
+      surfacePreset: "glass",
+      hoverEffect: "lift-glow",
+      marquee: { speed: 18, direction: "right", seamless: true },
+      composition: "layered",
+    });
+  });
+
+  test("radiate decoration round-trips (map-pulse variant)", () => {
+    expect(blockStyle(docWithBlockStyle({ decoration: { motion: "radiate" } }))).toEqual({
+      decoration: { motion: "radiate" },
+    });
+  });
+
+  test("present-only reset members are omitted (none / flow)", () => {
+    expect(
+      blockStyle(
+        docWithBlockStyle({
+          decoration: { motion: "none" },
+          tilt: "none",
+          surfacePreset: "none",
+          hoverEffect: "none",
+          composition: "flow",
+        })
+      )
+    ).toEqual({});
+  });
+
+  test("fail-closed enum VALUES throw PageDocumentError in write mode", () => {
+    const cases: Array<Record<string, unknown>> = [
+      { decoration: { motion: "explode" } },
+      { tilt: "spin" },
+      { surfacePreset: "drop-table" },
+      { hoverEffect: "hack" },
+      { layer: { anchor: "nope" } },
+      { marquee: { direction: "up" } },
+      { composition: "diagonal" },
+    ];
+    for (const style of cases) {
+      expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle(style))).toThrow();
+    }
+  });
+
+  test("numbers clamp fail-soft (layer.z, marquee.speed, decoration.duration)", () => {
+    expect(blockStyle(docWithBlockStyle({ layer: { z: 99999 } })).layer).toEqual({ z: 40 });
+    expect(blockStyle(docWithBlockStyle({ marquee: { speed: 0.1 } })).marquee).toEqual({
+      speed: 8,
+    });
+    expect(
+      blockStyle(docWithBlockStyle({ decoration: { motion: "float", duration: 1 } })).decoration
+    ).toEqual({ motion: "float", duration: 2000 });
+  });
+
+  test("unknown NESTED key throws", () => {
+    for (const style of [
+      { decoration: { motion: "float", foo: 1 } },
+      { layer: { x: 0, evil: 1 } },
+      { marquee: { speed: 18, bad: 1 } },
+    ]) {
+      expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle(style))).toThrow(
+        "Unknown page document field"
+      );
+    }
+  });
+
+  test("unknown top-level style key throws", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ wobble: 1 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.wobble"
+    );
+  });
+
+  test(
+    "a responsive.tablet.style.layer round-trips (partial schema mirror)",
+    { timeout: 30_000 },
+    () => {
+      const doc = buildDocument();
+      doc.sections[0]!.blocks[0]!.responsive = {
+        tablet: { style: { layer: { x: 5, y: 5 } } },
+      } as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      expect(normalized.sections[0]!.blocks[0]!.responsive?.tablet?.style?.layer).toEqual({
+        x: 5,
+        y: 5,
+      });
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      expect(ajv.compile(pageDocumentV2JsonSchema)(normalized)).toBe(true);
+    }
+  );
+
+  test("section surfacePreset/composition round-trip + present-only omission", () => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      surfacePreset: "ambient-orbs",
+      composition: "layered",
+    } as PageDocumentV2["sections"][number]["style"];
+    const normalized = normalizePageDocumentV2ForWrite(doc);
+    expect(normalized.sections[0]!.style.surfacePreset).toBe("ambient-orbs");
+    expect(normalized.sections[0]!.style.composition).toBe("layered");
+
+    const reset = buildDocument();
+    reset.sections[0]!.style = {
+      ...reset.sections[0]!.style,
+      surfacePreset: "none",
+      composition: "flow",
+    } as PageDocumentV2["sections"][number]["style"];
+    const resetNorm = normalizePageDocumentV2ForWrite(reset);
+    expect(resetNorm.sections[0]!.style).not.toHaveProperty("surfacePreset");
+    expect(resetNorm.sections[0]!.style).not.toHaveProperty("composition");
+  });
+
+  test("a legacy block/section (none of the new keys) is byte-identical", () => {
+    const normalized = normalizePageDocumentV2ForWrite(buildDocument());
+    expect(normalized.sections[0]!.blocks[0]!.style).toBeUndefined();
+    expect(normalized.sections[0]!.style).not.toHaveProperty("surfacePreset");
+    expect(normalized.sections[0]!.style).not.toHaveProperty("composition");
+  });
+});

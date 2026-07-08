@@ -514,6 +514,19 @@ const runtimeParityPageData = (token: string) => ({
           visibility: { visible: true },
         },
         {
+          // TASK-522-01: the custom-SVG block is insertable, so the parity loop
+          // asserts `data-page-block="customSvg"`. The sanitized-render CASE ships
+          // with 522-02; here the type-agnostic block frame stamps the data-attr.
+          id: `parity-custom-svg-${token}`,
+          type: "customSvg",
+          props: {
+            svg: '<svg viewBox="0 0 10 10"><path d="M0 0 L10 10" stroke="#000"/></svg>',
+            drawIn: false,
+            label: "",
+          },
+          visibility: { visible: true },
+        },
+        {
           id: `parity-quote-${token}`,
           type: "quote",
           props: { text: `Runtime quote ${token}`, cite: "Coderso" },

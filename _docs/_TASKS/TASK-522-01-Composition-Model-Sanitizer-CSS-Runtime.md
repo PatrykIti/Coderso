@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Schema (JSON model) / Security / Site Render / Accessibility
 **Estimated Effort:** Large
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-521 (all landed — EXTENDS the shared `pageEffectsRuntime.ts`
 module and reuses its global reduced-motion early-return + the curated-SVG + keyframes
 CSS precedent). NOTE: the hero tilt PRIMITIVE lives in `hero.tsx`'s `HERO_TILT_SCRIPT`

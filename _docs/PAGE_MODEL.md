@@ -982,6 +982,110 @@ surface was relocated out of the full-height drawer into a compact panel in the 
 right side-inspector rail as section/block settings, with a new **Effects** section
 (TASK-521-05).
 
+## Composable Hero Toolkit & Premium Effects — TASK-522
+
+TASK-522 adds the composable TOOLKIT to build a rich, premium hero (a layered glass
+card with floating badges, drifting orbs, a pulsing ring, a tilt-on-pointer card and
+a drawn line-SVG, plus hover glow/lift and a ticker strip) inside Page Editor v2 —
+NOT a one-off hero widget. It builds on TASK-521 and shares its invariants: every
+addition is **present-only** (zero bytes when unauthored — a legacy / no-effect
+document normalizes and renders byte-identical to the post-521 output), joins the
+**reject-unknown allowlist** (`assertKnownKeys` + the strict `pageDocumentV2JsonSchema`
+`additionalProperties: false`) with a round-trip test, respects
+**`prefers-reduced-motion`** (a CSS `@media (prefers-reduced-motion: no-preference)`
+gate around every keyframe binding AND, for the block-tilt runtime, a `matchMedia`
+early-return), and adds **no npm dependency, no DB migration/DDL, no new route/RBAC,
+and no `PAGE_DOCUMENT_SCHEMA_VERSION` bump** (stays `2`). All config rides existing
+jsonb (`block.style`, `section.style`, block props). Enums are `normalizeEnum`-guarded
+(fail-CLOSED on write — an invalid enum VALUE throws `PageDocumentError`), numbers are
+`readNumber`-clamped (fail-soft), and colors run through `readSafeColor`.
+
+### Custom-SVG block (`customSvg`) — the one new `pageBlockType`
+
+`customSvg` is the single new `pageBlockType` member (the FIVE exhaustive
+`Record<PageBlockType, …>` surfaces gain one entry each). `pageBlockPropKeys.customSvg
+= ["svg", "drawIn", "drawSpeed", "label"]`, defaults `{ svg: "", drawIn: false, label:
+"" }`:
+
+- `svg` — arbitrary inline SVG source, **sanitized by an allowlist sanitizer**
+  (`core/services/pages/svgSanitizer.ts`) at BOTH write (`normalizeBlockProps`) AND
+  render (defence-in-depth before `dangerouslySetInnerHTML`). See `SECURITY_SPEC.md` §
+  Pages custom-SVG sanitizer boundary.
+- `drawIn` — boolean; enables an optional stroke draw-in animation
+  (`@keyframes cx-draw { to { stroke-dashoffset: 0 } }`, the reference `.draw-line`).
+- `drawSpeed` — draw duration, clamped `PAGE_DRAW_SPEED_CLAMP = { min: 600, max: 6000 }`
+  ms, driven through the `--draw-speed` custom property.
+- `label` — a11y title text.
+
+Legacy documents never contain a `customSvg` block, so byte-identity is trivially
+preserved. Byte cap `PAGE_CUSTOM_SVG_MAX_BYTES = 24576` (24 KiB, measured via
+`TextEncoder` — the sanitizer is isomorphic and also runs at render).
+
+### Block style fields (`PageBlockStyleV2`) — decoration / tilt / layer / hover / surface / marquee / composition
+
+`block.style` gains present-only keys (all reject-unknown + round-trip tested; only the
+NUMERIC `layer.x/y/z` render per device — see below):
+
+- `decoration?: PageBlockDecoration` — `{ motion, delay?, duration? }` turning any
+  block into a layered floating decoration. `motion` ∈
+  `pageBlockDecorationMotions = ["none", "float", "drift", "pulse", "orbit", "radiate"]`
+  (`"none"` omitted). `float` = `.floating-chip` translateY; `drift` = `.hero-bg-orb`
+  translate+scale; `pulse` = `.sun-ring`/`pulseRing` scale+opacity; `radiate` =
+  `.map-pulse`/`mapPulse` concentric box-shadow ring; `orbit` = rotation. `delay`
+  clamped `PAGE_DECORATION_DELAY_CLAMP = { min: 0, max: 4000 }` ms (staggering);
+  `duration` clamped `PAGE_DECORATION_DURATION_CLAMP = { min: 2000, max: 16000 }` ms.
+- `tilt?: PageTiltStrength` — `pageTiltStrengths = ["none", "subtle", "strong"]`; a
+  perspective + `preserve-3d` pointer-tracking 3D tilt on any block, driven by the
+  `[data-block-tilt]` runtime binding appended to `pageEffectsRuntime.ts`.
+- `tiltGlare?: boolean` — optional `.cx-glare` sheen sweep on a tilted block.
+- `layer?: PageBlockLayer` — `{ x?, y?, z?, anchor? }` placement inside a layered
+  canvas. `x`/`y` clamped `PAGE_LAYER_X_CLAMP`/`PAGE_LAYER_Y_CLAMP = { min: -50, max:
+  150 }` %; `z` clamped `PAGE_LAYER_Z_CLAMP = { min: 0, max: 40 }`; `anchor` ∈
+  `pageLayerAnchors` (9 grid positions). Only `x/y/z` vary per device (via
+  `pageResponsiveCss.ts` `--layer-*` deltas); `anchor` is base-only.
+- `surfacePreset?: PageSurfacePreset` — `pageSurfacePresets = ["none", "glass",
+  "glass-grid", "radial-glow", "ambient-orbs"]`; one-click premium backgrounds.
+- `hoverEffect?: PageBlockHoverEffect` — `pageBlockHoverEffects = ["none",
+  "glow-reveal", "lift", "scale", "lift-glow"]`; hover interactivity (the reference
+  `:hover:after` glow-reveal, `:hover` lift/scale).
+- `marquee?: PageBlockMarquee` — `{ speed?, direction?, seamless? }` on a `group`/row
+  block only (`@keyframes cx-ticker`). `speed` clamped `PAGE_MARQUEE_SPEED_CLAMP =
+  { min: 8, max: 40 }` s; `direction` ∈ `pageMarqueeDirections = ["left", "right"]`;
+  `seamless` duplicates the track for a gapless loop.
+- `composition?: PageComposition` — `pageCompositions = ["flow", "layered"]`; a
+  layout-block (`container`/`columns`/`group`) becomes an absolute positioning context
+  for its `layer`-placed children.
+
+### Section style fields (`PageSectionStyleV2`) — surface preset + layered canvas
+
+`section.style` gains present-only `surfacePreset?: PageSurfacePreset` (same enum) and
+`composition?: PageComposition` (`"layered"` makes the section a positioning context for
+absolutely placed children). The section threads its `readSafeColor`-validated
+`style.accent` into `--surface-glow`; blocks thread a plain-color `style.background`
+(gradients/urls are left out — an invalid `radial-gradient()` retint).
+
+### Per-device scope (bounded + honest)
+
+Only the NUMERIC `layer.x/y/z` offsets vary per breakpoint — `pageResponsiveCss.ts`
+emits per-property `--layer-*` declarations only; class/data-attr effect deltas are NOT
+CSS-expressible against the inline base. So `decoration`/`surfacePreset`/`hoverEffect`/
+`tilt`/`composition`/`marquee` are BASE-ONLY (identical on every breakpoint, their
+controls `responsive: false`); a decoration is HIDDEN on mobile via the existing
+per-device block visibility (`display:none`), not "kept but animation-off".
+
+### Composition CSS + runtime
+
+The static composition CSS (`core/services/pages/pageCompositionEffects.tsx`,
+`PAGE_COMPOSITION_EFFECTS_CSS`) + the resolvers (`resolveBlockCompositionAttrs` /
+`resolveSectionCompositionAttrs` → `data-deco`/`data-surface`/`data-hover`/`data-layer`/
+`data-composition`/`data-marquee`/`data-block-tilt` attributes + CSS custom properties)
+are emitted once in `PageDocumentRender` (front/preview only, never the builder canvas)
+when a 522 effect is authored, alongside 521's runtime. The block-tilt (+ glare)
+pointer math is a small documented duplication of `hero.tsx`'s `HERO_TILT_SCRIPT`
+appended to the shared `pageEffectsRuntime.ts` as a self-gated `[data-block-tilt]`
+binding (its own `matchMedia('(pointer:fine)')` gate; reuses the module reduced-motion
+early-return).
+
 ## Public Runtime
 
 Pages v2 section/block rendering is owned by

@@ -24,6 +24,7 @@ import {
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
 } from "./pageAuthoringSanitizers";
+import { sanitizeSvg } from "./svgSanitizer";
 
 export const PAGE_DOCUMENT_SCHEMA_VERSION = 2 as const;
 
@@ -69,6 +70,9 @@ export const pageBlockTypes = [
   "container",
   "columns",
   "group",
+  // TASK-522-01-L01: the ONE new arbitrary-SVG block. Paste/upload a sanitized
+  // inline SVG (svgSanitizer allowlist) with an optional stroke draw-in.
+  "customSvg",
 ] as const;
 
 /**
@@ -270,6 +274,78 @@ export const PAGE_TEXT_MARK_MAX = 24 as const;
 export const PAGE_BLOCK_MAX_TREE_DEPTH = 4 as const;
 export const PAGE_BLOCK_MAX_CHILDREN_PER_SLOT = 24 as const;
 
+/**
+ * TASK-522 composable-hero toolkit vocabulary (owned here, imported read-only by
+ * every consumer subtask 522-02..05). Every field these describe is PRESENT-ONLY
+ * (omitted when unauthored so legacy documents stay byte-identical), reject-unknown
+ * allowlisted, and — where a motion is involved — reduced-motion-safe. NO
+ * schemaVersion bump, NO migration, NO new dependency.
+ *
+ * `"none"` (decoration/tilt/surface/hover) and `"flow"` (composition) are the
+ * FIRST member of their enum: they are the present-only RESET path the normalizer
+ * OMITS, so toggling an effect off returns the doc to byte identity. `"radiate"`
+ * is the `.map-pulse`/`@keyframes mapPulse` concentric box-shadow ring (distinct
+ * from `"pulse"` = `.sun-ring`/pulseRing scale+opacity).
+ */
+export const pageBlockDecorationMotions = [
+  "none",
+  "float",
+  "drift",
+  "pulse",
+  "orbit",
+  "radiate",
+] as const;
+export type PageBlockDecorationMotion = (typeof pageBlockDecorationMotions)[number];
+export const pageTiltStrengths = ["none", "subtle", "strong"] as const;
+export type PageTiltStrength = (typeof pageTiltStrengths)[number];
+export const pageSurfacePresets = [
+  "none",
+  "glass",
+  "glass-grid",
+  "radial-glow",
+  "ambient-orbs",
+] as const;
+export type PageSurfacePreset = (typeof pageSurfacePresets)[number];
+export const pageBlockHoverEffects = ["none", "glow-reveal", "lift", "scale", "lift-glow"] as const;
+export type PageBlockHoverEffect = (typeof pageBlockHoverEffects)[number];
+export const pageCompositions = ["flow", "layered"] as const;
+export type PageComposition = (typeof pageCompositions)[number];
+export const pageLayerAnchors = [
+  "top-left",
+  "top",
+  "top-right",
+  "left",
+  "center",
+  "right",
+  "bottom-left",
+  "bottom",
+  "bottom-right",
+] as const;
+export type PageLayerAnchor = (typeof pageLayerAnchors)[number];
+export const pageMarqueeDirections = ["left", "right"] as const;
+export type PageMarqueeDirection = (typeof pageMarqueeDirections)[number];
+export const PAGE_DECORATION_DELAY_CLAMP = { min: 0, max: 4000 } as const; // ms
+export const PAGE_DECORATION_DURATION_CLAMP = { min: 2000, max: 16000 } as const; // ms
+export const PAGE_LAYER_X_CLAMP = { min: -50, max: 150 } as const; // %
+export const PAGE_LAYER_Y_CLAMP = { min: -50, max: 150 } as const; // %
+export const PAGE_LAYER_Z_CLAMP = { min: 0, max: 40 } as const;
+export const PAGE_MARQUEE_SPEED_CLAMP = { min: 8, max: 40 } as const; // s
+/** Custom-SVG block: stroke draw-in speed bounds (ms) + max sanitized byte cap. */
+export const PAGE_DRAW_SPEED_CLAMP = { min: 600, max: 6000 } as const; // ms
+export const PAGE_CUSTOM_SVG_MAX_BYTES = 24576 as const; // 24 KiB
+
+export type PageBlockDecoration = {
+  motion: PageBlockDecorationMotion;
+  delay?: number;
+  duration?: number;
+};
+export type PageBlockLayer = { x?: number; y?: number; z?: number; anchor?: PageLayerAnchor };
+export type PageBlockMarquee = {
+  speed?: number;
+  direction?: PageMarqueeDirection;
+  seamless?: boolean;
+};
+
 export type PageBreakpoint = (typeof pageBreakpoints)[number];
 export type PageSectionType = (typeof pageSectionTypes)[number];
 export type PageBlockType = (typeof pageBlockTypes)[number];
@@ -453,6 +529,19 @@ export type PageSectionStyleV2 = {
   scrollEffect?: PageSectionScrollEffect;
   /** px travel; meaningful only for `scrollEffect === "parallax"`. */
   parallaxIntensity?: number;
+  /**
+   * TASK-522-01-L03 premium surface preset (glass / grid / radial-glow /
+   * ambient-orbs). Present-only: `"none"` omitted so an unstyled section stays
+   * byte-identical. STATIC (renders under reduced-motion; only the ambient-orb
+   * drift animates). Retints off the section's `accent`.
+   */
+  surfacePreset?: PageSurfacePreset;
+  /**
+   * TASK-522-01-L03 layered-canvas mode. `"layered"` turns the section into a
+   * positioning context whose children place absolutely by `block.style.layer`;
+   * `"flow"` (default, omitted) keeps the normal flex/grid flow.
+   */
+  composition?: PageComposition;
 };
 
 export type PageSectionSpacingV2 = {
@@ -514,6 +603,31 @@ export type PageBlockStyleV2 = {
   lineHeight?: number | null;
   /** Letter-spacing in px clamped to {@link PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP}. */
   letterSpacing?: number | null;
+  /**
+   * TASK-522 composable-hero toolkit style fields (all PRESENT-ONLY — omitted
+   * when unauthored so legacy/no-effect blocks stay byte-identical). The model
+   * accepts every field under the responsive-override channel, but only the
+   * NUMERIC `layer.x/y/z` offsets actually RENDER per device (via the
+   * 522-05-L02 `--layer-*` seam); the data-attr/class effects
+   * (decoration/tilt/surfacePreset/hoverEffect/composition/marquee) are
+   * BASE-ONLY and authored `responsive:false` (see 522-01-L03).
+   */
+  /** Floating-drift decoration; `"none"` resets (whole object omitted). */
+  decoration?: PageBlockDecoration;
+  /** Tilt-toward-pointer on any block (reuses the 521-style runtime pattern). */
+  tilt?: PageTiltStrength;
+  /** Optional glare/sheen sweep on tilt. */
+  tiltGlare?: boolean;
+  /** Placement inside a layered canvas ancestor (x/y in %, z-index, anchor). */
+  layer?: PageBlockLayer;
+  /** Premium surface preset (glass / grid / radial-glow / ambient-orbs). */
+  surfacePreset?: PageSurfacePreset;
+  /** Hover-effect preset (glow-reveal / lift / scale / lift-glow). */
+  hoverEffect?: PageBlockHoverEffect;
+  /** Ticker/marquee — group/row block only (`@keyframes ticker`). */
+  marquee?: PageBlockMarquee;
+  /** Layout-block canvas mode (`"layered"` positions children absolutely). */
+  composition?: PageComposition;
 };
 
 export type PageBlockVisibilityV2 = {
@@ -609,6 +723,15 @@ const pageBlockStyleKeys = [
   "fontWeight",
   "lineHeight",
   "letterSpacing",
+  // TASK-522-01-L03 composition/decoration style fields (present-only).
+  "decoration",
+  "tilt",
+  "tiltGlare",
+  "layer",
+  "surfacePreset",
+  "hoverEffect",
+  "marquee",
+  "composition",
 ] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
@@ -700,6 +823,8 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   container: [],
   columns: ["count", "gap", "distribution"],
   group: ["direction", "wrap", "gap"],
+  // TASK-522-01-L01: sanitized inline SVG + optional stroke draw-in.
+  customSvg: ["svg", "drawIn", "drawSpeed", "label"],
 };
 
 export type PageBlockRuntimeRendererState = "real" | "placeholder" | "unsupported";
@@ -782,6 +907,10 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   // `renderPageBlockContent case "icon"` (pageRendererV2.tsx) mounts the curated
   // inline-SVG + CSS-keyframe glyph. Flip lands with the renderer/palette/controls.
   "icon",
+  // TASK-522-01-L01: the custom-SVG block is a real runtime renderer — its
+  // `renderPageBlockContent case "customSvg"` (522-02-L01) mounts the sanitized
+  // inline SVG. Registered here so the capability report marks it runtime "real".
+  "customSvg",
 ]);
 const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "filters", "form", "embed"]);
 const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"]);
@@ -827,6 +956,10 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   "container",
   "columns",
   "group",
+  // TASK-522-01-L01: the custom-SVG block is editor-insertable — its palette copy
+  // (pageEditorOptions.ts) + block controls (pageEditorControlRegistry.ts) ship
+  // with 522-02. No capability-reason stub (it IS insertable).
+  "customSvg",
 ]);
 const insertableBlockTypes = editorInsertableBlockTypes;
 const assistantEmittableBlockTypes = new Set<PageBlockType>([
@@ -957,6 +1090,9 @@ export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown
   container: {},
   columns: { count: 2, gap: 24, distribution: "equal" },
   group: { direction: "column", wrap: false, gap: 16 },
+  // TASK-522-01-L01: drawSpeed omitted until authored (the only present-only
+  // prop); empty svg = neutral fallback at render.
+  customSvg: { svg: "", drawIn: false, label: "" },
 };
 
 const numericSchema = (minimum: number, maximum: number): RecordValue => ({
@@ -1185,6 +1321,19 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   if (type === "icon" && key === "speed") {
     return numericSchema(ANIMATED_ICON_SPEED_CLAMP.min, ANIMATED_ICON_SPEED_CLAMP.max);
   }
+  // Custom-SVG block props (TASK-522-01-L01) — Ajv in lockstep with the
+  // normalizer. MUST precede the generic string tail (`svg`/`label` would else
+  // fall to the looser `stringSchema`).
+  if (type === "customSvg" && key === "svg") {
+    return { type: "string", maxLength: PAGE_CUSTOM_SVG_MAX_BYTES };
+  }
+  if (type === "customSvg" && key === "drawIn") return booleanSchema;
+  if (type === "customSvg" && key === "drawSpeed") {
+    return numericSchema(PAGE_DRAW_SPEED_CLAMP.min, PAGE_DRAW_SPEED_CLAMP.max);
+  }
+  if (type === "customSvg" && key === "label") {
+    return { type: "string", maxLength: 160 };
+  }
   if (key === "size") return numericSchema(0, 240);
   if (
     key === "ordered" ||
@@ -1263,8 +1412,56 @@ const pageBlockStyleJsonSchema: RecordValue = {
       PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP.min,
       PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP.max
     ),
+    // TASK-522-01-L03 composition/decoration fields (mirrors the normalizer;
+    // present-only, additionalProperties:false on every nested object).
+    decoration: {
+      type: "object",
+      additionalProperties: false,
+      required: ["motion"],
+      properties: {
+        motion: { type: "string", enum: [...pageBlockDecorationMotions] },
+        delay: numericSchema(PAGE_DECORATION_DELAY_CLAMP.min, PAGE_DECORATION_DELAY_CLAMP.max),
+        duration: numericSchema(
+          PAGE_DECORATION_DURATION_CLAMP.min,
+          PAGE_DECORATION_DURATION_CLAMP.max
+        ),
+      },
+    },
+    tilt: { type: "string", enum: [...pageTiltStrengths] },
+    tiltGlare: booleanSchema,
+    layer: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        x: numericSchema(PAGE_LAYER_X_CLAMP.min, PAGE_LAYER_X_CLAMP.max),
+        y: numericSchema(PAGE_LAYER_Y_CLAMP.min, PAGE_LAYER_Y_CLAMP.max),
+        z: numericSchema(PAGE_LAYER_Z_CLAMP.min, PAGE_LAYER_Z_CLAMP.max),
+        anchor: { type: "string", enum: [...pageLayerAnchors] },
+      },
+    },
+    surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
+    hoverEffect: { type: "string", enum: [...pageBlockHoverEffects] },
+    composition: { type: "string", enum: [...pageCompositions] },
+    marquee: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        speed: numericSchema(PAGE_MARQUEE_SPEED_CLAMP.min, PAGE_MARQUEE_SPEED_CLAMP.max),
+        direction: { type: "string", enum: [...pageMarqueeDirections] },
+        seamless: booleanSchema,
+      },
+    },
   },
 };
+
+// TASK-522-01-L03: the block-style schema is referenced by EVERY block type at
+// EVERY tree depth (inline + responsive override) — ~176 occurrences. Inlining
+// the (now larger) object at each site bloats Ajv's generated validator enough
+// to blow the call stack on a max-depth document. Hoist it into `$defs` and
+// reference it by `$ref` so Ajv compiles ONE style validator shared everywhere
+// (validation semantics identical — `additionalProperties:false` preserved).
+const PAGE_BLOCK_STYLE_JSON_SCHEMA_REF = "#/$defs/pageBlockStyle";
+const pageBlockStyleJsonSchemaRef: RecordValue = { $ref: PAGE_BLOCK_STYLE_JSON_SCHEMA_REF };
 
 const pageBlockVisibilityJsonSchema: RecordValue = {
   type: "object",
@@ -1297,7 +1494,7 @@ const blockResponsiveJsonSchemaForType = (type: PageBlockType): RecordValue => {
     additionalProperties: false,
     properties: {
       props: blockResponsivePropsJsonSchemaForType(type),
-      style: pageBlockStyleJsonSchema,
+      style: pageBlockStyleJsonSchemaRef,
       visibility: {
         type: "object",
         additionalProperties: false,
@@ -1324,7 +1521,7 @@ const blockJsonSchemaForType = (type: PageBlockType, depth: number): RecordValue
     id: { type: "string", minLength: 1 },
     type: { const: type },
     props: blockPropsJsonSchemaForType(type),
-    style: pageBlockStyleJsonSchema,
+    style: pageBlockStyleJsonSchemaRef,
     visibility: pageBlockVisibilityJsonSchema,
     responsive: blockResponsiveJsonSchemaForType(type),
   };
@@ -1397,6 +1594,9 @@ const partialSectionStyleJsonSchema: RecordValue = {
       PAGE_PARALLAX_INTENSITY_CLAMP.min,
       PAGE_PARALLAX_INTENSITY_CLAMP.max
     ),
+    // TASK-522-01-L03 section composition fields (present-only mirror).
+    surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
+    composition: { type: "string", enum: [...pageCompositions] },
   },
 };
 
@@ -1448,7 +1648,7 @@ export const pageDocumentV2JsonSchema: RecordValue = {
   type: "object",
   required: ["schemaVersion", "sections"],
   additionalProperties: false,
-  $defs: pageBlockDepthJsonSchemas,
+  $defs: { pageBlockStyle: pageBlockStyleJsonSchema, ...pageBlockDepthJsonSchemas },
   properties: {
     schemaVersion: { const: PAGE_DOCUMENT_SCHEMA_VERSION },
     breakpoints: {
@@ -1584,6 +1784,9 @@ export const pageDocumentV2JsonSchema: RecordValue = {
                 minimum: PAGE_PARALLAX_INTENSITY_CLAMP.min,
                 maximum: PAGE_PARALLAX_INTENSITY_CLAMP.max,
               },
+              // TASK-522-01-L03 section composition fields (present-only mirror).
+              surfacePreset: { type: "string", enum: [...pageSurfacePresets] },
+              composition: { type: "string", enum: [...pageCompositions] },
             },
           },
           spacing: {
@@ -2225,6 +2428,9 @@ const normalizeSectionStyle = (
       "shadow",
       "scrollEffect",
       "parallaxIntensity",
+      // TASK-522-01-L03 section composition fields (present-only).
+      "surfacePreset",
+      "composition",
     ],
     path,
     mode
@@ -2280,6 +2486,28 @@ const normalizeSectionStyle = (
       PAGE_PARALLAX_INTENSITY_CLAMP.min,
       PAGE_PARALLAX_INTENSITY_CLAMP.max
     );
+  }
+  // TASK-522-01-L03 section composition (present-only; `"none"`/`"flow"` omitted;
+  // `defaultStyle` seeds neither so an unauthored section stays byte-identical).
+  if (input.surfacePreset !== undefined) {
+    const s = normalizeEnum(
+      input.surfacePreset,
+      pageSurfacePresets,
+      "none",
+      `${path}.surfacePreset`,
+      mode
+    );
+    if (s !== "none") result.surfacePreset = s;
+  }
+  if (input.composition !== undefined) {
+    const c = normalizeEnum(
+      input.composition,
+      pageCompositions,
+      "flow",
+      `${path}.composition`,
+      mode
+    );
+    if (c !== "flow") result.composition = c;
   }
   return partial ? result : ({ ...defaultStyle, ...result } satisfies PageSectionStyleV2);
 };
@@ -2470,6 +2698,120 @@ const normalizeBlockStyle = (
       `${path}.letterSpacing`,
       mode
     );
+  }
+  // TASK-522-01-L03 composition/decoration fields — all present-only. Enums
+  // fail-closed (write mode throws on a bad VALUE); the "none"/"flow" reset
+  // member is OMITTED; numbers clamp fail-soft; nested unknown keys reject.
+  if (input.decoration !== undefined) {
+    const d = (isRecord(input.decoration) ? input.decoration : {}) as RecordValue;
+    assertKnownKeys(d, ["motion", "delay", "duration"], `${path}.decoration`, mode);
+    const motion = normalizeEnum(
+      d.motion,
+      pageBlockDecorationMotions,
+      "none",
+      `${path}.decoration.motion`,
+      mode
+    );
+    if (motion !== "none") {
+      const deco: PageBlockDecoration = { motion };
+      if (d.delay !== undefined) {
+        deco.delay = readNumber(
+          d.delay,
+          0,
+          PAGE_DECORATION_DELAY_CLAMP.min,
+          PAGE_DECORATION_DELAY_CLAMP.max
+        );
+      }
+      if (d.duration !== undefined) {
+        deco.duration = readNumber(
+          d.duration,
+          6000,
+          PAGE_DECORATION_DURATION_CLAMP.min,
+          PAGE_DECORATION_DURATION_CLAMP.max
+        );
+      }
+      result.decoration = deco;
+    }
+  }
+  if (input.tilt !== undefined) {
+    const t = normalizeEnum(input.tilt, pageTiltStrengths, "none", `${path}.tilt`, mode);
+    if (t !== "none") result.tilt = t;
+  }
+  if (input.tiltGlare !== undefined && input.tiltGlare === true) result.tiltGlare = true;
+  if (input.layer !== undefined) {
+    const l = (isRecord(input.layer) ? input.layer : {}) as RecordValue;
+    assertKnownKeys(l, ["x", "y", "z", "anchor"], `${path}.layer`, mode);
+    const layer: PageBlockLayer = {};
+    if (l.x !== undefined)
+      layer.x = readNumber(l.x, 0, PAGE_LAYER_X_CLAMP.min, PAGE_LAYER_X_CLAMP.max);
+    if (l.y !== undefined)
+      layer.y = readNumber(l.y, 0, PAGE_LAYER_Y_CLAMP.min, PAGE_LAYER_Y_CLAMP.max);
+    if (l.z !== undefined)
+      layer.z = readNumber(l.z, 0, PAGE_LAYER_Z_CLAMP.min, PAGE_LAYER_Z_CLAMP.max);
+    if (l.anchor !== undefined) {
+      layer.anchor = normalizeEnum(
+        l.anchor,
+        pageLayerAnchors,
+        "center",
+        `${path}.layer.anchor`,
+        mode
+      );
+    }
+    if (Object.keys(layer).length) result.layer = layer;
+  }
+  if (input.surfacePreset !== undefined) {
+    const s = normalizeEnum(
+      input.surfacePreset,
+      pageSurfacePresets,
+      "none",
+      `${path}.surfacePreset`,
+      mode
+    );
+    if (s !== "none") result.surfacePreset = s;
+  }
+  if (input.hoverEffect !== undefined) {
+    const h = normalizeEnum(
+      input.hoverEffect,
+      pageBlockHoverEffects,
+      "none",
+      `${path}.hoverEffect`,
+      mode
+    );
+    if (h !== "none") result.hoverEffect = h;
+  }
+  if (input.composition !== undefined) {
+    const c = normalizeEnum(
+      input.composition,
+      pageCompositions,
+      "flow",
+      `${path}.composition`,
+      mode
+    );
+    if (c !== "flow") result.composition = c;
+  }
+  if (input.marquee !== undefined) {
+    const mq = (isRecord(input.marquee) ? input.marquee : {}) as RecordValue;
+    assertKnownKeys(mq, ["speed", "direction", "seamless"], `${path}.marquee`, mode);
+    const marquee: PageBlockMarquee = {};
+    if (mq.speed !== undefined) {
+      marquee.speed = readNumber(
+        mq.speed,
+        18,
+        PAGE_MARQUEE_SPEED_CLAMP.min,
+        PAGE_MARQUEE_SPEED_CLAMP.max
+      );
+    }
+    if (mq.direction !== undefined) {
+      marquee.direction = normalizeEnum(
+        mq.direction,
+        pageMarqueeDirections,
+        "left",
+        `${path}.marquee.direction`,
+        mode
+      );
+    }
+    if (mq.seamless === true) marquee.seamless = true;
+    if (Object.keys(marquee).length) result.marquee = marquee;
   }
   return Object.keys(result).length > 0 ? result : undefined;
 };
@@ -2844,6 +3186,23 @@ const normalizeBlockProp = (
   if (type === "icon" && key === "color") return readSafeColor(value, "var(--primary)");
   if (type === "icon" && key === "speed") {
     return readNumber(value, 1600, ANIMATED_ICON_SPEED_CLAMP.min, ANIMATED_ICON_SPEED_CLAMP.max);
+  }
+  // Custom-SVG block props (TASK-522-01-L01). MUST precede the generic string
+  // tail below, else `svg`/`label` bypass sanitize/slice. `svg` is allowlist-
+  // sanitized (fail-soft "" on reject = the default); `drawSpeed` clamps;
+  // `label` slices; `drawIn` coerces to boolean.
+  if (type === "customSvg" && key === "svg") {
+    const rawSvg = typeof value === "string" ? value : "";
+    return sanitizeSvg(rawSvg, PAGE_CUSTOM_SVG_MAX_BYTES);
+  }
+  if (type === "customSvg" && key === "drawIn") {
+    return value === true;
+  }
+  if (type === "customSvg" && key === "drawSpeed") {
+    return readNumber(value, 2400, PAGE_DRAW_SPEED_CLAMP.min, PAGE_DRAW_SPEED_CLAMP.max);
+  }
+  if (type === "customSvg" && key === "label") {
+    return typeof value === "string" ? value.slice(0, 160) : "";
   }
   if (
     key === "ordered" ||

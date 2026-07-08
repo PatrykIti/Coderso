@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Tests / Docs / Closure
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Depends on:** TASK-522-01..05 (all landed).
 
 ---

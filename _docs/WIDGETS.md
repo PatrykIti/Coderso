@@ -313,6 +313,37 @@ present-only, reject-unknown, `prefers-reduced-motion`-safe, no npm dependency):
   new composite widget — `core/widgets/registry.ts` / `modulePackMatrix.ts` are
   unchanged and the widget-pack matrix gains no row.
 
+## Composable Hero Toolkit & Premium Effects (TASK-522)
+
+TASK-522 delivers a composable TOOLKIT — not a one-off hero widget — to build a rich
+premium hero (a layered glass card with floating badges, drifting orbs, a pulsing
+ring, a tilt-on-pointer card + a drawn line-SVG, plus hover glow/lift and a ticker)
+inside Page Editor v2 (see `_docs/PAGE_MODEL.md` § Composable Hero Toolkit & Premium
+Effects for the full contract — present-only, reject-unknown,
+`prefers-reduced-motion`-safe, no npm dependency, no migration):
+
+- **Custom-SVG block** (`customSvg`, the ONE new `pageBlockType`) — paste an
+  arbitrary inline SVG that is **sanitized by an allowlist sanitizer**
+  (`core/services/pages/svgSanitizer.ts`) at write AND render, with an optional stroke
+  **draw-in** animation. This is a PAGE block implemented through a renderer `case`,
+  NOT a composite widget — `core/widgets/registry.ts` / `modulePackMatrix.ts` are
+  unchanged and the widget-pack matrix (`_docs/WIDGET_PACK_MATRIX.md`) gains no row.
+- **Floating-drift decoration** (`block.style.decoration`) — turns any block into a
+  layered decoration (`float`/`drift`/`pulse`/`radiate`/`orbit`).
+- **Tilt-on-any-block** (`block.style.tilt` + `tiltGlare`) — generalizes 521's hero
+  tilt to any card/block via a `[data-block-tilt]` runtime binding.
+- **Layered canvas** (`section.style.composition` / layout-block
+  `style.composition:"layered"` + per-child `style.layer`) — absolute, z-indexed,
+  per-device children so a hero composes from SVG + badges + cards + orbs.
+- **Glass/glow surface presets** (`style.surfacePreset`) + **hover-effect presets**
+  (`block.style.hoverEffect`) — the premium look + interactivity in one click.
+- **Ticker / marquee** (`group` block `style.marquee`) — a horizontal auto-scrolling
+  strip with an optional seamless loop.
+
+All are STYLE fields (plus one block type); everything is dependency-free (hand-rolled
+SVG sanitizer + inline CSS keyframes + 521's runtime) and composes the reference
+wow-site hero without a new dependency or migration.
+
 ## Dokumentacja widgetow
 
 Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:

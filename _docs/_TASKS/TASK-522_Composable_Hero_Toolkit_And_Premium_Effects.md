@@ -50,7 +50,7 @@
   present-only additive sub-object precedent), the existing widget CSS-motion
   substrate + `motion-safe:`/`motion-reduce:` guards.
 
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 **Closure changelog:** Assigned at closure as the then-current next-free (grep
 `_docs/_CHANGELOG/` highest+1). As of authoring the highest on disk is **1233**
 (519=1232, 520=1233; 1229–1231 free; 521 pending), so 522 — landing AFTER

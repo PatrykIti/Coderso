@@ -595,6 +595,27 @@ const collectBlockDeclarations = (
     if (value) frame.push({ property: "margin", value });
   }
 
+  // TASK-522-05-L02 — per-device layered-canvas offsets. The 522-01-L04 frame
+  // resolver emits the BASE position as inline --layer-x/y/z custom props on the
+  // [data-block-id] FRAME (consumed by `[data-composition="layered"]
+  // [data-layer]{left:var(--layer-x)…}`); here we retarget those props per
+  // breakpoint. They ride the block-frame selector — the SAME element that carries
+  // data-layer + the base var + the media query — and every frame declaration is
+  // serialized with !important, so the delta beats the inline base custom prop
+  // (finding-4). Only x/y/z (the numeric offsets) vary per device; anchor stays
+  // base-only.
+  if (styleOverride.layer !== undefined) {
+    if (isFiniteNumber(mergedStyle.layer?.x)) {
+      frame.push({ property: "--layer-x", value: `${mergedStyle.layer.x}%` });
+    }
+    if (isFiniteNumber(mergedStyle.layer?.y)) {
+      frame.push({ property: "--layer-y", value: `${mergedStyle.layer.y}%` });
+    }
+    if (isFiniteNumber(mergedStyle.layer?.z)) {
+      frame.push({ property: "--layer-z", value: String(mergedStyle.layer.z) });
+    }
+  }
+
   // Typography overrides (TASK-424). Only typography-capable blocks have a
   // painted text target; explicit `null` overrides (clear back to the baked
   // classes at one breakpoint) are not expressible against the inline base

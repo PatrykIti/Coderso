@@ -104,6 +104,13 @@ export const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> =
   container: { label: "Container", description: "Nested layout container." },
   columns: { label: "Columns", description: "Nested column layout." },
   group: { label: "Group", description: "Nested grouped layout." },
+  // TASK-522-02-L02: BlockOption has NO `icon` field — do not add one
+  // (excess-property typecheck error). Sanitizer drops scripts, event handlers,
+  // and external refs — documented here (no per-control `help` field exists).
+  customSvg: {
+    label: "Custom SVG",
+    description: "Paste a sanitized inline SVG (line drawings, logos, diagrams).",
+  },
 };
 
 export const blockOptions: BlockOption[] = pageBlockTypes.flatMap((type) =>
