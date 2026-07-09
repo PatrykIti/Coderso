@@ -6,7 +6,7 @@
 **Priority:** Medium
 **Category:** Site Render / Accessibility
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

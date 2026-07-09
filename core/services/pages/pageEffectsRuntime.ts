@@ -75,8 +75,67 @@ export const PAGE_EFFECTS_RUNTIME_SOURCE = [
   //      listeners. FIRST executable statement — before arming, observing or
   //      binding anything. The key literal MUST equal PAGE_EFFECTS_RUNTIME_INIT_FLAG
   //      (invariant #1: no interpolation into the static source).
-  'if(window.__codersoPageMotionEffectsInit)return;',
-  'window.__codersoPageMotionEffectsInit=true;',
+  "if(window.__codersoPageMotionEffectsInit)return;",
+  "window.__codersoPageMotionEffectsInit=true;",
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── TASK-534 ── switcher + gallery-filter INTERACTION TOGGLES. Placed HERE —
+  //   AFTER the idempotence guard, BEFORE the reduced-motion early-return below —
+  //   because that early-return (`if(RM&&RM.matches)return;`) is an UNCONDITIONAL
+  //   whole-IIFE return: anything after it is skipped for reduce users. Tabs and
+  //   filters are accessibility interactions that MUST work for reduce users
+  //   (Hard Invariants #2/#9), so they cannot sit below the return. They perform
+  //   NO motion themselves (click/keyboard/aria/hidden toggles only); the visual
+  //   crossfade/fade is CSS `motion-safe:`-guarded (534-03). All config from
+  //   validated `data-*` — zero interpolation of stored data.
+  //
+  // (1) SWITCHER — tablist toggle (reproduces app.js:72-86 styleData swap).
+  'var sw534=document.querySelectorAll("[data-switcher]");',
+  "sw534.forEach(function(root){",
+  ' var tabs=[].slice.call(root.querySelectorAll("[data-switcher-tab]"));',
+  ' var panels=[].slice.call(root.querySelectorAll("[data-switcher-panel]"));',
+  " if(!tabs.length)return;",
+  " function activate(i){tabs.forEach(function(t,j){var on=j===i;",
+  '  t.setAttribute("aria-selected",on?"true":"false");t.tabIndex=on?0:-1;});',
+  "  panels.forEach(function(p,j){var on=j===i;p.hidden=!on;",
+  '   p.setAttribute("data-active",on?"true":"false");});}',
+  " tabs.forEach(function(t,i){",
+  '  t.addEventListener("click",function(){activate(i);t.focus();});',
+  '  t.addEventListener("keydown",function(e){var n=null;',
+  '   if(e.key==="ArrowRight"||e.key==="ArrowDown")n=(i+1)%tabs.length;',
+  '   else if(e.key==="ArrowLeft"||e.key==="ArrowUp")n=(i-1+tabs.length)%tabs.length;',
+  '   else if(e.key==="Home")n=0;else if(e.key==="End")n=tabs.length-1;',
+  "   if(n!==null){e.preventDefault();activate(n);tabs[n].focus();}});",
+  " });",
+  "});",
+  // (2) GALLERY FILTER — chip show/hide (reproduces app.js:88-100 data-category).
+  //   `data-category` is a SPACE-SEPARATED SET of single kebab tokens; each chip's
+  //   `data-filter` is ONE token — matched via `cat.split(" ").indexOf(f)` (no
+  //   innerHTML/eval, no substring false-positive). The bar is a role="toolbar" of
+  //   `aria-pressed` toggle buttons (NOT a tablist) with roving tabindex (active=0,
+  //   rest=-1) + ArrowLeft/Right/Home/End roving, mirroring the toolbar APG.
+  'var gf534=document.querySelectorAll("[data-gallery-filter]");',
+  "gf534.forEach(function(bar){",
+  ' var chips=[].slice.call(bar.querySelectorAll("[data-filter]"));',
+  " if(!chips.length)return;",
+  ' var scope=bar.closest("[data-gallery]")||document;',
+  ' var items=[].slice.call(scope.querySelectorAll("[data-filter-item]"));',
+  ' function select(c){var f=c.getAttribute("data-filter")||"all";',
+  '  chips.forEach(function(x){x.setAttribute("aria-pressed",x===c?"true":"false");});',
+  '  items.forEach(function(it){var cat=it.getAttribute("data-category")||"";',
+  '   var hide=f!=="all"&&cat.split(" ").indexOf(f)===-1;',
+  '   it.classList.toggle("is-hidden",hide);it.hidden=hide;});}',
+  " function rove(i){chips.forEach(function(x,j){x.tabIndex=j===i?0:-1;});chips[i].focus();}",
+  " chips.forEach(function(c,i){",
+  '  c.addEventListener("click",function(){select(c);});',
+  '  c.addEventListener("keydown",function(e){var n=null;',
+  '   if(e.key==="ArrowRight"||e.key==="ArrowDown")n=(i+1)%chips.length;',
+  '   else if(e.key==="ArrowLeft"||e.key==="ArrowUp")n=(i-1+chips.length)%chips.length;',
+  '   else if(e.key==="Home")n=0;else if(e.key==="End")n=chips.length-1;',
+  "   if(n!==null){e.preventDefault();rove(n);}});",
+  " });",
+  "});",
+  // ── END TASK-534 pre-early-return toggles ──
+  // ══════════════════════════════════════════════════════════════════════════
   'var RM=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)");',
   "if(RM&&RM.matches)return;",
   // ---- ARM the reveal-hide: JS-required-to-HIDE. The reveal opacity:0 rule is
@@ -146,6 +205,25 @@ export const PAGE_EFFECTS_RUNTIME_SOURCE = [
   '   if(gl){gl.style.removeProperty("--glare-x");gl.style.removeProperty("--glare-y");}},{passive:true});',
   " });",
   "}",
+  // ── TASK-534 ── MAGNETIC pointer-attract (reproduces app.js .magnetic). Placed
+  //   HERE — AFTER the 522 block-tilt clause, BEFORE `}catch(e){}` — so it INHERITS
+  //   the reduced-motion early-return above (magnetic IS motion → correctly
+  //   suppressed for reduce) and opens its OWN `pointer:fine` gate (no magnet on
+  //   touch). Transforms only, rect reads batched in rAF, `passive` listeners; all
+  //   config from validated `data-*` — zero interpolation of stored data.
+  'var mg534=document.querySelectorAll("[data-magnetic]");',
+  'if(mg534.length&&window.matchMedia&&window.matchMedia("(pointer:fine)").matches){',
+  " mg534.forEach(function(el){var mPend=false,mx=0,my=0;",
+  '  function mf(){mPend=false;el.style.transform="translate("+mx.toFixed(1)+"px,"+my.toFixed(1)+"px)";}',
+  '  el.addEventListener("pointermove",function(e){var r=el.getBoundingClientRect();',
+  "   mx=Math.max(-14,Math.min(14,(e.clientX-(r.left+r.width/2))*0.3));",
+  "   my=Math.max(-14,Math.min(14,(e.clientY-(r.top+r.height/2))*0.3));",
+  "   if(!mPend){mPend=true;requestAnimationFrame(mf);}},{passive:true});",
+  '  el.addEventListener("pointerleave",function(){mx=0;my=0;',
+  "   if(!mPend){mPend=true;requestAnimationFrame(mf);}},{passive:true});",
+  " });",
+  "}",
+  // ── END TASK-534 magnetic clause ──
   "}catch(e){}",
   "})();",
 ].join("");

@@ -753,6 +753,9 @@ const pageEditorBlockLabels: Record<PageBlockType, string> = {
   // TASK-522-01-L01: the custom-SVG block is editor-insertable — its palette
   // label mirrors blockOptionCopy.customSvg.
   customSvg: "Custom SVG",
+  // ── TASK-534 ── switcher + scrollHint palette labels (mirror blockOptionCopy).
+  switcher: "Switcher",
+  scrollHint: "Scroll hint",
 };
 
 const pageEditorSectionLabels: Record<PageSectionType, string> = {
@@ -2291,6 +2294,8 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 20 blocks
     // TASK-471-04 amendment: native "Badge" block; TASK-521-04 amendment:
     // the animated "Icon" block (implements the formerly-placeholder icon block).
     // TASK-522-01 amendment: the "Custom SVG" block (sanitized inline SVG).
+    // TASK-534 amendment: "Gallery" (filter controls shipped) + the "Switcher"
+    // and "Scroll hint" declarative-interactivity blocks.
     expect(blockPaletteTitles).toEqual([
       "Heading",
       "Text",
@@ -2298,6 +2303,7 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 20 blocks
       "Button",
       "Image",
       "Video",
+      "Gallery",
       "Form",
       "List",
       "Card",
@@ -2312,8 +2318,10 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 20 blocks
       "Columns",
       "Group",
       "Custom SVG",
+      "Switcher",
+      "Scroll hint",
     ]);
-    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(31);
+    expect(sectionPaletteTitles.length + blockPaletteTitles.length).toBe(34);
 
     expect(sectionPaletteTitles).not.toContain("Template");
     expect(sectionPaletteTitles).not.toContain("Navigation");
@@ -2326,7 +2334,8 @@ test("PageEditor command palette catalog is frozen to 11 sections plus 20 blocks
     expect(sectionPaletteTitles).not.toContain("Lead form");
     expect(sectionPaletteTitles).not.toContain("Embed");
 
-    expect(blockPaletteTitles).not.toContain("Gallery");
+    // TASK-534: "Gallery" is now in the block palette (filter controls shipped).
+    expect(blockPaletteTitles).toContain("Gallery");
     expect(blockPaletteTitles).not.toContain("Embed");
 
     // TASK-521-04: the icon block is now a real, insertable runtime renderer
@@ -6735,6 +6744,28 @@ test("TASK-521-05: disabling spotlight drops settings.effects (present-only)", a
     clickButton(view.container, "Save draft");
     await flush();
     const call = pageEditorState.updatePage.mock.calls.at(-1);
+    expect((call?.[1] as { data: PageDocumentV2 }).data.settings.effects).toBeUndefined();
+  } finally {
+    view.cleanup();
+  }
+});
+
+test("TASK-534: Grain overlay toggle writes settings.effects.noiseOverlay present-only", async () => {
+  const view = mount(<PageEditor pageId="page-1" />);
+  try {
+    await flush();
+    const panel = openPageSettingsPanel(view.container);
+    // On ⇒ noiseOverlay:true persists (independent of the spotlight toggle).
+    setToggleField(panel, "Grain overlay", true);
+    clickButton(view.container, "Save draft");
+    await flush();
+    let call = pageEditorState.updatePage.mock.calls.at(-1);
+    expect((call?.[1] as { data: PageDocumentV2 }).data.settings.effects?.noiseOverlay).toBe(true);
+    // Off ⇒ the key is dropped; with no other effect the whole object is stripped.
+    setToggleField(panel, "Grain overlay", false);
+    clickButton(view.container, "Save draft");
+    await flush();
+    call = pageEditorState.updatePage.mock.calls.at(-1);
     expect((call?.[1] as { data: PageDocumentV2 }).data.settings.effects).toBeUndefined();
   } finally {
     view.cleanup();

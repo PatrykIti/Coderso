@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Schema (JSON model) / Site Render (runtime) / Security
 **Estimated Effort:** Large
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

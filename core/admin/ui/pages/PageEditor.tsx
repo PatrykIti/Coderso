@@ -2292,6 +2292,8 @@ export function PageEditor({ pageId: initialPageId, initialPage, host }: PageEdi
         if (next.cursorSpotlight && next.spotlightSize != null) {
           cleaned.spotlightSize = next.spotlightSize;
         }
+        // ── TASK-534 ── page-root grain overlay: present-only (kept only when true).
+        if (next.noiseOverlay) cleaned.noiseOverlay = true;
         if (Object.keys(cleaned).length > 0) {
           return { ...doc, settings: { ...doc.settings, effects: cleaned } };
         }
@@ -5114,6 +5116,12 @@ export const PageSettingsSubpanel = ({
                 />
               </>
             ) : null}
+            {/* ── TASK-534 ── page-root static grain overlay (present-only). */}
+            <ToggleSwitch
+              label="Grain overlay"
+              value={!!effects?.noiseOverlay}
+              onChange={(on) => onEffectsChange({ noiseOverlay: on })}
+            />
           </section>
         </div>
       </div>

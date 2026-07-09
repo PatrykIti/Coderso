@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Admin UI / Content (Pages)
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

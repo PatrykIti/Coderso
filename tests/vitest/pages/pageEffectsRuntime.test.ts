@@ -29,14 +29,22 @@ describe("pageEffectsRuntime static source (TASK-521-01-L04)", () => {
     expect(source.endsWith("})();")).toBe(true);
   });
 
-  test("reduced-motion guard early-returns FIRST, before any observer/listener", () => {
+  test("reduced-motion guard early-returns before any MOTION observer/listener", () => {
     expect(source).toContain(`matchMedia("${PAGE_EFFECTS_REDUCED_MOTION_QUERY}")`);
     const guardReturn = source.indexOf("if(RM&&RM.matches)return;");
     const observer = source.indexOf("IntersectionObserver");
-    const listener = source.indexOf("addEventListener");
+    // TASK-534: the FIRST addEventListener is now the switcher/filter INTERACTION
+    // TOGGLE, deliberately placed BEFORE the reduced-motion return (it must run for
+    // reduce users — accessibility). The MOTION listeners (parallax scroll,
+    // spotlight/tilt/magnetic pointermove) still follow the return, so assert the
+    // reveal observer + the parallax scroll listener + the LAST addEventListener
+    // (magnetic pointerleave) are all after the guard.
+    const parallaxScroll = source.indexOf('window.addEventListener("scroll"');
+    const lastListener = source.lastIndexOf("addEventListener");
     expect(guardReturn).toBeGreaterThan(-1);
     expect(observer).toBeGreaterThan(guardReturn);
-    expect(listener).toBeGreaterThan(guardReturn);
+    expect(parallaxScroll).toBeGreaterThan(guardReturn);
+    expect(lastListener).toBeGreaterThan(guardReturn);
   });
 
   test("arms data-reveal-armed AFTER the reduced-motion return but BEFORE the observe loop (JS-required-to-HIDE)", () => {
@@ -269,11 +277,12 @@ describe("pageEffectsRuntime idempotence self-guard (TASK-535)", () => {
     // Spy on window.addEventListener to count listener bindings across runs.
     const winEvents: string[] = [];
     const realAdd = win.addEventListener.bind(win);
-    (win as unknown as { addEventListener: (t: string, ...r: unknown[]) => void }).addEventListener =
-      (type: string, ...rest: unknown[]) => {
-        winEvents.push(type);
-        return (realAdd as (t: string, ...r: unknown[]) => void)(type, ...rest);
-      };
+    (
+      win as unknown as { addEventListener: (t: string, ...r: unknown[]) => void }
+    ).addEventListener = (type: string, ...rest: unknown[]) => {
+      winEvents.push(type);
+      return (realAdd as (t: string, ...r: unknown[]) => void)(type, ...rest);
+    };
     // eslint-disable-next-line no-new-func
     const fn = new Function("window", "document", "requestAnimationFrame", source);
     const armedAfter = () => {
@@ -285,9 +294,11 @@ describe("pageEffectsRuntime idempotence self-guard (TASK-535)", () => {
     fn(win, doc, raf);
     const afterFirst = { winEvents: [...winEvents], armed: armedAfter() };
     // Un-arm so a re-arm by the second run would be observable.
-    (doc.querySelector("[data-page-motion]") as unknown as {
-      removeAttribute: (n: string) => void;
-    }).removeAttribute("data-reveal-armed");
+    (
+      doc.querySelector("[data-page-motion]") as unknown as {
+        removeAttribute: (n: string) => void;
+      }
+    ).removeAttribute("data-reveal-armed");
     fn(win, doc, raf);
     const afterSecond = { winEvents: [...winEvents], armed: armedAfter() };
     return { win, doc, afterFirst, afterSecond };
@@ -304,5 +315,59 @@ describe("pageEffectsRuntime idempotence self-guard (TASK-535)", () => {
     expect(afterSecond.winEvents.length).toBe(afterFirst.winEvents.length);
     // …and it did NOT re-arm the reveal root we cleared before the second run.
     expect(afterSecond.armed).toBeNull();
+  });
+});
+
+// TASK-534 — declarative-interactivity runtime clauses (switcher toggle, gallery
+// filter, magnetic pointer-attract) appended to the ONE runtime source. STATIC
+// string assertions lock the SPLIT placement: the switcher + filter TOGGLE clauses
+// precede the reduced-motion early-return (they must run for reduce users), while
+// the magnetic MOTION clause follows it (suppressed for reduce). Behavioral IIFE
+// exec lives in the content lane (534-05-L01).
+describe("pageEffectsRuntime declarative interactivity (TASK-534)", () => {
+  const source = PAGE_EFFECTS_RUNTIME_SOURCE;
+
+  test("source contains the switcher / gallery-filter / magnetic clause markers", () => {
+    expect(source).toContain('querySelectorAll("[data-switcher]")');
+    expect(source).toContain('querySelectorAll("[data-gallery-filter]")');
+    expect(source).toContain('querySelectorAll("[data-magnetic]")');
+  });
+
+  test("switcher + gallery-filter TOGGLE clauses precede the reduced-motion early-return", () => {
+    const guardReturn = source.indexOf("if(RM&&RM.matches)return;");
+    const switcher = source.indexOf('querySelectorAll("[data-switcher]")');
+    const filter = source.indexOf('querySelectorAll("[data-gallery-filter]")');
+    expect(guardReturn).toBeGreaterThan(-1);
+    expect(switcher).toBeGreaterThan(-1);
+    expect(filter).toBeGreaterThan(-1);
+    // The toggles run for reduce users → they sit BEFORE the whole-IIFE return.
+    expect(switcher).toBeLessThan(guardReturn);
+    expect(filter).toBeLessThan(guardReturn);
+    // …but still AFTER the idempotence flag-set (bound once per page).
+    expect(switcher).toBeGreaterThan(
+      source.indexOf(`window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}=true;`)
+    );
+  });
+
+  test("magnetic MOTION clause follows the reduced-motion early-return (suppressed for reduce)", () => {
+    const guardReturn = source.indexOf("if(RM&&RM.matches)return;");
+    const magnetic = source.indexOf('querySelectorAll("[data-magnetic]")');
+    expect(magnetic).toBeGreaterThan(guardReturn);
+    // …and after the 522 block-tilt clause (its documented placement anchor).
+    expect(magnetic).toBeGreaterThan(source.indexOf('querySelectorAll("[data-block-tilt]")'));
+  });
+
+  test("magnetic opens its OWN pointer:fine gate", () => {
+    const magnetic = source.indexOf('querySelectorAll("[data-magnetic]")');
+    const gateAfterMagnetic = source.indexOf('matchMedia("(pointer:fine)")', magnetic);
+    expect(gateAfterMagnetic).toBeGreaterThan(magnetic);
+  });
+
+  test("filter matches data-category by TOKEN split (no substring false-positive, no innerHTML/eval)", () => {
+    expect(source).toContain('cat.split(" ").indexOf(f)');
+    expect(source.includes("${")).toBe(false);
+    expect(/\beval\s*\(/.test(source)).toBe(false);
+    expect(/\bFunction\s*\(/.test(source)).toBe(false);
+    expect(/innerHTML/.test(source)).toBe(false);
   });
 });

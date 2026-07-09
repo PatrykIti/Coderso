@@ -832,7 +832,20 @@ describe("PageDocumentV2", () => {
     expect(pageDividerTones).toEqual(["neutral", "muted", "accent"]);
     expect(pageColumnDistributions).toEqual(["equal", "auto"]);
     expect(pageGroupDirections).toEqual(["row", "column"]);
-    expect(pageBlockSlotKeys).toEqual(["children", "column:1", "column:2", "column:3", "column:4"]);
+    // ── TASK-534 ── the switcher block adds six panel:N slots (its tab panels).
+    expect(pageBlockSlotKeys).toEqual([
+      "children",
+      "column:1",
+      "column:2",
+      "column:3",
+      "column:4",
+      "panel:1",
+      "panel:2",
+      "panel:3",
+      "panel:4",
+      "panel:5",
+      "panel:6",
+    ]);
 
     const document = buildDocument();
     document.sections[0]!.blocks = [
@@ -1518,13 +1531,16 @@ describe("PageDocumentV2", () => {
       runtimeRenderer: "real",
       slots: [],
     });
+    // TASK-534: gallery is now editor-insertable (filter/layout controls shipped),
+    // clearing its `gallery-editor-controls-pending` reason; still not assistant-
+    // emittable (the assistant does not invent galleries).
     expect(pageBlockCapabilities.gallery).toMatchObject({
-      editorInsertable: false,
-      insertable: false,
+      editorInsertable: true,
+      insertable: true,
       assistantEmittable: false,
       runtimeRenderer: "real",
-      reason: "gallery-editor-controls-pending",
     });
+    expect("reason" in pageBlockCapabilities.gallery).toBe(false);
     expect(pageBlockCapabilities.columns).toMatchObject({
       editorInsertable: true,
       insertable: true,
@@ -2179,6 +2195,9 @@ describe("section full-bleed background model (TASK-525-01-L02)", () => {
   });
 
   // Expensive schema compile ⇒ 30s timeout (sibling AJV tests convention).
+  // TASK-534: bump to the same explicit Ajv-compile timeout the other schema tests
+  // use (the recursive document schema compiles in a few seconds under parallel
+  // suite load; the default 5s ceiling flakes now the schema carries more props).
   test("fullBleed:true validates against the JSON schema", { timeout: 30_000 }, () => {
     const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: true }));
     const ajv = new Ajv({ allErrors: true, strict: true });

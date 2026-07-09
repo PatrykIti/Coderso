@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Site Render (runtime) / Accessibility / Security
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -85,20 +85,31 @@ children; `[data-gallery-filter]` chip host + `[data-filter-item][data-category]
 ' });',
 '});',
 
-// (2) GALLERY FILTER — chip show/hide (reproduces app.js:88-100 data-category)
+// (2) GALLERY FILTER — chip show/hide (reproduces app.js:88-100 data-category).
+//   534 audit remediation: the bar is a role="toolbar" of aria-pressed toggle
+//   buttons (NOT a tablist) with roving tabindex (active=0, rest=-1) +
+//   ArrowLeft/Right/Home/End roving, mirroring the toolbar APG.
 'var gf=document.querySelectorAll("[data-gallery-filter]");',
 'gf.forEach(function(bar){',
 ' var chips=[].slice.call(bar.querySelectorAll("[data-filter]"));',
+' if(!chips.length)return;',
 ' var scope=bar.closest("[data-gallery]")||document;',
 ' var items=[].slice.call(scope.querySelectorAll("[data-filter-item]"));',
-' chips.forEach(function(c){c.addEventListener("click",function(){',
-'  var f=c.getAttribute("data-filter")||"all";',
-'  chips.forEach(function(x){x.setAttribute("aria-selected",x===c?"true":"false");});',
+' function select(c){var f=c.getAttribute("data-filter")||"all";',
+'  chips.forEach(function(x){x.setAttribute("aria-pressed",x===c?"true":"false");});',
 '  items.forEach(function(it){var cat=it.getAttribute("data-category")||"";',
-// String.includes on a data-attr token (never innerHTML/eval); .is-hidden toggle:
+// String.split token match on a data-attr (never innerHTML/eval); .is-hidden toggle:
 '   var hide=f!=="all"&&cat.split(" ").indexOf(f)===-1;',
-'   it.classList.toggle("is-hidden",hide);it.hidden=hide;});',
-' });});',
+'   it.classList.toggle("is-hidden",hide);it.hidden=hide;});}',
+' function rove(i){chips.forEach(function(x,j){x.tabIndex=j===i?0:-1;});chips[i].focus();}',
+' chips.forEach(function(c,i){',
+'  c.addEventListener("click",function(){select(c);});',
+'  c.addEventListener("keydown",function(e){var n=null;',
+'   if(e.key==="ArrowRight"||e.key==="ArrowDown")n=(i+1)%chips.length;',
+'   else if(e.key==="ArrowLeft"||e.key==="ArrowUp")n=(i-1+chips.length)%chips.length;',
+'   else if(e.key==="Home")n=0;else if(e.key==="End")n=chips.length-1;',
+'   if(n!==null){e.preventDefault();rove(n);}});',
+' });',
 '});',
 // ── END TASK-534 pre-early-return toggles ──
 
