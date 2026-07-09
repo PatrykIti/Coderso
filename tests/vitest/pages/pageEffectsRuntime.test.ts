@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import {
   PAGE_EFFECTS_REDUCED_MOTION_QUERY,
   PAGE_EFFECTS_RUNTIME_ID,
+  PAGE_EFFECTS_RUNTIME_INIT_FLAG,
   PAGE_EFFECTS_RUNTIME_SOURCE,
   prefersReducedMotion,
 } from "../../../core/services/pages/pageEffectsRuntime";
@@ -202,5 +203,106 @@ describe("pageEffectsRuntime block tilt (TASK-522-01-L05)", () => {
     expect((card as unknown as { style: { transform: string } }).style.transform).toContain(
       "rotateX"
     );
+  });
+});
+
+// TASK-535 — idempotence self-guard. A page renders TWO PageDocumentRender
+// documents (the <main> page + the SiteFooter template); when BOTH author motion
+// each emits its own copy of this runtime <script>, and both share one `window`.
+// The IIFE must NO-OP any copy after the first: no re-arm of [data-reveal-armed],
+// no double IntersectionObserver, no double scroll/pointer listeners. String
+// assertions guard the seam; a happy-dom double-run proves the runtime behaviour.
+describe("pageEffectsRuntime idempotence self-guard (TASK-535)", () => {
+  const source = PAGE_EFFECTS_RUNTIME_SOURCE;
+
+  test("init flag is a stable non-empty window-key literal", () => {
+    expect(typeof PAGE_EFFECTS_RUNTIME_INIT_FLAG).toBe("string");
+    expect(PAGE_EFFECTS_RUNTIME_INIT_FLAG.length).toBeGreaterThan(0);
+    // The static source hardcodes the SAME key (no interpolation — invariant #1),
+    // so the exported constant and the emitted literal must not drift.
+    expect(source).toContain(`window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}`);
+  });
+
+  test("guard is the FIRST executable statement — checks the flag then sets it, before arm/observe/listen", () => {
+    const check = source.indexOf(`if(window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG})return;`);
+    const set = source.indexOf(`window.${PAGE_EFFECTS_RUNTIME_INIT_FLAG}=true;`);
+    const arm = source.indexOf('setAttribute("data-reveal-armed","true")');
+    const observe = source.indexOf("io.observe(");
+    const listen = source.indexOf("addEventListener");
+    // check present, and comes before the flag-set
+    expect(check).toBeGreaterThan(-1);
+    expect(set).toBeGreaterThan(check);
+    // and both precede any arming / observing / listener binding
+    expect(arm).toBeGreaterThan(set);
+    expect(observe).toBeGreaterThan(set);
+    expect(listen).toBeGreaterThan(set);
+    // the reduced-motion early-return still lives AFTER the guard (guard is truly first)
+    expect(source.indexOf("if(RM&&RM.matches)return;")).toBeGreaterThan(set);
+  });
+
+  test("guard adds no eval / Function / interpolation sink", () => {
+    expect(/\beval\s*\(/.test(source)).toBe(false);
+    expect(/\bFunction\s*\(/.test(source)).toBe(false);
+    expect(source.includes("${")).toBe(false);
+  });
+
+  // Run the source N times against the SAME window (mirrors a page that emits the
+  // script twice). Parallax nodes force window scroll/resize listeners; a motion
+  // root proves reveal arming. We count window.addEventListener calls + arm writes.
+  const runTwiceInOneWindow = () => {
+    const win = new Window();
+    const doc = win.document;
+    doc.body.innerHTML =
+      '<div data-page-motion="true">' +
+      '<div data-page-effect="parallax" data-parallax="20"></div>' +
+      "</div>";
+    (win as unknown as { matchMedia: (q: string) => unknown }).matchMedia = (q: string) => ({
+      matches: false, // not reduced-motion, coarse pointer — isolates the parallax/window path
+      media: q,
+      addEventListener() {},
+      removeEventListener() {},
+    });
+    const raf = (cb: () => void) => {
+      cb();
+      return 0;
+    };
+    // Spy on window.addEventListener to count listener bindings across runs.
+    const winEvents: string[] = [];
+    const realAdd = win.addEventListener.bind(win);
+    (win as unknown as { addEventListener: (t: string, ...r: unknown[]) => void }).addEventListener =
+      (type: string, ...rest: unknown[]) => {
+        winEvents.push(type);
+        return (realAdd as (t: string, ...r: unknown[]) => void)(type, ...rest);
+      };
+    // eslint-disable-next-line no-new-func
+    const fn = new Function("window", "document", "requestAnimationFrame", source);
+    const armedAfter = () => {
+      const root = doc.querySelector("[data-page-motion]") as unknown as {
+        getAttribute: (n: string) => string | null;
+      };
+      return root.getAttribute("data-reveal-armed");
+    };
+    fn(win, doc, raf);
+    const afterFirst = { winEvents: [...winEvents], armed: armedAfter() };
+    // Un-arm so a re-arm by the second run would be observable.
+    (doc.querySelector("[data-page-motion]") as unknown as {
+      removeAttribute: (n: string) => void;
+    }).removeAttribute("data-reveal-armed");
+    fn(win, doc, raf);
+    const afterSecond = { winEvents: [...winEvents], armed: armedAfter() };
+    return { win, doc, afterFirst, afterSecond };
+  };
+
+  test("second script run is a NO-OP: sets the window flag, adds no new listeners, does not re-arm", () => {
+    const { win, afterFirst, afterSecond } = runTwiceInOneWindow();
+    // First run initialised: flag set, reveal armed, and scroll/resize bound.
+    expect((win as unknown as Record<string, unknown>)[PAGE_EFFECTS_RUNTIME_INIT_FLAG]).toBe(true);
+    expect(afterFirst.armed).toBe("true");
+    expect(afterFirst.winEvents).toContain("scroll");
+    expect(afterFirst.winEvents).toContain("resize");
+    // Second run early-returns: NO additional window listeners were bound…
+    expect(afterSecond.winEvents.length).toBe(afterFirst.winEvents.length);
+    // …and it did NOT re-arm the reveal root we cleared before the second run.
+    expect(afterSecond.armed).toBeNull();
   });
 });

@@ -79,6 +79,18 @@ export const PAGE_BLOCK_ELEMENT_ATTRIBUTE = "data-page-block-element" as const;
 export const PAGE_BLOCK_TEXT_ATTRIBUTE = "data-page-block-text" as const;
 
 /**
+ * TASK-535 — stable hook on the `[data-tilt-parent]` perspective WRAPPER that a
+ * tilt+layer block hoists its layer placement onto (see `splitBlockComposition` /
+ * `renderPageBlockWithFrame` in pageRendererV2). The base `--layer-x/y/z` live on
+ * the wrapper (the consumer of the layered-canvas CSS), NOT the `[data-block-id]`
+ * frame, and CSS custom props inherit DOWNWARD only — so a per-device `--layer-*`
+ * override MUST target the wrapper, not the frame. The renderer stamps the block
+ * id here ONLY when the layer placement was hoisted to the wrapper (tilt+layer);
+ * `collectBlockDeclarations` retargets the responsive layer override at it.
+ */
+export const PAGE_TILT_PARENT_LAYER_ATTRIBUTE = "data-tilt-parent-for" as const;
+
+/**
  * Style-target contract shared with `pageRendererV2.tsx`: block types whose
  * visual identity is an inner element (the `<a>` of a button, the `<img>` of
  * an image) carry the visual style surface (background, text color, border,
@@ -154,6 +166,15 @@ const sectionContentSelector = (id: string) =>
 
 const blockSelector = (id: string) => `[${PAGE_BLOCK_ID_ATTRIBUTE}="${escapeCssString(id)}"]`;
 
+/**
+ * TASK-535 — the `[data-tilt-parent]` wrapper carrying a tilt+layer block's
+ * hoisted layer placement (base `--layer-*`). Per-device layer overrides target
+ * this wrapper (custom props inherit downward, so a frame-scoped override cannot
+ * reach the ancestor wrapper that consumes `var(--layer-*)`).
+ */
+const blockTiltLayerWrapperSelector = (id: string) =>
+  `[${PAGE_TILT_PARENT_LAYER_ATTRIBUTE}="${escapeCssString(id)}"]`;
+
 const blockElementSelector = (id: string) =>
   `${blockSelector(id)} [${PAGE_BLOCK_ELEMENT_ATTRIBUTE}="true"]`;
 
@@ -199,6 +220,30 @@ const shadowCssValues: Record<string, string> = {
   md: "0 14px 40px rgba(15, 23, 42, 0.12)",
   lg: "0 22px 60px rgba(15, 23, 42, 0.16)",
 };
+
+/**
+ * TASK-535 — full-bleed predicate + content-cap width formula, mirrored from
+ * `pageRendererV2.tsx` (`isPageSectionFullBleed` / `toPageSectionStyle`). The
+ * renderer owns them but `pageRendererV2.tsx` imports FROM this module, so a
+ * back-import would cycle; per this file's convention (see `shadowCssValues` /
+ * `toBoxSpacingValue`) they are re-declared here with a MUST-stay-in-sync note.
+ *
+ * The 525 model DECOUPLED the bleed box from the content cap: full-bleed content
+ * is ALWAYS capped/centered at `layout.maxWidth` (the pre-525 `max-width:none`
+ * pin is GONE). So a full-bleed content div carries BOTH
+ * `width: min(<max>, calc(100% - 2 * 20px))` AND `max-width: <max>` — which makes
+ * a responsive `layout.maxWidth` override CSS-EXPRESSIBLE (it was falsely marked
+ * `not_css_expressible` while the pin still existed).
+ */
+const isSectionFullBleed = (
+  section: PageSectionV2,
+  template: ReturnType<typeof resolvePageSectionTemplate>
+): boolean => template.variant === "full-width" || section.style.fullBleed === true;
+/** Mirrors `PAGE_SECTION_FULL_BLEED_GUTTER` (the reference `.container` side gutter). */
+const SECTION_FULL_BLEED_GUTTER = "20px";
+/** Mirrors the full-bleed content `width` in `toPageSectionStyle`. */
+const fullBleedContentWidth = (maxWidthPx: string): string =>
+  `min(${maxWidthPx}, calc(100% - 2 * ${SECTION_FULL_BLEED_GUTTER}))`;
 
 /** Mirrors `pageSectionAlignmentClass` (Tailwind `items-*`). */
 const sectionAlignItemsValues: Record<string, string> = {
@@ -317,13 +362,20 @@ const collectSectionDeclarations = (
   const template = resolvePageSectionTemplate(section);
 
   if (layoutOverride.maxWidth !== undefined) {
-    if (template.variant === "full-width") {
-      // The renderer pins `max-width: none` for full-width variants at every
-      // breakpoint, so a maxWidth override can never take effect.
-      diag("layout.maxWidth", "not_css_expressible");
-    } else {
-      const value = pxValue(mergedLayout.maxWidth);
-      if (value) content.push({ property: "max-width", value });
+    const value = pxValue(mergedLayout.maxWidth);
+    if (value) {
+      // TASK-535 — the 525 model DECOUPLED bleed from the content cap: full-bleed
+      // content is ALWAYS capped/centered at `layout.maxWidth` (the pre-525
+      // `max-width:none` pin is GONE — see `toPageSectionStyle`). So a `maxWidth`
+      // override IS CSS-expressible on a full-bleed section: mirror the base
+      // content div, which carries BOTH `width: min(<max>, calc(100% - 40px))`
+      // AND `max-width: <max>`. (The stale branch here reported
+      // `not_css_expressible` under the removed pin.) Non-full-bleed keeps the
+      // plain `max-width` declaration byte-identical.
+      if (isSectionFullBleed(section, template)) {
+        content.push({ property: "width", value: fullBleedContentWidth(value) });
+      }
+      content.push({ property: "max-width", value });
     }
   }
   if (layoutOverride.align !== undefined) {
@@ -436,8 +488,17 @@ const collectBlockDeclarations = (
   block: PageBlockV2,
   override: NonNullable<NonNullable<PageBlockV2["responsive"]>["tablet"]>,
   context: CollectorContext
-): { frame: CssDeclaration[]; element: CssDeclaration[]; text: CssDeclaration[] } => {
+): {
+  frame: CssDeclaration[];
+  element: CssDeclaration[];
+  text: CssDeclaration[];
+  wrapper: CssDeclaration[];
+} => {
   const frame: CssDeclaration[] = [];
+  // TASK-535 — declarations that must ride the `[data-tilt-parent]` WRAPPER rather
+  // than the `[data-block-id]` frame (currently only the per-device layer offsets of
+  // a tilt+layer block, whose base `--layer-*` were hoisted onto the wrapper).
+  const wrapper: CssDeclaration[] = [];
   // Visual style keys follow the renderer's style-target contract: for
   // re-routed types they land on the inner visual element, otherwise on the
   // frame. Layout keys (align/width/padding/margin/display) always stay on
@@ -605,23 +666,34 @@ const collectBlockDeclarations = (
   }
 
   // TASK-522-05-L02 — per-device layered-canvas offsets. The 522-01-L04 frame
-  // resolver emits the BASE position as inline --layer-x/y/z custom props on the
-  // [data-block-id] FRAME (consumed by `[data-composition="layered"]
-  // [data-layer]{left:var(--layer-x)…}`); here we retarget those props per
-  // breakpoint. They ride the block-frame selector — the SAME element that carries
-  // data-layer + the base var + the media query — and every frame declaration is
-  // serialized with !important, so the delta beats the inline base custom prop
-  // (finding-4). Only x/y/z (the numeric offsets) vary per device; anchor stays
-  // base-only.
+  // resolver emits the BASE position as inline --layer-x/y/z custom props; here we
+  // retarget those props per breakpoint. They ride the SAME element that carries
+  // data-layer + the base var + the media query, and every declaration is serialized
+  // with !important, so the delta beats the inline base custom prop (finding-4). Only
+  // x/y/z (the numeric offsets) vary per device; anchor stays base-only.
+  //
+  // TASK-535 — TARGET follows where the renderer put the BASE layer placement:
+  //   - layer-only (no tilt): base `--layer-*` live on the `[data-block-id]` FRAME,
+  //     so the override rides the FRAME (`frame`) — byte-identical to pre-535.
+  //   - tilt + layer: `splitBlockComposition` HOISTED the base `--layer-*` onto the
+  //     `[data-tilt-parent]` WRAPPER (a per-device value on the child frame can NEVER
+  //     inherit UP to the wrapper that consumes `var(--layer-*)`), so the override
+  //     must ride the WRAPPER (`wrapper`, `[data-tilt-parent-for="<id>"]`). The hoist
+  //     is decided from the BASE style (tilt non-none AND base layer present) — the
+  //     wrapper's `data-tilt-parent-for` exists exactly then.
   if (styleOverride.layer !== undefined) {
+    const baseStyle = block.style ?? {};
+    const baseTiltAndLayer =
+      baseStyle.tilt != null && baseStyle.tilt !== "none" && baseStyle.layer != null;
+    const layerTarget = baseTiltAndLayer ? wrapper : frame;
     if (isFiniteNumber(mergedStyle.layer?.x)) {
-      frame.push({ property: "--layer-x", value: `${mergedStyle.layer.x}%` });
+      layerTarget.push({ property: "--layer-x", value: `${mergedStyle.layer.x}%` });
     }
     if (isFiniteNumber(mergedStyle.layer?.y)) {
-      frame.push({ property: "--layer-y", value: `${mergedStyle.layer.y}%` });
+      layerTarget.push({ property: "--layer-y", value: `${mergedStyle.layer.y}%` });
     }
     if (isFiniteNumber(mergedStyle.layer?.z)) {
-      frame.push({ property: "--layer-z", value: String(mergedStyle.layer.z) });
+      layerTarget.push({ property: "--layer-z", value: String(mergedStyle.layer.z) });
     }
   }
 
@@ -696,7 +768,7 @@ const collectBlockDeclarations = (
     frame.push({ property: "display", value: "none" });
   }
 
-  return { frame, element: visual === frame ? [] : visual, text };
+  return { frame, element: visual === frame ? [] : visual, text, wrapper };
 };
 
 const hasBlockOverride = (
@@ -720,10 +792,12 @@ const walkBlock = (block: PageBlockV2, context: CollectorContext, markupAbsent: 
     } else if (!id) {
       pushDiagnostic(context, "block", id, "*", "unsafe_scope_id");
     } else {
-      const { frame, element, text } = collectBlockDeclarations(block, override, context);
+      const { frame, element, text, wrapper } = collectBlockDeclarations(block, override, context);
       pushRule(context, blockSelector(id), frame);
       pushRule(context, blockElementSelector(id), element);
       pushRule(context, blockTextSelector(id), text);
+      // TASK-535 — tilt+layer per-device layer offsets ride the hoisted wrapper.
+      pushRule(context, blockTiltLayerWrapperSelector(id), wrapper);
     }
   }
 

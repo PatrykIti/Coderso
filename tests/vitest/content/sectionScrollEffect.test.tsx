@@ -1,7 +1,10 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { PAGE_EFFECTS_RUNTIME_SOURCE } from "../../../core/services/pages/pageEffectsRuntime";
+import {
+  PAGE_EFFECTS_RUNTIME_INIT_FLAG,
+  PAGE_EFFECTS_RUNTIME_SOURCE,
+} from "../../../core/services/pages/pageEffectsRuntime";
 
 /**
  * TASK-521-02-L03 — behavioral smoke of the section reveal/parallax runtime
@@ -43,6 +46,16 @@ const mockMatchMedia = (reduce: boolean, fine = true) => {
 beforeEach(() => {
   ioInstances = [];
   document.body.innerHTML = "";
+  // TASK-535: the runtime's per-window idempotence guard sets
+  // `window[PAGE_EFFECTS_RUNTIME_INIT_FLAG]` and early-returns on any 2nd+
+  // invocation against the SAME window. happy-dom shares one `window` across
+  // every test in this file, and `vi.unstubAllGlobals()` does NOT clear a plain
+  // window property — so without this reset the 2nd `runRuntime()` short-circuits
+  // before arming reveal / binding the scroll (parallax) handler (making later
+  // tests fail or pass vacuously). Clear the flag so each `runRuntime()` re-arms
+  // a clean runtime. The production guard is unchanged; this only resets the
+  // shared test window.
+  delete (window as unknown as Record<string, unknown>)[PAGE_EFFECTS_RUNTIME_INIT_FLAG];
   class MockIO {
     private cb: (entries: IoEntry[]) => void;
     constructor(cb: (entries: IoEntry[]) => void) {

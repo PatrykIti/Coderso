@@ -178,7 +178,7 @@ CSS. Enums/clamps are owned by `pageDocumentV2.ts`.
 | Composition | `pageCompositions` | `flow`, `layered` |
 | Layer anchor | `pageLayerAnchors` | 9 grid positions (`top-left`..`bottom-right`) |
 | Layer offset X/Y | `PAGE_LAYER_X_CLAMP`/`PAGE_LAYER_Y_CLAMP` | `-50`..`150` % |
-| Layer Z | `PAGE_LAYER_Z_CLAMP` | `0`..`40` |
+| Layer Z | `PAGE_LAYER_Z_CLAMP` | `0`..`20` |
 | Marquee direction | `pageMarqueeDirections` | `left`, `right` |
 | Marquee speed | `PAGE_MARQUEE_SPEED_CLAMP` | `8`..`40` s |
 | Custom-SVG draw speed | `PAGE_DRAW_SPEED_CLAMP` | `600`..`6000` ms |

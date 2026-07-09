@@ -289,6 +289,75 @@ describe("resolveSectionCompositionAttrs", () => {
   });
 });
 
+describe("glow render-parity re-sanitization (TASK-535 defence-in-depth)", () => {
+  // The resolvers run at RENDER and thread the glow into `style` custom props, so
+  // they re-run sanitizeAuthoringCssColor exactly as spotlight/canvas-bg do — a
+  // value that bypassed the write boundary cannot reach the DOM as a
+  // `;`-delimited CSS injection. Valid colors pass UNCHANGED (byte-identity).
+  const GLOW_VARS = ["--surface-glow", "--deco-ring", "--orb-color"] as const;
+
+  test("BLOCK: a valid plain color / token / rgba passes through unchanged", () => {
+    for (const color of ["#8ee8ff", "rgba(142,232,255,.5)", "var(--color-primary)"]) {
+      const v = resolveBlockCompositionAttrs({ surfacePreset: "glass", surfaceTint: color }).cssVars;
+      for (const k of GLOW_VARS) expect(v[k]).toBe(color);
+    }
+  });
+
+  test("BLOCK: a `;`-delimited CSS-injection surfaceTint drops the glow (all three vars)", () => {
+    const v = resolveBlockCompositionAttrs({
+      surfacePreset: "glass",
+      surfaceTint: "#fff;position:fixed;inset:0",
+    }).cssVars;
+    for (const k of GLOW_VARS) expect(v).not.toHaveProperty(k);
+  });
+
+  test("BLOCK: an injection in the background-derived glow fallback is dropped", () => {
+    const v = resolveBlockCompositionAttrs({
+      surfacePreset: "glass",
+      background: "red;z-index:2147483647",
+    }).cssVars;
+    for (const k of GLOW_VARS) expect(v).not.toHaveProperty(k);
+  });
+
+  test("SECTION: a valid accent passes unchanged; an injection accent drops the glow", () => {
+    const ok = resolveSectionCompositionAttrs({
+      background: "#fff",
+      backgroundType: "color",
+      accent: "#c7b7ff",
+      radius: 0,
+      shadow: "none",
+      surfacePreset: "radial-glow",
+    }).cssVars;
+    for (const k of GLOW_VARS) expect(ok[k]).toBe("#c7b7ff");
+
+    const bad = resolveSectionCompositionAttrs({
+      background: "#fff",
+      backgroundType: "color",
+      accent: "red;z-index:9",
+      radius: 0,
+      shadow: "none",
+      surfacePreset: "radial-glow",
+    }).cssVars;
+    for (const k of GLOW_VARS) expect(bad).not.toHaveProperty(k);
+  });
+
+  test("present-only preserved: no style / no preset still yields no glow vars", () => {
+    expect(resolveBlockCompositionAttrs(undefined).cssVars).toEqual({});
+    expect(resolveBlockCompositionAttrs({ surfaceTint: "#8ee8ff" }).cssVars).not.toHaveProperty(
+      "--surface-glow"
+    );
+    expect(
+      resolveSectionCompositionAttrs({
+        background: "#fff",
+        backgroundType: "color",
+        accent: "#c7b7ff",
+        radius: 0,
+        shadow: "none",
+      }).cssVars
+    ).not.toHaveProperty("--surface-glow");
+  });
+});
+
 describe("hover-transition + orb-drift are gated; surfaces static (TASK-522-05-L05)", () => {
   const css = PAGE_COMPOSITION_EFFECTS_CSS;
   const gate = css.indexOf("@media (prefers-reduced-motion: no-preference)");

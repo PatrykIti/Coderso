@@ -164,15 +164,31 @@ const TRIPWIRES: RegExp[] = [
   /-moz-binding/i,
 ];
 
+// Case-insensitive canonical lookup: a pasted `<SVG>`/`<RECT>`/`<LINEARGRADIENT>`
+// (HTML-parsed inline SVG is case-insensitive in the browser) maps to its
+// canonical allowlisted spelling. Without this the case-INSENSITIVE root gate
+// (`/^<svg[\s>]/i`) admits an uppercase `<SVG>` whose tags the case-SENSITIVE
+// walk then DROPS, leaking the (allowlisted) CHILDREN as an UNWRAPPED fragment.
+// Re-emitting the canonical form keeps camelCase tags (linearGradient,
+// feGaussianBlur, clipPath) intact and preserves the allowlist invariant.
+const ALLOWED_TAG_CANONICAL = new Map<string, string>(
+  Array.from(ALLOWED_TAGS, (tag) => [tag.toLowerCase(), tag])
+);
+
 const ALLOWED_NS = new Set<string>(["http://www.w3.org/2000/svg", "http://www.w3.org/1999/xlink"]);
 
 // Matcher for re-emitted allowlisted tags (used by the post-walk residual check).
 // Longest-first alternation + a `(?=[\s/>])` lookahead so `feMerge` never
-// shadows `feMergeNode`. Quoted attribute values may not contain `<`/`>`.
+// shadows `feMergeNode`. The attr body is a QUOTE-BALANCED class
+// (`[^<>"']|"[^"]*"|'[^']*'`) — NOT a loose `[^<>]*` — so an UNBALANCED-quote tag
+// that the quote-aware walk could NEVER have matched (e.g. a desynced
+// `<rect style="x" ">`) is left in the residue and correctly trips the
+// fail-closed residual-`<` / odd-quote guard below, instead of being silently
+// stripped (which would leak a raw `style`/clickjacking attr into the DOM).
 const TAG_REEMIT_RE = new RegExp(
   `<\\/?(?:${Array.from(ALLOWED_TAGS)
     .sort((a, b) => b.length - a.length)
-    .join("|")})(?=[\\s/>])[^<>]*>`,
+    .join("|")})(?=[\\s/>])(?:[^<>"']|"[^"]*"|'[^']*')*>`,
   "g"
 );
 
@@ -194,7 +210,22 @@ export function sanitizeSvg(
   // ISOMORPHIC byte count — never `Buffer.byteLength` (undefined in the browser
   // builder canvas bundle). `TextEncoder` exists in Node AND the browser.
   if (new TextEncoder().encode(src).length > maxBytes) return "";
-  if (!/^<svg[\s>]/i.test(src) || !/<\/svg>\s*$/i.test(src)) return ""; // lone <svg>…</svg>
+  // Must be a LONE SVG: either `<svg …>…</svg>` OR a valid self-closing `<svg …/>`
+  // (a self-closing root has no `</svg>`; the opening tag ends in `/>`). Both
+  // forms start `<svg` followed by whitespace, `>` or `/`.
+  if (!/^<svg[\s/>]/i.test(src)) return "";
+  const selfClosingRoot = /^<svg\b(?:[^>"']|"[^"]*"|'[^']*')*\/>\s*$/i.test(src);
+  if (!selfClosingRoot) {
+    if (!/<\/svg>\s*$/i.test(src)) return "";
+    // FAIL-CLOSED: when this is NOT a full self-closing root, the FIRST `<svg…>`
+    // must itself be an OPEN tag (not self-closed). Otherwise a self-closed root
+    // `<svg/>` followed by junk + a trailing `<svg>…</svg>` would pass both the
+    // start gate and the `</svg>`-end gate while leaving the junk BETWEEN them as
+    // un-walked verbatim TEXT reaching the DOM — defeating the "lone <svg>…</svg>"
+    // and "no un-walked fragment reaches the DOM" hard invariants.
+    const rootOpen = /^<svg\b(?:[^>"']|"[^"]*"|'[^']*')*?(\/?)>/i.exec(src);
+    if (!rootOpen || rootOpen[1] === "/") return "";
+  }
   // FAIL-CLOSED PRE-PASS: HTML comments / CDATA are NOT matched by the tag-walk
   // regex, so left in place they survive verbatim. Reject on their presence.
   if (/<!--|<!\[CDATA\[/i.test(src)) return "";
@@ -225,32 +256,40 @@ export function sanitizeSvg(
   // check. A non-local ref sets `rejected` ⇒ the WHOLE SVG fails closed to "".
   let rejected = false;
   const out = src.replace(
-    /<(\/?)([a-zA-Z][\w:-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g,
-    (_full, slash: string, tag: string, attrs: string) => {
-      if (!ALLOWED_TAGS.has(tag)) return ""; // drop tag
-      if (slash) return `</${tag}>`;
-      const kept = String(attrs).replace(
-        /([a-zA-Z_:][-\w:.]*)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g,
-        (attrFull: string, name: string, rawVal: string) => {
-          if (!ALLOWED_ATTRS.has(name)) return ""; // drop unknown attr (incl. style)
-          const val = String(rawVal)
-            .replace(/^["']|["']$/g, "")
-            .trim(); // unquote (quoted OR bare)
-          if ((name === "href" || name === "xlink:href") && !isLocalHash(val)) {
-            rejected = true;
-            return "";
-          }
-          val.replace(
-            /url\(\s*(['"]?)([\s\S]*?)\1\s*\)/gi,
-            (_u: string, _q: string, target: string) => {
-              if (!isLocalHash(String(target))) rejected = true;
-              return _u;
-            }
-          );
-          return attrFull;
+    /<(\/?)([a-zA-Z][\w:-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g,
+    (_full, slash: string, tag: string, attrs: string, selfClose: string) => {
+      // Case-INSENSITIVE allowlist lookup, re-emit CANONICAL spelling (see
+      // ALLOWED_TAG_CANONICAL): keeps `<SVG>`/`<RECT>` from leaking as an
+      // unwrapped fragment while preserving camelCase (linearGradient, …).
+      const canonical = ALLOWED_TAG_CANONICAL.get(tag.toLowerCase());
+      if (!canonical) return ""; // drop tag
+      if (slash) return `</${canonical}>`;
+      // Rebuild the attr list from ONLY the allowlisted `name=value` pairs. A
+      // valueless/boolean attr (`<rect fill-rule>`, `<rect autofocus>`) is NOT a
+      // `name=value` pair, so it is left OUT — otherwise it would survive verbatim
+      // and break the "only allowlisted attrs remain" invariant.
+      let kept = "";
+      const attrRe = /([a-zA-Z_:][-\w:.]*)\s*=\s*("[^"]*"|'[^']*'|[^\s"'>]+)/g;
+      let a: RegExpExecArray | null;
+      while ((a = attrRe.exec(String(attrs)))) {
+        const name = a[1]!;
+        const rawVal = a[2]!;
+        if (!ALLOWED_ATTRS.has(name)) continue; // drop unknown attr (incl. style)
+        const val = rawVal.replace(/^["']|["']$/g, "").trim(); // unquote (quoted OR bare)
+        if ((name === "href" || name === "xlink:href") && !isLocalHash(val)) {
+          rejected = true;
+          continue;
         }
-      );
-      return `<${tag}${kept}>`;
+        val.replace(
+          /url\(\s*(['"]?)([\s\S]*?)\1\s*\)/gi,
+          (_u: string, _q: string, target: string) => {
+            if (!isLocalHash(String(target))) rejected = true;
+            return _u;
+          }
+        );
+        kept += ` ${a[0]}`;
+      }
+      return `<${canonical}${kept}${selfClose ? "/" : ""}>`;
     }
   );
   if (rejected) return ""; // non-local ref found in the walk

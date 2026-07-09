@@ -156,6 +156,134 @@ describe("sanitizeSvg — style attribute is NOT allowlisted (layout-escape clas
     expect(sanitizeSvg('<svg style="background:url(javascript:alert(1))"><rect/></svg>')).toBe("");
     expect(sanitizeSvg('<svg><rect style="behavior:url(#x)"/></svg>')).toBe("");
   });
+
+  // TASK-535 residual-matcher regression: an UNBALANCED-quote tag desyncs the
+  // quote-aware walk (it is never matched, so its raw `style` passes verbatim).
+  // The post-walk residual matcher must be QUOTE-BALANCED so it does NOT strip
+  // that never-walked tag from the residue — else the odd-quote / residual-`<`
+  // fail-closed guard is defeated and a `position:fixed;inset:0;z-index:…`
+  // clickjacking overlay leaks to the DOM. Multi-tag (dropped-tag-preamble) AND
+  // single-tag variants must both fail closed.
+  test("dropped-tag preamble + unbalanced-quote style desync → '' (multi-tag)", () => {
+    expect(
+      sanitizeSvg(
+        '<svg><path <x><rect style="position:fixed;inset:0;z-index:2147483647;background:red" "/></svg>'
+      )
+    ).toBe("");
+    expect(
+      sanitizeSvg('<svg><g <y><rect style="opacity:0;position:fixed;inset:0" "/></svg>')
+    ).toBe("");
+  });
+  test("unbalanced-quote style desync → '' (single-tag latent variant)", () => {
+    expect(sanitizeSvg('<svg><rect style="x" "/></svg>')).toBe("");
+  });
+});
+
+describe("sanitizeSvg — valueless/boolean attrs are stripped (TASK-535 allowlist invariant)", () => {
+  test("a valueless allowlisted-name attr is dropped (only name=value pairs remain)", () => {
+    const out = sanitizeSvg('<svg><rect fill-rule width="4" height="3"/></svg>');
+    expect(out).not.toBe("");
+    expect(out).toContain('width="4"');
+    expect(out).toContain('height="3"');
+    // `fill-rule` with NO value is not a name=value pair → must not survive.
+    expect(out).not.toContain("fill-rule");
+  });
+
+  test("a valueless UNKNOWN attr is dropped", () => {
+    const out = sanitizeSvg('<svg><rect autofocus width="4"/></svg>');
+    expect(out).toBe('<svg><rect width="4"/></svg>');
+  });
+
+  test("a valueless would-be event attr (`ONLOAD`, no `=`) does not survive", () => {
+    // With a trailing `=` this hits the on* tripwire; valueless it is simply not a
+    // name=value pair and is dropped by the rebuilt attr list.
+    const out = sanitizeSvg('<svg><rect ONLOAD width="4"/></svg>');
+    expect(out).not.toContain("ONLOAD");
+    expect(out).not.toContain("onload");
+  });
+
+  test("mixed valueless + valued attrs keep only the allowlisted valued ones", () => {
+    const out = sanitizeSvg('<svg><rect fill-rule width="2" autofocus height="3" hidden/></svg>');
+    expect(out).toBe('<svg><rect width="2" height="3"/></svg>');
+  });
+});
+
+describe("sanitizeSvg — tag case normalized to canonical (TASK-535 no fragment leak)", () => {
+  test("an UPPERCASE root <SVG> re-emits a wrapped <svg> (NOT an unwrapped fragment)", () => {
+    const out = sanitizeSvg('<SVG><rect width="4"/></SVG>');
+    expect(out).toBe('<svg><rect width="4"/></svg>');
+    // regression guard: the old sanitizer leaked `<rect .../>` with no <svg> wrap.
+    expect(out.startsWith("<svg")).toBe(true);
+  });
+
+  test("a mixed-case <Svg>/<Rect> normalizes to canonical lowercase", () => {
+    expect(sanitizeSvg('<Svg><Rect width="2"/></Svg>')).toBe('<svg><rect width="2"/></svg>');
+  });
+
+  test("an UPPERCASE camelCase tag maps to its canonical spelling", () => {
+    const out = sanitizeSvg(
+      '<svg><FILTER><FEGAUSSIANBLUR stdDeviation="2"/></FILTER></svg>'
+    );
+    expect(out).toContain("<filter>");
+    expect(out).toContain("<feGaussianBlur");
+  });
+
+  test("uppercase root does NOT weaken tripwires: <SVG ONLOAD=…> and <SVG><script> fail closed", () => {
+    expect(sanitizeSvg("<SVG ONLOAD=alert(1)></SVG>")).toBe("");
+    expect(sanitizeSvg("<SVG><script>alert(1)</script></SVG>")).toBe("");
+  });
+});
+
+describe("sanitizeSvg — valid self-closing root <svg/> is accepted (TASK-535)", () => {
+  test("a bare self-closing <svg/> passes", () => {
+    expect(sanitizeSvg("<svg/>")).toBe("<svg/>");
+  });
+
+  test("a self-closing <svg …/> with allowlisted attrs passes; unknown attrs stripped", () => {
+    expect(sanitizeSvg('<svg viewBox="0 0 10 10"/>')).toBe('<svg viewBox="0 0 10 10"/>');
+    expect(sanitizeSvg('<svg autofocus width="4"/>')).toBe('<svg width="4"/>');
+  });
+
+  test("a self-closing root with a non-local href still fails closed", () => {
+    expect(sanitizeSvg('<svg href="http://evil"/>')).toBe("");
+  });
+
+  test("a self-closing root followed by trailing markup fails closed (must be a LONE svg)", () => {
+    expect(sanitizeSvg("<svg/><script>alert(1)</script>")).toBe("");
+    expect(sanitizeSvg('<svg width="1"/><rect/>')).toBe("");
+  });
+
+  test("a self-closed root + junk + trailing <svg>…</svg> fails closed (fail-open regression guard)", () => {
+    // A self-closed FIRST `<svg/>` whose trailing markup happens to end in
+    // `</svg>` must NOT satisfy the `</svg>`-terminated form: the junk between
+    // the self-closed root and the trailing svg would otherwise reach the DOM
+    // as un-walked verbatim TEXT (defeats the "lone <svg>…</svg>" invariant).
+    expect(sanitizeSvg("<svg/><rect/><svg></svg>")).toBe("");
+    expect(sanitizeSvg('<svg/> style="position:fixed" <svg></svg>')).toBe("");
+    expect(sanitizeSvg('<svg/><rect fill="red"/><svg></svg>')).toBe("");
+    expect(sanitizeSvg('<svg/>> STYLE="x"viewBox=">"<svg/></svg>')).toBe("");
+  });
+});
+
+describe("sanitizeSvg — text-container children handled consistently/fail-closed (TASK-535)", () => {
+  test("an unknown child tag inside <text> is dropped; its text stays (consistent walk)", () => {
+    expect(sanitizeSvg("<svg><text>hi<b>bold</b></text></svg>")).toBe(
+      "<svg><text>hibold</text></svg>"
+    );
+  });
+
+  test("an unknown child inside <desc> is dropped consistently", () => {
+    expect(sanitizeSvg("<svg><desc>a<em>b</em>c</desc></svg>")).toBe("<svg><desc>abc</desc></svg>");
+  });
+
+  test("a <script> inside a text container still fails the WHOLE svg closed", () => {
+    expect(sanitizeSvg("<svg><title>a<script>x</script></title></svg>")).toBe("");
+    expect(sanitizeSvg("<svg><text><script>alert(1)</script></text></svg>")).toBe("");
+  });
+
+  test("an on* handler on a child inside a text container fails closed", () => {
+    expect(sanitizeSvg('<svg><text><tspan onclick="x">y</tspan></text></svg>')).toBe("");
+  });
 });
 
 describe("sanitizeSvg — isomorphic byte count (no Buffer)", () => {
