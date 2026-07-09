@@ -258,6 +258,50 @@ gate, so under reduced-motion no transition runs and the delay is inert — moti
 identical to 521's reduced-motion behavior. Present-only — no DDL, no migration, no
 schemaVersion bump; a no-`revealDelay` block renders byte-identically to post-522 output.
 
+## Pages v2 premium backgrounds & colored glow (TASK-531)
+
+TASK-531 adds two premium-fidelity surfaces to Page v2 blocks AND sections, both
+present-only, jsonb-only (NO DDL, NO migration, NO `PAGE_DOCUMENT_SCHEMA_VERSION` bump [stays
+`2`], NO npm dependency): a **safe multi-layer background** (glow-over-gradient) and an
+**arbitrary colored glow box-shadow**.
+
+**Glow clamps (`PageGlow` — structured colored box-shadow):**
+
+| Field | Clamp | Values |
+|-------|-------|--------|
+| Glow blur | `PAGE_GLOW_BLUR_CLAMP` | `0`..`120` px (default `24` at render) |
+| Glow spread | `PAGE_GLOW_SPREAD_CLAMP` | `-40`..`80` px |
+| Glow offset X/Y | `PAGE_GLOW_OFFSET_CLAMP` | `-80`..`80` px |
+
+`glow.color` is REQUIRED and sanitized via `sanitizeAuthoringCssColor` at write (an
+invalid/absent color OMITS the whole glow, present-only fail-soft). The spec composes at
+render via the shared pure `composeGlowBoxShadow` (`pageGlow.ts`) into a FIXED `"<x>px <y>px
+<blur>px <spread>px <color>"` box-shadow — never a raw author string, re-sanitized +
+re-clamped at BOTH the SSR inline path (`pageRendererV2.tsx`) and the per-device RAW `<style>`
+path (`pageResponsiveCss.ts`). When the enum `shadow` token is also set the glow is APPENDED
+via `mergeShadows` (`"<enum-shadow>, <glow>"`) so both render. Authored via
+`block.style.glow.*` / `section.style.glow.*` controls (color swatch + four numerics,
+`responsive:true`).
+
+**Multi-layer background caps (safe multi-layer `background` value):**
+
+| Guard | Constant | Value |
+|-------|----------|-------|
+| Top-level layer cap | `PAGE_BG_MAX_LAYERS` | `6` |
+| CSS value length cap | `PAGE_CSS_VALUE_MAX_LENGTH` | `512` |
+
+`sanitizeAuthoringCssBackground` accepts a comma-separated list of safe gradient/color layers
+(the reference `.cta-card`/`art-*` look) via an ALLOWLIST applied per top-level comma-split
+layer (whole-value tripwire pre-pass → depth-0 comma split → each layer a safe color or safe
+single gradient → `PAGE_BG_MAX_LAYERS` cap; length-capped at `PAGE_CSS_VALUE_MAX_LENGTH`;
+fails CLOSED — see SECURITY_SPEC). The single-layer fast path is byte-identical. Both render
+boundaries re-gate on `isSafeAuthoringCssGradient || isSafeAuthoringCssBackgroundLayers` so a
+multi-layer value paints via `background-image`; the SECTION `backgroundType:"gradient"` branch
+is NEW (block was already wired) and paints on the content box + the `100vw` bleed box for a
+full-bleed section. No new `backgroundType` value — the gradient TYPE reuses the existing
+`pageBackgroundTypes` enum. Present-only; a no-glow / single-layer / no-section-gradient
+document renders byte-identically to post-530 output.
+
 ## Tailwind integration
 
 - Core build mapuje tokeny na utility classes.

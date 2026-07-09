@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Content (Pages) / Site Render / Schema (JSON model)
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-09)
 
 ---
 

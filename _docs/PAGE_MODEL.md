@@ -1088,6 +1088,40 @@ NUMERIC `layer.x/y/z` render per device — see below):
   not expressible), reject-unknown + round-trip tested. Reveal stays JS-gated under
   `[data-reveal-armed]` + `motion-safe:`, so a `transition-delay` is inert under
   `prefers-reduced-motion` (no transition runs) — motion-neutral, no new runtime/keyframe.
+- `glow?: PageGlow` (TASK-531) — an arbitrary COLORED box-shadow (the reference colored-glow
+  shadows) as a **structured spec**, `{ color, blur?, spread?, x?, y? }`. `color` is REQUIRED
+  and sanitized via `sanitizeAuthoringCssColor` at write (`readOptionalSafeColor`); an
+  invalid/absent color OMITS the whole glow (present-only, fail-soft — never a partial glow).
+  The numerics are clamped: `blur` `PAGE_GLOW_BLUR_CLAMP = { min: 0, max: 120 }` (default 24
+  at render), `spread` `PAGE_GLOW_SPREAD_CLAMP = { min: -40, max: 80 }`, `x`/`y`
+  `PAGE_GLOW_OFFSET_CLAMP = { min: -80, max: 80 }`. It composes at render via the shared pure
+  `composeGlowBoxShadow` (`pageGlow.ts`) into a FIXED `"<x>px <y>px <blur>px <spread>px
+  <color>"` template — NEVER a raw author string, re-sanitized + re-clamped at BOTH render
+  boundaries (defence in depth). When the enum `shadow` token is ALSO set, the glow is
+  APPENDED (`mergeShadows` → `"<enum-shadow>, <glow>"`) so both render (glow augments the
+  token drop-shadow). Authored via the `block.style.glow.*` controls (color swatch + four
+  numeric fields, `responsive:true` — a per-device glow rides the `pageResponsiveCss.ts`
+  box-shadow branch). Reject-unknown nested key + round-trip tested; omitted when unset →
+  byte-identical.
+
+### Multi-layer background + gradient background type (TASK-531)
+
+Both `block.style.background` and `section.style.background` (with `backgroundType:"gradient"`)
+now accept a **safe multi-layer** value — a COMMA-SEPARATED list of gradient/color layers
+(glow-over-gradient, the reference `.cta-card`/`art-*` look), e.g. `radial-gradient(circle at
+82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)`.
+The write sanitizer `sanitizeAuthoringCssBackground` allowlists the value PER top-level
+comma-split layer (whole-value tripwire pre-pass → depth-0 comma split → each layer must be a
+safe color or safe single gradient → `PAGE_BG_MAX_LAYERS = 6` cap; length-capped at
+`PAGE_CSS_VALUE_MAX_LENGTH = 512`; fails CLOSED — see SECURITY_SPEC). The single-layer fast
+path is unchanged (byte-identical). Both render boundaries re-gate on
+`isSafeAuthoringCssGradient(safe) || isSafeAuthoringCssBackgroundLayers(safe)` so a multi-layer
+value actually PAINTS: the SSR inline path (`toGradientBackground` → `background-image`) and
+the per-device RAW `<style>` path (`pageResponsiveCss.ts`). The SECTION gradient branch is NEW
+(the block gradient was already wired) — a `section.style.backgroundType:"gradient"` now paints
+via `background-image` on the content box AND, for a full-bleed section, on the `100vw` bleed
+box; the gradient TYPE reuses the existing `backgroundType` `select` (`pageBackgroundTypes`
+includes `"gradient"`), so no new control was needed.
 
 ### Section style fields (`PageSectionStyleV2`) — surface preset + layered canvas + full-bleed
 
@@ -1113,6 +1147,18 @@ not a per-property CSS delta), reject-unknown + round-trip tested. Only fixed li
 (`100vw`, the 20px gutter) reach CSS — no author-controlled value. The section threads its `readSafeColor`-validated
 `style.accent` into `--surface-glow`; blocks thread a plain-color `style.background`
 (gradients/urls are left out — an invalid `radial-gradient()` retint).
+
+`section.style` also gains a present-only `glow?: PageGlow` (TASK-531), the SAME structured
+colored box-shadow spec + clamps + `composeGlowBoxShadow` render composition documented for the
+block above (merged with the enum section `shadow` via `mergeShadows`, painted on the section
+content box AND, for a full-bleed section, the `100vw` bleed box). Authored via the
+`section.style.glow.*` controls (`responsive:true`). It joins the section `assertKnownKeys`
+allowlist and ALL THREE `additionalProperties:false` section-style JSON schemas — the block
+schema, the per-breakpoint `partialSectionStyleJsonSchema`, AND the inlined TOP-LEVEL
+section-style schema (validating `sections[].style`) — in lockstep, mirroring the
+`surfacePreset`/`composition`/`fullBleed` precedent, so a top-level `style.glow` round-trips
+against the compiled `pageDocumentV2JsonSchema`. Present-only, reject-unknown, round-trip
+tested; `PAGE_DOCUMENT_SCHEMA_VERSION` stays `2` (no migration).
 
 ### Per-device scope (bounded + honest)
 

@@ -53,10 +53,14 @@ import {
 } from "./pageSectionTemplates";
 import {
   escapeAuthoringCssString,
+  isSafeAuthoringCssBackgroundLayers,
   isSafeAuthoringCssColor,
   isSafeAuthoringCssGradient,
   sanitizeAuthoringMediaUrl,
 } from "./pageAuthoringSanitizers";
+// ── TASK-531: shared pure glow-compose (Bun-free home; NEVER import the render
+// inline path — this module is Vitest-lane / import-side-effect-free).
+import { composeGlowBoxShadow, mergeShadows } from "./pageGlow";
 
 /**
  * Stable per-node attribute hooks. `pageRendererV2.tsx` already emits all
@@ -205,8 +209,31 @@ const isGradientOrUrlColor = (value: string): boolean => /gradient|url\(/i.test(
 /**
  * Stricter than the renderer's gradient sniff (`toGradientBackground`): the
  * stylesheet context additionally requires a safe charset and balanced parens.
+ *
+ * SECURITY (TASK-531): this is the SINGLE-LAYER alias. Do NOT re-bind it to the
+ * multi-layer validator. The multi-layer accept lives in
+ * `isSafeCssBackgroundValue` below, which runs the whole-value tripwire pre-pass
+ * (inside `isSafeAuthoringCssBackgroundLayers`) BEFORE allowlisting each layer —
+ * that tripwire is load-bearing because this module emits values RAW (un-escaped)
+ * into a `<style>` string via `dangerouslySetInnerHTML`.
  */
 const isSafeCssGradient = isSafeAuthoringCssGradient;
+
+/**
+ * TASK-531 — the RAW `<style>` per-device gradient allowlist. A background value
+ * is accepted only if it is a safe SINGLE-layer gradient OR passes the
+ * tripwire-bearing multi-layer allowlist (`isSafeAuthoringCssBackgroundLayers`:
+ * whole-value tripwire pre-pass → depth-0 comma split → per-layer safe-color /
+ * safe-gradient check → `PAGE_BG_MAX_LAYERS` cap; fail-closed on anything else).
+ *
+ * FORBIDDEN: do NOT widen `isSafeCssGradient` directly to accept multi-layer, and
+ * do NOT re-implement/bypass the whole-value tripwire here — this value is emitted
+ * un-escaped into the injected `<style>`, so a `url()`/`@import`/`expression(`/
+ * `</style>`-charset value MUST be rejected exactly as the write boundary rejects
+ * it. Keep the multi-layer accept routed through this tripwire-bearing validator.
+ */
+const isSafeCssBackgroundValue = (value: string): boolean =>
+  isSafeCssGradient(value) || isSafeAuthoringCssBackgroundLayers(value);
 
 const isFiniteNumber = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value);
@@ -421,8 +448,9 @@ const collectSectionDeclarations = (
     styleOverride.backgroundType !== undefined ||
     styleOverride.backgroundImage !== undefined
   ) {
-    // Mirror `toPageSectionStyle`: only `color` and `image` background types
-    // produce paint; everything else clears both channels.
+    // Mirror `toPageSectionStyle`: `color` and `image` background types produce
+    // paint, TASK-531 adds the `gradient` branch (RAW <style> boundary — gated by
+    // the tripwire-bearing multi-layer allowlist), everything else clears.
     if (mergedStyle.backgroundType === "color") {
       if (typeof mergedStyle.background === "string" && isSafeCssColor(mergedStyle.background)) {
         content.push({ property: "background-color", value: mergedStyle.background });
@@ -430,6 +458,21 @@ const collectSectionDeclarations = (
       } else {
         diag("style.background", "unsafe_color_value");
       }
+    } else if (mergedStyle.backgroundType === "gradient" && mergedStyle.background) {
+      // ── TASK-531 REGION: NEW section gradient override (the section had no
+      // gradient branch here — the SSR section branch is added in G-2). CSS
+      // gradients paint via `background-image`; the value is emitted RAW, so it
+      // MUST pass the tripwire-bearing allowlist (see `isSafeCssBackgroundValue`).
+      if (
+        typeof mergedStyle.background === "string" &&
+        isSafeCssBackgroundValue(mergedStyle.background)
+      ) {
+        content.push({ property: "background-image", value: mergedStyle.background });
+        content.push({ property: "background-color", value: "transparent" });
+      } else {
+        diag("style.background", "unsafe_background_value");
+      }
+      // ── END TASK-531 REGION ────────────────────────────────────────────────
     } else if (mergedStyle.backgroundType === "image" && mergedStyle.backgroundImage) {
       const safeBackgroundImage = sanitizeAuthoringMediaUrl(mergedStyle.backgroundImage);
       if (!safeBackgroundImage) {
@@ -450,8 +493,22 @@ const collectSectionDeclarations = (
     const value = pxValue(mergedStyle.radius);
     if (value) content.push({ property: "border-radius", value });
   }
-  if (styleOverride.shadow !== undefined) {
-    const value = shadowCssValues[mergedStyle.shadow];
+  // ── TASK-531 REGION: compose a per-device glow (G-3b). Fire when the device
+  // overrides shadow OR glow; a device-only glow (no enum shadow) still emits.
+  // `composeGlowBoxShadow` re-sanitizes the color + clamps the numbers into a
+  // fixed template, so the RAW <style> glow emit is as safe as the SSR one.
+  // `"none"` is treated as absent for the glow merge (parity with the SSR
+  // `toPageSectionBoxShadow`); an EXPLICIT `shadow` override still resets to
+  // `box-shadow: none` when no glow is present (byte-identical to pre-531).
+  if (styleOverride.shadow !== undefined || styleOverride.glow !== undefined) {
+    const enumShadow =
+      mergedStyle.shadow && mergedStyle.shadow !== "none"
+        ? shadowCssValues[mergedStyle.shadow]
+        : undefined;
+    const glow = composeGlowBoxShadow(mergedStyle.glow);
+    const value =
+      mergeShadows(enumShadow, glow) ??
+      (styleOverride.shadow !== undefined ? shadowCssValues[mergedStyle.shadow] : undefined);
     if (value) content.push({ property: "box-shadow", value });
   }
 
@@ -587,7 +644,11 @@ const collectBlockDeclarations = (
         diag("style.background", "unsafe_color_value");
       }
     } else if (mergedStyle.backgroundType === "gradient" && mergedStyle.background) {
-      if (isSafeCssGradient(mergedStyle.background)) {
+      // ── TASK-531: relax the single-layer re-gate to the tripwire-bearing
+      // multi-layer allowlist (the only change to this branch) so a per-device
+      // multi-layer gradient override paints. RAW <style> emit — see the FORBIDDEN
+      // note on `isSafeCssBackgroundValue`; never widen `isSafeCssGradient` here.
+      if (isSafeCssBackgroundValue(mergedStyle.background)) {
         visual.push({ property: "background-image", value: mergedStyle.background });
         visual.push({ property: "background-color", value: "transparent" });
         visual.push({ property: "--coderso-block-surface", value: "initial" });
@@ -621,8 +682,19 @@ const collectBlockDeclarations = (
     const value = pxValue(mergedStyle.radius);
     if (value) visual.push({ property: "border-radius", value });
   }
-  if (styleOverride.shadow !== undefined) {
-    const value = shadowCssValues[mergedStyle.shadow ?? ""];
+  // ── TASK-531 REGION: compose a per-device glow (G-3b), same shape as the
+  // section branch — fire on shadow OR glow; a device-only glow still emits.
+  // `"none"` treated as absent for the glow merge; an EXPLICIT shadow override
+  // still resets to `box-shadow: none` when no glow is present (pre-531 parity).
+  if (styleOverride.shadow !== undefined || styleOverride.glow !== undefined) {
+    const enumShadow =
+      mergedStyle.shadow && mergedStyle.shadow !== "none"
+        ? shadowCssValues[mergedStyle.shadow]
+        : undefined;
+    const glow = composeGlowBoxShadow(mergedStyle.glow);
+    const value =
+      mergeShadows(enumShadow, glow) ??
+      (styleOverride.shadow !== undefined ? shadowCssValues[mergedStyle.shadow ?? ""] : undefined);
     if (value) visual.push({ property: "box-shadow", value });
   }
   if (

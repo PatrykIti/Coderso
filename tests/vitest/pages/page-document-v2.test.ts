@@ -2178,7 +2178,8 @@ describe("section full-bleed background model (TASK-525-01-L02)", () => {
     );
   });
 
-  test("fullBleed:true validates against the JSON schema", () => {
+  // Expensive schema compile ⇒ 30s timeout (sibling AJV tests convention).
+  test("fullBleed:true validates against the JSON schema", { timeout: 30_000 }, () => {
     const normalized = normalizePageDocumentV2ForWrite(withSectionStyle({ fullBleed: true }));
     const ajv = new Ajv({ allErrors: true, strict: true });
     const validate = ajv.compile(pageDocumentV2JsonSchema);
@@ -2485,7 +2486,10 @@ describe("block reveal-delay model (TASK-525-02-L01)", () => {
     );
   });
 
-  test("revealDelay validates against the JSON schema", () => {
+  // Compiling `pageDocumentV2JsonSchema` is expensive; under full-file load the
+  // default 5s timeout can be exceeded (pre-existing latent flake — sibling AJV
+  // tests already use { timeout: 30_000 }). Align this one for stability.
+  test("revealDelay validates against the JSON schema", { timeout: 30_000 }, () => {
     const normalized = normalizePageDocumentV2ForWrite(docWithBlockStyle({ revealDelay: 240 }));
     const ajv = new Ajv({ allErrors: true, strict: true });
     const validate = ajv.compile(pageDocumentV2JsonSchema);
@@ -2678,16 +2682,197 @@ describe("composition style model (TASK-522-01-L03)", () => {
     expect(style.surfaceTint).toBe("rgba(142,232,255,.5)");
   });
 
-  test("surfaceTint validates against the block-style JSON schema (additionalProperties:false)", () => {
-    const doc = docWithBlockStyle({ surfaceTint: "#8ee8ff" });
-    const normalized = normalizePageDocumentV2ForWrite(doc);
-    const ajv = new Ajv({ allErrors: true, strict: true });
-    expect(ajv.compile(pageDocumentV2JsonSchema)(normalized)).toBe(true);
-  });
+  // See the revealDelay AJV test note: expensive schema compile ⇒ 30s timeout.
+  test(
+    "surfaceTint validates against the block-style JSON schema (additionalProperties:false)",
+    { timeout: 30_000 },
+    () => {
+      const doc = docWithBlockStyle({ surfaceTint: "#8ee8ff" });
+      const normalized = normalizePageDocumentV2ForWrite(doc);
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      expect(ajv.compile(pageDocumentV2JsonSchema)(normalized)).toBe(true);
+    }
+  );
 
   test("unknown block-style key still rejects with surfaceTint in the allowlist", () => {
     expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ wobble: 1 }))).toThrow(
       "Unknown page document field: sections.0.blocks.0.style.wobble"
     );
+  });
+});
+
+// TASK-531-01-L02/L04 — glow model (arbitrary colored box-shadow) + multi-layer
+// background at the WRITE boundary. Present-only, reject-unknown, fail-soft, joins
+// all three additionalProperties:false JSON schemas in lockstep.
+describe("glow model + multi-layer background write boundary (TASK-531-01)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const docWithSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    (normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {}) as Record<
+      string,
+      unknown
+    >;
+  const sectionStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.style as unknown as Record<string, unknown>;
+
+  const REFERENCE_GLOW = { color: "rgba(142,232,255,.22)", blur: 45, y: 18 } as const;
+
+  // ── Round-trip on BOTH targets ──────────────────────────────────────────────
+  test("round-trips glow on a block (present-only, byte-stable second pass)", () => {
+    const first = normalizePageDocumentV2ForWrite(
+      docWithBlockStyle({ glow: { ...REFERENCE_GLOW } })
+    );
+    expect(first.sections[0]!.blocks[0]!.style).toMatchObject({
+      glow: { color: "rgba(142,232,255,.22)", blur: 45, y: 18 },
+    });
+    // Unset offsets/spread are OMITTED (present-only — not defaulted into storage).
+    const glow = (first.sections[0]!.blocks[0]!.style as Record<string, unknown>).glow as Record<
+      string,
+      unknown
+    >;
+    expect("x" in glow).toBe(false);
+    expect("spread" in glow).toBe(false);
+    // Re-normalizing the stored doc is byte-identical (round-trip stability).
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.blocks[0]!.style).toEqual(first.sections[0]!.blocks[0]!.style);
+  });
+
+  test("round-trips glow on a section (present-only, byte-stable second pass)", () => {
+    const first = normalizePageDocumentV2ForWrite(
+      docWithSectionStyle({ glow: { color: "#8ee8ff", blur: 28 } })
+    );
+    expect(sectionStyle(cloneDocument(first))).toMatchObject({
+      glow: { color: "#8ee8ff", blur: 28 },
+    });
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.style).toEqual(first.sections[0]!.style);
+  });
+
+  // ── Present-only omit ───────────────────────────────────────────────────────
+  test("glow is present-only — omitted when unauthored on block AND section", () => {
+    expect("glow" in blockStyle(docWithBlockStyle({}))).toBe(false);
+    expect("glow" in sectionStyle(docWithSectionStyle({}))).toBe(false);
+  });
+
+  // ── Reject-unknown nested key (fail-closed READ trap) ───────────────────────
+  test("an unknown nested glow key rejects fail-closed (block AND section)", () => {
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithBlockStyle({ glow: { color: "#8ee8ff", wobble: 1 } }))
+    ).toThrow("Unknown page document field: sections.0.blocks.0.style.glow.wobble");
+    expect(() =>
+      normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({ glow: { color: "#8ee8ff", wobble: 1 } })
+      )
+    ).toThrow("Unknown page document field: sections.0.style.glow.wobble");
+  });
+
+  // ── Fail-soft VALUES ────────────────────────────────────────────────────────
+  test("a bad glow color omits the WHOLE glow (fail-soft, color required)", () => {
+    // expression()/url()/named-with-parens are not safe colors ⇒ the whole glow drops.
+    expect(
+      "glow" in blockStyle(docWithBlockStyle({ glow: { color: "expression(alert(1))" } }))
+    ).toBe(false);
+    expect("glow" in blockStyle(docWithBlockStyle({ glow: { color: "url(//evil/x)" } }))).toBe(
+      false
+    );
+    // A glow object with NO color at all ⇒ omitted (color is required).
+    expect("glow" in blockStyle(docWithBlockStyle({ glow: { blur: 40 } }))).toBe(false);
+    expect("glow" in sectionStyle(docWithSectionStyle({ glow: { color: "not a color;}" } }))).toBe(
+      false
+    );
+  });
+
+  test("glow numerics clamp fail-soft to the 531 bounds", () => {
+    const clamped = blockStyle(
+      docWithBlockStyle({ glow: { color: "#8ee8ff", blur: 9999, spread: -999, x: 5000, y: -5000 } })
+    ).glow as Record<string, number>;
+    expect(clamped.blur).toBe(120); // PAGE_GLOW_BLUR_CLAMP.max
+    expect(clamped.spread).toBe(-40); // PAGE_GLOW_SPREAD_CLAMP.min
+    expect(clamped.x).toBe(80); // PAGE_GLOW_OFFSET_CLAMP.max
+    expect(clamped.y).toBe(-80); // PAGE_GLOW_OFFSET_CLAMP.min
+  });
+
+  // ── JSON schema lockstep (all THREE additionalProperties:false style schemas) ─
+  test(
+    "glow validates against the compiled pageDocumentV2JsonSchema on block AND section",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      const blockNormalized = normalizePageDocumentV2ForWrite(
+        docWithBlockStyle({ glow: { ...REFERENCE_GLOW } })
+      );
+      expect(validate(blockNormalized)).toBe(true);
+      // Top-level section style is validated by the INLINED section schema (:1827),
+      // separate from the partial — omitting glow there would fail this assertion.
+      const sectionNormalized = normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({ glow: { color: "#8ee8ff", blur: 28 } })
+      );
+      expect(validate(sectionNormalized)).toBe(true);
+
+      // A hand-injected unknown nested glow key fails additionalProperties:false too.
+      const tampered = cloneDocument(blockNormalized);
+      (
+        (tampered.sections[0]!.blocks[0]!.style as Record<string, unknown>).glow as Record<
+          string,
+          unknown
+        >
+      ).wobble = 1;
+      expect(validate(tampered)).toBe(false);
+      // A glow with no color fails required:["color"].
+      const noColor = cloneDocument(blockNormalized);
+      (noColor.sections[0]!.blocks[0]!.style as Record<string, unknown>).glow = { blur: 10 };
+      expect(validate(noColor)).toBe(false);
+    }
+  );
+
+  // ── Multi-layer background at the WRITE boundary (G-1) ───────────────────────
+  test("a safe multi-layer background round-trips through the block AND section write boundary", () => {
+    const ctaCard =
+      "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+    expect(
+      blockStyle(docWithBlockStyle({ background: ctaCard, backgroundType: "gradient" })).background
+    ).toBe(ctaCard);
+    expect(
+      sectionStyle(docWithSectionStyle({ background: ctaCard, backgroundType: "gradient" }))
+        .background
+    ).toBe(ctaCard);
+  });
+
+  test("a url()-bearing multi-layer background is rejected at the write boundary (no beacon stored)", () => {
+    // The section normalizer sanitizes background via sanitizeAuthoringCssBackground:
+    // the trailing url() layer fails the per-layer allowlist + whole-value tripwire, so
+    // the whole value drops to the default (no verbatim beacon persisted).
+    const beacon = "linear-gradient(#fff,#000), url(//evil/beacon)";
+    expect(
+      sectionStyle(docWithSectionStyle({ background: beacon, backgroundType: "gradient" }))
+        .background
+    ).not.toBe(beacon);
+    // Over-cap (7 layers) also rejected.
+    const overCap = Array.from({ length: 7 }, () => "#000").join(", ");
+    expect(
+      sectionStyle(docWithSectionStyle({ background: overCap, backgroundType: "gradient" }))
+        .background
+    ).not.toBe(overCap);
+  });
+
+  // ── Byte-identity for a no-effect document ──────────────────────────────────
+  test("a doc with no glow / no multi-layer / no section-gradient is byte-identical across two passes", () => {
+    const base = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("glow" in (base.sections[0]!.style as Record<string, unknown>)).toBe(false);
+    const rerun = normalizePageDocumentV2ForWrite(cloneDocument(base));
+    expect(rerun).toEqual(base);
   });
 });

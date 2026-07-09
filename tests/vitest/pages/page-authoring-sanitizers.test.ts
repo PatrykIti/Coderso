@@ -6,8 +6,10 @@ import {
   createPageSectionV2,
 } from "../../../core/services/pages/pageDocumentV2";
 import {
+  PAGE_BG_MAX_LAYERS,
   composeAuthoringGradientCss,
   escapeAuthoringCssString,
+  isSafeAuthoringCssBackgroundLayers,
   normalizeAuthoringSafeHref,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
@@ -69,6 +71,87 @@ test("authoring CSS sanitizers keep safe color and gradient values fail closed",
   expect(sanitizeAuthoringCssColor("red;}body{display:none")).toBeNull();
   expect(sanitizeAuthoringCssBackground("url(javascript:alert(1))")).toBeNull();
   expect(sanitizeAuthoringCssBackground("linear-gradient(90deg, #000, </style>)")).toBeNull();
+});
+
+test("TASK-531: multi-layer background sanitizer accepts safe glow-over-gradient layers", () => {
+  // Reference `.cta-card`: radial glow OVER a base linear gradient — the whole reason
+  // 531 relaxes the write boundary. Value returned trimmed-unchanged.
+  const ctaCard =
+    "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+  expect(sanitizeAuthoringCssBackground(ctaCard)).toBe(ctaCard);
+  expect(isSafeAuthoringCssBackgroundLayers(ctaCard)).toBe(true);
+
+  // A color layer + a gradient layer (allowlist accepts either per layer).
+  const colorPlusGradient =
+    "linear-gradient(180deg,#eaf3ff,#dfe9ff), radial-gradient(circle,#8ee8ff,transparent 70%)";
+  expect(sanitizeAuthoringCssBackground(colorPlusGradient)).toBe(colorPlusGradient);
+
+  // Single-layer values STILL accepted byte-identically through the unchanged fast path
+  // (they never enter the multi-layer branch — no top-level comma).
+  expect(sanitizeAuthoringCssBackground("linear-gradient(90deg,#000,#fff)")).toBe(
+    "linear-gradient(90deg,#000,#fff)"
+  );
+  expect(sanitizeAuthoringCssBackground("#0d9488")).toBe("#0d9488");
+  expect(sanitizeAuthoringCssBackground("var(--color-primary)")).toBe("var(--color-primary)");
+  expect(sanitizeAuthoringCssBackground("rgba(0,0,0,.5)")).toBe("rgba(0,0,0,.5)");
+  // A single gradient is NOT a "multi-layer" value (needs >= 2 top-level layers).
+  expect(isSafeAuthoringCssBackgroundLayers("linear-gradient(90deg,#000,#fff)")).toBe(false);
+});
+
+test("TASK-531: multi-layer background sanitizer rejects hostile constructs (XSS/mXSS corpus)", () => {
+  const rejected = [
+    // The original attack: a trailing url() beacon layer after a valid gradient head.
+    "linear-gradient(#fff,#000), url(//evil/beacon)",
+    // A bare url() alone (single layer, but url() rejected by the fast path too).
+    "url(//evil/x)",
+    // Other fetch-capable CSS image functions as trailing layers.
+    'linear-gradient(#fff,#000), image-set("//evil/x" 1x)',
+    "element(#foo), linear-gradient(#fff,#000)",
+    "cross-fade(url(//evil/a), url(//evil/b)), linear-gradient(#fff,#000)",
+    "image(//evil/x), linear-gradient(#fff,#000)",
+    // Scriptable / navigable protocols as a layer.
+    "javascript:alert(1), linear-gradient(#fff,#000)",
+    "linear-gradient(#fff,#000), data:text/html,<script>",
+    "vbscript:msgbox(1), linear-gradient(#fff,#000)",
+    // At-rule / legacy IE injection vectors (whole-value tripwire).
+    "@import url(evil); linear-gradient(#fff,#000)",
+    "linear-gradient(#fff,#000), expression(alert(1))",
+    "linear-gradient(#fff,#000), behavior:url(#default#foo)",
+    "-moz-binding:url(//evil/x), linear-gradient(#fff,#000)",
+    // A layer that is neither a safe color nor a safe gradient (fail-closed, whole value).
+    "12 34, linear-gradient(#fff,#000)",
+  ];
+  for (const value of rejected) {
+    expect(sanitizeAuthoringCssBackground(value)).toBeNull();
+    expect(isSafeAuthoringCssBackgroundLayers(value)).toBe(false);
+  }
+
+  // Layer-count cap: 7 safe top-level layers is over PAGE_BG_MAX_LAYERS (6) ⇒ reject.
+  const overCap = Array.from({ length: PAGE_BG_MAX_LAYERS + 1 }, () => "#000").join(", ");
+  expect(sanitizeAuthoringCssBackground(overCap)).toBeNull();
+  expect(isSafeAuthoringCssBackgroundLayers(overCap)).toBe(false);
+  // Exactly at the cap is accepted (boundary).
+  const atCap = Array.from({ length: PAGE_BG_MAX_LAYERS }, () => "#000").join(", ");
+  expect(isSafeAuthoringCssBackgroundLayers(atCap)).toBe(true);
+});
+
+test("TASK-531: multi-layer split is paren-aware and the accept corpus is idempotent", () => {
+  // A comma INSIDE a gradient's own paren group is NOT a top-level split point — the
+  // value is treated as ONE safe layer (single-layer fast path), not shredded.
+  const singleWithInnerCommas = "radial-gradient(circle, #8ee8ff, transparent 70%)";
+  expect(sanitizeAuthoringCssBackground(singleWithInnerCommas)).toBe(singleWithInnerCommas);
+  expect(isSafeAuthoringCssBackgroundLayers(singleWithInnerCommas)).toBe(false); // one layer
+
+  // Idempotence over the accept corpus.
+  for (const value of [
+    "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)",
+    "linear-gradient(180deg,#eaf3ff,#dfe9ff), radial-gradient(circle,#8ee8ff,transparent 70%)",
+    "linear-gradient(90deg,#000,#fff)",
+  ]) {
+    const first = sanitizeAuthoringCssBackground(value);
+    expect(first).not.toBeNull();
+    expect(sanitizeAuthoringCssBackground(first as string)).toBe(first);
+  }
 });
 
 test("gradient composer orders stops, clamps values, and rejects unsafe colors", () => {

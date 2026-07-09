@@ -73,8 +73,20 @@ export const sanitizePageEditorControlValue = (
   control: PageEditorControlDefinition,
   value: unknown
 ): unknown => {
-  const [group, key] = control.overridePath;
+  const [group, key, ...rest] = control.overridePath;
   if (group === "props") return sanitizeBlockPropValue(key, value);
+  // ── TASK-531 REGION: nested `style.glow.color` (length-3 overridePath) client
+  // write-guard. The `[group, key]` destructure leaves `key="glow"` (NOT "color"),
+  // so `sanitizeStyleValue` matches none of its cases and would return the glow
+  // color UNSANITIZED into optimistic client state. Route the nested color path
+  // through `sanitizeAuthoringCssColor` here (defence-in-depth; the persist
+  // boundary `normalizeGlow` re-sanitizes). Mirrors sibling 533-02's length-4
+  // `border.*.color` handling; distinct condition, additive. Numeric glow fields
+  // (blur/spread/x/y) pass through — clamped at the persist boundary.
+  if (group === "style" && key === "glow" && rest[0] === "color") {
+    return sanitizeAuthoringCssColor(value);
+  }
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
   if (group === "style") return sanitizeStyleValue(key, value);
   return value;
 };

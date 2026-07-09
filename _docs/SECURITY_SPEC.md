@@ -493,16 +493,65 @@ Rotacja klucza:
   (`PageDocumentRender`, defence in depth — React SSR does not block a `;`-delimited CSS
   injection in a `style` value). A value that fails the sanitizer returns `null` and the
   key is dropped (fail-soft); no raw stored string ever reaches a CSS declaration.
-- **Gradient hardening.** `isSafeAuthoringCssGradient` now rejects any `url(` token AND
-  any top-level comma-separated multi-layer form (`isSingleGradientLayer`: exactly one
-  gradient head + its balanced parens, with nothing after the matching close paren). This
-  closes the `linear-gradient(...), url(//evil.example/beacon.png)` outbound-fetch layer
-  and the nested `radial-gradient(circle,url(//x))` case. The gradient charset already
-  excluded `;`/`{`/`}`/`<`/`>`/`:` (no declaration or `</style>` breakout); this addition
-  closes the residual `url()`-layer fetch surface. The hardening is a single-writer change
-  in `pageAuthoringSanitizers.ts` and applies to EVERY caller of
-  `sanitizeAuthoringCssBackground` (page canvas background + all TASK-522 background
-  authoring), not just the page canvas.
+- **Gradient hardening.** `isSafeAuthoringCssGradient` rejects any `url(` token AND is a
+  SINGLE-gradient guard (`isSingleGradientLayer`: exactly one gradient head + its balanced
+  parens, with nothing after the matching close paren). The gradient charset excludes
+  `;`/`{`/`}`/`<`/`>`/`:` (no declaration or `</style>` breakout). This closes the nested
+  `radial-gradient(circle,url(//x))` case and, per-layer, the `url()`-layer fetch surface.
+- **Multi-layer background allowlist (TASK-531 — the one new attack surface).**
+  `sanitizeAuthoringCssBackground` now ACCEPTS a COMMA-SEPARATED list of safe gradient/color
+  layers (glow-over-gradient — the reference `.cta-card`/`art-*` look) via
+  `isSafeAuthoringCssBackgroundLayers`. The relaxation is an **ALLOWLIST applied per
+  top-level comma-split layer** (NOT a loosened regex, NOT a denylist), NOT a widening of
+  `isSingleGradientLayer` (unchanged — still the per-layer guard, now called PER layer):
+  - a **whole-value tripwire pre-pass** runs FIRST and fails closed on any
+    `url(`/`image-set(`/`image(`/`element(`/`cross-fade(`/`@import`/`expression(`/
+    `behavior:`/`-moz-binding`/`javascript:`/`vbscript:`/`data:` anywhere in the value;
+  - the value is split at **depth-0 commas only** (a comma inside a gradient's own parens
+    stays with its layer — never a naive `split(",")`);
+  - EVERY split layer must independently pass `isSafeAuthoringCssColor` OR
+    `isSafeAuthoringCssGradient`, so a `url(...)`/`image-set(...)`/non-color-non-gradient
+    layer fails (a `url()` layer is neither), and the layer count is capped at
+    `PAGE_BG_MAX_LAYERS` (6);
+  - the whole value is length-capped at `PAGE_CSS_VALUE_MAX_LENGTH` (512) BEFORE any regex
+    runs (algorithmic-complexity / ReDoS defence — the `rgb()`/`hsl()` charset patterns also
+    dropped a redundant leading `\s*` that could backtrack); it fails CLOSED on any bad
+    layer / over-cap / tripwire hit. This keeps `linear-gradient(...),
+    url(//evil.example/beacon.png)` and every `url()`/`javascript:`/`@import`/`expression(`
+    layer REJECTED (asserted by the TASK-523 outbound-beacon suite, which stays green). The
+    single-layer fast path is UNCHANGED (byte-identical), so no existing single-layer
+    document changes behavior. The hardening is a single-writer change in
+    `pageAuthoringSanitizers.ts` and applies to EVERY caller of
+    `sanitizeAuthoringCssBackground` (page canvas background + all TASK-522/531 background
+    authoring).
+- **Two render boundaries relax in lockstep on the SAME validator.** A multi-layer value
+  must PAINT, so both render paths re-gate through `isSafeAuthoringCssGradient(safe) ||
+  isSafeAuthoringCssBackgroundLayers(safe)` — never a value the write boundary rejects:
+  1. the SSR inline-style path (`toGradientBackground`, `pageRendererV2.tsx`), whose output
+     lands in a React-escaped `CSSProperties` object; and
+  2. the per-device RAW `<style>` path (`pageResponsiveCss.ts`), which emits declarations
+     UN-escaped via `dangerouslySetInnerHTML` — there the whole-value tripwire baked into
+     `isSafeAuthoringCssBackgroundLayers` is LOAD-BEARING. That module keeps
+     `isSafeCssGradient` as the single-layer alias and routes multi-layer through a separate
+     `isSafeCssBackgroundValue` helper with a code-comment FORBIDDING a naive re-bind of
+     `isSafeCssGradient` to the multi-layer validator without the tripwire pre-pass. Both
+     boundaries reuse the exported validator, so a value one accepts is exactly what the
+     write boundary accepts (a per-device `url()`/`@import`/over-cap override emits NO rule +
+     an `unsafe_background_value` diagnostic).
+- **Colored glow box-shadow (TASK-531) is a STRUCTURED spec, never a raw string.**
+  `PageGlow` (`{ color, blur?, spread?, x?, y? }`) on both `PageBlockStyleV2` and
+  `PageSectionStyleV2` is present-only, reject-unknown (`assertKnownKeys` +
+  `additionalProperties:false` in all three style schemas), and REQUIRES a valid `color`
+  (sanitized via `sanitizeAuthoringCssColor` at write — an invalid/absent color OMITS the
+  whole glow, fail-soft). The numeric fields are clamped at write (`PAGE_GLOW_BLUR_CLAMP`
+  0..120, `PAGE_GLOW_SPREAD_CLAMP` -40..80, `PAGE_GLOW_OFFSET_CLAMP` ±80). At BOTH render
+  boundaries the shared pure `composeGlowBoxShadow` (`pageGlow.ts`) RE-sanitizes the color
+  and RE-clamps the numbers into a FIXED `"<x>px <y>px <blur>px <spread>px <color>"`
+  template (defence in depth) — it NEVER interpolates a raw author string, so no arbitrary
+  `box-shadow` token (which could smuggle a `url()`) can be emitted; a bad color composes to
+  nothing. The editor client mutation guard (`sanitizePageEditorControlValue`) also routes
+  the nested length-3 `style.glow.color` control path through `sanitizeAuthoringCssColor`, so
+  even optimistic client preview state never holds an unsanitized glow color.
 
 ## Assistant security baseline (v1)
 

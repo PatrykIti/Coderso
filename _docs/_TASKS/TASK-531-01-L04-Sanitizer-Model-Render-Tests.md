@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Security / Content (Pages) / Site Render / Testing
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-09)
 
 ---
 
