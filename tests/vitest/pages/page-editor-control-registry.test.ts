@@ -1629,6 +1629,9 @@ describe("nested glow.color client mutation guard (TASK-531-01-L03, finding #4)"
     expect(
       sanitizePageEditorControlValue(control, "linear-gradient(#fff,#000), url(//evil/beacon)")
     ).toBeNull();
+  });
+});
+
 // TASK-534-04-L04 — declarative-interactivity control coverage (switcher tabs /
 // variant / activeIndex, gallery filter controls, scrollHint glyph/label, the
 // single universal magnetic toggle, the section noise toggle).
