@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Site Render
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-09
 
 ---
 

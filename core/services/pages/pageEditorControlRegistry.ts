@@ -47,6 +47,10 @@ import {
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
   pageTypographyFontWeights,
+  // ── TASK-532 typography fidelity (Bundle B) ──
+  pageTypographyTextTransforms,
+  pageDividerAligns,
+  PAGE_DIVIDER_WIDTH_CLAMP,
   type PageBlockType,
   type PageBreakpoint,
   type PageSectionVariant,
@@ -825,6 +829,32 @@ export const pageTypographyBlockControls: readonly PageEditorControlDefinition[]
     responsive: true,
     options: pageTypographyFontSizes,
   }),
+  // ── TASK-532 typography fidelity (Bundle B) — fluid size + text-transform ──
+  // Both `fontSize` (token) and `fontSizeCustom` (fluid) are always shown (the
+  // registry has no value-conditional visibility); the "fluid wins over token"
+  // precedence is a RENDER rule (L05). A per-device font-size STRING is
+  // CSS-expressible, so this control is responsive.
+  control({
+    id: "block.style.fontSizeCustom",
+    panel: "typography",
+    target: "block",
+    label: "Fluid size",
+    path: ["style", "fontSizeCustom"],
+    input: "text",
+    responsive: true,
+  }),
+  control({
+    id: "block.style.textTransform",
+    panel: "typography",
+    target: "block",
+    label: "Text transform",
+    path: ["style", "textTransform"],
+    input: "select",
+    responsive: true,
+    options: pageTypographyTextTransforms,
+    fallback: "none",
+  }),
+  // ── end TASK-532 ──
   control({
     id: "block.style.fontWeight",
     panel: "typography",
@@ -1178,6 +1208,26 @@ export const pageBlockControlRegistry: Record<
       input: "number",
       clamp: { min: 1, max: 16 },
     }),
+    // ── TASK-532 eyebrow divider (Bundle B) — decorative gradient rule ──
+    blockPropControl("divider", "gradient", {
+      label: "Gradient rule",
+      input: "switch",
+      panel: "style",
+    }),
+    blockPropControl("divider", "width", {
+      label: "Rule length",
+      input: "number",
+      panel: "style",
+      clamp: PAGE_DIVIDER_WIDTH_CLAMP,
+      unit: "px",
+    }),
+    blockPropControl("divider", "align", {
+      label: "Rule align",
+      input: "segmented",
+      panel: "style",
+      options: pageDividerAligns,
+    }),
+    // ── end TASK-532 ──
   ],
   spacer: [
     blockPropControl("spacer", "size", {

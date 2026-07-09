@@ -537,6 +537,163 @@ describe("PageDocumentV2", () => {
     }
   });
 
+  // ── TASK-532 typography fidelity (Bundle B) — model + schema round-trip ──
+  test("TASK-532 fluid font-size + text-transform + heavier weights round-trip present-only", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.style = {
+      fontSizeCustom: " clamp(2.6rem,5vw,4.4rem) ",
+      fontSize: "lg",
+      fontWeight: "extrabold",
+      textTransform: "uppercase",
+    } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    document.sections[0]!.blocks[1]!.style = {
+      fontWeight: "black",
+      textTransform: "none", // present-only reset ⇒ omitted
+      fontSizeCustom: "expression(1)", // rejected by the grammar ⇒ omitted
+    } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+
+    // Custom size is stored trimmed; the token remains (custom-wins is a render
+    // concern); heavier weight + transform round-trip.
+    expect(normalized.sections[0]?.blocks[0]?.style).toEqual({
+      fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)",
+      fontSize: "lg",
+      fontWeight: "extrabold",
+      textTransform: "uppercase",
+    });
+    // "none" transform + rejected fluid size are both OMITTED (present-only).
+    expect(normalized.sections[0]?.blocks[1]?.style).toEqual({
+      fontWeight: "black",
+    });
+  });
+
+  test("TASK-532 fail-closed enums: bad fontWeight/textTransform throw on write", () => {
+    const badWeight = buildDocument();
+    badWeight.sections[0]!.blocks[0]!.style = {
+      fontWeight: "ultra",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(badWeight)).toThrow(
+      "Invalid sections.0.blocks.0.style.fontWeight."
+    );
+
+    const badTransform = buildDocument();
+    badTransform.sections[0]!.blocks[0]!.style = {
+      textTransform: "rotate",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(badTransform)).toThrow(
+      "Invalid sections.0.blocks.0.style.textTransform."
+    );
+  });
+
+  test("TASK-532 eyebrow divider width/align/gradient round-trip present-only + clamp + fail-closed", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0] = {
+      id: "blk_divider",
+      type: "divider",
+      props: { tone: "accent", thickness: 2, width: 34, align: "left", gradient: true },
+      visibility: { visible: true },
+    };
+    document.sections[0]!.blocks[1] = {
+      id: "blk_divider2",
+      type: "divider",
+      props: { tone: "neutral", thickness: 1, width: 9999, align: "center" },
+      visibility: { visible: true },
+    };
+
+    const normalized = normalizePageDocumentV2ForWrite(document);
+    expect(normalized.sections[0]?.blocks[0]?.props).toEqual({
+      tone: "accent",
+      thickness: 2,
+      width: 34,
+      align: "left",
+      gradient: true,
+    });
+    // width over the cap clamps to 400 (fail-soft); no gradient authored.
+    expect(normalized.sections[0]?.blocks[1]?.props).toEqual({
+      tone: "neutral",
+      thickness: 1,
+      width: 400,
+      align: "center",
+    });
+
+    // align:"skew" is fail-closed.
+    const badAlign = buildDocument();
+    badAlign.sections[0]!.blocks[0] = {
+      id: "blk_divider3",
+      type: "divider",
+      props: { tone: "neutral", thickness: 1, align: "skew" },
+      visibility: { visible: true },
+    };
+    expect(() => normalizePageDocumentV2ForWrite(badAlign)).toThrow();
+  });
+
+  test("TASK-532 legacy divider without new props is byte-identical (present-only)", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0] = {
+      id: "blk_divider",
+      type: "divider",
+      props: { tone: "muted", thickness: 3 },
+      visibility: { visible: true },
+    };
+    const written = normalizePageDocumentV2ForWrite(document);
+    expect(written.sections[0]?.blocks[0]?.props).toEqual({ tone: "muted", thickness: 3 });
+    // No new decorative keys leaked in.
+    expect(written.sections[0]?.blocks[0]?.props).not.toHaveProperty("width");
+    expect(written.sections[0]?.blocks[0]?.props).not.toHaveProperty("align");
+    expect(written.sections[0]?.blocks[0]?.props).not.toHaveProperty("gradient");
+  });
+
+  test(
+    "TASK-532 JSON schema accepts new fields on inline + responsive style, rejects unknown",
+    { timeout: AJV_COMPILE_TEST_TIMEOUT_MS },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+
+      const inline = buildDocument();
+      inline.sections[0]!.blocks[0]!.style = {
+        fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)",
+        textTransform: "uppercase",
+        fontWeight: "black",
+      } as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(inline)).toBe(true);
+
+      // The responsive-override style path is validated by the SAME $ref-shared
+      // schema (no separate partial schema exists).
+      const responsive = buildDocument();
+      responsive.sections[0]!.blocks[0]!.responsive = {
+        tablet: { style: { fontSizeCustom: "1.45rem", textTransform: "capitalize" } },
+      } as PageDocumentV2["sections"][number]["blocks"][number]["responsive"];
+      expect(validate(responsive)).toBe(true);
+
+      // Unknown style key still rejects (additionalProperties:false).
+      const unknownKey = buildDocument();
+      unknownKey.sections[0]!.blocks[0]!.style = {
+        fontSizeThing: "1rem",
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(unknownKey)).toBe(false);
+
+      // Unknown textTransform enum value rejects at the schema too.
+      const badTransform = buildDocument();
+      badTransform.sections[0]!.blocks[0]!.style = {
+        textTransform: "rotate",
+      } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+      expect(validate(badTransform)).toBe(false);
+    }
+  );
+
+  test("TASK-532 fontSizeThing unknown style key throws PageDocumentError on write", () => {
+    const document = buildDocument();
+    document.sections[0]!.blocks[0]!.style = {
+      fontSizeThing: "1rem",
+    } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    expect(() => normalizePageDocumentV2ForWrite(document)).toThrow();
+    expect(isPageDocumentError(safeNormalizeError(document), "page_document_unknown_field")).toBe(
+      true
+    );
+  });
+
   test("normalizes text marks with clamped ranges and same-type conflict removal", () => {
     const document = buildDocument();
     document.sections[0]!.blocks[0]!.props = {
@@ -784,7 +941,10 @@ describe("PageDocumentV2", () => {
 
       const unknownToken = buildDocument();
       unknownToken.sections[0]!.blocks[0]!.style = {
-        fontWeight: "black",
+        // TASK-532 (Bundle B): the weight enum grew to include "black" (900), so
+        // the invalid-token fixture is re-baselined to a token that stays OUTSIDE
+        // the 6-member enum, preserving the reject-unknown-token intent.
+        fontWeight: "ultrablack",
       } as unknown as PageDocumentV2["sections"][number]["blocks"][number]["style"];
       expect(validate(unknownToken)).toBe(false);
 

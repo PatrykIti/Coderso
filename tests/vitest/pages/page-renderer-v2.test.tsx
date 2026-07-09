@@ -3619,7 +3619,9 @@ test("TASK-535 — FOOTER-ONLY reveal: primary has none, footer authors it ⇒ r
 
 test("TASK-535 — FOOTER-ONLY composition: primary has none, footer authors a surface ⇒ composition CSS STILL emitted (from the footer)", () => {
   const mainNoEffect = createEffectsDocument([createSection()]);
-  const footerComposition = createEffectsDocument([createEffectSection({ surfacePreset: "glass" })]);
+  const footerComposition = createEffectsDocument([
+    createEffectSection({ surfacePreset: "glass" }),
+  ]);
   const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoEffect} />);
   const secondary = renderToStaticMarkup(
     <PageDocumentRender document={footerComposition} documentRole="secondary" rootTag="div" />
@@ -4490,7 +4492,9 @@ test("TASK-535 — a tilt+layer child inside a layered canvas positions the WRAP
   expect(wrapperTag).toContain("--layer-z:4");
   // The real block frame carries the tilt + its id — but NOT the layer placement,
   // so it never goes absolute and escapes the wrapper.
-  expect(html).toMatch(/data-block-id="blk-lt1"[^>]*data-block-tilt="strong"|data-block-tilt="strong"[^>]*data-block-id="blk-lt1"/);
+  expect(html).toMatch(
+    /data-block-id="blk-lt1"[^>]*data-block-tilt="strong"|data-block-tilt="strong"[^>]*data-block-id="blk-lt1"/
+  );
   expect(html).not.toMatch(/data-block-id="blk-lt1"[^>]*data-layer=/);
   // Wrapper wraps the frame (document order: wrapper `>` precedes the frame id).
   expect(html.indexOf(wrapperTag)).toBeLessThan(html.indexOf('data-block-id="blk-lt1"'));
@@ -4605,4 +4609,184 @@ test("seamless marquee copy carries NO data-block-id in canvas mode (finding 3)"
   expect(countMarkup(html, 'data-block-id="blk-m2"')).toBe(1);
   // Two tracks still render (the copy is present, just frame-less).
   expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+});
+
+// ── TASK-532 typography fidelity (Bundle B) — behavioral render ──
+test("TASK-532 toPageBlockTypographyStyle: fluid font-size wins over the discrete token", () => {
+  const custom = createPageBlockV2("heading", {
+    props: { text: "Fluid", level: "h1", align: "left" },
+    style: { fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)", fontSize: "lg" },
+  });
+  expect(toPageBlockTypographyStyle(custom).fontSize).toBe("clamp(2.6rem,5vw,4.4rem)");
+
+  // token-only path intact (regression).
+  const tokenOnly = createPageBlockV2("heading", {
+    props: { text: "Token", level: "h1", align: "left" },
+    style: { fontSize: "lg" },
+  });
+  expect(toPageBlockTypographyStyle(tokenOnly).fontSize).toBe(pageTypographyFontSizeCssValues.lg);
+
+  // text-transform emitted; heavier weight maps to the css value; unset absent.
+  const transformed = createPageBlockV2("heading", {
+    props: { text: "Up", level: "h1", align: "left" },
+    style: { textTransform: "uppercase", fontWeight: "black" },
+  });
+  const emitted = toPageBlockTypographyStyle(transformed);
+  expect(emitted.textTransform).toBe("uppercase");
+  expect(emitted.fontWeight).toBe(pageTypographyFontWeightCssValues.black);
+  expect(emitted.fontWeight).toBe("900");
+
+  const bare = createPageBlockV2("heading", {
+    props: { text: "Bare", level: "h1", align: "left" },
+  });
+  const bareEmitted = toPageBlockTypographyStyle(bare);
+  expect(bareEmitted).not.toHaveProperty("fontSize");
+  expect(bareEmitted).not.toHaveProperty("textTransform");
+});
+
+test("TASK-532 heading renders inline fluid font-size + text-transform", () => {
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-heading",
+        blocks: [
+          createPageBlockV2("heading", {
+            id: "blk-532-heading",
+            props: { text: "Fluid heading", level: "h1", align: "left" },
+            style: {
+              fontSizeCustom: "clamp(2.6rem,5vw,4.4rem)",
+              textTransform: "uppercase",
+            },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(html).toContain("font-size:clamp(2.6rem,5vw,4.4rem)");
+  expect(html).toContain("text-transform:uppercase");
+});
+
+test("TASK-532 divider gradient variant renders a gradient <span>; legacy divider is an <hr>", () => {
+  const gradientHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-divider-gradient",
+        blocks: [
+          createPageBlockV2("divider", {
+            id: "blk-532-divider-gradient",
+            props: { tone: "accent", thickness: 2, width: 34, align: "left", gradient: true },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(gradientHtml).toContain("linear-gradient(90deg");
+  expect(gradientHtml).toContain(", transparent)");
+  expect(gradientHtml).toContain("width:34px");
+  expect(gradientHtml).not.toContain("<hr");
+
+  const legacyHtml = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-divider-legacy",
+        blocks: [
+          createPageBlockV2("divider", {
+            id: "blk-532-divider-legacy",
+            props: { tone: "neutral", thickness: 1 },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(legacyHtml).toContain("<hr");
+  expect(legacyHtml).not.toContain("linear-gradient");
+});
+
+test("TASK-532 rich text block honors textColor; plain path + unset stay unchanged", () => {
+  const richColored = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-color",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-color",
+            props: { text: "<p>Aqua body</p>", format: "rich", align: "left" },
+            style: { textColor: "#22d3ee" },
+          }),
+        ],
+      })}
+    />
+  );
+  // Wrapper carries the authored color + the inherit-forcing class so every
+  // descendant inherits it. NOTE: renderToStaticMarkup asserts EMITTED MARKUP
+  // only — the actual PAINTED color on the child <p>/<span> (getComputedStyle)
+  // is proven by the LIVE Playwright computed-color smoke (acceptance #5), not
+  // here. This codebase ships no @tailwindcss/typography plugin, so the inline
+  // wrapper color already paints today; the inherit class is defensive.
+  expect(richColored).toContain("color:#22d3ee");
+  expect(richColored).toContain("text-[color:inherit]");
+  // STRUCTURAL proof (as far as SSR markup can go): the sanitized child <p> is
+  // emitted INSIDE the same wrapper <div> that carries BOTH `color:#22d3ee` and
+  // the `[&_*]:text-[color:inherit]` descendant utility — so the inherit chain
+  // that wins the cascade is really present in the tree. The wrapper's opening
+  // tag must precede the child text, and that opening tag must carry both the
+  // authored inline color and the inherit-forcing class. (The COMPUTED color on
+  // that child stays a live-smoke concern — SSR does not resolve the cascade.)
+  const richWrapperOpen = richColored.match(/<div[^>]*data-page-block-text="true"[^>]*>/)?.[0];
+  expect(richWrapperOpen).toBeDefined();
+  expect(richWrapperOpen).toContain("color:#22d3ee");
+  expect(richWrapperOpen).toContain("text-[color:inherit]");
+  expect(richColored.indexOf(richWrapperOpen as string)).toBeLessThan(
+    richColored.indexOf("Aqua body")
+  );
+
+  // A bad color fails soft — no inline color, no inherit class.
+  const richBadColor = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-badcolor",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-badcolor",
+            props: { text: "<p>No color</p>", format: "rich", align: "left" },
+            style: { textColor: "javascript:alert(1)" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(richBadColor).not.toContain("text-[color:inherit]");
+
+  // Unset textColor on rich → no inline color, no inherit class (byte-identical).
+  const richUnset = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-rich-unset",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-rich-unset",
+            props: { text: "<p>Plain body</p>", format: "rich", align: "left" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(richUnset).not.toContain("text-[color:inherit]");
+
+  // The PLAIN path keeps its --coderso-block-text var mechanism (regression).
+  const plainColored = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", {
+        id: "sec-532-plain-color",
+        blocks: [
+          createPageBlockV2("text", {
+            id: "blk-532-plain-color",
+            props: { text: "Plain aqua", format: "plain", align: "left" },
+            style: { textColor: "#22d3ee" },
+          }),
+        ],
+      })}
+    />
+  );
+  expect(plainColored).toContain("--coderso-block-text");
 });

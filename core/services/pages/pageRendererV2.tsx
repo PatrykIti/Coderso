@@ -794,8 +794,18 @@ export const toPageBlockTypographyStyle = (block: PageBlockV2): PageBlockStylePr
   const style = block.style ?? {};
   const result: PageBlockStyleProperties = {};
   if (style.fontFamily) result.fontFamily = pageTypographyFontFamilyCssValues[style.fontFamily];
-  if (style.fontSize) result.fontSize = pageTypographyFontSizeCssValues[style.fontSize];
+  // ── TASK-532 fluid font-size (Bundle B): custom WINS over the discrete token ──
+  // `fontSizeCustom` is already grammar-sanitized at the write boundary (L01
+  // `sanitizeAuthoringCssFontSize`), so it is assigned inline verbatim; the
+  // discrete token remains the fallback/unset path.
+  if (style.fontSizeCustom) {
+    result.fontSize = style.fontSizeCustom;
+  } else if (style.fontSize) {
+    result.fontSize = pageTypographyFontSizeCssValues[style.fontSize];
+  }
   if (style.fontWeight) result.fontWeight = pageTypographyFontWeightCssValues[style.fontWeight];
+  // ── TASK-532 text-transform (Bundle B): fail-closed enum keyword ──
+  if (style.textTransform) result.textTransform = style.textTransform;
   if (typeof style.lineHeight === "number" && Number.isFinite(style.lineHeight)) {
     result.lineHeight = style.lineHeight;
   }
@@ -1305,8 +1315,47 @@ const renderTextBlock = (block: PageBlockV2, context: PageBlockRenderContext) =>
   if (block.props.format === "rich") {
     const sanitizedHtml = sanitizeAuthoringRichTextHtml(block.props.text);
     const richChildren = renderSanitizedRichTextHtml(sanitizedHtml, style);
+    // ── TASK-532 text-block textColor (Bundle B) — rich-path fix ──
+    // The plain `<p>` path honors `style.textColor` via the inherited
+    // `--coderso-block-text` var. The rich path renders a bare wrapper `<div>`
+    // whose sanitized children carry the typography style WITHOUT color, so an
+    // authored textColor never reaches the rich body. Present-only fix: when a
+    // safe textColor is authored, set it on the wrapper AND force every child to
+    // inherit it via `[&_*]:text-[color:inherit]`. `richTextColor` comes ONLY
+    // from the existing `sanitizeAuthoringCssColor` whitelist (never a raw
+    // author string).
+    //
+    // WHY THIS PAINTS TODAY (empirically verified 2026-07-09, LIVE Chromium,
+    // acceptance #5): the `prose` class on the wrapper is a hook for the Tailwind
+    // typography plugin, but that plugin is NOT installed here (no
+    // `@plugin "@tailwindcss/typography"` in either entrypoint — both are plain
+    // `@import "tailwindcss"`; and post-content.css defines no `.prose` descendant
+    // COLOR rule). So no competing descendant-color rule exists: the child <p>
+    // inherits the wrapper's inline `color` and computes to the authored value.
+    // Proven in-browser: getComputedStyle(child <p>).color === rgb(34,211,238) for
+    // textColor "#22d3ee", in BOTH light and dark. The `[&_*]:text-[color:inherit]`
+    // utility is a belt-and-suspenders inherit hint on top of that.
+    // CAVEAT (not a false safety net): this utility compiles to `.<class> * {
+    // color: inherit }` — specificity (0,1,0), same as a hypothetical
+    // `.prose :where(p){color}`. If the typography plugin were ever added, its
+    // descendant color rule could TIE and win on source order, so this utility
+    // is NOT a guaranteed override — adding that plugin would require re-checking
+    // the cascade (or bumping specificity), not relying on this line alone.
+    // NOTE: only a runtime computed-color check (acceptance #5, LIVE Playwright)
+    // proves the painted color; the render test asserts the emitted markup only.
+    const richTextColor = sanitizeAuthoringCssColor(block.style?.textColor);
     return (
-      <div className={className}>
+      <div
+        className={joinPageRenderClasses(
+          className,
+          richTextColor ? "[&_*]:text-[color:inherit]" : undefined
+        )}
+        style={richTextColor ? { color: richTextColor } : undefined}
+        // Present-only: only tag the rich wrapper as a text node when an
+        // authored textColor is threaded onto it. Without textColor the wrapper
+        // stays byte-identical to post-530 (no attribute leak).
+        {...(richTextColor ? pageBlockTextDataAttributes : {})}
+      >
         {context.renderInlineText
           ? context.renderInlineText({
               block,
@@ -2271,15 +2320,43 @@ export const renderPageBlockContent = (
         </article>
       );
     }
-    case "divider":
+    case "divider": {
+      // ── TASK-532 eyebrow divider (Bundle B) — present-only gradient variant ──
+      const dividerThickness = readNumber(block.props.thickness, 1);
+      const dividerToneColor = pageDividerToneBorderColor(block.props.tone);
+      if (block.props.gradient === true) {
+        // Slim gradient eyebrow rule (reference `.eyebrow span`: a short 34px,
+        // 2px gradient line). The gradient is a STATIC template whose only
+        // variable is the whitelisted tone color (from
+        // `pageDividerToneBorderColor`) fading to `transparent` — no raw author
+        // string reaches the declaration. `align` positions the short rule.
+        const dividerWidth = typeof block.props.width === "number" ? block.props.width : 34;
+        const dividerAlign = block.props.align;
+        return (
+          <span
+            aria-hidden="true"
+            style={{
+              display: "block",
+              height: `${dividerThickness}px`,
+              width: `${dividerWidth}px`,
+              background: `linear-gradient(90deg, ${dividerToneColor}, transparent)`,
+              marginLeft:
+                dividerAlign === "center" || dividerAlign === "right" ? "auto" : undefined,
+              marginRight: dividerAlign === "center" ? "auto" : undefined,
+            }}
+          />
+        );
+      }
+      // Legacy path — byte-identical when `gradient` is unset.
       return (
         <hr
           style={{
-            borderColor: pageDividerToneBorderColor(block.props.tone),
-            borderWidth: `${readNumber(block.props.thickness, 1)}px`,
+            borderColor: dividerToneColor,
+            borderWidth: `${dividerThickness}px`,
           }}
         />
       );
+    }
     case "spacer":
       return <div aria-hidden="true" style={{ height: `${readNumber(block.props.size, 32)}px` }} />;
     case "statistic": {
@@ -3193,9 +3270,7 @@ export function PageDocumentRender({
   // the primary does NOT (`spotlightOn && !peerSpotlightOn`) — so a footer-only
   // spotlight still renders exactly one (footer-owned) overlay, while both-author
   // (double-brightness) collapses to the single primary-owned one.
-  const emitsSpotlightOverlay = isPrimaryDocument
-    ? spotlightOn
-    : spotlightOn && !peerSpotlightOn;
+  const emitsSpotlightOverlay = isPrimaryDocument ? spotlightOn : spotlightOn && !peerSpotlightOn;
 
   const spotlightSize = Math.max(
     PAGE_SPOTLIGHT_SIZE_CLAMP.min,

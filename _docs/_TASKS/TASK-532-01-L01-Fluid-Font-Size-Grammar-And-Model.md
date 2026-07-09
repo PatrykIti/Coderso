@@ -7,7 +7,8 @@
 **Priority:** High
 **Category:** Security / Schema (JSON model)
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-09
 
 ---
 
