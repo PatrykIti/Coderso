@@ -11,6 +11,7 @@ import { SetPasswordPage } from "@/pages/auth/SetPasswordPage";
 
 import { PageListPage } from "@/pages/content/PageListPage";
 import { PageEditorPreview } from "@/pages/content/PageEditorPreview";
+import { PageEditorOptionsV2 } from "@/pages/content/PageEditorOptionsV2";
 import { PostsListPage } from "@/pages/content/PostsListPage";
 import { PostEditorPreview } from "@/pages/content/PostEditorPreview";
 import { MenuListPage } from "@/pages/content/MenuListPage";
@@ -90,12 +91,30 @@ export const routes: RouteDef[] = [
   // Auth
   { path: "/login", title: "Sign in", group: "Auth", shell: "auth", Component: LoginPage },
   { path: "/2fa", title: "Two-factor", group: "Auth", shell: "auth", Component: TwoFactorPage },
-  { path: "/reset", title: "Reset password", group: "Auth", shell: "auth", Component: ResetPasswordPage },
-  { path: "/reset/confirm", title: "Set password", group: "Auth", shell: "auth", Component: SetPasswordPage },
+  {
+    path: "/reset",
+    title: "Reset password",
+    group: "Auth",
+    shell: "auth",
+    Component: ResetPasswordPage,
+  },
+  {
+    path: "/reset/confirm",
+    title: "Set password",
+    group: "Auth",
+    shell: "auth",
+    Component: SetPasswordPage,
+  },
 
   // Main content
   { path: "/pages", title: "Pages", group: "Main", Component: PageListPage },
   { path: "/pages/:id", title: "Page editor", group: "Editors", Component: PageEditorPreview },
+  {
+    path: "/pages/:id/options",
+    title: "Page editor — options v2",
+    group: "Editors",
+    Component: PageEditorOptionsV2,
+  },
   { path: "/posts", title: "Posts", group: "Main", Component: PostsListPage },
   { path: "/posts/:id", title: "Post editor", group: "Editors", Component: PostEditorPreview },
   { path: "/menus", title: "Menus", group: "Main", Component: MenuListPage },
@@ -104,36 +123,131 @@ export const routes: RouteDef[] = [
 
   // Advanced
   { path: "/advanced/engine", title: "Engine", group: "Advanced", Component: EnginePage },
-  { path: "/advanced/engine/:id/schema", title: "Schema builder", group: "Editors", Component: SchemaBuilderPreview },
-  { path: "/advanced/engine/:id/collection", title: "Collection", group: "Advanced", Component: CollectionWorkspacePage },
-  { path: "/advanced/engine/:id", title: "Content type", group: "Editors", Component: ContentTypeEditorPreview },
+  {
+    path: "/advanced/engine/:id/schema",
+    title: "Schema builder",
+    group: "Editors",
+    Component: SchemaBuilderPreview,
+  },
+  {
+    path: "/advanced/engine/:id/collection",
+    title: "Collection",
+    group: "Advanced",
+    Component: CollectionWorkspacePage,
+  },
+  {
+    path: "/advanced/engine/:id",
+    title: "Content type",
+    group: "Editors",
+    Component: ContentTypeEditorPreview,
+  },
   { path: "/advanced/entries", title: "Entries", group: "Advanced", Component: EntriesPage },
-  { path: "/advanced/entries/:type/:id", title: "Entry editor", group: "Editors", Component: EntryEditorPreview },
-  { path: "/advanced/custom-screens", title: "Screens", group: "Advanced", Component: CustomScreensPage },
-  { path: "/advanced/custom-screens/:id/entries/:entryId", title: "Screen entry (edit)", group: "Editors", Component: CustomScreenEntryEditorPreview },
-  { path: "/advanced/custom-screens/:id/entries", title: "Published screen (list)", group: "Advanced", Component: CustomScreenEntriesPage },
-  { path: "/advanced/custom-screens/:id", title: "Screen editor", group: "Editors", Component: CustomScreenEditorPreview },
+  {
+    path: "/advanced/entries/:type/:id",
+    title: "Entry editor",
+    group: "Editors",
+    Component: EntryEditorPreview,
+  },
+  {
+    path: "/advanced/custom-screens",
+    title: "Screens",
+    group: "Advanced",
+    Component: CustomScreensPage,
+  },
+  {
+    path: "/advanced/custom-screens/:id/entries/:entryId",
+    title: "Screen entry (edit)",
+    group: "Editors",
+    Component: CustomScreenEntryEditorPreview,
+  },
+  {
+    path: "/advanced/custom-screens/:id/entries",
+    title: "Published screen (list)",
+    group: "Advanced",
+    Component: CustomScreenEntriesPage,
+  },
+  {
+    path: "/advanced/custom-screens/:id",
+    title: "Screen editor",
+    group: "Editors",
+    Component: CustomScreenEditorPreview,
+  },
   { path: "/advanced/forms", title: "Forms", group: "Advanced", Component: FormsPage },
-  { path: "/advanced/forms/:id/submissions", title: "Form submissions", group: "Advanced", Component: FormSubmissionsPage },
-  { path: "/advanced/forms/:id", title: "Form builder", group: "Editors", Component: FormBuilderPreview },
+  {
+    path: "/advanced/forms/:id/submissions",
+    title: "Form submissions",
+    group: "Advanced",
+    Component: FormSubmissionsPage,
+  },
+  {
+    path: "/advanced/forms/:id",
+    title: "Form builder",
+    group: "Editors",
+    Component: FormBuilderPreview,
+  },
   { path: "/advanced/listings", title: "Listings", group: "Advanced", Component: ListingsPage },
-  { path: "/advanced/listings/:id", title: "Listing editor", group: "Editors", Component: ListingEditorPreview },
+  {
+    path: "/advanced/listings/:id",
+    title: "Listing editor",
+    group: "Editors",
+    Component: ListingEditorPreview,
+  },
   { path: "/advanced/filters", title: "Filters", group: "Advanced", Component: FiltersPage },
-  { path: "/advanced/search", title: "Search module", group: "Advanced", Component: SearchModulePage },
+  {
+    path: "/advanced/search",
+    title: "Search module",
+    group: "Advanced",
+    Component: SearchModulePage,
+  },
   { path: "/advanced/booking", title: "Booking", group: "Advanced", Component: BookingPage },
   { path: "/advanced/reviews", title: "Reviews", group: "Advanced", Component: ReviewsPage },
   { path: "/advanced/commerce", title: "Commerce", group: "Advanced", Component: CommercePage },
-  { path: "/advanced/commerce/:id", title: "Product editor", group: "Editors", Component: CommerceEditorPreview },
+  {
+    path: "/advanced/commerce/:id",
+    title: "Product editor",
+    group: "Editors",
+    Component: CommerceEditorPreview,
+  },
   { path: "/advanced/popups", title: "Popups", group: "Advanced", Component: PopupsPage },
-  { path: "/advanced/popups/:id", title: "Popup editor", group: "Editors", Component: PopupEditorPreview },
-  { path: "/advanced/solution-kits", title: "Solution kits", group: "Advanced", Component: SolutionKitsPage },
-  { path: "/advanced/widgets", title: "Widget library", group: "Advanced", Component: WidgetLibraryPage },
-  { path: "/advanced/page-templates", title: "Page templates", group: "Advanced", Component: PageTemplatesPage },
-  { path: "/advanced/page-templates/:id", title: "Template editor", group: "Editors", Component: PageTemplateEditorPreview },
+  {
+    path: "/advanced/popups/:id",
+    title: "Popup editor",
+    group: "Editors",
+    Component: PopupEditorPreview,
+  },
+  {
+    path: "/advanced/solution-kits",
+    title: "Solution kits",
+    group: "Advanced",
+    Component: SolutionKitsPage,
+  },
+  {
+    path: "/advanced/widgets",
+    title: "Widget library",
+    group: "Advanced",
+    Component: WidgetLibraryPage,
+  },
+  {
+    path: "/advanced/page-templates",
+    title: "Page templates",
+    group: "Advanced",
+    Component: PageTemplatesPage,
+  },
+  {
+    path: "/advanced/page-templates/:id",
+    title: "Template editor",
+    group: "Editors",
+    Component: PageTemplateEditorPreview,
+  },
 
   // Store + visual
   { path: "/store", title: "Plugin store", group: "Store", Component: PluginStorePage },
-  { path: "/store/plugins/:id", title: "Plugin details", group: "Store", Component: PluginDetailsPage },
+  {
+    path: "/store/plugins/:id",
+    title: "Plugin details",
+    group: "Store",
+    Component: PluginDetailsPage,
+  },
   { path: "/themes", title: "Admin UI theme", group: "Visual", Component: ThemesPage },
 
   // Tools
@@ -141,7 +255,12 @@ export const routes: RouteDef[] = [
   { path: "/seo", title: "SEO manager", group: "Tools", Component: SeoManagerPage },
   { path: "/analytics", title: "Analytics", group: "Tools", Component: AnalyticsPage },
   { path: "/backups", title: "Backups", group: "Tools", Component: BackupsPage },
-  { path: "/tools/import-export", title: "Import / export", group: "Tools", Component: ImportExportPage },
+  {
+    path: "/tools/import-export",
+    title: "Import / export",
+    group: "Tools",
+    Component: ImportExportPage,
+  },
   { path: "/redirects", title: "Redirects", group: "Tools", Component: RedirectsPage },
 
   // Admin
@@ -151,26 +270,78 @@ export const routes: RouteDef[] = [
   { path: "/access-logs", title: "Access logs", group: "Admin", Component: AccessLogsPage },
 
   // Settings
-  { path: "/settings", title: "General settings", group: "Settings", Component: GeneralSettingsPage },
-  { path: "/settings/general", title: "General settings", group: "Settings", Component: GeneralSettingsPage },
-  { path: "/settings/site", title: "Site settings", group: "Settings", Component: SiteSettingsPage },
-  { path: "/settings/assistant", title: "Assistant", group: "Settings", Component: AssistantSettingsPage },
-  { path: "/settings/security", title: "Security", group: "Settings", Component: SecuritySettingsPage },
-  { path: "/settings/security/ip-allowlist", title: "IP allowlist", group: "Settings", Component: IpAllowlistPage },
-  { path: "/settings/security/sessions", title: "Sessions", group: "Settings", Component: SessionsPage },
-  { path: "/settings/security/login-alerts", title: "Login alerts", group: "Settings", Component: LoginAlertsPage },
+  {
+    path: "/settings",
+    title: "General settings",
+    group: "Settings",
+    Component: GeneralSettingsPage,
+  },
+  {
+    path: "/settings/general",
+    title: "General settings",
+    group: "Settings",
+    Component: GeneralSettingsPage,
+  },
+  {
+    path: "/settings/site",
+    title: "Site settings",
+    group: "Settings",
+    Component: SiteSettingsPage,
+  },
+  {
+    path: "/settings/assistant",
+    title: "Assistant",
+    group: "Settings",
+    Component: AssistantSettingsPage,
+  },
+  {
+    path: "/settings/security",
+    title: "Security",
+    group: "Settings",
+    Component: SecuritySettingsPage,
+  },
+  {
+    path: "/settings/security/ip-allowlist",
+    title: "IP allowlist",
+    group: "Settings",
+    Component: IpAllowlistPage,
+  },
+  {
+    path: "/settings/security/sessions",
+    title: "Sessions",
+    group: "Settings",
+    Component: SessionsPage,
+  },
+  {
+    path: "/settings/security/login-alerts",
+    title: "Login alerts",
+    group: "Settings",
+    Component: LoginAlertsPage,
+  },
   { path: "/settings/api-keys", title: "API keys", group: "Settings", Component: ApiKeysPage },
   { path: "/settings/webhooks", title: "Webhooks", group: "Settings", Component: WebhooksPage },
   { path: "/settings/email", title: "Email", group: "Settings", Component: EmailSettingsPage },
-  { path: "/settings/storage", title: "Storage", group: "Settings", Component: StorageSettingsPage },
-  { path: "/settings/integrations", title: "Integrations", group: "Settings", Component: IntegrationsPage },
+  {
+    path: "/settings/storage",
+    title: "Storage",
+    group: "Settings",
+    Component: StorageSettingsPage,
+  },
+  {
+    path: "/settings/integrations",
+    title: "Integrations",
+    group: "Settings",
+    Component: IntegrationsPage,
+  },
 ];
 
 export { NotFoundPage };
 
 const segmentsOf = (value: string) => value.split("/").filter(Boolean);
 
-export function matchRoute(path: string): { route: RouteDef; params: Record<string, string> } | null {
+export function matchRoute(
+  path: string
+): { route: RouteDef; params: Record<string, string> } | null {
   const pathParts = segmentsOf(path);
   for (const route of routes) {
     const patternParts = segmentsOf(route.path);
