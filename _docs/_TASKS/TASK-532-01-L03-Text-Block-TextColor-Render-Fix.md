@@ -7,7 +7,8 @@
 **Priority:** Medium
 **Category:** Site Render / Admin UI
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-09
 
 ---
 

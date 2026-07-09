@@ -7,7 +7,8 @@
 **Priority:** Medium
 **Category:** Admin UI
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
+**Completed:** 2026-07-09
 
 ---
 

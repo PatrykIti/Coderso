@@ -22,6 +22,7 @@ import {
   PAGE_CSS_VALUE_MAX_LENGTH,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
+  sanitizeAuthoringCssFontSize,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
 } from "./pageAuthoringSanitizers";
@@ -268,7 +269,26 @@ export const pageTypographyFontSizes = [
   "4xl",
   "5xl",
 ] as const;
-export const pageTypographyFontWeights = ["normal", "medium", "semibold", "bold"] as const;
+// ── TASK-532 heavier weights (Bundle B) — extend the enum with extrabold/black ──
+export const pageTypographyFontWeights = [
+  "normal",
+  "medium",
+  "semibold",
+  "bold",
+  "extrabold",
+  "black",
+] as const;
+// ── TASK-532 text-transform (Bundle B) — present-only enum ──
+export const pageTypographyTextTransforms = [
+  "none",
+  "uppercase",
+  "lowercase",
+  "capitalize",
+] as const;
+// ── TASK-532 eyebrow-divider alignment + rule-length bounds (Bundle B) ──
+export const pageDividerAligns = ["left", "center", "right"] as const;
+/** Eyebrow short-rule length bounds in px (decorative divider width). */
+export const PAGE_DIVIDER_WIDTH_CLAMP = { min: 8, max: 400 } as const;
 /** Unitless `line-height` bounds for block typography. */
 export const PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP = { min: 1, max: 2.5 } as const;
 /** `letter-spacing` bounds in px for block typography. */
@@ -430,6 +450,8 @@ export type PageBlockSlotKey = (typeof pageBlockSlotKeys)[number];
 export type PageTypographyFontFamily = (typeof pageTypographyFontFamilies)[number];
 export type PageTypographyFontSize = (typeof pageTypographyFontSizes)[number];
 export type PageTypographyFontWeight = (typeof pageTypographyFontWeights)[number];
+// ── TASK-532 text-transform type (Bundle B) ──
+export type PageTypographyTextTransform = (typeof pageTypographyTextTransforms)[number];
 export type PageTypographyCapableBlockType = (typeof pageTypographyCapableBlockTypes)[number];
 export type PageTextColorMarkCapableBlockType = (typeof pageTextColorMarkCapableBlockTypes)[number];
 export type PageTextMarkCapableBlockType = PageTextColorMarkCapableBlockType;
@@ -507,6 +529,9 @@ export const pageTypographyFontWeightCssValues: Record<PageTypographyFontWeight,
   medium: "500",
   semibold: "600",
   bold: "700",
+  // ── TASK-532 heavier weights (Bundle B) ──
+  extrabold: "800",
+  black: "900",
 };
 
 export type PageDocumentSeoV2 = {
@@ -699,6 +724,22 @@ export type PageBlockStyleV2 = {
   lineHeight?: number | null;
   /** Letter-spacing in px clamped to {@link PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP}. */
   letterSpacing?: number | null;
+  // ── TASK-532 typography fidelity (Bundle B) — present-only fields ──
+  /**
+   * Fluid font-size (present-only). A strict `clamp()`/`min()`/`max()` of
+   * numeric-unit lengths (`rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`) or a single such
+   * length — validated by {@link sanitizeAuthoringCssFontSize} at the write
+   * boundary (NEVER arbitrary CSS). WINS over the discrete `fontSize` token at
+   * render (`toPageBlockTypographyStyle`); the token remains the fallback/unset
+   * state. Omitted when unset or when the grammar rejects.
+   */
+  fontSizeCustom?: string;
+  /**
+   * Text-transform (present-only enum). `"none"` resets ⇒ the field is OMITTED
+   * so an un-authored block is byte-identical to post-530.
+   */
+  textTransform?: PageTypographyTextTransform;
+  // ── end TASK-532 typography fidelity ──
   /**
    * TASK-522 composable-hero toolkit style fields (all PRESENT-ONLY — omitted
    * when unauthored so legacy/no-effect blocks stay byte-identical). The model
@@ -858,6 +899,10 @@ const pageBlockStyleKeys = [
   "fontWeight",
   "lineHeight",
   "letterSpacing",
+  // ── TASK-532 typography fidelity (Bundle B) present-only style keys ──
+  "fontSizeCustom",
+  "textTransform",
+  // ── end TASK-532 ──
   // TASK-522-01-L03 composition/decoration style fields (present-only).
   "decoration",
   "tilt",
@@ -962,7 +1007,8 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
     "applyLabel",
   ],
   embed: ["html", "url", "provider"],
-  divider: ["tone", "thickness"],
+  // ── TASK-532 eyebrow divider (Bundle B): width/align/gradient present-only ──
+  divider: ["tone", "thickness", "width", "align", "gradient"],
   spacer: ["size"],
   statistic: ["value", "label", "caption"],
   icon: ["name", "label", "animation", "size", "color", "speed"],
@@ -1469,6 +1515,18 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
     return nullableNumericSchema(PAGE_COLLECTION_LIMIT_CLAMP.min, PAGE_COLLECTION_LIMIT_CLAMP.max);
   }
   if (type === "divider" && key === "tone") return { type: "string", enum: [...pageDividerTones] };
+  // ── TASK-532 eyebrow divider (Bundle B) — present-only decorative props ──
+  if (type === "divider" && key === "width") {
+    return {
+      type: "number",
+      minimum: PAGE_DIVIDER_WIDTH_CLAMP.min,
+      maximum: PAGE_DIVIDER_WIDTH_CLAMP.max,
+    };
+  }
+  if (type === "divider" && key === "align")
+    return { type: "string", enum: [...pageDividerAligns] };
+  if (type === "divider" && key === "gradient") return { type: "boolean" };
+  // ── end TASK-532 ──
   if (type === "columns" && key === "distribution") {
     return { type: "string", enum: [...pageColumnDistributions] };
   }
@@ -1637,6 +1695,14 @@ const pageBlockStyleJsonSchema: RecordValue = {
     fontFamily: nullableEnumSchema(pageTypographyFontFamilies),
     fontSize: nullableEnumSchema(pageTypographyFontSizes),
     fontWeight: nullableEnumSchema(pageTypographyFontWeights),
+    // ── TASK-532 typography fidelity (Bundle B) — present-only ──
+    // `fontSizeCustom` schema is intentionally loose (string + length cap): the
+    // GRAMMAR is enforced by `sanitizeAuthoringCssFontSize` at the write
+    // boundary (the security boundary); the schema cap is defence-in-depth.
+    // Both keep additionalProperties:false so an UNKNOWN key still rejects.
+    fontSizeCustom: { type: "string", maxLength: 64 },
+    textTransform: { type: "string", enum: [...pageTypographyTextTransforms] },
+    // ── end TASK-532 ──
     lineHeight: nullableNumericSchema(
       PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP.min,
       PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP.max
@@ -3052,6 +3118,26 @@ const normalizeBlockStyle = (
       mode
     );
   }
+  // ── TASK-532 typography fidelity (Bundle B) — present-only ──
+  // Fluid font-size: grammar-validated at the write boundary. A non-conforming
+  // value returns `null` ⇒ the field is OMITTED (never stored raw); this is the
+  // security boundary — L05 emits only this already-sanitized value.
+  if (input.fontSizeCustom !== undefined) {
+    const safe = sanitizeAuthoringCssFontSize(input.fontSizeCustom);
+    if (safe) result.fontSizeCustom = safe;
+  }
+  // Text-transform: fail-closed enum; `"none"` resets ⇒ omitted (present-only).
+  if (input.textTransform !== undefined) {
+    const t = normalizeEnum(
+      input.textTransform,
+      pageTypographyTextTransforms,
+      "none",
+      `${path}.textTransform`,
+      mode
+    );
+    if (t !== "none") result.textTransform = t;
+  }
+  // ── end TASK-532 ──
   // TASK-522-01-L03 composition/decoration fields — all present-only. Enums
   // fail-closed (write mode throws on a bad VALUE); the "none"/"flow" reset
   // member is OMITTED; numbers clamp fail-soft; nested unknown keys reject.
@@ -3547,6 +3633,21 @@ const normalizeBlockProp = (
   if (type === "divider" && key === "tone") {
     return normalizeEnum(value, pageDividerTones, "neutral", path, mode);
   }
+  // ── TASK-532 eyebrow divider (Bundle B) — present-only decorative props ──
+  // `width` clamps fail-soft; `align` is a fail-closed enum; `gradient` coerces
+  // to a strict boolean. All are only serialized when the author sets them (the
+  // generic prop loop writes only keys whose input value !== undefined), so a
+  // legacy `{tone,thickness}` divider round-trips byte-identical.
+  if (type === "divider" && key === "width") {
+    return readNumber(value, 34, PAGE_DIVIDER_WIDTH_CLAMP.min, PAGE_DIVIDER_WIDTH_CLAMP.max);
+  }
+  if (type === "divider" && key === "align") {
+    return normalizeEnum(value, pageDividerAligns, "left", path, mode);
+  }
+  if (type === "divider" && key === "gradient") {
+    return value === true;
+  }
+  // ── end TASK-532 ──
   if (type === "columns" && key === "distribution") {
     return normalizeEnum(value, pageColumnDistributions, "equal", path, mode);
   }

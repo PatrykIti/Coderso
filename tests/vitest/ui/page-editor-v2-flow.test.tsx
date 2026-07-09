@@ -2764,11 +2764,22 @@ test("PageEditor typography panel renders dedicated widgets, paints the text nod
     ) as HTMLElement;
     expect(panel).toBeTruthy();
 
-    // Dedicated widgets only: no native selects, no raw text inputs.
+    // Dedicated widgets only: no native selects, no native number inputs. The
+    // ONLY raw text input allowed in the typography panel is the TASK-532 fluid
+    // font-size control (a free-text clamp()/rem CSS length has no dedicated
+    // widget); every other control is a dedicated widget.
     expect(panel.querySelectorAll("select")).toHaveLength(0);
-    expect(panel.querySelectorAll('[data-page-editor-control="text"]')).toHaveLength(0);
     expect(panel.querySelectorAll('input[type="number"]')).toHaveLength(0);
-    for (const label of ["Font family", "Font size", "Font weight", "Text align"]) {
+    const textControls = panel.querySelectorAll('[data-page-editor-control="text"]');
+    expect(textControls).toHaveLength(1);
+    expect(textControls[0]?.textContent).toContain("Fluid size");
+    for (const label of [
+      "Font family",
+      "Font size",
+      "Font weight",
+      "Text align",
+      "Text transform",
+    ]) {
       expect(findSegmentedGroup(panel, label)).toBeTruthy();
     }
     for (const label of ["Line height", "Letter spacing"]) {

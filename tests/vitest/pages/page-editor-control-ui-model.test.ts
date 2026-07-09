@@ -138,8 +138,17 @@ describe("page editor control ui model adapter", () => {
     });
     expect(resolveById("block.style.fontWeight")).toMatchObject({
       kind: "segmented",
-      options: ["normal", "medium", "semibold", "bold"],
-      labels: { normal: "Normal", medium: "Medium", semibold: "Semibold", bold: "Bold" },
+      // TASK-532 (Bundle B): the weight enum grew 4→6 (extrabold/black); labels
+      // auto-humanize via `humanizeOptionToken`.
+      options: ["normal", "medium", "semibold", "bold", "extrabold", "black"],
+      labels: {
+        normal: "Normal",
+        medium: "Medium",
+        semibold: "Semibold",
+        bold: "Bold",
+        extrabold: "Extrabold",
+        black: "Black",
+      },
     });
     // Registry-owned fractional step/unit force the slider+stepper pairing
     // even below the wide-span threshold; line height stays unitless.
@@ -157,6 +166,26 @@ describe("page editor control ui model adapter", () => {
       step: 0.5,
       unit: "px",
     });
+  });
+
+  // ── TASK-532 typography fidelity (Bundle B) — ui-model kinds ──
+  test("TASK-532 controls resolve to the correct ui-model kinds", () => {
+    // Fluid size is a free-text CSS length input.
+    expect(resolveById("block.style.fontSizeCustom")).toEqual({ kind: "text" });
+    // 4 options (< the 6-member segmented limit) upgrades to segmented.
+    expect(resolveById("block.style.textTransform")).toMatchObject({
+      kind: "segmented",
+      options: ["none", "uppercase", "lowercase", "capitalize"],
+    });
+    // Divider eyebrow controls.
+    expect(resolveById("block.divider.props.gradient")).toEqual({ kind: "toggle" });
+    expect(resolveById("block.divider.props.align")).toMatchObject({
+      kind: "segmented",
+      options: ["left", "center", "right"],
+    });
+    // Width is a numeric control (slider family; wide span → stepper pairing).
+    const width = resolveById("block.divider.props.width");
+    expect(["slider", "sliderStepper"]).toContain(width.kind);
   });
 
   test("small finite select sets upgrade to segmented with English labels", () => {

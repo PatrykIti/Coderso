@@ -37,13 +37,26 @@ and references the typography group above:
   `var(--font-sans/--font-display, <DEFAULT_TOKENS stack>)`.
 - `fontSize: "2xs" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" |
   "4xl" | "5xl"` renders as `var(--text-*, <DEFAULT_TOKENS size>)`.
-- `fontWeight: "normal" | "medium" | "semibold" | "bold"` maps to
-  400/500/600/700 (no CSS variable; weights are not part of the v1 token
-  groups).
+- `fontSizeCustom` (TASK-532, present-only fluid size) is NOT token-backed: it
+  emits a grammar-validated fluid length string (a bare number + allowlisted
+  unit `rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`, or a single `clamp()`/`min()`/`max()`
+  of such lengths — e.g. `clamp(2.6rem,5vw,4.4rem)`) INLINE on the text node and
+  **wins over the `fontSize` token** at render (`toPageBlockTypographyStyle`);
+  the discrete token stays the fallback/unset state. It is validated by
+  `sanitizeAuthoringCssFontSize` (`pageAuthoringSanitizers.ts`) at the write
+  boundary — never arbitrary CSS, 64-char cap, injection constructs fail-closed
+  to omitted.
+- `fontWeight: "normal" | "medium" | "semibold" | "bold" | "extrabold" |
+  "black"` maps to 400/500/600/700/**800/900** (the last two added by TASK-532;
+  no CSS variable — weights are not part of the v1 token groups and paint inline
+  via `pageTypographyFontWeightCssValues`).
+- `textTransform` (TASK-532, present-only enum `none`/`uppercase`/`lowercase`/
+  `capitalize`) emits a fixed CSS keyword inline on the text node; `none`/unset
+  ⇒ omitted (no token, no variable).
 - The owner mapping lives in `core/services/pages/pageDocumentV2.ts`
   (`pageTypographyFontFamilyCssValues`, `pageTypographyFontSizeCssValues`,
-  `pageTypographyFontWeightCssValues`) and references
-  `DesignTokens.typography` from `core/services/theme/tokenTypes.ts`.
+  `pageTypographyFontWeightCssValues`, `pageTypographyTextTransforms`) and
+  references `DesignTokens.typography` from `core/services/theme/tokenTypes.ts`.
 - The published front resolves the variables from the `:root` token stylesheet
   (`toCssVariables` in `core/ui/theme/tokenCss.ts`). The admin shell defines
   its OWN admin-theme `--text-*`/`--font-*` variables on `:root`, so the page
@@ -301,6 +314,36 @@ is NEW (block was already wired) and paints on the content box + the `100vw` ble
 full-bleed section. No new `backgroundType` value — the gradient TYPE reuses the existing
 `pageBackgroundTypes` enum. Present-only; a no-glow / single-layer / no-section-gradient
 document renders byte-identically to post-530 output.
+
+## Pages v2 typography fidelity (TASK-532)
+
+Bundle B (Typography Fidelity) adds present-only, additive block-level fields on
+top of the TASK-424 typography surface (all jsonb — NO DB migration, NO npm
+dependency, NO `PAGE_DOCUMENT_SCHEMA_VERSION` bump [stays `2`], NO route/RBAC).
+Every field emits ZERO bytes when unauthored ⇒ post-530 / no-effect docs
+normalize AND render byte-identical. Values reach CSS only as inline
+custom-properties, fixed enum keywords, or grammar-validated length strings —
+never raw declarations. Enums/clamps are owned by `pageDocumentV2.ts`; the fluid
+length grammar is owned by `pageAuthoringSanitizers.ts`.
+
+**Enums, clamps & grammar:**
+
+| Field | Enum / clamp / grammar | Values |
+|-------|------------------------|--------|
+| `style.fontWeight` (extended) | `pageTypographyFontWeights` | +`extrabold` (800), +`black` (900) on top of `normal`/`medium`/`semibold`/`bold` |
+| `style.textTransform` | `pageTypographyTextTransforms` | `none`/`uppercase`/`lowercase`/`capitalize` (`none` resets ⇒ omitted) |
+| `style.fontSizeCustom` | `sanitizeAuthoringCssFontSize` grammar | bare number + unit (`rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`) OR single `clamp()`/`min()`/`max()` of such lengths; 64-char cap; wins over `fontSize` token |
+| `divider.width` | `PAGE_DIVIDER_WIDTH_CLAMP` | `8`..`400` px (eyebrow short-rule length, default 34) |
+| `divider.align` | `pageDividerAligns` | `left`/`center`/`right` |
+| `divider.gradient` | boolean | `true` ⇒ slim `linear-gradient(90deg, <tone-color>, transparent)` `<span>` (tone from the `pageDividerToneBorderColor` whitelist); unset ⇒ legacy `<hr>` byte-identical |
+
+**Security boundary.** `fontSizeCustom` is the only new free-text CSS surface and
+is grammar-validated at the write boundary (rejects `url(`/`expression(`/`;`/`{`/
+`}`/`<`/`\`/`:`/comment escapes fail-closed to omitted); `textColor` (rich path)
+and the divider gradient tone color ride `sanitizeAuthoringCssColor`; the enums
+fail closed (`PageDocumentError` on an unknown value in write mode). Each new key
+joins the reject-unknown allowlist (`pageBlockStyleKeys` + `$defs/pageBlockStyle`
+`additionalProperties:false`) with a round-trip test.
 
 ## Tailwind integration
 

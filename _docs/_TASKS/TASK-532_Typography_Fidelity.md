@@ -23,12 +23,12 @@
   referenced by `$ref` on BOTH the inline and responsive-override paths, the
   `sanitizeAuthoringCssColor` write-boundary color whitelist).
 
-**Status:** ⏳ To Do
-**Closure changelog:** Assigned at closure as the then-current next-free (grep
-`_docs/_CHANGELOG/` highest+1). Highest on disk at authoring is **1242**
-(TASK-530); the four bundles 531–534 take **1243+**. Do **NOT** hardcode a
-colliding number and do **NOT** edit `_CHANGELOG/*` or `_TASKS/README.md` — the
-orchestrator/closure subtask owns those.
+**Status:** ✅ Done
+**Completed:** 2026-07-09
+**Closure changelog:** **1244** (`_docs/_CHANGELOG/1244-2026-07-09-task-532-typography-fidelity.md`)
+— assigned at closure as the then-current next-free (highest on disk was 1243,
+TASK-535; 1244 was free). 1243 (TASK-535 audit remediation) landed on this branch
+before 532 closed, so 532 took 1244 rather than the authoring-time reservation.
 
 ---
 
@@ -217,10 +217,15 @@ so a three-way merge is additive.
   `"fontSizeCustom"`, `"textTransform"` inside a `// TASK-532` comment fence; 531/533/534
   append their own keys in their own fences. A three-way merge of disjoint appended
   lines is clean.
-- **Owned breaking tests (explicit — corrected 2026-07-09, TWO assertions break).**
-  Extending `pageTypographyFontWeights` from 4→6 members breaks exactly TWO assertions on
-  disk (the earlier "exactly ONE" claim was wrong — it missed the literal-token pin at
-  page-document-v2.test.ts:787):
+- **Owned breaking tests (explicit — corrected 2026-07-09, FOUR test files rebaseline).**
+  Extending `pageTypographyFontWeights` from 4→6 members plus adding the fluid-size /
+  text-transform controls forces re-baselining in FOUR owned test files (the earlier
+  "exactly TWO" enumeration was still short — it named only the two weight-enum
+  assertions and missed the exhaustive-record TS break and the typography-panel
+  raw-input-count assertion; corrected below). None weakens a behavior assertion
+  (verified: root `tsc -p tsconfig.json --noEmit` EXIT 0, all four suites green).
+
+  Two break from the WEIGHT-ENUM 4→6 growth (the literal-token pins):
   1. **`tests/vitest/pages/page-editor-control-ui-model.test.ts:139-143`** — pins a
      HARDCODED 4-member literal `resolveById("block.style.fontWeight").toMatchObject({
      kind:"segmented", options:["normal","medium","semibold","bold"], labels:{...} })`.
@@ -238,6 +243,27 @@ so a three-way merge is additive.
      `validate()` returns `true`, and `.toBe(false)` FAILS. Re-baseline the invalid-token
      fixture to a token that stays OUTSIDE the 6-member enum (e.g. `fontWeight: "ultra"` or
      `"ultrablack"`), preserving the reject-unknown-token intent.
+
+  Two MORE break as required TYPE/BEHAVIOR consequences of the enum growth and the new
+  fluid-size control (enumerated 2026-07-09 — these were undercounted before; both are
+  genuine required rebaselines that do NOT weaken any behavior assertion):
+  3. **`tests/vitest/pages/page-block-render-defaults.test.tsx`** — `fontWeightTokenClass`
+     is an EXHAUSTIVE `Record<PageTypographyFontWeight, string | null>`, so growing the
+     enum to 6 members makes it a TS COMPILE ERROR (`root tsc` red) until the two new keys
+     exist. Add `extrabold: null, black: null` — `null` is CORRECT because the authored
+     weight is emitted INLINE via `pageTypographyFontWeightCssValues` (800/900) at
+     `toPageBlockTypographyStyle` (`pageRendererV2.tsx:806`), NOT as a baked `font-*` class
+     (exactly like `normal`), so there is no class to assert. Also widen the local
+     `anyWeightClass` regex to `/font-(normal|medium|semibold|bold|extrabold|black)/`.
+     No behavior assertion weakened (it still asserts the absence of a baked weight class).
+  4. **`tests/vitest/ui/page-editor-v2-flow.test.tsx`** — the typography-panel "dedicated
+     widgets only, no raw text inputs" assertion breaks because the NEW `fontSizeCustom`
+     (Fluid size) control is a free-text `input:"text"` (a `clamp()`/`rem` CSS length has
+     no dedicated widget). Re-baseline from `[data-page-editor-control="text"]` length `0`
+     to EXACTLY `1` and assert that one input's label is `"Fluid size"` (so the assertion
+     still forbids ANY unexpected raw text input); add `"Text transform"` to the
+     segmented-group list. No behavior assertion weakened — it now pins the single allowed
+     text input by identity rather than forbidding all of them.
   **The two files previously claimed non-breaking:** (a)
   `tests/vitest/pages/page-editor-control-registry.test.ts:669` asserts `options:
   pageTypographyFontWeights` by REFERENCE against the imported enum (registry `:836` sets
@@ -248,7 +274,9 @@ so a three-way merge is additive.
   string, see item 2 above. **Do NOT rely on `grep pageTypographyFontWeights` alone:** also
   grep the literal weight strings (`"black"`, `"extrabold"`, and each existing member used
   as an invalid-token fixture) across `tests/vitest/**` before landing. Re-baseline ONLY
-  these two assertions; never weaken a behavior assertion. NOTE: labels auto-humanize
+  these FOUR files' assertions (the two weight-enum literal pins above + the exhaustive
+  record and the typography-panel raw-input count); never weaken a behavior assertion.
+  NOTE: labels auto-humanize
   (`getPageEditorOptionLabel` falls back to `humanizeOptionToken` → "Extrabold"/"Black"),
   so NO `pageEditorOptionLabelCatalog` edit is needed and the `labels` subset match
   (`toMatchObject`) is unaffected.
@@ -356,17 +384,24 @@ text-block textColor (plain + rich) persist, round-trip, reject unknown keys, an
 fail-soft on bad values; `fontSizeCustom` is grammar-validated (never arbitrary CSS)
 and wins over the discrete token; colors ride the whitelist; no npm dep, no migration,
 no schemaVersion bump, no route; every shared-file edit is inside a labelled `TASK-532`
-region; post-530 / no-effect docs byte-identical; the TWO owned re-baselining assertions
-(see the corrected 'Owned breaking tests' section) are updated together and NEITHER
-weakens a behavior assertion: (a) the hardcoded 4-member literal in
+region; post-530 / no-effect docs byte-identical; the FOUR owned re-baselining test files
+(see the corrected 'Owned breaking tests' section) are updated together and NONE weakens a
+behavior assertion: (a) the hardcoded 4-member literal in
 `page-editor-control-ui-model.test.ts:139-143` is re-baselined to the 6-member weight list
-`["normal","medium","semibold","bold","extrabold","black"]`, and (b) the literal-token
+`["normal","medium","semibold","bold","extrabold","black"]`, (b) the literal-token
 invalid-fixture in `page-document-v2.test.ts:785-789` (line `:787`) is re-baselined from
 `fontWeight: "black"` — which the grown 6-member enum now ACCEPTS, flipping
 `validate()` to `true` and its `.toBe(false)` RED — to a token that stays OUTSIDE the
 6-member enum (e.g. `fontWeight: "ultrablack"`), preserving the reject-unknown-token
-intent; `page-editor-control-registry.test.ts:669` compares `options` by REFERENCE
-against the imported `pageTypographyFontWeights`, so it does NOT re-baseline; every gate green (root
+intent, (c) the exhaustive `Record<PageTypographyFontWeight,…>` in
+`page-block-render-defaults.test.tsx` gains `extrabold: null, black: null` (a required TS
+fix — the new weights paint inline via the css-values map, not a baked class) and widens
+its `anyWeightClass` regex, and (d) `page-editor-v2-flow.test.tsx` re-baselines the
+typography-panel raw-text-input count from `0` to exactly `1` (the new `fontSizeCustom`
+"Fluid size" free-text control, pinned by label) and adds "Text transform" to the
+segmented-group list; `page-editor-control-registry.test.ts:669` compares `options` by
+REFERENCE against the imported `pageTypographyFontWeights`, so it does NOT re-baseline;
+every gate green (root
 `tsc -p tsconfig.json --noEmit`, `bun --cwd core lint:types`, `bun --cwd core lint`,
 Vitest, `bun test`, `gates:coderso`); ≥5-scenario Playwright smoke passes light + dark
 with 0 console errors side-by-side vs the prototype; closure documented under the

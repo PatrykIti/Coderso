@@ -78,6 +78,9 @@ import {
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
   pageTypographyFontWeights,
+  pageTypographyTextTransforms,
+  pageDividerAligns,
+  PAGE_DIVIDER_WIDTH_CLAMP,
 } from "../../../core/services/pages/pageDocumentV2";
 import {
   getPageSectionVariantOptions,
@@ -213,6 +216,9 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
   pageTypographyFontWeights,
+  // ── TASK-532 typography fidelity (Bundle B) option sets ──
+  pageTypographyTextTransforms,
+  pageDividerAligns,
   animatedIconNames,
   animatedIconAnimations,
   // ── TASK-534 ── declarative-interactivity control option sets.
@@ -689,6 +695,9 @@ describe("page editor control registry", () => {
     expect(pageTypographyBlockControls.map((control) => control.id)).toEqual([
       "block.style.fontFamily",
       "block.style.fontSize",
+      // TASK-532 (Bundle B): fluid size + text-transform sit next to token size.
+      "block.style.fontSizeCustom",
+      "block.style.textTransform",
       "block.style.fontWeight",
       "block.style.lineHeight",
       "block.style.letterSpacing",
@@ -1490,6 +1499,44 @@ describe("layout composition.mode + group marquee controls (TASK-522-05-L02/L04)
         `${type} should not carry marquee`
       ).toBe(false);
     }
+  });
+
+  // ── TASK-532 typography fidelity (Bundle B) — controls ──
+  test("TASK-532 text block exposes fluid size, text-transform, textColor + grown weight enum", () => {
+    const controls = getPageEditorControlsForTarget({ kind: "block", type: "text" });
+    const ids = controls.map((control) => control.id);
+    expect(ids).toContain("block.style.fontSizeCustom");
+    expect(ids).toContain("block.style.textTransform");
+    // textColor pre-exists (universal, not type-gated) — lock it in for `text`.
+    expect(ids).toContain("block.style.textColor");
+
+    const fluid = controls.find((control) => control.id === "block.style.fontSizeCustom")!;
+    expect(fluid).toMatchObject({ input: "text", responsive: true, panel: "typography" });
+
+    const transform = controls.find((control) => control.id === "block.style.textTransform")!;
+    expect(transform.options).toEqual([...pageTypographyTextTransforms]);
+    expect(transform).toMatchObject({ input: "select", responsive: true, fallback: "none" });
+
+    // The weight enum grew 4→6; the control reads it by reference.
+    const weight = controls.find((control) => control.id === "block.style.fontWeight")!;
+    expect(weight.options).toEqual([...pageTypographyFontWeights]);
+    expect(weight.options).toHaveLength(6);
+    expect(weight.options).toContain("extrabold");
+    expect(weight.options).toContain("black");
+  });
+
+  test("TASK-532 divider block exposes gradient/width/align controls", () => {
+    const controls = pageBlockControlRegistry.divider;
+    const gradient = controls.find((control) => control.id === "block.divider.props.gradient")!;
+    expect(gradient).toMatchObject({ input: "switch", panel: "style" });
+
+    const width = controls.find((control) => control.id === "block.divider.props.width")!;
+    expect(width).toMatchObject({ input: "number", panel: "style", unit: "px" });
+    expect(width.clamp).toEqual(PAGE_DIVIDER_WIDTH_CLAMP);
+
+    const align = controls.find((control) => control.id === "block.divider.props.align")!;
+    expect(align).toMatchObject({ input: "segmented", panel: "style" });
+    expect(align.options).toEqual([...pageDividerAligns]);
   });
 });
 

@@ -199,6 +199,42 @@ export const sanitizeAuthoringCssBackground = (value: unknown): string | null =>
   return null; // fail-closed
 };
 
+// ── TASK-532 typography length grammar (Bundle B — fluid font-size) ──────────
+// A strict numeric-unit-clamp grammar for the ONLY new free-text CSS surface in
+// Bundle B (`style.fontSizeCustom`). This is an ALLOWLIST (bare number + fixed
+// unit, or a single clamp()/min()/max() of such lengths) — NEVER arbitrary CSS.
+// Disjoint from bundle 531's gradient-helper region above; reuses
+// `hasBalancedParens`.
+const FONT_SIZE_MAX_LEN = 64; // hard length cap (defence-in-depth)
+// A bare number + one allowlisted unit, e.g. 1.45rem, .78rem, 100%, 5vw, 12px.
+const singleLengthPattern = /^-?(?:\d+\.?\d*|\.\d+)(?:rem|em|px|vw|vh|%|ch)$/i;
+// One clamp()/min()/max() whose comma-separated args are each a singleLength.
+const clampHeadPattern = /^(clamp|min|max)\((.*)\)$/i;
+
+export const isSafeAuthoringCssLength = (value: string): boolean => {
+  const v = value.trim();
+  if (!v || v.length > FONT_SIZE_MAX_LEN) return false;
+  // Reject every CSS-escape / injection construct up front (fail-closed):
+  if (/[;{}<>\\]|\/\*|url\s*\(|expression\s*\(|:/.test(v)) return false;
+  if (singleLengthPattern.test(v)) return true;
+  const m = clampHeadPattern.exec(v);
+  if (!m) return false;
+  if (!hasBalancedParens(v)) return false; // REUSE the balanced-paren helper
+  const args = m[2].split(",").map((a) => a.trim());
+  // clamp needs exactly 3 args; min/max accept >=1 (all lengths, no nesting).
+  if (m[1].toLowerCase() === "clamp" && args.length !== 3) return false;
+  if (args.length < 1) return false;
+  return args.every((a) => singleLengthPattern.test(a));
+};
+
+export const sanitizeAuthoringCssFontSize = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  return isSafeAuthoringCssLength(trimmed) ? trimmed : null; // present-only: null ⇒ omit
+};
+// ── end TASK-532 typography length grammar ──────────────────────────────────
+
 export const sanitizeAuthoringUrl = (
   value: unknown,
   kind: AuthoringUrlKind = "link"

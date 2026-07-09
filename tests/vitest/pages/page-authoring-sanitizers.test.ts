@@ -10,9 +10,11 @@ import {
   composeAuthoringGradientCss,
   escapeAuthoringCssString,
   isSafeAuthoringCssBackgroundLayers,
+  isSafeAuthoringCssLength,
   normalizeAuthoringSafeHref,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
+  sanitizeAuthoringCssFontSize,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
   sanitizeAuthoringRichTextHtml,
@@ -235,4 +237,64 @@ test("Page v2 normalizers sanitize URL and style fields before persistence", () 
   expect(section.style.background).toBe("#ffffff");
   expect(section.style.backgroundImage).toBeNull();
   expect(section.style.accent).toBe("#0d9488");
+});
+
+// ── TASK-532 fluid font-size length grammar (Bundle B) ──
+test("TASK-532 isSafeAuthoringCssLength accepts the numeric-unit-clamp grammar only", () => {
+  const accepted = [
+    "1.45rem",
+    ".78rem",
+    "12px",
+    "100%",
+    "5vw",
+    "2.5em",
+    "10ch",
+    "clamp(2.6rem,5vw,4.4rem)",
+    "min(4rem,8vw)",
+    "max(1rem,2vh)",
+    "clamp(.9rem,1.2vw,1.1rem)",
+  ];
+  for (const value of accepted) {
+    expect(isSafeAuthoringCssLength(value)).toBe(true);
+  }
+
+  const rejected = [
+    "url(x)",
+    "url(javascript:1)",
+    "expression(alert(1))",
+    "1px;color:red",
+    "12px}",
+    "{font-size:0}",
+    "/*x*/1rem",
+    "calc(1rem + 2px)",
+    "clamp(1rem,2rem)", // 2 args
+    "clamp(1rem,2rem,3rem,4rem)", // 4 args
+    "1rem 2rem",
+    "red",
+    "var(--x)",
+    "1", // no unit
+    "1deg",
+    "1s",
+    `${"9".repeat(65)}px`, // 67 chars > 64 cap
+    "",
+    "-",
+    "clamp(url(x),1rem,2rem)",
+    "\\",
+    "<script>",
+  ];
+  for (const value of rejected) {
+    expect(isSafeAuthoringCssLength(value)).toBe(false);
+  }
+});
+
+test("TASK-532 sanitizeAuthoringCssFontSize returns the trimmed string on accept, null otherwise", () => {
+  expect(sanitizeAuthoringCssFontSize("clamp(2.6rem,5vw,4.4rem)")).toBe("clamp(2.6rem,5vw,4.4rem)");
+  expect(sanitizeAuthoringCssFontSize("  1.45rem  ")).toBe("1.45rem");
+  expect(sanitizeAuthoringCssFontSize("expression(alert(1))")).toBeNull();
+  expect(sanitizeAuthoringCssFontSize("1px;color:red")).toBeNull();
+  expect(sanitizeAuthoringCssFontSize("")).toBeNull();
+  // Non-string input fails closed.
+  expect(sanitizeAuthoringCssFontSize(12 as unknown)).toBeNull();
+  expect(sanitizeAuthoringCssFontSize(null)).toBeNull();
+  expect(sanitizeAuthoringCssFontSize({ toString: () => "1rem" } as unknown)).toBeNull();
 });

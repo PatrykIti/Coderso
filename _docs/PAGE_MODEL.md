@@ -209,7 +209,14 @@ Block style is bounded and optional. Supported style keys are:
 - `align`: `left`, `center`, `right`;
 - `width`: `auto`, `full`;
 - `textColor`, `background`, `backgroundType`, `backgroundImage`, `opacity`,
-  `radius`, `shadow`, `borderColor`, `borderWidth`, and `borderStyle`;
+  `radius`, `shadow`, `borderColor`, `borderWidth`, and `borderStyle`
+  (`textColor` rides the `sanitizeAuthoringCssColor` whitelist). TASK-532 threads
+  a sanitized `textColor` onto the `text` block's **rich** (`format:"rich"`)
+  render path too — previously only the plain `<p>` path honored it via the
+  inherited `--coderso-block-text` var, while the rich wrapper `<div>` rendered
+  colorless; the rich wrapper now sets inline `color` + a
+  `[&_*]:text-[color:inherit]` child hint so an authored `textColor` paints the
+  rich body (unset ⇒ byte-identical, no attribute leak);
 - `padding` and `margin` using `{ top, right, bottom, left }` spacing objects;
 - token-backed typography (TASK-424), nullable with unset/`null` meaning
   "keep the baked classes" so pre-existing documents render identically:
@@ -217,7 +224,23 @@ Block style is bounded and optional. Supported style keys are:
     `var(--font-sans/--font-display, <default stack>)`),
   - `fontSize`: `2xs` | `xs` | `sm` | `md` | `lg` | `xl` | `2xl` | `3xl` |
     `4xl` | `5xl` (theme scale refs emitted as `var(--text-*, <default size>)`),
-  - `fontWeight`: `normal` | `medium` | `semibold` | `bold` (400/500/600/700),
+  - `fontSizeCustom` (TASK-532, present-only): a fluid font-size string that
+    **wins over the discrete `fontSize` token** at render (the token stays the
+    fallback/unset state). Accepts ONLY a strict numeric-unit-clamp grammar —
+    a bare number + allowlisted unit (`rem`/`em`/`px`/`vw`/`vh`/`%`/`ch`) or a
+    single `clamp()`/`min()`/`max()` of such lengths (e.g.
+    `clamp(2.6rem,5vw,4.4rem)`, `1.45rem`), validated by
+    `sanitizeAuthoringCssFontSize` at the write boundary (NEVER arbitrary CSS;
+    64-char cap; rejects `url(`/`expression(`/`;`/`{`/`}`/`<`/`\`/`:`/comment
+    escapes fail-closed to omitted). Responsive-capable (a per-device font-size
+    string is CSS-expressible),
+  - `fontWeight`: `normal` | `medium` | `semibold` | `bold` | `extrabold` |
+    `black` (400/500/600/700/**800/900** — the last two added by TASK-532;
+    heavier weights paint inline via `pageTypographyFontWeightCssValues`, not a
+    baked `font-*` class),
+  - `textTransform` (TASK-532, present-only enum): `none` | `uppercase` |
+    `lowercase` | `capitalize`; `none` resets ⇒ the field is omitted so an
+    un-authored block is byte-identical,
   - `lineHeight`: unitless number clamped to 1–2.5,
   - `letterSpacing`: px number clamped to -2–8.
 
@@ -389,6 +412,14 @@ truthful:
   wraps the title in a safe link. Unsafe media/link values fail closed.
 - `divider.tone` changes the public border color (`neutral`, `muted`,
   `accent`) while `divider.thickness` keeps controlling border width.
+  TASK-532 extends the SAME `divider` block (no new block type) with a
+  present-only decorative **eyebrow-rule** variant: `divider.gradient` (boolean)
+  swaps the `<hr>` for a slim `<span>` painting
+  `linear-gradient(90deg, <tone-color>, transparent)` (the tone color comes only
+  from the `pageDividerToneBorderColor` whitelist — no raw author string);
+  `divider.width` (px, clamped 8–400, default 34) sets the short-rule length and
+  `divider.align` (`left`/`center`/`right`) positions it via auto margins.
+  With `gradient` unset the legacy `<hr>` is byte-identical.
 
 `list.items[]` may be plain strings or simple `{ "label": "...", "href": "..." }`
 objects for navigation/footer links.
