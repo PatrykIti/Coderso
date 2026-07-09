@@ -13,6 +13,7 @@ import {
   normalizeAuthoringSafeHref,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
+  sanitizeAuthoringGridTemplate,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
   sanitizeAuthoringRichTextHtml,
@@ -235,4 +236,68 @@ test("Page v2 normalizers sanitize URL and style fields before persistence", () 
   expect(section.style.background).toBe("#ffffff");
   expect(section.style.backgroundImage).toBeNull();
   expect(section.style.accent).toBe("#0d9488");
+});
+
+// ── TASK-533-01-L04 — restricted grid-template-columns sanitizer ─────────────
+// The ONLY author STRING reaching a CSS VALUE position (section columnTemplate).
+// Strict ALLOWLIST: accept a tiny grid-track grammar, REJECT everything else → null.
+test("sanitizeAuthoringGridTemplate accepts the restricted grammar (round-trips normalized whitespace)", () => {
+  for (const ok of [
+    "1fr 1fr",
+    "1.15fr .85fr", // flagship leading-dot ratio (.project-grid) — MUST survive
+    "1fr 1.2fr", // intro-strip ratio (.intro-strip-grid)
+    "minmax(0,1fr) minmax(420px,.9fr)", // flagship .hero-grid — bare `0` bound + leading-dot
+    "minmax(0,1fr) 1fr",
+    "auto 1fr",
+    "repeat(3,1fr)",
+    "1fr 2fr 1fr",
+  ]) {
+    expect(sanitizeAuthoringGridTemplate(ok)).toBe(ok.replace(/\s+/g, " "));
+  }
+  // Collapses internal whitespace runs to a single space.
+  expect(sanitizeAuthoringGridTemplate("  1.15fr    .85fr  ")).toBe("1.15fr .85fr");
+  // AUDIT REMEDIATION (2026-07-09): the CANONICAL spaced minmax()/repeat() form — exactly
+  // how the reference `.hero-grid` and any devtools copy-paste writes it (a space after the
+  // internal comma) — MUST be accepted and normalised to the no-inner-space canonical form,
+  // NOT rejected. The old `raw.split(/\s+/)` shredded `minmax(0, 1fr)` into `minmax(0,`/
+  // `1fr)` (neither a valid track) ⇒ silent whole-value omission.
+  expect(sanitizeAuthoringGridTemplate("minmax(0, 1fr) minmax(420px, .9fr)")).toBe(
+    "minmax(0,1fr) minmax(420px,.9fr)"
+  );
+  expect(sanitizeAuthoringGridTemplate("repeat(3, 1fr)")).toBe("repeat(3,1fr)");
+  // Mixed spaced-function + bare tracks with irregular top-level whitespace also normalise.
+  expect(sanitizeAuthoringGridTemplate("minmax(0, 1fr)   1fr")).toBe("minmax(0,1fr) 1fr");
+  expect(sanitizeAuthoringGridTemplate("1.15fr minmax(200px, 1fr)")).toBe(
+    "1.15fr minmax(200px,1fr)"
+  );
+});
+
+test("sanitizeAuthoringGridTemplate rejects injection / out-of-grammar → null", () => {
+  for (const bad of [
+    "1fr;}body{display:none}",
+    "url(evil)",
+    "expression(alert(1))",
+    "repeat(999,1fr)", // count > GRID_MAX_REPEAT
+    "<b>",
+    "calc(100% - 10px)",
+    "1fr @import",
+    "1fr /* x */ 1fr",
+    "minmax(a,b)", // inner tokens fail GRID_LEN (closed grammar)
+    "repeat(9,zz)", // inner token fails GRID_LEN
+    "minmax(1fr)", // wrong arg count
+    "1fr `x`",
+    "1fr\\2f 1fr",
+    "1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr", // 13 tracks > GRID_MAX_TRACKS
+    "5", // bare unitless standalone track is not valid
+    "",
+    "   ",
+    "a".repeat(300), // over-length
+  ]) {
+    expect(sanitizeAuthoringGridTemplate(bad), `expected reject: ${bad}`).toBeNull();
+  }
+  // Non-string inputs.
+  expect(sanitizeAuthoringGridTemplate(42 as unknown)).toBeNull();
+  expect(sanitizeAuthoringGridTemplate(null as unknown)).toBeNull();
+  expect(sanitizeAuthoringGridTemplate(undefined as unknown)).toBeNull();
+  expect(sanitizeAuthoringGridTemplate({} as unknown)).toBeNull();
 });

@@ -149,6 +149,21 @@ Phase 3B section template semantics are part of the public runtime contract:
 - `timeline.horizontal` floors the grid to at least three columns and wraps
   each child block in a timeline item with a marker. Other timeline variants
   keep the item/marker structure with their resolved grid/spacing.
+- The VERTICAL timeline variants (`default`, `compact`) draw a CONTINUOUS
+  vertical axis line connecting the dots (TASK-533-03), reproducing the reference
+  `.timeline:before` (aqua→fade rule) + `.timeline article:before` glow dots. The
+  axis is a per-item connector segment (`data-page-timeline-axis` /
+  `data-page-timeline-axis-line`) hoisted into the `relative` item box and spanning
+  its FULL height (`inset-y-0`, so the item's own vertical padding is INSIDE the
+  segment — no intra-item break); it bleeds its bottom by exactly the section content
+  row gap so segment N reaches segment N+1's top, and the LAST item ends flush at its
+  dot (`bottom:0`, no overshoot). The dot keeps a `box-shadow` glow off the section
+  accent. This is ADDITIVE DOM — the existing `data-page-timeline-item/marker/content`
+  hooks are retained; the `horizontal` variant is UNCHANGED. No model field and no
+  author-controlled value: the axis/dot are fixed render structure tinted off the
+  already-sanitized `--coderso-section-accent` (the bleed offset is the clamped numeric
+  section gap). The `timeline` section is authored as a section TEMPLATE via the
+  section-template picker.
 - `gallery` remains a section template over existing child blocks. `cards`
   wraps child blocks in card surfaces while `grid` keeps the flat section grid;
   this does not ungate or redefine the standalone `gallery` block.
@@ -1103,6 +1118,18 @@ NUMERIC `layer.x/y/z` render per device — see below):
   numeric fields, `responsive:true` — a per-device glow rides the `pageResponsiveCss.ts`
   box-shadow branch). Reject-unknown nested key + round-trip tested; omitted when unset →
   byte-identical.
+- `colSpan?: number` / `rowSpan?: number` (TASK-533-01) — a block can SPAN columns/rows
+  in the section grid, reproducing the reference `.project-card.large{grid-row:span 2}` /
+  `.offer-card.feature{grid-row:span 2}` (the Aurora card 2× taller). Both are clamped
+  integers (`readOptionalClampedNumber` + `Math.trunc` against `PAGE_BLOCK_SPAN_CLAMP =
+  { min: 1, max: 4 }`; NaN/Infinity/out-of-range fail-soft) and emit ONLY `gridColumn:
+  "span N"` / `gridRow: "span N"` on the block FRAME — never a raw author value in a CSS
+  declaration, markup, or URL. The span is emitted ONLY on the auto-flow grid path; it is
+  SUPPRESSED for a block placed inside a per-column composition (where the parent owns the
+  track placement), so it cannot fight explicit column placement. Present-only (unset ⇒ no
+  `gridRow`/`gridColumn`, byte-identical to post-530); joins `pageBlockStyleKeys` +
+  `pageBlockStyleJsonSchema` (`additionalProperties:false`); reject-unknown + round-trip
+  tested. Authored via the `block.style.colSpan`/`rowSpan` number controls.
 
 ### Multi-layer background + gradient background type (TASK-531)
 
@@ -1159,6 +1186,50 @@ section-style schema (validating `sections[].style`) — in lockstep, mirroring 
 `surfacePreset`/`composition`/`fullBleed` precedent, so a top-level `style.glow` round-trips
 against the compiled `pageDocumentV2JsonSchema`. Present-only, reject-unknown, round-trip
 tested; `PAGE_DOCUMENT_SCHEMA_VERSION` stays `2` (no migration).
+
+### Asymmetric column ratio + per-edge section border (TASK-533)
+
+`section.style` also gains two present-only fields (both reject-unknown + round-trip
+tested; `PAGE_DOCUMENT_SCHEMA_VERSION` stays `2`, no migration):
+
+- `columnTemplate?: string` (TASK-533-01) — a restricted `grid-template-columns` value
+  (e.g. `"1.15fr .85fr"`, `"1fr 1.2fr"`, `"minmax(0,1fr) minmax(420px,.9fr)"`) that, when
+  set, OVERRIDES the symmetric `pageSectionGridClass(columns)` with an inline
+  `gridTemplateColumns` on the content grid, reproducing the reference intro (1/1.2fr) and
+  realizacje (1.15/.85fr) ratios. This is the ONLY author-controlled STRING reaching a CSS
+  VALUE position, so it goes through the NEW strict-allowlist sanitizer
+  `sanitizeAuthoringGridTemplate` (`pageAuthoringSanitizers.ts`) at the write boundary: an
+  up-front metacharacter reject (`;{}\<>@` backtick `/*` `url(` `expression(` and any `:`
+  outside a function's parens) → paren-depth-aware TOP-LEVEL whitespace split (so
+  `minmax(0, 1fr)` / `repeat(3, 1fr)` stay one track) → each track must match a tiny
+  grammar (`<num>fr|px|%|rem|em`, `auto`, `minmax(min,max)`, `repeat(<int>,…)`), bounded
+  `GRID_MAX_TRACKS = 12` / `GRID_MAX_REPEAT = 12`, minmax/repeat INNER tokens re-validated
+  against a finite length pattern, and re-emitted in a CANONICAL no-inner-space form. It is
+  a positive ALLOWLIST (not a blocklist); rejection ⇒ the field is OMITTED (present-only,
+  fail-soft) and never emitted raw. It is a single React inline-style value (no CSS-rule
+  interpolation, so no rule-injection surface) AND additionally sanitizer-gated. Curated
+  `pageColumnTemplatePresets` back the "Column ratio" control (every preset round-trips
+  unchanged). Unset ⇒ symmetric `grid-cols-N`, byte-identical to post-530. DISJOINT from
+  the 531 gradient/multi-layer relaxation surface (does NOT touch
+  `isSafeAuthoringCssGradient` / `sanitizeAuthoringCssBackground`).
+- `border?: PageSectionBorderV2` (TASK-533-02) — a per-edge section border
+  (`{ top?, right?, bottom?, left? }`, each `{ color?, width?, style? }`), at minimum
+  top+bottom for the reference `border-block` (`.intro-strip{border-block:1px solid
+  rgba(255,255,255,.1)}`), full four-edge supported. Each `color` is sanitized via
+  `sanitizeAuthoringCssColor` (through `readOptionalSafeColor`) — the only sanctioned color
+  path; each `width` is clamped `PAGE_SECTION_BORDER_WIDTH_CLAMP = { min: 0, max: 16 }` px
+  via `readOptionalClampedNumber`; each `style` is `normalizeEnum`-validated against the
+  fixed border-style enum. It emits fixed `border-{edge}-color/-width/-style` declarations
+  on the NORMAL content box AND, for a full-bleed section, on the `100vw` bleed box — never
+  the paint-empty full-bleed content box, and never a raw author value in a free CSS
+  position. The nested `style.border.<edge>.color` optimistic client-state path is also
+  routed through `sanitizeAuthoringCssColor` in `pageEditorMutationActions.ts` (the length-4
+  override path the `[group,key]` destructure would otherwise leave unsanitized). It joins
+  the section `assertKnownKeys` allowlist and BOTH `additionalProperties:false` section-style
+  JSON schema mirrors (the per-breakpoint `partialSectionStyleJsonSchema` AND the inlined
+  top-level section-style schema) in lockstep. Present-only: omitted whole-object when no
+  edge is authored ⇒ byte-identical to post-530. Authored via the per-edge
+  `section.style.border.*` controls.
 
 ### Per-device scope (bounded + honest)
 

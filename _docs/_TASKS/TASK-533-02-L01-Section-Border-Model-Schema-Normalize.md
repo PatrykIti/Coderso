@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Schema (JSON model) / Security
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

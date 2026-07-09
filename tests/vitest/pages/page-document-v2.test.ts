@@ -2876,3 +2876,225 @@ describe("glow model + multi-layer background write boundary (TASK-531-01)", () 
     expect(rerun).toEqual(base);
   });
 });
+
+// TASK-533-01-L04 — block colSpan/rowSpan + section columnTemplate model at the
+// WRITE boundary. Present-only, reject-unknown, fail-soft, joins the allowlist +
+// additionalProperties:false JSON schema in lockstep.
+describe("grid span + asymmetric column ratio write boundary (TASK-533-01)", () => {
+  const docWithBlockStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.blocks[0]!.style =
+      style as PageDocumentV2["sections"][number]["blocks"][number]["style"];
+    return doc;
+  };
+  const docWithSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+  const blockStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    (normalizePageDocumentV2ForWrite(doc).sections[0]!.blocks[0]!.style ?? {}) as Record<
+      string,
+      unknown
+    >;
+  const sectionStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.style as unknown as Record<string, unknown>;
+
+  test("block colSpan/rowSpan round-trip present-only + clamp + trunc", () => {
+    expect(blockStyle(docWithBlockStyle({ rowSpan: 2 })).rowSpan).toBe(2);
+    expect(blockStyle(docWithBlockStyle({ colSpan: 2 })).colSpan).toBe(2);
+    // Clamp: out-of-range clamps to the PAGE_BLOCK_SPAN_CLAMP bounds {1,4}.
+    expect(blockStyle(docWithBlockStyle({ rowSpan: 99 })).rowSpan).toBe(4); // clamp max
+    expect(blockStyle(docWithBlockStyle({ colSpan: 0 })).colSpan).toBe(1); // clamp min
+    // Trunc: a fractional span becomes an integer literal for `span N`.
+    expect(blockStyle(docWithBlockStyle({ rowSpan: 2.9 })).rowSpan).toBe(2);
+    // Present-only: unset ⇒ omitted.
+    expect("colSpan" in blockStyle(docWithBlockStyle({}))).toBe(false);
+    expect("rowSpan" in blockStyle(docWithBlockStyle({}))).toBe(false);
+  });
+
+  test("block span is byte-stable across a second normalize pass", () => {
+    const first = normalizePageDocumentV2ForWrite(docWithBlockStyle({ colSpan: 2, rowSpan: 2 }));
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.blocks[0]!.style).toEqual(first.sections[0]!.blocks[0]!.style);
+  });
+
+  test("section columnTemplate round-trips a sanitizer-valid ratio, omits an invalid one", () => {
+    expect(
+      sectionStyle(docWithSectionStyle({ columnTemplate: "1.15fr .85fr" })).columnTemplate
+    ).toBe("1.15fr .85fr");
+    expect(sectionStyle(docWithSectionStyle({ columnTemplate: "1fr 1.2fr" })).columnTemplate).toBe(
+      "1fr 1.2fr"
+    );
+    // Rejected by the strict sanitizer ⇒ OMITTED (present-only fail-soft, never raw).
+    expect(
+      "columnTemplate" in sectionStyle(docWithSectionStyle({ columnTemplate: "1fr;}x{}" }))
+    ).toBe(false);
+    expect(
+      "columnTemplate" in sectionStyle(docWithSectionStyle({ columnTemplate: "url(evil)" }))
+    ).toBe(false);
+    // Present-only: unset ⇒ omitted.
+    expect("columnTemplate" in sectionStyle(docWithSectionStyle({}))).toBe(false);
+  });
+
+  test("rejects unknown block/section style keys (fail-closed READ trap)", () => {
+    expect(() => normalizePageDocumentV2ForWrite(docWithBlockStyle({ colSpanX: 2 }))).toThrow(
+      "Unknown page document field: sections.0.blocks.0.style.colSpanX"
+    );
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithSectionStyle({ columnTemplateX: "1fr" }))
+    ).toThrow("Unknown page document field: sections.0.style.columnTemplateX");
+  });
+
+  test("no-span / no-columnTemplate doc is byte-identical across two passes", () => {
+    const base = normalizePageDocumentV2ForWrite(buildDocument());
+    expect("colSpan" in (base.sections[0]!.blocks[0]!.style ?? {})).toBe(false);
+    expect("columnTemplate" in (base.sections[0]!.style as Record<string, unknown>)).toBe(false);
+    const rerun = normalizePageDocumentV2ForWrite(cloneDocument(base));
+    expect(rerun).toEqual(base);
+  });
+
+  test(
+    "colSpan/rowSpan/columnTemplate validate against the compiled pageDocumentV2JsonSchema",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      const blockNormalized = normalizePageDocumentV2ForWrite(
+        docWithBlockStyle({ colSpan: 2, rowSpan: 2 })
+      );
+      expect(validate(blockNormalized)).toBe(true);
+      // Top-level section style is validated by the INLINED section schema (mirror b),
+      // separate from the partial — omitting columnTemplate there would fail this.
+      const sectionNormalized = normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({ columnTemplate: "1.15fr .85fr" })
+      );
+      expect(validate(sectionNormalized)).toBe(true);
+      // A hand-injected out-of-range span fails the numeric schema.
+      const badSpan = cloneDocument(blockNormalized);
+      (badSpan.sections[0]!.blocks[0]!.style as Record<string, unknown>).rowSpan = 99;
+      expect(validate(badSpan)).toBe(false);
+    }
+  );
+});
+
+// TASK-533-02-L04 — per-edge section border model at the WRITE boundary. Present-only
+// whole-object omit, reject-unknown (edge + prop), fail-soft clamp/bad-color-drop,
+// joins the section-style allowlist + additionalProperties:false JSON schema in lockstep.
+describe("per-edge section border write boundary (TASK-533-02)", () => {
+  const docWithSectionStyle = (style: Record<string, unknown>): PageDocumentV2 => {
+    const doc = buildDocument();
+    doc.sections[0]!.style = {
+      ...doc.sections[0]!.style,
+      ...style,
+    } as PageDocumentV2["sections"][number]["style"];
+    return doc;
+  };
+  const sectionStyle = (doc: PageDocumentV2): Record<string, unknown> =>
+    normalizePageDocumentV2ForWrite(doc).sections[0]!.style as unknown as Record<string, unknown>;
+  const border = (doc: PageDocumentV2): Record<string, unknown> | undefined =>
+    sectionStyle(doc).border as Record<string, unknown> | undefined;
+
+  test("section border round-trips per-edge present-only (border-block: no left/right)", () => {
+    const b = border(
+      docWithSectionStyle({
+        border: {
+          top: { color: "#ffffff33", width: 1 },
+          bottom: { color: "#ffffff33", width: 1 },
+        },
+      })
+    );
+    // Present-only: `style` is OMITTED when unauthored (the render defaults it to
+    // "solid" — 533-02-L02 — but the stored model stays byte-identical). color + width
+    // round-trip.
+    expect(b?.top).toEqual({ color: "#ffffff33", width: 1 });
+    expect((b?.top as Record<string, unknown>).style).toBeUndefined();
+    expect((b?.bottom as Record<string, unknown>).width).toBe(1);
+    // border-block: only top+bottom authored ⇒ no left/right edges.
+    expect("left" in (b ?? {})).toBe(false);
+    expect("right" in (b ?? {})).toBe(false);
+    // Present-only whole-object omit when unset.
+    expect("border" in sectionStyle(docWithSectionStyle({}))).toBe(false);
+  });
+
+  test("four-edge border round-trips all edges", () => {
+    const b = border(
+      docWithSectionStyle({
+        border: {
+          top: { color: "#fff", width: 2, style: "dashed" },
+          right: { color: "#000", width: 1 },
+          bottom: { width: 3 },
+          left: { color: "#0d9488", width: 1, style: "dotted" },
+        },
+      })
+    );
+    expect((b?.top as Record<string, unknown>).style).toBe("dashed");
+    expect((b?.bottom as Record<string, unknown>).width).toBe(3);
+    expect((b?.left as Record<string, unknown>).color).toBe("#0d9488");
+  });
+
+  test("clamps width and drops a bad color (fail-soft)", () => {
+    // Width over-range clamps to the PAGE_SECTION_BORDER_WIDTH_CLAMP max {16}.
+    const clamped = border(docWithSectionStyle({ border: { top: { width: 99 } } }));
+    expect((clamped?.top as Record<string, unknown>).width).toBe(16);
+    // A hostile color is sanitized away; the width keeps the edge alive.
+    const bad = border(
+      docWithSectionStyle({ border: { top: { color: "javascript:alert(1)", width: 1 } } })
+    );
+    expect((bad?.top as Record<string, unknown>).color).toBeUndefined();
+    expect((bad?.top as Record<string, unknown>).width).toBe(1);
+  });
+
+  test("omits an all-empty border object entirely (present-only whole-object omit)", () => {
+    expect("border" in sectionStyle(docWithSectionStyle({ border: { top: {}, bottom: {} } }))).toBe(
+      false
+    );
+    // An edge with only a bad color / zero width contributes nothing ⇒ whole object omitted.
+    expect(
+      "border" in
+        sectionStyle(docWithSectionStyle({ border: { top: { color: "url(x)", width: 0 } } }))
+    ).toBe(false);
+  });
+
+  test("rejects unknown border edge / prop keys (fail-closed READ trap)", () => {
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithSectionStyle({ border: { middle: { width: 1 } } }))
+    ).toThrow("Unknown page document field: sections.0.style.border.middle");
+    expect(() =>
+      normalizePageDocumentV2ForWrite(docWithSectionStyle({ border: { top: { widthX: 1 } } }))
+    ).toThrow("Unknown page document field: sections.0.style.border.top.widthX");
+  });
+
+  test("border is byte-stable across a second normalize pass", () => {
+    const first = normalizePageDocumentV2ForWrite(
+      docWithSectionStyle({ border: { top: { color: "#fff2", width: 1 } } })
+    );
+    const second = normalizePageDocumentV2ForWrite(cloneDocument(first));
+    expect(second.sections[0]!.style).toEqual(first.sections[0]!.style);
+  });
+
+  test(
+    "border validates against the compiled pageDocumentV2JsonSchema (both mirrors)",
+    { timeout: 30_000 },
+    () => {
+      const ajv = new Ajv({ allErrors: true, strict: true });
+      const validate = ajv.compile(pageDocumentV2JsonSchema);
+      const normalized = normalizePageDocumentV2ForWrite(
+        docWithSectionStyle({
+          border: { top: { color: "#fff2", width: 1 }, bottom: { color: "#fff2", width: 1 } },
+        })
+      );
+      expect(validate(normalized)).toBe(true);
+      // A hand-injected unknown nested edge key fails additionalProperties:false too.
+      const tampered = cloneDocument(normalized);
+      (
+        (tampered.sections[0]!.style as unknown as Record<string, Record<string, unknown>>).border!
+          .top as Record<string, unknown>
+      ).wobble = 1;
+      expect(validate(tampered)).toBe(false);
+    }
+  );
+});

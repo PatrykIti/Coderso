@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Testing / Security
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

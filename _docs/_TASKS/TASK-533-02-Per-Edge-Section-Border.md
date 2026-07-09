@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Schema (JSON model) / Site Render / Admin UI / Security
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
