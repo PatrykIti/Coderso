@@ -1051,7 +1051,7 @@ NUMERIC `layer.x/y/z` render per device — see below):
 - `tiltGlare?: boolean` — optional `.cx-glare` sheen sweep on a tilted block.
 - `layer?: PageBlockLayer` — `{ x?, y?, z?, anchor? }` placement inside a layered
   canvas. `x`/`y` clamped `PAGE_LAYER_X_CLAMP`/`PAGE_LAYER_Y_CLAMP = { min: -50, max:
-  150 }` %; `z` clamped `PAGE_LAYER_Z_CLAMP = { min: 0, max: 40 }`; `anchor` ∈
+  150 }` %; `z` clamped `PAGE_LAYER_Z_CLAMP = { min: 0, max: 20 }`; `anchor` ∈
   `pageLayerAnchors` (9 grid positions). Only `x/y/z` vary per device (via
   `pageResponsiveCss.ts` `--layer-*` deltas); `anchor` is base-only.
 - `surfacePreset?: PageSurfacePreset` — `pageSurfacePresets = ["none", "glass",

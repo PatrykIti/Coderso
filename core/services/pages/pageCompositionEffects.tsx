@@ -19,6 +19,7 @@
  * is left out — invalid inside `radial-gradient()`).
  */
 
+import { sanitizeAuthoringCssColor } from "./pageAuthoringSanitizers";
 import type { PageBlockStyleV2, PageSectionStyleV2 } from "./pageDocumentV2";
 
 // (1) Static CSS — emitted once by PageDocumentRender (522-05-L01), present-only.
@@ -110,8 +111,9 @@ export const PAGE_COMPOSITION_EFFECTS_CSS = `
   [data-hover="scale"]{transition:transform .25s ease}
   [data-hover="scale"]:hover{transform:scale(1.03)}
 }
-/* tilt needs a perspective parent + preserve-3d (STATIC, safe under reduce) */
-[data-tilt-parent]{perspective:1200px}
+/* tilt frame needs preserve-3d (STATIC, safe under reduce); the perspective
+   PARENT gets an inline perspective:1200px on the [data-tilt-parent] wrapper
+   in pageRendererV2 (withTiltParent), so no CSS rule is needed for it here. */
 [data-block-tilt]{transform-style:preserve-3d;position:relative}
 `;
 
@@ -149,7 +151,15 @@ export function resolveBlockCompositionAttrs(style?: PageBlockStyleV2): PageBloc
   const bgGlow = bg && !isGradientOrUrl(bg) ? bg : undefined;
   const tintGlow =
     style.surfaceTint && !isGradientOrUrl(style.surfaceTint) ? style.surfaceTint : undefined;
-  const glow = tintGlow ?? bgGlow;
+  // DEFENCE-IN-DEPTH render parity (TASK-535): the glow source is validated at
+  // WRITE (readOptionalSafeColor / readOptionalSafeBackground), but these resolvers
+  // run at RENDER and thread the value straight into a `style` CSS custom prop.
+  // Re-sanitize here exactly as the spotlight color / canvas background do at
+  // render (pageRendererV2 `sanitizeAuthoringCssColor(effects?.spotlightColor)`),
+  // so a value that somehow bypassed the write boundary cannot reach the DOM as a
+  // `;`-delimited CSS injection. A write-sanitized plain color passes unchanged
+  // (behaviour identical for valid input); an unexpected value drops the glow.
+  const glow = sanitizeAuthoringCssColor(tintGlow ?? bgGlow) ?? undefined;
   const motion = style.decoration?.motion;
   const needsGlow =
     !!style.surfacePreset ||
@@ -210,8 +220,11 @@ export function resolveSectionCompositionAttrs(
   if (style.composition === "layered") dataAttrs["data-composition"] = "layered";
   // SECTIONS thread their real `accent` (readSafeColor-validated at write). No
   // `?? background` fallback: section background may be a GRADIENT (invalid in
-  // radial-gradient()'s color slot).
-  const glow = style.accent;
+  // radial-gradient()'s color slot). DEFENCE-IN-DEPTH render parity (TASK-535):
+  // re-sanitize at RENDER exactly as spotlight/canvas-bg do (this resolver threads
+  // the value into a `style` custom prop). A write-sanitized color passes
+  // unchanged; an unexpected value drops the glow (present-only).
+  const glow = sanitizeAuthoringCssColor(style.accent) ?? undefined;
   if (glow && style.surfacePreset) {
     cssVars["--surface-glow"] = glow;
     cssVars["--deco-ring"] = glow;

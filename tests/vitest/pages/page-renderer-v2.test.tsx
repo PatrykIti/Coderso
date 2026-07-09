@@ -824,6 +824,102 @@ test("full-width section variants remove the outer section gutter so backgrounds
   expect(fullWidthHtml).toContain("background-color:#dcfce7");
 });
 
+test("TASK-535: the fullBleed FLAG (default variant) drops the px-4 py-6 gutter, matching the style path", () => {
+  // Regression: `toPageSectionStyle` / `toPageSectionBleedStyle` key the bleed box
+  // + content cap off `isPageSectionFullBleed` (variant full-width OR
+  // `style.fullBleed`), but the section CLASSNAME only checked the variant, so a
+  // `style.fullBleed`-only section got the 100vw bleed box yet KEPT the utility
+  // gutter. The className must route off the SAME predicate: drop the gutter here
+  // too, consistent with the style path.
+  const flagBleed = createPageSectionV2("hero", {
+    id: "sec-flag-bleed",
+    variant: "default", // NOT the full-width template variant — the FLAG alone.
+    style: {
+      background: "#dcfce7",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+      fullBleed: true,
+    },
+  });
+  const flagProps = toPageSectionRenderProps(flagBleed);
+  const flagHtml = renderToStaticMarkup(<PageSectionRender section={flagBleed} />);
+  // Gutter dropped (matches the style path), NOT `w-full px-4 py-6`.
+  expect(flagProps.sectionClassName).toBe("w-full");
+  expect(flagProps.sectionClassName).not.toContain("px-4");
+  expect(flagProps.sectionClassName).not.toContain("py-6");
+  // The style path already treats it as full-bleed: 100vw bleed box + capped content.
+  const bleed = toPageSectionBleedStyle(flagBleed);
+  expect(bleed?.width).toBe("100vw");
+  expect(flagHtml).toContain("width:100vw");
+  // A NON-full-bleed (default variant, no flag) sibling still keeps the gutter.
+  const bounded = createPageSectionV2("hero", {
+    id: "sec-bounded",
+    variant: "default",
+    style: {
+      background: "#eef2ff",
+      backgroundType: "color",
+      backgroundImage: null,
+      accent: "#0d9488",
+      radius: 0,
+      shadow: "none",
+    },
+  });
+  expect(toPageSectionRenderProps(bounded).sectionClassName).toBe("w-full px-4 py-6");
+});
+
+test("TASK-535: a page with a full-bleed section guards the root with overflow-x:clip (no h-scroll from 100vw)", () => {
+  // The 100vw bleed box counts the vertical-scrollbar gutter, so it is wider than
+  // the content area and pushes a spurious horizontal scrollbar. The page root
+  // gets `overflow-x:clip` (present-only) to clip it WITHOUT creating a scroll
+  // container (which `overflow:hidden` would, breaking the sticky nav).
+  const bleedDoc = createEffectsDocument([
+    createPageSectionV2("hero", {
+      id: "sec-bleed",
+      variant: "full-width",
+      style: {
+        background: "#dcfce7",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      },
+    }),
+  ]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={bleedDoc} />);
+  expect(html).toContain("overflow-x:clip");
+  // The FLAG path guards too (default variant + style.fullBleed).
+  const flagDoc = createEffectsDocument([
+    createPageSectionV2("hero", {
+      id: "sec-flag",
+      variant: "default",
+      style: {
+        background: "#dcfce7",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        fullBleed: true,
+      },
+    }),
+  ]);
+  expect(renderToStaticMarkup(<PageDocumentRender document={flagDoc} />)).toContain(
+    "overflow-x:clip"
+  );
+});
+
+test("TASK-535: a page with NO full-bleed section adds NO root overflow guard (present-only, byte-identical)", () => {
+  // present-only invariant: `createSection()` is a `centered` variant with no
+  // fullBleed flag, so the root style stays byte-identical (no overflow-x).
+  const doc = createEffectsDocument([createSection()]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  expect(html).not.toContain("overflow-x");
+});
+
 test("TASK-525-01: full-width section caps content at layout.maxWidth (bg full-bleed)", () => {
   const section = createPageSectionV2("hero", {
     id: "sec-fb-cap",
@@ -3156,6 +3252,112 @@ test("TASK-525-02: staggers a revealing section's children with distinct per-blo
   expect(new Set(emitted).size).toBe(3);
 });
 
+test("TASK-535 — revealDelay does NOT inherit: the reveal CSS resets --reveal-delay per [data-page-block] frame", () => {
+  // `--reveal-delay` is a CSS CUSTOM PROPERTY (inherits by default). A block stamps
+  // it INLINE on its OWN frame, so a container that authors revealDelay would leak
+  // its value onto every un-delayed nested child (they'd cascade at the ancestor's
+  // delay instead of 0). The reveal CSS rule that reads it must ALSO reset it to 0ms
+  // on the same [data-page-block] selector, so an un-delayed descendant uses 0ms
+  // (author-stylesheet reset), while an authored frame's INLINE value still wins the
+  // cascade (inline beats an author-stylesheet declaration).
+  const declRe =
+    /([^{}]*\[data-page-block\])\{([^}]*transition-delay:var\(--reveal-delay,0ms\)[^}]*)\}/g;
+  const transitionDeclarations = [...PAGE_REVEAL_MOTION_CSS.matchAll(declRe)];
+  expect(transitionDeclarations.length).toBeGreaterThan(0);
+  // At least one transition-carrying rule ALSO resets the custom property to 0ms so
+  // the value cannot inherit from an ancestor frame onto an un-delayed descendant.
+  expect(transitionDeclarations.some(([, , body]) => body.includes("--reveal-delay:0ms"))).toBe(
+    true
+  );
+  // The reset lives on the SAME state-independent rule that carries the transition
+  // (so it survives into the revealed state), and precedes the `var()` read.
+  const resetRule = transitionDeclarations.find(([, , body]) =>
+    body.includes("--reveal-delay:0ms")
+  );
+  expect(resetRule).toBeDefined();
+  const body = resetRule?.[2] ?? "";
+  expect(body.indexOf("--reveal-delay:0ms")).toBeLessThan(
+    body.indexOf("transition-delay:var(--reveal-delay,0ms)")
+  );
+  // The reset rule stays state-independent (not gated by :not([data-revealed])).
+  expect(/:not\(\[data-revealed\]\)/.test(resetRule?.[1] ?? "")).toBe(false);
+});
+
+test("TASK-535 — a container's revealDelay is NOT stamped inline onto an un-delayed nested child (no inline leak)", () => {
+  // DOM-structure proof of the inheritance fix's premise: the un-authored child frame
+  // carries NO inline --reveal-delay (so the CSS per-frame 0ms reset governs it and it
+  // does not inherit the ancestor's 500ms), while BOTH the container that authored the
+  // delay AND a sibling that authored its OWN delay keep their inline values.
+  const container = createPageBlockV2("container", {
+    id: "blk-parent-delay",
+    style: { revealDelay: 500 } as PageBlockV2["style"],
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-child-nodelay",
+          props: { text: "child", level: "h2", align: "left" },
+        }),
+        createPageBlockV2("text", {
+          id: "blk-child-owndelay",
+          style: { revealDelay: 120 } as PageBlockV2["style"],
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-reveal-nest", blocks: [container] })}
+    />
+  );
+  // The container frame carries its own inline delay…
+  const parentTag = html.match(/<div[^>]*data-block-id="blk-parent-delay"[^>]*>/)?.[0] ?? "";
+  expect(parentTag).toContain("--reveal-delay:500ms");
+  // …the self-delayed sibling keeps its OWN inline delay…
+  const ownTag = html.match(/<div[^>]*data-block-id="blk-child-owndelay"[^>]*>/)?.[0] ?? "";
+  expect(ownTag).toContain("--reveal-delay:120ms");
+  // …but the un-delayed child frame has NO inline --reveal-delay (would otherwise
+  // pin the author's 0 to the ancestor's 500ms via inheritance — the CSS reset owns
+  // it instead). Its frame `style` should not mention the var at all.
+  const childTag = html.match(/<div[^>]*data-block-id="blk-child-nodelay"[^>]*>/)?.[0] ?? "";
+  expect(childTag).not.toContain("--reveal-delay");
+});
+
+test("TASK-535 — revealDelay-only (no section scrollEffect) is INERT by design: no motion CSS / marker / script", () => {
+  // Documented scope: revealDelay is a STAGGER within a revealing section, not a
+  // standalone reveal trigger. A page whose ONLY authored motion is a block
+  // revealDelay — inside a section with NO scrollEffect — emits NO reveal
+  // stylesheet, NO data-page-motion marker and NO runtime <script>: nothing hides
+  // or observes the block, so the (still-stamped) --reveal-delay var is inert. The
+  // fix for a visible reveal is to author the SECTION's reveal scrollEffect.
+  const delayOnlySection = createPageSectionV2("content", {
+    id: "sec-delay-only",
+    style: {
+      background: "#ffffff",
+      backgroundType: "none",
+      backgroundImage: null,
+      accent: "#111111",
+      radius: 0,
+      shadow: "none",
+      // NOTE: no scrollEffect authored.
+    },
+    blocks: [
+      createPageBlockV2("text", {
+        id: "blk-delay-only",
+        style: { revealDelay: 300 } as PageBlockV2["style"],
+      }),
+    ],
+  });
+  const doc = createEffectsDocument([delayOnlySection]);
+  const html = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  // The block still carries its inline var (present-only, harmless)…
+  expect(html).toContain("--reveal-delay:300ms");
+  // …but NONE of the section-reveal machinery is emitted (inert by design).
+  expect(html).not.toContain("data-page-motion-css");
+  expect(html).not.toContain("data-page-motion=");
+  expect(html).not.toContain("data-page-effect");
+  expect(html).not.toContain(`data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`);
+});
+
 // ---------------------------------------------------------------------------
 // TASK-521-05-L03 — page-shell effects (PageDocumentRender): cursor spotlight,
 // data-page-motion marker, reveal-hide + noscript, runtime script, byte-identity.
@@ -3317,6 +3519,131 @@ test("section scrollEffect only ⇒ data-page-motion + <style data-page-motion-c
   // no page spotlight
   expect(html).not.toContain('data-page-spotlight="true"');
   expect(html).not.toContain("data-page-spotlight-overlay");
+});
+
+// ---------------------------------------------------------------------------
+// TASK-535 — page-global effect-node handling across the TWO documents a page
+// renders (the <main> page + the SiteFooter template). Each PageDocumentRender
+// decides its own effects. Two classes of node:
+//   - IDEMPOTENT stylesheets (reveal/composition/spotlight CSS + reveal noscript):
+//     document-agnostic selectors, so a duplicate is HARMLESS. Emitted PER-DOCUMENT /
+//     present-only ⇒ a FOOTER-ONLY effect is still styled (the earlier 535 pass that
+//     gated these to the primary suppressed them on BOTH docs for footer-only effects).
+//   - The viewport-fixed spotlight OVERLAY DIV: the ONE true singleton (two stack ⇒
+//     double brightness). De-duplicated across documents via `peerSpotlightOn` so
+//     EXACTLY ONE renders, while a footer-only spotlight still emits its overlay.
+// ---------------------------------------------------------------------------
+
+test("TASK-535 — secondary spotlight document with a spotlight PEER suppresses its overlay DIV, but still emits the (idempotent) spotlight CSS", () => {
+  const doc = createEffectsDocument([createSection()], {
+    cursorSpotlight: true,
+    spotlightColor: "#ff0000",
+    spotlightSize: 400,
+  });
+  // peerSpotlightOn=true models the primary <main> already owning the overlay.
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={doc} documentRole="secondary" rootTag="div" peerSpotlightOn />
+  );
+  // The viewport-fixed overlay DIV is NOT emitted (the primary owns the single one)…
+  expect(secondary).not.toContain('data-page-spotlight-overlay="true"');
+  // …but the idempotent spotlight CSS + root markers ARE emitted (harmless duplicate;
+  // ensures a footer-authored spotlight is styled), and the runtime <script> emits.
+  expect(secondary).toContain("data-page-spotlight-css");
+  expect(secondary).toContain('data-page-spotlight="true"');
+  expect(countMarkup(secondary, `data-coderso-runtime-script="${PAGE_EFFECTS_RUNTIME_ID}"`)).toBe(
+    1
+  );
+});
+
+test("TASK-535 — primary + secondary spotlight documents emit EXACTLY ONE overlay DIV across the page (peer-threaded)", () => {
+  const doc = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  // Both author spotlight: the shell tells the footer the primary already owns the
+  // overlay (peerSpotlightOn), so the footer suppresses its copy — the primary owns it.
+  const primary = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={doc} documentRole="secondary" rootTag="div" peerSpotlightOn />
+  );
+  const page = primary + secondary; // both documents live in one HTML document
+  // Exactly one overlay DIV across the page; it comes from the PRIMARY.
+  expect(countMarkup(page, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(primary, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(secondary, 'data-page-spotlight-overlay="true"')).toBe(0);
+  // The spotlight CSS is idempotent and emitted per-document (harmless duplicate).
+  expect(countMarkup(page, "data-page-spotlight-css")).toBe(2);
+});
+
+test("TASK-535 — FOOTER-ONLY spotlight: primary has none, footer authors it ⇒ overlay STILL renders (from the footer)", () => {
+  const mainNoSpotlight = createEffectsDocument([createSection()]);
+  const footerSpotlight = createEffectsDocument([createSection()], { cursorSpotlight: true });
+  // Shell wiring: the primary authors no spotlight (so it owns no overlay), and the
+  // footer learns the primary does NOT have one (peerSpotlightOn=false) ⇒ footer owns it.
+  const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoSpotlight} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender
+      document={footerSpotlight}
+      documentRole="secondary"
+      rootTag="div"
+      peerSpotlightOn={false}
+    />
+  );
+  const page = primary + secondary;
+  // Regression guard: pre-fix this yielded ZERO overlays (primary-only gate + primary
+  // has no spotlight). Now the FOOTER emits exactly one, with its CSS + root marker.
+  expect(countMarkup(page, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(secondary, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(primary, 'data-page-spotlight-overlay="true"')).toBe(0);
+  expect(secondary).toContain("data-page-spotlight-css");
+  expect(secondary).toContain('data-page-spotlight="true"');
+});
+
+test("TASK-535 — FOOTER-ONLY reveal: primary has none, footer authors it ⇒ reveal CSS + noscript STILL emitted (from the footer)", () => {
+  const mainNoEffect = createEffectsDocument([createSection()]);
+  const footerReveal = createEffectsDocument([
+    createEffectSection({ scrollEffect: "reveal-up" }),
+    createSection(),
+  ]);
+  const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoEffect} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={footerReveal} documentRole="secondary" rootTag="div" />
+  );
+  // Regression guard: pre-fix these were primary-only, so a footer-only reveal was
+  // emitted NOWHERE ⇒ unstyled/degraded. Now the footer emits its own idempotent copy.
+  expect(primary).not.toContain("data-page-motion-css");
+  expect(secondary).toContain("data-page-motion-css");
+  expect(secondary).toContain("<noscript>");
+  expect(secondary).toContain('data-page-effect="reveal-up"');
+  const page = primary + secondary;
+  expect(countMarkup(page, "data-page-motion-css")).toBe(1);
+  expect(countMarkup(page, "<noscript>")).toBe(1);
+});
+
+test("TASK-535 — FOOTER-ONLY composition: primary has none, footer authors a surface ⇒ composition CSS STILL emitted (from the footer)", () => {
+  const mainNoEffect = createEffectsDocument([createSection()]);
+  const footerComposition = createEffectsDocument([createEffectSection({ surfacePreset: "glass" })]);
+  const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoEffect} />);
+  const secondary = renderToStaticMarkup(
+    <PageDocumentRender document={footerComposition} documentRole="secondary" rootTag="div" />
+  );
+  // Regression guard: pre-fix a footer-only glass/glow surface emitted its data-attrs
+  // but the composition stylesheet was NOWHERE ⇒ unstyled surfaces. Now the footer
+  // emits its own idempotent copy.
+  expect(primary).not.toContain("data-page-composition-css");
+  expect(secondary).toContain("data-page-composition-css");
+});
+
+test("TASK-535 — primary render is byte-identical with an explicit documentRole='primary' (default), no peer", () => {
+  const doc = createEffectsDocument([createEffectSection({ scrollEffect: "reveal-up" })], {
+    cursorSpotlight: true,
+  });
+  const implicit = renderToStaticMarkup(<PageDocumentRender document={doc} />);
+  const explicit = renderToStaticMarkup(
+    <PageDocumentRender document={doc} documentRole="primary" />
+  );
+  expect(explicit).toBe(implicit);
+  // The default primary still emits every page-global singleton exactly once
+  // (overlay DIV needle, not the CSS selector).
+  expect(countMarkup(implicit, 'data-page-spotlight-overlay="true"')).toBe(1);
+  expect(countMarkup(implicit, "data-page-motion-css")).toBe(1);
 });
 
 test("no effects ⇒ byte-identical <Root> (no marker/overlay/script/style)", () => {
@@ -3891,21 +4218,61 @@ test("finding 4 — anchor + hover lift co-locate layer + hover on the FRAME (52
   expect(renderComposedBlocks([block])).toContain('data-hover="lift"');
 });
 
-test("finding 4 — anchor + tilt: layer + tilt co-locate on frame, perspective on ancestor (528)", () => {
+test("TASK-535 finding — tilt + layer: layer PLACEMENT hoists to the perspective WRAPPER, tilt stays on the frame", () => {
+  // Regression for the tilt+layer containing-block bug: a non-`none` `perspective`
+  // on the [data-tilt-parent] wrapper establishes a CONTAINING BLOCK for absolute
+  // descendants. With the layer placement on the FRAME (pre-535), the frame went
+  // `position:absolute` but resolved its --layer-x/y offsets against the WRAPPER
+  // instead of the `.cx-layered-canvas`, and the wrapper stayed at its in-flow
+  // origin → the layered chip landed at the wrong place. FIX: the LAYER PLACEMENT
+  // (data-layer + data-layer-anchor + --layer-x/y/z) rides the WRAPPER so the
+  // WRAPPER is the absolutely positioned layered child (offsets resolve against the
+  // canvas); the tilt transform stays on the inner frame.
   const block = composedBlock({
     tilt: "subtle",
-    layer: { x: 8, y: 12, anchor: "bottom-right" },
+    layer: { x: 8, y: 12, z: 3, anchor: "bottom-right" },
   });
+  // The FRAME (the real [data-block-id] node) no longer carries the layer placement —
+  // it must NOT go `position:absolute` and escape the wrapper.
   const attrs = frameAttrs(block);
-  expect(attrs["data-layer"]).toBe("");
-  expect(attrs["data-layer-anchor"]).toBe("bottom-right");
-  // TASK-528: tilt rides the frame (same node as the anchor `translate:` offset);
-  // perspective is on the ancestor wrapper, not the frame.
+  const vars = frameVars(block);
+  expect(attrs["data-layer"]).toBeUndefined();
+  expect(attrs["data-layer-anchor"]).toBeUndefined();
+  expect(vars["--layer-x"]).toBeUndefined();
+  expect(vars["--layer-y"]).toBeUndefined();
+  expect(vars["--layer-z"]).toBeUndefined();
+  // Tilt rides the frame (whole-card tilt, TASK-528); perspective on the ancestor.
   expect(attrs["data-block-tilt"]).toBe("subtle");
   expect(attrs["data-tilt-parent"]).toBeUndefined();
+
+  // Structural: the [data-tilt-parent] wrapper IS the absolutely-positioned layered
+  // child — it carries data-layer + data-layer-anchor + the base --layer-* the
+  // `[data-composition="layered"] [data-layer]{position:absolute;left:var(--layer-x)…}`
+  // CSS consumes, and it WRAPS the tilt frame (wrapper open tag precedes the frame's
+  // data-block-tilt, with no other block frame between them).
   const html = renderComposedBlocks([block]);
-  expect(html).toContain('data-block-tilt="subtle"');
-  expect(html).toContain("data-tilt-parent");
+  const wrapperMatch = html.match(/<div data-tilt-parent[^>]*>/);
+  expect(wrapperMatch).not.toBeNull();
+  const wrapperTag = wrapperMatch?.[0] ?? "";
+  expect(wrapperTag).toContain('data-layer=""');
+  expect(wrapperTag).toContain('data-layer-anchor="bottom-right"');
+  expect(wrapperTag).toContain("--layer-x:8%");
+  expect(wrapperTag).toContain("--layer-y:12%");
+  expect(wrapperTag).toContain("--layer-z:3");
+  expect(wrapperTag).toContain("perspective:1200px");
+  // TASK-535 per-device layer: the wrapper carries the block id as
+  // `data-tilt-parent-for` (present ONLY for this hoisted tilt+layer case) so
+  // pageResponsiveCss can retarget the per-device --layer-* override at the wrapper
+  // (custom props inherit downward; a frame-scoped override can never reach it).
+  expect(wrapperTag).toContain('data-tilt-parent-for="blk-comp"');
+  // The wrapper is an ANCESTOR of the tilt frame (wrapper `>` comes before the
+  // frame's data-block-tilt in document order).
+  const wrapperOpenIdx = html.indexOf(wrapperTag);
+  const tiltIdx = html.indexOf('data-block-tilt="subtle"');
+  expect(wrapperOpenIdx).toBeGreaterThanOrEqual(0);
+  expect(tiltIdx).toBeGreaterThan(wrapperOpenIdx);
+  // The layer placement is NOT duplicated onto the frame node itself.
+  expect(html).not.toMatch(/data-block-tilt="subtle"[^>]*data-layer=/);
 });
 
 test("finding 4 — radiate + anchor stays wholly on the frame (no inner wrapper)", () => {
@@ -3927,6 +4294,10 @@ test("finding 4 — layer-only block (no transform effect) keeps everything on t
   const html = renderComposedBlocks([block]);
   expect(html).not.toContain("data-deco");
   expect(html).not.toContain("data-block-tilt");
+  // TASK-535: no tilt ⇒ no perspective wrapper, so no per-device layer hook either
+  // (layer-only stays byte-identical to pre-535 — the responsive override rides the
+  // frame [data-block-id], not a wrapper).
+  expect(html).not.toContain("data-tilt-parent-for");
 });
 
 // ── TASK-522-04-L02 — block tilt render-shape (controls in 522-04-L01) ──
@@ -4081,6 +4452,48 @@ test("layered layout block places children absolutely via data-layer + --layer-*
   expect(html).toContain("--layer-z:3");
   expect(html).toContain('data-layer-anchor="top-left"');
   expect(html).toContain("--layer-x:40%");
+});
+
+test("TASK-535 — a tilt+layer child inside a layered canvas positions the WRAPPER, not the tilt frame", () => {
+  // End-to-end: a layered-canvas child that authors BOTH layer AND tilt. The
+  // `[data-composition="layered"] [data-layer]{position:absolute;left:var(--layer-x)…}`
+  // rule must land on the [data-tilt-parent] WRAPPER (so it positions against the
+  // .cx-layered-canvas), NOT on the inner tilt frame (whose `perspective` ancestor
+  // would otherwise steal its containing block and pin it to the wrapper's in-flow
+  // origin). The tilt transform + data-block-id stay on the inner frame.
+  const container = createPageBlockV2("container", {
+    id: "blk-layered-tilt",
+    style: { composition: "layered" },
+    slots: {
+      children: [
+        createPageBlockV2("heading", {
+          id: "blk-lt1",
+          props: { text: "Tilted chip", level: "h2", align: "left" },
+          style: { layer: { x: 25, y: 35, z: 4, anchor: "center" }, tilt: "strong" },
+        }),
+      ],
+    },
+  });
+  const html = renderToStaticMarkup(
+    <PageSectionContent
+      section={createPageSectionV2("content", { id: "sec-lt", blocks: [container] })}
+    />
+  );
+  expect(html).toContain("cx-layered-canvas");
+  // The tilt wrapper is the layered positioned child: it carries data-layer +
+  // anchor + --layer-* + perspective, and it opens BEFORE the tilt frame it wraps.
+  const wrapperTag = html.match(/<div data-tilt-parent[^>]*>/)?.[0] ?? "";
+  expect(wrapperTag).toContain('data-layer=""');
+  expect(wrapperTag).toContain('data-layer-anchor="center"');
+  expect(wrapperTag).toContain("--layer-x:25%");
+  expect(wrapperTag).toContain("--layer-y:35%");
+  expect(wrapperTag).toContain("--layer-z:4");
+  // The real block frame carries the tilt + its id — but NOT the layer placement,
+  // so it never goes absolute and escapes the wrapper.
+  expect(html).toMatch(/data-block-id="blk-lt1"[^>]*data-block-tilt="strong"|data-block-tilt="strong"[^>]*data-block-id="blk-lt1"/);
+  expect(html).not.toMatch(/data-block-id="blk-lt1"[^>]*data-layer=/);
+  // Wrapper wraps the frame (document order: wrapper `>` precedes the frame id).
+  expect(html.indexOf(wrapperTag)).toBeLessThan(html.indexOf('data-block-id="blk-lt1"'));
 });
 
 test("flow (unset composition) layout block stays byte-identical (no layered canvas)", () => {

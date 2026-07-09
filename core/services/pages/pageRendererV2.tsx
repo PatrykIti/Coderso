@@ -54,6 +54,7 @@ import {
   PAGE_BLOCK_TEXT_ATTRIBUTE,
   PAGE_SECTION_CONTENT_ATTRIBUTE,
   PAGE_SECTION_ID_ATTRIBUTE,
+  PAGE_TILT_PARENT_LAYER_ATTRIBUTE,
 } from "./pageResponsiveCss";
 import {
   distributePageSectionBlocksToColumns,
@@ -635,7 +636,19 @@ export const toPageSectionRenderProps = (
     ? "motion-safe:transition-[opacity,transform] motion-safe:duration-700 " +
       "motion-safe:data-[revealed=true]:opacity-100 motion-safe:data-[revealed=true]:translate-y-0"
     : "";
-  const baseSectionClassName = template.variant === "full-width" ? "w-full" : "w-full px-4 py-6";
+  // TASK-535 — drop the px-4 py-6 gutter for EVERY full-bleed section, not just
+  // the `full-width` template variant. The style path (`toPageSectionStyle` /
+  // `toPageSectionBleedStyle`) already keys the bleed box + content cap off
+  // `isPageSectionFullBleed(...)` (template full-width OR the author toggling
+  // `style.fullBleed`), so a `style.fullBleed`-only section got its 100vw bleed
+  // box + content cap but STILL carried the utility gutter here — the class path
+  // was checking only the variant. Route the className off the SAME predicate so
+  // the gutter decision matches the style decision (a fullBleed-flag section
+  // paints edge-to-edge with no doubled utility padding). Non-full-bleed keeps
+  // `w-full px-4 py-6` byte-identical.
+  const baseSectionClassName = isPageSectionFullBleed(section, template)
+    ? "w-full"
+    : "w-full px-4 py-6";
   return {
     sectionClassName: [baseSectionClassName, revealClass].filter(Boolean).join(" "),
     contentClassName: joinPageRenderClasses(
@@ -693,8 +706,23 @@ export const PAGE_REVEAL_MOTION_CSS =
   // frame's transition resets to `all 0s`, and blocks JUMP to opacity:1 with no
   // fade/delay/cascade. Keeping the transition state-agnostic means it survives
   // into the revealed style so the per-block --reveal-delay actually staggers.
+  //
+  // TASK-535 — `--reveal-delay` is a CSS CUSTOM PROPERTY, which INHERITS. A block
+  // stamps it on its OWN frame inline (toPageBlockRenderProps), so a container that
+  // authors `revealDelay` sets `--reveal-delay:<n>ms` on its frame — and a NESTED
+  // CHILD block that authored NO delay of its own would INHERIT the ancestor's value
+  // and cascade at the ancestor's delay instead of at 0 (all children of a delayed
+  // container animate together, defeating per-block stagger). FIX: reset
+  // `--reveal-delay:0ms` in this same stylesheet rule, which applies to EVERY
+  // [data-page-block] frame under a revealing section. An AUTHORED block's INLINE
+  // `--reveal-delay:<n>ms` beats this author-stylesheet declaration (inline wins the
+  // cascade), so it keeps its own value; an UNAUTHORED descendant has no inline
+  // value, so this reset wins and it uses 0ms — it no longer inherits an ancestor's
+  // delay. `var(--reveal-delay,0ms)` then reads that per-frame cascaded value. Pure
+  // CSS (no `@property`), so it works in every browser; the frame emit is untouched
+  // (present-only inline var stays byte-identical).
   '[data-reveal-armed] [data-page-effect^="reveal"] [data-page-block]' +
-  "{transition:opacity .7s,transform .7s;transition-delay:var(--reveal-delay,0ms)}" +
+  "{--reveal-delay:0ms;transition:opacity .7s,transform .7s;transition-delay:var(--reveal-delay,0ms)}" +
   // Hide-state visual values only (opacity/transform) gated by :not([data-revealed]).
   '[data-reveal-armed] [data-page-effect^="reveal"]:not([data-revealed]) [data-page-block]' +
   "{opacity:0}" +
@@ -902,27 +930,71 @@ const splitBlockComposition = (style?: PageBlockStyle) => {
   // KNOWN rare combo: a block with BOTH tilt AND a transform-decoration
   // (float/drift) would contend on `transform` on the frame — the reference never
   // combines them (chips float, card tilts).
+  //
+  // TASK-535 tilt + layer containing-block: when a block authors BOTH tilt AND
+  // style.layer, the [data-tilt-parent] perspective WRAPPER (see
+  // renderPageBlockWithFrame) is an in-flow ANCESTOR of the frame — and a
+  // non-`none` `perspective` establishes a CONTAINING BLOCK for absolutely
+  // positioned descendants. The layer CSS is
+  // `[data-composition="layered"] [data-layer]{position:absolute;left:var(--layer-x)…}`;
+  // with the layer placement on the FRAME the frame goes absolute but resolves
+  // its offsets against the WRAPPER (the perspective containing block) instead of
+  // the `.cx-layered-canvas`, and the wrapper itself stays at its in-flow origin —
+  // so the layered chip lands at the wrong place (regression of TASK-522-05-L02).
+  // FIX: hoist the LAYER PLACEMENT (data-layer + data-layer-anchor + --layer-x/y/z)
+  // onto the wrapper so the WRAPPER is the absolutely-positioned layered child
+  // (offsets resolve against the canvas; the anchor `translate:` rides the wrapper),
+  // while the TILT transform + everything else stay on the inner frame. Custom
+  // props inherit DOWNWARD, so the base --layer-* MUST sit on the wrapper (the
+  // consumer) — a value declared on the child frame never reaches the parent
+  // wrapper. The SAME downward-only rule means the PER-DEVICE --layer-* override
+  // must ALSO target the wrapper for a tilt+layer block: pageResponsiveCss retargets
+  // it at `[data-tilt-parent-for="<id>"]` (the renderer stamps that id on the wrapper
+  // here) instead of `[data-block-id]` (the frame). Present-only: the split fires
+  // only when tilt AND layer are BOTH authored; every other combo keeps the layer
+  // placement on the frame, byte-identical to pre-535 (finding-4 co-location; the
+  // per-device --layer-* on [data-block-id] for the layer-ONLY case; the tilt-only
+  // + anchor+deco/hover paths).
   const effectToInner = new Set<string>();
   // (deco + hover + tilt now stay on the frame, co-located with data-surface)
   const INNER_VAR_KEYS: string[] = []; // decoration timing vars now seed the frame (which carries data-deco)
+  // Layer-placement keys hoisted to the tilt wrapper ONLY when tilt is also
+  // authored (see the block comment above). These are the attrs/vars the layered
+  // canvas CSS consumes to place + offset the absolutely-positioned child.
+  const LAYER_ATTR_KEYS = ["data-layer", "data-layer-anchor"];
+  const LAYER_VAR_KEYS = ["--layer-x", "--layer-y", "--layer-z"];
+  // tilt needs a perspective PARENT: an ancestor wrapper of the frame carries it.
+  const tiltParent = comp.perspectiveParent;
+  // `data-layer` is a PRESENCE attr (value ""), so test key presence, not truthiness.
+  const hoistLayerToWrapper = tiltParent && "data-layer" in comp.dataAttrs;
   const frameAttrs: Record<string, string> = {};
   const frameVars: Record<string, string> = {};
   const innerAttrs: Record<string, string> = {};
   const innerVars: Record<string, string> = {};
+  const wrapperAttrs: Record<string, string> = {};
+  const wrapperVars: Record<string, string> = {};
   for (const [k, v] of Object.entries(comp.dataAttrs)) {
+    if (hoistLayerToWrapper && LAYER_ATTR_KEYS.includes(k)) {
+      wrapperAttrs[k] = v;
+      continue;
+    }
     (effectToInner.has(k) ? innerAttrs : frameAttrs)[k] = v;
   }
   for (const [k, v] of Object.entries(comp.cssVars)) {
+    if (hoistLayerToWrapper && LAYER_VAR_KEYS.includes(k)) {
+      wrapperVars[k] = v;
+      continue;
+    }
     (INNER_VAR_KEYS.includes(k) ? innerVars : frameVars)[k] = v;
   }
-  // tilt needs a perspective PARENT: an ancestor wrapper of the frame carries it.
-  const tiltParent = comp.perspectiveParent;
   const needsInner = effectToInner.size > 0 || comp.glare || comp.ambientOrbs;
   return {
     frameAttrs,
     frameVars,
     innerAttrs,
     innerVars,
+    wrapperAttrs,
+    wrapperVars,
     needsInner,
     tiltParent,
     glare: comp.glare,
@@ -933,9 +1005,24 @@ const splitBlockComposition = (style?: PageBlockStyle) => {
 export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => {
   const s = splitBlockComposition(block.style);
   // TASK-525-02-L02: present-only `--reveal-delay` (bounded ms, clamped at the
-  // write boundary) inherits down into the block's children so the revealing
+  // write boundary) is stamped INLINE on this block's OWN frame; the revealing
   // section's per-block reveal transition (PAGE_REVEAL_MOTION_CSS) staggers each
   // frame by its own delay. Empty object when unauthored → byte-identical frame.
+  //
+  // TASK-535 — SCOPE (intended + documented): `revealDelay` is a STAGGER *within a
+  // revealing section*, NOT an independent per-block reveal trigger. The stagger is
+  // driven by the SECTION's `data-revealed` (the 521 runtime observes SECTION
+  // `[data-page-effect="reveal-*"]` nodes only) and consumed by PAGE_REVEAL_MOTION_CSS,
+  // which is scoped under `[data-page-effect^="reveal"]` AND emitted only when some
+  // section authors a `scrollEffect` (`hasSectionEffect`). So a block whose ONLY
+  // authored motion is `revealDelay` — inside a section with NO `scrollEffect` — is
+  // INERT BY DESIGN: the var is stamped but nothing hides/reveals/transitions it, and
+  // no runtime observes the block. That is the correct model (the editor exposes
+  // `revealDelay` alongside the section's reveal effect); widening it to make a lone
+  // block self-reveal would require the runtime to observe blocks (new attr + new IO),
+  // which this task does not add. INHERITANCE is handled in PAGE_REVEAL_MOTION_CSS: a
+  // nested child with no delay of its own no longer inherits an ancestor's stamped
+  // `--reveal-delay` (the rule resets it to 0ms; the authored inline var still wins).
   const revealDelay = block.style?.revealDelay;
   const revealVar: Record<string, string> =
     typeof revealDelay === "number" ? { "--reveal-delay": `${revealDelay}ms` } : {};
@@ -2379,9 +2466,32 @@ const renderPageBlockWithFrame = (block: PageBlockV2, context: PageBlockRenderCo
   // data-surface), so CSS `perspective` must sit on an ANCESTOR — wrap the frame
   // in a [data-tilt-parent] perspective wrapper. Present-only: only when the block
   // authors tilt (`s.tiltParent`); otherwise the frame renders byte-identically.
+  //
+  // TASK-535 tilt + layer: when the block ALSO authors style.layer, the layer
+  // placement (data-layer + data-layer-anchor + base --layer-x/y/z) is hoisted onto
+  // THIS wrapper (splitBlockComposition → s.wrapperAttrs/s.wrapperVars). The
+  // wrapper then IS the `[data-composition="layered"] [data-layer]` absolutely
+  // positioned child, so its offsets resolve against the `.cx-layered-canvas` (not
+  // the perspective containing block it would otherwise clobber), while the tilt
+  // transform stays on the inner frame. Empty for every non-(tilt+layer) block →
+  // the wrapper renders exactly as before.
+  //
+  // TASK-535 per-device layer: because the base `--layer-*` now live on the WRAPPER
+  // (not the frame), and CSS custom props inherit DOWNWARD only, a per-device
+  // `--layer-*` override on `[data-block-id]` (the child frame) could never reach
+  // the wrapper. We stamp the block id onto the wrapper as `data-tilt-parent-for`
+  // (present ONLY when the layer placement was hoisted here) so pageResponsiveCss
+  // can retarget the per-device layer override at THIS wrapper. `data-block-id`
+  // stays uniquely on the frame (selection chrome depends on that 1:1 mapping).
+  const wrapperLayerId = "data-layer" in s.wrapperAttrs ? block.id : undefined;
   const withTiltParent = (frame: ReactNode): ReactNode =>
     s.tiltParent ? (
-      <div data-tilt-parent="" style={{ perspective: "1200px" } as CSSProperties}>
+      <div
+        data-tilt-parent=""
+        {...(wrapperLayerId ? { [PAGE_TILT_PARENT_LAYER_ATTRIBUTE]: wrapperLayerId } : {})}
+        style={{ perspective: "1200px", ...(s.wrapperVars as CSSProperties) }}
+        {...s.wrapperAttrs}
+      >
         {frame}
       </div>
     ) : (
@@ -2933,6 +3043,19 @@ const docUsesCompositionEffects = (document: PageDocumentV2): boolean => {
 };
 
 /**
+ * TASK-535 — whether ANY section is full-bleed (template `full-width` OR the
+ * author-toggled `style.fullBleed`, via the shared `isPageSectionFullBleed`
+ * predicate). Full-bleed sections paint a FIXED-literal `width:100vw` bleed box
+ * (`toPageSectionBleedStyle`); `100vw` counts the vertical-scrollbar gutter, so
+ * on a scrolling page it is a few px WIDER than the content area and pushes a
+ * spurious HORIZONTAL scrollbar. Present-only: gates an `overflow-x:clip` guard
+ * on the page root so the 100vw bleed can never cause horizontal scroll. Empty
+ * for a page with no full-bleed section ⇒ the root style stays byte-identical.
+ */
+const docHasFullBleedSection = (sections: readonly PageSectionV2[]): boolean =>
+  sections.some((section) => isPageSectionFullBleed(section, resolvePageSectionTemplate(section)));
+
+/**
  * Whether ANY block authors a mouse-tilt (`style.tilt !== "none"`). The 522
  * block-tilt binding is APPENDED INTO 521-05's single runtime source string, so a
  * tilt has no runtime unless that ONE emit fires — this OR-widens 521-05's emit
@@ -2962,6 +3085,16 @@ const usesCompositionTilt = (document: PageDocumentV2): boolean => {
   return false;
 };
 
+/**
+ * TASK-535 — whether a document authors the cursor spotlight
+ * (`settings.effects.cursorSpotlight`). Exported so the site shell can thread the
+ * SIBLING document's spotlight need into `PageDocumentRender`'s `peerSpotlightOn`,
+ * de-duplicating the single viewport-fixed spotlight overlay DIV across the
+ * `<main>` (primary) and footer (secondary) documents.
+ */
+export const documentUsesSpotlight = (document: PageDocumentV2): boolean =>
+  !!document.settings?.effects?.cursorSpotlight;
+
 export function PageDocumentRender({
   document,
   breakpoint = "desktop",
@@ -2969,6 +3102,8 @@ export function PageDocumentRender({
   runtimeDataByBlockId,
   rootTag = "main",
   rootClassName,
+  documentRole = "primary",
+  peerSpotlightOn = false,
 }: {
   document: PageDocumentV2;
   breakpoint?: PageBreakpoint;
@@ -2981,6 +3116,38 @@ export function PageDocumentRender({
    */
   rootTag?: "main" | "div";
   rootClassName?: string;
+  /**
+   * TASK-535 — a page renders TWO documents: the `<main>` page (primary) and the
+   * site-shell footer template (secondary), each authored independently in the same
+   * editor, so BOTH can author motion. The once-per-PAGE nodes split into two classes:
+   *
+   *  - Idempotent STYLESHEETS (reveal CSS + its noscript, spotlight CSS, composition
+   *    CSS): the selectors are document-agnostic, so a duplicate copy is HARMLESS
+   *    (same rules, no visual doubling). These stay PER-DOCUMENT / present-only —
+   *    emitted whenever THIS document authors the effect — so a FOOTER-ONLY effect
+   *    (main authors none, footer authors glass/reveal/spotlight) is still styled.
+   *    Gating them to the primary (as an earlier 535 pass did) suppressed them on
+   *    BOTH documents for footer-only effects ⇒ unstyled footer surfaces.
+   *
+   *  - The viewport-fixed SPOTLIGHT OVERLAY DIV is the ONLY true page-global singleton
+   *    that DOUBLE-STACKS (two `fixed inset-0` `mix-blend:screen` gradients ⇒ double
+   *    brightness). It is emitted EXACTLY ONCE per page: the primary emits it when
+   *    EITHER document authors spotlight (`spotlightOn || peerSpotlightOn`); the
+   *    secondary emits it only when the primary does NOT (footer-only spotlight).
+   *
+   * The runtime `<script>` is NOT suppressed on secondary (a footer-only-motion page
+   * still needs it); it self-guards on a window flag (`PAGE_EFFECTS_RUNTIME_INIT_FLAG`)
+   * so a second copy is a total no-op — one set of listeners/observers, no re-arm.
+   */
+  documentRole?: "primary" | "secondary";
+  /**
+   * TASK-535 — whether the PRIMARY (`<main>`) page document authors a cursor
+   * spotlight. Consulted ONLY on the secondary (footer) render: the footer suppresses
+   * ITS copy of the single viewport-fixed overlay DIV when the primary already owns
+   * one, yet still emits one for a footer-only spotlight (see `documentRole`).
+   * Defaults `false` (a stand-alone render — preview, tests — has no sibling document).
+   */
+  peerSpotlightOn?: boolean;
 }) {
   const resolved = resolvePageRenderTree(document, breakpoint);
   const Root = rootTag;
@@ -3012,6 +3179,23 @@ export function PageDocumentRender({
   const usesComposition = docUsesCompositionEffects(document);
   const compositionTilt = usesCompositionTilt(document);
   const anyMotion = spotlightOn || hasSectionEffect || compositionTilt;
+  // TASK-535 — the idempotent effect stylesheets (reveal/composition/spotlight CSS
+  // + reveal noscript) stay PER-DOCUMENT/present-only so a footer-only effect is
+  // still styled; only the viewport-fixed spotlight OVERLAY DIV is a true page
+  // singleton (two stack ⇒ double brightness) and is de-duplicated across the two
+  // documents below. The runtime <script> emits from either (self-guards at runtime).
+  const isPrimaryDocument = documentRole === "primary";
+  // Emit the single spotlight OVERLAY DIV exactly once per page. The overlay is
+  // CSS-gated by an ancestor `[data-page-spotlight]` + the root `--spotlight-*` vars,
+  // which a document only sets when IT authors spotlight — so a document can only host
+  // a WORKING overlay when its OWN `spotlightOn` is true. The primary therefore emits
+  // it iff `spotlightOn`; the secondary (footer) emits it iff it authors spotlight AND
+  // the primary does NOT (`spotlightOn && !peerSpotlightOn`) — so a footer-only
+  // spotlight still renders exactly one (footer-owned) overlay, while both-author
+  // (double-brightness) collapses to the single primary-owned one.
+  const emitsSpotlightOverlay = isPrimaryDocument
+    ? spotlightOn
+    : spotlightOn && !peerSpotlightOn;
 
   const spotlightSize = Math.max(
     PAGE_SPOTLIGHT_SIZE_CLAMP.min,
@@ -3032,11 +3216,23 @@ export function PageDocumentRender({
   // Present-only: a page without a background yields `undefined`.
   const canvasBackground =
     sanitizeAuthoringCssBackground(resolved.settings.background) ?? undefined;
-  // Build rootStyle when the spotlight OR a canvas background is set; keep the exact
-  // `--spotlight-*` vars and ADD `background` only when present. When NEITHER is set,
-  // rootStyle stays `undefined` ⇒ byte-identical <Root> vs post-522.
+  // TASK-535 — a full-bleed section paints a `width:100vw` bleed box that counts
+  // the vertical-scrollbar gutter, so it is a few px WIDER than the content area
+  // and pushes a spurious HORIZONTAL scrollbar. Guard with `overflow-x:clip` on
+  // the page root (the containing block that wraps every bleed section). `clip`
+  // (NOT `hidden`) is deliberate: `overflow:hidden` on one axis forces the other
+  // to `auto`, establishing a scroll container that BREAKS `position:sticky`
+  // descendants (the front sticky nav); `clip` clips overflow WITHOUT creating a
+  // scroll container, so sticky keeps working. Per-document (NOT primary-only):
+  // the footer document wraps its OWN bleed sections in its OWN root. Present-only
+  // ⇒ a page with no full-bleed section keeps `rootStyle` byte-identical.
+  const needsBleedOverflowGuard = docHasFullBleedSection(resolved.sections);
+  // Build rootStyle when the spotlight OR a canvas background is set OR a bleed
+  // guard is needed; keep the exact `--spotlight-*` vars and ADD `background` only
+  // when present. When NONE apply, rootStyle stays `undefined` ⇒ byte-identical
+  // <Root> vs post-522.
   const rootStyle: CSSProperties | undefined =
-    spotlightOn || canvasBackground
+    spotlightOn || canvasBackground || needsBleedOverflowGuard
       ? ({
           ...(spotlightOn
             ? {
@@ -3045,6 +3241,7 @@ export function PageDocumentRender({
               }
             : {}),
           ...(canvasBackground ? { background: canvasBackground } : {}),
+          ...(needsBleedOverflowGuard ? { overflowX: "clip" as const } : {}),
         } as CSSProperties)
       : undefined;
 
@@ -3058,11 +3255,14 @@ export function PageDocumentRender({
     >
       {/* Reveal HIDE state — the ONLY emit of 521-02-L02's PAGE_REVEAL_MOTION_CSS
           (committed single path). Scoped under the runtime-set [data-reveal-armed]
-          so it is inert until the runtime arms (JS-required-to-HIDE). */}
+          so it is inert until the runtime arms (JS-required-to-HIDE). TASK-535:
+          idempotent, document-agnostic selectors — emitted PER-DOCUMENT / present-only
+          so a footer-only reveal is still styled; a duplicate copy is harmless. */}
       {hasSectionEffect && (
         <style data-page-motion-css dangerouslySetInnerHTML={{ __html: PAGE_REVEAL_MOTION_CSS }} />
       )}
-      {/* Belt-and-suspenders: pure JS-disabled users keep reveal content visible. */}
+      {/* Belt-and-suspenders: pure JS-disabled users keep reveal content visible.
+          TASK-535: idempotent — per-document / present-only (harmless if duplicated). */}
       {hasSectionEffect && (
         <noscript
           dangerouslySetInnerHTML={{
@@ -3070,20 +3270,29 @@ export function PageDocumentRender({
           }}
         />
       )}
+      {/* Spotlight CSS is an idempotent, document-agnostic stylesheet — emit it
+          PER-DOCUMENT / present-only so a footer-only spotlight is still styled;
+          a duplicate <style> is harmless (same selectors/rules). */}
       {spotlightOn && (
-        <>
-          <style data-page-spotlight-css dangerouslySetInnerHTML={{ __html: PAGE_SPOTLIGHT_CSS }} />
-          <div
-            aria-hidden="true"
-            data-page-spotlight-overlay
-            className="pointer-events-none fixed inset-0"
-          />
-        </>
+        <style data-page-spotlight-css dangerouslySetInnerHTML={{ __html: PAGE_SPOTLIGHT_CSS }} />
+      )}
+      {/* TASK-535: the spotlight overlay is a viewport-fixed (`fixed inset-0`)
+          page-global singleton — a second copy stacks another radial-gradient and
+          DOUBLES the brightness. Emit the overlay DIV EXACTLY ONCE per page
+          (`emitsSpotlightOverlay`): the primary owns it when EITHER document has
+          spotlight; the footer owns it only for a footer-only spotlight. */}
+      {emitsSpotlightOverlay && (
+        <div
+          aria-hidden="true"
+          data-page-spotlight-overlay
+          className="pointer-events-none fixed inset-0"
+        />
       )}
       {/* TASK-522-05-L01 — composition-effects static CSS, a DISJOINT new node
           emitted present-only (only when a 522 surface/decoration/tilt/hover/
           layer/marquee is authored). Front/preview only (this shared renderer is
-          NOT the builder canvas). */}
+          NOT the builder canvas). TASK-535: idempotent stylesheet — per-document /
+          present-only so a footer-only composition surface is still styled. */}
       {usesComposition && (
         <style
           data-page-composition-css

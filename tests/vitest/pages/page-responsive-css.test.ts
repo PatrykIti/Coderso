@@ -739,7 +739,13 @@ describe("buildPageResponsiveCss", () => {
     });
   });
 
-  test("maxWidth overrides on full-width variants are diagnostics-only", () => {
+  test("maxWidth overrides on full-bleed sections resize the content cap (525 model: NOT diagnostics-only)", () => {
+    // TASK-535 — the pre-525 renderer pinned `max-width:none` on full-width
+    // variants, so a maxWidth override was rightly `not_css_expressible`. The 525
+    // model DECOUPLED the 100vw bleed box from the CONTENT, which is now ALWAYS
+    // capped/centered at `layout.maxWidth` (see `toPageSectionStyle`). So the
+    // override IS expressible: it resizes the content cap, mirroring the base
+    // content div's BOTH `width: min(<max>, calc(100% - 40px))` AND `max-width`.
     const document = buildDocument([
       buildSection({
         variant: "full-width",
@@ -747,14 +753,64 @@ describe("buildPageResponsiveCss", () => {
       }),
     ]);
     const plan = buildPageResponsiveCssPlan(document);
-    expect(plan.css).toBe("");
-    expect(plan.diagnostics).toContainEqual({
+    // No stale diagnostic — the override reaches CSS.
+    expect(plan.diagnostics).not.toContainEqual({
       scope: "section",
       id: "sec_hero",
       breakpoint: "mobile",
       key: "layout.maxWidth",
       reason: "not_css_expressible",
     });
+    // Content selector, mobile media query, declarations alpha-sorted
+    // (`max-width` before `width`); both mirror the base full-bleed content cap.
+    expect(plan.css).toBe(
+      [
+        "@media (max-width: 639px){",
+        '[data-section-id="sec_hero"] > [data-page-section-content="true"]' +
+          "{max-width:360px !important;width:min(360px, calc(100% - 2 * 20px)) !important}",
+        "}",
+      ].join("\n")
+    );
+  });
+
+  test("maxWidth overrides on the fullBleed FLAG (not just the full-width variant) also resize the content cap", () => {
+    // TASK-535 — `isPageSectionFullBleed` is `variant==='full-width' OR
+    // style.fullBleed`, so a default-variant section that TOGGLED `style.fullBleed`
+    // gets the same decoupled content cap and the SAME expressible override.
+    const document = buildDocument([
+      buildSection({
+        style: {
+          background: "#ffffff",
+          backgroundType: "color",
+          backgroundImage: null,
+          accent: "#0d9488",
+          radius: 0,
+          shadow: "none",
+          fullBleed: true,
+        },
+        responsive: { tablet: { layout: { maxWidth: 720 } } },
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).toContain("max-width:720px !important");
+    expect(css).toContain("width:min(720px, calc(100% - 2 * 20px)) !important");
+  });
+
+  test("maxWidth overrides on NON-full-bleed sections stay a plain max-width (no width formula)", () => {
+    // Byte-identical to pre-535 for the common (non-full-bleed) case: just
+    // `max-width`, no `width: min(...)`.
+    const document = buildDocument([
+      buildSection({ responsive: { mobile: { layout: { maxWidth: 360 } } } }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).toBe(
+      [
+        "@media (max-width: 639px){",
+        '[data-section-id="sec_hero"] > [data-page-section-content="true"]{max-width:360px !important}',
+        "}",
+      ].join("\n")
+    );
+    expect(css).not.toContain("width:min(");
   });
 
   test("overrides on nodes hidden at the desktop base emit diagnostics, not CSS", () => {
@@ -926,6 +982,46 @@ describe("per-device layer offsets (TASK-522-05-L02 seam)", () => {
       }),
     ]);
     expect(buildPageResponsiveCss(document)).not.toContain("--layer-x");
+  });
+
+  test("TASK-535 — tilt+layer: the tablet layer override targets the hoisted WRAPPER, not the frame", () => {
+    // When a block authors BOTH tilt AND layer, the renderer HOISTS the base
+    // --layer-* onto the [data-tilt-parent] wrapper (a per-device value on the child
+    // [data-block-id] frame could never inherit UP to the wrapper that consumes
+    // var(--layer-*)). The per-device override must therefore land on the wrapper
+    // selector [data-tilt-parent-for="<id>"], NOT the frame [data-block-id].
+    const document = buildDocument([
+      buildSection({
+        style: {
+          background: "#fff",
+          backgroundType: "color",
+          backgroundImage: null,
+          accent: "#000",
+          radius: 0,
+          shadow: "none",
+          composition: "layered",
+        },
+        blocks: [
+          buildBlock({
+            id: "blk_tilt_layer",
+            style: {
+              layer: { x: 10, y: 20, anchor: "top-right" },
+              tilt: "subtle",
+            },
+            responsive: { tablet: { style: { layer: { x: 80, y: 40 } } } },
+          }),
+        ],
+      }),
+    ]);
+    const css = buildPageResponsiveCss(document);
+    expect(css).toContain("@media (min-width: 640px) and (max-width: 1023px){");
+    // The override rides the wrapper selector (the element that carries the hoisted
+    // base --layer-*), so var(--layer-x) on the wrapper resolves to the tablet value.
+    expect(css).toContain('[data-tilt-parent-for="blk_tilt_layer"]{--layer-x:80% !important');
+    expect(css).toContain("--layer-y:40% !important");
+    // Regression guard: the layer delta must NOT be emitted on the frame selector
+    // (where it would be DEAD — it can never inherit up to the wrapper).
+    expect(css).not.toContain('[data-block-id="blk_tilt_layer"]{--layer-x');
   });
 });
 

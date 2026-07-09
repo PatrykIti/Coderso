@@ -2254,7 +2254,7 @@ test("PageEditor section inserter follows owner insertable section capabilities"
   }
 });
 
-test("PageEditor command palette catalog is frozen to 11 sections plus 19 blocks with gated titles absent", async () => {
+test("PageEditor command palette catalog is frozen to 11 sections plus 20 blocks with gated titles absent", async () => {
   const view = mount(<PageEditor pageId="page-1" initialPage={pageEditorState.cachedPage} />);
 
   try {

@@ -667,6 +667,15 @@ export type PageBlockStyleV2 = {
    * consumed by the reveal `transition-delay`, so a revealing section's children
    * CASCADE (each block fades on its own delay) rather than fading as one unit.
    * Present-only: omitted when unset so an un-authored block is byte-identical.
+   *
+   * SCOPE (TASK-535, intended + documented): this is a STAGGER *within a revealing
+   * section*, NOT a standalone per-block reveal trigger. The cascade is driven by the
+   * SECTION's `scrollEffect` reveal (the runtime toggles `data-revealed` on the
+   * SECTION only, and `PAGE_REVEAL_MOTION_CSS` is scoped under `[data-page-effect^=
+   * "reveal"]`). A block whose ONLY motion is `revealDelay`, inside a section with no
+   * reveal `scrollEffect`, is INERT by design — set a section reveal effect to make
+   * the stagger take effect. It also does NOT inherit onto un-delayed nested children
+   * (the reveal CSS resets `--reveal-delay` per frame; see `PAGE_REVEAL_MOTION_CSS`).
    */
   revealDelay?: number;
 };

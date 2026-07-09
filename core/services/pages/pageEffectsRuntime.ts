@@ -14,8 +14,12 @@
  *     any observe loop (JS-required-to-HIDE — never permanently hidden).
  *  3. Dependency-free; `passive` listeners + rAF; `try/catch` guard; transforms
  *     only (composited, no layout thrash — rect reads batched inside rAF).
- *  4. Idempotent (single id); safe to include when no effect element exists
- *     (every `querySelectorAll` returns empty → no-op).
+ *  4. Idempotent. The IIFE self-guards on a window init flag
+ *     (`PAGE_EFFECTS_RUNTIME_INIT_FLAG`): a SECOND copy of this script (a footer
+ *     document emits its own when it authors motion) returns early and does
+ *     nothing — no re-arm, no double-observe, no double-listener. Also safe to
+ *     include when no effect element exists (every `querySelectorAll` returns
+ *     empty → no-op).
  *
  * Consumers: 521-02 (section render stamps the data-attrs) and 521-05
  * (PageDocumentRender emits this once + the spotlight overlay). Hero tilt has
@@ -24,6 +28,20 @@
 
 /** Stable dedupe id for the runtime-script registry / single emit site. */
 export const PAGE_EFFECTS_RUNTIME_ID = "page-motion-effects";
+
+/**
+ * TASK-535 — window init flag the IIFE self-guards on. A page can render TWO
+ * `PageDocumentRender` documents (the `<main>` page + a `SiteFooter` template),
+ * each of which emits its own runtime `<script>` when its OWN document authors
+ * motion. Both scripts share one `window`; without a guard the SECOND copy would
+ * re-arm reveal, double-bind scroll/pointer listeners and re-observe the same
+ * nodes. The IIFE sets this flag on first init and returns early if already set,
+ * so any later copy is a total no-op. Keyed on the runtime id (a stable literal);
+ * the STATIC source hardcodes the SAME string (invariant #1 forbids interpolating
+ * any value into the source), and this export lets consumers/tests reference the
+ * exact key without drift.
+ */
+export const PAGE_EFFECTS_RUNTIME_INIT_FLAG = "__codersoPageMotionEffectsInit";
 
 /**
  * The media query the runtime early-returns on. Exported so consumers /tests
@@ -49,6 +67,16 @@ export const prefersReducedMotion = (): boolean => {
 export const PAGE_EFFECTS_RUNTIME_SOURCE = [
   "(function(){",
   "try{",
+  // ---- TASK-535 idempotence self-guard: a page may emit this same script TWICE
+  //      (the <main> page document AND the SiteFooter template document each emit
+  //      their own copy when they author motion). Both share one `window`. Set a
+  //      window flag on first init and NO-OP any later copy so we never re-arm
+  //      reveal, double-observe the same nodes, or double-bind scroll/pointer
+  //      listeners. FIRST executable statement — before arming, observing or
+  //      binding anything. The key literal MUST equal PAGE_EFFECTS_RUNTIME_INIT_FLAG
+  //      (invariant #1: no interpolation into the static source).
+  'if(window.__codersoPageMotionEffectsInit)return;',
+  'window.__codersoPageMotionEffectsInit=true;',
   'var RM=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)");',
   "if(RM&&RM.matches)return;",
   // ---- ARM the reveal-hide: JS-required-to-HIDE. The reveal opacity:0 rule is

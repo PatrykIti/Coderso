@@ -752,9 +752,17 @@ export function SiteHeaderMenuDocumentRender({
 export function SiteFooter({
   document,
   breakpoint,
+  peerSpotlightOn = false,
 }: {
   document: PageDocumentV2;
   breakpoint?: PageBreakpoint;
+  /**
+   * TASK-535 — whether the PRIMARY (`<main>`) page document authors a cursor
+   * spotlight. Threaded so the footer (secondary) suppresses its own copy of the
+   * single viewport-fixed spotlight overlay DIV when the primary already emits it,
+   * yet still emits the overlay for a FOOTER-ONLY spotlight.
+   */
+  peerSpotlightOn?: boolean;
 }) {
   if (document.sections.length === 0) return null;
 
@@ -766,6 +774,15 @@ export function SiteFooter({
         rootTag="div"
         rootClassName="bg-white text-slate-950"
         emptyContent={null}
+        // TASK-535 — the footer is the SECONDARY page document. Idempotent effect
+        // stylesheets (reveal/composition/spotlight CSS + noscript) still emit here
+        // present-only so a FOOTER-ONLY effect is styled; only the viewport-fixed
+        // spotlight OVERLAY DIV is de-duplicated across documents — the footer
+        // suppresses it when the primary already emits it (`peerSpotlightOn`), but
+        // still emits it for a footer-only spotlight. The runtime <script> emits
+        // here too (self-guards at runtime), so footer-only motion keeps working.
+        documentRole="secondary"
+        peerSpotlightOn={peerSpotlightOn}
       />
     </footer>
   );
