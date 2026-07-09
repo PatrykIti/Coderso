@@ -35,6 +35,8 @@ import {
   type PageBlockV2,
   type PageBreakpoint,
   type PageDocumentV2,
+  // ── TASK-533-02: per-edge section border type for the render builder.
+  type PageSectionBorderV2,
   type PageSectionV2,
   type PageTextMark,
 } from "./pageDocumentV2";
@@ -208,6 +210,20 @@ type PageBlockRenderContext = {
   layoutMode?: PageSectionLayoutMode;
   slotKey?: PageBlockSlotKey;
   parentBlock?: PageBlockV2;
+  /**
+   * TASK-533-01 (audit remediation): SUPPRESS the block grid span
+   * (`colSpan`/`rowSpan` → `gridColumn`/`gridRow`) when the block is rendered
+   * inside a per-column composition wrapper. In that path the block's grid
+   * parent is a SINGLE-column `<div data-page-section-column>` (not the section
+   * content grid), so `grid-column: span N` is a no-op (one column) and
+   * `grid-row: span N` spans the WRAPPER's own auto-rows (opening whitespace)
+   * instead of doubling the block's height relative to grid siblings — a silent
+   * cosmetic failure. Span and per-column `column` assignment are therefore
+   * mutually exclusive: when composition is active the span is dropped so the
+   * emitted CSS reflects the actual layout (no misleading inert rule). In the
+   * pure auto-flow path (no assignments) this stays unset and span works.
+   */
+  suppressBlockSpan?: boolean;
 };
 
 export const joinPageRenderClasses = (...classes: Array<string | false | undefined>) =>
@@ -418,6 +434,37 @@ const toPageSectionBoxShadow = (shadow: PageSectionV2["style"]["shadow"]) =>
         ? "0 14px 40px rgba(15, 23, 42, 0.12)"
         : "0 22px 60px rgba(15, 23, 42, 0.16)";
 
+// ── TASK-533-02 REGION: per-edge section border emit ──────────────────────────
+// Shared builder used by BOTH the normal content-box return (toPageSectionStyle :441)
+// AND the bleed box (toPageSectionBleedStyle), so the border rides the box that paints
+// the section background in each mode (content box for normal, bleed box for
+// full-bleed) — framing the section like `.intro-strip{border-block:…}`. Returns `{}`
+// when nothing meaningful is authored ⇒ byte-identical to post-530. Every value is a
+// sanitized color / clamped-width literal / enum style from 533-02-L01 (the color is
+// re-guarded here via sanitizeAuthoringCssColor for defence in depth); border props are
+// fixed React camelCase inline-style keys (value positions, not rule strings).
+const toPageSectionBorderStyle = (
+  border: PageSectionBorderV2 | undefined
+): PageSectionStyleProperties => {
+  const borderStyle: PageSectionStyleProperties = {};
+  if (!border) return borderStyle;
+  for (const edge of ["top", "right", "bottom", "left"] as const) {
+    const e = border[edge];
+    if (!e) continue;
+    const color = sanitizeAuthoringCssColor(e.color);
+    const width = typeof e.width === "number" && Number.isFinite(e.width) ? e.width : undefined;
+    const style = e.style ?? (color || width ? "solid" : undefined);
+    const has = style !== "none" && (Boolean(color) || (width ?? 0) > 0);
+    if (!has) continue;
+    const cap = `${edge[0]!.toUpperCase()}${edge.slice(1)}` as "Top" | "Right" | "Bottom" | "Left";
+    if (color) borderStyle[`border${cap}Color`] = color;
+    borderStyle[`border${cap}Style`] = style;
+    borderStyle[`border${cap}Width`] = `${width ?? 1}px`;
+  }
+  return borderStyle;
+};
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
+
 export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProperties => {
   const template = resolvePageSectionTemplate(section);
   const spacing = toPageSectionVariantSpacing(section, template);
@@ -476,6 +523,11 @@ export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProp
     maxWidth,
     margin: "0 auto",
     gap,
+    // ── TASK-533-02: per-edge border on the NORMAL content box (the box that paints
+    // this section's background). `{}` when no edge authored ⇒ byte-identical. Do NOT
+    // add to the paint-empty full-bleed content-box return above — the full-bleed
+    // frame rides the bleed box (toPageSectionBleedStyle) instead.
+    ...toPageSectionBorderStyle(section.style.border),
   };
 };
 
@@ -524,6 +576,10 @@ export const toPageSectionBleedStyle = (
       toPageSectionBoxShadow(section.style.shadow),
       composeGlowBoxShadow(section.style.glow)
     ),
+    // ── TASK-533-02: per-edge border on the bleed box, so a full-bleed section's
+    // frame draws edge-to-edge (matching where its background paints). `{}` when no
+    // edge authored ⇒ byte-identical.
+    ...toPageSectionBorderStyle(section.style.border),
   };
 };
 
@@ -686,6 +742,22 @@ export const toPageSectionRenderProps = (
   const baseSectionClassName = isPageSectionFullBleed(section, template)
     ? "w-full"
     : "w-full px-4 py-6";
+  // ── TASK-533-01: asymmetric column ratio. `columnTemplate` is already the strict
+  // sanitizer's restricted string (rejected values were omitted at normalize), so it
+  // reaches CSS as a single inline `gridTemplateColumns` VALUE (not a rule). Present:
+  // it OVERRIDES the symmetric grid class (inline style beats the utility class),
+  // BOTH on the published front (`pageSectionGridClass`) AND in the editor canvas
+  // (`pageSectionCanvasGridClass`) — inline `gridTemplateColumns` wins over either
+  // symmetric class regardless of layout mode, so the author sees the SAME asymmetric
+  // ratio they'll ship (WYSIWYG / publish->front parity: every-control-visible-effect).
+  // Unset: the branch is skipped ⇒ the content-grid style is byte-identical to
+  // post-530 (the symmetric grid class stays the fallback tracks).
+  const sectionStyle = toPageSectionStyle(section);
+  const columnTemplate = section.style.columnTemplate;
+  const contentStyle: PageSectionStyleProperties =
+    typeof columnTemplate === "string"
+      ? { ...sectionStyle, gridTemplateColumns: columnTemplate }
+      : sectionStyle;
   return {
     sectionClassName: [baseSectionClassName, revealClass].filter(Boolean).join(" "),
     contentClassName: joinPageRenderClasses(
@@ -697,7 +769,7 @@ export const toPageSectionRenderProps = (
       pageSectionJustifyClass(section.layout.justify),
       pageSectionTemplateClass(template)
     ),
-    style: toPageSectionStyle(section),
+    style: contentStyle,
     dataAttributes: {
       "data-page-section": section.type,
       [PAGE_SECTION_ID_ATTRIBUTE]: section.id,
@@ -1050,7 +1122,10 @@ const splitBlockComposition = (style?: PageBlockStyle) => {
   };
 };
 
-export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps => {
+export const toPageBlockRenderProps = (
+  block: PageBlockV2,
+  options?: { suppressSpan?: boolean }
+): PageBlockRenderProps => {
   const s = splitBlockComposition(block.style);
   // TASK-525-02-L02: present-only `--reveal-delay` (bounded ms, clamped at the
   // write boundary) is stamped INLINE on this block's OWN frame; the revealing
@@ -1074,6 +1149,26 @@ export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps
   const revealDelay = block.style?.revealDelay;
   const revealVar: Record<string, string> =
     typeof revealDelay === "number" ? { "--reveal-delay": `${revealDelay}ms` } : {};
+  // ── TASK-533-01: block grid span on the frame (present-only). colSpan/rowSpan
+  // are already bounded ints from the normalizer (Math.trunc + PAGE_BLOCK_SPAN_CLAMP),
+  // so `span ${n}` is a fixed literal — no raw author value reaches CSS. Empty object
+  // when unset ⇒ no gridColumn/gridRow keys ⇒ byte-identical to post-530.
+  //
+  // TASK-533-01 (audit remediation): the span is emitted ONLY on the auto-flow path,
+  // where the block frame is a DIRECT child of the section content grid. When
+  // `options.suppressSpan` is set (the block is inside a per-column composition
+  // wrapper — a SINGLE-column grid), the span would be inert/misleading:
+  // `grid-column: span N` is a no-op (one column) and `grid-row: span N` spans the
+  // wrapper's own auto-rows (whitespace), not the block relative to grid siblings. So
+  // span and per-column `column` assignment are mutually exclusive — the span is
+  // dropped here so the emitted CSS matches the real layout (no ghost rule).
+  const suppressSpan = options?.suppressSpan === true;
+  const colSpan = suppressSpan ? undefined : block.style?.colSpan;
+  const rowSpan = suppressSpan ? undefined : block.style?.rowSpan;
+  const spanStyle: CSSProperties = {
+    ...(typeof colSpan === "number" ? { gridColumn: `span ${colSpan}` } : {}),
+    ...(typeof rowSpan === "number" ? { gridRow: `span ${rowSpan}` } : {}),
+  };
   return {
     className: joinPageRenderClasses(
       "max-w-full",
@@ -1087,6 +1182,8 @@ export const toPageBlockRenderProps = (block: PageBlockV2): PageBlockRenderProps
       ...toPageBlockStyle(block),
       ...(s.frameVars as CSSProperties),
       ...(revealVar as CSSProperties),
+      // ── TASK-533-01: present-only grid span (empty when unset).
+      ...spanStyle,
     },
     dataAttributes: {
       "data-page-block": block.type,
@@ -2764,7 +2861,12 @@ const renderPageBlockWithFrame = (block: PageBlockV2, context: PageBlockRenderCo
       </div>
     );
   }
-  const renderProps = toPageBlockRenderProps(block);
+  // TASK-533-01 (audit remediation): drop the block grid span when this block is
+  // rendered inside a per-column composition wrapper (single-column grid) — see
+  // toPageBlockRenderProps + PageBlockRenderContext.suppressBlockSpan.
+  const renderProps = toPageBlockRenderProps(block, {
+    suppressSpan: context.suppressBlockSpan,
+  });
   // TASK-528 whole-card tilt: the frame carries data-block-tilt (co-located with
   // data-surface), so CSS `perspective` must sit on an ANCESTOR — wrap the frame
   // in a [data-tilt-parent] perspective wrapper. Present-only: only when the block
@@ -2819,7 +2921,15 @@ const renderPageBlockWithFrame = (block: PageBlockV2, context: PageBlockRenderCo
   }
   return (
     <FragmentLike key={block.id}>
-      {withTiltParent(<PageBlockFrame block={block}>{content}</PageBlockFrame>)}
+      {/* Pass the suppression-aware renderProps so the span drop (composition path)
+          reaches the real front/runtime frame — PageBlockFrame would otherwise
+          recompute the span-carrying props from the block, re-introducing the ghost
+          rule. */}
+      {withTiltParent(
+        <PageBlockFrame block={block} renderProps={renderProps}>
+          {content}
+        </PageBlockFrame>
+      )}
     </FragmentLike>
   );
 };
@@ -2828,9 +2938,24 @@ export function PageBlockContent({ block }: { block: PageBlockV2 }) {
   return <>{renderPageBlockContent(block)}</>;
 }
 
-export function PageBlockFrame({ block, children }: { block: PageBlockV2; children: ReactNode }) {
+export function PageBlockFrame({
+  block,
+  children,
+  renderProps: renderPropsOverride,
+}: {
+  block: PageBlockV2;
+  children: ReactNode;
+  /**
+   * TASK-533-01 (audit remediation): when the caller has already computed
+   * suppression-aware render props (span dropped in the per-column composition
+   * path), pass them through so this frame does not recompute the span-carrying
+   * props and re-introduce the inert `gridColumn`/`gridRow` rule. Undefined ⇒
+   * derive from the block as before (byte-identical to the prior contract).
+   */
+  renderProps?: PageBlockRenderProps;
+}) {
   if (!block.visibility.visible) return null;
-  const renderProps = toPageBlockRenderProps(block);
+  const renderProps = renderPropsOverride ?? toPageBlockRenderProps(block);
   return (
     <div
       className={renderProps.className}
@@ -2874,38 +2999,112 @@ const wrapSectionTemplateBlock = (
   template: ResolvedPageSectionTemplate,
   block: PageBlockV2,
   index: number,
-  rendered: ReactNode
+  rendered: ReactNode,
+  // Total sibling count in this render pass. The timeline axis uses it to
+  // suppress the row-gap bleed on the LAST item so the continuous rule ends at
+  // the final dot (like the reference `.timeline:before{bottom:0}`) rather than
+  // overshooting into empty section space. Optional (defaults to a large value
+  // ⇒ "not last") so non-timeline callers are unaffected.
+  total = Number.POSITIVE_INFINITY
 ): ReactNode => {
   if (!rendered) return rendered;
 
   if (template.template === "timeline") {
+    // ── TASK-533-03: VERTICAL variants (default/compact) draw a CONTINUOUS axis line
+    // connecting the dots. OPTION B — a per-item connector segment in the marker column.
+    // The section content grid stacks these items in ONE column with a REAL row `gap`
+    // between them (default 24px, compact scales it down, min-floored at 8px), AND each
+    // item carries its OWN vertical padding (`py-3` = 12px each edge default, `py-2` = 8px
+    // compact). So the true empty distance between one item's dot-row and the next is
+    // `rowGap + paddingBottom + paddingTop`, NOT just the row gap.
+    //
+    // AUDIT REMEDIATION (2026-07-09): the previous connector lived in the marker column's
+    // dot-row span and only bled `bottom: calc(-1 * rowGap)`. That bridged the 24px grid
+    // gap but IGNORED the item's own 12+12px py padding, leaving a ~24px dashed BREAK at
+    // every boundary — NOT the reference `.timeline:before{top:0;bottom:0}` continuous rule.
+    // Fix: HOIST the axis-line to be a child of the `relative` ITEM div and span the FULL
+    // item box via `inset-y-0` (so the py padding is INSIDE the segment, not a gap), then
+    // bleed the bottom by ONLY the inter-item row gap so segment N reaches segment N+1's
+    // top. The LAST item suppresses the bleed (`bottom:0`) so the rule ENDS at the final
+    // dot instead of overshooting into empty section space (matching the reference
+    // container axis that stops at the last dot). Reproduces `.timeline:before` (aqua→fade
+    // axis) WITHOUT container-height math. The dot keeps its `box-shadow` glow off the
+    // accent (`.timeline article:before`). All existing hooks (item/marker/content) are
+    // RETAINED (additive DOM); `data-page-timeline-axis` / `data-page-timeline-axis-line`
+    // key the smoke assertion. The horizontal variant is UNCHANGED (no regression). No
+    // author-controlled value: axis/dot are fixed structure tinted off the already-sanitized
+    // `--coderso-section-accent`; the bleed offset is the clamped numeric section gap (a
+    // bounded int → fixed `px` literal).
+    if (template.variant !== "horizontal") {
+      // Resolved inter-item ROW gap of the section content grid (the grid band between two
+      // items). Same source the section content style emits as inline `gap`.
+      const rowGapPx = toPageSectionVariantSpacing(section, template).gap;
+      // Last item ends the axis at its dot — no downward bleed into empty section space.
+      const isLast = index + 1 >= total;
+      return (
+        <div
+          key={`${section.id}-timeline-${block.id}`}
+          className={joinPageRenderClasses(
+            "relative min-w-0",
+            "grid grid-cols-[auto_minmax(0,1fr)] gap-4",
+            template.variant === "compact" ? "py-2" : "py-3"
+          )}
+          data-page-timeline-item={index + 1}
+        >
+          {/* Continuous axis: a 1px rule behind the dot (accent → fade) that spans the FULL
+              item box (`inset-y-0` — the item's own py padding is INSIDE the segment, so no
+              intra-item break) and BLEEDS its bottom by the section row gap so it meets the
+              next item's segment. On the last item the bleed is dropped so the rule ends at
+              the final dot (no overshoot). It is centered on the `w-8` marker column
+              (`left-4` = 16px = the marker span's `w-8`/2, matching the dot center). */}
+          <span
+            aria-hidden="true"
+            className="absolute inset-y-0 left-4 w-px -translate-x-1/2"
+            style={{
+              // Bridge the row gap only (the item's own py padding is already inside this
+              // full-height span): extend the bottom so this segment reaches — and overlaps
+              // by 1px — the next item's segment. The last item ends flush at its dot.
+              bottom: isLast ? 0 : `calc(-1 * ${rowGapPx}px)`,
+              background:
+                "linear-gradient(var(--coderso-section-accent,#0d9488), rgba(148,163,184,.12))",
+            }}
+            data-page-timeline-axis="true"
+            data-page-timeline-axis-line="true"
+          />
+          <span className="relative flex w-8 justify-center">
+            {/* Glow dot (mirrors `.timeline article:before` box-shadow off the accent). */}
+            <span
+              className="relative mt-1 h-3 w-3 rounded-full ring-4 ring-white"
+              style={{
+                backgroundColor: "var(--coderso-section-accent,#0d9488)",
+                boxShadow: "0 0 16px var(--coderso-section-accent,#0d9488)",
+              }}
+              data-page-timeline-marker="true"
+            />
+          </span>
+          <div className="min-w-0" data-page-timeline-content="true">
+            {rendered}
+          </div>
+        </div>
+      );
+    }
+    // Horizontal variant — UNCHANGED (top-row markers; no vertical axis).
     return (
       <div
         key={`${section.id}-timeline-${block.id}`}
         className={joinPageRenderClasses(
           "relative min-w-0",
-          template.variant === "horizontal"
-            ? "grid gap-3 md:grid-rows-[auto_1fr]"
-            : "grid grid-cols-[auto_minmax(0,1fr)] gap-4",
-          template.variant === "compact" ? "py-2" : "py-3"
+          "grid gap-3 md:grid-rows-[auto_1fr]",
+          "py-3"
         )}
         data-page-timeline-item={index + 1}
       >
         <span
-          className={joinPageRenderClasses(
-            "mt-1 h-3 w-3 rounded-full ring-4 ring-white",
-            template.variant === "horizontal" ? "justify-self-center" : undefined
-          )}
+          className="mt-1 h-3 w-3 justify-self-center rounded-full ring-4 ring-white"
           style={{ backgroundColor: "var(--coderso-section-accent,#0d9488)" }}
           data-page-timeline-marker="true"
         />
-        <div
-          className={joinPageRenderClasses(
-            "min-w-0",
-            template.variant === "horizontal" ? "text-center" : undefined
-          )}
-          data-page-timeline-content="true"
-        >
+        <div className="min-w-0 text-center" data-page-timeline-content="true">
           {rendered}
         </div>
       </div>
@@ -3040,7 +3239,14 @@ const renderTemplateSectionChildren = (
   }
 
   return blocks.map((block, index) =>
-    wrapSectionTemplateBlock(section, template, block, index, renderBlock(block, index))
+    wrapSectionTemplateBlock(
+      section,
+      template,
+      block,
+      index,
+      renderBlock(block, index),
+      blocks.length
+    )
   );
 };
 
@@ -3084,26 +3290,6 @@ export function PageSectionContent({
   const blocks = includeHiddenBlocks
     ? section.blocks
     : section.blocks.filter((block) => block.visibility.visible);
-  const blockRenderContext = (index: number): PageBlockRenderContext => ({
-    blockPath: [{ index }] as PageBlockPath,
-    depth: 1,
-    includeHiddenBlocks,
-    renderBlockFrame,
-    renderInlineText,
-    renderColumnsSlotTrailing,
-    runtimeDataByBlockId,
-    layoutMode,
-  });
-  const renderBlockAtIndex = (block: PageBlockV2, index: number) =>
-    renderPageBlockWithFrame(block, blockRenderContext(index));
-  const renderWrappedBlockAtIndex = (block: PageBlockV2, index: number) =>
-    wrapSectionTemplateBlock(
-      section,
-      template,
-      block,
-      index,
-      renderPageBlockWithFrame(block, blockRenderContext(index))
-    );
   // Per-column composition (owner finding #5, round 3): when the section
   // composes 2+ columns AND at least one rendered root block carries a
   // `style.column` assignment, blocks render inside one wrapper stack per
@@ -3119,6 +3305,32 @@ export function PageSectionContent({
     compositionColumns >= 2 && blocks.length > 0 && pageSectionBlocksHaveColumnAssignments(blocks)
       ? distributePageSectionBlocksToColumns(blocks, compositionColumns)
       : null;
+  const blockRenderContext = (index: number): PageBlockRenderContext => ({
+    blockPath: [{ index }] as PageBlockPath,
+    depth: 1,
+    includeHiddenBlocks,
+    renderBlockFrame,
+    renderInlineText,
+    renderColumnsSlotTrailing,
+    runtimeDataByBlockId,
+    layoutMode,
+    // TASK-533-01 (audit remediation): inside per-column composition every block
+    // frame is a child of a SINGLE-column wrapper, so its grid span (colSpan/
+    // rowSpan) is inert/misleading — drop it (span ⟂ per-column `column`). The
+    // auto-flow path leaves this unset, so span keeps working as the direct grid
+    // child of the section content grid.
+    suppressBlockSpan: columnComposition !== null,
+  });
+  const renderBlockAtIndex = (block: PageBlockV2, index: number) =>
+    renderPageBlockWithFrame(block, blockRenderContext(index));
+  const renderWrappedBlockAtIndex = (block: PageBlockV2, index: number) =>
+    wrapSectionTemplateBlock(
+      section,
+      template,
+      block,
+      index,
+      renderPageBlockWithFrame(block, blockRenderContext(index))
+    );
   return (
     <div
       className={renderProps.contentClassName}

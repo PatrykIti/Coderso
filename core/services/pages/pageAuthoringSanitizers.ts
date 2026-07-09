@@ -357,6 +357,112 @@ export const sanitizeAuthoringRichTextHtml = (value: unknown): string => {
   });
 };
 
+// ── TASK-533 REGION: restricted `grid-template-columns` sanitizer ─────────────
+// STRICT ALLOWLIST (positive validation only) for the ONLY author-controlled
+// STRING that reaches a CSS VALUE position (section `columnTemplate`, emitted as an
+// inline `gridTemplateColumns`). Everything outside a tiny grid-track grammar is
+// REJECTED (→ null ⇒ the model OMITS the field, present-only fail-soft). DISJOINT
+// from the 531 gradient/multi-layer relaxation surface above (does NOT touch
+// isSafeAuthoringCssGradient / isSingleGradientLayer / sanitizeAuthoringCssBackground).
+const GRID_MAX_TRACKS = 12;
+const GRID_MAX_REPEAT = 12; // repeat(N,…) count bound
+// Number sub-pattern accepts a leading-dot decimal (`.85fr`, `.9fr`) — the reference
+// `.project-grid{grid-template-columns:1.15fr .85fr}` uses them. GRID_LEN re-validates
+// the INNER tokens of minmax()/repeat(); the unit is OPTIONAL there so a BARE unitless
+// numeric bound (canonically `0`, as in `.hero-grid{…minmax(0,1fr)…}`) is ACCEPTED. A
+// bare finite number is a valid flexible/fixed minmax bound with no injection surface
+// (the up-front metacharacter reject + bounded track/repeat counts stay intact).
+const GRID_LEN = /^(?:(?:\d+(?:\.\d+)?|\.\d+)(?:fr|px|%|rem|em)?|auto)$/; // unit OPTIONAL (bare `0` ok)
+// GRID_TRACK keeps the unit REQUIRED for a STANDALONE track (a bare unitless number is
+// not a valid standalone grid track); the unitless allowance applies ONLY to the
+// minmax/repeat inner re-validation via GRID_LEN. The minmax()/repeat() inner body is
+// NOT validated by this regex alone (`[^()]+` admits arbitrary chars) — the loop below
+// re-validates each inner token against GRID_LEN. The regex only recognises the shape.
+const GRID_TRACK =
+  /^(?:(?:\d+(?:\.\d+)?|\.\d+)(?:fr|px|%|rem|em)|auto|minmax\([^()]+\)|repeat\(\d{1,2},[^()]+\))$/;
+
+// Split a comma-separated function body into trimmed non-empty tokens.
+const gridInnerTokens = (body: string): string[] =>
+  body
+    .split(",")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+
+// Split a track LIST on TOP-LEVEL whitespace only — whitespace INSIDE a function's
+// parens (`minmax(0, 1fr)`, `repeat(3, 1fr)`) does NOT separate tracks. Splitting the
+// raw string on any `\s+` shredded the canonical spaced form (`minmax(0, 1fr)` →
+// `minmax(0,`/`1fr)`), so a reference/devtools value with normal comma spacing was
+// silently REJECTED. This paren-depth-aware tokenizer keeps each function call intact.
+// The up-front metacharacter reject already forbids `\\<>@{};` and unbalanced parens are
+// caught downstream by GRID_TRACK (a token with a stray `(` or `)` fails the shape test),
+// so a well-formed depth counter here cannot admit an injection the grammar would miss.
+const gridTopLevelTracks = (raw: string): string[] => {
+  const tracks: string[] = [];
+  let current = "";
+  let depth = 0;
+  for (const char of raw) {
+    if (char === "(") {
+      depth += 1;
+      current += char;
+    } else if (char === ")") {
+      depth = Math.max(0, depth - 1);
+      current += char;
+    } else if (depth === 0 && /\s/.test(char)) {
+      if (current.length > 0) {
+        tracks.push(current);
+        current = "";
+      }
+    } else {
+      current += char;
+    }
+  }
+  if (current.length > 0) tracks.push(current);
+  return tracks;
+};
+
+export const sanitizeAuthoringGridTemplate = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (raw.length === 0 || raw.length > 200) return null;
+  // Hard-reject any rule/injection metacharacter up front (defence in depth). The
+  // trailing `:(?![^()]*\))` rejects a `:` that is NOT inside a function's parens.
+  if (/[;{}\\<>@`]|\/\*|url\(|expression\(|:(?![^()]*\))/i.test(raw)) return null;
+  // Split on TOP-LEVEL whitespace only, so `minmax(0, 1fr)` / `repeat(3, 1fr)` (the
+  // canonical spaced reference/devtools form) stay ONE track instead of being shredded.
+  const tracks = gridTopLevelTracks(raw);
+  if (tracks.length === 0 || tracks.length > GRID_MAX_TRACKS) return null;
+  // Re-validated tracks are re-emitted in a CANONICAL no-inner-space form so the output is
+  // stable regardless of the author's spacing (`minmax(0, 1fr)` and `minmax(0,1fr)` both
+  // → `minmax(0,1fr)`), while bare tracks (`1.15fr`, `.85fr`, `auto`) pass through as-is.
+  const normalized: string[] = [];
+  for (const track of tracks) {
+    if (!GRID_TRACK.test(track)) return null;
+    // CLOSED grammar: re-validate the INNER tokens of minmax()/repeat() against
+    // GRID_LEN (bounded finite numbers only — `[^()]+` in GRID_TRACK does NOT).
+    const mm = /^minmax\((.+)\)$/.exec(track);
+    if (mm) {
+      const inner = gridInnerTokens(mm[1]!);
+      // minmax(min, max) — exactly two length/fr/auto tokens, each valid.
+      if (inner.length !== 2 || !inner.every((token) => GRID_LEN.test(token))) return null;
+      normalized.push(`minmax(${inner.join(",")})`);
+      continue;
+    }
+    const rp = /^repeat\((\d{1,2}),(.+)\)$/.exec(track);
+    if (rp) {
+      const count = Number(rp[1]);
+      // finite int, bounded (reject repeat(99,…) — `\d{1,2}` alone allows up to 99).
+      if (!Number.isInteger(count) || count < 1 || count > GRID_MAX_REPEAT) return null;
+      const inner = gridInnerTokens(rp[2]!);
+      if (inner.length === 0 || !inner.every((token) => GRID_LEN.test(token))) return null;
+      normalized.push(`repeat(${count},${inner.join(",")})`);
+      continue;
+    }
+    normalized.push(track);
+  }
+  return normalized.join(" ");
+};
+// ── END TASK-533 REGION ───────────────────────────────────────────────────────
+
 /**
  * Escape a value for use inside a double-quoted CSS string such as
  * `url("...")`. Also escapes angle brackets so generated style elements can

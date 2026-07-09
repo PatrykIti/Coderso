@@ -6,6 +6,13 @@ import {
   PAGE_GLOW_SPREAD_CLAMP,
   PAGE_GLOW_OFFSET_CLAMP,
   // ── END TASK-531 ──
+  // ── TASK-533-01 — block grid-span clamp bounds + column-ratio presets ──
+  PAGE_BLOCK_SPAN_CLAMP,
+  pageColumnTemplatePresets,
+  // ── END TASK-533-01 ──
+  // ── TASK-533-02 — per-edge section border width clamp bounds ──
+  PAGE_SECTION_BORDER_WIDTH_CLAMP,
+  // ── END TASK-533-02 ──
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
@@ -514,6 +521,63 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     input: "switch",
     responsive: false,
   }),
+  // ── TASK-533-01 REGION: asymmetric column ratio (curated safe presets) ──────
+  // `select` of curated presets (each is sanitizeAuthoringGridTemplate-passing), so
+  // the value is naturally constrained to a sanitizer-valid string; the write
+  // boundary re-sanitizes any tampered payload regardless. responsive:false —
+  // structural (a per-breakpoint ratio is not CSS-expressible against the inline
+  // base). No `fallback` — an unset ratio shows empty and falls back to the
+  // symmetric grid class (present-only honesty).
+  control({
+    id: "section.style.columnTemplate",
+    panel: "layout",
+    target: "section",
+    label: "Column ratio",
+    path: ["style", "columnTemplate"],
+    input: "select",
+    responsive: false,
+    options: pageColumnTemplatePresets,
+  }),
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+  // ── TASK-533-02 REGION: per-edge section border (color/width/style per edge) ──
+  // Mirrors the block border input kinds (color/number/segmented) per edge. Length-4
+  // paths (`["style","border",side,prop]`) — the mutation router
+  // (pageEditorMutationActions) sanitizes the nested color path. responsive:false —
+  // the border is device-uniform (a per-breakpoint delta is out of scope). No
+  // misleading fallback on color/width (present-only honesty).
+  ...(["top", "right", "bottom", "left"] as const).flatMap((side) => [
+    control({
+      id: `section.style.border.${side}.color`,
+      panel: "style",
+      target: "section",
+      label: `Border ${side} color`,
+      path: ["style", "border", side, "color"],
+      input: "color",
+      responsive: false,
+    }),
+    control({
+      id: `section.style.border.${side}.width`,
+      panel: "style",
+      target: "section",
+      label: `Border ${side} width`,
+      path: ["style", "border", side, "width"],
+      input: "number",
+      responsive: false,
+      clamp: PAGE_SECTION_BORDER_WIDTH_CLAMP,
+    }),
+    control({
+      id: `section.style.border.${side}.style`,
+      panel: "style",
+      target: "section",
+      label: `Border ${side} style`,
+      path: ["style", "border", side, "style"],
+      input: "segmented",
+      responsive: false,
+      options: pageBlockBorderStyles,
+      fallback: "none",
+    }),
+  ]),
+  // ── END TASK-533-02 REGION ────────────────────────────────────────────────
 ] as const;
 
 /**
@@ -941,6 +1005,29 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     // Blocks are visible unless explicitly hidden (defaultBlockVisibility).
     fallback: true,
   }),
+  // ── TASK-533-01 REGION: block grid span (number inputs, PAGE_BLOCK_SPAN_CLAMP) ──
+  // No `fallback` — an unset span shows empty (present-only; not a misleading "1").
+  control({
+    id: "block.style.colSpan",
+    panel: "layout",
+    target: "block",
+    label: "Column span",
+    path: ["style", "colSpan"],
+    input: "number",
+    responsive: true,
+    clamp: PAGE_BLOCK_SPAN_CLAMP,
+  }),
+  control({
+    id: "block.style.rowSpan",
+    panel: "layout",
+    target: "block",
+    label: "Row span",
+    path: ["style", "rowSpan"],
+    input: "number",
+    responsive: true,
+    clamp: PAGE_BLOCK_SPAN_CLAMP,
+  }),
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
 ] as const;
 
 /**

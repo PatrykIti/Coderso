@@ -23,6 +23,8 @@ import {
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
   sanitizeAuthoringCssFontSize,
+  // ── TASK-533: restricted grid-template sanitizer (asymmetric column ratio).
+  sanitizeAuthoringGridTemplate,
   sanitizeAuthoringLinkHref,
   sanitizeAuthoringMediaUrl,
 } from "./pageAuthoringSanitizers";
@@ -303,6 +305,31 @@ export const PAGE_BLOCK_BORDER_WIDTH_CLAMP = { min: 0, max: 12 } as const;
  * paints more than four columns.
  */
 export const PAGE_SECTION_BLOCK_COLUMN_CLAMP = { min: 1, max: 4 } as const;
+// ── TASK-533-01 REGION: block grid-span bounds + column-ratio presets ─────────
+/** Block grid-span bounds — how many columns/rows a block may span in the section
+ *  grid (`grid-column: span N` / `grid-row: span N`). Reproduces
+ *  `.project-card.large{grid-row:span 2}`. */
+export const PAGE_BLOCK_SPAN_CLAMP = { min: 1, max: 4 } as const;
+/**
+ * Curated safe `columnTemplate` presets for the section "Column ratio" control.
+ * Every entry is `sanitizeAuthoringGridTemplate`-passing (round-trips unchanged),
+ * reproducing the reference intro (1/1.2fr), realizacje (1.15/.85fr), and hero
+ * (minmax) ratios. Naturally constrains the authored value to a sanitizer-valid
+ * string; the write boundary re-sanitizes any tampered payload regardless.
+ */
+export const pageColumnTemplatePresets = [
+  "1fr 1fr",
+  "1.15fr .85fr",
+  "1fr 1.2fr",
+  "1fr .95fr",
+  "minmax(0,1fr) minmax(420px,.9fr)",
+] as const;
+// ── END TASK-533-01 REGION ────────────────────────────────────────────────────
+// ── TASK-533-02 REGION: per-edge section border width bounds ──────────────────
+/** Per-edge section border width bounds in px (`border-{edge}-width`). Reproduces
+ *  `.intro-strip{border-block:1px solid …}`. */
+export const PAGE_SECTION_BORDER_WIDTH_CLAMP = { min: 0, max: 16 } as const;
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
 /**
  * Block types whose rendered output paints user-editable text, and therefore
  * may expose (and paint) the typography style surface. Layout, media, and
@@ -663,7 +690,45 @@ export type PageSectionStyleV2 = {
    * serializes byte-identically. STATIC (renders identically under reduced-motion).
    */
   noiseOverlay?: boolean;
+  // ── TASK-533-01 REGION: asymmetric column ratio (present-only, sanitized) ──
+  /**
+   * TASK-533-01 restricted `grid-template-columns` value (e.g. `"1.15fr .85fr"`,
+   * `"1fr 1.2fr"`, `"minmax(0,1fr) minmax(420px,.9fr)"`). When set it OVERRIDES the
+   * symmetric grid class with an inline `gridTemplateColumns`, reproducing the intro
+   * (1/1.2fr) and realizacje (1.15/.85fr) reference ratios. Strict-sanitized via
+   * `sanitizeAuthoringGridTemplate` (the only author string reaching a CSS value
+   * position); rejection ⇒ OMITTED. Present-only: unset ⇒ byte-identical to post-530.
+   */
+  columnTemplate?: string;
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+  // ── TASK-533-02 REGION: per-edge section border (present-only) ─────────────
+  /**
+   * TASK-533-02 per-edge section border (`border-block` = top+bottom minimum, full
+   * four-edge supported). Present-only: omitted when no edge is authored ⇒
+   * byte-identical to post-530. Colors via `sanitizeAuthoringCssColor`, widths clamped
+   * to {@link PAGE_SECTION_BORDER_WIDTH_CLAMP}, style enum-validated. Reproduces
+   * `.intro-strip{border-block:1px solid rgba(255,255,255,.1)}`.
+   */
+  border?: PageSectionBorderV2;
+  // ── END TASK-533-02 REGION ────────────────────────────────────────────────
 };
+
+// ── TASK-533-02 REGION: per-edge section border types ─────────────────────────
+/** One border edge: color (sanitized), width (clamped px), style (enum). */
+export type PageSectionBorderEdgeV2 = {
+  color?: string | null;
+  width?: number;
+  style?: PageBlockBorderStyle;
+};
+/** Per-edge section border; mirrors {@link PageBoxSpacingV2}'s four-optional-edge
+ *  shape with a per-edge value. Present-only: omitted whole-object when empty. */
+export type PageSectionBorderV2 = {
+  top?: PageSectionBorderEdgeV2;
+  right?: PageSectionBorderEdgeV2;
+  bottom?: PageSectionBorderEdgeV2;
+  left?: PageSectionBorderEdgeV2;
+};
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
 
 export type PageSectionSpacingV2 = {
   paddingTop: number;
@@ -804,6 +869,20 @@ export type PageBlockStyleV2 = {
    * gated (transforms only). Reaches render solely as a `data-magnetic` toggle.
    */
   magnetic?: boolean;
+  // ── TASK-533-01 REGION: block grid span (present-only, clamped ints) ───────
+  /**
+   * TASK-533-01 span N columns in the section grid (`grid-column: span N`,
+   * clamped {@link PAGE_BLOCK_SPAN_CLAMP}). Present-only: omitted when unset ⇒
+   * byte-identical to post-530.
+   */
+  colSpan?: number;
+  /**
+   * TASK-533-01 span N rows in the section grid (`grid-row: span N`, clamped
+   * {@link PAGE_BLOCK_SPAN_CLAMP}). Reproduces `.project-card.large{grid-row:span 2}`.
+   * Present-only: omitted when unset ⇒ byte-identical to post-530.
+   */
+  rowSpan?: number;
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
 };
 
 export type PageBlockVisibilityV2 = {
@@ -921,6 +1000,10 @@ const pageBlockStyleKeys = [
   // ── END TASK-531 REGION ──────────────────────────────────────────────────
   // ── TASK-534 ── present-only magnetic-hover flag (runtime pointer-attract).
   "magnetic",
+  // ── TASK-533-01 REGION: block grid span (present-only clamped ints).
+  "colSpan",
+  "rowSpan",
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
 ] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
@@ -1667,6 +1750,30 @@ const pageGlowJsonSchema: RecordValue = {
 };
 // ── END TASK-531 REGION ───────────────────────────────────────────────────────
 
+// ── TASK-533-02 REGION: per-edge section border JSON schema ───────────────────
+// Nested additionalProperties:false at BOTH the edge and the border level (mirrors
+// the layer/marquee nested-object precedent). Shared by BOTH section-style mirrors.
+const pageSectionBorderEdgeJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    color: { type: ["string", "null"] },
+    width: numericSchema(PAGE_SECTION_BORDER_WIDTH_CLAMP.min, PAGE_SECTION_BORDER_WIDTH_CLAMP.max),
+    style: { type: "string", enum: [...pageBlockBorderStyles] },
+  },
+};
+const pageSectionBorderJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    top: pageSectionBorderEdgeJsonSchema,
+    right: pageSectionBorderEdgeJsonSchema,
+    bottom: pageSectionBorderEdgeJsonSchema,
+    left: pageSectionBorderEdgeJsonSchema,
+  },
+};
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
+
 const pageBlockStyleJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
@@ -1760,6 +1867,10 @@ const pageBlockStyleJsonSchema: RecordValue = {
     // ── END TASK-531 REGION ──────────────────────────────────────────────────
     // ── TASK-534 ── present-only magnetic-hover flag (boolean).
     magnetic: booleanSchema,
+    // ── TASK-533-01 REGION: block grid span (present-only clamped ints).
+    colSpan: numericSchema(PAGE_BLOCK_SPAN_CLAMP.min, PAGE_BLOCK_SPAN_CLAMP.max),
+    rowSpan: numericSchema(PAGE_BLOCK_SPAN_CLAMP.min, PAGE_BLOCK_SPAN_CLAMP.max),
+    // ── END TASK-533-01 REGION ────────────────────────────────────────────────
   },
 };
 
@@ -1915,6 +2026,13 @@ const partialSectionStyleJsonSchema: RecordValue = {
     // ── END TASK-531 REGION ──────────────────────────────────────────────────
     // ── TASK-534 ── static grain overlay (present-only boolean).
     noiseOverlay: booleanSchema,
+    // ── TASK-533-01 REGION: asymmetric column ratio (value validated at
+    // normalize by sanitizeAuthoringGridTemplate; string shape only here).
+    columnTemplate: { type: "string" },
+    // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+    // ── TASK-533-02 REGION: per-edge section border (present-only object).
+    border: pageSectionBorderJsonSchema,
+    // ── END TASK-533-02 REGION ────────────────────────────────────────────────
   },
 };
 
@@ -2125,6 +2243,16 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               // ── END TASK-531 REGION ────────────────────────────────────────
               // ── TASK-534 ── static grain overlay (present-only boolean).
               noiseOverlay: booleanSchema,
+              // ── TASK-533-01 REGION: asymmetric column ratio (MUST mirror the
+              // partial schema or a top-level style.columnTemplate fails
+              // additionalProperties:false; value validated at normalize).
+              columnTemplate: { type: "string" },
+              // ── END TASK-533-01 REGION ─────────────────────────────────────
+              // ── TASK-533-02 REGION: per-edge section border (MUST mirror the
+              // partial schema or a top-level style.border fails
+              // additionalProperties:false and breaks the border round-trip).
+              border: pageSectionBorderJsonSchema,
+              // ── END TASK-533-02 REGION ─────────────────────────────────────
             },
           },
           spacing: {
@@ -2800,6 +2928,57 @@ const normalizeGlow = (value: unknown, mode: NormalizeMode, path: string): PageG
 };
 // ── END TASK-531 REGION ───────────────────────────────────────────────────────
 
+// ── TASK-533-02 REGION: per-edge section border normalizer ────────────────────
+const pageSectionBorderEdges = ["top", "right", "bottom", "left"] as const;
+const normalizeSectionBorderEdge = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageSectionBorderEdgeV2 | undefined => {
+  const edge = (isRecord(value) ? value : {}) as RecordValue;
+  assertKnownKeys(edge, ["color", "width", "style"], path, mode);
+  const result: PageSectionBorderEdgeV2 = {};
+  // Color via readOptionalSafeColor → sanitizeAuthoringCssColor (only sanctioned path);
+  // a bad color is DROPPED (undefined), never persisted raw.
+  if (edge.color !== undefined) {
+    const color = readOptionalSafeColor(edge.color);
+    if (typeof color === "string" && color.length > 0) result.color = color;
+  }
+  if (edge.width !== undefined) {
+    const width = readOptionalClampedNumber(
+      edge.width,
+      PAGE_SECTION_BORDER_WIDTH_CLAMP,
+      `${path}.width`,
+      mode
+    );
+    if (width !== undefined) result.width = width;
+  }
+  if (edge.style !== undefined) {
+    result.style = normalizeEnum(edge.style, pageBlockBorderStyles, "solid", `${path}.style`, mode);
+  }
+  // Include the edge ONLY if it has at least one meaningful prop (a visible border
+  // needs a color OR a positive width); otherwise omit (present-only).
+  const meaningful = Boolean(result.color) || (result.width ?? 0) > 0;
+  return meaningful ? result : undefined;
+};
+const normalizeSectionBorder = (
+  value: unknown,
+  mode: NormalizeMode,
+  path: string
+): PageSectionBorderV2 | undefined => {
+  const input = requireRecord(value ?? {}, path, mode);
+  assertKnownKeys(input, pageSectionBorderEdges, path, mode);
+  const result: PageSectionBorderV2 = {};
+  for (const edge of pageSectionBorderEdges) {
+    if (input[edge] === undefined) continue;
+    const normalized = normalizeSectionBorderEdge(input[edge], mode, `${path}.${edge}`);
+    if (normalized) result[edge] = normalized;
+  }
+  // Present-only whole-object omit: return undefined when NO edge survives.
+  return Object.keys(result).length > 0 ? result : undefined;
+};
+// ── END TASK-533-02 REGION ────────────────────────────────────────────────────
+
 const normalizeSectionStyle = (
   value: unknown,
   mode: NormalizeMode,
@@ -2828,6 +3007,12 @@ const normalizeSectionStyle = (
       // ── END TASK-531 REGION ──────────────────────────────────────────────
       // ── TASK-534 ── static grain overlay (present-only boolean).
       "noiseOverlay",
+      // ── TASK-533-01 REGION: asymmetric column ratio (present-only string).
+      "columnTemplate",
+      // ── END TASK-533-01 REGION ────────────────────────────────────────────
+      // ── TASK-533-02 REGION: per-edge section border (present-only object).
+      "border",
+      // ── END TASK-533-02 REGION ────────────────────────────────────────────
     ],
     path,
     mode
@@ -2919,6 +3104,20 @@ const normalizeSectionStyle = (
   // ── TASK-534 ── static grain overlay (present-only; emitted ONLY when === true
   // so a non-grain section stays byte-identical; defaultStyle seeds no key).
   if (input.noiseOverlay === true) result.noiseOverlay = true;
+  // ── TASK-533-01 REGION: asymmetric column ratio (present-only sanitized string).
+  // The ONLY author string reaching a CSS value position — routed through the strict
+  // allowlist `sanitizeAuthoringGridTemplate`; rejection/empty ⇒ OMIT (never emit raw).
+  if (input.columnTemplate !== undefined) {
+    const template = sanitizeAuthoringGridTemplate(input.columnTemplate);
+    if (typeof template === "string" && template.length > 0) result.columnTemplate = template;
+  }
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
+  // ── TASK-533-02 REGION: per-edge section border (present-only whole-object omit).
+  if (input.border !== undefined) {
+    const border = normalizeSectionBorder(input.border, mode, `${path}.border`);
+    if (border) result.border = border;
+  }
+  // ── END TASK-533-02 REGION ────────────────────────────────────────────────
   return partial ? result : ({ ...defaultStyle, ...result } satisfies PageSectionStyleV2);
 };
 
@@ -3274,6 +3473,28 @@ const normalizeBlockStyle = (
   if (input.magnetic !== undefined && readBoolean(input.magnetic, false)) {
     result.magnetic = true;
   }
+  // ── TASK-533-01 REGION: block grid span (present-only clamped ints).
+  // Emitted ONLY as `span N` literals at render (533-01-L02); NaN/Infinity/out-of-range
+  // clamp fail-soft; Math.trunc so `span ${n}` is always an integer.
+  if (input.colSpan !== undefined) {
+    const n = readOptionalClampedNumber(
+      input.colSpan,
+      PAGE_BLOCK_SPAN_CLAMP,
+      `${path}.colSpan`,
+      mode
+    );
+    if (n !== undefined) result.colSpan = Math.trunc(n);
+  }
+  if (input.rowSpan !== undefined) {
+    const n = readOptionalClampedNumber(
+      input.rowSpan,
+      PAGE_BLOCK_SPAN_CLAMP,
+      `${path}.rowSpan`,
+      mode
+    );
+    if (n !== undefined) result.rowSpan = Math.trunc(n);
+  }
+  // ── END TASK-533-01 REGION ────────────────────────────────────────────────
   return Object.keys(result).length > 0 ? result : undefined;
 };
 

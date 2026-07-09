@@ -87,6 +87,18 @@ export const sanitizePageEditorControlValue = (
     return sanitizeAuthoringCssColor(value);
   }
   // ── END TASK-531 REGION ──────────────────────────────────────────────────
+  // ── TASK-533-02 REGION: nested `style.border.<side>.color` (length-4 overridePath)
+  // client write-guard. Same `[group, key, ...rest]` destructure as 531 leaves
+  // `key="border"` (NOT "color"), so `sanitizeStyleValue` matches none of its cases and
+  // would return the border color UNSANITIZED into optimistic client state. The final
+  // path segment is `rest[1]==="color"` (rest = [side, "color"]); route it through
+  // `sanitizeAuthoringCssColor` (defence-in-depth; the persist boundary
+  // `normalizeSectionStyle → readOptionalSafeColor` + 533-02-L02 emit re-guard). Numeric
+  // width + enum style fields pass through — clamped/enum-validated at the persist boundary.
+  if (group === "style" && key === "border" && rest[1] === "color") {
+    return sanitizeAuthoringCssColor(value);
+  }
+  // ── END TASK-533-02 REGION ────────────────────────────────────────────────
   if (group === "style") return sanitizeStyleValue(key, value);
   return value;
 };

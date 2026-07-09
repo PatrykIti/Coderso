@@ -18,6 +18,8 @@ import {
 } from "../../../core/services/pages/pageEditorControlRegistry";
 // TASK-531-01-L03/L04 — client optimistic write-guard under test (finding #4).
 import { sanitizePageEditorControlValue } from "../../../core/services/pages/pageEditorMutationActions";
+// TASK-533-01-L04 — assert the curated column-ratio presets are sanitizer-passing.
+import { sanitizeAuthoringGridTemplate } from "../../../core/services/pages/pageAuthoringSanitizers";
 import {
   PAGE_COLLECTION_LIMIT_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
@@ -66,6 +68,11 @@ import {
   PAGE_GLOW_BLUR_CLAMP,
   PAGE_GLOW_SPREAD_CLAMP,
   PAGE_GLOW_OFFSET_CLAMP,
+  // TASK-533-01-L03 block grid-span clamp bounds + column-ratio presets.
+  PAGE_BLOCK_SPAN_CLAMP,
+  pageColumnTemplatePresets,
+  // TASK-533-02-L03 per-edge section border width clamp bounds.
+  PAGE_SECTION_BORDER_WIDTH_CLAMP,
   pageTextAlignments,
   pageTextFormats,
   pageTiltStrengths,
@@ -121,6 +128,21 @@ const validSectionPaths = new Set([
   "style.glow.y",
   // ── TASK-534 ── section grain overlay.
   "style.noiseOverlay",
+  // TASK-533-01-L03 asymmetric column ratio.
+  "style.columnTemplate",
+  // TASK-533-02-L03 per-edge section border (4 edges × color/width/style).
+  "style.border.top.color",
+  "style.border.top.width",
+  "style.border.top.style",
+  "style.border.right.color",
+  "style.border.right.width",
+  "style.border.right.style",
+  "style.border.bottom.color",
+  "style.border.bottom.width",
+  "style.border.bottom.style",
+  "style.border.left.color",
+  "style.border.left.width",
+  "style.border.left.style",
 ]);
 
 const validBlockPaths = new Set([
@@ -175,6 +197,9 @@ const validBlockPaths = new Set([
   "style.glow.y",
   // ── TASK-534 ── magnetic-hover flag (universal block control).
   "style.magnetic",
+  // TASK-533-01-L03 block grid span.
+  "style.colSpan",
+  "style.rowSpan",
   "visibility.visible",
 ]);
 
@@ -225,6 +250,8 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageGalleryLayouts,
   switcherVariants,
   scrollHintGlyphs,
+  // TASK-533-01-L03 curated column-ratio presets (all sanitizer-passing).
+  pageColumnTemplatePresets,
 ]);
 
 /**
@@ -1735,5 +1762,132 @@ describe("page editor control registry — TASK-534 interactivity", () => {
     expect(switcherControls.some((c) => c.id === "block.style.magnetic")).toBe(true);
     const galleryControls = getPageEditorControlsForTarget({ kind: "block", type: "gallery" });
     expect(galleryControls.some((c) => c.id === "block.gallery.props.filterable")).toBe(true);
+  });
+});
+
+// TASK-533-01-L04 — block colSpan/rowSpan + section columnTemplate controls.
+describe("grid span + column-ratio controls (TASK-533-01-L03)", () => {
+  const findSection = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalSectionControls.find((entry) => entry.id === id);
+  const findBlock = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalBlockControls.find((entry) => entry.id === id);
+
+  test("block colSpan/rowSpan are clamped number inputs on the layout panel (no fallback)", () => {
+    for (const tail of ["colSpan", "rowSpan"] as const) {
+      const control = findBlock(`block.style.${tail}`);
+      expect(control, `block.style.${tail} missing`).toBeDefined();
+      expect(control?.input).toBe("number");
+      expect(control?.target).toBe("block");
+      expect(control?.panel).toBe("layout");
+      expect(control?.path).toEqual(["style", tail]);
+      expect(control?.clamp).toEqual({
+        min: PAGE_BLOCK_SPAN_CLAMP.min,
+        max: PAGE_BLOCK_SPAN_CLAMP.max,
+      });
+      // Present-only: no misleading fallback for an unset span.
+      expect("fallback" in (control ?? {})).toBe(false);
+      expect("options" in (control ?? {})).toBe(false);
+    }
+  });
+
+  test("section columnTemplate is a curated select of sanitizer-passing presets", () => {
+    const control = findSection("section.style.columnTemplate");
+    expect(control).toBeDefined();
+    expect(control?.input).toBe("select");
+    expect(control?.target).toBe("section");
+    expect(control?.panel).toBe("layout");
+    expect(control?.path).toEqual(["style", "columnTemplate"]);
+    // Curated presets are the shared owner array (also gates ownerOptionSets).
+    expect(control?.options).toBe(pageColumnTemplatePresets);
+    // Every preset survives the strict sanitizer byte-identically.
+    for (const preset of pageColumnTemplatePresets) {
+      expect(sanitizeAuthoringGridTemplate(preset), preset).toBe(preset);
+    }
+    // Present-only: no misleading fallback for an unset ratio.
+    expect("fallback" in (control ?? {})).toBe(false);
+  });
+
+  test("all three 533-01 control ids are registered", () => {
+    const ids = [...pageUniversalBlockControls, ...pageUniversalSectionControls].map(
+      (entry) => entry.id
+    );
+    expect(ids).toEqual(
+      expect.arrayContaining([
+        "block.style.colSpan",
+        "block.style.rowSpan",
+        "section.style.columnTemplate",
+      ])
+    );
+  });
+});
+
+// TASK-533-02-L04 — per-edge section border controls + the nested (length-4)
+// border.*.color client mutation write-guard.
+describe("per-edge section border controls (TASK-533-02-L03)", () => {
+  const findSection = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalSectionControls.find((entry) => entry.id === id);
+
+  test("registers 12 per-edge border controls with the correct length-4 paths + clamp", () => {
+    for (const side of ["top", "right", "bottom", "left"] as const) {
+      const color = findSection(`section.style.border.${side}.color`);
+      expect(color, `${side}.color missing`).toBeDefined();
+      expect(color?.input).toBe("color");
+      expect(color?.target).toBe("section");
+      expect(color?.panel).toBe("style");
+      expect(color?.responsive).toBe(false);
+      expect(color?.path).toEqual(["style", "border", side, "color"]);
+      // Present-only: no misleading fallback on the color.
+      expect("fallback" in (color ?? {})).toBe(false);
+
+      const width = findSection(`section.style.border.${side}.width`);
+      expect(width, `${side}.width missing`).toBeDefined();
+      expect(width?.input).toBe("number");
+      expect(width?.path).toEqual(["style", "border", side, "width"]);
+      expect(width?.clamp).toEqual({
+        min: PAGE_SECTION_BORDER_WIDTH_CLAMP.min,
+        max: PAGE_SECTION_BORDER_WIDTH_CLAMP.max,
+      });
+      // Present-only: no misleading fallback on the width.
+      expect("fallback" in (width ?? {})).toBe(false);
+
+      const style = findSection(`section.style.border.${side}.style`);
+      expect(style, `${side}.style missing`).toBeDefined();
+      expect(style?.input).toBe("segmented");
+      expect(style?.path).toEqual(["style", "border", side, "style"]);
+      expect(style?.options).toBe(pageBlockBorderStyles);
+    }
+  });
+
+  // The nested length-4 border.*.color CLIENT write-guard (parent contract §Security).
+  // The `[group, key, ...rest]` destructure (531 form) leaves `key="border"` (NOT
+  // "color"), so without the 533-02 branch the border color would fall through
+  // UNSANITIZED into optimistic client state. This asserts it now REACHES the color
+  // sanitizer end-to-end (editor value sanitize).
+  test("border.*.color drops a hostile color and passes a safe color through", () => {
+    for (const side of ["top", "right", "bottom", "left"] as const) {
+      const control = findSection(`section.style.border.${side}.color`);
+      if (!control) throw new Error(`section.style.border.${side}.color control missing`);
+      // Precondition: the guard sees the length-4 nested path.
+      expect(control.overridePath).toEqual(["style", "border", side, "color"]);
+      // Hostile colors are rejected (sanitizeAuthoringCssColor → null) at the client guard.
+      expect(sanitizePageEditorControlValue(control, "expression(alert(1))")).toBeNull();
+      expect(sanitizePageEditorControlValue(control, "url(//evil)")).toBeNull();
+      expect(sanitizePageEditorControlValue(control, "javascript:alert(1)")).toBeNull();
+      // A safe color passes through unchanged.
+      expect(sanitizePageEditorControlValue(control, "#ffffff33")).toBe("#ffffff33");
+      expect(sanitizePageEditorControlValue(control, "rgba(255,255,255,.1)")).toBe(
+        "rgba(255,255,255,.1)"
+      );
+    }
+  });
+
+  test("regression: border.*.width / .style pass through the guard unchanged (numeric/enum)", () => {
+    const width = findSection("section.style.border.top.width");
+    const style = findSection("section.style.border.top.style");
+    if (!width || !style) throw new Error("border width/style control missing");
+    // Non-color nested border paths are NOT color-sanitized — width/style pass through
+    // (clamped/enum-validated at the persist boundary, not the client guard).
+    expect(sanitizePageEditorControlValue(width, 2)).toBe(2);
+    expect(sanitizePageEditorControlValue(style, "dashed")).toBe("dashed");
   });
 });
