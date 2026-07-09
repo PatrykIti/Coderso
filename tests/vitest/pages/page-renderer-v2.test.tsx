@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { renderToStaticMarkup } from "react-dom/server";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import {
   createPageBlockV2,
@@ -30,6 +30,17 @@ import {
   PAGE_EFFECTS_RUNTIME_ID,
   PAGE_EFFECTS_RUNTIME_SOURCE,
 } from "../../../core/services/pages/pageEffectsRuntime";
+// TASK-531-01-L02/L04 — shared pure glow-compose helpers under test.
+import {
+  clampGlowNum,
+  composeGlowBoxShadow,
+  mergeShadows,
+} from "../../../core/services/pages/pageGlow";
+import {
+  PAGE_GLOW_BLUR_CLAMP,
+  PAGE_GLOW_OFFSET_CLAMP,
+  PAGE_GLOW_SPREAD_CLAMP,
+} from "../../../core/services/pages/pageDocumentV2";
 import {
   pageTypographyFontFamilyCssValues,
   pageTypographyFontSizeCssValues,
@@ -3619,7 +3630,9 @@ test("TASK-535 — FOOTER-ONLY reveal: primary has none, footer authors it ⇒ r
 
 test("TASK-535 — FOOTER-ONLY composition: primary has none, footer authors a surface ⇒ composition CSS STILL emitted (from the footer)", () => {
   const mainNoEffect = createEffectsDocument([createSection()]);
-  const footerComposition = createEffectsDocument([createEffectSection({ surfacePreset: "glass" })]);
+  const footerComposition = createEffectsDocument([
+    createEffectSection({ surfacePreset: "glass" }),
+  ]);
   const primary = renderToStaticMarkup(<PageDocumentRender document={mainNoEffect} />);
   const secondary = renderToStaticMarkup(
     <PageDocumentRender document={footerComposition} documentRole="secondary" rootTag="div" />
@@ -4490,7 +4503,9 @@ test("TASK-535 — a tilt+layer child inside a layered canvas positions the WRAP
   expect(wrapperTag).toContain("--layer-z:4");
   // The real block frame carries the tilt + its id — but NOT the layer placement,
   // so it never goes absolute and escapes the wrapper.
-  expect(html).toMatch(/data-block-id="blk-lt1"[^>]*data-block-tilt="strong"|data-block-tilt="strong"[^>]*data-block-id="blk-lt1"/);
+  expect(html).toMatch(
+    /data-block-id="blk-lt1"[^>]*data-block-tilt="strong"|data-block-tilt="strong"[^>]*data-block-id="blk-lt1"/
+  );
   expect(html).not.toMatch(/data-block-id="blk-lt1"[^>]*data-layer=/);
   // Wrapper wraps the frame (document order: wrapper `>` precedes the frame id).
   expect(html.indexOf(wrapperTag)).toBeLessThan(html.indexOf('data-block-id="blk-lt1"'));
@@ -4605,4 +4620,252 @@ test("seamless marquee copy carries NO data-block-id in canvas mode (finding 3)"
   expect(countMarkup(html, 'data-block-id="blk-m2"')).toBe(1);
   // Two tracks still render (the copy is present, just frame-less).
   expect(countMarkup(html, "cx-marquee-track")).toBe(2);
+});
+
+// ── TASK-531-01-L02/L04 — glow render + section-gradient (single + multi-layer) ──
+// The SSR inline-style boundary (React-escaped CSSProperties). Covers the pure
+// glow composer, block/section glow merge, section gradient parity with the
+// already-wired block gradient, multi-layer paint on BOTH targets, and byte-identity.
+describe("glow + multi-layer/section gradient render (TASK-531-01-L02)", () => {
+  const CTA_CARD =
+    "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+
+  test("composeGlowBoxShadow emits a fixed four-part template from sanitized inputs", () => {
+    // The reference glow: 0 18px 45px rgba(142,232,255,.22) — matches criterion #4.
+    expect(composeGlowBoxShadow({ color: "#8ee8ff", blur: 45, y: 18 })).toBe(
+      "0px 18px 45px 0px #8ee8ff"
+    );
+    expect(composeGlowBoxShadow({ color: "rgba(142,232,255,.22)", blur: 45, y: 18 })).toBe(
+      "0px 18px 45px 0px rgba(142,232,255,.22)"
+    );
+    // Defaults: blur ⇒ 24, spread/x/y ⇒ 0 when unset.
+    expect(composeGlowBoxShadow({ color: "#0d9488" })).toBe("0px 0px 24px 0px #0d9488");
+    // Negative offsets/spread survive (clamped, not stripped).
+    expect(composeGlowBoxShadow({ color: "#0d9488", x: -12, y: -8, spread: -10 })).toBe(
+      "-12px -8px 24px -10px #0d9488"
+    );
+  });
+
+  test("composeGlowBoxShadow re-sanitizes the color at render (fail-soft to undefined)", () => {
+    // Defence in depth: a bad color composes to NOTHING (no glow), never a raw string.
+    expect(composeGlowBoxShadow({ color: "expression(alert(1))" })).toBeUndefined();
+    expect(composeGlowBoxShadow({ color: "url(//evil/x)" })).toBeUndefined();
+    expect(composeGlowBoxShadow(undefined)).toBeUndefined();
+  });
+
+  test("composeGlowBoxShadow clamps out-of-range numbers into the 531 bounds", () => {
+    expect(
+      composeGlowBoxShadow({ color: "#000", blur: 9999, spread: 9999, x: 9999, y: -9999 })
+    ).toBe(`80px -80px 120px 80px #000`);
+    // clampGlowNum truncates + clamps a possibly-undefined value (default 0).
+    expect(clampGlowNum(undefined, PAGE_GLOW_BLUR_CLAMP)).toBe(0);
+    expect(clampGlowNum(45.9, PAGE_GLOW_BLUR_CLAMP)).toBe(45);
+    expect(clampGlowNum(9999, PAGE_GLOW_BLUR_CLAMP)).toBe(120);
+    expect(clampGlowNum(-9999, PAGE_GLOW_OFFSET_CLAMP)).toBe(-80);
+    expect(clampGlowNum(-9999, PAGE_GLOW_SPREAD_CLAMP)).toBe(-40);
+  });
+
+  test("mergeShadows comma-joins the enum shadow and the glow (glow AUGMENTS, does not replace)", () => {
+    expect(mergeShadows("0 14px 40px rgba(15, 23, 42, 0.12)", "0px 18px 45px 0px #8ee8ff")).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12), 0px 18px 45px 0px #8ee8ff"
+    );
+    expect(mergeShadows(undefined, "0px 0px 24px 0px #8ee8ff")).toBe("0px 0px 24px 0px #8ee8ff");
+    expect(mergeShadows("0 14px 40px rgba(15, 23, 42, 0.12)", undefined)).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12)"
+    );
+    expect(mergeShadows(undefined, undefined)).toBeUndefined();
+  });
+
+  test("a block with glow ONLY emits the composed box-shadow on its render props", () => {
+    const block = createPageBlockV2("heading", {
+      id: "blk-glow-only",
+      props: { text: "Glow", level: "h2", align: "left" },
+      style: { glow: { color: "rgba(142,232,255,.22)", blur: 45, y: 18 } } as never,
+    });
+    expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
+      "0px 18px 45px 0px rgba(142,232,255,.22)"
+    );
+  });
+
+  test("a block with BOTH enum shadow AND glow emits a TWO-shadow box-shadow (enum first)", () => {
+    const block = createPageBlockV2("heading", {
+      id: "blk-glow-shadow",
+      props: { text: "Glow", level: "h2", align: "left" },
+      style: { shadow: "md", glow: { color: "#8ee8ff", blur: 28 } } as never,
+    });
+    expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12), 0px 0px 28px 0px #8ee8ff"
+    );
+  });
+
+  test("a section with glow merges it into the section box AND the bleed box", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-glow",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "md",
+        glow: { color: "#8ee8ff", blur: 28 },
+      } as never,
+    });
+    expect(toPageSectionStyle(section).boxShadow).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12), 0px 0px 28px 0px #8ee8ff"
+    );
+    // Full-bleed section: the glow bleeds edge-to-edge on the bleed box too.
+    const fullBleed = createPageSectionV2("hero", {
+      id: "sec-glow-bleed",
+      variant: "full-width",
+      style: {
+        background: "#ffffff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+        glow: { color: "#8ee8ff", blur: 28 },
+      } as never,
+    });
+    expect(toPageSectionBleedStyle(fullBleed)?.boxShadow).toBe("0px 0px 28px 0px #8ee8ff");
+  });
+
+  test("SECTION backgroundType:gradient paints a single-layer gradient via backgroundImage", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-gradient-single",
+      style: {
+        background: "linear-gradient(145deg,#0f1720,#1b2733)",
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(section).backgroundImage).toBe(
+      "linear-gradient(145deg,#0f1720,#1b2733)"
+    );
+    // No flat background-color when the type is gradient.
+    expect(toPageSectionStyle(section).backgroundColor).toBeUndefined();
+  });
+
+  test("SECTION backgroundType:gradient paints the reference .cta-card MULTI-LAYER value (relaxed re-gate)", () => {
+    // This is the render-side gate for the fix: a PRE-relax toGradientBackground
+    // would return undefined here (single-layer re-check drops the comma-joined value).
+    // Non-full-bleed: the gradient paints on the content box (toPageSectionStyle).
+    const section = createPageSectionV2("hero", {
+      id: "sec-gradient-multi",
+      variant: "default",
+      style: {
+        background: CTA_CARD,
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(section).backgroundImage).toBe(CTA_CARD);
+    // No bleed box for a non-full-bleed section.
+    expect(toPageSectionBleedStyle(section)).toBeUndefined();
+
+    // Full-bleed: the paint moves to the bleed box (525 model — content stays capped),
+    // so the multi-layer gradient bleeds edge-to-edge there.
+    const fullBleed = createPageSectionV2("hero", {
+      id: "sec-gradient-multi-bleed",
+      variant: "full-width",
+      style: {
+        background: CTA_CARD,
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 0,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionBleedStyle(fullBleed)?.backgroundImage).toBe(CTA_CARD);
+  });
+
+  test("SECTION gradient with an invalid value falls back cleanly (no paint, no throw)", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-gradient-bad",
+      style: {
+        background: "linear-gradient(#fff,#000), url(//evil/beacon)",
+        backgroundType: "gradient",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(section).backgroundImage).toBeUndefined();
+  });
+
+  test("switching a SECTION back to color/image restores flat/image paint (no gradient)", () => {
+    const color = createPageSectionV2("hero", {
+      id: "sec-flat",
+      style: {
+        background: "#101828",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "none",
+      } as never,
+    });
+    expect(toPageSectionStyle(color).backgroundColor).toBe("#101828");
+    expect(toPageSectionStyle(color).backgroundImage).toBeUndefined();
+  });
+
+  test("BLOCK gradient path still emits single-layer AND now paints the MULTI-LAYER value", () => {
+    // The block :738 call site is UNCHANGED; the shared toGradientBackground relax
+    // reaches the block target too. Single-layer regression guard first:
+    const single = createPageBlockV2("button", {
+      id: "blk-grad-single",
+      props: { label: "Go", href: "/go" },
+      style: { background: "linear-gradient(90deg,#000,#fff)", backgroundType: "gradient" },
+    });
+    const singleSection = createPageSectionV2("cta", { id: "sec-blk-single", blocks: [single] });
+    const singleHtml = renderToStaticMarkup(<PageSectionContent section={singleSection} />);
+    expect(singleHtml).toContain("background-image:linear-gradient(90deg,#000,#fff)");
+
+    // Multi-layer on a card block (heading frame carries the visual style):
+    const multi = createPageBlockV2("heading", {
+      id: "blk-grad-multi",
+      props: { text: "Card", level: "h2", align: "left" },
+      style: { background: CTA_CARD, backgroundType: "gradient" } as never,
+    });
+    expect(toPageBlockRenderProps(multi).style.backgroundImage).toBe(CTA_CARD);
+    // And it survives to the SSR markup (React-escaped into the style attribute).
+    const multiSection = createPageSectionV2("content", { id: "sec-blk-multi", blocks: [multi] });
+    const multiHtml = renderToStaticMarkup(<PageSectionContent section={multiSection} />);
+    expect(multiHtml).toContain("background-image:radial-gradient(circle at 82% 10%");
+  });
+
+  test("no-glow / no-gradient section + block render byte-identical to the pre-531 style shape", () => {
+    const section = createPageSectionV2("hero", {
+      id: "sec-noeffect",
+      style: {
+        background: "#eef2ff",
+        backgroundType: "color",
+        backgroundImage: null,
+        accent: "#0d9488",
+        radius: 12,
+        shadow: "sm",
+      },
+    });
+    const style = toPageSectionStyle(section);
+    // The enum shadow alone (no glow) is UNCHANGED — no trailing comma-joined glow.
+    expect(style.boxShadow).toBe("0 6px 20px rgba(15, 23, 42, 0.08)");
+    expect(style.backgroundColor).toBe("#eef2ff");
+    const block = createPageBlockV2("heading", {
+      id: "blk-noeffect",
+      props: { text: "Plain", level: "h2", align: "left" },
+      style: { shadow: "md" },
+    });
+    expect(toPageBlockRenderProps(block).style.boxShadow).toBe(
+      "0 14px 40px rgba(15, 23, 42, 0.12)"
+    );
+  });
 });

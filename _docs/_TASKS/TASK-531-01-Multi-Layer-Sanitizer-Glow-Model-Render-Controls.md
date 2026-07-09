@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Security / Content (Pages) / Site Render / Admin UI / Schema (JSON model)
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-09)
 
 ---
 

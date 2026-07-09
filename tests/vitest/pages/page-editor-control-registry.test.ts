@@ -16,6 +16,8 @@ import {
   projectPageResponsiveOverrideEntries,
   type PageEditorControlDefinition,
 } from "../../../core/services/pages/pageEditorControlRegistry";
+// TASK-531-01-L03/L04 — client optimistic write-guard under test (finding #4).
+import { sanitizePageEditorControlValue } from "../../../core/services/pages/pageEditorMutationActions";
 import {
   PAGE_COLLECTION_LIMIT_CLAMP,
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
@@ -56,6 +58,10 @@ import {
   pageSectionTypes,
   pageShadowTokens,
   PAGE_PARALLAX_INTENSITY_CLAMP,
+  // TASK-531-01-L03 glow control clamp bounds.
+  PAGE_GLOW_BLUR_CLAMP,
+  PAGE_GLOW_SPREAD_CLAMP,
+  PAGE_GLOW_OFFSET_CLAMP,
   pageTextAlignments,
   pageTextFormats,
   pageTiltStrengths,
@@ -100,6 +106,12 @@ const validSectionPaths = new Set([
   "style.composition",
   // TASK-525-01-L02 full-bleed background.
   "style.fullBleed",
+  // TASK-531-01-L03 section glow group (arbitrary colored box-shadow).
+  "style.glow.color",
+  "style.glow.blur",
+  "style.glow.spread",
+  "style.glow.x",
+  "style.glow.y",
 ]);
 
 const validBlockPaths = new Set([
@@ -146,6 +158,12 @@ const validBlockPaths = new Set([
   "style.layer.anchor",
   // TASK-525-02-L03 per-block staggered reveal control.
   "style.revealDelay",
+  // TASK-531-01-L03 block glow group (arbitrary colored box-shadow).
+  "style.glow.color",
+  "style.glow.blur",
+  "style.glow.spread",
+  "style.glow.x",
+  "style.glow.y",
   "visibility.visible",
 ]);
 
@@ -1446,5 +1464,144 @@ describe("layout composition.mode + group marquee controls (TASK-522-05-L02/L04)
         `${type} should not carry marquee`
       ).toBe(false);
     }
+  });
+});
+
+describe("glow + gradient-type controls (TASK-531-01-L03)", () => {
+  const findSection = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalSectionControls.find((entry) => entry.id === id);
+  const findBlock = (id: string): PageEditorControlDefinition | undefined =>
+    pageUniversalBlockControls.find((entry) => entry.id === id);
+
+  // Shared descriptor spec: the color leaf + the four numeric leaves with their clamps.
+  const numericGlowSpec: ReadonlyArray<{
+    tail: string;
+    clamp: { min: number; max: number };
+  }> = [
+    { tail: "blur", clamp: { min: PAGE_GLOW_BLUR_CLAMP.min, max: PAGE_GLOW_BLUR_CLAMP.max } },
+    {
+      tail: "spread",
+      clamp: { min: PAGE_GLOW_SPREAD_CLAMP.min, max: PAGE_GLOW_SPREAD_CLAMP.max },
+    },
+    { tail: "x", clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max } },
+    { tail: "y", clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max } },
+  ];
+
+  for (const target of ["section", "block"] as const) {
+    const find = target === "section" ? findSection : findBlock;
+
+    test(`${target} glow.color is a live per-device color control on the style panel`, () => {
+      const color = find(`${target}.style.glow.color`);
+      expect(color).toBeDefined();
+      // No new UI kind — glow color reuses the existing `color` input.
+      expect(color?.input).toBe("color");
+      expect(color?.target).toBe(target);
+      expect(color?.panel).toBe("style");
+      // Glow is per-device (rides the responsive @media machinery — G-3b).
+      expect(color?.responsive).toBe(true);
+      expect(color?.path).toEqual(["style", "glow", "color"]);
+      expect(Array.isArray(color?.path)).toBe(true);
+      // No options (enum-less), no legacy fields.
+      expect("options" in (color ?? {})).toBe(false);
+      expect("kind" in (color ?? {})).toBe(false);
+      expect("showWhen" in (color ?? {})).toBe(false);
+    });
+
+    test(`${target} glow numeric controls are clamped per-device number inputs`, () => {
+      for (const spec of numericGlowSpec) {
+        const numeric = find(`${target}.style.glow.${spec.tail}`);
+        expect(numeric, `${target}.style.glow.${spec.tail} missing`).toBeDefined();
+        // No new UI kind — numeric glow fields reuse `number` + clamp.
+        expect(numeric?.input).toBe("number");
+        expect(numeric?.target).toBe(target);
+        expect(numeric?.panel).toBe("style");
+        expect(numeric?.responsive).toBe(true);
+        expect(numeric?.path).toEqual(["style", "glow", spec.tail]);
+        expect(numeric?.clamp).toEqual(spec.clamp);
+        // Enum-less; no legacy fields.
+        expect("options" in (numeric ?? {})).toBe(false);
+        expect("showWhen" in (numeric ?? {})).toBe(false);
+      }
+    });
+  }
+
+  test("glow controls are UNIVERSAL — composed for every block type", () => {
+    const glowIds = [
+      "block.style.glow.color",
+      "block.style.glow.blur",
+      "block.style.glow.spread",
+      "block.style.glow.x",
+      "block.style.glow.y",
+    ];
+    for (const type of pageBlockTypes) {
+      const composed = [...pageUniversalBlockControls, ...pageBlockControlRegistry[type]];
+      for (const id of glowIds) {
+        expect(
+          composed.some((entry) => entry.id === id),
+          `${type} missing ${id}`
+        ).toBe(true);
+      }
+    }
+  });
+
+  test("backgroundType still offers the gradient option on both targets (no enum change)", () => {
+    // 531 authors a gradient by selecting the existing backgroundType option +
+    // typing/pasting into the existing `background` control — no new control.
+    expect(pageBackgroundTypes).toContain("gradient");
+    const sectionType = findSection("section.style.backgroundType");
+    const blockType = findBlock("block.style.backgroundType");
+    expect(sectionType?.input).toBe("select");
+    expect(sectionType?.options).toBe(pageBackgroundTypes);
+    expect(sectionType?.options).toContain("gradient");
+    expect(blockType?.input).toBe("select");
+    expect(blockType?.options).toBe(pageBackgroundTypes);
+    expect(blockType?.options).toContain("gradient");
+  });
+});
+
+// TASK-531-01-L03/L04 — the nested glow.color CLIENT mutation write-guard (finding #4).
+// `sanitizePageEditorControlValue` destructures `const [group, key] = overridePath`, so
+// for the length-3 `["style","glow","color"]` path `key="glow"` (NOT "color") — without
+// the 531 branch the glow color would fall through UNSANITIZED into optimistic client
+// state. Parallel to sibling 533-02's length-4 `border.*.color` handling.
+describe("nested glow.color client mutation guard (TASK-531-01-L03, finding #4)", () => {
+  const glowColorControl = (target: "section" | "block"): PageEditorControlDefinition => {
+    const pool = target === "section" ? pageUniversalSectionControls : pageUniversalBlockControls;
+    const control = pool.find((entry) => entry.id === `${target}.style.glow.color`);
+    if (!control) throw new Error(`${target}.style.glow.color control missing`);
+    return control;
+  };
+
+  for (const target of ["section", "block"] as const) {
+    test(`${target} glow.color drops a hostile color and passes a safe color through`, () => {
+      const control = glowColorControl(target);
+      // Precondition: the guard sees the length-3 nested path.
+      expect(control.overridePath).toEqual(["style", "glow", "color"]);
+      // A hostile color is rejected (sanitizeAuthoringCssColor → null) at the client guard,
+      // proving the nested length-3 path now REACHES the color sanitizer.
+      expect(sanitizePageEditorControlValue(control, "expression(alert(1))")).toBeNull();
+      expect(sanitizePageEditorControlValue(control, "url(//evil/x)")).toBeNull();
+      // A safe color passes through unchanged.
+      expect(sanitizePageEditorControlValue(control, "rgba(142,232,255,.22)")).toBe(
+        "rgba(142,232,255,.22)"
+      );
+      expect(sanitizePageEditorControlValue(control, "#8ee8ff")).toBe("#8ee8ff");
+    });
+  }
+
+  test("regression: a plain style.background control still routes through the background sanitizer", () => {
+    const control = pageUniversalBlockControls.find(
+      (entry) => entry.id === "block.style.background"
+    );
+    if (!control) throw new Error("block.style.background control missing");
+    expect(control.overridePath).toEqual(["style", "background"]);
+    // Multi-layer accept (the 531 relax) — not disturbed by the added glow branch.
+    const ctaCard =
+      "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+    expect(sanitizePageEditorControlValue(control, ctaCard)).toBe(ctaCard);
+    // url() reject still fires through the background sanitizer.
+    expect(
+      sanitizePageEditorControlValue(control, "linear-gradient(#fff,#000), url(//evil/beacon)")
+    ).toBeNull();
   });
 });

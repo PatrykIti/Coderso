@@ -1,6 +1,11 @@
 import {
   PAGE_COLLECTION_LIMIT_CLAMP,
   PAGE_BLOCK_BORDER_WIDTH_CLAMP,
+  // ── TASK-531 — glow clamp bounds (read-only) for the glow numeric controls ──
+  PAGE_GLOW_BLUR_CLAMP,
+  PAGE_GLOW_SPREAD_CLAMP,
+  PAGE_GLOW_OFFSET_CLAMP,
+  // ── END TASK-531 ──
   PAGE_TYPOGRAPHY_LETTER_SPACING_CLAMP,
   PAGE_TYPOGRAPHY_LINE_HEIGHT_CLAMP,
   pageBackgroundTypes,
@@ -311,6 +316,63 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     responsive: true,
     options: pageShadowTokens,
   }),
+  // ── TASK-531 REGION — section glow group (arbitrary colored box-shadow) ──────
+  // color + numeric blur/spread/x/y; responsive:true (per-device glow rides the
+  // responsive @media machinery — pageResponsiveCss.ts composes it). No new UI
+  // kind: color uses input:"color", the four numerics use input:"number"+clamp.
+  // glow.color is REQUIRED at the write boundary — an unset/invalid color omits
+  // the whole glow (present-only), so the numeric controls are harmless no-ops
+  // until a color is set (registry has no showWhen).
+  control({
+    id: "section.style.glow.color",
+    panel: "style",
+    target: "section",
+    label: "Glow color",
+    path: ["style", "glow", "color"],
+    input: "color",
+    responsive: true,
+  }),
+  control({
+    id: "section.style.glow.blur",
+    panel: "style",
+    target: "section",
+    label: "Glow blur",
+    path: ["style", "glow", "blur"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_BLUR_CLAMP.min, max: PAGE_GLOW_BLUR_CLAMP.max },
+  }),
+  control({
+    id: "section.style.glow.spread",
+    panel: "style",
+    target: "section",
+    label: "Glow spread",
+    path: ["style", "glow", "spread"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_SPREAD_CLAMP.min, max: PAGE_GLOW_SPREAD_CLAMP.max },
+  }),
+  control({
+    id: "section.style.glow.x",
+    panel: "style",
+    target: "section",
+    label: "Glow offset X",
+    path: ["style", "glow", "x"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  control({
+    id: "section.style.glow.y",
+    panel: "style",
+    target: "section",
+    label: "Glow offset Y",
+    path: ["style", "glow", "y"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  // ── END TASK-531 REGION — section glow group ────────────────────────────────
   control({
     id: "section.scrollEffect",
     panel: "style",
@@ -543,6 +605,59 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     // Unset renders no box-shadow — the schema default "none".
     fallback: "none",
   }),
+  // ── TASK-531 REGION — block glow group (arbitrary colored box-shadow) ────────
+  // Identical `style.glow.*` tail to the section group; target:"block".
+  // responsive:true (per-device glow rides pageResponsiveCss.ts). No new UI kind.
+  control({
+    id: "block.style.glow.color",
+    panel: "style",
+    target: "block",
+    label: "Glow color",
+    path: ["style", "glow", "color"],
+    input: "color",
+    responsive: true,
+  }),
+  control({
+    id: "block.style.glow.blur",
+    panel: "style",
+    target: "block",
+    label: "Glow blur",
+    path: ["style", "glow", "blur"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_BLUR_CLAMP.min, max: PAGE_GLOW_BLUR_CLAMP.max },
+  }),
+  control({
+    id: "block.style.glow.spread",
+    panel: "style",
+    target: "block",
+    label: "Glow spread",
+    path: ["style", "glow", "spread"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_SPREAD_CLAMP.min, max: PAGE_GLOW_SPREAD_CLAMP.max },
+  }),
+  control({
+    id: "block.style.glow.x",
+    panel: "style",
+    target: "block",
+    label: "Glow offset X",
+    path: ["style", "glow", "x"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  control({
+    id: "block.style.glow.y",
+    panel: "style",
+    target: "block",
+    label: "Glow offset Y",
+    path: ["style", "glow", "y"],
+    input: "number",
+    responsive: true,
+    clamp: { min: PAGE_GLOW_OFFSET_CLAMP.min, max: PAGE_GLOW_OFFSET_CLAMP.max },
+  }),
+  // ── END TASK-531 REGION — block glow group ──────────────────────────────────
   control({
     id: "block.style.borderColor",
     panel: "style",

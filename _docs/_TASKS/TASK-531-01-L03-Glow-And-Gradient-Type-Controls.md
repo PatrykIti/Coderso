@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Content (Pages)
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done (2026-07-09)
 
 ---
 

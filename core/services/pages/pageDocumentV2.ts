@@ -19,6 +19,7 @@ import {
 import { createSecureRandomHexFragment } from "../security/secureRandom";
 import { DEFAULT_TOKENS } from "../theme/tokenTypes";
 import {
+  PAGE_CSS_VALUE_MAX_LENGTH,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
   sanitizeAuthoringLinkHref,
@@ -344,6 +345,29 @@ export const PAGE_MARQUEE_SPEED_CLAMP = { min: 8, max: 40 } as const; // s
 export const PAGE_DRAW_SPEED_CLAMP = { min: 600, max: 6000 } as const; // ms
 export const PAGE_CUSTOM_SVG_MAX_BYTES = 24576 as const; // 24 KiB
 
+// ── TASK-531 REGION (glow model: clamps + type) ───────────────────────────────
+// Arbitrary colored box-shadow (glow) — a STRUCTURED spec (never a raw author
+// string). `color` is sanitized via `sanitizeAuthoringCssColor` at write; the
+// numeric fields are clamped, then composed into a fixed `box-shadow` template
+// at render (`composeGlowBoxShadow`, `pageGlow.ts`). See TASK-531 §G-3.
+export const PAGE_GLOW_BLUR_CLAMP = { min: 0, max: 120 } as const; // px
+export const PAGE_GLOW_SPREAD_CLAMP = { min: -40, max: 80 } as const; // px
+export const PAGE_GLOW_OFFSET_CLAMP = { min: -80, max: 80 } as const; // px (x AND y)
+
+export type PageGlow = {
+  /** REQUIRED — sanitized via `sanitizeAuthoringCssColor` at write; whole glow OMITTED when invalid. */
+  color: string;
+  /** PAGE_GLOW_BLUR_CLAMP (default 24 at render). */
+  blur?: number;
+  /** PAGE_GLOW_SPREAD_CLAMP (default 0). */
+  spread?: number;
+  /** PAGE_GLOW_OFFSET_CLAMP (default 0). */
+  x?: number;
+  /** PAGE_GLOW_OFFSET_CLAMP (default 0). */
+  y?: number;
+};
+// ── END TASK-531 REGION ───────────────────────────────────────────────────────
+
 export type PageBlockDecoration = {
   motion: PageBlockDecorationMotion;
   delay?: number;
@@ -568,6 +592,15 @@ export type PageSectionStyleV2 = {
    * variant still bleeds by default, independent of this flag).
    */
   fullBleed?: boolean;
+  // ── TASK-531 REGION ──────────────────────────────────────────────────────
+  /**
+   * TASK-531 arbitrary colored glow box-shadow on the section box. Present-only:
+   * omitted when unauthored OR when its `color` fails sanitization. Composed to a
+   * fixed `box-shadow` template at render (`composeGlowBoxShadow`), APPENDED after
+   * the enum `shadow` when both are present.
+   */
+  glow?: PageGlow;
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
 };
 
 export type PageSectionSpacingV2 = {
@@ -678,6 +711,14 @@ export type PageBlockStyleV2 = {
    * (the reveal CSS resets `--reveal-delay` per frame; see `PAGE_REVEAL_MOTION_CSS`).
    */
   revealDelay?: number;
+  // ── TASK-531 REGION ──────────────────────────────────────────────────────
+  /**
+   * TASK-531 arbitrary colored glow box-shadow on the block frame. Same shape +
+   * present-only semantics as the section field (composed at render, APPENDED
+   * after the enum `shadow` when both are present).
+   */
+  glow?: PageGlow;
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
 };
 
 export type PageBlockVisibilityV2 = {
@@ -786,6 +827,9 @@ const pageBlockStyleKeys = [
   "composition",
   // TASK-525-02-L01 per-block staggered reveal (present-only number).
   "revealDelay",
+  // ── TASK-531 REGION: arbitrary colored glow box-shadow (present-only object).
+  "glow",
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
 ] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
@@ -1430,6 +1474,27 @@ const pageBoxSpacingJsonSchema: RecordValue = {
   ),
 };
 
+// ── TASK-531 REGION: glow box-shadow JSON schema ──────────────────────────────
+// Shared by ALL THREE additionalProperties:false style schemas (block, partial
+// section, inlined top-level section). Mirrors the `layer`/`marquee` nested-object
+// shape: strict object, `color` REQUIRED, numeric fields bounded by the 531 clamps.
+const pageGlowJsonSchema: RecordValue = {
+  type: "object",
+  additionalProperties: false,
+  required: ["color"],
+  properties: {
+    // maxLength defence-in-depth (ReDoS): deep color validation is owned by
+    // `sanitizeAuthoringCssColor` (itself length-guarded), but capping at the schema
+    // rejects oversized input before it reaches any normalizer/regex.
+    color: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
+    blur: numericSchema(PAGE_GLOW_BLUR_CLAMP.min, PAGE_GLOW_BLUR_CLAMP.max),
+    spread: numericSchema(PAGE_GLOW_SPREAD_CLAMP.min, PAGE_GLOW_SPREAD_CLAMP.max),
+    x: numericSchema(PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max),
+    y: numericSchema(PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max),
+  },
+};
+// ── END TASK-531 REGION ───────────────────────────────────────────────────────
+
 const pageBlockStyleJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
@@ -1510,6 +1575,9 @@ const pageBlockStyleJsonSchema: RecordValue = {
     },
     // TASK-525-02-L01 per-block staggered reveal (present-only, bounded ms).
     revealDelay: numericSchema(PAGE_REVEAL_DELAY_CLAMP.min, PAGE_REVEAL_DELAY_CLAMP.max),
+    // ── TASK-531 REGION: glow box-shadow (present-only object; color REQUIRED).
+    glow: pageGlowJsonSchema,
+    // ── END TASK-531 REGION ──────────────────────────────────────────────────
   },
 };
 
@@ -1639,7 +1707,9 @@ const partialSectionStyleJsonSchema: RecordValue = {
   type: "object",
   additionalProperties: false,
   properties: {
-    background: { type: "string" },
+    // maxLength defence-in-depth (ReDoS): deep validation owned by
+    // `sanitizeAuthoringCssBackground`; cap oversized input before any regex.
+    background: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
     backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
     backgroundImage: { type: ["string", "null"] },
     accent: { type: "string" },
@@ -1658,6 +1728,9 @@ const partialSectionStyleJsonSchema: RecordValue = {
     composition: { type: "string", enum: [...pageCompositions] },
     // TASK-525-01-L02 full-bleed background (present-only boolean).
     fullBleed: booleanSchema,
+    // ── TASK-531 REGION: glow box-shadow (present-only mirror).
+    glow: pageGlowJsonSchema,
+    // ── END TASK-531 REGION ──────────────────────────────────────────────────
   },
 };
 
@@ -1784,7 +1857,9 @@ export const pageDocumentV2JsonSchema: RecordValue = {
         // is owned by `sanitizeAuthoringCssBackground` in `normalizeSettings`
         // (exactly as `menuAppearance`'s deep validation is owned by
         // `normalizeMenuAppearance`); the schema mirrors only the shape.
-        background: { type: "string" },
+        // maxLength defence-in-depth (ReDoS): this multi-layer-capable field previously
+        // had NO cap; bound it so oversized input is rejected before any regex.
+        background: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
         collectionLink: {
           type: "object",
           required: ["contentTypeId", "pageRole"],
@@ -1838,7 +1913,9 @@ export const pageDocumentV2JsonSchema: RecordValue = {
             required: ["background", "backgroundType", "accent", "radius", "shadow"],
             additionalProperties: false,
             properties: {
-              background: { type: "string" },
+              // maxLength defence-in-depth (ReDoS): deep validation owned by
+              // `sanitizeAuthoringCssBackground`; cap oversized input before any regex.
+              background: { type: "string", maxLength: PAGE_CSS_VALUE_MAX_LENGTH },
               backgroundType: { type: "string", enum: [...pageBackgroundTypes] },
               backgroundImage: { type: ["string", "null"] },
               accent: { type: "string" },
@@ -1855,6 +1932,11 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               composition: { type: "string", enum: [...pageCompositions] },
               // TASK-525-01-L02 full-bleed background (present-only boolean).
               fullBleed: booleanSchema,
+              // ── TASK-531 REGION: glow box-shadow (present-only; MUST mirror the
+              // partial + block schemas or a top-level style.glow fails
+              // additionalProperties:false and breaks the section-glow round-trip.
+              glow: pageGlowJsonSchema,
+              // ── END TASK-531 REGION ────────────────────────────────────────
             },
           },
           spacing: {
@@ -2494,6 +2576,33 @@ const normalizeSectionLayout = (
   return partial ? result : ({ ...defaultLayout, ...result } satisfies PageSectionLayoutV2);
 };
 
+// ── TASK-531 REGION (shared glow normalizer) ──────────────────────────────────
+// Fail-soft numbers (clamp), REQUIRED sanitized color, reject-unknown nested keys
+// (fail-closed in write mode). Returns `undefined` when the color is invalid ⇒ the
+// WHOLE glow key is OMITTED (never a partial / color-less glow), so a no-glow /
+// bad-color style stays byte-identical (present-only).
+const normalizeGlow = (value: unknown, mode: NormalizeMode, path: string): PageGlow | undefined => {
+  const g = (isRecord(value) ? value : {}) as RecordValue;
+  assertKnownKeys(g, ["color", "blur", "spread", "x", "y"], path, mode);
+  const color = readOptionalSafeColor(g.color);
+  if (typeof color !== "string" || color.length === 0) return undefined;
+  const glow: PageGlow = { color };
+  if (g.blur !== undefined) {
+    glow.blur = readNumber(g.blur, 24, PAGE_GLOW_BLUR_CLAMP.min, PAGE_GLOW_BLUR_CLAMP.max);
+  }
+  if (g.spread !== undefined) {
+    glow.spread = readNumber(g.spread, 0, PAGE_GLOW_SPREAD_CLAMP.min, PAGE_GLOW_SPREAD_CLAMP.max);
+  }
+  if (g.x !== undefined) {
+    glow.x = readNumber(g.x, 0, PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max);
+  }
+  if (g.y !== undefined) {
+    glow.y = readNumber(g.y, 0, PAGE_GLOW_OFFSET_CLAMP.min, PAGE_GLOW_OFFSET_CLAMP.max);
+  }
+  return glow;
+};
+// ── END TASK-531 REGION ───────────────────────────────────────────────────────
+
 const normalizeSectionStyle = (
   value: unknown,
   mode: NormalizeMode,
@@ -2517,6 +2626,9 @@ const normalizeSectionStyle = (
       "composition",
       // TASK-525-01-L02 full-bleed background (present-only boolean).
       "fullBleed",
+      // ── TASK-531 REGION: glow box-shadow (present-only object).
+      "glow",
+      // ── END TASK-531 REGION ──────────────────────────────────────────────
     ],
     path,
     mode
@@ -2599,6 +2711,12 @@ const normalizeSectionStyle = (
   // Emitted ONLY when `=== true`; `false`/unset omitted so a non-bleed section
   // stays byte-identical (`defaultStyle` seeds no key).
   if (input.fullBleed === true) result.fullBleed = true;
+  // ── TASK-531 REGION: glow box-shadow (present-only; omitted when color invalid).
+  if (input.glow !== undefined) {
+    const glow = normalizeGlow(input.glow, mode, `${path}.glow`);
+    if (glow) result.glow = glow;
+  }
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
   return partial ? result : ({ ...defaultStyle, ...result } satisfies PageSectionStyleV2);
 };
 
@@ -2923,6 +3041,12 @@ const normalizeBlockStyle = (
       PAGE_REVEAL_DELAY_CLAMP.max
     );
   }
+  // ── TASK-531 REGION: glow box-shadow (present-only; omitted when color invalid).
+  if (input.glow !== undefined) {
+    const glow = normalizeGlow(input.glow, mode, `${path}.glow`);
+    if (glow) result.glow = glow;
+  }
+  // ── END TASK-531 REGION ──────────────────────────────────────────────────
   return Object.keys(result).length > 0 ? result : undefined;
 };
 

@@ -1096,3 +1096,183 @@ describe("per-device surface tint glow (TASK-524-02-L03 seam)", () => {
     });
   });
 });
+
+// ── TASK-531-01-L02/L04 — the SECOND render boundary (per-device @media RAW <style>) ──
+// pageResponsiveCss.ts emits per-device declarations RAW into a <style> string
+// (dangerouslySetInnerHTML, NOT React-escaped), so the multi-layer allowlist +
+// tripwire and the glow composer must gate this boundary exactly like the write one.
+describe("per-device gradient + glow @media (TASK-531-01-L02)", () => {
+  const CTA_CARD =
+    "radial-gradient(circle at 82% 10%, rgba(142,232,255,.35), transparent 60%), linear-gradient(145deg,#0f1720,#1b2733)";
+  const sectionContentRule = (css: string): string =>
+    css.match(
+      /\[data-section-id="sec_hero"\] > \[data-page-section-content="true"\]\{[^}]*\}/
+    )?.[0] ?? "";
+  const blockRule = (css: string): string =>
+    css.match(/\[data-block-id="blk_text"\]\{[^}]*\}/)?.[0] ?? "";
+
+  test("SECTION per-device multi-layer gradient override paints via the NEW section gradient branch", () => {
+    const document = normalizePageDocumentV2ForWrite(
+      buildDocument([
+        buildSection({
+          responsive: {
+            tablet: { style: { backgroundType: "gradient", background: CTA_CARD } },
+          },
+        }),
+      ])
+    );
+    const plan = buildPageResponsiveCssPlan(document);
+    const rule = sectionContentRule(plan.css);
+    expect(rule).toContain(`background-image:${CTA_CARD} !important`);
+    expect(rule).toContain("background-color:transparent !important");
+    expect(plan.diagnostics).toEqual([]);
+  });
+
+  test("BLOCK per-device multi-layer gradient override paints via the RELAXED block re-gate", () => {
+    const document = normalizePageDocumentV2ForWrite(
+      buildDocument([
+        buildSection({
+          blocks: [
+            buildBlock({
+              responsive: {
+                mobile: { style: { backgroundType: "gradient", background: CTA_CARD } },
+              },
+            }),
+          ],
+        }),
+      ])
+    );
+    const plan = buildPageResponsiveCssPlan(document);
+    // A PRE-relax single-layer re-gate would drop this comma-joined value ⇒ gate for the fix.
+    expect(plan.css).toContain(`background-image:${CTA_CARD} !important`);
+    expect(plan.css).toContain("background-color:transparent !important");
+    expect(plan.diagnostics).toEqual([]);
+  });
+
+  test("per-device url()-bearing multi-layer override is rejected RAW (diagnostic, no <style> emit)", () => {
+    const document = normalizePageDocumentV2ForWrite(
+      buildDocument([
+        buildSection({
+          responsive: {
+            tablet: {
+              style: {
+                backgroundType: "gradient",
+                background: "linear-gradient(#fff,#000), url(//evil/beacon)",
+              },
+            },
+          },
+        }),
+      ])
+    );
+    const plan = buildPageResponsiveCssPlan(document);
+    expect(plan.css).not.toContain("url(//evil/beacon)");
+    expect(plan.css).not.toContain("background-image:linear-gradient(#fff,#000), url");
+    expect(plan.diagnostics).toContainEqual({
+      scope: "section",
+      id: "sec_hero",
+      breakpoint: "tablet",
+      key: "style.background",
+      reason: "unsafe_background_value",
+    });
+  });
+
+  test("per-device @import / expression / over-cap multi-layer overrides all reject at the RAW boundary", () => {
+    const overCap = Array.from({ length: 7 }, () => "#000").join(", ");
+    for (const [bp, value] of [
+      ["tablet", "linear-gradient(#fff,#000), @import url(evil)"],
+      ["mobile", "linear-gradient(#fff,#000), expression(alert(1))"],
+      ["tablet", overCap],
+    ] as const) {
+      const document = normalizePageDocumentV2ForWrite(
+        buildDocument([
+          buildSection({
+            id: "sec_hero",
+            responsive: { [bp]: { style: { backgroundType: "gradient", background: value } } },
+          }),
+        ])
+      );
+      const plan = buildPageResponsiveCssPlan(document);
+      expect(plan.css).not.toContain("@import");
+      expect(plan.css).not.toContain("expression(");
+      expect(plan.diagnostics).toContainEqual({
+        scope: "section",
+        id: "sec_hero",
+        breakpoint: bp,
+        key: "style.background",
+        reason: "unsafe_background_value",
+      });
+    }
+  });
+
+  test("MOBILE-ONLY glow override (no enum shadow) still emits a box-shadow rule (G-3b)", () => {
+    const document = normalizePageDocumentV2ForWrite(
+      buildDocument([
+        buildSection({
+          responsive: { mobile: { style: { glow: { color: "#8ee8ff", blur: 28 } } } },
+          blocks: [
+            buildBlock({
+              responsive: {
+                mobile: { style: { glow: { color: "rgba(142,232,255,.22)", blur: 45, y: 18 } } },
+              },
+            }),
+          ],
+        }),
+      ])
+    );
+    const plan = buildPageResponsiveCssPlan(document);
+    // Section: device-only glow composes even without an enum shadow override.
+    expect(sectionContentRule(plan.css)).toContain(
+      "box-shadow:0px 0px 28px 0px #8ee8ff !important"
+    );
+    // Block: same, on the block frame rule.
+    expect(blockRule(plan.css)).toContain(
+      "box-shadow:0px 18px 45px 0px rgba(142,232,255,.22) !important"
+    );
+    expect(plan.diagnostics).toEqual([]);
+  });
+
+  test("a device with BOTH enum shadow AND glow emits the merged two-shadow value", () => {
+    const document = normalizePageDocumentV2ForWrite(
+      buildDocument([
+        buildSection({
+          responsive: { mobile: { style: { shadow: "md", glow: { color: "#8ee8ff", blur: 28 } } } },
+        }),
+      ])
+    );
+    const plan = buildPageResponsiveCssPlan(document);
+    expect(sectionContentRule(plan.css)).toContain(
+      "box-shadow:0 14px 40px rgba(15, 23, 42, 0.12), 0px 0px 28px 0px #8ee8ff !important"
+    );
+  });
+
+  test("a per-device glow with a hostile color composes to nothing (fail-soft, no box-shadow rule)", () => {
+    const document = normalizePageDocumentV2ForWrite(
+      buildDocument([
+        buildSection({
+          responsive: { mobile: { style: { glow: { color: "expression(alert(1))" } } } },
+        }),
+      ])
+    );
+    const plan = buildPageResponsiveCssPlan(document);
+    // The hostile color is dropped at the WRITE boundary (normalizeGlow omits the glow),
+    // so no glow reaches the responsive branch and no box-shadow rule emits.
+    expect(plan.css).not.toContain("expression(");
+    expect(plan.css).not.toContain("box-shadow");
+  });
+
+  test("byte-identity: a doc with no per-device gradient/glow override emits identical css", () => {
+    // A plain per-device maxWidth override (no 531 field) is unchanged by 531.
+    const document = normalizePageDocumentV2ForWrite(
+      buildDocument([buildSection({ responsive: { tablet: { layout: { maxWidth: 640 } } } })])
+    );
+    const plan = buildPageResponsiveCssPlan(document);
+    expect(plan.css).toBe(
+      [
+        "@media (min-width: 640px) and (max-width: 1023px){",
+        '[data-section-id="sec_hero"] > [data-page-section-content="true"]{max-width:640px !important}',
+        "}",
+      ].join("\n")
+    );
+    expect(plan.diagnostics).toEqual([]);
+  });
+});

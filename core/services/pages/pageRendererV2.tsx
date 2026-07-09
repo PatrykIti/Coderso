@@ -77,6 +77,7 @@ import {
 } from "./pageRuntimeBindingContract";
 import {
   escapeAuthoringCssString,
+  isSafeAuthoringCssBackgroundLayers,
   isSafeAuthoringCssGradient,
   sanitizeAuthoringCssBackground,
   sanitizeAuthoringCssColor,
@@ -84,6 +85,8 @@ import {
   sanitizeAuthoringMediaUrl,
   sanitizeAuthoringRichTextHtml,
 } from "./pageAuthoringSanitizers";
+// ── TASK-531: shared pure glow-compose (also imported by pageResponsiveCss.ts). ─
+import { composeGlowBoxShadow, mergeShadows } from "./pageGlow";
 
 export type PageRenderMode = "runtime" | "admin-preview";
 export type PageSectionLayoutMode = "runtime" | "canvas-device";
@@ -346,7 +349,15 @@ const toBoxSpacingValue = (spacing: PageBlockStyle["padding"] | PageBlockStyle["
 const toGradientBackground = (value: string | null | undefined) => {
   if (!value) return undefined;
   const safe = sanitizeAuthoringCssBackground(value);
-  return safe && isSafeAuthoringCssGradient(safe) ? safe : undefined;
+  // ── TASK-531: relax the render-side re-gate. The write sanitizer (531-01-L01)
+  // now ACCEPTS a safe multi-layer background (glow-over-gradient), but the old
+  // `isSafeAuthoringCssGradient` re-check requires a SINGLE layer, so without this
+  // the relaxed sanitizer never PAINTS multi-layer on block OR section. Trust the
+  // already-allowlisted sanitizer return: accept single OR safe multi-layer.
+  // `isSafeAuthoringCssBackgroundLayers` carries the whole-value tripwire + cap.
+  return safe && (isSafeAuthoringCssGradient(safe) || isSafeAuthoringCssBackgroundLayers(safe))
+    ? safe
+    : undefined;
 };
 
 const scalePageSectionSpacing = (value: number, scale: number, minimum: number) =>
@@ -415,10 +426,22 @@ export const toPageSectionStyle = (section: PageSectionV2): PageSectionStyleProp
     section.style.backgroundType === "image"
       ? sanitizeAuthoringMediaUrl(section.style.backgroundImage)
       : null;
+  // ── TASK-531: SECTION gradient branch (grounding correction: the BLOCK gradient
+  // is already wired; the section path was missing). CSS gradients paint via
+  // `background-image`; `toGradientBackground` (relaxed above) trusts the
+  // allowlisted sanitizer so a safe MULTI-LAYER value survives here too.
+  const backgroundGradient =
+    section.style.backgroundType === "gradient"
+      ? toGradientBackground(section.style.background)
+      : undefined;
   const backgroundImage = backgroundImageUrl
     ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
-    : undefined;
-  const boxShadow = toPageSectionBoxShadow(section.style.shadow);
+    : backgroundGradient;
+  // ── TASK-531: append the glow after the enum shadow (comma list = two stacked).
+  const boxShadow = mergeShadows(
+    toPageSectionBoxShadow(section.style.shadow),
+    composeGlowBoxShadow(section.style.glow)
+  );
   const padding = `${spacing.paddingTop}px ${spacing.paddingRight}px ${spacing.paddingBottom}px ${spacing.paddingLeft}px`;
   const gap = `${spacing.gap}px`;
   const maxWidth = `${section.layout.maxWidth}px`;
@@ -475,9 +498,16 @@ export const toPageSectionBleedStyle = (
     section.style.backgroundType === "image"
       ? sanitizeAuthoringMediaUrl(section.style.backgroundImage)
       : null;
+  // ── TASK-531: the bleed box paints the section background/shadow, so it also
+  // gains the gradient branch + glow merge so a full-bleed gradient/glow bleeds
+  // edge-to-edge (mirrors toPageSectionStyle's non-bleed return).
+  const backgroundGradient =
+    section.style.backgroundType === "gradient"
+      ? toGradientBackground(section.style.background)
+      : undefined;
   const backgroundImage = backgroundImageUrl
     ? `url("${escapeAuthoringCssString(backgroundImageUrl)}")`
-    : undefined;
+    : backgroundGradient;
   return {
     // FIXED-literal 100vw bleed centered on the section's own axis.
     width: "100vw",
@@ -486,7 +516,10 @@ export const toPageSectionBleedStyle = (
     backgroundColor: backgroundColor ?? undefined,
     backgroundImage,
     borderRadius: `${section.style.radius}px`,
-    boxShadow: toPageSectionBoxShadow(section.style.shadow),
+    boxShadow: mergeShadows(
+      toPageSectionBoxShadow(section.style.shadow),
+      composeGlowBoxShadow(section.style.glow)
+    ),
   };
 };
 
@@ -771,7 +804,8 @@ const toPageBlockVisualStyle = (block: PageBlockV2): PageBlockStyleProperties =>
     color: textColor ?? undefined,
     opacity: style.opacity,
     borderRadius: style.radius !== undefined ? `${style.radius}px` : undefined,
-    boxShadow: toPageShadowValue(style.shadow),
+    // ── TASK-531: append the glow after the enum shadow (comma list = two stacked).
+    boxShadow: mergeShadows(toPageShadowValue(style.shadow), composeGlowBoxShadow(style.glow)),
     borderColor: borderColor ?? undefined,
     borderStyle: hasBorder ? borderStyle : undefined,
     borderWidth: hasBorder ? `${borderWidth}px` : undefined,
@@ -3193,9 +3227,7 @@ export function PageDocumentRender({
   // the primary does NOT (`spotlightOn && !peerSpotlightOn`) — so a footer-only
   // spotlight still renders exactly one (footer-owned) overlay, while both-author
   // (double-brightness) collapses to the single primary-owned one.
-  const emitsSpotlightOverlay = isPrimaryDocument
-    ? spotlightOn
-    : spotlightOn && !peerSpotlightOn;
+  const emitsSpotlightOverlay = isPrimaryDocument ? spotlightOn : spotlightOn && !peerSpotlightOn;
 
   const spotlightSize = Math.max(
     PAGE_SPOTLIGHT_SIZE_CLAMP.min,
