@@ -20,7 +20,12 @@
  */
 
 import { sanitizeAuthoringCssColor } from "./pageAuthoringSanitizers";
-import type { PageBlockStyleV2, PageSectionStyleV2 } from "./pageDocumentV2";
+import type {
+  PageBlockStyleV2,
+  PageBlockV2,
+  PageDocumentV2,
+  PageSectionStyleV2,
+} from "./pageDocumentV2";
 
 // (1) Static CSS — emitted once by PageDocumentRender (522-05-L01), present-only.
 export const PAGE_COMPOSITION_EFFECTS_CSS = `
@@ -244,3 +249,78 @@ export function resolveDrawInAttrs(
     cssVars: drawSpeed != null ? { "--draw-speed": `${drawSpeed}ms` } : {},
   };
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// ── TASK-534 ── declarative-interactivity CSS + runtime-surface resolver.
+//
+// PAGE_INTERACTIVITY_CSS is a STATIC string (no author input, no interpolation) —
+// the only dynamic values it reacts to are renderer-set bounded `data-*`/`aria-*`
+// attributes (validated enums/booleans). `var(--primary)` is a design token, not
+// author input. The FUNCTIONAL show/hide rules (`[hidden]`/`.is-hidden` →
+// `display:none`) sit OUTSIDE the reduced-motion guard so tabs/filters still WORK
+// (instant) for reduce users; every ANIMATED (transition/opacity) rule is inside
+// `@media (prefers-reduced-motion: no-preference)`. Emitted present-only by the
+// renderer (534-02), so a no-interactivity page carries none of this.
+// ══════════════════════════════════════════════════════════════════════════════
+export const PAGE_INTERACTIVITY_CSS = [
+  // switcher tab bar — scrolls horizontally on mobile (segmented controls must
+  // scroll, not wrap awkwardly), no visible scrollbar chrome.
+  "[data-switcher] .cx-switcher-tabs{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none}",
+  "[data-switcher] .cx-switcher-tabs::-webkit-scrollbar{display:none}",
+  "[data-switcher] [data-switcher-tab]{cursor:pointer;white-space:nowrap;border:0;background:transparent;padding:6px 14px;color:inherit;font:inherit}",
+  // pill vs underline selected state (token color only).
+  "[data-switcher-variant='pill'] [data-switcher-tab][aria-selected='true']{background:var(--primary);color:#fff;border-radius:999px}",
+  "[data-switcher-variant='underline'] [data-switcher-tab][aria-selected='true']{border-bottom:2px solid var(--primary)}",
+  // FUNCTIONAL show/hide (OUTSIDE the reduced-motion guard — tabs work for reduce).
+  "[data-switcher-panel][hidden]{display:none}",
+  // panel crossfade — motion-safe only; reduce users get instant show/hide.
+  "@media (prefers-reduced-motion: no-preference){[data-switcher-panel]{opacity:0;transition:opacity .25s ease}[data-switcher-panel][data-active='true']{opacity:1}}",
+  // filter chip bar.
+  "[data-gallery-filter]{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}",
+  "[data-gallery-filter] .cx-filter-chip{cursor:pointer;border:1px solid var(--primary);background:transparent;color:inherit;border-radius:999px;padding:4px 12px;font:inherit}",
+  "[data-gallery-filter] .cx-filter-chip[aria-pressed='true']{background:var(--primary);color:#fff}",
+  // FUNCTIONAL hide (OUTSIDE the reduced-motion guard — filters work for reduce).
+  "[data-filter-item].is-hidden{display:none}",
+  "@media (prefers-reduced-motion: no-preference){[data-filter-item]{transition:opacity .2s ease}}",
+  // magnetic — transform transition on leave (runtime sets transform on move).
+  "@media (prefers-reduced-motion: no-preference){[data-magnetic]{transition:transform .15s ease;will-change:transform}}",
+].join("");
+
+/**
+ * TASK-534 — whether a block authors a RUNTIME-BEARING interactivity surface (a
+ * `switcher`, a filterable `gallery`, or `style.magnetic`). Recurses through nested
+ * slots (incl. the new `panel:N` switcher slots). scrollHint + noiseOverlay are NOT
+ * runtime-bearing (CSS keyframe / static overlay), so they do NOT count here. Mirrors
+ * `blockUsesCompositionTilt`. Drives the SINGLE runtime `<script>` emit predicate +
+ * the present-only `PAGE_INTERACTIVITY_CSS` emit.
+ */
+const blockUsesInteractivityRuntime = (block: PageBlockV2): boolean => {
+  if (block.type === "switcher") return true;
+  if (block.type === "gallery" && block.props.filterable === true) return true;
+  if (block.style?.magnetic === true) return true;
+  if (block.slots) {
+    for (const children of Object.values(block.slots)) {
+      if (children) {
+        for (const child of children) {
+          if (blockUsesInteractivityRuntime(child)) return true;
+        }
+      }
+    }
+  }
+  return false;
+};
+
+/**
+ * TASK-534 — document-level scan for any RUNTIME-BEARING interactivity surface. A
+ * no-interactivity document returns false ⇒ nothing emitted ⇒ byte-identical
+ * (Hard Invariant #1). Consumed read-only by `pageRendererV2.tsx` (534-02) to
+ * OR-widen the single `anyMotion` runtime-emit predicate.
+ */
+export const usesInteractivityRuntime = (document: PageDocumentV2): boolean => {
+  for (const section of document.sections) {
+    for (const block of section.blocks) {
+      if (blockUsesInteractivityRuntime(block)) return true;
+    }
+  }
+  return false;
+};

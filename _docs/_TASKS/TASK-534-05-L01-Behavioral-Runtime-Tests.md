@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Tests / Accessibility / Security
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

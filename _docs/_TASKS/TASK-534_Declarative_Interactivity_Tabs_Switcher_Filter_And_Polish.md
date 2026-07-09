@@ -40,11 +40,11 @@
 declarative primitive that was slated for 527 is delivered here as subtask 534-01.
 No separate TASK-527 file is created; this contract is its sole home.
 
-**Status:** ⏳ To Do
-**Closure changelog:** RESOLVE at closure by grepping next-free
-(`_docs/_CHANGELOG/`) — `1242` is the last used (TASK-530); `531`–`534` take
-`1243+`, so 534 lands at the next-free after 531/532/533 (do NOT hard-code; the
-orchestrator owns `_docs/_CHANGELOG/*` and `_docs/_TASKS/README.md`).
+**Status:** ✅ Done
+**Closure changelog:** `1244` (`_docs/_CHANGELOG/1244-2026-07-09-task-534-declarative-interactivity.md`) —
+resolved next-free at closure (`1243`/TASK-535 was the last used in this tree; 531/532/533
+land their own numbers in their worktrees). The orchestrator owns `_docs/_CHANGELOG/*`
+and `_docs/_TASKS/README.md` and may renumber on merge.
 
 ---
 

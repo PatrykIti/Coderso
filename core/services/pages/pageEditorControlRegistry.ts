@@ -47,6 +47,11 @@ import {
   pageTypographyFontFamilies,
   pageTypographyFontSizes,
   pageTypographyFontWeights,
+  // ── TASK-534 ── declarative-interactivity control vocabulary (read-only).
+  pageGalleryLayouts,
+  switcherVariants,
+  scrollHintGlyphs,
+  SWITCHER_MAX_PANELS,
   type PageBlockType,
   type PageBreakpoint,
   type PageSectionVariant,
@@ -432,6 +437,17 @@ export const pageUniversalSectionControls: readonly PageEditorControlDefinition[
     input: "switch",
     responsive: false,
   }),
+  // ── TASK-534 ── static grain overlay toggle (present-only; normalize omits
+  // false/unset). Device-uniform structural overlay, not a per-property delta.
+  control({
+    id: "section.style.noiseOverlay",
+    panel: "background",
+    target: "section",
+    label: "Grain overlay",
+    path: ["style", "noiseOverlay"],
+    input: "switch",
+    responsive: false,
+  }),
 ] as const;
 
 /**
@@ -783,6 +799,18 @@ export const pageUniversalBlockControls: readonly PageEditorControlDefinition[] 
     // <select> presents). Declare that as the effective default.
     fallback: "top-left",
   }),
+  // ── TASK-534 ── universal magnetic-hover toggle (present-only; normalize omits
+  // false/unset). The runtime clause is `pointer:fine` + reduced-motion gated, so
+  // the effect is a progressive enhancement (no magnet on touch/reduce).
+  control({
+    id: "block.style.magnetic",
+    panel: "style",
+    target: "block",
+    label: "Magnetic hover",
+    path: ["style", "magnetic"],
+    input: "switch",
+    responsive: false,
+  }),
   control({
     id: "block.visibility.visible",
     panel: "visibility",
@@ -1062,7 +1090,26 @@ export const pageBlockControlRegistry: Record<
     blockPropControl("video", "autoplay", { label: "Autoplay", input: "switch" }),
     blockPropControl("video", "muted", { label: "Muted", input: "switch" }),
   ],
-  gallery: [],
+  // ── TASK-534 ── gallery filter controls (present-only writes; category tokens
+  // kebab-sanitized on save via the 534-01-L01 write normalizer).
+  gallery: [
+    blockPropControl("gallery", "layout", {
+      label: "Layout",
+      input: "segmented",
+      panel: "style",
+      options: pageGalleryLayouts,
+    }),
+    blockPropControl("gallery", "filterable", {
+      label: "Filterable",
+      input: "switch",
+      panel: "content",
+    }),
+    blockPropControl("gallery", "filterCategories", {
+      label: "Filter categories",
+      input: "items",
+      panel: "content",
+    }),
+  ],
   form: [
     // TASK-456: the form block Content panel. `formId` is a nullable
     // reference picked from the Forms admin through the dynamic "forms"
@@ -1333,6 +1380,44 @@ export const pageBlockControlRegistry: Record<
       panel: "style",
       clamp: { min: 600, max: 6000 },
       unit: "ms",
+    }),
+  ],
+  // ── TASK-534 ── switcher per-type controls. `tabs` REUSES the "items" (listItems)
+  // editor: a `{label,href}` editor row is safe because the 534-01-L01 switcher-tabs
+  // normalizer rebuilds each tab as a fresh `{label}` (drops href) BEFORE schema
+  // validation runs on the normalized doc. Panel bodies (child blocks per panel:N
+  // slot) are edited on the canvas via the existing slot-child authoring path.
+  switcher: [
+    blockPropControl("switcher", "tabs", {
+      label: "Tabs",
+      input: "items",
+      panel: "content",
+    }),
+    blockPropControl("switcher", "activeIndex", {
+      label: "Default tab",
+      input: "number",
+      panel: "content",
+      clamp: { min: 0, max: SWITCHER_MAX_PANELS - 1 },
+    }),
+    blockPropControl("switcher", "variant", {
+      label: "Style",
+      input: "segmented",
+      panel: "style",
+      options: switcherVariants,
+    }),
+  ],
+  // ── TASK-534 ── scrollHint per-type controls (glyph + accessible label).
+  scrollHint: [
+    blockPropControl("scrollHint", "glyph", {
+      label: "Indicator",
+      input: "segmented",
+      panel: "style",
+      options: scrollHintGlyphs,
+    }),
+    blockPropControl("scrollHint", "label", {
+      label: "Accessible label",
+      input: "text",
+      panel: "content",
     }),
   ],
 };

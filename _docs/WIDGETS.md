@@ -344,6 +344,38 @@ All are STYLE fields (plus one block type); everything is dependency-free (hand-
 SVG sanitizer + inline CSS keyframes + 521's runtime) and composes the reference
 wow-site hero without a new dependency or migration.
 
+## Declarative Interactivity — Tabs/Switcher, Filterable Gallery, Polish (TASK-534)
+
+TASK-534 (Bundle D; absorbs TASK-527) adds a cohesive family of DECLARATIVE
+interactivity closing `_TMP-cms-ograniczenia.md` §1 ("Brak interaktywności JS"). See
+`_docs/PAGE_MODEL.md` § Declarative Interactivity for the full contract — everything is
+present-only, reject-unknown, `prefers-reduced-motion` + keyboard safe, rides the ONE
+existing `pageEffectsRuntime.ts` `<script>`, and needs no npm dependency, no migration,
+no `PAGE_DOCUMENT_SCHEMA_VERSION` bump, no route/RBAC:
+
+- **Segmented `switcher` / tabs block** (the ONE new `pageBlockType`; absorbs TASK-527)
+  — N labelled panels in six `panel:1..panel:6` slots rendered as a real
+  `role="tablist"`/`role="tab"`/`role="tabpanel"` set (roving tabindex, arrow/Home/End
+  keyboard, `hidden` inactive panels for no-JS). Tab labels are escaped TEXT nodes. This
+  is a PAGE block implemented through a renderer `case`, NOT a composite widget —
+  `core/widgets/registry.ts` / `modulePackMatrix.ts` are unchanged and the widget-pack
+  matrix (`_docs/WIDGET_PACK_MATRIX.md`) gains no row.
+- **Filterable gallery** — present-only `filterable`/`filterCategories` on the EXISTING
+  `gallery` block plus an optional per-item single-token `category`; a `role="tablist"`
+  chip bar toggles item visibility via a token-split runtime match. The `gallery` block
+  is now editor-insertable (its `gallery-editor-controls-pending` reason cleared).
+- **`scrollHint` block** (the second new `pageBlockType`) — a CSS-keyframe-only
+  `aria-hidden` dot/chevron with an optional `sr-only` label; no runtime.
+- **Noise/grain overlay** (`PageEffectsV2.noiseOverlay` page + `PageSectionStyleV2.noiseOverlay`
+  section) — a static self-generated SVG-turbulence layer (no asset, no author color).
+- **Magnetic button** (`block.style.magnetic`) — a pointer-attraction runtime clause
+  (transforms only, rAF, clamped ±14px, `pointer:fine` + reduced-motion gated).
+
+Toggle interactions (switcher, filter) sit BEFORE the runtime reduced-motion
+early-return so they work for reduce users; the magnetic MOTION clause sits after it.
+Only runtime-bearing surfaces (switcher / filterable gallery / magnetic) widen the
+single-`<script>` emit predicate; scrollHint + noise are CSS/static.
+
 ## Dokumentacja widgetow
 
 Szczegoly dla kazdego widgetu znajduja sie w `_docs/_WIDGETS/`:

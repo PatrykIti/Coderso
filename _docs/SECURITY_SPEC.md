@@ -504,6 +504,38 @@ Rotacja klucza:
   `sanitizeAuthoringCssBackground` (page canvas background + all TASK-522 background
   authoring), not just the page canvas.
 
+## Declarative interactivity boundary (TASK-534)
+
+TASK-534 adds a family of declarative interactivity (switcher/tabs block, filterable
+gallery, scroll-hint block, noise overlay, magnetic button). It introduces **no new
+route, RBAC, HTTP method, DB migration, or `PAGE_DOCUMENT_SCHEMA_VERSION` bump**, and no
+new attacker-authored MARKUP sink (unlike 522's `customSvg`). Every input surface is
+fail-closed:
+
+- **Enums** — `switcher.variant` and `scrollHint.glyph` run through `normalizeEnum`
+  (fail-CLOSED to the default on an out-of-set write). `magnetic`, `noiseOverlay`, and
+  `filterable` are `readBoolean`-coerced present-only flags. `switcher.activeIndex` is
+  clamped to the tab count.
+- **Free-text labels** (switcher tab labels, scrollHint `label`) render as **escaped
+  React TEXT nodes**, never `dangerouslySetInnerHTML` — no markup breakout.
+- **Gallery category tokens** — each `category` is a SPACE-SEPARATED SET of single kebab
+  tokens matched against `^[\w-]{1,48}$`; any out-of-pattern token is DROPPED fail-soft
+  at BOTH write (`normalizeBlockProps`) AND render, so the value emitted into
+  `data-category`/`data-filter` can never break out of the attribute. The runtime match
+  is a `cat.split(" ").indexOf(f)` token compare — no substring false positive, no
+  `innerHTML`/`eval`.
+- **Noise overlay** paints a STATIC self-generated SVG-turbulence data-URI
+  (`pageInteractivityGlyphs.tsx`) — no author color, no asset fetch, no relaxation of
+  `sanitizeAuthoringCssBackground`.
+- **Runtime** — all three interactivity clauses live in the SINGLE
+  `PAGE_EFFECTS_RUNTIME_SOURCE` static, dependency-free IIFE emitted via static-`__html`
+  `dangerouslySetInnerHTML`; they read ONLY validated DOM `data-*`/CSS custom properties
+  and NEVER interpolate stored data (no `${`, `eval`, `Function(`, or `innerHTML` sink),
+  and are idempotent via the existing per-window init flag.
+- **Allowlist** — every new key joins its `assertKnownKeys` allowlist AND the strict
+  `pageDocumentV2JsonSchema` (`additionalProperties: false`) in lockstep with a
+  round-trip test; an unknown prop throws `PageDocumentError` (fail-closed read trap).
+
 ## Assistant security baseline (v1)
 
 - Konfiguracja limitow asystenta jest trzymana w global settings:

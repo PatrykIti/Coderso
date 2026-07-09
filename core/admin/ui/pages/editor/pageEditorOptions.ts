@@ -111,6 +111,17 @@ export const blockOptionCopy: Record<PageBlockType, Omit<BlockOption, "type">> =
     label: "Custom SVG",
     description: "Paste a sanitized inline SVG (line drawings, logos, diagrams).",
   },
+  // ── TASK-534 ── switcher + scrollHint palette copy. Non-Partial exhaustive
+  // Record<PageBlockType,…>, so these MUST land with the block-type members
+  // (534-01-L01) or root `tsc` breaks. BlockOption has NO `icon` field (:107).
+  switcher: {
+    label: "Switcher",
+    description: "Segmented tabs with swappable panels.",
+  },
+  scrollHint: {
+    label: "Scroll hint",
+    description: "Animated scroll indicator.",
+  },
 };
 
 export const blockOptions: BlockOption[] = pageBlockTypes.flatMap((type) =>

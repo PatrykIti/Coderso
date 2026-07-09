@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Docs
 **Estimated Effort:** Small
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

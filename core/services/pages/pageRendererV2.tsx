@@ -31,6 +31,7 @@ import {
   ANIMATED_ICON_SPEED_CLAMP,
   type AnimatedIconAnimation,
   type PageBlockSlotKey,
+  type PageSwitcherVariant,
   type PageBlockV2,
   type PageBreakpoint,
   type PageDocumentV2,
@@ -38,11 +39,14 @@ import {
   type PageTextMark,
 } from "./pageDocumentV2";
 import { AnimatedIcon, ANIMATED_ICON_KEYFRAMES_CSS } from "./animatedIconGlyphs";
+import { SCROLL_HINT_GLYPHS, INTERACTIVITY_KEYFRAMES_CSS } from "./pageInteractivityGlyphs";
 import {
   resolveBlockCompositionAttrs,
   resolveDrawInAttrs,
   resolveSectionCompositionAttrs,
   PAGE_COMPOSITION_EFFECTS_CSS,
+  PAGE_INTERACTIVITY_CSS,
+  usesInteractivityRuntime,
 } from "./pageCompositionEffects";
 import { sanitizeSvg } from "./svgSanitizer";
 import { PAGE_EFFECTS_RUNTIME_ID, PAGE_EFFECTS_RUNTIME_SOURCE } from "./pageEffectsRuntime";
@@ -1424,7 +1428,16 @@ type PageGalleryItem = {
   src: string;
   alt: string;
   caption: string;
+  // ── TASK-534 ── space-joined single-token category set (present-only). This
+  // render-side shape is SEPARATE from the model item shape (534-01-L01); both
+  // carry the field because `toGalleryItem` rebuilds the item and drops unknown keys.
+  category?: string;
 };
+
+// ── TASK-534 ── a gallery category is a SINGLE token, NO space (534-01-L01): the
+// runtime filter treats `data-category` as a space-separated SET, so a space must
+// not live inside one category token.
+const PAGE_GALLERY_CATEGORY_TOKEN = /^[\w-]{1,48}$/;
 
 const readGalleryItemText = (item: Record<string, unknown>, ...keys: string[]): string => {
   for (const key of keys) {
@@ -1451,7 +1464,14 @@ const toGalleryItem = (value: unknown): PageGalleryItem | null => {
   const alt = readGalleryItemText(value, "alt", "title", "label", "name");
   const caption = readGalleryItemText(value, "caption", "title", "label", "name", "description");
   if (!src && !caption) return null;
-  return { src, alt, caption };
+  // ── TASK-534 ── re-sanitize the item category per space-split token (defence in
+  // depth); keep valid single tokens, re-join with a space; undefined ⇒ no category
+  // survives to the figure (present-only, so a bad/absent value never breaks out).
+  const catTokens = readGalleryItemText(value, "category")
+    .split(/\s+/)
+    .filter((token) => PAGE_GALLERY_CATEGORY_TOKEN.test(token));
+  const category = catTokens.length ? catTokens.join(" ") : undefined;
+  return { src, alt, caption, ...(category ? { category } : {}) };
 };
 
 const pageGalleryGridClass = (layout: unknown) => {
@@ -1483,40 +1503,111 @@ const renderGallery = (block: PageBlockV2) => {
     );
   }
 
-  return (
+  // ── TASK-534 ── present-only filter. Re-validate at the render boundary (never
+  // trust stored): `filterable` boolean; categories re-sanitized per single token
+  // (NO space) so a value that bypassed the write path can never break out of the
+  // `data-category`/`data-filter` attribute. Unset ⇒ byte-identical to pre-534.
+  const filterable = block.props.filterable === true;
+  const categories = filterable
+    ? [
+        ...new Set(
+          (Array.isArray(block.props.filterCategories) ? block.props.filterCategories : []).filter(
+            (c): c is string => typeof c === "string" && PAGE_GALLERY_CATEGORY_TOKEN.test(c)
+          )
+        ),
+      ].slice(0, 12)
+    : [];
+
+  const grid = (
     <div
       className={pageGalleryGridClass(layout)}
       data-page-gallery="true"
       data-page-gallery-layout={layout}
     >
-      {items.map((item, index) => (
-        <figure
-          key={`${block.id}-gallery-${index}`}
-          className={joinPageRenderClasses(
-            "overflow-hidden rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)]",
-            pageGalleryItemClass(layout)
-          )}
-          data-page-gallery-item="true"
+      {items.map((item, index) => {
+        // Re-sanitize the item category at render (defence in depth). An item may
+        // hold MULTIPLE space-joined single-token categories → validate PER token.
+        const rawCat = typeof item.category === "string" ? item.category : "";
+        const catTokens = rawCat
+          .split(/\s+/)
+          .filter((token) => PAGE_GALLERY_CATEGORY_TOKEN.test(token));
+        const cat = catTokens.length ? catTokens.join(" ") : undefined;
+        return (
+          <figure
+            key={`${block.id}-gallery-${index}`}
+            className={joinPageRenderClasses(
+              "overflow-hidden rounded border border-slate-200 bg-[var(--coderso-block-surface,#ffffff)]",
+              pageGalleryItemClass(layout)
+            )}
+            data-page-gallery-item="true"
+            {...(filterable ? { "data-filter-item": "true" } : {})}
+            {...(filterable && cat ? { "data-category": cat } : {})}
+          >
+            {item.src ? (
+              <img
+                className="aspect-[4/3] w-full object-cover"
+                src={item.src}
+                alt={item.alt}
+                loading="lazy"
+              />
+            ) : (
+              <div className="flex aspect-[4/3] items-center justify-center bg-slate-100 px-4 text-center text-sm text-slate-500">
+                {item.caption}
+              </div>
+            )}
+            {item.caption ? (
+              <figcaption className="px-4 py-3 text-sm text-[var(--coderso-block-text,#475569)]">
+                {item.caption}
+              </figcaption>
+            ) : null}
+          </figure>
+        );
+      })}
+    </div>
+  );
+
+  // Present-only: no filter bar unless authored AND at least one valid category.
+  if (!filterable || categories.length === 0) return grid;
+
+  // TASK-534 accessibility (534 audit remediation): a filter chip group is a set of
+  // toggle buttons, NOT a single-select tablist over one panel. It is rendered as a
+  // role="toolbar" of `aria-pressed` toggle buttons (the semantically honest pattern)
+  // rather than an incomplete role="tab"/tablist (which promises aria-controls +
+  // tabpanel + roving-tab semantics we do not — and should not — fulfil here). The
+  // toolbar carries roving tabindex (active chip = 0, rest = -1) matched by the
+  // runtime's ArrowLeft/Right/Home/End handler (534-01-L03).
+  return (
+    <div data-gallery="true">
+      <div
+        role="toolbar"
+        aria-label="Filter gallery"
+        aria-orientation="horizontal"
+        data-gallery-filter="true"
+        className="cx-gallery-filter"
+      >
+        <button
+          type="button"
+          data-filter="all"
+          aria-pressed="true"
+          tabIndex={0}
+          className="cx-filter-chip"
         >
-          {item.src ? (
-            <img
-              className="aspect-[4/3] w-full object-cover"
-              src={item.src}
-              alt={item.alt}
-              loading="lazy"
-            />
-          ) : (
-            <div className="flex aspect-[4/3] items-center justify-center bg-slate-100 px-4 text-center text-sm text-slate-500">
-              {item.caption}
-            </div>
-          )}
-          {item.caption ? (
-            <figcaption className="px-4 py-3 text-sm text-[var(--coderso-block-text,#475569)]">
-              {item.caption}
-            </figcaption>
-          ) : null}
-        </figure>
-      ))}
+          All
+        </button>
+        {categories.map((category) => (
+          <button
+            key={category}
+            type="button"
+            data-filter={category}
+            aria-pressed="false"
+            tabIndex={-1}
+            className="cx-filter-chip"
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+      {grid}
     </div>
   );
 };
@@ -2426,6 +2517,107 @@ export const renderPageBlockContent = (
         />
       );
     }
+    // ── TASK-534 ── segmented SWITCHER / TABS (absorbs 527). A real role="tablist"
+    // with N tabs + N panels (child blocks from the panel:1..6 slots), stamping the
+    // data-switcher contract the 534-01-L03 runtime binds. Progressive: no-JS ⇒ the
+    // first panel is visible (resting `hidden` on the rest); the runtime toggles it.
+    case "switcher": {
+      // Re-validate at the render boundary (defence in depth — never trust stored):
+      const tabs = Array.isArray(block.props.tabs) ? block.props.tabs : [];
+      const variant: PageSwitcherVariant =
+        block.props.variant === "underline" ? "underline" : "pill";
+      const rawActive =
+        typeof block.props.activeIndex === "number" && Number.isFinite(block.props.activeIndex)
+          ? Math.trunc(block.props.activeIndex)
+          : 0;
+      const active = Math.max(0, Math.min(Math.max(0, tabs.length - 1), rawActive));
+      const panelSlots = [
+        "panel:1",
+        "panel:2",
+        "panel:3",
+        "panel:4",
+        "panel:5",
+        "panel:6",
+      ] as const;
+      return (
+        <div data-switcher="true" data-switcher-variant={variant}>
+          <div
+            role="tablist"
+            aria-label="Content tabs"
+            aria-orientation="horizontal"
+            className={joinPageRenderClasses("cx-switcher-tabs", `cx-switcher-${variant}`)}
+          >
+            {tabs.map((tab, i) => (
+              <button
+                key={i}
+                type="button"
+                role="tab"
+                data-switcher-tab="true"
+                id={`${block.id}-tab-${i}`}
+                aria-controls={`${block.id}-panel-${i}`}
+                aria-selected={i === active ? "true" : "false"}
+                tabIndex={i === active ? 0 : -1}
+                className="cx-switcher-tab"
+              >
+                {/* Escaped React TEXT node — an <img onerror> label is inert text. */}
+                {String((tab as { label?: unknown })?.label ?? "")}
+              </button>
+            ))}
+          </div>
+          {tabs.map((_, i) => {
+            const slotBlocks = block.slots?.[panelSlots[i]] ?? [];
+            return (
+              <div
+                key={i}
+                role="tabpanel"
+                data-switcher-panel="true"
+                id={`${block.id}-panel-${i}`}
+                aria-labelledby={`${block.id}-tab-${i}`}
+                data-active={i === active ? "true" : "false"}
+                // TASK-534 a11y (APG Tabs): tabIndex=0 makes a panel whose authored
+                // children may be entirely non-focusable (text/image/heading) reachable
+                // by keyboard/SR after tab selection; harmless when it has focusable kids.
+                tabIndex={0}
+                hidden={i !== active}
+              >
+                {renderPageBlockList(slotBlocks, {
+                  parentPath: context.blockPath,
+                  depth: context.depth + 1,
+                  includeHiddenBlocks: context.includeHiddenBlocks,
+                  renderBlockFrame: context.renderBlockFrame,
+                  renderInlineText: context.renderInlineText,
+                  renderColumnsSlotTrailing: context.renderColumnsSlotTrailing,
+                  runtimeDataByBlockId: context.runtimeDataByBlockId,
+                  layoutMode: context.layoutMode,
+                  slotKey: panelSlots[i],
+                  parentBlock: block,
+                })}
+              </div>
+            );
+          })}
+        </div>
+      );
+    }
+    // ── TASK-534 ── hero scroll-hint indicator (CSS-keyframe dot/chevron, NO
+    // runtime). Block-scoped keyframe CSS rides WITH the block (case "icon" :2287
+    // pattern) so it works on BOTH the front shell AND the builder canvas. The
+    // glyph is re-validated at render; the label is an escaped sr-only TEXT node.
+    case "scrollHint": {
+      const glyph = block.props.glyph === "chevron" ? "chevron" : "dot";
+      const label = typeof block.props.label === "string" ? block.props.label : "Scroll";
+      return (
+        <>
+          <style
+            data-page-interactivity-css
+            dangerouslySetInnerHTML={{ __html: INTERACTIVITY_KEYFRAMES_CSS }}
+          />
+          <div data-scroll-hint="true" className="cx-scroll-hint" aria-hidden="true">
+            <span className="cx-hint-dot">{SCROLL_HINT_GLYPHS[glyph]}</span>
+          </div>
+          {label ? <span className="sr-only">{label}</span> : null}
+        </>
+      );
+    }
     default:
       return null;
   }
@@ -2911,6 +3103,10 @@ export function PageSectionRender({
     sectionBleedStyle || sectionCompositionStyle
       ? { ...sectionBleedStyle, ...sectionCompositionStyle }
       : undefined;
+  // ── TASK-534 ── present-only static grain overlay on the section surface. The
+  // overlay is `inset:0` absolute, so the section must be a positioning context —
+  // `[data-noise-host]{position:relative}` (INTERACTIVITY_KEYFRAMES_CSS) supplies it.
+  const sectionNoise = section.style.noiseOverlay === true;
   return (
     <section
       id={section.visibility.anchor ?? undefined}
@@ -2919,7 +3115,21 @@ export function PageSectionRender({
       {...renderProps.dataAttributes}
       {...effectDataAttrs}
       {...sc.dataAttrs}
+      {...(sectionNoise ? { "data-noise-host": "true" } : {})}
     >
+      {sectionNoise ? (
+        <>
+          <style
+            data-section-noise-css
+            dangerouslySetInnerHTML={{ __html: INTERACTIVITY_KEYFRAMES_CSS }}
+          />
+          <div
+            aria-hidden="true"
+            data-noise-overlay="true"
+            className="pointer-events-none absolute inset-0"
+          />
+        </>
+      ) : null}
       {sc.ambientOrbs ? (
         <>
           <span className="cx-orb cx-orb-a" aria-hidden="true" data-deco="drift" />
@@ -3178,7 +3388,15 @@ export function PageDocumentRender({
   // <script>, which would double-run reveal/parallax/spotlight).
   const usesComposition = docUsesCompositionEffects(document);
   const compositionTilt = usesCompositionTilt(document);
-  const anyMotion = spotlightOn || hasSectionEffect || compositionTilt;
+  // ── TASK-534 ── OR-widen the SINGLE runtime <script> emit predicate with the
+  // RUNTIME-BEARING interactivity surfaces (switcher / filterable gallery /
+  // block.style.magnetic). scrollHint + noise are NOT runtime-bearing (CSS keyframe
+  // / static overlay), so they do NOT widen anyMotion. Present-only: a no-effect
+  // document keeps anyMotion false ⇒ byte-identical (no <script>, no CSS).
+  const usesInteractivity = usesInteractivityRuntime(document);
+  const anyMotion = spotlightOn || hasSectionEffect || compositionTilt || usesInteractivity;
+  // ── TASK-534 ── present-only page-root static grain overlay.
+  const pageNoise = !!effects?.noiseOverlay;
   // TASK-535 — the idempotent effect stylesheets (reveal/composition/spotlight CSS
   // + reveal noscript) stay PER-DOCUMENT/present-only so a footer-only effect is
   // still styled; only the viewport-fixed spotlight OVERLAY DIV is a true page
@@ -3193,9 +3411,7 @@ export function PageDocumentRender({
   // the primary does NOT (`spotlightOn && !peerSpotlightOn`) — so a footer-only
   // spotlight still renders exactly one (footer-owned) overlay, while both-author
   // (double-brightness) collapses to the single primary-owned one.
-  const emitsSpotlightOverlay = isPrimaryDocument
-    ? spotlightOn
-    : spotlightOn && !peerSpotlightOn;
+  const emitsSpotlightOverlay = isPrimaryDocument ? spotlightOn : spotlightOn && !peerSpotlightOn;
 
   const spotlightSize = Math.max(
     PAGE_SPOTLIGHT_SIZE_CLAMP.min,
@@ -3252,6 +3468,7 @@ export function PageDocumentRender({
       data-page-v2="true"
       {...(anyMotion ? { "data-page-motion": "true" } : {})}
       {...(spotlightOn ? { "data-page-spotlight": "true" } : {})}
+      {...(pageNoise ? { "data-noise-host": "true" } : {})}
     >
       {/* Reveal HIDE state — the ONLY emit of 521-02-L02's PAGE_REVEAL_MOTION_CSS
           (committed single path). Scoped under the runtime-set [data-reveal-armed]
@@ -3298,6 +3515,30 @@ export function PageDocumentRender({
           data-page-composition-css
           dangerouslySetInnerHTML={{ __html: PAGE_COMPOSITION_EFFECTS_CSS }}
         />
+      )}
+      {/* ── TASK-534 ── declarative-interactivity CSS (switcher tablist + variants,
+          filter chips + .is-hidden, magnetic transition). Idempotent, document-
+          agnostic, present-only — emitted only when a switcher/filter/magnetic
+          surface is authored. Front/preview only (this is not the builder canvas). */}
+      {usesInteractivity && (
+        <style
+          data-page-interactivity-css
+          dangerouslySetInnerHTML={{ __html: PAGE_INTERACTIVITY_CSS }}
+        />
+      )}
+      {/* ── TASK-534 ── present-only page-root static grain overlay + its CSS. */}
+      {pageNoise && (
+        <>
+          <style
+            data-page-noise-css
+            dangerouslySetInnerHTML={{ __html: INTERACTIVITY_KEYFRAMES_CSS }}
+          />
+          <div
+            aria-hidden="true"
+            data-noise-overlay="true"
+            className="pointer-events-none absolute inset-0"
+          />
+        </>
       )}
       {resolved.sections.map((section) => (
         <PageSectionRender

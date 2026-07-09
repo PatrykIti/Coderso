@@ -7,7 +7,7 @@
 **Priority:** High
 **Category:** Site Render / Accessibility / Security
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
@@ -15,7 +15,8 @@
 
 Executable leaf. Edits `renderGallery` in `core/services/pages/pageRendererV2.tsx`
 (`:1379`) — when `props.filterable`, wraps the grid in a `[data-gallery]` host, emits a
-filter-chip bar (`role="tablist"`, `[data-gallery-filter]` with `[data-filter]` chips for
+filter-chip bar (`role="toolbar"` of `aria-pressed` toggle buttons — see the a11y note —
+`[data-gallery-filter]` with `[data-filter]` chips for
 "all" + each category), and stamps each figure with `[data-filter-item]` + `data-category`
 (from the per-item `category`). Reproduces the prototype portfolio filter
 (`_docs/projekty-domow-wow-site/assets/app.js:88-100`). Disjoint from L01/L03.
@@ -114,12 +115,13 @@ const renderGallery = (block: PageBlockV2) => {
 
   return (
     <div data-gallery="true">
-      <div role="tablist" data-gallery-filter className="cx-gallery-filter">
-        <button type="button" role="tab" data-filter="all"
-          aria-selected="true" className="cx-filter-chip">All</button>
+      <div role="toolbar" aria-label="Filter gallery" aria-orientation="horizontal"
+        data-gallery-filter className="cx-gallery-filter">
+        <button type="button" data-filter="all"
+          aria-pressed="true" tabIndex={0} className="cx-filter-chip">All</button>
         {categories.map((c) => (
-          <button key={c} type="button" role="tab" data-filter={c}
-            aria-selected="false" className="cx-filter-chip">{c}</button>
+          <button key={c} type="button" data-filter={c}
+            aria-pressed="false" tabIndex={-1} className="cx-filter-chip">{c}</button>
         ))}
       </div>
       {grid}
@@ -129,8 +131,12 @@ const renderGallery = (block: PageBlockV2) => {
 ```
 
 **Progressive enhancement:** no-JS ⇒ all items visible, chips inert (the runtime
-adds `.is-hidden`). **A11y:** chip bar is a `role="tablist"` of keyboard-focusable
-buttons.
+adds `.is-hidden`). **A11y (534 audit remediation):** a filter chip group is a
+multi-select-ish TOGGLE SET, not a single-select tablist over one panel, so the bar
+is a `role="toolbar"` of `aria-pressed` toggle buttons (NOT `role="tab"`/`aria-selected`
+— which would falsely promise `aria-controls` + a `tabpanel`). It carries roving
+tabindex (active chip `tabindex=0`, rest `-1`) with `aria-orientation="horizontal"`;
+the 534-01-L03 runtime wires ArrowLeft/Right/Home/End roving + `aria-pressed` toggle.
 
 ## Security note
 

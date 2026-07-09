@@ -46,9 +46,13 @@ import {
   pageColumnDistributions,
   pageDividerTones,
   pageFiltersBlockLayouts,
+  pageGalleryLayouts,
   pageGroupDirections,
   pageHeadingLevels,
   pageImageFits,
+  // ── TASK-534 ── declarative-interactivity control options.
+  switcherVariants,
+  scrollHintGlyphs,
   pageSectionAlignments,
   pageSectionCapabilities,
   pageSectionJustify,
@@ -100,6 +104,8 @@ const validSectionPaths = new Set([
   "style.composition",
   // TASK-525-01-L02 full-bleed background.
   "style.fullBleed",
+  // ── TASK-534 ── section grain overlay.
+  "style.noiseOverlay",
 ]);
 
 const validBlockPaths = new Set([
@@ -146,6 +152,8 @@ const validBlockPaths = new Set([
   "style.layer.anchor",
   // TASK-525-02-L03 per-block staggered reveal control.
   "style.revealDelay",
+  // ── TASK-534 ── magnetic-hover flag (universal block control).
+  "style.magnetic",
   "visibility.visible",
 ]);
 
@@ -189,6 +197,10 @@ const ownerOptionSets = new Set<readonly string[]>([
   pageTypographyFontWeights,
   animatedIconNames,
   animatedIconAnimations,
+  // ── TASK-534 ── declarative-interactivity control option sets.
+  pageGalleryLayouts,
+  switcherVariants,
+  scrollHintGlyphs,
 ]);
 
 /**
@@ -328,13 +340,15 @@ describe("page editor control registry", () => {
       runtimeRenderer: "real",
     });
     expect("reason" in pageBlockCapabilities.columns).toBe(false);
+    // ── TASK-534 ── gallery is now editor-insertable (filter/layout controls
+    // shipped), so it carries no capability reason and stays assistant-excluded.
     expect(pageBlockCapabilities.gallery).toMatchObject({
-      editorInsertable: false,
-      insertable: false,
+      editorInsertable: true,
+      insertable: true,
       assistantEmittable: false,
       runtimeRenderer: "real",
-      reason: "gallery-editor-controls-pending",
     });
+    expect("reason" in pageBlockCapabilities.gallery).toBe(false);
     // TASK-457: the collection block joined the editor-insertable catalog.
     expect(pageBlockCapabilities.collection.editorInsertable).toBe(true);
   });
@@ -399,7 +413,7 @@ describe("page editor control registry", () => {
     }
   });
 
-  test("insertable block catalog is frozen to the audited 20 blocks (TASK-522-01 customSvg addition)", () => {
+  test("insertable block catalog is frozen to the audited 23 blocks (TASK-534 gallery/switcher/scrollHint additions)", () => {
     const insertableBlocks = pageBlockTypes.filter(
       (type) => pageBlockCapabilities[type].editorInsertable
     );
@@ -410,6 +424,8 @@ describe("page editor control registry", () => {
       "button",
       "image",
       "video",
+      // TASK-534: gallery joined the editor-insertable catalog (filter controls).
+      "gallery",
       "form",
       "list",
       "card",
@@ -424,6 +440,9 @@ describe("page editor control registry", () => {
       "columns",
       "group",
       "customSvg",
+      // TASK-534: the switcher + scrollHint interactivity blocks.
+      "switcher",
+      "scrollHint",
     ]);
     for (const type of insertableBlocks) {
       expect(pageBlockCapabilities[type]).toMatchObject({
@@ -438,12 +457,17 @@ describe("page editor control registry", () => {
         // assistant-emittable (the assistant does not invent decorative motion).
         // TASK-522-01: the custom-SVG block is likewise author-insertable but NOT
         // assistant-emittable (the assistant does not invent pasted SVG markup).
+        // TASK-534: gallery, switcher, and scrollHint are author-insertable but NOT
+        // assistant-emittable (the assistant does not invent galleries/tabs/hints).
         assistantEmittable:
           type !== "form" &&
           type !== "collection" &&
           type !== "filters" &&
           type !== "icon" &&
-          type !== "customSvg",
+          type !== "customSvg" &&
+          type !== "gallery" &&
+          type !== "switcher" &&
+          type !== "scrollHint",
         runtimeRenderer: "real",
       });
       expect("reason" in pageBlockCapabilities[type]).toBe(false);
@@ -482,10 +506,10 @@ describe("page editor control registry", () => {
   test("the remaining gated blocks stay non-insertable with frozen capability reasons", () => {
     // TASK-456/457 amendments: "form" and "collection" left this set
     // deliberately (editor controls shipped). TASK-521-04 promoted "icon" out of
-    // this set (renderer case + palette + controls shipped). Any further promotion
+    // this set (renderer case + palette + controls shipped). TASK-534 promoted
+    // "gallery" out (filter/layout controls shipped). Any further promotion
     // requires an explicit capability change and follow-on task, exactly like those.
     const gatedBlockReasons = {
-      gallery: "gallery-editor-controls-pending",
       embed: "embed-editor-controls-pending",
     } as const;
 
@@ -808,12 +832,14 @@ describe("page editor control registry", () => {
     expect(blockById.get("block.heading.props.text")).toBe("override");
     expect(blockById.get("block.style.width")).toBe("inherited");
 
-    // Unsupported targets project no entries instead of fake controls.
+    // Unsupported targets project no entries instead of fake controls. TASK-534:
+    // gallery is now insertable (filter controls), so `embed` is the gated block
+    // that still projects nothing.
     expect(
       projectPageResponsiveOverrideEntries({ kind: "section", type: "navigation" }, "mobile", {})
     ).toEqual([]);
     expect(
-      projectPageResponsiveOverrideEntries({ kind: "block", type: "gallery" }, "mobile", {})
+      projectPageResponsiveOverrideEntries({ kind: "block", type: "embed" }, "mobile", {})
     ).toEqual([]);
   });
 
@@ -1446,5 +1472,64 @@ describe("layout composition.mode + group marquee controls (TASK-522-05-L02/L04)
         `${type} should not carry marquee`
       ).toBe(false);
     }
+  });
+});
+
+// TASK-534-04-L04 — declarative-interactivity control coverage (switcher tabs /
+// variant / activeIndex, gallery filter controls, scrollHint glyph/label, the
+// single universal magnetic toggle, the section noise toggle).
+describe("page editor control registry — TASK-534 interactivity", () => {
+  test("switcher resolves tabs (items) + variant segmented + clamped activeIndex", () => {
+    const controls = pageBlockControlRegistry.switcher;
+    const byId = new Map(controls.map((c) => [c.id, c]));
+    const tabs = byId.get("block.switcher.props.tabs");
+    expect(tabs?.input).toBe("items");
+    expect(tabs?.path).toEqual(["props", "tabs"]);
+    const variant = byId.get("block.switcher.props.variant");
+    expect(variant?.input).toBe("segmented");
+    expect(variant?.options).toBe(switcherVariants);
+    const active = byId.get("block.switcher.props.activeIndex");
+    expect(active?.input).toBe("number");
+    expect(active?.clamp).toEqual({ min: 0, max: 5 }); // SWITCHER_MAX_PANELS - 1.
+  });
+
+  test("gallery resolves layout segmented + filterable switch + filterCategories list", () => {
+    const byId = new Map(pageBlockControlRegistry.gallery.map((c) => [c.id, c]));
+    expect(byId.get("block.gallery.props.layout")?.input).toBe("segmented");
+    expect(byId.get("block.gallery.props.layout")?.options).toBe(pageGalleryLayouts);
+    expect(byId.get("block.gallery.props.filterable")?.input).toBe("switch");
+    expect(byId.get("block.gallery.props.filterCategories")?.input).toBe("items");
+  });
+
+  test("scrollHint resolves glyph segmented + label text", () => {
+    const byId = new Map(pageBlockControlRegistry.scrollHint.map((c) => [c.id, c]));
+    expect(byId.get("block.scrollHint.props.glyph")?.input).toBe("segmented");
+    expect(byId.get("block.scrollHint.props.glyph")?.options).toBe(scrollHintGlyphs);
+    expect(byId.get("block.scrollHint.props.label")?.input).toBe("text");
+  });
+
+  test("pageUniversalBlockControls contains exactly one block.style.magnetic switch", () => {
+    const magnetic = pageUniversalBlockControls.filter((c) => c.id === "block.style.magnetic");
+    expect(magnetic).toHaveLength(1);
+    expect(magnetic[0]?.input).toBe("switch");
+    expect(magnetic[0]?.path).toEqual(["style", "magnetic"]);
+    expect(magnetic[0]?.responsive).toBe(false);
+  });
+
+  test("pageUniversalSectionControls contains exactly one section.style.noiseOverlay switch", () => {
+    const noise = pageUniversalSectionControls.filter((c) => c.id === "section.style.noiseOverlay");
+    expect(noise).toHaveLength(1);
+    expect(noise[0]?.input).toBe("switch");
+    expect(noise[0]?.path).toEqual(["style", "noiseOverlay"]);
+    expect(noise[0]?.responsive).toBe(false);
+  });
+
+  test("the new controls resolve for their insertable block types (via getPageEditorControlsForTarget)", () => {
+    const switcherControls = getPageEditorControlsForTarget({ kind: "block", type: "switcher" });
+    expect(switcherControls.some((c) => c.id === "block.switcher.props.tabs")).toBe(true);
+    // The universal magnetic toggle also appears on the resolved surface.
+    expect(switcherControls.some((c) => c.id === "block.style.magnetic")).toBe(true);
+    const galleryControls = getPageEditorControlsForTarget({ kind: "block", type: "gallery" });
+    expect(galleryControls.some((c) => c.id === "block.gallery.props.filterable")).toBe(true);
   });
 });

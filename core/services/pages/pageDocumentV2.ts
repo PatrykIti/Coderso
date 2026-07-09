@@ -73,6 +73,9 @@ export const pageBlockTypes = [
   // TASK-522-01-L01: the ONE new arbitrary-SVG block. Paste/upload a sanitized
   // inline SVG (svgSanitizer allowlist) with an optional stroke draw-in.
   "customSvg",
+  // ── TASK-534 ── declarative interactivity primitives (customSvg pattern).
+  "switcher", // segmented tabs; N panels in slots panel:1..panel:6 (absorbs 527).
+  "scrollHint", // hero scroll-hint indicator (CSS-keyframe dot/chevron, no runtime).
 ] as const;
 
 /**
@@ -172,7 +175,32 @@ export const pageBlockSlotKeys = [
   "column:2",
   "column:3",
   "column:4",
+  // ── TASK-534 ── switcher panel slots (one child-block tree per tab).
+  "panel:1",
+  "panel:2",
+  "panel:3",
+  "panel:4",
+  "panel:5",
+  "panel:6",
 ] as const;
+
+// ── TASK-534 ── declarative-interactivity vocabulary (single source of truth).
+/** Number of `panel:N` slots ⇒ the hard upper bound on switcher tabs/panels. */
+export const SWITCHER_MAX_PANELS = 6 as const;
+export const switcherVariants = ["pill", "underline"] as const;
+export type PageSwitcherVariant = (typeof switcherVariants)[number];
+export const scrollHintGlyphs = ["dot", "chevron"] as const;
+export type PageScrollHintGlyph = (typeof scrollHintGlyphs)[number];
+/** Max chip categories exposed on a filterable gallery. */
+export const GALLERY_FILTER_CATEGORY_MAX = 12 as const;
+/**
+ * A gallery category is a SINGLE kebab/word token — NO SPACE. The runtime filter
+ * (534-01-L03) treats an item's `data-category` as a SPACE-SEPARATED SET of tokens
+ * (`cat.split(" ").indexOf(f)`), and each chip's `data-filter` is ONE token; a
+ * space inside a single category would split it into two tokens so a whole-phrase
+ * chip could never match. Multiple categories per item join with spaces.
+ */
+export const GALLERY_CATEGORY_PATTERN = /^[\w-]{1,48}$/;
 
 /**
  * TASK-521 shared motion/effects vocabulary (single source of truth). All
@@ -511,6 +539,9 @@ export type PageEffectsV2 = {
   cursorSpotlight?: boolean;
   spotlightColor?: string;
   spotlightSize?: number;
+  // ── TASK-534 ── present-only page-root static grain overlay (self-generated
+  // SVG turbulence; no author color, no asset). Omitted when false/unset.
+  noiseOverlay?: boolean;
 };
 
 export type PageSectionLayoutV2 = {
@@ -568,6 +599,12 @@ export type PageSectionStyleV2 = {
    * variant still bleeds by default, independent of this flag).
    */
   fullBleed?: boolean;
+  /**
+   * ── TASK-534 ── Static self-generated SVG-turbulence grain over the section
+   * surface. Present-only: omitted when false/unset so an un-authored section
+   * serializes byte-identically. STATIC (renders identically under reduced-motion).
+   */
+  noiseOverlay?: boolean;
 };
 
 export type PageSectionSpacingV2 = {
@@ -678,6 +715,13 @@ export type PageBlockStyleV2 = {
    * (the reveal CSS resets `--reveal-delay` per frame; see `PAGE_REVEAL_MOTION_CSS`).
    */
   revealDelay?: number;
+  /**
+   * ── TASK-534 ── Magnetic pointer-attract on hover. Present-only: omitted when
+   * false/unset. A runtime clause (`PAGE_EFFECTS_RUNTIME_SOURCE`, 534-01-L03)
+   * translates the element toward the pointer, `pointer:fine` + reduced-motion
+   * gated (transforms only). Reaches render solely as a `data-magnetic` toggle.
+   */
+  magnetic?: boolean;
 };
 
 export type PageBlockVisibilityV2 = {
@@ -786,6 +830,8 @@ const pageBlockStyleKeys = [
   "composition",
   // TASK-525-02-L01 per-block staggered reveal (present-only number).
   "revealDelay",
+  // ── TASK-534 ── present-only magnetic-hover flag (runtime pointer-attract).
+  "magnetic",
 ] as const;
 const mobileBreakpoints: MobileBreakpoint[] = ["tablet", "mobile"];
 const defaultBreakpoints: PageBreakpoint[] = ["desktop", "tablet", "mobile"];
@@ -832,6 +878,8 @@ const pageLayoutBlockSlots: Partial<Record<PageBlockType, readonly PageBlockSlot
   container: ["children"],
   columns: ["column:1", "column:2", "column:3", "column:4"],
   group: ["children"],
+  // ── TASK-534 ── switcher exposes one child-block tree per tab (panel:1..6).
+  switcher: ["panel:1", "panel:2", "panel:3", "panel:4", "panel:5", "panel:6"],
 };
 
 export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
@@ -851,7 +899,8 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   button: ["label", "href", "target", "variant", "size"],
   image: ["assetId", "src", "alt", "caption", "fit"],
   video: ["assetId", "src", "title", "autoplay", "muted"],
-  gallery: ["items", "layout"],
+  // ── TASK-534 ── present-only filter props (+ per-item optional `category`).
+  gallery: ["items", "layout", "filterable", "filterCategories"],
   form: ["formId", "title"],
   list: ["items", "ordered"],
   card: ["title", "text", "image", "href"],
@@ -879,6 +928,9 @@ export const pageBlockPropKeys: Record<PageBlockType, readonly string[]> = {
   group: ["direction", "wrap", "gap"],
   // TASK-522-01-L01: sanitized inline SVG + optional stroke draw-in.
   customSvg: ["svg", "drawIn", "drawSpeed", "label"],
+  // ── TASK-534 ── declarative-interactivity blocks.
+  switcher: ["tabs", "activeIndex", "variant"],
+  scrollHint: ["label", "glyph"],
 };
 
 export type PageBlockRuntimeRendererState = "real" | "placeholder" | "unsupported";
@@ -965,9 +1017,18 @@ const realRuntimeBlockTypes = new Set<PageBlockType>([
   // `renderPageBlockContent case "customSvg"` (522-02-L01) mounts the sanitized
   // inline SVG. Registered here so the capability report marks it runtime "real".
   "customSvg",
+  // ── TASK-534 ── switcher (renderer case 534-02-L01, tablist runtime 534-01-L03)
+  // + scrollHint (renderer case 534-02-L03, CSS-keyframe only) are real renderers.
+  "switcher",
+  "scrollHint",
 ]);
 const dataBoundBlockTypes = new Set<PageBlockType>(["collection", "filters", "form", "embed"]);
-const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group"]);
+// ── TASK-534 ── switcher is a SLOT HOST (panel:1..6). It MUST live in
+// layoutBlockTypes because getPageBlockActiveSlotKeys (:1063) gates on THIS set,
+// not on pageLayoutBlockSlots — omitting it would leave the editor slot
+// enumeration returning [] (dead panels), even though the JSON schema + normalize
+// slot-validation read pageBlockCapabilities[type].slots and would work.
+const layoutBlockTypes = new Set<PageBlockType>(["container", "columns", "group", "switcher"]);
 const editorInsertableBlockTypes = new Set<PageBlockType>([
   "heading",
   "text",
@@ -975,6 +1036,11 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   "button",
   "image",
   "video",
+  // ── TASK-534 ── the gallery block joins the editor-insertable catalog: its
+  // authoring controls (filterable/filterCategories + layout) ship with 534-04,
+  // clearing the `gallery-editor-controls-pending` capability reason. Acceptance
+  // Criteria #2 inserts a `gallery` with `filterable:true` from the palette.
+  "gallery",
   // TASK-456: the form block is editor-insertable — its public runtime
   // (scoped data binding, nonce/anti-abuse submit pipeline) shipped with
   // TASK-418-06-L04 and the authoring controls (formId combobox + title)
@@ -1014,6 +1080,10 @@ const editorInsertableBlockTypes = new Set<PageBlockType>([
   // (pageEditorOptions.ts) + block controls (pageEditorControlRegistry.ts) ship
   // with 522-02. No capability-reason stub (it IS insertable).
   "customSvg",
+  // ── TASK-534 ── switcher + scrollHint are editor-insertable (palette copy in
+  // blockOptionCopy 534-01-L01; controls in 534-04). No capability-reason stub.
+  "switcher",
+  "scrollHint",
 ]);
 const insertableBlockTypes = editorInsertableBlockTypes;
 const assistantEmittableBlockTypes = new Set<PageBlockType>([
@@ -1034,7 +1104,8 @@ const assistantEmittableBlockTypes = new Set<PageBlockType>([
   "group",
 ]);
 const pageBlockCapabilityReasons: Partial<Record<PageBlockType, string>> = {
-  gallery: "gallery-editor-controls-pending",
+  // ── TASK-534 ── `gallery` is now editor-insertable (filter/layout controls
+  // shipped in 534-04), so its `gallery-editor-controls-pending` reason is dropped.
   embed: "embed-editor-controls-pending",
 };
 
@@ -1147,6 +1218,14 @@ export const pageBlockDefaultProps: Record<PageBlockType, Record<string, unknown
   // TASK-522-01-L01: drawSpeed omitted until authored (the only present-only
   // prop); empty svg = neutral fallback at render.
   customSvg: { svg: "", drawIn: false, label: "" },
+  // ── TASK-534 ── switcher/scrollHint defaults. gallery is UNCHANGED above
+  // (filterable/filterCategories are present-only, not seeded).
+  switcher: {
+    tabs: [{ label: "Tab one" }, { label: "Tab two" }],
+    activeIndex: 0,
+    variant: "pill",
+  },
+  scrollHint: { label: "Scroll", glyph: "dot" },
 };
 
 const numericSchema = (minimum: number, maximum: number): RecordValue => ({
@@ -1388,6 +1467,41 @@ const blockPropJsonSchemaForType = (type: PageBlockType, key: string): RecordVal
   if (type === "customSvg" && key === "label") {
     return { type: "string", maxLength: 160 };
   }
+  // ── TASK-534 ── switcher / scrollHint / gallery-filter prop schemas. MUST
+  // precede the generic tails (`key === "items"`/string) so `tabs`/enums do not
+  // fall to a looser type-inconsistent schema than the write normalizer.
+  if (type === "switcher" && key === "tabs") {
+    return {
+      type: "array",
+      maxItems: SWITCHER_MAX_PANELS,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["label"],
+        properties: { label: { type: "string" } },
+      },
+    };
+  }
+  if (type === "switcher" && key === "activeIndex") {
+    return numericSchema(0, SWITCHER_MAX_PANELS - 1);
+  }
+  if (type === "switcher" && key === "variant") {
+    return { type: "string", enum: [...switcherVariants] };
+  }
+  if (type === "scrollHint" && key === "glyph") {
+    return { type: "string", enum: [...scrollHintGlyphs] };
+  }
+  if (type === "scrollHint" && key === "label") {
+    return { type: "string", maxLength: 160 };
+  }
+  if (type === "gallery" && key === "filterable") return booleanSchema;
+  if (type === "gallery" && key === "filterCategories") {
+    return {
+      type: "array",
+      maxItems: GALLERY_FILTER_CATEGORY_MAX,
+      items: { type: "string" },
+    };
+  }
   if (key === "size") return numericSchema(0, 240);
   if (
     key === "ordered" ||
@@ -1510,6 +1624,8 @@ const pageBlockStyleJsonSchema: RecordValue = {
     },
     // TASK-525-02-L01 per-block staggered reveal (present-only, bounded ms).
     revealDelay: numericSchema(PAGE_REVEAL_DELAY_CLAMP.min, PAGE_REVEAL_DELAY_CLAMP.max),
+    // ── TASK-534 ── present-only magnetic-hover flag (boolean).
+    magnetic: booleanSchema,
   },
 };
 
@@ -1658,6 +1774,8 @@ const partialSectionStyleJsonSchema: RecordValue = {
     composition: { type: "string", enum: [...pageCompositions] },
     // TASK-525-01-L02 full-bleed background (present-only boolean).
     fullBleed: booleanSchema,
+    // ── TASK-534 ── static grain overlay (present-only boolean).
+    noiseOverlay: booleanSchema,
   },
 };
 
@@ -1778,6 +1896,8 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               minimum: PAGE_SPOTLIGHT_SIZE_CLAMP.min,
               maximum: PAGE_SPOTLIGHT_SIZE_CLAMP.max,
             },
+            // ── TASK-534 ── page-root static grain overlay (present-only boolean).
+            noiseOverlay: { type: "boolean" },
           },
         },
         // TASK-523-01 per-page canvas background. Deep color/gradient validation
@@ -1855,6 +1975,8 @@ export const pageDocumentV2JsonSchema: RecordValue = {
               composition: { type: "string", enum: [...pageCompositions] },
               // TASK-525-01-L02 full-bleed background (present-only boolean).
               fullBleed: booleanSchema,
+              // ── TASK-534 ── static grain overlay (present-only boolean).
+              noiseOverlay: booleanSchema,
             },
           },
           spacing: {
@@ -2385,7 +2507,13 @@ const normalizeSettingsMenuAppearance = (
   return sanitizeMenuAppearance(value);
 };
 
-const PAGE_EFFECTS_KEYS = ["cursorSpotlight", "spotlightColor", "spotlightSize"] as const;
+const PAGE_EFFECTS_KEYS = [
+  "cursorSpotlight",
+  "spotlightColor",
+  "spotlightSize",
+  // ── TASK-534 ── page-root static grain overlay (present-only boolean).
+  "noiseOverlay",
+] as const;
 
 /**
  * TASK-521-01-L02 per-page effects sub-normalizer (mirrors
@@ -2411,6 +2539,9 @@ const normalizeEffects = (value: unknown, mode: NormalizeMode): PageEffectsV2 | 
       PAGE_SPOTLIGHT_SIZE_CLAMP.max
     );
   }
+  // ── TASK-534 ── page-root grain overlay: present-only (emitted ONLY when true so
+  // a spotlight-only / no-effect page stays byte-identical).
+  if (input.noiseOverlay === true) result.noiseOverlay = true;
   return Object.keys(result).length ? result : undefined;
 };
 
@@ -2517,6 +2648,8 @@ const normalizeSectionStyle = (
       "composition",
       // TASK-525-01-L02 full-bleed background (present-only boolean).
       "fullBleed",
+      // ── TASK-534 ── static grain overlay (present-only boolean).
+      "noiseOverlay",
     ],
     path,
     mode
@@ -2599,6 +2732,9 @@ const normalizeSectionStyle = (
   // Emitted ONLY when `=== true`; `false`/unset omitted so a non-bleed section
   // stays byte-identical (`defaultStyle` seeds no key).
   if (input.fullBleed === true) result.fullBleed = true;
+  // ── TASK-534 ── static grain overlay (present-only; emitted ONLY when === true
+  // so a non-grain section stays byte-identical; defaultStyle seeds no key).
+  if (input.noiseOverlay === true) result.noiseOverlay = true;
   return partial ? result : ({ ...defaultStyle, ...result } satisfies PageSectionStyleV2);
 };
 
@@ -2923,6 +3059,11 @@ const normalizeBlockStyle = (
       PAGE_REVEAL_DELAY_CLAMP.max
     );
   }
+  // ── TASK-534 ── present-only magnetic-hover flag; emitted ONLY when === true so
+  // an un-authored / disabled block stays byte-identical (mirrors tiltGlare).
+  if (input.magnetic !== undefined && readBoolean(input.magnetic, false)) {
+    result.magnetic = true;
+  }
   return Object.keys(result).length > 0 ? result : undefined;
 };
 
@@ -2978,8 +3119,14 @@ const normalizeBlockProps = (
 
   for (const key of pageBlockPropKeys[type]) {
     if (key === "marks") continue;
-    if (input[key] !== undefined)
-      result[key] = normalizeBlockProp(type, key, input[key], mode, `${path}.${key}`);
+    if (input[key] !== undefined) {
+      const normalized = normalizeBlockProp(type, key, input[key], mode, `${path}.${key}`);
+      // ── TASK-534 ── present-only props (gallery `filterable`/`filterCategories`)
+      // return `undefined` when they carry nothing meaningful; do NOT stamp an
+      // `undefined`-valued key onto the props object so a non-filterable gallery
+      // stays byte-identical to a legacy one (the defaults seed no such key).
+      if (normalized !== undefined) result[key] = normalized;
+    }
   }
   if (isPageTextMarkCapableBlockType(type) && input.marks !== undefined) {
     const text = typeof result.text === "string" ? result.text : "";
@@ -3172,7 +3319,18 @@ const normalizeGalleryItems = (value: unknown): Record<string, unknown>[] => {
       readOptionalText(item.description) ??
       "";
     if (!src && !caption) return [];
-    return [{ src, alt, caption }];
+    // ── TASK-534 ── present-only per-item `category`: a SPACE-SEPARATED set of
+    // single kebab/word tokens (each `GALLERY_CATEGORY_PATTERN`). Out-of-pattern
+    // tokens are DROPPED (fail-soft) so the stored value is always a bounded token
+    // set that can never `"`-break out of the `data-category` attribute. Absent /
+    // no valid token ⇒ NO `category` key, so legacy gallery items stay byte-identical.
+    const rebuilt: Record<string, unknown> = { src, alt, caption };
+    const catTokens = (readOptionalText(item.category) ?? "")
+      .split(/\s+/)
+      .filter((token) => GALLERY_CATEGORY_PATTERN.test(token))
+      .slice(0, GALLERY_FILTER_CATEGORY_MAX);
+    if (catTokens.length) rebuilt.category = catTokens.join(" ");
+    return [rebuilt];
   });
 };
 
@@ -3313,6 +3471,47 @@ const normalizeBlockProp = (
   }
   if (type === "customSvg" && key === "label") {
     return typeof value === "string" ? value.slice(0, 160) : "";
+  }
+  // ── TASK-534 ── switcher / scrollHint / gallery-filter props. MUST precede the
+  // boolean cluster + the generic `key === "items"` / string tail below, else
+  // `tabs` (an array) falls to the `items` clone path and enums bypass the
+  // fail-closed `normalizeEnum`. Config from validated values only.
+  if (type === "switcher" && key === "tabs") {
+    // Rebuild each tab as a FRESH { label } ONLY — reading `label`, DISCARDING
+    // `href` (the listItems editor can commit `{label,href}`) and every other key
+    // BEFORE schema validation, so the switcher tab schema
+    // (additionalProperties:false + required:["label"]) never rejects an editor row
+    // (534-04-L01). Count clamped to SWITCHER_MAX_PANELS.
+    const raw = requireArray(value ?? [], path, mode).slice(0, SWITCHER_MAX_PANELS);
+    const tabs = raw.map((tab) => ({
+      label: readText(isRecord(tab) ? tab.label : "", ""),
+    }));
+    return tabs.length ? tabs : [{ label: "Tab one" }];
+  }
+  if (type === "switcher" && key === "variant") {
+    return normalizeEnum(value, switcherVariants, "pill", path, mode);
+  }
+  if (type === "switcher" && key === "activeIndex") {
+    // Clamp to the hard panel-count bound; the renderer re-clamps against the
+    // actual tab count (defence in depth, 534-02-L01).
+    return readNumber(value, 0, 0, SWITCHER_MAX_PANELS - 1);
+  }
+  if (type === "scrollHint" && key === "glyph") {
+    return normalizeEnum(value, scrollHintGlyphs, "dot", path, mode);
+  }
+  if (type === "scrollHint" && key === "label") {
+    return readText(value, "Scroll"); // a11y text, escaped at render.
+  }
+  if (type === "gallery" && key === "filterable") {
+    // Present-only: omit `false` so a non-filterable gallery is byte-identical.
+    return readBoolean(value, false) ? true : undefined;
+  }
+  if (type === "gallery" && key === "filterCategories") {
+    const cats = (Array.isArray(value) ? value : [])
+      .map((c) => (typeof c === "string" ? c.trim() : ""))
+      .filter((c) => GALLERY_CATEGORY_PATTERN.test(c)) // single-token allowlist, drop bad.
+      .slice(0, GALLERY_FILTER_CATEGORY_MAX);
+    return cats.length ? cats : undefined; // present-only.
   }
   if (
     key === "ordered" ||

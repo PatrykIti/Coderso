@@ -1230,6 +1230,88 @@ surfaces. TASK-523-02 makes it occlusion-proof:
   `30`, so no authored layer can reach the spotlight and occlude the glow. Invariant:
   `PAGE_LAYER_Z_CLAMP.max (20) < overlay z-index (30) < nav z-index (40)`.
 
+## Declarative Interactivity — Tabs/Switcher, Filterable Gallery, Polish — TASK-534
+
+TASK-534 (Bundle D of the page-toolkit fidelity program; absorbs TASK-527) adds a
+cohesive family of DECLARATIVE interactivity, closing `_TMP-cms-ograniczenia.md` §1
+("Brak interaktywności JS") and reproducing `_docs/projekty-domow-wow-site`. Every
+addition is **present-only** (omitted when unauthored ⇒ the document AND HTML stay
+byte-identical to post-530/535), joins the **reject-unknown allowlist**
+(`assertKnownKeys` + strict `pageDocumentV2JsonSchema` `additionalProperties: false`)
+with a round-trip test, and needs **no npm dependency, no DB migration, no
+`PAGE_DOCUMENT_SCHEMA_VERSION` bump (stays `2`), no new route/RBAC**. The behaviour
+rides the **ONE existing** `pageEffectsRuntime.ts` `<script>` as static,
+dependency-free IIFE clauses (no interpolation of stored data) and is
+`prefers-reduced-motion` + keyboard + aria-tablist safe.
+
+### Segmented `switcher` / tabs block (absorbs TASK-527)
+
+`switcher` is a NEW `pageBlockTypes` member added the `customSvg` way — ATOMICALLY
+across every exhaustive `Record<PageBlockType, …>` surface (`pageBlockTypes`,
+`pageBlockPropKeys`, `pageBlockDefaultProps`, `realRuntimeBlockTypes`,
+`editorInsertableBlockTypes`, `layoutBlockTypes`, `pageBlockRenderDefaults.ts`,
+`pageEditorOptions.ts` `blockOptionCopy`, `pageEditorControlRegistry.ts`
+`pageBlockControlRegistry`, and the test-tree `pageEditorBlockLabels`) so root `tsc`
+stays green. Its N labelled panels live in SIX new `panel:1..panel:6`
+`pageBlockSlotKeys` slots; `switcher` joins `layoutBlockTypes` so
+`getPageBlockActiveSlotKeys` returns its panel slots (schema + normalize slot
+validation read `pageBlockCapabilities[type].slots`). Props: `variant`
+(`normalizeEnum` fail-closed), `activeIndex` (clamped), and up to six free-text tab
+`{label}` records (rendered as escaped React TEXT nodes — never
+`dangerouslySetInnerHTML`). The renderer emits a real `role="tablist"` with N
+`role="tab"` (roving `tabindex`, `aria-selected`, `aria-controls`) and N
+`role="tabpanel"` (`aria-labelledby`, resting `hidden` on inactive panels for no-JS
+progressive enhancement). The runtime clause toggles the active panel on click and
+roves selection on ArrowLeft/Right/Up/Down/Home/End; it sits BEFORE the reduced-motion
+whole-IIFE early-return so it works for reduce users (the crossfade is CSS
+`motion-safe:`-guarded).
+
+### Filterable gallery/portfolio
+
+Present-only `filterable` + `filterCategories` props on the EXISTING `gallery` block,
+plus an optional per-item `category` — a SPACE-SEPARATED SET of single kebab tokens
+`^[\w-]{1,48}$`, out-of-pattern tokens DROPPED fail-soft at BOTH write and render. The
+renderer emits a `role="tablist"` chip bar (`[data-gallery-filter]`, `[data-filter]`
+chips) above the grid and stamps each figure with `[data-filter-item]` +
+`data-category`; the runtime shows/hides items on chip click via
+`cat.split(" ").indexOf(f)` (token-split — no substring false positive, no
+`innerHTML`/`eval`). Unset ⇒ `renderGallery` output is byte-identical. The `gallery`
+block is now editor-insertable (its `gallery-editor-controls-pending` capability reason
+is cleared now that the filter/layout controls shipped).
+
+### Polish — noise overlay, scroll-hint, magnetic
+
+- **Noise/grain overlay** — present-only `PageEffectsV2.noiseOverlay` (page root) and
+  `PageSectionStyleV2.noiseOverlay` (section). Paints a STATIC self-generated
+  SVG-turbulence layer (`pageInteractivityGlyphs.tsx` data-URI — no asset, no author
+  color, no `sanitizeAuthoringCssBackground` relaxation). Renders identically under
+  reduced-motion; `[data-noise-host]{position:relative}` supplies the positioning
+  context for the `inset:0` overlay. CSS/static — does NOT widen `anyMotion`.
+- **`scrollHint` block** — a NEW `pageBlockTypes` member (customSvg pattern): a
+  CSS-keyframe-only `aria-hidden` dot/chevron (`glyph` enum, `normalizeEnum`
+  fail-closed) with an optional `sr-only` `label`. The bob is `@media
+  (prefers-reduced-motion: no-preference)`-gated; NO runtime.
+- **Magnetic button** — present-only `PageBlockStyleV2.magnetic` (`readBoolean`). A NEW
+  clause in `PAGE_EFFECTS_RUNTIME_SOURCE` (after the 522 `[data-block-tilt]` clause)
+  attracts `[data-magnetic]` toward the pointer, transforms only, rAF + `passive`,
+  clamped ±14px. Placed AFTER the reduced-motion early-return (motion suppressed for
+  reduce) behind its own `matchMedia('(pointer:fine)')` gate (no magnet on touch).
+
+### Runtime — one `<script>`, split placement + CSS
+
+All three clauses live in the single `PAGE_EFFECTS_RUNTIME_SOURCE`; the SINGLE emit in
+`PageDocumentRender` carries them, its `anyMotion` predicate OR-widened (append-only) by
+a new `usesInteractivityRuntime(document)` resolver (`pageCompositionEffects.tsx`) that
+returns true only for RUNTIME-BEARING surfaces (switcher / filterable gallery /
+magnetic) — scrollHint + noise are CSS/static and do NOT widen it. Interaction TOGGLES
+(switcher, filter) sit BEFORE the reduced-motion early-return (accessibility — they must
+work for reduce users); the magnetic MOTION clause sits AFTER it. Idempotent via the
+existing per-window init flag (535). `PAGE_INTERACTIVITY_CSS` (present-only emit) styles
+the tab bar (horizontal-scroll on mobile), pill/underline selected states via
+`var(--primary)`, panel crossfade + filter fade + magnetic transition (all inside
+`prefers-reduced-motion: no-preference`), while the FUNCTIONAL `[hidden]` / `.is-hidden`
+`display:none` rules sit OUTSIDE the guard so tabs/filters WORK for reduce users.
+
 ## Public Runtime
 
 Pages v2 section/block rendering is owned by

@@ -6,7 +6,7 @@
 **Priority:** High
 **Category:** Site Render / Accessibility / Security
 **Estimated Effort:** Large
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 

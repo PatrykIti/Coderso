@@ -608,6 +608,45 @@ const runtimeParityPageData = (token: string) => ({
           visibility: { visible: true },
         },
         {
+          // TASK-534: the segmented switcher/tabs block is insertable, so the
+          // parity loop asserts `data-page-block="switcher"`. Panels live in the
+          // `panel:1..panel:N` slots (real tablist/tabpanel render).
+          id: `parity-switcher-${token}`,
+          type: "switcher",
+          props: {
+            tabs: [{ label: `Barn ${token}` }, { label: `Villa ${token}` }],
+            activeIndex: 0,
+            variant: "pill",
+          },
+          visibility: { visible: true },
+          slots: {
+            "panel:1": [
+              {
+                id: `parity-switcher-panel-1-${token}`,
+                type: "text",
+                props: { text: `Switcher panel one ${token}`, format: "plain", align: "left" },
+                visibility: { visible: true },
+              },
+            ],
+            "panel:2": [
+              {
+                id: `parity-switcher-panel-2-${token}`,
+                type: "text",
+                props: { text: `Switcher panel two ${token}`, format: "plain", align: "left" },
+                visibility: { visible: true },
+              },
+            ],
+          },
+        },
+        {
+          // TASK-534: the scroll-hint block is insertable (CSS-keyframe only,
+          // no runtime), so the parity loop asserts `data-page-block="scrollHint"`.
+          id: `parity-scroll-hint-${token}`,
+          type: "scrollHint",
+          props: { glyph: "chevron", label: `Scroll for more ${token}` },
+          visibility: { visible: true },
+        },
+        {
           id: `parity-collection-${token}`,
           type: "collection",
           props: { contentTypeId: "ct-private", queryId: "query-private", limit: 6 },

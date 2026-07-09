@@ -7,7 +7,7 @@
 **Priority:** Medium
 **Category:** Admin UI / Content (Pages)
 **Estimated Effort:** Medium
-**Status:** ⏳ To Do
+**Status:** ✅ Done
 
 ---
 
