@@ -38,11 +38,25 @@ normalizer in lockstep. NO schemaVersion bump, NO migration, NO dependency.
 - **`pageBlockStyleJsonSchema`** — `pageDocumentV2.ts:1424`
   (`additionalProperties:false` `:1426`; `column` numeric at `:1430`). Add
   `colSpan: numericSchema(...)`, `rowSpan: numericSchema(...)`.
-- **`partialSectionStyleJsonSchema`** — `pageDocumentV2.ts:1629`
-  (`additionalProperties:false` `:1631`) AND the full non-partial section-style
-  properties inside the document JSON schema (grep `radius: numericSchema(0, 64)`
-  paired with `shadow: { type: "string", enum: [...pageShadowTokens] }` to find BOTH
-  mirrors — add `columnTemplate: { type: "string" }` to BOTH).
+- **Section-style JSON schema — TWO strict `additionalProperties:false` mirrors that
+  BOTH gain `columnTemplate` in lockstep** (like 531's glow):
+  (a) **`partialSectionStyleJsonSchema`** — the standalone per-breakpoint
+  RESPONSIVE-OVERRIDE section style at `pageDocumentV2.ts:1629`
+  (`additionalProperties:false` `:1631`; `radius: numericSchema(0, 64)` `:1637`; last
+  field `fullBleed: booleanSchema` `:1651`), referenced once at `:1690`; and
+  (b) the **inlined TOP-LEVEL section-style schema at `:1827-1850`** — a SEPARATE
+  object inside `pageDocumentV2JsonSchema` validating `sections[].style`
+  (`additionalProperties:false` `:1830`; note it inlines `radius: { type: "number",
+  minimum: 0, maximum: 64 }` `:1836`, NOT `numericSchema(...)`; last field
+  `fullBleed: booleanSchema` `:1848`). To find BOTH, grep the anchor **`fullBleed:
+  booleanSchema`** (exactly two section-style hits — `:1651` partial, `:1848` inlined)
+  and append after each. (A `radius: numericSchema(0, 64)` grep is WRONG: it matches
+  the partial `:1637` and the unrelated `pageBlockStyleJsonSchema` `:1439`, but MISSES
+  the inlined mirror `:1836` which uses the expanded `{ type: "number", ... }` form —
+  the precedent `surfacePreset`/`composition`/`fullBleed` live in BOTH mirrors, so
+  `columnTemplate` must too, or a top-level `style.columnTemplate` fails
+  `additionalProperties:false` at `:1830`.) Add `columnTemplate: { type: "string" }`
+  to BOTH.
 - **`normalizeBlockStyle`** — `pageDocumentV2.ts:2661` (`column` normalize
   `:2677-2686`, `borderWidth` clamp via `readOptionalClampedNumber` `:2726-2733`).
   Add `colSpan`/`rowSpan` present-only clamps.
@@ -103,7 +117,8 @@ assertKnownKeys(input, [ /* …"fullBleed" */,
 colSpan: numericSchema(PAGE_BLOCK_SPAN_CLAMP.min, PAGE_BLOCK_SPAN_CLAMP.max),
 rowSpan: numericSchema(PAGE_BLOCK_SPAN_CLAMP.min, PAGE_BLOCK_SPAN_CLAMP.max),
 
-// (partialSectionStyleJsonSchema.properties AND the full section-style schema mirror)
+// (BOTH section-style mirrors — grep `fullBleed: booleanSchema`, two hits:
+//   partial :1651 + inlined top-level :1848 — append after each)
 columnTemplate: { type: "string" },   // value validated at normalize by the sanitizer
 
 // (normalizeBlockStyle — append present-only clamped ints)

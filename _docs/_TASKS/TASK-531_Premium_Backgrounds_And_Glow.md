@@ -151,6 +151,55 @@ Legacy / no-effect documents parse + render **byte-identical** to post-530.
   the SAME `toGradientBackground` helper, relaxing that helper's re-gate (above) makes
   multi-layer paint on BOTH targets once G-1 relaxes the write sanitizer.
 
+### G-2b — the SECOND render boundary: `pageResponsiveCss.ts` per-device @media emit (BLOCKING, security-critical, contract-audit 2026-07-09)
+
+- **There are TWO render boundaries, not one.** The SSR inline-style path
+  (`pageRendererV2.tsx` `toGradientBackground`/`toPageSectionStyle`, G-2 above) emits into
+  React `CSSProperties` objects — React ESCAPES those values into the `style` attribute. The
+  SECOND boundary is **`core/services/pages/pageResponsiveCss.ts`**, which emits per-device
+  `@media` declarations RAW into a `<style>` string (`renderRule :266-273` →
+  `` `${property}:${value} !important` `` joined and injected via
+  `dangerouslySetInnerHTML` by the renderer — **NOT React-escaped**). This module RE-GATES
+  gradients through its own alias **`isSafeCssGradient` (`:188`) = the single-layer
+  `isSafeAuthoringCssGradient`**. So even after G-1 relaxes the write sanitizer and G-2
+  relaxes `toGradientBackground`, a PER-DEVICE (tablet/mobile) multi-layer background
+  override is DROPPED here (single-layer re-gate → `unsafe_background_value` diagnostic),
+  and section per-device gradients cannot emit at all:
+  - **Block gradient override branch** (`:528-534`): `mergedStyle.backgroundType ===
+    "gradient" && mergedStyle.background` → `isSafeCssGradient(mergedStyle.background)` →
+    emits `background-image: <value>` RAW. Multi-layer fails the single-layer re-gate.
+  - **Section has NO gradient override branch** (`:372-395`): the section background
+    override handles only `backgroundType === "color"` (`:374-380`) and `"image"`
+    (`:381-391`); the `else` (`:392-395`) CLEARS to transparent/none — so a per-device
+    section `backgroundType:"gradient"` override paints nothing (mirroring the SSR gap G-2
+    fixes for the base, but never fixed here for the responsive delta).
+  - **DECISION (contract-audit 2026-07-09 — option (a), for fidelity):** 531 **relaxes the
+    block gradient override branch AND ADDS a section gradient override branch** in
+    `pageResponsiveCss.ts` so the RAW `<style>` path keeps the SAME allowlist + tripwire as
+    the write boundary. Both branches gate the emitted value on the NEW tripwire-bearing
+    validator: `isSafeCssGradient(v) || isSafeAuthoringCssBackgroundLayers(v)` (import
+    `isSafeAuthoringCssBackgroundLayers` from `pageAuthoringSanitizers`, exported by
+    531-01-L01 — the SAME per-layer allowlist + whole-value tripwire + `PAGE_BG_MAX_LAYERS`
+    cap the SSR helper uses, so the RAW-string boundary can never accept a multi-layer value
+    the write boundary would reject). The section branch emits `background-image: <value>`
+    (+ `background-color: transparent`) mirroring the block branch and the SSR section
+    branch G-2 adds. **Rejected the weaker option (b)** (declaring per-device multi-layer
+    OUT OF SCOPE) because acceptance-criterion #5 explicitly claims per-device overrides
+    "ride the existing responsive machinery" — dropping that would leave a fidelity hole vs
+    the prototype's responsive cards. **Security note (fail-closed):** because
+    `isSafeAuthoringCssBackgroundLayers` runs its whole-value tripwire FIRST and allowlists
+    each comma-split layer, the RAW un-escaped `<style>` emit is exactly as safe as the SSR
+    escaped emit — a `url()`/`@import`/`expression(`/`</style>`-charset value is rejected at
+    BOTH boundaries. The single-layer `color` (`:374`) / `image` (`:381`) branches are
+    UNCHANGED (single-layer fast path parity). **531 adds
+    `core/services/pages/pageResponsiveCss.ts` to the seam-file list and to 531-01-L02's
+    render ownership** (see the seam list and subtask table below). A code-comment MUST mark
+    the relaxed `:188` alias / `:528` block branch / new `:372` section branch as a
+    tripwire-bearing multi-layer accept, FORBIDDING a future naive re-bind of
+    `isSafeCssGradient` to the multi-layer validator WITHOUT the whole-value tripwire
+    pre-pass (the tripwire lives inside `isSafeAuthoringCssBackgroundLayers`; never widen the
+    single-layer alias directly).
+
 ### G-3 — no arbitrary colored box-shadow / glow (MISSING)
 
 - The only shadow surface is the `shadow` enum (`PageShadowToken = none|sm|md|lg`,
@@ -163,6 +212,45 @@ Legacy / no-effect documents parse + render **byte-identical** to post-530.
   never a raw author string (defence against CSS injection). When both `shadow` (enum)
   and `glow` are present, the render composes `"<enum-shadow>, <glow-shadow>"` (comma
   list = two stacked shadows), so glow AUGMENTS rather than replaces the token shadow.
+
+### G-3b — per-device GLOW is NOT composed by the responsive @media boundary (contract-audit 2026-07-09)
+
+- 531-01-L03 marks the five `glow.*` controls `responsive:true` (per-device authoring), and
+  acceptance-criterion #5 claims per-device glow "rides the existing responsive machinery".
+  But `pageResponsiveCss.ts` composes only the shadow ENUM per device — the responsive
+  box-shadow branches map `shadowCssValues[mergedStyle.shadow]` and **read no glow**:
+  - **Section** (`:401-403`): `if (styleOverride.shadow !== undefined) { value =
+    shadowCssValues[mergedStyle.shadow]; content.push({box-shadow, value}) }` — glow is not
+    read, so a per-device `style.glow` override emits nothing.
+  - **Block** (`:564-565`): same — `value = shadowCssValues[mergedStyle.shadow ?? ""]`, no
+    glow read/compose.
+  So a per-device glow authored through the responsive controls is silently dropped, and if
+  a device sets ONLY glow (no enum shadow) no box-shadow rule emits at all.
+- **DECISION (contract-audit 2026-07-09 — extend, for fidelity + control honesty):** 531
+  **extends both responsive box-shadow branches to COMPOSE a per-device glow** so the
+  `responsive:true` flag on the glow controls is honored. This requires the glow composer +
+  clamps to be available inside `pageResponsiveCss.ts`; because `composeGlowBoxShadow` lives
+  in `pageRendererV2.tsx` (which must stay Bun-free / import-side-effect-free per the module
+  header, and `pageResponsiveCss.ts` is a separate Vitest-lane module), 531-01-L02 **factors
+  the pure glow-compose + shadow-merge logic (`composeGlowBoxShadow` / `mergeShadows` /
+  `clampGlowNum` + the `PAGE_GLOW_*_CLAMP` reads) into a shared pure helper both modules
+  import** (either a small new pure module, or export the pure fns from a Bun-free home;
+  `pageDocumentV2.ts` already owns the clamps). Each responsive branch then emits, when the
+  device has `shadow` and/or `glow` overriding:
+  `box-shadow: mergeShadows(shadowCssValues[mergedStyle.shadow], composeGlowBoxShadow(mergedStyle.glow))`
+  gated so it fires when EITHER `styleOverride.shadow` OR `styleOverride.glow` is present
+  (a device-only glow with no enum shadow still emits). `glow.color` is re-run through
+  `sanitizeAuthoringCssColor` inside `composeGlowBoxShadow` (the RAW `<style>` boundary must
+  re-validate — the whole value is composed from the sanitized color + clamped numbers into
+  a fixed template, never a raw string), fail-soft to no glow on a bad color (mirroring the
+  `unsafe_color_value` diagnostic idiom). The `glow` group is added to the section + block
+  responsive-override CHANGE detectors (`hasOverride` `:745-751` / `hasBlockOverride`
+  `:702-709` already key on `style` object non-emptiness, so a `style.glow` override is
+  already detected — verify, do not double-count). **Rejected the fallback (desktop-only
+  glow)**: it would require dropping `responsive:true` from the five L03 glow controls and
+  correcting criterion #5, leaving a fidelity gap. 531-01-L02 owns the shared-helper
+  extraction + both responsive branches; 531-01-L04 owns the per-device-glow @media emit
+  test (a section/block with only a mobile `glow` override emits a mobile `box-shadow` rule).
 
 ## Schema-extension plan (JSON model — NO DDL, NO schemaVersion bump)
 
@@ -218,7 +306,7 @@ section render branch).
 
 | # | Subtask | Sole-writer file(s) / owned region | Leaves | Depends on |
 |---|---------|-----------------------------------|--------|------------|
-| 531-01 | Multi-layer sanitizer relax + glow model + section-gradient/glow render + controls (foundation) | `core/services/pages/pageAuthoringSanitizers.ts` **[multi-layer relax — 531 OWNS this file's multi-layer changes]**; `core/services/pages/pageDocumentV2.ts` **[TASK-531 region: `PageGlow` type + clamps, `glow?` on both style types, `pageBlockStyleKeys` + section `assertKnownKeys` additions, ALL THREE JSON schemas (block `:1424`, partial section `:1629`, inlined top-level section `:1827-1850`), `normalizeBlockStyle` + `normalizeSectionStyle` glow blocks]**; `core/services/pages/pageRendererV2.tsx` **[TASK-531 region: relax `toGradientBackground` re-check (`:345`) to accept multi-layer via `isSafeAuthoringCssBackgroundLayers`, section gradient branch in `toPageSectionStyle` + `toPageSectionBleedStyle`, `composeGlowBoxShadow` helper, glow merge into `toPageBlockVisualStyle` + `toPageSectionStyle`]**; `core/services/pages/pageEditorControlRegistry.ts` **[TASK-531 region: `section.style.glow.*` group in `pageUniversalSectionControls` + `block.style.glow.*` group in `pageUniversalBlockControls`]** | L01 sanitizer multi-layer relax, L02 glow model + section-gradient/glow render, L03 glow + gradient-type controls, L04 tests (sanitizer/model/render) | TASK-530 |
+| 531-01 | Multi-layer sanitizer relax + glow model + section-gradient/glow render + controls (foundation) | `core/services/pages/pageAuthoringSanitizers.ts` **[multi-layer relax — 531 OWNS this file's multi-layer changes; export `isSafeAuthoringCssBackgroundLayers` + tripwire]**; `core/services/pages/pageDocumentV2.ts` **[TASK-531 region: `PageGlow` type + clamps, `glow?` on both style types, `pageBlockStyleKeys` + section `assertKnownKeys` additions, ALL THREE JSON schemas (block `:1424`, partial section `:1629`, inlined top-level section `:1827-1850`), `normalizeBlockStyle` + `normalizeSectionStyle` glow blocks]**; `core/services/pages/pageRendererV2.tsx` **[TASK-531 region: relax `toGradientBackground` re-check (`:345`) to accept multi-layer via `isSafeAuthoringCssBackgroundLayers`, section gradient branch in `toPageSectionStyle` + `toPageSectionBleedStyle`, `composeGlowBoxShadow` helper (factored to a shared PURE home so `pageResponsiveCss.ts` can import it), glow merge into `toPageBlockVisualStyle` + `toPageSectionStyle`]**; `core/services/pages/pageResponsiveCss.ts` **[TASK-531 region: relax the block gradient override re-gate (`:528-534`) + ADD a section gradient override branch (`:372-395`) via `isSafeCssGradient(v) \|\| isSafeAuthoringCssBackgroundLayers(v)` (the RAW `<style>` boundary keeps the SAME tripwire+allowlist as the write boundary — G-2b); EXTEND the section (`:401-403`) + block (`:564-565`) responsive box-shadow branches to compose per-device glow (`mergeShadows` + `composeGlowBoxShadow`) — G-3b; code-comment forbidding a naive re-bind of `isSafeCssGradient` without the tripwire pre-pass]**; `core/services/pages/pageEditorControlRegistry.ts` **[TASK-531 region: `section.style.glow.*` group in `pageUniversalSectionControls` + `block.style.glow.*` group in `pageUniversalBlockControls`]**; `core/services/pages/pageEditorMutationActions.ts` **[TASK-531 region: route the nested `style.glow.color` (length-3) path through `sanitizeAuthoringCssColor` in `sanitizeStyleValue`/`sanitizePageEditorControlValue` — the `[group,key]` destructure (`:76`) otherwise leaves `glow.color` UNSANITIZED in optimistic client state (finding #4); mirror sibling 533-02's `border.*.color` handling]** | L01 sanitizer multi-layer relax, L02 glow model + section-gradient/glow render (+ shared pure glow-compose home) + `pageResponsiveCss.ts` multi-layer/glow relax + glow.color mutation-guard, L03 glow + gradient-type controls, L04 tests (sanitizer/model/render/responsive-css/mutation-guard) | TASK-530 |
 | 531-02 | Tests, docs, closure | test files (own) + `_docs/*.md` | — | 531-01 |
 
 **Land order (strictly sequential):** 531-01 (sanitizer + model + render + controls) →
@@ -236,13 +324,23 @@ section render branch).
 > confirmed 532 (`sanitizeAuthoringCssFontSize`) and 533 (`sanitizeAuthoringGridTemplate`)
 > only ADD independent new functions in their own labelled regions and never touch
 > `isSingleGradientLayer`/`isSafeAuthoringCssGradient`/`sanitizeAuthoringCssBackground`;
-> 534 does not touch the file. **Serialize note:** 531's section-gradient+glow emit and
-> 533-02's per-edge `border` emit BOTH append to `toPageSectionStyle`
-> (`pageRendererV2.tsx:405`); disjoint labelled regions → additive three-way merge, with
-> only a trivial adjacent-append resolution if 531+533 land into one integration branch
-> concurrently. Canonical region sigil confirmed **`// ── TASK-53x ──`** (531 & 534
-> already use it; 532/533 aligned in their parents). Append-anchor rule: append each new
-> entry on its OWN line inside the labelled region; never rewrite the closing
+> 534 does not touch the file. **531 is the SOLE owner of `pageResponsiveCss.ts`** — no
+> other bundle (532/533/534) edits that file (grep-confirmed 2026-07-09), so 531's
+> block-gradient-override relax + new section-gradient-override branch + per-device glow
+> compose land without a cross-bundle merge there. **NEW shared seam (contract-audit
+> 2026-07-09): `pageEditorMutationActions.ts` is shared between 531 (nested `style.glow.color`
+> route) and 533-02 (nested `style.border.*.color` route).** Both add DISJOINT branches to
+> the SAME `sanitizePageEditorControlValue` / `sanitizeStyleValue` in their own labelled
+> `TASK-53x` regions — 531 matches `key==="glow" && rest[0]==="color"` (length-3), 533-02
+> matches the `["style","border",side,"color"]` (length-4) path; distinct conditions, no
+> overlap. If 531+533 land into one integration branch concurrently, resolve by keeping BOTH
+> branches (additive) — neither rewrites the other's condition. **Serialize note:** 531's
+> section-gradient+glow emit and 533-02's per-edge `border` emit BOTH append to
+> `toPageSectionStyle` (`pageRendererV2.tsx:405`); disjoint labelled regions → additive
+> three-way merge, with only a trivial adjacent-append resolution if 531+533 land into one
+> integration branch concurrently. Canonical region sigil confirmed **`// ── TASK-53x ──`**
+> (531 & 534 already use it; 532/533 aligned in their parents). Append-anchor rule: append
+> each new entry on its OWN line inside the labelled region; never rewrite the closing
 > `] as const;` line, a function `return` line, or a schema object's closing brace.
 
 The four premium-fidelity bundles (531/532/533/534) share these seam files; each ADDS
@@ -282,6 +380,35 @@ additively. 531's owned seam regions:
   `pageUniversalBlockControls` (`:449`), plus (if not already an option) confirms
   `"gradient"` is offered by the existing `backgroundType` `select` controls (`:276`,
   `:489`) — `pageBackgroundTypes` already includes `"gradient"`, so no enum change.
+- **`pageResponsiveCss.ts` (the SECOND render boundary — contract-audit 2026-07-09):**
+  this module emits per-device `@media` declarations RAW into a `<style>` string
+  (`renderRule :266-273`, injected via `dangerouslySetInnerHTML`, **NOT React-escaped**) and
+  RE-GATES gradients through its own single-layer alias `isSafeCssGradient` (`:188`). 531
+  (a) relaxes the block gradient override branch (`:528-534`) and (b) ADDS a section
+  gradient override branch (`:372-395`), both gating on
+  `isSafeCssGradient(v) || isSafeAuthoringCssBackgroundLayers(v)` (import the 531-01-L01
+  export) so the RAW `<style>` path keeps the SAME per-layer allowlist + whole-value
+  tripwire + `PAGE_BG_MAX_LAYERS` cap as the write boundary — fail-closed and exactly as
+  safe as the SSR escaped emit (see G-2b + Security Contract §1); and (c) extends the section
+  (`:401-403`) + block (`:564-565`) responsive box-shadow branches to compose a per-device
+  glow via `mergeShadows`/`composeGlowBoxShadow` (imported from the shared pure home L02
+  factors out — this module is a Bun-free Vitest-lane module and must not import from the
+  render-side inline path) so the `responsive:true` glow controls actually emit (see G-3b).
+  A code-comment marks these as tripwire-bearing multi-layer accepts and FORBIDS a future
+  naive re-bind of `isSafeCssGradient` to the multi-layer validator without the tripwire
+  pre-pass. All 531 edits are wrapped in a `// ── TASK-531 …` region.
+- **`pageEditorMutationActions.ts` (client optimistic write-guard — finding #4):** the
+  editor value sanitizer `sanitizePageEditorControlValue` (`:72-80`) destructures
+  `const [group, key] = control.overridePath` (`:76`) and routes `group==="style"` to
+  `sanitizeStyleValue(key, value)` (`:63-70`). For a nested glow color control the
+  `overridePath` is the length-3 `["style","glow","color"]`, so `group="style"` but
+  `key="glow"` (NOT `"color"`); `sanitizeStyleValue` matches none of its cases and returns
+  the value UNSANITIZED into the editor's optimistic client state. 531 adds a TASK-531 region
+  routing the nested `style.glow.color` path (and any nested glow numeric) through
+  `sanitizeAuthoringCssColor` / numeric handling, mirroring how sibling 533-02 OWNS the
+  equivalent `border.*.color` (length-4) seam. The persisted write boundary is unaffected
+  (`normalizeGlow` re-sanitizes at persist), but this closes the client-layer gap so a bad
+  glow color never reaches the optimistic preview un-validated.
 - **`pageCompositionEffects.tsx`:** 531 does NOT need composition CSS — glow composes to
   an inline `box-shadow` (no class/selector), and multi-layer gradients paint via the
   existing inline `background-image`. Listed as a shared seam only because 533/534 use
@@ -337,6 +464,39 @@ write (normalize) boundary and the render boundary (defence in depth).
      linear-gradient(145deg,#0f1720,#1b2733)` (reference `.cta-card`) is ACCEPTED;
      `linear-gradient(#fff,#000), url(//evil/beacon)` is REJECTED to `null` (fallback), so
      no external fetch / injection reaches CSS.
+   - **ALL consumers widened by the relaxation (finding #5 — enumerate exhaustively).**
+     Relaxing `sanitizeAuthoringCssBackground` widens EVERY caller of that function, at BOTH
+     the write and render boundaries. The complete grounded list (verified 2026-07-09):
+     1. **Section/block `style.background` write** — `normalizeSectionStyle` /
+        `normalizeBlockStyle` (the primary 531 surface). SAFE: fail-closed allowlist as above.
+     2. **Section/block `style.background` SSR render** — `toGradientBackground`
+        (`pageRendererV2.tsx:345/347`), which 531-01-L02 ALSO relaxes (G-2) to actually
+        paint multi-layer. SAFE: emits into a React `CSSProperties` object → React-escaped;
+        AND the value already passed the fail-closed write allowlist.
+     3. **Section/block per-device `style.background` @media render** — `pageResponsiveCss.ts`
+        (the SECOND render boundary, G-2b). This is the ONE consumer that emits RAW into a
+        `<style>` string via `dangerouslySetInnerHTML` (NOT React-escaped), so it re-gates
+        through the SAME tripwire-bearing `isSafeAuthoringCssBackgroundLayers` allowlist —
+        a multi-layer value it accepts is exactly what the write boundary would accept, and
+        `url()`/`@import`/`expression(`/`</style>`-charset never pass either boundary. SAFE.
+     4. **`settings.background` page-canvas write** — `normalizeSettings`
+        (`pageDocumentV2.ts:2434-2437`, TASK-523-01 per-page canvas background). This is the
+        THIRD independently-widened consumer. Post-relaxation a multi-layer canvas background
+        is now ACCEPTED (previously single-layer only). SAFE: same fail-closed allowlist.
+     5. **`settings.background` page-canvas SSR render** — `pageRendererV2.tsx:3033-3034`
+        re-sanitizes `resolved.settings.background` and feeds it into the `rootStyle`
+        `CSSProperties` object (`:3038-3044`). SAFE: React-escaped into the `style` attribute
+        (defence-in-depth re-sanitize matching every other color/background in the renderer);
+        the RAW `<style>` @media path (consumer #3) does NOT emit a per-device canvas
+        background (settings has no responsive machinery), so this consumer is escaped-only.
+     6. **Editor optimistic client write-guard** — `pageEditorMutationActions.ts:67`
+        (`sanitizeStyleValue`, `key === "background"` → `sanitizeAuthoringCssBackground`).
+        SAFE: same fail-closed allowlist; runs BEFORE the value hits optimistic client state
+        AND is re-validated at the persist boundary (consumers #1/#4). (Note: this guard is
+        ALSO the finding-#4 seam for the SEPARATE nested `glow.color` path — see §5.)
+     Every widened consumer re-uses the SAME allowlist (write) or is React-escaped (render),
+     except the one RAW `<style>` boundary (#3) which is gated by the identical
+     tripwire+allowlist. No consumer accepts a value the write boundary would reject.
 2. **`glow.color` (whitelist, no CSS injection).** `glow.color` runs through the existing
    `sanitizeAuthoringCssColor` (`pageAuthoringSanitizers.ts:93`) at write (hex/hex8/
    `rgb[a]()`/`hsl[a]()`/`var(--color-*)`/named; else the whole glow is OMITTED — a glow
@@ -357,6 +517,36 @@ write (normalize) boundary and the render boundary (defence in depth).
    test — a forgotten allowlist entry silently degrades every stored doc carrying `glow`
    to empty on read. No new key ships without its round-trip assertion. The relaxed
    multi-layer path ships an explicit accept/reject corpus (531-01-L04).
+5. **Nested `glow.color` CLIENT mutation sanitizer (finding #4 — client-layer gap).** The
+   editor optimistic write-guard `sanitizePageEditorControlValue`
+   (`pageEditorMutationActions.ts:72-80`) destructures `const [group, key] =
+   control.overridePath` (`:76`) and routes only `group==="style"` → `sanitizeStyleValue(key,
+   value)`. For the glow color control the `overridePath` is the length-3
+   `["style","glow","color"]`, so `group="style"` but `key="glow"` (NOT `"color"`);
+   `sanitizeStyleValue` (`:63-70`) matches none of its cases (`textColor`/`borderColor`/
+   `accent`/`background`/`backgroundImage`) and returns the value UNSANITIZED into the
+   editor's optimistic client state. Sibling **533-02 explicitly OWNS this seam for
+   `border.*.color`** (its length-4 nested path); 531 adds the EQUIVALENT handling for the
+   length-3 `glow.color` (and any nested glow numeric): a TASK-531 region in
+   `pageEditorMutationActions.ts` detects the nested glow color path and routes it through
+   `sanitizeAuthoringCssColor` (numeric glow fields clamp), so a hostile glow color never
+   reaches the optimistic preview un-validated. This is DEFENCE-IN-DEPTH only — the persist
+   boundary (`normalizeGlow`, §2/§3) already re-sanitizes `glow.color` and clamps the numbers,
+   so a stored document is safe regardless; this closes the transient client-state gap and
+   keeps parity with 533-02's border handling. 531-01-L04 asserts
+   `sanitizePageEditorControlValue` drops a bad glow color for a `style.glow.color` control
+   and that the nested length-3 color path now reaches `sanitizeAuthoringCssColor`.
+6. **RAW `<style>` per-device boundary parity (finding #1 — the SECOND render boundary).**
+   `pageResponsiveCss.ts` emits per-device declarations RAW (unescaped) into a `<style>`
+   string; 531's relaxed block gradient override branch + NEW section gradient override
+   branch there gate on the SAME tripwire-bearing `isSafeAuthoringCssBackgroundLayers`
+   allowlist as the write boundary (see §1 consumer #3 + G-2b). A code-comment at the
+   relaxed `isSafeCssGradient` alias (`:188`) / block branch (`:528`) / new section branch
+   (`:372`) FORBIDS a future naive re-bind of the single-layer alias to the multi-layer
+   validator WITHOUT the whole-value tripwire pre-pass. The per-device glow compose (G-3b)
+   likewise composes from the re-sanitized `glow.color` + clamped numbers into a fixed
+   `box-shadow` template — never a raw string — so the RAW `<style>` glow emit is as safe as
+   the SSR emit.
 
 ## Hard Invariants
 
@@ -382,6 +572,21 @@ write (normalize) boundary and the render boundary (defence in depth).
    reject-to-null for a bad background), unknown nested KEYS reject (`PageDocumentError`).
 7. **All 531 model/schema/control additions live in a clearly-labelled `// ── TASK-531`
    region** in each shared seam file so 532/533/534 worktrees merge additively.
+8. **BOTH render boundaries enforce the SAME allowlist** — the SSR inline-style path
+   (React-escaped `CSSProperties`) AND the `pageResponsiveCss.ts` per-device RAW `<style>`
+   path (`dangerouslySetInnerHTML`) gate multi-layer through
+   `isSafeAuthoringCssBackgroundLayers` (per-layer allowlist + whole-value tripwire + cap);
+   neither boundary accepts a value the write boundary would reject; a code-comment forbids
+   re-binding `isSafeCssGradient` to the multi-layer validator without the tripwire pre-pass.
+9. **Per-device glow + multi-layer ride the responsive machinery** — the responsive section
+   (`:401-403`) + block (`:564-565`) box-shadow branches compose a per-device glow (a
+   device-only glow with no enum shadow still emits a `box-shadow` rule); the block gradient
+   override + new section gradient override emit multi-layer per device. The five glow
+   controls keep `responsive:true` and it is honored end-to-end (not silently dropped).
+10. **Nested `glow.color` is sanitized at the client mutation guard** — the editor
+    optimistic write-guard routes the length-3 `style.glow.color` path through
+    `sanitizeAuthoringCssColor` (parity with sibling 533-02's `border.*.color`), not left
+    UNSANITIZED by the `[group,key]` destructure.
 
 ## Acceptance Criteria (measured LIVE vs the prototype — ≥5 real-flow scenarios per area)
 
@@ -410,14 +615,26 @@ hero `sun-ring`, `art-*`).
    (like the reference glow); a section with `glow` paints on the section box; a block
    with BOTH `shadow:"md"` AND `glow` shows a TWO-shadow computed `box-shadow` (enum +
    glow); reset glow → byte-identical.
-5. **Override/reset + cross-device.** Glow + multi-layer authored at desktop persist and
-   round-trip; toggling glow off / clearing the multi-layer value returns to byte
-   identity; per-device background/glow overrides ride the existing responsive machinery.
-6. **Security negatives.** `background:"linear-gradient(#fff,#000), url(//evil/beacon)"` →
-   `sanitizeAuthoringCssBackground` returns `null` (no external ref reaches CSS);
-   `background` with 7+ top-level layers → rejected (over cap); `glow.color:"expression(alert(1))"`
-   → glow OMITTED (fail-soft); `glow.blur:9999` → clamps to 120; an unknown key
-   `style.glow.wobble` → `PageDocumentError` (fail-closed); `style.foo` → rejected.
+5. **Override/reset + cross-device (BOTH render boundaries).** Glow + multi-layer authored
+   at desktop persist and round-trip; toggling glow off / clearing the multi-layer value
+   returns to byte identity. Per-device overrides ride the responsive `@media` machinery
+   (`pageResponsiveCss.ts`, the RAW `<style>` boundary): a TABLET/MOBILE multi-layer
+   background override paints BOTH layers at that breakpoint (computed `background-image`
+   two layers inside the media query on section AND block); a MOBILE-ONLY `glow` override
+   (no enum shadow) emits a mobile `box-shadow` rule; a per-device SECTION
+   `backgroundType:"gradient"` override paints (the new section responsive gradient branch).
+   Verify at desktop/tablet/mobile viewport widths on the front after publish.
+6. **Security negatives (BOTH boundaries).** `background:"linear-gradient(#fff,#000),
+   url(//evil/beacon)"` → `sanitizeAuthoringCssBackground` returns `null` (no external ref
+   reaches CSS) AND the per-device `pageResponsiveCss.ts` branch drops it
+   (`unsafe_background_value` diagnostic — no RAW `<style>` emit, network panel clean at the
+   tablet/mobile viewport); `background` with 7+ top-level layers → rejected (over cap) at
+   BOTH boundaries; a per-device override `background:"linear-gradient(#fff,#000),
+   @import url(evil)"` → tripwire-rejected in the RAW `<style>` path (no `@import` reaches
+   the injected stylesheet); `glow.color:"expression(alert(1))"` → glow OMITTED (fail-soft)
+   at write AND the client mutation guard drops it (finding #4); `glow.blur:9999` → clamps
+   to 120 (write AND per-device compose); an unknown key `style.glow.wobble` →
+   `PageDocumentError` (fail-closed); `style.foo` → rejected.
 7. **No-effect byte-identity.** A page with none of the new fields authored (and no
    multi-layer background) produces a normalized document and rendered HTML
    byte-identical to the post-530 output.
@@ -430,11 +647,19 @@ already-wired block gradient, and arbitrary colored glow box-shadow persists + r
 block AND section; the relaxed multi-layer sanitizer is an allowlist per comma-split layer
 (fail-closed) that still rejects `url()`/`javascript:`/`expression`/`data:text/html`/`@import`
 and caps layer count; glow is a structured spec composed at render (never a raw string);
-every new key joins its reject-unknown allowlist + JSON schema + round-trip test and
+**BOTH render boundaries enforce it** — the SSR inline-style path (React-escaped) AND the
+`pageResponsiveCss.ts` per-device RAW `<style>` path (relaxed block gradient override + NEW
+section gradient override, both gated on `isSafeAuthoringCssBackgroundLayers`, plus the
+per-device glow compose in the responsive box-shadow branches so `responsive:true` glow is
+honored); the nested `style.glow.color` client mutation guard routes through
+`sanitizeAuthoringCssColor` (parity with 533-02's `border.*.color`); every new key joins
+its reject-unknown allowlist + JSON schema + round-trip test and
 fail-soft on bad values; no npm dependency, no migration, no schemaVersion bump, no route,
 no new block type; all 531 additions live in a labelled `TASK-531` region in each shared
-seam; legacy / no-effect docs byte-identical; Security Contract satisfied (multi-layer
-allowlist + color whitelist + clamps at write and render); every gate green (root `tsc -p
+seam (including `pageResponsiveCss.ts` + `pageEditorMutationActions.ts`); legacy /
+no-effect docs byte-identical; Security Contract satisfied (multi-layer allowlist + color
+whitelist + clamps at write and BOTH render boundaries + the client mutation guard, all
+widened `sanitizeAuthoringCssBackground` consumers enumerated + verified safe); every gate green (root `tsc -p
 tsconfig.json --noEmit`, `bun --cwd core lint:types`, `bun --cwd core lint`, vitest, `bun
 test`, `gates:coderso`); ≥5-scenario-per-area Playwright smoke passes light + dark with 0
 console errors measured side-by-side vs the prototype; closure documented under the

@@ -356,10 +356,17 @@ text-block textColor (plain + rich) persist, round-trip, reject unknown keys, an
 fail-soft on bad values; `fontSizeCustom` is grammar-validated (never arbitrary CSS)
 and wins over the discrete token; colors ride the whitelist; no npm dep, no migration,
 no schemaVersion bump, no route; every shared-file edit is inside a labelled `TASK-532`
-region; post-530 / no-effect docs byte-identical; the ONE owned hardcoded-literal
-assertion (`page-editor-control-ui-model.test.ts:139-143`) is re-baselined to the 6-member
-weight list (registry `:669` compares by-reference and `page-document-v2.test.ts` has no
-weight pin, so neither re-baselines; no behavior weakening); every gate green (root
+region; post-530 / no-effect docs byte-identical; the TWO owned re-baselining assertions
+(see the corrected 'Owned breaking tests' section) are updated together and NEITHER
+weakens a behavior assertion: (a) the hardcoded 4-member literal in
+`page-editor-control-ui-model.test.ts:139-143` is re-baselined to the 6-member weight list
+`["normal","medium","semibold","bold","extrabold","black"]`, and (b) the literal-token
+invalid-fixture in `page-document-v2.test.ts:785-789` (line `:787`) is re-baselined from
+`fontWeight: "black"` — which the grown 6-member enum now ACCEPTS, flipping
+`validate()` to `true` and its `.toBe(false)` RED — to a token that stays OUTSIDE the
+6-member enum (e.g. `fontWeight: "ultrablack"`), preserving the reject-unknown-token
+intent; `page-editor-control-registry.test.ts:669` compares `options` by REFERENCE
+against the imported `pageTypographyFontWeights`, so it does NOT re-baseline; every gate green (root
 `tsc -p tsconfig.json --noEmit`, `bun --cwd core lint:types`, `bun --cwd core lint`,
 Vitest, `bun test`, `gates:coderso`); ≥5-scenario Playwright smoke passes light + dark
 with 0 console errors side-by-side vs the prototype; closure documented under the

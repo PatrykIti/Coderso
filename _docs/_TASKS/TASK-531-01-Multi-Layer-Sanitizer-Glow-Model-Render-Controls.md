@@ -22,17 +22,27 @@ order, the three grounded capabilities:
   multi-layer changes.**
 - **L02** — `PageGlow` model + clamps + `glow?` on `PageBlockStyleV2` AND
   `PageSectionStyleV2` (allowlist + JSON schema + normalize), plus the SECTION gradient
-  render branch (block gradient is already wired — grounding correction) and the
-  `composeGlowBoxShadow` render helper merged into block + section box-shadow.
+  render branch (block gradient is already wired — grounding correction), the
+  `composeGlowBoxShadow` render helper merged into block + section box-shadow, AND the SECOND
+  render boundary `pageResponsiveCss.ts` (per-device `@media`, contract-audit 2026-07-09):
+  relax the block gradient override + ADD a section gradient override (both gating on the
+  tripwire-bearing `isSafeAuthoringCssBackgroundLayers`) + extend the section/block
+  responsive box-shadow branches to compose per-device glow (shared pure glow-compose home).
 - **L03** — `glow.*` controls (color + numeric) on the universal section AND block control
-  groups; confirm `backgroundType:"gradient"` is offered for both targets.
+  groups; confirm `backgroundType:"gradient"` is offered for both targets; AND close the
+  nested `style.glow.color` client mutation-guard gap in `pageEditorMutationActions.ts`
+  (finding #4, mirroring sibling 533-02's `border.*.color`).
 - **L04** — Vitest for sanitizer (accept/reject corpus), model (round-trip / reject-unknown /
-  fail-soft), and render (section gradient, block+section glow, byte-identity).
+  fail-soft), render (section gradient, block+section glow, byte-identity), the SECOND
+  render boundary `page-responsive-css.test.ts` (per-device gradient/glow + RAW-boundary
+  security rejects), and the client mutation-guard (`glow.color` sanitized).
 
 Single-writer file ownership (this subtask owns ALL of these; 531-02 owns tests + docs
 only): `pageAuthoringSanitizers.ts`, the `TASK-531` region of `pageDocumentV2.ts`, the
-`TASK-531` region of `pageRendererV2.tsx`, the `TASK-531` region of
-`pageEditorControlRegistry.ts`.
+`TASK-531` region of `pageRendererV2.tsx`, the `TASK-531` region of `pageResponsiveCss.ts`
+(the SECOND render boundary), the `TASK-531` region of `pageEditorControlRegistry.ts`, the
+`TASK-531` region of `pageEditorMutationActions.ts`, and the Bun-free shared pure
+glow-compose home L02 factors out.
 
 ## Grounded anchors (verified 2026-07-09; RE-GREP at implement time)
 
@@ -51,6 +61,16 @@ only): `pageAuthoringSanitizers.ts`, the `TASK-531` region of `pageDocumentV2.ts
   `toPageSectionStyle :405` (color branch `:409`, image branch `:413`, boxShadow `:420`,
   non-bleed return boxShadow `:446`), `toPageSectionBleedStyle :464`,
   `toPageBlockVisualStyle :714` (block gradient ALREADY wired `:738`, boxShadow `:746`).
+- `pageResponsiveCss.ts` (the SECOND render boundary): `isSafeCssGradient :188` (single-layer
+  alias), `renderRule :266-273` (RAW `` `${property}:${value} !important` ``, injected
+  un-escaped via `dangerouslySetInnerHTML`), `shadowCssValues :196`, section background
+  override `:367-396` (NO gradient branch — clears in the `else` `:392-395`), section
+  responsive box-shadow `:401-403`, block gradient override `:528-534` (single-layer re-gate),
+  block responsive box-shadow `:564-565`, `hasOverride :745-751`, `hasBlockOverride :702-709`,
+  import block `:54-59`. Module is Bun-free / import-side-effect-free (Vitest lane).
+- `pageEditorMutationActions.ts` (client optimistic write-guard): `sanitizePageEditorControlValue
+  :72-80` (`const [group, key] = control.overridePath` `:76`), `sanitizeStyleValue :63-70`,
+  `sanitizeAuthoringCssColor` already imported `:10`.
 - `pageEditorControlRegistry.ts`: input union `:67-75` (`text|number|select|segmented|
   switch|color|swatch|media|…`), `control()` helper `:165`,
   `pageUniversalSectionControls :225`, `section.style.backgroundType` `:276`,

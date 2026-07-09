@@ -142,11 +142,17 @@ reject-unknown, both fail-soft-clamped.
 - **`PageSectionStyleV2`** (`pageDocumentV2.ts:534-571`) — no border member.
   **Section-style allowlist** = the INLINE `assertKnownKeys([...])` literal inside
   `normalizeSectionStyle` (`pageDocumentV2.ts:2495-2514` — there is NO named
-  `sectionStyleKeys` const). **Section-style JSON schema** =
-  `partialSectionStyleJsonSchema` (`pageDocumentV2.ts:1629`,
-  `additionalProperties:false` at `:1631`) AND the full non-partial section-style
-  properties inside the document JSON schema (grep `radius: numericSchema(0, 64)` /
-  `shadow: { type: "string", enum: [...pageShadowTokens] }` to find both mirrors).
+  `sectionStyleKeys` const). **Section-style JSON schema = TWO strict
+  `additionalProperties:false` mirrors** (like 531's glow) — (a)
+  `partialSectionStyleJsonSchema`, the standalone RESPONSIVE-OVERRIDE section style at
+  `pageDocumentV2.ts:1629` (`additionalProperties:false` `:1631`; last field
+  `fullBleed: booleanSchema` `:1651`); and (b) the inlined TOP-LEVEL section-style
+  schema at `:1827-1850` inside `pageDocumentV2JsonSchema` validating `sections[].style`
+  (`additionalProperties:false` `:1830`; last field `fullBleed: booleanSchema` `:1848`).
+  Grep the anchor `fullBleed: booleanSchema` (exactly two section-style hits: `:1651`
+  partial, `:1848` inlined) to find BOTH — a `radius: numericSchema(0, 64)` grep is
+  WRONG (matches the partial `:1637` + the unrelated block schema `:1439`, MISSES the
+  inlined mirror `:1836` which uses the expanded `{ type: "number", ... }` form).
   **Section-style normalizer** = `normalizeSectionStyle` (`pageDocumentV2.ts:2488`).
   **`toPageSectionStyle`** (`pageRendererV2.tsx:405`) is the emit seam.
 - The BLOCK border precedent is UNIFORM (single edge set): `borderColor` /
@@ -193,8 +199,11 @@ via the section-template picker — surface it if it is not already offered).
 - **`PageSectionStyleV2`** (`pageDocumentV2.ts:534-571`) — add `columnTemplate?:
   string` (533-01) + `border?: PageSectionBorderV2` (533-02) adjacent, in a labelled
   `TASK-533` block. **Section-style allowlist** (inline `assertKnownKeys` array
-  `:2495-2514`) — add `"columnTemplate"`, `"border"`. **`partialSectionStyleJsonSchema`**
-  (`:1629`) + the full section-style schema mirror — add both properties. **`normalizeSectionStyle`**
+  `:2495-2514`) — add `"columnTemplate"`, `"border"`. **BOTH section-style JSON
+  schema mirrors** — `partialSectionStyleJsonSchema` (`:1629`, append after `fullBleed`
+  `:1651`) AND the inlined top-level section-style schema (`:1827-1850`, append after
+  `fullBleed` `:1848`); grep `fullBleed: booleanSchema` (two section hits) to land both
+  — add both properties to each. **`normalizeSectionStyle`**
   (`:2488`) — normalize both present-only.
 - **`PageBlockStyleV2`** (`pageDocumentV2.ts:596-672`) — add `colSpan?: number` /
   `rowSpan?: number` (533-01) adjacent to `column` (`:611`), in a labelled

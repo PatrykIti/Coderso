@@ -37,10 +37,15 @@ closure content but does not race the orchestrator on those two files.
 2. Card block with two-layer `art-*`-style fill → two computed layers.
 3. Full-bleed section with multi-layer gradient bleeds edge-to-edge (two layers on the
    bleed box).
-4. Multi-layer + per-device override → tablet/mobile background overrides ride the
-   responsive machinery.
-5. Security negative: pasting `linear-gradient(#fff,#000), url(//evil/beacon)` → NO paint,
-   NO external fetch (network panel clean), value not stored.
+4. Multi-layer + per-device override → tablet/mobile multi-layer background overrides paint
+   BOTH layers at that breakpoint (the `pageResponsiveCss.ts` RAW `<style>` @media boundary —
+   verify at tablet/mobile viewport widths on the front, computed `background-image` two
+   layers inside the media query); a per-device SECTION `backgroundType:"gradient"` override
+   paints (the new section responsive gradient branch).
+5. Security negative (BOTH boundaries): pasting `linear-gradient(#fff,#000), url(//evil/beacon)`
+   → NO paint at desktop OR tablet/mobile, NO external fetch (network panel clean at every
+   viewport), value not stored; a per-device `@import`/over-cap override likewise emits no
+   RAW `<style>` rule.
 
 **Gradient block/section parity:**
 1. Block `backgroundType:"gradient"` paints (already wired — regression).
@@ -54,16 +59,21 @@ closure content but does not race the orchestrator on those two files.
    `box-shadow: 0px 18px 45px 0px rgba(142,232,255,.22)`.
 2. Section glow paints on the section box.
 3. Block with BOTH `shadow:"md"` AND `glow` → TWO-shadow computed `box-shadow`.
-4. Glow offset/spread edit → visible change; reset → byte identity.
-5. Security negative: `glow.color:"expression(alert(1))"` → glow omitted (no box-shadow),
-   `glow.blur:9999` clamps to 120.
+4. Per-device glow: a MOBILE-ONLY glow override (no enum shadow) → a mobile `box-shadow` at
+   the mobile viewport (the `pageResponsiveCss.ts` responsive box-shadow branch composes it);
+   reset → byte identity.
+5. Security negative: `glow.color:"expression(alert(1))"` → glow omitted (no box-shadow) at
+   write AND the editor client mutation guard drops it (finding #4); `glow.blur:9999` clamps
+   to 120.
 
 ## Gates (all must be green before closure)
 
 - root `tsc -p tsconfig.json --noEmit` (catches test excess-prop errors outside `core/`),
   `bun --cwd core lint:types`, `bun --cwd core lint`,
 - targeted Vitest globs (`tests/vitest/pages/page-authoring-sanitizers.test.ts`,
-  `page-renderer-v2.test.tsx`, the model round-trip + control-registry suites),
+  `page-renderer-v2.test.tsx`, `page-responsive-css.test.ts` (the SECOND render boundary),
+  `page-editor-control-registry.test.ts` (glow controls + the `glow.color` client-guard
+  assertion), the model round-trip suites),
 - `bun test`, `gates:coderso`, and the Playwright smoke above.
 
 ## Security note

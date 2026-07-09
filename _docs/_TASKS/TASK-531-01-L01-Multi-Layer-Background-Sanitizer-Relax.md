@@ -44,6 +44,18 @@ existing single-layer document changes behavior.
   re-check to `isSafeAuthoringCssGradient(safe) || isSafeAuthoringCssBackgroundLayers(safe)`.
   Relaxing the sanitizer here + relaxing `toGradientBackground` in L02 together fix BOTH
   targets.
+- **The exported `isSafeAuthoringCssBackgroundLayers` has TWO render consumers, not one
+  (contract-audit 2026-07-09).** Besides `toGradientBackground` (the SSR inline-style path,
+  React-escaped), 531-01-L02 ALSO imports it into `pageResponsiveCss.ts` — the SECOND render
+  boundary, which emits per-device declarations RAW into a `<style>` string
+  (`dangerouslySetInnerHTML`, NOT escaped) and re-gates gradients through its own single-layer
+  alias `isSafeCssGradient` (`:188`). Because that boundary is UN-escaped, the whole-value
+  tripwire baked into `isSafeAuthoringCssBackgroundLayers` (the `multiLayerTripwire` pre-pass)
+  is load-bearing there — it MUST run BEFORE the per-layer allowlist so a hostile value can
+  never reach the raw `<style>`. This is why the tripwire lives INSIDE the exported validator
+  (not only in `sanitizeAuthoringCssBackground`): both render boundaries reuse the exported
+  fn and inherit the tripwire for free. Keep the tripwire inside the exported validator; do
+  NOT let a consumer re-implement or bypass it.
 
 ## Implementation pseudocode
 

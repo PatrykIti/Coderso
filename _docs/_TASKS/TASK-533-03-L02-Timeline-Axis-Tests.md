@@ -23,12 +23,24 @@ axis-less timeline assertion. Render-only ⇒ **Vitest** (Bun-free).
 - **`tests/vitest/pages/page-renderer-v2.test.tsx`** — grep `timeline` /
   `data-page-timeline` for existing timeline coverage BEFORE writing (to find any
   shape/count assertion the added axis node changes).
-- Render helper: the file's `renderSection` / `render(...)` + `container.querySelector`
-  pattern (grep in-file).
+- **Illustrative-helper note:** the `renderSection(...)` / `makeTimelineSection(...)` /
+  `container.querySelector(...)` calls in the "Test cases" pseudocode below are
+  SHORTHAND — this file has NO such helpers. Map them to the file's REAL helpers at
+  implement time: construct via `createPageSectionV2("timeline", {...})` +
+  `createPageBlockV2(...)` (imported top-of-file); render via
+  `renderToStaticMarkup(<PageSectionRender section={...} />)` (or `PageSectionContent`)
+  from `react-dom/server`, then assert on the returned markup string with
+  `.toContain(...)` (this file asserts against static markup / `toPageSectionRenderProps`
+  props, NOT a live DOM — there is no `container`/`querySelector`). Grep the in-file
+  `renderToStaticMarkup` + `createPageSectionV2` usages to copy the exact pattern.
 
 ## Test cases
 
 ```ts
+// NOTE: renderSection/makeTimelineSection/container.querySelector below are SHORTHAND —
+// see the illustrative-helper note above. Real: createPageSectionV2/createPageBlockV2 +
+// renderToStaticMarkup(<PageSectionRender .../>) then assert on the markup string.
+
 // (1) axis present + tinted + dots retained (vertical variant)
 it("native timeline renders a vertical axis connecting the dots", () => {
   const { container } = renderSection(makeTimelineSection({ variant: "vertical", blocks: 3 }));

@@ -25,6 +25,23 @@ fields use `input:"number"` with `clamp` — both already in the input union
 (`pageEditorControlRegistry.ts:67-75`). NO `pageEditorControlUiModel.ts` change, NO
 `editorControls/*` component change.
 
+**Also close the editor-side value-sanitizer gap for the nested (length-3) glow color path
+(in a labelled `TASK-531` region of `core/services/pages/pageEditorMutationActions.ts`) —
+finding #4, mirroring sibling 533-02's `border.*.color` handling.**
+`sanitizePageEditorControlValue` (`:72-80`) destructures `const [group, key] =
+control.overridePath` (`:76`) and routes `group==="style"` to `sanitizeStyleValue(key,
+value)` (`:63-70`). For the glow color control the `overridePath` is the length-3
+`["style","glow","color"]`, so `group="style"` but `key="glow"` (NOT `"color"`) —
+`sanitizeStyleValue` only color-sanitizes when `key` is exactly
+`"textColor"|"borderColor"|"accent"`, so the glow color falls through `return value`
+UNSANITIZED into the editor's optimistic client state. This is NOT a persistence/SSR hole
+(the write boundary re-normalizes via `normalizeGlow` → `readOptionalSafeColor`, and
+531-01-L02's `composeGlowBoxShadow` re-guards at render via `sanitizeAuthoringCssColor`), but
+the live editor PREVIEW could momentarily hold an unsanitized string. This leaf routes the
+nested `style.glow.color` path (and any nested glow numeric) through `sanitizeAuthoringCssColor`
+/ numeric handling (see §Security note), exactly as 533-02 OWNS the equivalent
+`border.*.color` (length-4) seam.
+
 ## Grounded anchors (verified 2026-07-09)
 
 - `pageEditorControlRegistry.ts`: `control()` helper `:165`,
@@ -38,6 +55,12 @@ fields use `input:"number"` with `clamp` — both already in the input union
 - Clamp constants owned by 531-01-L02: `PAGE_GLOW_BLUR_CLAMP` (0..120),
   `PAGE_GLOW_SPREAD_CLAMP` (-40..80), `PAGE_GLOW_OFFSET_CLAMP` (-80..80) — imported
   read-only from `pageDocumentV2.ts` (append-only import sub-region).
+- **Editor value sanitizer (finding #4)** — `pageEditorMutationActions.ts`:
+  `sanitizePageEditorControlValue` (`:72-80`), `sanitizeStyleValue` (`:63-70`), the
+  `const [group, key] = control.overridePath` destructure (`:76`). `sanitizeAuthoringCssColor`
+  is ALREADY imported (`:10`). Extend to route the nested `style.glow.color` path through
+  `sanitizeAuthoringCssColor` (and clamp the nested glow numerics), mirroring the sibling
+  533-02-L03 border handling.
 
 ## Implementation pseudocode
 
@@ -61,6 +84,30 @@ control({ id: "section.style.glow.y", panel: "style", target: "section",
 
 // ── TASK-531 REGION — block glow group, appended to pageUniversalBlockControls ──
 // (same five descriptors with id "block.style.glow.*", target: "block")
+```
+
+```ts
+// ── TASK-531 REGION (pageEditorMutationActions.ts) — nested glow.color/numeric guard ──
+// sanitizeStyleValue (:63-70) sees key="glow" (NOT "color") for the length-3 path
+// ["style","glow","color"], so it must inspect the FULL overridePath, not just [group,key].
+// Route via sanitizePageEditorControlValue (:72-80) which HAS the whole control.overridePath:
+export const sanitizePageEditorControlValue = (
+  control: PageEditorControlDefinition,
+  value: unknown
+): unknown => {
+  const [group, key, ...rest] = control.overridePath;
+  if (group === "props") return sanitizeBlockPropValue(key, value);
+  if (group === "style") {
+    // ── TASK-531 — nested glow color (length-3 style.glow.color) ──
+    if (key === "glow" && rest[0] === "color") return sanitizeAuthoringCssColor(value);
+    // (nested glow numerics blur/spread/x/y are clamped by the number input's `clamp`
+    //  metadata before reaching here and re-clamped at the write boundary; if a raw
+    //  passthrough is a concern, clamp them here too against PAGE_GLOW_*_CLAMP.)
+    return sanitizeStyleValue(key, value);
+  }
+  return value;
+};
+// ── END TASK-531 REGION ───────────────────────────────────────────────────────
 ```
 
 **Design notes.** No value-conditional visibility (`showWhen`) exists in the registry
@@ -111,6 +158,19 @@ Controls only shape authoring UX; every glow value still passes the 531-01-L02 w
 normalizer (`sanitizeAuthoringCssColor` on color, clamps on numbers, reject-unknown nested
 keys) and the render-time `composeGlowBoxShadow`. No control can bypass the write boundary.
 
+**Editor-side client-layer gap — closed by this leaf (finding #4).**
+`sanitizePageEditorControlValue` (`pageEditorMutationActions.ts:72-80`) reads only
+`const [group, key] = control.overridePath`, so for the nested `["style","glow","color"]`
+control path it computes `key="glow"` (NOT `"color"`) and `sanitizeStyleValue` (`:63-70`)
+does NOT color-sanitize it (it matches only `textColor`/`borderColor`/`accent`), leaving the
+glow color UNSANITIZED in the editor's optimistic client state. This is NOT a persistence/SSR
+hole (the write boundary re-normalizes via `normalizeGlow`, and `composeGlowBoxShadow`
+re-guards at BOTH render boundaries), but the live preview could momentarily hold an
+unsanitized string. This leaf extends `sanitizePageEditorControlValue` to detect the nested
+glow color path and route it through `sanitizeAuthoringCssColor` — EXACTLY parallel to sibling
+533-02-L03's `border.*.color` handling. `sanitizeAuthoringCssColor` is already imported
+(`:10`); no new import.
+
 ## Hard Invariants
 
 1. Glow controls use existing `color` + `number` inputs; NO new UI kind, NO
@@ -119,3 +179,7 @@ keys) and the render-time `composeGlowBoxShadow`. No control can bypass the writ
    `panel`/`target`/`responsive` set; numeric bounds via `clamp`; enum-less (no `options`).
 3. `backgroundType:"gradient"` is reused from the existing enum/control — no new control
    for gradient authoring.
+4. The editor value sanitizer routes the nested `style.glow.color` (length-3) path through
+   `sanitizeAuthoringCssColor` in a labelled TASK-531 region of
+   `pageEditorMutationActions.ts` (the `[group,key]` destructure otherwise leaves it
+   UNSANITIZED in optimistic client state — finding #4; parity with sibling 533-02).

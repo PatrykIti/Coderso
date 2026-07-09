@@ -35,9 +35,14 @@ bump, NO migration, NO dependency.
 - **Section-style allowlist** — INLINE `assertKnownKeys([...])` in
   `normalizeSectionStyle` `:2495-2514` (after 533-01 also carries `"columnTemplate"`).
   Append `"border"`.
-- **`partialSectionStyleJsonSchema`** — `:1629` + the full non-partial section-style
-  schema mirror (grep the paired `radius`/`shadow` props) — add `border` object to
-  BOTH.
+- **Section-style JSON schema — TWO strict `additionalProperties:false` mirrors** (see
+  533-01-L01): (a) `partialSectionStyleJsonSchema` (RESPONSIVE-OVERRIDE) `:1629`, last
+  field `fullBleed: booleanSchema` `:1651`; and (b) the inlined TOP-LEVEL section-style
+  schema `:1827-1850` (validates `sections[].style`, `additionalProperties:false`
+  `:1830`), last field `fullBleed: booleanSchema` `:1848`. Grep `fullBleed:
+  booleanSchema` (two section-style hits) to land BOTH — NOT `radius: numericSchema(0,
+  64)` (misses the inlined mirror `:1836`, which uses `{ type: "number", ... }`). Add
+  the `border` object to BOTH.
 - **`normalizeSectionStyle`** — `:2488`. Add a present-only `border` branch.
 - **Clamp** — add `PAGE_SECTION_BORDER_WIDTH_CLAMP = {min:0,max:16} as const` in the
   `TASK-533` clamp region (near `PAGE_BLOCK_SPAN_CLAMP` from 533-01-L01 / the block
@@ -94,7 +99,8 @@ const pageSectionBorderJsonSchema = {
   properties: { top: pageSectionBorderEdgeJsonSchema, right: pageSectionBorderEdgeJsonSchema,
                 bottom: pageSectionBorderEdgeJsonSchema, left: pageSectionBorderEdgeJsonSchema },
 };
-// add `border: pageSectionBorderJsonSchema` to partialSectionStyleJsonSchema AND the full mirror
+// add `border: pageSectionBorderJsonSchema` to BOTH section-style mirrors —
+// grep `fullBleed: booleanSchema` (partial :1651 + inlined top-level :1848), append after each
 
 // (normalizeSectionStyle — append present-only branch)
 if (input.border !== undefined) {
