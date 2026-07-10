@@ -407,12 +407,12 @@ testIfDb(
       const publicResponse = await fetch(`${baseUrl}${publicPath}`, {
         method: "POST",
         headers: { ...commonHeaders, host: publicHost },
-        body: "{}",
+        body: "{",
       });
       const adminResponse = await fetch(`${baseUrl}${adminWritePath}`, {
         method: "POST",
         headers: { ...commonHeaders, host: adminHost },
-        body: "{}",
+        body: "{",
       });
       expect(publicResponse.status).toBe(400);
       expect(adminResponse.status).toBe(400);

@@ -1,11 +1,25 @@
-import { expect, test } from "vitest";
+import Ajv from "ajv";
+import { describe, expect, test } from "vitest";
 
 import {
+  FORM_SCHEMA_LIMITS,
+  formSettingsSchema,
   getDefaultFormSettings,
   normalizeFormSettings,
   normalizeFormStep,
   resolveStepTitle,
 } from "../../../core/services/forms/formSettings";
+import { formCreateSchema, formUpdateSchema } from "../../../core/server/validation/formSchemas";
+
+const ajv = new Ajv({
+  allErrors: true,
+  strict: true,
+  strictTypes: false,
+  allowUnionTypes: true,
+});
+const validateCreate = ajv.compile(formCreateSchema);
+const validateUpdate = ajv.compile(formUpdateSchema);
+const validateSettings = ajv.compile(formSettingsSchema);
 
 test("normalizeFormSettings returns defaults for invalid input", () => {
   const settings = normalizeFormSettings(null);
@@ -163,5 +177,151 @@ test("getDefaultFormSettings emits no theme key", () => {
       baseDelayMs: 300,
       maxDelayMs: 2000,
     },
+  });
+});
+
+describe("strict form write schemas", () => {
+  test("requires create name, requires a nonempty update, and owns access/status enums", () => {
+    expect(validateCreate({ name: "Contact" })).toBe(true);
+    expect(validateCreate({})).toBe(false);
+    expect(validateUpdate({})).toBe(false);
+    expect(validateUpdate({ name: "Contact" })).toBe(true);
+    expect(validateCreate({ name: "Contact", status: "deleted" })).toBe(false);
+    expect(validateCreate({ name: "Contact", submissionAccess: "private" })).toBe(false);
+    expect(validateCreate({ name: "Contact", unknown: true })).toBe(false);
+  });
+
+  test("accepts null/empty/max form strings and rejects max+1", () => {
+    const cases: Array<[string, number, boolean]> = [
+      ["slug", FORM_SCHEMA_LIMITS.slug, true],
+      ["description", FORM_SCHEMA_LIMITS.description, true],
+      ["successMessage", FORM_SCHEMA_LIMITS.successMessage, true],
+      ["successRedirectUrl", FORM_SCHEMA_LIMITS.successRedirectUrl, true],
+    ];
+    for (const [key, max] of cases) {
+      expect(validateCreate({ name: "Form", [key]: null })).toBe(true);
+      expect(validateCreate({ name: "Form", [key]: "" })).toBe(true);
+      expect(validateCreate({ name: "Form", [key]: "x".repeat(max) })).toBe(true);
+      expect(validateCreate({ name: "Form", [key]: "x".repeat(max + 1) })).toBe(false);
+    }
+    expect(validateCreate({ name: "x".repeat(FORM_SCHEMA_LIMITS.name) })).toBe(true);
+    expect(validateCreate({ name: "x".repeat(FORM_SCHEMA_LIMITS.name + 1) })).toBe(false);
+    expect(validateCreate({ name: "" })).toBe(false);
+  });
+
+  test("rejects unknown keys at every settings/theme/retry depth", () => {
+    const invalidSettings = [
+      { unknown: true },
+      { automationRetry: { unknown: true } },
+      { theme: { unknown: true } },
+      { theme: { layout: { unknown: true } } },
+      { theme: { surface: { unknown: true } } },
+      { theme: { typography: { unknown: true } } },
+      { theme: { input: { unknown: true } } },
+      { theme: { submit: { unknown: true } } },
+    ];
+    for (const settings of invalidSettings) {
+      expect(validateCreate({ name: "Form", settings })).toBe(false);
+    }
+  });
+
+  test("pins layout, step-title, and retry bounds", () => {
+    expect(
+      validateSettings({
+        automationRetry: { maxAttempts: 1, baseDelayMs: 50, maxDelayMs: 100 },
+      })
+    ).toBe(true);
+    expect(
+      validateSettings({
+        layoutMode: "multi_step",
+        saveProgress: true,
+        stepTitles: Array.from({ length: 10 }, () => "x".repeat(240)),
+        preset: "service_intake",
+        automationRetry: {
+          enabled: true,
+          maxAttempts: 5,
+          baseDelayMs: 50,
+          maxDelayMs: 20_000,
+        },
+      })
+    ).toBe(true);
+    expect(validateSettings({ stepTitles: Array.from({ length: 11 }, () => "Step") })).toBe(false);
+    expect(validateSettings({ stepTitles: [""] })).toBe(false);
+    expect(validateSettings({ stepTitles: ["x".repeat(241)] })).toBe(false);
+    for (const automationRetry of [
+      { maxAttempts: 0 },
+      { maxAttempts: 6 },
+      { baseDelayMs: 49 },
+      { baseDelayMs: 5_001 },
+      { maxDelayMs: 99 },
+      { maxDelayMs: 20_001 },
+      { maxAttempts: 1.5 },
+    ]) {
+      expect(validateSettings({ automationRetry })).toBe(false);
+    }
+  });
+
+  test("normalizes retry cross-invariant without changing its existing defaults", () => {
+    const normalized = normalizeFormSettings({
+      automationRetry: { baseDelayMs: 5_000, maxDelayMs: 100 },
+    });
+    expect(normalized.automationRetry.baseDelayMs).toBe(5_000);
+    expect(normalized.automationRetry.maxDelayMs).toBe(5_000);
+  });
+
+  test("accepts every theme key at its boundary and pins color/label maxima", () => {
+    const settings = {
+      theme: {
+        layout: {
+          width: "full",
+          align: "right",
+          fieldGap: "lg",
+          columns: 2,
+          buttonAlignment: "full",
+        },
+        surface: {
+          card: true,
+          background: "x".repeat(128),
+          borderColor: "#fff",
+          borderWidth: "md",
+          radius: "xl",
+          padding: "xl",
+          shadow: "lg",
+        },
+        typography: {
+          titleSize: "xl",
+          titleWeight: "bold",
+          titleColor: "#111",
+          labelColor: "#222",
+          helperColor: "#333",
+          fontFamily: "mono",
+        },
+        input: {
+          size: "lg",
+          radius: "xl",
+          borderColor: "#444",
+          background: "#555",
+          textColor: "#666",
+        },
+        submit: {
+          background: "#777",
+          textColor: "#888",
+          radius: "xl",
+          fullWidth: true,
+          label: "x".repeat(240),
+        },
+      },
+    };
+    expect(validateSettings(settings)).toBe(true);
+    expect(validateSettings({ theme: { surface: { background: "x".repeat(129) } } })).toBe(false);
+    expect(validateSettings({ theme: { submit: { label: "" } } })).toBe(false);
+    expect(validateSettings({ theme: { submit: { label: "x".repeat(241) } } })).toBe(false);
+    expect(validateSettings({ theme: { layout: { columns: 3 } } })).toBe(false);
+  });
+
+  test("keeps empty/no-theme documents present-only", () => {
+    expect(validateSettings({})).toBe(true);
+    expect(normalizeFormSettings({})).toEqual(getDefaultFormSettings());
+    expect("theme" in normalizeFormSettings({ theme: {} })).toBe(false);
   });
 });

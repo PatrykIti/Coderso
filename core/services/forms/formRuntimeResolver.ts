@@ -2,6 +2,7 @@ import { createFormSubmissionNonce } from "./submissionNonce";
 import { normalizeSubmissionAccess } from "./submissionAccess";
 import { getDefaultFormSettings, normalizeFormSettings } from "./formSettings";
 import type { FormRuntimeResolution } from "./formRuntimeContract";
+import { isSafeFormFieldPattern } from "./validation";
 
 export const resolveFormSubmissionAccess = (value: unknown) =>
   normalizeSubmissionAccess(value, "public");
@@ -99,6 +100,15 @@ export async function resolveFormRuntimeData(
     submissionAccess,
     submissionNonce: submissionAccess === "public" ? createFormSubmissionNonce(form.id) : null,
     botProtection,
-    fields: fields.map((field) => toFieldRecord(field)),
+    fields: fields.map((field) => {
+      const record = toFieldRecord(field);
+      const pattern = record.settings.pattern;
+      if (pattern === undefined || isSafeFormFieldPattern(pattern)) {
+        return record;
+      }
+      const settings = { ...record.settings };
+      delete settings.pattern;
+      return { ...record, settings };
+    }),
   };
 }

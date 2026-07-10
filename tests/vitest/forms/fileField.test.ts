@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 
 import { mimeMatchesAccept } from "../../../core/services/forms/mimeMatchesAccept";
 import {
+  assertFormFieldsWriteShape,
+  FORM_FIELD_SCHEMA_LIMITS,
   normalizeFormFields,
   normalizeMediaReference,
   validateSubmissionPayload,
@@ -68,6 +70,52 @@ describe("file field settings normalization", () => {
       { type: "file", label: "A", name: "a", settings: { accept: [] } },
     ]);
     expect(field?.settings.accept).toBeUndefined();
+  });
+
+  test("strict write shape pins accept count/token and integer size bounds", () => {
+    const maxToken = `${"a".repeat(115)}/${"b".repeat(11)}`;
+    expect(maxToken).toHaveLength(FORM_FIELD_SCHEMA_LIMITS.mimeToken);
+    expect(() =>
+      assertFormFieldsWriteShape([
+        {
+          type: "file",
+          label: "Attachment",
+          settings: {
+            accept: Array.from({ length: FORM_FIELD_SCHEMA_LIMITS.mimeTokens }, () => maxToken),
+            maxSizeMb: 100,
+            multiple: false,
+          },
+        },
+      ])
+    ).not.toThrow();
+    expect(() =>
+      assertFormFieldsWriteShape([
+        {
+          type: "file",
+          label: "Attachment",
+          settings: {
+            accept: Array.from(
+              { length: FORM_FIELD_SCHEMA_LIMITS.mimeTokens + 1 },
+              () => "image/png"
+            ),
+          },
+        },
+      ])
+    ).toThrow("form_field_invalid");
+    expect(() =>
+      assertFormFieldsWriteShape([
+        {
+          type: "file",
+          label: "Attachment",
+          settings: { accept: [`${maxToken}x`] },
+        },
+      ])
+    ).toThrow("form_field_invalid");
+    expect(() =>
+      assertFormFieldsWriteShape([
+        { type: "file", label: "Attachment", settings: { maxSizeMb: 1.5 } },
+      ])
+    ).toThrow("form_field_invalid");
   });
 });
 

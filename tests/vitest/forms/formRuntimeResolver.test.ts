@@ -288,3 +288,71 @@ test("resolveFormRuntimeData does not project public fields for published intern
   expect(result.fields).toEqual([]);
   expect(result.error).toBe("public_submission_disabled");
 });
+
+test("resolveFormRuntimeData omits only unsafe legacy patterns without mutating storage", async () => {
+  process.env.FORM_SUBMIT_NONCE_SECRET = NONCE_SECRET;
+  const safeSettings = { pattern: "^[A-Z]{2}\\d{4}$", helper: "Safe" };
+  const unsafeSettings = { pattern: "^a*a*a*a*a*a*a*a*a*a*b$", helper: "Legacy" };
+  const oversizedSettings = { pattern: "a".repeat(100_000), helper: "Oversized" };
+
+  vi.doMock("../../../core/services/forms/formsService", () => ({
+    getForm: async () => ({
+      id: "form-patterns",
+      name: "Patterns",
+      description: null,
+      status: "published",
+      successMessage: null,
+      successRedirectUrl: null,
+      submissionAccess: "public",
+      settings: {},
+    }),
+    listFormFields: async () => [
+      {
+        id: "safe",
+        type: "text",
+        label: "Safe",
+        name: "safe",
+        required: false,
+        orderIndex: 0,
+        settings: safeSettings,
+      },
+      {
+        id: "unsafe",
+        type: "text",
+        label: "Unsafe",
+        name: "unsafe",
+        required: false,
+        orderIndex: 1,
+        settings: unsafeSettings,
+      },
+      {
+        id: "oversized",
+        type: "text",
+        label: "Oversized",
+        name: "oversized",
+        required: false,
+        orderIndex: 2,
+        settings: oversizedSettings,
+      },
+    ],
+    toFieldRecord: (field: Record<string, unknown>) => field,
+  }));
+  vi.doMock("../../../core/services/settings/securitySettings", () => ({
+    getSecuritySettingsPublic: async () => ({ botProtection: { enabled: false } }),
+  }));
+
+  const { resolveFormRuntimeData } =
+    await import("../../../core/services/forms/formRuntimeResolver");
+  const result = await resolveFormRuntimeData("form-patterns", { preview: false });
+  const preview = await resolveFormRuntimeData("form-patterns", { preview: true });
+
+  expect(result.fields[0]?.settings).toBe(safeSettings);
+  expect(result.fields[0]?.settings.pattern).toBe("^[A-Z]{2}\\d{4}$");
+  expect(result.fields[1]?.settings).toEqual({ helper: "Legacy" });
+  expect(result.fields[2]?.settings).toEqual({ helper: "Oversized" });
+  expect(preview.fields[0]?.settings.pattern).toBe("^[A-Z]{2}\\d{4}$");
+  expect(preview.fields[1]?.settings.pattern).toBeUndefined();
+  expect(preview.fields[2]?.settings.pattern).toBeUndefined();
+  expect(unsafeSettings.pattern).toBe("^a*a*a*a*a*a*a*a*a*a*b$");
+  expect(oversizedSettings.pattern).toHaveLength(100_000);
+});

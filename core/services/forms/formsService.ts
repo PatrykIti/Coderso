@@ -5,6 +5,7 @@ import { formActionRuns, formFields, forms, formSubmissions } from "../../db/sch
 import { invalidateLinkedDetailPageRouteCaches } from "../../site/cache/siteCache";
 import { normalizeSubmissionAccess, type SubmissionAccessMode } from "./submissionAccess";
 import {
+  assertFormFieldsWriteShape,
   deriveFormSlug,
   normalizeFormFields,
   type FormFieldInput,
@@ -196,6 +197,7 @@ export async function listFormFields(formId: string) {
 }
 
 export async function setFormFields(formId: string, fieldsInput: FormFieldInput[]) {
+  assertFormFieldsWriteShape(fieldsInput);
   const form = await getForm(formId);
   if (!form) throw new Error("form_not_found");
 

@@ -1,8 +1,22 @@
 import { resolveClearableCssColorValue } from "../../widgets/core/clearableStyle";
 
-export type FormLayoutMode = "single" | "multi_step";
+export const FORM_LAYOUT_MODE_VALUES = ["single", "multi_step"] as const;
+export type FormLayoutMode = (typeof FORM_LAYOUT_MODE_VALUES)[number];
 
-export type FormPresetId = "custom" | "contact" | "lead_capture" | "service_intake";
+export const FORM_PRESET_VALUES = ["custom", "contact", "lead_capture", "service_intake"] as const;
+export type FormPresetId = (typeof FORM_PRESET_VALUES)[number];
+
+export const FORM_SCHEMA_LIMITS = {
+  name: 200,
+  slug: 200,
+  description: 10_000,
+  successMessage: 2_000,
+  successRedirectUrl: 2_048,
+  stepTitles: 10,
+  stepTitle: 240,
+  themeColor: 128,
+  submitLabel: 240,
+} as const;
 
 export type FormAutomationRetrySettings = {
   enabled: boolean;
@@ -17,49 +31,58 @@ export type FormAutomationRetrySettings = {
 // allowlist and are imported read-only by 516-02/04/06 (via `formTheme.ts`,
 // which re-exports them). Do NOT redefine or drift these downstream.
 // -----------------------------------------------------------------------------
-export type FormThemeWidth = "sm" | "md" | "lg" | "xl" | "full";
-export type FormThemeAlign = "left" | "center" | "right";
-export type FormThemeButtonAlign = "left" | "center" | "right" | "full";
-export type FormThemeGap = "sm" | "md" | "lg";
-export type FormThemeColumns = 1 | 2;
-export type FormThemeBorderWidth = "none" | "sm" | "md";
-export type FormThemeRadius = "none" | "sm" | "md" | "lg" | "xl";
-export type FormThemePadding = "sm" | "md" | "lg" | "xl";
-export type FormThemeShadow = "none" | "soft" | "sm" | "md" | "lg";
-export type FormThemeTitleSize = "sm" | "md" | "lg" | "xl";
-export type FormThemeTitleWeight = "normal" | "medium" | "semibold" | "bold";
-export type FormThemeFontFamily = "display" | "inherit" | "sans" | "serif" | "mono";
-export type FormThemeInputSize = "sm" | "md" | "lg";
-
-export const FORM_THEME_WIDTHS = new Set<FormThemeWidth>(["sm", "md", "lg", "xl", "full"]);
-export const FORM_THEME_ALIGNS = new Set<FormThemeAlign>(["left", "center", "right"]);
-export const FORM_THEME_BUTTON_ALIGNS = new Set<FormThemeButtonAlign>([
-  "left",
-  "center",
-  "right",
-  "full",
-]);
-export const FORM_THEME_GAPS = new Set<FormThemeGap>(["sm", "md", "lg"]);
-export const FORM_THEME_COLUMNS = new Set<FormThemeColumns>([1, 2]);
-export const FORM_THEME_BORDER_WIDTHS = new Set<FormThemeBorderWidth>(["none", "sm", "md"]);
-export const FORM_THEME_RADII = new Set<FormThemeRadius>(["none", "sm", "md", "lg", "xl"]);
-export const FORM_THEME_PADDINGS = new Set<FormThemePadding>(["sm", "md", "lg", "xl"]);
-export const FORM_THEME_SHADOWS = new Set<FormThemeShadow>(["none", "soft", "sm", "md", "lg"]);
-export const FORM_THEME_TITLE_SIZES = new Set<FormThemeTitleSize>(["sm", "md", "lg", "xl"]);
-export const FORM_THEME_TITLE_WEIGHTS = new Set<FormThemeTitleWeight>([
-  "normal",
-  "medium",
-  "semibold",
-  "bold",
-]);
-export const FORM_THEME_FONT_FAMILIES = new Set<FormThemeFontFamily>([
+export const FORM_THEME_WIDTH_VALUES = ["sm", "md", "lg", "xl", "full"] as const;
+export type FormThemeWidth = (typeof FORM_THEME_WIDTH_VALUES)[number];
+export const FORM_THEME_ALIGN_VALUES = ["left", "center", "right"] as const;
+export type FormThemeAlign = (typeof FORM_THEME_ALIGN_VALUES)[number];
+export const FORM_THEME_BUTTON_ALIGN_VALUES = ["left", "center", "right", "full"] as const;
+export type FormThemeButtonAlign = (typeof FORM_THEME_BUTTON_ALIGN_VALUES)[number];
+export const FORM_THEME_GAP_VALUES = ["sm", "md", "lg"] as const;
+export type FormThemeGap = (typeof FORM_THEME_GAP_VALUES)[number];
+export const FORM_THEME_COLUMN_VALUES = [1, 2] as const;
+export type FormThemeColumns = (typeof FORM_THEME_COLUMN_VALUES)[number];
+export const FORM_THEME_BORDER_WIDTH_VALUES = ["none", "sm", "md"] as const;
+export type FormThemeBorderWidth = (typeof FORM_THEME_BORDER_WIDTH_VALUES)[number];
+export const FORM_THEME_RADIUS_VALUES = ["none", "sm", "md", "lg", "xl"] as const;
+export type FormThemeRadius = (typeof FORM_THEME_RADIUS_VALUES)[number];
+export const FORM_THEME_PADDING_VALUES = ["sm", "md", "lg", "xl"] as const;
+export type FormThemePadding = (typeof FORM_THEME_PADDING_VALUES)[number];
+export const FORM_THEME_SHADOW_VALUES = ["none", "soft", "sm", "md", "lg"] as const;
+export type FormThemeShadow = (typeof FORM_THEME_SHADOW_VALUES)[number];
+export const FORM_THEME_TITLE_SIZE_VALUES = ["sm", "md", "lg", "xl"] as const;
+export type FormThemeTitleSize = (typeof FORM_THEME_TITLE_SIZE_VALUES)[number];
+export const FORM_THEME_TITLE_WEIGHT_VALUES = ["normal", "medium", "semibold", "bold"] as const;
+export type FormThemeTitleWeight = (typeof FORM_THEME_TITLE_WEIGHT_VALUES)[number];
+export const FORM_THEME_FONT_FAMILY_VALUES = [
   "display",
   "inherit",
   "sans",
   "serif",
   "mono",
-]);
-export const FORM_THEME_INPUT_SIZES = new Set<FormThemeInputSize>(["sm", "md", "lg"]);
+] as const;
+export type FormThemeFontFamily = (typeof FORM_THEME_FONT_FAMILY_VALUES)[number];
+export const FORM_THEME_INPUT_SIZE_VALUES = ["sm", "md", "lg"] as const;
+export type FormThemeInputSize = (typeof FORM_THEME_INPUT_SIZE_VALUES)[number];
+
+export const FORM_THEME_WIDTHS = new Set<FormThemeWidth>(FORM_THEME_WIDTH_VALUES);
+export const FORM_THEME_ALIGNS = new Set<FormThemeAlign>(FORM_THEME_ALIGN_VALUES);
+export const FORM_THEME_BUTTON_ALIGNS = new Set<FormThemeButtonAlign>(
+  FORM_THEME_BUTTON_ALIGN_VALUES
+);
+export const FORM_THEME_GAPS = new Set<FormThemeGap>(FORM_THEME_GAP_VALUES);
+export const FORM_THEME_COLUMNS = new Set<FormThemeColumns>(FORM_THEME_COLUMN_VALUES);
+export const FORM_THEME_BORDER_WIDTHS = new Set<FormThemeBorderWidth>(
+  FORM_THEME_BORDER_WIDTH_VALUES
+);
+export const FORM_THEME_RADII = new Set<FormThemeRadius>(FORM_THEME_RADIUS_VALUES);
+export const FORM_THEME_PADDINGS = new Set<FormThemePadding>(FORM_THEME_PADDING_VALUES);
+export const FORM_THEME_SHADOWS = new Set<FormThemeShadow>(FORM_THEME_SHADOW_VALUES);
+export const FORM_THEME_TITLE_SIZES = new Set<FormThemeTitleSize>(FORM_THEME_TITLE_SIZE_VALUES);
+export const FORM_THEME_TITLE_WEIGHTS = new Set<FormThemeTitleWeight>(
+  FORM_THEME_TITLE_WEIGHT_VALUES
+);
+export const FORM_THEME_FONT_FAMILIES = new Set<FormThemeFontFamily>(FORM_THEME_FONT_FAMILY_VALUES);
+export const FORM_THEME_INPUT_SIZES = new Set<FormThemeInputSize>(FORM_THEME_INPUT_SIZE_VALUES);
 
 export type FormFormTheme = {
   layout?: {
@@ -111,8 +134,114 @@ export type FormSettings = {
   theme?: FormFormTheme;
 };
 
-const LAYOUT_MODES = new Set<FormLayoutMode>(["single", "multi_step"]);
-const PRESET_IDS = new Set<FormPresetId>(["custom", "contact", "lead_capture", "service_intake"]);
+const themeColorSchema = {
+  type: "string",
+  maxLength: FORM_SCHEMA_LIMITS.themeColor,
+} as const;
+
+export const formAutomationRetrySchema = {
+  type: "object",
+  properties: {
+    enabled: { type: "boolean" },
+    maxAttempts: { type: "integer", minimum: 1, maximum: 5 },
+    baseDelayMs: { type: "integer", minimum: 50, maximum: 5_000 },
+    maxDelayMs: { type: "integer", minimum: 100, maximum: 20_000 },
+  },
+  additionalProperties: false,
+} as const;
+
+export const formThemeSchema = {
+  type: "object",
+  properties: {
+    layout: {
+      type: "object",
+      properties: {
+        width: { enum: FORM_THEME_WIDTH_VALUES },
+        align: { enum: FORM_THEME_ALIGN_VALUES },
+        fieldGap: { enum: FORM_THEME_GAP_VALUES },
+        columns: { enum: FORM_THEME_COLUMN_VALUES },
+        buttonAlignment: { enum: FORM_THEME_BUTTON_ALIGN_VALUES },
+      },
+      additionalProperties: false,
+    },
+    surface: {
+      type: "object",
+      properties: {
+        card: { type: "boolean" },
+        background: themeColorSchema,
+        borderColor: themeColorSchema,
+        borderWidth: { enum: FORM_THEME_BORDER_WIDTH_VALUES },
+        radius: { enum: FORM_THEME_RADIUS_VALUES },
+        padding: { enum: FORM_THEME_PADDING_VALUES },
+        shadow: { enum: FORM_THEME_SHADOW_VALUES },
+      },
+      additionalProperties: false,
+    },
+    typography: {
+      type: "object",
+      properties: {
+        titleSize: { enum: FORM_THEME_TITLE_SIZE_VALUES },
+        titleWeight: { enum: FORM_THEME_TITLE_WEIGHT_VALUES },
+        titleColor: themeColorSchema,
+        labelColor: themeColorSchema,
+        helperColor: themeColorSchema,
+        fontFamily: { enum: FORM_THEME_FONT_FAMILY_VALUES },
+      },
+      additionalProperties: false,
+    },
+    input: {
+      type: "object",
+      properties: {
+        size: { enum: FORM_THEME_INPUT_SIZE_VALUES },
+        radius: { enum: FORM_THEME_RADIUS_VALUES },
+        borderColor: themeColorSchema,
+        background: themeColorSchema,
+        textColor: themeColorSchema,
+      },
+      additionalProperties: false,
+    },
+    submit: {
+      type: "object",
+      properties: {
+        background: themeColorSchema,
+        textColor: themeColorSchema,
+        radius: { enum: FORM_THEME_RADIUS_VALUES },
+        fullWidth: { type: "boolean" },
+        label: {
+          type: "string",
+          minLength: 1,
+          maxLength: FORM_SCHEMA_LIMITS.submitLabel,
+        },
+      },
+      additionalProperties: false,
+    },
+  },
+  additionalProperties: false,
+} as const;
+
+export const formSettingsSchema = {
+  type: "object",
+  properties: {
+    layoutMode: { enum: FORM_LAYOUT_MODE_VALUES },
+    saveProgress: { type: "boolean" },
+    stepTitles: {
+      type: "array",
+      maxItems: FORM_SCHEMA_LIMITS.stepTitles,
+      items: {
+        type: "string",
+        minLength: 1,
+        maxLength: FORM_SCHEMA_LIMITS.stepTitle,
+      },
+    },
+    preset: { enum: FORM_PRESET_VALUES },
+    automationRetry: formAutomationRetrySchema,
+    theme: formThemeSchema,
+  },
+  additionalProperties: false,
+} as const;
+
+const LAYOUT_MODES = new Set<FormLayoutMode>(FORM_LAYOUT_MODE_VALUES);
+const PRESET_IDS = new Set<FormPresetId>(FORM_PRESET_VALUES);
 
 const DEFAULT_SETTINGS: FormSettings = {
   layoutMode: "single",
