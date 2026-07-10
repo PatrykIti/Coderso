@@ -78,7 +78,7 @@ Task board for project work. Keep task files and this board in sync.
   Do not move a leaf task to `Done` until either its standalone changelog
   exists or the family changelog records that leaf.
 
-- **To Do:** 262 tasks
+- **To Do:** 389 tasks
 - **In Progress:** 5 tasks
 - **Done:** 3086 tasks
 
@@ -94,6 +94,12 @@ Task board for project work. Keep task files and this board in sync.
 > re-skin does not (mirroring the dashboard=TASK-480 pattern); 58 subtasks + 127
 > leaves total. The table lists the umbrellas; subtasks/leaves live in each tree's
 > own files.
+>
+> 2026-07-09: the TASK-536–545 remediation program was authored as 10 umbrellas,
+> 43 technical children, and 74 executable leaves (127 physical To Do tasks).
+> The table lists the umbrellas; every descendant and its status is linked from
+> the corresponding parent/child file. Changelogs 1248–1257 are reserved for
+> implementation closure only.
 
 ---
 
@@ -101,6 +107,16 @@ Task board for project work. Keep task files and this board in sync.
 
 | ID | Title | Priority | Effort | Notes |
 |----|-------|----------|--------|-------|
+| TASK-536 | Forms File Upload and Media Trust Boundary | Critical | Large | Post-audit remediation for byte-authoritative media identity/delivery, functional Forms file uploads, strict nested schemas, and one public-write charge. Changelog 1248 pinned. 5 children + 9 leaves. |
+| TASK-537 | Entry Mutation Atomicity and Secret-Minimal Projections | High | Large | One metadata transaction, validation before write, cache after commit, and explicit DB projections that do not materialize `accessPassword`. Lands before TASK-517. Changelog 1249 pinned. 3 children + 4 leaves. |
+| TASK-538 | Custom SVG Layout Isolation | Critical | Large | Removes author SVG class capability and the author-data raw-markup render sink; proves geometry/click isolation without a scanner exception. Changelog 1250 pinned. 3 children + 5 leaves. |
+| TASK-539 | Page V2 Post-Audit Remediation II | High | Very Large | Residual Page v2 model, sanitizer, authoring, transform, renderer, responsive CSS, runtime-init, and narrow-canvas corrections after TASK-535. Changelog 1251 pinned. 8 children + 17 leaves. |
+| TASK-540 | Custom Screens Functional and Data-Integrity Remediation | High | Large | Strict Screen data/URLs/Tabs, link-only Button action, accessible runtime, dirty/cache recovery, responsive canvas, and per-user preferences. Changelog 1252 pinned. 6 children + 10 leaves. |
+| TASK-541 | Canonical CSS Color Contract | High | Medium | One Bun-free, profile-based color parser/normalizer rolled through admin, menu, and widget boundaries. Changelog 1253 pinned. 3 children + 6 leaves. |
+| TASK-542 | Menu Determinism, Responsive Cascade, and Runtime Parity | High | Large | Strict deterministic MenuDocumentV2, complete responsive neutralizers, shared public projection/active identity, and dirty-safe revalidation. Changelog 1254 pinned. 4 children + 6 leaves. |
+| TASK-543 | Posts Exit Safety and List Accessibility | High | Small | Close awaits the latest autosave and remains on failure; PostsTable restores semantic link navigation and mid-width metadata. Changelog 1255 pinned. 3 children + 3 leaves. |
+| TASK-544 | Media Folder Reliability and Error Recovery | Medium | Medium | Stable slug-conflict mapping, retryable promise dedupe, and visible recoverable folder-operation failures without state loss. Changelog 1256 pinned. 4 children + 4 leaves. |
+| TASK-545 | Workflow, Smoke Evidence, and Task-Graph Integrity | High | Large | All-results guard, five-round workflow enforcement, durable hashed smoke manifests, and bounded historical graph/index repair. Changelog 1257 pinned. 4 children + 10 leaves. |
 | TASK-478 | Page Editor Inline Link And Toolbar Placement UX | Medium | Medium | Inline links are invisible/uneditable/unremovable and hijack selection (navigate on click); plus a request to dock the mark toolbar to the block side so the picker doesn't cover the text. Live-verified 2026-06-27. |
 | TASK-478-01 | Inline Link Visual Feedback | Medium | Small | Linked fragments render as a bare `<a>` (no underline/color); add token-driven link styling on canvas+front (`pageRendererV2.tsx:780`). |
 | TASK-478-02 | Inline Link Edit, Remove, And Click-To-Select | Medium | Medium | No unlink control, can't clear via empty URL, URL field not seeded from existing href, and clicking a linked fragment navigates instead of selecting. Add remove/edit + suppress navigation while editing. |

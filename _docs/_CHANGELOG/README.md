@@ -31,7 +31,11 @@ Numbers 1034-1090 are consumed by the 31-05 Admin Tools, Admin UI,
 TASK-361 through TASK-398 widget remediation waves, and the 2026-06-03
 assistant policy coverage fix. 1229/1230/1231 are reserved (pinned) for the
 in-flight TASK-511/517/518; TASK-519 took its pinned 1232; TASK-520 took 1233.
-Use 1248 for the next changelog entry.
+Changelogs 1248–1257 are reserved, respectively, for the implementation closure
+of TASK-536, TASK-537, TASK-538, TASK-539, TASK-540, TASK-541, TASK-542,
+TASK-543, TASK-544, and TASK-545. These are contract reservations only: do not
+add index rows or changelog files before the corresponding family is complete.
+Use 1258 for the next unreserved changelog entry.
 
 | No. | Date | Title | Type |
 |-----|------|-------|------|
